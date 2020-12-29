@@ -1,5 +1,5 @@
 {
-	"version" : 3,
+	"version" : 5,
 	"name" : "scene_pbd",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-2.671, 1.033, -7.070",
-			"pitch" : -0.150419,
-			"yaw" : 1.200232
+			"position" : "-3.037, 1.792, -10.415",
+			"pitch" : -0.221945,
+			"yaw" : 1.473639
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "E33D3F704D2A8BB240747101C7B74D76",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "351D7B866F7BEDB24B38A5A39DA008B3",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -67,6 +69,7 @@
 		},
 		{
 			"name" : "Soft Bodies",
+			"id" : "19B226A6109ED5BC427D75C257C320BE",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -76,6 +79,7 @@
 		},
 		{
 			"name" : "New_Object_00",
+			"id" : "BC56E4CFA335CFB748F08EB08FA373A6",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -83,7 +87,7 @@
 			{
 				"pos" : "0.000, 5.028, 0.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr grey"
@@ -91,6 +95,7 @@
 		},
 		{
 			"name" : "New_Object_01",
+			"id" : "0804F61832DB0F96448DC9A368C23C69",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -99,7 +104,7 @@
 				"pos" : "0.000, 5.028, 10.072",
 				"scale" : "2.515, 2.477, 2.477"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr grey"
@@ -107,6 +112,7 @@
 		},
 		{
 			"name" : "New_Object_02",
+			"id" : "1638653263CA5BBC4D038B5D6AB9C3DB",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -115,7 +121,7 @@
 				"pos" : "-8.113, 5.028, 5.940",
 				"scale" : "2.515, 2.477, 2.477"
 			},
-			"mesh" : "cube",
+			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr green"
@@ -123,6 +129,7 @@
 		},
 		{
 			"name" : "SoftBody_000",
+			"id" : "4FDC2E83F9D248974D1D5C2BD5991EC4",
 			"type" : "soft body",
 			"visible" : true,
 			"casts shadow" : true,
@@ -136,259 +143,259 @@
 				"points" : 
 				[
 					{
-						"position" : "-1.88, -3.38, 0.00",
+						"position" : "-1.97, -2.45, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.51, -3.71, 0.00",
+						"position" : "-2.47, -2.91, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.35, -3.23, 0.00",
+						"position" : "-2.49, -2.37, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.04, -3.86, 0.00",
+						"position" : "-1.93, -2.95, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.28, -1.42, 0.00",
+						"position" : "-1.12, -1.45, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.90, -1.79, 0.00",
+						"position" : "-1.79, -1.44, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.76, -1.31, 0.00",
+						"position" : "-1.38, -1.05, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.42, -1.91, 0.00",
+						"position" : "-1.45, -1.08, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.59, -2.07, 0.00",
+						"position" : "-0.43, -0.16, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.01, -2.39, 0.00",
+						"position" : "-0.78, -0.75, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.12, -1.87, 0.00",
+						"position" : "-0.93, -0.26, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.45, -2.57, 0.00",
+						"position" : "-0.29, -0.64, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.00, -4.04, 0.00",
+						"position" : "0.03, -2.11, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.63, -4.35, 0.00",
+						"position" : "-0.36, -2.71, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.47, -3.87, 0.00",
+						"position" : "-0.46, -2.22, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.16, -4.52, 0.00",
+						"position" : "0.14, -2.60, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.31, -3.07, 0.00",
+						"position" : "-0.17, -1.13, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.31, -3.38, 0.00",
+						"position" : "-0.55, -1.74, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.16, -2.89, 0.00",
+						"position" : "-0.64, -1.25, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.16, -3.56, 0.00",
+						"position" : "-0.07, -1.62, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.26, -3.42, 0.00",
+						"position" : "0.79, -0.90, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.63, -3.73, 0.00",
+						"position" : "0.41, -1.51, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.78, -3.24, 0.00",
+						"position" : "0.31, -1.02, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.11, -3.90, 0.00",
+						"position" : "0.90, -1.39, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.95, -4.38, 0.00",
+						"position" : "1.01, -1.88, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.31, -4.69, 0.00",
+						"position" : "0.63, -2.48, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.47, -4.21, 0.00",
+						"position" : "0.52, -2.00, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.78, -4.86, 0.00",
+						"position" : "1.12, -2.37, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.88, -1.06, 0.00",
+						"position" : "-0.06, 0.43, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.27, -1.35, 0.00",
+						"position" : "-0.46, -0.14, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.39, -0.81, 0.00",
+						"position" : "-0.02, 0.01, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.74, -1.57, 0.00",
+						"position" : "-0.54, 0.34, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.84, -1.46, 0.00",
+						"position" : "0.31, 1.05, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.22, -1.75, 0.00",
+						"position" : "-0.04, 0.43, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.36, -1.26, 0.00",
+						"position" : "-0.09, 0.90, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.69, -1.94, 0.00",
+						"position" : "0.44, 0.57, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.55, -2.43, 0.00",
+						"position" : "0.56, 0.08, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.93, -2.75, 0.00",
+						"position" : "0.20, -0.53, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.07, -2.25, 0.00",
+						"position" : "0.07, -0.04, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.41, -2.93, 0.00",
+						"position" : "0.68, -0.41, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.05, -0.44, 0.00",
+						"position" : "-0.23, -1.09, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.64, -0.84, 0.00",
+						"position" : "-0.91, -0.80, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.55, -0.37, 0.00",
+						"position" : "-0.41, -0.63, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.16, -0.93, 0.00",
+						"position" : "-0.68, -1.23, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.09, -0.59, 0.00",
+						"position" : "-0.48, -0.12, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.68, -1.03, 0.00",
+						"position" : "-0.85, -0.77, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.57, -0.51, 0.00",
+						"position" : "-0.36, -0.61, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.21, -1.14, 0.00",
+						"position" : "-0.34, -0.61, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.35, -1.70, 0.00",
+						"position" : "-0.81, -0.74, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.95, -2.05, 0.00",
+						"position" : "-1.11, -1.37, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.81, -1.55, 0.00",
+						"position" : "-0.71, -1.19, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.49, -2.21, 0.00",
+						"position" : "-1.26, -0.90, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.58, -2.41, 0.00",
+						"position" : "-1.84, -1.44, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.20, -2.75, 0.00",
+						"position" : "-2.45, -1.81, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.05, -2.27, 0.00",
+						"position" : "-2.22, -1.24, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.73, -2.90, 0.00",
+						"position" : "-1.96, -1.93, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.64, -2.72, 0.00",
+						"position" : "-1.09, -1.37, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.25, -3.05, 0.00",
+						"position" : "-1.47, -1.98, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.10, -2.56, 0.00",
+						"position" : "-1.39, -1.57, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.78, -3.21, 0.00",
+						"position" : "-1.02, -1.85, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.94, -3.70, 0.00",
+						"position" : "-0.95, -2.34, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.57, -4.02, 0.00",
+						"position" : "-1.39, -2.93, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.41, -3.54, 0.00",
+						"position" : "-1.46, -2.44, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.10, -4.18, 0.00",
+						"position" : "-0.86, -2.82, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
@@ -396,67 +403,67 @@
 						"inverse mass" : 0.000000
 					},
 					{
-						"position" : "-0.50, 0.01, 0.00",
+						"position" : "0.12, -0.47, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.53, -0.30, 0.00",
+						"position" : "-0.05, 0.49, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.99, 0.05, 0.00",
+						"position" : "0.23, -0.95, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.48, 0.12, 0.00",
+						"position" : "0.06, -0.48, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "2.17, -2.11, 0.00",
+						"position" : "0.92, 0.70, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "2.03, -2.60, 0.00",
+						"position" : "1.05, 0.20, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.88, -3.09, 0.00",
+						"position" : "1.17, -0.30, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "2.00, -0.98, 0.00",
+						"position" : "0.07, 1.51, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.52, -0.78, 0.00",
+						"position" : "-0.41, 1.11, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "2.48, -1.15, 0.00",
+						"position" : "0.56, 1.70, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "2.32, -1.62, 0.00",
+						"position" : "0.78, 1.20, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.04, -0.56, 0.00",
+						"position" : "-0.52, 0.59, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.58, -4.06, 0.00",
+						"position" : "1.39, -1.28, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.42, -4.55, 0.00",
+						"position" : "1.50, -1.77, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.26, -5.03, 0.00",
+						"position" : "1.60, -2.26, 0.00",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.73, -3.58, 0.00",
+						"position" : "1.28, -0.79, 0.00",
 						"inverse mass" : 1.000000
 					}
 				],
@@ -9263,7 +9270,6 @@
 						}
 					}
 				],
-				"mesh file path" : "../../../FlexEngine/resources/meshes/cloth.glb",
 				"render wireframe" : true,
 				"damping" : 0.980000,
 				"stiffness" : 0.995000,

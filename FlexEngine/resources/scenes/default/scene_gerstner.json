@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "Scene Gerstner",
 	"spawn player" : false,
 	"skybox data" : 
@@ -30,6 +30,7 @@
 	[
 		{
 			"name" : "Skybox",
+			"id" : "5A5E3EBF8B00FF96467AFE417DAEBBCA",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "37FA95F9BFAF47AD4C9E3BF2DB7F7643",
 			"type" : "reflection probe",
 			"visible" : false,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "A4291E50B494F4B54F45C73D2AEC4901",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -77,6 +80,7 @@
 		},
 		{
 			"name" : "Gerstner Wave",
+			"id" : "097971388B9245B14AE148BA63355EAD",
 			"type" : "gerstner wave",
 			"visible" : true,
 			"casts shadow" : true,
@@ -178,6 +182,7 @@
 		},
 		{
 			"name" : "PointLight_00",
+			"id" : "1A7273F28FFB93AE4CC39F5F8CA6E410",
 			"type" : "point light",
 			"visible" : false,
 			"casts shadow" : true,
@@ -195,6 +200,7 @@
 		},
 		{
 			"name" : "PointLight_01",
+			"id" : "FB8EFADB928129954EE21986E495E377",
 			"type" : "point light",
 			"visible" : false,
 			"casts shadow" : true,

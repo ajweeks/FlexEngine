@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_particles",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-136.998, 27.015, -59.352",
-			"pitch" : -0.053752,
-			"yaw" : 0.893817
+			"position" : "-86.279, 4.890, -27.203",
+			"pitch" : -0.073501,
+			"yaw" : 0.355850
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "0A76288EC369BD8241B8C1B5A3638EC5",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "63645861DA790682415D40ACB253AA27",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "sphere",
+			"id" : "6292EA82CCAFA9A44A8A2F2CC178ADB9",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -70,6 +73,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "A99A9D3B39E7A7AE47D0560FA728D3A3",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -91,6 +95,7 @@
 		},
 		{
 			"name" : "particle system 1",
+			"id" : "1B117324FF7D319C4E78E137A116FD6D",
 			"type" : "particle system",
 			"visible" : true,
 			"casts shadow" : true,
@@ -117,6 +122,7 @@
 		},
 		{
 			"name" : "particle system 2",
+			"id" : "1AB5A50682230E874615C25FBFB51E9C",
 			"type" : "particle system",
 			"visible" : true,
 			"casts shadow" : true,
@@ -143,6 +149,7 @@
 		},
 		{
 			"name" : "particle system 3",
+			"id" : "72F54F0D5270D6A040FD723F8B87833E",
 			"type" : "particle system",
 			"visible" : true,
 			"casts shadow" : true,
@@ -169,6 +176,7 @@
 		},
 		{
 			"name" : "particle system 4",
+			"id" : "A271016035DBFE86424E978BABFC660E",
 			"type" : "particle system",
 			"visible" : true,
 			"casts shadow" : true,
@@ -195,6 +203,7 @@
 		},
 		{
 			"name" : "particle system 5",
+			"id" : "A1CF09336DE37DB54C5023DCE30E1ECA",
 			"type" : "particle system",
 			"visible" : true,
 			"casts shadow" : true,

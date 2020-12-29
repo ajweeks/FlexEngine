@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_shanghai",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-151.999, 29.254, -65.621",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-225.149, 32.131, -21.632",
+			"pitch" : -0.128863,
+			"yaw" : 0.364430
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "DF181A72E1BFD28546577F637E5582F3",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "5859BF7AB488769B4FDDB6C46B2EAA46",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "sphere",
+			"id" : "EC6804C4A94B68894650B0C2CC70BD41",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -70,17 +73,18 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "7C8D14F48AB5BC814848CA9616EE5C09",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "-0.000, 0.865, 2.659"
+				"rot" : "3.122, -1.328, -0.368"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.407, 0.100, 0.882, 0.217",
+				"rotation" : "0.775, -0.151, 0.603, 0.120",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "0.92, 0.92, 0.62",
 				"enabled" : true,
@@ -91,6 +95,7 @@
 		},
 		{
 			"name" : "bridge",
+			"id" : "F7CE1A888FCEDE8C40DCE54F3CA66D89",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -105,6 +110,7 @@
 		},
 		{
 			"name" : "ground",
+			"id" : "8B2C1E0BD3607EBC4357DC0562DC15B6",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -120,6 +126,7 @@
 		},
 		{
 			"name" : "river",
+			"id" : "E58DEB999F40B4B54AB1B5C2C9A66312",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -134,6 +141,7 @@
 		},
 		{
 			"name" : "boat",
+			"id" : "AD9254D2DA8A9EA14D89F7A54E9C5D0E",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -148,6 +156,7 @@
 		},
 		{
 			"name" : "build1",
+			"id" : "165555ED8C3D51B142BA8139EC2730A2",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -162,6 +171,7 @@
 		},
 		{
 			"name" : "build2",
+			"id" : "A072C3A0505C42A64F134DF50E36D43E",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -176,6 +186,7 @@
 		},
 		{
 			"name" : "river bed",
+			"id" : "B4E9F4939CABDFBB45BAB5CC19AFCA3F",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -190,6 +201,7 @@
 		},
 		{
 			"name" : "tables",
+			"id" : "B426E4AACEB20291477CE42399ADFC6E",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -204,6 +216,7 @@
 		},
 		{
 			"name" : "misc1",
+			"id" : "DF88B2E178696F994CD65B765AAB1A54",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -218,6 +231,7 @@
 		},
 		{
 			"name" : "misc2",
+			"id" : "6E2968A3F3CDDAB44C1391B8A66E0F33",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -232,6 +246,7 @@
 		},
 		{
 			"name" : "veg1",
+			"id" : "49D02C38D9EB798E4264D608686746A1",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -246,6 +261,7 @@
 		},
 		{
 			"name" : "benches",
+			"id" : "AA3E6DE9610F74894D5626137BCED58F",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -260,6 +276,7 @@
 		},
 		{
 			"name" : "misc3",
+			"id" : "3D65FBF9CE9B67A44ADAFCDD4A5913A8",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -274,6 +291,7 @@
 		},
 		{
 			"name" : "misc4",
+			"id" : "D3C2FA41C7B3379544B53088A67891B0",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -288,6 +306,7 @@
 		},
 		{
 			"name" : "build3",
+			"id" : "6DE407353D42D6A54D07F6EB476F6B08",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -302,6 +321,7 @@
 		},
 		{
 			"name" : "dragon",
+			"id" : "73874CB0E384D2BA4E64AACB9F9243E3",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -319,6 +339,7 @@
 		},
 		{
 			"name" : "PointLight_00",
+			"id" : "452A778DE9ECB0884A00DC9B8186FD78",
 			"type" : "point light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -336,6 +357,7 @@
 		},
 		{
 			"name" : "New_Object_00",
+			"id" : "2C6B247E62F7D2884B6C9624EB6AC067",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -346,6 +368,8 @@
 			"mesh" : "donut.glb",
 			"materials" : 
 			[
+				"New Material 02",
+				"New Material 02",
 				"New Material 02"
 			],
 			"collider" : 
@@ -364,6 +388,7 @@
 		},
 		{
 			"name" : "New_Object_01",
+			"id" : "003C59FA91C682A94646CFF3405BFFD4",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -374,6 +399,8 @@
 			"mesh" : "donut.glb",
 			"materials" : 
 			[
+				"New Material 02",
+				"New Material 02",
 				"New Material 02"
 			],
 			"collider" : 
@@ -392,6 +419,7 @@
 		},
 		{
 			"name" : "New_Object_02",
+			"id" : "5E9A55A8C4295A984D267F5A84471AA1",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -402,6 +430,8 @@
 			"mesh" : "donut.glb",
 			"materials" : 
 			[
+				"New Material 02",
+				"New Material 02",
 				"New Material 02"
 			],
 			"collider" : 

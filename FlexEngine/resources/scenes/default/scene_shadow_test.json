@@ -1,7 +1,8 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_shadow_test",
 	"spawn player" : true,
+	"player 0 guid" : "7DC72E8C3217E78642D0C390F3C596D7",
 	"skybox data" : 
 	{
 		"top colour" : "0.22, 0.58, 0.88, 0.00",
@@ -21,15 +22,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-22.531, 11.706, -29.638",
-			"pitch" : -0.180863,
-			"yaw" : -5.409176
+			"position" : "-26.356, 8.521, -26.339",
+			"pitch" : -0.186302,
+			"yaw" : -5.598392
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "tablet",
+			"id" : "C8A47B216A9E05A64A33C8E42F2D54C9",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -46,6 +48,7 @@
 		},
 		{
 			"name" : "Lighting",
+			"id" : "743C576BD597F78149CDB26BFA7E01E3",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -57,6 +60,7 @@
 			[
 				{
 					"name" : "Directional Light",
+					"id" : "CDB26D078AE201974B26863B8ED101AE",
 					"type" : "directional light",
 					"visible" : true,
 					"casts shadow" : true,
@@ -78,6 +82,7 @@
 				},
 				{
 					"name" : "PointLight_07",
+					"id" : "78809A7AF5E7B0B447871BD524DBE076",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -95,6 +100,7 @@
 				},
 				{
 					"name" : "PointLight_00",
+					"id" : "B6AF8B4B4564F2B940721E79BC5B04FF",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -112,6 +118,7 @@
 				},
 				{
 					"name" : "PointLight_01",
+					"id" : "095CB73E613366AA4C92BC3CFD1F123C",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -129,6 +136,7 @@
 				},
 				{
 					"name" : "PointLight_02",
+					"id" : "D6192130C048DC924314F2DB844958CA",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -146,6 +154,7 @@
 				},
 				{
 					"name" : "PointLight_03",
+					"id" : "5025B95080591A8F4C4D93F3F7C6B5EB",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -163,6 +172,7 @@
 				},
 				{
 					"name" : "PointLight_04",
+					"id" : "AC78A390BE9383AE44091DA7F5C89AE6",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -180,6 +190,7 @@
 				},
 				{
 					"name" : "PointLight_05",
+					"id" : "6D6E76D63602148448DEBCB6C36E3F9B",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -197,6 +208,7 @@
 				},
 				{
 					"name" : "PointLight_06",
+					"id" : "C2ABDA0921B2DB8E41E6A6A027B3018F",
 					"type" : "point light",
 					"visible" : false,
 					"casts shadow" : true,
@@ -214,6 +226,7 @@
 				},
 				{
 					"name" : "Reflection Probe 01",
+					"id" : "FF420C63FF031EBA42C8E5594CAEA797",
 					"type" : "reflection probe",
 					"visible" : true,
 					"casts shadow" : true,
@@ -226,6 +239,7 @@
 		},
 		{
 			"name" : "Env",
+			"id" : "CF468D75C16934B0412F828F9959187B",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -237,6 +251,7 @@
 			[
 				{
 					"name" : "Wall 04",
+					"id" : "7B8D9D5F21DCEBB54AA2C595D54819BF",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -267,6 +282,7 @@
 				},
 				{
 					"name" : "Wall 01",
+					"id" : "91AD009742FD6FAB45BE579AFA5D6AA8",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -297,6 +313,7 @@
 				},
 				{
 					"name" : "Wall 02",
+					"id" : "433EAE5E790685834DEE20A827ECC63D",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -326,6 +343,7 @@
 				},
 				{
 					"name" : "Wall 03",
+					"id" : "EC804FF4047A9F89467BD4D5E5FE3C83",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -356,6 +374,7 @@
 				},
 				{
 					"name" : "ground plane",
+					"id" : "E92BE4B4A92209BD4B4FB632F750CF1A",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -385,6 +404,7 @@
 				},
 				{
 					"name" : "New_Game_Object_02",
+					"id" : "30FEAD42EBEC8B9E4A4DD31B97EFFA7F",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -414,6 +434,7 @@
 				},
 				{
 					"name" : "New_Game_Object_03",
+					"id" : "277C81BDEC5859B047DD1C2D12FA8224",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -443,6 +464,7 @@
 				},
 				{
 					"name" : "New_Game_Object_00",
+					"id" : "B53B764908785E8C4CB4B6116F2EC6D7",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -472,6 +494,7 @@
 				},
 				{
 					"name" : "New_Game_Object_01",
+					"id" : "A2912941D97E1FA44887B872BD4A28F5",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -501,6 +524,7 @@
 				},
 				{
 					"name" : "Wall 03",
+					"id" : "A3B78516F7C0289F479097A8FE608210",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -530,6 +554,7 @@
 				},
 				{
 					"name" : "New_Game_Object_02",
+					"id" : "023C2FC3EE975AB94FAAA20D53B78E0B",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -546,6 +571,7 @@
 				},
 				{
 					"name" : "New_Game_Object_01",
+					"id" : "A1931E05AAE47AB041B7696793664005",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -562,6 +588,7 @@
 				},
 				{
 					"name" : "New_Game_Object_02",
+					"id" : "7E54EC65A96188AA4B2B0F370AFA92C8",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -578,6 +605,7 @@
 				},
 				{
 					"name" : "New_Game_Object_03",
+					"id" : "FC8C4AB085A6438B45D28F93B395297C",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -594,6 +622,7 @@
 				},
 				{
 					"name" : "New_Game_Object_00",
+					"id" : "3A3F12F9A5D3DF864A4A4BD88C625E66",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -610,6 +639,7 @@
 				},
 				{
 					"name" : "New_Game_Object_01",
+					"id" : "B6CB0009431347B64DFC65C7FD697FE8",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -626,6 +656,7 @@
 				},
 				{
 					"name" : "bawl",
+					"id" : "B958F246723DBF904A6EFCDC7D40EEFD",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -642,6 +673,7 @@
 				},
 				{
 					"name" : "che",
+					"id" : "147153D605DC9BA644BB3CF2F5049599",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -662,6 +694,7 @@
 				},
 				{
 					"name" : "Cylinder",
+					"id" : "E84AC02002C40C8E42D0E64E5D654B8C",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -692,6 +725,7 @@
 				},
 				{
 					"name" : "Skybox",
+					"id" : "4C29A0CDF42BEEA84403CB07063E5F52",
 					"type" : "skybox",
 					"visible" : true,
 					"casts shadow" : false,

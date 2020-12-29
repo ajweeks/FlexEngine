@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_depth_test",
 	"spawn player" : false,
 	"skybox data" : 
@@ -10,7 +10,7 @@
 	},
 	"camera" : 
 	{
-		"type" : "first-person",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "0.000, 0.000, 0.000",
-			"pitch" : 0.000000,
-			"yaw" : 3.141593
+			"position" : "-6.181, 0.337, -3.678",
+			"pitch" : -0.109727,
+			"yaw" : 0.038510
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "C59463449CBDD28D481E059CCC8874E2",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -48,6 +49,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "EB3B3D3BC1583DB34EA8DC977AD9A25F",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -58,6 +60,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "151CDCB63155FAB94C65B115824E3FF6",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -79,6 +82,7 @@
 		},
 		{
 			"name" : "block_1",
+			"id" : "D67100FAB06C6E854724987FBE43A400",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -86,10 +90,15 @@
 			{
 				"pos" : "5.500, 0.000, -1.000"
 			},
-			"mesh" : "cube.glb"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_2",
+			"id" : "E7231A3E2B9B8BA8455404ED78096047",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -97,10 +106,15 @@
 			{
 				"pos" : "10.500, 0.000, -2.000"
 			},
-			"mesh" : "cube.glb"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_3",
+			"id" : "0BBF1B9C7AB51EA049F73550B3FC6712",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -108,10 +122,15 @@
 			{
 				"pos" : "15.500, 0.000, -3.000"
 			},
-			"mesh" : "cube.glb"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_4",
+			"id" : "2FADC236E903A08E4970E6ABEBEFF470",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -119,7 +138,11 @@
 			{
 				"pos" : "20.500, 0.000, -4.000"
 			},
-			"mesh" : "cube.glb"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		}
 	]
 }

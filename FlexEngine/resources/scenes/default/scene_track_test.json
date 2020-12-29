@@ -2,6 +2,7 @@
 	"version" : 5,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
+	"player 0 guid" : "7AEEDF8930C49B91485A828EECCF8F74",
 	"skybox data" : 
 	{
 		"top colour" : "0.22, 0.58, 0.88, 0.00",
@@ -22,8 +23,8 @@
 		"transform" : 
 		{
 			"position" : "-69.147, 15.031, 58.696",
-			"pitch" : -0.273638,
-			"yaw" : 5.458113
+			"pitch" : -0.304592,
+			"yaw" : 5.482846
 		}
 	},
 	"objects" : 
@@ -838,20 +839,7 @@
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
-					},
-					"children" : 
-					[
-						{
-							"name" : "New_Game_Object_00",
-							"id" : "EF426873C73098BA44ADAD9B004673E6",
-							"type" : "NONE",
-							"visible" : true,
-							"casts shadow" : true,
-							"transform" : 
-							{
-							}
-						}
-					]
+					}
 				},
 				{
 					"name" : "PointLight_03",
@@ -934,20 +922,7 @@
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
-					},
-					"children" : 
-					[
-						{
-							"name" : "New_Game_Object_00",
-							"id" : "3BD6396C032EEAA544AEAB6EC0651103",
-							"type" : "NONE",
-							"visible" : true,
-							"casts shadow" : true,
-							"transform" : 
-							{
-							}
-						}
-					]
+					}
 				}
 			]
 		},
@@ -971,20 +946,7 @@
 					"transform" : 
 					{
 						"pos" : "-8.434, 7.266, 0.000"
-					},
-					"children" : 
-					[
-						{
-							"name" : "New_Game_Object_00",
-							"id" : "DAF996B7BD3C05894DA80E96BBE91DD9",
-							"type" : "NONE",
-							"visible" : true,
-							"casts shadow" : true,
-							"transform" : 
-							{
-							}
-						}
-					]
+					}
 				}
 			]
 		}

@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "Scene Empty",
 	"spawn player" : false,
 	"skybox data" : 
@@ -30,6 +30,7 @@
 	[
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "7A4F63B71FE65DA64C44E445F265B832",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -40,6 +41,7 @@
 		},
 		{
 			"name" : "Skybox",
+			"id" : "75C7C4C99FDECDBA4D5CD097E646926C",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,

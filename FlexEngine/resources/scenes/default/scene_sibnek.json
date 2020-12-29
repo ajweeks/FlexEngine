@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_sibnek",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-48.938, 26.033, -1.304",
-			"pitch" : 0.599027,
-			"yaw" : 1.292045
+			"position" : "-57.448, 3.466, 7.706",
+			"pitch" : 0.169489,
+			"yaw" : -0.028459
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "9E21BB97E67E608D4AD74FCC0530F8D3",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "45440631ED0751AE443997FF4A39A977",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "sibnek",
+			"id" : "E7C75C7194CDF4B24C2DFCEF17A6C45A",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -68,7 +71,9 @@
 			"materials" : 
 			[
 				"grid",
-				"pbr blue",
+				"grid",
+				"grid",
+				"grid",
 				"grid",
 				"grid",
 				"grid",
@@ -88,6 +93,7 @@
 		},
 		{
 			"name" : "PointLight_00",
+			"id" : "EA160EA47EA0A5BC40042E4E323A40D4",
 			"type" : "point light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -106,6 +112,7 @@
 		},
 		{
 			"name" : "PointLight_01",
+			"id" : "17F3514BFAAE13AE4539EDDE82D4C942",
 			"type" : "point light",
 			"visible" : true,
 			"casts shadow" : true,

@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_spring_test",
 	"spawn player" : false,
 	"skybox data" : 
@@ -30,6 +30,7 @@
 	[
 		{
 			"name" : "Skybox",
+			"id" : "736194605078D09646265A3DC2E363A4",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "88F285DC181BC9894CFE009954B01B70",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "D7246CA6B5828AAA4231EE871567AF25",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -77,6 +80,7 @@
 		},
 		{
 			"name" : "New_Object_00",
+			"id" : "D9048C576625EFA94053EF3B20973C2D",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -89,6 +93,7 @@
 			[
 				{
 					"name" : "spring1",
+					"id" : "33F9EB2D813252AF4B5A00C1DBE0B29A",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -98,11 +103,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "0.00, -10.87, 2.02"
+						"end point" : "0.00, -11.52, 1.89"
 					}
 				},
 				{
 					"name" : "spring2",
+					"id" : "DDB35F8FD8F453AD4C327B0C4FEE8099",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -112,11 +118,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-6.92, -8.51, 1.49"
+						"end point" : "-6.54, -9.17, 1.40"
 					}
 				},
 				{
 					"name" : "spring3",
+					"id" : "DFAEC52D028074A14B98E7BB4FBAE959",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -126,12 +133,13 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-18.32, -13.15, 6.89"
+						"end point" : "-12.07, -13.84, 4.54"
 					},
 					"children" : 
 					[
 						{
 							"name" : "Spring origin2",
+							"id" : "FCFEA8CDB508CFBC4EDDA64A38F6DE07",
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
@@ -145,6 +153,7 @@
 				},
 				{
 					"name" : "spring4",
+					"id" : "AC4A3651DF96769D45EBD23901234839",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -154,11 +163,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-28.35, -9.36, 5.08"
+						"end point" : "-29.89, -10.83, 5.51"
 					}
 				},
 				{
 					"name" : "spring3",
+					"id" : "A000570303E8CBAA413EFB2EF7A454BE",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -168,11 +178,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-8.03, -7.58, 15.97"
+						"end point" : "-6.13, -8.47, 12.21"
 					}
 				},
 				{
 					"name" : "spring4",
+					"id" : "55EAE826C1391DB545A1613A734DB90D",
 					"type" : "spring",
 					"visible" : true,
 					"casts shadow" : true,
@@ -182,7 +193,7 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-18.42, -10.01, 21.97"
+						"end point" : "-12.92, -12.07, 15.35"
 					}
 				}
 			]

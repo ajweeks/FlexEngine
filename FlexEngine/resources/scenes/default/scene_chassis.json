@@ -1,7 +1,8 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_chassis",
 	"spawn player" : true,
+	"player 0 guid" : "673A91A3F6F26DAF4D8034BF3985FAFB",
 	"skybox data" : 
 	{
 		"top colour" : "0.22, 0.58, 0.88, 0.00",
@@ -21,8 +22,8 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-0.000, 20.249, -18.000",
-			"pitch" : -0.785395,
+			"position" : "-0.000, 20.250, -18.000",
+			"pitch" : -0.785398,
 			"yaw" : 1.570796
 		}
 	},
@@ -30,6 +31,7 @@
 	[
 		{
 			"name" : "Skybox",
+			"id" : "DAF0521821F34EB14584905775B72FAC",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +48,7 @@
 		},
 		{
 			"name" : "ground",
+			"id" : "5540CD97E4D08BA040B4AD89466F2177",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
@@ -75,6 +78,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "9DBB638829AE2695410941BA8267224F",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,
@@ -96,13 +100,14 @@
 		},
 		{
 			"name" : "Vehicle",
+			"id" : "E4262E0C32AD39884AA714691327B732",
 			"type" : "vehicle",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-12.271, 1.349, -15.968",
-				"rot" : "3.141, 0.207, -3.142",
+				"pos" : "-12.271, 1.350, -15.969",
+				"rot" : "3.142, 0.207, 3.142",
 				"scale" : "0.999, 1.000, 1.010"
 			},
 			"materials" : 

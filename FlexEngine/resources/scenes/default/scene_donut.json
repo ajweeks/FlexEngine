@@ -1,5 +1,5 @@
 {
-	"version" : 4,
+	"version" : 5,
 	"name" : "scene_donut",
 	"spawn player" : false,
 	"skybox data" : 
@@ -21,15 +21,16 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.684, 25.407, -7.697",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-26.473, 9.080, 26.307",
+			"pitch" : -0.036441,
+			"yaw" : -0.905478
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "6A50D04E9281558E457A9814F613E56D",
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
@@ -46,6 +47,7 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "0F6205F6C105D99C451A6E96CBB23243",
 			"type" : "reflection probe",
 			"visible" : true,
 			"casts shadow" : true,
@@ -56,6 +58,7 @@
 		},
 		{
 			"name" : "donut",
+			"id" : "F064E1C44DB843B1411FAAB9AF86DFB6",
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
@@ -75,6 +78,7 @@
 			[
 				{
 					"name" : "donut2",
+					"id" : "7725190D2D416181453E9AE57CEEEDB8",
 					"type" : "object",
 					"visible" : true,
 					"casts shadow" : true,
@@ -94,6 +98,7 @@
 					[
 						{
 							"name" : "donut3",
+							"id" : "B8123D5F8BB321BD47E6A3D4E93193BF",
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
@@ -116,6 +121,7 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "9844037EC2F88A954FE6D074D9820BD1",
 			"type" : "directional light",
 			"visible" : true,
 			"casts shadow" : true,

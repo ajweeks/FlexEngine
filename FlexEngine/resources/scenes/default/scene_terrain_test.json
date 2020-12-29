@@ -81,7 +81,7 @@
 		{
 			"name" : "Terrain",
 			"id" : "D747202C0AE085AF4FF5E4A4815437FA",
-			"type" : "terrain",
+			"type" : "terrain generator",
 			"visible" : true,
 			"casts shadow" : true,
 			"transform" : 
