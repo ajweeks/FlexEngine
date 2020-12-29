@@ -654,7 +654,11 @@ namespace flex
 		PROFILE_AUTO("TrackManager DrawDebug");
 
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-		BezierCurveList* trackRiding = (player0 == nullptr ? nullptr : (player0->m_TrackRidingID == InvalidTrackID ? nullptr : &m_Tracks[(i32)player0->m_TrackRidingID]));
+		BezierCurveList* trackRiding = nullptr;
+		if (player0 != nullptr && player0->m_TrackRidingID != InvalidTrackID)
+		{
+			trackRiding = &m_Tracks[(i32)player0->m_TrackRidingID];
+		}
 		real distAlongClosestTrack = -1.0f;
 		TrackID closestTrackID = (player0 == nullptr ? 0 : GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
 			player0->m_TrackAttachMinDist, &distAlongClosestTrack));

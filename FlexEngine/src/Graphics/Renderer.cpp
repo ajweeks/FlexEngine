@@ -125,7 +125,7 @@ namespace flex
 			m_FullScreenTriVertexBufferData.Initialize(triVertexBufferDataCreateInfo);
 
 
-			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", GameObjectType::_NONE);
+			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", SID("object"));
 			m_PersistentObjects.push_back(fullScreenTriGameObject);
 			fullScreenTriGameObject->SetVisible(false);
 			fullScreenTriGameObject->SetCastsShadow(false);
@@ -174,7 +174,7 @@ namespace flex
 			m_Quad3DVertexBufferData.Initialize(quad3DVertexBufferDataCreateInfo);
 
 
-			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", GameObjectType::_NONE);
+			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", SID("object"));
 			m_PersistentObjects.push_back(quad3DGameObject);
 			quad3DGameObject->SetVisible(false);
 			quad3DGameObject->SetCastsShadow(false);
@@ -1812,7 +1812,7 @@ namespace flex
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
-			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, GameObjectType::_NONE);
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, SID("object"));
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// NOTE: G-buffer isn't rendered normally, it is handled separately
 			gBufferQuadGameObject->SetVisible(false);

@@ -35,7 +35,7 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
-		GameObject("Player " + std::to_string(index), GameObjectType::PLAYER, gameObjectID),
+		GameObject("Player " + std::to_string(index), SID("player"), gameObjectID),
 		m_Index(index),
 		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
 	{
@@ -88,7 +88,7 @@ namespace flex
 			mapTabletMatCreateInfo.bSerializable = false;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
+			m_MapTabletHolder = new GameObject("Map tablet", SID("object"));
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
@@ -101,7 +101,7 @@ namespace flex
 				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
 			}
 
-			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
+			m_MapTablet = new GameObject("Map tablet mesh", SID("object"));
 			Mesh* mapTabletMesh = m_MapTablet->SetMesh(new Mesh(m_MapTablet));
 			mapTabletMesh->LoadFromFile(MESH_DIRECTORY "map_tablet.glb", mapTabletMatID);
 			m_MapTabletHolder->AddChild(m_MapTablet);
@@ -181,10 +181,10 @@ namespace flex
 
 		if (m_ObjectInteractingWith != nullptr)
 		{
-			GameObjectType interactingWithType = m_ObjectInteractingWith->GetType();
-			switch (interactingWithType)
+			StringID interactingWithTypeID = m_ObjectInteractingWith->GetTypeID();
+			switch (interactingWithTypeID)
 			{
-			case GameObjectType::TERMINAL:
+			case SID("terminal"):
 			{
 				if (g_EngineInstance->IsRenderingImGui())
 				{
@@ -192,7 +192,7 @@ namespace flex
 					terminal->DrawTerminalUI();
 				}
 			} break;
-			case GameObjectType::VEHICLE:
+			case SID("vehicle"):
 			{
 				Vehicle* vehicle = static_cast<Vehicle*>(m_ObjectInteractingWith);
 
@@ -309,11 +309,11 @@ namespace flex
 			return true;
 		}
 
-		GameObjectType objType = gameObject->GetType();
-		switch (objType)
+		StringID objTypeID = gameObject->GetTypeID();
+		switch (objTypeID)
 		{
-		case GameObjectType::TERMINAL: return true;
-		case GameObjectType::VEHICLE: return true;
+		case SID("terminal"): return true;
+		case SID("vehicle"): return true;
 		}
 
 		return false;
@@ -323,10 +323,10 @@ namespace flex
 	{
 		if (gameObject == nullptr)
 		{
-			GameObjectType objType = m_ObjectInteractingWith->GetType();
-			switch (objType)
+			StringID objTypeID = m_ObjectInteractingWith->GetTypeID();
+			switch (objTypeID)
 			{
-			case GameObjectType::TERMINAL:
+			case SID("terminal"):
 			{
 				BaseCamera* cam = g_CameraManager->CurrentCamera();
 				assert(cam->type == CameraType::TERMINAL);
@@ -339,10 +339,10 @@ namespace flex
 			return;
 		}
 
-		GameObjectType objType = gameObject->GetType();
-		switch (objType)
+		StringID objTypeID = gameObject->GetTypeID();
+		switch (objTypeID)
 		{
-		case GameObjectType::TERMINAL:
+		case SID("terminal"):
 		{
 			Terminal* terminal = static_cast<Terminal*>(gameObject);
 			m_ObjectInteractingWith = gameObject;
@@ -360,17 +360,17 @@ namespace flex
 			}
 			terminalCam->SetTerminal(terminal);
 		} break;
-		case GameObjectType::WIRE:
+		case SID("wire"):
 		{
 			Wire* wire = static_cast<Wire*>(gameObject);
 
 			m_HeldItem = wire;
 		} break;
-		case GameObjectType::SOCKET:
+		case SID("socket"):
 		{
 			Socket* socket = static_cast<Socket*>(gameObject);
 
-			if (m_HeldItem != nullptr && m_HeldItem->GetType() == GameObjectType::WIRE)
+			if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
 			{
 				Wire* wire = (Wire*)m_HeldItem;
 				if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
@@ -387,7 +387,7 @@ namespace flex
 				}
 			}
 		} break;
-		case GameObjectType::VEHICLE:
+		case SID("vehicle"):
 		{
 			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
 

@@ -442,7 +442,7 @@ namespace flex
 	{
 	}
 
-	std::string JSONField::Print(i32 tabCount)
+	std::string JSONField::Print(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + '\"' + label + "\" : ");
@@ -524,8 +524,9 @@ namespace flex
 		return result;
 	}
 
-	std::string JSONObject::Print(i32 tabCount)
+	std::string JSONObject::Print(i32 tabCount) const
 	{
+		// TODO: Use StringBuilder in PrintFunctions
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + "{\n");
 

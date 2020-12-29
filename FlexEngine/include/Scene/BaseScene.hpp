@@ -94,14 +94,14 @@ namespace flex
 		std::vector<GameObject*> GetAllObjects();
 
 		template<class T>
-		std::vector<T*> GetObjectsOfType(GameObjectType type)
+		std::vector<T*> GetObjectsOfType(StringID typeID)
 		{
 			std::vector<GameObject*> gameObjects = GetAllObjects();
 			std::vector<T*> result;
 
 			for (GameObject* gameObject : gameObjects)
 			{
-				if (gameObject->GetType() == type)
+				if (gameObject->GetTypeID() == typeID)
 				{
 					result.push_back((T*)gameObject);
 				}
@@ -134,6 +134,10 @@ namespace flex
 
 		GameObject* GetGameObject(const GameObjectID& gameObjectID);
 
+		static const char* GameObjectTypeIDToString(StringID typeID);
+
+		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
+
 		static const i32 LATEST_SCENE_FILE_VERSION = 5;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
@@ -147,6 +151,8 @@ namespace flex
 
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
+
+		void CreateNewObject(const std::string& newObjectName, GameObject* parent = nullptr);
 
 		i32 m_SceneFileVersion = 1;
 		i32 m_MaterialsFileVersion = 1;
@@ -189,10 +195,13 @@ namespace flex
 		*/
 		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
+		void ReadGameObjectTypesFile();
+		void WriteGameObjectTypesFile();
+
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 
-		GameObjectType m_NewObjectImGuiSelectedType = GameObjectType::OBJECT;
+		Pair<StringID, std::string> m_NewObjectTypeIDPair;
 
 	};
 } // namespace flex

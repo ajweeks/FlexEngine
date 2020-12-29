@@ -336,22 +336,20 @@ namespace flex
 		PROFILE_END("Cart manager update");
 	}
 
-	CartID CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
+	Cart* CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
 	{
-		// TODO: Use custom memory allocator
 		CartID cartID = (CartID)m_Carts.size();
 		Cart* newCart = new Cart(cartID, name, gameObjectID);
 		m_Carts.push_back(newCart);
-		return cartID;
+		return newCart;
 	}
 
-	CartID CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
+	EngineCart* CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
 	{
-		// TODO: Use custom memory allocator
 		CartID cartID = (CartID)m_Carts.size();
 		EngineCart* newCart = new EngineCart(cartID, name, gameObjectID);
 		m_Carts.push_back(newCart);
-		return cartID;
+		return newCart;
 	}
 
 	Cart* CartManager::GetCart(CartID cartID) const
@@ -428,7 +426,7 @@ namespace flex
 	{
 		// TODO: Update chains properly!?
 
-		if (gameObject->GetType() == GameObjectType::CART)
+		if (gameObject->GetTypeID() == SID("cart"))
 		{
 			Cart* cart = (Cart*)gameObject;
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)

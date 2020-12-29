@@ -1080,7 +1080,7 @@ namespace flex
 				if (fileType == "glb" || fileType == "gltf")
 				{
 					BaseScene* scene = g_SceneManager->CurrentScene();
-					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), GameObjectType::OBJECT);
+					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), SID("object"));
 
 					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
 
@@ -1223,7 +1223,10 @@ namespace flex
 					{
 						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene();
 
-						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+						if (duplicatedObject != nullptr)
+						{
+							duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+						}
 					}
 
 					SelectNone();
@@ -1354,7 +1357,7 @@ namespace flex
 
 		if (m_TestShape == nullptr)
 		{
-			m_TestShape = new GameObject("Test Shape", GameObjectType::OBJECT);
+			m_TestShape = new GameObject("Test Shape", SID("object"));
 			Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
 			mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", m_TransformGizmoMatXID);
 			m_TestShape->GetTransform()->Scale(0.5f);
@@ -1362,7 +1365,7 @@ namespace flex
 			m_TestShape->SetVisible(false);
 		}
 
-		m_GridObject = new GameObject("Grid", GameObjectType::OBJECT);
+		m_GridObject = new GameObject("Grid", SID("object"));
 		Mesh* gridMesh = m_GridObject->SetMesh(new Mesh(m_GridObject));
 		RenderObjectCreateInfo gridCreateInfo = {};
 		gridCreateInfo.bEditorObject = true;
@@ -1371,7 +1374,7 @@ namespace flex
 		m_GridObject->PostInitialize();
 		m_GridObject->SetVisible(m_bShowGrid);
 
-		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
+		m_TransformGizmo = new GameObject("Transform gizmo", SID("object"));
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
 		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
@@ -1383,7 +1386,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
+			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", SID("object"));
 			translateXAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* xAxisMesh = translateXAxis->SetMesh(new Mesh(translateXAxis));
 
@@ -1398,7 +1401,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, false, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
+			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", SID("object"));
 			translateYAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* yAxisMesh = translateYAxis->SetMesh(new Mesh(translateYAxis));
 
@@ -1413,7 +1416,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, false, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
+			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", SID("object"));
 			translateZAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* zAxisMesh = translateZAxis->SetMesh(new Mesh(translateZAxis));
 
@@ -1437,7 +1440,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
+			m_TranslationGizmo = new GameObject("Translation gizmo", SID("object"));
 
 			m_TranslationGizmo->AddChildImmediate(translateXAxis);
 			m_TranslationGizmo->AddChildImmediate(translateYAxis);
@@ -1452,7 +1455,7 @@ namespace flex
 			real cylinderHeight = 0.2f;
 
 			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
+			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", SID("object"));
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			Mesh* xAxisMesh = rotationXAxis->SetMesh(new Mesh(rotationXAxis));
 
@@ -1467,7 +1470,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, false, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
+			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", SID("object"));
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			Mesh* yAxisMesh = rotationYAxis->SetMesh(new Mesh(rotationYAxis));
 
@@ -1482,7 +1485,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, false, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
+			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", SID("object"));
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 			Mesh* zAxisMesh = rotationZAxis->SetMesh(new Mesh(rotationZAxis));
 
@@ -1505,7 +1508,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::_NONE);
+			m_RotationGizmo = new GameObject("Rotation gizmo", SID("object"));
 
 			m_RotationGizmo->AddChildImmediate(rotationXAxis);
 			m_RotationGizmo->AddChildImmediate(rotationYAxis);
@@ -1523,7 +1526,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
+			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", SID("object"));
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* xAxisMesh = scaleXAxis->SetMesh(new Mesh(scaleXAxis));
 
@@ -1538,7 +1541,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, false, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
+			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", SID("object"));
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* yAxisMesh = scaleYAxis->SetMesh(new Mesh(scaleYAxis));
 
@@ -1553,7 +1556,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, false, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
+			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", SID("object"));
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* zAxisMesh = scaleZAxis->SetMesh(new Mesh(scaleZAxis));
 
@@ -1568,7 +1571,7 @@ namespace flex
 			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, false, &gizmoCreateInfo);
 
 			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
+			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", SID("object"));
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
 			Mesh* allAxesMesh = scaleAllAxes->SetMesh(new Mesh(scaleAllAxes));
 
@@ -1592,7 +1595,7 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::_NONE);
+			m_ScaleGizmo = new GameObject("Scale gizmo", SID("object"));
 
 			m_ScaleGizmo->AddChildImmediate(scaleXAxis);
 			m_ScaleGizmo->AddChildImmediate(scaleYAxis);
@@ -1626,7 +1629,7 @@ namespace flex
 
 		if (m_CurrentTransformGizmoState == TransformState::ROTATE)
 		{
-			real threshold = 0.2f;
+			real threshold = 0.1f;
 			real power = 0.05f;
 			if (camViewXAlignment <= threshold)
 			{
@@ -1656,8 +1659,8 @@ namespace flex
 		else
 		{
 			// TODO: Use different scheme for rotating when facing head-on (screen-space rather than world-space)
-			real threshold = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.965f : 0.9f;
-			real power = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.5f : 0.2f;
+			real threshold = 0.95f;
+			real power = 0.2f;
 			if (camViewXAlignment >= threshold)
 			{
 				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));

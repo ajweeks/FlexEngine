@@ -891,16 +891,14 @@ namespace flex
 					if (ImGui::MenuItem("Cart"))
 					{
 						CartManager* cartManager = scene->GetCartManager();
-						CartID cartID = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-						Cart* cart = cartManager->GetCart(cartID);
+						Cart* cart = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
 						player->AddToInventory(cart);
 					}
 
 					if (ImGui::MenuItem("Engine cart"))
 					{
 						CartManager* cartManager = scene->GetCartManager();
-						CartID cartID = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-						EngineCart* engineCart = static_cast<EngineCart*>(cartManager->GetCart(cartID));
+						EngineCart* engineCart = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
 						player->AddToInventory(engineCart);
 					}
 
@@ -1657,7 +1655,7 @@ namespace flex
 			return;
 		}
 
-		JSONObject rootObject{};
+		JSONObject rootObject = {};
 
 		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));

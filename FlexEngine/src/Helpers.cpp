@@ -1305,28 +1305,6 @@ namespace flex
 		return num;
 	}
 
-	const char* GameObjectTypeToString(GameObjectType type)
-	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
-
-		return GameObjectTypeStrings[(i32)type];
-	}
-
-	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
-	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
-
-		for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
-		{
-			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
-			{
-				return (GameObjectType)i;
-			}
-		}
-
-		return GameObjectType::_NONE;
-	}
-
 	std::string ReplaceBackSlashesWithForward(std::string str)
 	{
 		std::for_each(str.begin(), str.end(), [](char& c)
@@ -1598,25 +1576,6 @@ namespace flex
 	u32 GenerateUID()
 	{
 		return ++_lastUID;
-	}
-
-	// FNV-1a Hash http://isthe.com/chongo/tech/comp/fnv/
-	u64 Hash(const char* str)
-	{
-		const u64 prime = 1099511628211;
-		const u64 offset = 14695981039346656037;
-
-		u64 result = offset;
-
-		const char* p = str;
-		while (*p != 0)
-		{
-			char c = *p++;
-			result = result ^ c;
-			result = result * prime;
-		}
-
-		return result;
 	}
 
 	bool Contains(const std::vector<const char*>& vec, const char* val)

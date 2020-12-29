@@ -90,67 +90,6 @@ namespace flex
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};
 
-	// TODO: Make string-only (use SID) so it can be data-driven and modified in editor
-	enum class GameObjectType
-	{
-		OBJECT,
-		POINT_LIGHT,
-		DIRECTIONAL_LIGHT,
-		PLAYER,
-		SKYBOX,
-		REFLECTION_PROBE,
-		VALVE,
-		RISING_BLOCK,
-		GLASS_PANE,
-		CART,
-		ENGINE_CART,
-		MOBILE_LIQUID_BOX,
-		TERMINAL,
-		GERSTNER_WAVE,
-		BLOCKS,
-		PARTICLE_SYSTEM,
-		TERRAIN_GENERATOR,
-		WIRE,
-		SOCKET,
-		SPRING,
-		SOFT_BODY,
-		VEHICLE,
-
-		// NOTE: New entries need to also be added to GameObjectTypeStrings below, Renderer::DoCreateGameObjectButton, and GameObject::CreateObjectFromJSON
-
-		_NONE
-	};
-
-	static const char* GameObjectTypeStrings[] =
-	{
-		"object",
-		"point light",
-		"directional light",
-		"player",
-		"skybox",
-		"reflection probe",
-		"valve",
-		"rising block",
-		"glass pane",
-		"cart",
-		"engine cart",
-		"mobile liquid box",
-		"terminal",
-		"gerstner wave",
-		"blocks",
-		"particle system",
-		"terrain",
-		"wire",
-		"socket",
-		"spring",
-		"soft body",
-		"vehicle",
-
-		"NONE"
-	};
-
-	static_assert(ARRAY_LENGTH(GameObjectTypeStrings) == (u32)GameObjectType::_NONE + 1, "Length of GameObjectTypeStrings must match length of GameObjectType enum");
-
 	// Screen-space anchors
 	enum class AnchorPoint
 	{

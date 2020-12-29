@@ -32,7 +32,7 @@ namespace flex
 	struct PrefabInfo
 	{
 		std::string name;
-		GameObjectType type;
+		StringID typeID;
 		std::string prefabType;
 		bool bPrefab;
 		bool bVisible;
@@ -44,13 +44,13 @@ namespace flex
 	class GameObject
 	{
 	public:
-		GameObject(const std::string& name, GameObjectType type, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
 		virtual ~GameObject();
 
 		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
 		static GameObject* CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		static GameObject* CreateObjectOfType(GameObjectType gameObjectType, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		static GameObject* CreateObjectOfType(BaseScene* scene, StringID typeID, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID, const char* optionalTypeStr = nullptr);
 
 		enum CopyFlags : u32
 		{
@@ -111,15 +111,15 @@ namespace flex
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
-		u32 GetChildCountOfType(GameObjectType objType, bool bRecurse);
+		u32 GetChildCountOfType(StringID objTypeID, bool bRecurse);
 
 		GameObject* AddSibling(GameObject* child);
 		GameObject* AddSiblingImmediate(GameObject* child);
 
 		template<class T>
-		void GetChildrenOfType(GameObjectType objType, bool bRecurse, std::vector<T*>& children)
+		void GetChildrenOfType(StringID objTypeID, bool bRecurse, std::vector<T*>& children)
 		{
-			if (m_Type == objType)
+			if (m_TypeID == objTypeID)
 			{
 				children.push_back((T*)this);
 			}
@@ -128,7 +128,7 @@ namespace flex
 			{
 				for (GameObject* child : m_Children)
 				{
-					child->GetChildrenOfType(objType, bRecurse, children);
+					child->GetChildrenOfType(objTypeID, bRecurse, children);
 				}
 			}
 		}
@@ -186,7 +186,7 @@ namespace flex
 		// Called when another object is no longer overlapping
 		void OnOverlapEnd(GameObject* other);
 
-		GameObjectType GetType() const;
+		StringID GetTypeID() const;
 
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
@@ -225,7 +225,7 @@ namespace flex
 
 		Transform m_Transform;
 
-		GameObjectType m_Type = GameObjectType::_NONE;
+		StringID m_TypeID = InvalidStringID;
 
 		/*
 		* If true, this object will be written out to file
@@ -472,7 +472,7 @@ namespace flex
 		Cart(CartID cartID,
 			const std::string& name,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
-			GameObjectType type = GameObjectType::CART,
+			StringID typeID = SID("cart"),
 			const char* meshName = emptyCartMeshName);
 
 		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
@@ -810,6 +810,7 @@ namespace flex
 		bool DestroyWire(Wire* wire);
 
 		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx = 0, Wire* connectedWire = nullptr);
+		Socket* AddSocket(Socket* socket, i32 slotIdx = 0, Wire* connectedWire = nullptr);
 
 		std::vector<Wire*> wires;
 		std::vector<Socket*> sockets;

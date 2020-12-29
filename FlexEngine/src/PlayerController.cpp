@@ -276,7 +276,7 @@ namespace flex
 						}
 						else if (m_Player->m_HeldItem != nullptr)
 						{
-							if (m_Player->m_HeldItem->GetType() == GameObjectType::WIRE)
+							if (m_Player->m_HeldItem->GetTypeID() == SID("wire"))
 							{
 								Wire* wire = (Wire*)m_Player->m_HeldItem;
 								wire->SetInteractingWith(nullptr);
@@ -297,9 +297,9 @@ namespace flex
 					GameObject* gameObject = m_Player->m_Inventory[0];
 					bool bPlaced = false;
 
-					switch (gameObject->GetType())
+					switch (gameObject->GetTypeID())
 					{
-					case GameObjectType::ENGINE_CART:
+					case SID("engine cart"):
 					{
 						EngineCart* engineCart = static_cast<EngineCart*>(gameObject);
 
@@ -316,7 +316,7 @@ namespace flex
 								engineCart->SetVisible(true);
 							}
 					} break;
-					case GameObjectType::CART:
+					case SID("cart"):
 					{
 						Cart* cart = static_cast<Cart*>(gameObject);
 
@@ -333,11 +333,11 @@ namespace flex
 							cart->SetVisible(true);
 						}
 					} break;
-					case GameObjectType::MOBILE_LIQUID_BOX:
+					case SID("mobile liquid box"):
 					{
 						MobileLiquidBox* mobileLiquidBox = static_cast<MobileLiquidBox*>(gameObject);
 
-						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>(GameObjectType::CART);
+						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>(SID("cart"));
 						glm::vec3 playerPos = m_Player->m_Transform.GetWorldPosition();
 						real threshold = 8.0f;
 						real closestCartDist = threshold;
@@ -431,7 +431,7 @@ namespace flex
 		bool bInteractingWithTerminal = false;
 		{
 			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
-			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetType() == GameObjectType::TERMINAL);
+			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
 		}
 
 		if (m_Player->m_bPossessed)
@@ -721,8 +721,7 @@ namespace flex
 			if (action == Action::DBG_ADD_CART_TO_INV)
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-				Cart* cart = scene->GetCartManager()->GetCart(cartID);
+				Cart* cart = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
 				cart->SetVisible(false);
 				m_Player->m_Inventory.push_back(cart);
 				return EventReply::CONSUMED;
@@ -731,8 +730,7 @@ namespace flex
 			if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
 			{
 				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-				EngineCart* engineCart = static_cast<EngineCart*>(scene->GetCartManager()->GetCart(cartID));
+				EngineCart* engineCart = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
 				engineCart->SetVisible(false);
 				m_Player->m_Inventory.push_back(engineCart);
 				return EventReply::CONSUMED;

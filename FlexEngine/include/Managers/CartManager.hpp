@@ -6,6 +6,7 @@
 namespace flex
 {
 	class Cart;
+	class EngineCart;
 	class BaseScene;
 
 	struct CartChain
@@ -43,8 +44,8 @@ namespace flex
 		void Update();
 
 		// Creates a new cart with given name and adds to the current scene
-		CartID CreateCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
-		CartID CreateEngineCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
+		Cart* CreateCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
+		EngineCart* CreateEngineCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID);
 		Cart* GetCart(CartID cartID) const;
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);

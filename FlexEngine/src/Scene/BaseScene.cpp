@@ -31,10 +31,13 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 #include "Track/BezierCurve3D.hpp"
 
 namespace flex
 {
+	std::map<StringID, std::string> BaseScene::GameObjectTypeStringIDPairs;
+
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName),
 		m_TrackManager(this),
@@ -100,6 +103,8 @@ namespace flex
 
 			m_bLoaded = true;
 		}
+
+		ReadGameObjectTypesFile();
 
 		// All updating to new file version should be complete by this point
 		m_SceneFileVersion = LATEST_SCENE_FILE_VERSION;
@@ -376,8 +381,16 @@ namespace flex
 		for (const JSONObject& rootObjectJSON : rootObjects)
 		{
 			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion);
-			rootObj->GetTransform()->UpdateParentTransform();
-			AddRootObjectImmediate(rootObj);
+			if (rootObj != nullptr)
+			{
+				rootObj->GetTransform()->UpdateParentTransform();
+				AddRootObjectImmediate(rootObj);
+			}
+			else
+			{
+				std::string firstFieldName = rootObjectJSON.fields.empty() ? std::string() : rootObjectJSON.fields[0].Print(0);
+				PrintError("Failed to create game object from JSON object with first field %s\n", firstFieldName.c_str());
+			}
 		}
 
 		if (sceneRootObject.HasField("track manager"))
@@ -960,14 +973,15 @@ namespace flex
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
-			if (ImGui::BeginCombo("Type", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]))
+			if (ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str()))
 			{
-				for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
+				for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
 				{
-					bool bSelected = (i == (i32)m_NewObjectImGuiSelectedType);
-					if (ImGui::Selectable(GameObjectTypeStrings[i], &bSelected))
+					bool bSelected = (typeIDPair.first == m_NewObjectTypeIDPair.first);
+					if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
 					{
-						m_NewObjectImGuiSelectedType = (GameObjectType)i;
+						m_NewObjectTypeIDPair.first = typeIDPair.first;
+						m_NewObjectTypeIDPair.second = typeIDPair.second;
 					}
 				}
 
@@ -985,101 +999,14 @@ namespace flex
 
 				if (!newObjectName.empty())
 				{
-					// TODO: Switch to a data-based factory/reflection system to get rid of all this!!
-					switch (m_NewObjectImGuiSelectedType)
+					GameObject* parent = nullptr;
+
+					if (g_Editor->HasSelectedObject())
 					{
-					case GameObjectType::OBJECT:
-					{
-						GameObject* newGameObject = new GameObject(newObjectName, GameObjectType::OBJECT);
+						parent = g_Editor->GetSelectedObjects(false)[0];
+					}
 
-						Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
-						mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
-
-						g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
-
-						newGameObject->Initialize();
-						newGameObject->PostInitialize();
-
-						g_Editor->SetSelectedObject(newGameObject);
-
-					} break;
-					case GameObjectType::TERRAIN_GENERATOR:
-					{
-						TerrainGenerator* terrainGenerator = new TerrainGenerator(newObjectName);
-
-						g_SceneManager->CurrentScene()->AddRootObject(terrainGenerator);
-
-						terrainGenerator->Initialize();
-						terrainGenerator->PostInitialize();
-
-						g_Editor->SetSelectedObject(terrainGenerator);
-					} break;
-					case GameObjectType::WIRE:
-					{
-						Wire* newWire = g_PluggablesSystem->AddWire(InvalidGameObjectID);
-
-						newWire->Initialize();
-						newWire->PostInitialize();
-
-						g_SceneManager->CurrentScene()->AddRootObject(newWire);
-					} break;
-					case GameObjectType::SOCKET:
-					{
-						GameObject* parent = nullptr;
-						u32 socketIndex = 0;
-						if (g_Editor->HasSelectedObject())
-						{
-							parent = g_Editor->GetSelectedObjects(false)[0];
-							socketIndex = (u32)parent->sockets.size();
-						}
-						std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3);
-						Socket* socket = g_PluggablesSystem->AddSocket(socketName, InvalidGameObjectID, socketIndex);
-
-						socket->Initialize();
-						socket->PostInitialize();
-
-						if (parent)
-						{
-							parent->AddChild(socket);
-						}
-						else
-						{
-							g_SceneManager->CurrentScene()->AddRootObject(socket);
-						}
-					} break;
-					case GameObjectType::SPRING:
-					{
-						SpringObject* newObject = new SpringObject(newObjectName);
-
-						newObject->Initialize();
-						newObject->PostInitialize();
-
-						g_SceneManager->CurrentScene()->AddRootObject(newObject);
-					} break;
-					case GameObjectType::SOFT_BODY:
-					{
-						SoftBody* softBody = new SoftBody(newObjectName);
-						g_SceneManager->CurrentScene()->AddRootObject(softBody);
-
-						softBody->Initialize();
-						softBody->PostInitialize();
-
-						g_Editor->SetSelectedObject(softBody);
-					} break;
-					case GameObjectType::VEHICLE:
-					{
-						Vehicle* vehicle = new Vehicle(newObjectName);
-						g_SceneManager->CurrentScene()->AddRootObject(vehicle);
-
-						vehicle->Initialize();
-						vehicle->PostInitialize();
-
-						g_Editor->SetSelectedObject(vehicle);
-					} break;
-					default:
-						PrintWarn("Unhandled game object type %s\n", GameObjectTypeStrings[(i32)m_NewObjectImGuiSelectedType]);
-						break;
-					};
+					CreateNewObject(newObjectName, parent);
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -1099,6 +1026,61 @@ namespace flex
 
 			ImGui::EndPopup();
 		}
+	}
+
+	void BaseScene::CreateNewObject(const std::string& newObjectName, GameObject* parent /* = nullptr */)
+	{
+		GameObject* newGameObject = GameObject::CreateObjectOfType(this, m_NewObjectTypeIDPair.first, newObjectName);
+
+		if (newGameObject == nullptr)
+		{
+			// TODO: Type may not yet exist, create base game object in it's place so at least it can be seen in editor
+			return;
+		}
+
+		// Special case handlings
+		switch (m_NewObjectTypeIDPair.first)
+		{
+		case SID("object"):
+		{
+			Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
+			mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
+
+		} break;
+		case SID("socket"):
+		{
+			std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3);
+
+			u32 socketIndex = 0;
+			if (parent != nullptr)
+			{
+				socketIndex = (u32)parent->sockets.size();
+			}
+
+			Socket* socket = g_PluggablesSystem->AddSocket((Socket*)newGameObject, socketIndex);
+
+			socket->Initialize();
+			socket->PostInitialize();
+
+		} break;
+		default:
+			PrintWarn("Unhandled game object type in BaseScene::DoCreateGameObjectButton: %s\n", m_NewObjectTypeIDPair.second.c_str());
+			break;
+		};
+
+		newGameObject->Initialize();
+		newGameObject->PostInitialize();
+
+		if (parent != nullptr)
+		{
+			parent->AddChild(newGameObject);
+		}
+		else
+		{
+			g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+		}
+
+		g_Editor->SetSelectedObject(newGameObject);
 	}
 
 	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject)
@@ -1382,6 +1364,16 @@ namespace flex
 			return nullptr;
 		}
 		return iter->second;
+	}
+
+	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
+	{
+		auto iter = GameObjectTypeStringIDPairs.find(typeID);
+		if (iter == GameObjectTypeStringIDPairs.end())
+		{
+			return "";
+		}
+		return iter->second.c_str();
 	}
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
@@ -1742,8 +1734,6 @@ namespace flex
 
 		const bool bRootObject = (gameObject->GetParent() == nullptr);
 
-		RemoveObjectImmediateRecursive(gameObject->ID, bDestroy);
-
 		if (bRootObject)
 		{
 			auto iter = m_RootObjects.begin();
@@ -1757,7 +1747,10 @@ namespace flex
 				++iter;
 			}
 		}
-		else
+
+		RemoveObjectImmediateRecursive(gameObjectID, bDestroy);
+
+		if (!bRootObject)
 		{
 			if (!bDestroy)
 			{
@@ -1804,7 +1797,7 @@ namespace flex
 
 		if (bDestroy)
 		{
-			gameObject->Destroy(false);
+			gameObject->Destroy();
 			delete gameObject;
 		}
 		else
@@ -1909,6 +1902,48 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	void BaseScene::ReadGameObjectTypesFile()
+	{
+		GameObjectTypeStringIDPairs = {};
+		std::string fileContents;
+		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
+		{
+			std::vector<std::string> lines = Split(fileContents, '\n');
+			for (const std::string& line : lines)
+			{
+				if (!line.empty())
+				{
+					const char* lineCStr = line.c_str();
+					StringID typeID = Hash(lineCStr);
+					if (GameObjectTypeStringIDPairs.find(typeID) != GameObjectTypeStringIDPairs.end())
+					{
+						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
+					}
+					GameObjectTypeStringIDPairs.emplace(typeID, line);
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	void BaseScene::WriteGameObjectTypesFile()
+	{
+		StringBuilder fileContents;
+
+		for (auto iter = GameObjectTypeStringIDPairs.begin(); iter != GameObjectTypeStringIDPairs.end(); ++iter)
+		{
+			fileContents.AppendLine(iter->second);
+		}
+
+		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
+		{
+			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
+		}
 	}
 
 	std::vector<GameObject*>& BaseScene::GetRootObjects()

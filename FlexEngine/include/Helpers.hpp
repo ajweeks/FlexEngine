@@ -174,9 +174,6 @@ namespace flex
 	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
 	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
 
-	const char* GameObjectTypeToString(GameObjectType type);
-	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr);
-
 	FLEX_NO_DISCARD std::string ReplaceBackSlashesWithForward(std::string str);
 	FLEX_NO_DISCARD std::string RelativePathToAbsolute(std::string relativePath);
 
@@ -224,7 +221,23 @@ namespace flex
 	// globally-unique value use Platform::GenerateGUID instead)
 	u32 GenerateUID();
 
-	u64 Hash(const char* str);
+	static const u64 FNV1_64_Prime = 1099511628211u;
+	static const u64 FNV1_64_Offset = 14695981039346656037u;
+
+	// FNV-1a Hash http://isthe.com/chongo/tech/comp/fnv/
+	constexpr u64 Hash(const char* str)
+	{
+		u64 result = FNV1_64_Offset;
+
+		while (*str != 0)
+		{
+			char c = *str++;
+			result = result ^ c;
+			result = result * FNV1_64_Prime;
+		}
+
+		return result;
+	}
 
 	template<typename T>
 	bool Contains(const std::vector<T>& vec, T val)
@@ -233,11 +246,8 @@ namespace flex
 	}
 
 	bool Contains(const std::vector<const char*>& vec, const char* val);
-
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
-
 	bool Contains(const std::string& str, const std::string& pattern);
-
 	bool Contains(const std::string& str, char pattern);
 
 	template<typename T>
