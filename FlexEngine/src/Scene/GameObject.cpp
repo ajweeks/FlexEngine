@@ -108,7 +108,7 @@ namespace flex
 
 	GameObject* GameObject::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		if (parent->GetTypeID() == SID("directional light"))
+		if (parent != nullptr && (parent->GetTypeID() == SID("directional light")))
 		{
 			PrintError("Attempted to copy directional light\n");
 			return nullptr;
@@ -212,8 +212,11 @@ namespace flex
 		default:
 		{
 			std::string sceneName = scene->GetName();
-			PrintWarn("Unhandled game object type in CreateGameObjectFromJSON (Object name: %s, type: %s) in scene %s\n",
+			PrintWarn("Unhandled game object type in CreateGameObjectFromJSON (Object name: %s, type: %s) in scene %s.\n"
+				"Creating placeholder base object.\n",
 				objectName.c_str(), (optionalTypeStr == nullptr ? "unknown" : optionalTypeStr), sceneName.c_str());
+
+			return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		} break;
 		}
 

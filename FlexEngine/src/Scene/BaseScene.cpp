@@ -513,34 +513,37 @@ namespace flex
 				if (bRenameSceneFileName)
 				{
 					std::string newSceneFileNameStr(newSceneFileName);
-					std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(GetDefaultRelativeFilePath()));
-					std::string newSceneFilePath = fileDir + newSceneFileNameStr;
-					bool bNameEmpty = newSceneFileNameStr.empty();
-					bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
-					bool bFileExists = FileExists(newSceneFilePath);
-					bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
+					if (newSceneFileNameStr.compare(m_FileName) != 0)
+					{
+						std::string fileDir = ExtractDirectoryString(RelativePathToAbsolute(GetDefaultRelativeFilePath()));
+						std::string newSceneFilePath = fileDir + newSceneFileNameStr;
+						bool bNameEmpty = newSceneFileNameStr.empty();
+						bool bCorrectFileType = EndsWith(newSceneFileNameStr, ".json");
+						bool bFileExists = FileExists(newSceneFilePath);
+						bool bSceneNameValid = (!bNameEmpty && bCorrectFileType && !bFileExists);
 
-					if (bSceneNameValid)
-					{
-						if (SetFileName(newSceneFileNameStr, true))
+						if (bSceneNameValid)
 						{
-							ImGui::CloseCurrentPopup();
+							if (SetFileName(newSceneFileNameStr, true))
+							{
+								ImGui::CloseCurrentPopup();
+							}
 						}
-					}
-					else
-					{
-						PrintError("Attempted name scene with invalid name: %s\n", newSceneFileNameStr.c_str());
-						if (bNameEmpty)
+						else
 						{
-							PrintError("(file name is empty!)\n");
-						}
-						else if (!bCorrectFileType)
-						{
-							PrintError("(must end with \".json\"!)\n");
-						}
-						else if (bFileExists)
-						{
-							PrintError("(file already exists!)\n");
+							PrintError("Attempted to set scene name to invalid name: %s\n", newSceneFileNameStr.c_str());
+							if (bNameEmpty)
+							{
+								PrintError("(file name is empty!)\n");
+							}
+							else if (!bCorrectFileType)
+							{
+								PrintError("(must end with \".json\"!)\n");
+							}
+							else if (bFileExists)
+							{
+								PrintError("(file already exists!)\n");
+							}
 						}
 					}
 				}
@@ -644,6 +647,13 @@ namespace flex
 					sceneNameMaxCharCount,
 					ImGuiInputTextFlags_EnterReturnsTrue);
 
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
 				bDuplicateScene |= ImGui::Button("Duplicate");
 
 				bool bValidInput = true;
@@ -661,13 +671,6 @@ namespace flex
 					{
 						bCloseContextMenu = true;
 					}
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
 				}
 
 				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
@@ -710,6 +713,13 @@ namespace flex
 				ImGui::Text("%s", textStr.c_str());
 				ImGui::PopStyleColor();
 
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
 				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
@@ -724,13 +734,6 @@ namespace flex
 				ImGui::PopStyleColor();
 				ImGui::PopStyleColor();
 				ImGui::PopStyleColor();
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
 
 				if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
 				{
@@ -940,6 +943,10 @@ namespace flex
 		if (ImGui::Button(buttonName))
 		{
 			ImGui::OpenPopup(popupName);
+
+			m_NewObjectTypeIDPair.first = SID("object");
+			m_NewObjectTypeIDPair.second = GameObjectTypeStringIDPairs[SID("object")];
+
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
 			const std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
@@ -967,7 +974,6 @@ namespace flex
 			const size_t maxStrLen = 256;
 			newObjectName.resize(maxStrLen);
 
-
 			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
 				maxStrLen,
@@ -987,6 +993,60 @@ namespace flex
 
 				ImGui::EndCombo();
 			}
+
+			static std::string newObjectType;
+
+			const char* newTypePopupStr = "New Object Type";
+			if (ImGui::Button("New Type"))
+			{
+				ImGui::OpenPopup(newTypePopupStr);
+				newObjectType.clear();
+				newObjectType.resize(maxStrLen);
+			}
+
+			if (ImGui::BeginPopupModal(newTypePopupStr, NULL,
+				ImGuiWindowFlags_AlwaysAutoResize |
+				ImGuiWindowFlags_NoSavedSettings |
+				ImGuiWindowFlags_NoNavInputs))
+			{
+				bool bCreateType = false;
+				if (ImGui::InputText("Type", (char*)newObjectType.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					bCreateType = true;
+				}
+
+				if (ImGui::Button("Cancel"))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Create") || bCreateType)
+				{
+					// Remove excess trailing \0 chars
+					newObjectType = std::string(newObjectType.c_str());
+
+					if (!newObjectType.empty())
+					{
+						StringID newTypeID = Hash(newObjectType.c_str());
+						GameObjectTypeStringIDPairs.emplace(newTypeID, newObjectType);
+
+						WriteGameObjectTypesFile();
+
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::EndPopup();
+			}
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
 
 			bCreate |= ImGui::Button("Create");
 
@@ -1012,13 +1072,6 @@ namespace flex
 				}
 			}
 
-			ImGui::SameLine();
-
-			if (ImGui::Button("Cancel"))
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
 			{
 				ImGui::CloseCurrentPopup();
@@ -1032,20 +1085,13 @@ namespace flex
 	{
 		GameObject* newGameObject = GameObject::CreateObjectOfType(this, m_NewObjectTypeIDPair.first, newObjectName);
 
-		if (newGameObject == nullptr)
-		{
-			// TODO: Type may not yet exist, create base game object in it's place so at least it can be seen in editor
-			return;
-		}
-
-		// Special case handlings
+		// Special case handling
 		switch (m_NewObjectTypeIDPair.first)
 		{
 		case SID("object"):
 		{
 			Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
 			mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
-
 		} break;
 		case SID("socket"):
 		{
@@ -1057,15 +1103,8 @@ namespace flex
 				socketIndex = (u32)parent->sockets.size();
 			}
 
-			Socket* socket = g_PluggablesSystem->AddSocket((Socket*)newGameObject, socketIndex);
-
-			socket->Initialize();
-			socket->PostInitialize();
-
+			g_PluggablesSystem->AddSocket((Socket*)newGameObject, socketIndex);
 		} break;
-		default:
-			PrintWarn("Unhandled game object type in BaseScene::DoCreateGameObjectButton: %s\n", m_NewObjectTypeIDPair.second.c_str());
-			break;
 		};
 
 		newGameObject->Initialize();
