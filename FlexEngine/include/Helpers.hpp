@@ -391,6 +391,7 @@ namespace flex
 	struct GUID
 	{
 		GUID();
+		GUID(u64 data1, u64 data2);
 
 		GUID(const GUID& other);
 		GUID(const GUID&& other);

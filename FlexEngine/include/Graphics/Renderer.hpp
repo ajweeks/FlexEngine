@@ -89,6 +89,7 @@ namespace flex
 		virtual void Initialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
+		void DestroyPersistentObjects();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
 		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;

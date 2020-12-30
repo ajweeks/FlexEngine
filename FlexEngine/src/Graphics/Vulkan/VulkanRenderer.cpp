@@ -665,13 +665,6 @@ namespace flex
 
 			m_SkyBoxMesh = nullptr;
 
-			for (GameObject* obj : m_PersistentObjects)
-			{
-				obj->Destroy();
-				delete obj;
-			}
-			m_PersistentObjects.clear();
-
 			u32 activeRenderObjectCount = GetActiveRenderObjectCount();
 			if (activeRenderObjectCount > 0)
 			{
@@ -7620,12 +7613,14 @@ namespace flex
 						}
 						else if (m_bEnableSelectionWireframe)
 						{
-							std::vector<GameObject*> selectedObjects = g_Editor->GetSelectedObjects(true);
+							std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs(true);
 							std::vector<RenderID> renderIDs;
-							renderIDs.reserve(selectedObjects.size());
+							renderIDs.reserve(selectedObjectIDs.size());
 
-							for (GameObject* selectedObj : selectedObjects)
+							BaseScene* currentScene = g_SceneManager->CurrentScene();
+							for (const GameObjectID& selectedObjID : selectedObjectIDs)
 							{
+								GameObject* selectedObj = currentScene->GetGameObject(selectedObjID);
 								Mesh* mesh = selectedObj->GetMesh();
 								if (mesh != nullptr)
 								{

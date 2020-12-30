@@ -191,6 +191,11 @@ namespace flex
 		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
 
+		void AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
+		void RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
+
+		bool SelfOrChildIsSelected() const;
+
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
 		// Filled if this object is a trigger
@@ -213,7 +218,7 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
-		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
+		void CopyGenericFieldsAndAddToScene(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
 		void SetOutputSignal(i32 slotIdx, i32 value);
 

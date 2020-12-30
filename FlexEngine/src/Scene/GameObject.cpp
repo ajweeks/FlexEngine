@@ -114,9 +114,9 @@ namespace flex
 			return nullptr;
 		}
 
-		GameObject* newGameObject = new GameObject(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName), m_TypeID);
+		GameObject* newGameObject = new GameObject(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name), m_TypeID);
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -307,9 +307,14 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		if (g_Editor->IsObjectSelected(this))
+		if (g_Editor->IsObjectSelected(ID))
 		{
-			g_Editor->DeselectObject(this);
+			g_Editor->DeselectObject(ID);
+		}
+
+		if (g_SceneManager->CurrentSceneExists())
+		{
+			g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
 		}
 	}
 
@@ -500,7 +505,7 @@ namespace flex
 					m_RigidBody->MatchParentTransform();
 				}
 
-				if (g_Editor->IsObjectSelected(this))
+				if (g_Editor->IsObjectSelected(ID))
 				{
 					g_Editor->CalculateSelectedObjectsCenter();
 				}
@@ -960,7 +965,7 @@ namespace flex
 			GameObject* newGameObject = CopySelfAndAddToScene();
 			if (newGameObject != nullptr)
 			{
-				g_Editor->SetSelectedObject(newGameObject);
+				g_Editor->SetSelectedObject(newGameObject->ID);
 			}
 
 			return true;
@@ -1443,6 +1448,61 @@ namespace flex
 			child->RemoveSelfAndChildrenToVec(vec);
 		}
 	}
+	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	{
+		if (Find(vec, ID) == vec.end())
+		{
+			vec.push_back(ID);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			if (Find(vec, child->ID) == vec.end())
+			{
+				vec.push_back(child->ID);
+			}
+
+			child->AddSelfIDAndChildrenToVec(vec);
+		}
+	}
+
+	void GameObject::RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	{
+		auto iter = Find(vec, ID);
+		if (iter != vec.end())
+		{
+			vec.erase(iter);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			auto childIter = Find(vec, child->ID);
+			if (childIter != vec.end())
+			{
+				vec.erase(childIter);
+			}
+
+			child->RemoveSelfIDAndChildrenToVec(vec);
+		}
+	}
+
+	bool GameObject::SelfOrChildIsSelected() const
+	{
+		if (g_Editor->IsObjectSelected(ID))
+		{
+			return true;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			if (child->SelfOrChildIsSelected())
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
 
 	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
 	{
@@ -1465,7 +1525,7 @@ namespace flex
 		return m_TypeID;
 	}
 
-	void GameObject::CopyGenericFields(GameObject* newGameObject, GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
+	void GameObject::CopyGenericFieldsAndAddToScene(GameObject* newGameObject, GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		RenderObjectCreateInfo* createInfoPtr = nullptr;
 		std::vector<MaterialID> matIDs;
@@ -1476,19 +1536,19 @@ namespace flex
 
 		*newGameObject->GetTransform() = m_Transform;
 
-		if (parent)
+		if (parent != nullptr)
 		{
 			parent->AddChild(newGameObject);
 		}
 		else
 		{
-			if (m_Parent)
+			if (m_Parent != nullptr)
 			{
-				m_Parent->AddChild(newGameObject);
+				g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
 			}
 			else
 			{
-				g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+				g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 			}
 		}
 
@@ -1566,7 +1626,7 @@ namespace flex
 			} break;
 			default:
 			{
-				PrintWarn("Unhanded shape type in GameObject::CopyGenericFields\n");
+				PrintWarn("Unhanded shape type in GameObject::CopyGenericFieldsAndAddToScene\n");
 			} break;
 			}
 
@@ -1584,7 +1644,6 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					std::string newChildName = child->GetName();
 					GameObject* newChild = child->CopySelfAndAddToScene(newGameObject, copyFlags);
 					if (newGameObject != nullptr)
 					{
@@ -2199,7 +2258,7 @@ namespace flex
 
 	GameObject* Valve::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		Valve* newGameObject = new Valve(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+		Valve* newGameObject = new Valve(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->minRotation = minRotation;
 		newGameObject->maxRotation = maxRotation;
@@ -2208,7 +2267,7 @@ namespace flex
 		newGameObject->rotationSpeed = rotationSpeed;
 		newGameObject->rotation = rotation;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -2381,14 +2440,14 @@ namespace flex
 
 	GameObject* RisingBlock::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		RisingBlock* newGameObject = new RisingBlock(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+		RisingBlock* newGameObject = new RisingBlock(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->valve = valve;
 		newGameObject->moveAxis = moveAxis;
 		newGameObject->bAffectedByGravity = bAffectedByGravity;
 		newGameObject->startingPos = startingPos;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -2558,11 +2617,11 @@ namespace flex
 
 	GameObject* GlassPane::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		GlassPane* newGameObject = new GlassPane(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+		GlassPane* newGameObject = new GlassPane(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->bBroken = bBroken;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -2619,11 +2678,11 @@ namespace flex
 
 	GameObject* ReflectionProbe::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		ReflectionProbe* newGameObject = new ReflectionProbe(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+		ReflectionProbe* newGameObject = new ReflectionProbe(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->captureMatID = captureMatID;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -2706,9 +2765,9 @@ namespace flex
 
 	GameObject* Skybox::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		Skybox* newGameObject = new Skybox(GetIncrementedPostFixedStr(m_Name, s_DefaultNewGameObjectName));
+		Skybox* newGameObject = new Skybox(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -2995,12 +3054,12 @@ namespace flex
 			return nullptr;
 		}
 
-		PointLight* newGameObject = new PointLight(g_SceneManager->CurrentScene()->GetUniqueObjectName("PointLight_", 2));
+		PointLight* newGameObject = new PointLight(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		memcpy(&newGameObject->data, &data, sizeof(PointLightData));
 		// newGameObject->pointLightID will be filled out in Initialize
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -3190,12 +3249,12 @@ namespace flex
 	GameObject* Cart::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		Cart* newGameObject = new Cart(cartID);
+		Cart* newGameObject = new Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->currentTrackID = currentTrackID;
 		newGameObject->distAlongTrack = distAlongTrack;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -3430,14 +3489,14 @@ namespace flex
 	GameObject* EngineCart::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		EngineCart* newGameObject = new EngineCart(cartID);
+		EngineCart* newGameObject = new EngineCart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		newGameObject->powerRemaining = powerRemaining;
 
 		newGameObject->currentTrackID = currentTrackID;
 		newGameObject->distAlongTrack = distAlongTrack;
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -3549,9 +3608,9 @@ namespace flex
 
 	GameObject* MobileLiquidBox::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		GameObject* newGameObject = new MobileLiquidBox();
+		GameObject* newGameObject = new MobileLiquidBox(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -4543,8 +4602,8 @@ namespace flex
 
 	GameObject* GerstnerWave::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		GerstnerWave* newGameObject = new GerstnerWave(GetIncrementedPostFixedStr(m_Name, "Gerstner Wave"));
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		GerstnerWave* newGameObject = new GerstnerWave(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 		return newGameObject;
 	}
 
@@ -5971,9 +6030,9 @@ namespace flex
 
 	GameObject* Terminal::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		GameObject* newGameObject = new Terminal();
+		GameObject* newGameObject = new Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
-		CopyGenericFields(newGameObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newGameObject, parent, copyFlags);
 
 		return newGameObject;
 	}
@@ -6678,9 +6737,9 @@ namespace flex
 
 	GameObject* ParticleSystem::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		ParticleSystem* newParticleSystem = new ParticleSystem(GetIncrementedPostFixedStr(m_Name, "Particle System"));
+		ParticleSystem* newParticleSystem = new ParticleSystem(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
-		CopyGenericFields(newParticleSystem, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newParticleSystem, parent, copyFlags);
 
 		newParticleSystem->data.colour0 = data.colour0;
 		newParticleSystem->data.colour1 = data.colour1;
@@ -6789,6 +6848,7 @@ namespace flex
 	GameObject* TerrainGenerator::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		// TODO:
+		assert(false);
 		FLEX_UNUSED(parent);
 		FLEX_UNUSED(copyFlags);
 		return nullptr;
@@ -7303,12 +7363,12 @@ namespace flex
 
 	GameObject* SpringObject::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		SpringObject* newObject = new SpringObject(GetIncrementedPostFixedStr(m_Name, "Spring Object"));
+		SpringObject* newObject = new SpringObject(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
 		// Ensure mesh & rigid body isn't copied
 		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::MESH);
 		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::RIGIDBODY);
-		CopyGenericFields(newObject, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newObject, parent, copyFlags);
 
 		return newObject;
 	}
@@ -7607,11 +7667,9 @@ namespace flex
 
 	GameObject* SoftBody::CopySelfAndAddToScene(GameObject* parent /* = nullptr */, CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		size_t underscore = m_Name.find('_');
-		std::string namePrefix = underscore == std::string::npos ? m_Name : m_Name.substr(0, underscore + 1);
-		SoftBody* newSoftBody = new SoftBody(g_SceneManager->CurrentScene()->GetUniqueObjectName(namePrefix, 3));
+		SoftBody* newSoftBody = new SoftBody(g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
 
-		CopyGenericFields(newSoftBody, parent, copyFlags);
+		CopyGenericFieldsAndAddToScene(newSoftBody, parent, copyFlags);
 
 		newSoftBody->points.resize(points.size());
 		newSoftBody->constraints.resize(constraints.size());

@@ -238,6 +238,7 @@ namespace flex
 			for (const Pair<GameObject*, GameObject*>& objectPair : m_PendingAddChildObjects)
 			{
 				objectPair.first->AddChildImmediate(objectPair.second);
+				RegisterGameObject(objectPair.second);
 			}
 			m_PendingAddChildObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -774,6 +775,18 @@ namespace flex
 		return result;
 	}
 
+	std::vector<GameObjectID> BaseScene::GetAllObjectIDs()
+	{
+		std::vector<GameObjectID> result;
+
+		for (GameObject* obj : m_RootObjects)
+		{
+			obj->AddSelfIDAndChildrenToVec(result);
+		}
+
+		return result;
+	}
+
 	TrackManager* BaseScene::GetTrackManager()
 	{
 		return &m_TrackManager;
@@ -782,6 +795,56 @@ namespace flex
 	CartManager* BaseScene::GetCartManager()
 	{
 		return &m_CartManager;
+	}
+
+	std::string BaseScene::GetUniqueObjectName(const std::string& existingName)
+	{
+		const std::vector<GameObject*> allObjects = GetAllObjects();
+
+		i16 digits;
+		i32 existingIndex = GetNumberEndingWith(existingName, digits);
+
+		std::string prefix = existingName.substr(0, existingName.length() - digits);
+
+		i32 newIndex = existingIndex + 1;
+		bool bNameTaken = true;
+		std::string name;
+		while (bNameTaken)
+		{
+			name.clear();
+			bNameTaken = false;
+			std::string suffix = IntToString(newIndex, digits);
+			name = prefix + suffix;
+			for (const GameObject* gameObject : allObjects)
+			{
+				if (gameObject->GetName().compare(name) == 0)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
+			}
+			for (const GameObject* gameObject : m_PendingAddObjects)
+			{
+				if (gameObject->GetName() == name)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
+			}
+			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
+			{
+				if (gameObjectPair.second->GetName() == name)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
+			}
+		}
+
+		return name;
 	}
 
 	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
@@ -798,6 +861,24 @@ namespace flex
 			for (const GameObject* gameObject : allObjects)
 			{
 				if (gameObject->GetName() == name)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
+			}
+			for (const GameObject* gameObject : m_PendingAddObjects)
+			{
+				if (gameObject->GetName() == name)
+				{
+					bNameTaken = true;
+					++newIndex;
+					break;
+				}
+			}
+			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
+			{
+				if (gameObjectPair.second->GetName() == name)
 				{
 					bNameTaken = true;
 					++newIndex;
@@ -830,11 +911,10 @@ namespace flex
 
 		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
 
-		const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
-		if (!selectedObjects.empty())
+		if (g_Editor->HasSelectedObject())
 		{
 			// TODO: Draw common fields for all selected objects?
-			GameObject* selectedObject = selectedObjects[0];
+			GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
 			if (selectedObject)
 			{
 				selectedObject->DrawImGuiObjects();
@@ -857,28 +937,27 @@ namespace flex
 
 			if (payload && payload->Data)
 			{
-				i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
+				i32 draggedObjectCount = payload->DataSize / sizeof(GameObjectID);
 
-				std::vector<GameObject*> draggedGameObjectsVec;
-				draggedGameObjectsVec.reserve(draggedObjectCount);
+				std::vector<GameObjectID> draggedGameObjectsIDs;
+				draggedGameObjectsIDs.reserve(draggedObjectCount);
 				for (i32 i = 0; i < draggedObjectCount; ++i)
 				{
-					draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
+					draggedGameObjectsIDs.push_back(*((GameObjectID*)payload->Data + i));
 				}
 
-				if (!draggedGameObjectsVec.empty())
+				if (!draggedGameObjectsIDs.empty())
 				{
-					std::vector<GameObject*> siblings = draggedGameObjectsVec[0]->GetLaterSiblings();
-
-					for (GameObject* draggedGameObject : draggedGameObjectsVec)
+					for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
 					{
-						bool bRootObject = draggedGameObject == draggedGameObjectsVec[0];
-						bool bRootSibling = Find(siblings, draggedGameObject) != siblings.end();
-						// Only re-parent root-most object (leave sub-hierarchy as-is)
-						if ((bRootObject || bRootSibling) &&
-							draggedGameObject->GetParent())
+						GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+						GameObject* parent = draggedGameObject->GetParent();
+						GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
+						bool bParentInSelection = parentID.IsValid() ? (Find(draggedGameObjectsIDs, parentID) != draggedGameObjectsIDs.end()) : false;
+						// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
+						if (!bParentInSelection && parent)
 						{
-							draggedGameObject->GetParent()->RemoveChildImmediate(draggedGameObject->ID, false);
+							parent->RemoveChildImmediate(draggedGameObject->ID, false);
 							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
 						}
 					}
@@ -909,7 +988,7 @@ namespace flex
 				newPointLight->Initialize();
 				newPointLight->PostInitialize();
 
-				g_Editor->SetSelectedObject(newPointLight);
+				g_Editor->SetSelectedObject(newPointLight->ID);
 			}
 		}
 
@@ -929,7 +1008,7 @@ namespace flex
 				newDiright->Initialize();
 				newDiright->PostInitialize();
 
-				g_Editor->SetSelectedObject(newDiright);
+				g_Editor->SetSelectedObject(newDiright->ID);
 			}
 		}
 	}
@@ -968,8 +1047,7 @@ namespace flex
 
 		if (ImGui::BeginPopupModal(popupName, NULL,
 			ImGuiWindowFlags_AlwaysAutoResize |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoNavInputs))
+			ImGuiWindowFlags_NoSavedSettings))
 		{
 			const size_t maxStrLen = 256;
 			newObjectName.resize(maxStrLen);
@@ -978,6 +1056,12 @@ namespace flex
 				(char*)newObjectName.data(),
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
+
+			// SetItemDefaultFocus doesn't work here for some reason
+			if (ImGui::IsWindowAppearing())
+			{
+				ImGui::SetKeyboardFocusHere();
+			}
 
 			if (ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str()))
 			{
@@ -1063,7 +1147,7 @@ namespace flex
 
 					if (g_Editor->HasSelectedObject())
 					{
-						parent = g_Editor->GetSelectedObjects(false)[0];
+						parent = GetGameObject(g_Editor->GetFirstSelectedObjectID());
 					}
 
 					CreateNewObject(newObjectName, parent);
@@ -1112,14 +1196,14 @@ namespace flex
 
 		if (parent != nullptr)
 		{
-			parent->AddChild(newGameObject);
+			g_SceneManager->CurrentScene()->AddChildObjectImmediate(parent, newGameObject);
 		}
 		else
 		{
-			g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+			g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 		}
 
-		g_Editor->SetSelectedObject(newGameObject);
+		g_Editor->SetSelectedObject(newGameObject->ID);
 	}
 
 	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject)
@@ -1146,6 +1230,8 @@ namespace flex
 
 		std::string objectName = gameObject->GetName();
 
+		bool bForceTreeNodeOpen = false;
+
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
 		bool bHasChildren = !gameObjectChildren.empty();
 		if (bHasChildren)
@@ -1157,7 +1243,10 @@ namespace flex
 				if (child->IsVisibleInSceneExplorer(true))
 				{
 					bChildVisibleInSceneExplorer = true;
-					break;
+				}
+				if (child->SelfOrChildIsSelected())
+				{
+					bForceTreeNodeOpen = true;
 				}
 			}
 
@@ -1166,7 +1255,7 @@ namespace flex
 				bHasChildren = false;
 			}
 		}
-		bool bSelected = g_Editor->IsObjectSelected(gameObject);
+		bool bSelected = g_Editor->IsObjectSelected(gameObject->ID);
 
 		bool bVisible = gameObject->IsVisible();
 		if (ImGui::Checkbox("##visible", &bVisible))
@@ -1185,6 +1274,11 @@ namespace flex
 			node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
 		}
 
+		if (bForceTreeNodeOpen)
+		{
+			ImGui::SetNextTreeNodeOpen(true);
+		}
+
 		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
 
 		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
@@ -1199,21 +1293,21 @@ namespace flex
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 				{
-					g_Editor->ToggleSelectedObject(gameObject);
+					g_Editor->ToggleSelectedObject(gameObject->ID);
 				}
 				else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
-					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
-					if (selectedObjects.empty() ||
-						(selectedObjects.size() == 1 && selectedObjects[0] == gameObject))
+					const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+					if (selectedObjectIDs.empty() ||
+						(selectedObjectIDs.size() == 1 && selectedObjectIDs[0] == gameObject->ID))
 					{
-						g_Editor->ToggleSelectedObject(gameObject);
+						g_Editor->ToggleSelectedObject(gameObject->ID);
 					}
 					else
 					{
 						std::vector<GameObject*> objectsToSelect;
 
-						GameObject* objectA = selectedObjects[selectedObjects.size() - 1];
+						GameObject* objectA = GetGameObject(selectedObjectIDs[selectedObjectIDs.size() - 1]);
 						GameObject* objectB = gameObject;
 
 						objectA->AddSelfAndChildrenToVec(objectsToSelect);
@@ -1239,13 +1333,13 @@ namespace flex
 
 						for (GameObject* objectToSelect : objectsToSelect)
 						{
-							g_Editor->AddSelectedObject(objectToSelect);
+							g_Editor->AddSelectedObject(objectToSelect->ID);
 						}
 					}
 				}
 				else
 				{
-					g_Editor->SetSelectedObject(gameObject);
+					g_Editor->SetSelectedObject(gameObject->ID);
 				}
 			}
 
@@ -1253,47 +1347,48 @@ namespace flex
 			{
 				if (ImGui::BeginDragDropSource())
 				{
-					const void* data = nullptr;
+					void* data = nullptr;
 					size_t size = 0;
 
-					const std::vector<GameObject*>& selectedObjects = g_Editor->GetSelectedObjects();
-					auto iter = Find(selectedObjects, gameObject);
-					bool bItemInSelection = iter != selectedObjects.end();
+					const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+					auto iter = Find(selectedObjectIDs, gameObject->ID);
+					bool bItemInSelection = iter != selectedObjectIDs.end();
 					std::string dragDropText;
 
-					std::vector<GameObject*> draggedGameObjects;
+					std::vector<GameObjectID> draggedGameObjectIDs;
 					if (bItemInSelection)
 					{
-						for (GameObject* selectedObject : selectedObjects)
+						for (const GameObjectID& selectedObjectID : selectedObjectIDs)
 						{
 							// Don't allow children to not be part of dragged selection
-							selectedObject->AddSelfAndChildrenToVec(draggedGameObjects);
+							GameObject* selectedObject = GetGameObject(selectedObjectID);
+							selectedObject->AddSelfIDAndChildrenToVec(draggedGameObjectIDs);
 						}
 
 						// Ensure any children which weren't selected are now in selection
-						for (GameObject* draggedGameObject : draggedGameObjects)
+						for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
 						{
-							g_Editor->AddSelectedObject(draggedGameObject);
+							g_Editor->AddSelectedObject(draggedGameObjectID);
 						}
 
-						data = draggedGameObjects.data();
-						size = draggedGameObjects.size() * sizeof(GameObject*);
+						data = draggedGameObjectIDs.data();
+						size = draggedGameObjectIDs.size() * sizeof(GameObjectID);
 
-						if (draggedGameObjects.size() == 1)
+						if (draggedGameObjectIDs.size() == 1)
 						{
-							dragDropText = draggedGameObjects[0]->GetName();
+							dragDropText = GetGameObject(draggedGameObjectIDs[0])->GetName();
 						}
 						else
 						{
-							dragDropText = IntToString((u32)draggedGameObjects.size()) + " objects";
+							dragDropText = IntToString((u32)draggedGameObjectIDs.size()) + " objects";
 						}
 					}
 					else
 					{
-						g_Editor->SetSelectedObject(gameObject);
+						g_Editor->SetSelectedObject(gameObject->ID);
 
-						data = (void*)(&gameObject);
-						size = sizeof(GameObject*);
+						data = (void*)&gameObject->ID;
+						size = sizeof(GameObjectID);
 						dragDropText = gameObject->GetName();
 					}
 
@@ -1311,21 +1406,22 @@ namespace flex
 
 				if (payload && payload->Data)
 				{
-					i32 draggedObjectCount = payload->DataSize / sizeof(GameObject*);
+					i32 draggedObjectCount = payload->DataSize / sizeof(GameObjectID);
 
-					std::vector<GameObject*> draggedGameObjectsVec;
-					draggedGameObjectsVec.reserve(draggedObjectCount);
+					std::vector<GameObjectID> draggedGameObjectIDs;
+					draggedGameObjectIDs.reserve(draggedObjectCount);
 					for (i32 i = 0; i < draggedObjectCount; ++i)
 					{
-						draggedGameObjectsVec.push_back(*((GameObject**)payload->Data + i));
+						draggedGameObjectIDs.push_back(*((GameObjectID*)payload->Data + i));
 					}
 
-					if (!draggedGameObjectsVec.empty())
+					if (!draggedGameObjectIDs.empty())
 					{
 						bool bContainsChild = false;
 
-						for (GameObject* draggedGameObject : draggedGameObjectsVec)
+						for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
 						{
+							GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
 							if (draggedGameObject == gameObject)
 							{
 								bContainsChild = true;
@@ -1342,21 +1438,24 @@ namespace flex
 						// If we're a child of the dragged object then don't allow (causes infinite recursion)
 						if (!bContainsChild)
 						{
-							for (GameObject* draggedGameObject : draggedGameObjectsVec)
+							for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
 							{
-								if (draggedGameObject->GetParent())
+								GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+								GameObject* parent = draggedGameObject->GetParent();
+								if (parent != nullptr)
 								{
-									if (Find(draggedGameObjectsVec, draggedGameObject->GetParent()) == draggedGameObjectsVec.end())
+									// Parent isn't also being dragged
+									if (Find(draggedGameObjectIDs, parent->ID) == draggedGameObjectIDs.end())
 									{
 										draggedGameObject->DetachFromParent();
-										gameObject->AddChild(draggedGameObject);
+										gameObject->AddChildImmediate(draggedGameObject);
 										bParentChildTreeDirty = true;
 									}
 								}
 								else
 								{
-									g_SceneManager->CurrentScene()->RemoveRootObjectImmediate(draggedGameObject, false);
-									gameObject->AddChild(draggedGameObject);
+									g_SceneManager->CurrentScene()->RemoveObjectImmediate(draggedGameObject, false);
+									gameObject->AddChildImmediate(draggedGameObject);
 									bParentChildTreeDirty = true;
 								}
 							}
@@ -1614,12 +1713,32 @@ namespace flex
 
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
-		assert(m_GameObjectLUT.find(gameObject->ID) == m_GameObjectLUT.end());
+		auto iter = m_GameObjectLUT.find(gameObject->ID);
+		if (iter != m_GameObjectLUT.end())
+		{
+			assert(iter->second == gameObject);
+		}
 		m_GameObjectLUT[gameObject->ID] = gameObject;
 
 		for (GameObject* child : gameObject->m_Children)
 		{
 			RegisterGameObject(child);
+		}
+	}
+
+	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID)
+	{
+		auto iter = m_GameObjectLUT.find(gameObjectID);
+		if (iter == m_GameObjectLUT.end())
+		{
+			// Silently fail (this case is hit with e.g. editor gizmo objects that aren't ever registered)
+
+			//std::string idStr = gameObjectID.ToString();
+			//PrintError("Attempted to unregister non-registered object with ID %s\n", idStr.c_str());
+		}
+		else
+		{
+			m_GameObjectLUT.erase(iter);
 		}
 	}
 
@@ -1641,93 +1760,44 @@ namespace flex
 		return child;
 	}
 
-	void BaseScene::RemoveRootObject(const GameObjectID& gameObjectID, bool bDestroy)
+	GameObject* BaseScene::AddChildObjectImmediate(GameObject* parent, GameObject* child)
 	{
-		if (bDestroy)
+		if (parent == nullptr || child == nullptr)
 		{
-			m_PendingDestroyObjects.push_back(gameObjectID);
+			return child;
 		}
-		else
+
+		if (parent->ID == child->ID)
 		{
-			m_PendingRemoveObjects.push_back(gameObjectID);
+			PrintError("Attempted to add self as child on %s\n", child->GetName().c_str());
+			return child;
 		}
+
+
+		parent->AddChildImmediate(child);
+		RegisterGameObject(child);
+
+		return child;
 	}
 
-	void BaseScene::RemoveRootObject(GameObject* gameObject, bool bDestroy)
-	{
-		if (bDestroy)
-		{
-			m_PendingDestroyObjects.push_back(gameObject->ID);
-		}
-		else
-		{
-			m_PendingRemoveObjects.push_back(gameObject->ID);
-		}
-	}
-
-	void BaseScene::RemoveRootObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy)
-	{
-		auto iter = m_RootObjects.begin();
-		while (iter != m_RootObjects.end())
-		{
-			GameObject* gameObject = *iter;
-			if (gameObject->ID == gameObjectID)
-			{
-				if (bDestroy)
-				{
-					gameObject->Destroy();
-					delete gameObject;
-				}
-
-				m_GameObjectLUT.erase(gameObject->ID);
-				iter = m_RootObjects.erase(iter);
-
-				UpdateRootObjectSiblingIndices();
-				g_Renderer->RenderObjectStateChanged();
-				return;
-			}
-			else
-			{
-				++iter;
-			}
-		}
-
-		PrintWarn("Attempting to remove non-existent child from scene %s\n", m_Name.c_str());
-	}
-
-	void BaseScene::RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy)
-	{
-		return RemoveRootObjectImmediate(gameObject->ID, bDestroy);
-	}
-
-	void BaseScene::RemoveAllRootObjects(bool bDestroy)
+	void BaseScene::RemoveAllObjects()
 	{
 		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (bDestroy)
-			{
-				m_PendingDestroyObjects.push_back(rootObject->ID);
-			}
-			else
-			{
-				// TODO: Add children?
-				m_PendingRemoveObjects.push_back(rootObject->ID);
-			}
+			m_PendingDestroyObjects.push_back(rootObject->ID);
 		}
 	}
 
-	void BaseScene::RemoveAllRootObjectsImmediate(bool bDestroy)
+	void BaseScene::RemoveAllObjectsImmediate()
 	{
 		auto iter = m_RootObjects.begin();
 		while (iter != m_RootObjects.end())
 		{
 			GameObject* gameObject = *iter;
 
-			if (bDestroy)
-			{
-				gameObject->Destroy();
-				delete gameObject;
-			}
+			// Recurses down child hierarchy
+			gameObject->Destroy();
+			delete gameObject;
 
 			iter = m_RootObjects.erase(iter);
 		}
@@ -1742,6 +1812,7 @@ namespace flex
 	{
 		if (bDestroy)
 		{
+			// TODO: Use set to handle uniqueness checking
 			if (!Contains(m_PendingDestroyObjects, gameObjectID))
 			{
 				m_PendingDestroyObjects.push_back(gameObjectID);
@@ -1787,11 +1858,13 @@ namespace flex
 			}
 		}
 
-		RemoveObjectImmediateRecursive(gameObjectID, bDestroy);
-
-		if (!bRootObject)
+		if (bDestroy)
 		{
-			if (!bDestroy)
+			RemoveObjectImmediateRecursive(gameObjectID, bDestroy);
+		}
+		else
+		{
+			if (!bRootObject)
 			{
 				gameObject->GetParent()->RemoveChildImmediate(gameObjectID, bDestroy);
 			}
@@ -1864,15 +1937,21 @@ namespace flex
 			m_PendingDestroyObjects.reserve(m_PendingDestroyObjects.size() + gameObjects.size());
 			for (GameObject* gameObject : gameObjects)
 			{
-				m_PendingDestroyObjects.push_back(gameObject->ID);
+				if (!Contains(m_PendingDestroyObjects, gameObject->ID))
+				{
+					m_PendingDestroyObjects.push_back(gameObject->ID);
+				}
 			}
 		}
 		else
 		{
-			m_PendingDestroyObjects.reserve(m_PendingDestroyObjects.size() + gameObjects.size());
+			m_PendingRemoveObjects.reserve(m_PendingRemoveObjects.size() + gameObjects.size());
 			for (GameObject* gameObject : gameObjects)
 			{
-				m_PendingRemoveObjects.push_back(gameObject->ID);
+				if (!Contains(m_PendingRemoveObjects, gameObject->ID))
+				{
+					m_PendingRemoveObjects.push_back(gameObject->ID);
+				}
 			}
 		}
 	}

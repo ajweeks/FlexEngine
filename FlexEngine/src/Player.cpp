@@ -260,7 +260,7 @@ namespace flex
 				ImGui::Text("Object interacting with:");
 				if (ImGui::Button(name.c_str()))
 				{
-					g_Editor->SetSelectedObject(m_ObjectInteractingWith);
+					g_Editor->SetSelectedObject(m_ObjectInteractingWith->ID);
 				}
 			}
 

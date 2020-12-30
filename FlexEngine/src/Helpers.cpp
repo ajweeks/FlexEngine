@@ -1726,6 +1726,12 @@ namespace flex
 		Data2 = 0;
 	}
 
+	GUID::GUID(u64 data1, u64 data2) :
+		Data1(data1),
+		Data2(data2)
+	{
+	}
+
 	GUID::GUID(const GUID& other)
 	{
 		Data1 = other.Data1;

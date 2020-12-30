@@ -70,12 +70,9 @@ namespace flex
 		GameObject* AddRootObject(GameObject* gameObject);
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
-		void RemoveRootObject(const GameObjectID& gameObjectID, bool bDestroy);
-		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
-		void RemoveRootObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
-		void RemoveRootObjectImmediate(GameObject* gameObject, bool bDestroy);
-		void RemoveAllRootObjects(bool bDestroy);
-		void RemoveAllRootObjectsImmediate(bool bDestroy);
+		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
+		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
+		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
 		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
 		void RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
@@ -92,6 +89,7 @@ namespace flex
 		bool IsLoaded() const;
 
 		std::vector<GameObject*> GetAllObjects();
+		std::vector<GameObjectID> GetAllObjectIDs();
 
 		template<class T>
 		std::vector<T*> GetObjectsOfType(StringID typeID)
@@ -113,6 +111,7 @@ namespace flex
 		TrackManager* GetTrackManager();
 		CartManager* GetCartManager();
 
+		std::string GetUniqueObjectName(const std::string& existingName);
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
 		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
@@ -151,6 +150,7 @@ namespace flex
 
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
+		void UnregisterGameObject(const GameObjectID& gameObjectID);
 
 		void CreateNewObject(const std::string& newObjectName, GameObject* parent = nullptr);
 

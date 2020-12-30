@@ -354,10 +354,7 @@ namespace flex
 
 						if (closestCartIdx != -1)
 						{
-							if (mobileLiquidBox->GetParent() == nullptr)
-							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(mobileLiquidBox->ID, false);
-							}
+							g_SceneManager->CurrentScene()->RemoveObjectImmediate(mobileLiquidBox->ID, false);
 
 							bPlaced = true;
 

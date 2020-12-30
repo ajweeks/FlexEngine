@@ -145,7 +145,7 @@ namespace flex
 		{
 			m_bDraggingGizmo = false;
 			if (!g_CameraManager->CurrentCamera()->bIsGameplayCam &&
-				!m_CurrentlySelectedObjects.empty())
+				!m_CurrentlySelectedObjectIDs.empty())
 			{
 				HandleGizmoHover();
 			}
@@ -159,7 +159,7 @@ namespace flex
 			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
 			g_Renderer->GetDebugDrawer()->drawLine(
 				btVector3(x, 0, z),
-				g_Editor->GetSelectedObjects().size() > 0 ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
+				g_Editor->HasSelectedObject() ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
 				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),
 				btVector3(1.0f, 0.0f, sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f));
 		}
@@ -167,7 +167,7 @@ namespace flex
 
 		FadeOutHeadOnGizmos();
 
-		if (!m_CurrentlySelectedObjects.empty() && !g_CameraManager->CurrentCamera()->bIsGameplayCam)
+		if (!m_CurrentlySelectedObjectIDs.empty() && !g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
 			m_TransformGizmo->SetVisible(true);
 			UpdateGizmoVisibility();
@@ -226,64 +226,73 @@ namespace flex
 
 	bool Editor::HasSelectedObject() const
 	{
-		return !m_CurrentlySelectedObjects.empty();
+		return !m_CurrentlySelectedObjectIDs.empty();
 	}
 
-	std::vector<GameObject*> Editor::GetSelectedObjects(bool bForceIncludeChildren)
+	std::vector<GameObjectID> Editor::GetSelectedObjectIDs(bool bForceIncludeChildren) const
 	{
 		if (bForceIncludeChildren)
 		{
-			std::vector<GameObject*> selectedObjects;
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			std::vector<GameObjectID> selectedObjects;
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
-				gameObject->AddSelfAndChildrenToVec(selectedObjects);
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+				gameObject->AddSelfIDAndChildrenToVec(selectedObjects);
 			}
 			return selectedObjects;
 		}
 		else
 		{
-			return m_CurrentlySelectedObjects;
+			return m_CurrentlySelectedObjectIDs;
 		}
 	}
 
-	void Editor::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = false */)
+	GameObjectID Editor::GetFirstSelectedObjectID() const
+	{
+		return m_CurrentlySelectedObjectIDs[0];
+	}
+
+	void Editor::SetSelectedObject(const GameObjectID& gameObjectID, bool bSelectChildren /* = false */)
 	{
 		SelectNone();
 
+		GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
 		if (gameObject != nullptr)
 		{
 			if (bSelectChildren)
 			{
-				gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+				gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 			}
 			else
 			{
-				m_CurrentlySelectedObjects.push_back(gameObject);
+				m_CurrentlySelectedObjectIDs.push_back(gameObjectID);
 			}
 		}
 
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::SetSelectedObjects(const std::vector<GameObject*>& selectedObjects)
+	void Editor::SetSelectedObjects(const std::vector<GameObjectID>& selectedObjects)
 	{
-		m_CurrentlySelectedObjects = selectedObjects;
+		m_CurrentlySelectedObjectIDs = selectedObjects;
 
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::ToggleSelectedObject(GameObject* gameObject)
+	void Editor::ToggleSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
+		auto iter = Find(m_CurrentlySelectedObjectIDs, gameObjectID);
+		if (iter == m_CurrentlySelectedObjectIDs.end())
 		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+			gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 		}
 		else
 		{
-			m_CurrentlySelectedObjects.erase(iter);
+			m_CurrentlySelectedObjectIDs.erase(iter);
 
-			if (m_CurrentlySelectedObjects.empty())
+			if (m_CurrentlySelectedObjectIDs.empty())
 			{
 				SelectNone();
 			}
@@ -292,24 +301,26 @@ namespace flex
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::AddSelectedObject(GameObject* gameObject)
+	void Editor::AddSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
+		auto iter = Find(m_CurrentlySelectedObjectIDs, gameObjectID);
+		if (iter == m_CurrentlySelectedObjectIDs.end())
 		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+			gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 
 			CalculateSelectedObjectsCenter();
 		}
 	}
 
-	void Editor::DeselectObject(GameObject* gameObject)
+	void Editor::DeselectObject(const GameObjectID& gameObjectID)
 	{
-		for (GameObject* selectedObj : m_CurrentlySelectedObjects)
+		for (const GameObjectID& selectedObj : m_CurrentlySelectedObjectIDs)
 		{
-			if (selectedObj == gameObject)
+			if (selectedObj == gameObjectID)
 			{
-				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+				GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+				gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 				CalculateSelectedObjectsCenter();
 				return;
 			}
@@ -318,9 +329,9 @@ namespace flex
 		PrintWarn("Attempted to deselect object which wasn't selected!\n");
 	}
 
-	bool Editor::IsObjectSelected(GameObject* gameObject)
+	bool Editor::IsObjectSelected(const GameObjectID& gameObjectID)
 	{
-		bool bSelected = (Find(m_CurrentlySelectedObjects, gameObject) != m_CurrentlySelectedObjects.end());
+		bool bSelected = (Find(m_CurrentlySelectedObjectIDs, gameObjectID) != m_CurrentlySelectedObjectIDs.end());
 		return bSelected;
 	}
 
@@ -331,7 +342,7 @@ namespace flex
 
 	void Editor::SelectNone()
 	{
-		m_CurrentlySelectedObjects.clear();
+		m_CurrentlySelectedObjectIDs.clear();
 		m_SelectedObjectsCenterPos = VEC3_ZERO;
 		m_SelectedObjectDragStartPos = VEC3_ZERO;
 		m_DraggingGizmoScaleLast = VEC3_ZERO;
@@ -475,27 +486,31 @@ namespace flex
 
 	void Editor::CalculateSelectedObjectsCenter()
 	{
-		if (m_CurrentlySelectedObjects.empty())
+		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			return;
 		}
 
 		glm::vec3 avgPos(0.0f);
-		for (GameObject* gameObject : m_CurrentlySelectedObjects)
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 		{
+			GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 			avgPos += gameObject->GetTransform()->GetWorldPosition();
 		}
 		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
-		m_SelectedObjectRotation = m_CurrentlySelectedObjects[0]->GetTransform()->GetWorldRotation();
+		GameObject* firstObject = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0]);
+		m_SelectedObjectRotation = firstObject->GetTransform()->GetWorldRotation();
 
-		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
+		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjectIDs.size());
 	}
 
 	void Editor::SelectAll()
 	{
-		for (GameObject* gameObject : g_SceneManager->CurrentScene()->GetAllObjects())
+		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
+		for (GameObject* gameObject : allObjects)
 		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
+			m_CurrentlySelectedObjectIDs.push_back(gameObject->ID);
 		}
 		CalculateSelectedObjectsCenter();
 	}
@@ -728,7 +743,7 @@ namespace flex
 		assert(m_HoveringAxisIndex != -1);
 		assert(m_DraggingAxisIndex != -1);
 		assert(m_bDraggingGizmo);
-		if (m_CurrentlySelectedObjects.empty())
+		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			SelectNone();
 			return;
@@ -764,7 +779,8 @@ namespace flex
 		glm::vec3 camRight = cam->right;
 		glm::vec3 camUp = cam->up;
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-		Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		Transform* transform = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0])->GetTransform();
 
 		switch (m_CurrentTransformGizmoState)
 		{
@@ -830,10 +846,11 @@ namespace flex
 				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Translate(dPos);
@@ -920,10 +937,11 @@ namespace flex
 
 			if (dRotWS != QUAT_IDENTITY)
 			{
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 					GameObject* parent = gameObject->GetParent();
-					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
 					if (bObjectIsntChild)
 					{
 						Transform* t = gameObject->GetTransform();
@@ -1007,10 +1025,11 @@ namespace flex
 
 			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
 
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Scale(dLocalScale);
@@ -1045,12 +1064,12 @@ namespace flex
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
-					ToggleSelectedObject(pickedObject);
+					ToggleSelectedObject(pickedObject->ID);
 				}
 				else
 				{
 					SelectNone();
-					m_CurrentlySelectedObjects.push_back(pickedObject);
+					m_CurrentlySelectedObjectIDs.push_back(pickedObject->ID);
 				}
 				g_InputManager->ClearMouseInput();
 				CalculateSelectedObjectsCenter();
@@ -1068,7 +1087,7 @@ namespace flex
 
 	void Editor::OnDragDrop(i32 count, const char** paths)
 	{
-		std::vector<GameObject*> createdObjs;
+		std::vector<GameObjectID> createdObjs;
 
 		for (i32 i = 0; i < count; ++i)
 		{
@@ -1097,7 +1116,7 @@ namespace flex
 					Mesh::ImportFromFile(relativeFilePath, newObj);
 					// TODO: Position object relative to mouse position & camera transform
 					scene->AddRootObject(newObj);
-					createdObjs.push_back(newObj);
+					createdObjs.push_back(newObj->ID);
 				}
 				else
 				{
@@ -1147,7 +1166,7 @@ namespace flex
 			{
 				if (m_bDraggingGizmo)
 				{
-					if (m_CurrentlySelectedObjects.empty())
+					if (m_CurrentlySelectedObjectIDs.empty())
 					{
 						m_SelectedObjectDragStartPos = VEC3_NEG_ONE;
 					}
@@ -1204,9 +1223,9 @@ namespace flex
 		{
 			if (keyCode == KeyCode::KEY_DELETE)
 			{
-				if (!m_CurrentlySelectedObjects.empty())
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
-					g_SceneManager->CurrentScene()->RemoveObjects(m_CurrentlySelectedObjects, true);
+					g_SceneManager->CurrentScene()->RemoveObjects(m_CurrentlySelectedObjectIDs, true);
 
 					SelectNone();
 					return EventReply::CONSUMED;
@@ -1215,23 +1234,30 @@ namespace flex
 
 			if (bControlDown && keyCode == KeyCode::KEY_D)
 			{
-				if (!m_CurrentlySelectedObjects.empty())
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
-					std::vector<GameObject*> newSelectedGameObjects;
+					std::vector<GameObjectID> newSelectedGameObjectIDs;
 
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					BaseScene* currentScene = g_SceneManager->CurrentScene();
+					for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene();
+						GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+						GameObject* parent = gameObject->GetParent();
 
-						if (duplicatedObject != nullptr)
+						if (parent == nullptr || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end()))
 						{
-							duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+							GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene();
+
+							if (duplicatedObject != nullptr)
+							{
+								duplicatedObject->AddSelfIDAndChildrenToVec(newSelectedGameObjectIDs);
+							}
 						}
 					}
 
 					SelectNone();
 
-					m_CurrentlySelectedObjects = newSelectedGameObjects;
+					m_CurrentlySelectedObjectIDs = newSelectedGameObjectIDs;
 					CalculateSelectedObjectsCenter();
 				}
 				return EventReply::CONSUMED;
@@ -1280,7 +1306,7 @@ namespace flex
 
 		if (action == Action::PAUSE)
 		{
-			if (m_CurrentlySelectedObjects.empty())
+			if (m_CurrentlySelectedObjectIDs.empty())
 			{
 				//m_bSimulationPaused = !m_bSimulationPaused;
 			}
@@ -1292,12 +1318,15 @@ namespace flex
 		}
 
 		CameraType currentCameraType = g_CameraManager->CurrentCamera()->type;
-		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && currentCameraType == CameraType::DEBUG_CAM)
+		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjectIDs.empty() && currentCameraType == CameraType::DEBUG_CAM)
 		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+
 			glm::vec3 minPos(FLT_MAX);
 			glm::vec3 maxPos(-FLT_MAX);
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				Mesh* mesh = gameObject->GetMesh();
 				if (mesh)
 				{

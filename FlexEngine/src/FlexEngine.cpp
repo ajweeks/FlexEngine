@@ -360,6 +360,7 @@ namespace flex
 
 		g_Editor->Destroy();
 		g_PluggablesSystem->Destroy();
+		g_Renderer->DestroyPersistentObjects();
 		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();

@@ -6,6 +6,8 @@
 namespace flex
 {
 	class GameObject;
+	struct GUID;
+	using GameObjectID = GUID;
 
 	class Editor
 	{
@@ -20,15 +22,16 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
-		std::vector<GameObject*> GetSelectedObjects(bool bForceIncludeChildren = false);
-		void SetSelectedObject(GameObject* gameObject, bool bSelectChildren = false);
-		void SetSelectedObjects(const std::vector<GameObject*>& selectedObjects);
+		std::vector<GameObjectID> GetSelectedObjectIDs(bool bForceIncludeChildren = false) const;
+		GameObjectID GetFirstSelectedObjectID() const;
+		void SetSelectedObject(const GameObjectID& gameObjectID, bool bSelectChildren = false);
+		void SetSelectedObjects(const std::vector<GameObjectID>& selectedObjects);
 		bool HasSelectedObject() const;
-		void ToggleSelectedObject(GameObject* gameObject);
-		void AddSelectedObject(GameObject* gameObject);
+		void ToggleSelectedObject(const GameObjectID& gameObjectID);
+		void AddSelectedObject(const GameObjectID& gameObjectID);
 		void SelectAll();
-		void DeselectObject(GameObject* gameObject);
-		bool IsObjectSelected(GameObject* gameObject);
+		void DeselectObject(const GameObjectID& gameObjectID);
+		bool IsObjectSelected(const GameObjectID& gameObjectID);
 		glm::vec3 GetSelectedObjectsCenter();
 		void SelectNone();
 
@@ -132,7 +135,7 @@ namespace flex
 		i32 m_DraggingAxisIndex = -1;
 		i32 m_HoveringAxisIndex = -1;
 
-		std::vector<GameObject*> m_CurrentlySelectedObjects;
+		std::vector<GameObjectID> m_CurrentlySelectedObjectIDs;
 
 		glm::vec3 m_SelectedObjectsCenterPos;
 		glm::quat m_SelectedObjectRotation;

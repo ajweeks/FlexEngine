@@ -581,6 +581,11 @@ namespace flex
 		return m_Scenes[m_CurrentSceneIndex];
 	}
 
+	bool SceneManager::CurrentSceneExists() const
+	{
+		return m_CurrentSceneIndex != InvalidID;
+	}
+
 	u32 SceneManager::GetSceneCount() const
 	{
 		return (u32)m_Scenes.size();

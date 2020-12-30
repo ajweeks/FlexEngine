@@ -199,6 +199,16 @@ namespace flex
 		}
 	}
 
+	void Renderer::DestroyPersistentObjects()
+	{
+		for (GameObject* obj : m_PersistentObjects)
+		{
+			obj->Destroy();
+			delete obj;
+		}
+		m_PersistentObjects.clear();
+	}
+
 	void Renderer::Destroy()
 	{
 		free(m_PointLights);
