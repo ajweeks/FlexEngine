@@ -1,0 +1,119 @@
+{
+	"version" : 6,
+	"name" : "scene_prefab_test",
+	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "8.326, 2.563, -2.284",
+			"pitch" : -0.304859,
+			"yaw" : 2.543581
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "550D6BBEFAA67685495BCE9A868118FE",
+			"type" : "skybox",
+			"transform" : 
+			{
+			},
+			"visible" : true,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"id" : "364A266CCA195F894C5FB105EC59CC6B",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.194, -0.973, -2.523"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 3.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "valve0",
+			"id" : "B153CFDF0CE9B59F40DF191B6238B13C",
+			"type" : "prefab",
+			"prefab type" : "valve",
+			"prefab id" : "F5728E887DCFE1884F83BD60B12D8443",
+			"transform" : 
+			{
+				"pos" : "-0.253, 0.000, 0.000"
+			},
+			"children" : 
+			[
+				{
+					"name" : "child0",
+					"id" : "6FB348F68991D39F4F1134F905398D12",
+					"type" : "object",
+					"transform" : 
+					{
+					},
+					"visible" : true,
+					"casts shadow" : true
+				}
+			]
+		},
+		{
+			"name" : "valve1",
+			"id" : "B1F298E86466D581414A0C78852893E1",
+			"type" : "prefab",
+			"prefab type" : "valve",
+			"prefab id" : "F5728E887DCFE1884F83BD60B12D8443",
+			"transform" : 
+			{
+				"pos" : "1.879, 0.000, 0.000"
+			},
+			"children" : 
+			[
+				{
+					"name" : "child0",
+					"id" : "5ABBA7BADE34EBBD42FB2C96A9729815",
+					"type" : "object",
+					"transform" : 
+					{
+					},
+					"visible" : true,
+					"casts shadow" : true
+				}
+			]
+		}
+	]
+}

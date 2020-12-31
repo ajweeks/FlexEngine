@@ -52,8 +52,6 @@ static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
 static const unsigned char base64_table[65] =
 "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static const unsigned char hex_table[17] = "0123456789ABCDEF";
-
 static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
 	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62, 63, 62, 62, 63, 52, 53, 54, 55,
@@ -65,9 +63,6 @@ static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
 namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
-
-	const GUID InvalidGameObjectID = {};
-	const GUID InvalidGUID = {};
 
 	static u32 _lastUID = 0;
 
@@ -1718,175 +1713,6 @@ namespace flex
 	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
 	{
 		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
-	}
-
-	GUID::GUID()
-	{
-		Data1 = 0;
-		Data2 = 0;
-	}
-
-	GUID::GUID(u64 data1, u64 data2) :
-		Data1(data1),
-		Data2(data2)
-	{
-	}
-
-	GUID::GUID(const GUID& other)
-	{
-		Data1 = other.Data1;
-		Data2 = other.Data2;
-	}
-
-	GUID::GUID(const GUID&& other)
-	{
-		Data1 = other.Data1;
-		Data2 = other.Data2;
-	}
-
-	GUID& GUID::operator=(const GUID& other)
-	{
-		if (&other != this)
-		{
-			Data1 = other.Data1;
-			Data2 = other.Data2;
-		}
-		return *this;
-	}
-
-	GUID& GUID::operator=(const GUID&& other)
-	{
-		if (&other != this)
-		{
-			Data1 = other.Data1;
-			Data2 = other.Data2;
-		}
-		return *this;
-	}
-
-	bool GUID::operator!=(const GUID& rhs) const
-	{
-		return Data1 != rhs.Data1 && Data2 != rhs.Data2;
-	}
-
-	bool GUID::operator==(const GUID& rhs) const
-	{
-		// TODO: Compare perf of this with memcmp
-		return Data1 == rhs.Data1 && Data2 == rhs.Data2;
-	}
-
-	bool GUID::operator<(const GUID& rhs) const
-	{
-		return Data2 < rhs.Data2 || (Data2 == rhs.Data2 && Data1 < rhs.Data1);
-	}
-
-	bool GUID::operator>(const GUID& rhs) const
-	{
-		return Data2 > rhs.Data2 || (Data2 == rhs.Data2 && Data1 > rhs.Data1);
-	}
-
-	bool GUID::IsValid() const
-	{
-		return memcmp(&Data1, &InvalidGameObjectID.Data1, GUIDLength) != 0;
-	}
-
-	inline u8 ToHex(u8 dec)
-	{
-		return hex_table[dec];
-	}
-
-	inline u8 FromHex(char hex)
-	{
-		if (hex <= '9')
-		{
-			return (u8)(hex - '0');
-		}
-
-		return 10 + (u8)(hex - 'A');
-	}
-
-	std::string GUID::ToString() const
-	{
-		char buffer[33];
-
-		ToString(buffer);
-
-		return std::string(buffer);
-	}
-
-	void GUID::ToString(char buffer[33]) const
-	{
-		// Write to buffer in reverse order (least significant to most significant)
-		char* bufferPtr = buffer + 31;
-		u64 data = Data1;
-		for (u32 i = 0; i < 8; ++i)
-		{
-			u8 d = data & 0xFF;       // Lowest byte of data
-			u8 msb = ToHex(d >> 4);   // Higher nibble
-			u8 lsb = ToHex(d & 0x0F); // Lower nibble
-			data >>= 8; // /= 256
-			*bufferPtr-- = lsb;
-			*bufferPtr-- = msb;
-		}
-
-		data = Data2;
-		for (u32 i = 0; i < 8; ++i)
-		{
-			u8 d = data & 0xFF;		  // Lowest byte of data
-			u8 msb = ToHex(d >> 4);	  // Higher nibble
-			u8 lsb = ToHex(d & 0x0F); // Lower nibble
-			data >>= 8; // /= 256
-			*bufferPtr-- = lsb;
-			*bufferPtr-- = msb;
-		}
-
-		buffer[32] = 0; // Null terminator
-	}
-
-	GUID GUID::FromString(const std::string& str)
-	{
-		if (str.length() != 32)
-		{
-			return InvalidGUID;
-		}
-
-		const char* buffer = str.data();
-
-#if DEBUG
-		for (u32 i = 0; i < 32; ++i)
-		{
-			if (!((buffer[i] >= '0' && buffer[i] <= '9') ||
-				(buffer[i] >= 'A' && buffer[i] <= 'F')))
-			{
-				return InvalidGUID;
-			}
-		}
-#endif
-
-		GUID result = {};
-
-		// Read from string in reverse order (least significant to most significant)
-		for (u32 i = 16; i >= 9; --i)
-		{
-			char msb = buffer[(i - 1) * 2];
-			char lsb = buffer[(i - 1) * 2 + 1];
-
-			u8 val = FromHex(msb) << 4 | FromHex(lsb);
-
-			result.Data1 |= (u64)val << ((16 - i) * 8);
-		}
-
-		for (u32 i = 8; i >= 1; --i)
-		{
-			char msb = buffer[(i - 1) * 2];
-			char lsb = buffer[(i - 1) * 2 + 1];
-
-			u8 val = FromHex(msb) << 4 | FromHex(lsb);
-
-			result.Data2 |= (u64)val << ((8 - i) * 8);
-		}
-
-		return result;
 	}
 
 	namespace ImGuiExt

@@ -6,8 +6,6 @@
 namespace flex
 {
 	class GameObject;
-	struct GUID;
-	using GameObjectID = GUID;
 
 	class Editor
 	{
@@ -62,6 +60,7 @@ namespace flex
 		// ImGui payload identifiers
 		static const char* MaterialPayloadCStr;
 		static const char* MeshPayloadCStr;
+		static const char* PrefabPayloadCStr;
 		static const char* GameObjectPayloadCStr;
 
 	private:

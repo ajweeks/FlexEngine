@@ -199,7 +199,8 @@ namespace flex
 		// Returns true when the selected material has changed
 		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials);
 		void DrawImGuiTexturePreviewTooltip(Texture* texture);
-		void DrawImGuiForGameObject(GameObject* gameObject);
+		// Returns true if any property changed
+		bool DrawImGuiForGameObject(GameObject* gameObject);
 
 		void DrawImGuiSettings();
 

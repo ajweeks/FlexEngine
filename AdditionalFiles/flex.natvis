@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="flex::BaseScene">
+    <DisplayString>{m_FileName}</DisplayString>
+  </Type>
+
   <Type Name="flex::GameObject">
     <DisplayString>{m_Name}, ID: {ID.Data1} {ID.Data2}</DisplayString>
   </Type>

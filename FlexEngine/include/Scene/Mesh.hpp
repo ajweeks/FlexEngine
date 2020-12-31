@@ -68,7 +68,8 @@ namespace flex
 
 		void SetOwner(GameObject* owner);
 
-		void DrawImGui();
+		// Returns true if any property changed
+		bool DrawImGui();
 
 		void SetTypeToMemory();
 

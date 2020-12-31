@@ -121,7 +121,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion)
+	GameObject* GameObject::CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 sceneFileVersion)
 	{
 		GameObject* newGameObject = nullptr;
 
@@ -129,7 +129,7 @@ namespace flex
 		std::string objectName = obj.GetString("name");
 
 		GameObjectID gameObjectID;
-		if (fileVersion >= 5)
+		if (sceneFileVersion >= 5)
 		{
 			gameObjectID = obj.GetGUID("id");
 		}
@@ -140,10 +140,40 @@ namespace flex
 
 		if (gameObjectTypeStr.compare("prefab") == 0)
 		{
-			PrefabInfo* prefabInfo = g_ResourceManager->GetPrefabInfo(objectName);
+			PrefabInfo* prefabInfo = nullptr;
+
+			std::string prefabName = obj.GetString("prefab type");
+
+			if (sceneFileVersion >= 6)
+			{
+				// Added in v6
+				std::string prefabIDStr = obj.GetString("prefab id");
+				PrefabID prefabID = GUID::FromString(prefabIDStr);
+				prefabInfo = g_ResourceManager->GetPrefabInfo(prefabID);
+
+				if (prefabInfo->name.compare(prefabName) != 0)
+				{
+					std::string sceneName = scene->GetName();
+					std::string idStr = prefabInfo->ID.ToString();
+					PrintWarn("Prefabs with matching GUIDs have differing names between scene file & prefab file\n(Scene: %s, \"%s\" != \"%s\", GUID: %s)\n",
+						sceneName.c_str(), prefabInfo->name.c_str(), prefabName.c_str(), idStr.c_str());
+				}
+			}
+			else
+			{
+				prefabInfo = g_ResourceManager->GetPrefabInfo(prefabName);
+			}
+
 			if (prefabInfo != nullptr)
 			{
-				return CreateObjectFromPrefabInfo(*prefabInfo, scene, fileVersion, gameObjectID);
+				JSONObject transformObj;
+				Transform transform = Transform::Identity();
+				if (obj.SetObjectChecked("transform", transformObj))
+				{
+					transform = Transform::ParseJSON(transformObj);
+				}
+
+				return CreateObjectFromPrefabInfo(scene, objectName, gameObjectID, *prefabInfo, &transform);
 			}
 			else
 			{
@@ -158,23 +188,34 @@ namespace flex
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->ParseJSON(obj, scene, fileVersion);
+			newGameObject->ParseJSON(obj, scene, sceneFileVersion);
 		}
 
 		return newGameObject;
 	}
 
-	GameObject* GameObject::CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	GameObject* GameObject::CreateObjectFromPrefabInfo(BaseScene* scene, const std::string& objectName, const GameObjectID& gameObjectID, const PrefabInfo& prefabInfo, Transform* optionalTransform /* = nullptr */)
 	{
-		FLEX_UNUSED(fileVersion);
+		GameObject* prefabInstance = CreateObjectOfType(scene, prefabInfo.typeID, objectName, gameObjectID);
+		prefabInstance->m_PrefabIDLoadedFrom = prefabInfo.ID;
+		prefabInstance->m_bVisible = prefabInfo.bVisible;
+		if (optionalTransform != nullptr)
+		{
+			prefabInstance->m_Transform = *optionalTransform;
+		}
 
-		GameObject* prefabInstance = CreateObjectOfType(scene, prefabInfo.typeID, prefabInfo.name, gameObjectID);
-		prefabInstance->m_bLoadedFromPrefab = true;
-		prefabInstance->m_PrefabName = prefabInstance->m_Name;
-		prefabInstance->SetVisible(prefabInfo.bVisible, false);
-		prefabInstance->m_Transform = prefabInfo.transform;
+		std::vector<MaterialID> materialIDs;
+		if (prefabInstance->m_Mesh != nullptr)
+		{
+			materialIDs = prefabInstance->m_Mesh->GetMaterialIDs();
+		}
+		prefabInstance->ParseUniqueFields(prefabInfo.sourceData, scene, materialIDs);
 
-		prefabInstance->ParseUniqueFields(prefabInfo.sourceData, scene, prefabInstance->m_Mesh->GetMaterialIDs());
+		for (const PrefabInfo& childInfo : prefabInfo.children)
+		{
+			// TODO: Check
+			prefabInstance->AddChild(CreateObjectFromPrefabInfo(scene, childInfo.name, InvalidGameObjectID, childInfo));
+		}
 
 		return prefabInstance;
 	}
@@ -385,8 +426,10 @@ namespace flex
 	{
 		// ImGui::PushID will have already been called, making names not need to be quailfied for uniqueness
 
+		bool bAnyPropertyChanged = false;
+
 		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
-		ImGui::Text("%s : %s", m_Name.c_str(), typeStr);
+		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_PrefabIDLoadedFrom.IsValid() ? "(prefab)" : "");
 
 		if (DoImGuiContextMenu(true))
 		{
@@ -409,6 +452,7 @@ namespace flex
 		bool bVisible = m_bVisible;
 		if (ImGui::Checkbox(objectVisibleLabel.c_str(), &bVisible))
 		{
+			bAnyPropertyChanged = true;
 			SetVisible(bVisible);
 		}
 
@@ -417,6 +461,7 @@ namespace flex
 		bool bStatic = m_bStatic;
 		if (ImGui::Checkbox("Static", &bStatic))
 		{
+			bAnyPropertyChanged = true;
 			SetStatic(bStatic);
 		}
 
@@ -437,6 +482,7 @@ namespace flex
 
 				if (ImGui::Button("Paste"))
 				{
+					bAnyPropertyChanged = true;
 					PasteTransformFromClipboard(&m_Transform);
 					ImGui::CloseCurrentPopup();
 				}
@@ -492,6 +538,7 @@ namespace flex
 
 			if (bValueChanged)
 			{
+				bAnyPropertyChanged = true;
 				m_Transform.SetLocalPosition(translation, false);
 
 				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
@@ -514,12 +561,13 @@ namespace flex
 
 		if (m_Mesh != nullptr)
 		{
-			g_Renderer->DrawImGuiForGameObject(this);
+			bAnyPropertyChanged = g_Renderer->DrawImGuiForGameObject(this) || bAnyPropertyChanged;
 		}
 		else
 		{
 			if (ImGui::Button("Add mesh component"))
 			{
+				bAnyPropertyChanged = true;
 				Mesh* mesh = SetMesh(new Mesh(this));
 				mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
@@ -537,6 +585,7 @@ namespace flex
 				{
 					if (ImGui::Button("Remove rigid body"))
 					{
+						bAnyPropertyChanged = true;
 						RemoveRigidBody();
 					}
 
@@ -548,12 +597,14 @@ namespace flex
 					bool bRBStatic = m_RigidBody->IsStatic();
 					if (ImGui::Checkbox("Static##rb", &bRBStatic))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetStatic(bRBStatic);
 					}
 
 					bool bKinematic = m_RigidBody->IsKinematic();
 					if (ImGui::Checkbox("Kinematic", &bKinematic))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetKinematic(bKinematic);
 					}
 
@@ -562,6 +613,7 @@ namespace flex
 						i32 group = m_RigidBody->GetGroup();
 						if (ImGui::InputInt("Group", &group, 1, 16))
 						{
+							bAnyPropertyChanged = true;
 							group = glm::clamp(group, -1, 16);
 							m_RigidBody->SetGroup(group);
 						}
@@ -571,6 +623,7 @@ namespace flex
 						i32 mask = m_RigidBody->GetMask();
 						if (ImGui::InputInt("Mask", &mask, 1, 16))
 						{
+							bAnyPropertyChanged = true;
 							mask = glm::clamp(mask, -1, 16);
 							m_RigidBody->SetMask(mask);
 						}
@@ -581,18 +634,21 @@ namespace flex
 					i32 flags = m_RigidBody->GetPhysicsFlags();
 					if (ImGui::SliderInt("Flags", &flags, 0, 16))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetPhysicsFlags(flags);
 					}
 
 					real mass = m_RigidBody->GetMass();
 					if (ImGui::SliderFloat("Mass", &mass, 0.0f, 1000.0f))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetMass(mass);
 					}
 
 					real friction = m_RigidBody->GetFriction();
 					if (ImGui::SliderFloat("Friction", &friction, 0.0f, 1.0f))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetFriction(friction);
 					}
 
@@ -627,6 +683,8 @@ namespace flex
 								{
 									if (selectedColliderShape != i)
 									{
+										bAnyPropertyChanged = true;
+
 										selectedColliderShape = i;
 
 										BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
@@ -683,6 +741,7 @@ namespace flex
 						real maxExtent = 1000.0f;
 						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
 						{
+							bAnyPropertyChanged = true;
 							halfExtents = ToBtVec3(halfExtentsG);
 							btBoxShape* newShape = new btBoxShape(halfExtents);
 							SetCollisionShape(newShape);
@@ -697,6 +756,7 @@ namespace flex
 						real maxExtent = 1000.0f;
 						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
 						{
+							bAnyPropertyChanged = true;
 							btSphereShape* newShape = new btSphereShape(radius);
 							SetCollisionShape(newShape);
 						}
@@ -715,6 +775,7 @@ namespace flex
 
 						if (bUpdateShape)
 						{
+							bAnyPropertyChanged = true;
 							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
 							SetCollisionShape(newShape);
 						}
@@ -729,6 +790,7 @@ namespace flex
 						real maxExtent = 1000.0f;
 						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
 						{
+							bAnyPropertyChanged = true;
 							halfExtents = ToBtVec3(halfExtentsG);
 							btCylinderShape* newShape = new btCylinderShape(halfExtents);
 							SetCollisionShape(newShape);
@@ -743,10 +805,12 @@ namespace flex
 					glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
 					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetLocalPosition(localOffsetPos);
 					}
 					if (ImGui::IsItemClicked(1))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetLocalPosition(VEC3_ZERO);
 					}
 
@@ -754,6 +818,7 @@ namespace flex
 					glm::vec3 cleanedRot;
 					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
 					{
+						bAnyPropertyChanged = true;
 						m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
 					}
 
@@ -762,20 +827,24 @@ namespace flex
 					glm::vec3 linearVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity());
 					if (ImGui::DragFloat3("linear vel", &linearVel.x, 0.05f))
 					{
+						bAnyPropertyChanged = true;
 						rbInternal->setLinearVelocity(ToBtVec3(linearVel));
 					}
 					if (ImGui::IsItemClicked(1))
 					{
+						bAnyPropertyChanged = true;
 						rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
 					}
 
 					glm::vec3 angularVel = ToVec3(m_RigidBody->GetRigidBodyInternal()->getAngularVelocity());
 					if (ImGui::DragFloat3("angular vel", &angularVel.x, 0.05f))
 					{
+						bAnyPropertyChanged = true;
 						rbInternal->setAngularVelocity(ToBtVec3(angularVel));
 					}
 					if (ImGui::IsItemClicked(1))
 					{
+						bAnyPropertyChanged = true;
 						rbInternal->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
 					}
 
@@ -801,6 +870,7 @@ namespace flex
 		{
 			if (ImGui::Button("Add rigid body"))
 			{
+				bAnyPropertyChanged = true;
 				RigidBody* rb = SetRigidBody(new RigidBody());
 				btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
 				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
@@ -853,6 +923,14 @@ namespace flex
 		}
 		ImGui::Text("Parent: %s", parentName.c_str());
 		ImGui::Text("Num children: %u", m_Children.size());
+
+		if (bAnyPropertyChanged)
+		{
+			if (m_PrefabIDLoadedFrom.IsValid())
+			{
+				g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+			}
+		}
 	}
 
 	bool GameObject::DoImGuiContextMenu(bool bActive)
@@ -909,30 +987,33 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			char buffer[33];
-			ID.ToString(buffer);
-			char data0Buffer[17];
-			char data1Buffer[17];
-			memcpy(data0Buffer, buffer, 16);
-			data0Buffer[16] = 0;
-			memcpy(data1Buffer, buffer + 16, 16);
-			data1Buffer[16] = 0;
-			ImGui::Text("GUID: %s-%s", data0Buffer, data1Buffer);
-
-			if (ImGui::IsItemHovered())
+			// ID
 			{
-				ImGui::BeginTooltip();
+				char buffer[33];
+				ID.ToString(buffer);
+				char data0Buffer[17];
+				char data1Buffer[17];
+				memcpy(data0Buffer, buffer, 16);
+				data0Buffer[16] = 0;
+				memcpy(data1Buffer, buffer + 16, 16);
+				data1Buffer[16] = 0;
+				ImGui::Text("GUID: %s-%s", data0Buffer, data1Buffer);
 
-				ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
+				if (ImGui::IsItemHovered())
+				{
+					ImGui::BeginTooltip();
 
-				ImGui::EndTooltip();
-			}
+					ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
 
-			ImGui::SameLine();
+					ImGui::EndTooltip();
+				}
 
-			if (ImGui::Button("Copy"))
-			{
-				g_Window->SetClipboardText(buffer);
+				ImGui::SameLine();
+
+				if (ImGui::Button("Copy"))
+				{
+					g_Window->SetClipboardText(buffer);
+				}
 			}
 
 			if (DrawImGuiDuplicateGameObjectButton())
@@ -949,6 +1030,20 @@ namespace flex
 				bDeletedOrDuplicated = true;
 			}
 
+			if (ImGui::Button("Save as prefab"))
+			{
+				PrefabInfo newInfo = SaveToPrefabInfo();
+
+				if (m_PrefabIDLoadedFrom != InvalidPrefabID)
+				{
+					g_ResourceManager->UpdatePrefabData(newInfo);
+				}
+				else
+				{
+					g_ResourceManager->AddNewPrefab(newInfo);
+				}
+			}
+
 			ImGui::EndPopup();
 		}
 
@@ -956,6 +1051,58 @@ namespace flex
 		ImGui::PopID(); // ID.Data2
 
 		return bDeletedOrDuplicated;
+	}
+
+	PrefabInfo GameObject::SaveToPrefabInfo()
+	{
+		PrefabInfo result;
+
+		if (m_PrefabIDLoadedFrom == InvalidPrefabID)
+		{
+			// This is a new prefab, genrate a new ID
+			m_PrefabIDLoadedFrom = Platform::GenerateGUID();
+		}
+
+		result.ID = m_PrefabIDLoadedFrom;
+
+		AddSelfAndChildrenToPrefabInfo(result, true);
+
+		return result;
+	}
+
+	void GameObject::AddSelfAndChildrenToPrefabInfo(PrefabInfo& prefabInfo, bool bRoot)
+	{
+		prefabInfo.name = m_Name;
+		prefabInfo.typeID = m_TypeID;
+		prefabInfo.bVisible = m_bVisible;
+		prefabInfo.transform = m_Transform;
+		prefabInfo.sourceData = Serialize(g_SceneManager->CurrentScene(), true);
+
+		if (bRoot)
+		{
+			// Check is prefab already exists, if so use existing name
+			PrefabInfo* oldPrefabInfo = g_ResourceManager->GetPrefabInfo(m_PrefabIDLoadedFrom);
+			if (oldPrefabInfo != nullptr)
+			{
+				prefabInfo.name = oldPrefabInfo->name;
+				// Not so yummy hack
+				for (JSONField& field : prefabInfo.sourceData.fields)
+				{
+					if (field.label.compare("name") == 0)
+					{
+						field.value.strValue = oldPrefabInfo->name;
+						break;
+					}
+				}
+			}
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			PrefabInfo childInfo;
+			child->AddSelfAndChildrenToPrefabInfo(childInfo, false);
+			prefabInfo.children.emplace_back(childInfo);
+		}
 	}
 
 	bool GameObject::DrawImGuiDuplicateGameObjectButton()
@@ -1182,7 +1329,7 @@ namespace flex
 		// Generic game objects have no unique fields
 	}
 
-	JSONObject GameObject::Serialize(const BaseScene* scene) const
+	JSONObject GameObject::Serialize(const BaseScene* scene, bool bSerializePrefabData /* = false */) const
 	{
 		JSONObject object = {};
 
@@ -1194,195 +1341,211 @@ namespace flex
 
 
 		// Non-basic objects shouldn't serialize certain fields which are constant across all instances
-		// TODO: Save out overridden prefab fields
 		// TODO: Remove this var in place of new member m_bSerializeMesh
 		bool bIsBasicObject = (m_TypeID == SID("object") || m_TypeID == InvalidStringID);
 
 
 		object.fields.emplace_back("name", JSONValue(m_Name));
 
-		// Added in v5
-		object.fields.emplace_back("id", JSONValue(ID));
-
-		if (m_bLoadedFromPrefab)
+		// Added in scene v5
+		if (!bSerializePrefabData)
 		{
-			object.fields.emplace_back("type", JSONValue(std::string("prefab")));
-			object.fields.emplace_back("prefab type", JSONValue(m_PrefabName));
+			object.fields.emplace_back("id", JSONValue(ID));
 		}
-		else
+
+		if (bSerializePrefabData)
 		{
 			object.fields.emplace_back("type", JSONValue(BaseScene::GameObjectTypeIDToString(m_TypeID)));
 		}
-
-		object.fields.emplace_back("visible", JSONValue(IsVisible()));
-		// TODO: Only save/read this value when editor is included in build
-		if (!IsVisibleInSceneExplorer())
+		else
 		{
-			object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
-		}
-
-		if (IsStatic())
-		{
-			object.fields.emplace_back("static", JSONValue(true));
-		}
-
-		object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
-
-		object.fields.push_back(m_Transform.Serialize());
-
-		if (m_Mesh &&
-			bIsBasicObject &&
-			!m_bLoadedFromPrefab)
-		{
-			object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
-		}
-
-		if (m_Mesh)
-		{
-			std::vector<JSONField> materialFields;
-			for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
+			if (m_PrefabIDLoadedFrom.IsValid())
 			{
-				MaterialID matID = InvalidMaterialID;
-				if (m_Mesh)
-				{
-					matID = m_Mesh->GetMaterialID(slotIndex);
-				}
-
-				if (matID != InvalidMaterialID)
-				{
-					Material* material = g_Renderer->GetMaterial(matID);
-					if (material->bSerializable)
-					{
-						std::string materialName = material->name;
-						if (!materialName.empty())
-						{
-							materialFields.emplace_back(materialName, JSONValue(""));
-						}
-						else
-						{
-							PrintWarn("Game object contains material with empty material name!\n");
-						}
-					}
-				}
-			}
-
-			if (!materialFields.empty())
-			{
-				object.fields.emplace_back("materials", JSONValue(materialFields));
-			}
-		}
-
-		btCollisionShape* collisionShape = GetCollisionShape();
-		if (collisionShape &&
-			!m_bLoadedFromPrefab)
-		{
-			JSONObject colliderObj;
-
-			i32 shapeType = collisionShape->getShapeType();
-			std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-			colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = ToVec3(btHalfExtents);
-				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = VecToString(halfExtents, 3);
-				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
-				radius /= m_Transform.GetWorldScale().x;
-				colliderObj.fields.emplace_back("radius", JSONValue(radius));
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
-				real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
-				radius /= m_Transform.GetWorldScale().x;
-				height /= m_Transform.GetWorldScale().x;
-				colliderObj.fields.emplace_back("radius", JSONValue(radius));
-				colliderObj.fields.emplace_back("height", JSONValue(height));
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
-				real height = static_cast<btConeShape*>(collisionShape)->getHeight();
-				radius /= m_Transform.GetWorldScale().x;
-				height /= m_Transform.GetWorldScale().x;
-				colliderObj.fields.emplace_back("radius", JSONValue(radius));
-				colliderObj.fields.emplace_back("height", JSONValue(height));
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
-				glm::vec3 halfExtents = ToVec3(btHalfExtents);
-				halfExtents /= m_Transform.GetWorldScale();
-				std::string halfExtentsStr = VecToString(halfExtents, 3);
-				colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
-			} break;
-			default:
-			{
-				PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
-					shapeType, m_Name.c_str(), scene->GetName().c_str());
-			} break;
-			}
-
-			if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
-			{
-				colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
-			}
-
-			if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
-			{
-				glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
-				colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
-			}
-
-			if (m_RigidBody->GetLocalScale() != VEC3_ONE)
-			{
-				colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
-			}
-
-			//bool bTrigger = false;
-			//colliderObj.fields.emplace_back("trigger", JSONValue(bTrigger)));
-			// TODO: Handle triggers
-
-			object.fields.emplace_back("collider", JSONValue(colliderObj));
-		}
-
-		RigidBody* rigidBody = GetRigidBody();
-		if (rigidBody &&
-			!m_bLoadedFromPrefab)
-		{
-			JSONObject rigidBodyObj = {};
-
-			if (collisionShape == nullptr)
-			{
-				PrintError("Attempted to serialize object (%s) which has a rigid body but no collider!\n", GetName().c_str());
+				object.fields.emplace_back("type", JSONValue(std::string("prefab")));
+				std::string prefabName = g_ResourceManager->GetPrefabInfo(m_PrefabIDLoadedFrom)->name;
+				object.fields.emplace_back("prefab type", JSONValue(prefabName)); // More of a convenience for source control, GUID is ground truth
+				// Added in scene v6
+				std::string prefabIDStr = m_PrefabIDLoadedFrom.ToString();
+				object.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 			}
 			else
 			{
-				real mass = rigidBody->GetMass();
-				bool bKinematic = rigidBody->IsKinematic();
-				bool bStatic = rigidBody->IsStatic();
-				i32 mask = m_RigidBody->GetMask();
-				i32 group = m_RigidBody->GetGroup();
-
-				rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
-				rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
-				rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
-				rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
-				rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+				object.fields.emplace_back("type", JSONValue(BaseScene::GameObjectTypeIDToString(m_TypeID)));
 			}
-
-			object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 		}
 
-		SerializeUniqueFields(object);
+		object.fields.push_back(m_Transform.Serialize());
+
+		// TODO: Handle overrides
+		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
+		{
+			object.fields.emplace_back("visible", JSONValue(IsVisible()));
+			if (!IsVisibleInSceneExplorer())
+			{
+				object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
+			}
+
+			if (IsStatic())
+			{
+				object.fields.emplace_back("static", JSONValue(true));
+			}
+
+			object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
+
+			if (m_Mesh &&
+				bIsBasicObject &&
+				!m_PrefabIDLoadedFrom.IsValid())
+			{
+				object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
+			}
+
+			if (m_Mesh)
+			{
+				std::vector<JSONField> materialFields;
+				for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
+				{
+					MaterialID matID = InvalidMaterialID;
+					if (m_Mesh)
+					{
+						matID = m_Mesh->GetMaterialID(slotIndex);
+					}
+
+					if (matID != InvalidMaterialID)
+					{
+						Material* material = g_Renderer->GetMaterial(matID);
+						if (material->bSerializable)
+						{
+							std::string materialName = material->name;
+							if (!materialName.empty())
+							{
+								materialFields.emplace_back(materialName, JSONValue(""));
+							}
+							else
+							{
+								PrintWarn("Game object contains material with empty material name!\n");
+							}
+						}
+					}
+				}
+
+				if (!materialFields.empty())
+				{
+					object.fields.emplace_back("materials", JSONValue(materialFields));
+				}
+			}
+
+			btCollisionShape* collisionShape = GetCollisionShape();
+			if (collisionShape &&
+				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			{
+				JSONObject colliderObj;
+
+				i32 shapeType = collisionShape->getShapeType();
+				std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
+				colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
+
+				switch (shapeType)
+				{
+				case BOX_SHAPE_PROXYTYPE:
+				{
+					btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
+					glm::vec3 halfExtents = ToVec3(btHalfExtents);
+					halfExtents /= m_Transform.GetWorldScale();
+					std::string halfExtentsStr = VecToString(halfExtents, 3);
+					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
+				} break;
+				case SPHERE_SHAPE_PROXYTYPE:
+				{
+					real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
+					radius /= m_Transform.GetWorldScale().x;
+					colliderObj.fields.emplace_back("radius", JSONValue(radius));
+				} break;
+				case CAPSULE_SHAPE_PROXYTYPE:
+				{
+					real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
+					real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
+					radius /= m_Transform.GetWorldScale().x;
+					height /= m_Transform.GetWorldScale().x;
+					colliderObj.fields.emplace_back("radius", JSONValue(radius));
+					colliderObj.fields.emplace_back("height", JSONValue(height));
+				} break;
+				case CONE_SHAPE_PROXYTYPE:
+				{
+					real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
+					real height = static_cast<btConeShape*>(collisionShape)->getHeight();
+					radius /= m_Transform.GetWorldScale().x;
+					height /= m_Transform.GetWorldScale().x;
+					colliderObj.fields.emplace_back("radius", JSONValue(radius));
+					colliderObj.fields.emplace_back("height", JSONValue(height));
+				} break;
+				case CYLINDER_SHAPE_PROXYTYPE:
+				{
+					btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
+					glm::vec3 halfExtents = ToVec3(btHalfExtents);
+					halfExtents /= m_Transform.GetWorldScale();
+					std::string halfExtentsStr = VecToString(halfExtents, 3);
+					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
+				} break;
+				default:
+				{
+					PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
+						shapeType, m_Name.c_str(), scene->GetName().c_str());
+				} break;
+				}
+
+				if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
+				{
+					colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
+				}
+
+				if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
+				{
+					glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
+					colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
+				}
+
+				if (m_RigidBody->GetLocalScale() != VEC3_ONE)
+				{
+					colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
+				}
+
+				//bool bTrigger = false;
+				//colliderObj.fields.emplace_back("trigger", JSONValue(bTrigger)));
+				// TODO: Handle triggers
+
+				object.fields.emplace_back("collider", JSONValue(colliderObj));
+			}
+
+			RigidBody* rigidBody = GetRigidBody();
+			if (rigidBody &&
+				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			{
+				JSONObject rigidBodyObj = {};
+
+				if (collisionShape == nullptr)
+				{
+					PrintError("Attempted to serialize object (%s) which has a rigid body but no collider!\n", GetName().c_str());
+				}
+				else
+				{
+					real mass = rigidBody->GetMass();
+					bool bKinematic = rigidBody->IsKinematic();
+					bool bStatic = rigidBody->IsStatic();
+					i32 mask = m_RigidBody->GetMask();
+					i32 group = m_RigidBody->GetGroup();
+
+					rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
+					rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
+					rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
+					rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
+					rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+				}
+
+				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
+			}
+
+			SerializeUniqueFields(object);
+		}
 
 		if (!m_Children.empty())
 		{
@@ -1392,7 +1555,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					childrenToSerialize.push_back(child->Serialize(scene));
+					childrenToSerialize.push_back(child->Serialize(scene, bSerializePrefabData));
 				}
 			}
 
@@ -1534,7 +1697,19 @@ namespace flex
 			matIDs = m_Mesh->GetMaterialIDs();
 		}
 
-		*newGameObject->GetTransform() = m_Transform;
+		newGameObject->m_Tags = m_Tags;
+		newGameObject->m_Transform = m_Transform;
+		newGameObject->m_TypeID = m_TypeID;
+
+		newGameObject->m_bSerializable = m_bSerializable;
+		newGameObject->m_bVisible = m_bVisible;
+		newGameObject->m_bVisibleInSceneExplorer = m_bVisibleInSceneExplorer;
+		newGameObject->m_bStatic = m_bStatic;
+		newGameObject->m_bTrigger = m_bTrigger;
+		newGameObject->m_bInteractable = m_bInteractable;
+		newGameObject->m_PrefabIDLoadedFrom = m_PrefabIDLoadedFrom;
+		newGameObject->m_bCastsShadow = m_bCastsShadow;
+		newGameObject->m_bUniformScale = m_bUniformScale;
 
 		if (parent != nullptr)
 		{
@@ -1560,20 +1735,23 @@ namespace flex
 		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr)
 		{
 			Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
-			Mesh::Type prefabType = m_Mesh->GetType();
-			if (prefabType == Mesh::Type::PREFAB)
+			Mesh::Type meshType = m_Mesh->GetType();
+			switch (meshType)
+			{
+			case Mesh::Type::PREFAB:
 			{
 				PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
 				newMesh->LoadPrefabShape(shape, matIDs[0], createInfoPtr);
-			}
-			else if (prefabType == Mesh::Type::FILE)
+			} break;
+			case Mesh::Type::FILE:
 			{
 				std::string filePath = m_Mesh->GetRelativeFilePath();
 				newMesh->LoadFromFile(filePath, matIDs, false, createInfoPtr);
-			}
-			else
+			} break;
+			default:
 			{
 				PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
+			} break;
 			}
 		}
 
@@ -2289,34 +2467,35 @@ namespace flex
 			{
 				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
-
-			if (!m_Mesh)
-			{
-				Mesh* valveMesh = new Mesh(this);
-				valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs[0]);
-				assert(m_Mesh == nullptr);
-				SetMesh(valveMesh);
-			}
-
-			if (!m_CollisionShape)
-			{
-				btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				SetCollisionShape(cylinderShape);
-			}
-
-			if (!m_RigidBody)
-			{
-				RigidBody* rigidBody = SetRigidBody(new RigidBody());
-				rigidBody->SetMass(1.0f);
-				rigidBody->SetKinematic(false);
-				rigidBody->SetStatic(false);
-			}
 		}
 		else
 		{
-			PrintWarn("Valve's \"valve info\" field missing in scene %s\n", scene->GetName().c_str());
+			std::string sceneName = scene->GetName();
+			PrintError("Valve's \"valve info\" field missing in scene %s\n", sceneName.c_str());
+		}
+
+		if (!m_Mesh)
+		{
+			Mesh* valveMesh = new Mesh(this);
+			valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs.empty() ? g_Renderer->GetPlaceholderMaterialID() : matIDs[0]);
+			assert(m_Mesh == nullptr);
+			SetMesh(valveMesh);
+		}
+
+		if (!m_CollisionShape)
+		{
+			btVector3 btHalfExtents(1.5f, 1.0f, 1.5f);
+			btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
+
+			SetCollisionShape(cylinderShape);
+		}
+
+		if (!m_RigidBody)
+		{
+			RigidBody* rigidBody = SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(false);
+			rigidBody->SetStatic(false);
 		}
 	}
 
@@ -2413,6 +2592,17 @@ namespace flex
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
 		}
+
+
+		/*
+
+		[x] Don't serialize prefab fields other than prefab type
+		[x] Right click save as prefab
+		[x] Colour prefabs differently in hierarchy
+		[ ] Test nested prefabs
+
+		*/
+
 
 		m_RigidBody->GetRigidBodyInternal()->activate(true);
 		m_Transform.SetLocalRotation(glm::quat(glm::vec3(0, rotation, 0)));

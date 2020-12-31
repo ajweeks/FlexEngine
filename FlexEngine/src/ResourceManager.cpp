@@ -141,20 +141,22 @@ namespace flex
 				JSONObject prefabObject;
 				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
 				{
-					PrefabInfo prefabInfo = {};
+					JSONObject prefabRootObject = prefabObject.GetObject("root");
 
-					prefabInfo.name = prefabObject.GetString("name");
-					prefabInfo.prefabType = prefabObject.GetString("prefab type");
+					PrefabInfo prefabInfo = ParsePrefabInfoFromJSON(prefabRootObject);
 
-					prefabInfo.bVisible = prefabObject.GetBool("visible");
+					i32 version = prefabObject.GetInt("version");
 
-					JSONObject transformObj;
-					if (prefabObject.SetObjectChecked("transform", transformObj))
+					if (version >= 2)
 					{
-						prefabInfo.transform = Transform::ParseJSON(transformObj);
+						// Added in prefab v2
+						std::string idStr = prefabObject.GetString("prefab id");
+						prefabInfo.ID = GUID::FromString(idStr);
 					}
-
-					prefabInfo.sourceData = prefabObject;
+					else
+					{
+						prefabInfo.ID = Platform::GenerateGUID();
+					}
 
 					parsedPrefabInfos.push_back(prefabInfo);
 				}
@@ -175,6 +177,44 @@ namespace flex
 		{
 			Print("Parsed %u prefabs\n", (u32)parsedPrefabInfos.size());
 		}
+	}
+
+	PrefabInfo ResourceManager::ParsePrefabInfoFromJSON(const JSONObject& prefabRootObj)
+	{
+		PrefabInfo prefabInfo = {};
+
+		prefabInfo.name = prefabRootObj.GetString("name");
+		std::string typeName = prefabRootObj.GetString("type");
+		prefabInfo.typeID = Hash(typeName.c_str());
+
+		std::string prefabType = prefabRootObj.GetString("prefab type");
+
+		if (!prefabRootObj.SetBoolChecked("visible", prefabInfo.bVisible))
+		{
+			prefabInfo.bVisible = true;
+		}
+
+		JSONObject transformObj;
+		if (prefabRootObj.SetObjectChecked("transform", transformObj))
+		{
+			prefabInfo.transform = Transform::ParseJSON(transformObj);
+		}
+
+		std::vector<JSONObject> children;
+		if (prefabRootObj.SetObjectArrayChecked("children", children))
+		{
+			prefabInfo.children.reserve(children.size());
+			for (const JSONObject& childObj : children)
+			{
+				PrefabInfo childInfo = ParsePrefabInfoFromJSON(childObj);
+				prefabInfo.children.push_back(childInfo);
+			}
+		}
+
+		prefabInfo.sourceData = prefabRootObj;
+		prefabInfo.bDirty = false;
+
+		return prefabInfo;
 	}
 
 	void ResourceManager::ParseFontFile()
@@ -703,6 +743,7 @@ namespace flex
 		return nullptr;
 	}
 
+	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
 	PrefabInfo* ResourceManager::GetPrefabInfo(const std::string& prefabName)
 	{
 		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
@@ -714,6 +755,106 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	PrefabInfo* ResourceManager::GetPrefabInfo(const PrefabID& prefabID)
+	{
+		// TODO: Use map
+		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		{
+			if (prefabInfo.ID == prefabID)
+			{
+				return &prefabInfo;
+			}
+		}
+
+		return nullptr;
+	}
+
+	bool ResourceManager::IsPrefabDirty(const PrefabID& prefabID) const
+	{
+		for (const PrefabInfo& prefabInfo : parsedPrefabInfos)
+		{
+			if (prefabInfo.ID == prefabID)
+			{
+				return prefabInfo.bDirty;
+			}
+		}
+
+		return true;
+	}
+
+	void ResourceManager::SetPrefabDirty(const PrefabID& prefabID)
+	{
+		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		{
+			if (prefabInfo.ID == prefabID)
+			{
+				prefabInfo.bDirty = true;
+			}
+		}
+	}
+
+	void ResourceManager::SetAllPrefabsDirty(bool bDirty)
+	{
+		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		{
+			prefabInfo.bDirty = bDirty;
+		}
+	}
+
+	void ResourceManager::UpdatePrefabData(const PrefabInfo& prefabInfo)
+	{
+		for (PrefabInfo& info : parsedPrefabInfos)
+		{
+			if (info.ID == prefabInfo.ID)
+			{
+				info = prefabInfo;
+
+				std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabInfo.name + ".json");
+				JSONObject prefabJSON = {};
+				prefabJSON.fields.emplace_back("version", JSONValue(BaseScene::LATETST_PREFAB_FILE_VERSION));
+
+				// Added in prefab v2
+				std::string prefabIDStr = prefabInfo.ID.ToString();
+				prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
+
+				prefabJSON.fields.emplace_back("root", JSONValue(prefabInfo.sourceData));
+
+				std::string fileContents = prefabJSON.Print(0);
+				if (WriteFile(path, fileContents, false))
+				{
+					info.bDirty = false;
+				}
+				else
+				{
+					info.bDirty = true;
+					PrintError("Failed to write prefab to disk (%s, %s\n)", prefabInfo.name.c_str(), path.c_str());
+				}
+
+				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabInfo.ID);
+
+				return;
+			}
+		}
+
+		PrintError("Attempted to update prefab info but no previous entries exist for name (%s)\n", prefabInfo.name.c_str());
+	}
+
+	void ResourceManager::AddNewPrefab(PrefabInfo& prefabInfo)
+	{
+		for (PrefabInfo& info : parsedPrefabInfos)
+		{
+			if (info.ID == prefabInfo.ID)
+			{
+				std::string idStr = info.ID.ToString();
+				PrintError("Attempted to add prefab with same ID multiple times! (%s %s)\n", info.name.c_str(), idStr.c_str());
+				return;
+			}
+		}
+
+		prefabInfo.bDirty = true;
+		parsedPrefabInfos.push_back(prefabInfo);
 	}
 
 	void ResourceManager::DrawImGuiMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter)
@@ -1438,6 +1579,60 @@ namespace flex
 
 					ImGui::EndPopup();
 				}
+			}
+
+			ImGui::End();
+		}
+
+		if (bPrefabsWindowShowing)
+		{
+			if (ImGui::Begin("Prefabs", &bPrefabsWindowShowing))
+			{
+				static ImGuiTextFilter prefabFilter;
+				prefabFilter.Draw("##prefab-filter");
+
+				ImGui::SameLine();
+				if (ImGui::Button("x"))
+				{
+					prefabFilter.Clear();
+				}
+
+				static u32 selectedPrefabIndex = 0;
+				if (ImGui::BeginChild("prefab list", ImVec2(0.0f, 120.0f), true))
+				{
+					for (u32 i = 0; i < (u32)parsedPrefabInfos.size(); ++i)
+					{
+						const PrefabInfo& prefabInfo = parsedPrefabInfos[i];
+						std::string prefabNameStr = prefabInfo.name + (prefabInfo.bDirty ? "*" : "");
+						const char* prefabName = prefabNameStr.c_str();
+
+						if (prefabFilter.PassFilter(prefabName))
+						{
+							bool bSelected = (i == selectedPrefabIndex);
+							if (ImGui::Selectable(prefabName, &bSelected))
+							{
+								selectedPrefabIndex = i;
+							}
+
+							if (ImGui::IsItemActive())
+							{
+								if (ImGui::BeginDragDropSource())
+								{
+									const void* data = (void*)&prefabInfo;
+									size_t size = sizeof(PrefabInfo);
+
+									ImGui::SetDragDropPayload(Editor::PrefabPayloadCStr, data, size);
+
+									ImGui::Text("%s", prefabName);
+
+									ImGui::EndDragDropSource();
+								}
+							}
+						}
+					}
+				}
+
+				ImGui::EndChild();
 			}
 
 			ImGui::End();

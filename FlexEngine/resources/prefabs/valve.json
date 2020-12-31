@@ -1,16 +1,48 @@
 {
-	"version" : 1,
-	"name" : "valve",
-	"type" : "valve",
-	"collider" : 
+	"version" : 2,
+	"prefab id" : "F5728E887DCFE1884F83BD60B12D8443",
+	"root" : 
 	{
-		"shape" : "cylinder",
-		"half extents" : "1.500000, 1.000000, 1.500000"
-	},
-	"rigid body" : 
-	{
-		"mass" : 1.000000,
-		"kinematic" : false,
-		"static" : false
+		"name" : "valve",
+		"type" : "valve",
+		"transform" : 
+		{
+			"pos" : "-0.253, 0.000, 0.000"
+		},
+		"visible" : true,
+		"casts shadow" : true,
+		"materials" : 
+		[
+			"pbr light grey"
+		],
+		"collider" : 
+		{
+			"shape" : "cylinder",
+			"half extents" : "1.500, 1.000, 1.500"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
+		"valve info" : 
+		{
+			"range" : "-1.00, 1.00"
+		},
+		"children" : 
+		[
+			{
+				"name" : "child0",
+				"type" : "object",
+				"transform" : 
+				{
+				},
+				"visible" : true,
+				"casts shadow" : true
+			}
+		]
 	}
 }

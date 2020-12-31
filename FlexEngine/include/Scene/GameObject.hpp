@@ -29,16 +29,18 @@ namespace flex
 		class VirtualMachine;
 	}
 
+	// Parsed cache of data read from prefab JSON files
 	struct PrefabInfo
 	{
 		std::string name;
+		PrefabID ID;
 		StringID typeID;
-		std::string prefabType;
-		bool bPrefab;
 		bool bVisible;
 		Transform transform;
+		std::vector<PrefabInfo> children;
 
 		JSONObject sourceData;
+		bool bDirty;
 	};
 
 	class GameObject
@@ -47,8 +49,8 @@ namespace flex
 		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
 		virtual ~GameObject();
 
-		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion);
-		static GameObject* CreateObjectFromPrefabInfo(const PrefabInfo& prefabInfo, BaseScene* scene, i32 fileVersion, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 sceneFileVersion);
+		static GameObject* CreateObjectFromPrefabInfo(BaseScene* scene, const std::string& objectName, const GameObjectID& gameObjectID, const PrefabInfo& prefabInfo, Transform* optionalTransform = nullptr);
 
 		static GameObject* CreateObjectOfType(BaseScene* scene, StringID typeID, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID, const char* optionalTypeStr = nullptr);
 
@@ -92,7 +94,7 @@ namespace flex
 
 		GameObject* GetObjectInteractingWith();
 
-		JSONObject Serialize(const BaseScene* scene) const;
+		JSONObject Serialize(const BaseScene* scene, bool bSerializePrefabData = false) const;
 
 		void RemoveRigidBody();
 
@@ -155,6 +157,8 @@ namespace flex
 
 		bool IsSerializable() const;
 		void SetSerializable(bool bSerializable);
+
+		PrefabInfo SaveToPrefabInfo();
 
 		bool IsStatic() const;
 		void SetStatic(bool bStatic);
@@ -232,6 +236,8 @@ namespace flex
 
 		StringID m_TypeID = InvalidStringID;
 
+		// TODO: Store as bitfield
+
 		/*
 		* If true, this object will be written out to file
 		* NOTE: If false, children will also not be serialized
@@ -268,14 +274,12 @@ namespace flex
 		*/
 		bool m_bInteractable = false;
 
-		bool m_bLoadedFromPrefab = false;
-
 		bool m_bCastsShadow = true;
 
 		// Editor only
 		bool m_bUniformScale = false;
 
-		std::string m_PrefabName;
+		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
 
 		/*
 		* Will point at the player we're interacting with, or the object if we're the player
@@ -296,6 +300,7 @@ namespace flex
 
 	private:
 		void DrawImGuiForSelfInternal();
+		void AddSelfAndChildrenToPrefabInfo(PrefabInfo& prefabInfo, bool bRoot);
 
 	};
 

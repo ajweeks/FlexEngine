@@ -9,7 +9,6 @@ struct GLFWimage;
 namespace flex
 {
 	class Transform;
-	struct GUID;
 
 	// TODO: Many of the functions in this file would benefit from unit tests
 
@@ -217,6 +216,23 @@ namespace flex
 	glm::vec3 Floor(const glm::vec3& p);
 	glm::vec3 Fract(const glm::vec3& p);
 
+	static const unsigned char hex_table[17] = "0123456789ABCDEF";
+
+	inline u8 DecimalToHex(u8 dec)
+	{
+		return hex_table[dec];
+	}
+
+	inline u8 DecimalFromHex(char hex)
+	{
+		if (hex <= '9')
+		{
+			return (u8)(hex - '0');
+		}
+
+		return 10 + (u8)(hex - 'A');
+	}
+
 	// Returns monotonically increasing ID with each call (for a
 	// globally-unique value use Platform::GenerateGUID instead)
 	u32 GenerateUID();
@@ -385,40 +401,6 @@ namespace flex
 		void* criticalSection = nullptr;
 		volatile bool running = true;
 	};
-
-	static constexpr i32 GUIDInLength = 12;
-	static constexpr i32 GUIDLength = 16;
-	struct GUID
-	{
-		GUID();
-		GUID(u64 data1, u64 data2);
-
-		GUID(const GUID& other);
-		GUID(const GUID&& other);
-		GUID& operator=(const GUID& other);
-		GUID& operator=(const GUID&& other);
-
-		bool operator!=(const GUID& rhs) const;
-		bool operator==(const GUID& rhs) const;
-		bool operator<(const GUID& rhs) const;
-		bool operator>(const GUID& rhs) const;
-
-		bool IsValid() const;
-
-		std::string ToString() const;
-		// Fills out buffer with this GUID's value in uppercase base 16 with a null terminator
-		void ToString(char buffer[33]) const;
-
-		static GUID FromString(const std::string& str);
-
-		u64 Data1; // Stores least significant quad word
-		u64 Data2; // Stores most significant quad word
-	};
-
-	using GameObjectID = GUID;
-
-	extern const GUID InvalidGUID;
-	extern const GUID InvalidGameObjectID;
 
 	namespace ImGuiExt
 	{

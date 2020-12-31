@@ -9,6 +9,7 @@
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 
@@ -111,6 +112,9 @@ namespace flex
 
 		g_Editor->PreSceneChange();
 
+		// Any modifications will now be lost, so all prefabs will be clean again
+		g_ResourceManager->SetAllPrefabsDirty(false);
+
 		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
 		if (m_CurrentSceneIndex != InvalidID)
@@ -156,6 +160,7 @@ namespace flex
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
+			// TODO: Give scenes GUIDs to prevent name clashes
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
 				return SetCurrentScene((u32)i, bPrintErrorOnFailure);

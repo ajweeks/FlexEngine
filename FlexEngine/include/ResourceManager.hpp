@@ -72,7 +72,14 @@ namespace flex
 		TextureID AddLoadedTexture(Texture* texture);
 
 		MaterialCreateInfo* GetMaterialInfo(const std::string& materialName);
+		// DEPRECATED (see cpp)
 		PrefabInfo* GetPrefabInfo(const std::string& prefabName);
+		PrefabInfo* GetPrefabInfo(const PrefabID& prefabID);
+		bool IsPrefabDirty(const PrefabID& prefabID) const;
+		void SetPrefabDirty(const PrefabID& prefabID);
+		void SetAllPrefabsDirty(bool bDirty);
+		void UpdatePrefabData(const PrefabInfo& prefabInfo);
+		void AddNewPrefab(PrefabInfo& prefabInfo);
 
 		// ImGui window flags
 		bool bFontWindowShowing = false;
@@ -80,6 +87,7 @@ namespace flex
 		bool bShaderWindowShowing = false;
 		bool bTextureWindowShowing = false;
 		bool bMeshWindowShowing = false;
+		bool bPrefabsWindowShowing = false;
 
 		bool bShowEditorMaterials = false;
 
@@ -98,6 +106,7 @@ namespace flex
 		std::vector<std::string> discoveredMeshes;
 
 	private:
+		PrefabInfo ParsePrefabInfoFromJSON(const JSONObject& prefabRootObj);
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

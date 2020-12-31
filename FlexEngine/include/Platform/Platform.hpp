@@ -13,9 +13,6 @@ namespace flex
 		u32 l3CacheCount;
 	};
 
-	struct GUID;
-	using GameObjectID = GUID;
-
 	class Platform
 	{
 	public:

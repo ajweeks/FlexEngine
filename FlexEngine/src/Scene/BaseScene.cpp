@@ -246,6 +246,33 @@ namespace flex
 		}
 	}
 
+	void BaseScene::OnPrefabChanged(const PrefabID& prefabID)
+	{
+		PrefabInfo* prefabInfo = g_ResourceManager->GetPrefabInfo(prefabID);
+
+		std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs(false);
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			OnPrefabChangedInternal(prefabID, prefabInfo, rootObject);
+		}
+
+		g_Editor->SetSelectedObjects(selectedObjectIDs);
+	}
+
+	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, PrefabInfo* prefabInfo, GameObject* gameObject)
+	{
+		if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+		{
+			GameObject* newGameObject = ReplacePrefab(*prefabInfo, gameObject);
+
+			for (GameObject* child : newGameObject->m_Children)
+			{
+				OnPrefabChangedInternal(prefabID, prefabInfo, child);
+			}
+		}
+	}
+
 	bool BaseScene::LoadFromFile(const std::string& filePath)
 	{
 		if (!FileExists(filePath))
@@ -933,17 +960,16 @@ namespace flex
 		// Dropping objects onto this text makes them root objects
 		if (ImGui::BeginDragDropTarget())
 		{
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-
-			if (payload && payload->Data)
+			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
 			{
-				i32 draggedObjectCount = payload->DataSize / sizeof(GameObjectID);
+				i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
 
 				std::vector<GameObjectID> draggedGameObjectsIDs;
 				draggedGameObjectsIDs.reserve(draggedObjectCount);
 				for (i32 i = 0; i < draggedObjectCount; ++i)
 				{
-					draggedGameObjectsIDs.push_back(*((GameObjectID*)payload->Data + i));
+					draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
 				}
 
 				if (!draggedGameObjectsIDs.empty())
@@ -963,6 +989,14 @@ namespace flex
 					}
 				}
 			}
+
+			const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+			if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+			{
+				PrefabInfo* prefabInfo = (PrefabInfo*)prefabPayload->Data;
+				InstantiatePrefab(*prefabInfo);
+			}
+
 			ImGui::EndDragDropTarget();
 		}
 
@@ -1279,7 +1313,20 @@ namespace flex
 			ImGui::SetNextTreeNodeOpen(true);
 		}
 
-		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s", objectName.c_str());
+		const bool bPrefab = gameObject->m_PrefabIDLoadedFrom != InvalidPrefabID;
+		if (bPrefab)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.75f, 0.98f, 1.0f));
+		}
+
+		bool bPrefabDirty = (gameObject->m_PrefabIDLoadedFrom.IsValid() ? g_ResourceManager->IsPrefabDirty(gameObject->m_PrefabIDLoadedFrom) : false);
+		const char* prefabDirtyStr = (bPrefabDirty ? "*" : "");
+		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s%s", objectName.c_str(), prefabDirtyStr);
+
+		if (bPrefab)
+		{
+			ImGui::PopStyleColor();
+		}
 
 		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
 		if (bGameObjectDeletedOrDuplicated || gameObject == nullptr)
@@ -1288,7 +1335,6 @@ namespace flex
 		}
 		else
 		{
-			// TODO: Remove from renderer class
 			if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
@@ -1402,17 +1448,16 @@ namespace flex
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-
-				if (payload && payload->Data)
+				const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+				if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
 				{
-					i32 draggedObjectCount = payload->DataSize / sizeof(GameObjectID);
+					i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
 
 					std::vector<GameObjectID> draggedGameObjectIDs;
 					draggedGameObjectIDs.reserve(draggedObjectCount);
 					for (i32 i = 0; i < draggedObjectCount; ++i)
 					{
-						draggedGameObjectIDs.push_back(*((GameObjectID*)payload->Data + i));
+						draggedGameObjectIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
 					}
 
 					if (!draggedGameObjectIDs.empty())
@@ -1463,6 +1508,13 @@ namespace flex
 					}
 				}
 
+				const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+				if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+				{
+					PrefabInfo* prefabInfo = (PrefabInfo*)prefabPayload->Data;
+					InstantiatePrefab(*prefabInfo);
+				}
+
 				ImGui::EndDragDropTarget();
 			}
 		}
@@ -1492,6 +1544,62 @@ namespace flex
 		}
 
 		return bParentChildTreeDirty;
+	}
+
+	GameObject* BaseScene::InstantiatePrefab(const PrefabInfo& prefabInfo, GameObject* parent /* = nullptr */)
+	{
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabInfo(this, GetUniqueObjectName(prefabInfo.name), InvalidGameObjectID, prefabInfo);
+		if (parent != nullptr)
+		{
+			g_SceneManager->CurrentScene()->AddChildObject(parent, newPrefabInstance);
+		}
+		else
+		{
+			g_SceneManager->CurrentScene()->AddRootObject(newPrefabInstance);
+		}
+
+		newPrefabInstance->Initialize();
+		newPrefabInstance->PostInitialize();
+
+		return newPrefabInstance;
+	}
+
+	GameObject* BaseScene::ReplacePrefab(const PrefabInfo& prefabInfo, GameObject* previousInstance)
+	{
+		GameObjectID previousGameObjectID = previousInstance->ID;
+		GameObject* previousParent = previousInstance->m_Parent;
+		std::string previousName = previousInstance->m_Name;
+
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabInfo(this, previousName, previousGameObjectID, prefabInfo);
+
+		// Place in root object list or as child of parent
+		if (previousParent == nullptr)
+		{
+			// Replace root object pointer in-place
+			for (u32 i = 0; i < (u32)m_RootObjects.size(); ++i)
+			{
+				if (m_RootObjects[i]->ID == previousGameObjectID)
+				{
+					m_RootObjects[i] = newPrefabInstance;
+					break;
+				}
+			}
+		}
+		else
+		{
+			g_SceneManager->CurrentScene()->AddChildObject(previousParent, newPrefabInstance);
+		}
+
+		previousInstance->Destroy(true);
+		delete previousInstance;
+
+		// Destroy will have removed our ID from the LUT
+		RegisterGameObject(newPrefabInstance);
+
+		newPrefabInstance->Initialize();
+		newPrefabInstance->PostInitialize();
+
+		return newPrefabInstance;
 	}
 
 	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID)
@@ -1525,6 +1633,8 @@ namespace flex
 	void BaseScene::SerializeToFile(bool bSaveOverDefault /* = false */) const
 	{
 		bool success = true;
+
+		// TODO: Check for dirty prefabs in scene and warn user if so
 
 		success = g_ResourceManager->SerializeMaterialFile() && success;
 		//success &= BaseScene::SerializePrefabFile();

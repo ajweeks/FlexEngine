@@ -38,6 +38,7 @@ namespace flex
 	// (Must be 12 chars or less)
 	const char* Editor::MaterialPayloadCStr = "material";
 	const char* Editor::MeshPayloadCStr = "mesh";
+	const char* Editor::PrefabPayloadCStr = "prefab";
 	const char* Editor::GameObjectPayloadCStr = "gameobject";
 
 	Editor::Editor() :

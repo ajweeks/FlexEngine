@@ -42,6 +42,8 @@
 
 #include "memory.hpp"
 
+#include "GUID.hpp"
+
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 #define NOMINMAX
 

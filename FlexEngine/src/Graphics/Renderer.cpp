@@ -1059,9 +1059,10 @@ namespace flex
 		ImGui::EndTooltip();
 	}
 
-	void Renderer::DrawImGuiForGameObject(GameObject* gameObject)
+	bool Renderer::DrawImGuiForGameObject(GameObject* gameObject)
 	{
 		Mesh* mesh = gameObject->GetMesh();
+		bool bAnyPropertyChanged = false;
 
 		if (mesh != nullptr)
 		{
@@ -1102,6 +1103,7 @@ namespace flex
 						std::string materialName = matPair.first;
 						if (ImGui::Selectable(materialName.c_str(), &bSelected))
 						{
+							bAnyPropertyChanged = true;
 							meshComponent->SetMaterialID(matPair.second);
 							selectedMaterialShortIndex = matShortIndex;
 							bMatChanged = true;
@@ -1122,6 +1124,7 @@ namespace flex
 						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
 						if (draggedMaterialID)
 						{
+							bAnyPropertyChanged = true;
 							meshComponent->SetMaterialID(*draggedMaterialID);
 							bMatChanged = true;
 						}
@@ -1131,14 +1134,17 @@ namespace flex
 				}
 			}
 
-			mesh->DrawImGui();
+			bAnyPropertyChanged = mesh->DrawImGui() || bAnyPropertyChanged;
 
 			bool bCastsShadow = gameObject->CastsShadow();
 			if (ImGui::Checkbox("Casts shadow", &bCastsShadow))
 			{
+				bAnyPropertyChanged = true;
 				gameObject->SetCastsShadow(bCastsShadow);
 			}
 		}
+
+		return bAnyPropertyChanged;
 	}
 
 	void Renderer::OnPostSceneChange()

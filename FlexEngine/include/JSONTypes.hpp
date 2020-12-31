@@ -10,7 +10,6 @@ namespace flex
 	struct JSONField;		// Holds a label and a value
 	struct JSONObject;		// Holds fields
 	struct ParsedJSONFile;	// Holds a root object
-	struct GUID;
 
 	struct JSONObject
 	{

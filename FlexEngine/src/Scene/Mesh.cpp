@@ -428,8 +428,10 @@ namespace flex
 		m_OwningGameObject = owner;
 	}
 
-	void Mesh::DrawImGui()
+	bool Mesh::DrawImGui()
 	{
+		bool bAnyPropertyChanged = false;
+
 		const char* meshContextMenuStr = "mesh context menu";
 		auto contextMenuCheck = [meshContextMenuStr]()
 		{
@@ -483,6 +485,7 @@ namespace flex
 					{
 						if (selectedMeshIndex != i)
 						{
+							bAnyPropertyChanged = true;
 							selectedMeshIndex = i;
 							std::string relativeFilePath = meshPair.first;
 							GameObject* owner = m_OwningGameObject;
@@ -506,6 +509,7 @@ namespace flex
 
 				if (payload && payload->Data)
 				{
+					bAnyPropertyChanged = true;
 					std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
 					GameObject* owner = m_OwningGameObject;
 					Destroy();
@@ -531,6 +535,7 @@ namespace flex
 					{
 						if (selectedMeshIndex != i)
 						{
+							bAnyPropertyChanged = true;
 							selectedMeshIndex = i;
 							Destroy();
 							LoadPrefabShape((PrefabShape)i, GetMaterialID(0));
@@ -564,6 +569,7 @@ namespace flex
 		{
 			if (ImGui::Button("Remove mesh"))
 			{
+				bAnyPropertyChanged = true;
 				bDeleteSelf = true;
 			}
 
@@ -575,6 +581,8 @@ namespace flex
 			m_OwningGameObject->SetMesh(nullptr);
 			// We are now deleted!
 		}
+
+		return bAnyPropertyChanged;
 	}
 
 	void Mesh::SetTypeToMemory()

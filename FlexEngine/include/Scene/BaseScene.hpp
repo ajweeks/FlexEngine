@@ -16,21 +16,22 @@ namespace flex
 	struct JSONField;
 	struct Material;
 	class ICallbackGameObject;
-	struct GUID;
-	using GameObjectID = GUID;
+	struct PrefabInfo;
 
-	class BaseScene
+	class BaseScene final
 	{
 	public:
 		// fileName e.g. "scene_01.json"
 		explicit BaseScene(const std::string& fileName);
-		virtual ~BaseScene();
+		~BaseScene();
 
-		virtual void Initialize();
-		virtual void PostInitialize();
-		virtual void Destroy();
-		virtual void Update();
-		virtual void LateUpdate();
+		void Initialize();
+		void PostInitialize();
+		void Destroy();
+		void Update();
+		void LateUpdate();
+
+		void OnPrefabChanged(const PrefabID& prefabID);
 
 		bool LoadFromFile(const std::string& filePath);
 		void CreateBlank(const std::string& filePath);
@@ -81,6 +82,9 @@ namespace flex
 		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
+
+		GameObject* InstantiatePrefab(const PrefabInfo& prefabInfo, GameObject* parent = nullptr);
+		GameObject* ReplacePrefab(const PrefabInfo& prefabInfo, GameObject* previousInstance);
 
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
@@ -137,9 +141,10 @@ namespace flex
 
 		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
 
-		static const i32 LATEST_SCENE_FILE_VERSION = 5;
+		static const i32 LATEST_SCENE_FILE_VERSION = 6;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
+		static const i32 LATETST_PREFAB_FILE_VERSION = 2;
 
 	protected:
 		friend GameObject;
@@ -194,6 +199,8 @@ namespace flex
 		* one containing given tag, or nullptr if none exist
 		*/
 		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
+
+		void OnPrefabChangedInternal(const PrefabID& prefabID, PrefabInfo* prefabInfo, GameObject* rootObject);
 
 		void ReadGameObjectTypesFile();
 		void WriteGameObjectTypesFile();
