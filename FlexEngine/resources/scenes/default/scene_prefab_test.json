@@ -21,9 +21,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "8.326, 2.563, -2.284",
-			"pitch" : -0.304859,
-			"yaw" : 2.543581
+			"position" : "-5.726, 4.634, -10.452",
+			"pitch" : -0.426022,
+			"yaw" : 0.848546
 		}
 	},
 	"objects" : 
@@ -32,9 +32,6 @@
 			"name" : "Skybox",
 			"id" : "550D6BBEFAA67685495BCE9A868118FE",
 			"type" : "skybox",
-			"transform" : 
-			{
-			},
 			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
@@ -68,52 +65,11 @@
 			}
 		},
 		{
-			"name" : "valve0",
-			"id" : "B153CFDF0CE9B59F40DF191B6238B13C",
+			"name" : "vehicle0",
+			"id" : "32CDC2C1EC89FD994DAEFE3E1315D571",
 			"type" : "prefab",
-			"prefab type" : "valve",
-			"prefab id" : "F5728E887DCFE1884F83BD60B12D8443",
-			"transform" : 
-			{
-				"pos" : "-0.253, 0.000, 0.000"
-			},
-			"children" : 
-			[
-				{
-					"name" : "child0",
-					"id" : "6FB348F68991D39F4F1134F905398D12",
-					"type" : "object",
-					"transform" : 
-					{
-					},
-					"visible" : true,
-					"casts shadow" : true
-				}
-			]
-		},
-		{
-			"name" : "valve1",
-			"id" : "B1F298E86466D581414A0C78852893E1",
-			"type" : "prefab",
-			"prefab type" : "valve",
-			"prefab id" : "F5728E887DCFE1884F83BD60B12D8443",
-			"transform" : 
-			{
-				"pos" : "1.879, 0.000, 0.000"
-			},
-			"children" : 
-			[
-				{
-					"name" : "child0",
-					"id" : "5ABBA7BADE34EBBD42FB2C96A9729815",
-					"type" : "object",
-					"transform" : 
-					{
-					},
-					"visible" : true,
-					"casts shadow" : true
-				}
-			]
+			"prefab type" : "vehicle",
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159"
 		}
 	]
 }

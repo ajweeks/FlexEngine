@@ -109,7 +109,8 @@ namespace flex
 		m_RequiredAttributes = shader->vertexAttributes;
 	}
 
-	MeshComponent* MeshComponent::LoadFromCGLTF(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromCGLTF(
+		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
@@ -118,16 +119,19 @@ namespace flex
 		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
 	}
 
-	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(
+		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		u32 initialMaxVertexCount /* = u32_max */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, true);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 	}
 
-	MeshComponent* MeshComponent::LoadFromCGLTFInternal(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromCGLTFInternal(
+		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		bool bDynamic,
@@ -396,32 +400,38 @@ namespace flex
 		return newMeshComponent;
 	}
 
-	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromMemory(
+		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
 	}
 
-	MeshComponent* MeshComponent::LoadFromMemoryDynamic(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
+		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 	}
 
-	MeshComponent* MeshComponent::LoadFromMemoryInternal(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromMemoryInternal(
+		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject)
 	{
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
@@ -448,24 +458,29 @@ namespace flex
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
-		// NOTE: There is no way to disable render object creation in this function currently
-		if (newMeshComponent->renderID != InvalidRenderID)
+		if (bCreateRenderObject)
 		{
-			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			if (newMeshComponent->renderID != InvalidRenderID)
+			{
+				g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			}
+
+			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+
+			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
+
+			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
-
-		newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 
 		newMeshComponent->m_bInitialized = true;
 
 		return newMeshComponent;
 	}
 
-	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshComponent::LoadPrefabShape(
+		PrefabShape shape,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
 		if (m_bInitialized)
 		{
@@ -1009,10 +1024,13 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 
-		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (bCreateRenderObject)
+		{
+			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
-		g_Renderer->SetTopologyMode(renderID, topologyMode);
-		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+			g_Renderer->SetTopologyMode(renderID, topologyMode);
+			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+		}
 
 		m_bInitialized = true;
 
@@ -1268,7 +1286,7 @@ namespace flex
 		struct MikkTUserData
 		{
 			VertexBufferDataCreateInfo* createInfo;
-			std::vector<u32> const * indices;
+			std::vector<u32> const* indices;
 		};
 
 		SMikkTSpaceInterface mikkTinterface = {};

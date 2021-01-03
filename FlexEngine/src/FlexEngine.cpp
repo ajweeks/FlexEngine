@@ -258,12 +258,13 @@ namespace flex
 		g_PluggablesSystem->Initialize();
 
 		g_ResourceManager->DiscoverMeshes();
-		g_ResourceManager->DiscoverPrefabs();
 		g_ResourceManager->ParseMaterialsFile();
 		g_ResourceManager->ParseFontFile();
 
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
+
+		g_ResourceManager->DiscoverPrefabs();
 
 		LoadCommonSettingsFromDisk();
 

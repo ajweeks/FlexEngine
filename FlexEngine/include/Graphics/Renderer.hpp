@@ -113,6 +113,7 @@ namespace flex
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
+		// Returns true if value changed
 		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr) = 0;
 		virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
 		virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<Texture*>& textures, i32* selectedIndex) = 0;
@@ -196,8 +197,9 @@ namespace flex
 
 		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
+		i32 GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials);
 		// Returns true when the selected material has changed
-		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials);
+		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
 		void DrawImGuiTexturePreviewTooltip(Texture* texture);
 		// Returns true if any property changed
 		bool DrawImGuiForGameObject(GameObject* gameObject);

@@ -37,28 +37,33 @@ namespace flex
 			const std::string& relativeFilePath,
 			MaterialID materialID,
 			bool bDynamic = false,
+			bool bCreateRenderObject = true,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			const std::vector<MaterialID>& inMaterialIDs,
 			bool bDynamic = false,
+			bool bCreateRenderObject = true,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID matID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID matID,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
@@ -75,9 +80,9 @@ namespace flex
 
 		std::vector<MaterialID> GetMaterialIDs() const;
 
-		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner);
-		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs);
-		static Mesh* ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs);
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, bool bCreateRenderObject = true);
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject = true);
+		static Mesh* ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject = true);
 
 		Type GetType() const;
 		u32 GetSubmeshCount() const;
@@ -113,7 +118,8 @@ namespace flex
 			MaterialID matID,
 			bool bDynamic,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject);
 
 
 		Type m_Type = Type::_NONE;

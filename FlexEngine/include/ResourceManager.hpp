@@ -38,7 +38,7 @@ namespace flex
 		void DiscoverMeshes();
 		void DiscoverPrefabs();
 
-		void ParseMeshJSON(GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
+		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
 
 		void ParseFontFile();
 		void SerializeFontFile();
@@ -73,13 +73,15 @@ namespace flex
 
 		MaterialCreateInfo* GetMaterialInfo(const std::string& materialName);
 		// DEPRECATED (see cpp)
-		PrefabInfo* GetPrefabInfo(const std::string& prefabName);
-		PrefabInfo* GetPrefabInfo(const PrefabID& prefabID);
+		GameObject* GetPrefabTemplate(const std::string& prefabName);
+		// DEPRECATED (see cpp)
+		PrefabID GetPrefabID(const std::string& prefabName);
+		GameObject* GetPrefabTemplate(const PrefabID& prefabID);
 		bool IsPrefabDirty(const PrefabID& prefabID) const;
 		void SetPrefabDirty(const PrefabID& prefabID);
 		void SetAllPrefabsDirty(bool bDirty);
-		void UpdatePrefabData(const PrefabInfo& prefabInfo);
-		void AddNewPrefab(PrefabInfo& prefabInfo);
+		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
+		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
 
 		// ImGui window flags
 		bool bFontWindowShowing = false;
@@ -99,14 +101,30 @@ namespace flex
 		std::vector<Texture*> loadedTextures;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
-		std::vector<PrefabInfo> parsedPrefabInfos;
+
+		struct PrefabTemplatePair
+		{
+			PrefabTemplatePair(GameObject* templateObject, const PrefabID& prefabID, const std::string& fileName, bool bDirty) :
+				templateObject(templateObject),
+				prefabID(prefabID),
+				fileName(fileName),
+				bDirty(bDirty)
+			{
+			}
+
+			GameObject* templateObject = nullptr;
+			PrefabID prefabID = InvalidPrefabID;
+			std::string fileName;
+			bool bDirty = false;
+		};
+		std::vector<PrefabTemplatePair> prefabTemplates;
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
 		std::map<std::string, LoadedMesh*> loadedMeshes;
 		std::vector<std::string> discoveredMeshes;
 
 	private:
-		PrefabInfo ParsePrefabInfoFromJSON(const JSONObject& prefabRootObj);
+		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

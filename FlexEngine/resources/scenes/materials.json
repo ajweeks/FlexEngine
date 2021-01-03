@@ -479,11 +479,11 @@
 			"const roughness" : 1.000000
 		},
 		{
-			"name" : "New Material 02",
+			"name" : "Black glass",
 			"shader" : "pbr",
-			"const albedo" : "1.000, 0.000, 0.000, 0.000",
+			"const albedo" : "0.047, 0.026, 0.026, 0.000",
 			"const metallic" : 1.000000,
-			"const roughness" : 1.000000
+			"const roughness" : 0.050000
 		},
 		{
 			"name" : "black plastic",
@@ -491,6 +491,13 @@
 			"const albedo" : "0.000, 0.000, 0.000, 0.000",
 			"const metallic" : 0.000000,
 			"const roughness" : 1.000000
+		},
+		{
+			"name" : "Blue paint",
+			"shader" : "pbr",
+			"const albedo" : "0.018, 0.107, 0.920, 0.000",
+			"const metallic" : 0.850000,
+			"const roughness" : 0.780000
 		}
 	]
 }

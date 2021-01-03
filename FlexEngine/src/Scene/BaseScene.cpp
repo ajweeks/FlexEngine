@@ -248,27 +248,27 @@ namespace flex
 
 	void BaseScene::OnPrefabChanged(const PrefabID& prefabID)
 	{
-		PrefabInfo* prefabInfo = g_ResourceManager->GetPrefabInfo(prefabID);
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
 		std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs(false);
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
-			OnPrefabChangedInternal(prefabID, prefabInfo, rootObject);
+			OnPrefabChangedInternal(prefabID, prefabTemplate, rootObject);
 		}
 
 		g_Editor->SetSelectedObjects(selectedObjectIDs);
 	}
 
-	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, PrefabInfo* prefabInfo, GameObject* gameObject)
+	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* gameObject)
 	{
 		if (gameObject->m_PrefabIDLoadedFrom == prefabID)
 		{
-			GameObject* newGameObject = ReplacePrefab(*prefabInfo, gameObject);
+			GameObject* newGameObject = ReplacePrefab(prefabID, gameObject);
 
 			for (GameObject* child : newGameObject->m_Children)
 			{
-				OnPrefabChangedInternal(prefabID, prefabInfo, child);
+				OnPrefabChangedInternal(prefabID, prefabTemplate, child);
 			}
 		}
 	}
@@ -408,7 +408,10 @@ namespace flex
 		const std::vector<JSONObject>& rootObjects = sceneRootObject.GetObjectArray("objects");
 		for (const JSONObject& rootObjectJSON : rootObjects)
 		{
-			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion);
+			using CopyFlags = GameObject::CopyFlags;
+
+			CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
+			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, false, copyFlags);
 			if (rootObj != nullptr)
 			{
 				rootObj->GetTransform()->UpdateParentTransform();
@@ -993,8 +996,8 @@ namespace flex
 			const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
 			if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
 			{
-				PrefabInfo* prefabInfo = (PrefabInfo*)prefabPayload->Data;
-				InstantiatePrefab(*prefabInfo);
+				PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+				InstantiatePrefab(prefabID);
 			}
 
 			ImGui::EndDragDropTarget();
@@ -1184,7 +1187,7 @@ namespace flex
 						parent = GetGameObject(g_Editor->GetFirstSelectedObjectID());
 					}
 
-					CreateNewObject(newObjectName, parent);
+					CreateNewGameObject(newObjectName, parent);
 
 					ImGui::CloseCurrentPopup();
 				}
@@ -1199,9 +1202,9 @@ namespace flex
 		}
 	}
 
-	void BaseScene::CreateNewObject(const std::string& newObjectName, GameObject* parent /* = nullptr */)
+	void BaseScene::CreateNewGameObject(const std::string& newObjectName, GameObject* parent /* = nullptr */)
 	{
-		GameObject* newGameObject = GameObject::CreateObjectOfType(this, m_NewObjectTypeIDPair.first, newObjectName);
+		GameObject* newGameObject = GameObject::CreateObjectOfType(m_NewObjectTypeIDPair.first, newObjectName);
 
 		// Special case handling
 		switch (m_NewObjectTypeIDPair.first)
@@ -1313,7 +1316,7 @@ namespace flex
 			ImGui::SetNextTreeNodeOpen(true);
 		}
 
-		const bool bPrefab = gameObject->m_PrefabIDLoadedFrom != InvalidPrefabID;
+		const bool bPrefab = gameObject->m_PrefabIDLoadedFrom.IsValid();
 		if (bPrefab)
 		{
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.75f, 0.98f, 1.0f));
@@ -1511,8 +1514,8 @@ namespace flex
 				const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
 				if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
 				{
-					PrefabInfo* prefabInfo = (PrefabInfo*)prefabPayload->Data;
-					InstantiatePrefab(*prefabInfo);
+					PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+					InstantiatePrefab(prefabID);
 				}
 
 				ImGui::EndDragDropTarget();
@@ -1546,31 +1549,31 @@ namespace flex
 		return bParentChildTreeDirty;
 	}
 
-	GameObject* BaseScene::InstantiatePrefab(const PrefabInfo& prefabInfo, GameObject* parent /* = nullptr */)
+	GameObject* BaseScene::InstantiatePrefab(const PrefabID& prefabID, GameObject* parent /* = nullptr */)
 	{
-		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabInfo(this, GetUniqueObjectName(prefabInfo.name), InvalidGameObjectID, prefabInfo);
-		if (parent != nullptr)
-		{
-			g_SceneManager->CurrentScene()->AddChildObject(parent, newPrefabInstance);
-		}
-		else
-		{
-			g_SceneManager->CurrentScene()->AddRootObject(newPrefabInstance);
-		}
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+		std::string prefabName = prefabTemplate->GetName();
+		std::string newObjectName = GetUniqueObjectName(prefabName);
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, newObjectName, InvalidGameObjectID, parent);
 
 		newPrefabInstance->Initialize();
 		newPrefabInstance->PostInitialize();
 
+		g_Editor->SetSelectedObject(newPrefabInstance->ID, false);
+
 		return newPrefabInstance;
 	}
 
-	GameObject* BaseScene::ReplacePrefab(const PrefabInfo& prefabInfo, GameObject* previousInstance)
+	GameObject* BaseScene::ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance)
 	{
+		using CopyFlags = GameObject::CopyFlags;
+
 		GameObjectID previousGameObjectID = previousInstance->ID;
 		GameObject* previousParent = previousInstance->m_Parent;
 		std::string previousName = previousInstance->m_Name;
+		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
 
-		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabInfo(this, previousName, previousGameObjectID, prefabInfo);
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousName, previousGameObjectID, previousParent, nullptr, copyFlags);
 
 		// Place in root object list or as child of parent
 		if (previousParent == nullptr)
@@ -1624,6 +1627,7 @@ namespace flex
 
 	void BaseScene::UpdateRootObjectSiblingIndices()
 	{
+		// TODO: Set flag here, do work only once per frame at most
 		for (i32 i = 0; i < (i32)m_RootObjects.size(); ++i)
 		{
 			m_RootObjects[i]->UpdateSiblingIndices(i);

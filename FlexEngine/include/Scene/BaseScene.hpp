@@ -16,7 +16,6 @@ namespace flex
 	struct JSONField;
 	struct Material;
 	class ICallbackGameObject;
-	struct PrefabInfo;
 
 	class BaseScene final
 	{
@@ -83,8 +82,8 @@ namespace flex
 		void RemoveObjectsImmediate(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 
-		GameObject* InstantiatePrefab(const PrefabInfo& prefabInfo, GameObject* parent = nullptr);
-		GameObject* ReplacePrefab(const PrefabInfo& prefabInfo, GameObject* previousInstance);
+		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
+		GameObject* ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance);
 
 		GameObject* FirstObjectWithTag(const std::string& tag);
 
@@ -144,7 +143,7 @@ namespace flex
 		static const i32 LATEST_SCENE_FILE_VERSION = 6;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
-		static const i32 LATETST_PREFAB_FILE_VERSION = 2;
+		static const i32 LATETST_PREFAB_FILE_VERSION = 3;
 
 	protected:
 		friend GameObject;
@@ -157,7 +156,7 @@ namespace flex
 		void RegisterGameObject(GameObject* gameObject);
 		void UnregisterGameObject(const GameObjectID& gameObjectID);
 
-		void CreateNewObject(const std::string& newObjectName, GameObject* parent = nullptr);
+		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
 
 		i32 m_SceneFileVersion = 1;
 		i32 m_MaterialsFileVersion = 1;
@@ -200,7 +199,7 @@ namespace flex
 		*/
 		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
-		void OnPrefabChangedInternal(const PrefabID& prefabID, PrefabInfo* prefabInfo, GameObject* rootObject);
+		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
 
 		void ReadGameObjectTypesFile();
 		void WriteGameObjectTypesFile();

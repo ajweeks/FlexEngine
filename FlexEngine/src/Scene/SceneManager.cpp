@@ -586,7 +586,7 @@ namespace flex
 		return m_Scenes[m_CurrentSceneIndex];
 	}
 
-	bool SceneManager::CurrentSceneExists() const
+	bool SceneManager::HasSceneLoaded() const
 	{
 		return m_CurrentSceneIndex != InvalidID;
 	}

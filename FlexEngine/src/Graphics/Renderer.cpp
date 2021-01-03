@@ -875,11 +875,41 @@ namespace flex
 		}
 	}
 
-	bool Renderer::DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials)
+	static ImGuiTextFilter materialFilter;
+
+	i32 Renderer::GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials)
+	{
+		i32 matShortIndex = 0;
+		for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
+		{
+			auto matIter = m_Materials.find(i);
+			if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->visibleInEditor))
+			{
+				continue;
+			}
+
+			Material* material = matIter->second;
+
+			if (!materialFilter.PassFilter(material->name.c_str()))
+			{
+				continue;
+			}
+
+			if (materialID == (MaterialID)i)
+			{
+				break;
+			}
+
+			++matShortIndex;
+		}
+
+		return matShortIndex;
+	}
+
+	bool Renderer::DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected)
 	{
 		bool bMaterialSelectionChanged = false;
 
-		static ImGuiTextFilter materialFilter;
 		materialFilter.Draw("##material-filter");
 
 		ImGui::SameLine();
@@ -893,12 +923,9 @@ namespace flex
 			i32 matShortIndex = 0;
 			for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 			{
-				ImGui::PushID(i);
-
 				auto matIter = m_Materials.find(i);
 				if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->visibleInEditor))
 				{
-					ImGui::PopID();
 					continue;
 				}
 
@@ -906,9 +933,10 @@ namespace flex
 
 				if (!materialFilter.PassFilter(material->name.c_str()))
 				{
-					ImGui::PopID();
 					continue;
 				}
+
+				ImGui::PushID(i);
 
 				bool bSelected = (matShortIndex == *selectedMaterialIndexShort);
 				const bool bWasMatVisibleInEditor = material->visibleInEditor;
@@ -925,6 +953,11 @@ namespace flex
 						*selectedMaterialID = (MaterialID)i;
 						bMaterialSelectionChanged = true;
 					}
+				}
+
+				if (bScrollToSelected && bSelected)
+				{
+					ImGui::SetScrollHereY();
 				}
 
 				if (!bWasMatVisibleInEditor)
@@ -1073,6 +1106,11 @@ namespace flex
 			for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
 			{
 				MeshComponent* meshComponent = subMeshes[slotIndex];
+
+				if (meshComponent->renderID == InvalidRenderID)
+				{
+					continue;
+				}
 
 				MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
 

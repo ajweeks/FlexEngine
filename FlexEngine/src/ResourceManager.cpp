@@ -64,6 +64,13 @@ namespace flex
 			delete loadedTexture;
 		}
 		loadedTextures.clear();
+
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		{
+			prefabTemplatePair.templateObject->Destroy();
+			delete prefabTemplatePair.templateObject;
+		}
+		prefabTemplates.clear();
 	}
 
 	void ResourceManager::DestroyAllLoadedMeshes()
@@ -125,7 +132,7 @@ namespace flex
 
 	void ResourceManager::DiscoverPrefabs()
 	{
-		parsedPrefabInfos.clear();
+		prefabTemplates.clear();
 
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(PREFAB_DIRECTORY, foundFiles, ".json"))
@@ -141,24 +148,31 @@ namespace flex
 				JSONObject prefabObject;
 				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
 				{
-					JSONObject prefabRootObject = prefabObject.GetObject("root");
+					const std::string fileName = StripLeadingDirectories(foundFilePath);
 
-					PrefabInfo prefabInfo = ParsePrefabInfoFromJSON(prefabRootObject);
+					i32 prefabVersion = prefabObject.GetInt("version");
 
-					i32 version = prefabObject.GetInt("version");
+					i32 sceneVersion = 6;
+					// Added in prefab v3, older files use scene version 6
+					prefabObject.SetIntChecked("scene version", sceneVersion);
 
-					if (version >= 2)
+					PrefabID prefabID;
+					if (prefabVersion >= 2)
 					{
 						// Added in prefab v2
 						std::string idStr = prefabObject.GetString("prefab id");
-						prefabInfo.ID = GUID::FromString(idStr);
+						prefabID = GUID::FromString(idStr);
 					}
 					else
 					{
-						prefabInfo.ID = Platform::GenerateGUID();
+						prefabID = Platform::GenerateGUID();
 					}
 
-					parsedPrefabInfos.push_back(prefabInfo);
+					JSONObject prefabRootObject = prefabObject.GetObject("root");
+
+					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, true);
+
+					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);
 				}
 				else
 				{
@@ -175,46 +189,8 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("Parsed %u prefabs\n", (u32)parsedPrefabInfos.size());
+			Print("Parsed %u prefabs\n", (u32)prefabTemplates.size());
 		}
-	}
-
-	PrefabInfo ResourceManager::ParsePrefabInfoFromJSON(const JSONObject& prefabRootObj)
-	{
-		PrefabInfo prefabInfo = {};
-
-		prefabInfo.name = prefabRootObj.GetString("name");
-		std::string typeName = prefabRootObj.GetString("type");
-		prefabInfo.typeID = Hash(typeName.c_str());
-
-		std::string prefabType = prefabRootObj.GetString("prefab type");
-
-		if (!prefabRootObj.SetBoolChecked("visible", prefabInfo.bVisible))
-		{
-			prefabInfo.bVisible = true;
-		}
-
-		JSONObject transformObj;
-		if (prefabRootObj.SetObjectChecked("transform", transformObj))
-		{
-			prefabInfo.transform = Transform::ParseJSON(transformObj);
-		}
-
-		std::vector<JSONObject> children;
-		if (prefabRootObj.SetObjectArrayChecked("children", children))
-		{
-			prefabInfo.children.reserve(children.size());
-			for (const JSONObject& childObj : children)
-			{
-				PrefabInfo childInfo = ParsePrefabInfoFromJSON(childObj);
-				prefabInfo.children.push_back(childInfo);
-			}
-		}
-
-		prefabInfo.sourceData = prefabRootObj;
-		prefabInfo.bDirty = false;
-
-		return prefabInfo;
 	}
 
 	void ResourceManager::ParseFontFile()
@@ -403,13 +379,14 @@ namespace flex
 		return meshObject;
 	}
 
-	void ResourceManager::ParseMeshJSON(GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
+	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
 	{
+		bool bCreateRenderObject = !parent->IsTemplate();
+
 		std::string meshFilePath;
 		if (meshObj.SetStringChecked("mesh", meshFilePath))
 		{
-			i32 sceneVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
-			if (sceneVersion >= 4)
+			if (sceneFileVersion >= 4)
 			{
 				meshFilePath = MESH_DIRECTORY + meshFilePath;
 			}
@@ -449,14 +426,14 @@ namespace flex
 				}
 			}
 
-			Mesh::ImportFromFile(meshFilePath, parent, materialIDs);
+			Mesh::ImportFromFile(meshFilePath, parent, materialIDs, bCreateRenderObject);
 			return;
 		}
 
 		std::string prefabName;
 		if (meshObj.SetStringChecked("prefab", prefabName))
 		{
-			Mesh::ImportFromPrefab(prefabName, parent, materialIDs);
+			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
 			return;
 		}
 	}
@@ -744,27 +721,40 @@ namespace flex
 	}
 
 	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
-	PrefabInfo* ResourceManager::GetPrefabInfo(const std::string& prefabName)
+	GameObject* ResourceManager::GetPrefabTemplate(const std::string& prefabName)
 	{
-		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabInfo.name.compare(prefabName) == 0)
+			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
 			{
-				return &prefabInfo;
+				return prefabTemplatePair.templateObject;
 			}
 		}
 
 		return nullptr;
 	}
 
-	PrefabInfo* ResourceManager::GetPrefabInfo(const PrefabID& prefabID)
+	PrefabID ResourceManager::GetPrefabID(const std::string& prefabName)
+	{
+		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		{
+			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
+			{
+				return prefabTemplatePair.prefabID;
+			}
+		}
+
+		return InvalidPrefabID;
+	}
+
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID)
 	{
 		// TODO: Use map
-		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabInfo.ID == prefabID)
+			if (prefabTemplatePair.prefabID == prefabID)
 			{
-				return &prefabInfo;
+				return prefabTemplatePair.templateObject;
 			}
 		}
 
@@ -773,11 +763,11 @@ namespace flex
 
 	bool ResourceManager::IsPrefabDirty(const PrefabID& prefabID) const
 	{
-		for (const PrefabInfo& prefabInfo : parsedPrefabInfos)
+		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabInfo.ID == prefabID)
+			if (prefabTemplatePair.prefabID == prefabID)
 			{
-				return prefabInfo.bDirty;
+				return prefabTemplatePair.bDirty;
 			}
 		}
 
@@ -786,75 +776,98 @@ namespace flex
 
 	void ResourceManager::SetPrefabDirty(const PrefabID& prefabID)
 	{
-		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabInfo.ID == prefabID)
+			if (prefabTemplatePair.prefabID == prefabID)
 			{
-				prefabInfo.bDirty = true;
+				prefabTemplatePair.bDirty = true;
 			}
 		}
 	}
 
 	void ResourceManager::SetAllPrefabsDirty(bool bDirty)
 	{
-		for (PrefabInfo& prefabInfo : parsedPrefabInfos)
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			prefabInfo.bDirty = bDirty;
+			prefabTemplatePair.bDirty = bDirty;
 		}
 	}
 
-	void ResourceManager::UpdatePrefabData(const PrefabInfo& prefabInfo)
+	void ResourceManager::UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID)
 	{
-		for (PrefabInfo& info : parsedPrefabInfos)
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (info.ID == prefabInfo.ID)
+			if (prefabID == prefabTemplatePair.prefabID)
 			{
-				info = prefabInfo;
+				prefabTemplatePair.templateObject->Destroy();
+				delete prefabTemplatePair.templateObject;
 
-				std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabInfo.name + ".json");
-				JSONObject prefabJSON = {};
-				prefabJSON.fields.emplace_back("version", JSONValue(BaseScene::LATETST_PREFAB_FILE_VERSION));
+				prefabTemplatePair.templateObject = prefabTemplate;
 
-				// Added in prefab v2
-				std::string prefabIDStr = prefabInfo.ID.ToString();
-				prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
+				WritePrefabToDisk(prefabTemplatePair, prefabID);
 
-				prefabJSON.fields.emplace_back("root", JSONValue(prefabInfo.sourceData));
-
-				std::string fileContents = prefabJSON.Print(0);
-				if (WriteFile(path, fileContents, false))
-				{
-					info.bDirty = false;
-				}
-				else
-				{
-					info.bDirty = true;
-					PrintError("Failed to write prefab to disk (%s, %s\n)", prefabInfo.name.c_str(), path.c_str());
-				}
-
-				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabInfo.ID);
+				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabID);
 
 				return;
 			}
 		}
 
-		PrintError("Attempted to update prefab info but no previous entries exist for name (%s)\n", prefabInfo.name.c_str());
+		std::string prefabIDStr = prefabID.ToString();
+		std::string prefabName = prefabTemplate->GetName();
+		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
 	}
 
-	void ResourceManager::AddNewPrefab(PrefabInfo& prefabInfo)
+	PrefabID ResourceManager::AddNewPrefab(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
 	{
-		for (PrefabInfo& info : parsedPrefabInfos)
+		PrefabID newID = Platform::GenerateGUID();
+
+		std::string fileNameStr;
+
+		if (fileName != nullptr)
 		{
-			if (info.ID == prefabInfo.ID)
-			{
-				std::string idStr = info.ID.ToString();
-				PrintError("Attempted to add prefab with same ID multiple times! (%s %s)\n", info.name.c_str(), idStr.c_str());
-				return;
-			}
+			fileNameStr = std::string(fileName);
+		}
+		else
+		{
+			fileNameStr = prefabTemplate->GetName() + ".json";
 		}
 
-		prefabInfo.bDirty = true;
-		parsedPrefabInfos.push_back(prefabInfo);
+		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newID, fileNameStr, false };
+
+		prefabTemplates.emplace_back(prefabTemplatePair);
+
+		WritePrefabToDisk(prefabTemplatePair, newID);
+
+		return newID;
+	}
+
+	void ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID)
+	{
+		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplatePair.fileName);
+
+		JSONObject prefabJSON = {};
+		prefabJSON.fields.emplace_back("version", JSONValue(BaseScene::LATETST_PREFAB_FILE_VERSION));
+		// Added in prefab v3
+		prefabJSON.fields.emplace_back("scene version", JSONValue(BaseScene::LATEST_SCENE_FILE_VERSION));
+
+		// Added in prefab v2
+		std::string prefabIDStr = prefabID.ToString();
+		prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
+
+		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true);
+		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
+
+		std::string fileContents = prefabJSON.Print(0);
+		if (WriteFile(path, fileContents, false))
+		{
+			prefabTemplatePair.bDirty = false;
+		}
+		else
+		{
+			prefabTemplatePair.bDirty = true;
+			std::string prefabName = prefabTemplatePair.templateObject->GetName();
+			PrintError("Failed to write prefab to disk (%s, %s\n)", prefabName.c_str(), path.c_str());
+		}
 	}
 
 	void ResourceManager::DrawImGuiMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter)
@@ -1063,6 +1076,7 @@ namespace flex
 			{
 				static bool bUpdateFields = true;
 				static bool bMaterialSelectionChanged = true;
+				static bool bScrollToSelected = true;
 				const i32 MAX_NAME_LEN = 128;
 				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 				static MaterialID selectedMaterialID = 0;
@@ -1091,7 +1105,7 @@ namespace flex
 				{
 					bMaterialSelectionChanged = false;
 
-					//bUpdateFields = true; // ?
+					bUpdateFields = true;
 
 					matName = material->name;
 					matName.resize(MAX_NAME_LEN);
@@ -1223,7 +1237,8 @@ namespace flex
 
 				ImGui::EndColumns();
 
-				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialIndexShort, &selectedMaterialID, bShowEditorMaterials);
+				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialIndexShort, &selectedMaterialID, bShowEditorMaterials, bScrollToSelected);
+				bScrollToSelected = false;
 
 				const i32 MAX_MAT_NAME_LEN = 128;
 				static std::string newMaterialName = "";
@@ -1244,47 +1259,36 @@ namespace flex
 					ImGui::Text("Shader:");
 					static i32 newMatShaderIndex = 0;
 					static Shader* newMatShader = nullptr;
-					if (g_Renderer->DrawImGuiShadersDropdown(&newMatShaderIndex, &newMatShader))
-						//if (ImGui::BeginChild("Shader", ImVec2(0, 120), true))
-						//{
-						//	i32 i = 0;
-						//	for (VulkanShader& shader : m_Shaders)
-						//	{
-						//		bool bSelectedShader = (i == newMatShaderIndex);
-						//		if (ImGui::Selectable(shader->name.c_str(), &bSelectedShader))
-						//		{
-						//			newMatShaderIndex = i;
-						//		}
-						//
-						//		++i;
-						//	}
-						//}
-						//ImGui::EndChild(); // Shader
-
-						if (ImGui::Button("Create new material"))
-						{
-							// Remove trailing /0 characters
-							newMaterialName = std::string(newMaterialName.c_str());
-
-							bool bMaterialNameExists = g_Renderer->MaterialWithNameExists(newMaterialName);
-
-							if (bMaterialNameExists)
-							{
-								newMaterialName = GetIncrementedPostFixedStr(newMaterialName, "new material");
-							}
-
-							MaterialCreateInfo createInfo = {};
-							createInfo.name = newMaterialName;
-							createInfo.shaderName = newMatShader->name;
-							g_Renderer->InitializeMaterial(&createInfo);
-
-							ImGui::CloseCurrentPopup();
-						}
-
-					ImGui::SameLine();
+					g_Renderer->DrawImGuiShadersDropdown(&newMatShaderIndex, &newMatShader);
 
 					if (ImGui::Button("Cancel"))
 					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Create new material"))
+					{
+						// Remove trailing /0 characters
+						newMaterialName = std::string(newMaterialName.c_str());
+
+						bool bMaterialNameExists = g_Renderer->MaterialWithNameExists(newMaterialName);
+
+						if (bMaterialNameExists)
+						{
+							newMaterialName = GetIncrementedPostFixedStr(newMaterialName, "new material");
+						}
+
+						MaterialCreateInfo createInfo = {};
+						createInfo.name = newMaterialName;
+						createInfo.shaderName = newMatShader->name;
+						selectedMaterialID = g_Renderer->InitializeMaterial(&createInfo);
+						selectedMaterialIndexShort = g_Renderer->GetShortMaterialIndex(selectedMaterialID, bShowEditorMaterials);
+
+						bMaterialSelectionChanged = true;
+						bScrollToSelected = true;
+
 						ImGui::CloseCurrentPopup();
 					}
 
@@ -1597,13 +1601,20 @@ namespace flex
 					prefabFilter.Clear();
 				}
 
+				ImGui::SameLine();
+
+				if (ImGui::Button("Refresh"))
+				{
+					DiscoverPrefabs();
+				}
+
 				static u32 selectedPrefabIndex = 0;
 				if (ImGui::BeginChild("prefab list", ImVec2(0.0f, 120.0f), true))
 				{
-					for (u32 i = 0; i < (u32)parsedPrefabInfos.size(); ++i)
+					for (u32 i = 0; i < (u32)prefabTemplates.size(); ++i)
 					{
-						const PrefabInfo& prefabInfo = parsedPrefabInfos[i];
-						std::string prefabNameStr = prefabInfo.name + (prefabInfo.bDirty ? "*" : "");
+						const PrefabTemplatePair& prefabTemplatePair = prefabTemplates[i];
+						std::string prefabNameStr = prefabTemplatePair.templateObject->GetName() + (prefabTemplatePair.bDirty ? "*" : "");
 						const char* prefabName = prefabNameStr.c_str();
 
 						if (prefabFilter.PassFilter(prefabName))
@@ -1618,8 +1629,8 @@ namespace flex
 							{
 								if (ImGui::BeginDragDropSource())
 								{
-									const void* data = (void*)&prefabInfo;
-									size_t size = sizeof(PrefabInfo);
+									const void* data = (void*)&prefabTemplatePair.prefabID;
+									size_t size = sizeof(PrefabID);
 
 									ImGui::SetDragDropPayload(Editor::PrefabPayloadCStr, data, size);
 

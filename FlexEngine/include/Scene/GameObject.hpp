@@ -9,8 +9,6 @@
 #include "Transform.hpp"
 #include "Time.hpp"
 
-#include <set>
-
 class btCollisionShape;
 
 namespace flex
@@ -29,44 +27,47 @@ namespace flex
 		class VirtualMachine;
 	}
 
-	// Parsed cache of data read from prefab JSON files
-	struct PrefabInfo
-	{
-		std::string name;
-		PrefabID ID;
-		StringID typeID;
-		bool bVisible;
-		Transform transform;
-		std::vector<PrefabInfo> children;
-
-		JSONObject sourceData;
-		bool bDirty;
-	};
-
 	class GameObject
 	{
 	public:
-		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
-		virtual ~GameObject();
-
-		static GameObject* CreateObjectFromJSON(const JSONObject& obj, BaseScene* scene, i32 sceneFileVersion);
-		static GameObject* CreateObjectFromPrefabInfo(BaseScene* scene, const std::string& objectName, const GameObjectID& gameObjectID, const PrefabInfo& prefabInfo, Transform* optionalTransform = nullptr);
-
-		static GameObject* CreateObjectOfType(BaseScene* scene, StringID typeID, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID, const char* optionalTypeStr = nullptr);
-
 		enum CopyFlags : u32
 		{
 			CHILDREN = (1 << 0),
 			MESH = (1 << 1),
 			RIGIDBODY = (1 << 2),
+			ADD_TO_SCENE = (1 << 3),
 
 			ALL = 0xFFFFFFFF,
-			_NONE = 0,
+			_NONE = 0
 		};
+
+		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		virtual ~GameObject();
+
+		static GameObject* CreateObjectFromJSON(
+			const JSONObject& obj,
+			BaseScene* scene,
+			i32 sceneFileVersion,
+			bool bIsPrefabTemplate = false,
+			CopyFlags copyFlags = CopyFlags::ALL);
+
+		static GameObject* CreateObjectFromPrefabTemplate(
+			const PrefabID& prefabID,
+			std::string& objectName,
+			const GameObjectID& gameObjectID,
+			GameObject* parent = nullptr,
+			Transform* optionalTransform = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL);
+
+		static GameObject* CreateObjectOfType(StringID typeID, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID, const char* optionalTypeStr = nullptr);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID);
 
 		virtual void Initialize();
 		virtual void PostInitialize();
@@ -77,7 +78,13 @@ namespace flex
 
 		virtual void OnTransformChanged();
 
-		virtual void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID);
+		virtual void ParseJSON(
+			const JSONObject& obj,
+			BaseScene* scene,
+			i32 fileVersion,
+			MaterialID overriddenMatID = InvalidMaterialID,
+			bool bIsPrefabTemplate = false,
+			CopyFlags copyFlags = CopyFlags::ALL);
 
 		virtual bool AllowInteractionWith(GameObject* gameObject);
 		virtual void SetInteractingWith(GameObject* gameObject);
@@ -158,8 +165,6 @@ namespace flex
 		bool IsSerializable() const;
 		void SetSerializable(bool bSerializable);
 
-		PrefabInfo SaveToPrefabInfo();
-
 		bool IsStatic() const;
 		void SetStatic(bool bStatic);
 
@@ -202,6 +207,8 @@ namespace flex
 
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
+		bool IsTemplate() const;
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
@@ -222,7 +229,7 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
 
-		void CopyGenericFieldsAndAddToScene(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
+		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
 		void SetOutputSignal(i32 slotIdx, i32 value);
 
@@ -276,6 +283,9 @@ namespace flex
 
 		bool m_bCastsShadow = true;
 
+		// If true, this object will never live in the real world and will only be duplicated
+		bool m_bIsTemplate = false;
+
 		// Editor only
 		bool m_bUniformScale = false;
 
@@ -300,7 +310,6 @@ namespace flex
 
 	private:
 		void DrawImGuiForSelfInternal();
-		void AddSelfAndChildrenToPrefabInfo(PrefabInfo& prefabInfo, bool bRoot);
 
 	};
 
@@ -342,7 +351,11 @@ namespace flex
 		explicit PointLight(BaseScene* scene);
 		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -369,7 +382,11 @@ namespace flex
 	public:
 		explicit Valve(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void PostInitialize() override;
 		virtual void Update() override;
@@ -402,7 +419,11 @@ namespace flex
 	public:
 		explicit RisingBlock(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -432,7 +453,11 @@ namespace flex
 	public:
 		explicit GlassPane(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		bool bBroken = false;
 
@@ -447,7 +472,11 @@ namespace flex
 	public:
 		explicit ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void PostInitialize() override;
 
@@ -463,8 +492,6 @@ namespace flex
 	{
 	public:
 		explicit Skybox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
 		void ProcedurallyInitialize(MaterialID matID);
 
@@ -487,7 +514,11 @@ namespace flex
 			StringID typeID = SID("cart"),
 			const char* meshName = emptyCartMeshName);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void DrawImGuiObjects() override;
 		virtual real GetDrivePower() const;
@@ -533,7 +564,11 @@ namespace flex
 		explicit EngineCart(CartID cartID);
 		EngineCart(CartID cartID, const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
@@ -560,7 +595,11 @@ namespace flex
 		MobileLiquidBox();
 		explicit MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -583,8 +622,6 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		void AddWave();
 		void RemoveWave(i32 index);
-
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -846,8 +883,6 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
-
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 
 		void SetCamera(TerminalCamera* camera);
@@ -917,9 +952,12 @@ namespace flex
 	public:
 		explicit ParticleSystem(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
-		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
 		virtual void DrawImGuiObjects() override;
@@ -946,8 +984,6 @@ namespace flex
 	{
 	public:
 		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1013,7 +1049,11 @@ namespace flex
 	public:
 		SpringObject(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Update() override;
@@ -1024,7 +1064,13 @@ namespace flex
 		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
 
-		virtual void ParseJSON(const JSONObject& obj, BaseScene* scene, i32 fileVersion, MaterialID overriddenMatID = InvalidMaterialID) override;
+		virtual void ParseJSON(
+			const JSONObject& obj,
+			BaseScene* scene,
+			i32 fileVersion,
+			MaterialID overriddenMatID = InvalidMaterialID,
+			bool bIsPrefabTemplate = false,
+			CopyFlags copyFlags = CopyFlags::ALL);
 
 	private:
 		static void CreateMaterials();
@@ -1133,7 +1179,11 @@ namespace flex
 	public:
 		SoftBody(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -1204,7 +1254,11 @@ namespace flex
 	public:
 		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		//virtual GameObject* CopySelfAndAddToScene(GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL) override;
+		//virtual GameObject* CopySelf(
+		//	GameObject* parent = nullptr,
+		//	CopyFlags copyFlags = CopyFlags::ALL,
+		//	std::string* optionalName = nullptr,
+		//	const GameObjectID& optionalID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;

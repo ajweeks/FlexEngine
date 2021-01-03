@@ -2058,7 +2058,7 @@ namespace flex
 
 		bool VulkanRenderer::DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader /* = nullptr */)
 		{
-			bool bResult = false;
+			bool bValueChanged = false;
 
 			ImGui::PushItemWidth(240.0f);
 			if (ImGui::BeginCombo("Shaders", m_Shaders[*selectedShaderIndex]->name.c_str()))
@@ -2071,7 +2071,7 @@ namespace flex
 					if (ImGui::Selectable(m_Shaders[i]->name.c_str(), &bSelected))
 					{
 						*selectedShaderIndex = i;
-						bResult = true;
+						bValueChanged = true;
 					}
 
 					ImGui::PopID();
@@ -2085,12 +2085,12 @@ namespace flex
 				*outSelectedShader = m_Shaders[*selectedShaderIndex];
 			}
 
-			return bResult;
+			return bValueChanged;
 		}
 
 		bool VulkanRenderer::DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader /* = nullptr */)
 		{
-			bool bResult = false;
+			bool bValueChanged = false;
 
 			static ImGuiTextFilter shaderFilter;
 			if (bShowFilter)
@@ -2119,7 +2119,7 @@ namespace flex
 							if (bSelected)
 							{
 								*selectedShaderIndex = i;
-								bResult = true;
+								bValueChanged = true;
 							}
 						}
 					}
@@ -2132,7 +2132,7 @@ namespace flex
 				*outSelectedShader = m_Shaders[*selectedShaderIndex];
 			}
 
-			return bResult;
+			return bValueChanged;
 		}
 
 		bool VulkanRenderer::DrawImGuiTextureSelector(const char* label, const std::vector<Texture*>& textures, i32* selectedIndex)

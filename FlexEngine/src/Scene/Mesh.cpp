@@ -76,15 +76,17 @@ namespace flex
 		const std::string& relativeFilePath,
 		MaterialID materialID,
 		bool bDynamic /* = false */,
+		bool bCreateRenderObject /* = true */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
-		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), bDynamic, optionalCreateInfo);
+		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), bDynamic, bCreateRenderObject, optionalCreateInfo);
 	}
 
 	bool Mesh::LoadFromFile(
 		const std::string& relativeFilePath,
 		const std::vector<MaterialID>& inMaterialIDs,
 		bool bDynamic /* = false */,
+		bool bCreateRenderObject /* = true */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		// TODO: Call SetRequiredAttributesFromMaterialID for each mesh with each matID?
@@ -143,11 +145,11 @@ namespace flex
 				MeshComponent* meshComponent;
 				if (bDynamic)
 				{
-					meshComponent = MeshComponent::LoadFromCGLTFDynamic(this, &mesh->primitives[j], matID, u32_max, optionalCreateInfo);
+					meshComponent = MeshComponent::LoadFromCGLTFDynamic(this, &mesh->primitives[j], matID, u32_max, optionalCreateInfo, bCreateRenderObject);
 				}
 				else
 				{
-					meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, optionalCreateInfo);
+					meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, optionalCreateInfo, bCreateRenderObject);
 				}
 				if (meshComponent != nullptr)
 				{
@@ -167,18 +169,20 @@ namespace flex
 	bool Mesh::LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID matID,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo);
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID matID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo);
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
@@ -186,7 +190,8 @@ namespace flex
 		MaterialID matID,
 		bool bDynamic,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject)
 	{
 		if (m_bInitialized)
 		{
@@ -209,11 +214,11 @@ namespace flex
 
 		if (bDynamic)
 		{
-			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo);
+			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 		}
 		else
 		{
-			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
+			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo, bCreateRenderObject);
 		}
 
 		if (meshComponent)
@@ -228,12 +233,16 @@ namespace flex
 		return true;
 	}
 
-	bool Mesh::LoadPrefabShape(PrefabShape shape, MaterialID materialID, RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	bool Mesh::LoadPrefabShape(
+		PrefabShape shape,
+		MaterialID materialID,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
 		m_Type = Type::PREFAB;
 
 		m_Meshes = { new MeshComponent(this, materialID, false) };
-		return m_Meshes[0]->LoadPrefabShape(shape, optionalCreateInfo);
+		return m_Meshes[0]->LoadPrefabShape(shape, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::CreateProcedural(u32 initialMaxVertCount,
@@ -360,27 +369,27 @@ namespace flex
 		return true;
 	}
 
-	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner)
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, bool bCreateRenderObject /* = true */)
 	{
-		return ImportFromFile(meshFilePath, owner, { g_Renderer->GetPlaceholderMaterialID() });
+		return ImportFromFile(meshFilePath, owner, { g_Renderer->GetPlaceholderMaterialID() }, bCreateRenderObject);
 	}
 
-	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs)
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject /* = true */)
 	{
 		Mesh* newMesh = new Mesh(owner);
 
 		owner->SetMesh(newMesh);
-		newMesh->LoadFromFile(meshFilePath, materialIDs);
+		newMesh->LoadFromFile(meshFilePath, materialIDs, false, bCreateRenderObject);
 
 		return newMesh;
 	}
 
-	Mesh* Mesh::ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs)
+	Mesh* Mesh::ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject /* = true */)
 	{
 		Mesh* newMesh = new Mesh(owner);
 
 		owner->SetMesh(newMesh);
-		newMesh->LoadPrefabShape(MeshComponent::StringToPrefabShape(prefabName), materialIDs[0]);
+		newMesh->LoadPrefabShape(MeshComponent::StringToPrefabShape(prefabName), materialIDs[0], nullptr, bCreateRenderObject);
 
 		return newMesh;
 	}

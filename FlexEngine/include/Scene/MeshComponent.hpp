@@ -57,23 +57,27 @@ namespace flex
 			cgltf_primitive* primitive,
 			MaterialID materialID,
 			u32 initialMaxVertexCount = u32_max,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromMemoryDynamic(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool LoadPrefabShape(PrefabShape shape,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
@@ -117,7 +121,8 @@ namespace flex
 			MaterialID materialID,
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo);
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject);
 
 		static MeshComponent* LoadFromCGLTFInternal(Mesh* owningMesh,
 			cgltf_primitive* primitive,

@@ -1,0 +1,19 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+	"root" : 
+	{
+		"name" : "vehicle",
+		"type" : "object",
+		"visible" : true,
+		"casts shadow" : true,
+		"mesh" : "car_paint.glb",
+		"materials" : 
+		[
+			"Black glass",
+			"Blue paint",
+			"black plastic"
+		]
+	}
+}
