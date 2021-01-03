@@ -67,6 +67,7 @@ namespace flex
 		{
 			g_Renderer->OnPreSceneChange();
 			g_EngineInstance->OnSceneChanged();
+			g_ResourceManager->OnSceneChanged();
 			g_Editor->OnSceneChanged();
 			g_CameraManager->OnSceneChanged();
 			g_Renderer->OnPostSceneChange();

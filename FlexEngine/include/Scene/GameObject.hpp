@@ -32,10 +32,11 @@ namespace flex
 	public:
 		enum CopyFlags : u32
 		{
-			CHILDREN = (1 << 0),
-			MESH = (1 << 1),
-			RIGIDBODY = (1 << 2),
-			ADD_TO_SCENE = (1 << 3),
+			CHILDREN				= (1 << 0),
+			MESH					= (1 << 1),
+			RIGIDBODY				= (1 << 2),
+			ADD_TO_SCENE			= (1 << 3),
+			CREATE_RENDER_OBJECT	= (1 << 4),
 
 			ALL = 0xFFFFFFFF,
 			_NONE = 0
@@ -67,7 +68,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID);
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize();
 		virtual void PostInitialize();
@@ -220,6 +221,7 @@ namespace flex
 
 	protected:
 		friend BaseScene;
+		friend ResourceManager;
 
 		static const char* s_DefaultNewGameObjectName;
 
@@ -285,6 +287,8 @@ namespace flex
 
 		// If true, this object will never live in the real world and will only be duplicated
 		bool m_bIsTemplate = false;
+
+		bool m_bSerializeMesh = true;
 
 		// Editor only
 		bool m_bUniformScale = false;
@@ -355,7 +359,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -386,7 +390,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void PostInitialize() override;
 		virtual void Update() override;
@@ -423,7 +427,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -457,7 +461,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		bool bBroken = false;
 
@@ -476,7 +480,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void PostInitialize() override;
 
@@ -518,7 +522,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void DrawImGuiObjects() override;
 		virtual real GetDrivePower() const;
@@ -568,7 +572,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
@@ -599,7 +603,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -956,7 +960,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
@@ -1053,7 +1057,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Update() override;
@@ -1183,7 +1187,7 @@ namespace flex
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
-			const GameObjectID& optionalID = InvalidGameObjectID) override;
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -1249,6 +1253,8 @@ namespace flex
 
 	};
 
+	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
+
 	class Vehicle final : public GameObject
 	{
 	public:
@@ -1258,7 +1264,7 @@ namespace flex
 		//	GameObject* parent = nullptr,
 		//	CopyFlags copyFlags = CopyFlags::ALL,
 		//	std::string* optionalName = nullptr,
-		//	const GameObjectID& optionalID = InvalidGameObjectID) override;
+		//	const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -1270,8 +1276,21 @@ namespace flex
 		virtual void DrawImGuiObjects() override;
 
 	private:
-		std::string m_ChassisMeshFilePath;
-		i32 m_SelectedMeshIndex = 0;
+		enum class Tire : u32
+		{
+			FL = 0,
+			FR = 1,
+			RL = 2,
+			RR = 3,
+
+			_NONE
+		};
+
+		static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
+
+		static const i32 m_TireCount = 4;
+
+		GameObjectID m_TireIDs[m_TireCount];
 
 	};
 

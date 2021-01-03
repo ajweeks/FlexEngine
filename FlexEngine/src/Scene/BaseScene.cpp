@@ -1615,6 +1615,33 @@ namespace flex
 		return iter->second;
 	}
 
+	bool BaseScene::GameObjectIDField(const char* label, GameObjectID& ID)
+	{
+		ImGui::Text(label);
+		GameObject* gameObject = nullptr;
+
+		if (ID.IsValid())
+		{
+			gameObject = GetGameObject(ID);
+		}
+
+		ImGui::SameLine();
+
+		std::string objectName = (gameObject != nullptr ? gameObject->GetName() : "Invalid");
+		ImGui::Text("%s", objectName.c_str());
+
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			std::string idStr = ID.IsValid() ? ID.ToString() : "Invalid";
+			ImGui::Text("%s", idStr.c_str());
+
+			ImGui::EndTooltip();
+		}
+
+		return false;
+	}
+
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
 		auto iter = GameObjectTypeStringIDPairs.find(typeID);

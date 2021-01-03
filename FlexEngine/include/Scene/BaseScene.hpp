@@ -136,6 +136,8 @@ namespace flex
 
 		GameObject* GetGameObject(const GameObjectID& gameObjectID);
 
+		bool GameObjectIDField(const char* label, GameObjectID& ID);
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;

@@ -1,7 +1,8 @@
 {
 	"version" : 6,
 	"name" : "scene_prefab_test",
-	"spawn player" : false,
+	"spawn player" : true,
+	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
 	"skybox data" : 
 	{
 		"top colour" : "0.22, 0.58, 0.88, 0.00",
@@ -21,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-5.726, 4.634, -10.452",
-			"pitch" : -0.426022,
-			"yaw" : 0.848546
+			"position" : "9.239, 4.381, -5.433",
+			"pitch" : -0.284030,
+			"yaw" : 2.554255
 		}
 	},
 	"objects" : 
@@ -66,10 +67,44 @@
 		},
 		{
 			"name" : "vehicle0",
-			"id" : "32CDC2C1EC89FD994DAEFE3E1315D571",
+			"id" : "0F8DA5B02CE493BA4741D38E0EBD23E0",
 			"type" : "prefab",
 			"prefab type" : "vehicle",
-			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159"
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.447, 0.000"
+			}
+		},
+		{
+			"name" : "plane",
+			"id" : "C4C2924E21AFB0914B00C8F7A213E65D",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.336, 0.000",
+				"scale" : "100.000, 0.495, 100.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		}
 	]
 }

@@ -29,6 +29,8 @@ namespace flex
 		void Destroy();
 		void DestroyAllLoadedMeshes();
 
+		void OnSceneChanged();
+
 		// Returns true if found and *loadedMesh was set
 		bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
 		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath);
@@ -73,15 +75,18 @@ namespace flex
 
 		MaterialCreateInfo* GetMaterialInfo(const std::string& materialName);
 		// DEPRECATED (see cpp)
-		GameObject* GetPrefabTemplate(const std::string& prefabName);
+		GameObject* GetPrefabTemplate(const std::string& prefabName) const;
 		// DEPRECATED (see cpp)
-		PrefabID GetPrefabID(const std::string& prefabName);
-		GameObject* GetPrefabTemplate(const PrefabID& prefabID);
+		PrefabID GetPrefabID(const std::string& prefabName) const;
+		GameObject* GetPrefabTemplate(const PrefabID& prefabID) const;
+		std::string GetPrefabFileName(const PrefabID& prefabID) const;
 		bool IsPrefabDirty(const PrefabID& prefabID) const;
 		void SetPrefabDirty(const PrefabID& prefabID);
 		void SetAllPrefabsDirty(bool bDirty);
 		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
 		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
+
+		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
 		// ImGui window flags
 		bool bFontWindowShowing = false;
@@ -125,6 +130,7 @@ namespace flex
 
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);
+		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

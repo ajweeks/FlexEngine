@@ -83,6 +83,12 @@ namespace flex
 		loadedMeshes.clear();
 	}
 
+	void ResourceManager::OnSceneChanged()
+	{
+		DiscoverMeshes();
+		DiscoverPrefabs();
+	}
+
 	bool ResourceManager::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
 	{
 		auto iter = loadedMeshes.find(relativeFilePath);
@@ -132,6 +138,11 @@ namespace flex
 
 	void ResourceManager::DiscoverPrefabs()
 	{
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		{
+			prefabTemplatePair.templateObject->Destroy();
+			delete prefabTemplatePair.templateObject;
+		}
 		prefabTemplates.clear();
 
 		std::vector<std::string> foundFiles;
@@ -721,7 +732,7 @@ namespace flex
 	}
 
 	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
-	GameObject* ResourceManager::GetPrefabTemplate(const std::string& prefabName)
+	GameObject* ResourceManager::GetPrefabTemplate(const std::string& prefabName) const
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
@@ -734,7 +745,7 @@ namespace flex
 		return nullptr;
 	}
 
-	PrefabID ResourceManager::GetPrefabID(const std::string& prefabName)
+	PrefabID ResourceManager::GetPrefabID(const std::string& prefabName) const
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
@@ -747,7 +758,7 @@ namespace flex
 		return InvalidPrefabID;
 	}
 
-	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID)
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID) const
 	{
 		// TODO: Use map
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
@@ -759,6 +770,19 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	std::string ResourceManager::GetPrefabFileName(const PrefabID& prefabID) const
+	{
+		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		{
+			if (prefabTemplatePair.prefabID == prefabID)
+			{
+				return prefabTemplatePair.fileName;
+			}
+		}
+
+		return "";
 	}
 
 	bool ResourceManager::IsPrefabDirty(const PrefabID& prefabID) const
@@ -839,6 +863,33 @@ namespace flex
 		WritePrefabToDisk(prefabTemplatePair, newID);
 
 		return newID;
+	}
+
+	bool ResourceManager::PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const
+	{
+		GameObject* prefabTemplate = GetPrefabTemplate(prefabID);
+
+		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
+	}
+
+	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const
+	{
+		std::string childName = child->GetName();
+		for (GameObject* prefabChild : prefabTemplate->m_Children)
+		{
+			// TODO: Use more robust metric to check for uniqueness
+			if (prefabChild->GetName().compare(childName) == 0 && prefabChild->m_TypeID == child->m_TypeID)
+			{
+				return true;
+			}
+
+			if (PrefabTemplateContainsChildRecursive(prefabTemplate, prefabChild))
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	void ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID)

@@ -5,7 +5,11 @@
 	"root" : 
 	{
 		"name" : "vehicle",
-		"type" : "object",
+		"type" : "vehicle",
+		"transform" : 
+		{
+			"pos" : "0.000, 0.447, 0.000"
+		},
 		"visible" : true,
 		"casts shadow" : true,
 		"mesh" : "car_paint.glb",
@@ -14,6 +18,73 @@
 			"Black glass",
 			"Blue paint",
 			"black plastic"
+		],
+		"children" : 
+		[
+			{
+				"name" : "wheel_FL0",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.768, -0.159, 1.528"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_FL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_FR0",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.742, -0.131, 1.537"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_FR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_RL0",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.720, -0.145, -1.187"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_RL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_RR0",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.738, -0.151, -1.153"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_RR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			}
 		]
 	}
 }
