@@ -1267,6 +1267,8 @@ namespace flex
 
 		std::string objectName = gameObject->GetName();
 
+		bool bSelected = g_Editor->IsObjectSelected(gameObject->ID);
+
 		bool bForceTreeNodeOpen = false;
 
 		const std::vector<GameObject*>& gameObjectChildren = gameObject->GetChildren();
@@ -1281,7 +1283,7 @@ namespace flex
 				{
 					bChildVisibleInSceneExplorer = true;
 				}
-				if (child->SelfOrChildIsSelected())
+				if (!bSelected && child->SelfOrChildIsSelected())
 				{
 					bForceTreeNodeOpen = true;
 				}
@@ -1292,7 +1294,6 @@ namespace flex
 				bHasChildren = false;
 			}
 		}
-		bool bSelected = g_Editor->IsObjectSelected(gameObject->ID);
 
 		bool bVisible = gameObject->IsVisible();
 		if (ImGui::Checkbox("##visible", &bVisible))
@@ -1414,12 +1415,6 @@ namespace flex
 							selectedObject->AddSelfIDAndChildrenToVec(draggedGameObjectIDs);
 						}
 
-						// Ensure any children which weren't selected are now in selection
-						for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
-						{
-							g_Editor->AddSelectedObject(draggedGameObjectID);
-						}
-
 						data = draggedGameObjectIDs.data();
 						size = draggedGameObjectIDs.size() * sizeof(GameObjectID);
 
@@ -1434,8 +1429,6 @@ namespace flex
 					}
 					else
 					{
-						g_Editor->SetSelectedObject(gameObject->ID);
-
 						data = (void*)&gameObject->ID;
 						size = sizeof(GameObjectID);
 						dragDropText = gameObject->GetName();
