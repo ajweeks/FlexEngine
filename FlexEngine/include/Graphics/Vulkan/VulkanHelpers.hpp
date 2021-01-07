@@ -176,7 +176,6 @@ namespace flex
 			// TODO: Be like VulkanMaterial/VulkanShader and keep base class as member? Or convert them to inherit
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
 
 			virtual ~VulkanTexture() {}
 
@@ -407,17 +406,10 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
-		struct VulkanCubemapGBuffer
-		{
-			VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat);
-
-			u32 id = 0;
-			const char* name = "";
-			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
-		};
-
 		struct UniformBufferList
 		{
+			UniformBufferList();
+
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
@@ -488,7 +480,6 @@ namespace flex
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
-			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			u32 cubemapDepthSamplerID = 0;
 
 			// TODO: Remove, this always equals shaderID

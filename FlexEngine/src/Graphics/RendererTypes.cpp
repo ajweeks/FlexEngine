@@ -169,7 +169,6 @@ namespace flex
 				generateCubemapSampler == other.generateCubemapSampler &&
 				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&
-				cubeMapFilePaths[0] == other.cubeMapFilePaths[0] &&
 				constAlbedo == other.constAlbedo &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&

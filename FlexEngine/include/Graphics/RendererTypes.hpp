@@ -353,21 +353,20 @@ namespace flex
 	// TODO: Straight up copy most of these with a memcpy?
 	struct MaterialCreateInfo
 	{
-		std::string shaderName = "";
-		std::string name = "";
+		std::string shaderName;
+		std::string name;
 
-		std::string normalTexturePath = "";
-		std::string albedoTexturePath = "";
-		std::string metallicTexturePath = "";
-		std::string roughnessTexturePath = "";
-		std::string hdrEquirectangularTexturePath = "";
+		std::string normalTexturePath;
+		std::string albedoTexturePath;
+		std::string metallicTexturePath;
+		std::string roughnessTexturePath;
+		std::string hdrEquirectangularTexturePath;
 
 		glm::vec4 colourMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
 		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
-		std::string environmentMapPath = "";
-		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
+		std::string environmentMapPath;
 		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
 		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
@@ -552,26 +551,25 @@ namespace flex
 
 		static std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);
 
-		std::string name = "";
+		std::string name;
 		ShaderID shaderID = InvalidShaderID;
-		std::string normalTexturePath = "";
+		std::string normalTexturePath;
 
 		// GBuffer samplers
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers;
 
 		glm::vec2 cubemapSamplerSize = { 0, 0 };
-		std::array<std::string, 6> cubeMapFilePaths; // RT, LF, UP, DN, BK, FT
 
 		// PBR constants
 		glm::vec4 constAlbedo = { 1, 1, 1, 1 };
 		real constMetallic = 0;
 		real constRoughness = 0;
-		std::string albedoTexturePath = "";
-		std::string metallicTexturePath = "";
-		std::string roughnessTexturePath = "";
-		std::string hdrEquirectangularTexturePath = "";
+		std::string albedoTexturePath;
+		std::string metallicTexturePath;
+		std::string roughnessTexturePath;
+		std::string hdrEquirectangularTexturePath;
 		glm::vec2 irradianceSamplerSize = { 0, 0 };
-		std::string environmentMapPath = "";
+		std::string environmentMapPath;
 		glm::vec2 prefilteredMapSize = { 0, 0 };
 		glm::vec4 colourMultiplier = { 1, 1, 1, 1 };
 
@@ -792,7 +790,7 @@ namespace flex
 
 		virtual ~Shader() {};
 
-		std::string name = "";
+		std::string name;
 
 		std::string vertexShaderFilePath = "";
 		std::string fragmentShaderFilePath = "";

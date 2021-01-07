@@ -279,18 +279,6 @@ namespace flex
 		{
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
-			const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically,
-			bool bGenerateMipMaps, bool bHDR) :
-			Texture(relativeCubemapFilePaths, channelCount, bFlipVertically, bGenerateMipMaps, bHDR),
-			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
-			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
-			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
-		{
-		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{
@@ -2245,13 +2233,6 @@ namespace flex
 			return &frameBuffer;
 		}
 
-		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
-			id(id),
-			name(name),
-			internalFormat(internalFormat)
-		{
-		}
-
 		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo) :
 			Shader(shaderInfo)
 		{
@@ -2690,6 +2671,12 @@ namespace flex
 				delete attachment;
 				attachment = nullptr;
 			}
+		}
+
+		UniformBufferList::UniformBufferList()
+		{
+			// Every instance will have at least one type
+			uniformBufferList.reserve(1);
 		}
 
 		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
