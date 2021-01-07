@@ -1610,6 +1610,8 @@ namespace flex
 
 	bool BaseScene::GameObjectIDField(const char* label, GameObjectID& ID)
 	{
+		bool bChanged = false;
+
 		ImGui::Text(label);
 		GameObject* gameObject = nullptr;
 
@@ -1632,7 +1634,25 @@ namespace flex
 			ImGui::EndTooltip();
 		}
 
-		return false;
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+			{
+				i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+
+				if (draggedObjectCount >= 1)
+				{
+					GameObjectID draggedObjectID = *((GameObjectID*)gameObjectPayload->Data);
+					ID = draggedObjectID;
+					bChanged = true;
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		return bChanged;
 	}
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
