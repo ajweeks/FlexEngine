@@ -3106,24 +3106,57 @@ namespace flex
 			}
 		}
 
-		if (data.enabled)
+		if (data.enabled && g_EngineInstance->IsRenderingEditorObjects())
 		{
-			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
 
-			glm::vec3 forward = m_Transform.GetForward();
-			glm::vec3 right = m_Transform.GetRight();
-			glm::vec3 up = m_Transform.GetUp();
-			real lineLength = 2.0f;
-			real spacing = 0.75f;
-			glm::vec3 scaledForward = forward * lineLength;
-			glm::vec3 offsets[] = { -up, up, -right, right, VEC3_ZERO };
-			btVector3 lineColour = ToBtVec3(data.colour);
-			for (const glm::vec3& offset : offsets)
+			if (!cam->bIsGameplayCam)
 			{
-				glm::vec3 basePos = pos + offset * spacing;
-				btVector3 lightPos = ToBtVec3(basePos);
-				btVector3 lineEnd = ToBtVec3(basePos + scaledForward);
-				debugDrawer->drawLine(lightPos, lineEnd, lineColour);
+				// Debug lines
+				{
+					PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+					glm::vec3 forward = m_Transform.GetForward();
+					glm::vec3 right = m_Transform.GetRight();
+					glm::vec3 up = m_Transform.GetUp();
+					real lineLength = 2.0f;
+					real spacing = 0.75f;
+					glm::vec3 scaledForward = forward * lineLength;
+					glm::vec3 offsets[] = { -up, up, -right, right, VEC3_ZERO };
+					btVector3 lineColour = ToBtVec3(data.colour);
+					for (const glm::vec3& offset : offsets)
+					{
+						glm::vec3 basePos = pos + offset * spacing;
+						btVector3 lightPos = ToBtVec3(basePos);
+						btVector3 lineEnd = ToBtVec3(basePos + scaledForward);
+						debugDrawer->drawLine(lightPos, lineEnd, lineColour);
+					}
+				}
+
+				// Sprite
+				{
+					const real minSpriteDist = 1.5f;
+					const real maxSpriteDist = 3.0f;
+
+					glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+					SpriteQuadDrawInfo drawInfo = {};
+					drawInfo.bScreenSpace = false;
+					drawInfo.bReadDepth = true;
+					drawInfo.bWriteDepth = true;
+					drawInfo.scale = scale;
+					drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
+
+					glm::vec3 camPos = cam->position;
+					glm::vec3 camUp = cam->up;
+					drawInfo.textureID = g_Renderer->directionalLightIconID;
+					drawInfo.pos = pos;
+					glm::mat4 rotMat = glm::lookAt(camPos, pos, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
+					drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
+					g_Renderer->EnqueueSprite(drawInfo);
+				}
 			}
 		}
 
@@ -3337,6 +3370,38 @@ namespace flex
 				m_bVisible = receivedSignal == 1;
 				data.enabled = m_bVisible ? 1 : 0;
 				g_Renderer->UpdatePointLightData(pointLightID, &data);
+			}
+		}
+
+		if (data.enabled && g_EngineInstance->IsRenderingEditorObjects())
+		{
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+			if (!cam->bIsGameplayCam)
+			{
+				const real minSpriteDist = 1.5f;
+				const real maxSpriteDist = 3.0f;
+
+				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+				SpriteQuadDrawInfo drawInfo = {};
+				drawInfo.bScreenSpace = false;
+				drawInfo.bReadDepth = true;
+				drawInfo.bWriteDepth = true;
+				drawInfo.scale = scale;
+				drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
+
+				glm::vec3 camPos = cam->position;
+				glm::vec3 camUp = cam->up;
+
+				drawInfo.textureID = g_Renderer->pointLightIconID;
+				// TODO: Sort back to front? Or clear depth and then enable depth test
+				drawInfo.pos = data.pos;
+				glm::mat4 rotMat = glm::lookAt(drawInfo.pos, camPos, camUp);
+				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+				real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
+				drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
+				g_Renderer->EnqueueSprite(drawInfo);
 			}
 		}
 

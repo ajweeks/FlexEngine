@@ -4476,67 +4476,6 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::EnqueueScreenSpaceSprites()
-		{
-			Renderer::EnqueueScreenSpaceSprites();
-		}
-
-		// TODO: Move to base renderer
-		void VulkanRenderer::EnqueueWorldSpaceSprites()
-		{
-			Renderer::EnqueueWorldSpaceSprites();
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			if (!cam->bIsGameplayCam && g_EngineInstance->IsRenderingEditorObjects())
-			{
-				glm::vec3 scale(1.0f, -1.0f, 1.0f);
-
-				SpriteQuadDrawInfo drawInfo = {};
-				drawInfo.bScreenSpace = false;
-				drawInfo.bReadDepth = true;
-				drawInfo.bWriteDepth = true;
-				drawInfo.scale = scale;
-				drawInfo.materialID = m_SpriteMatWSID;
-
-				const real minSpriteDist = 1.5f;
-				const real maxSpriteDist = 3.0f;
-
-				glm::vec3 camPos = cam->position;
-				glm::vec3 camUp = cam->up;
-				for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
-				{
-					if (m_PointLights[i].enabled)
-					{
-						drawInfo.textureID = pointLightIconID;
-						// TODO: Sort back to front? Or clear depth and then enable depth test
-						drawInfo.pos = m_PointLights[i].pos;
-						glm::mat4 rotMat = glm::lookAt(m_PointLights[i].pos, camPos, camUp);
-						drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-						real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
-						drawInfo.colour = glm::vec4(m_PointLights[i].colour * 1.5f, alpha);
-						EnqueueSprite(drawInfo);
-					}
-				}
-
-				if (m_DirectionalLight != nullptr && m_DirectionalLight->data.enabled)
-				{
-					drawInfo.textureID = directionalLightIconID;
-					drawInfo.pos = m_DirectionalLight->pos;
-					glm::mat4 rotMat = glm::lookAt(camPos, m_DirectionalLight->pos, camUp);
-					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-					real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
-					drawInfo.colour = glm::vec4(m_DirectionalLight->data.colour * 1.5f, alpha);
-					EnqueueSprite(drawInfo);
-
-					glm::vec3 dirLightForward = m_DirectionalLight->data.dir;
-					m_PhysicsDebugDrawer->drawLine(
-						ToBtVec3(m_DirectionalLight->pos),
-						ToBtVec3(m_DirectionalLight->pos - dirLightForward * 2.5f),
-						btVector3(0.0f, 0.0f, 1.0f));
-				}
-			}
-		}
-
 		void VulkanRenderer::DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer)
 		{
 			if (batch.empty())

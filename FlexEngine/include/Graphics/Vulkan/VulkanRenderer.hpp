@@ -157,9 +157,6 @@ namespace flex
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual void RecreateShadowFrameBuffers() override;
 
-			virtual void EnqueueScreenSpaceSprites() override;
-			virtual void EnqueueWorldSpaceSprites() override;
-
 		private:
 			friend VulkanPhysicsDebugDraw;
 			friend VulkanRenderPass;

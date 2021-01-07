@@ -318,6 +318,10 @@ namespace flex
 
 		StringID previewedFont = InvalidStringID;
 
+		MaterialID m_SpriteMatSSID = InvalidMaterialID;
+		MaterialID m_SpriteMatWSID = InvalidMaterialID;
+		MaterialID m_SpriteArrMatID = InvalidMaterialID;
+
 	protected:
 		void LoadShaders();
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
@@ -325,8 +329,8 @@ namespace flex
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 		virtual void RecreateShadowFrameBuffers() = 0;
 
-		virtual void EnqueueScreenSpaceSprites();
-		virtual void EnqueueWorldSpaceSprites();
+		void EnqueueScreenSpaceSprites();
+		void EnqueueWorldSpaceSprites();
 
 		void GenerateGBuffer();
 
@@ -446,9 +450,6 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		MaterialID m_GBufferMaterialID = InvalidMaterialID;
-		MaterialID m_SpriteMatSSID = InvalidMaterialID;
-		MaterialID m_SpriteMatWSID = InvalidMaterialID;
-		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 		MaterialID m_FontMatSSID = InvalidMaterialID;
 		MaterialID m_FontMatWSID = InvalidMaterialID;
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
