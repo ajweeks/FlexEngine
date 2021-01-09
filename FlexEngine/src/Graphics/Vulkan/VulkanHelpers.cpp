@@ -783,7 +783,8 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				// TODO: Handle error gracefully
-				PrintError("VulkanTexture::CreateImage > Invalid image format!\n");
+				PrintError("VulkanTexture::CreateImage: Invalid image format!\n");
+				return 0;
 			}
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageInfo, nullptr, createInfo.image));
@@ -866,6 +867,11 @@ namespace flex
 				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
 				u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
+
+				if (imageSize == 0)
+				{
+					return 0;
+				}
 
 				imageFormat = inFormat;
 				imageLayout = imageCreateInfo.initialLayout;
@@ -968,6 +974,11 @@ namespace flex
 				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
 
 				u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
+
+				if (imageSize == 0)
+				{
+					return 0;
+				}
 
 				imageLayout = imageCreateInfo.initialLayout;
 				imageFormat = inFormat;

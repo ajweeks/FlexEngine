@@ -1184,7 +1184,17 @@ namespace flex
 
 					for (u32 texIndex = 0; texIndex < material->textures.Count(); ++texIndex)
 					{
-						material->textures.values[texIndex].object = GetLoadedTexture(selectedTextureIndices[texIndex]);
+						Texture* loadedTex = GetLoadedTexture(selectedTextureIndices[texIndex]);
+						if (loadedTex == nullptr)
+						{
+							Texture* selectedTex = loadedTextures[selectedTextureIndices[texIndex] - 1];
+							const char* failedTexName = (selectedTex != nullptr ? selectedTex->fileName.c_str() : "");
+							PrintError("Failed to load texture %s\n", failedTexName);
+							// If texture failed to be found select blank texture
+							selectedTextureIndices[texIndex] = 0;
+							loadedTex = GetLoadedTexture(g_Renderer->blankTextureID);
+						}
+						material->textures.values[texIndex].object = loadedTex;
 					}
 
 					i32 i = 0;
