@@ -229,30 +229,22 @@ namespace flex
 		}
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter)
 	{
-		std::string cleanedFileType = fileType;
+		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
-			size_t dotPos = cleanedFileType.find('.');
+			size_t dotPos = cleanedFileTypeFilter.find('.');
 			if (dotPos != std::string::npos)
 			{
-				cleanedFileType.erase(dotPos, 1);
+				cleanedFileTypeFilter.erase(dotPos, 1);
 			}
 		}
 
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
-		{
-			cleanedDirPath += '/';
-		}
-
+		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
 		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
 
-
-		HANDLE hFind;
 		WIN32_FIND_DATAA findData;
-
-		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
 
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
@@ -269,27 +261,73 @@ namespace flex
 			}
 			else
 			{
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
+				bool bFoundFileTypeMatches = false;
+				if (cleanedFileTypeFilter == "*")
 				{
-					foundFileTypeMatches = true;
+					bFoundFileTypeMatches = true;
 				}
 				else
 				{
 					std::string fileNameStr(findData.cFileName);
-					size_t dotPos = fileNameStr.find('.');
-
-					if (dotPos != std::string::npos)
+					std::string fileType = ExtractFileType(fileNameStr);
+					if (fileType == cleanedFileTypeFilter)
 					{
-						std::string foundFileType = Split(fileNameStr, '.')[1];
-						if (foundFileType == cleanedFileType)
-						{
-							foundFileTypeMatches = true;
-						}
+						bFoundFileTypeMatches = true;
 					}
 				}
 
-				if (foundFileTypeMatches)
+				if (bFoundFileTypeMatches)
+				{
+					// File size retrieval:
+					//LARGE_INTEGER filesize;
+					//filesize.LowPart = findData.nFileSizeLow;
+					//filesize.HighPart = findData.nFileSizeHigh;
+
+					filePaths.push_back(cleanedDirPath + findData.cFileName);
+				}
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+
+		FindClose(hFind);
+
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return !filePaths.empty();
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	{
+		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		WIN32_FIND_DATAA findData;
+		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+		if (hFind == INVALID_HANDLE_VALUE)
+		{
+			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		do
+		{
+			if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			{
+				bool bFoundFileTypeMatches = false;
+
+				std::string fileNameStr(findData.cFileName);
+				std::string fileType = ExtractFileType(fileNameStr);
+				if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+				{
+					bFoundFileTypeMatches = true;
+				}
+
+				if (bFoundFileTypeMatches)
 				{
 					// File size retrieval:
 					//LARGE_INTEGER filesize;

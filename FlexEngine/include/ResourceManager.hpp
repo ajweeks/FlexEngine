@@ -39,6 +39,7 @@ namespace flex
 
 		void DiscoverMeshes();
 		void DiscoverPrefabs();
+		void DiscoverTextures();
 
 		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
 
@@ -66,7 +67,9 @@ namespace flex
 
 		// Returns a pointer into loadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
+		Texture* FindLoadedTextureWithName(const std::string& fileName);
 		Texture* GetLoadedTexture(TextureID textureID);
+		Texture* GetOrLoadTexture(const std::string& textureName);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
 
@@ -126,7 +129,10 @@ namespace flex
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
 		std::map<std::string, LoadedMesh*> loadedMeshes;
+		std::vector<std::string> discoveredTextures;
 		std::vector<std::string> discoveredMeshes;
+
+		static const char* s_SupportedTextureFormats[];
 
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);

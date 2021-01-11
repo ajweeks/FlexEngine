@@ -93,7 +93,7 @@ namespace flex
 			*channelCountOut = (u32)channelCount;
 		}
 
-		if (data == 0)
+		if (data == nullptr)
 		{
 			const char* failureReasonStr = stbi_failure_reason();
 			PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
@@ -145,7 +145,6 @@ namespace flex
 
 		if (!pixels)
 		{
-			PrintError("Failed to load HDR image at %s\n", filePath.c_str());
 			return false;
 		}
 
@@ -166,11 +165,6 @@ namespace flex
 		std::stringstream stream;
 		stream << std::fixed << std::setprecision(precision) << f;
 		return stream.str();
-	}
-
-	std::string BoolToString(bool b)
-	{
-		return b ? "true" : "false";
 	}
 
 	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
@@ -1354,6 +1348,15 @@ namespace flex
 		std::string absolutePath = workingDirectory + '/' + strippedFilePath;
 
 		return absolutePath;
+	}
+
+	std::string EnsureTrailingSlash(const std::string& str)
+	{
+		if (str[str.size() - 1] != '/')
+		{
+			return str + '/';
+		}
+		return str;
 	}
 
 	// TODO: Test thoroughly

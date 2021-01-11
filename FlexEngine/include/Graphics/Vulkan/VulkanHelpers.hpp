@@ -173,9 +173,8 @@ namespace flex
 
 		struct VulkanTexture : Texture
 		{
-			// TODO: Be like VulkanMaterial/VulkanShader and keep base class as member? Or convert them to inherit
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name);
 
 			virtual ~VulkanTexture() {}
 
@@ -266,7 +265,8 @@ namespace flex
 			// Expects *texture == nullptr
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
 
-			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
+			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
+				VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
@@ -276,22 +276,22 @@ namespace flex
 			void Build(void* data = nullptr);
 
 			/*
-			 * Creates image, image view, and sampler based on the texture at filePath
+			 * Creates image, image view, and sampler based on the texture at relativeFilePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain = false);
+			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
@@ -397,7 +397,8 @@ namespace flex
 
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer = 0);
+		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+			u32 width, u32 height, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 

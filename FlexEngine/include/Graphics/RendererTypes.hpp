@@ -412,9 +412,7 @@ namespace flex
 	struct Texture
 	{
 		Texture();
-		Texture(const std::string& name, u32 width, u32 height, u32 channelCount);
-		Texture(const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
-		Texture(const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+		Texture(const std::string& name);
 
 		virtual ~Texture() {}
 

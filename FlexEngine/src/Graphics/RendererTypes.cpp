@@ -443,30 +443,8 @@ namespace flex
 	{
 	}
 
-	Texture::Texture(const std::string& name, u32 width, u32 height, u32 channelCount) :
-		width(width),
-		height(height),
-		channelCount(channelCount),
+	Texture::Texture(const std::string& name) :
 		name(name)
-	{
-	}
-
-	Texture::Texture(const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) :
-		channelCount(channelCount),
-		relativeFilePath(relativeFilePath),
-		fileName(StripLeadingDirectories(relativeFilePath)),
-		bFlipVertically(bFlipVertically),
-		bGenerateMipMaps(bGenerateMipMaps),
-		bHDR(bHDR)
-	{
-	}
-
-	Texture::Texture(const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) :
-		channelCount(channelCount),
-		relativeCubemapFilePaths(relativeCubemapFilePaths),
-		bFlipVertically(bFlipVertically),
-		bGenerateMipMaps(bGenerateMipMaps),
-		bHDR(bHDR)
 	{
 	}
 

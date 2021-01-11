@@ -32,6 +32,9 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	// TODO: Support DDS
+	const char* ResourceManager::s_SupportedTextureFormats[] = { "jpg", "jpeg", "png", "tga", "bmp", "gif", "hdr", "pic" };
+
 	ResourceManager::ResourceManager() :
 		m_FontsFilePathAbs(RelativePathToAbsolute(FONT_DEFINITION_LOCATION))
 	{
@@ -43,6 +46,7 @@ namespace flex
 
 	void ResourceManager::Initialize()
 	{
+		DiscoverTextures();
 	}
 
 	void ResourceManager::Destroy()
@@ -201,6 +205,29 @@ namespace flex
 		if (g_bEnableLogging_Loading)
 		{
 			Print("Parsed %u prefabs\n", (u32)prefabTemplates.size());
+		}
+	}
+
+	void ResourceManager::DiscoverTextures()
+	{
+		discoveredTextures.clear();
+
+		// Zeroth index represents no texture
+		discoveredTextures.push_back("");
+
+		std::vector<std::string> foundFiles;
+		if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
+		{
+			for (const std::string& foundFilePath : foundFiles)
+			{
+				std::string fileName = StripLeadingDirectories(foundFilePath);
+				discoveredTextures.push_back(fileName);
+			}
+		}
+		else
+		{
+			PrintError("Failed to find files in \"" TEXTURE_DIRECTORY "\"!\n");
+			return;
 		}
 	}
 
@@ -648,16 +675,28 @@ namespace flex
 			const std::string fontName = StripFileType(StripLeadingDirectories(metaData.filePath));
 			g_Renderer->LoadFont(metaData, bForceRender);
 		}
-
 	}
 
 	Texture* ResourceManager::FindLoadedTextureWithPath(const std::string& filePath)
 	{
-		for (Texture* vulkanTexture : loadedTextures)
+		for (Texture* texture : loadedTextures)
 		{
-			if (vulkanTexture && !filePath.empty() && filePath.compare(vulkanTexture->relativeFilePath) == 0)
+			if (texture && !filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
 			{
-				return vulkanTexture;
+				return texture;
+			}
+		}
+
+		return nullptr;
+	}
+
+	Texture* ResourceManager::FindLoadedTextureWithName(const std::string& fileName)
+	{
+		for (Texture* texture : loadedTextures)
+		{
+			if (texture && fileName.compare(texture->fileName) == 0)
+			{
+				return texture;
 			}
 		}
 
@@ -671,6 +710,20 @@ namespace flex
 			return loadedTextures[textureID];
 		}
 		return nullptr;
+	}
+
+	Texture* ResourceManager::GetOrLoadTexture(const std::string& textureName)
+	{
+		for (Texture* texture : loadedTextures)
+		{
+			if (texture && texture->fileName.compare(textureName) == 0)
+			{
+				return texture;
+			}
+		}
+
+		TextureID texID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY + textureName, false, false, false);
+		return GetLoadedTexture(texID);
 	}
 
 	bool ResourceManager::RemoveLoadedTexture(TextureID textureID, bool bDestroy)
@@ -1147,10 +1200,8 @@ namespace flex
 
 				static std::string matName = "";
 				static i32 selectedShaderIndex = 0;
-				// Texture index values of 0 represent no texture, 1 = first index into textures array and so on
-				//static i32 albedoTextureIndex = 0;
-				static std::vector<i32> selectedTextureIndices; // One for each of the current material's texture slots
-				//static bool bUpdateAlbedoTextureMaterial = false;
+				// One for each of the current material's texture slots, index into discoveredTextures
+				static std::vector<i32> selectedTextureIndices;
 
 				if (bMaterialSelectionChanged)
 				{
@@ -1166,12 +1217,11 @@ namespace flex
 					i32 texIndex = 0;
 					for (ShaderUniformContainer<Texture*>::TexPair& pair : material->textures)
 					{
-						for (u32 loadedTexIndex = 0; loadedTexIndex < loadedTextures.size(); ++loadedTexIndex)
+						for (u32 i = 0; i < discoveredTextures.size(); ++i)
 						{
-							// TODO: Compare IDs
-							if (pair.object == loadedTextures[loadedTexIndex])
+							if (pair.object->fileName.compare(discoveredTextures[i]) == 0)
 							{
-								selectedTextureIndices[texIndex] = loadedTexIndex;
+								selectedTextureIndices[texIndex] = i;
 							}
 						}
 						++texIndex;
@@ -1184,11 +1234,10 @@ namespace flex
 
 					for (u32 texIndex = 0; texIndex < material->textures.Count(); ++texIndex)
 					{
-						Texture* loadedTex = GetLoadedTexture(selectedTextureIndices[texIndex]);
+						Texture* loadedTex = GetOrLoadTexture(discoveredTextures[selectedTextureIndices[texIndex]]);
 						if (loadedTex == nullptr)
 						{
-							Texture* selectedTex = loadedTextures[selectedTextureIndices[texIndex] - 1];
-							const char* failedTexName = (selectedTex != nullptr ? selectedTex->fileName.c_str() : "");
+							const char* failedTexName = discoveredTextures[selectedTextureIndices[texIndex]].c_str();
 							PrintError("Failed to load texture %s\n", failedTexName);
 							// If texture failed to be found select blank texture
 							selectedTextureIndices[texIndex] = 0;
@@ -1290,7 +1339,7 @@ namespace flex
 						// TODO: Pass in reference to material->textures?
 						//Texture* texture = material->textures[texIndex];
 						std::string texFieldName = material->textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
-						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), loadedTextures, &selectedTextureIndices[texIndex]);
+						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), discoveredTextures, &selectedTextureIndices[texIndex]);
 					}
 				}
 
@@ -1443,14 +1492,28 @@ namespace flex
 				static i32 selectedTextureIndex = 0;
 				if (ImGui::BeginChild("texture list", ImVec2(0.0f, 120.0f), true))
 				{
-					i32 i = 0;
-					for (Texture* texture : loadedTextures)
+					for (i32 i = 1; i < (i32)discoveredTextures.size(); ++i)
 					{
-						std::string textureName = texture->name;
-						if (textureFilter.PassFilter(textureName.c_str()))
+						const std::string& texFileName = discoveredTextures[i];
+
+						if (textureFilter.PassFilter(texFileName.c_str()))
 						{
 							bool bSelected = (i == selectedTextureIndex);
-							if (ImGui::Selectable(textureName.c_str(), &bSelected))
+							static char texNameBuf[256];
+							memset(texNameBuf, 0, 256);
+							memcpy(texNameBuf, texFileName.c_str(), texFileName.size());
+							Texture* loadedTex = g_ResourceManager->FindLoadedTextureWithName(texFileName);
+							if (loadedTex == nullptr)
+							{
+								static const char* unloadedStr = " (unloaded)\0";
+								static u32 unloadedStrLen = (u32)strlen(unloadedStr);
+								memcpy(texNameBuf + texFileName.size(), unloadedStr, unloadedStrLen);
+							}
+							else
+							{
+								memcpy(texNameBuf + texFileName.size(), "\0", 1);
+							}
+							if (ImGui::Selectable(texNameBuf, &bSelected))
 							{
 								selectedTextureIndex = i;
 							}
@@ -1472,13 +1535,21 @@ namespace flex
 
 							if (ImGui::IsItemHovered())
 							{
-								g_Renderer->DrawImGuiTexturePreviewTooltip(texture);
+								if (loadedTex != nullptr)
+								{
+									g_Renderer->DrawImGuiTexturePreviewTooltip(loadedTex);
+								}
 							}
-							++i;
 						}
 					}
 				}
 				ImGui::EndChild();
+
+				// TODO: Hook up DirectoryWatcher here
+				if (ImGui::Button("Refresh"))
+				{
+					DiscoverTextures();
+				}
 
 				if (ImGui::Button("Import Texture"))
 				{
@@ -1508,8 +1579,7 @@ namespace flex
 						else
 						{
 							Print("Importing texture: %s\n", relativeFilePath.c_str());
-
-							g_Renderer->InitializeTextureFromFile(relativeFilePath, 3, false, false, false);
+							g_Renderer->InitializeTextureFromFile(relativeFilePath, false, false, false);
 						}
 
 						ImGui::CloseCurrentPopup();

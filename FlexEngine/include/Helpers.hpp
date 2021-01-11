@@ -132,7 +132,6 @@ namespace flex
 
 	std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string BoolToString(bool b);
 
 	std::string VecToString(const glm::vec2& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
 	std::string VecToString(const glm::vec3& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
@@ -175,6 +174,8 @@ namespace flex
 
 	FLEX_NO_DISCARD std::string ReplaceBackSlashesWithForward(std::string str);
 	FLEX_NO_DISCARD std::string RelativePathToAbsolute(std::string relativePath);
+
+	FLEX_NO_DISCARD std::string EnsureTrailingSlash(const std::string& str);
 
 	FLEX_NO_DISCARD std::string Replace(const std::string& str, const std::string& pattern, const std::string& replacement);
 	FLEX_NO_DISCARD std::string Replace(const std::string& str, char pattern, char replacement);

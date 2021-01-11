@@ -52,7 +52,8 @@ namespace flex
 
 		// Returns true if any files were found
 		// Set fileType to "*" to retrieve all files
-		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen);
 		static bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
 
 		static void OpenFileWithDefaultApplication(const std::string& absoluteDirectory);
