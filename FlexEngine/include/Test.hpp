@@ -1584,6 +1584,80 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(HelpersRelativeToAbsolutePath0)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "C:/Users/user.name/Documents/Project/../../Subfolder/File.txt";
+			relativePath = RelativePathToAbsolute(relativePath);
+
+			EXPECT(strcmp(relativePath.c_str(), "C:/Users/user.name/Subfolder/File.txt"), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersRelativeToAbsolutePath1)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "Documents/Project/../../Subfolder/File.txt";
+			std::string absolutePath = RelativePathToAbsolute(relativePath);
+
+			std::string expected = FlexEngine::s_CurrentWorkingDirectory + "/Subfolder/File.txt";
+			EXPECT(strcmp(absolutePath.c_str(), expected.c_str()), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersRelativeToAbsolutePath2)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "../../Subfolder/File.txt";
+			std::string absolutePath = RelativePathToAbsolute(relativePath);
+
+			size_t lastSlash = FlexEngine::s_CurrentWorkingDirectory.rfind('/');
+			size_t secondLastSlash = FlexEngine::s_CurrentWorkingDirectory.rfind('/', lastSlash - 1);
+			std::string shortenedWorkingDirectory = FlexEngine::s_CurrentWorkingDirectory.substr(0, secondLastSlash);
+			std::string expected = shortenedWorkingDirectory + "/Subfolder/File.txt";
+			EXPECT(strcmp(absolutePath.c_str(), expected.c_str()), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersRelativeToAbsolutePath3)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "Subfolder/../Subfolder/../File.txt";
+			std::string absolutePath = RelativePathToAbsolute(relativePath);
+
+			std::string expected = FlexEngine::s_CurrentWorkingDirectory + "/File.txt";
+			EXPECT(strcmp(absolutePath.c_str(), expected.c_str()), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersRelativeToAbsolutePath4)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "/file_with_underscores.flx";
+			std::string absolutePath = RelativePathToAbsolute(relativePath);
+
+			std::string expected = FlexEngine::s_CurrentWorkingDirectory + "/file_with_underscores.flx";
+			EXPECT(strcmp(absolutePath.c_str(), expected.c_str()), 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersRelativeToAbsolutePath5)
+		{
+			Platform::RetrieveCurrentWorkingDirectory();
+
+			std::string relativePath = "assets/textures/../../assets/meshes/../../cube.glb";
+			std::string absolutePath = RelativePathToAbsolute(relativePath);
+
+			std::string expected = FlexEngine::s_CurrentWorkingDirectory + "/cube.glb";
+			EXPECT(strcmp(absolutePath.c_str(), expected.c_str()), 0);
+		}
+		UNIT_TEST_END;
+
 		//
 		// GUID tests
 		//
@@ -1766,6 +1840,8 @@ namespace flex
 				HelpersSplit0, HelpersSplit1, HelpersSplit2, HelpersSplit3, HelpersSplit4,
 				HelpersSplitNoStrip0, HelpersSplitNoStrip1, HelpersSplitNoStrip2,
 				HelpersNextNonAlphaNumeric0, HelpersNextNonAlphaNumeric1, HelpersNextNonAlphaNumeric2,
+				HelpersRelativeToAbsolutePath0, HelpersRelativeToAbsolutePath1, HelpersRelativeToAbsolutePath2,
+				HelpersRelativeToAbsolutePath3, HelpersRelativeToAbsolutePath4, HelpersRelativeToAbsolutePath5,
 				// GUID tests
 				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID1, InvalidGUID1,
 				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1,

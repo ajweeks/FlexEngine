@@ -156,6 +156,28 @@ namespace flex
 		}
 	}
 
+	void Platform::RetrievePathToExecutable()
+	{
+		TCHAR szFileName[MAX_PATH];
+		GetModuleFileName(NULL, szFileName, MAX_PATH);
+		char fileNameBuff[MAX_PATH];
+#pragma warning(disable: 4127) // Expression is constant
+		if (sizeof(TCHAR) == sizeof(WCHAR))
+#pragma warning(default: 4127)
+		{
+			sprintf_s(fileNameBuff, MAX_PATH, "%ws", (WCHAR*)szFileName);
+		}
+		else
+		{
+			sprintf_s(fileNameBuff, MAX_PATH, "%s", (char*)szFileName);
+		}
+
+		FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(fileNameBuff));
+
+		std::string exeDir = ExtractDirectoryString(FlexEngine::s_ExecutablePath);
+		SetCurrentDirectory(exeDir.c_str());
+	}
+
 	bool Platform::CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)

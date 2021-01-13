@@ -1296,56 +1296,121 @@ namespace flex
 
 	std::string ReplaceBackSlashesWithForward(std::string str)
 	{
-		std::for_each(str.begin(), str.end(), [](char& c)
+		for (char& c : str)
 		{
 			if (c == '\\')
 			{
 				c = '/';
 			}
-		});
+		}
 		return str;
 	}
 
 	std::string RelativePathToAbsolute(std::string relativePath)
 	{
-		// TODO: Compile out of release?
+		if (relativePath.empty())
+		{
+			return relativePath;
+		}
+
 		if (Contains(relativePath, '\\'))
 		{
 			PrintWarn("RelativePathToAbsolute was given path containing backslashes");
 			relativePath = ReplaceBackSlashesWithForward(relativePath);
 		}
 
+		// TODO: This is windows-specific, bring out to platform file
 		if (relativePath.find(':') != std::string::npos)
 		{
-			// File must already be absolute if it contains a drive character
+			// Remove any double dots but leave drive letter prefix intact
+			// e.g.
+			// "C:/Users/user.name/Documents/Project/../../Subfolder/File.txt"
+			//  v
+			// "C:/Users/user.name/Subfolder/File.txt"
+
+			size_t nextDoubleDot = relativePath.find("..");
+
+			while (nextDoubleDot != std::string::npos)
+			{
+				if (nextDoubleDot > 0 && relativePath[nextDoubleDot - 1] == '/')
+				{
+					size_t precedingSlash = relativePath.rfind('/', nextDoubleDot - 2);
+					if (precedingSlash != std::string::npos)
+					{
+						relativePath = relativePath.substr(0, precedingSlash) + relativePath.substr(nextDoubleDot + 2);
+					}
+				}
+
+				nextDoubleDot = relativePath.find("..");
+			}
+
 			return relativePath;
 		}
 
+		// First check for relative paths in path string to remove
 		size_t nextDoubleDot = relativePath.find("..");
-
-		std::string workingDirectory = FlexEngine::s_CurrentWorkingDirectory;
-
-		std::string strippedFilePath = relativePath;
-
 		while (nextDoubleDot != std::string::npos)
 		{
-			size_t lastSlash = workingDirectory.find_last_of('/');
+			size_t lastSlash = relativePath.rfind('/', nextDoubleDot);
+			if (lastSlash == std::string::npos)
+			{
+				// No more directories to remove from relative path
+				nextDoubleDot = std::string::npos;
+				break;
+			}
+			else
+			{
+				size_t lastSlash2 = (nextDoubleDot == 0 ? std::string::npos : relativePath.rfind('/', nextDoubleDot - 2));
+				if (lastSlash2 == std::string::npos && nextDoubleDot != 0)
+				{
+					lastSlash2 = 0;
+				}
+				if (lastSlash2 == std::string::npos)
+				{
+					relativePath = relativePath.substr(nextDoubleDot + 2);
+				}
+				else
+				{
+					relativePath = relativePath.substr(0, lastSlash2) + relativePath.substr(nextDoubleDot + 2);
+
+				}
+				nextDoubleDot = relativePath.find("..");
+			}
+		}
+
+		if (relativePath.size() <= 1)
+		{
+			return relativePath;
+		}
+
+		// Trim leading slash
+		if (relativePath[0] == '/')
+		{
+			relativePath = relativePath.substr(1);
+		}
+
+		std::string pathPrefix = FlexEngine::s_CurrentWorkingDirectory;
+
+		// Then remove directories from path prefix for each double dot
+		nextDoubleDot = relativePath.find("..");
+		while (nextDoubleDot != std::string::npos)
+		{
+			size_t lastSlash = pathPrefix.find_last_of('/');
 			if (lastSlash == std::string::npos)
 			{
 				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
 				nextDoubleDot = std::string::npos;
+				break;
 			}
 			else
 			{
-				workingDirectory = workingDirectory.substr(0, lastSlash);
-				strippedFilePath = strippedFilePath.substr(nextDoubleDot);
-				nextDoubleDot = relativePath.find("..", nextDoubleDot + 2);
+				pathPrefix = pathPrefix.substr(0, lastSlash); // remove final directory in string
+				relativePath = relativePath.substr(nextDoubleDot + 3); // remove "../" prefix
+				nextDoubleDot = relativePath.find("..");
 			}
 		}
 
-		strippedFilePath = ReplaceBackSlashesWithForward(strippedFilePath);
-
-		std::string absolutePath = workingDirectory + '/' + strippedFilePath;
+		std::string absolutePath = pathPrefix + '/' + relativePath;
 
 		return absolutePath;
 	}

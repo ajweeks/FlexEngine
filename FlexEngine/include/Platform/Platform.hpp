@@ -44,6 +44,7 @@ namespace flex
 
 		// File system helpers
 		static void RetrieveCurrentWorkingDirectory();
+		static void RetrievePathToExecutable();
 		static bool CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
 		static void OpenExplorer(const std::string& absoluteDirectory);
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);

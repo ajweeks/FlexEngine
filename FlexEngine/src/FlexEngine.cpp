@@ -74,6 +74,7 @@ namespace flex
 	const u32 FlexEngine::EngineVersionPatch = 6;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
+	std::string FlexEngine::s_ExecutablePath;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
 	// Globals declared in stdafx.hpp
@@ -104,6 +105,7 @@ namespace flex
 	{
 		std::srand((u32)time(NULL));
 
+		Platform::RetrievePathToExecutable();
 		Platform::RetrieveCurrentWorkingDirectory();
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);

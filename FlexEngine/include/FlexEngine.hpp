@@ -65,6 +65,7 @@ namespace flex
 
 		// TODO: Figure out how to make this not cause a memory leak!
 		static std::string s_CurrentWorkingDirectory;
+		static std::string s_ExecutablePath;
 
 		// TODO: Move to text file
 		enum class SoundEffect
