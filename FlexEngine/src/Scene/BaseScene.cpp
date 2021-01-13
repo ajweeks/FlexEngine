@@ -2012,6 +2012,11 @@ namespace flex
 			}
 		}
 
+		for (ICallbackGameObject* callback : m_OnGameObjectDestroyedCallbacks)
+		{
+			callback->Execute(gameObject);
+		}
+
 		if (bDestroy)
 		{
 			RemoveObjectImmediateRecursive(gameObjectID, bDestroy);

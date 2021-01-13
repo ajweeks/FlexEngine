@@ -157,7 +157,7 @@ namespace flex
 
 	void VertexBufferData::Destroy()
 	{
-		if (vertexData)
+		if (vertexData != nullptr)
 		{
 			free(vertexData);
 			vertexData = nullptr;

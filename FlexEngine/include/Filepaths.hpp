@@ -1,5 +1,6 @@
 #pragma once
 
+// TODO: Rename folder to data
 #define ROOT_LOCATION				"../../../FlexEngine/"
 
 #define RESOURCE_LOCATION			ROOT_LOCATION "resources/"

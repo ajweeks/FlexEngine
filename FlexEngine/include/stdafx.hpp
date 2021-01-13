@@ -1,4 +1,5 @@
-// Configuration variables:
+
+// Configuration variables
 
 #define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1

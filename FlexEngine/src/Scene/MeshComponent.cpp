@@ -371,7 +371,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
@@ -448,7 +448,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
@@ -494,7 +494,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
@@ -1048,7 +1048,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}

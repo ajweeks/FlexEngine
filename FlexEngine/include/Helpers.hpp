@@ -62,43 +62,43 @@ namespace flex
 	 * Returns the index of the first character which isn't a number
 	 * of letter (or -1 if none exist) starting from offset
 	 */
-	i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
+	FLEX_NO_DISCARD i32 NextNonAlphaNumeric(const std::string& str, i32 offset);
 
-	bool NearlyEquals(real a, real b, real threshold);
-	bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold);
-	bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold);
-	bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold);
-	bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold);
+	FLEX_NO_DISCARD bool NearlyEquals(real a, real b, real threshold);
+	FLEX_NO_DISCARD bool NearlyEquals(const glm::vec2& a, const glm::vec2& b, real threshold);
+	FLEX_NO_DISCARD bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold);
+	FLEX_NO_DISCARD bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold);
+	FLEX_NO_DISCARD bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold);
 
-	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
-	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
-	real MoveTowards(const real& a, const real b, real delta);
+	FLEX_NO_DISCARD glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
+	FLEX_NO_DISCARD glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
+	FLEX_NO_DISCARD real MoveTowards(const real& a, const real b, real delta);
 
-	real Lerp(real a, real b, real t);
-	glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
-	glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
-	glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
+	FLEX_NO_DISCARD real Lerp(real a, real b, real t);
+	FLEX_NO_DISCARD glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
+	FLEX_NO_DISCARD glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
+	FLEX_NO_DISCARD glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
 
-	u32 Pack2FloatToU32(real f1, real f2);
+	FLEX_NO_DISCARD u32 Pack2FloatToU32(real f1, real f2);
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
 
 	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
-	u32 Parse32u(const char* ptr);
+	FLEX_NO_DISCARD u32 Parse32u(const char* ptr);
 	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
-	u16 Parse16u(const char* ptr);
+	FLEX_NO_DISCARD u16 Parse16u(const char* ptr);
 
-	bool ParseBool(const std::string& intStr);
+	FLEX_NO_DISCARD bool ParseBool(const std::string& intStr);
 
-	i32 ParseInt(const std::string& intStr);
+	FLEX_NO_DISCARD i32 ParseInt(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
-	real ParseFloat(const std::string& floatStr);
+	FLEX_NO_DISCARD real ParseFloat(const std::string& floatStr);
 
 	/* Parses a comma separated list of 2 floats */
-	glm::vec2 ParseVec2(const std::string& vecStr);
+	FLEX_NO_DISCARD glm::vec2 ParseVec2(const std::string& vecStr);
 
 	/* Parses a comma separated list of 3 floats */
-	glm::vec3 ParseVec3(const std::string& vecStr);
+	FLEX_NO_DISCARD glm::vec3 ParseVec3(const std::string& vecStr);
 
 	/*
 	* Parses a comma separated list of 3 or 4 floats
@@ -106,48 +106,47 @@ namespace flex
 	* If defaultW is negative then an error will be generated if the string doesn't
 	* contain 4 components
 	*/
-	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
+	FLEX_NO_DISCARD glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
 
-	glm::quat ParseQuat(const std::string& quatStr);
+	FLEX_NO_DISCARD glm::quat ParseQuat(const std::string& quatStr);
 
-	u32 CountSetBits(u32 bits);
+	FLEX_NO_DISCARD u32 CountSetBits(u32 bits);
 
-	bool IsNanOrInf(real val);
-	bool IsNanOrInf(const glm::vec2& vec);
-	bool IsNanOrInf(const glm::vec3& vec);
-	bool IsNanOrInf(const glm::vec4& vec);
-	bool IsNanOrInf(const glm::quat& quat);
+	FLEX_NO_DISCARD bool IsNanOrInf(real val);
+	FLEX_NO_DISCARD bool IsNanOrInf(const glm::vec2& vec);
+	FLEX_NO_DISCARD bool IsNanOrInf(const glm::vec3& vec);
+	FLEX_NO_DISCARD bool IsNanOrInf(const glm::vec4& vec);
+	FLEX_NO_DISCARD bool IsNanOrInf(const glm::quat& quat);
 
-	real RoundToNearestPowerOfTwo(real num);
-	u64 NextPowerOfTwo(u64 x);
-	u32 NextPowerOfTwo(u32 x);
+	FLEX_NO_DISCARD real RoundToNearestPowerOfTwo(real num);
+	FLEX_NO_DISCARD u64 NextPowerOfTwo(u64 x);
+	FLEX_NO_DISCARD u32 NextPowerOfTwo(u32 x);
 
 	FLEX_NO_DISCARD std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
 	void PadEnd(std::string& str, i32 minLen, char pad);
 	void PadStart(std::string& str, i32 minLen, char pad);
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
-	std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
-	std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
 
-	std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
+	FLEX_NO_DISCARD std::string VecToString(const glm::vec2& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string VecToString(const glm::vec3& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string VecToString(const glm::vec4& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string VecToString(const glm::vec2& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string VecToString(const glm::vec3& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string VecToString(const glm::vec4& vec, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string Vec2ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string Vec3ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string Vec4ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string Vec2ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string Vec3ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string Vec4ToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string VecToString(real x, real y, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string VecToString(real x, real y, real z, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string VecToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
 
-	std::string VecToString(real x, real y, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string VecToString(real x, real y, real z, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string VecToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
-
-	std::string QuatToString(const glm::quat& quat, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string QuatToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
-	std::string QuatToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string QuatToString(const glm::quat& quat, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string QuatToString(real x, real y, real z, real w, i32 precision = DEFAULT_FLOAT_PRECISION);
+	FLEX_NO_DISCARD std::string QuatToString(real* data, i32 precision = DEFAULT_FLOAT_PRECISION);
 
 	void CopyVec3ToClipboard(const glm::vec3& vec);
 	void CopyVec4ToClipboard(const glm::vec4& vec);
@@ -158,19 +157,19 @@ namespace flex
 	void CopyTransformToClipboard(Transform* transform);
 	bool PasteTransformFromClipboard(Transform* transform);
 
-	glm::vec3 PasteColour3FromClipboard();
-	glm::vec4 PasteColour4FromClipboard();
+	FLEX_NO_DISCARD glm::vec3 PasteColour3FromClipboard();
+	FLEX_NO_DISCARD glm::vec4 PasteColour4FromClipboard();
 
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
 	std::string& ToUpper(std::string& str);
 
-	bool StartsWith(const std::string& str, const std::string& start);
-	bool EndsWith(const std::string& str, const std::string& end);
+	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
+	FLEX_NO_DISCARD bool EndsWith(const std::string& str, const std::string& end);
 
 	// Returns the number str ends with or -1 if last char isn't numeral
 	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)
-	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
+	FLEX_NO_DISCARD i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars);
 
 	FLEX_NO_DISCARD std::string ReplaceBackSlashesWithForward(std::string str);
 	FLEX_NO_DISCARD std::string RelativePathToAbsolute(std::string relativePath);
@@ -181,10 +180,10 @@ namespace flex
 	FLEX_NO_DISCARD std::string Replace(const std::string& str, char pattern, char replacement);
 
 	// Returns random value in range [min, max)
-	i32 RandomInt(i32 min, i32 max);
+	FLEX_NO_DISCARD i32 RandomInt(i32 min, i32 max);
 
 	// Returns random value in range [min, max)
-	real RandomFloat(real min, real max);
+	FLEX_NO_DISCARD real RandomFloat(real min, real max);
 
 	// TODO: Add tests! Unused!
 	bool Base64Encode(const u8* src, char* dst, size_t len);
@@ -192,13 +191,13 @@ namespace flex
 
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes);
 
-	real MinComponent(const glm::vec2& vec);
-	real MinComponent(const glm::vec3& vec);
-	real MinComponent(const glm::vec4& vec);
+	FLEX_NO_DISCARD real MinComponent(const glm::vec2& vec);
+	FLEX_NO_DISCARD real MinComponent(const glm::vec3& vec);
+	FLEX_NO_DISCARD real MinComponent(const glm::vec4& vec);
 
-	real MaxComponent(const glm::vec2& vec);
-	real MaxComponent(const glm::vec3& vec);
-	real MaxComponent(const glm::vec4& vec);
+	FLEX_NO_DISCARD real MaxComponent(const glm::vec2& vec);
+	FLEX_NO_DISCARD real MaxComponent(const glm::vec3& vec);
+	FLEX_NO_DISCARD real MaxComponent(const glm::vec4& vec);
 
 	FLEX_NO_DISCARD inline real Saturate(real val)
 	{
@@ -211,20 +210,20 @@ namespace flex
 		return glm::clamp(val, T(0), T(1));
 	}
 
-	glm::vec2 Floor(const glm::vec2& p);
-	glm::vec2 Fract(const glm::vec2& p);
+	FLEX_NO_DISCARD glm::vec2 Floor(const glm::vec2& p);
+	FLEX_NO_DISCARD glm::vec2 Fract(const glm::vec2& p);
 
-	glm::vec3 Floor(const glm::vec3& p);
-	glm::vec3 Fract(const glm::vec3& p);
+	FLEX_NO_DISCARD glm::vec3 Floor(const glm::vec3& p);
+	FLEX_NO_DISCARD glm::vec3 Fract(const glm::vec3& p);
 
 	static const unsigned char hex_table[17] = "0123456789ABCDEF";
 
-	inline u8 DecimalToHex(u8 dec)
+	FLEX_NO_DISCARD inline u8 DecimalToHex(u8 dec)
 	{
 		return hex_table[dec];
 	}
 
-	inline u8 DecimalFromHex(char hex)
+	FLEX_NO_DISCARD inline u8 DecimalFromHex(char hex)
 	{
 		if (hex <= '9')
 		{
@@ -236,7 +235,7 @@ namespace flex
 
 	// Returns monotonically increasing ID with each call (for a
 	// globally-unique value use Platform::GenerateGUID instead)
-	u32 GenerateUID();
+	FLEX_NO_DISCARD u32 GenerateUID();
 
 	static const u64 FNV1_64_Prime = 1099511628211u;
 	static const u64 FNV1_64_Offset = 14695981039346656037u;

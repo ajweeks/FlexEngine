@@ -675,7 +675,7 @@ namespace flex
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
-					if (renderObject)
+					if (renderObject != nullptr)
 					{
 						if (renderObject->gameObject)
 						{
@@ -1286,7 +1286,7 @@ namespace flex
 			for (RenderID renderID = 0; renderID < MAX_NUM_RENDER_OBJECTS; ++renderID)
 			{
 				VulkanRenderObject* renderObject = m_RenderObjects[renderID];
-				if (renderObject)
+				if (renderObject != nullptr)
 				{
 					if (renderObject->materialID == oldMatID)
 					{
@@ -1591,7 +1591,7 @@ namespace flex
 		{
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				if (!particleSystem)
+				if (particleSystem == nullptr)
 				{
 					continue;
 				}
@@ -2255,7 +2255,7 @@ namespace flex
 		void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
+			if (renderObject == nullptr)
 			{
 				return;
 			}
@@ -2327,7 +2327,7 @@ namespace flex
 			outInfo = {};
 
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
+			if (renderObject == nullptr)
 			{
 				return false;
 			}
@@ -2403,7 +2403,7 @@ namespace flex
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject)
+				if (renderObject != nullptr)
 				{
 					auto matIter = m_Materials.find(renderObject->materialID);
 					if (matIter != m_Materials.end())
@@ -2428,7 +2428,7 @@ namespace flex
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject)
+			if (renderObject != nullptr)
 			{
 				MaterialID prevMatID = renderObject->materialID;
 				if (materialID != prevMatID)
@@ -2491,7 +2491,7 @@ namespace flex
 
 		void VulkanRenderer::DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject)
 		{
-			if (renderObject)
+			if (renderObject != nullptr)
 			{
 				FreeDynamicVertexData(renderID);
 
@@ -2511,7 +2511,7 @@ namespace flex
 
 		void VulkanRenderer::NewFrame()
 		{
-			if (m_PhysicsDebugDrawer)
+			if (m_PhysicsDebugDrawer != nullptr)
 			{
 				m_PhysicsDebugDrawer->ClearLines();
 			}
@@ -2564,7 +2564,7 @@ namespace flex
 		{
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject)
+				if (renderObject != nullptr)
 				{
 					Mesh* mesh = renderObject->gameObject->GetMesh();
 					if (mesh && mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
@@ -2605,7 +2605,7 @@ namespace flex
 				if (renderObject != nullptr)
 				{
 					GameObject* owningGameObject = renderObject->gameObject;
-					if (owningGameObject)
+					if (owningGameObject != nullptr)
 					{
 						Mesh* mesh = owningGameObject->GetMesh();
 						if (mesh && mesh->GetRelativeFilePath().compare(relativeMeshFilePath) == 0)
@@ -2681,7 +2681,7 @@ namespace flex
 
 		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)
 		{
-			if (!m_SkyBoxMesh)
+			if (m_SkyBoxMesh == nullptr)
 			{
 				PrintError("Attempted to generate cubemap before skybox object was created!\n");
 				return;
@@ -2974,7 +2974,7 @@ namespace flex
 
 		void VulkanRenderer::GenerateIrradianceSampler(VulkanRenderObject* renderObject)
 		{
-			if (!m_SkyBoxMesh)
+			if (m_SkyBoxMesh == nullptr)
 			{
 				PrintError("Attempted to generate cubemap before skybox object was created!\n");
 				return;
@@ -3242,7 +3242,7 @@ namespace flex
 
 		void VulkanRenderer::GeneratePrefilteredCube(VulkanRenderObject* renderObject)
 		{
-			if (!m_SkyBoxMesh)
+			if (m_SkyBoxMesh == nullptr)
 			{
 				PrintError("Attempted to generate cubemap before skybox object was created!\n");
 				return;
@@ -3787,7 +3787,7 @@ namespace flex
 			u32 capacity = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject)
+				if (renderObject != nullptr)
 				{
 					++capacity;
 				}
@@ -4733,7 +4733,7 @@ namespace flex
 		{
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				if (particleSystem)
+				if (particleSystem != nullptr)
 				{
 					InitializeParticleSystemBuffer(particleSystem);
 				}
@@ -5594,7 +5594,7 @@ namespace flex
 		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject)
+			if (renderObject == nullptr)
 			{
 				return;
 			}
@@ -5679,7 +5679,7 @@ namespace flex
 			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
 			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(m_DescriptorPool, layouts, 1);
 
-			if (*createInfo->descriptorSet)
+			if (*createInfo->descriptorSet != nullptr)
 			{
 				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, createInfo->descriptorSet);
 			}
@@ -6093,7 +6093,7 @@ namespace flex
 
 			assert(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
 
-			if (createInfo->pipelineCache)
+			if (createInfo->pipelineCache != nullptr)
 			{
 				vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineCache, nullptr);
 
@@ -6495,7 +6495,7 @@ namespace flex
 				const u32 vertexBufferSize = requiredMemory;
 
 				void* vertexDataStart = malloc(vertexBufferSize);
-				if (!vertexDataStart)
+				if (vertexDataStart == nullptr)
 				{
 					PrintError("Failed to allocate %d bytes for static vertex buffer\n", vertexBufferSize);
 					return;
@@ -6586,7 +6586,7 @@ namespace flex
 			}
 
 			void* vertexDataStart = malloc(size);
-			if (!vertexDataStart)
+			if (vertexDataStart == nullptr)
 			{
 				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
 				return;
@@ -6791,7 +6791,7 @@ namespace flex
 					renderObject->materialID == matID)
 				{
 					const UniformBuffer* dynamicBuffer = material->uniformBufferList.Get(UniformBufferType::DYNAMIC);
-					if (dynamicBuffer)
+					if (dynamicBuffer != nullptr)
 					{
 						*inOutDynamicUBOOffset += RoundUp(dynamicBuffer->data.size - 1, m_DynamicAlignment);
 					}
@@ -8345,7 +8345,7 @@ namespace flex
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			DirLightData* dirLightData = &defaultDirLightData;
-			if (m_DirectionalLight)
+			if (m_DirectionalLight != nullptr)
 			{
 				dirLightData = &m_DirectionalLight->data;
 			}
@@ -8500,7 +8500,7 @@ namespace flex
 			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
 			ParticleSimData particleSimData = {};
 
-			if (uniformOverrides)
+			if (uniformOverrides != nullptr)
 			{
 				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
 				{
@@ -8673,7 +8673,7 @@ namespace flex
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (!renderObject)
+				if (renderObject == nullptr)
 				{
 					continue;
 				}
@@ -8799,7 +8799,7 @@ namespace flex
 					else if (i == *textureIndex - 1)
 					{
 						matTexturePath = texturePath;
-						if (texture)
+						if (texture != nullptr)
 						{
 							*textureToUpdate = texture;
 						}
