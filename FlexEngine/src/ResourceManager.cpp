@@ -87,6 +87,17 @@ namespace flex
 		loadedMeshes.clear();
 	}
 
+	void ResourceManager::PreSceneChange()
+	{
+		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		{
+			prefabTemplatePair.templateObject->Destroy();
+			delete prefabTemplatePair.templateObject;
+		}
+		prefabTemplates.clear();
+
+	}
+
 	void ResourceManager::OnSceneChanged()
 	{
 		DiscoverMeshes();

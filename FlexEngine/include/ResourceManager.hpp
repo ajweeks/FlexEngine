@@ -29,6 +29,7 @@ namespace flex
 		void Destroy();
 		void DestroyAllLoadedMeshes();
 
+		void PreSceneChange();
 		void OnSceneChanged();
 
 		// Returns true if found and *loadedMesh was set

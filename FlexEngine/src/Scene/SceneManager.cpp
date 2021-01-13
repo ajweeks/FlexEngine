@@ -111,7 +111,11 @@ namespace flex
 			return false;
 		}
 
-		g_Editor->PreSceneChange();
+		if (m_CurrentSceneIndex != InvalidID)
+		{
+			g_Editor->PreSceneChange();
+			g_ResourceManager->PreSceneChange();
+		}
 
 		// Any modifications will now be lost, so all prefabs will be clean again
 		g_ResourceManager->SetAllPrefabsDirty(false);
