@@ -228,8 +228,10 @@ namespace flex
 		static AudioCue s_SqueakySounds;
 		static AudioSourceID s_BunkSound;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
+		virtual void ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const;
+		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const;
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
@@ -341,12 +343,12 @@ namespace flex
 
 		DirLightData data;
 
-		// DEBUG:
+		// Editor-only
 		glm::vec3 pos = VEC3_ZERO;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 	};
 
 	class PointLight final : public GameObject
@@ -377,8 +379,8 @@ namespace flex
 		PointLightID pointLightID = InvalidPointLightID;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 	};
 
 	class Valve final : public GameObject
@@ -413,8 +415,8 @@ namespace flex
 		real pRotation = 0.0f;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -447,8 +449,8 @@ namespace flex
 		real pdDistBlockMoved = 0.0f;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -466,8 +468,8 @@ namespace flex
 		bool bBroken = false;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -487,8 +489,8 @@ namespace flex
 		MaterialID captureMatID = 0;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -500,8 +502,8 @@ namespace flex
 		void ProcedurallyInitialize(MaterialID matID);
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		void InternalInit(MaterialID matID);
 	};
@@ -557,8 +559,8 @@ namespace flex
 		static const char* emptyCartMeshName;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -588,8 +590,8 @@ namespace flex
 		static const char* engineMeshName;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -611,8 +613,8 @@ namespace flex
 		real liquidAmount = 0.0f;
 
 	protected:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	};
 
@@ -724,8 +726,8 @@ namespace flex
 		//};
 
 	private:
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		void UpdateDependentVariables(i32 waveIndex);
 
@@ -812,8 +814,8 @@ namespace flex
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		void PlugIn(Socket* socket);
 		void Unplug(Socket* socket);
@@ -836,8 +838,8 @@ namespace flex
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;
@@ -914,8 +916,8 @@ namespace flex
 
 		void ClampCursorX();
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 	private:
 		friend TerminalCamera;
@@ -968,8 +970,8 @@ namespace flex
 
 		virtual void OnTransformChanged() override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		glm::mat4 model;
 		real scale;
@@ -996,8 +998,8 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		u32 VertCountPerChunkAxis = 8;
 		real ChunkSize = 16.0f;
@@ -1065,8 +1067,8 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		virtual void ParseJSON(
 			const JSONObject& obj,
@@ -1193,8 +1195,8 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -1270,8 +1272,10 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual void ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeUniqueFields(JSONObject& parentObject) const override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
+		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const override;
 
 		virtual void DrawImGuiObjects() override;
 

@@ -137,16 +137,9 @@ namespace flex
 		std::string objectName = obj.GetString("name");
 
 		GameObjectID gameObjectID;
-		if (!bIsPrefabTemplate)
+		if (sceneFileVersion >= 5)
 		{
-			if (sceneFileVersion >= 5)
-			{
-				gameObjectID = obj.GetGUID("id");
-			}
-			else
-			{
-				gameObjectID = InvalidGameObjectID;
-			}
+			gameObjectID = obj.GetGUID("id");
 		}
 		else
 		{
@@ -1308,7 +1301,12 @@ namespace flex
 			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
-		ParseUniqueFields(obj, scene, matIDs);
+		ParseTypeUniqueFields(obj, scene, matIDs);
+
+		if (!bIsPrefabTemplate)
+		{
+			ParseInstanceUniqueFields(obj, scene, matIDs);
+		}
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -1332,11 +1330,6 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
-	{
-		// Generic game objects have no unique fields
-	}
-
 	JSONObject GameObject::Serialize(const BaseScene* scene, bool bSerializePrefabData /* = false */) const
 	{
 		JSONObject object = {};
@@ -1350,10 +1343,7 @@ namespace flex
 		object.fields.emplace_back("name", JSONValue(m_Name));
 
 		// Added in scene v5
-		if (!bSerializePrefabData)
-		{
-			object.fields.emplace_back("id", JSONValue(ID));
-		}
+		object.fields.emplace_back("id", JSONValue(ID));
 
 		if (bSerializePrefabData)
 		{
@@ -1550,7 +1540,12 @@ namespace flex
 				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
 
-			SerializeUniqueFields(object);
+			SerializeTypeUniqueFields(object);
+		}
+
+		if (!bSerializePrefabData)
+		{
+			SerializeInstanceUniqueFields(object);
 		}
 
 		if (!m_Children.empty())
@@ -1583,9 +1578,9 @@ namespace flex
 		return object;
 	}
 
-	void GameObject::SerializeUniqueFields(JSONObject& /* parentObject */) const
+	StringID GameObject::GetTypeID() const
 	{
-		// Generic game objects have no unique fields
+		return m_TypeID;
 	}
 
 	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
@@ -1702,9 +1697,24 @@ namespace flex
 	//	UNREFERENCED_PARAMETER(wire);
 	//}
 
-	StringID GameObject::GetTypeID() const
+	void GameObject::ParseTypeUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
 	{
-		return m_TypeID;
+		// Generic game objects have no unique fields
+	}
+
+	void GameObject::ParseInstanceUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
+	{
+		// Generic game objects have no unique fields
+	}
+
+	void GameObject::SerializeTypeUniqueFields(JSONObject& /* parentObject */) const
+	{
+		// Generic game objects have no unique fields
+	}
+
+	void GameObject::SerializeInstanceUniqueFields(JSONObject& /* parentObject */) const
+	{
+		// Generic game objects have no unique fields
 	}
 
 	void GameObject::CopyGenericFields(
@@ -2490,7 +2500,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Valve::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Valve::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject valveInfo;
 		if (parentObj.SetObjectChecked("valve info", valveInfo))
@@ -2540,7 +2550,7 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeUniqueFields(JSONObject& parentObject) const
+	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject valveInfo = {};
 
@@ -2688,7 +2698,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		if (!m_Mesh)
 		{
@@ -2744,7 +2754,7 @@ namespace flex
 		}
 	}
 
-	void RisingBlock::SerializeUniqueFields(JSONObject& parentObject) const
+	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject blockInfo = {};
 
@@ -2867,7 +2877,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void GlassPane::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void GlassPane::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -2903,7 +2913,7 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeUniqueFields(JSONObject& parentObject) const
+	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject windowInfo = {};
 
@@ -2933,7 +2943,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void ReflectionProbe::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(parentObj);
@@ -2989,7 +2999,7 @@ namespace flex
 		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	void ReflectionProbe::SerializeUniqueFields(JSONObject& parentObject) const
+	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		FLEX_UNUSED(parentObject);
 
@@ -3015,7 +3025,7 @@ namespace flex
 		InternalInit(matID);
 	}
 
-	void Skybox::ParseUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		assert(matIDs.size() == 1);
@@ -3033,7 +3043,7 @@ namespace flex
 		InternalInit(matIDs[0]);
 	}
 
-	void Skybox::SerializeUniqueFields(JSONObject& parentObject) const
+	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
@@ -3223,7 +3233,7 @@ namespace flex
 		return m_Transform.GetWorldRotation();
 	}
 
-	void DirectionalLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 
@@ -3269,7 +3279,7 @@ namespace flex
 		}
 	}
 
-	void DirectionalLight::SerializeUniqueFields(JSONObject& parentObject) const
+	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject dirLightObj = {};
 
@@ -3479,7 +3489,7 @@ namespace flex
 		return m_Transform.GetWorldPosition();
 	}
 
-	void PointLight::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -3504,7 +3514,7 @@ namespace flex
 		}
 	}
 
-	void PointLight::SerializeUniqueFields(JSONObject& parentObject) const
+	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject pointLightObj = {};
 
@@ -3774,7 +3784,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	void Cart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Cart::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -3784,7 +3794,7 @@ namespace flex
 		distAlongTrack = cartInfo.GetFloat("dist along track");
 	}
 
-	void Cart::SerializeUniqueFields(JSONObject& parentObject) const
+	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject cartInfo = {};
 
@@ -3883,7 +3893,7 @@ namespace flex
 		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
-	void EngineCart::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -3896,7 +3906,7 @@ namespace flex
 		powerRemaining = cartInfo.GetFloat("power remaining");
 	}
 
-	void EngineCart::SerializeUniqueFields(JSONObject& parentObject) const
+	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject cartInfo = {};
 
@@ -3960,14 +3970,14 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void MobileLiquidBox::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(parentObject);
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 	}
 
-	void MobileLiquidBox::SerializeUniqueFields(JSONObject& parentObject) const
+	void MobileLiquidBox::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		FLEX_UNUSED(parentObject);
 	}
@@ -3975,6 +3985,7 @@ namespace flex
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("gerstner wave"), gameObjectID)
 	{
+		m_bSerializeMesh = false;
 		workQueue = new ThreadSafeArray<WaveGenData>(32);
 
 		// Defaults to use if not set in file
@@ -5228,7 +5239,7 @@ namespace flex
 		return memcmp(&lhs, &rhs, sizeof(GerstnerWave::WaveInfo)) == 0;
 	}
 
-	void GerstnerWave::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 
@@ -5333,7 +5344,7 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::SerializeUniqueFields(JSONObject& parentObject) const
+	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject gerstnerWaveObj = {};
 
@@ -5350,7 +5361,6 @@ namespace flex
 
 		gerstnerWaveObj.fields.emplace_back("waves", JSONValue(waveObjs));
 
-		// TODO: Add uint support
 		gerstnerWaveObj.fields.emplace_back("max chunk vert count per axis", JSONValue(maxChunkVertCountPerAxis));
 		gerstnerWaveObj.fields.emplace_back("chunk size", JSONValue(size));
 		gerstnerWaveObj.fields.emplace_back("chunk load radius", JSONValue(loadRadius));
@@ -5765,7 +5775,7 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void Wire::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matIDs);
@@ -5775,7 +5785,7 @@ namespace flex
 		obj.SetVec3Checked("endPoint", endPoint);
 	}
 
-	void Wire::SerializeUniqueFields(JSONObject& parentObject) const
+	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject obj = {};
 
@@ -5848,7 +5858,7 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void Socket::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matIDs);
@@ -5860,7 +5870,7 @@ namespace flex
 
 	}
 
-	void Socket::SerializeUniqueFields(JSONObject& parentObject) const
+	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject obj = {};
 
@@ -6385,7 +6395,7 @@ namespace flex
 		m_Camera = camera;
 	}
 
-	void Terminal::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Terminal::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -6403,7 +6413,7 @@ namespace flex
 		MoveCursorToStart();
 	}
 
-	void Terminal::SerializeUniqueFields(JSONObject& parentObject) const
+	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject terminalObj = {};
 
@@ -7069,7 +7079,7 @@ namespace flex
 		return newParticleSystem;
 	}
 
-	void ParticleSystem::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 		FLEX_UNUSED(scene);
@@ -7095,7 +7105,7 @@ namespace flex
 		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
 	}
 
-	void ParticleSystem::SerializeUniqueFields(JSONObject& parentObject) const
+	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject particleSystemObj = {};
 
@@ -7204,7 +7214,8 @@ namespace flex
 			}
 		}
 
-		ShaderID shaderID = g_Renderer->GetMaterial(m_TerrainMatID)->shaderID;
+		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
+		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
 
 		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
 		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
@@ -7216,7 +7227,7 @@ namespace flex
 		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
 		vertexBufferCreateInfo.normals.clear();
 
-		vertexBufferCreateInfo.attributes = g_Renderer->GetShader(shaderID)->vertexAttributes;
+		vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
 		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
 		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
 		vertexBufferCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
@@ -7315,13 +7326,20 @@ namespace flex
 		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
 		{
 			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
-			if (tableWidth < 1) break;
+			if (tableWidth < 1)
+			{
+				break;
+			}
+
 			std::vector<glm::vec4> textureMem(m_RandomTables[i].size());
 			for (u32 j = 0; j < m_RandomTables[i].size(); ++j)
 			{
 				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
 			}
-			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0], (u32)(textureMem.size() * sizeof(u32) * 4), VK_FORMAT_R32G32B32A32_SFLOAT, "Perlin random table", tableWidth, tableWidth, 2, VK_FILTER_NEAREST);
+			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0],
+				(u32)(textureMem.size() * sizeof(u32) * 4),
+				VK_FORMAT_R32G32B32A32_SFLOAT,
+				"Perlin random table", tableWidth, tableWidth, 4, VK_FILTER_NEAREST);
 		}
 	}
 
@@ -7606,7 +7624,7 @@ namespace flex
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
 	}
 
-	void TerrainGenerator::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 		FLEX_UNUSED(scene);
@@ -7636,7 +7654,7 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::SerializeUniqueFields(JSONObject& parentObject) const
+	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject chunkGenInfo = {};
 
@@ -7885,7 +7903,7 @@ namespace flex
 
 	}
 
-	void SpringObject::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SpringObject::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
@@ -7897,7 +7915,7 @@ namespace flex
 		}
 	}
 
-	void SpringObject::SerializeUniqueFields(JSONObject& parentObject) const
+	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject springObj = {};
 
@@ -8653,7 +8671,7 @@ namespace flex
 		return false;
 	}
 
-	void SoftBody::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(matIDs);
 		UNREFERENCED_PARAMETER(scene);
@@ -8760,7 +8778,7 @@ namespace flex
 		}
 	}
 
-	void SoftBody::SerializeUniqueFields(JSONObject& parentObject) const
+	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject) const
 	{
 		JSONObject softBodyObject = JSONObject();
 
@@ -9018,37 +9036,64 @@ namespace flex
 		}
 	}
 
-	void Vehicle::ParseUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		UNREFERENCED_PARAMETER(scene);
+		UNREFERENCED_PARAMETER(matIDs);
+
+		JSONObject vehicleObj;
+		if (parentObject.SetObjectChecked("vehicle", vehicleObj))
+		{
+			std::vector<JSONField> tireIDs;
+			if (vehicleObj.SetFieldArrayChecked("tire ids", tireIDs))
+			{
+				assert(m_TireCount == (i32)tireIDs.size());
+				for (i32 i = 0; i < m_TireCount; ++i)
+				{
+					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].label);
+				}
+			}
+		}
+	}
+
+	void Vehicle::ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		UNREFERENCED_PARAMETER(parentObject);
 		UNREFERENCED_PARAMETER(scene);
 		UNREFERENCED_PARAMETER(matIDs);
-
-		//JSONObject vehicleObj;
-		//if (parentObject.SetObjectChecked("vehicle", vehicleObj))
-		//{
-		//
-		//}
 	}
 
-	void Vehicle::SerializeUniqueFields(JSONObject& parentObject) const
+	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject vehicleObj = JSONObject();
+
+		std::vector<JSONField> tireIDs;
+		tireIDs.reserve(m_TireCount);
+		for (i32 i = 0; i < m_TireCount; ++i)
+		{
+			JSONField tireIDField = {};
+			tireIDField.label = m_TireIDs[i].ToString();
+			tireIDs.push_back(tireIDField);
+		}
+
+		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
+
+		parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
+	}
+
+	void Vehicle::SerializeInstanceUniqueFields(JSONObject& parentObject) const
 	{
 		UNREFERENCED_PARAMETER(parentObject);
-
-		//JSONObject vehicleObj = JSONObject();
-		//
-		//vehicleObj.fields.emplace_back("chassis mesh file path", JSONValue(m_ChassisMeshFilePath));
-		//
-		//parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
 	}
 
 	void Vehicle::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
 		for (i32 i = 0; i < m_TireCount; ++i)
 		{
-			g_SceneManager->CurrentScene()->GameObjectIDField(TireNames[i], m_TireIDs[i]);
+			currentScene->GameObjectIDField(TireNames[i], m_TireIDs[i]);
 		}
 	}
 } // namespace flex
