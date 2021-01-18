@@ -9,6 +9,7 @@
 namespace flex
 {
 	bool g_bEnableLogToConsole = true;
+	// TODO: Use StringBuilder
 	std::stringstream g_LogBuffer;
 	const char* g_LogBufferFilePath;
 

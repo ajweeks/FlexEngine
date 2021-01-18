@@ -5917,7 +5917,7 @@ namespace flex
 			FLEX_UNUSED(bSetCubemapRenderPass);
 
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (!renderObject || !renderObject->vertexBufferData)
+			if (renderObject == nullptr || renderObject->vertexBufferData == nullptr)
 			{
 				return;
 			}
@@ -6573,8 +6573,8 @@ namespace flex
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject &&
-					renderObject->vertexBufferData)
+				if (renderObject != nullptr &&
+					renderObject->vertexBufferData != nullptr)
 				{
 					size += renderObject->vertexBufferData->VertexCount * vertexStride;
 				}
@@ -6598,8 +6598,8 @@ namespace flex
 			u32 vertexBufferSize = 0;
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject &&
-					renderObject->vertexBufferData &&
+				if (renderObject != nullptr &&
+					renderObject->vertexBufferData != nullptr &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
 				{
@@ -6943,8 +6943,8 @@ namespace flex
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject &&
-					renderObject->vertexBufferData &&
+				if (renderObject != nullptr &&
+					renderObject->vertexBufferData != nullptr &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
 				{
