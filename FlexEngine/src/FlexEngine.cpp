@@ -273,9 +273,9 @@ namespace flex
 		ImGui::CreateContext();
 		SetupImGuiStyles();
 
-		g_Renderer->PostInitialize();
-
 		g_Editor->PostInitialize();
+
+		g_Renderer->PostInitialize();
 
 		g_InputManager->Initialize();
 
