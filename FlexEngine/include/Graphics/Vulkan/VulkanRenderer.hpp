@@ -192,7 +192,6 @@ namespace flex
 			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface();
-			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
@@ -213,6 +212,9 @@ namespace flex
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
+			void CreateStaticUniformBuffer(VulkanMaterial* material);
+			void CreateDynamicUniformBuffer(VulkanMaterial* material);
+			void CreateParticleUniformBuffer(VulkanMaterial* material);
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
@@ -221,14 +223,17 @@ namespace flex
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
 			void CreateStaticVertexBuffers();
+			void CreateAllStaticVertexBuffers();
+
 			void CreateDynamicVertexAndIndexBuffers();
+			void CreateAllDynamicVertexAndIndexBuffers();
+
+			void CreateStaticIndexBuffer();
 
 			void CreateShadowVertexBuffer();
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size);
-
-			void CreateStaticIndexBuffers();
 
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);

@@ -419,7 +419,7 @@ namespace flex
 			m_TAA_ks[0] = 2.25f; // KL
 			m_TAA_ks[1] = 100.0f; // KH
 
-			CreateDynamicVertexAndIndexBuffers();
+			CreateAllDynamicVertexAndIndexBuffers();
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -568,8 +568,9 @@ namespace flex
 				}
 			}
 
-			CreateStaticVertexBuffers();
-			CreateStaticIndexBuffers();
+			CreateAllStaticVertexBuffers();
+			CreateStaticIndexBuffer();
+			// NOTE: CreateAllDynamicVertexAndIndexBuffers will have been called in Initialize
 
 			CreateShadowVertexBuffer();
 			CreateShadowIndexBuffer();
@@ -640,28 +641,6 @@ namespace flex
 			m_PresentCompleteSemaphore.replace();
 			m_RenderCompleteSemaphore.replace();
 
-			for (auto& pair : m_DynamicVertexIndexBufferPairs)
-			{
-				pair.second->Destroy();
-				delete pair.second;
-			}
-			m_DynamicVertexIndexBufferPairs.clear();
-
-			m_ShadowVertexIndexBufferPair->Destroy();
-			delete m_ShadowVertexIndexBufferPair;
-			m_ShadowVertexIndexBufferPair = nullptr;
-
-			for (auto& pair : m_StaticVertexBuffers)
-			{
-				pair.second->Destroy();
-				delete pair.second;
-			}
-			m_StaticVertexBuffers.clear();
-
-			m_StaticIndexBuffer->Destroy();
-			delete m_StaticIndexBuffer;
-			m_StaticIndexBuffer = nullptr;
-
 			delete m_FullScreenTriVertexBuffer;
 			m_FullScreenTriVertexBuffer = nullptr;
 
@@ -687,6 +666,28 @@ namespace flex
 				PrintError("=====================================================\n");
 			}
 			m_RenderObjects.clear();
+
+			for (auto& pair : m_DynamicVertexIndexBufferPairs)
+			{
+				pair.second->Destroy();
+				delete pair.second;
+			}
+			m_DynamicVertexIndexBufferPairs.clear();
+
+			m_ShadowVertexIndexBufferPair->Destroy();
+			delete m_ShadowVertexIndexBufferPair;
+			m_ShadowVertexIndexBufferPair = nullptr;
+
+			for (auto& pair : m_StaticVertexBuffers)
+			{
+				pair.second->Destroy();
+				delete pair.second;
+			}
+			m_StaticVertexBuffers.clear();
+
+			m_StaticIndexBuffer->Destroy();
+			delete m_StaticIndexBuffer;
+			m_StaticIndexBuffer = nullptr;
 
 			for (Shader* shader : m_Shaders)
 			{
@@ -1106,11 +1107,11 @@ namespace flex
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
 				u32 channelCount = 4;
 				VulkanTexture* irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler");
-					irradianceTexture->CreateCubemapEmpty(
-						(u32)createInfo->generatedIrradianceCubemapSize.x,
-						(u32)createInfo->generatedIrradianceCubemapSize.y,
-						channelCount,
-						VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+				irradianceTexture->CreateCubemapEmpty(
+					(u32)createInfo->generatedIrradianceCubemapSize.x,
+					(u32)createInfo->generatedIrradianceCubemapSize.y,
+					channelCount,
+					VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(irradianceTexture);
 				material->textures.Add(U_IRRADIANCE_SAMPLER, irradianceTexture, "Irradiance");
 			}
@@ -1302,6 +1303,13 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanMaterial* material)
 		{
+			CreateStaticUniformBuffer(material);
+			CreateDynamicUniformBuffer(material);
+			CreateParticleUniformBuffer(material);
+		}
+
+		void VulkanRenderer::CreateStaticUniformBuffer(VulkanMaterial * material)
+		{
 			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
 			if (shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
@@ -1311,6 +1319,7 @@ namespace flex
 				if (constantBuffer->data.size > 0)
 				{
 					free(constantBuffer->data.data);
+					constantBuffer->data.data = nullptr;
 
 					constantBuffer->data.size = GetAlignedUBOSize(constantBuffer->data.size);
 
@@ -1321,6 +1330,11 @@ namespace flex
 						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 				}
 			}
+		}
+
+		void VulkanRenderer::CreateDynamicUniformBuffer(VulkanMaterial* material)
+		{
+			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
 			if (shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
@@ -1341,11 +1355,17 @@ namespace flex
 					}
 				}
 			}
+		}
+
+		void VulkanRenderer::CreateParticleUniformBuffer(VulkanMaterial* material)
+		{
+			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
 			if (shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
 			{
 				UniformBuffer* particleBuffer = material->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
 				flex_aligned_free(particleBuffer->data.data);
+				particleBuffer->data.data = nullptr;
 
 				particleBuffer->data.size = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
@@ -2309,9 +2329,9 @@ namespace flex
 
 			if (m_bPostInitialized)
 			{
-				CreateStaticVertexBuffers();
-				CreateStaticIndexBuffers();
-				CreateDynamicVertexAndIndexBuffers();
+				CreateAllStaticVertexBuffers();
+				CreateStaticIndexBuffer();
+				CreateAllDynamicVertexAndIndexBuffers();
 
 				CreateShadowVertexBuffer();
 				CreateShadowIndexBuffer();
@@ -2473,7 +2493,7 @@ namespace flex
 		{
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject && renderObject->renderID == renderID)
+				if (renderObject != nullptr && renderObject->renderID == renderID)
 				{
 					DestroyRenderObject(renderID, renderObject);
 					return true;
@@ -3593,7 +3613,7 @@ namespace flex
 
 				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
-				vkQueueWaitIdle(m_GraphicsQueue);
+				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 
 				vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, pipeline, nullptr);
 				vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, pipelinelayout, nullptr);
@@ -5579,9 +5599,7 @@ namespace flex
 			if (shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
 				UniformBuffer const* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
-				// TODO: FIXME: BAD: CLEANUP:
-				const VkDeviceSize dynamicBufferSize = sizeof(VulkanUniformBufferObjectData) * m_RenderObjects.size();
-				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBufferSize, UniformBufferType::DYNAMIC });
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBuffer->fullDynamicBufferSize, UniformBufferType::DYNAMIC });
 			}
 
 			if (shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
@@ -5609,6 +5627,7 @@ namespace flex
 			}
 			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", gameObjectName.c_str(), renderID);
 			createInfo.DBG_Name = debugName;
+			// NOTE: Existing descriptor sets get released in CreateDescriptorSet
 			createInfo.descriptorSet = &renderObject->descriptorSet;
 
 			CreateDescriptorSet(createInfo, renderObject->materialID);
@@ -6464,10 +6483,10 @@ namespace flex
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
-			auto renderObjectValid = [this](VulkanRenderObject* renderObject, u32 staticVertexBufferIndex) -> bool
+			auto RenderObjectUsesStaticBuffer = [this](VulkanRenderObject* renderObject, u32 staticVertexBufferIndex) -> bool
 			{
-				return renderObject &&
-					renderObject->vertexBufferData &&
+				return renderObject != nullptr &&
+					renderObject->vertexBufferData != nullptr &&
 					!m_Materials[renderObject->materialID]->bDynamic &&
 					m_Shaders[m_Materials.at(renderObject->materialID)->shaderID]->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
@@ -6481,54 +6500,63 @@ namespace flex
 
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
-					if (renderObjectValid(renderObject, staticVertexBufferIndex))
+					if (RenderObjectUsesStaticBuffer(renderObject, staticVertexBufferIndex))
 					{
 						requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
 					}
 				}
 
-				if (requiredMemory == 0)
+				if (requiredMemory > 0)
 				{
-					continue;
-				}
+					const u32 vertexBufferSize = requiredMemory;
 
-				const u32 vertexBufferSize = requiredMemory;
-
-				void* vertexDataStart = malloc(vertexBufferSize);
-				if (vertexDataStart == nullptr)
-				{
-					PrintError("Failed to allocate %d bytes for static vertex buffer\n", vertexBufferSize);
-					return;
-				}
-
-				void* vertexBufferData = vertexDataStart;
-
-				u32 vertexCount = 0;
-				for (VulkanRenderObject* renderObject : m_RenderObjects)
-				{
-					if (renderObjectValid(renderObject, staticVertexBufferIndex))
+					void* vertexDataStart = malloc(vertexBufferSize);
+					if (vertexDataStart != nullptr)
 					{
-						renderObject->vertexOffset = vertexCount;
 
-						memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+						void* vertexBufferData = vertexDataStart;
 
-						vertexCount += renderObject->vertexBufferData->VertexCount;
+						u32 vertexCount = 0;
+						for (VulkanRenderObject* renderObject : m_RenderObjects)
+						{
+							if (RenderObjectUsesStaticBuffer(renderObject, staticVertexBufferIndex))
+							{
+								renderObject->vertexOffset = vertexCount;
 
-						vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+								memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
+
+								vertexCount += renderObject->vertexBufferData->VertexCount;
+
+								vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+							}
+						}
+
+						if (vertexBufferSize > 0 && vertexCount > 0)
+						{
+							assert(vertexBufferData == ((char*)vertexDataStart + vertexBufferSize));
+
+							CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
+						}
+						else
+						{
+
+							PrintError("Failed to create static vertex buffer with index %u\n", staticVertexBufferIndex);
+						}
+
+						free(vertexDataStart);
+					}
+					else
+					{
+						PrintError("Failed to allocate %d bytes for static vertex buffer\n", vertexBufferSize);
 					}
 				}
-
-				if (vertexBufferSize == 0 || vertexCount == 0)
-				{
-					PrintError("Failed to create static vertex buffer\n");
-					return;
-				}
-
-				assert(vertexBufferData == ((char*)vertexDataStart + vertexBufferSize));
-
-				CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize);
-				free(vertexDataStart);
 			}
+		}
+
+		void VulkanRenderer::CreateAllStaticVertexBuffers()
+		{
+			// TODO:
+			CreateStaticVertexBuffers();
 		}
 
 		void VulkanRenderer::CreateDynamicVertexAndIndexBuffers()
@@ -6561,6 +6589,12 @@ namespace flex
 					CreateDynamicIndexBuffer(m_DynamicVertexIndexBufferPairs[bufferIndex].second->indexBuffer, dynamicVertexBufferSizes[bufferIndex].indexMemoryReq);
 				}
 			}
+		}
+
+		void VulkanRenderer::CreateAllDynamicVertexAndIndexBuffers()
+		{
+			// TODO:
+			CreateDynamicVertexAndIndexBuffers();
 		}
 
 		void VulkanRenderer::CreateShadowVertexBuffer()
@@ -6624,6 +6658,30 @@ namespace flex
 			free(vertexDataStart);
 		}
 
+		void VulkanRenderer::CreateStaticIndexBuffer()
+		{
+			std::vector<u32> indices;
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			{
+				if (renderObject != nullptr &&
+					renderObject->bIndexed &&
+					!m_Materials[renderObject->materialID]->bDynamic)
+				{
+					renderObject->indexOffset = (u32)indices.size();
+					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+				}
+			}
+
+			if (indices.empty())
+			{
+				// No indexed render objects use specified shader
+				return;
+			}
+
+			CreateAndUploadToStaticIndexBuffer(m_StaticIndexBuffer, indices);
+		}
+
 		void VulkanRenderer::CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize)
 		{
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
@@ -6648,37 +6706,13 @@ namespace flex
 			indexBuffer->Create(size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 
-		void VulkanRenderer::CreateStaticIndexBuffers()
-		{
-			std::vector<u32> indices;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject &&
-					renderObject->bIndexed &&
-					!m_Materials[renderObject->materialID]->bDynamic)
-				{
-					renderObject->indexOffset = (u32)indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-				}
-			}
-
-			if (indices.empty())
-			{
-				// No indexed render objects use specified shader
-				return;
-			}
-
-			CreateAndUploadToStaticIndexBuffer(m_StaticIndexBuffer, indices);
-		}
-
 		void VulkanRenderer::CreateShadowIndexBuffer()
 		{
 			std::vector<u32> indices;
 
 			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				if (renderObject &&
+				if (renderObject != nullptr &&
 					renderObject->bIndexed &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
@@ -6746,11 +6780,11 @@ namespace flex
 
 			if (maxObjectCount == -1)
 			{
-				// TODO: FIXME: Use better metric for initial size
-				maxObjectCount = (i32)m_RenderObjects.size();
+				maxObjectCount = (i32)MAX_NUM_RENDER_OBJECTS;
 			}
 			size_t dynamicBufferSize = (size_t)maxObjectCount * m_DynamicAlignment;
 
+			assert(*data == nullptr);
 			(*data) = flex_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
 			assert(*data);
 
@@ -6786,8 +6820,8 @@ namespace flex
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-				if (renderObject &&
-					(VkPipeline)renderObject->graphicsPipeline.pipeline != 0 &&
+				if (renderObject != nullptr &&
+					(VkPipeline)renderObject->graphicsPipeline.pipeline != VK_NULL_HANDLE &&
 					renderObject->materialID == matID)
 				{
 					const UniformBuffer* dynamicBuffer = material->uniformBufferList.Get(UniformBufferType::DYNAMIC);
@@ -6826,8 +6860,8 @@ namespace flex
 		{
 			if (m_DirtyFlagBits & RenderBatchDirtyFlag::STATIC_DATA)
 			{
-				CreateStaticVertexBuffers();
-				CreateStaticIndexBuffers();
+				CreateAllStaticVertexBuffers();
+				CreateStaticIndexBuffer();
 			}
 			if (m_DirtyFlagBits & RenderBatchDirtyFlag::SHADOW_DATA)
 			{

@@ -123,7 +123,11 @@ namespace flex
 	void* flex_aligned_malloc(std::size_t size, std::size_t alignment)
 	{
 #ifdef _WINDOWS
+#ifdef DEBUG
+		void* ptr = _aligned_malloc_dbg(size, alignment, __FILE__, __LINE__);
+#else
 		void* ptr = _aligned_malloc(size, alignment);
+#endif
 		return ptr;
 #else
 		void* ptr;
@@ -135,7 +139,11 @@ namespace flex
 	void flex_aligned_free(void* ptr)
 	{
 #ifdef _WINDOWS
+#ifdef DEBUG
+		_aligned_free_dbg(ptr);
+#else
 		_aligned_free(ptr);
+#endif
 #else
 		free(ptr);
 #endif
