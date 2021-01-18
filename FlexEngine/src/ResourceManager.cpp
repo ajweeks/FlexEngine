@@ -101,7 +101,6 @@ namespace flex
 	void ResourceManager::OnSceneChanged()
 	{
 		DiscoverMeshes();
-		DiscoverPrefabs();
 	}
 
 	bool ResourceManager::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)

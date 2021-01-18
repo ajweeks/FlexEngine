@@ -5,6 +5,7 @@
 	"root" : 
 	{
 		"name" : "vehicle",
+		"id" : "A598B8BCBEC0FE8C4556A37EDFF33456",
 		"type" : "vehicle",
 		"transform" : 
 		{
@@ -19,10 +20,21 @@
 			"Blue paint",
 			"black plastic"
 		],
+		"vehicle" : 
+		{
+			"tire ids" : 
+			[
+				"B64CE8ED94CAF6A0402C14A07B1677E8",
+				"12D5C1CA774F9BA6469A213A36B2F4ED",
+				"A466332CDAC209A3428712DFA5E61433",
+				"B868A177203E76BD49D76670F82CAEB0"
+			]
+		},
 		"children" : 
 		[
 			{
-				"name" : "wheel_FL0",
+				"name" : "wheel_FL8",
+				"id" : "B64CE8ED94CAF6A0402C14A07B1677E8",
 				"type" : "object",
 				"transform" : 
 				{
@@ -38,7 +50,8 @@
 				]
 			},
 			{
-				"name" : "wheel_FR0",
+				"name" : "wheel_FR8",
+				"id" : "12D5C1CA774F9BA6469A213A36B2F4ED",
 				"type" : "object",
 				"transform" : 
 				{
@@ -54,7 +67,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RL0",
+				"name" : "wheel_RL8",
+				"id" : "A466332CDAC209A3428712DFA5E61433",
 				"type" : "object",
 				"transform" : 
 				{
@@ -70,7 +84,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RR0",
+				"name" : "wheel_RR8",
+				"id" : "B868A177203E76BD49D76670F82CAEB0",
 				"type" : "object",
 				"transform" : 
 				{

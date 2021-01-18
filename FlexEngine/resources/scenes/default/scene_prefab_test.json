@@ -22,7 +22,7 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "9.239, 4.381, -5.433",
+			"position" : "9.426, 4.381, -5.152",
 			"pitch" : -0.284030,
 			"yaw" : 2.554255
 		}
@@ -104,6 +104,17 @@
 				"static" : true,
 				"mask" : 1,
 				"group" : 1
+			}
+		},
+		{
+			"name" : "vehicle1",
+			"id" : "2D730952F105599A41BF8FFC3A27BCA4",
+			"type" : "prefab",
+			"prefab type" : "vehicle",
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.447, 4.783"
 			}
 		}
 	]

@@ -27,6 +27,36 @@ namespace flex
 		class VirtualMachine;
 	}
 
+	struct ChildIndex
+	{
+		ChildIndex(const std::list<u32>& siblingIndices) :
+			siblingIndices(siblingIndices)
+		{}
+
+		void Add(u32 siblingIndex)
+		{
+			siblingIndices.emplace_back(siblingIndex);
+		}
+
+		u32 Pop()
+		{
+			u32 result = siblingIndices.front();
+			siblingIndices.pop_front();
+			return result;
+		}
+
+		bool IsValid()
+		{
+			return !siblingIndices.empty();
+		}
+
+		// Stores sibling index for each level down the hierarchy to reach this child
+		// (0th index = index under root, 1st = index under first child, etc.)
+		std::list<u32> siblingIndices;
+	};
+
+	extern ChildIndex InvalidChildIndex;
+
 	class GameObject
 	{
 	public:
@@ -210,6 +240,10 @@ namespace flex
 
 		bool IsTemplate() const;
 
+		ChildIndex ComputeChildIndex() const;
+		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
+		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
@@ -236,6 +270,9 @@ namespace flex
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
 		void SetOutputSignal(i32 slotIdx, i32 value);
+
+		bool GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const;
+		bool GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const;
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -1262,11 +1299,11 @@ namespace flex
 	public:
 		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		//virtual GameObject* CopySelf(
-		//	GameObject* parent = nullptr,
-		//	CopyFlags copyFlags = CopyFlags::ALL,
-		//	std::string* optionalName = nullptr,
-		//	const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;

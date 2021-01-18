@@ -266,8 +266,6 @@ namespace flex
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
 
-		g_ResourceManager->DiscoverPrefabs();
-
 		LoadCommonSettingsFromDisk();
 
 		ImGui::CreateContext();

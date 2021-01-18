@@ -71,6 +71,8 @@ namespace flex
 
 			m_CartManager.Initialize();
 
+			g_ResourceManager->DiscoverPrefabs();
+
 			const std::string filePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
 
 			if (FileExists(filePath))
@@ -1625,13 +1627,32 @@ namespace flex
 		std::string objectName = (gameObject != nullptr ? gameObject->GetName() : "Invalid");
 		ImGui::Text("%s", objectName.c_str());
 
-		if (ImGui::IsItemHovered())
+		if (ID.IsValid())
 		{
-			ImGui::BeginTooltip();
-			std::string idStr = ID.IsValid() ? ID.ToString() : "Invalid";
-			ImGui::Text("%s", idStr.c_str());
+			ImGui::PushID(label);
 
-			ImGui::EndTooltip();
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::BeginTooltip();
+				std::string idStr = ID.ToString();
+				ImGui::Text("%s", idStr.c_str());
+
+				ImGui::EndTooltip();
+			}
+
+			if (ImGui::BeginPopupContextItem("##gid-context"))
+			{
+				if (ImGui::Button("Clear"))
+				{
+					ID = InvalidGameObjectID;
+					bChanged = true;
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::EndPopup();
+			}
+
+			ImGui::PopID();
+
 		}
 
 		if (ImGui::BeginDragDropTarget())

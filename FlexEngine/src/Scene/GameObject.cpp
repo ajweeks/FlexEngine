@@ -70,6 +70,8 @@ namespace flex
 	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
+	extern ChildIndex InvalidChildIndex = ChildIndex({});
+
 	static volatile u32 workQueueEntriesCreated = 0;
 	static volatile u32 workQueueEntriesClaimed = 0;
 	static volatile u32 workQueueEntriesCompleted = 0;
@@ -1684,6 +1686,81 @@ namespace flex
 	bool GameObject::IsTemplate() const
 	{
 		return m_bIsTemplate;
+	}
+
+	ChildIndex GameObject::ComputeChildIndex() const
+	{
+		// NOTE: Sibling indices must have been calculated before calling this!
+
+		std::list<u32> siblingIndices;
+		siblingIndices.push_back(m_SiblingIndex);
+
+		GameObject* parent = m_Parent;
+		while (parent != nullptr)
+		{
+			if (parent->m_Parent != nullptr)
+			{
+				siblingIndices.emplace_front(parent->m_SiblingIndex);
+			}
+			parent = parent->m_Parent;
+		}
+
+		ChildIndex result(siblingIndices);
+		return result;
+	}
+
+	ChildIndex GameObject::GetChildIndexWithID(const GameObjectID& gameObjectID) const
+	{
+		ChildIndex result = InvalidChildIndex;
+		GetChildIndexWithIDRecursive(gameObjectID, result);
+		return result;
+	}
+
+	bool GameObject::GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const
+	{
+		for (u32 siblingIndex = 0; siblingIndex < (u32)m_Children.size(); ++siblingIndex)
+		{
+			if (m_Children[siblingIndex]->ID == gameObjectID)
+			{
+				outChildIndex = m_Children[siblingIndex]->ComputeChildIndex();
+				return true;
+			}
+
+			// Depth-first search
+			if (m_Children[siblingIndex]->GetChildIndexWithIDRecursive(gameObjectID, outChildIndex))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	GameObjectID GameObject::GetIDAtChildIndex(const ChildIndex& childIndex) const
+	{
+		GameObjectID result = InvalidGameObjectID;
+		GetIDAtChildIndexRecursive(childIndex, result);
+		return result;
+	}
+
+	bool GameObject::GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const
+	{
+		if (!childIndex.siblingIndices.empty() && childIndex.siblingIndices.front() < m_Children.size())
+		{
+			if (childIndex.siblingIndices.size() == 1)
+			{
+				outGameObjectID = m_Children[childIndex.siblingIndices.front()]->ID;
+				return true;
+			}
+			else
+			{
+				ChildIndex subChildIndex(childIndex.siblingIndices);
+				u32 siblingIndex = subChildIndex.Pop();
+				return m_Children[siblingIndex]->GetIDAtChildIndexRecursive(subChildIndex, outGameObjectID);
+			}
+		}
+
+		return false;
 	}
 
 	//void GameObject::OnConnectionMade(Wire* wire)
@@ -8990,6 +9067,51 @@ namespace flex
 		m_bInteractable = true;
 	}
 
+	GameObject* Vehicle::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
+		Vehicle* newGameObject = new Vehicle(newObjectName, optionalGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		// Children now exist
+		memset(newGameObject->m_TireIDs, 0, sizeof(GameObjectID) * m_TireCount);
+
+		// Temporarily set sibling indices as if these objects are both root objects (this will
+		// be overwritten by the proper values soon)
+		UpdateSiblingIndices(0);
+		newGameObject->UpdateSiblingIndices(0);
+
+		for (i32 i = 0; i < m_TireCount; ++i)
+		{
+			ChildIndex childIndex = GetChildIndexWithID(m_TireIDs[i]);
+			bool bSuccess = childIndex.IsValid();
+
+			if (bSuccess)
+			{
+				GameObjectID correspondingID = newGameObject->GetIDAtChildIndex(childIndex);
+				bSuccess = (correspondingID != InvalidGameObjectID);
+
+				if (bSuccess)
+				{
+					newGameObject->m_TireIDs[i] = correspondingID;
+				}
+			}
+
+			if (!bSuccess)
+			{
+				std::string idStr = m_TireIDs[i].ToString();
+				PrintError("Failed to find corresponding game object ID for vehicle child %s (%s)\n", TireNames[i], idStr.c_str());
+			}
+		}
+
+		return newGameObject;
+	}
+
 	void Vehicle::Initialize()
 	{
 		GameObject::Initialize();
@@ -9093,7 +9215,11 @@ namespace flex
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
 		for (i32 i = 0; i < m_TireCount; ++i)
 		{
-			currentScene->GameObjectIDField(TireNames[i], m_TireIDs[i]);
+			char buf[32];
+			memcpy(buf, TireNames[i], strlen(TireNames[i]));
+			buf[strlen(TireNames[i])] = ':';
+			buf[strlen(TireNames[i]) + 1] = 0;
+			currentScene->GameObjectIDField(buf, m_TireIDs[i]);
 		}
 	}
 } // namespace flex
