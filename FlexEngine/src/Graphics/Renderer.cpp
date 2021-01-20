@@ -756,6 +756,22 @@ namespace flex
 		return result;
 	}
 
+	void Renderer::SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex)
+	{
+		if (!Contains(m_DirtyDynamicVertexAndIndexBufferIndices, dynamicVertexBufferIndex))
+		{
+			m_DirtyDynamicVertexAndIndexBufferIndices.push_back(dynamicVertexBufferIndex);
+		}
+	}
+
+	void Renderer::SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex)
+	{
+		if (!Contains(m_DirtyStaticVertexBufferIndices, staticVertexBufferIndex))
+		{
+			m_DirtyStaticVertexBufferIndices.push_back(staticVertexBufferIndex);
+		}
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -1265,6 +1281,7 @@ namespace flex
 		m_Shaders[shaderID]->bNeedBRDFLUT = true;
 		m_Shaders[shaderID]->bNeedIrradianceSampler = true;
 		m_Shaders[shaderID]->bNeedPrefilteredMap = true;
+		m_Shaders[shaderID]->maxObjectCount =  1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
@@ -1280,7 +1297,6 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
 
@@ -1294,48 +1310,18 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_1_SAMPLER);
 		++shaderID;
 
-		//// Deferred combine cubemap
-		//m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED_COMBINE;
-		//m_Shaders[shaderID]->bDeferred = false;
-		//m_Shaders[shaderID]->bDepthWriteEnable = false;
-		//m_Shaders[shaderID]->bNeedBRDFLUT = true;
-		//m_Shaders[shaderID]->bNeedIrradianceSampler = true;
-		//m_Shaders[shaderID]->bNeedPrefilteredMap = true;
-		//m_Shaders[shaderID]->vertexAttributes =
-		//	(u32)VertexAttribute::POSITION; // Used as 3D texture coord into cubemap
-
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION);
-		////m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_LIGHT_VIEW_PROJS);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CAM_POS);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_FB_0_SAMPLER);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_FB_1_SAMPLER);
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DEPTH_SAMPLER);
-
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
-		//++shaderID;
-
 		// Colour
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->maxObjectCount =  32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
@@ -1349,6 +1335,7 @@ namespace flex
 		m_Shaders[shaderID]->bNeedRoughnessSampler = true;
 		m_Shaders[shaderID]->bNeedNormalSampler = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
+		m_Shaders[shaderID]->maxObjectCount =   32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1383,6 +1370,7 @@ namespace flex
 		m_Shaders[shaderID]->bNeedRoughnessSampler = true;
 		m_Shaders[shaderID]->bNeedAlbedoSampler = true;
 		m_Shaders[shaderID]->bNeedNormalSampler = true;
+		m_Shaders[shaderID]->maxObjectCount =  8;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1452,6 +1440,8 @@ namespace flex
 		m_Shaders[shaderID]->bNeedCubemapSampler = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
+		// TODO: Find out why this has to be -1 and not 1 (otherwise NaNs)
+		m_Shaders[shaderID]->maxObjectCount = -1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
@@ -1472,6 +1462,7 @@ namespace flex
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
+		m_Shaders[shaderID]->maxObjectCount = 16;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1491,6 +1482,7 @@ namespace flex
 		m_Shaders[shaderID]->bTextureArr = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1505,6 +1497,7 @@ namespace flex
 
 		// Post processing
 		m_Shaders[shaderID]->renderPassType = RenderPassType::POST_PROCESS;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
@@ -1531,6 +1524,7 @@ namespace flex
 
 		// Compute SDF
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1552,6 +1546,7 @@ namespace flex
 		// Font SS
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
+		m_Shaders[shaderID]->maxObjectCount = 4;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV |
@@ -1571,6 +1566,7 @@ namespace flex
 		// Font WS
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
+		m_Shaders[shaderID]->maxObjectCount = 4;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1595,6 +1591,7 @@ namespace flex
 		m_Shaders[shaderID]->bGenerateVertexBufferForAll = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 64;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
@@ -1624,6 +1621,7 @@ namespace flex
 		// SSAO Blur
 		m_Shaders[shaderID]->renderPassType = RenderPassType::SSAO_BLUR;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
@@ -1694,8 +1692,6 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = false;
-		// TODO?
-		//m_Shaders[shaderID]->bDynamic = true;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::VELOCITY3 |
@@ -1762,6 +1758,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->maxObjectCount = 16;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 

@@ -222,12 +222,15 @@ namespace flex
 			void CreateComputeResources();
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
+			// Creates all static vertex buffers that are marked as dirty
 			void CreateStaticVertexBuffers();
 			void CreateAllStaticVertexBuffers();
 
+			// Creates all dynamic vertex/index buffer pairs that are marked as dirty
 			void CreateDynamicVertexAndIndexBuffers();
 			void CreateAllDynamicVertexAndIndexBuffers();
 
+			// Creates the static index buffer used by all static geometry
 			void CreateStaticIndexBuffer();
 
 			void CreateShadowVertexBuffer();

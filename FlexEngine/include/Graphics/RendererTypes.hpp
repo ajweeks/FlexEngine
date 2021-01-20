@@ -336,6 +336,7 @@ namespace flex
 	CullFace StringToCullFace(const std::string& str);
 	std::string CullFaceToString(CullFace cullFace);
 
+	// TODO: Remove
 	enum RenderBatchDirtyFlag : u32
 	{
 		CLEAN = 0,
@@ -807,6 +808,9 @@ namespace flex
 
 		VertexAttributes vertexAttributes = 0;
 		i32 numAttachments = 1;
+
+		// Specifies how many objects to allocate dynamic uniform buffer room for (per material)
+		i32 maxObjectCount = -1;
 
 		i32 subpass = 0;
 		bool bDepthWriteEnable = true;

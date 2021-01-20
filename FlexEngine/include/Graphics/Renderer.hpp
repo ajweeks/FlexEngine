@@ -299,6 +299,9 @@ namespace flex
 
 		std::vector<JSONObject> SerializeAllMaterialsToJSON();
 
+		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
+		void SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex);
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -526,6 +529,7 @@ namespace flex
 
 		real m_TAA_ks[2];
 
+		// TODO: Remove
 		RenderBatchDirtyFlags m_DirtyFlagBits = (RenderBatchDirtyFlags)RenderBatchDirtyFlag::CLEAN;
 
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
@@ -536,6 +540,9 @@ namespace flex
 		i32 m_RendererSettingsFileVersion = 0;
 
 		DirectoryWatcher* m_ShaderDirectoryWatcher = nullptr;
+
+		std::vector<u32> m_DirtyStaticVertexBufferIndices;
+		std::vector<u32> m_DirtyDynamicVertexAndIndexBufferIndices;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

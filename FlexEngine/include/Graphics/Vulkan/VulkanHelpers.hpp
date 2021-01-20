@@ -130,7 +130,7 @@ namespace flex
 		struct VulkanUniformBufferObjectData
 		{
 			u8* data = nullptr;
-			u32 size = 0;
+			u32 unitSize = 0; // Size of each buffer instance (per object)
 		};
 
 		enum class UniformBufferType

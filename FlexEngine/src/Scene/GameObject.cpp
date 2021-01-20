@@ -7294,6 +7294,12 @@ namespace flex
 		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
 		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
 
+		if (m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+		{
+			terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
+			g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
+		}
+
 		const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
 		const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCount = triCount * 3;
