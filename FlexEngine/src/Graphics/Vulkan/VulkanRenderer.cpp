@@ -3429,12 +3429,6 @@ namespace flex
 
 			BeginDebugMarkerRegion(cmdBuf, "Generate Prefiltered Cube");
 
-			VkViewport viewport = vks::viewportFlipped((real)dim, (real)dim, 0.0f, 1.0f);
-			vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
-
-			VkRect2D scissor = vks::scissor(0u, 0u, dim, dim);
-			vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
-
 			VkImageSubresourceRange subresourceRange = {};
 			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			subresourceRange.baseMipLevel = 0;
@@ -3453,10 +3447,10 @@ namespace flex
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
 				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
-				viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
+				VkViewport viewport = vks::viewportFlipped(viewportSize, viewportSize, 0.0f, 1.0f);
 				vkCmdSetViewport(cmdBuf, 0, 1, &viewport);
 
-				scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
+				VkRect2D scissor = vks::scissor(0u, 0u, (u32)viewportSize, (u32)viewportSize);
 				vkCmdSetScissor(cmdBuf, 0, 1, &scissor);
 
 				for (u32 face = 0; face < 6; ++face)
@@ -3646,21 +3640,6 @@ namespace flex
 
 				bRenderedBRDFLUT = true;
 			}
-		}
-
-		void VulkanRenderer::CaptureSceneToCubemap(RenderID cubemapRenderID)
-		{
-			FLEX_UNUSED(cubemapRenderID);
-		}
-
-		void VulkanRenderer::GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID)
-		{
-			FLEX_UNUSED(cubemapMaterialID);
-		}
-
-		void VulkanRenderer::GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID)
-		{
-			FLEX_UNUSED(cubemapMaterialID);
 		}
 
 		void VulkanRenderer::CreateSSAOPipelines()

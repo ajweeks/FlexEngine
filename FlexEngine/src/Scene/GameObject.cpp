@@ -7525,6 +7525,8 @@ namespace flex
 		// Freshly loaded chunks
 		for (const glm::vec2i& chunkIdx : chunksInRadius)
 		{
+			// TODO: Tell renderer to resize terrain dynamic UBO to accommodate all chunks to prevent many resizes
+
 			auto meshIter = m_Meshes.find(chunkIdx);
 			if (meshIter == m_Meshes.end() && m_ChunksToLoad.find(chunkIdx) == m_ChunksToLoad.end())
 			{

@@ -171,10 +171,6 @@ namespace flex
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT();
 
-			void CaptureSceneToCubemap(RenderID cubemapRenderID);
-			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
-			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
