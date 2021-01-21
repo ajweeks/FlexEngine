@@ -3444,6 +3444,11 @@ namespace flex
 				subresourceRange);
 			prefilterTexture->imageLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 
+			std::vector<Pair<void*, u32>> pushConstants;
+			pushConstants.reserve(2);
+
+			glm::mat4 pespectiveMat = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
+
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
 				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
@@ -3457,8 +3462,14 @@ namespace flex
 				{
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+					real roughness = 0.5f;
+
 					// Push constants
-					skyboxMat->pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
+					pushConstants.clear();
+					pushConstants.emplace_back((void*)&s_CaptureViews[face], (u32)sizeof(glm::mat4));
+					pushConstants.emplace_back((void*)&pespectiveMat, (u32)sizeof(glm::mat4));
+					skyboxMat->pushConstantBlock->SetData(pushConstants);
+
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						skyboxMat->pushConstantBlock->size, skyboxMat->pushConstantBlock->data);
 
