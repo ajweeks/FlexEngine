@@ -627,6 +627,8 @@ namespace flex
 			const i32 sceneNameMaxCharCount = 256;
 			static char newSceneName[sceneNameMaxCharCount];
 			static char newSceneFileName[sceneNameMaxCharCount];
+			static bool bSceneFileNameValid = false;
+			static bool bSceneNameValid = false;
 			if (ImGui::Button("Duplicate..."))
 			{
 				ImGui::OpenPopup(duplicateScenePopupLabel);
@@ -669,16 +671,37 @@ namespace flex
 				NULL,
 				ImGuiWindowFlags_AlwaysAutoResize))
 			{
+				const bool bWasSceneNameValid = bSceneNameValid;
+				if (!bWasSceneNameValid)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.2f, 0.2f, 1.0));
+				}
 
 				bool bDuplicateScene = ImGui::InputText("Name##duplicate-scene-name",
 					newSceneName,
 					sceneNameMaxCharCount,
 					ImGuiInputTextFlags_EnterReturnsTrue);
 
+				if (!bWasSceneNameValid)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				const bool bWasSceneFileNameValid = bSceneFileNameValid;
+				if (!bWasSceneFileNameValid)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.95f, 0.2f, 0.2f, 1.0));
+				}
+
 				bDuplicateScene |= ImGui::InputText("File name##duplicate-scene-file-path",
 					newSceneFileName,
 					sceneNameMaxCharCount,
 					ImGuiInputTextFlags_EnterReturnsTrue);
+
+				if (!bWasSceneFileNameValid)
+				{
+					ImGui::PopStyleColor();
+				}
 
 				if (ImGui::Button("Cancel"))
 				{
@@ -689,18 +712,27 @@ namespace flex
 
 				bDuplicateScene |= ImGui::Button("Duplicate");
 
-				bool bValidInput = true;
-
-				if (strlen(newSceneName) == 0 ||
-					strlen(newSceneFileName) == 0 ||
-					!EndsWith(newSceneFileName, ".json"))
+				bSceneFileNameValid = true;
+				std::string newSceneFileNameStr(newSceneFileName);
+				if (newSceneFileNameStr.length() == 0 ||
+					(!EndsWith(newSceneFileNameStr, ".json") &&
+						Contains(newSceneFileNameStr, '.')))
 				{
-					bValidInput = false;
+					// TODO: Check for path collisions with existing files
+					bSceneFileNameValid = false;
 				}
 
-				if (bDuplicateScene && bValidInput)
+				// TODO: Check for name collisions with existing scenes
+				bSceneNameValid = strlen(newSceneName) != 0;
+
+				if (bDuplicateScene && bSceneFileNameValid && bSceneNameValid)
 				{
-					if (g_SceneManager->DuplicateScene(this, newSceneFileName, newSceneName))
+					if (!EndsWith(newSceneFileNameStr, ".json"))
+					{
+						assert(!Contains(newSceneFileNameStr, '.'));
+						newSceneFileNameStr += ".json";
+					}
+					if (g_SceneManager->DuplicateScene(this, newSceneFileNameStr, newSceneName))
 					{
 						bCloseContextMenu = true;
 					}
