@@ -5,11 +5,13 @@
 	"root" : 
 	{
 		"name" : "vehicle",
-		"id" : "A598B8BCBEC0FE8C4556A37EDFF33456",
+		"id" : "372B0A43116DC8924A692D9B2350EC23",
 		"type" : "vehicle",
 		"transform" : 
 		{
-			"pos" : "0.000, 0.447, 0.000"
+			"pos" : "0.076, 0.559, 0.814",
+			"rot" : "-0.000, 0.120, 0.000",
+			"scale" : "1.000, 1.000, 1.000"
 		},
 		"visible" : true,
 		"casts shadow" : true,
@@ -20,21 +22,35 @@
 			"Blue paint",
 			"black plastic"
 		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.000, 0.700, 2.300",
+			"offset pos" : "0.000, 0.300, 0.100"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
 		"vehicle" : 
 		{
 			"tire ids" : 
 			[
-				"B64CE8ED94CAF6A0402C14A07B1677E8",
-				"12D5C1CA774F9BA6469A213A36B2F4ED",
-				"A466332CDAC209A3428712DFA5E61433",
-				"B868A177203E76BD49D76670F82CAEB0"
+				"DA6079094D0806A04920E6D321EC5176",
+				"6BB2AB11A51169954E2E7DB1AD518BF6",
+				"622D1DCDCA364A98477252AB5D57A242",
+				"50EE7DC36F320A9648B4B39F4B329B11"
 			]
 		},
 		"children" : 
 		[
 			{
-				"name" : "wheel_FL8",
-				"id" : "B64CE8ED94CAF6A0402C14A07B1677E8",
+				"name" : "wheel_FL10",
+				"id" : "DA6079094D0806A04920E6D321EC5176",
 				"type" : "object",
 				"transform" : 
 				{
@@ -50,8 +66,8 @@
 				]
 			},
 			{
-				"name" : "wheel_FR8",
-				"id" : "12D5C1CA774F9BA6469A213A36B2F4ED",
+				"name" : "wheel_FR10",
+				"id" : "6BB2AB11A51169954E2E7DB1AD518BF6",
 				"type" : "object",
 				"transform" : 
 				{
@@ -67,8 +83,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RL8",
-				"id" : "A466332CDAC209A3428712DFA5E61433",
+				"name" : "wheel_RL10",
+				"id" : "622D1DCDCA364A98477252AB5D57A242",
 				"type" : "object",
 				"transform" : 
 				{
@@ -84,8 +100,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RR8",
-				"id" : "B868A177203E76BD49D76670F82CAEB0",
+				"name" : "wheel_RR10",
+				"id" : "50EE7DC36F320A9648B4B39F4B329B11",
 				"type" : "object",
 				"transform" : 
 				{
