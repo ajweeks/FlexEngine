@@ -51,6 +51,9 @@ namespace flex
 
 	void RigidBody::Initialize(btCollisionShape* collisionShape, Transform* parentTransform)
 	{
+		assert(m_RigidBody == nullptr);
+		assert(m_MotionState == nullptr);
+
 		m_ParentTransform = parentTransform;
 
 		btVector3 localInertia(0, 0, 0);

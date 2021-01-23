@@ -1259,6 +1259,9 @@ namespace flex
 							{
 								duplicatedObject->AddSelfIDAndChildrenToVec(newSelectedGameObjectIDs);
 							}
+
+							duplicatedObject->Initialize();
+							duplicatedObject->PostInitialize();
 						}
 					}
 

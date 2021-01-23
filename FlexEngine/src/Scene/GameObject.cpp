@@ -1928,9 +1928,6 @@ namespace flex
 			// TODO: Copy over constraints here
 		}
 
-		newGameObject->Initialize();
-		newGameObject->PostInitialize();
-
 		if (copyFlags & CopyFlags::CHILDREN)
 		{
 			for (GameObject* child : m_Children)
