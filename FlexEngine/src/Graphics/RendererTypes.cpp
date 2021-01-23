@@ -80,7 +80,6 @@ namespace flex
 				_u(ENABLE_METALLIC_SAMPLER)
 				_u(ENABLE_ROUGHNESS_SAMPLER)
 				_u(ENABLE_NORMAL_SAMPLER)
-				_u(ENABLE_IRRADIANCE_SAMPLER)
 				_u(SHOW_EDGES)
 				_u(LIGHT_VIEW_PROJS)
 				_u(EXPOSURE)
@@ -183,7 +182,6 @@ namespace flex
 				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
 				enableCubemapTrilinearFiltering == other.enableCubemapTrilinearFiltering &&
 				generateHDRCubemapSampler == other.generateHDRCubemapSampler &&
-				enableIrradianceSampler == other.enableIrradianceSampler &&
 				generateIrradianceSampler == other.generateIrradianceSampler &&
 				irradianceSamplerSize == other.irradianceSamplerSize &&
 				environmentMapPath == other.environmentMapPath &&
@@ -236,7 +234,6 @@ namespace flex
 		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
 		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
 		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
 		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
 		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
 		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
@@ -345,50 +342,50 @@ namespace flex
 		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
 
 		static const bool defaultEnableAlbedo = false;
-		if (shader->bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
+		if (shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
 		}
 
 		static const bool defaultEnableMetallicSampler = false;
-		if (shader->bNeedMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
+		if (shader->textureUniforms.HasUniform(U_METALLIC_SAMPLER) && enableMetallicSampler != defaultEnableMetallicSampler)
 		{
 			materialObject.fields.emplace_back("enable metallic sampler", JSONValue(enableMetallicSampler));
 		}
 
 		static const bool defaultEnableRoughness = false;
-		if (shader->bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
+		if (shader->textureUniforms.HasUniform(U_ROUGHNESS_SAMPLER) && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
-		if (shader->bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
+		if (shader->textureUniforms.HasUniform(U_NORMAL_SAMPLER) && enableNormalSampler != defaultEnableNormal)
 		{
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
 		static const std::string texturePrefixStr = TEXTURE_DIRECTORY;
 
-		if (shader->bNeedAlbedoSampler && !albedoTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && !albedoTexturePath.empty())
 		{
 			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
-		if (shader->bNeedMetallicSampler && !metallicTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_METALLIC_SAMPLER) && !metallicTexturePath.empty())
 		{
 			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
-		if (shader->bNeedRoughnessSampler && !roughnessTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_ROUGHNESS_SAMPLER) && !roughnessTexturePath.empty())
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
-		if (shader->bNeedNormalSampler && !normalTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_NORMAL_SAMPLER) && !normalTexturePath.empty())
 		{
 			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
@@ -399,7 +396,7 @@ namespace flex
 			materialObject.fields.emplace_back("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler));
 		}
 
-		if (shader->bNeedCubemapSampler)
+		if (shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
 
@@ -409,7 +406,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
-		if (shader->bNeedIrradianceSampler || irradianceSamplerSize.x > 0)
+		if (shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER) || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
@@ -417,7 +414,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
-		if (shader->bNeedPrefilteredMap || prefilteredMapSize.x > 0)
+		if (shader->textureUniforms.HasUniform(U_PREFILTER_MAP) || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 

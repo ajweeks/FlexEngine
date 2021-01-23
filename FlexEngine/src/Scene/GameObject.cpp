@@ -3034,7 +3034,6 @@ namespace flex
 		//probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
 		//probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
 		//probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		//probeCaptureMatCreateInfo.enableIrradianceSampler = true;
 		//probeCaptureMatCreateInfo.generateIrradianceSampler = true;
 		//probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
 		//probeCaptureMatCreateInfo.enablePrefilteredMap = true;
@@ -7257,7 +7256,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.enableIrradianceSampler = false;
 		matCreateInfo.bSerializable = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
@@ -8033,7 +8031,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.enableIrradianceSampler = false;
 		matCreateInfo.bDynamic = true;
 		matCreateInfo.bSerializable = false;
 		s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
@@ -8044,7 +8041,6 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
 		matCreateInfo.constRoughness = 0.0f;
 		matCreateInfo.constMetallic = 1.0f;
-		matCreateInfo.enableIrradianceSampler = false;
 		matCreateInfo.bSerializable = false;
 		s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 	}

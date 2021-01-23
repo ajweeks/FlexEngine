@@ -166,7 +166,7 @@ namespace flex
 	const u64 U_ENABLE_METALLIC_SAMPLER = (1ull << 19); const u32 US_ENABLE_METALLIC_SAMPLER = sizeof(i32);
 	const u64 U_ENABLE_ROUGHNESS_SAMPLER = (1ull << 20); const u32 US_ENABLE_ROUGHNESS_SAMPLER = sizeof(i32);
 	const u64 U_ENABLE_NORMAL_SAMPLER = (1ull << 21); const u32 US_ENABLE_NORMAL_SAMPLER = sizeof(i32);
-	const u64 U_ENABLE_IRRADIANCE_SAMPLER = (1ull << 22); const u32 US_ENABLE_IRRADIANCE_SAMPLER = sizeof(i32);
+	// GAP
 	const u64 U_CUBEMAP_SAMPLER = (1ull << 23);
 	const u64 U_IRRADIANCE_SAMPLER = (1ull << 24);
 	const u64 U_FB_0_SAMPLER = (1ull << 25);
@@ -387,7 +387,6 @@ namespace flex
 		bool enableHDREquirectangularSampler = false;
 		bool generateHDRCubemapSampler = false;
 
-		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
 
 		bool enableBRDFLUT = false;
@@ -588,7 +587,6 @@ namespace flex
 		bool enableCubemapTrilinearFiltering = false;
 		bool generateHDRCubemapSampler = false;
 
-		bool enableIrradianceSampler = false;
 		bool generateIrradianceSampler = false;
 
 		bool enablePrefilteredMap = false;
@@ -835,16 +833,6 @@ namespace flex
 		bool bTranslucent = false;
 		bool bCompute = false;
 
-		// These variables should be set to true when the shader has these uniforms
-		bool bNeedNormalSampler = false;
-		bool bNeedCubemapSampler = false;
-		bool bNeedAlbedoSampler = false;
-		bool bNeedMetallicSampler = false;
-		bool bNeedRoughnessSampler = false;
-		bool bNeedHDREquirectangularSampler = false;
-		bool bNeedIrradianceSampler = false;
-		bool bNeedPrefilteredMap = false;
-		bool bNeedBRDFLUT = false;
 		bool bNeedPushConstantBlock = false;
 		bool bGenerateVertexBufferForAll = false;
 		bool bTextureArr = false;
@@ -946,7 +934,6 @@ namespace flex
 		u32 enableMetallicSampler;
 		u32 enableRoughnessSampler;
 		u32 enableNormalSampler;
-		u32 enableIrradianceSampler;
 		i32 texChannel;
 		glm::vec4 sdfData;
 		glm::vec4 fontCharData;

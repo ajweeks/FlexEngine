@@ -1215,7 +1215,6 @@ namespace flex
 #if COMPILE_OPEN_GL
 		shaderInfos = {
 			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
-			//{ "deferred_combine_cubemap", "deferred_combine_cubemap.vert", "deferred_combine_cubemap.frag" },
 			{ "colour", "colour.vert", "colour.frag" },
 			{ "pbr", "pbr.vert", "pbr.frag" },
 			{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
@@ -1241,7 +1240,6 @@ namespace flex
 #elif COMPILE_VULKAN
 		shaderInfos = {
 			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
-			//{ "deferred_combine_cubemap", "vk_deferred_combine_cubemap_vert.spv", "vk_deferred_combine_cubemap_frag.spv" },
 			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv" },
 			{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
 			{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
@@ -1278,10 +1276,6 @@ namespace flex
 		// Deferred combine
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED_COMBINE;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
-		m_Shaders[shaderID]->bNeedBRDFLUT = true;
-		m_Shaders[shaderID]->bNeedIrradianceSampler = true;
-		m_Shaders[shaderID]->bNeedPrefilteredMap = true;
-		m_Shaders[shaderID]->maxObjectCount =  1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
@@ -1296,9 +1290,6 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PREFILTER_MAP);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_IRRADIANCE_SAMPLER);
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
@@ -1330,10 +1321,6 @@ namespace flex
 		// PBR
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2; // TODO: Work out automatically from samplers?
-		m_Shaders[shaderID]->bNeedAlbedoSampler = true;
-		m_Shaders[shaderID]->bNeedMetallicSampler = true;
-		m_Shaders[shaderID]->bNeedRoughnessSampler = true;
-		m_Shaders[shaderID]->bNeedNormalSampler = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
 		m_Shaders[shaderID]->maxObjectCount =   32;
 		m_Shaders[shaderID]->vertexAttributes =
@@ -1366,10 +1353,6 @@ namespace flex
 		// PBR - WORLD SPACE
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2;
-		m_Shaders[shaderID]->bNeedMetallicSampler = true;
-		m_Shaders[shaderID]->bNeedRoughnessSampler = true;
-		m_Shaders[shaderID]->bNeedAlbedoSampler = true;
-		m_Shaders[shaderID]->bNeedNormalSampler = true;
 		m_Shaders[shaderID]->maxObjectCount =  8;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -1401,7 +1384,6 @@ namespace flex
 
 		// Skybox
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bNeedCubemapSampler = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		m_Shaders[shaderID]->vertexAttributes =
@@ -1415,7 +1397,6 @@ namespace flex
 
 		// Equirectangular to Cube
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bNeedHDREquirectangularSampler = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		m_Shaders[shaderID]->vertexAttributes =
@@ -1426,7 +1407,6 @@ namespace flex
 
 		// Irradiance
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bNeedCubemapSampler = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		m_Shaders[shaderID]->vertexAttributes =
@@ -1437,7 +1417,6 @@ namespace flex
 
 		// Prefilter
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bNeedCubemapSampler = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		// TODO: Find out why this has to be -1 and not 1 (otherwise NaNs)
@@ -1862,7 +1841,6 @@ namespace flex
 			MaterialCreateInfo gBufferMaterialCreateInfo = {};
 			gBufferMaterialCreateInfo.name = gBufferMatName;
 			gBufferMaterialCreateInfo.shaderName = "deferred_combine";
-			gBufferMaterialCreateInfo.enableIrradianceSampler = true;
 			gBufferMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
 			gBufferMaterialCreateInfo.enablePrefilteredMap = true;
 			gBufferMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;
@@ -1898,7 +1876,6 @@ namespace flex
 		//	MaterialCreateInfo gBufferCubemapMaterialCreateInfo = {};
 		//	gBufferCubemapMaterialCreateInfo.name = gBufferCubeMatName;
 		//	gBufferCubemapMaterialCreateInfo.shaderName = "deferred_combine_cubemap";
-		//	gBufferCubemapMaterialCreateInfo.enableIrradianceSampler = true;
 		//	gBufferCubemapMaterialCreateInfo.irradianceSamplerMatID = skyboxMaterialID;
 		//	gBufferCubemapMaterialCreateInfo.enablePrefilteredMap = true;
 		//	gBufferCubemapMaterialCreateInfo.prefilterMapSamplerMatID = skyboxMaterialID;

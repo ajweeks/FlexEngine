@@ -61,11 +61,6 @@ layout (binding = 0) uniform UBOConstant
 	float zFar;
 } uboConstant;
 
-layout (binding = 1) uniform UBODynamic
-{
-	int enableIrradianceSampler;
-} uboDynamic;
-
 layout (binding = 2) uniform sampler2D brdfLUT;
 layout (binding = 3) uniform samplerCube irradianceSampler;
 layout (binding = 4) uniform samplerCube prefilterMap;
@@ -292,28 +287,20 @@ void main()
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
-	vec3 ambient;
-	if (uboDynamic.enableIrradianceSampler != 0)
-	{
-		// Diffse ambient term (IBL)
-		vec3 kS = F;
-	    vec3 kD = 1.0 - kS;
-	    kD *= 1.0 - metallic;	  
-	    vec3 irradiance = texture(irradianceSampler, N).rgb;
-	    vec3 diffuse = irradiance * albedo;
+	// Diffse ambient term (IBL)
+	vec3 kS = F;
+    vec3 kD = 1.0 - kS;
+    kD *= 1.0 - metallic;	  
+    vec3 irradiance = texture(irradianceSampler, N).rgb;
+    vec3 diffuse = irradiance * albedo;
 
-		// Specular ambient term (IBL)
-		const float MAX_REFLECTION_LOAD = 5.0;
-		vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-		vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-		vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
+	// Specular ambient term (IBL)
+	const float MAX_REFLECTION_LOAD = 5.0;
+	vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
+	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
 
-	    ambient = (kD * diffuse + specular);
-	}
-	else
-	{
-		ambient = vec3(0.03) * albedo;
-	}
+	vec3 ambient = (kD * diffuse + specular);
 
 	// TODO: Apply SSAO to ambient term
 	vec3 colour = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);

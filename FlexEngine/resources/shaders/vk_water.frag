@@ -12,11 +12,6 @@ layout (location = 3) in mat3 ex_TBN;
 
 layout (location = 0) out vec4 fragColour;
 
-// layout (binding = 1) uniform UBODynamic
-// {
-	// int enableIrradianceSampler;
-// } uboDynamic;
-
 // TODO: Move to common header
 struct DirectionalLight 
 {

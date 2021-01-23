@@ -943,7 +943,6 @@ namespace flex
 
 			material->generateHDRCubemapSampler = createInfo->generateHDRCubemapSampler;
 
-			material->enableIrradianceSampler = createInfo->enableIrradianceSampler;
 			material->generateIrradianceSampler = createInfo->generateIrradianceSampler;
 			material->irradianceSamplerSize = createInfo->generatedIrradianceCubemapSize;
 
@@ -951,7 +950,7 @@ namespace flex
 			{
 				material->pushConstantBlock = new Material::PushConstantBlock(shader->pushConstantBlockSize);
 			}
-			if (shader->bNeedBRDFLUT)
+			if (shader->textureUniforms.HasUniform(U_BRDF_LUT_SAMPLER))
 			{
 				if (!m_BRDFTexture)
 				{
@@ -963,14 +962,14 @@ namespace flex
 				}
 				material->textures.Add(U_BRDF_LUT_SAMPLER, m_BRDFTexture, "BRDF");
 			}
-			if (shader->bNeedIrradianceSampler)
+			if (shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER))
 			{
 				if (createInfo->irradianceSamplerMatID < m_Materials.size())
 				{
 					material->textures.Add(U_IRRADIANCE_SAMPLER, m_Materials.at(createInfo->irradianceSamplerMatID)->textures[U_IRRADIANCE_SAMPLER], "Irradiance");
 				}
 			}
-			if (shader->bNeedPrefilteredMap)
+			if (shader->textureUniforms.HasUniform(U_PREFILTER_MAP))
 			{
 				VulkanTexture* prefilterTexture = nullptr;
 				if (createInfo->prefilterMapSamplerMatID < m_Materials.size())
@@ -2453,7 +2452,7 @@ namespace flex
 					auto matIter = m_Materials.find(renderObject->materialID);
 					if (matIter != m_Materials.end())
 					{
-						if (m_Shaders[matIter->second->shaderID]->bNeedPrefilteredMap)
+						if (m_Shaders[matIter->second->shaderID]->textureUniforms.HasUniform(U_PREFILTER_MAP))
 						{
 							VulkanMaterial* renderObjectMat = (VulkanMaterial*)matIter->second;
 							renderObjectMat->textures.Add(U_IRRADIANCE_SAMPLER, skyboxMaterial->textures[U_IRRADIANCE_SAMPLER], "Irradiance");
@@ -8651,7 +8650,6 @@ namespace flex
 			u32 enableMetallicSampler = material->enableMetallicSampler;
 			u32 enableRoughnessSampler = material->enableRoughnessSampler;
 			u32 enableNormalSampler = material->enableNormalSampler;
-			u32 enableIrradianceSampler = material->enableIrradianceSampler;
 			real textureScale = material->textureScale;
 			real blendSharpness = material->blendSharpness;
 			glm::vec2 texSize = material->texSize;
@@ -8682,10 +8680,6 @@ namespace flex
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_NORMAL_SAMPLER))
 				{
 					enableNormalSampler = uniformOverrides->enableNormalSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_IRRADIANCE_SAMPLER))
-				{
-					enableIrradianceSampler = uniformOverrides->enableIrradianceSampler;
 				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_SDF_DATA))
 				{
@@ -8740,7 +8734,6 @@ namespace flex
 				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, US_ENABLE_METALLIC_SAMPLER },
 				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, US_ENABLE_ROUGHNESS_SAMPLER },
 				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, US_ENABLE_NORMAL_SAMPLER },
-				{ U_ENABLE_IRRADIANCE_SAMPLER, (void*)&enableIrradianceSampler, US_ENABLE_IRRADIANCE_SAMPLER },
 				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, US_BLEND_SHARPNESS },
 				{ U_TEXTURE_SCALE, (void*)&textureScale, US_TEXTURE_SCALE },
 				{ U_FONT_CHAR_DATA, (void*)&fontCharData, US_FONT_CHAR_DATA },
