@@ -614,19 +614,21 @@ namespace flex
 
 			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 
-			if (ImGui::TreeNode("Rigid body"))
-			{
-				if (ImGui::BeginPopupContextItem("rb context menu"))
-				{
-					if (ImGui::Button("Remove rigid body"))
-					{
-						bAnyPropertyChanged = true;
-						RemoveRigidBody();
-					}
+			bool bShowTree = ImGui::TreeNode("Rigid body");
 
-					ImGui::EndPopup();
+			if (ImGui::BeginPopupContextItem("rb context menu"))
+			{
+				if (ImGui::Button("Remove rigid body"))
+				{
+					bAnyPropertyChanged = true;
+					RemoveRigidBody();
 				}
 
+				ImGui::EndPopup();
+			}
+
+			if (bShowTree)
+			{
 				if (m_RigidBody != nullptr)
 				{
 					bool bRBStatic = m_RigidBody->IsStatic();
