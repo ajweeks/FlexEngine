@@ -3461,7 +3461,7 @@ namespace flex
 				{
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-					real roughness = 0.5f;
+					//real roughness = 0.5f;
 
 					// Push constants
 					pushConstants.clear();
@@ -6802,12 +6802,12 @@ namespace flex
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
 			// TODO: Avoid using this flag at all
-			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed often
+			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed individually
 
 			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
 		}
 
-		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount /* = -1 */)
+		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount /* = -1 */)
 		{
 			if (maxObjectCount == -1)
 			{
@@ -6815,7 +6815,7 @@ namespace flex
 			}
 
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			size_t dynamicAllignment = (dynamicDataSize / uboAlignment) * uboAlignment + ((dynamicDataSize % uboAlignment) > 0 ? uboAlignment : 0);
+			size_t dynamicAllignment = (bufferUnitSize / uboAlignment) * uboAlignment + ((bufferUnitSize % uboAlignment) > 0 ? uboAlignment : 0);
 
 			if (dynamicAllignment > m_DynamicAlignment)
 			{
@@ -8600,15 +8600,14 @@ namespace flex
 					}
 				}
 
-				u32 size = constantBuffer->data.unitSize;
+				u32 bufferUnitSize = constantBuffer->data.unitSize;
 
-#if  DEBUG
-				u32 calculatedSize1 = index;
-				calculatedSize1 = GetAlignedUBOSize(calculatedSize1);
-				assert(calculatedSize1 == size);
+#ifdef DEBUG
+				u32 calculatedUnitSize = GetAlignedUBOSize(index);
+				assert(calculatedUnitSize == bufferUnitSize);
 #endif
 
-				memcpy(material->uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, size);
+				memcpy(material->uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, bufferUnitSize);
 			}
 		}
 
@@ -8758,7 +8757,7 @@ namespace flex
 
 			u32 bufferUnitSize = dynamicBuffer->data.unitSize;
 
-#if  DEBUG
+#ifdef DEBUG
 			u32 calculatedUnitSize = GetAlignedUBOSize(index);
 			assert(calculatedUnitSize == bufferUnitSize);
 #endif
