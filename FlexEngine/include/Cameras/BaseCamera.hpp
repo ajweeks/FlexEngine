@@ -8,6 +8,7 @@ namespace flex
 		OVERHEAD,
 		FIRST_PERSON,
 		TERMINAL,
+		VEHICLE,
 
 		_NONE
 	};

@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "Cameras/OverheadCamera.hpp"
+#include "Cameras/VehicleCamera.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
@@ -20,18 +20,18 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	OverheadCamera::OverheadCamera(real FOV) :
-		BaseCamera("overhead", CameraType::OVERHEAD, true, FOV)
+	VehicleCamera::VehicleCamera(real FOV) :
+		BaseCamera("vehicle", CameraType::VEHICLE, true, FOV)
 	{
 		bPossessPlayer = true;
 		ResetValues();
 	}
 
-	OverheadCamera::~OverheadCamera()
+	VehicleCamera::~VehicleCamera()
 	{
 	}
 
-	void OverheadCamera::Initialize()
+	void VehicleCamera::Initialize()
 	{
 		if (!m_bInitialized)
 		{
@@ -49,7 +49,7 @@ namespace flex
 		}
 	}
 
-	void OverheadCamera::OnSceneChanged()
+	void VehicleCamera::OnSceneChanged()
 	{
 		BaseCamera::OnSceneChanged();
 
@@ -59,30 +59,13 @@ namespace flex
 		ResetValues();
 	}
 
-	void OverheadCamera::Update()
+	void VehicleCamera::Update()
 	{
 		BaseCamera::Update();
 
 		if (m_Player0 == nullptr)
 		{
 			return;
-		}
-
-		if (g_InputManager->GetActionPressed(Action::ZOOM_OUT))
-		{
-			m_TargetZoomLevel += (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
-			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
-		}
-
-		if (g_InputManager->GetActionPressed(Action::ZOOM_IN))
-		{
-			m_TargetZoomLevel -= (m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1);
-			m_TargetZoomLevel = glm::clamp(m_TargetZoomLevel, m_MinZoomLevel, m_MaxZoomLevel);
-		}
-
-		if (!NearlyEquals(m_ZoomLevel, m_TargetZoomLevel, 0.01f))
-		{
-			m_ZoomLevel = MoveTowards(m_ZoomLevel, m_TargetZoomLevel, g_DeltaTime * 15.0f);
 		}
 
 		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
@@ -103,11 +86,11 @@ namespace flex
 		RecalculateViewProjection();
 	}
 
-	void OverheadCamera::DrawImGuiObjects()
+	void VehicleCamera::DrawImGuiObjects()
 	{
 		if (m_Player0 != nullptr)
 		{
-			if (ImGui::TreeNode("Overhead camera"))
+			if (ImGui::TreeNode("Vehicle camera"))
 			{
 				glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
 				glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
@@ -120,15 +103,15 @@ namespace flex
 		}
 	}
 
-	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos)
+	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& pos)
 	{
 		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
-		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * m_ZoomLevel;
+		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * 10.0f;
 		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
 		return pos + offsetVec;
 	}
 
-	void OverheadCamera::SetPosAndLookAt()
+	void VehicleCamera::SetPosAndLookAt()
 	{
 		if (m_Player0 == nullptr)
 		{
@@ -143,25 +126,23 @@ namespace flex
 		SetLookAt();
 	}
 
-	void OverheadCamera::SetLookAt()
+	void VehicleCamera::SetLookAt()
 	{
 		forward = glm::normalize(m_TargetLookAtPos - position);
 		right = normalize(glm::cross(VEC3_UP, forward));
 		up = cross(forward, right);
 	}
 
-	void OverheadCamera::FindPlayer()
+	void VehicleCamera::FindPlayer()
 	{
 		m_Player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
 	}
 
-	void OverheadCamera::ResetValues()
+	void VehicleCamera::ResetValues()
 	{
 		ResetOrientation();
 
 		m_Vel = VEC3_ZERO;
-		m_TargetZoomLevel = (real)(m_ZoomLevels / 2) * ((m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1)) + m_MinZoomLevel;
-		m_ZoomLevel = m_TargetZoomLevel;
 		pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 

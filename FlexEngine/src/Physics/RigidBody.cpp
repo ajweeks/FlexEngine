@@ -96,13 +96,15 @@ namespace flex
 	{
 		if (m_RigidBody)
 		{
+			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			for (btTypedConstraint* constraint : m_Constraints)
 			{
-				m_RigidBody->removeConstraintRef(constraint);
+				world->removeConstraint(constraint);
 				delete constraint;
 			}
 
-			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->removeRigidBody(m_RigidBody);
+			world->removeRigidBody(m_RigidBody);
+			//delete m_RigidBody->getMotionState(); // ?
 			delete m_RigidBody;
 		}
 
@@ -113,6 +115,8 @@ namespace flex
 	{
 		m_RigidBody->addConstraintRef(constraint);
 		m_Constraints.push_back(constraint);
+
+		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addConstraint(constraint, true);
 	}
 
 	void RigidBody::SetMass(real mass)

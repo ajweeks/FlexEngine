@@ -21,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
@@ -323,8 +324,8 @@ namespace flex
 	{
 		if (gameObject == nullptr)
 		{
-			StringID objTypeID = m_ObjectInteractingWith->GetTypeID();
-			switch (objTypeID)
+			StringID previousObjectInteractingWithID = m_ObjectInteractingWith->GetTypeID();
+			switch (previousObjectInteractingWithID)
 			{
 			case SID("terminal"):
 			{
@@ -333,19 +334,26 @@ namespace flex
 				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
 				terminalCam->SetTerminal(nullptr);
 			} break;
+			case SID("vehicle"):
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				assert(cam->type == CameraType::VEHICLE);
+				//VehicleCamera* vehicleCam = static_cast<VehicleCamera*>(cam);
+				g_CameraManager->PopCamera();
+			} break;
 			}
 
-			GameObject::SetInteractingWith(gameObject);
+			GameObject::SetInteractingWith(nullptr);
 			return;
 		}
 
-		StringID objTypeID = gameObject->GetTypeID();
-		switch (objTypeID)
+		StringID newObjectInteractingWithID = gameObject->GetTypeID();
+		switch (newObjectInteractingWithID)
 		{
 		case SID("terminal"):
 		{
 			Terminal* terminal = static_cast<Terminal*>(gameObject);
-			m_ObjectInteractingWith = gameObject;
+			GameObject::SetInteractingWith(terminal);
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			TerminalCamera* terminalCam = nullptr;
@@ -391,7 +399,19 @@ namespace flex
 		{
 			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
 
-			m_ObjectInteractingWith = vehicle;
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			VehicleCamera* vehicleCamera = nullptr;
+			if (cam->type == CameraType::VEHICLE)
+			{
+				vehicleCamera = static_cast<VehicleCamera*>(cam);
+			}
+			else
+			{
+				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
+				g_CameraManager->PushCamera(vehicleCamera, false, true);
+			}
+
+			GameObject::SetInteractingWith(vehicle);
 		} break;
 		default:
 		{

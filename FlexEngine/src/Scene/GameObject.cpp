@@ -4,12 +4,19 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
+#include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
+#include <BulletDynamics/ConstraintSolver/btHinge2Constraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+
+#include <Vehicles/Hinge2Vehicle.h>
+#include <CommonInterfaces/CommonExampleInterface.h>
+#include <CommonInterfaces/CommonGUIHelperInterface.h>
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
@@ -9114,6 +9121,162 @@ namespace flex
 	void Vehicle::Initialize()
 	{
 		GameObject::Initialize();
+
+#if 1
+		if (m_RigidBody != nullptr)
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			GameObject* tireFL = scene->GetGameObject(m_TireIDs[(u32)Tire::FL]);
+			GameObject* tireFR = scene->GetGameObject(m_TireIDs[(u32)Tire::FR]);
+			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
+			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
+
+			// TODO: Expose in ImGui
+			m_tuning = {};
+
+			// ?
+			btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
+			dynamicsWorld->getSolverInfo().m_globalCfm = 0.00001f;
+
+
+			btCollisionShape* chassisShape = new btBoxShape(btVector3(1.f, 0.5f, 2.f));
+			m_collisionShapes.push_back(chassisShape);
+
+			btCompoundShape* compound = new btCompoundShape();
+			m_collisionShapes.push_back(compound);
+			btTransform localTrans;
+			localTrans.setIdentity();
+			//localTrans effectively shifts the center of mass with respect to the chassis
+			localTrans.setOrigin(btVector3(0, 1, 0));
+
+			compound->addChildShape(localTrans, chassisShape);
+
+			{
+				btCollisionShape* suppShape = new btBoxShape(btVector3(0.5f, 0.1f, 0.5f));
+				btTransform suppLocalTrans;
+				suppLocalTrans.setIdentity();
+				//localTrans effectively shifts the center of mass with respect to the chassis
+				suppLocalTrans.setOrigin(btVector3(0, 1.0, 2.5));
+				compound->addChildShape(suppLocalTrans, suppShape);
+			}
+
+			btTransform tr;
+			tr.setIdentity();
+
+			btRigidBody* chassisRB = m_RigidBody->GetRigidBodyInternal();// localCreateRigidBody(800, tr, compound);  //chassisShape);
+			btVector3 inertia;
+			chassisRB->getCollisionShape()->calculateLocalInertia(800.0f, inertia);
+			chassisRB->setMassProps(800.0f, inertia);
+
+			//chassisRB->setDamping(0.2,0.2);
+
+			//m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth, wheelRadius, wheelRadius));
+
+			//m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
+			//int wheelGraphicsIndex = m_wheelShape->getUserIndex();
+			//
+			//const real position[4] = { 0, 10, 10, 0 };
+			//const real quaternion[4] = { 0, 0, 0, 1 };
+			//const real color[4] = { 0, 1, 0, 1 };
+			//const real scaling[4] = { 1, 1, 1, 1 };
+			//
+			//for (int i = 0; i < 4; i++)
+			//{
+			//	m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance(wheelGraphicsIndex, position, quaternion, color, scaling);
+			//}
+
+			m_VehicleRaycaster = new btDefaultVehicleRaycaster(dynamicsWorld);
+			m_Vehicle = new btRaycastVehicle(m_tuning, chassisRB, m_VehicleRaycaster);
+
+			///never deactivate the vehicle
+			chassisRB->setActivationState(DISABLE_DEACTIVATION);
+
+			dynamicsWorld->addVehicle(m_Vehicle);
+
+			m_Vehicle->setCoordinateSystem(0, 1, 2);
+
+			real wheelRadius = 0.5f;
+			//real wheelWidth = 0.4f;
+			real wheelFriction = 1000;  //BT_LARGE_FLOAT;
+			real suspensionStiffness = 20.f;
+			real suspensionDamping = 2.3f;
+			real suspensionCompression = 4.4f;
+			real rollInfluence = 0.1f;  //1.0f;
+
+			btScalar suspensionRestLength(0.6f);
+			btVector3 wheelDirectionCS0(0, -1, 0);
+			btVector3 wheelAxleCS(-1, 0, 0);
+
+			btVector3 connecitonPoint = ToBtVec3(tireFL->GetTransform()->GetLocalPosition());
+			bool bIsFrontWheel = true;
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			connecitonPoint = ToBtVec3(tireFR->GetTransform()->GetLocalPosition());
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			bIsFrontWheel = false;
+			connecitonPoint = ToBtVec3(tireRL->GetTransform()->GetLocalPosition());
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			connecitonPoint = ToBtVec3(tireRR->GetTransform()->GetLocalPosition());
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+
+			for (i32 i = 0; i < m_Vehicle->getNumWheels(); ++i)
+			{
+				btWheelInfo& wheel = m_Vehicle->getWheelInfo(i);
+				wheel.m_suspensionStiffness = suspensionStiffness;
+				wheel.m_wheelsDampingRelaxation = suspensionDamping;
+				wheel.m_wheelsDampingCompression = suspensionCompression;
+				wheel.m_frictionSlip = wheelFriction;
+				wheel.m_rollInfluence = rollInfluence;
+			}
+		}
+#endif
+
+#if 0
+		if (tireFL != nullptr && tireFR != nullptr &&
+			tireRL != nullptr && tireRR != nullptr)
+		{
+			btRigidBody* bodyA = m_RigidBody->GetRigidBodyInternal();
+
+			btVector3 axisA(0, 1, 0); // Allow wheel to pivot about Z for steering
+			btVector3 axisB(1, 0, 0); // Allow wheel to roll about X
+
+			for (const GameObjectID& tireID : m_TireIDs)
+			{
+				GameObject* tireObjet = scene->GetGameObject(tireID);
+
+				btVector3 anchor = ToBtVec3(tireObjet->GetTransform()->GetLocalPosition());
+				btHinge2Constraint* constraint = new btHinge2Constraint(
+					*bodyA, *tireObjet->GetRigidBody()->GetRigidBodyInternal(),
+					anchor, axisA, axisB);
+
+				// Drive engine
+				constraint->enableMotor(3, true);
+				constraint->setMaxMotorForce(3, 1000);
+				constraint->setTargetVelocity(3, 0);
+
+				// Steer engine
+				constraint->enableMotor(5, true);
+				constraint->setMaxMotorForce(5, 1000);
+				constraint->setTargetVelocity(5, 0);
+
+				constraint->setParam(BT_CONSTRAINT_CFM, 0.15f, 2);
+				constraint->setParam(BT_CONSTRAINT_ERP, 0.35f, 2);
+
+				constraint->setDamping(2, 2.0);
+				constraint->setStiffness(2, 40.0);
+
+				constraint->setDbgDrawSize(btScalar(5.f));
+
+				m_RigidBody->AddConstraint(constraint);
+			}
+		}
+#endif
+
+#if 0
+		static DummyGUIHelper helperInterface;
+
+		CommonExampleOptions options(&helperInterface);
+		vehicle = Hinge2VehicleCreateFunc(options);
+#endif
 	}
 
 	void Vehicle::Destroy(bool bDetachFromParent /* = true */)
@@ -9125,36 +9288,134 @@ namespace flex
 	{
 		GameObject::Update();
 
-		if (m_RigidBody != nullptr)
+		const real moveAccel = 1500.0f;
+		const real turnAccel = 0.8f;
+
+		btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
+
+		real engineForceScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
+
+		// The faster we get, the slower we accelerate
+		real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / MAX_ENGINE_FORCE, 0.0f, 1.0f), 5.0f);
+
+		if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
 		{
+			m_EngineForce += moveAccel * g_DeltaTime * accelFactor;
+			//force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
+		}
+		if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
+		{
+			m_EngineForce -= moveAccel * g_DeltaTime * accelFactor;
+			//force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
+		}
+		if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
+		{
+			m_Steering -= turnAccel * g_DeltaTime;
+			m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
+		}
+		if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
+		{
+			m_Steering += turnAccel * g_DeltaTime;
+			m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
+		}
+		if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
+		{
+			m_BrakeForce = 80.0f;
+			engineForceScale = 0.0f;
+		}
+		else
+		{
+			m_BrakeForce = 0.0f;
+		}
+
+		m_EngineForce *= glm::clamp(engineForceScale, 0.0f, 1.0f);
+		if (abs(m_EngineForce) < 0.1f)
+		{
+			m_EngineForce = 0.0f;
+		}
+
+		// TODO: Detect being upside down and not moving and initiate righting maneuver
+
+#if 1
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		for (i32 i = 0; i < 4; i++)
+		{
+			//synchronize the wheels with the (interpolated) chassis world transform
+			m_Vehicle->updateWheelTransform(i, true);
+
+			Transform newWheelTransform = ToTransform(m_Vehicle->getWheelInfo(i).m_worldTransform);
+			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetLocalRotation(newWheelTransform.GetLocalRotation());
+		}
+
+
+		{
+			i32 wheelIndex = 2;
+			m_Vehicle->applyEngineForce(m_EngineForce, wheelIndex);
+			m_Vehicle->setBrake(m_BrakeForce, wheelIndex);
+			wheelIndex = 3;
+			m_Vehicle->applyEngineForce(m_EngineForce, wheelIndex);
+			m_Vehicle->setBrake(m_BrakeForce, wheelIndex);
+
+			wheelIndex = 0;
+			m_Vehicle->setSteeringValue(m_Steering, wheelIndex);
+			wheelIndex = 1;
+			m_Vehicle->setSteeringValue(m_Steering, wheelIndex);
+		}
+
+#endif
+
+#if 0
+		//if (m_RigidBody != nullptr)
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			GameObject* tireFL = scene->GetGameObject(m_TireIDs[(u32)Tire::FL]);
+			GameObject* tireFR = scene->GetGameObject(m_TireIDs[(u32)Tire::FR]);
+			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
+			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
+
 			btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
 
-			const real moveAccel = 10.0f;
-			const real turnAccel = 3.0f;
+			btTransform mainTransform;
+			rb->getMotionState()->getWorldTransform(mainTransform);
 
-			btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
-			btVector3 torque = btVector3(0.0f, 0.0f, 0.0f);
+			if (tireRL != nullptr && tireRR != nullptr)
+			{
+				btTransform tireRLTransform, tireRRTransform;
+				tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(tireRLTransform);
+				tireRR->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(tireRRTransform);
+				mainTransform.setOrigin((tireRLTransform.getOrigin() + tireRRTransform.getOrigin()) / 2.0f);
+				rb->activate(true);
 
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
-			{
-				force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
-			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
-			{
-				force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
-			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
-			{
-				torque += btVector3(0.0f, -turnAccel, 0.0f);
-			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
-			{
-				torque += btVector3(0.0f, turnAccel, 0.0f);
+				btVector3 torque = btVector3(m_EngineForce, 0.0f, 0.0f);
+
+				//btTransform rlTransform, rrTransform;
+				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(rlTransform);
+				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(rrTransform);
+				//
+				//rlTransform.setRotation(rlTransform.getRotation() * btQuaternion(btVector3(1, 0, 0), m_TireSpeed));
+				//rrTransform.setRotation(rrTransform.getRotation() * btQuaternion(btVector3(1, 0, 0), m_TireSpeed));
+				//
+				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->setWorldTransform(rlTransform);
+				//tireRL->GetRigidBody()->GetRigidBodyInternal()->activate(true);
+				//
+				//tireRR->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->setWorldTransform(rrTransform);
+				//tireRR->GetRigidBody()->GetRigidBodyInternal()->activate(true);
+
+				//tireRL->GetRigidBody()->GetRigidBodyInternal()->applyTorque(torque);
+				//tireRR->GetRigidBody()->GetRigidBodyInternal()->applyTorque(torque);
 			}
 
-			rb->applyCentralForce(force);
-			rb->applyTorque(torque);
+			//rb->applyCentralForce(force);
+			//rb->applyTorque(torque);
 		}
+#endif
+
+#if 0
+		vehicle->stepSimulation(g_DeltaTime);
+
+		vehicle->updateGraphics();
+		vehicle->renderScene();
+#endif
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -9220,5 +9481,9 @@ namespace flex
 			buf[strlen(TireNames[i]) + 1] = 0;
 			currentScene->GameObjectIDField(buf, m_TireIDs[i]);
 		}
+
+		ImGui::Text("Engine force: %.2f", m_EngineForce);
+		ImGui::Text("Braking force: %.2f", m_BrakeForce);
+		ImGui::Text("Steering: %.2f", m_Steering);
 	}
 } // namespace flex

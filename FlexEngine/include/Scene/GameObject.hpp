@@ -1,5 +1,9 @@
 #pragma once
 
+IGNORE_WARNINGS_PUSH
+#include <BulletDynamics/Vehicle/btRaycastVehicle.h>
+IGNORE_WARNINGS_POP
+
 #include "Audio/AudioCue.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
@@ -1113,7 +1117,7 @@ namespace flex
 			i32 fileVersion,
 			MaterialID overriddenMatID = InvalidMaterialID,
 			bool bIsPrefabTemplate = false,
-			CopyFlags copyFlags = CopyFlags::ALL);
+			CopyFlags copyFlags = CopyFlags::ALL) override;
 
 	private:
 		static void CreateMaterials();
@@ -1332,6 +1336,24 @@ namespace flex
 		static const i32 m_TireCount = 4;
 
 		GameObjectID m_TireIDs[m_TireCount];
+
+		real m_EngineForce = 0.0f;
+		real m_BrakeForce = 0.0f;
+		real m_Steering = 0.0f;
+		const real MAX_STEER = 0.5f;
+		const real MAX_ENGINE_FORCE = 2500.0f;
+		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
+
+#if 0
+		class CommonExampleInterface* vehicle;
+#endif
+
+		btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
+
+		btDefaultVehicleRaycaster* m_VehicleRaycaster;
+		btRaycastVehicle* m_Vehicle;
+
+		btRaycastVehicle::btVehicleTuning m_tuning;
 
 	};
 
