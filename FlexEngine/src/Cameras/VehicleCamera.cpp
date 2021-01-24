@@ -106,7 +106,7 @@ namespace flex
 	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& pos)
 	{
 		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
-		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * 10.0f;
+		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * 6.0f;
 		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
 		return pos + offsetVec;
 	}

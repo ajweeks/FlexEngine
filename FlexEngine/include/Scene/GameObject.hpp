@@ -1335,6 +1335,8 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		void ResetTransform();
+
 		GameObjectID m_TireIDs[m_TireCount];
 
 		real m_EngineForce = 0.0f;
@@ -1354,6 +1356,15 @@ namespace flex
 		btRaycastVehicle* m_Vehicle;
 
 		btRaycastVehicle::btVehicleTuning m_tuning;
+
+		sec m_SecUpsideDown = 0.0f;
+		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;
+
+		bool m_bFlippingRightSideUp = false;
+		sec m_SecFlipppingRightSideUp = 0.0f;
+		const sec MAX_FLIPPING_UPRIGHT_TIME = 3.5f;
+		glm::quat m_TargetRot;
+		const real UPRIGHTING_SPEED = 10.0f;
 
 	};
 

@@ -337,9 +337,10 @@ namespace flex
 			case SID("vehicle"):
 			{
 				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				assert(cam->type == CameraType::VEHICLE);
-				//VehicleCamera* vehicleCam = static_cast<VehicleCamera*>(cam);
-				g_CameraManager->PopCamera();
+				if (cam->type == CameraType::VEHICLE)
+				{
+					g_CameraManager->PopCamera();
+				}
 			} break;
 			}
 

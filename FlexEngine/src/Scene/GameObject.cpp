@@ -24,8 +24,8 @@ IGNORE_WARNINGS_PUSH
 #define SSE_MATHFUN_WITH_CODE
 #include "sse_mathfun.h"
 
-#include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/norm.hpp> // for distance2
+#include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/vector_angle.hpp> // for angle
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
@@ -9131,42 +9131,13 @@ namespace flex
 			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
 			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
 
-			// TODO: Expose in ImGui
 			m_tuning = {};
 
 			// ?
 			btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
 			dynamicsWorld->getSolverInfo().m_globalCfm = 0.00001f;
 
-
-			btCollisionShape* chassisShape = new btBoxShape(btVector3(1.f, 0.5f, 2.f));
-			m_collisionShapes.push_back(chassisShape);
-
-			btCompoundShape* compound = new btCompoundShape();
-			m_collisionShapes.push_back(compound);
-			btTransform localTrans;
-			localTrans.setIdentity();
-			//localTrans effectively shifts the center of mass with respect to the chassis
-			localTrans.setOrigin(btVector3(0, 1, 0));
-
-			compound->addChildShape(localTrans, chassisShape);
-
-			{
-				btCollisionShape* suppShape = new btBoxShape(btVector3(0.5f, 0.1f, 0.5f));
-				btTransform suppLocalTrans;
-				suppLocalTrans.setIdentity();
-				//localTrans effectively shifts the center of mass with respect to the chassis
-				suppLocalTrans.setOrigin(btVector3(0, 1.0, 2.5));
-				compound->addChildShape(suppLocalTrans, suppShape);
-			}
-
-			btTransform tr;
-			tr.setIdentity();
-
-			btRigidBody* chassisRB = m_RigidBody->GetRigidBodyInternal();// localCreateRigidBody(800, tr, compound);  //chassisShape);
-			btVector3 inertia;
-			chassisRB->getCollisionShape()->calculateLocalInertia(800.0f, inertia);
-			chassisRB->setMassProps(800.0f, inertia);
+			btRigidBody* chassisRB = m_RigidBody->GetRigidBodyInternal();
 
 			//chassisRB->setDamping(0.2,0.2);
 
@@ -9188,7 +9159,6 @@ namespace flex
 			m_VehicleRaycaster = new btDefaultVehicleRaycaster(dynamicsWorld);
 			m_Vehicle = new btRaycastVehicle(m_tuning, chassisRB, m_VehicleRaycaster);
 
-			///never deactivate the vehicle
 			chassisRB->setActivationState(DISABLE_DEACTIVATION);
 
 			dynamicsWorld->addVehicle(m_Vehicle);
@@ -9295,37 +9265,42 @@ namespace flex
 
 		real engineForceScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
 
-		// The faster we get, the slower we accelerate
-		real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / MAX_ENGINE_FORCE, 0.0f, 1.0f), 5.0f);
+		bool bOccupied = (m_ObjectInteractingWith != nullptr) && (m_ObjectInteractingWith->GetTypeID() == SID("player"));
 
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
+		if (bOccupied)
 		{
-			m_EngineForce += moveAccel * g_DeltaTime * accelFactor;
-			//force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
-		}
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
-		{
-			m_EngineForce -= moveAccel * g_DeltaTime * accelFactor;
-			//force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
-		}
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
-		{
-			m_Steering -= turnAccel * g_DeltaTime;
-			m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
-		}
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
-		{
-			m_Steering += turnAccel * g_DeltaTime;
-			m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
-		}
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
-		{
-			m_BrakeForce = 80.0f;
-			engineForceScale = 0.0f;
-		}
-		else
-		{
-			m_BrakeForce = 0.0f;
+			// The faster we get, the slower we accelerate
+			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / MAX_ENGINE_FORCE, 0.0f, 1.0f), 5.0f);
+
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
+			{
+				m_EngineForce += moveAccel * g_DeltaTime * accelFactor;
+				//force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
+			{
+				m_EngineForce -= moveAccel * g_DeltaTime * accelFactor;
+				//force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
+			{
+				m_Steering -= turnAccel * g_DeltaTime;
+				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
+			{
+				m_Steering += turnAccel * g_DeltaTime;
+				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
+			}
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
+			{
+				m_BrakeForce = 80.0f;
+				engineForceScale = 0.0f;
+			}
+			else
+			{
+				m_BrakeForce = 0.0f;
+			}
 		}
 
 		m_EngineForce *= glm::clamp(engineForceScale, 0.0f, 1.0f);
@@ -9334,7 +9309,69 @@ namespace flex
 			m_EngineForce = 0.0f;
 		}
 
-		// TODO: Detect being upside down and not moving and initiate righting maneuver
+		if (m_bFlippingRightSideUp)
+		{
+			m_Transform.SetWorldRotation(glm::slerp(m_Transform.GetWorldRotation(), m_TargetRot, glm::clamp(g_DeltaTime * UPRIGHTING_SPEED, 0.0f, 1.0f)));
+			real uprightedness = glm::dot(m_Transform.GetUp(), VEC3_UP);
+			m_SecFlipppingRightSideUp += g_DeltaTime;
+			bool bRightSideUp = uprightedness > 0.9f;
+			if (bRightSideUp || m_SecFlipppingRightSideUp > MAX_FLIPPING_UPRIGHT_TIME)
+			{
+				m_SecFlipppingRightSideUp = 0.0f;
+				m_bFlippingRightSideUp = false;
+			}
+		}
+		else
+		{
+			// Check if flipped upside down and stuck
+			glm::vec3 chassisUp = m_Transform.GetUp();
+			real uprightedness = glm::dot(chassisUp, VEC3_UP);
+			bool bUpsideDown = uprightedness < 0.1f;
+			if (bUpsideDown)
+			{
+				m_SecUpsideDown += g_DeltaTime;
+
+				if (m_SecUpsideDown > SEC_UPSIDE_DOWN_BEFORE_FLIP)
+				{
+					glm::vec3 chassisForward = m_Transform.GetForward();
+					glm::vec3 chassisRight = m_Transform.GetRight();
+
+					Print("Flip!\n");
+					m_bFlippingRightSideUp = true;
+					real w = sqrt(1.0f + uprightedness);
+
+					if (abs(uprightedness) < 0.99f)
+					{
+						if (abs(dot(chassisForward, VEC3_UP)) > abs(dot(chassisRight, VEC3_UP)))
+						{
+							m_TargetRot = glm::normalize(glm::quat(chassisRight.x, chassisRight.y, chassisRight.z, w));
+						}
+						else
+						{
+							m_TargetRot = glm::normalize(glm::quat(chassisForward.x, chassisForward.y, chassisForward.z, w));
+						}
+					}
+					else
+					{
+						// Vectors are nearly parallel, just pick the forward axis to rotate about
+						m_TargetRot = glm::quat(chassisForward.x, chassisForward.y, chassisForward.z, w);
+					}
+					m_SecFlipppingRightSideUp = 0.0f;
+					m_SecUpsideDown = 0.0f;
+					m_Transform.SetWorldPosition(m_Transform.GetWorldPosition() + VEC3_UP * 3.0f);
+				}
+			}
+			else
+			{
+				m_SecUpsideDown = 0.0f;
+			}
+		}
+
+		// Check if fell below the level
+		if (m_Transform.GetWorldPosition().y < -100.0f)
+		{
+			ResetTransform();
+		}
 
 #if 1
 		BaseScene* scene = g_SceneManager->CurrentScene();
@@ -9485,5 +9522,34 @@ namespace flex
 		ImGui::Text("Engine force: %.2f", m_EngineForce);
 		ImGui::Text("Braking force: %.2f", m_BrakeForce);
 		ImGui::Text("Steering: %.2f", m_Steering);
+		if (m_bFlippingRightSideUp)
+		{
+			ImGui::ProgressBar(m_SecFlipppingRightSideUp / MAX_FLIPPING_UPRIGHT_TIME, ImVec2(-1, 0), "Flipping right side up");
+		}
+		else
+		{
+			ImGui::ProgressBar(m_SecUpsideDown / SEC_UPSIDE_DOWN_BEFORE_FLIP, ImVec2(-1, 0), "Sec upside down");
+		}
+
+		ImGui::SliderFloat("Sus. stiffness", &m_tuning.m_suspensionStiffness, 0.0f, 10.0f);
+		ImGui::SliderFloat("Sus. compression", &m_tuning.m_suspensionCompression, 0.0f, 5.0f);
+		ImGui::SliderFloat("Sus. damping", &m_tuning.m_suspensionDamping, 0.0f, 1.0f);
+		ImGui::SliderFloat("Sus. max travel cm", &m_tuning.m_maxSuspensionTravelCm, 0.0f, 1000.0f);
+		ImGui::SliderFloat("Friction slip", &m_tuning.m_frictionSlip, 0.0f, 50.0f);
+		ImGui::SliderFloat("Sus. max force", &m_tuning.m_maxSuspensionForce, 0.0f, 10'000.0f);
+	}
+
+	void Vehicle::ResetTransform()
+	{
+		m_RigidBody->GetRigidBodyInternal()->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		m_Transform.SetWorldFromMatrix(MAT4_IDENTITY);
+		m_Transform.Translate(0.0f, 2.0f, 0.0f);
+		m_SecUpsideDown = 0.0f;
+		m_bFlippingRightSideUp = false;
+		m_SecFlipppingRightSideUp = 0.0f;
+		m_EngineForce = 0.0f;
+		m_BrakeForce = 0.0f;
+		m_Steering = 0.0f;
 	}
 } // namespace flex

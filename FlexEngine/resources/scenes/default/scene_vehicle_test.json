@@ -85,7 +85,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, -0.336, 0.000",
-				"scale" : "100.000, 0.495, 100.000"
+				"scale" : "200.000, 0.495, 200.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -97,7 +97,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "0.5, 0.5, 0.5"
 			},
 			"rigid body" : 
 			{
