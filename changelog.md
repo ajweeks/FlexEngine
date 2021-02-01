@@ -1,7 +1,36 @@
 
 ### Flex Engine change log (reverse chronological order)
 
+**2021**
+_January_
+- Reduce memory usage of dynamic uniform buffers by allowing lazy initialization
+- Define prefabs using "template" game objects
+
 **2020**
+_December_
+- Add StringID (hashed string)
+- Add GameObjectIDs (GUID)
+- Add ResourceManager
+- Add first pass at vehicles
+- Various editor improvements (scene/object creation/duplication etc.)
+
+_November_
+- Add mesh target based coil springs
+- Dynamic buffer fixes
+- Add soft body type that can be initialized from mesh
+- Add first position-based dynamics solver
+- Add keybinding editor
+- Add plugables system to connect computers to peripherals
+
+_October_ (0.8.5)
+- Further work on compiler
+
+_September_
+- Further work on compiler
+
+_August_
+- Improve scripting language infastructure (diagnostics, intermediate representation)
+
 _July_
 - Add mesh drag-drop import support (glb/gltf only)
 - Add support for having multiple specialization constants per stage
@@ -18,7 +47,7 @@ _May_
 - Add tesselation & sampling LOD levels to water mesh
 - Make water generation infinite & vastly more optimial (utilize SIMD & multithreading)
 
-_April_
+_April_ (0.8.4)
 - Fix water generation & center around camera
 - Add directory watch to auto-recompile shaders on file modification for lightning-fast iteration times
 - Add more granular shader compilation using shaderc library
@@ -39,7 +68,7 @@ _January_
 
 
 **2019**
-_December_
+_December_ (0.8.3)
 - Add support for multiple material IDs per mesh
 - Add unit test framework
 - Start porting to linux
@@ -48,7 +77,7 @@ _November_
 - Add compute-based GPU particles
 - Calculate render pass image transitions automatically (mini render graph)
 
-_October_
+_October_ (0.8.2)
 - Wrap render passes in abstraction
 - Improve scene management
 - Improve TAA implementation
@@ -75,7 +104,7 @@ _May_
 - Add screen-space ambient occlusion to Vulkan & OpenGL
 - Remove world position from GBuffer, reconstruct from depth instead
 
-_April_
+_April_ (0.8.1)
 - Add async Vulkan shader compilation on bootup (based on shader file checksums)
 - Add shader hot-reloading support to Vulkan
 - Add font metadata viewer
@@ -98,7 +127,7 @@ _February_
 - Add terminals & terminal camera
 - Add support for world-space text rendering
 
-_January_
+_January_ (0.8.0)
 - Add basic keymapping UI (Window > Key Mapper)
 - Allow callbacks to be given a priority
 - Add input event callbacks
@@ -113,7 +142,7 @@ _January_
 
 
 **2018**
-_December_
+_December_ (0.7.0)
 - Add carts that ride along tracks (create with C, place onto nearest track with SPACE)
 - Add RenderDoc API integration to allow capturing frames with a keypress (F9)
 - Add support for time dilation
