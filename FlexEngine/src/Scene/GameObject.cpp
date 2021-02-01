@@ -9290,7 +9290,7 @@ namespace flex
 			}
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
 			{
-				m_BrakeForce = 80.0f;
+				m_BrakeForce = MAX_BRAKE_FORCE;
 				engineForceSlowScale = 0.0f;
 			}
 			else

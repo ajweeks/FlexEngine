@@ -1339,6 +1339,7 @@ namespace flex
 
 		const real MAX_STEER = 0.5f;
 		const real MAX_ENGINE_FORCE = 2500.0f;
+		const real MAX_BRAKE_FORCE = 40.0f;
 		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
 
