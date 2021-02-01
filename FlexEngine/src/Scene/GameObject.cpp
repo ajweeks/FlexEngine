@@ -409,10 +409,10 @@ namespace flex
 		else if (m_ObjectInteractingWith != nullptr)
 		{
 			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
-			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
+			//btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			//btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
+			//debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
+			//debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
@@ -6234,9 +6234,9 @@ namespace flex
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
-		u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), (u32)outputSignals.size());
 		if (m_VM != nullptr && m_VM->IsExecuting())
 		{
+			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), (u32)outputSignals.size());
 			for (u32 i = 0; i < outputCount; ++i)
 			{
 				SetOutputSignal(i, m_VM->terminalOutputs[i].valInt);
@@ -9165,37 +9165,29 @@ namespace flex
 
 			m_Vehicle->setCoordinateSystem(0, 1, 2);
 
-			real wheelRadius = 0.5f;
-			//real wheelWidth = 0.4f;
-			real wheelFriction = 1000;  //BT_LARGE_FLOAT;
-			real suspensionStiffness = 20.f;
-			real suspensionDamping = 2.3f;
-			real suspensionCompression = 4.4f;
-			real rollInfluence = 0.1f;  //1.0f;
-
 			btScalar suspensionRestLength(0.6f);
 			btVector3 wheelDirectionCS0(0, -1, 0);
 			btVector3 wheelAxleCS(-1, 0, 0);
 
 			btVector3 connecitonPoint = ToBtVec3(tireFL->GetTransform()->GetLocalPosition());
 			bool bIsFrontWheel = true;
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
 			connecitonPoint = ToBtVec3(tireFR->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
 			bIsFrontWheel = false;
 			connecitonPoint = ToBtVec3(tireRL->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
 			connecitonPoint = ToBtVec3(tireRR->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, wheelRadius, m_tuning, bIsFrontWheel);
+			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
 
 			for (i32 i = 0; i < m_Vehicle->getNumWheels(); ++i)
 			{
 				btWheelInfo& wheel = m_Vehicle->getWheelInfo(i);
-				wheel.m_suspensionStiffness = suspensionStiffness;
-				wheel.m_wheelsDampingRelaxation = suspensionDamping;
-				wheel.m_wheelsDampingCompression = suspensionCompression;
-				wheel.m_frictionSlip = wheelFriction;
-				wheel.m_rollInfluence = rollInfluence;
+				wheel.m_suspensionStiffness = m_SuspensionStiffness;
+				wheel.m_wheelsDampingRelaxation = m_SuspensionDamping;
+				wheel.m_wheelsDampingCompression = m_SuspensionCompression;
+				wheel.m_frictionSlip = m_WheelFriction;
+				wheel.m_rollInfluence = m_RollInfluence;
 			}
 		}
 #endif
@@ -9258,12 +9250,16 @@ namespace flex
 	{
 		GameObject::Update();
 
-		const real moveAccel = 1500.0f;
-		const real turnAccel = 0.8f;
+		const btVector3 linearVel = m_RigidBody->GetRigidBodyInternal()->getLinearVelocity();
+		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
 
 		btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
 
-		real engineForceScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
+		real engineForceSlowScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
+		real steeringSlowScale = (1.0f - g_DeltaTime * STEERING_SLOW_FACTOR);
+
+		real maxSteerVel = 30.0f;
+		real steeringScale = Lerp(0.6f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
 
 		bool bOccupied = (m_ObjectInteractingWith != nullptr) && (m_ObjectInteractingWith->GetTypeID() == SID("player"));
 
@@ -9274,28 +9270,28 @@ namespace flex
 
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
 			{
-				m_EngineForce += moveAccel * g_DeltaTime * accelFactor;
-				//force += ToBtVec3(m_Transform.GetForward()) * moveAccel;
+				m_EngineForce += m_MoveAccel * g_DeltaTime * accelFactor;
+				//force += ToBtVec3(m_Transform.GetForward()) * m_MoveAccel;
 			}
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
 			{
-				m_EngineForce -= moveAccel * g_DeltaTime * accelFactor;
-				//force += ToBtVec3(-m_Transform.GetForward()) * moveAccel;
+				m_EngineForce -= m_MoveAccel * g_DeltaTime * accelFactor;
+				//force += ToBtVec3(-m_Transform.GetForward()) * m_MoveAccel;
 			}
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
 			{
-				m_Steering -= turnAccel * g_DeltaTime;
+				m_Steering -= m_TurnAccel * g_DeltaTime * steeringScale;
 				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
 			}
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
 			{
-				m_Steering += turnAccel * g_DeltaTime;
+				m_Steering += m_TurnAccel * g_DeltaTime * steeringScale;
 				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
 			}
 			if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
 			{
 				m_BrakeForce = 80.0f;
-				engineForceScale = 0.0f;
+				engineForceSlowScale = 0.0f;
 			}
 			else
 			{
@@ -9303,7 +9299,8 @@ namespace flex
 			}
 		}
 
-		m_EngineForce *= glm::clamp(engineForceScale, 0.0f, 1.0f);
+		m_Steering *= glm::clamp(steeringSlowScale, 0.0f, 1.0f);
+		m_EngineForce *= glm::clamp(engineForceSlowScale, 0.0f, 1.0f);
 		if (abs(m_EngineForce) < 0.1f)
 		{
 			m_EngineForce = 0.0f;
@@ -9368,7 +9365,7 @@ namespace flex
 		}
 
 		// Check if fell below the level
-		if (m_Transform.GetWorldPosition().y < -100.0f)
+		if (m_Transform.GetWorldPosition().y < -10.0f)
 		{
 			ResetTransform();
 		}
@@ -9531,12 +9528,38 @@ namespace flex
 			ImGui::ProgressBar(m_SecUpsideDown / SEC_UPSIDE_DOWN_BEFORE_FLIP, ImVec2(-1, 0), "Sec upside down");
 		}
 
+		ImGui::SliderFloat("Roll influence", &m_RollInfluence, 0.0f, 1.0f);
+
+		ImGui::Spacing();
+
 		ImGui::SliderFloat("Sus. stiffness", &m_tuning.m_suspensionStiffness, 0.0f, 10.0f);
 		ImGui::SliderFloat("Sus. compression", &m_tuning.m_suspensionCompression, 0.0f, 5.0f);
 		ImGui::SliderFloat("Sus. damping", &m_tuning.m_suspensionDamping, 0.0f, 1.0f);
 		ImGui::SliderFloat("Sus. max travel cm", &m_tuning.m_maxSuspensionTravelCm, 0.0f, 1000.0f);
 		ImGui::SliderFloat("Friction slip", &m_tuning.m_frictionSlip, 0.0f, 50.0f);
 		ImGui::SliderFloat("Sus. max force", &m_tuning.m_maxSuspensionForce, 0.0f, 10'000.0f);
+	}
+
+	bool Vehicle::AllowInteractionWith(GameObject* gameObject)
+	{
+		return gameObject->GetTypeID() == SID("player");
+	}
+
+	void Vehicle::SetInteractingWith(GameObject* gameObject)
+	{
+		//if (gameObject != nullptr && gameObject->GetTypeID() == SID("player"))
+		//{
+		//	Player* player = static_cast<Player*>(gameObject);
+		//}
+
+		if (gameObject == nullptr)
+		{
+			// Player has left the vehicle, stop accelerating & braking
+			m_EngineForce = 0.0f;
+			m_BrakeForce = 0.0f;
+		}
+
+		GameObject::SetInteractingWith(gameObject);
 	}
 
 	void Vehicle::ResetTransform()

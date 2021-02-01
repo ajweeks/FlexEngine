@@ -1216,7 +1216,6 @@ namespace flex
 
 				currentScene->GetTrackManager()->DrawImGuiObjects();
 				currentScene->GetCartManager()->DrawImGuiObjects();
-				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 
 				if (ImGui::TreeNode("Spring"))
 				{

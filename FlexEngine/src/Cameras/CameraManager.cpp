@@ -278,6 +278,8 @@ namespace flex
 				currentCamera->ResetPosition();
 			}
 
+			CurrentCamera()->DrawImGuiObjects();
+
 			ImGui::TreePop();
 		}
 	}

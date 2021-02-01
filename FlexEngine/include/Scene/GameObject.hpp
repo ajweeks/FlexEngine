@@ -1284,7 +1284,6 @@ namespace flex
 
 		std::vector<glm::vec3> initialPositions;
 
-		Mesh* m_Mesh = nullptr;
 		MeshComponent* m_MeshComponent = nullptr;
 		VertexBufferDataCreateInfo m_MeshVertexBufferCreateInfo;
 		MaterialID m_MeshMaterialID = InvalidMaterialID;
@@ -1320,6 +1319,9 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
+
 	private:
 		enum class Tire : u32
 		{
@@ -1335,6 +1337,14 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		const real MAX_STEER = 0.5f;
+		const real MAX_ENGINE_FORCE = 2500.0f;
+		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
+		const real STEERING_SLOW_FACTOR = 4.0f;
+
+		const real m_MoveAccel = 1500.0f;
+		const real m_TurnAccel = 1.5f;
+
 		void ResetTransform();
 
 		GameObjectID m_TireIDs[m_TireCount];
@@ -1342,9 +1352,13 @@ namespace flex
 		real m_EngineForce = 0.0f;
 		real m_BrakeForce = 0.0f;
 		real m_Steering = 0.0f;
-		const real MAX_STEER = 0.5f;
-		const real MAX_ENGINE_FORCE = 2500.0f;
-		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
+		real m_RollInfluence = 0.05f;
+		real m_WheelFriction = 50.0f;
+		real m_WheelRadius = 0.5f;
+		real m_WheelWidth = 0.4f;
+		real m_SuspensionStiffness = 20.f;
+		real m_SuspensionDamping = 2.3f;
+		real m_SuspensionCompression = 4.4f;
 
 #if 0
 		class CommonExampleInterface* vehicle;

@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Physics/RigidBody.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -21,9 +22,13 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	VehicleCamera::VehicleCamera(real FOV) :
-		BaseCamera("vehicle", CameraType::VEHICLE, true, FOV)
+		BaseCamera("vehicle", CameraType::VEHICLE, true, FOV),
+		m_SpeedFactors(256),
+		m_TargetFollowDist(256)
 	{
 		bPossessPlayer = true;
+		m_SpeedFactors.overrideMin = 0.0f;
+		m_SpeedFactors.overrideMax = 1.0f;
 		ResetValues();
 	}
 
@@ -35,13 +40,14 @@ namespace flex
 	{
 		if (!m_bInitialized)
 		{
-			if (m_Player0 == nullptr)
+			if (m_TrackedVehicle == nullptr)
 			{
-				FindPlayer();
+				FindActiveVehicle();
 			}
 
-			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+			m_TargetPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
+			m_TargetForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+			m_TargetVelMagnitudeRollingAvg = RollingAverage<real>(30, SamplingType::LINEAR);
 
 			ResetValues();
 
@@ -53,8 +59,8 @@ namespace flex
 	{
 		BaseCamera::OnSceneChanged();
 
-		m_Player0 = nullptr;
-		FindPlayer();
+		m_TrackedVehicle = nullptr;
+		FindActiveVehicle();
 
 		ResetValues();
 	}
@@ -63,15 +69,19 @@ namespace flex
 	{
 		BaseCamera::Update();
 
-		if (m_Player0 == nullptr)
+		if (m_TrackedVehicle == nullptr)
 		{
 			return;
 		}
 
-		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
+		Transform* targetTransform = m_TrackedVehicle->GetTransform();
+		btRigidBody* trackedRB = m_TrackedVehicle->GetRigidBody()->GetRigidBodyInternal();
 
-		m_PlayerPosRollingAvg.AddValue(m_Player0->GetTransform()->GetWorldPosition());
-		m_TargetLookAtPos = m_PlayerPosRollingAvg.currentAverage;
+		m_TargetForwardRollingAvg.AddValue(targetTransform->GetForward());
+		m_TargetVelMagnitudeRollingAvg.AddValue(trackedRB->getLinearVelocity().length());
+
+		m_TargetPosRollingAvg.AddValue(targetTransform->GetWorldPosition());
+		m_TargetLookAtPos = m_TargetPosRollingAvg.currentAverage;
 
 #if THOROUGH_CHECKS
 		ENSURE(!IsNanOrInf(m_TargetLookAtPos));
@@ -88,37 +98,57 @@ namespace flex
 
 	void VehicleCamera::DrawImGuiObjects()
 	{
-		if (m_Player0 != nullptr)
+		if (m_TrackedVehicle != nullptr)
 		{
 			if (ImGui::TreeNode("Vehicle camera"))
 			{
-				glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
-				glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
+				Transform* targetTransform = m_TrackedVehicle->GetTransform();
+				glm::vec3 start = targetTransform->GetWorldPosition();
+				glm::vec3 end = start + m_TargetForwardRollingAvg.currentAverage * 10.0f;
 				g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
-				ImGui::Text("Avg player forward: %s", VecToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
+				ImGui::Text("Avg target forward: %s", VecToString(m_TargetForwardRollingAvg.currentAverage, 2).c_str());
 				ImGui::Text("For: %s", VecToString(forward, 2).c_str());
 				ImGui::TreePop();
+
+				ImGui::SliderFloat("Rotation update speed", &m_RotationUpdateSpeed, 0.001f, 50.0f);
+				ImGui::SliderFloat("Dist update speed", &m_DistanceUpdateSpeed, 0.001f, 10.0f);
+
+				m_SpeedFactors.DrawImGui();
+				m_TargetFollowDist.DrawImGui();
 			}
 		}
 	}
 
-	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& pos)
+	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& lookAtPos)
 	{
-		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
-		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * 6.0f;
-		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
-		return pos + offsetVec;
+		// TODO: Handle camera cut to stationary vehicle? (use vehicle forward rather than vel)
+		glm::vec3 backward = -m_TargetForwardRollingAvg.currentAverage;
+
+		real speedFactor = glm::clamp((m_TargetVelMagnitudeRollingAvg.currentAverage - m_MinSpeed) / (m_MaxSpeed - m_MinSpeed), 0.0f, 1.0f);
+		glm::vec3 upward = VEC3_UP * Lerp(m_MaxDownwardAngle, m_MinDownwardAngle, speedFactor);
+		real targetFollowDistance = Lerp(m_ClosestDist, m_FurthestDist, speedFactor);
+		real previousFollowDistance = glm::distance(position, lookAtPos);
+		real distUpdateDelta = glm::clamp(1.0f - g_DeltaTime * m_DistanceUpdateSpeed / 1000.0f, 0.0f, 1.0f);
+		real followDistance = Lerp(previousFollowDistance, targetFollowDistance, distUpdateDelta);
+		glm::vec3 offsetVec = glm::normalize(upward + backward) * followDistance;
+
+		m_SpeedFactors.AddElement(speedFactor);
+		m_TargetFollowDist.AddElement(glm::length(offsetVec));
+
+		return lookAtPos + offsetVec;
 	}
 
 	void VehicleCamera::SetPosAndLookAt()
 	{
-		if (m_Player0 == nullptr)
+		if (m_TrackedVehicle == nullptr)
 		{
 			return;
 		}
 
-		m_TargetLookAtPos = m_Player0->GetTransform()->GetWorldPosition();
+		Transform* targetTransform = m_TrackedVehicle->GetTransform();
+
+		m_TargetLookAtPos = targetTransform->GetWorldPosition();
 
 		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
 		position = desiredPos;
@@ -133,9 +163,20 @@ namespace flex
 		up = cross(forward, right);
 	}
 
-	void VehicleCamera::FindPlayer()
+	void VehicleCamera::FindActiveVehicle()
 	{
-		m_Player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		GameObject* player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		if (player0 != nullptr)
+		{
+			GameObject* interactingWith = player0->GetObjectInteractingWith();
+			if (interactingWith != nullptr && interactingWith->GetTypeID() == SID("vehicle"))
+			{
+				m_TrackedVehicle = (Vehicle*)interactingWith;
+				return;
+			}
+		}
+
+		PrintError("Vehicle camera failed to find active vehicle\n");
 	}
 
 	void VehicleCamera::ResetValues()
@@ -146,15 +187,16 @@ namespace flex
 		pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 
-		if (m_Player0 != nullptr)
+		if (m_TrackedVehicle != nullptr)
 		{
-			m_PlayerPosRollingAvg.Reset(m_Player0->GetTransform()->GetWorldPosition());
-			m_PlayerForwardRollingAvg.Reset(m_Player0->GetTransform()->GetForward());
+			Transform* targetTransform = m_TrackedVehicle->GetTransform();
+			m_TargetPosRollingAvg.Reset(targetTransform->GetWorldPosition());
+			m_TargetForwardRollingAvg.Reset(targetTransform->GetForward());
 		}
 		else
 		{
-			m_PlayerPosRollingAvg.Reset();
-			m_PlayerForwardRollingAvg.Reset();
+			m_TargetPosRollingAvg.Reset();
+			m_TargetForwardRollingAvg.Reset();
 		}
 
 		RecalculateViewProjection();

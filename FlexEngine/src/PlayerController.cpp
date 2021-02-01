@@ -475,7 +475,7 @@ namespace flex
 			}
 		}
 
-		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON);
+		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON) && m_Player->IsVisible();
 		if (bDrawLocalAxes)
 		{
 			const real lineLength = 4.0f;

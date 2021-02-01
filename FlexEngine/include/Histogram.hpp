@@ -30,10 +30,15 @@ namespace flex
 			ImVec2 p = ImGui::GetCursorScreenPos();
 			real width = 300.0f;
 			real height = 100.0f;
-			for (real element : data)
+			real lowestMin = overrideMin;
+			real highestMax = overrideMax;
+			if (lowestMin == FLT_MAX || highestMax == -FLT_MAX)
 			{
-				lowestMin = glm::min(lowestMin, element);
-				highestMax = glm::max(highestMax, element);
+				for (real element : data)
+				{
+					lowestMin = glm::min(lowestMin, element);
+					highestMax = glm::max(highestMax, element);
+				}
 			}
 			real maxAbs = glm::max(abs(lowestMin), abs(highestMax));
 			ImGui::PlotLines("", data.data(), (u32)data.size(), 0, 0, -maxAbs, maxAbs, ImVec2(width, height));
@@ -44,8 +49,8 @@ namespace flex
 
 		std::vector<real> data;
 		i32 index = 0;
-		real lowestMin = FLT_MAX;
-		real highestMax = -FLT_MAX;
+		real overrideMin = FLT_MAX;
+		real overrideMax = -FLT_MAX;
 	};
 
 } // namespace flex

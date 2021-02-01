@@ -341,6 +341,8 @@ namespace flex
 				{
 					g_CameraManager->PopCamera();
 				}
+
+				SetVisible(true);
 			} break;
 			}
 
@@ -399,6 +401,7 @@ namespace flex
 		case SID("vehicle"):
 		{
 			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
+			GameObject::SetInteractingWith(vehicle);
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			VehicleCamera* vehicleCamera = nullptr;
@@ -412,7 +415,7 @@ namespace flex
 				g_CameraManager->PushCamera(vehicleCamera, false, true);
 			}
 
-			GameObject::SetInteractingWith(vehicle);
+			SetVisible(false);
 		} break;
 		default:
 		{
