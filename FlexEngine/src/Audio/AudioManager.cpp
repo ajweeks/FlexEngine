@@ -144,6 +144,7 @@ namespace flex
 		i32 sampleRate = 44100;
 		i32 size = (i32)(sampleRate * length);
 		u8* data = (u8*)malloc((u32)size);
+		assert(data != nullptr);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (i32 i = 0; i < size; ++i)

@@ -4,8 +4,19 @@
     <platform>Unspecified</platform>
     <importproject>../build/Flex.sln</importproject>
     <analyze-all-vs-configs>true</analyze-all-vs-configs>
+    <check-headers>true</check-headers>
+    <check-unused-templates>false</check-unused-templates>
+    <max-ctu-depth>10</max-ctu-depth>
+    <exclude>
+        <path name="../FlexEngine/dependencies/"/>
+        <path name="../build/"/>
+        <path name="../bin/"/>
+    </exclude>
     <libraries>
         <library>sfml</library>
         <library>windows</library>
     </libraries>
+    <suppressions>
+        <suppression>useStlAlgorithm</suppression>
+    </suppressions>
 </project>

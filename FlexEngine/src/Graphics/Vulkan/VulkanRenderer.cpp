@@ -579,6 +579,7 @@ namespace flex
 			{
 				// TODO: Bring out to Mesh class?
 				void* vertData = malloc(m_FullScreenTriVertexBufferData.VertexBufferSize);
+				assert(vertData != nullptr);
 				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				CreateAndUploadToStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				free(vertData);
@@ -1539,19 +1540,22 @@ namespace flex
 			}
 
 			result->pData = malloc(result->dataSize);
-			u8* data = (u8*)result->pData;
-			for (const SpecializationConstantCreateInfo& entry : entries)
+			assert(result->pData != nullptr);
 			{
-				memcpy(data, entry.data, entry.size);
-				data += entry.size;
+				u8* data = (u8*)result->pData;
+				for (const SpecializationConstantCreateInfo& entry : entries)
+				{
+					memcpy(data, entry.data, entry.size);
+					data += entry.size;
+				}
+				assert(data == ((u8*)result->pData + result->dataSize));
 			}
-			assert(data == ((u8*)result->pData + result->dataSize));
 
 			VkSpecializationMapEntry* mapEntries = (VkSpecializationMapEntry*)malloc(result->mapEntryCount * sizeof(VkSpecializationMapEntry));
 			assert(mapEntries != nullptr);
 
 			u32 offset = 0;
-			for (u32 i = 0; i < (u32)entries.size(); ++i)
+			for (u32 i = 0; i < result->mapEntryCount; ++i)
 			{
 				const SpecializationConstantCreateInfo& entry = entries[i];
 				mapEntries[i].constantID = (u32)entry.constantID;
@@ -4180,7 +4184,7 @@ namespace flex
 				imageView.flags = 0;
 				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &imageView, nullptr, m_ShadowCascades[i]->imageView.replace()));
 				char imageViewName[256];
-				snprintf(imageViewName, 256, "Shadow cascade %u image view", i);
+				snprintf(imageViewName, 256, "Shadow cascade %i image view", i);
 				SetImageViewName(m_VulkanDevice, m_ShadowCascades[i]->imageView, imageViewName);
 
 				VkFramebufferCreateInfo shadowFramebufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
@@ -4190,7 +4194,7 @@ namespace flex
 				shadowFramebufferCreateInfo.height = m_ShadowMapBaseResolution;
 
 				char frameBufferName[256];
-				snprintf(frameBufferName, 256, "Shadow cascade %u frame buffer", i);
+				snprintf(frameBufferName, 256, "Shadow cascade %i frame buffer", i);
 
 				m_ShadowCascades[i]->frameBuffer.Create(&shadowFramebufferCreateInfo, m_ShadowRenderPass, frameBufferName);
 
@@ -4410,6 +4414,10 @@ namespace flex
 					void* dst = bScreenSpace ? (void*)textVerticesSS.data() : (void*)textVerticesWS.data();
 					memcpy(fontVertexBuffer->m_Mapped, dst, copySize);
 					fontVertexBuffer->Unmap();
+				}
+				else
+				{
+					return;
 				}
 			}
 
