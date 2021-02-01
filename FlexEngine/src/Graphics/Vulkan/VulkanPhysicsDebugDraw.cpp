@@ -126,10 +126,6 @@ namespace flex
 		void VulkanPhysicsDebugDraw::Draw()
 		{
 			const u32 lineCount = m_LineSegmentIndex;
-			if (lineCount == 0)
-			{
-				return;
-			}
 
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
@@ -142,40 +138,43 @@ namespace flex
 				m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
 				indexBuffer.clear();
 
-				u32 numVerts = lineCount * 2;
-
-				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts && !m_VertexBufferCreateInfo.positions_3D.empty())
+				if (lineCount > 0)
 				{
-					u32 newVertCount = numVerts * 2;
-					m_VertexBufferCreateInfo.positions_3D.resize(newVertCount);
-					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(newVertCount);
-					indexBuffer.resize(newVertCount);
-				}
-				else
-				{
-					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
-					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
-					indexBuffer.resize(numVerts);
-				}
+					u32 numVerts = lineCount * 2;
 
-				i32 i = 0;
-				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
-				glm::vec4* colData = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
-				u32* idxData = indexBuffer.data();
-				for (u32 li = 0; li < lineCount; ++li)
-				{
-					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
-					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
+					if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts && !m_VertexBufferCreateInfo.positions_3D.empty())
+					{
+						u32 newVertCount = numVerts * 2;
+						m_VertexBufferCreateInfo.positions_3D.resize(newVertCount);
+						m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(newVertCount);
+						indexBuffer.resize(newVertCount);
+					}
+					else
+					{
+						m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+						m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
+						indexBuffer.resize(numVerts);
+					}
 
-					memcpy(colData + i, m_LineSegments[li].colourFrom, sizeof(real) * 4);
-					memcpy(colData + i + 1, m_LineSegments[li].colourTo, sizeof(real) * 4);
+					i32 i = 0;
+					glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
+					glm::vec4* colData = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
+					u32* idxData = indexBuffer.data();
+					for (u32 li = 0; li < lineCount; ++li)
+					{
+						memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
+						memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					u32 idx0 = li * 2;
-					u32 idx1 = li * 2 + 1;
-					memcpy(idxData + i, &idx0, sizeof(u32));
-					memcpy(idxData + i + 1, &idx1, sizeof(u32));
+						memcpy(colData + i, m_LineSegments[li].colourFrom, sizeof(real) * 4);
+						memcpy(colData + i + 1, m_LineSegments[li].colourTo, sizeof(real) * 4);
 
-					i += 2;
+						u32 idx0 = li * 2;
+						u32 idx1 = li * 2 + 1;
+						memcpy(idxData + i, &idx0, sizeof(u32));
+						memcpy(idxData + i + 1, &idx1, sizeof(u32));
+
+						i += 2;
+					}
 				}
 
 				PROFILE_BEGIN("Hash vertex buffer");

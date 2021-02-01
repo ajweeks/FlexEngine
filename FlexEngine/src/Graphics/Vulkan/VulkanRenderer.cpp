@@ -1985,22 +1985,25 @@ namespace flex
 			}
 
 			// Shrink
-			real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertSubBufferSize;
-			real indexExcess = 1.0f - (real)newIndexDataSize / indexSubBufferSize;
-			if (vertExcess > 0.5f || indexExcess > 0.5f)
+			if (vertSubBufferSize > 0)
 			{
-				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
-				vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
-				assert(vertSubBufferSize != ((VkDeviceSize)-1));
+				real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertSubBufferSize;
+				real indexExcess = 1.0f - (real)newIndexDataSize / indexSubBufferSize;
+				if (vertExcess > 0.5f || indexExcess > 0.5f)
+				{
+					renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize, true);
+					vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
+					assert(vertSubBufferSize != ((VkDeviceSize)-1));
 
-				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexSubBufferSize, true);
-				indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
-				assert(indexSubBufferSize != ((VkDeviceSize)-1));
+					renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, indexSubBufferSize, true);
+					indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
+					assert(indexSubBufferSize != ((VkDeviceSize)-1));
 
-				ShrinkDynamicVertexData(renderID);
+					ShrinkDynamicVertexData(renderID, 0.5f);
 
-				// TODO: Jikes, fix me?
-				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+					// TODO: Jikes, fix me?
+					vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
+				}
 			}
 
 			VkDeviceSize vertOffsetBytes = renderObject->dynamicVertexBufferOffset;
