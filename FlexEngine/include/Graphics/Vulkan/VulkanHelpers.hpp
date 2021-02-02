@@ -446,6 +446,9 @@ namespace flex
 
 			bool TickStatus();
 
+			// Whether a textual assembly version should also be generated (unused by runtime)
+			const bool bEnableAssemblyCompilation = true;
+
 			ms startTime = 0.0f;
 			ms lastCompileDuration = 0.0f;
 

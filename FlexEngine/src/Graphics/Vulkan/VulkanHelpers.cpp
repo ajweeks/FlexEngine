@@ -2351,9 +2351,27 @@ namespace flex
 								shaderc::CompileOptions options = {};
 								options.SetOptimizationLevel(shaderc_optimization_level_performance);
 								options.SetWarningsAsErrors();
-								options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
 								//options.SetIncluder(std::unique_ptr<shaderc::CompileOptions::IncluderInterface>(includer));
+
+								if (bEnableAssemblyCompilation)
+								{
+									shaderc::AssemblyCompilationResult assemblyResult = compiler.CompileGlslToSpvAssembly(fileContents, shaderKind, fileName.c_str(), options);
+									if (assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success)
+									{
+										std::vector<char> spvBytes(assemblyResult.begin(), assemblyResult.end());
+										std::string strippedFileName = StripFileType(fileName);
+										std::string spvFilePath = RelativePathToAbsolute(SPV_DIRECTORY) + strippedFileName + "_" + fileType + ".asm";
+										std::ofstream fileStream(spvFilePath, std::ios::out);
+										if (fileStream.is_open())
+										{
+											fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(char));
+											fileStream.close();
+										}
+									}
+								}
+
+								options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
 								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str());
 								if (result.GetCompilationStatus() == shaderc_compilation_status_success)
