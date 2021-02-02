@@ -66,8 +66,6 @@ namespace flex
 
 		GLFWwindow* m_Window = nullptr;
 
-		std::vector<GLFWimage> m_WindowIcons;
-
 	private:
 
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;

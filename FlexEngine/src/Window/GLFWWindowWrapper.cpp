@@ -74,12 +74,6 @@ namespace flex
 
 	void GLFWWindowWrapper::Destroy()
 	{
-		for (GLFWimage& icon : m_WindowIcons)
-		{
-			DestroyGLFWimage(icon);
-		}
-		m_WindowIcons.clear();
-
 		if (m_Window)
 		{
 			m_Window = nullptr;
@@ -187,17 +181,6 @@ namespace flex
 
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
-
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_DIRECTORY "flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_DIRECTORY "flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_DIRECTORY "flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_DIRECTORY "flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_DIRECTORY "flex-logo-03_16.png", 4));
-
-		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
-		{
-			glfwSetWindowIcon(m_Window, (i32)m_WindowIcons.size(), m_WindowIcons.data());
-		}
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo()

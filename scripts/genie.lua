@@ -213,7 +213,8 @@ files {
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
-	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis")
+	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis"),
+	path.join(PROJECT_DIR, "AdditionalFiles/flex.rc")
 }
 
 --Exclude the following files from the build, but keep in the project
