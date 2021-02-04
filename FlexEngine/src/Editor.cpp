@@ -1292,6 +1292,7 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
+		// TODO: Check for exact matches, don't match if additional modifiers are down
 		if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
 		{
 			SetTransformState(TransformState::TRANSLATE);

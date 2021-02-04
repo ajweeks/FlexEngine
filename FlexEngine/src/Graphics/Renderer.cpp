@@ -1419,7 +1419,6 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
-		// TODO: Find out why this has to be -1 and not 1 (otherwise NaNs)
 		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
@@ -1768,6 +1767,9 @@ namespace flex
 				{
 					assert(!shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER));
 				}
+
+				// -1 means allocate max, anything else must be > 0
+				assert(shader->maxObjectCount != 0);
 			}
 
 			if (!LoadShaderCode(shaderID))

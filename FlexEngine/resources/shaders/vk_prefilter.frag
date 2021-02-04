@@ -101,14 +101,17 @@ void main()
             float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
             float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
-            float mipLevel = roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
+            float mipLevel = (roughness == 0.0) ? 0.0 : (0.5 * log2(saSample / saTexel)); 
 
 			prefilteredColour += textureLod(cubemapSampler, L, mipLevel).rgb * NdotL;
 			totalWeight += NdotL;
 		}
 	}
 
-	prefilteredColour /= totalWeight;
+    if (totalWeight > 0.001)
+    {
+        prefilteredColour /= totalWeight;
+    }
 
 	FragColour = vec4(prefilteredColour, 1.0);
 }

@@ -334,6 +334,7 @@ namespace flex
 		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); });
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
 		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
+		m_ConsoleCommands.emplace_back("exit", []() { g_EngineInstance->Stop(); });
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
