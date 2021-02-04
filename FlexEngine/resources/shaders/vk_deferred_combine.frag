@@ -61,15 +61,15 @@ layout (binding = 0) uniform UBOConstant
 	float zFar;
 } uboConstant;
 
-layout (binding = 2) uniform sampler2D brdfLUT;
-layout (binding = 3) uniform samplerCube irradianceSampler;
-layout (binding = 4) uniform samplerCube prefilterMap;
-layout (binding = 5) uniform sampler2D depthBuffer;
-layout (binding = 6) uniform sampler2D ssaoBuffer;
-layout (binding = 7) uniform sampler2DArray shadowMaps;
+layout (binding = 1) uniform sampler2D brdfLUT;
+layout (binding = 2) uniform samplerCube irradianceSampler;
+layout (binding = 3) uniform samplerCube prefilterMap;
+layout (binding = 4) uniform sampler2D depthBuffer;
+layout (binding = 5) uniform sampler2D ssaoBuffer;
+layout (binding = 6) uniform sampler2DArray shadowMaps;
 
-layout (binding = 8) uniform sampler2D normalRoughnessTex;
-layout (binding = 9) uniform sampler2D albedoMetallicTex;
+layout (binding = 7) uniform sampler2D normalRoughnessTex;
+layout (binding = 8) uniform sampler2D albedoMetallicTex;
 
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
 {
