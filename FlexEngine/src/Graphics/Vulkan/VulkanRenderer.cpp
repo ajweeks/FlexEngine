@@ -6809,11 +6809,6 @@ namespace flex
 
 		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount /* = -1 */)
 		{
-			if (maxObjectCount == -1)
-			{
-				return 0;
-			}
-
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 			size_t dynamicAllignment = (bufferUnitSize / uboAlignment) * uboAlignment + ((bufferUnitSize % uboAlignment) > 0 ? uboAlignment : 0);
 
@@ -6825,6 +6820,11 @@ namespace flex
 					newDynamicAllignment <<= 1;
 				}
 				m_DynamicAlignment = (u32)newDynamicAllignment;
+			}
+
+			if (maxObjectCount == -1)
+			{
+				maxObjectCount = MAX_NUM_RENDER_OBJECTS;
 			}
 
 			size_t dynamicBufferSize = (size_t)maxObjectCount * m_DynamicAlignment;
@@ -8750,6 +8750,14 @@ namespace flex
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
+#ifdef DEBUG
+					if (dynamicOffset + index > dynamicBuffer->fullDynamicBufferSize)
+					{
+						// TODO: Just resize here?
+						PrintError("Invalid offset into dynamic buffer in material %s (shader: %s) - offset: %u, full size: %u\n", material->name.c_str(), shader->name.c_str(), dynamicOffset + index, dynamicBuffer->fullDynamicBufferSize);
+						break;
+					}
+#endif
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.copySize);
 					index += uniformInfo.copySize;
 				}

@@ -346,14 +346,10 @@ namespace flex
 		}
 
 		// Handle m_Children being modified during loop (from call to DetachFromParent)
-		while (!m_Children.empty())
+		for (GameObject* child : m_Children)
 		{
-			size_t previousChildCount = m_Children.size();
-			GameObject* child = m_Children[previousChildCount - 1];
-			child->Destroy();
+			child->Destroy(false);
 			delete child;
-			// If this assert fires a subclass likely isn't calling GameObject::Destroy in it's overloaded version
-			assert(m_Children.size() == previousChildCount - 1);
 		}
 		m_Children.clear();
 

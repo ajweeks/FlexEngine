@@ -133,7 +133,7 @@ namespace flex
 		{
 			if (rootObject)
 			{
-				rootObject->Destroy();
+				rootObject->Destroy(false);
 				delete rootObject;
 			}
 		}

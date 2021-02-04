@@ -1420,7 +1420,7 @@ namespace flex
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		// TODO: Find out why this has to be -1 and not 1 (otherwise NaNs)
-		m_Shaders[shaderID]->maxObjectCount = -1;
+		m_Shaders[shaderID]->maxObjectCount = 1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
@@ -1570,7 +1570,7 @@ namespace flex
 		m_Shaders[shaderID]->bGenerateVertexBufferForAll = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 64;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = -1;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
