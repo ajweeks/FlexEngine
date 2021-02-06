@@ -9,4 +9,4 @@
 	url = https://github.com/glfw/glfw
 [submodule "FlexEngine/dependencies/bullet"]
 	path = FlexEngine/dependencies/bullet
-	url = https://github.com/bulletphysics/bullet3
+	url = https://github.com/ajweeks/bullet3
