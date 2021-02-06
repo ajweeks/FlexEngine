@@ -63,7 +63,7 @@ namespace flex
 	{
 		BaseCamera::Update();
 
-		if (!m_Player0)
+		if (m_Player0 == nullptr)
 		{
 			return;
 		}
@@ -130,7 +130,7 @@ namespace flex
 
 	void OverheadCamera::SetPosAndLookAt()
 	{
-		if (!m_Player0)
+		if (m_Player0 == nullptr)
 		{
 			return;
 		}
@@ -165,7 +165,7 @@ namespace flex
 		pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 
-		if (m_Player0)
+		if (m_Player0 != nullptr)
 		{
 			m_PlayerPosRollingAvg.Reset(m_Player0->GetTransform()->GetWorldPosition());
 			m_PlayerForwardRollingAvg.Reset(m_Player0->GetTransform()->GetForward());

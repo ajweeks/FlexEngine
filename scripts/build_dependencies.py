@@ -38,13 +38,13 @@ def run_git(arguments = []):
 	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=False)
 
 
-if len(sys.argv) != 3:
-	print('Invalid usage, platform & build system must be specified.\n\te.g. ' \
-		'"python build_dependencies.py windows vs2019"')
+if (3 < len(sys.argv) < 4):
+	print('Usage: "python build_dependencies.py windows vs2019 [build_extras]"')
 	exit(1)
 
 platform = sys.argv[1]
 genie_target = sys.argv[2]
+build_extras = len(sys.argv) == 4 and sys.argv[3] == 'build_extras'
 
 supported_platforms = ['windows', 'linux']
 if platform not in supported_platforms:
@@ -84,7 +84,7 @@ if not os.path.exists(project_root + 'lib/x64/Debug'):
 
 print("\n------------------------------------------\n\nBuilding GLFW...\n\n------------------------------------------\n")
 
-#GLFW
+# GLFW
 glfw_path = project_root + 'dependencies/glfw/'
 glfw_build_path = glfw_path + 'build/'
 if not os.path.exists(glfw_build_path):
@@ -103,7 +103,7 @@ else:
 	run_make(glfw_build_path, False)
 	shutil.copyfile(glfw_build_path + 'src/libglfw3.a', libs_target + 'libglfw3.a')
 
-#OpenAL
+# OpenAL
 if platform == 'windows':
 	print("\n------------------------------------------\n\nBuilding OpenAL...\n\n------------------------------------------\n")
 	openAL_path = project_root + 'dependencies/openAL/'
@@ -118,7 +118,7 @@ if platform == 'windows':
 
 print("\n------------------------------------------\n\nBuilding Bullet...\n\n------------------------------------------\n")
 
-#Bullet
+# Bullet
 bullet_path = project_root + 'dependencies/bullet/'
 bullet_build_path = bullet_path + 'build/'
 if not os.path.exists(bullet_build_path):
@@ -135,9 +135,23 @@ else:
 	shutil.copyfile(bullet_build_path + 'src/BulletDynamics/libBulletDynamics.a', libs_target + 'libBulletDynamics.a')
 	shutil.copyfile(bullet_build_path + 'src/LinearMath/libLinearMath.a', libs_target + 'libLinearMath.a')
 
+if build_extras:
+	print("\n------------------------------------------\n\nBuilding Bullet Full...\n\n------------------------------------------\n")
+
+	# Bullet Full (Build demos & extras, not for use in Flex, but for inspecting separately)
+	bullet_path = project_root + 'dependencies/bullet/'
+	bullet_build_path = bullet_path + 'build_full/'
+	if not os.path.exists(bullet_build_path):
+		os.makedirs(bullet_build_path)
+	run_cmake(bullet_path, bullet_build_path, ['-DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON', '-DBUILD_UNIT_TESTS=OFF', '-DBUILD_CPU_DEMOS=ON', '-DBUILD_BULLET2_DEMOS=ON', '-DBUILD_EXTRAS=ON'])
+	if platform == 'windows':
+		run_msbuild(bullet_build_path + 'BULLET_PHYSICS.sln')
+	else:
+		run_make(bullet_build_path, False)
+
 print("\n------------------------------------------\n\nBuilding FreeType...\n\n------------------------------------------\n")
 
-#FreeType
+# FreeType
 free_type_path = project_root + 'dependencies/freetype/'
 free_type_build_path = free_type_path
 if platform == 'linux':
@@ -158,7 +172,7 @@ else:
 
 print("\n------------------------------------------\n\nBuilding Shaderc...\n\n------------------------------------------\n")
 
-#Shaderc
+# Shaderc
 shader_c_path = project_root + 'dependencies/shaderc/'
 shader_c_build_path = shader_c_path + 'build/'
 if not os.path.exists(shader_c_path):
@@ -187,7 +201,7 @@ else:
 
 print("\n------------------------------------------\n\nBuilding genie project...\n\n------------------------------------------\n")
 
-#Project
+# Project
 subprocess.check_call([genie_path, '--file=genie.lua', genie_target], stderr=subprocess.STDOUT)
 
 end_time = time.perf_counter()

@@ -15,7 +15,7 @@ namespace flex
 	class Player : public GameObject
 	{
 	public:
-		Player(i32 index, GameObjectID gameObjectID = InvalidGameObjectID);
+		explicit Player(i32 index, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;

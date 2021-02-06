@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -1216,7 +1217,6 @@ namespace flex
 
 				currentScene->GetTrackManager()->DrawImGuiObjects();
 				currentScene->GetCartManager()->DrawImGuiObjects();
-				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
 
 				if (ImGui::TreeNode("Spring"))
 				{
@@ -1739,6 +1739,9 @@ namespace flex
 
 		TerminalCamera* terminalCamera = new TerminalCamera();
 		g_CameraManager->AddCamera(terminalCamera, false);
+
+		VehicleCamera* vehicleCamera = new VehicleCamera();
+		g_CameraManager->AddCamera(vehicleCamera, false);
 	}
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)

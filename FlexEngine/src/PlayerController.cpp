@@ -426,9 +426,11 @@ namespace flex
 		m_Player->UpdateIsGrounded();
 
 		bool bInteractingWithTerminal = false;
+		bool bInteractingWithVehicle = false;
 		{
 			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
 			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
+			bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
 		}
 
 		if (m_Player->m_bPossessed)
@@ -465,7 +467,7 @@ namespace flex
 			}
 			else
 			{
-				if (!bInteractingWithTerminal)
+				if (!bInteractingWithTerminal && !bInteractingWithVehicle)
 				{
 					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
 					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
@@ -473,7 +475,7 @@ namespace flex
 			}
 		}
 
-		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON);
+		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON) && m_Player->IsVisible();
 		if (bDrawLocalAxes)
 		{
 			const real lineLength = 4.0f;
@@ -511,6 +513,7 @@ namespace flex
 
 		if (m_Player->m_bPossessed &&
 			!bInteractingWithTerminal &&
+			!bInteractingWithVehicle &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = lookLR;

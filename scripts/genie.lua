@@ -118,6 +118,7 @@ configuration {}
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
+		path.join(DEPENDENCIES_DIR, "bullet/examples"),
 		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
 		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/include"),

@@ -1,5 +1,9 @@
 #pragma once
 
+IGNORE_WARNINGS_PUSH
+#include <BulletDynamics/Vehicle/btRaycastVehicle.h>
+IGNORE_WARNINGS_POP
+
 #include "Audio/AudioCue.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
@@ -1113,7 +1117,7 @@ namespace flex
 			i32 fileVersion,
 			MaterialID overriddenMatID = InvalidMaterialID,
 			bool bIsPrefabTemplate = false,
-			CopyFlags copyFlags = CopyFlags::ALL);
+			CopyFlags copyFlags = CopyFlags::ALL) override;
 
 	private:
 		static void CreateMaterials();
@@ -1280,7 +1284,6 @@ namespace flex
 
 		std::vector<glm::vec3> initialPositions;
 
-		Mesh* m_Mesh = nullptr;
 		MeshComponent* m_MeshComponent = nullptr;
 		VertexBufferDataCreateInfo m_MeshVertexBufferCreateInfo;
 		MaterialID m_MeshMaterialID = InvalidMaterialID;
@@ -1316,6 +1319,9 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		virtual void SetInteractingWith(GameObject* gameObject) override;
+
 	private:
 		enum class Tire : u32
 		{
@@ -1331,7 +1337,49 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		const real MAX_STEER = 0.5f;
+		const real MAX_ENGINE_FORCE = 2500.0f;
+		const real MAX_BRAKE_FORCE = 40.0f;
+		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
+		const real STEERING_SLOW_FACTOR = 4.0f;
+
+		const real m_MoveAccel = 1500.0f;
+		const real m_TurnAccel = 1.5f;
+
+		void ResetTransform();
+
 		GameObjectID m_TireIDs[m_TireCount];
+
+		real m_EngineForce = 0.0f;
+		real m_BrakeForce = 0.0f;
+		real m_Steering = 0.0f;
+		real m_RollInfluence = 0.05f;
+		real m_WheelFriction = 50.0f;
+		real m_WheelRadius = 0.5f;
+		real m_WheelWidth = 0.4f;
+		real m_SuspensionStiffness = 20.f;
+		real m_SuspensionDamping = 2.3f;
+		real m_SuspensionCompression = 4.4f;
+
+#if 0
+		class CommonExampleInterface* vehicle;
+#endif
+
+		btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
+
+		btDefaultVehicleRaycaster* m_VehicleRaycaster;
+		btRaycastVehicle* m_Vehicle;
+
+		btRaycastVehicle::btVehicleTuning m_tuning;
+
+		sec m_SecUpsideDown = 0.0f;
+		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;
+
+		bool m_bFlippingRightSideUp = false;
+		sec m_SecFlipppingRightSideUp = 0.0f;
+		const sec MAX_FLIPPING_UPRIGHT_TIME = 3.5f;
+		glm::quat m_TargetRot;
+		const real UPRIGHTING_SPEED = 10.0f;
 
 	};
 

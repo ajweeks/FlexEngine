@@ -1,0 +1,112 @@
+{
+	"version" : 6,
+	"name" : "scene_vehicle_test",
+	"spawn player" : true,
+	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-3.686, 0.284, 1.676",
+			"pitch" : -0.066218,
+			"yaw" : -0.045600
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "550D6BBEFAA67685495BCE9A868118FE",
+			"type" : "skybox",
+			"visible" : true,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"id" : "364A266CCA195F894C5FB105EC59CC6B",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.194, -0.973, -2.523"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "-0.217, -0.591, -0.616, 0.473",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 3.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "vehicle0",
+			"id" : "0F8DA5B02CE493BA4741D38E0EBD23E0",
+			"type" : "prefab",
+			"prefab type" : "vehicle",
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+			"transform" : 
+			{
+				"pos" : "-0.004, 0.559, 0.003",
+				"rot" : "0.000, -0.000, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "plane",
+			"id" : "C4C2924E21AFB0914B00C8F7A213E65D",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.336, 0.000",
+				"scale" : "200.000, 0.495, 200.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.5, 0.5, 0.5"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		}
+	]
+}

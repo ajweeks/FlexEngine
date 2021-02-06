@@ -54,6 +54,7 @@ namespace flex
 		}
 
 		m_PointLights = (PointLightData*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		assert(m_PointLights != nullptr);
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLights[i].colour = VEC3_NEG_ONE;

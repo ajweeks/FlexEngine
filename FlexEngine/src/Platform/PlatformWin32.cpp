@@ -386,7 +386,7 @@ namespace flex
 		openFileName.nFilterIndex = 0;
 		const i32 MAX_FILE_PATH_LEN = 512;
 		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		memset(fileBuf + MAX_FILE_PATH_LEN - 1, '\0', 1);
 		openFileName.lpstrFile = fileBuf;
 		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
 		openFileName.lpstrTitle = windowTitle.c_str();
@@ -473,7 +473,8 @@ namespace flex
 
 		GameObjectID result;
 		::UUID winGuid;
-		::UuidCreate(&winGuid);
+		RPC_STATUS status = ::UuidCreate(&winGuid);
+		assert(status == RPC_S_OK);
 		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
 		return result;
 	}
@@ -612,6 +613,7 @@ namespace flex
 		}
 
 		ptr = buffer;
+		assert(ptr != nullptr);
 
 		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 		{

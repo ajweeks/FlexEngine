@@ -728,6 +728,7 @@ namespace flex
 
 					size = dataSize;
 					data = malloc(dataSize);
+					assert(data != nullptr);
 				}
 				else
 				{

@@ -5,11 +5,13 @@
 	"root" : 
 	{
 		"name" : "vehicle",
-		"id" : "A598B8BCBEC0FE8C4556A37EDFF33456",
+		"id" : "68A3F1C76272CCB845562C218C98E445",
 		"type" : "vehicle",
 		"transform" : 
 		{
-			"pos" : "0.000, 0.447, 0.000"
+			"pos" : "-0.068, 1.158, 2.772",
+			"rot" : "-0.001, -0.034, -0.000",
+			"scale" : "1.000, 1.000, 1.000"
 		},
 		"visible" : true,
 		"casts shadow" : true,
@@ -20,25 +22,39 @@
 			"Blue paint",
 			"black plastic"
 		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.900, 0.300, 2.200",
+			"offset pos" : "0.000, 0.700, 0.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 700.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
 		"vehicle" : 
 		{
 			"tire ids" : 
 			[
-				"B64CE8ED94CAF6A0402C14A07B1677E8",
-				"12D5C1CA774F9BA6469A213A36B2F4ED",
-				"A466332CDAC209A3428712DFA5E61433",
-				"B868A177203E76BD49D76670F82CAEB0"
+				"F9CB95E8A975A49A484D1599B12CBFA7",
+				"04ADC588F0D6E592414D2FD4ADEE9A03",
+				"570758C32481C4934DDF00887B686350",
+				"C00B64EA392D67AA4ECEBA0ED6F3A2A9"
 			]
 		},
 		"children" : 
 		[
 			{
-				"name" : "wheel_FL8",
-				"id" : "B64CE8ED94CAF6A0402C14A07B1677E8",
+				"name" : "wheel_FL16",
+				"id" : "F9CB95E8A975A49A484D1599B12CBFA7",
 				"type" : "object",
 				"transform" : 
 				{
-					"pos" : "-0.768, -0.159, 1.528"
+					"pos" : "-0.846, -0.135, 1.534"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -50,8 +66,8 @@
 				]
 			},
 			{
-				"name" : "wheel_FR8",
-				"id" : "12D5C1CA774F9BA6469A213A36B2F4ED",
+				"name" : "wheel_FR16",
+				"id" : "04ADC588F0D6E592414D2FD4ADEE9A03",
 				"type" : "object",
 				"transform" : 
 				{
@@ -67,8 +83,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RL8",
-				"id" : "A466332CDAC209A3428712DFA5E61433",
+				"name" : "wheel_RL16",
+				"id" : "570758C32481C4934DDF00887B686350",
 				"type" : "object",
 				"transform" : 
 				{
@@ -84,8 +100,8 @@
 				]
 			},
 			{
-				"name" : "wheel_RR8",
-				"id" : "B868A177203E76BD49D76670F82CAEB0",
+				"name" : "wheel_RR16",
+				"id" : "C00B64EA392D67AA4ECEBA0ED6F3A2A9",
 				"type" : "object",
 				"transform" : 
 				{

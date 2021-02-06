@@ -19,6 +19,8 @@ namespace flex
 
 		VkResult VulkanBuffer::Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 		{
+			assert(size != 0);
+
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -217,7 +219,7 @@ namespace flex
 			real unused = (real)excessBytes / m_Size;
 			if (unused >= minUnused)
 			{
-				VkDeviceSize newSize = usedSize;
+				VkDeviceSize newSize = glm::max(usedSize, (VkDeviceSize)1); // Size must be greater than zero
 				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
 
 				VK_CHECK_RESULT(result);
