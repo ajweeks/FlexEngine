@@ -337,8 +337,6 @@ namespace flex
 			}
 
 			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", false, false, false);
-			loadingTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "loading_1.png", false, false, false);
-			workTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "work_d.jpg", false, true, false);
 			pointLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/point-light-icon-256.png", false, true, false);
 			directionalLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/directional-light-icon-256.png", false, true, false);
 

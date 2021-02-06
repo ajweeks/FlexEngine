@@ -313,8 +313,6 @@ namespace flex
 		TextureID blankTextureID = InvalidTextureID; // 1x1 white pixel texture
 		TextureID blankTextureArrID = InvalidTextureID; // 1x1 white pixel with texture array with one layer
 		TextureID alphaBGTextureID = InvalidTextureID;
-		TextureID loadingTextureID = InvalidTextureID;
-		TextureID workTextureID = InvalidTextureID;
 
 		TextureID pointLightIconID = InvalidTextureID;
 		TextureID directionalLightIconID = InvalidTextureID;
