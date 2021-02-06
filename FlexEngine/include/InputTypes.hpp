@@ -590,6 +590,8 @@ namespace flex
 	struct InputBinding
 	{
 		KeyCode keyCode = KeyCode::_NONE;
+		// TODO: Support keybindings such as Shift + Ctrl + T by storing optional modifiers:
+		//std::vector<KeyCode> modifiers;
 		MouseButton mouseButton = MouseButton::_NONE;
 		MouseAxis mouseAxis = MouseAxis::_NONE;
 		GamepadButton gamepadButton = GamepadButton::_NONE;

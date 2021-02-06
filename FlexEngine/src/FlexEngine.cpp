@@ -1752,6 +1752,7 @@ namespace flex
 	{
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
+		const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 
 		if (action == KeyAction::PRESS)
 		{
@@ -1789,7 +1790,7 @@ namespace flex
 			}
 
 			// TODO: Handle elsewhere to handle ignoring ImGuiIO::WantCaptureKeyboard?
-			if (keyCode == KeyCode::KEY_F1)
+			if (bShiftDown && keyCode == KeyCode::KEY_1)
 			{
 				m_bToggleRenderImGui = true;
 				return EventReply::CONSUMED;

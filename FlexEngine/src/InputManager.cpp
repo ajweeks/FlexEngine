@@ -841,10 +841,16 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeysDown[(i32)keyCode] = m_Keys[keyCode].down > 0;
 
-		io.KeyCtrl = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
-		io.KeyShift = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
-		io.KeyAlt = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
-		io.KeySuper = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
+		const bool bCtrlDown = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
+		const bool bShiftDown = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
+		const bool bAltDown = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
+		const bool bSuperDown = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
+		const bool bModiferDown = (bCtrlDown || bShiftDown || bAltDown || bSuperDown);
+
+		io.KeyCtrl = bCtrlDown;
+		io.KeyShift = bShiftDown;
+		io.KeyAlt = bAltDown;
+		io.KeySuper = bSuperDown;
 
 		if (!io.WantCaptureKeyboard)
 		{
@@ -853,7 +859,8 @@ namespace flex
 			auto keyEventIter = m_KeyEventCallbacks.begin();
 			Action keyPressAction = Action::_NONE;
 
-			if (action == KeyAction::PRESS)
+			// TODO: Allow modifiers to be down once supported properly
+			if (action == KeyAction::PRESS && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)
