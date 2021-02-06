@@ -32,7 +32,7 @@ namespace flex
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
 		// Framebuffer for offscreen rendering
-		struct FrameBufferAttachment
+		struct FrameBufferAttachment final
 		{
 			struct CreateInfo
 			{
@@ -49,6 +49,11 @@ namespace flex
 
 			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
 			~FrameBufferAttachment();
+
+			FrameBufferAttachment(const FrameBufferAttachment&) = delete;
+			FrameBufferAttachment(const FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment& operator=(FrameBufferAttachment&) = delete;
+			FrameBufferAttachment& operator=(const FrameBufferAttachment&&) = delete;
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -80,6 +85,11 @@ namespace flex
 			FrameBuffer(VulkanDevice* device);
 			~FrameBuffer();
 
+			FrameBuffer(const FrameBuffer&) = delete;
+			FrameBuffer(const FrameBuffer&&) = delete;
+			FrameBuffer& operator=(FrameBuffer&) = delete;
+			FrameBuffer& operator=(const FrameBuffer&&) = delete;
+
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
 			VkFramebuffer* Replace();
@@ -101,6 +111,11 @@ namespace flex
 		{
 			Cascade(VulkanDevice* device);
 			~Cascade();
+
+			Cascade(const Cascade&) = delete;
+			Cascade(const Cascade&&) = delete;
+			Cascade& operator=(const Cascade&) = delete;
+			Cascade& operator=(const Cascade&&) = delete;
 
 			FrameBuffer frameBuffer;
 			FrameBufferAttachment* attachment = nullptr;
@@ -142,10 +157,25 @@ namespace flex
 			_NONE
 		};
 
-		struct UniformBuffer
+		struct UniformBuffer final
 		{
 			UniformBuffer(VulkanDevice* device, UniformBufferType type);
 			~UniformBuffer();
+
+			UniformBuffer(const UniformBuffer&) = delete;
+			UniformBuffer& operator=(const UniformBuffer&) = delete;
+
+			UniformBuffer(const UniformBuffer&& other) :
+				buffer(other.buffer)
+			{
+				if (this != &other)
+				{
+					data = other.data;
+					fullDynamicBufferSize = other.fullDynamicBufferSize;
+					type = other.type;
+				}
+			}
+			UniformBuffer& operator=(const UniformBuffer&&) = delete;
 
 			VulkanBuffer buffer;
 			VulkanUniformBufferObjectData data;
@@ -154,12 +184,17 @@ namespace flex
 			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
-		struct VertexIndexBufferPair
+		struct VertexIndexBufferPair final
 		{
 			VertexIndexBufferPair(VulkanBuffer* vertexBuffer, VulkanBuffer* indexBuffer) :
 				vertexBuffer(vertexBuffer),
 				indexBuffer(indexBuffer)
 			{}
+
+			VertexIndexBufferPair(const VertexIndexBufferPair&) = delete;
+			VertexIndexBufferPair(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&) = delete;
+			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&&) = delete;
 
 			void Destroy();
 			void Clear();
@@ -171,12 +206,17 @@ namespace flex
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
-		struct VulkanTexture : Texture
+		struct VulkanTexture final : Texture
 		{
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
 			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name);
 
 			virtual ~VulkanTexture() {}
+
+			VulkanTexture(const VulkanTexture&) = delete;
+			VulkanTexture(const VulkanTexture&&) = delete;
+			VulkanTexture& operator=(const VulkanTexture&) = delete;
+			VulkanTexture& operator=(const VulkanTexture&&) = delete;
 
 			struct ImageCreateInfo
 			{
@@ -424,6 +464,11 @@ namespace flex
 			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
 			virtual ~VulkanShader();
 
+			VulkanShader(const VulkanShader&) = delete;
+			VulkanShader(const VulkanShader&&) = delete;
+			VulkanShader& operator=(const VulkanShader&) = delete;
+			VulkanShader& operator=(const VulkanShader&&) = delete;
+
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 
 			VDeleter<VkShaderModule> vertShaderModule;
@@ -438,6 +483,11 @@ namespace flex
 		struct VulkanShaderCompiler
 		{
 			VulkanShaderCompiler(bool bForceRecompile);
+
+			VulkanShaderCompiler(const VulkanShaderCompiler&) = delete;
+			VulkanShaderCompiler(const VulkanShaderCompiler&&) = delete;
+			VulkanShaderCompiler& operator=(const VulkanShaderCompiler&) = delete;
+			VulkanShaderCompiler& operator=(const VulkanShaderCompiler&&) = delete;
 
 			static void ClearShaderHash(const std::string& shaderName);
 
@@ -476,7 +526,13 @@ namespace flex
 
 		struct VulkanMaterial final : public Material
 		{
+			VulkanMaterial() {};
 			virtual ~VulkanMaterial() {};
+
+			VulkanMaterial(const VulkanMaterial&) = delete;
+			VulkanMaterial(const VulkanMaterial&&) = delete;
+			VulkanMaterial& operator=(const VulkanMaterial&) = delete;
+			VulkanMaterial& operator=(const VulkanMaterial&&) = delete;
 
 			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
 			UniformBufferList uniformBufferList;
@@ -508,9 +564,14 @@ namespace flex
 			VDeleter<VkPipelineLayout> layout;
 		};
 
-		struct VulkanRenderObject
+		struct VulkanRenderObject final
 		{
 			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
+
+			VulkanRenderObject(const VulkanRenderObject&) = delete;
+			VulkanRenderObject(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject& operator=(const VulkanRenderObject&) = delete;
+			VulkanRenderObject& operator=(const VulkanRenderObject&&) = delete;
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -621,7 +682,12 @@ namespace flex
 
 		struct VulkanParticleSystem
 		{
-			VulkanParticleSystem(VulkanDevice* device);
+			explicit VulkanParticleSystem(VulkanDevice* device);
+
+			VulkanParticleSystem(const VulkanParticleSystem&) = delete;
+			VulkanParticleSystem(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem& operator=(const VulkanParticleSystem&) = delete;
+			VulkanParticleSystem& operator=(const VulkanParticleSystem&&) = delete;
 
 			ParticleSystemID ID = InvalidParticleSystemID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;

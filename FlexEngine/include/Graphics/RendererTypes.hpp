@@ -416,6 +416,11 @@ namespace flex
 
 		virtual ~Texture() {}
 
+		Texture(const Texture&) = delete;
+		Texture(const Texture&&) = delete;
+		Texture& operator=(const Texture&) = delete;
+		Texture& operator=(const Texture&&) = delete;
+
 		// TODO: Add Reload
 
 		u32 width = 0;
@@ -525,14 +530,6 @@ namespace flex
 
 		Material() {};
 
-		Material(const Material& rhs)
-		{
-			if (rhs.pushConstantBlock)
-			{
-				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
-			}
-		}
-
 		virtual ~Material()
 		{
 			if (pushConstantBlock)
@@ -541,6 +538,18 @@ namespace flex
 				pushConstantBlock = nullptr;
 			}
 		}
+
+		Material(const Material& rhs)
+		{
+			if (rhs.pushConstantBlock)
+			{
+				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
+			}
+		}
+
+		Material(const Material&&) = delete;
+		Material& operator=(const Material&) = delete;
+		Material& operator=(const Material&&) = delete;
 
 		bool Equals(const Material& other);
 
@@ -805,6 +814,11 @@ namespace flex
 			const std::string& inComputeShaderFilePath = "");
 
 		virtual ~Shader() {};
+
+		Shader(const Shader&) = delete;
+		Shader(const Shader&&) = delete;
+		Shader& operator=(const Shader&) = delete;
+		Shader& operator=(const Shader&&) = delete;
 
 		std::string name;
 

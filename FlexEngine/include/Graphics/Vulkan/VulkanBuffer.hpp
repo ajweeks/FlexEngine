@@ -23,6 +23,26 @@ namespace flex
 		{
 			VulkanBuffer(VulkanDevice* device);
 
+			VulkanBuffer(const VulkanBuffer& other)
+			{
+				if (this != &other)
+				{
+					m_Device = other.m_Device;
+					m_Buffer = other.m_Buffer;
+					m_Memory = other.m_Memory;
+					m_Size = other.m_Size;
+					m_Alignment = other.m_Alignment;
+					m_Mapped = other.m_Mapped;
+					allocations = other.allocations;
+					m_UsageFlags = other.m_UsageFlags;
+					m_MemoryPropertyFlags = other.m_MemoryPropertyFlags;
+				}
+			}
+
+			VulkanBuffer(const VulkanBuffer&& other) = delete;
+			VulkanBuffer& operator=(const VulkanBuffer& other) = delete;
+			VulkanBuffer& operator=(const VulkanBuffer&& other) = delete;
+
 			VkResult Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 			void Destroy();
 
