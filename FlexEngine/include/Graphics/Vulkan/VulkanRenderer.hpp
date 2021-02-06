@@ -455,8 +455,12 @@ namespace flex
 
 #ifdef SHIPPING
 			const bool m_bEnableValidationLayers = false;
+			const bool m_bEnableGPUAssistanceValidationFeature = false;
+			const bool m_bEnableBestPracticesValidationFeature = false;
 #else
 			const bool m_bEnableValidationLayers = true;
+			const bool m_bEnableGPUAssistanceValidationFeature = true;
+			const bool m_bEnableBestPracticesValidationFeature = true;
 #endif
 
 			bool m_bShaderErrorWindowShowing = true;

@@ -4970,6 +4970,22 @@ namespace flex
 				createInfo.enabledLayerCount = 0;
 			}
 
+			std::vector<VkValidationFeatureEnableEXT> validationFeatureEnables;
+			if (m_bEnableGPUAssistanceValidationFeature)
+			{
+				validationFeatureEnables.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+
+			}
+			if (m_bEnableBestPracticesValidationFeature)
+			{
+				validationFeatureEnables.push_back(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+			}
+			VkValidationFeaturesEXT features = {};
+			features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+			features.enabledValidationFeatureCount = (u32)validationFeatureEnables.size();
+			features.pEnabledValidationFeatures = validationFeatureEnables.data();
+			createInfo.pNext = &features;
+
 			// TODO: PERFORMANCE: Call on separate thread? (taking 10% of bootup time!)
 			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
 
@@ -8190,7 +8206,7 @@ namespace flex
 					DeviceDiagnosticCheckpoint* checkpoint = (DeviceDiagnosticCheckpoint*)(data[i].pCheckpointMarker);
 					if (checkpoint)
 					{
-						vkhpp::PipelineStageFlagBits flagBits = (vkhpp::PipelineStageFlagBits) data[i].stage;
+						vkhpp::PipelineStageFlagBits flagBits = (vkhpp::PipelineStageFlagBits)data[i].stage;
 						std::string stageStr = vkhpp::to_string(flagBits);
 						PrintError("Checkpoint: %s - %s\n", stageStr.c_str(), (const char*)checkpoint->name);
 					}
