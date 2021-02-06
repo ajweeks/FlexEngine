@@ -163,6 +163,10 @@ shader_c_path = project_root + 'dependencies/shaderc/'
 shader_c_build_path = shader_c_path + 'build/'
 if not os.path.exists(shader_c_path):
 	run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--recurse-submodules', '--depth=1'])
+
+	# NOTE: Shell must be *True* for pushd to work!!
+	checkout_tag_cmd = ['pushd ' + shader_c_path + '; git fetch --tags; git checkout tags/v2020.2 -b master']
+	subprocess.check_call(checkout_tag_cmd, stderr=subprocess.STDOUT, shell=True)
 if not os.path.exists(shader_c_build_path):
 	os.makedirs(shader_c_build_path)
 
@@ -170,7 +174,7 @@ if platform == 'windows':
 	os.environ['GIT_EXECUTABLE'] = git_path
 subprocess.check_call([python_path, shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT)
 
-shader_c_cmake_args = ['-DSHADERC_SKIP_TESTS=ON', '-DBUILD_GMOCK=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_BUILD_SAMPLES=OFF', '-DENABLE_CTEST=OFF', '-DINSTALL_GTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD', '-Wno-dev']
+shader_c_cmake_args = ['-DSHADERC_ENABLE_SPVC=ON', '-DSHADERC_SKIP_TESTS=ON', '-DBUILD_GMOCK=OFF', '-DBUILD_TESTING=OFF', '-DENABLE_BUILD_SAMPLES=OFF', '-DENABLE_CTEST=OFF', '-DINSTALL_GTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD', '-Wno-dev']
 if platform == 'linux':
 	shader_c_cmake_args += ['-G', 'Unix Makefiles', '.']
 run_cmake(shader_c_path, shader_c_build_path, shader_c_cmake_args)

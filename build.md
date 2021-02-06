@@ -38,3 +38,15 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 4. `make`
 5. `cd ../bin/Debug_x64/FlexEngine`
 6. `./Flex`
+
+
+Fedora:
+`openal-soft libpng zlib`
+
+---
+
+**Troubleshooting:**
+
+If some libraries can't be found but are installed (eg. "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
+
+`ln -s /usr/lib64/libopenal.so.1 /usr/lib64/libopenal.so`

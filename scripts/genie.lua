@@ -166,6 +166,7 @@ project "Flex"
 			-- lpthread for shaderc?
 			"-pthread", -- For pthread_create
 			"-ldl", -- For dlopen, etc.
+			"-L/usr/lib64/",
 		}
 		buildoptions {
 			"-Wfatal-errors",
