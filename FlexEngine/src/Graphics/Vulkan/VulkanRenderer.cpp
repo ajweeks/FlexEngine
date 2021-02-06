@@ -2748,6 +2748,7 @@ namespace flex
 			bool bRandomizeSkybox = true;
 			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
 			{
+				// TODO: Select from current scene!
 				matCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
 			}
 
@@ -2766,6 +2767,7 @@ namespace flex
 			renderPass.ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
 			renderPass.Create();
 
+			// TODO: Use FrameBuffer class here
 			// Offscreen framebuffer
 			struct {
 				VkImage image;
@@ -2901,20 +2903,21 @@ namespace flex
 				subresourceRange);
 
 
-			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[m_Shaders[skyboxMat->shaderID]->staticVertexBufferIndex].second;
-			VulkanBuffer* indexBuffer = m_StaticIndexBuffer;
-			if (vertexBuffer->m_Buffer == VK_NULL_HANDLE)
+			VulkanBuffer* skyboxVertexBuffer = m_StaticVertexBuffers[m_Shaders[skyboxMat->shaderID]->staticVertexBufferIndex].second;
+			VulkanBuffer* skyboxIndexBuffer = m_StaticIndexBuffer;
+			if (skyboxVertexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
 				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
 				return;
 			}
 			if (skyboxRenderObject->bIndexed &&
-				indexBuffer->m_Buffer == VK_NULL_HANDLE)
+				skyboxIndexBuffer->m_Buffer == VK_NULL_HANDLE)
 			{
 				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
 				return;
 			}
 
+			glm::mat4 perspectiveMat = glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim);
 			for (u32 mip = 0; mip < mipLevels; ++mip)
 			{
 				real viewportSize = static_cast<real>(dim * std::pow(0.5f, mip));
@@ -2929,7 +2932,7 @@ namespace flex
 					vkCmdBeginRenderPass(cmdBuf, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 					// Push constants
-					skyboxMat->pushConstantBlock->SetData(s_CaptureViews[face], glm::perspective(PI_DIV_TWO, 1.0f, 0.1f, (real)dim));
+					skyboxMat->pushConstantBlock->SetData(s_CaptureViews[face], perspectiveMat);
 					vkCmdPushConstants(cmdBuf, pipelinelayout, VK_SHADER_STAGE_VERTEX_BIT, 0,
 						skyboxMat->pushConstantBlock->size, skyboxMat->pushConstantBlock->data);
 
@@ -2939,10 +2942,10 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
-					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertexBuffer->m_Buffer, offsets);
+					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &skyboxVertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdBindIndexBuffer(cmdBuf, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						vkCmdBindIndexBuffer(cmdBuf, skyboxIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
 						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, 0, 0, 0);
 					}
 					else
@@ -7867,17 +7870,21 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer, "End Editor objects");
 				}
 
+				EnqueueWorldSpaceSprites();
+				if (!m_QueuedWSSprites.empty())
 				{
 					BeginDebugMarkerRegion(commandBuffer, "World Space Sprites");
 
-					EnqueueWorldSpaceSprites();
 					DrawSpriteBatch(m_QueuedWSSprites, commandBuffer);
 					m_QueuedWSSprites.clear();
 
 					EndDebugMarkerRegion(commandBuffer, "End World Space Sprites");
+				}
+
+				EnqueueWorldSpaceText();
+				{
 					BeginDebugMarkerRegion(commandBuffer, "World Space Text");
 
-					EnqueueWorldSpaceText();
 					DrawText(commandBuffer, false);
 
 					EndDebugMarkerRegion(commandBuffer, "End World Space Text");
@@ -7961,10 +7968,11 @@ namespace flex
 				// Fullscreen blit from offscreen frame buffer onto swap chain
 				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, m_BlitGraphicsPipeline.layout, m_FinalFullscreenBlitDescriptorSet);
 
+				EnqueueScreenSpaceSprites();
+				if (!m_QueuedSSSprites.empty() || !m_QueuedSSArrSprites.empty())
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
 
-					EnqueueScreenSpaceSprites();
 					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
 					m_QueuedSSSprites.clear();
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
@@ -7973,10 +7981,10 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites");
 				}
 
+				EnqueueScreenSpaceText();
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
-					EnqueueScreenSpaceText();
 					DrawText(commandBuffer, true);
 
 					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");

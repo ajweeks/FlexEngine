@@ -611,6 +611,7 @@ namespace flex
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
 
+		// TODO: Store TextureIDs here
 		ShaderUniformContainer<Texture*> textures;
 
 		struct PushConstantBlock

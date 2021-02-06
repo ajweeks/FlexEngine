@@ -242,7 +242,7 @@ namespace flex
 		Print("Bullet v%d\n", btGetVersion());
 
 #if COMPILE_RENDERDOC_API
-		if (m_RenderDocAPI &&
+		if (m_RenderDocAPI != nullptr &&
 			m_RenderDocAutoCaptureFrameCount != -1 &&
 			m_RenderDocAutoCaptureFrameOffset == 0)
 		{
@@ -549,7 +549,7 @@ namespace flex
 				}
 
 #if COMPILE_RENDERDOC_API
-				if (m_RenderDocAPI)
+				if (m_RenderDocAPI != nullptr)
 				{
 					if (!m_bRenderDocCapturingFrame &&
 						m_RenderDocAutoCaptureFrameOffset != -1 &&
@@ -563,7 +563,7 @@ namespace flex
 						}
 					}
 
-					if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
+					if (m_bRenderDocTriggerCaptureNextFrame)
 					{
 						m_bRenderDocTriggerCaptureNextFrame = false;
 						m_bRenderDocCapturingFrame = true;
@@ -671,7 +671,7 @@ namespace flex
 			PROFILE_END("Render");
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI && m_bRenderDocCapturingFrame)
+			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
 			{
 				m_bRenderDocCapturingFrame = false;
 				Print("Capturing RenderDoc frame...\n");
@@ -812,7 +812,7 @@ namespace flex
 			if (ImGui::BeginMenu("File"))
 			{
 #if COMPILE_RENDERDOC_API
-				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame", "F9"))
+				if (m_RenderDocAPI != nullptr && ImGui::MenuItem("Capture RenderDoc frame", "F9"))
 				{
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}
@@ -1765,7 +1765,7 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI &&
+			if (m_RenderDocAPI != nullptr &&
 				!m_bRenderDocCapturingFrame &&
 				!m_bRenderDocTriggerCaptureNextFrame &&
 				keyCode == KeyCode::KEY_F9)
