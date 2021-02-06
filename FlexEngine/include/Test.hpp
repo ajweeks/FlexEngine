@@ -1856,7 +1856,7 @@ namespace flex
 				{
 					func();
 				}
-				catch (std::exception e)
+				catch (std::exception& e)
 				{
 					PrintError("%s\n", e.what());
 					failedTestCount += 1;
