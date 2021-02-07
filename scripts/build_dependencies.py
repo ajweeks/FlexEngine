@@ -1,3 +1,5 @@
+#/usr/bin/env python
+
 import os
 import subprocess
 import shutil
@@ -14,6 +16,8 @@ genie_path_windows = 'genie.exe'
 genie_path_linux = 'genie'
 python_path_windows = 'python'
 python_path_linux = 'python3'
+
+shaderc_tag = 'v2020.2'
 
 def run_cmake(source, build, arguments = []):
 	cmakeCmd = [cmake_path, '-S', source, '-B', build]
@@ -110,7 +114,7 @@ if platform == 'windows':
 	openAL_build_path = openAL_path + 'build/'
 	if not os.path.exists(openAL_build_path):
 		os.makedirs(openAL_build_path)
-	run_cmake(openAL_path, openAL_build_path, ['-DALSOFT_EXAMPLES=OFF', '-DALSOFT_TESTS=OFF'])
+	run_cmake(openAL_path, openAL_build_path, ['-DALSOFT_EXAMPLES=OFF', '-DALSOFT_TESTS=OFF', '-Wno-dev'])
 	run_msbuild(openAL_build_path + 'openAL.sln')
 	shutil.copyfile(openAL_build_path + 'Debug/common.lib', libs_target + 'common.lib')
 	shutil.copyfile(openAL_build_path + 'Debug/OpenAL32.dll', libs_target + 'OpenAL32.dll')
@@ -175,13 +179,47 @@ print("\n------------------------------------------\n\nBuilding Shaderc...\n\n--
 # Shaderc
 shader_c_path = project_root + 'dependencies/shaderc/'
 shader_c_build_path = shader_c_path + 'build/'
+
+# Delete existing directory if on incorrect commit
+del_shader_c_dir = os.path.exists(shader_c_path)
+
+if del_shader_c_dir:
+	# Directory exists, check if on correct commit
+	pdir = os.getcwd()
+	os.chdir(shader_c_path)
+	curr_shader_c_commit = subprocess.check_output(["git", "describe"]).strip()
+	curr_shader_c_commit = curr_shader_c_commit.decode()
+	os.chdir(pdir)
+	if curr_shader_c_commit == shaderc_tag:
+		# No need to obliterate dir, just rebuild
+		del_shader_c_dir = False
+	print('On commit ' + str(curr_shader_c_commit) + ', required commit: ' + shaderc_tag + 
+		(' (not matched, re-cloning repo)' if del_shader_c_dir else ' (matched, skipping clone of repo)'))
+
+if del_shader_c_dir:
+	 # Remove existing shaderc directory (shutil.rmtree fails here with permission errors on windows, use the big guns instead)
+	if platform == 'windows':
+		os.system('rmdir /S/ Q "{}"'.format(shader_c_path))
+	else:
+		os.system('rm -rdf "{}"'.format(shader_c_path))
+
 if not os.path.exists(shader_c_path):
 	run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--recurse-submodules', '--depth=1'])
 
-	# NOTE: Shell must be *True* for pushd to work!!
-	checkout_tag_cmd = ['pushd ' + shader_c_path + '; git fetch --tags; git checkout tags/v2020.2 -b master']
-	subprocess.check_call(checkout_tag_cmd, stderr=subprocess.STDOUT, shell=True)
-if not os.path.exists(shader_c_build_path):
+	if platform == 'windows':
+		pdir = os.getcwd()
+		os.chdir(shader_c_path)
+		run_git(['fetch', '--tags'])
+		run_git(['checkout', 'tags/' + shaderc_tag, '-b', 'master'])
+		os.chdir(pdir)
+	else:
+		checkout_tag_cmd = ['pushd ' + shader_c_path + '; git fetch --tags; git checkout ' + 'tags/' + shaderc_tag + ' -b master']
+		# NOTE: Shell must be *True* for pushd to work!!
+		subprocess.check_call(checkout_tag_cmd, stderr=subprocess.STDOUT, shell=True)
+
+if os.path.exists(shader_c_build_path):
+	shutil.rmtree(shader_c_build_path)
+else:
 	os.makedirs(shader_c_build_path)
 
 if platform == 'windows':
