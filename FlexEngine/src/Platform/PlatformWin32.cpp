@@ -479,11 +479,6 @@ namespace flex
 		return result;
 	}
 
-	u64 Platform::RotateLeftU64(u64 val, i32 shift)
-	{
-		return RotateLeft64(val, shift);
-	}
-
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);

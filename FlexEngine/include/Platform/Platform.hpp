@@ -83,8 +83,6 @@ namespace flex
 		static u64 GetUSSinceEpoch();
 		static GameObjectID GenerateGUID();
 
-		static u64 RotateLeftU64(u64 val, i32 shift);
-
 		static CPUInfo cpuInfo;
 
 	private:
