@@ -1795,17 +1795,17 @@ namespace flex
 			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
 		}
 
-		bool DragUInt(const char* label, u32* v, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
+		bool DragUInt(const char* label, u32* v, real speed /* = 1.0f */, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
 		{
-			return ImGui::DragScalar(label, ImGuiDataType_U32, v, 1.0f, &v_min, &v_max, format);
+			return ImGui::DragScalar(label, ImGuiDataType_U32, v, speed, &v_min, &v_max, format);
 		}
 
-		bool DragInt16(const char* label, i16* v, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
+		bool DragInt16(const char* label, i16* v, real speed /* = 1.0f */, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
 		{
 			i32 v32 = (i32)*v;
 			i32 v_min32 = (i32)v_min;
 			i32 v_max32 = (i32)v_max;
-			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, 1.0f, &v_min32, &v_max32, format);
+			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, speed, &v_min32, &v_max32, format);
 
 			if (bResult)
 			{

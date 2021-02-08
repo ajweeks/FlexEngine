@@ -2238,6 +2238,7 @@ namespace flex
 	{
 		GameObjectTypeStringIDPairs = {};
 		std::string fileContents;
+		// TODO: Gather this info from reflection?
 		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
 		{
 			std::vector<std::string> lines = Split(fileContents, '\n');

@@ -1263,7 +1263,7 @@ namespace flex
 				}
 			}
 
-			if (renderObject->gameObject->CastsShadow())
+			if (renderObject->gameObject != nullptr && renderObject->gameObject->CastsShadow())
 			{
 				m_DirtyFlagBits |= RenderBatchDirtyFlag::SHADOW_DATA;
 			}

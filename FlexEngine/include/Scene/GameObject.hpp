@@ -19,6 +19,7 @@ namespace flex
 {
 	class BaseScene;
 	class BezierCurveList;
+	class BezierCurve3D;
 	class Mesh;
 	class MeshComponent;
 	class Socket;
@@ -1383,4 +1384,25 @@ namespace flex
 
 	};
 
+	class Road : public GameObject
+	{
+	public:
+		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+
+	private:
+		void GenerateSegment(i32 index);
+		void GenerateMaterial();
+
+		std::vector<BezierCurve3D> curveSegments;
+		std::vector<MeshComponent*> m_Meshes;
+		MaterialID m_RoadMaterialID = InvalidMaterialID;
+
+		u32 m_QuadCountPerSegment = 10;
+
+	};
 } // namespace flex

@@ -281,6 +281,7 @@ namespace flex
 		case SID("spring"): return new SpringObject(objectName, gameObjectID);
 		case SID("soft body"): return new SoftBody(objectName, gameObjectID);
 		case SID("vehicle"): return new Vehicle(objectName, gameObjectID);
+		case SID("road"): return new Road(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -7366,7 +7367,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
-		if (meshComponent)
+		if (meshComponent != nullptr)
 		{
 			assert(m_Meshes[chunkIndex] == nullptr);
 			m_Meshes[chunkIndex] = meshComponent;
@@ -9575,4 +9576,178 @@ namespace flex
 		m_BrakeForce = 0.0f;
 		m_Steering = 0.0f;
 	}
+
+	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("road"), gameObjectID)
+	{
+		m_bSerializeMesh = false;
+	}
+
+	void Road::Initialize()
+	{
+		GameObject::Initialize();
+
+		m_Mesh = new Mesh(this);
+		m_Mesh->SetTypeToMemory();
+
+		curveSegments.push_back(BezierCurve3D(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(5.0f, 0.0f, 4.0f), glm::vec3(1.0f, 0.0f, 4.0f), glm::vec3(5.0f, 0.0f, 8.0f)));
+		GenerateSegment(0);
+	}
+
+	void Road::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		for (u32 i = 0; i < (u32)m_Meshes.size(); ++i)
+		{
+			m_Meshes[i]->Destroy();
+			delete m_Meshes[i];
+		}
+		m_Meshes.clear();
+		curveSegments.clear();
+	}
+
+	void Road::Update()
+	{
+		GameObject::Update();
+
+		for (BezierCurve3D& curve : curveSegments)
+		{
+			curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+	}
+
+	void Road::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (ImGuiExt::DragUInt("Quad count per segment", &m_QuadCountPerSegment, 0.1f, 1u, 32u))
+		{
+			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			{
+				GenerateSegment(i);
+			}
+		}
+	}
+
+	void Road::GenerateSegment(i32 index)
+	{
+		if (index >= (i32)curveSegments.size())
+		{
+			PrintError("Attempted to generate road segment without curve defined!\n");
+			return;
+		}
+
+		PROFILE_AUTO("Generate road segment");
+
+		if (index < (i32)m_Meshes.size() && m_Meshes[index] != nullptr)
+		{
+			m_Meshes[index]->Destroy();
+			m_Meshes[index] = nullptr;
+		}
+
+		if (index >= (i32)m_Meshes.size())
+		{
+			m_Meshes.resize(index + 1);
+		}
+
+		GenerateMaterial();
+
+		Material* roadMaterial = g_Renderer->GetMaterial(m_RoadMaterialID);
+		Shader* roadShader = g_Renderer->GetShader(roadMaterial->shaderID);
+
+		BezierCurve3D& curve = curveSegments[index];
+
+		//if (m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+		//{
+		//	terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
+		//	g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
+		//}
+
+		const u32 vertexCount = m_QuadCountPerSegment * 2 + 2;
+		const u32 triCount = m_QuadCountPerSegment * 2;
+		const u32 indexCount = triCount * 3;
+
+		static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.positions_3D.clear();
+		vertexBufferCreateInfo.texCoords_UV.clear();
+		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
+		vertexBufferCreateInfo.normals.clear();
+		vertexBufferCreateInfo.tangents.clear();
+
+		vertexBufferCreateInfo.attributes = roadShader->vertexAttributes;
+		vertexBufferCreateInfo.positions_3D.reserve(vertexCount);
+		vertexBufferCreateInfo.texCoords_UV.reserve(vertexCount);
+		vertexBufferCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
+		vertexBufferCreateInfo.normals.reserve(vertexCount);
+		vertexBufferCreateInfo.tangents.reserve(vertexCount);
+
+		std::vector<u32> indices(indexCount);
+
+		for (u32 z = 0; z < m_QuadCountPerSegment + 1; ++z)
+		{
+			real t = (real)z / m_QuadCountPerSegment;
+			glm::vec3 pos = curve.GetPointOnCurve(t);
+			pos.y += 0.1f;
+			glm::vec3 up = VEC3_UP;
+			glm::vec3 forward = glm::normalize(curve.GetFirstDerivativeOnCurve(t));
+			glm::vec3 tangent = glm::cross(forward, up);
+
+			real xs[] = { -1, 1 };
+			for (u32 x = 0; x < 2; ++x)
+			{
+				glm::vec3 vertPosWS = pos + xs[x] * tangent;
+				glm::vec3 normal = up;// glm::normalize(glm::vec3(heightDX * nscale, 2.0f * e, heightDZ * nscale));
+				glm::vec2 uv((real)x, t);
+				glm::vec3 vertCol = glm::vec3(1.0f, 0.0f, 0.0f);
+
+				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
+				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
+				vertexBufferCreateInfo.colours_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
+				vertexBufferCreateInfo.normals.emplace_back(normal);
+				vertexBufferCreateInfo.tangents.emplace_back(tangent);
+			}
+		}
+
+		i32 i = 0;
+		for (u32 z = 0; z < m_QuadCountPerSegment; ++z)
+		{
+			u32 vertIdx = z * 6;
+			indices[vertIdx + 0] = i + 0;
+			indices[vertIdx + 1] = i + 1;
+			indices[vertIdx + 2] = i + 3;
+
+			indices[vertIdx + 3] = i + 0;
+			indices[vertIdx + 4] = i + 3;
+			indices[vertIdx + 5] = i + 2;
+
+			i += 2;
+		}
+
+		RenderObjectCreateInfo renderObjectCreateInfo = {};
+		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_RoadMaterialID, &renderObjectCreateInfo);
+		if (meshComponent != nullptr)
+		{
+			assert(m_Meshes[index] == nullptr);
+			m_Meshes[index] = meshComponent;
+		}
+	}
+
+	void Road::GenerateMaterial()
+	{
+		if (m_RoadMaterialID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Road surface";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.bDynamic = false;
+			matCreateInfo.constRoughness = 0.95f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.constAlbedo = glm::vec3(0.25f, 0.25f, 0.28f);
+			matCreateInfo.bSerializable = false;
+
+			m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
+		}
+	}
+
 } // namespace flex

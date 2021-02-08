@@ -1078,7 +1078,7 @@ namespace flex
 						metaData.bDirty |= ImGui::DragFloat("Shadow Opacity", &metaData.shadowOpacity, 0.005f, 0.0f, 0.999f);
 						metaData.bDirty |= ImGui::DragFloat("Soften", &metaData.soften, 0.001f, 0.0f, 1.0f);
 						// TODO: Store "needs bake" flag as well
-						metaData.bDirty |= ImGuiExt::DragInt16("Size", &metaData.size, 4, 256);
+						metaData.bDirty |= ImGuiExt::DragInt16("Size", &metaData.size, 1.0f, 4, 256);
 
 						ImGui::Text("Size: %i", metaData.size);
 						ImGui::SameLine();
