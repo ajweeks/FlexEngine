@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferDataCreateInfo
 #include "Helpers.hpp"
 #include "Spring.hpp"
+#include "Track/BezierCurve3D.hpp"
 #include "Transform.hpp"
 #include "Time.hpp"
 
@@ -19,7 +20,6 @@ namespace flex
 {
 	class BaseScene;
 	class BezierCurveList;
-	class BezierCurve3D;
 	class Mesh;
 	class MeshComponent;
 	class Socket;
@@ -1398,7 +1398,14 @@ namespace flex
 		void GenerateSegment(i32 index);
 		void GenerateMaterial();
 
-		std::vector<BezierCurve3D> curveSegments;
+		struct Segment
+		{
+			BezierCurve3D curve;
+			real widthStart;
+			real widthEnd;
+		};
+
+		std::vector<Segment> curveSegments;
 		std::vector<MeshComponent*> m_Meshes;
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 

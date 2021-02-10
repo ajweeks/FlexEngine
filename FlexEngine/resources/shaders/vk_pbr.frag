@@ -39,8 +39,7 @@ layout (location = 1) out vec4 outAlbedoMetallic;
 
 void main() 
 {
-	vec2 texCoord = ex_TexCoord * 3.0;
-	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, texCoord).rgb : vec3(uboDynamic.constAlbedo);
+	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(uboDynamic.constAlbedo);
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
 	vec3 N = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];

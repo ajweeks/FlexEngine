@@ -9590,8 +9590,20 @@ namespace flex
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
-		curveSegments.push_back(BezierCurve3D(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(5.0f, 0.0f, 4.0f), glm::vec3(1.0f, 0.0f, 4.0f), glm::vec3(5.0f, 0.0f, 8.0f)));
-		GenerateSegment(0);
+		m_QuadCountPerSegment = 25;
+
+		Segment segment = {};
+		segment.curve = BezierCurve3D(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(5.0f, 0.0f, 8.0f), glm::vec3(1.0f, 0.0f, 8.0f), glm::vec3(5.0f, 0.0f, 16.0f));
+		segment.widthStart = 2.0f;
+		segment.widthEnd = 3.0f;
+		curveSegments.push_back(segment);
+		GenerateSegment((i32)curveSegments.size() - 1);
+
+		segment.curve = BezierCurve3D(glm::vec3(5.0f, 0.0f, 16.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 32.0f));
+		segment.widthStart = 3.0f;
+		segment.widthEnd = 2.0f;
+		curveSegments.push_back(segment);
+		GenerateSegment((i32)curveSegments.size() - 1);
 	}
 
 	void Road::Destroy(bool bDetachFromParent /* = true */)
@@ -9611,9 +9623,9 @@ namespace flex
 	{
 		GameObject::Update();
 
-		for (BezierCurve3D& curve : curveSegments)
+		for (Segment& segment : curveSegments)
 		{
-			curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
+			segment.curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
 
@@ -9656,7 +9668,8 @@ namespace flex
 		Material* roadMaterial = g_Renderer->GetMaterial(m_RoadMaterialID);
 		Shader* roadShader = g_Renderer->GetShader(roadMaterial->shaderID);
 
-		BezierCurve3D& curve = curveSegments[index];
+		Segment& segment = curveSegments[index];
+		BezierCurve3D& curve = segment.curve;
 
 		//if (m_Meshes.size() >= terrainShader->maxObjectCount - 1)
 		//{
@@ -9687,23 +9700,23 @@ namespace flex
 		for (u32 z = 0; z < m_QuadCountPerSegment + 1; ++z)
 		{
 			real t = (real)z / m_QuadCountPerSegment;
+			real width = Lerp(segment.widthStart, segment.widthEnd, t);
 			glm::vec3 pos = curve.GetPointOnCurve(t);
 			pos.y += 0.1f;
 			glm::vec3 up = VEC3_UP;
 			glm::vec3 forward = glm::normalize(curve.GetFirstDerivativeOnCurve(t));
 			glm::vec3 tangent = glm::cross(forward, up);
 
-			real xs[] = { -1, 1 };
+			real xScales[] = { -width, width };
 			for (u32 x = 0; x < 2; ++x)
 			{
-				glm::vec3 vertPosWS = pos + xs[x] * tangent;
+				glm::vec3 vertPosWS = pos + xScales[x] * tangent;
 				glm::vec3 normal = up;// glm::normalize(glm::vec3(heightDX * nscale, 2.0f * e, heightDZ * nscale));
 				glm::vec2 uv((real)x, t);
-				glm::vec3 vertCol = glm::vec3(1.0f, 0.0f, 0.0f);
 
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
 				vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
-				vertexBufferCreateInfo.colours_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
+				vertexBufferCreateInfo.colours_R32G32B32A32.emplace_back(VEC4_ONE);
 				vertexBufferCreateInfo.normals.emplace_back(normal);
 				vertexBufferCreateInfo.tangents.emplace_back(tangent);
 			}
@@ -9737,6 +9750,7 @@ namespace flex
 	{
 		if (m_RoadMaterialID == InvalidMaterialID)
 		{
+			// TODO: Add serialized member which points at material ID once support for that is in
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "Road surface";
 			matCreateInfo.shaderName = "pbr";
@@ -9744,6 +9758,8 @@ namespace flex
 			matCreateInfo.constRoughness = 0.95f;
 			matCreateInfo.constMetallic = 0.0f;
 			matCreateInfo.constAlbedo = glm::vec3(0.25f, 0.25f, 0.28f);
+			matCreateInfo.albedoTexturePath = TEXTURE_DIRECTORY "road-albedo.png";
+			matCreateInfo.enableAlbedoSampler = true;
 			matCreateInfo.bSerializable = false;
 
 			m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
