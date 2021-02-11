@@ -2,7 +2,7 @@ spring
 socket
 soft body
 gerstner wave
-terrain
+terrain generator
 player
 directional light
 point light

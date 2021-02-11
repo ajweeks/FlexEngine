@@ -290,7 +290,7 @@ namespace flex
 		case InvalidStringID: // Fall through
 		default:
 		{
-			PrintWarn("Unhandled game object type in CreateGameObjectFromJSON (Object name: %s, type: %s).\n"
+			PrintWarn("Unhandled game object type in CreateObjectOfType (Object name: %s, type: %s).\n"
 				"Creating placeholder base object.\n",
 				objectName.c_str(), (optionalTypeStr == nullptr ? "unknown" : optionalTypeStr));
 
@@ -9358,18 +9358,27 @@ namespace flex
 
 		m_QuadCountPerSegment = 25;
 
-		Segment segment = {};
-		segment.curve = BezierCurve3D(glm::vec3(4.0f, 0.0f, 0.0f), glm::vec3(5.0f, 0.0f, 8.0f), glm::vec3(1.0f, 0.0f, 8.0f), glm::vec3(5.0f, 0.0f, 16.0f));
-		segment.widthStart = 2.0f;
-		segment.widthEnd = 3.0f;
-		curveSegments.push_back(segment);
-		GenerateSegment((i32)curveSegments.size() - 1);
+		m_Start = glm::vec3(4.0f, 0.0f, 0.0f);
+		m_End = glm::vec3(9.0f, 0.0f, 32.0f);
 
-		segment.curve = BezierCurve3D(glm::vec3(5.0f, 0.0f, 16.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 32.0f));
-		segment.widthStart = 3.0f;
+		Segment segment = {};
+		segment.curve = BezierCurve3D(m_Start, glm::vec3(5.0f, 0.0f, 8.0f), glm::vec3(1.0f, 0.0f, 8.0f), glm::vec3(5.0f, 0.0f, 16.0f));
+		segment.widthStart = 2.0f;
 		segment.widthEnd = 2.0f;
 		curveSegments.push_back(segment);
 		GenerateSegment((i32)curveSegments.size() - 1);
+
+		segment.curve = BezierCurve3D(glm::vec3(5.0f, 0.0f, 16.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 24.0f), m_End);
+		segment.widthStart = 2.0f;
+		segment.widthEnd = 2.0f;
+		curveSegments.push_back(segment);
+		GenerateSegment((i32)curveSegments.size() - 1);
+
+		GenerateSegmentsToReach(glm::vec3(30.0f, 0.0, 42.0f));
+		GenerateSegmentsToReach(glm::vec3(48.0f, 0.0, 34.0f));
+		GenerateSegmentsToReach(glm::vec3(52.0f, 0.0, 16.0f));
+		GenerateSegmentsToReach(glm::vec3(32.0f, 0.0, -12.0f));
+		GenerateSegmentsToReach(m_Start);
 
 		GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->RegisterRoad(this);
 	}
@@ -9409,6 +9418,49 @@ namespace flex
 			{
 				GenerateSegment(i);
 			}
+		}
+	}
+
+	void Road::GenerateSegmentsToReach(const glm::vec3& point)
+	{
+		// Attempts to extend road either from start or end to reach given point
+		real dist2ToEnd = glm::distance2(point, m_End);
+		real dist2ToStart = glm::distance2(point, m_Start);
+		const bool bEndCloser = (dist2ToEnd < dist2ToStart) && (dist2ToEnd > 0.01f) || (dist2ToStart <= 0.01f);
+		glm::vec3 startPoint = bEndCloser ? m_End : m_Start;
+		Segment& startSegment = bEndCloser ? curveSegments[curveSegments.size() - 1] : curveSegments[0];
+		glm::vec3 delta = point - startPoint;
+		real distance = glm::length(delta);
+		glm::vec3 deltaN = delta / distance;
+		i32 estimatedSegmentCount = (i32)glm::ceil(distance / m_TargetSegmentLength);
+
+		glm::vec3 tangent = startSegment.curve.points[3] - startSegment.curve.points[2];
+
+		curveSegments.reserve(curveSegments.size() + estimatedSegmentCount);
+
+		Segment segment = {};
+		for (i32 newSegmentIndex = 0; newSegmentIndex < estimatedSegmentCount; ++newSegmentIndex)
+		{
+			glm::vec3 endPoint = startPoint + deltaN * m_TargetSegmentLength;
+			glm::vec3 mid0 = startPoint + tangent;
+			tangent = deltaN;
+			glm::vec3 mid1 = Lerp(startPoint, endPoint, 0.66f);
+			segment.curve = BezierCurve3D(startPoint, mid0, mid1, endPoint);
+			segment.widthStart = 2.0f;
+			segment.widthEnd = 2.0f;
+			curveSegments.push_back(segment);
+			GenerateSegment((i32)curveSegments.size() - 1);
+
+			startPoint = endPoint;
+		}
+
+		if (bEndCloser)
+		{
+			m_End = startPoint;
+		}
+		else
+		{
+			m_Start = startPoint;
 		}
 	}
 

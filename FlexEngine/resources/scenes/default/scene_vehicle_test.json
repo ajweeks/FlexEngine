@@ -14,7 +14,7 @@
 		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
-		"fov" : 0.785398,
+		"fov" : 0.923279,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -22,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "18.515, 19.494, 14.452",
-			"pitch" : -0.549908,
-			"yaw" : -2.663905
+			"position" : "20.665, 23.699, -36.050",
+			"pitch" : -0.656165,
+			"yaw" : -11.106071
 		}
 	},
 	"objects" : 
@@ -50,7 +50,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.767, 0.535, -1.104"
+				"rot" : "0.767, 0.536, -1.103"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -73,8 +73,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.704, 0.329, -54.344",
-				"rot" : "-0.007, -0.012, -0.004",
+				"pos" : "-0.169, 0.329, -4.995",
+				"rot" : "-0.007, 0.027, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -87,7 +87,7 @@
 				"pos" : "0.000, -0.336, 0.000",
 				"scale" : "200.000, 0.495, 200.000"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -114,6 +114,35 @@
 			"type" : "road",
 			"visible" : true,
 			"casts shadow" : true
+		},
+		{
+			"name" : "Terrain",
+			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
+			"type" : "terrain generator",
+			"transform" : 
+			{
+				"pos" : "0.000, -11.576, 0.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"chunk generator info" : 
+			{
+				"vert count per chunk axis" : 32,
+				"chunk size" : 16.000000,
+				"max height" : 19.517000,
+				"use manual seed" : true,
+				"manual seed" : 0,
+				"loaded chunk radius" : 100.000000,
+				"base table width" : 16,
+				"low colour" : "0.33, 0.41, 0.33",
+				"mid colour" : "0.51, 0.58, 0.37",
+				"high colour" : "0.65, 0.70, 0.43",
+				"base octave" : 30.000000,
+				"octave scale" : 30.000000,
+				"num octaves" : 3,
+				"pin center" : true,
+				"pinned center" : "0.22, 18.74, -3.03"
+			}
 		}
 	]
 }
