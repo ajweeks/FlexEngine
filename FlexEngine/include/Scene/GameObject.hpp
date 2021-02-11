@@ -891,35 +891,6 @@ namespace flex
 		i32 slotIdx = 0;
 	};
 
-	// TODO: Add scene base class
-	class PluggablesSystem
-	{
-	public:
-		void Initialize();
-		void Destroy();
-
-		void Update();
-
-		i32 GetReceivedSignal(Socket* socket);
-
-		Wire* AddWire(const GameObjectID& gameObjectID, Socket* socket0 = nullptr, Socket* socket1 = nullptr);
-		bool DestroySocket(Socket* socket);
-		bool DestroyWire(Wire* wire);
-
-		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx = 0, Wire* connectedWire = nullptr);
-		Socket* AddSocket(Socket* socket, i32 slotIdx = 0, Wire* connectedWire = nullptr);
-
-		std::vector<Wire*> wires;
-		std::vector<Socket*> sockets;
-
-	private:
-		bool RemoveSocket(const GameObjectID& socketID);
-
-		// TODO: Serialization (requires ObjectIDs)
-		// TODO: Use WirePool
-
-	};
-
 	class Terminal final : public GameObject
 	{
 	public:

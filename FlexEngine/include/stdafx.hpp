@@ -134,6 +134,7 @@
 
 #include "Logger.hpp"
 #include "Types.hpp"
+#include "Systems.hpp"
 
 IGNORE_WARNINGS_PUSH
 #define GLM_FORCE_RADIANS
@@ -273,13 +274,19 @@ namespace flex
 
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
-	extern class PluggablesSystem* g_PluggablesSystem;
+	extern class System* g_Systems[(i32)SystemType::_NONE];
 	extern class FlexEngine* g_EngineInstance;
 	extern class Editor* g_Editor;
 	extern class SceneManager* g_SceneManager;
 	extern struct Monitor* g_Monitor;
 	extern class PhysicsManager* g_PhysicsManager;
 	extern class ResourceManager* g_ResourceManager;
+
+	template<typename T>
+	T* GetSystem(SystemType systemType)
+	{
+		return (T*)g_Systems[(i32)systemType];
+	}
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;

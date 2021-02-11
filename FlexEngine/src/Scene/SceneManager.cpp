@@ -125,7 +125,8 @@ namespace flex
 		if (m_CurrentSceneIndex != InvalidID)
 		{
 			g_CameraManager->Destroy();
-			g_PluggablesSystem->Destroy();
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->Destroy();
+			GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->Destroy();
 
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}

@@ -1258,7 +1258,7 @@ namespace flex
 				socketIndex = (u32)parent->sockets.size();
 			}
 
-			g_PluggablesSystem->AddSocket((Socket*)newGameObject, socketIndex);
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket((Socket*)newGameObject, socketIndex);
 		} break;
 		};
 
