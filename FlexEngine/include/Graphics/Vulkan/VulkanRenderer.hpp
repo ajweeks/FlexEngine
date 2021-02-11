@@ -350,6 +350,8 @@ namespace flex
 			u32 GetStaticVertexIndexBufferIndex(u32 stride);
 			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
+			void UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax);
+
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 

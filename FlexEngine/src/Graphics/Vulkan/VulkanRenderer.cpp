@@ -4556,6 +4556,12 @@ namespace flex
 			// TODO: Use instancing!
 			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[spriteShader->staticVertexBufferIndex].second;
 
+			if ((i32)batch.size() > spriteShader->maxObjectCount)
+			{
+				UpdateShaderMaxObjectCount(spriteMat->shaderID, (i32)batch.size());
+				// TODO: Flush GPU queues here?
+			}
+
 			u32 i = 0;
 			for (const SpriteQuadDrawInfo& drawInfo : batch)
 			{
@@ -4868,6 +4874,56 @@ namespace flex
 
 			m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
 			return (u32)m_DynamicVertexIndexBufferPairs.size() - 1;
+		}
+
+		void VulkanRenderer::UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax)
+		{
+			VulkanShader* shader = (VulkanShader*)GetShader(shaderID);
+
+			i32 oldMax = (i32)shader->maxObjectCount;
+			shader->maxObjectCount = newMax;
+			Print("Growing dynamic UBO max object count of all materials who use shader \"%s\" from %i to %i\n", shader->name.c_str(), oldMax, shader->maxObjectCount);
+#if 1
+			// Efficient:
+			// Any materials that use this shader need their buffers grown too
+			// otherwise we'll think they have new max object count worth of space
+			for (auto& materialPair : m_Materials)
+			{
+				if (materialPair.second->shaderID == shaderID)
+				{
+					CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
+				}
+			}
+
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i] != nullptr)
+				{
+					Material* objMat = GetMaterial(m_RenderObjects[i]->materialID);
+					if (objMat->shaderID == shaderID)
+					{
+						CreateDescriptorSet(i);
+						CreateGraphicsPipeline(i, true);
+					}
+				}
+			}
+#else
+			// Naive:
+			for (auto& materialPair : m_Materials)
+			{
+				CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
+			}
+
+			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			{
+				if (m_RenderObjects[i] != nullptr)
+				{
+					CreateDescriptorSet(i);
+					CreateGraphicsPipeline(i, true);
+				}
+			}
+#endif
+
 		}
 
 		RenderID VulkanRenderer::GetNextAvailableRenderID() const
@@ -6946,50 +7002,8 @@ namespace flex
 					//VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 
 					real growthRate = 1.5f;
-					i32 oldMax = shader->maxObjectCount;
-					shader->maxObjectCount = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment * growthRate);
-					Print("Growing dynamic UBO max object count of all materials who use shader \"%s\" from %i to %i\n", shader->name.c_str(), oldMax, shader->maxObjectCount);
-
-#if 1
-					// Efficient:
-					// Any materials that use this shader need their buffers grown too
-					// otherwise we'll think they have new max object count worth of space
-					for (auto& materialPair : m_Materials)
-					{
-						if (materialPair.second->shaderID == material->shaderID)
-						{
-							CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
-						}
-					}
-
-					for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
-					{
-						if (m_RenderObjects[i] != nullptr)
-						{
-							Material* objMat = GetMaterial(m_RenderObjects[i]->materialID);
-							if (objMat->shaderID == material->shaderID)
-							{
-								CreateDescriptorSet(i);
-								CreateGraphicsPipeline(i, true);
-							}
-						}
-					}
-#else
-					// Naive:
-					for (auto& materialPair : m_Materials)
-					{
-						CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
-					}
-
-					for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
-					{
-						if (m_RenderObjects[i] != nullptr)
-						{
-							CreateDescriptorSet(i);
-							CreateGraphicsPipeline(i, true);
-						}
-					}
-#endif
+					i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment * growthRate);
+					UpdateShaderMaxObjectCount(material->shaderID, newMax);
 				}
 			}
 
@@ -8783,14 +8797,16 @@ namespace flex
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
-#ifdef DEBUG
+					// Resize buffer is not large enough
 					if (dynamicOffset + index > dynamicBuffer->fullDynamicBufferSize)
 					{
-						// TODO: Just resize here?
-						PrintError("Invalid offset into dynamic buffer in material %s (shader: %s) - offset: %u, full size: %u\n", material->name.c_str(), shader->name.c_str(), dynamicOffset + index, dynamicBuffer->fullDynamicBufferSize);
-						break;
+						// TODO: Untested path! May need GPU flush/dynamic UBO update here
+						real growthRate = 1.5f;
+						u32 newUsedSize = (u32)(glm::max(dynamicBuffer->fullDynamicBufferSize, 2u) * growthRate);
+						i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment);
+						UpdateShaderMaxObjectCount(material->shaderID, newMax);
 					}
-#endif
+
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.copySize);
 					index += uniformInfo.copySize;
 				}
