@@ -112,6 +112,8 @@ namespace flex
 		GameObject* pickedGameObject = nullptr;
 
 		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
+		//rayCallback.m_collisionFilterGroup = btBroadphaseProxy::CollisionFilterGroups::SensorTrigger;
+		rayCallback.m_collisionFilterMask = btBroadphaseProxy::CollisionFilterGroups::SensorTrigger;
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		real closestGizmoDist2 = FLT_MAX;
 		if (rayCallback.hasHit())
@@ -124,7 +126,13 @@ namespace flex
 				{
 					GameObject* gameObject = static_cast<GameObject*>(body->getUserPointer());
 
-					if (gameObject && gameObject->HasTag(tag))
+					if (gameObject)
+					{
+						std::string s = gameObject->GetName();
+						Print("%s\n", s.c_str());
+					}
+
+					if (gameObject != nullptr && gameObject->HasTag(tag))
 					{
 						real dist2 = (pickPos - rayStart).length2();
 						if (dist2 < closestGizmoDist2)
@@ -205,16 +213,16 @@ namespace flex
 
 			if (numContacts > 0 && obAGameObject && obBGameObject)
 			{
-				u32 obAFlags = obAGameObject->GetRigidBody()->GetPhysicsFlags();
-				u32 obBFlags = obBGameObject->GetRigidBody()->GetPhysicsFlags();
+				i32 obAGroup = obAGameObject->GetRigidBody()->GetGroup();
+				i32 obBGroup = obBGameObject->GetRigidBody()->GetGroup();
 
-				u32 bObATrigger = (obAFlags & (u32)PhysicsFlag::TRIGGER);
-				u32 bObBTrigger = (obBFlags & (u32)PhysicsFlag::TRIGGER);
+				bool bObATrigger = (obAGroup & (i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger);
+				bool bObBTrigger = (obBGroup & (i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger);
 				// If exactly one of the two objects is a trigger (not both)
 				if (bObATrigger ^ bObBTrigger)
 				{
 					const btCollisionObject* triggerCollisionObject = (bObATrigger ? obA : obB);
-					const btCollisionObject* otherCollisionObject = (bObATrigger ? obB: obA);
+					const btCollisionObject* otherCollisionObject = (bObATrigger ? obB : obA);
 					GameObject* trigger = (bObATrigger ? obAGameObject : obBGameObject);
 					GameObject* other = (bObATrigger ? obBGameObject : obAGameObject);
 

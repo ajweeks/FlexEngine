@@ -1067,7 +1067,7 @@ namespace flex
 			GameObject* pickedObject = static_cast<GameObject*>(pickedRB->getUserPointer());
 
 			RigidBody* rb = pickedObject->GetRigidBody();
-			if (!(rb->GetPhysicsFlags() & (u32)PhysicsFlag::UNSELECTABLE))
+			if (!(rb->GetGroup() & (i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger))
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
@@ -1413,9 +1413,9 @@ namespace flex
 
 		m_TransformGizmo = new GameObject("Transform gizmo", SID("object"));
 
-		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
-		i32 gizmoRBMask = (i32)CollisionType::DEFAULT;
+		u32 gizmoRBFlags = 0;// ((u32)btBroadphaseProxy::CollisionFilterGroups::DefaultFilter));// | ((u32)PhysicsFlag::UNSELECTABLE);
+		i32 gizmoRBFilterGroup = (i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger;// (u32)CollisionType::EDITOR_OBJECT;
+		i32 gizmoRBFilterMask = (i32)btBroadphaseProxy::CollisionFilterGroups::AllFilter;
 
 		// Translation gizmo
 		{
@@ -1430,7 +1430,7 @@ namespace flex
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			translateXAxis->SetCollisionShape(xAxisShape);
 
-			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1445,7 +1445,7 @@ namespace flex
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			translateYAxis->SetCollisionShape(yAxisShape);
 
-			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoYAxisRB->SetMass(0.0f);
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1460,7 +1460,7 @@ namespace flex
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			translateZAxis->SetCollisionShape(zAxisShape);
 
-			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoZAxisRB->SetMass(0.0f);
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1499,7 +1499,7 @@ namespace flex
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationXAxis->SetCollisionShape(xAxisShape);
 
-			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1514,7 +1514,7 @@ namespace flex
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationYAxis->SetCollisionShape(yAxisShape);
 
-			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoYAxisRB->SetMass(0.0f);
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1529,7 +1529,7 @@ namespace flex
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			rotationZAxis->SetCollisionShape(zAxisShape);
 
-			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoZAxisRB->SetMass(0.0f);
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1570,7 +1570,7 @@ namespace flex
 			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleXAxis->SetCollisionShape(xAxisShape);
 
-			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoXAxisRB->SetMass(0.0f);
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1585,7 +1585,7 @@ namespace flex
 			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleYAxis->SetCollisionShape(yAxisShape);
 
-			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoYAxisRB->SetMass(0.0f);
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1600,7 +1600,7 @@ namespace flex
 			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
 			scaleZAxis->SetCollisionShape(zAxisShape);
 
-			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoZAxisRB->SetMass(0.0f);
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
@@ -1615,7 +1615,7 @@ namespace flex
 			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
 			scaleAllAxes->SetCollisionShape(allAxesShape);
 
-			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBFilterGroup, gizmoRBFilterMask));
 			gizmoAllAxesRB->SetMass(0.0f);
 			gizmoAllAxesRB->SetKinematic(true);
 			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);

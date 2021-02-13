@@ -13,7 +13,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = (i32)CollisionType::DEFAULT, i32 mask = (i32)CollisionType::DEFAULT);
+		RigidBody(i32 group = (i32)btBroadphaseProxy::CollisionFilterGroups::DefaultFilter, i32 mask = (i32)btBroadphaseProxy::CollisionFilterGroups::AllFilter & !(i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();

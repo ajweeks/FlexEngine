@@ -2636,7 +2636,7 @@ namespace flex
 	{
 		GameObject::PostInitialize();
 
-		m_RigidBody->SetPhysicsFlags((u32)PhysicsFlag::TRIGGER);
+		m_RigidBody->SetGroup((i32)btBroadphaseProxy::CollisionFilterGroups::SensorTrigger);
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setAngularFactor(btVector3(0, 1, 0));
 		// Mark as trigger
