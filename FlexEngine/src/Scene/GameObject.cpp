@@ -890,19 +890,10 @@ namespace flex
 					}
 
 					ImGui::Text("Activation state: %i", rbInternal->getActivationState());
-
-					//glm::vec3 localOffsetScale = m_RigidBody->GetLocalScale();
-					//if (ImGui::DragFloat3("Scale offset", &localOffsetScale.x, 0.01f))
-					//{
-					//	real epsilon = 0.001f;
-					//	localOffsetScale.x = glm::max(localOffsetScale.x, epsilon);
-					//	localOffsetScale.y = glm::max(localOffsetScale.y, epsilon);
-					//	localOffsetScale.z = glm::max(localOffsetScale.z, epsilon);
-
-					//	m_RigidBody->SetLocalScale(localOffsetScale);
-					//}
-
 				}
+
+				ImGui::Text("Group: %i", m_RigidBody->GetGroup());
+				ImGui::Text("Mask: %i", m_RigidBody->GetMask());
 
 				ImGui::TreePop();
 			}
@@ -922,6 +913,7 @@ namespace flex
 			}
 		}
 
+		if (!sockets.empty())
 		{
 			bool bTreeOpen = ImGui::TreeNode("Sockets");
 			ImGui::SameLine();

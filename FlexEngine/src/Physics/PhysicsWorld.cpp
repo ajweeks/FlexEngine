@@ -32,7 +32,7 @@ namespace flex
 
 	void PhysicsWorld::Initialize()
 	{
-		if (!m_World)
+		if (m_World == nullptr)
 		{
 			m_World = g_PhysicsManager->CreateWorld();
 
@@ -45,7 +45,7 @@ namespace flex
 
 	void PhysicsWorld::Destroy()
 	{
-		if (m_World)
+		if (m_World != nullptr)
 		{
 			for (i32 i = m_World->getNumCollisionObjects() - 1; i >= 0; --i)
 			{
@@ -66,7 +66,7 @@ namespace flex
 
 	void PhysicsWorld::Update(sec deltaSeconds)
 	{
-		if (m_World)
+		if (m_World != nullptr)
 		{
 			PROFILE_AUTO("Physics tick");
 			m_World->stepSimulation(deltaSeconds, MAX_SUBSTEPS);
@@ -120,7 +120,7 @@ namespace flex
 			{
 				btVector3 pickPos = rayCallback.m_hitPointWorld[i];
 				const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObjects[i]);
-				if (body)
+				if (body != nullptr)
 				{
 					GameObject* gameObject = static_cast<GameObject*>(body->getUserPointer());
 
@@ -150,11 +150,11 @@ namespace flex
 		{
 			//btVector3 pickPos = rayCallback.m_hitPointWorld;
 			const btRigidBody* body = static_cast<const btRigidBody*>(btRigidBody::upcast(rayCallback.m_collisionObject));
-			if (body)
+			if (body != nullptr)
 			{
 				GameObject* pickedGameObject = static_cast<GameObject*>(body->getUserPointer());
 
-				if (pickedGameObject)
+				if (pickedGameObject != nullptr)
 				{
 					pickedBody = body;
 				}
@@ -227,7 +227,6 @@ namespace flex
 						{
 							trigger->OnOverlapBegin(other);
 							other->OnOverlapBegin(trigger);
-							//Print("Trigger collision begin " + obAGameObject->GetName() + " : " + obBGameObject->GetName());
 						}
 					}
 				}
@@ -249,14 +248,13 @@ namespace flex
 
 		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> differentPairs;
 		std::set_difference(physWorld->m_CollisionPairs.begin(), physWorld->m_CollisionPairs.end(),
-							collisionPairsFoundThisStep.begin(), collisionPairsFoundThisStep.end(),
-							std::inserter(differentPairs, differentPairs.begin()));
+			collisionPairsFoundThisStep.begin(), collisionPairsFoundThisStep.end(),
+			std::inserter(differentPairs, differentPairs.begin()));
 
 		for (const auto& pair : differentPairs)
 		{
 			GameObject* triggerGameObject = static_cast<GameObject*>(pair.first->getUserPointer());
 			GameObject* otherGameObject = static_cast<GameObject*>(pair.second->getUserPointer());
-			//Print("Trigger collision end " + triggerGameObject->GetName() + " : " + otherGameObject->GetName());
 			triggerGameObject->OnOverlapEnd(otherGameObject);
 			otherGameObject->OnOverlapEnd(triggerGameObject);
 		}
