@@ -78,7 +78,7 @@ if cmake_version_maj < 3 or cmake_version_min < 13:
 
 start_time = time.perf_counter()
 
-print("\nBuilding Flex Engine...\n");
+print("\nBuilding Flex Engine..." + ("(with extras)" if build_extras else "") +  "\n");
 
 project_root = '../FlexEngine/'
 libs_target = project_root + 'lib/x64/Debug/'
