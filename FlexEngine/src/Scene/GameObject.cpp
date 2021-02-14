@@ -2,12 +2,14 @@
 
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h>
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btHingeConstraint.h>
 #include <BulletDynamics/ConstraintSolver/btHinge2Constraint.h>
@@ -890,10 +892,10 @@ namespace flex
 					}
 
 					ImGui::Text("Activation state: %i", rbInternal->getActivationState());
-				}
 
-				ImGui::Text("Group: %i", m_RigidBody->GetGroup());
-				ImGui::Text("Mask: %i", m_RigidBody->GetMask());
+					ImGui::Text("Group: %i", m_RigidBody->GetGroup());
+					ImGui::Text("Mask: %i", m_RigidBody->GetMask());
+				}
 
 				ImGui::TreePop();
 			}
@@ -2461,7 +2463,11 @@ namespace flex
 
 	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
 	{
-		delete m_RigidBody;
+		if (m_RigidBody != nullptr)
+		{
+			m_RigidBody->Destroy();
+			delete m_RigidBody;
+		}
 
 		m_RigidBody = rigidBody;
 
@@ -7583,7 +7589,7 @@ namespace flex
 		m_DynamicVertexBufferCreateInfo.attributes = extendedVertBufferData->Attributes;
 
 		m_Mesh = new Mesh(m_OriginTransform);
-		m_Indices = m_ExtendedMesh->GetIndexBuffer();
+		m_Indices = m_ExtendedMesh->GetIndexBufferCopy();
 		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, s_SpringMatID, vertCount);
 
 		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
@@ -8184,7 +8190,7 @@ namespace flex
 				m_MeshVertexBufferCreateInfo.positions_3D[i] = points[i]->pos - worldPos;
 			}
 
-			std::vector<u32> indices = m_MeshComponent->GetIndexBuffer();
+			std::vector<u32> indices = m_MeshComponent->GetIndexBufferCopy();
 			MeshComponent::CalculateTangents(m_MeshVertexBufferCreateInfo, indices);
 
 			//for (u32 i = 0; i <(u32)m_MeshVertexBufferCreateInfo.normals.size(); ++i)
@@ -8373,7 +8379,7 @@ namespace flex
 
 			m_MeshComponent = m_Mesh->GetSubMesh(0);
 			VertexBufferData* vertexBufferData = m_MeshComponent->GetVertexBufferData();
-			std::vector<u32> indexData = m_MeshComponent->GetIndexBuffer();
+			std::vector<u32> indexData = m_MeshComponent->GetIndexBufferCopy();
 			std::vector<glm::vec3> posData(vertexBufferData->VertexCount);
 			std::vector<glm::vec2> uvData(vertexBufferData->VertexCount);
 			VertexBufferData::ResizeForPresentAttributes(m_MeshVertexBufferCreateInfo, vertexBufferData->VertexCount);
@@ -9388,6 +9394,13 @@ namespace flex
 		}
 		m_Meshes.clear();
 		curveSegments.clear();
+
+		for (u32 i = 0; i < (u32)m_RigidBodies.size(); ++i)
+		{
+			m_RigidBodies[i]->Destroy();
+			delete m_RigidBodies[i];
+		}
+		m_RigidBodies.clear();
 	}
 
 	void Road::Update()
@@ -9495,7 +9508,7 @@ namespace flex
 		const u32 triCount = m_QuadCountPerSegment * 2;
 		const u32 indexCount = triCount * 3;
 
-		static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
 		vertexBufferCreateInfo.positions_3D.clear();
 		vertexBufferCreateInfo.texCoords_UV.clear();
 		vertexBufferCreateInfo.colours_R32G32B32A32.clear();
@@ -9558,6 +9571,8 @@ namespace flex
 			assert(m_Meshes[index] == nullptr);
 			m_Meshes[index] = meshComponent;
 		}
+
+		CreateRigidBody(index);
 	}
 
 	void Road::GenerateMaterial()
@@ -9578,5 +9593,52 @@ namespace flex
 
 			m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
 		}
+	}
+
+	void Road::CreateRigidBody(u32 meshIndex)
+	{
+		if (m_Meshes.empty())
+		{
+			return;
+		}
+
+		if (meshIndex < (u32)m_RigidBodies.size() && m_RigidBodies[meshIndex] != nullptr)
+		{
+			m_RigidBodies[meshIndex]->Destroy();
+			delete m_RigidBodies[meshIndex];
+			m_RigidBodies[meshIndex] = nullptr;
+		}
+
+		if (meshIndex >= (u32)m_RigidBodies.size())
+		{
+			m_RigidBodies.resize(meshIndex + 1, nullptr);
+		}
+
+		RigidBody* rb = new RigidBody();
+		rb->SetStatic(true);
+
+		m_RigidBodies[meshIndex] = rb;
+
+		btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
+		btIndexedMesh part = {};
+
+		MeshComponent* submesh = m_Meshes[meshIndex];
+		VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
+		u32* indexBufferData = submesh->GetIndexBufferDataPtr();
+		u32 indexCount = submesh->GetIndexCount();
+
+		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
+		part.m_vertexStride = vertexBufferData->VertexStride;
+		part.m_numVertices = vertexBufferData->UsedVertexCount;
+		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
+		part.m_triangleIndexStride = sizeof(u32) * 3;
+		part.m_numTriangles = (i32)(indexCount / 3);
+
+		meshInterface->addIndexedMesh(part, PHY_INTEGER);
+
+		bool useQuantizedAabbCompression = false;
+		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
+
+		rb->Initialize(shape, &m_Transform);
 	}
 } // namespace flex

@@ -1186,9 +1186,19 @@ namespace flex
 		return &m_VertexBufferData;
 	}
 
-	std::vector<u32> MeshComponent::GetIndexBuffer()
+	std::vector<u32> MeshComponent::GetIndexBufferCopy()
 	{
 		return m_Indices;
+	}
+
+	u32* MeshComponent::GetIndexBufferDataPtr()
+	{
+		return &m_Indices[0];
+	}
+
+	u32 MeshComponent::GetIndexCount()
+	{
+		return (u32)m_Indices.size();
 	}
 
 	real MeshComponent::GetVertexBufferUsage() const

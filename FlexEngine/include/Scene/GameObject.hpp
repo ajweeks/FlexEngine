@@ -1370,6 +1370,8 @@ namespace flex
 		void GenerateMaterial();
 		void GenerateSegmentsToReach(const glm::vec3& point);
 
+		void CreateRigidBody(u32 meshIndex);
+
 		struct Segment
 		{
 			BezierCurve3D curve;
@@ -1379,6 +1381,7 @@ namespace flex
 
 		std::vector<Segment> curveSegments;
 		std::vector<MeshComponent*> m_Meshes;
+		std::vector<RigidBody*> m_RigidBodies;
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 
 		u32 m_QuadCountPerSegment = 10;
