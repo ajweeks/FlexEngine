@@ -36,7 +36,6 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
-#include "Audio/AudioManager.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Editor.hpp"
@@ -78,6 +77,8 @@ namespace flex
 	const char* SpringObject::s_ContractedMeshFilePath = MESH_DIRECTORY "spring-contracted.glb";
 	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
+
+	std::array<AudioSourceID, (u32)Vehicle::SoundEffectSource::_COUNT> Vehicle::s_SoundEffectSources;
 
 	extern ChildIndex InvalidChildIndex = ChildIndex({});
 
@@ -8887,6 +8888,32 @@ namespace flex
 	{
 		GameObject::Initialize();
 
+		// Load static sound effects
+		if (s_SoundEffectSources[0] == 0 || s_SoundEffectSources[0] == InvalidAudioSourceID)
+		{
+			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-01-2.wav");
+			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_START] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-start.wav");
+			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-loop.wav");
+			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP], true);
+			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_END] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-end.wav");
+		}
+
+		// Create sound clips
+		{
+			{
+				AudioSourceID startID = InvalidAudioSourceID;
+				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01];
+				AudioSourceID endID = InvalidAudioSourceID;
+				m_SoundEffects[(u32)SoundEffect::ROAR_01] = SoundClip_Looping("Roar 01", startID, loopID, endID);
+			}
+			{
+				AudioSourceID startID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_START];
+				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP];
+				AudioSourceID endID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_END];
+				m_SoundEffects[(u32)SoundEffect::ROAR_02] = SoundClip_Looping("Roar 02", startID, loopID, endID);
+			}
+		}
+
 #if 1
 		if (m_RigidBody != nullptr)
 		{
@@ -9071,6 +9098,23 @@ namespace flex
 			m_EngineForce = 0.0f;
 		}
 
+		if (m_EngineForce == 0.0f)
+		{
+			if (m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::LOOPING ||
+				m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::STARTING)
+			{
+				m_SoundEffects[(u32)SoundEffect::ROAR_02].End();
+			}
+		}
+		else if (m_EngineForce > 0.0f)
+		{
+			if (m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::OFF ||
+				m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::ENDING)
+			{
+				m_SoundEffects[(u32)SoundEffect::ROAR_02].Start();
+			}
+		}
+
 		if (m_bFlippingRightSideUp)
 		{
 			m_Transform.SetWorldRotation(glm::slerp(m_Transform.GetWorldRotation(), m_TargetRot, glm::clamp(g_DeltaTime * UPRIGHTING_SPEED, 0.0f, 1.0f)));
@@ -9215,6 +9259,11 @@ namespace flex
 		vehicle->updateGraphics();
 		vehicle->renderScene();
 #endif
+
+		for (u32 i = 0; i < (u32)SoundEffect::_COUNT; ++i)
+		{
+			m_SoundEffects[i].Update();
+		}
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -9303,6 +9352,16 @@ namespace flex
 		ImGui::SliderFloat("Sus. max travel cm", &m_tuning.m_maxSuspensionTravelCm, 0.0f, 1000.0f);
 		ImGui::SliderFloat("Friction slip", &m_tuning.m_frictionSlip, 0.0f, 50.0f);
 		ImGui::SliderFloat("Sus. max force", &m_tuning.m_maxSuspensionForce, 0.0f, 10'000.0f);
+
+
+		if (ImGui::BeginChild("Sound clips", ImVec2(300, 300), true))
+		{
+			for (SoundClip_Looping& clip : m_SoundEffects)
+			{
+				clip.DrawImGui();
+			}
+		}
+		ImGui::EndChild();
 	}
 
 	bool Vehicle::AllowInteractionWith(GameObject* gameObject)
@@ -9357,25 +9416,13 @@ namespace flex
 		m_QuadCountPerSegment = 25;
 
 		m_Start = glm::vec3(4.0f, 0.0f, 0.0f);
-		m_End = glm::vec3(9.0f, 0.0f, 32.0f);
+		m_End = m_Start;
 
-		Segment segment = {};
-		segment.curve = BezierCurve3D(m_Start, glm::vec3(5.0f, 0.0f, 8.0f), glm::vec3(1.0f, 0.0f, 8.0f), glm::vec3(5.0f, 0.0f, 16.0f));
-		segment.widthStart = 2.0f;
-		segment.widthEnd = 2.0f;
-		curveSegments.push_back(segment);
-		GenerateSegment((i32)curveSegments.size() - 1);
-
-		segment.curve = BezierCurve3D(glm::vec3(5.0f, 0.0f, 16.0f), glm::vec3(9.0f, 0.0f, 24.0f), glm::vec3(9.0f, 0.0f, 24.0f), m_End);
-		segment.widthStart = 2.0f;
-		segment.widthEnd = 2.0f;
-		curveSegments.push_back(segment);
-		GenerateSegment((i32)curveSegments.size() - 1);
-
-		GenerateSegmentsToReach(glm::vec3(30.0f, 0.0, 42.0f));
-		GenerateSegmentsToReach(glm::vec3(48.0f, 0.0, 34.0f));
-		GenerateSegmentsToReach(glm::vec3(52.0f, 0.0, 16.0f));
-		GenerateSegmentsToReach(glm::vec3(32.0f, 0.0, -12.0f));
+		GenerateSegmentsToReach(glm::vec3(9.0f, 0.0f, 64.0f));
+		GenerateSegmentsToReach(glm::vec3(60.0f, 0.0, 84.0f));
+		GenerateSegmentsToReach(glm::vec3(96.0f, 0.0, 72.0f));
+		GenerateSegmentsToReach(glm::vec3(104.0f, 0.0, 32.0f));
+		GenerateSegmentsToReach(glm::vec3(64.0f, 0.0, -24.0f));
 		GenerateSegmentsToReach(m_Start);
 
 		GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->RegisterRoad(this);
@@ -9407,8 +9454,11 @@ namespace flex
 	{
 		GameObject::Update();
 
-		for (Segment& segment : curveSegments)
+		for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
 		{
+			Segment& segment = curveSegments[i];
+
+			// TOOD: move curve segment by our transform/offset it
 			segment.curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 	}
@@ -9433,13 +9483,13 @@ namespace flex
 		real dist2ToStart = glm::distance2(point, m_Start);
 		const bool bEndCloser = (dist2ToEnd < dist2ToStart) && (dist2ToEnd > 0.01f) || (dist2ToStart <= 0.01f);
 		glm::vec3 startPoint = bEndCloser ? m_End : m_Start;
-		Segment& startSegment = bEndCloser ? curveSegments[curveSegments.size() - 1] : curveSegments[0];
+		Segment* startSegment = curveSegments.empty() ? nullptr : (bEndCloser ? &curveSegments[curveSegments.size() - 1] : &curveSegments[0]);
 		glm::vec3 delta = point - startPoint;
 		real distance = glm::length(delta);
 		glm::vec3 deltaN = delta / distance;
-		i32 estimatedSegmentCount = (i32)glm::ceil(distance / m_TargetSegmentLength);
+		i32 estimatedSegmentCount = glm::clamp((i32)glm::ceil(distance / m_TargetSegmentLength), 1, 64);
 
-		glm::vec3 tangent = startSegment.curve.points[3] - startSegment.curve.points[2];
+		glm::vec3 tangent = startSegment != nullptr ? (startSegment->curve.points[3] - startSegment->curve.points[2]) : VEC3_FORWARD;
 
 		curveSegments.reserve(curveSegments.size() + estimatedSegmentCount);
 
@@ -9451,8 +9501,8 @@ namespace flex
 			tangent = deltaN;
 			glm::vec3 mid1 = Lerp(startPoint, endPoint, 0.66f);
 			segment.curve = BezierCurve3D(startPoint, mid0, mid1, endPoint);
-			segment.widthStart = 2.0f;
-			segment.widthEnd = 2.0f;
+			segment.widthStart = 3.0f;
+			segment.widthEnd = 3.0f;
 			curveSegments.push_back(segment);
 			GenerateSegment((i32)curveSegments.size() - 1);
 

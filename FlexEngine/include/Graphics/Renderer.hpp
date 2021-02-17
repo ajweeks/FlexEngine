@@ -72,6 +72,7 @@ namespace flex
 			real colourTo[4];
 		};
 
+		// TODO: Allocate from pool to reduce startup alloc size (currently 57MB!)
 		static const u32 MAX_NUM_LINE_SEGMENTS = 1'048'576;
 		u32 m_LineSegmentIndex = 0;
 		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];

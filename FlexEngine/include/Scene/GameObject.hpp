@@ -5,6 +5,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioCue.hpp"
+#include "Audio/AudioManager.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferDataCreateInfo
@@ -1294,6 +1295,14 @@ namespace flex
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;
 
+		enum class SoundEffect
+		{
+			ROAR_01,
+			ROAR_02,
+
+			_COUNT
+		};
+
 	private:
 		enum class Tire : u32
 		{
@@ -1309,16 +1318,30 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		enum class SoundEffectSource
+		{
+			ROAR_01,
+			ROAR_02_START,
+			ROAR_02_LOOP,
+			ROAR_02_END,
+
+			_COUNT
+		};
+
+		static std::array<AudioSourceID, (u32)SoundEffectSource::_COUNT> s_SoundEffectSources;
+
 		const real MAX_STEER = 0.5f;
-		const real MAX_ENGINE_FORCE = 2500.0f;
+		const real MAX_ENGINE_FORCE = 4000.0f;
 		const real MAX_BRAKE_FORCE = 40.0f;
-		const real ENGINE_FORCE_SLOW_FACTOR = 0.5f;
+		const real ENGINE_FORCE_SLOW_FACTOR = 10.0f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
 
-		const real m_MoveAccel = 1500.0f;
+		const real m_MoveAccel = 9500.0f;
 		const real m_TurnAccel = 1.5f;
 
 		void ResetTransform();
+
+		std::array<SoundClip_Looping, (u32)SoundEffect::_COUNT> m_SoundEffects;
 
 		GameObjectID m_TireIDs[m_TireCount];
 

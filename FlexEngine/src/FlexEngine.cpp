@@ -636,6 +636,8 @@ namespace flex
 							targetVel = spring.vel;
 						}
 					}
+
+					AudioManager::Update();
 				}
 				else
 				{

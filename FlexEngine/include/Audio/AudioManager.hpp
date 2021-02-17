@@ -7,11 +7,72 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	struct SoundClip_Looping
+	{
+		SoundClip_Looping();
+		SoundClip_Looping(const char* name, AudioSourceID startID, AudioSourceID loopID, AudioSourceID endID);
+
+		bool IsValid() const;
+		bool IsPlaying() const;
+
+		void Start();
+		void End();
+		void Update();
+		void KillCurrentlyPlaying();
+
+		void DrawImGui();
+
+		enum class State
+		{
+			STARTING,
+			LOOPING,
+			ENDING,
+
+			OFF
+		};
+
+		static constexpr const char* StateStrings[] =
+		{
+			"Starting",
+			"Looping",
+			"Ending",
+			"Off"
+		};
+
+		static_assert(ARRAY_LENGTH(StateStrings) == (u32)State::OFF + 1, "Length of StateStrings must match length of State enum");
+
+		// Optional
+		AudioSourceID start = InvalidAudioSourceID;
+
+		AudioSourceID loop = InvalidAudioSourceID;
+
+		// Optional
+		AudioSourceID end = InvalidAudioSourceID;
+
+		State state = State::OFF;
+		real timeInState = 0.0f;
+		real stateLength = -1.0f;
+
+	private:
+		void ChangeToState(State newState);
+
+		real m_FadeFastDuration = 0.1f;
+		real m_FadeDuration = 0.3f;
+
+		// Debug only
+		const char* m_Name = nullptr;
+
+	};
+
+
+	// TODO: Make global instance like every other manager?
+	// TODO: Inherit from System base class?
 	class AudioManager
 	{
 	public:
 		static void Initialize();
 		static void Destroy();
+		static void Update();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
@@ -25,6 +86,9 @@ namespace flex
 		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
+
+		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration);
+		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration);
 
 		/*
 		* Multiplies the source by gainScale
@@ -47,6 +111,8 @@ namespace flex
 		static bool GetSourceLooping(AudioSourceID sourceID);
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
+
+		static real GetSoundLength(AudioSourceID sourceID);
 
 		static void ToggleMuted();
 		static void SetMuted(bool bMuted);
@@ -73,9 +139,15 @@ namespace flex
 			ALuint source = InvalidAudioSourceID;
 			real gain = 1.0f;
 			real pitch = 1.0f;
+			real length = -1.0f;
 
 			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
 			ALenum state = AL_INITIAL;
+
+			// If non-zero, we're fading in when bFadingIn, and out otherwise
+			real fadeDuration = 0.0f;
+			real fadeDurationRemaining = 0.0f;
+			bool bFadingIn;
 
 			bool bLooping = false;
 		};

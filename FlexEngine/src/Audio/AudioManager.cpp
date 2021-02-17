@@ -20,6 +20,180 @@ namespace flex
 
 	AudioSourceID AudioManager::s_BeepID = InvalidAudioSourceID;
 
+	SoundClip_Looping::SoundClip_Looping()
+	{}
+
+	SoundClip_Looping::SoundClip_Looping(const char* name, AudioSourceID startID, AudioSourceID loopID, AudioSourceID endID) :
+		m_Name(name),
+		start(startID),
+		loop(loopID),
+		end(endID)
+	{
+	}
+
+	bool SoundClip_Looping::IsValid() const
+	{
+		return loop != InvalidAudioSourceID;
+	}
+
+	bool SoundClip_Looping::IsPlaying() const
+	{
+		return state != State::OFF;
+	}
+
+	void SoundClip_Looping::Start()
+	{
+		ChangeToState(State::STARTING);
+	}
+
+	void SoundClip_Looping::End()
+	{
+		ChangeToState(State::ENDING);
+	}
+
+	void SoundClip_Looping::Update()
+	{
+		if (state != State::OFF)
+		{
+			timeInState += g_DeltaTime;
+			if (timeInState >= stateLength)
+			{
+				switch (state)
+				{
+				case State::STARTING:
+				{
+					ChangeToState(State::LOOPING);
+				} break;
+				case State::LOOPING:
+				{
+					timeInState -= stateLength;
+				} break;
+				case State::ENDING:
+				{
+					ChangeToState(State::OFF);
+				} break;
+				}
+			}
+		}
+	}
+
+	void SoundClip_Looping::ChangeToState(State newState)
+	{
+		const State oldState = state;
+		Print("Changing from %s to %s\n", StateStrings[(i32)oldState], StateStrings[(i32)newState]);
+
+		if (oldState == newState)
+		{
+			return;
+		}
+
+		switch (newState)
+		{
+		case State::STARTING:
+		{
+			if (oldState == State::LOOPING)
+			{
+				PrintError("Unexpected state in SoundClip_Looping: looping -> starting transition\n");
+				KillCurrentlyPlaying();
+			}
+
+			if (start == InvalidAudioSourceID)
+			{
+				ChangeToState(State::LOOPING);
+				return;
+			}
+
+			if (oldState == State::ENDING)
+			{
+				AudioManager::FadeSourceOut(end, m_FadeFastDuration);
+			}
+
+			state = State::STARTING;
+			timeInState = 0.0f;
+			stateLength = std::max(AudioManager::GetSoundLength(start) - m_FadeDuration, 0.0f);
+			AudioManager::PlaySource(start);
+			AudioManager::SetSourceGain(start, 1.0f);
+		} break;
+		case State::LOOPING:
+		{
+			if (oldState == State::ENDING)
+			{
+				PrintError("Unexpected state in SoundClip_Looping: ending -> looping transition\n");
+			}
+
+			state = State::LOOPING;
+			timeInState = 0.0f;
+			stateLength = AudioManager::GetSoundLength(loop);
+			AudioManager::PlaySource(loop);
+			AudioManager::FadeSourceIn(loop, m_FadeDuration);
+		} break;
+		case State::ENDING:
+		{
+			if (end == InvalidAudioSourceID)
+			{
+				KillCurrentlyPlaying();
+				return;
+			}
+
+			if (oldState == State::STARTING)
+			{
+				AudioManager::FadeSourceOut(start, m_FadeFastDuration);
+			}
+			else if (oldState == State::LOOPING)
+			{
+				AudioManager::FadeSourceOut(loop, m_FadeDuration);
+			}
+
+			state = State::ENDING;
+			timeInState = 0.0f;
+			stateLength = AudioManager::GetSoundLength(end);
+			AudioManager::PlaySource(end);
+			AudioManager::SetSourceGain(end, 1.0f);
+		} break;
+		case State::OFF:
+		{
+			KillCurrentlyPlaying();
+		} break;
+		}
+	}
+
+	void SoundClip_Looping::KillCurrentlyPlaying()
+	{
+		switch (state)
+		{
+		case State::STARTING:
+		{
+			AudioManager::StopSource(start);
+		} break;
+		case State::LOOPING:
+		{
+			AudioManager::StopSource(loop);
+		} break;
+		case State::ENDING:
+		{
+			AudioManager::StopSource(end);
+		} break;
+		}
+
+		state = State::OFF;
+		stateLength = -1.0f;
+		timeInState = 0.0f;
+	}
+
+	void SoundClip_Looping::DrawImGui()
+	{
+		if (ImGui::TreeNode(m_Name))
+		{
+			ImGui::Text("State: %s", StateStrings[(i32)state]);
+			ImGui::Text("Time in state: %.2f", timeInState);
+			ImGui::Text("State length: %.2f", stateLength);
+
+			ImGui::TreePop();
+		}
+	}
+
+	// ---
+
 	void AudioManager::Initialize()
 	{
 		// Retrieve preferred device
@@ -77,6 +251,38 @@ namespace flex
 		alcCloseDevice(s_Device);
 	}
 
+	void AudioManager::Update()
+	{
+		for (u32 i = 0; i < (i32)s_Sources.size(); ++i)
+		{
+			Source& source = s_Sources[i];
+
+			if (source.fadeDurationRemaining > 0.0f)
+			{
+				real gain;
+
+				source.fadeDurationRemaining -= g_DeltaTime;
+				if (source.fadeDurationRemaining < 0.0f)
+				{
+					source.fadeDurationRemaining = 0.0f;
+					source.fadeDuration = 0.0f;
+					gain = source.bFadingIn ? 1.0f : 0.0f;
+				}
+				else if (source.bFadingIn)
+				{
+					gain = glm::clamp(1.0f - source.fadeDurationRemaining / source.fadeDuration, 0.0f, 1.0f);
+					Print("Fading in %.2f\n", gain);
+				}
+				else
+				{
+					gain = glm::clamp(source.fadeDurationRemaining / source.fadeDuration, 0.0f, 1.0f);
+					Print("Fading out %.2f\n", gain);
+				}
+				SetSourceGain((AudioSourceID)i, gain);
+			}
+		}
+	}
+
 	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
@@ -126,6 +332,14 @@ namespace flex
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
 		DisplayALError("alSourcei", alGetError());
+
+		ALint bufferID, bufferSize, frequency, bitsPerSample, channels;
+		alGetSourcei(s_Sources[newID].source, AL_BUFFER, &bufferID);
+		alGetBufferi(bufferID, AL_SIZE, &bufferSize);
+		alGetBufferi(bufferID, AL_FREQUENCY, &frequency);
+		alGetBufferi(bufferID, AL_CHANNELS, &channels);
+		alGetBufferi(bufferID, AL_BITS, &bitsPerSample);
+		s_Sources[newID].length = ((real)bufferSize) / (frequency * channels * (bitsPerSample / 8));
 
 		return newID;
 	}
@@ -189,6 +403,8 @@ namespace flex
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
 		DisplayALError("alSourcei", alGetError());
+
+		alGetSourcef(s_Sources[newID].source, AL_SEC_OFFSET, &s_Sources[newID].length);
 
 		return newID;
 	}
@@ -282,6 +498,21 @@ namespace flex
 		}
 	}
 
+	void AudioManager::FadeSourceIn(AudioSourceID sourceID, real fadeDuration)
+	{
+		SetSourceGain(sourceID, 0.0f);
+		s_Sources[sourceID].bFadingIn = true;
+		s_Sources[sourceID].fadeDuration = fadeDuration;
+		s_Sources[sourceID].fadeDurationRemaining = fadeDuration;
+	}
+
+	void AudioManager::FadeSourceOut(AudioSourceID sourceID, real fadeDuration)
+	{
+		s_Sources[sourceID].bFadingIn = false;
+		s_Sources[sourceID].fadeDuration = fadeDuration;
+		s_Sources[sourceID].fadeDurationRemaining = fadeDuration;
+	}
+
 	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero)
 	{
 		assert(sourceID < s_Sources.size());
@@ -357,6 +588,11 @@ namespace flex
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		return (s_Sources[sourceID].state == AL_PLAYING);
+	}
+
+	real AudioManager::GetSoundLength(AudioSourceID sourceID)
+	{
+		return s_Sources[sourceID].length;
 	}
 
 	void AudioManager::ToggleMuted()
