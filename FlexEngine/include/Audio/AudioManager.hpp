@@ -5,6 +5,8 @@ IGNORE_WARNINGS_PUSH
 #include "AL/alc.h"
 IGNORE_WARNINGS_POP
 
+#include "Histogram.hpp"
+
 namespace flex
 {
 	struct SoundClip_Looping
@@ -61,6 +63,40 @@ namespace flex
 
 		// Debug only
 		const char* m_Name = nullptr;
+		Histogram m_TimeInStateHisto;
+
+	};
+
+	struct SoundClip_LoopingSimple
+	{
+		SoundClip_LoopingSimple();
+		SoundClip_LoopingSimple(const char* name, AudioSourceID loopID);
+
+		bool IsValid() const;
+		bool IsPlaying() const;
+
+		void FadeIn();
+		void FadeOut();
+		void Update();
+		void KillCurrentlyPlaying();
+
+		void SetPitch(real pitch);
+
+		void DrawImGui();
+
+		AudioSourceID loop = InvalidAudioSourceID;
+
+		real fadeInTimeRemaining = -1.0f;
+		real fadeOutTimeRemaining = -1.0f;
+
+	private:
+		real m_FadeFastDuration = 0.1f;
+		real m_FadeDuration = 0.3f;
+		bool bPlaying = false;
+
+		// Debug only
+		const char* m_Name = nullptr;
+		Histogram m_VolHisto;
 
 	};
 
@@ -84,11 +120,13 @@ namespace flex
 		static real GetMasterGain();
 
 		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		// Start source partway through (t in [0, 1])
+		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 
-		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration);
-		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration);
+		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
+		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
 
 		/*
 		* Multiplies the source by gainScale

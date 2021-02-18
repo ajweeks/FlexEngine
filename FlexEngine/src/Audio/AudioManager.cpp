@@ -27,7 +27,8 @@ namespace flex
 		m_Name(name),
 		start(startID),
 		loop(loopID),
-		end(endID)
+		end(endID),
+		m_TimeInStateHisto(128)
 	{
 	}
 
@@ -75,12 +76,31 @@ namespace flex
 				}
 			}
 		}
+
+		switch (state)
+		{
+		case State::STARTING:
+		{
+			m_TimeInStateHisto.AddElement(timeInState);
+		} break;
+		case State::LOOPING:
+		{
+			m_TimeInStateHisto.AddElement(1.0f);
+		} break;
+		case State::ENDING:
+		{
+			m_TimeInStateHisto.AddElement(1.0f - timeInState);
+		} break;
+		case State::OFF:
+		{
+			m_TimeInStateHisto.AddElement(0.0f);
+		} break;
+		}
 	}
 
 	void SoundClip_Looping::ChangeToState(State newState)
 	{
 		const State oldState = state;
-		Print("Changing from %s to %s\n", StateStrings[(i32)oldState], StateStrings[(i32)newState]);
 
 		if (oldState == newState)
 		{
@@ -103,15 +123,26 @@ namespace flex
 				return;
 			}
 
+			real offset = -1.0f;
+
 			if (oldState == State::ENDING)
 			{
-				AudioManager::FadeSourceOut(end, m_FadeFastDuration);
+				offset = 1.0f - glm::clamp(timeInState / stateLength, 0.0f, 1.0f);
+
+				AudioManager::FadeSourceOut(end, m_FadeFastDuration, m_FadeFastDuration);
 			}
 
 			state = State::STARTING;
 			timeInState = 0.0f;
 			stateLength = std::max(AudioManager::GetSoundLength(start) - m_FadeDuration, 0.0f);
-			AudioManager::PlaySource(start);
+			if (offset != -1.0f)
+			{
+				AudioManager::PlaySourceFromPos(start, offset);
+			}
+			else
+			{
+				AudioManager::PlaySource(start);
+			}
 			AudioManager::SetSourceGain(start, 1.0f);
 		} break;
 		case State::LOOPING:
@@ -125,7 +156,7 @@ namespace flex
 			timeInState = 0.0f;
 			stateLength = AudioManager::GetSoundLength(loop);
 			AudioManager::PlaySource(loop);
-			AudioManager::FadeSourceIn(loop, m_FadeDuration);
+			AudioManager::FadeSourceIn(loop, m_FadeDuration, m_FadeDuration);
 		} break;
 		case State::ENDING:
 		{
@@ -135,19 +166,30 @@ namespace flex
 				return;
 			}
 
+			real offset = -1.0f;
+
 			if (oldState == State::STARTING)
 			{
-				AudioManager::FadeSourceOut(start, m_FadeFastDuration);
+				offset = 1.0f - glm::clamp(timeInState / stateLength, 0.0f, 1.0f);
+
+				AudioManager::FadeSourceOut(start, m_FadeFastDuration, m_FadeFastDuration);
 			}
 			else if (oldState == State::LOOPING)
 			{
-				AudioManager::FadeSourceOut(loop, m_FadeDuration);
+				AudioManager::FadeSourceOut(loop, m_FadeDuration, m_FadeDuration);
 			}
 
 			state = State::ENDING;
 			timeInState = 0.0f;
 			stateLength = AudioManager::GetSoundLength(end);
-			AudioManager::PlaySource(end);
+			if (offset != -1.0f)
+			{
+				AudioManager::PlaySourceFromPos(end, offset);
+			}
+			else
+			{
+				AudioManager::PlaySource(end);
+			}
 			AudioManager::SetSourceGain(end, 1.0f);
 		} break;
 		case State::OFF:
@@ -184,9 +226,163 @@ namespace flex
 	{
 		if (ImGui::TreeNode(m_Name))
 		{
-			ImGui::Text("State: %s", StateStrings[(i32)state]);
+#define SET_COL(s) if (state == s) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.4f, 1.0f))
+#define SET_COL_POP(s) if (state == s) ImGui::PopStyleColor()
+
+			SET_COL(State::LOOPING);
+			ImGui::Text("%d", StateStrings[(i32)State::LOOPING]);
+			SET_COL_POP(State::LOOPING);
+
+			SET_COL(State::STARTING);
+			ImGui::Text("%d", StateStrings[(i32)State::STARTING]);
+			SET_COL_POP(State::STARTING);
+
+			ImGui::SameLine();
+
+			SET_COL(State::ENDING);
+			ImGui::Text("%d", StateStrings[(i32)State::ENDING]);
+			SET_COL_POP(State::ENDING);
+
+			SET_COL(State::OFF);
+			ImGui::Text("%d", StateStrings[(i32)State::OFF]);
+			SET_COL_POP(State::OFF);
+
+#undef SET_COl
+#undef SET_COl_POP
+
 			ImGui::Text("Time in state: %.2f", timeInState);
 			ImGui::Text("State length: %.2f", stateLength);
+
+			ImGui::PlotHistogram("Histo",
+				m_TimeInStateHisto.data.data(),
+				(i32)m_TimeInStateHisto.data.size(),
+				m_TimeInStateHisto.index,
+				nullptr,
+				0.0f, 1.0f);
+
+			ImGui::TreePop();
+		}
+	}
+
+	SoundClip_LoopingSimple::SoundClip_LoopingSimple()
+	{}
+
+	SoundClip_LoopingSimple::SoundClip_LoopingSimple(const char* name, AudioSourceID loopID) :
+		m_Name(name),
+		loop(loopID),
+		m_VolHisto(128)
+	{
+	}
+
+	bool SoundClip_LoopingSimple::IsValid() const
+	{
+		return loop != InvalidAudioSourceID;
+	}
+
+	bool SoundClip_LoopingSimple::IsPlaying() const
+	{
+		return bPlaying;
+	}
+
+	void SoundClip_LoopingSimple::FadeIn()
+	{
+		// If looping or fading in, early out
+		if (bPlaying && fadeOutTimeRemaining == -1.0f)
+		{
+			return;
+		}
+
+		real durationRemaining = 1.0f;
+		if (fadeOutTimeRemaining != -1.0f)
+		{
+			durationRemaining = 1.0f - fadeOutTimeRemaining / m_FadeDuration;
+			fadeOutTimeRemaining = -1.0f;
+		}
+
+		bPlaying = true;
+		AudioManager::PlaySource(loop);
+		fadeInTimeRemaining = m_FadeDuration * durationRemaining;
+		AudioManager::FadeSourceIn(loop, durationRemaining * m_FadeDuration, m_FadeDuration);
+	}
+
+	void SoundClip_LoopingSimple::FadeOut()
+	{
+		if (bPlaying && fadeOutTimeRemaining == -1.0f)
+		{
+			real durationRemaining = 1.0f;
+			if (fadeInTimeRemaining != -1.0f)
+			{
+				durationRemaining = glm::clamp(1.0f - fadeInTimeRemaining / m_FadeDuration, 0.0f, 1.0f);
+			}
+
+			fadeInTimeRemaining = -1.0f;
+			fadeOutTimeRemaining = m_FadeDuration * durationRemaining;
+			AudioManager::FadeSourceOut(loop, durationRemaining * m_FadeDuration, m_FadeDuration);
+		}
+	}
+
+	void SoundClip_LoopingSimple::Update()
+	{
+		if (fadeInTimeRemaining != -1.0f)
+		{
+			fadeInTimeRemaining -= g_DeltaTime;
+			if (fadeInTimeRemaining <= 0.0f)
+			{
+				fadeInTimeRemaining = -1.0f;
+			}
+		}
+		if (fadeOutTimeRemaining != -1.0f)
+		{
+			fadeOutTimeRemaining -= g_DeltaTime;
+			if (fadeOutTimeRemaining <= 0.0f)
+			{
+				fadeOutTimeRemaining = -1.0f;
+				bPlaying = false;
+			}
+		}
+
+		if (fadeInTimeRemaining != -1.0f)
+		{
+			m_VolHisto.AddElement(1.0f - fadeInTimeRemaining / m_FadeDuration);
+		}
+		else if (fadeOutTimeRemaining != -1.0f)
+		{
+			m_VolHisto.AddElement(fadeOutTimeRemaining / m_FadeDuration);
+		}
+		else
+		{
+			m_VolHisto.AddElement(bPlaying ? 1.0f : 0.0f);
+		}
+	}
+
+	void SoundClip_LoopingSimple::KillCurrentlyPlaying()
+	{
+		AudioManager::StopSource(loop);
+		fadeInTimeRemaining = -1.0f;
+		fadeOutTimeRemaining = -1.0f;
+		bPlaying = false;
+	}
+
+	void SoundClip_LoopingSimple::SetPitch(real pitch)
+	{
+		AudioManager::SetSourcePitch(loop, pitch);
+	}
+
+	void SoundClip_LoopingSimple::DrawImGui()
+	{
+		if (ImGui::TreeNode(m_Name))
+		{
+			ImGui::PlotHistogram("Gain",
+				m_VolHisto.data.data(),
+				(i32)m_VolHisto.data.size(),
+				m_VolHisto.index,
+				nullptr,
+				0.0f, 1.0f);
+
+			ImGui::Text("Gain: %.2f", AudioManager::GetSourceGain(loop));
+			ImGui::Text("fadeInTimeRemaining: %.2f", fadeInTimeRemaining);
+			ImGui::Text("fadeOutTimeRemaining: %.2f", fadeOutTimeRemaining);
+			ImGui::Text("bPlaying: %s", (bPlaying ? "true" : "false"));
 
 			ImGui::TreePop();
 		}
@@ -271,12 +467,10 @@ namespace flex
 				else if (source.bFadingIn)
 				{
 					gain = glm::clamp(1.0f - source.fadeDurationRemaining / source.fadeDuration, 0.0f, 1.0f);
-					Print("Fading in %.2f\n", gain);
 				}
 				else
 				{
 					gain = glm::clamp(source.fadeDurationRemaining / source.fadeDuration, 0.0f, 1.0f);
-					Print("Fading out %.2f\n", gain);
 				}
 				SetSourceGain((AudioSourceID)i, gain);
 			}
@@ -444,7 +638,7 @@ namespace flex
 		return s_MasterGain;
 	}
 
-	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart)
+	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
 	{
 		if (sourceID >= s_Sources.size())
 		{
@@ -452,6 +646,7 @@ namespace flex
 			return;
 		}
 
+		// TODO: Just test cached value?
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 
 		if (bForceRestart || s_Sources[sourceID].state != AL_PLAYING)
@@ -460,6 +655,21 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("PlaySource", alGetError());
 		}
+	}
+
+	void AudioManager::PlaySourceFromPos(AudioSourceID sourceID, real t)
+	{
+		if (sourceID >= s_Sources.size())
+		{
+			PrintError("Attempted to play invalid source %d\n", (u32)sourceID);
+			return;
+		}
+
+		sec offset = t * s_Sources[sourceID].length;
+		alSourcef(s_Sources[sourceID].source, AL_SEC_OFFSET, offset);
+		alSourcePlay(s_Sources[sourceID].source);
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		DisplayALError("PlaySourceFromPos", alGetError());
 	}
 
 	void AudioManager::PauseSource(AudioSourceID sourceID)
@@ -498,22 +708,21 @@ namespace flex
 		}
 	}
 
-	void AudioManager::FadeSourceIn(AudioSourceID sourceID, real fadeDuration)
+	void AudioManager::FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration)
 	{
-		SetSourceGain(sourceID, 0.0f);
 		s_Sources[sourceID].bFadingIn = true;
-		s_Sources[sourceID].fadeDuration = fadeDuration;
+		s_Sources[sourceID].fadeDuration = fadeMaxDuration;
 		s_Sources[sourceID].fadeDurationRemaining = fadeDuration;
 	}
 
-	void AudioManager::FadeSourceOut(AudioSourceID sourceID, real fadeDuration)
+	void AudioManager::FadeSourceOut(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration)
 	{
 		s_Sources[sourceID].bFadingIn = false;
-		s_Sources[sourceID].fadeDuration = fadeDuration;
+		s_Sources[sourceID].fadeDuration = fadeMaxDuration;
 		s_Sources[sourceID].fadeDurationRemaining = fadeDuration;
 	}
 
-	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero)
+	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero /* = true */)
 	{
 		assert(sourceID < s_Sources.size());
 

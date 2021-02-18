@@ -8892,25 +8892,19 @@ namespace flex
 		if (s_SoundEffectSources[0] == 0 || s_SoundEffectSources[0] == InvalidAudioSourceID)
 		{
 			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-01-2.wav");
-			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_START] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-start.wav");
 			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-loop.wav");
 			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP], true);
-			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_END] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-end.wav");
 		}
 
 		// Create sound clips
 		{
 			{
-				AudioSourceID startID = InvalidAudioSourceID;
 				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01];
-				AudioSourceID endID = InvalidAudioSourceID;
-				m_SoundEffects[(u32)SoundEffect::ROAR_01] = SoundClip_Looping("Roar 01", startID, loopID, endID);
+				m_SoundEffects[(u32)SoundEffect::ROAR_01] = SoundClip_LoopingSimple("Roar 01", loopID);
 			}
 			{
-				AudioSourceID startID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_START];
 				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP];
-				AudioSourceID endID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_END];
-				m_SoundEffects[(u32)SoundEffect::ROAR_02] = SoundClip_Looping("Roar 02", startID, loopID, endID);
+				m_SoundEffects[(u32)SoundEffect::ROAR_02] = SoundClip_LoopingSimple("Roar 02", loopID);
 			}
 		}
 
@@ -9098,23 +9092,6 @@ namespace flex
 			m_EngineForce = 0.0f;
 		}
 
-		if (m_EngineForce == 0.0f)
-		{
-			if (m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::LOOPING ||
-				m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::STARTING)
-			{
-				m_SoundEffects[(u32)SoundEffect::ROAR_02].End();
-			}
-		}
-		else if (m_EngineForce > 0.0f)
-		{
-			if (m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::OFF ||
-				m_SoundEffects[(u32)SoundEffect::ROAR_02].state == SoundClip_Looping::State::ENDING)
-			{
-				m_SoundEffects[(u32)SoundEffect::ROAR_02].Start();
-			}
-		}
-
 		if (m_bFlippingRightSideUp)
 		{
 			m_Transform.SetWorldRotation(glm::slerp(m_Transform.GetWorldRotation(), m_TargetRot, glm::clamp(g_DeltaTime * UPRIGHTING_SPEED, 0.0f, 1.0f)));
@@ -9260,10 +9237,24 @@ namespace flex
 		vehicle->renderScene();
 #endif
 
+		real motorPitch = glm::clamp(forwardVel / 30.0f + 0.85f, 0.95f, 1.5f);
+
+		// TODO: Drive gain with vel/motor/wheel speed
+		if (abs(forwardVel) < 0.1f)
+		{
+			m_SoundEffects[(u32)SoundEffect::ROAR_02].FadeOut();
+		}
+		else
+		{
+			m_SoundEffects[(u32)SoundEffect::ROAR_02].FadeIn();
+		}
+
 		for (u32 i = 0; i < (u32)SoundEffect::_COUNT; ++i)
 		{
 			m_SoundEffects[i].Update();
 		}
+
+		m_SoundEffects[(u32)SoundEffect::ROAR_02].SetPitch(motorPitch);
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -9356,7 +9347,7 @@ namespace flex
 
 		if (ImGui::BeginChild("Sound clips", ImVec2(300, 300), true))
 		{
-			for (SoundClip_Looping& clip : m_SoundEffects)
+			for (SoundClip_LoopingSimple& clip : m_SoundEffects)
 			{
 				clip.DrawImGui();
 			}

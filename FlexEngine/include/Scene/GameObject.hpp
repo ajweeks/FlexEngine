@@ -1321,9 +1321,7 @@ namespace flex
 		enum class SoundEffectSource
 		{
 			ROAR_01,
-			ROAR_02_START,
 			ROAR_02_LOOP,
-			ROAR_02_END,
 
 			_COUNT
 		};
@@ -1341,7 +1339,7 @@ namespace flex
 
 		void ResetTransform();
 
-		std::array<SoundClip_Looping, (u32)SoundEffect::_COUNT> m_SoundEffects;
+		std::array<SoundClip_LoopingSimple, (u32)SoundEffect::_COUNT> m_SoundEffects;
 
 		GameObjectID m_TireIDs[m_TireCount];
 
@@ -1412,7 +1410,6 @@ namespace flex
 
 		glm::vec3 m_Start;
 		glm::vec3 m_End;
-
 
 	};
 } // namespace flex

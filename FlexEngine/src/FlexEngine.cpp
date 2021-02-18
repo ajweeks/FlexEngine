@@ -527,6 +527,7 @@ namespace flex
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
 
+			// TODO: Pause audio when editor is paused
 			if (m_bSimulationPaused && !m_bSimulateNextFrame)
 			{
 				g_DeltaTime = 0.0f;
