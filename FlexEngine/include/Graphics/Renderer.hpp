@@ -524,8 +524,6 @@ namespace flex
 
 		FT_Library m_FTLibrary;
 
-		i32 m_DebugMode = 0;
-
 		real m_TAA_ks[2];
 
 		// TODO: Remove
