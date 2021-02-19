@@ -33,7 +33,7 @@
 			"mass" : 700.000000,
 			"kinematic" : false,
 			"static" : false,
-			"mask" : 1,
+			"mask" : 5,
 			"group" : 1
 		},
 		"vehicle" : 
