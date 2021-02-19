@@ -9445,12 +9445,16 @@ namespace flex
 	{
 		GameObject::Update();
 
-		for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+		if (!g_Renderer->GetPhysicsDebuggingSettings().bDisableAll &&
+			g_Renderer->GetDebugDrawer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
 		{
-			Segment& segment = curveSegments[i];
+			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			{
+				Segment& segment = curveSegments[i];
 
-			// TOOD: move curve segment by our transform/offset it
-			segment.curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
+				// TOOD: move curve segment by our transform/offset it
+				segment.curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
+			}
 		}
 	}
 
