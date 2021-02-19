@@ -9655,7 +9655,8 @@ namespace flex
 			m_RigidBodies.resize(meshIndex + 1, nullptr);
 		}
 
-		RigidBody* rb = new RigidBody();
+		// TODO: Don't even create rb?
+		RigidBody* rb = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
 		rb->SetStatic(true);
 
 		m_RigidBodies[meshIndex] = rb;

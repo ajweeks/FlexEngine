@@ -54,6 +54,7 @@ namespace flex
 		NOTHING = 0,
 		DEFAULT = 1 << 0,
 		EDITOR_OBJECT = 1 << 1,
+		STATIC = 1 << 2,
 		EVERYTHING = ~0
 	};
 
