@@ -2,7 +2,13 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_February_
+- Add support for road generation
+- Add sounds for vehicle motor
+
 _January_
+- Add vehicle camera
+- Add vehicles
 - Reduce memory usage of dynamic uniform buffers by allowing lazy initialization
 - Define prefabs using "template" game objects
 
