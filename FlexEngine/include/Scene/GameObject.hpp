@@ -1299,6 +1299,7 @@ namespace flex
 		{
 			ROAR_01,
 			ROAR_02,
+			BRAKE_SCREECH_01,
 
 			_COUNT
 		};
@@ -1322,6 +1323,7 @@ namespace flex
 		{
 			ROAR_01,
 			ROAR_02_LOOP,
+			BRAKE_SCREECH_01,
 
 			_COUNT
 		};
@@ -1330,12 +1332,13 @@ namespace flex
 
 		const real MAX_STEER = 0.5f;
 		const real MAX_ENGINE_FORCE = 4000.0f;
-		const real MAX_BRAKE_FORCE = 40.0f;
+		const real MAX_BRAKE_FORCE = 55.0f;
 		const real ENGINE_FORCE_SLOW_FACTOR = 10.0f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
+		const real WHEEL_SLIP_SCREECH_THRESHOLD = 0.9f;
 
 		const real m_MoveAccel = 9500.0f;
-		const real m_TurnAccel = 1.5f;
+		const real m_TurnAccel = 1.8f;
 
 		void ResetTransform();
 
@@ -1347,7 +1350,7 @@ namespace flex
 		real m_BrakeForce = 0.0f;
 		real m_Steering = 0.0f;
 		real m_RollInfluence = 0.05f;
-		real m_WheelFriction = 50.0f;
+		real m_WheelFriction = 3.0f;
 		real m_WheelRadius = 0.5f;
 		real m_WheelWidth = 0.4f;
 		real m_SuspensionStiffness = 20.f;

@@ -8894,6 +8894,8 @@ namespace flex
 			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-01-2.wav");
 			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-loop.wav");
 			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP], true);
+			s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "brake-tire-screech-01.wav");
+			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01], true);
 		}
 
 		// Create sound clips
@@ -8905,6 +8907,10 @@ namespace flex
 			{
 				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP];
 				m_SoundEffects[(u32)SoundEffect::ROAR_02] = SoundClip_LoopingSimple("Roar 02", loopID);
+			}
+			{
+				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01];
+				m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01] = SoundClip_LoopingSimple("Brake screech 01", loopID);
 			}
 		}
 
@@ -9045,7 +9051,7 @@ namespace flex
 		real steeringSlowScale = (1.0f - g_DeltaTime * STEERING_SLOW_FACTOR);
 
 		real maxSteerVel = 30.0f;
-		real steeringScale = Lerp(0.6f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
+		real steeringScale = Lerp(0.45f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
 
 		bool bOccupied = (m_ObjectInteractingWith != nullptr) && (m_ObjectInteractingWith->GetTypeID() == SID("player"));
 
@@ -9156,6 +9162,8 @@ namespace flex
 			ResetTransform();
 		}
 
+		real maxWheelSlip = 1.0f;
+
 #if 1
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		for (i32 i = 0; i < 4; i++)
@@ -9163,8 +9171,11 @@ namespace flex
 			//synchronize the wheels with the (interpolated) chassis world transform
 			m_Vehicle->updateWheelTransform(i, true);
 
-			Transform newWheelTransform = ToTransform(m_Vehicle->getWheelInfo(i).m_worldTransform);
+			const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
+			Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
 			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetLocalRotation(newWheelTransform.GetLocalRotation());
+
+			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
 
 
@@ -9248,6 +9259,16 @@ namespace flex
 		{
 			m_SoundEffects[(u32)SoundEffect::ROAR_02].FadeIn();
 		}
+
+		if (abs(maxWheelSlip) > WHEEL_SLIP_SCREECH_THRESHOLD)
+		{
+			m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01].FadeOut();
+		}
+		else
+		{
+			m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01].FadeIn();
+		}
+
 
 		for (u32 i = 0; i < (u32)SoundEffect::_COUNT; ++i)
 		{
