@@ -1361,6 +1361,18 @@ namespace flex
 		class CommonExampleInterface* vehicle;
 #endif
 
+		MaterialID m_GlassMatID = InvalidMaterialID;
+		MaterialID m_CarPaintMatID = InvalidMaterialID;
+		MaterialID m_TireMatID = InvalidMaterialID;
+		MaterialID m_SpokeMatID = InvalidMaterialID;
+		MaterialID m_BrakeLightMatID = InvalidMaterialID;
+		MaterialID m_ReverseLightMatID = InvalidMaterialID;
+
+		glm::vec4 m_InitialBrakeLightMatEmissive;
+		glm::vec4 m_ActiveBrakeLightMatEmissive;
+		glm::vec4 m_InitialReverseLightMatEmissive;
+		glm::vec4 m_ActiveReverseLightMatEmissive;
+
 		btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
 		btDefaultVehicleRaycaster* m_VehicleRaycaster;

@@ -5,12 +5,12 @@
 	"root" : 
 	{
 		"name" : "vehicle",
-		"id" : "68A3F1C76272CCB845562C218C98E445",
+		"id" : "9881D174614A05A349C7F858840BCBEA",
 		"type" : "vehicle",
 		"transform" : 
 		{
-			"pos" : "-0.068, 1.158, 2.772",
-			"rot" : "-0.001, -0.034, -0.000",
+			"pos" : "-0.169, 0.329, -4.989",
+			"rot" : "-0.007, 0.027, -0.004",
 			"scale" : "1.000, 1.000, 1.000"
 		},
 		"visible" : true,
@@ -20,7 +20,8 @@
 		[
 			"Black glass",
 			"Blue paint",
-			"black plastic"
+			"Brake-light",
+			"Reverse-light"
 		],
 		"collider" : 
 		{
@@ -40,21 +41,22 @@
 		{
 			"tire ids" : 
 			[
-				"F9CB95E8A975A49A484D1599B12CBFA7",
-				"04ADC588F0D6E592414D2FD4ADEE9A03",
-				"570758C32481C4934DDF00887B686350",
-				"C00B64EA392D67AA4ECEBA0ED6F3A2A9"
+				"B54BE524F495CBAC4D5B328A461DF0B9",
+				"FD718D68540AF88F44A516E407147DDF",
+				"D2BF65C0059D9E834FB6E2C658D357CA",
+				"FB3E679CC5767E8E462B52425889F206"
 			]
 		},
 		"children" : 
 		[
 			{
-				"name" : "wheel_FL16",
-				"id" : "F9CB95E8A975A49A484D1599B12CBFA7",
+				"name" : "wheel_FL20",
+				"id" : "B54BE524F495CBAC4D5B328A461DF0B9",
 				"type" : "object",
 				"transform" : 
 				{
-					"pos" : "-0.846, -0.135, 1.534"
+					"pos" : "-0.846, -0.135, 1.534",
+					"rot" : "0.005, 0.027, -0.004"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -66,12 +68,13 @@
 				]
 			},
 			{
-				"name" : "wheel_FR16",
-				"id" : "04ADC588F0D6E592414D2FD4ADEE9A03",
+				"name" : "wheel_FR20",
+				"id" : "FD718D68540AF88F44A516E407147DDF",
 				"type" : "object",
 				"transform" : 
 				{
-					"pos" : "0.742, -0.131, 1.537"
+					"pos" : "0.742, -0.131, 1.537",
+					"rot" : "0.005, 0.027, -0.004"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -83,12 +86,13 @@
 				]
 			},
 			{
-				"name" : "wheel_RL16",
-				"id" : "570758C32481C4934DDF00887B686350",
+				"name" : "wheel_RL20",
+				"id" : "D2BF65C0059D9E834FB6E2C658D357CA",
 				"type" : "object",
 				"transform" : 
 				{
-					"pos" : "-0.720, -0.145, -1.187"
+					"pos" : "-0.720, -0.145, -1.187",
+					"rot" : "0.005, 0.027, -0.004"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -100,12 +104,13 @@
 				]
 			},
 			{
-				"name" : "wheel_RR16",
-				"id" : "C00B64EA392D67AA4ECEBA0ED6F3A2A9",
+				"name" : "wheel_RR20",
+				"id" : "FB3E679CC5767E8E462B52425889F206",
 				"type" : "object",
 				"transform" : 
 				{
-					"pos" : "0.738, -0.151, -1.153"
+					"pos" : "0.738, -0.151, -1.153",
+					"rot" : "0.005, 0.027, -0.004"
 				},
 				"visible" : true,
 				"casts shadow" : true,

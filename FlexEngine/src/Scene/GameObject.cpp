@@ -8923,6 +8923,20 @@ namespace flex
 			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
 			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
 
+			// TODO: Retrieve via name?
+			m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
+			m_CarPaintMatID = GetMesh()->GetSubMesh(1)->GetMaterialID();
+			m_BrakeLightMatID = GetMesh()->GetSubMesh(2)->GetMaterialID();
+			m_ReverseLightMatID = GetMesh()->GetSubMesh(3)->GetMaterialID();
+			m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
+			m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+
+			m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
+			m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
+
+			m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
+			m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+
 			m_tuning = {};
 
 			// ?
@@ -9089,6 +9103,24 @@ namespace flex
 			{
 				m_BrakeForce = 0.0f;
 			}
+		}
+
+		if (m_BrakeForce > 0.0f)
+		{
+			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
+		}
+		else
+		{
+			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
+		}
+
+		if (m_EngineForce < 0.0f)
+		{
+			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
+		}
+		else
+		{
+			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
 		}
 
 		m_Steering *= glm::clamp(steeringSlowScale, 0.0f, 1.0f);

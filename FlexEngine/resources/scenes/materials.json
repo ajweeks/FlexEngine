@@ -427,6 +427,16 @@
 			"const albedo" : "0.018, 0.107, 0.920, 1.000",
 			"const metallic" : 0.850000,
 			"const roughness" : 0.780000
+		},
+		{
+			"name" : "Brake-light",
+			"shader" : "emissive",
+			"const emissive" : "0.291, 0.000, 0.000, 1.000"
+		},
+		{
+			"name" : "Reverse-light",
+			"shader" : "emissive",
+			"const emissive" : "0.346, 0.346, 0.346, 1.000"
 		}
 	]
 }
