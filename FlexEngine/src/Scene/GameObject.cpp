@@ -9205,7 +9205,7 @@ namespace flex
 
 			const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
 			Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
-			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetLocalRotation(newWheelTransform.GetLocalRotation());
+			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelTransform.GetWorldRotation());
 
 			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
