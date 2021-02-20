@@ -80,7 +80,7 @@ namespace flex
 				_u(ENABLE_METALLIC_SAMPLER)
 				_u(ENABLE_ROUGHNESS_SAMPLER)
 				_u(ENABLE_NORMAL_SAMPLER)
-				_u(SHOW_EDGES)
+				_u(ENABLE_EMISSIVE_SAMPLER)
 				_u(LIGHT_VIEW_PROJS)
 				_u(EXPOSURE)
 				_u(TEX_SIZE)
@@ -102,6 +102,7 @@ namespace flex
 				_u(PARTICLE_SIM_DATA)
 				_u(OCEAN_DATA)
 				_u(SKYBOX_DATA)
+				_u(CONST_EMISSIVE)
 #undef _u
 		}
 
@@ -169,10 +170,13 @@ namespace flex
 				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&
 				constAlbedo == other.constAlbedo &&
+				constEmissive == other.constEmissive &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
+				enableEmissiveSampler == other.enableEmissiveSampler &&
+				emissiveTexturePath == other.emissiveTexturePath &&
 				enableMetallicSampler == other.enableMetallicSampler &&
 				metallicTexturePath == other.metallicTexturePath &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
@@ -212,6 +216,7 @@ namespace flex
 		std::vector<FilePathMaterialParam> filePathParams =
 		{
 			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
+			{ &createInfoOut.emissiveTexturePath, "emissive texture filepath" },
 			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
 			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
 			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
@@ -228,6 +233,7 @@ namespace flex
 		}
 
 		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
+		material.SetBoolChecked("enable emissive sampler", createInfoOut.enableEmissiveSampler);
 		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
 		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
 		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
@@ -250,6 +256,7 @@ namespace flex
 		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
 		material.SetVec4Checked("colour multiplier", createInfoOut.colourMultiplier);
 		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
+		material.SetVec3Checked("const emissive", createInfoOut.constEmissive);
 		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
 		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
 
@@ -334,17 +341,35 @@ namespace flex
 		const Shader* shader = g_Renderer->GetShader(shaderID);
 		materialObject.fields.emplace_back("shader", JSONValue(shader->name));
 
-		// TODO: Find out way of determining if the following four  values
-		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = VecToString(constAlbedo, 3);
-		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
-		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
-		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
+		if (constAlbedo != VEC4_ONE)
+		{
+			std::string constAlbedoStr = VecToString(constAlbedo, 3);
+			materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
+		}
+		if (constEmissive != VEC4_ONE)
+		{
+			std::string constEmissiveStr = VecToString(constEmissive, 3);
+			materialObject.fields.emplace_back("const emissive", JSONValue(constEmissiveStr));
+		}
+		if (constMetallic != 0.0f)
+		{
+			materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
+		}
+		if (constRoughness != 0.0f)
+		{
+			materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
+		}
 
 		static const bool defaultEnableAlbedo = false;
 		if (shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
+		}
+
+		static const bool defaultEnableEmissive = false;
+		if (shader->textureUniforms.HasUniform(U_EMISSIVE_SAMPLER) && enableEmissiveSampler != defaultEnableEmissive)
+		{
+			materialObject.fields.emplace_back("enable emissive sampler", JSONValue(enableEmissiveSampler));
 		}
 
 		static const bool defaultEnableMetallicSampler = false;
@@ -371,6 +396,12 @@ namespace flex
 		{
 			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
+		}
+
+		if (shader->textureUniforms.HasUniform(U_EMISSIVE_SAMPLER) && !emissiveTexturePath.empty())
+		{
+			std::string shortEmissiveTexturePath = emissiveTexturePath.substr(texturePrefixStr.length());
+			materialObject.fields.emplace_back("emissive texture filepath", JSONValue(shortEmissiveTexturePath));
 		}
 
 		if (shader->textureUniforms.HasUniform(U_METALLIC_SAMPLER) && !metallicTexturePath.empty())

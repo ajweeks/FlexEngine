@@ -1298,6 +1298,8 @@ namespace flex
 
 				ImGui::ColorEdit3("Albedo", &material->constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
+				ImGui::ColorEdit3("Emissive", &material->constEmissive.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+
 				if (material->enableMetallicSampler)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);

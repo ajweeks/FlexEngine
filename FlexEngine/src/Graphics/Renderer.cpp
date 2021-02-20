@@ -1267,6 +1267,7 @@ namespace flex
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv" },
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv" },
+			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv" },
 		};
 #endif
 
@@ -1747,6 +1748,33 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+		++shaderID;
+
+		// Emissive
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::TANGENT;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_EMISSIVE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NORMAL_SAMPLER);
 		++shaderID;
 
 		assert(shaderID == m_Shaders.size());

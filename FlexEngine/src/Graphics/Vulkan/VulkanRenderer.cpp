@@ -922,9 +922,13 @@ namespace flex
 			material->generateCubemapSampler = createInfo->generateCubemapSampler;
 			material->cubemapSamplerSize = createInfo->generatedCubemapSize;
 
-			material->constAlbedo = glm::vec4(createInfo->constAlbedo, 0);
+			material->constAlbedo = glm::vec4(createInfo->constAlbedo, 1.0f);
 			material->albedoTexturePath = createInfo->albedoTexturePath;
 			material->enableAlbedoSampler = createInfo->enableAlbedoSampler;
+
+			material->constEmissive = glm::vec4(createInfo->constEmissive, 1.0f);
+			material->emissiveTexturePath = createInfo->emissiveTexturePath;
+			material->enableEmissiveSampler = createInfo->enableEmissiveSampler;
 
 			material->constMetallic = createInfo->constMetallic;
 			material->metallicTexturePath = createInfo->metallicTexturePath;
@@ -1014,6 +1018,7 @@ namespace flex
 			TextureInfo textureInfos[] =
 			{
 				{ createInfo->albedoTexturePath, U_ALBEDO_SAMPLER, "Albedo" },
+				{ createInfo->emissiveTexturePath, U_EMISSIVE_SAMPLER, "Emissive" },
 				{ createInfo->metallicTexturePath, U_METALLIC_SAMPLER , "Metallic"},
 				{ createInfo->roughnessTexturePath, U_ROUGHNESS_SAMPLER, "Roughness" },
 				{ createInfo->normalTexturePath, U_NORMAL_SAMPLER, "Normal" },
@@ -5920,6 +5925,9 @@ namespace flex
 				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
+				{ U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
 				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
@@ -8693,6 +8701,7 @@ namespace flex
 			glm::mat4 viewProj = cam->GetViewProjection();
 			glm::vec4 colourMultiplier = material->colourMultiplier;
 			u32 enableAlbedoSampler = material->enableAlbedoSampler;
+			u32 enableEmissiveSampler = material->enableEmissiveSampler;
 			u32 enableMetallicSampler = material->enableMetallicSampler;
 			u32 enableRoughnessSampler = material->enableRoughnessSampler;
 			u32 enableNormalSampler = material->enableNormalSampler;
@@ -8774,9 +8783,11 @@ namespace flex
 				{ U_MODEL, (void*)&model, US_MODEL },
 				{ U_COLOUR_MULTIPLIER, (void*)&colourMultiplier, US_COLOUR_MULTIPLIER },
 				{ U_CONST_ALBEDO, (void*)&material->constAlbedo, US_CONST_ALBEDO },
+				{ U_CONST_EMISSIVE, (void*)&material->constEmissive, US_CONST_EMISSIVE},
 				{ U_CONST_METALLIC, (void*)&material->constMetallic, US_CONST_METALLIC },
 				{ U_CONST_ROUGHNESS, (void*)&material->constRoughness, US_CONST_ROUGHNESS },
 				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, US_ENABLE_ALBEDO_SAMPLER },
+				{ U_ENABLE_EMISSIVE_SAMPLER, (void*)&enableEmissiveSampler, US_ENABLE_EMISSIVE_SAMPLER},
 				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, US_ENABLE_METALLIC_SAMPLER },
 				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, US_ENABLE_ROUGHNESS_SAMPLER },
 				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, US_ENABLE_NORMAL_SAMPLER },

@@ -144,6 +144,7 @@ namespace flex
 	};
 
 	// Uniforms
+	// TODO: Change away from bitmasks, not scalable/dynamic
 	const u64 U_MODEL							= (1ull << 0);	const u32 US_MODEL						= sizeof(glm::mat4);
 	const u64 U_VIEW							= (1ull << 1);	const u32 US_VIEW						= sizeof(glm::mat4);
 	const u64 U_VIEW_INV						= (1ull << 2);	const u32 US_VIEW_INV					= sizeof(glm::mat4);
@@ -166,12 +167,12 @@ namespace flex
 	const u64 U_ENABLE_METALLIC_SAMPLER			= (1ull << 19); const u32 US_ENABLE_METALLIC_SAMPLER	= sizeof(i32);
 	const u64 U_ENABLE_ROUGHNESS_SAMPLER		= (1ull << 20); const u32 US_ENABLE_ROUGHNESS_SAMPLER	= sizeof(i32);
 	const u64 U_ENABLE_NORMAL_SAMPLER			= (1ull << 21); const u32 US_ENABLE_NORMAL_SAMPLER		= sizeof(i32);
-	// GAP
+	const u64 U_EMISSIVE_SAMPLER				= (1ull << 22);
 	const u64 U_CUBEMAP_SAMPLER					= (1ull << 23);
 	const u64 U_IRRADIANCE_SAMPLER				= (1ull << 24);
 	const u64 U_FB_0_SAMPLER					= (1ull << 25);
 	const u64 U_FB_1_SAMPLER					= (1ull << 26);
-	const u64 U_SHOW_EDGES						= (1ull << 27); const u32 US_SHOW_EDGES					= sizeof(i32);
+	const u64 U_ENABLE_EMISSIVE_SAMPLER			= (1ull << 27); const u32 US_ENABLE_EMISSIVE_SAMPLER	= sizeof(i32);
 	const u64 U_LIGHT_VIEW_PROJS				= (1ull << 28); const u32 US_LIGHT_VIEW_PROJS			= sizeof(glm::mat4) * MAX_SHADOW_CASCADE_COUNT;
 	const u64 U_HDR_EQUIRECTANGULAR_SAMPLER		= (1ull << 29);
 	const u64 U_BRDF_LUT_SAMPLER				= (1ull << 30);
@@ -207,6 +208,7 @@ namespace flex
 	const u64 U_PARTICLE_SIM_DATA				= (1ull << 60); const u32 US_PARTICLE_SIM_DATA			= sizeof(ParticleSimData);
 	const u64 U_OCEAN_DATA						= (1ull << 61); const u32 US_OCEAN_DATA					= sizeof(OceanData);
 	const u64 U_SKYBOX_DATA						= (1ull << 62); const u32 US_SKYBOX_DATA				= sizeof(SkyboxData);
+	const u64 U_CONST_EMISSIVE					= (1ull << 63); const u32 US_CONST_EMISSIVE				= sizeof(glm::vec4);
 	// NOTE: New uniforms must be added to Uniforms::CalculateSizeInBytes
 
 	enum class ClearFlag
@@ -359,21 +361,23 @@ namespace flex
 
 		std::string normalTexturePath;
 		std::string albedoTexturePath;
+		std::string emissiveTexturePath;
 		std::string metallicTexturePath;
 		std::string roughnessTexturePath;
 		std::string hdrEquirectangularTexturePath;
 
-		glm::vec4 colourMultiplier = { 1.0f, 1.0f, 1.0f, 1.0f };
+		glm::vec4 colourMultiplier = VEC4_ONE;
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers; // Pairs of frame buffer names (as seen in shader) and IDs
-		glm::vec2 generatedIrradianceCubemapSize = { 0.0f, 0.0f };
+		glm::vec2 generatedIrradianceCubemapSize = VEC2_ZERO;
 		MaterialID irradianceSamplerMatID = InvalidMaterialID; // The id of the material who has an irradiance sampler object (generateIrradianceSampler must be false)
 		std::string environmentMapPath;
-		glm::vec2 generatedCubemapSize = { 0.0f, 0.0f };
-		glm::vec2 generatedPrefilteredCubemapSize = { 0.0f, 0.0f };
+		glm::vec2 generatedCubemapSize = VEC2_ZERO;
+		glm::vec2 generatedPrefilteredCubemapSize = VEC2_ZERO;
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		// PBR Constant values
-		glm::vec3 constAlbedo = { 1.0f, 1.0f, 1.0f };
+		glm::vec3 constAlbedo = VEC3_ONE;
+		glm::vec3 constEmissive = VEC3_ONE;
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
 
@@ -381,6 +385,7 @@ namespace flex
 
 		bool enableNormalSampler = false;
 		bool enableAlbedoSampler = false;
+		bool enableEmissiveSampler = false;
 		bool enableMetallicSampler = false;
 		bool enableRoughnessSampler = false;
 		bool generateHDREquirectangularSampler = false;
@@ -565,20 +570,22 @@ namespace flex
 		// GBuffer samplers
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers;
 
-		glm::vec2 cubemapSamplerSize = { 0, 0 };
+		glm::vec2 cubemapSamplerSize = VEC2_ZERO;
 
 		// PBR constants
-		glm::vec4 constAlbedo = { 1, 1, 1, 1 };
-		real constMetallic = 0;
-		real constRoughness = 0;
+		glm::vec4 constAlbedo = VEC4_ONE;
+		glm::vec4 constEmissive = VEC4_ONE;
+		real constMetallic = 0.0f;
+		real constRoughness = 0.0f;
 		std::string albedoTexturePath;
+		std::string emissiveTexturePath;
 		std::string metallicTexturePath;
 		std::string roughnessTexturePath;
 		std::string hdrEquirectangularTexturePath;
-		glm::vec2 irradianceSamplerSize = { 0, 0 };
+		glm::vec2 irradianceSamplerSize = VEC2_ZERO;
 		std::string environmentMapPath;
-		glm::vec2 prefilteredMapSize = { 0, 0 };
-		glm::vec4 colourMultiplier = { 1, 1, 1, 1 };
+		glm::vec2 prefilteredMapSize = VEC2_ZERO;
+		glm::vec4 colourMultiplier = VEC4_ONE;
 
 		bool enableNormalSampler = false;
 
@@ -587,6 +594,7 @@ namespace flex
 
 		// PBR samplers
 		bool enableAlbedoSampler = false;
+		bool enableEmissiveSampler = false;
 		bool enableMetallicSampler = false;
 		bool enableRoughnessSampler = false;
 
