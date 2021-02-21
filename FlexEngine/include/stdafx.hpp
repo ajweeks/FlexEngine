@@ -156,6 +156,7 @@ namespace flex
 }
 
 #include "ImGuiBezier.hpp"
+#include "imgui_plot.h"
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
 
