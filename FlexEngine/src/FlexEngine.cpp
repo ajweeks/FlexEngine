@@ -340,6 +340,9 @@ namespace flex
 		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
 		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
 		m_ConsoleCommands.emplace_back("exit", []() { g_EngineInstance->Stop(); });
+		// TODO: Support params like "aa=0"
+		m_ConsoleCommands.emplace_back("aa.off", []() { g_Renderer->SetTAAEnabled(false); });
+		m_ConsoleCommands.emplace_back("aa.taa", []() { g_Renderer->SetTAAEnabled(true); });
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)

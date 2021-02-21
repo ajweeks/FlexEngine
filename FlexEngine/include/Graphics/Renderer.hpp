@@ -292,6 +292,7 @@ namespace flex
 		void SetDisplayShadowCascadePreview(bool bPreview);
 		bool GetDisplayShadowCascadePreview() const;
 
+		void SetTAAEnabled(bool bEnabled);
 		bool IsTAAEnabled() const;
 
 		i32 GetTAASampleCount() const;

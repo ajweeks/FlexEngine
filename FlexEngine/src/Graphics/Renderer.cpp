@@ -724,6 +724,15 @@ namespace flex
 		return m_bDisplayShadowCascadePreview;
 	}
 
+	void Renderer::SetTAAEnabled(bool bEnabled)
+	{
+		if (m_bEnableTAA != bEnabled)
+		{
+			m_bEnableTAA = bEnabled;
+			m_bTAAStateChanged = true;
+		}
+	}
+
 	bool Renderer::IsTAAEnabled() const
 	{
 		return m_bEnableTAA;
