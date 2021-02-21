@@ -1070,6 +1070,7 @@ namespace flex
 				ImGui::MenuItem("Textures", nullptr, &g_ResourceManager->bTextureWindowShowing);
 				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
 				ImGui::MenuItem("Prefabs", nullptr, &g_ResourceManager->bPrefabsWindowShowing);
+				ImGui::MenuItem("Sounds", nullptr, &g_ResourceManager->bSoundsWindowShowing);
 				ImGui::Separator();
 				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
 				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);

@@ -14,6 +14,8 @@ namespace flex
 	ALCdevice* AudioManager::s_Device = nullptr;
 
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
+	u8* AudioManager::s_WaveData[NUM_BUFFERS];
+	u32 AudioManager::s_WaveDataLengths[NUM_BUFFERS];
 
 	real AudioManager::s_MasterGain = 0.2f;
 	bool AudioManager::s_Muted = false;
@@ -493,19 +495,22 @@ namespace flex
 			Print("Loading audio source %s\n", friendlyName.c_str());
 		}
 
+		if (s_WaveData[newID] != nullptr)
+		{
+			delete s_WaveData[newID];
+		}
+
 		// WAVE file
 		i32 format;
-		u8* data;
-		i32 size;
-		i32 freq;
-		if (!ParseWAVFile(filePath, &format, &data, &size, &freq))
+		u32 freq;
+		if (!ParseWAVFile(filePath, &format, &s_WaveData[newID], &s_WaveDataLengths[newID], &freq))
 		{
 			PrintError("Failed to open or parse WAVE file\n");
 			return InvalidAudioSourceID;
 		}
 
 		// Buffer
-		alBufferData(s_Buffers[newID], format, data, size, freq);
+		alBufferData(s_Buffers[newID], format, s_WaveData[newID], s_WaveDataLengths[newID], freq);
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -513,7 +518,6 @@ namespace flex
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
-		delete[] data;
 
 		// Source
 		alGenSources(1, &s_Sources[newID].source);
@@ -617,13 +621,16 @@ namespace flex
 
 	void AudioManager::ClearAllAudioSources()
 	{
-		for (Source& source : s_Sources)
+		for (u32 id = 0; id < (u32)s_Sources.size(); ++id)
 		{
-			if (source.source != InvalidAudioSourceID)
+			if (s_Sources[id].source != InvalidAudioSourceID)
 			{
-				alDeleteSources(1, &source.source);
+				alDeleteSources(1, &s_Sources[id].source);
+				delete s_WaveData[id];
 			}
 		}
+
+		memset(s_WaveData, 0, NUM_BUFFERS * sizeof(u8*));
 		s_Sources.fill({});
 	}
 
@@ -802,6 +809,12 @@ namespace flex
 	real AudioManager::GetSoundLength(AudioSourceID sourceID)
 	{
 		return s_Sources[sourceID].length;
+	}
+
+	u8* AudioManager::GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount)
+	{
+		outSampleCount = s_WaveDataLengths[sourceID];
+		return s_WaveData[sourceID];
 	}
 
 	void AudioManager::ToggleMuted()

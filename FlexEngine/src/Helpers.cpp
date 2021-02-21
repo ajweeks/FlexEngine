@@ -357,7 +357,7 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq)
 	{
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))

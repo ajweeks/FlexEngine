@@ -47,6 +47,7 @@ namespace flex
 	void ResourceManager::Initialize()
 	{
 		DiscoverTextures();
+		DiscoverAudioFiles();
 	}
 
 	void ResourceManager::Destroy()
@@ -208,7 +209,33 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to find files in \"" PREFAB_DIRECTORY "\"!\n");
+			PrintError("Failed to find prefab files in \"" PREFAB_DIRECTORY "\"!\n");
+			return;
+		}
+
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Parsed %u prefabs\n", (u32)prefabTemplates.size());
+		}
+	}
+
+	void ResourceManager::DiscoverAudioFiles()
+	{
+		discoveredAudioFiles.clear();
+
+		std::vector<std::string> foundFiles;
+		if (Platform::FindFilesInDirectory(SFX_DIRECTORY, foundFiles, ".wav"))
+		{
+			for (std::string& foundFilePath : foundFiles)
+			{
+				foundFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
+				StringID stringID = SID(foundFilePath.c_str());
+				discoveredAudioFiles.emplace(stringID, Pair<std::string, AudioSourceID>(foundFilePath, InvalidAudioSourceID));
+			}
+		}
+		else
+		{
+			PrintError("Failed to find sound files in \"" SFX_DIRECTORY "\"!\n");
 			return;
 		}
 
@@ -236,7 +263,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Failed to find files in \"" TEXTURE_DIRECTORY "\"!\n");
+			PrintError("Failed to find texture files in \"" TEXTURE_DIRECTORY "\"!\n");
 			return;
 		}
 	}
@@ -1787,6 +1814,134 @@ namespace flex
 				}
 
 				ImGui::EndChild();
+			}
+
+			ImGui::End();
+		}
+
+		if (bSoundsWindowShowing)
+		{
+			if (ImGui::Begin("Sound clips", &bSoundsWindowShowing))
+			{
+				static ImGuiTextFilter soundFilter;
+				soundFilter.Draw("##sounds-filter");
+
+				ImGui::SameLine();
+				if (ImGui::Button("x"))
+				{
+					soundFilter.Clear();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Refresh"))
+				{
+					DiscoverAudioFiles();
+				}
+
+				static bool bValuesChanged = true;
+
+				static StringID selectedAudioFileID = InvalidStringID;
+				if (ImGui::BeginChild("audio file list", ImVec2(0.0f, 120.0f), true))
+				{
+					for (auto iter = discoveredAudioFiles.begin(); iter != discoveredAudioFiles.end(); ++iter)
+					{
+						const char* audioFileName = iter->second.first.c_str();
+
+						if (soundFilter.PassFilter(audioFileName))
+						{
+							bool bSelected = (iter->first == selectedAudioFileID);
+							if (ImGui::Selectable(audioFileName, &bSelected))
+							{
+								selectedAudioFileID = iter->first;
+								bValuesChanged = true;
+							}
+						}
+					}
+				}
+
+				ImGui::EndChild();
+
+				if (selectedAudioFileID != InvalidStringID)
+				{
+					AudioSourceID sourceID = discoveredAudioFiles[selectedAudioFileID].second;
+					if (sourceID == InvalidAudioSourceID)
+					{
+						if (ImGui::Button("Load"))
+						{
+							std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[selectedAudioFileID].first;
+							discoveredAudioFiles[selectedAudioFileID].second = AudioManager::AddAudioSource(filePath);
+							bValuesChanged = true;
+						}
+					}
+					else
+					{
+						u32 valsCount;
+						u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount);
+
+						// ImGui-imposed max
+						valsCount = glm::min(valsCount, (u32)(1 << 16));
+
+						static real* valsFloat = nullptr;
+						static u32 valsFloatLen = 0;
+						static u32 selectionStart = 0;
+						static u32 selectionLength = 0;
+
+						if (valsFloat == nullptr || valsFloatLen < valsCount)
+						{
+							free(valsFloat);
+							valsFloat = (real*)malloc(sizeof(real) * valsCount);
+							assert(valsFloat != nullptr);
+							valsFloatLen = valsCount;
+							bValuesChanged = true;
+						}
+
+						if (bValuesChanged)
+						{
+							bValuesChanged = false;
+
+							selectionStart = 0;
+							selectionLength = 0;
+
+							for (u32 i = 0; i < valsCount; ++i)
+							{
+								valsFloat[i] = (vals[i] / 255.0f - 0.5f) * 2.0f;
+							}
+						}
+
+						ImGui::PlotConfig conf;
+						//conf.values.xs = x_data; // this line is optional
+						conf.values.ys = valsFloat;
+						conf.values.count = valsCount;
+						conf.scale.min = -1.0f;
+						conf.scale.max = 1.0f;
+						conf.tooltip.show = true;
+						conf.tooltip.format = "%g: %.2f";
+						conf.grid_x.show = true;
+						conf.grid_x.size = 128;
+						conf.grid_x.subticks = 4;
+						conf.grid_y.show = true;
+						conf.grid_y.size = 0.5f;
+						conf.grid_y.subticks = 5;
+						conf.selection.show = true;
+						conf.selection.start = &selectionStart;
+						conf.selection.length = &selectionLength;
+						conf.frame_size = ImVec2(ImGui::GetWindowWidth() - 4.0f, 120.0f);
+						conf.line_thickness = 2.f;
+						conf.overlay_colour = IM_COL32(20, 165, 20, 65);
+
+						ImGui::Plot("Waveform", conf);
+
+						// Draw second plot with the selection
+						// reset previous values
+						conf.selection.show = false;
+						// set new ones
+						conf.values.offset = selectionStart;
+						conf.values.count = selectionLength;
+						conf.line_thickness = 2.f;
+						ImGui::Plot("Selection", conf);
+					}
+				}
 			}
 
 			ImGui::End();

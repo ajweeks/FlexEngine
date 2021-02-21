@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Pair.hpp"
+
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
 typedef struct FT_LibraryRec_* FT_Library;
@@ -40,6 +42,7 @@ namespace flex
 
 		void DiscoverMeshes();
 		void DiscoverPrefabs();
+		void DiscoverAudioFiles();
 		void DiscoverTextures();
 
 		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
@@ -99,6 +102,7 @@ namespace flex
 		bool bTextureWindowShowing = false;
 		bool bMeshWindowShowing = false;
 		bool bPrefabsWindowShowing = false;
+		bool bSoundsWindowShowing = false;
 
 		bool bShowEditorMaterials = false;
 
@@ -128,10 +132,12 @@ namespace flex
 		};
 		std::vector<PrefabTemplatePair> prefabTemplates;
 
+
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
 		std::map<std::string, LoadedMesh*> loadedMeshes;
 		std::vector<std::string> discoveredTextures;
 		std::vector<std::string> discoveredMeshes;
+		std::map<StringID, Pair<std::string, AudioSourceID>> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
 

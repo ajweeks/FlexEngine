@@ -31,7 +31,7 @@ namespace flex
 	* Reads in a .wav file and fills in given values according to file contents
 	* Returns true if reading and parsing succeeded
 	*/
-	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq);
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq);
 
 	// Removes all content before final '/' or '\'
 	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);

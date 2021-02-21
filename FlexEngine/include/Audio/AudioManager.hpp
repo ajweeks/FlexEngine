@@ -152,6 +152,8 @@ namespace flex
 
 		static real GetSoundLength(AudioSourceID sourceID);
 
+		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount);
+
 		static void ToggleMuted();
 		static void SetMuted(bool bMuted);
 		static bool IsMuted();
@@ -166,11 +168,14 @@ namespace flex
 
 		static ALuint GetNextAvailableSourceAndBufferIndex();
 
-		static const i32 NUM_BUFFERS = 32;
-		static ALuint s_Buffers[NUM_BUFFERS];
-
 		static real s_MasterGain;
 		static bool s_Muted;
+
+		static const i32 NUM_BUFFERS = 32;
+		static ALuint s_Buffers[NUM_BUFFERS];
+		// Editor-only
+		static u8* s_WaveData[NUM_BUFFERS];
+		static u32 s_WaveDataLengths[NUM_BUFFERS];
 
 		struct Source
 		{
