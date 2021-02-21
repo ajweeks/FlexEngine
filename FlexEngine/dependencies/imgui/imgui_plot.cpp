@@ -253,8 +253,8 @@ PlotStatus Plot(const char* label, const PlotConfig& conf) {
                                  ImVec2(fSelectionStep * *conf.selection.start, 0.f));
             ImVec2 pos1 = ImLerp(inner_bb.Min, inner_bb.Max,
                                 ImVec2(fSelectionStep * (*conf.selection.start + *conf.selection.length), 1.f));
-            window->DrawList->AddRectFilled(pos0, pos1, IM_COL32(128, 128, 128, 32));
-            window->DrawList->AddRect(pos0, pos1, IM_COL32(128, 128, 128, 128));
+            window->DrawList->AddRectFilled(pos0, pos1, conf.overlay_colour);
+            //window->DrawList->AddRect(pos0, pos1, conf.overlay_outline_colour);
         }
     }
 

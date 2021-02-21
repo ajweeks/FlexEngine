@@ -65,6 +65,7 @@ struct PlotConfig {
     float line_thickness = 1.f;
     bool skip_small_lines = true;
     const char* overlay_text = nullptr;
+	ImU32 overlay_colour = IM_COL32(128, 128, 128, 32);
 };
 
 enum class PlotStatus {
