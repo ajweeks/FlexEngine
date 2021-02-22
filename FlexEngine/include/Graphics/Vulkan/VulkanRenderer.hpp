@@ -455,7 +455,7 @@ namespace flex
 
 			bool m_bDiagnosticCheckpointsEnabled = false;
 
-#ifdef SHIPPING
+#ifdef RELEASE
 			const bool m_bEnableValidationLayers = false;
 			const bool m_bEnableGPUAssistanceValidationFeature = false;
 			const bool m_bEnableBestPracticesValidationFeature = false;

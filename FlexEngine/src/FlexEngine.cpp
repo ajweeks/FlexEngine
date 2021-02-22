@@ -178,9 +178,9 @@ namespace flex
 
 #ifdef DEBUG
 		const char* configStr = "Debug";
-#elif defined(DEVELOPMENT)
-		const char* configStr = "Development";
-#elif defined(SHIPPING)
+#elif defined(PROFILE)
+		const char* configStr = "Profile";
+#elif defined(RELEASE)
 #if defined(SYMBOLS)
 		const char* configStr = "Shipping (with symbols)";
 #else

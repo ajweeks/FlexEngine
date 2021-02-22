@@ -1,2 +1,2 @@
-@call python build_dependencies.py windows vs2019 build_extras
+@call python build_dependencies.py windows vs2019 All build_extras
 PAUSE

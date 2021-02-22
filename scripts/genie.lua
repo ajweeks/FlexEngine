@@ -13,9 +13,9 @@ DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 solution "Flex"
 	configurations {
 		"Debug",
-		"Development",
-		"Shipping",
-		"Shipping_WithSymbols"
+		"Profile",
+		"Release",
+		"Release_WithSymbols"
 	}
 
 	platforms { "x32", "x64" }
@@ -90,14 +90,14 @@ end
 configuration "Debug"
 	defines { "DEBUG", "SYMBOLS" }
 	flags { "Symbols", "ExtraWarnings" }
-configuration "Development"
-	defines { "DEVELOPMENT", "SYMBOLS" }
+configuration "Profile"
+	defines { "PROFILE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
-configuration "Shipping"
-	defines { "SHIPPING" }
+configuration "Release"
+	defines { "RELEASE" }
 	flags {"OptimizeSpeed", "No64BitChecks" }
-configuration "Shipping_WithSymbols"
-	defines { "SHIPPING", "SYMBOLS" }
+configuration "Release_WithSymbols"
+	defines { "RELEASE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
 configuration "x32"
 	defines "FLEX_32"
@@ -153,7 +153,7 @@ project "Flex"
 
 	configuration "vs*"
 		flags { "Winmain" }
-		links { "opengl32" }
+		links { "opengl32", "glfw3", "OpenAL32", }
 		buildoptions_cpp {
 			"/w14263", -- 'function' : member function does not override any base class virtual member function
 			"/w14264", -- 'virtual_function' : no override available for virtual member function from base 'class'; function is hidden
@@ -195,15 +195,15 @@ project "Flex"
 		-- Debug-only
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
-		configuration { "vs*", "Development" }
-			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-		configuration { "vs*", "Shipping" }
-			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-		configuration { "vs*", "Shipping_WithSymbols" }
-			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Profile" }
+			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Release" }
+			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
+		configuration { "vs*", "Release_WithSymbols" }
+			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
+			links { "glfw3", "openal", "BulletDynamics", "Bullet3Collision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
 configuration {}
 
 --Source files
