@@ -5,6 +5,7 @@
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
 #include "Helpers.hpp"
+#include "StringBuilder.hpp"
 
 namespace flex
 {
@@ -232,21 +233,21 @@ namespace flex
 #define SET_COL_POP(s) if (state == s) ImGui::PopStyleColor()
 
 			SET_COL(State::LOOPING);
-			ImGui::Text("%d", StateStrings[(i32)State::LOOPING]);
+			ImGui::Text("%s", StateStrings[(i32)State::LOOPING]);
 			SET_COL_POP(State::LOOPING);
 
 			SET_COL(State::STARTING);
-			ImGui::Text("%d", StateStrings[(i32)State::STARTING]);
+			ImGui::Text("%s", StateStrings[(i32)State::STARTING]);
 			SET_COL_POP(State::STARTING);
 
 			ImGui::SameLine();
 
 			SET_COL(State::ENDING);
-			ImGui::Text("%d", StateStrings[(i32)State::ENDING]);
+			ImGui::Text("%s", StateStrings[(i32)State::ENDING]);
 			SET_COL_POP(State::ENDING);
 
 			SET_COL(State::OFF);
-			ImGui::Text("%d", StateStrings[(i32)State::OFF]);
+			ImGui::Text("%s", StateStrings[(i32)State::OFF]);
 			SET_COL_POP(State::OFF);
 
 #undef SET_COl
@@ -479,7 +480,7 @@ namespace flex
 		}
 	}
 
-	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath)
+	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr /* = nullptr */)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
 		if (newID == InvalidAudioSourceID)
@@ -503,9 +504,13 @@ namespace flex
 		// WAVE file
 		i32 format;
 		u32 freq;
-		if (!ParseWAVFile(filePath, &format, &s_WaveData[newID], &s_WaveDataLengths[newID], &freq))
+		StringBuilder sb; // Fallback string builder in case one isn't passed in
+		StringBuilder* realSB = (outErrorStr == nullptr ? &sb : outErrorStr);
+		if (!ParseWAVFile(filePath, &format, &s_WaveData[newID], &s_WaveDataLengths[newID], &freq,
+			*realSB))
 		{
 			PrintError("Failed to open or parse WAVE file\n");
+			PrintError("%s", realSB->ToCString());
 			return InvalidAudioSourceID;
 		}
 
@@ -649,7 +654,7 @@ namespace flex
 	{
 		if (sourceID >= s_Sources.size())
 		{
-			PrintError("Attempted to play invalid source %d\n", (u32)sourceID);
+			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
 			return;
 		}
 
@@ -668,7 +673,7 @@ namespace flex
 	{
 		if (sourceID >= s_Sources.size())
 		{
-			PrintError("Attempted to play invalid source %d\n", (u32)sourceID);
+			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
 			return;
 		}
 
@@ -683,7 +688,7 @@ namespace flex
 	{
 		if (sourceID >= s_Sources.size())
 		{
-			PrintError("Attempted to pause invalid source %d\n", (u32)sourceID);
+			PrintError("Attempted to pause invalid source %u\n", (u32)sourceID);
 			return;
 		}
 
@@ -701,7 +706,7 @@ namespace flex
 	{
 		if (sourceID >= s_Sources.size())
 		{
-			PrintError("Attempted to stop invalid source %d\n", (u32)sourceID);
+			PrintError("Attempted to stop invalid source %u\n", (u32)sourceID);
 			return;
 		}
 
@@ -815,6 +820,11 @@ namespace flex
 	{
 		outSampleCount = s_WaveDataLengths[sourceID];
 		return s_WaveData[sourceID];
+	}
+
+	AudioManager::Source* AudioManager::GetSource(AudioSourceID sourceID)
+	{
+		return &s_Sources[sourceID];
 	}
 
 	void AudioManager::ToggleMuted()

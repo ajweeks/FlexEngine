@@ -27,6 +27,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
+#include "StringBuilder.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
 
@@ -230,7 +231,8 @@ namespace flex
 			{
 				foundFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
 				StringID stringID = SID(foundFilePath.c_str());
-				discoveredAudioFiles.emplace(stringID, Pair<std::string, AudioSourceID>(foundFilePath, InvalidAudioSourceID));
+				AudioFileMetaData metaData(foundFilePath);
+				discoveredAudioFiles.emplace(stringID, metaData);
 			}
 		}
 		else
@@ -1823,6 +1825,10 @@ namespace flex
 		{
 			if (ImGui::Begin("Sound clips", &bSoundsWindowShowing))
 			{
+				// TODO: Add tickbox/env var somewhere to disable this
+				static bool bAutoPlay = true;
+				static StringID selectedAudioFileID = InvalidStringID;
+
 				static ImGuiTextFilter soundFilter;
 				soundFilter.Draw("##sounds-filter");
 
@@ -1840,108 +1846,207 @@ namespace flex
 				}
 
 				static bool bValuesChanged = true;
+				static StringBuilder errorStringBuilder;
+				bool bLoadSound = false;
 
-				static StringID selectedAudioFileID = InvalidStringID;
-				if (ImGui::BeginChild("audio file list", ImVec2(0.0f, 120.0f), true))
+				static real windowWidth = 200.0f;
+				static real windowHeight = 300.0f;
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+				ImGui::BeginChild("child-above", ImVec2(windowWidth, windowHeight), true);
 				{
-					for (auto iter = discoveredAudioFiles.begin(); iter != discoveredAudioFiles.end(); ++iter)
+					if (ImGui::BeginChild("audio file list", ImVec2(ImGui::GetWindowWidth() - 4.0f, -1.0f), true))
 					{
-						const char* audioFileName = iter->second.first.c_str();
-
-						if (soundFilter.PassFilter(audioFileName))
+						for (auto iter = discoveredAudioFiles.begin(); iter != discoveredAudioFiles.end(); ++iter)
 						{
-							bool bSelected = (iter->first == selectedAudioFileID);
-							if (ImGui::Selectable(audioFileName, &bSelected))
+							const char* audioFileName = iter->second.name.c_str();
+
+							if (soundFilter.PassFilter(audioFileName))
 							{
-								selectedAudioFileID = iter->first;
+								bool bSelected = (iter->first == selectedAudioFileID);
+								bool bWasInvalid = discoveredAudioFiles[iter->first].bInvalid;
+								if (bWasInvalid)
+								{
+									ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+								}
+								// TODO: Indicate when sound is playing with colour change
+								if (ImGui::Selectable(audioFileName, &bSelected))
+								{
+									selectedAudioFileID = iter->first;
+									bValuesChanged = true;
+									errorStringBuilder.Clear();
+
+									if (bAutoPlay && discoveredAudioFiles[selectedAudioFileID].sourceID == InvalidAudioSourceID)
+									{
+										bLoadSound = true;
+									}
+								}
+								if (bWasInvalid)
+								{
+									ImGui::PopStyleColor();
+								}
+							}
+						}
+					}
+
+					ImGui::EndChild();
+				}
+				ImGui::EndChild();
+				// TODO: Make button much more visible (add knurling)
+				ImGui::InvisibleButton("hsplitter", ImVec2(-1, 8.0f));
+				if (ImGui::IsItemActive())
+				{
+					windowHeight += ImGui::GetIO().MouseDelta.y;
+				}
+				ImGui::BeginChild("child-below", ImVec2(0, 0), true);
+				{
+					if (selectedAudioFileID != InvalidStringID)
+					{
+						AudioSourceID sourceID = discoveredAudioFiles[selectedAudioFileID].sourceID;
+						if (sourceID == InvalidAudioSourceID)
+						{
+							if (ImGui::Button("Load"))
+							{
+								bLoadSound = true;
+							}
+						}
+
+						if (bLoadSound)
+						{
+							errorStringBuilder.Clear();
+							std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[selectedAudioFileID].name;
+							discoveredAudioFiles[selectedAudioFileID].sourceID = AudioManager::AddAudioSource(filePath, &errorStringBuilder);
+							bValuesChanged = true;
+
+							sourceID = discoveredAudioFiles[selectedAudioFileID].sourceID;
+							discoveredAudioFiles[selectedAudioFileID].bInvalid = (sourceID == InvalidAudioSourceID);
+						}
+
+						if (sourceID != InvalidAudioSourceID)
+						{
+							bool bPlaySound = false;
+							if (AudioManager::IsSourcePlaying(sourceID))
+							{
+								if (ImGui::Button("Stop"))
+								{
+									AudioManager::StopSource(sourceID);
+								}
+							}
+							else
+							{
+								bPlaySound = ImGui::Button("Play");
+							}
+
+							if (bPlaySound || (bValuesChanged && bAutoPlay))
+							{
+								AudioManager::PlaySource(sourceID);
+							}
+
+							AudioManager::Source* source = AudioManager::GetSource(sourceID);
+							ImGui::Text("%.2f", source->gain);
+
+							real gain = source->gain;
+							if (ImGui::SliderFloat("Gain", &gain, 0.0f, 1.0f))
+							{
+								AudioManager::SetSourceGain(sourceID, gain);
+							}
+
+							ImGui::Spacing();
+
+							real pitch = source->pitch;
+							if (ImGui::SliderFloat("Pitch", &pitch, 0.5f, 2.0f))
+							{
+								AudioManager::SetSourcePitch(sourceID, pitch);
+							}
+
+							bool bLooping = source->bLooping;
+							if (ImGui::Checkbox("looping", &bLooping))
+							{
+								AudioManager::SetSourceLooping(sourceID, bLooping);
+							}
+
+							// TODO: Show more info like file size, mono vs. stereo, etc.
+
+							u32 valsCount;
+							u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount);
+
+							// ImGui-imposed max
+							valsCount = glm::min(valsCount, (u32)(1 << 16));
+
+							static real* valsFloat = nullptr;
+							static u32 valsFloatLen = 0;
+							static u32 selectionStart = 0;
+							static u32 selectionLength = 0;
+
+							if (valsFloat == nullptr || valsFloatLen < valsCount)
+							{
+								free(valsFloat);
+								valsFloat = (real*)malloc(sizeof(real) * valsCount);
+								assert(valsFloat != nullptr);
+								valsFloatLen = valsCount;
 								bValuesChanged = true;
 							}
-						}
-					}
-				}
 
-				ImGui::EndChild();
-
-				if (selectedAudioFileID != InvalidStringID)
-				{
-					AudioSourceID sourceID = discoveredAudioFiles[selectedAudioFileID].second;
-					if (sourceID == InvalidAudioSourceID)
-					{
-						if (ImGui::Button("Load"))
-						{
-							std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[selectedAudioFileID].first;
-							discoveredAudioFiles[selectedAudioFileID].second = AudioManager::AddAudioSource(filePath);
-							bValuesChanged = true;
-						}
-					}
-					else
-					{
-						u32 valsCount;
-						u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount);
-
-						// ImGui-imposed max
-						valsCount = glm::min(valsCount, (u32)(1 << 16));
-
-						static real* valsFloat = nullptr;
-						static u32 valsFloatLen = 0;
-						static u32 selectionStart = 0;
-						static u32 selectionLength = 0;
-
-						if (valsFloat == nullptr || valsFloatLen < valsCount)
-						{
-							free(valsFloat);
-							valsFloat = (real*)malloc(sizeof(real) * valsCount);
-							assert(valsFloat != nullptr);
-							valsFloatLen = valsCount;
-							bValuesChanged = true;
-						}
-
-						if (bValuesChanged)
-						{
-							bValuesChanged = false;
-
-							selectionStart = 0;
-							selectionLength = 0;
-
-							for (u32 i = 0; i < valsCount; ++i)
+							if (bValuesChanged)
 							{
-								valsFloat[i] = (vals[i] / 255.0f - 0.5f) * 2.0f;
+								bValuesChanged = false;
+
+								selectionStart = 0;
+								selectionLength = 0;
+
+								for (u32 i = 0; i < valsCount; ++i)
+								{
+									valsFloat[i] = (vals[i] / 255.0f - 0.5f) * 2.0f;
+								}
 							}
+
+							ImGui::PlotConfig conf;
+							//conf.values.xs = x_data; // this line is optional
+							conf.values.ys = valsFloat;
+							conf.values.count = valsCount;
+							conf.scale.min = -1.0f;
+							conf.scale.max = 1.0f;
+							conf.tooltip.show = true;
+							conf.tooltip.format = "%g: %.2f";
+							conf.grid_x.show = true;
+							conf.grid_x.size = 128;
+							conf.grid_x.subticks = 4;
+							conf.grid_y.show = true;
+							conf.grid_y.size = 0.5f;
+							conf.grid_y.subticks = 5;
+							conf.selection.show = true;
+							conf.selection.start = &selectionStart;
+							conf.selection.length = &selectionLength;
+							conf.frame_size = ImVec2(ImGui::GetWindowWidth() - 4.0f, 120.0f);
+							conf.line_thickness = 2.f;
+							conf.overlay_colour = IM_COL32(20, 165, 20, 65);
+
+							ImGui::Plot("Waveform", conf);
+
+							// TODO: Draw vertical line over plot to show current sample being played
+
+							ImGui::Spacing();
+
+							// Draw second plot with the selection
+							// reset previous values
+							conf.selection.show = false;
+							// set new ones
+							conf.values.offset = selectionStart;
+							conf.values.count = selectionLength;
+							conf.line_thickness = 2.f;
+							ImGui::Plot("Selection", conf);
 						}
-
-						ImGui::PlotConfig conf;
-						//conf.values.xs = x_data; // this line is optional
-						conf.values.ys = valsFloat;
-						conf.values.count = valsCount;
-						conf.scale.min = -1.0f;
-						conf.scale.max = 1.0f;
-						conf.tooltip.show = true;
-						conf.tooltip.format = "%g: %.2f";
-						conf.grid_x.show = true;
-						conf.grid_x.size = 128;
-						conf.grid_x.subticks = 4;
-						conf.grid_y.show = true;
-						conf.grid_y.size = 0.5f;
-						conf.grid_y.subticks = 5;
-						conf.selection.show = true;
-						conf.selection.start = &selectionStart;
-						conf.selection.length = &selectionLength;
-						conf.frame_size = ImVec2(ImGui::GetWindowWidth() - 4.0f, 120.0f);
-						conf.line_thickness = 2.f;
-						conf.overlay_colour = IM_COL32(20, 165, 20, 65);
-
-						ImGui::Plot("Waveform", conf);
-
-						// Draw second plot with the selection
-						// reset previous values
-						conf.selection.show = false;
-						// set new ones
-						conf.values.offset = selectionStart;
-						conf.values.count = selectionLength;
-						conf.line_thickness = 2.f;
-						ImGui::Plot("Selection", conf);
+						else
+						{
+							// sourceID == InvalidAudioSourceID
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+							ImGui::Text("%s", errorStringBuilder.ToCString());
+							discoveredAudioFiles[selectedAudioFileID].bInvalid = true;
+							ImGui::PopStyleColor();
+						}
 					}
 				}
+				ImGui::EndChild();
+				ImGui::PopStyleVar();
 			}
 
 			ImGui::End();

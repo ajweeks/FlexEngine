@@ -57,6 +57,75 @@ namespace flex
 		buffer[length++] = '\n';
 	}
 
+	void StringBuilder::AppendLine(real val)
+	{
+		const u32 BUF_SIZE = 200;
+		char charBuff[BUF_SIZE];
+
+		// TODO: Use snsprintf_s on windows
+		sprintf(charBuff, "%.2f", val);
+		if ((length + (u32)strlen(charBuff)) >= (u32)buffer.size())
+		{
+			Resize((length + (u32)strlen(charBuff)) * 2);
+		}
+
+		for (char c : charBuff)
+		{
+			if (c == '\0')
+			{
+				break;
+			}
+			buffer[length++] = c;
+		}
+		buffer[length++] = '\n';
+	}
+
+	void StringBuilder::AppendLine(i32 val)
+	{
+		const u32 BUF_SIZE = 200;
+		char charBuff[BUF_SIZE];
+
+		// TODO: Use snsprintf_s on windows
+		sprintf(charBuff, "%i", val);
+		if ((length + (u32)strlen(charBuff)) >= (u32)buffer.size())
+		{
+			Resize((length + (u32)strlen(charBuff)) * 2);
+		}
+
+		for (char c : charBuff)
+		{
+			if (c == '\0')
+			{
+				break;
+			}
+			buffer[length++] = c;
+		}
+		buffer[length++] = '\n';
+	}
+
+	void StringBuilder::AppendLine(u32 val)
+	{
+		const u32 BUF_SIZE = 200;
+		char charBuff[BUF_SIZE];
+
+		// TODO: Use snsprintf_s on windows
+		sprintf(charBuff, "%u", val);
+		if ((length + (u32)strlen(charBuff)) >= (u32)buffer.size())
+		{
+			Resize((length + (u32)strlen(charBuff)) * 2);
+		}
+
+		for (char c : charBuff)
+		{
+			if (c == '\0')
+			{
+				break;
+			}
+			buffer[length++] = c;
+		}
+		buffer[length++] = '\n';
+	}
+
 	void StringBuilder::AppendLine(char c)
 	{
 		if ((length + 2) >= (u32)buffer.size())

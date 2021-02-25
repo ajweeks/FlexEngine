@@ -137,7 +137,22 @@ namespace flex
 		std::map<std::string, LoadedMesh*> loadedMeshes;
 		std::vector<std::string> discoveredTextures;
 		std::vector<std::string> discoveredMeshes;
-		std::map<StringID, Pair<std::string, AudioSourceID>> discoveredAudioFiles;
+
+		struct AudioFileMetaData
+		{
+			AudioFileMetaData()	{}
+
+			explicit AudioFileMetaData(std::string name, AudioSourceID sourceID = InvalidShaderID) :
+				name(name),
+				sourceID(sourceID)
+			{
+			}
+
+			std::string name;
+			AudioSourceID sourceID = InvalidAudioSourceID;
+			bool bInvalid = false;
+		};
+		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
 

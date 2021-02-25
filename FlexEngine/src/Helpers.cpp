@@ -16,6 +16,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Platform/Platform.hpp"
+#include "StringBuilder.hpp"
 #include "Transform.hpp"
 #include "Time.hpp"
 
@@ -269,7 +270,7 @@ namespace flex
 
 		if (!file)
 		{
-			PrintError("Unable to read file: %s\n", filePath.c_str());
+			PrintError("Unable to read file: ");
 			return false;
 		}
 
@@ -310,7 +311,7 @@ namespace flex
 
 		if (!file)
 		{
-			PrintError("Unable to read file: %s\n", filePath.c_str());
+			PrintError("Unable to read file: ");
 			return false;
 		}
 
@@ -357,18 +358,22 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq)
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr)
 	{
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{
-			PrintError("Failed to parse WAV file: %s\n", filePath.c_str());
+			outErrorStr.Append("Failed to parse WAV file: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		if (dataArray.size() < 12)
 		{
-			PrintError("Invalid WAV file: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAV file:\n");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -383,21 +388,27 @@ namespace flex
 			waveID.compare("WAVE") != 0 ||
 			subChunk1ID.compare("fmt ") != 0)
 		{
-			PrintError("Invalid WAVE file header: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAVE file header: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
 		if (subChunk1Size != 16)
 		{
-			PrintError("Non-16 bit chunk size in WAVE files in unsupported: %s\n", filePath.c_str());
+			outErrorStr.Append("Non-16 bit chunk size in WAVE files in unsupported: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		u16 audioFormat = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
 		if (audioFormat != 1) // WAVE_FORMAT_PCM
 		{
-			PrintError("WAVE file uses unsupported format (only PCM is allowed): %s\n", filePath.c_str());
+			outErrorStr.Append("WAVE file uses unsupported format (only PCM is allowed): ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -410,7 +421,9 @@ namespace flex
 		std::string subChunk2ID(&dataArray[dataIndex], 4); dataIndex += 4;
 		if (subChunk2ID.compare("data") != 0)
 		{
-			PrintError("Invalid WAVE file: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAVE file: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -452,7 +465,9 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine(bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
 				break;
 			}
 		} break;
@@ -467,13 +482,17 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine(bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
 				break;
 			}
 		} break;
 		default:
 		{
-			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %u\n", channelCount);
+			outErrorStr.Append("WAVE file contains invalid channel count (must be 1 or 2): ");
+			outErrorStr.AppendLine(channelCount);
+			PrintError("%s\n", outErrorStr.ToCString());
 		} break;
 		}
 

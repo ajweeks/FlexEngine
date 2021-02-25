@@ -9,6 +9,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	class StringBuilder;
+
 	struct SoundClip_Looping
 	{
 		SoundClip_Looping();
@@ -106,11 +108,29 @@ namespace flex
 	class AudioManager
 	{
 	public:
+		struct Source
+		{
+			ALuint source = InvalidAudioSourceID;
+			real gain = 1.0f;
+			real pitch = 1.0f;
+			real length = -1.0f;
+
+			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
+			ALenum state = AL_INITIAL;
+
+			// If non-zero, we're fading in when bFadingIn, and out otherwise
+			real fadeDuration = 0.0f;
+			real fadeDurationRemaining = 0.0f;
+			bool bFadingIn;
+
+			bool bLooping = false;
+		};
+
 		static void Initialize();
 		static void Destroy();
 		static void Update();
 
-		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
@@ -154,6 +174,8 @@ namespace flex
 
 		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount);
 
+		static Source* GetSource(AudioSourceID sourceID);
+
 		static void ToggleMuted();
 		static void SetMuted(bool bMuted);
 		static bool IsMuted();
@@ -171,29 +193,11 @@ namespace flex
 		static real s_MasterGain;
 		static bool s_Muted;
 
-		static const i32 NUM_BUFFERS = 32;
+		static const i32 NUM_BUFFERS = 2048;
 		static ALuint s_Buffers[NUM_BUFFERS];
 		// Editor-only
 		static u8* s_WaveData[NUM_BUFFERS];
 		static u32 s_WaveDataLengths[NUM_BUFFERS];
-
-		struct Source
-		{
-			ALuint source = InvalidAudioSourceID;
-			real gain = 1.0f;
-			real pitch = 1.0f;
-			real length = -1.0f;
-
-			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
-			ALenum state = AL_INITIAL;
-
-			// If non-zero, we're fading in when bFadingIn, and out otherwise
-			real fadeDuration = 0.0f;
-			real fadeDurationRemaining = 0.0f;
-			bool bFadingIn;
-
-			bool bLooping = false;
-		};
 
 		static std::array<Source, NUM_BUFFERS> s_Sources;
 
