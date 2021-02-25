@@ -254,13 +254,13 @@ namespace flex
 	{
 		if (button == MouseButton::LEFT)
 		{
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::KEY_PRESS)
 			{
 				m_MouseDragDist = VEC2_ZERO;
 				m_bDraggingLMB = true;
 				return EventReply::UNCONSUMED;
 			}
-			else if (action == KeyAction::RELEASE)
+			else if (action == KeyAction::KEY_RELEASE)
 			{
 				m_MouseDragDist = VEC2_ZERO;
 				m_bDraggingLMB = false;
@@ -271,7 +271,7 @@ namespace flex
 		}
 		else if (button == MouseButton::MIDDLE)
 		{
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::KEY_PRESS)
 			{
 				m_DragStartPosition = position;
 				m_bDraggingMMB = true;

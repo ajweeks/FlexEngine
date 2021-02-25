@@ -708,7 +708,7 @@ namespace flex
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
-		if (action == KeyAction::PRESS)
+		if (action == KeyAction::KEY_PRESS)
 		{
 			if (m_MousePosition.x == -1.0f)
 			{
@@ -722,7 +722,7 @@ namespace flex
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}
-		else if (action == KeyAction::RELEASE)
+		else if (action == KeyAction::KEY_RELEASE)
 		{
 			m_MouseButtonStates &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsPressed &= ~(1 << (u32)mouseButton);
@@ -750,7 +750,7 @@ namespace flex
 			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
 			Action mouseButtonAction = Action::_NONE;
 
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::KEY_PRESS)
 			{
 				mouseButtonAction = GetActionFromMouseButton(mouseButton);
 				if (mouseButtonAction != Action::_NONE)
@@ -825,15 +825,15 @@ namespace flex
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 
-		if (action == KeyAction::PRESS)
+		if (action == KeyAction::KEY_PRESS)
 		{
 			m_Keys[keyCode].down = 1;
 		}
-		else if (action == KeyAction::REPEAT)
+		else if (action == KeyAction::KEY_REPEAT)
 		{
 			// Ignore repeat events (we're already counting how long the key is down for
 		}
-		else if (action == KeyAction::RELEASE)
+		else if (action == KeyAction::KEY_RELEASE)
 		{
 			m_Keys[keyCode].down = 0;
 		}
@@ -860,7 +860,7 @@ namespace flex
 			Action keyPressAction = Action::_NONE;
 
 			// TODO: Allow modifiers to be down once supported properly
-			if (action == KeyAction::PRESS && !bModiferDown)
+			if (action == KeyAction::KEY_PRESS && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)

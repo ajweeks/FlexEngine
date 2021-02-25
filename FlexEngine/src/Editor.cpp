@@ -1157,7 +1157,7 @@ namespace flex
 	{
 		if (button == MouseButton::LEFT)
 		{
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::KEY_PRESS)
 			{
 				m_LMBDownPos = g_InputManager->GetMousePosition();
 
@@ -1169,7 +1169,7 @@ namespace flex
 
 				return EventReply::UNCONSUMED;
 			}
-			else if (action == KeyAction::RELEASE)
+			else if (action == KeyAction::KEY_RELEASE)
 			{
 				if (m_bDraggingGizmo)
 				{
@@ -1226,7 +1226,7 @@ namespace flex
 	{
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 
-		if (action == KeyAction::PRESS)
+		if (action == KeyAction::KEY_PRESS)
 		{
 			if (keyCode == KeyCode::KEY_DELETE)
 			{

@@ -619,9 +619,9 @@ namespace flex
 
 		switch (glfwAction)
 		{
-		case GLFW_PRESS: inputAction = KeyAction::PRESS; break;
-		case GLFW_REPEAT: inputAction = KeyAction::REPEAT; break;
-		case GLFW_RELEASE: inputAction = KeyAction::RELEASE; break;
+		case GLFW_PRESS: inputAction = KeyAction::KEY_PRESS; break;
+		case GLFW_REPEAT: inputAction = KeyAction::KEY_REPEAT; break;
+		case GLFW_RELEASE: inputAction = KeyAction::KEY_RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n",
 			glfwAction);

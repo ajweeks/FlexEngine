@@ -6620,7 +6620,7 @@ namespace flex
 	{
 		if (m_Camera != nullptr)
 		{
-			if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
+			if (action == KeyAction::KEY_PRESS || action == KeyAction::KEY_REPEAT)
 			{
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
 				const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;

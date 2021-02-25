@@ -1778,7 +1778,7 @@ namespace flex
 		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
 		const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 
-		if (action == KeyAction::PRESS)
+		if (action == KeyAction::KEY_PRESS)
 		{
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
 			{
@@ -1893,7 +1893,7 @@ namespace flex
 			}
 		}
 
-		if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
+		if (action == KeyAction::KEY_PRESS || action == KeyAction::KEY_REPEAT)
 		{
 			if (keyCode == KeyCode::KEY_F10)
 			{

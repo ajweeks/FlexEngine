@@ -6,9 +6,9 @@ namespace flex
 {
 	enum class KeyAction
 	{
-		PRESS,
-		RELEASE,
-		REPEAT,
+		KEY_PRESS,
+		KEY_RELEASE,
+		KEY_REPEAT,
 
 		_NONE
 	};
