@@ -1988,7 +1988,7 @@ namespace flex
 							u32 valsCount;
 							u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount);
 
-							// ImGui-imposed max
+							// NOTE: 1 << 16 is ImGui's max allowed number of samples
 							valsCount = glm::min(valsCount, (u32)(1 << 16));
 
 							static real* valsFloat = nullptr;
@@ -2019,7 +2019,6 @@ namespace flex
 							}
 
 							ImGui::PlotConfig conf;
-							//conf.values.xs = x_data; // this line is optional
 							conf.values.ys = valsFloat;
 							conf.values.count = valsCount;
 							conf.scale.min = -1.0f;
@@ -2039,16 +2038,21 @@ namespace flex
 							conf.line_thickness = 2.f;
 							conf.overlay_colour = IM_COL32(20, 165, 20, 65);
 
+							ImVec2 cursorStart = ImGui::GetCursorScreenPos();
+
 							ImGui::Plot("Waveform", conf);
 
-							// TODO: Draw vertical line over plot to show current sample being played
+							real playbackPosN = AudioManager::GetSourcePlaybackPos(sourceID) / AudioManager::GetSourceLength(sourceID);
+
+							ImDrawList* drawlist = ImGui::GetWindowDrawList();
+							drawlist->AddLine(
+								cursorStart + ImVec2(playbackPosN * conf.frame_size.x, 0.0f),
+								cursorStart + ImVec2(playbackPosN * conf.frame_size.x, conf.frame_size.y),
+								IM_COL32(20, 250, 20, 255), 2.0f);
 
 							ImGui::Spacing();
 
-							// Draw second plot with the selection
-							// reset previous values
 							conf.selection.show = false;
-							// set new ones
 							conf.values.offset = selectionStart;
 							conf.values.count = selectionLength;
 							conf.line_thickness = 2.f;
@@ -2056,7 +2060,6 @@ namespace flex
 						}
 						else
 						{
-							// sourceID == InvalidAudioSourceID
 							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
 							ImGui::Text("%s", errorStringBuilder.ToCString());
 							discoveredAudioFiles[selectedAudioFileID].bInvalid = true;

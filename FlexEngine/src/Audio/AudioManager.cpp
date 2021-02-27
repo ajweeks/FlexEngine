@@ -139,7 +139,7 @@ namespace flex
 
 			state = State::STARTING;
 			timeInState = 0.0f;
-			stateLength = std::max(AudioManager::GetSoundLength(start) - m_FadeDuration, 0.0f);
+			stateLength = std::max(AudioManager::GetSourceLength(start) - m_FadeDuration, 0.0f);
 			if (offset != -1.0f)
 			{
 				AudioManager::PlaySourceFromPos(start, offset);
@@ -159,7 +159,7 @@ namespace flex
 
 			state = State::LOOPING;
 			timeInState = 0.0f;
-			stateLength = AudioManager::GetSoundLength(loop);
+			stateLength = AudioManager::GetSourceLength(loop);
 			AudioManager::PlaySource(loop);
 			AudioManager::FadeSourceIn(loop, m_FadeDuration, m_FadeDuration);
 		} break;
@@ -186,7 +186,7 @@ namespace flex
 
 			state = State::ENDING;
 			timeInState = 0.0f;
-			stateLength = AudioManager::GetSoundLength(end);
+			stateLength = AudioManager::GetSourceLength(end);
 			if (offset != -1.0f)
 			{
 				AudioManager::PlaySourceFromPos(end, offset);
@@ -874,7 +874,7 @@ namespace flex
 		return (s_Sources[sourceID].state == AL_PLAYING);
 	}
 
-	real AudioManager::GetSoundLength(AudioSourceID sourceID)
+	real AudioManager::GetSourceLength(AudioSourceID sourceID)
 	{
 		return s_Sources[sourceID].length;
 	}
@@ -888,6 +888,13 @@ namespace flex
 	AudioManager::Source* AudioManager::GetSource(AudioSourceID sourceID)
 	{
 		return &s_Sources[sourceID];
+	}
+
+	real AudioManager::GetSourcePlaybackPos(AudioSourceID sourceID)
+	{
+		real playbackPos;
+		alGetSourcef(s_Sources[sourceID].source, AL_SEC_OFFSET, &playbackPos);
+		return playbackPos;
 	}
 
 	void AudioManager::ToggleMuted()

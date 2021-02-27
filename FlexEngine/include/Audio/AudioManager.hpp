@@ -176,11 +176,13 @@ namespace flex
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
 
-		static real GetSoundLength(AudioSourceID sourceID);
+		static real GetSourceLength(AudioSourceID sourceID);
 
 		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount);
 
 		static Source* GetSource(AudioSourceID sourceID);
+
+		static real GetSourcePlaybackPos(AudioSourceID sourceID);
 
 		static void ToggleMuted();
 		static void SetMuted(bool bMuted);
