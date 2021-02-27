@@ -20,6 +20,7 @@ namespace flex
 	struct MeshInfo;
 	struct MaterialCreateInfo;
 	struct PrefabInfo;
+	class StringBuilder;
 
 	class ResourceManager
 	{
@@ -94,6 +95,8 @@ namespace flex
 		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
+
+		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
 
 		// ImGui window flags
 		bool bFontWindowShowing = false;

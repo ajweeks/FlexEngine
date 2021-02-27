@@ -72,7 +72,7 @@ namespace flex
 	struct SoundClip_LoopingSimple
 	{
 		SoundClip_LoopingSimple();
-		SoundClip_LoopingSimple(const char* name, AudioSourceID loopID);
+		SoundClip_LoopingSimple(const char* name, StringID loopSID);
 
 		bool IsValid() const;
 		bool IsPlaying() const;
@@ -84,8 +84,12 @@ namespace flex
 
 		void SetPitch(real pitch);
 
-		void DrawImGui();
+		// Returns true when sound clip has changed
+		bool DrawImGui();
 
+		// Serialized value
+		StringID loopSID = InvalidStringID;
+		// Runtime value
 		AudioSourceID loop = InvalidAudioSourceID;
 
 		real fadeInTimeRemaining = -1.0f;
@@ -97,7 +101,7 @@ namespace flex
 		bool bPlaying = false;
 
 		// Debug only
-		const char* m_Name = nullptr;
+		const char* m_Name = "Uninitialized";
 		Histogram m_VolHisto;
 
 	};
@@ -122,6 +126,8 @@ namespace flex
 			real fadeDuration = 0.0f;
 			real fadeDurationRemaining = 0.0f;
 			bool bFadingIn;
+
+			const char* name = nullptr;
 
 			bool bLooping = false;
 		};
@@ -181,6 +187,8 @@ namespace flex
 		static bool IsMuted();
 
 		static void DrawImGuiObjects();
+
+		static bool AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen);
 
 	private:
 

@@ -220,6 +220,32 @@ namespace flex
 		return result;
 	}
 
+	std::string ULongToString(u64 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (i < 0)
+		{
+			if (result.length() < minChars)
+			{
+				result = "-" + std::string(minChars - result.length(), pad) + result;
+			}
+			else
+			{
+				result = "-" + result;
+			}
+		}
+		else
+		{
+			if (result.length() < minChars)
+			{
+				result = std::string(minChars - result.length(), pad) + result;
+			}
+		}
+
+		return result;
+	}
+
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
 		const glm::vec4& colour, real xSpacing, real scale) :
@@ -801,6 +827,16 @@ namespace flex
 	glm::i32 ParseInt(const std::string& intStr)
 	{
 		return (i32)atoi(intStr.c_str());
+	}
+
+	glm::u32 ParseUInt(const std::string& intStr)
+	{
+		return (u32)strtoul(intStr.c_str(), NULL, 10);
+	}
+
+	glm::u64 ParseULong(const std::string& intStr)
+	{
+		return (u64)strtoull(intStr.c_str(), NULL, 10);
 	}
 
 	real ParseFloat(const std::string& floatStr)

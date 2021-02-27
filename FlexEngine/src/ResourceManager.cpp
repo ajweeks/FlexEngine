@@ -964,6 +964,13 @@ namespace flex
 		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
 	}
 
+	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder)
+	{
+		std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[audioFileSID].name;
+		discoveredAudioFiles[audioFileSID].sourceID = AudioManager::AddAudioSource(filePath, errorStringBuilder);
+		discoveredAudioFiles[audioFileSID].bInvalid = (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID);
+	}
+
 	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const
 	{
 		std::string childName = child->GetName();
@@ -1856,14 +1863,14 @@ namespace flex
 				{
 					if (ImGui::BeginChild("audio file list", ImVec2(ImGui::GetWindowWidth() - 4.0f, -1.0f), true))
 					{
-						for (auto iter = discoveredAudioFiles.begin(); iter != discoveredAudioFiles.end(); ++iter)
+						for (auto audioFilePair = discoveredAudioFiles.begin(); audioFilePair != discoveredAudioFiles.end(); ++audioFilePair)
 						{
-							const char* audioFileName = iter->second.name.c_str();
+							const char* audioFileName = audioFilePair->second.name.c_str();
 
 							if (soundFilter.PassFilter(audioFileName))
 							{
-								bool bSelected = (iter->first == selectedAudioFileID);
-								bool bWasInvalid = discoveredAudioFiles[iter->first].bInvalid;
+								bool bSelected = (audioFilePair->first == selectedAudioFileID);
+								bool bWasInvalid = discoveredAudioFiles[audioFilePair->first].bInvalid;
 								if (bWasInvalid)
 								{
 									ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
@@ -1871,7 +1878,7 @@ namespace flex
 								// TODO: Indicate when sound is playing with colour change
 								if (ImGui::Selectable(audioFileName, &bSelected))
 								{
-									selectedAudioFileID = iter->first;
+									selectedAudioFileID = audioFilePair->first;
 									bValuesChanged = true;
 									errorStringBuilder.Clear();
 
@@ -1883,6 +1890,21 @@ namespace flex
 								if (bWasInvalid)
 								{
 									ImGui::PopStyleColor();
+								}
+
+								if (ImGui::IsItemActive())
+								{
+									if (ImGui::BeginDragDropSource())
+									{
+										void* data = (void*)&audioFilePair->first;
+										size_t size = sizeof(StringID);
+
+										ImGui::SetDragDropPayload(Editor::AudioFileNameSIDPayloadCStr, data, size);
+
+										ImGui::Text("%s", audioFileName);
+
+										ImGui::EndDragDropSource();
+									}
 								}
 							}
 						}
@@ -1913,12 +1935,9 @@ namespace flex
 						if (bLoadSound)
 						{
 							errorStringBuilder.Clear();
-							std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[selectedAudioFileID].name;
-							discoveredAudioFiles[selectedAudioFileID].sourceID = AudioManager::AddAudioSource(filePath, &errorStringBuilder);
-							bValuesChanged = true;
-
+							LoadAudioFile(selectedAudioFileID, &errorStringBuilder);
 							sourceID = discoveredAudioFiles[selectedAudioFileID].sourceID;
-							discoveredAudioFiles[selectedAudioFileID].bInvalid = (sourceID == InvalidAudioSourceID);
+							bValuesChanged = true;
 						}
 
 						if (sourceID != InvalidAudioSourceID)

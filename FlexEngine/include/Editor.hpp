@@ -62,6 +62,7 @@ namespace flex
 		static const char* MeshPayloadCStr;
 		static const char* PrefabPayloadCStr;
 		static const char* GameObjectPayloadCStr;
+		static const char* AudioFileNameSIDPayloadCStr;
 
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);

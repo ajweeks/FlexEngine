@@ -1282,6 +1282,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
@@ -1297,9 +1298,9 @@ namespace flex
 
 		enum class SoundEffect
 		{
-			ROAR_01,
-			ROAR_02,
-			BRAKE_SCREECH_01,
+			ENGINE,
+			BRAKE,
+			// NOTE: New entries also need to be added to VehicleSoundEffectNames
 
 			_COUNT
 		};
@@ -1319,16 +1320,9 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
-		enum class SoundEffectSource
-		{
-			ROAR_01,
-			ROAR_02_LOOP,
-			BRAKE_SCREECH_01,
+		void SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID);
 
-			_COUNT
-		};
-
-		static std::array<AudioSourceID, (u32)SoundEffectSource::_COUNT> s_SoundEffectSources;
+		std::array<StringID, (i32)SoundEffect::_COUNT> m_SoundEffectSIDs;
 
 		const real MAX_STEER = 0.5f;
 		const real MAX_ENGINE_FORCE = 4000.0f;
@@ -1390,6 +1384,17 @@ namespace flex
 		const real UPRIGHTING_SPEED = 10.0f;
 
 	};
+
+	static const char* VehicleSoundEffectNames[] =
+	{
+		"Vehicle engine",
+		"Vehicle brake",
+
+		"COUNT"
+	};
+
+	static_assert((ARRAY_LENGTH(VehicleSoundEffectNames) - 1) == (i32)Vehicle::SoundEffect::_COUNT, "VehicleSoundEffectNames length does not match the number of entries in the Vehicle::SoundEffect enum");
+
 
 	class Road : public GameObject
 	{

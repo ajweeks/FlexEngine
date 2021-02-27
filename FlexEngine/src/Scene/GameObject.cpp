@@ -78,8 +78,6 @@ namespace flex
 	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
-	std::array<AudioSourceID, (u32)Vehicle::SoundEffectSource::_COUNT> Vehicle::s_SoundEffectSources;
-
 	extern ChildIndex InvalidChildIndex = ChildIndex({});
 
 	static volatile u32 workQueueEntriesCreated = 0;
@@ -8837,6 +8835,12 @@ namespace flex
 		GameObject(name, SID("vehicle"), gameObjectID)
 	{
 		m_bInteractable = true;
+
+		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
+		{
+			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID);
+			m_SoundEffectSIDs[i] = InvalidStringID;
+		}
 	}
 
 	GameObject* Vehicle::CopySelf(
@@ -8881,38 +8885,18 @@ namespace flex
 			}
 		}
 
+		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
+		{
+			newGameObject->m_SoundEffectSIDs[i] = m_SoundEffectSIDs[i];
+			// m_SoundEffects array will be set in PostInitialize
+		}
+
 		return newGameObject;
 	}
 
 	void Vehicle::Initialize()
 	{
 		GameObject::Initialize();
-
-		// Load static sound effects
-		if (s_SoundEffectSources[0] == 0 || s_SoundEffectSources[0] == InvalidAudioSourceID)
-		{
-			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-01-2.wav");
-			s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP] = AudioManager::AddAudioSource(SFX_DIRECTORY "roar-02-loop.wav");
-			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP], true);
-			s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01] = AudioManager::AddAudioSource(SFX_DIRECTORY "brake-tire-screech-01.wav");
-			AudioManager::SetSourceLooping(s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01], true);
-		}
-
-		// Create sound clips
-		{
-			{
-				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_01];
-				m_SoundEffects[(u32)SoundEffect::ROAR_01] = SoundClip_LoopingSimple("Roar 01", loopID);
-			}
-			{
-				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::ROAR_02_LOOP];
-				m_SoundEffects[(u32)SoundEffect::ROAR_02] = SoundClip_LoopingSimple("Roar 02", loopID);
-			}
-			{
-				AudioSourceID loopID = s_SoundEffectSources[(u32)SoundEffectSource::BRAKE_SCREECH_01];
-				m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01] = SoundClip_LoopingSimple("Brake screech 01", loopID);
-			}
-		}
 
 #if 1
 		if (m_RigidBody != nullptr)
@@ -9045,6 +9029,17 @@ namespace flex
 		CommonExampleOptions options(&helperInterface);
 		vehicle = Hinge2VehicleCreateFunc(options);
 #endif
+	}
+
+	void Vehicle::PostInitialize()
+	{
+		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
+		{
+			if (m_SoundEffectSIDs[i] != InvalidStringID)
+			{
+				SetSoundEffectSID((SoundEffect)i, m_SoundEffectSIDs[i]);
+			}
+		}
 	}
 
 	void Vehicle::Destroy(bool bDetachFromParent /* = true */)
@@ -9285,20 +9280,20 @@ namespace flex
 		// TODO: Drive gain with vel/motor/wheel speed
 		if (abs(forwardVel) < 0.1f)
 		{
-			m_SoundEffects[(u32)SoundEffect::ROAR_02].FadeOut();
+			m_SoundEffects[(u32)SoundEffect::ENGINE].FadeOut();
 		}
 		else
 		{
-			m_SoundEffects[(u32)SoundEffect::ROAR_02].FadeIn();
+			m_SoundEffects[(u32)SoundEffect::ENGINE].FadeIn();
 		}
 
 		if (abs(maxWheelSlip) > WHEEL_SLIP_SCREECH_THRESHOLD)
 		{
-			m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01].FadeOut();
+			m_SoundEffects[(u32)SoundEffect::BRAKE].FadeOut();
 		}
 		else
 		{
-			m_SoundEffects[(u32)SoundEffect::BRAKE_SCREECH_01].FadeIn();
+			m_SoundEffects[(u32)SoundEffect::BRAKE].FadeIn();
 		}
 
 
@@ -9307,7 +9302,7 @@ namespace flex
 			m_SoundEffects[i].Update();
 		}
 
-		m_SoundEffects[(u32)SoundEffect::ROAR_02].SetPitch(motorPitch);
+		m_SoundEffects[(u32)SoundEffect::ENGINE].SetPitch(motorPitch);
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -9325,6 +9320,16 @@ namespace flex
 				for (i32 i = 0; i < m_TireCount; ++i)
 				{
 					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].label);
+				}
+			}
+
+			std::vector<JSONField> soundEffectSIDs;
+			if (vehicleObj.SetFieldArrayChecked("sound effect sids", soundEffectSIDs))
+			{
+				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
+				for (i32 i = 0; i < count; ++i)
+				{
+					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].label);
 				}
 			}
 		}
@@ -9352,6 +9357,14 @@ namespace flex
 
 		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
 
+		std::vector<JSONField> soundEffectSIDs;
+		soundEffectSIDs.resize(m_SoundEffectSIDs.size());
+		for (i32 i = 0; i < (i32)m_SoundEffectSIDs.size(); ++i)
+		{
+			soundEffectSIDs[i].label = ULongToString(m_SoundEffectSIDs[i]);
+		}
+		vehicleObj.fields.emplace_back("sound effect sids", JSONValue(soundEffectSIDs));
+
 		parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
 	}
 
@@ -9373,6 +9386,9 @@ namespace flex
 			buf[strlen(TireNames[i]) + 1] = 0;
 			currentScene->GameObjectIDField(buf, m_TireIDs[i]);
 		}
+
+		//AudioManager::AudioFileNameSIDField("engine", )
+
 
 		ImGui::Text("Engine force: %.2f", m_EngineForce);
 		ImGui::Text("Braking force: %.2f", m_BrakeForce);
@@ -9400,9 +9416,13 @@ namespace flex
 
 		if (ImGui::BeginChild("Sound clips", ImVec2(300, 300), true))
 		{
-			for (SoundClip_LoopingSimple& clip : m_SoundEffects)
+			for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 			{
-				clip.DrawImGui();
+				if (m_SoundEffects[i].DrawImGui())
+				{
+					SetSoundEffectSID((SoundEffect)i, m_SoundEffects[i].loopSID);
+					m_SoundEffectSIDs[i] = m_SoundEffects[i].loopSID;
+				}
 			}
 		}
 		ImGui::EndChild();
@@ -9428,6 +9448,16 @@ namespace flex
 		}
 
 		GameObject::SetInteractingWith(gameObject);
+	}
+
+	void Vehicle::SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID)
+	{
+		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID);
+		if (soundSID != InvalidStringID && soundEffect == SoundEffect::ENGINE)
+		{
+			// TODO: Save this metadata somewhere in a file
+			AudioManager::SetSourceLooping(m_SoundEffects[(i32)soundEffect].loop, true);
+		}
 	}
 
 	void Vehicle::ResetTransform()
@@ -9531,23 +9561,24 @@ namespace flex
 		real dist2ToStart = glm::distance2(point, m_Start);
 		const bool bEndCloser = (dist2ToEnd < dist2ToStart) && (dist2ToEnd > 0.01f) || (dist2ToStart <= 0.01f);
 		glm::vec3 startPoint = bEndCloser ? m_End : m_Start;
-		Segment* startSegment = curveSegments.empty() ? nullptr : (bEndCloser ? &curveSegments[curveSegments.size() - 1] : &curveSegments[0]);
+		//Segment* startSegment = curveSegments.empty() ? nullptr : (bEndCloser ? &curveSegments[curveSegments.size() - 1] : &curveSegments[0]);
 		glm::vec3 delta = point - startPoint;
 		real distance = glm::length(delta);
 		glm::vec3 deltaN = delta / distance;
 		i32 estimatedSegmentCount = glm::clamp((i32)glm::ceil(distance / m_TargetSegmentLength), 1, 64);
-
-		glm::vec3 tangent = startSegment != nullptr ? (startSegment->curve.points[3] - startSegment->curve.points[2]) : VEC3_FORWARD;
 
 		curveSegments.reserve(curveSegments.size() + estimatedSegmentCount);
 
 		Segment segment = {};
 		for (i32 newSegmentIndex = 0; newSegmentIndex < estimatedSegmentCount; ++newSegmentIndex)
 		{
+			glm::vec3 tangent = (newSegmentIndex != 0) ?
+				(curveSegments[newSegmentIndex-1].curve.points[3] - curveSegments[newSegmentIndex - 1].curve.points[2]) * 0.5f :
+				VEC3_FORWARD;
+			tangent = deltaN;
 			glm::vec3 endPoint = startPoint + deltaN * m_TargetSegmentLength;
 			glm::vec3 mid0 = startPoint + tangent;
-			tangent = deltaN;
-			glm::vec3 mid1 = Lerp(startPoint, endPoint, 0.66f);
+			glm::vec3 mid1 = endPoint - tangent;
 			segment.curve = BezierCurve3D(startPoint, mid0, mid1, endPoint);
 			segment.widthStart = 3.0f;
 			segment.widthEnd = 3.0f;

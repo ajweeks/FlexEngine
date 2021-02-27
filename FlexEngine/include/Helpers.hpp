@@ -91,6 +91,8 @@ namespace flex
 	FLEX_NO_DISCARD bool ParseBool(const std::string& intStr);
 
 	FLEX_NO_DISCARD i32 ParseInt(const std::string& intStr);
+	FLEX_NO_DISCARD u32 ParseUInt(const std::string& intStr);
+	FLEX_NO_DISCARD u64 ParseULong(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
 	FLEX_NO_DISCARD real ParseFloat(const std::string& floatStr);
@@ -130,6 +132,7 @@ namespace flex
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
 	FLEX_NO_DISCARD std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD std::string ULongToString(u64 i, u16 minChars = 0, char pad = '0');
 
 	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 

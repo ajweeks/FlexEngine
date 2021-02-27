@@ -5,6 +5,8 @@
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
 #include "Helpers.hpp"
+#include "Editor.hpp"
+#include "ResourceManager.hpp"
 #include "StringBuilder.hpp"
 
 namespace flex
@@ -57,7 +59,7 @@ namespace flex
 
 	void SoundClip_Looping::Update()
 	{
-		if (state != State::OFF)
+		if (loop != InvalidAudioSourceID && state != State::OFF)
 		{
 			timeInState += g_DeltaTime;
 			if (timeInState >= stateLength)
@@ -105,7 +107,7 @@ namespace flex
 	{
 		const State oldState = state;
 
-		if (oldState == newState)
+		if (oldState == newState || loop == InvalidAudioSourceID)
 		{
 			return;
 		}
@@ -204,6 +206,11 @@ namespace flex
 
 	void SoundClip_Looping::KillCurrentlyPlaying()
 	{
+		if (loop == InvalidAudioSourceID)
+		{
+			return;
+		}
+
 		switch (state)
 		{
 		case State::STARTING:
@@ -227,6 +234,12 @@ namespace flex
 
 	void SoundClip_Looping::DrawImGui()
 	{
+		if (loop == InvalidAudioSourceID)
+		{
+			ImGui::Text("Invalid");
+			return;
+		}
+
 		if (ImGui::TreeNode(m_Name))
 		{
 #define SET_COL(s) if (state == s) ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.9f, 0.4f, 1.0f))
@@ -270,11 +283,28 @@ namespace flex
 	SoundClip_LoopingSimple::SoundClip_LoopingSimple()
 	{}
 
-	SoundClip_LoopingSimple::SoundClip_LoopingSimple(const char* name, AudioSourceID loopID) :
+	SoundClip_LoopingSimple::SoundClip_LoopingSimple(const char* name, StringID loopSID) :
 		m_Name(name),
-		loop(loopID),
+		loopSID(loopSID),
 		m_VolHisto(128)
 	{
+		if (loopSID != InvalidStringID)
+		{
+			if (g_ResourceManager->discoveredAudioFiles.find(loopSID) != g_ResourceManager->discoveredAudioFiles.end())
+			{
+				if (g_ResourceManager->discoveredAudioFiles[loopSID].sourceID == InvalidAudioSourceID)
+				{
+					StringBuilder errorStringBuilder;
+					g_ResourceManager->LoadAudioFile(loopSID, &errorStringBuilder);
+					if (errorStringBuilder.Length() > 0)
+					{
+						PrintError("Failed to audio file for SoundClip_LoopingSimple, error: %s\n", errorStringBuilder.ToCString());
+						return;
+					}
+				}
+				loop = g_ResourceManager->discoveredAudioFiles[loopSID].sourceID;
+			}
+		}
 	}
 
 	bool SoundClip_LoopingSimple::IsValid() const
@@ -289,8 +319,7 @@ namespace flex
 
 	void SoundClip_LoopingSimple::FadeIn()
 	{
-		// If looping or fading in, early out
-		if (bPlaying && fadeOutTimeRemaining == -1.0f)
+		if ((bPlaying && fadeOutTimeRemaining == -1.0f) || (loop == InvalidAudioSourceID))
 		{
 			return;
 		}
@@ -310,7 +339,7 @@ namespace flex
 
 	void SoundClip_LoopingSimple::FadeOut()
 	{
-		if (bPlaying && fadeOutTimeRemaining == -1.0f)
+		if (bPlaying && fadeOutTimeRemaining == -1.0f && loop != InvalidAudioSourceID)
 		{
 			real durationRemaining = 1.0f;
 			if (fadeInTimeRemaining != -1.0f)
@@ -326,6 +355,11 @@ namespace flex
 
 	void SoundClip_LoopingSimple::Update()
 	{
+		if (loop == InvalidAudioSourceID)
+		{
+			return;
+		}
+
 		if (fadeInTimeRemaining != -1.0f)
 		{
 			fadeInTimeRemaining -= g_DeltaTime;
@@ -360,7 +394,10 @@ namespace flex
 
 	void SoundClip_LoopingSimple::KillCurrentlyPlaying()
 	{
-		AudioManager::StopSource(loop);
+		if (loop != InvalidAudioSourceID)
+		{
+			AudioManager::StopSource(loop);
+		}
 		fadeInTimeRemaining = -1.0f;
 		fadeOutTimeRemaining = -1.0f;
 		bPlaying = false;
@@ -368,12 +405,36 @@ namespace flex
 
 	void SoundClip_LoopingSimple::SetPitch(real pitch)
 	{
-		AudioManager::SetSourcePitch(loop, pitch);
+		if (loop != InvalidAudioSourceID)
+		{
+			AudioManager::SetSourcePitch(loop, pitch);
+		}
 	}
 
-	void SoundClip_LoopingSimple::DrawImGui()
+	bool SoundClip_LoopingSimple::DrawImGui()
 	{
-		if (ImGui::TreeNode(m_Name))
+		bool bTreeOpen = false;
+		if (AudioManager::AudioFileNameSIDField(m_Name, loopSID, &bTreeOpen))
+		{
+			KillCurrentlyPlaying();
+			loop = g_ResourceManager->discoveredAudioFiles[loopSID].sourceID;
+			if (bTreeOpen)
+			{
+				ImGui::TreePop();
+			}
+			return true;
+		}
+
+		if (loop == InvalidAudioSourceID)
+		{
+			if (bTreeOpen)
+			{
+				ImGui::TreePop();
+			}
+			return false;
+		}
+
+		if (bTreeOpen)
 		{
 			ImGui::PlotHistogram("Gain",
 				m_VolHisto.data.data(),
@@ -389,6 +450,8 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+
+		return false;
 	}
 
 	// ---
@@ -890,6 +953,70 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+	}
+
+	bool AudioManager::AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen)
+	{
+		bool bChanged = false;
+
+		bool bValid = sourceFileNameSID != InvalidStringID;
+
+		ImGui::PushID(label);
+
+		if (bValid)
+		{
+			const char* sourceName = g_ResourceManager->discoveredAudioFiles[sourceFileNameSID].name.c_str();
+			*bTreeOpen = ImGui::TreeNode("audiosourcetree", "%s : %s", label, sourceName);
+		}
+		else
+		{
+			ImGui::Text("%s : (null)", label);
+		}
+
+		if (bValid && ImGui::BeginPopupContextItem())
+		{
+			if (ImGui::Button("Clear"))
+			{
+				sourceFileNameSID = InvalidStringID;
+				bValid = false;
+				bChanged = true;
+			}
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::IsItemActive())
+		{
+			if (ImGui::BeginDragDropSource())
+			{
+				std::string dragDropText = ULongToString(sourceFileNameSID);
+
+				void* data = (void*)&sourceFileNameSID;
+				size_t size = sizeof(StringID);
+
+				ImGui::SetDragDropPayload(Editor::AudioFileNameSIDPayloadCStr, data, size);
+
+				ImGui::Text("%s", dragDropText.c_str());
+
+				ImGui::EndDragDropSource();
+			}
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* audioSourcePayload = ImGui::AcceptDragDropPayload(Editor::AudioFileNameSIDPayloadCStr);
+			if (audioSourcePayload != nullptr && audioSourcePayload->Data != nullptr)
+			{
+				StringID draggedSID = *((StringID*)audioSourcePayload->Data);
+				sourceFileNameSID = draggedSID;
+				bChanged = true;
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::PopID();
+
+		return bChanged;
 	}
 
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)

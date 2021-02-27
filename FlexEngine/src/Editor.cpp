@@ -40,6 +40,7 @@ namespace flex
 	const char* Editor::MeshPayloadCStr = "mesh";
 	const char* Editor::PrefabPayloadCStr = "prefab";
 	const char* Editor::GameObjectPayloadCStr = "gameobject";
+	const char* Editor::AudioFileNameSIDPayloadCStr = "audiosid";
 
 	Editor::Editor() :
 		m_MouseButtonCallback(this, &Editor::OnMouseButtonEvent),
