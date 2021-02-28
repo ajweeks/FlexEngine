@@ -75,7 +75,7 @@ PlotStatus Plot(const char* label, const PlotConfig& conf) {
     RenderFrame(
         frame_bb.Min,
         frame_bb.Max,
-        GetColorU32(ImGuiCol_FrameBg),
+        conf.bg_colour,
         true,
         style.FrameRounding);
 

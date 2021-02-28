@@ -2093,8 +2093,10 @@ namespace flex
 
 							static real* valsFloat = nullptr;
 							static u32 valsFloatLen = 0;
-							static u32 selectionStart = 0;
-							static u32 selectionLength = 0;
+							//static u32 selectionStart = 0;
+							//static u32 selectionLength = 0;
+							static u32 zoomCenter = 0;
+							static u32 zoomHalfLength = 0;
 
 							if (valsFloat == nullptr || valsFloatLen < valsCount)
 							{
@@ -2109,8 +2111,10 @@ namespace flex
 							{
 								bValuesChanged = false;
 
-								selectionStart = 0;
-								selectionLength = 0;
+								//selectionStart = 0;
+								//selectionLength = 0;
+								zoomCenter = (u32)(valsCount / 2);
+								zoomHalfLength = valsCount / 2;
 
 								for (u32 i = 0; i < valsCount; ++i)
 								{
@@ -2119,21 +2123,21 @@ namespace flex
 							}
 
 							ImGui::PlotConfig conf;
-							conf.values.ys = valsFloat;
-							conf.values.count = valsCount;
+							conf.values.ys = valsFloat + (zoomCenter - zoomHalfLength);
+							conf.values.count = zoomHalfLength * 2;
 							conf.scale.min = -1.0f;
 							conf.scale.max = 1.0f;
 							conf.tooltip.show = true;
 							conf.tooltip.format = "%g: %.2f";
 							conf.grid_x.show = true;
-							conf.grid_x.size = 128;
-							conf.grid_x.subticks = 4;
+							conf.grid_x.size = 4096;
+							conf.grid_x.subticks = 64;
 							conf.grid_y.show = true;
 							conf.grid_y.size = 0.5f;
 							conf.grid_y.subticks = 5;
-							conf.selection.show = true;
-							conf.selection.start = &selectionStart;
-							conf.selection.length = &selectionLength;
+							//conf.selection.show = true;
+							//conf.selection.start = &selectionStart;
+							//conf.selection.length = &selectionLength;
 							conf.frame_size = ImVec2(ImGui::GetWindowWidth() - 4.0f, 120.0f);
 							conf.line_thickness = 2.f;
 							conf.overlay_colour = IM_COL32(20, 165, 20, 65);
@@ -2142,6 +2146,50 @@ namespace flex
 
 							ImGui::Plot("Waveform", conf);
 
+							if (ImGui::IsItemHovered())
+							{
+								real mouseXN = glm::clamp((ImGui::GetIO().MousePos.x - cursorStart.x) / (conf.frame_size.x - cursorStart.x), 0.0f, 1.0f);
+								real scrollY = ImGui::GetIO().MouseWheel;
+
+								const u32 lastZoomHalfLength = zoomHalfLength;
+								const u32 lastZoomCenter = zoomCenter;
+								real inverseZoomPercent = zoomHalfLength / (valsCount / 2.0f);
+								real alpha = (real)glm::pow(inverseZoomPercent, 2.0f);
+								real deltaSlow = valsCount / 150.0f;
+								real deltaFast = valsCount / 10.0f;
+								i32 delta = (i32)Lerp(deltaSlow, deltaFast, alpha);
+								if (inverseZoomPercent < 0.1f)
+								{
+									delta = (i32)((real)delta * glm::clamp(glm::pow(inverseZoomPercent / 0.1f, 2.0f), 0.1f, 1.0f));
+								}
+								zoomHalfLength = (u32)glm::clamp((i32)zoomHalfLength - (i32)(delta * scrollY), 10, (i32)valsCount / 2);
+
+								if (scrollY != 0.0f)
+								{
+									real moveScale = scrollY < 0.0f ? -1.0f : 1.0f;
+									u32 zoomDelta = zoomHalfLength - lastZoomHalfLength;
+									// [0          [0.6 0.7]     1]
+									//             [0     1]
+									real left = (zoomCenter - zoomHalfLength) / (real)(valsCount);
+									real right = (zoomCenter + zoomHalfLength) / (real)(valsCount);
+									real mouseGlobalN = Lerp(left, right, mouseXN);
+									real newTargetMouseCenter;
+									// TODO: Fix this
+									if (mouseGlobalN > 0.5f)
+									{
+										newTargetMouseCenter = Lerp(mouseGlobalN, right, Saturate((mouseXN - 0.5f) / 0.5f));
+									}
+									else
+									{
+										newTargetMouseCenter = Lerp(left, mouseGlobalN, Saturate(mouseXN / 0.5f));
+									}
+									u32 targetZoomCenter = glm::clamp((u32)(newTargetMouseCenter * valsCount), zoomHalfLength, valsCount - zoomHalfLength);
+									zoomCenter = targetZoomCenter;// (u32)Lerp((real)zoomCenter, (real)targetZoomCenter, 0.5f);
+									//Print("Old center + half len, new center + half len,:\n%u\t%u\n%u\t%u\n\n", lastZoomCenter, lastZoomHalfLength, zoomCenter, zoomHalfLength);
+								}
+							}
+
+							// TODO: Take into account zoom level
 							real playbackPosN = AudioManager::GetSourcePlaybackPos(sourceID) / AudioManager::GetSourceLength(sourceID);
 
 							ImDrawList* drawlist = ImGui::GetWindowDrawList();
@@ -2150,13 +2198,13 @@ namespace flex
 								cursorStart + ImVec2(playbackPosN * conf.frame_size.x, conf.frame_size.y),
 								IM_COL32(20, 250, 20, 255), 2.0f);
 
-							ImGui::Spacing();
-
-							conf.selection.show = false;
-							conf.values.offset = selectionStart;
-							conf.values.count = selectionLength;
-							conf.line_thickness = 2.f;
-							ImGui::Plot("Selection", conf);
+							//ImGui::Spacing();
+							//
+							//conf.selection.show = false;
+							//conf.values.offset = selectionStart;
+							//conf.values.count = selectionLength;
+							//conf.line_thickness = 2.f;
+							//ImGui::Plot("Selection", conf);
 						}
 						else
 						{

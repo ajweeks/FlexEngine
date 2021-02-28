@@ -66,6 +66,7 @@ struct PlotConfig {
     bool skip_small_lines = true;
     const char* overlay_text = nullptr;
 	ImU32 overlay_colour = IM_COL32(128, 128, 128, 32);
+	ImU32 bg_colour = IM_COL32(32, 32, 32, 255);
 };
 
 enum class PlotStatus {
