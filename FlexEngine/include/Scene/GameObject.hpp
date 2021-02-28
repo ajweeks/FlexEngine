@@ -1406,10 +1406,16 @@ namespace flex
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
 
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
 	private:
 		void GenerateSegment(i32 index);
 		void GenerateMaterial();
-		void GenerateSegmentsToReach(const glm::vec3& point);
+		void GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points);
 
 		void CreateRigidBody(u32 meshIndex);
 
@@ -1426,10 +1432,6 @@ namespace flex
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 
 		u32 m_QuadCountPerSegment = 10;
-		real m_TargetSegmentLength = 16.0f;
-
-		glm::vec3 m_Start;
-		glm::vec3 m_End;
 
 	};
 } // namespace flex

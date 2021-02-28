@@ -1798,12 +1798,6 @@ namespace flex
 		GameObject* parent /* = nullptr */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
-		std::vector<MaterialID> matIDs;
-		if (m_Mesh && (copyFlags & CopyFlags::MESH))
-		{
-			matIDs = m_Mesh->GetMaterialIDs();
-		}
-
 		newGameObject->m_Tags = m_Tags;
 		newGameObject->m_Transform = m_Transform;
 		newGameObject->m_TypeID = m_TypeID;
@@ -1848,6 +1842,8 @@ namespace flex
 
 		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr)
 		{
+			std::vector<MaterialID> matIDs = m_Mesh->GetMaterialIDs();
+
 			Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
 			Mesh::Type meshType = m_Mesh->GetType();
 			switch (meshType)
@@ -9489,15 +9485,29 @@ namespace flex
 
 		m_QuadCountPerSegment = 25;
 
-		m_Start = glm::vec3(4.0f, 0.0f, 0.0f);
-		m_End = m_Start;
+		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
 
-		GenerateSegmentsToReach(glm::vec3(9.0f, 0.0f, 64.0f));
-		GenerateSegmentsToReach(glm::vec3(60.0f, 0.0, 84.0f));
-		GenerateSegmentsToReach(glm::vec3(96.0f, 0.0, 72.0f));
-		GenerateSegmentsToReach(glm::vec3(104.0f, 0.0, 32.0f));
-		GenerateSegmentsToReach(glm::vec3(64.0f, 0.0, -24.0f));
-		GenerateSegmentsToReach(m_Start);
+		if (curveSegments.empty())
+		{
+			std::vector<glm::vec3> newPoints =
+			{
+				start,
+				glm::vec3(9.0f, 0.0f, 64.0f),
+				glm::vec3(60.0f, 0.0, 84.0f),
+				glm::vec3(96.0f, 0.0, 72.0f),
+				glm::vec3(104.0f, 0.0, 32.0f),
+				glm::vec3(64.0f, 0.0, -24.0f),
+				start
+			};
+			GenerateSegmentsThroughPoints(newPoints);
+		}
+		else
+		{
+			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			{
+				GenerateSegment(i);
+			}
+		}
 
 		GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->RegisterRoad(this);
 	}
@@ -9554,47 +9564,60 @@ namespace flex
 		}
 	}
 
-	void Road::GenerateSegmentsToReach(const glm::vec3& point)
+	void Road::GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points)
 	{
-		// Attempts to extend road either from start or end to reach given point
-		real dist2ToEnd = glm::distance2(point, m_End);
-		real dist2ToStart = glm::distance2(point, m_Start);
-		const bool bEndCloser = (dist2ToEnd < dist2ToStart) && (dist2ToEnd > 0.01f) || (dist2ToStart <= 0.01f);
-		glm::vec3 startPoint = bEndCloser ? m_End : m_Start;
-		//Segment* startSegment = curveSegments.empty() ? nullptr : (bEndCloser ? &curveSegments[curveSegments.size() - 1] : &curveSegments[0]);
-		glm::vec3 delta = point - startPoint;
-		real distance = glm::length(delta);
-		glm::vec3 deltaN = delta / distance;
-		i32 estimatedSegmentCount = glm::clamp((i32)glm::ceil(distance / m_TargetSegmentLength), 1, 64);
+		const i32 startingCurveCount = (i32)curveSegments.size();
+		const real roadWidth = 3.0f;
 
-		curveSegments.reserve(curveSegments.size() + estimatedSegmentCount);
+		curveSegments.reserve(curveSegments.size() + points.size());
 
-		Segment segment = {};
-		for (i32 newSegmentIndex = 0; newSegmentIndex < estimatedSegmentCount; ++newSegmentIndex)
+		// First pass: set control points without yet setting handle points
 		{
-			glm::vec3 tangent = (newSegmentIndex != 0) ?
-				(curveSegments[newSegmentIndex-1].curve.points[3] - curveSegments[newSegmentIndex - 1].curve.points[2]) * 0.5f :
-				VEC3_FORWARD;
-			tangent = deltaN;
-			glm::vec3 endPoint = startPoint + deltaN * m_TargetSegmentLength;
-			glm::vec3 mid0 = startPoint + tangent;
-			glm::vec3 mid1 = endPoint - tangent;
-			segment.curve = BezierCurve3D(startPoint, mid0, mid1, endPoint);
-			segment.widthStart = 3.0f;
-			segment.widthEnd = 3.0f;
-			curveSegments.push_back(segment);
-			GenerateSegment((i32)curveSegments.size() - 1);
-
-			startPoint = endPoint;
+			Segment segment = {};
+			segment.widthStart = roadWidth;
+			segment.widthEnd = roadWidth;
+			for (u32 i = 1; i < (u32)points.size(); ++i)
+			{
+				segment.curve = BezierCurve3D(points[i - 1], VEC3_ZERO, VEC3_ZERO, points[i]);
+				curveSegments.push_back(segment);
+			}
 		}
 
-		if (bEndCloser)
+		// Second pass: generate tangents so segments are continuous
 		{
-			m_End = startPoint;
+			real tangentScale = 0.25f;
+
+			for (u32 i = 1; i < (u32)points.size() - 1; ++i)
+			{
+				i32 prevPointIndex = i - 1;
+				Segment& prevSeg = curveSegments[startingCurveCount + prevPointIndex];
+				Segment& currSeg = curveSegments[startingCurveCount + i];
+
+				glm::vec3 pointDiff = (currSeg.curve.points[3] - prevSeg.curve.points[0]) * tangentScale;
+
+				prevSeg.curve.points[2] = prevSeg.curve.points[3] - pointDiff;
+				currSeg.curve.points[1] = currSeg.curve.points[0] + pointDiff;
+			}
+
+			// Set final one (or two if looping) tangent point(s)
+			i32 finalSegmentIndex = (i32)(startingCurveCount + points.size() - 2);
+			if (NearlyEquals(curveSegments[finalSegmentIndex].curve.points[3], curveSegments[0].curve.points[0], 0.1f))
+			{
+				// Loop
+				glm::vec3 tangent = (curveSegments[0].curve.points[3] - curveSegments[finalSegmentIndex].curve.points[0]) * tangentScale;
+				curveSegments[0].curve.points[1] = curveSegments[0].curve.points[0] + tangent;
+				curveSegments[finalSegmentIndex].curve.points[2] = curveSegments[finalSegmentIndex].curve.points[3] - tangent;
+			}
+			else
+			{
+				curveSegments[finalSegmentIndex].curve.points[2] = curveSegments[finalSegmentIndex].curve.points[3] - curveSegments[finalSegmentIndex].curve.points[0];
+			}
 		}
-		else
+
+		// Third pass: actually generate meshes
+		for (u32 i = 0; i < (u32)points.size() - 1; ++i)
 		{
-			m_Start = startPoint;
+			GenerateSegment(startingCurveCount + i);
 		}
 	}
 
@@ -9658,7 +9681,7 @@ namespace flex
 			real t = (real)z / m_QuadCountPerSegment;
 			real width = Lerp(segment.widthStart, segment.widthEnd, t);
 			glm::vec3 pos = curve.GetPointOnCurve(t);
-			pos.y += 0.1f;
+			//pos.y += 0.1f;
 			glm::vec3 up = VEC3_UP;
 			glm::vec3 forward = glm::normalize(curve.GetFirstDerivativeOnCurve(t));
 			glm::vec3 tangent = glm::cross(forward, up);
@@ -9702,6 +9725,22 @@ namespace flex
 		}
 
 		CreateRigidBody(index);
+	}
+
+	GameObject* Road::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
+	{
+		FLEX_UNUSED(copyFlags);
+
+		std::string newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
+		Road* newGameObject = new Road(newObjectName, optionalGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, CopyFlags::ADD_TO_SCENE);
+
+		newGameObject->curveSegments = curveSegments;
+		newGameObject->m_RoadMaterialID = m_RoadMaterialID;
+		newGameObject->m_QuadCountPerSegment = m_QuadCountPerSegment;
+
+		return newGameObject;
 	}
 
 	void Road::GenerateMaterial()
