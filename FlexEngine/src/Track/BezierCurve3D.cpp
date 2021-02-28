@@ -29,7 +29,7 @@ namespace flex
 
 		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
 		btVector3 pPoint = ToBtVec3(points[0]);
-		for (i32 i = 0; i <= debug_SegmentCount; ++i)
+		for (i32 i = 1; i <= debug_SegmentCount; ++i)
 		{
 			real t = (real)i / (real)debug_SegmentCount;
 			btVector3 nPoint = ToBtVec3(GetPointOnCurve(t));
@@ -45,9 +45,11 @@ namespace flex
 		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
 #endif
 
-		for (const glm::vec3& point : points)
+		btVector3 pointColours[] = { btVector3(0.8f, 0.1f, 0.1f), btVector3(0.1f, 0.8f, 0.1f), btVector3(0.1f, 0.1f, 0.8f), btVector3(0.8f, 0.8f, 0.8f) };
+		for (u32 i = 0; i < 4; ++i)
 		{
-			debugDrawer->drawSphere(ToBtVec3(point), 0.1f, s_PointColour);
+			const glm::vec3& point = points[i];
+			debugDrawer->drawSphere(ToBtVec3(point), 0.1f + i * 0.02f, pointColours[i]);
 		}
 	}
 
