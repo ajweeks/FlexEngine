@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pair.hpp"
+#include "Platform/Platform.hpp" // For Date
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
@@ -9,6 +10,7 @@ typedef struct FT_FaceRec_* FT_Face;
 
 namespace flex
 {
+	class DirectoryWatcher;
 	struct JSONField;
 	struct JSONObject;
 	struct LoadedMesh;
@@ -29,6 +31,7 @@ namespace flex
 		~ResourceManager();
 
 		void Initialize();
+		void Update();
 		void Destroy();
 		void DestroyAllLoadedMeshes();
 
@@ -154,6 +157,9 @@ namespace flex
 			std::string name;
 			AudioSourceID sourceID = InvalidAudioSourceID;
 			bool bInvalid = false;
+
+			// Editor-only
+			Date fileModifiedDate;
 		};
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
@@ -165,6 +171,9 @@ namespace flex
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";
+
+		DirectoryWatcher* m_AudioDirectoryWatcher = nullptr;
+		i32 m_AudioRefreshFrameCountdown = -1; // When non-negative, counts down each frame until refresh is applied
 
 	};
 } // namespace flex

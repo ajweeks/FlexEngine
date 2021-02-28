@@ -47,12 +47,39 @@ namespace flex
 
 	void ResourceManager::Initialize()
 	{
+		m_AudioDirectoryWatcher = new DirectoryWatcher(SFX_DIRECTORY, false);
+
 		DiscoverTextures();
 		DiscoverAudioFiles();
 	}
 
+	void ResourceManager::Update()
+	{
+		if (m_AudioRefreshFrameCountdown != -1)
+		{
+			--m_AudioRefreshFrameCountdown;
+			if (m_AudioRefreshFrameCountdown <= -1)
+			{
+				m_AudioRefreshFrameCountdown = -1;
+				DiscoverAudioFiles();
+			}
+		}
+
+		if (m_AudioDirectoryWatcher->Update())
+		{
+			// Delay discovery to allow temporary files to be resolved.
+			// Audacity for example, when replacing an existing file "file.wav", will
+			// first write to "file0.wav", then delete "file.wav", then rename "file0.wav"
+			// to "file.wav". This delay prevents us from trying to load the temporary file.
+			m_AudioRefreshFrameCountdown = 1;
+		}
+	}
+
 	void ResourceManager::Destroy()
 	{
+		delete m_AudioDirectoryWatcher;
+		m_AudioDirectoryWatcher = nullptr;
+
 		for (BitmapFont* font : fontsScreenSpace)
 		{
 			delete font;
@@ -222,17 +249,69 @@ namespace flex
 
 	void ResourceManager::DiscoverAudioFiles()
 	{
-		discoveredAudioFiles.clear();
+		std::map<StringID, AudioFileMetaData> newDiscoveredAudioFiles;
+		i32 unchangedCount = 0;
+		i32 modifiedCount = 0;
+		i32 addedCount = 0;
+		i32 removedCount = 0;
+		i32 failedCount = 0;
+
+		StringBuilder errorStringBuilder;
 
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(SFX_DIRECTORY, foundFiles, ".wav"))
 		{
 			for (std::string& foundFilePath : foundFiles)
 			{
-				foundFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
-				StringID stringID = SID(foundFilePath.c_str());
-				AudioFileMetaData metaData(foundFilePath);
-				discoveredAudioFiles.emplace(stringID, metaData);
+				std::string relativeFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
+				StringID stringID = SID(relativeFilePath.c_str());
+				AudioFileMetaData metaData(relativeFilePath);
+				if (Platform::GetFileModifcationTime(foundFilePath.c_str(), metaData.fileModifiedDate))
+				{
+					auto iter = discoveredAudioFiles.find(stringID);
+					if (iter != discoveredAudioFiles.end())
+					{
+						// Existing file
+						if (iter->second.fileModifiedDate != metaData.fileModifiedDate)
+						{
+							++modifiedCount;
+							if (iter->second.sourceID != InvalidAudioSourceID)
+							{
+								// Reload existing audio file if already loaded, it's out of date
+								errorStringBuilder.Clear();
+								if (AudioManager::ReplaceAudioSource(foundFilePath, iter->second.sourceID, &errorStringBuilder) != InvalidAudioSourceID)
+								{
+									metaData.bInvalid = false;
+								}
+								else
+								{
+									// Failed to replace
+									metaData.bInvalid = true;
+									newDiscoveredAudioFiles.emplace(stringID, metaData);
+									++failedCount;
+									continue;
+								}
+							}
+						}
+						else
+						{
+							++unchangedCount;
+						}
+
+						metaData.sourceID = discoveredAudioFiles[stringID].sourceID;
+					}
+					else
+					{
+						// Newly discovered file
+						++addedCount;
+					}
+					newDiscoveredAudioFiles.emplace(stringID, metaData);
+				}
+				else
+				{
+					PrintError("Failed to get file modification time for %s\n", relativeFilePath.c_str());
+					newDiscoveredAudioFiles.emplace(stringID, metaData);
+				}
 			}
 		}
 		else
@@ -241,9 +320,16 @@ namespace flex
 			return;
 		}
 
+		removedCount = (i32)discoveredAudioFiles.size() - (i32)(newDiscoveredAudioFiles.size() - addedCount);
+
+		discoveredAudioFiles.clear();
+		discoveredAudioFiles = newDiscoveredAudioFiles;
+
 		if (g_bEnableLogging_Loading)
 		{
-			Print("Parsed %u prefabs\n", (u32)prefabTemplates.size());
+			Print("unchanged: %d, mod: %d, add: %d, removed: %d, failed: %d\n", unchangedCount, modifiedCount, addedCount, removedCount, failedCount);
+
+			Print("Discovered %u audio files\n", (u32)discoveredAudioFiles.size());
 		}
 	}
 
@@ -252,7 +338,7 @@ namespace flex
 		discoveredTextures.clear();
 
 		// Zeroth index represents no texture
-		discoveredTextures.push_back("");
+		discoveredTextures.emplace_back("");
 
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
@@ -261,6 +347,11 @@ namespace flex
 			{
 				std::string fileName = StripLeadingDirectories(foundFilePath);
 				discoveredTextures.push_back(fileName);
+			}
+
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Discovered %u textures\n", (u32)(discoveredTextures.size() - 1));
 			}
 		}
 		else
@@ -1985,8 +2076,17 @@ namespace flex
 
 							// TODO: Show more info like file size, mono vs. stereo, etc.
 
+							static u32 previousSourceVersion = 0;
+
 							u32 valsCount;
-							u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount);
+							u32 sourceVersion;
+							u8* vals = AudioManager::GetSourceSamples(sourceID, valsCount, sourceVersion);
+
+							if (sourceVersion != previousSourceVersion)
+							{
+								bValuesChanged = true;
+								previousSourceVersion = sourceVersion;
+							}
 
 							// NOTE: 1 << 16 is ImGui's max allowed number of samples
 							valsCount = glm::min(valsCount, (u32)(1 << 16));

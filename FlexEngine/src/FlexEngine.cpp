@@ -664,6 +664,8 @@ namespace flex
 
 				g_Window->Update();
 
+				g_ResourceManager->Update();
+
 				g_Editor->LateUpdate();
 
 				if (bSimulateFrame)

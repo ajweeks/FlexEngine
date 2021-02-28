@@ -13,6 +13,40 @@ namespace flex
 		u32 l3CacheCount;
 	};
 
+	struct Date
+	{
+		Date() {}
+
+		Date(u32 year, u32 month, u32 day, u32 hour, u32 minute, u32 second, u32 millisecond) :
+			year(year),
+			month(month),
+			day(day),
+			hour(hour),
+			minute(minute),
+			second(second),
+			millisecond(millisecond)
+		{
+		}
+
+		bool operator!=(const Date& other)
+		{
+			return !(*this == other);
+		}
+
+		bool operator==(const Date& other)
+		{
+			return year == other.year &&
+				month == other.month &&
+				day == other.day &&
+				hour == other.hour &&
+				minute == other.minute &&
+				second == other.second &&
+				millisecond == other.millisecond;
+		}
+
+		u32 year, month, day, hour, minute, second, millisecond;
+	};
+
 	class Platform
 	{
 	public:
@@ -50,6 +84,8 @@ namespace flex
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);
 		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
 		static bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
+
+		static bool GetFileModifcationTime(const char* filePath, Date& outModificationDate);
 
 		// Returns true if any files were found
 		// Set fileType to "*" to retrieve all files

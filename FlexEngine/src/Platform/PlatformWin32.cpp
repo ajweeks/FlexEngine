@@ -251,6 +251,31 @@ namespace flex
 		}
 	}
 
+	bool Platform::GetFileModifcationTime(const char* filePath, Date& outModificationDate)
+	{
+		HANDLE fileHandle = CreateFile(filePath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (fileHandle == INVALID_HANDLE_VALUE)
+		{
+			return false;
+		}
+		FILETIME fileCreationTime, fileAccessTime, fileWriteTime;
+		if (!GetFileTime(fileHandle, &fileCreationTime, &fileAccessTime, &fileWriteTime))
+		{
+			CloseHandle(fileHandle);
+			return false;
+		}
+
+		SYSTEMTIME fileWriteTimeSystem;
+		bool bSuccess = FileTimeToSystemTime(&fileWriteTime, &fileWriteTimeSystem);
+		assert(bSuccess);
+		// Incorrect hour? TODO: Get in UTC
+		outModificationDate = Date(fileWriteTimeSystem.wYear, fileWriteTimeSystem.wMonth, fileWriteTimeSystem.wDay,
+			fileWriteTimeSystem.wHour, fileWriteTimeSystem.wMinute, fileWriteTimeSystem.wSecond, fileWriteTimeSystem.wMilliseconds);
+
+		CloseHandle(fileHandle);
+		return true;
+	}
+
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter)
 	{
 		std::string cleanedFileTypeFilter = fileTypeFilter;
@@ -667,7 +692,7 @@ namespace flex
 			m_ChangeHandle = FindFirstChangeNotification(
 				directory.c_str(),
 				m_bWatchSubtree ? TRUE : FALSE,
-				FILE_NOTIFY_CHANGE_LAST_WRITE);
+				FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
 
 			if (m_ChangeHandle == INVALID_HANDLE_VALUE)
 			{
@@ -697,6 +722,8 @@ namespace flex
 		switch (dwWaitStatus)
 		{
 		case WAIT_OBJECT_0:
+			// A file was created, renamed, or deleted in the directory
+
 			// Clear modification flag (needs to be called twice for some reason...)
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)

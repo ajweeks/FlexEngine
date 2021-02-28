@@ -137,6 +137,7 @@ namespace flex
 		static void Update();
 
 		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
+		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
@@ -178,7 +179,7 @@ namespace flex
 
 		static real GetSourceLength(AudioSourceID sourceID);
 
-		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount);
+		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount, u32& outVersion);
 
 		static Source* GetSource(AudioSourceID sourceID);
 
@@ -200,14 +201,20 @@ namespace flex
 
 		static ALuint GetNextAvailableSourceAndBufferIndex();
 
+		static AudioSourceID AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr);
+
 		static real s_MasterGain;
 		static bool s_Muted;
 
 		static const i32 NUM_BUFFERS = 2048;
 		static ALuint s_Buffers[NUM_BUFFERS];
-		// Editor-only
+
+		// Editor-only <
 		static u8* s_WaveData[NUM_BUFFERS];
 		static u32 s_WaveDataLengths[NUM_BUFFERS];
+		// Monotonically increasing value, incrementing each time a new version is loaded
+		static u32 s_WaveDataVersions[NUM_BUFFERS];
+		// > End Editor-only
 
 		static std::array<Source, NUM_BUFFERS> s_Sources;
 

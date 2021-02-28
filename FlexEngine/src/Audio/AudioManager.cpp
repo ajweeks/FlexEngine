@@ -19,6 +19,7 @@ namespace flex
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
 	u8* AudioManager::s_WaveData[NUM_BUFFERS];
 	u32 AudioManager::s_WaveDataLengths[NUM_BUFFERS];
+	u32 AudioManager::s_WaveDataVersions[NUM_BUFFERS];
 
 	real AudioManager::s_MasterGain = 0.2f;
 	bool AudioManager::s_Muted = false;
@@ -553,15 +554,34 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
+		return AddAudioSourceInternal(newID, filePath, outErrorStr);
+	}
+
+	AudioSourceID AudioManager::ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr /* = nullptr */)
+	{
+		if (sourceID == InvalidAudioSourceID)
+		{
+			PrintError("Attempted to replace Invalid audio source\n");
+			return InvalidAudioSourceID;
+		}
+
+		StopSource(sourceID);
+		DestroyAudioSource(sourceID);
+
+		return AddAudioSourceInternal(sourceID, filePath, outErrorStr);
+	}
+
+	AudioSourceID AudioManager::AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr)
+	{
 		if (g_bEnableLogging_Loading)
 		{
 			const std::string friendlyName = StripLeadingDirectories(filePath);
 			Print("Loading audio source %s\n", friendlyName.c_str());
 		}
 
-		if (s_WaveData[newID] != nullptr)
+		if (s_WaveData[sourceID] != nullptr)
 		{
-			delete s_WaveData[newID];
+			delete s_WaveData[sourceID];
 		}
 
 		// WAVE file
@@ -569,7 +589,7 @@ namespace flex
 		u32 freq;
 		StringBuilder sb; // Fallback string builder in case one isn't passed in
 		StringBuilder* realSB = (outErrorStr == nullptr ? &sb : outErrorStr);
-		if (!ParseWAVFile(filePath, &format, &s_WaveData[newID], &s_WaveDataLengths[newID], &freq,
+		if (!ParseWAVFile(filePath, &format, &s_WaveData[sourceID], &s_WaveDataLengths[sourceID], &freq,
 			*realSB))
 		{
 			PrintError("Failed to open or parse WAVE file\n");
@@ -577,8 +597,10 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
+		++s_WaveDataVersions[sourceID];
+
 		// Buffer
-		alBufferData(s_Buffers[newID], format, s_WaveData[newID], s_WaveDataLengths[newID], freq);
+		alBufferData(s_Buffers[sourceID], format, s_WaveData[sourceID], s_WaveDataLengths[sourceID], freq);
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -588,7 +610,7 @@ namespace flex
 		}
 
 		// Source
-		alGenSources(1, &s_Sources[newID].source);
+		alGenSources(1, &s_Sources[sourceID].source);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
@@ -596,18 +618,18 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
+		alSourcei(s_Sources[sourceID].source, AL_BUFFER, s_Buffers[sourceID]);
 		DisplayALError("alSourcei", alGetError());
 
 		ALint bufferID, bufferSize, frequency, bitsPerSample, channels;
-		alGetSourcei(s_Sources[newID].source, AL_BUFFER, &bufferID);
+		alGetSourcei(s_Sources[sourceID].source, AL_BUFFER, &bufferID);
 		alGetBufferi(bufferID, AL_SIZE, &bufferSize);
 		alGetBufferi(bufferID, AL_FREQUENCY, &frequency);
 		alGetBufferi(bufferID, AL_CHANNELS, &channels);
 		alGetBufferi(bufferID, AL_BITS, &bitsPerSample);
-		s_Sources[newID].length = ((real)bufferSize) / (frequency * channels * (bitsPerSample / 8));
+		s_Sources[sourceID].length = ((real)bufferSize) / (frequency * channels * (bitsPerSample / 8));
 
-		return newID;
+		return sourceID;
 	}
 
 	AudioSourceID AudioManager::SynthesizeSound(sec length, real freq)
@@ -879,9 +901,10 @@ namespace flex
 		return s_Sources[sourceID].length;
 	}
 
-	u8* AudioManager::GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount)
+	u8* AudioManager::GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount, u32& outVersion)
 	{
 		outSampleCount = s_WaveDataLengths[sourceID];
+		outVersion = s_WaveDataVersions[sourceID];
 		return s_WaveData[sourceID];
 	}
 
