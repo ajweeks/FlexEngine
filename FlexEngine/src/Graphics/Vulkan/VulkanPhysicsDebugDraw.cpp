@@ -149,11 +149,11 @@ namespace flex
 							// Double in size when growing
 							numVerts = numVerts * 2;
 						}
-
-						m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
-						m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
-						indexBuffer.resize(numVerts);
 					}
+
+					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
+					indexBuffer.resize(numVerts);
 
 					i32 i = 0;
 					glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
