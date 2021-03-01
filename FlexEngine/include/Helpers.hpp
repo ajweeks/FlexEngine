@@ -259,16 +259,86 @@ namespace flex
 		return result;
 	}
 
-	template<typename T>
-	bool Contains(const std::vector<T>& vec, T val)
+	template<class T>
+	inline i32 Find(const std::vector<T>& vec, const T& t)
 	{
-		return std::find(vec.begin(), vec.end(), val) != vec.end();
+		T* vecData = (T*)vec.data();
+		i32 vecLen = (i32)vec.size();
+		for (i32 i = 0; i < vecLen; ++i)
+		{
+			if (*vecData == t)
+			{
+				return i;
+			}
+			++vecData;
+		}
+
+		return -1;
+	}
+
+	template<class T>
+	inline typename std::vector<T>::const_iterator FindIter(const std::vector<T>& vec, const T& t)
+	{
+		auto vecEnd = vec.end();
+		for (typename std::vector<T>::const_iterator iter = vec.begin(); iter != vecEnd; ++iter)
+		{
+			if (*iter == t)
+			{
+				return iter;
+			}
+		}
+
+		return vec.end();
+	}
+
+	template<class T>
+	inline bool Contains(const std::vector<T>& vec, const T& t)
+	{
+		return Find(vec, t) != -1;
+	}
+
+	template<class Key, class Value, class Comp>
+	inline bool Contains(const std::map<Key, Value, Comp>& map, const Key& key)
+	{
+		auto iter = map.find(key);
+		return iter != map.end();
+	}
+
+	template<class Value, class Comp>
+	inline bool Contains(const std::set<Value, Comp>& set, const Value& val)
+	{
+		auto iter = set.find(val);
+		return iter != set.end();
 	}
 
 	bool Contains(const std::vector<const char*>& vec, const char* val);
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 	bool Contains(const std::string& str, const std::string& pattern);
 	bool Contains(const std::string& str, char pattern);
+
+	template<typename T>
+	inline bool Erase(std::vector<T>& vec, const T& t)
+	{
+		i32 index = Find(vec, t);
+		if (index != -1)
+		{
+			vec.erase(index);
+			return true;
+		}
+		return false;
+	}
+
+	template<typename T, class I>
+	inline bool Erase(std::set<T, I>& set, const T& t)
+	{
+		auto iter = set.find(t);
+		if (iter != set.end())
+		{
+			set.erase(iter);
+			return true;
+		}
+		return false;
+	}
 
 	template<typename T>
 	i32 IndexOf(const std::vector<T>& vec, T val)
@@ -305,20 +375,6 @@ namespace flex
 	};
 
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically = false);
-
-	template<class T>
-	inline typename std::vector<T>::const_iterator Find(const std::vector<T>& vec, const T& t)
-	{
-		for (typename std::vector<T>::const_iterator iter = vec.begin(); iter != vec.end(); ++iter)
-		{
-			if (*iter == t)
-			{
-				return iter;
-			}
-		}
-
-		return vec.end();
-	}
 
 	struct HDRImage
 	{

@@ -16,7 +16,10 @@
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
+#ifdef _WINDOWS
+// RenderDoc API only supported on windows
 #define COMPILE_RENDERDOC_API 0
+#endif //  _WINDOWS
 #define COMPILE_SHADER_COMPILER 1
 #else
 #define THOROUGH_CHECKS 0
@@ -75,21 +78,6 @@
 #define FLEX_NO_DISCARD [[nodiscard]]
 
 #include "FlexPreprocessors.hpp"
-
-#if defined(__GNUG__)
-#define SUPPRESS_WARN_BEGIN(warn) \
-		_Pragma("GCC diagnostic push"); \
-		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
-#define SUPPRESS_WARN_END()  _Pragma("GCC diagnostic pop")
-#elif defined(__clang__)
-#error
-#define SUPPRESS_WARN_GCC(warn) \
-		_Pragma("clang diagnostic push"); \
-		_Pragma("clang diagnostic ignored " #warn)
-#define SUPPRESS_WARN_END()  _Pragma("clang diagnostic pop")
-#else 
-#define SUPPRESS_WARN_GCC(warn)
-#endif
 
 #undef FORMAT_STRING
 

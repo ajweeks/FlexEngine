@@ -1586,14 +1586,14 @@ namespace flex
 
 	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
 	{
-		if (Find(vec, this) == vec.end())
+		if (!Contains(vec, this))
 		{
 			vec.push_back(this);
 		}
 
 		for (GameObject* child : m_Children)
 		{
-			if (Find(vec, child) == vec.end())
+			if (!Contains(vec, child))
 			{
 				vec.push_back(child);
 			}
@@ -1604,7 +1604,7 @@ namespace flex
 
 	void GameObject::RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec)
 	{
-		auto iter = Find(vec, this);
+		auto iter = FindIter(vec, this);
 		if (iter != vec.end())
 		{
 			vec.erase(iter);
@@ -1612,7 +1612,7 @@ namespace flex
 
 		for (GameObject* child : m_Children)
 		{
-			auto childIter = Find(vec, child);
+			auto childIter = FindIter(vec, child);
 			if (childIter != vec.end())
 			{
 				vec.erase(childIter);
@@ -1623,14 +1623,14 @@ namespace flex
 	}
 	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
 	{
-		if (Find(vec, ID) == vec.end())
+		if (!Contains(vec, ID))
 		{
 			vec.push_back(ID);
 		}
 
 		for (GameObject* child : m_Children)
 		{
-			if (Find(vec, child->ID) == vec.end())
+			if (!Contains(vec, child->ID))
 			{
 				vec.push_back(child->ID);
 			}
@@ -1641,7 +1641,7 @@ namespace flex
 
 	void GameObject::RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
 	{
-		auto iter = Find(vec, ID);
+		auto iter = FindIter(vec, ID);
 		if (iter != vec.end())
 		{
 			vec.erase(iter);
@@ -1649,7 +1649,7 @@ namespace flex
 
 		for (GameObject* child : m_Children)
 		{
-			auto childIter = Find(vec, child->ID);
+			auto childIter = FindIter(vec, child->ID);
 			if (childIter != vec.end())
 			{
 				vec.erase(childIter);
@@ -2249,7 +2249,7 @@ namespace flex
 		{
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
-			auto thisIter = Find(siblings, this);
+			auto thisIter = FindIter(siblings, this);
 			assert(thisIter != siblings.end());
 
 			for (auto iter = siblings.begin(); iter != thisIter; ++iter)
@@ -2261,7 +2261,7 @@ namespace flex
 		{
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
-			auto thisIter = Find(rootObjects, this);
+			auto thisIter = FindIter(rootObjects, this);
 			assert(thisIter != rootObjects.end());
 
 			for (auto iter = rootObjects.begin(); iter != thisIter; ++iter)
@@ -2281,7 +2281,7 @@ namespace flex
 		{
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
-			auto thisIter = Find(siblings, this);
+			auto thisIter = FindIter(siblings, this);
 			assert(thisIter != siblings.end());
 
 			for (auto iter = thisIter + 1; iter != siblings.end(); ++iter)
@@ -2293,7 +2293,7 @@ namespace flex
 		{
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
-			auto thisIter = Find(rootObjects, this);
+			auto thisIter = FindIter(rootObjects, this);
 			assert(thisIter != rootObjects.end());
 
 			for (auto iter = thisIter + 1; iter != rootObjects.end(); ++iter)
@@ -7262,7 +7262,7 @@ namespace flex
 				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
 				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
 				{
-					chunksInRadius.push_back(glm::vec2i(x, z));
+					chunksInRadius.emplace_back(glm::vec2i(x, z));
 				}
 			}
 		}
@@ -7271,14 +7271,13 @@ namespace flex
 		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); ++chunkIter)
 		{
 			const glm::vec2i& chunkIdx = chunkIter->first;
-			if (Find(chunksInRadius, chunkIdx) == chunksInRadius.end() && m_ChunksToDestroy.find(chunkIdx) == m_ChunksToDestroy.end())
+
+			if (!Contains(chunksInRadius, chunkIdx) &&
+				!Contains(m_ChunksToDestroy, chunkIdx))
 			{
 				m_ChunksToDestroy.emplace(chunkIdx);
 
-				if (m_ChunksToLoad.find(chunkIdx) != m_ChunksToLoad.end())
-				{
-					m_ChunksToLoad.erase(chunkIdx);
-				}
+				Erase(m_ChunksToLoad, chunkIdx);
 			}
 		}
 
@@ -7287,15 +7286,12 @@ namespace flex
 		{
 			// TODO: Tell renderer to resize terrain dynamic UBO to accommodate all chunks to prevent many resizes
 
-			auto meshIter = m_Meshes.find(chunkIdx);
-			if (meshIter == m_Meshes.end() && m_ChunksToLoad.find(chunkIdx) == m_ChunksToLoad.end())
+			if (!Contains(m_Meshes, chunkIdx) &&
+				!Contains(m_ChunksToLoad, chunkIdx))
 			{
 				m_ChunksToLoad.emplace(chunkIdx);
 
-				if (m_ChunksToDestroy.find(chunkIdx) != m_ChunksToDestroy.end())
-				{
-					m_ChunksToDestroy.erase(chunkIdx);
-				}
+				Erase(m_ChunksToDestroy, chunkIdx);
 			}
 		}
 
@@ -7329,9 +7325,10 @@ namespace flex
 			PROFILE_AUTO("Generate terrain chunks");
 			ns start = Time::CurrentNanoseconds();
 			i32 iterationCount = 0;
-			while (m_ChunksToLoad.size() > 0)
+			while (!m_ChunksToLoad.empty())
 			{
 				GenerateChunk(*m_ChunksToLoad.begin());
+				Profiler::PrintBlockDuration("Generate terrain chunk");
 				m_ChunksToLoad.erase(m_ChunksToLoad.begin());
 
 				++iterationCount;
@@ -8059,17 +8056,17 @@ namespace flex
 							{
 								/*
 								Points must be in the following order: (describing adjacent triangles)
-								      1
-								      *
-								     /|\
-								    / | \
+									  1
+									  *
+									 /|\
+									/ | \
 								 2 /  |  \ 3
 								  *   |   *
 								   \  |  /
-								    \ | /
-								     \|/
-								      *
-								      0
+									\ | /
+									 \|/
+									  *
+									  0
 								*/
 
 								BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;

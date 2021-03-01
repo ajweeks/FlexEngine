@@ -5559,7 +5559,7 @@ namespace flex
 							std::vector<FrameBufferAttachmentID>::const_iterator targetAttachmentIter;
 							do
 							{
-								targetAttachmentIter = Find(prevPass->m_TargetColourAttachmentIDs, *sampledAttachmentIter);
+								targetAttachmentIter = FindIter(prevPass->m_TargetColourAttachmentIDs, *sampledAttachmentIter);
 								if (targetAttachmentIter != prevPass->m_TargetColourAttachmentIDs.end())
 								{
 									const u32 targetAttachmentIndex = (u32)(targetAttachmentIter - prevPass->m_TargetColourAttachmentIDs.begin());
@@ -5584,7 +5584,7 @@ namespace flex
 
 					if (prevPass->m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
 					{
-						auto sampledAttachmentIter = Find(unresolvedSampledAttachments, prevPass->m_TargetDepthAttachmentID);
+						auto sampledAttachmentIter = FindIter(unresolvedSampledAttachments, prevPass->m_TargetDepthAttachmentID);
 						if (sampledAttachmentIter != unresolvedSampledAttachments.end())
 						{
 							prevPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -5618,7 +5618,7 @@ namespace flex
 							std::vector<FrameBufferAttachmentID>::const_iterator targetAttachmentIter;
 							do
 							{
-								targetAttachmentIter = Find(nextPass->m_TargetColourAttachmentIDs, *sampledAttachmentIter);
+								targetAttachmentIter = FindIter(nextPass->m_TargetColourAttachmentIDs, *sampledAttachmentIter);
 								if (targetAttachmentIter != nextPass->m_TargetColourAttachmentIDs.end())
 								{
 									const u32 targetAttachmentIndex = (u32)(targetAttachmentIter - nextPass->m_TargetColourAttachmentIDs.begin());
@@ -5643,7 +5643,7 @@ namespace flex
 
 					if (nextPass->m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
 					{
-						auto sampledAttachmentIter = Find(unresolvedSampledAttachments, nextPass->m_TargetDepthAttachmentID);
+						auto sampledAttachmentIter = FindIter(unresolvedSampledAttachments, nextPass->m_TargetDepthAttachmentID);
 						if (sampledAttachmentIter != unresolvedSampledAttachments.end())
 						{
 							nextPass->m_TargetDepthAttachmentInitialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -5663,7 +5663,7 @@ namespace flex
 
 				for (auto nextPassTargetAttachmentIter = nextPass->m_TargetColourAttachmentIDs.begin(); nextPassTargetAttachmentIter != nextPass->m_TargetColourAttachmentIDs.end(); ++nextPassTargetAttachmentIter)
 				{
-					auto currPassTargetAttachmentIter = Find(currPass->m_TargetColourAttachmentIDs, *nextPassTargetAttachmentIter);
+					auto currPassTargetAttachmentIter = FindIter(currPass->m_TargetColourAttachmentIDs, *nextPassTargetAttachmentIter);
 					if (currPassTargetAttachmentIter != currPass->m_TargetColourAttachmentIDs.end())
 					{
 						if (*nextPassTargetAttachmentIter == *currPassTargetAttachmentIter)

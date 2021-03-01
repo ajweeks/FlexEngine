@@ -2166,8 +2166,8 @@ namespace flex
 
 								if (scrollY != 0.0f)
 								{
-									real moveScale = scrollY < 0.0f ? -1.0f : 1.0f;
-									u32 zoomDelta = zoomHalfLength - lastZoomHalfLength;
+									//real moveScale = scrollY < 0.0f ? -1.0f : 1.0f;
+									//u32 zoomDelta = zoomHalfLength - lastZoomHalfLength;
 									// [0          [0.6 0.7]     1]
 									//             [0     1]
 									real left = (zoomCenter - zoomHalfLength) / (real)(valsCount);

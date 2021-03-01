@@ -286,7 +286,7 @@ namespace flex
 
 	void Editor::ToggleSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjectIDs, gameObjectID);
+		auto iter = FindIter(m_CurrentlySelectedObjectIDs, gameObjectID);
 		if (iter == m_CurrentlySelectedObjectIDs.end())
 		{
 			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
@@ -307,8 +307,7 @@ namespace flex
 
 	void Editor::AddSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjectIDs, gameObjectID);
-		if (iter == m_CurrentlySelectedObjectIDs.end())
+		if (!Contains(m_CurrentlySelectedObjectIDs, gameObjectID))
 		{
 			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
 			gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
@@ -335,7 +334,7 @@ namespace flex
 
 	bool Editor::IsObjectSelected(const GameObjectID& gameObjectID)
 	{
-		bool bSelected = (Find(m_CurrentlySelectedObjectIDs, gameObjectID) != m_CurrentlySelectedObjectIDs.end());
+		bool bSelected = Contains(m_CurrentlySelectedObjectIDs, gameObjectID);
 		return bSelected;
 	}
 
@@ -858,7 +857,7 @@ namespace flex
 			{
 				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
+				bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Translate(dPos);
@@ -949,7 +948,7 @@ namespace flex
 				{
 					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 					GameObject* parent = gameObject->GetParent();
-					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
+					bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
 					if (bObjectIsntChild)
 					{
 						Transform* t = gameObject->GetTransform();
@@ -1037,7 +1036,7 @@ namespace flex
 			{
 				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end());
+				bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Scale(dLocalScale);
@@ -1252,7 +1251,7 @@ namespace flex
 						GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 						GameObject* parent = gameObject->GetParent();
 
-						if (parent == nullptr || (Find(m_CurrentlySelectedObjectIDs, parent->ID) == m_CurrentlySelectedObjectIDs.end()))
+						if (parent == nullptr || !Contains(m_CurrentlySelectedObjectIDs, parent->ID))
 						{
 							GameObject* duplicatedObject = gameObject->CopySelf();
 

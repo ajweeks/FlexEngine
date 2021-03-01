@@ -202,7 +202,7 @@ namespace flex
 		{
 			result = std::string(minChars - result.length(), pad) + result;
 		}
-		
+
 		return result;
 	}
 
@@ -210,23 +210,9 @@ namespace flex
 	{
 		std::string result = std::to_string(i);
 
-		if (i < 0)
+		if (result.length() < minChars)
 		{
-			if (result.length() < minChars)
-			{
-				result = "-" + std::string(minChars - result.length(), pad) + result;
-			}
-			else
-			{
-				result = "-" + result;
-			}
-		}
-		else
-		{
-			if (result.length() < minChars)
-			{
-				result = std::string(minChars - result.length(), pad) + result;
-			}
+			result = std::string(minChars - result.length(), pad) + result;
 		}
 
 		return result;

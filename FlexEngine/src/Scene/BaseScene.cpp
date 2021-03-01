@@ -1016,7 +1016,7 @@ namespace flex
 						GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
 						GameObject* parent = draggedGameObject->GetParent();
 						GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
-						bool bParentInSelection = parentID.IsValid() ? (Find(draggedGameObjectsIDs, parentID) != draggedGameObjectsIDs.end()) : false;
+						bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
 						// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
 						if (!bParentInSelection && parent)
 						{
@@ -1407,7 +1407,7 @@ namespace flex
 							}
 
 							const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
-							auto objectBIter = Find(objectALaterSiblings, objectB);
+							auto objectBIter = FindIter(objectALaterSiblings, objectB);
 							assert(objectBIter != objectALaterSiblings.end());
 							for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
 							{
@@ -1435,7 +1435,7 @@ namespace flex
 					size_t size = 0;
 
 					const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
-					auto iter = Find(selectedObjectIDs, gameObject->ID);
+					auto iter = FindIter(selectedObjectIDs, gameObject->ID);
 					bool bItemInSelection = iter != selectedObjectIDs.end();
 					std::string dragDropText;
 
@@ -1520,7 +1520,7 @@ namespace flex
 								if (parent != nullptr)
 								{
 									// Parent isn't also being dragged
-									if (Find(draggedGameObjectIDs, parent->ID) == draggedGameObjectIDs.end())
+									if (!Contains(draggedGameObjectIDs, parent->ID))
 									{
 										draggedGameObject->DetachFromParent();
 										gameObject->AddChildImmediate(draggedGameObject);
