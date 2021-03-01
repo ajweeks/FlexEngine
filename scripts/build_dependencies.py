@@ -42,7 +42,8 @@ def run_git(arguments = []):
 
 
 if len(sys.argv) < 4 or len(sys.argv) > 5:
-	print('Usage: "python build_dependencies.py windows vs2019 [build_extras]"')
+	print('Usage: "python build_dependencies.py [platform] [target] [config] <build_extras>"\n'
+			'e.g: "python build_dependencies.py windows vs2019 Debug"')
 	exit(1)
 
 platform = sys.argv[1]
@@ -157,8 +158,8 @@ def build_project(config):
 			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
 			shutil.copyfile(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target + 'LinearMath_Debug.lib')
 		else:
-			shutil.copyfile(bullet_build_path + 'lib/Release/Bullet3Collision.lib', libs_target + 'Bullet3Collision.lib')
-			shutil.copyfile(bullet_build_path + 'lib/Release/Bullet3Dynamics.lib', libs_target + 'Bullet3Dynamics.lib')
+			shutil.copyfile(bullet_build_path + 'lib/Release/BulletCollision.lib', libs_target + 'BulletCollision.lib')
+			shutil.copyfile(bullet_build_path + 'lib/Release/BulletDynamics.lib', libs_target + 'BulletDynamics.lib')
 			shutil.copyfile(bullet_build_path + 'lib/Release/LinearMath.lib', libs_target + 'LinearMath.lib')
 	else:
 		run_make(bullet_build_path, False)

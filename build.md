@@ -31,7 +31,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo apt update`
-  - `sudo apt-get install g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev vulkan-sdk automake libtool autoconf libbz2-dev`
+  - `sudo apt-get install g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev`
   - `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
 2. `cd scripts`
@@ -78,3 +78,5 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 If some libraries can't be found but are installed (eg. "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
 
 `ln -s /usr/lib64/libopenal.so.1 /usr/lib64/libopenal.so`
+
+If you get an error while building a dependency on linux which is similar to "Syntax error near unexpected token 'elif'"", a script likely has incorrect line endings. For example, freetype/autogen.sh may have to be converted using `dos2unix autogen.sh autogen.sh`
