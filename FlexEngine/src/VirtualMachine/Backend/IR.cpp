@@ -692,7 +692,7 @@ namespace flex
 				char buffer[256];
 				for (i32 terminalIndex = 0; terminalIndex < Terminal::MAX_OUTPUT_COUNT; ++terminalIndex)
 				{
-					sprintf_s(buffer, 256, "out_%d", terminalIndex);
+					sprintf(buffer, "out_%d", terminalIndex);
 					state->variableTypes[std::string(buffer)] = Value::Type::INT;
 				}
 			}

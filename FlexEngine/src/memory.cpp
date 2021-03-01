@@ -131,7 +131,11 @@ namespace flex
 		return ptr;
 #else
 		void* ptr;
-		posix_memalign(&ptr, alignment, size);
+		if (posix_memalign(&ptr, alignment, size) == 0)
+		{
+			PrintError("Failed to allocate aligned memory for %lu bytes\n", (u64)size);
+			return nullptr;
+		}
 		return ptr;
 #endif
 	}

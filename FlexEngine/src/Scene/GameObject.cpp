@@ -78,7 +78,7 @@ namespace flex
 	MaterialID SpringObject::s_SpringMatID = InvalidMaterialID;
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
-	extern ChildIndex InvalidChildIndex = ChildIndex({});
+	ChildIndex InvalidChildIndex = ChildIndex({});
 
 	static volatile u32 workQueueEntriesCreated = 0;
 	static volatile u32 workQueueEntriesClaimed = 0;
@@ -956,7 +956,7 @@ namespace flex
 			parentName = m_Parent->GetName();
 		}
 		ImGui::Text("Parent: %s", parentName.c_str());
-		ImGui::Text("Num children: %u", m_Children.size());
+		ImGui::Text("Num children: %u", (u32)m_Children.size());
 
 		if (bAnyPropertyChanged)
 		{
@@ -1037,7 +1037,7 @@ namespace flex
 				{
 					ImGui::BeginTooltip();
 
-					ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
+					ImGui::Text("Data1, Data2: %lu, %lu", ID.Data1, ID.Data2);
 
 					ImGui::EndTooltip();
 				}
@@ -1770,7 +1770,7 @@ namespace flex
 	//
 	//void GameObject::OnConnectionBroke(Wire* wire)
 	//{
-	//	UNREFERENCED_PARAMETER(wire);
+	//	FLEX_UNUSED(wire);
 	//}
 
 	void GameObject::ParseTypeUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
@@ -5615,8 +5615,8 @@ namespace flex
 
 	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("wire");
 		obj.SetVec3Checked("startPoint", startPoint);
@@ -5698,8 +5698,8 @@ namespace flex
 
 	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("socket");
 		obj.SetIntChecked("slotIdx", slotIdx);
@@ -7054,7 +7054,7 @@ namespace flex
 		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
 		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
 
-		if (m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+		if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
 		{
 			terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
 			g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
@@ -8012,8 +8012,7 @@ namespace flex
 				// Generate collision constraints
 				for (u32 i = 0; i < (u32)points.size(); ++i)
 				{
-					glm::vec3 deltaPos = predictedPositions[i] - points[i]->pos;
-
+					//glm::vec3 deltaPos = predictedPositions[i] - points[i]->pos;
 
 				}
 
@@ -8058,18 +8057,20 @@ namespace flex
 							} break;
 							case Constraint::Type::BENDING:
 							{
-								// Points must be in the following order: (describing adjacent triangles)
-								//     1
-								//      *
-								//     /|\
-								//    / | \
-								// 2 /  |  \ 3
-								//  *   |   *
-								//   \  |  /
-								//    \ | /
-								//     \|/
-								//      *
-								//     0
+								/*
+								Points must be in the following order: (describing adjacent triangles)
+								      1
+								      *
+								     /|\
+								    / | \
+								 2 /  |  \ 3
+								  *   |   *
+								   \  |  /
+								    \ | /
+								     \|/
+								      *
+								      0
+								*/
 
 								BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
 								// NOTE: Differing notation used here than in [Muller06] ([0,3] rather than [1,4])
@@ -8516,8 +8517,8 @@ namespace flex
 
 	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(matIDs);
-		UNREFERENCED_PARAMETER(scene);
+		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		JSONObject softBodyObject;
 		if (parentObject.SetObjectChecked("soft body", softBodyObject))
@@ -8851,7 +8852,9 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		// Children now exist
+		SUPPRESS_WARN_BEGIN("-Wclass-memaccess");
 		memset(newGameObject->m_TireIDs, 0, sizeof(GameObjectID) * m_TireCount);
+		SUPPRESS_WARN_END();
 
 		// Temporarily set sibling indices as if these objects are both root objects (this will
 		// be overwritten by the proper values soon)
@@ -9050,7 +9053,7 @@ namespace flex
 		const btVector3 linearVel = m_RigidBody->GetRigidBodyInternal()->getLinearVelocity();
 		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
 
-		btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
+		//btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
 
 		real engineForceSlowScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
 		real steeringSlowScale = (1.0f - g_DeltaTime * STEERING_SLOW_FACTOR);
@@ -9303,8 +9306,8 @@ namespace flex
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
 		JSONObject vehicleObj;
 		if (parentObject.SetObjectChecked("vehicle", vehicleObj))
@@ -9333,9 +9336,9 @@ namespace flex
 
 	void Vehicle::ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		UNREFERENCED_PARAMETER(parentObject);
-		UNREFERENCED_PARAMETER(scene);
-		UNREFERENCED_PARAMETER(matIDs);
+		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 	}
 
 	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject) const
@@ -9366,7 +9369,7 @@ namespace flex
 
 	void Vehicle::SerializeInstanceUniqueFields(JSONObject& parentObject) const
 	{
-		UNREFERENCED_PARAMETER(parentObject);
+		FLEX_UNUSED(parentObject);
 	}
 
 	void Vehicle::DrawImGuiObjects()

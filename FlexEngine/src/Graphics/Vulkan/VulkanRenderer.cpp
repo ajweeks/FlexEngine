@@ -1914,7 +1914,7 @@ namespace flex
 										u32 percentUsed = (u32)(progress * 100.0f);
 										char percentUsedBuff[64];
 										memset(percentUsedBuff, 0, sizeof(percentUsedBuff));
-										sprintf_s(percentUsedBuff, "%u%%", percentUsed);
+										sprintf(percentUsedBuff, "%u%%", percentUsed);
 										ImGui::Text("%s %s", byteCoutBuff, percentUsedBuff);
 									}
 									ImGui::EndChild();

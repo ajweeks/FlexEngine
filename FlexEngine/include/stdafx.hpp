@@ -76,6 +76,21 @@
 
 #include "FlexPreprocessors.hpp"
 
+#if defined(__GNUG__)
+#define SUPPRESS_WARN_BEGIN(warn) \
+		_Pragma("GCC diagnostic push"); \
+		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
+#define SUPPRESS_WARN_END()  _Pragma("GCC diagnostic pop")
+#elif defined(__clang__)
+#error
+#define SUPPRESS_WARN_GCC(warn) \
+		_Pragma("clang diagnostic push"); \
+		_Pragma("clang diagnostic ignored " #warn)
+#define SUPPRESS_WARN_END()  _Pragma("clang diagnostic pop")
+#else 
+#define SUPPRESS_WARN_GCC(warn)
+#endif
+
 #undef FORMAT_STRING
 
 #undef TRUE

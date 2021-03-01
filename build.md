@@ -50,12 +50,14 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 1. Run the following commands to install prerequisites:
   - `sudo eopkg upgrade`
   - `sudo eopkg install gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel`
+  - `sudo eopkg install -c system.devel`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
-3. `python3 build_dependencies.py linux gmake`
-4. `make`
-5. `cd ../bin/Debug_x64/FlexEngine`
-6. `./Flex`
+3. `git config --global init.defaultBranchName main`
+4. `python3 build_dependencies.py linux gmake`
+5. `make`
+6. `cd ../bin/Debug_x64/FlexEngine`
+7. `./Flex`
 
 ### Fedora
 #### Steps
@@ -64,10 +66,11 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
   - `sudo dnf install gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
-3. `python3 build_dependencies.py linux gmake`
-4. `make`
-5. `cd ../bin/Debug_x64/FlexEngine`
-6. `./Flex`
+3. `git config --global init.defaultBranchName main`
+4. `python3 build_dependencies.py linux gmake`
+5. `make`
+6. `cd ../bin/Debug_x64/FlexEngine`
+7. `./Flex`
 
 
 **Troubleshooting:**

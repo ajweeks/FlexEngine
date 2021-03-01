@@ -4,6 +4,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
 IGNORE_WARNINGS_POP
 
+#include <list>
+
 #include "Audio/AudioCue.hpp"
 #include "Audio/AudioManager.hpp"
 #include "Callbacks/InputCallbacks.hpp"

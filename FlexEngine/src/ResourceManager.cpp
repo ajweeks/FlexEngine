@@ -403,7 +403,7 @@ namespace flex
 						if (fontMetaData.find(fontNameID) != fontMetaData.end())
 						{
 							// TODO: Handle collision
-							PrintError("Hash collision detected in font meta data for %s : %llu\n", fontName.c_str(), fontNameID);
+							PrintError("Hash collision detected in font meta data for %s : %lu\n", fontName.c_str(), fontNameID);
 						}
 						fontMetaData[fontNameID] = metaData;
 					}

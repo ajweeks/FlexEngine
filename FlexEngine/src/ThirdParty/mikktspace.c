@@ -20,7 +20,15 @@
  *     misrepresented as being the original software.
  *  3. This notice may not be removed or altered from any source distribution.
  */
+#if defined(__clang__)
+_Pragma("clang diagnostic push") \
+_Pragma("clang diagnostic ignored \"-Weverything\"")
+#elif defined(_MSC_VER)
 __pragma(warning(push, 0))
+#elif defined(__GNUG__)
+_Pragma("GCC diagnostic push") \
+_Pragma("GCC diagnostic ignored \"-Wall\"")
+#endif
 
 #include <assert.h>
 #include <stdio.h>
@@ -1890,4 +1898,10 @@ static void DegenEpilogue(STSpace psTspace[], STriInfo pTriInfos[], int piTriLis
 	}
 }
 
+#if defined(__clang__)
+_Pragma("clang diagnostic pop")
+#elif defined(_MSC_VER)
 __pragma(warning(pop))
+#elif defined(__GNUG__)
+_Pragma("GCC diagnostic pop")
+#endif

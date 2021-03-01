@@ -153,7 +153,7 @@ namespace flex
 		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		bool bCalculateTangents = false;
-		bool bMissingTexCoords = false;
+		//bool bMissingTexCoords = false;
 
 		i32 posAttribIndex = -1;
 		i32 normAttribIndex = -1;
@@ -211,10 +211,10 @@ namespace flex
 		{
 			bCalculateTangents = true;
 
-			if (uvAttribIndex == -1)
-			{
-				bMissingTexCoords = true;
-			}
+			//if (uvAttribIndex == -1)
+			//{
+			//	bMissingTexCoords = true;
+			//}
 		}
 
 		{

@@ -2098,8 +2098,6 @@ namespace flex
 			return;
 		}
 
-		const bool bRootObject = (gameObject->GetParent() == nullptr);
-
 		if (bDestroy)
 		{
 			while (!gameObject->m_Children.empty())

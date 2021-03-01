@@ -12,12 +12,15 @@ IGNORE_WARNINGS_PUSH
 
 #include <sys/types.h> // For kill
 #include <sys/stat.h> // For stat
+#include <sys/time.h> // fortimeofday
 #include <signal.h> // For kill
 #include <unistd.h> // For getcwd, unlink, getpid, sysconf
 #include <errno.h> // For errno
 #include <dirent.h> // For readdir
 #include <sched.h> // For sched_yield
 #include <pthread.h>
+
+#include <stdlib.h>
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -428,13 +431,7 @@ namespace flex
 		// Adds the seconds (10^0)
 		result += (tv.tv_sec * 1000000);
 
-		return ret;
-	}
-
-	u64 Platform::RotateLeftU64(u64 val, i32 shift)
-	{
-		// TODO: Test
-		return _rotl(val, shift);  // gcc, icc, msvc.  Intel-defined.
+		return result;
 	}
 
 	u32 Platform::AtomicIncrement(volatile u32* value)

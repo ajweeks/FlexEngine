@@ -1222,6 +1222,7 @@ namespace flex
 	void Renderer::LoadShaders()
 	{
 		std::vector<ShaderInfo> shaderInfos;
+		SUPPRESS_WARN_BEGIN("-Wmissing-field-initializers");
 #if COMPILE_OPEN_GL
 		shaderInfos = {
 			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
@@ -1279,6 +1280,7 @@ namespace flex
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv" },
 		};
 #endif
+		SUPPRESS_WARN_END();
 
 		InitializeShaders(shaderInfos);
 

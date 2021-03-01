@@ -2,6 +2,7 @@
 
 #include "Graphics/RendererTypes.hpp"
 #include "Managers/CartManager.hpp"
+#include "Scene/GameObject.hpp"
 #include "Track/TrackManager.hpp"
 
 namespace flex
@@ -9,7 +10,6 @@ namespace flex
 	class PhysicsWorld;
 	class ReflectionProbe;
 	class Player;
-	class GameObject;
 	class PointLight;
 	class DirectionalLight;
 	struct JSONObject;
