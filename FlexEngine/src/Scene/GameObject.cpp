@@ -7215,25 +7215,42 @@ namespace flex
 	real TerrainGenerator::SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx)
 	{
 		const glm::vec2 scaledPos = pos / octave;
-		glm::vec2 posi = glm::vec2(std::floor(scaledPos.x), std::floor(scaledPos.y));
+		glm::vec2 posi = glm::vec2((real)(i32)scaledPos.x, (real)(i32)scaledPos.y);
+		if (scaledPos.x < 0.0f)
+		{
+			posi.x -= 1;
+		}
+		if (scaledPos.y < 0.0f)
+		{
+			posi.y -= 1.0f;
+		}
 		glm::vec2 posf = scaledPos - posi;
 
 		const std::vector<glm::vec2>& randomTables = m_RandomTables[octaveIdx];
 		const u32 tableEntryCount = (u32)randomTables.size();
 		const u32 tableWidth = (u32)std::sqrt(tableEntryCount);
 
-		glm::vec2 r00 = randomTables[(u32)((i32)(posi.y * tableWidth + posi.x) % tableEntryCount)];
-		glm::vec2 r10 = randomTables[(u32)((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount)];
-		glm::vec2 r01 = randomTables[(u32)((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount)];
-		glm::vec2 r11 = randomTables[(u32)((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount)];
+		glm::vec2* data = (glm::vec2*)randomTables.data();
+		glm::vec2 r00 = *(data + ((i32)(posi.y * tableWidth + posi.x) % tableEntryCount));
+		glm::vec2 r10 = *(data + ((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount));
+		glm::vec2 r01 = *(data + ((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount));
+		glm::vec2 r11 = *(data + ((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount));
 
-		real r00p = glm::dot(posf, r00);
-		real r10p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y), r10);
-		real r01p = glm::dot(glm::vec2(posf.x, posf.y - 1.0f), r01);
-		real r11p = glm::dot(glm::vec2(posf.x - 1.0f, posf.y - 1.0f), r11);
+		real posfXMinOne = posf.x - 1.0f;
+		real posfYMinOne = posf.y - 1.0f;
 
-		real xBlend = SmoothBlend(posf.x);
-		real yBlend = SmoothBlend(posf.y);
+		//real r00p = glm::dot(posf, r00);
+		//real r10p = glm::dot(glm::vec2(posfXMinOne, posf.y), r10);
+		//real r01p = glm::dot(glm::vec2(posf.x, posfYMinOne), r01);
+		//real r11p = glm::dot(glm::vec2(posfXMinOne, posfYMinOne), r11);
+
+		real r00p = posf.x * r00.x + posf.y * r00.y;
+		real r10p = posfXMinOne * r10.x + posf.y * r10.y;
+		real r01p = posf.x * r01.x + posfYMinOne * r01.y;
+		real r11p = posfXMinOne * r11.x + posfYMinOne * r11.y;
+
+		real xBlend = (posf.x);
+		real yBlend = (posf.y);
 		real xval0 = Lerp(r00p, r10p, xBlend);
 		real xval1 = Lerp(r01p, r11p, xBlend);
 		real val = Lerp(xval0, xval1, yBlend);
