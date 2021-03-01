@@ -111,17 +111,16 @@ def build_project(config):
 		# glfw_cmake_args += ['-DCMAKE_BUILD_TYPE=Release'] # TODO: Investigate MinSizeRel
 	run_cmake(glfw_path, glfw_build_path, glfw_cmake_args)
 
-	glfw_lib_path = glfw_build_path + 'src/' + config + '/'
-
 	if platform == 'windows':
 		glfw_msbuild_args = ['/property:Configuration=' + config]
+		glfw_lib_path = glfw_build_path + 'src/' + config + '/'
 		run_msbuild(glfw_build_path + 'glfw.sln', glfw_msbuild_args)
 		print('glfw source: ' + glfw_lib_path)
 		# TODO: Double check
 		shutil.copyfile(glfw_lib_path + 'glfw3.lib', libs_target + 'glfw3.lib')
 	else:
-		print(glfw_build_path)
 		run_make(glfw_build_path, False)
+		glfw_lib_path = glfw_build_path + 'src/'
 		shutil.copyfile(glfw_lib_path + 'libglfw3.a', libs_target + 'libglfw3.a')
 
 	# OpenAL
@@ -151,7 +150,8 @@ def build_project(config):
 	bullet_cmake_args += ['-DCMAKE_BUILD_TYPE=' + config]
 	run_cmake(bullet_path, bullet_build_path, bullet_cmake_args)
 	if platform == 'windows':
-		run_msbuild(bullet_build_path + 'BULLET_PHYSICS.sln')
+		bullet_msbuild_args = ['/property:Configuration=' + config] # TODO: Investigate MinSizeRel
+		run_msbuild(bullet_build_path + 'BULLET_PHYSICS.sln', bullet_msbuild_args)
 		if config == 'Debug':
 			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletCollision_Debug.lib', libs_target + 'BulletCollision_Debug.lib')
 			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
@@ -264,11 +264,11 @@ def build_project(config):
 	run_cmake(shader_c_path, shader_c_build_path, shader_c_cmake_args)
 	run_cmake_build(shader_c_build_path, ['--config', config])
 
-	shader_c_lib_path = shader_c_build_path + 'libshaderc/' + config + '/'
-
 	if platform == 'windows':
+		shader_c_lib_path = shader_c_build_path + 'libshaderc/' + config + '/'
 		shutil.copyfile(shader_c_lib_path + 'shaderc_combined.lib', libs_target + 'shaderc_combined.lib')
 	else:
+		shader_c_lib_path = shader_c_build_path + 'libshaderc/'
 		shutil.copyfile(shader_c_lib_path + 'libshaderc_combined.a', libs_target + 'libshaderc_combined.a')
 
 
@@ -288,4 +288,4 @@ subprocess.check_call([genie_path, '--file=genie.lua', genie_target], stderr=sub
 
 end_time = time.perf_counter()
 total_elapsed = end_time - start_time
-print("Building all Flex dependencies took {0:0.1f}s".format(total_elapsed))
+print("Building all Flex dependencies took {0:0.1f} sec ({1:0.1f} min)".format(total_elapsed, total_elapsed / 60.0))
