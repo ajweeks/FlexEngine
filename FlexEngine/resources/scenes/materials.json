@@ -437,6 +437,16 @@
 			"name" : "Reverse-light",
 			"shader" : "emissive",
 			"const emissive" : "0.346, 0.346, 0.346, 1.000"
+		},
+		{
+			"name" : "Raymarched",
+			"shader" : "raymarched"
+		},
+		{
+			"name" : "grass 01",
+			"shader" : "pbr",
+			"const albedo" : "0.055, 0.715, 0.076, 1.000",
+			"const roughness" : 1.000000
 		}
 	]
 }
