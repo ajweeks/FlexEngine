@@ -36,18 +36,20 @@ layout (binding = 1) uniform UBODynamic
 	mat4 model;
 } uboDynamic;
 
-layout (location = 0) in vec4 ex_WorldPos;
+layout (location = 0) in vec4 ex_PositionOS;
 
 layout (location = 0) out vec4 outColour;
 
 float sdf(vec3 p)
 {
+	p /=  uboDynamic.model[0][0];
 	p.xy *= sin(p.z * 15.0 + uboConstant.time * 4.5) * 0.09 + 0.85;
 	p.y *= cos((p.y+p.z) * 12.3 + uboConstant.time * 3.6) * 0.07 + 0.85;
 	p.x *= cos((p.x) * 9.3 + uboConstant.time * 2.6) * 0.02 + 0.98;
 	p.z = mix(p.z, p.z * p.y, 0.3);
 
-	float dist = length(p) - 0.5;
+	float radius = 0.5;
+	float dist = length(p) - radius;
 
 	return dist;
 }
@@ -69,9 +71,9 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 
 	vec3 lightDir = normalize(vec3(1.0, -0.9, -0.2));
 
-	const int stepCount = 64;
+	const int stepCount = 256;
 	float tmin = 0.0;
-	float tmax = 1000.0;
+	float tmax = 10000.0;
 	float t = tmin;
 	for (int i = 0; i < stepCount; ++i)
 	{
@@ -79,7 +81,7 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 		result.xyz = dist.xxx;
 		// result.w = 1.0;
 		// break;
-		if (dist < 0.01)
+		if (dist < 0.001 * t)
 		{
 			vec3 N = calcNormal(rayOrigin + t * rayDir);
 			//result.xyz = (N) * 0.5 + 0.5;
@@ -111,13 +113,13 @@ void main()
 	screenCoordN.y = -screenCoordN.y;
 
 	//outColour = vec4(0.9, 0.1, 0.1, 1.0);
-	// outColour = vec4(abs(ex_WorldPos.xyz), 1.0);
+	// outColour = vec4(abs(ex_PositionOS.xyz), 1.0);
 
 	vec3 rayDirWS = vec3(inverse(mat3(uboConstant.view)) * vec3(screenCoordN, 1.0));
 	//outColour = vec4((rayDirWS.z > 0.0 ? 1.0 : 0.0).xxx, 1.0);
 	 // outColour = vec4(max(rayDirWS, 0.0), 1);
 	 // return;
-	vec4 col = raymarch(ex_WorldPos.xyz, rayDirWS);
+	vec4 col = raymarch(ex_PositionOS.xyz, rayDirWS);
 
     // Contrast
     float constrast = 0.3;

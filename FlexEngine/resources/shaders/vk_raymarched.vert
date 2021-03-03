@@ -5,7 +5,7 @@
 
 layout (location = 0) in vec3 in_Position;
 
-layout (location = 0) out vec4 ex_WorldPos;
+layout (location = 0) out vec4 ex_PositionOS;
 
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
@@ -23,6 +23,7 @@ layout (binding = 1) uniform UBODynamic
 
 void main()
 {
-    ex_WorldPos = uboDynamic.model * vec4(in_Position, 1.0);
-    gl_Position = uboConstant.viewProjection * ex_WorldPos;
+    ex_PositionOS.xyz = mat3(uboDynamic.model) * in_Position;
+    vec4 positionWS = uboDynamic.model * vec4(in_Position, 1.0);
+    gl_Position = uboConstant.viewProjection * positionWS;
 }
