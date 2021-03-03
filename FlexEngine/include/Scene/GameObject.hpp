@@ -1431,6 +1431,8 @@ namespace flex
 		std::vector<Segment> curveSegments;
 		std::vector<MeshComponent*> m_Meshes;
 		std::vector<RigidBody*> m_RigidBodies;
+		std::vector<class btTriangleIndexVertexArray*> m_MeshVertexArrays;
+
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 
 		u32 m_QuadCountPerSegment = 10;

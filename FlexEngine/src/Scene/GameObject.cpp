@@ -9547,8 +9547,10 @@ namespace flex
 		{
 			m_RigidBodies[i]->Destroy();
 			delete m_RigidBodies[i];
+			delete m_MeshVertexArrays[i];
 		}
 		m_RigidBodies.clear();
+		m_MeshVertexArrays.clear();
 	}
 
 	void Road::Update()
@@ -9797,6 +9799,7 @@ namespace flex
 		if (meshIndex >= (u32)m_RigidBodies.size())
 		{
 			m_RigidBodies.resize(meshIndex + 1, nullptr);
+			m_MeshVertexArrays.resize(meshIndex + 1, nullptr);
 		}
 
 		// TODO: Don't even create rb?
@@ -9805,7 +9808,7 @@ namespace flex
 
 		m_RigidBodies[meshIndex] = rb;
 
-		btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
+		m_MeshVertexArrays[meshIndex] = new btTriangleIndexVertexArray();
 		btIndexedMesh part = {};
 
 		MeshComponent* submesh = m_Meshes[meshIndex];
@@ -9820,10 +9823,10 @@ namespace flex
 		part.m_triangleIndexStride = sizeof(u32) * 3;
 		part.m_numTriangles = (i32)(indexCount / 3);
 
-		meshInterface->addIndexedMesh(part, PHY_INTEGER);
+		m_MeshVertexArrays[meshIndex]->addIndexedMesh(part, PHY_INTEGER);
 
 		bool useQuantizedAabbCompression = false;
-		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
+		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(m_MeshVertexArrays[meshIndex], useQuantizedAabbCompression);
 
 		rb->Initialize(shape, &m_Transform);
 	}
