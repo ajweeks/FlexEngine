@@ -456,10 +456,17 @@ namespace flex
 		volatile T* t = nullptr;
 	};
 
-	struct ThreadData
+	struct WaveThreadData
 	{
 		void* criticalSection = nullptr;
 		volatile bool running = true;
+	};
+
+	struct TerrainThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool running = true;
+
 	};
 
 	namespace ImGuiExt

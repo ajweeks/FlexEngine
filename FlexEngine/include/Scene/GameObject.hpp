@@ -1,4 +1,5 @@
 #pragma once
+#pragma once
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
@@ -829,12 +830,12 @@ namespace flex
 
 		u32 DEBUG_lastUsedVertCount = 0;
 
-		ThreadData threadUserData;
+		WaveThreadData threadUserData;
 	};
 
 	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs);
 
-	void* ThreadUpdate(void* inData);
+	void* WaveThreadUpdate(void* inData);
 
 	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size);
 	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
@@ -1017,19 +1018,56 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
+		struct TerrainChunkData
+		{
+			// General info
+			real baseOctave;
+			real chunkSize;
+			real maxHeight;
+			real octaveScale;
+			u32 numOctaves;
+			u32 vertCountPerChunkAxis;
+			i32 isolateOctave;
+
+			std::vector<std::vector<glm::vec2>>* randomTables;
+
+			// Per chunk inputs
+			volatile glm::vec2i chunkIndex;
+
+			// Per chunk outputs
+			volatile glm::vec3* positions;
+			volatile u32* indices;
+		};
+
 		u32 VertCountPerChunkAxis = 8;
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
 
 	private:
+		static real SmoothBlend(real t);
+
 		void GenerateGradients();
-		void GenerateChunk(const glm::ivec2& index);
+
+		void DiscoverChunks();
+		void GenerateChunks();
 		void DestroyAllChunks();
-		real SampleTerrain(const glm::vec2& pos);
-		real SampleNoise(const glm::vec2& pos, real octave, u32 octaveIdx);
+
+		void AllocWorkQueueEntry(u32 workQueueIndex);
+		void FreeWorkQueueEntry(u32 workQueueIndex);
 
 		MaterialID m_TerrainMatID = InvalidMaterialID;
-		std::map<glm::vec2i, MeshComponent*, Vec2iCompare> m_Meshes; // Chunk index to mesh
+
+		struct Chunk
+		{
+			MeshComponent* meshComponent = nullptr;
+			//glm::vec2i chunkIndex;
+			u32 linearIndex = 0;
+		};
+
+		// TODO: Merge somehow while maintaining unique indices for work queue
+		std::map<glm::vec2i, Chunk*, Vec2iCompare> m_Meshes; // Chunk index to mesh
+
+		void* criticalSection = nullptr;
 
 		real nscale = 1.0f;
 		real m_LoadedChunkRadius = 100.0f;
@@ -1037,7 +1075,7 @@ namespace flex
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
 
-		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(8.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
+		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(4.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
 		const ns m_DeletionBudgetPerFrame = Time::ConvertFormatsConstexpr(0.5f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
 
 		bool m_UseManualSeed = true;
@@ -1064,7 +1102,13 @@ namespace flex
 
 		i32 m_IsolateOctave = -1;
 
+		TerrainThreadData threadUserData;
 	};
+
+	void* TerrainThreadUpdate(void* inData);
+
+	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos);
+	real SampleNoise(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
 
 	class SpringObject final : public GameObject
 	{
