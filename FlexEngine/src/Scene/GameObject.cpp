@@ -7595,7 +7595,7 @@ namespace flex
 	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
 	{
 		const u32 vertCountPerChunk = VertCountPerChunkAxis * VertCountPerChunkAxis;
-		const u32 triCountPerChunk = ((vertCountPerChunk - 1) * (vertCountPerChunk - 1)) * 2;
+		const u32 triCountPerChunk = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCountPerChunk = triCountPerChunk * 3;
 
 		volatile glm::vec3* volatile* positionData = &(*terrain_workQueue)[workQueueIndex].positions;
