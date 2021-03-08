@@ -33,6 +33,7 @@ namespace flex
 	using MaterialID = u32;
 	using TextureID = u32;
 	using FrameBufferAttachmentID = u32;
+	using GraphicsPipelineID = u32;
 	using PointLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
@@ -73,6 +74,7 @@ namespace flex
 	static constexpr auto InvalidMaterialID = ((MaterialID)u32_max);
 	static constexpr auto InvalidTextureID = ((TextureID)u32_max);
 	static constexpr auto InvalidFrameBufferAttachmentID = ((FrameBufferAttachmentID)u32_max);
+	static constexpr auto InvalidGraphicsPipelineID = ((GraphicsPipelineID)u32_max);
 	static constexpr auto InvalidPointLightID = ((PointLightID)u32_max);
 	static constexpr auto InvalidAudioSourceID = ((AudioSourceID)u32_max);
 	static constexpr auto InvalidTrackID = ((TrackID)u32_max);

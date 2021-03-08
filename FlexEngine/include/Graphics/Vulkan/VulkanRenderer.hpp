@@ -175,8 +175,8 @@ namespace flex
 			void CreateSSAODescriptorSets();
 
 			void CreateWireframeDescriptorSets();
-			VkPipeline CreateWireframePipeline(VertexAttributes vertexAttributes);
-			VkPipeline GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
+			GraphicsPipelineConfiguration* CreateWireframePipeline(VertexAttributes vertexAttributes);
+			GraphicsPipelineConfiguration* GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
 			void DestroyWireframePipelines();
 
 			RenderID GetNextAvailableRenderID() const;
@@ -199,8 +199,12 @@ namespace flex
 			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
 			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			void CreateDescriptorSetLayout(ShaderID shaderID);
-			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);
-			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
+			void CreateGraphicsPipeline(RenderID renderID);
+			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo, GraphicsPipelineID& outPipelineID);
+			void DestroyAllGraphicsPipelines();
+			void DestroyGraphicsPipeline(GraphicsPipelineID pipelineID);
+			bool IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const;
+			GraphicsPipelineConfiguration* GetGraphicsPipeline(GraphicsPipelineID pipelineID) const;
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
@@ -504,22 +508,23 @@ namespace flex
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
-			GraphicsPipeline m_ShadowGraphicsPipeline;
+			GraphicsPipelineID m_ShadowGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_FontSSGraphicsPipeline;
-			GraphicsPipeline m_FontWSGraphicsPipeline;
+			GraphicsPipelineID m_FontSSGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_FontWSGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_PostProcessGraphicsPipeline;
-			GraphicsPipeline m_TAAResolveGraphicsPipeline;
-			GraphicsPipeline m_GammaCorrectGraphicsPipeline;
+			GraphicsPipelineID m_PostProcessGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_TAAResolveGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_GammaCorrectGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_SpriteArrGraphicsPipeline;
+			GraphicsPipelineID m_SpriteArrGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_BlitGraphicsPipeline;
-
-			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
+			GraphicsPipelineID m_BlitGraphicsPipelineID = InvalidGraphicsPipelineID;
 
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
+
+			std::map<u64, GraphicsPipelineID> m_GraphicsPipelineHashes;
+			std::map<GraphicsPipelineID, GraphicsPipelineConfiguration*> m_GraphicsPipelines;
 
 			// TODO: Make RenderAPI-agnostic and move to resource manager
 			std::vector<VulkanParticleSystem*> m_ParticleSystems;
@@ -558,15 +563,15 @@ namespace flex
 
 			VulkanTexture* m_NoiseTexture = nullptr;
 
-			GraphicsPipeline m_SSAOGraphicsPipeline;
-			GraphicsPipeline m_SSAOBlurHGraphicsPipeline;
-			GraphicsPipeline m_SSAOBlurVGraphicsPipeline;
+			GraphicsPipelineID m_SSAOGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_SSAOBlurHGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_SSAOBlurVGraphicsPipelineID = InvalidGraphicsPipelineID;
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
 
 			// Maps vertex attributes to pipeline
-			std::map<VertexAttributes, VkPipeline> m_WireframeGraphicsPipelines;
+			std::map<VertexAttributes, GraphicsPipelineConfiguration*> m_WireframeGraphicsPipelines;
 			VDeleter<VkPipelineLayout> m_WireframePipelineLayout;
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 

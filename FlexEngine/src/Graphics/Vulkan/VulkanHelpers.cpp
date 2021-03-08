@@ -1629,10 +1629,58 @@ namespace flex
 			return indices;
 		}
 
-		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
-			renderID(renderID),
-			graphicsPipeline(device)
+		VulkanRenderObject::VulkanRenderObject(RenderID renderID) :
+			renderID(renderID)
 		{
+		}
+
+		bool GraphicsPipelineCreateInfo::operator=(const GraphicsPipelineCreateInfo& other)
+		{
+			// TODO: memcmp
+			return shaderID == other.shaderID &&
+				vertexAttributes == other.vertexAttributes &&
+				topology == other.topology &&
+				cullMode == other.cullMode &&
+				renderPass == other.renderPass &&
+				subpass == other.subpass &&
+				pushConstantRangeCount == other.pushConstantRangeCount &&
+				descriptorSetLayoutIndex == other.descriptorSetLayoutIndex &&
+				bSetDynamicStates == other.bSetDynamicStates &&
+				bEnableColourBlending == other.bEnableColourBlending &&
+				bEnableAdditiveColourBlending == other.bEnableAdditiveColourBlending &&
+				depthTestEnable == other.depthTestEnable &&
+				depthWriteEnable == other.depthWriteEnable &&
+				depthCompareOp == other.depthCompareOp &&
+				stencilTestEnable == other.stencilTestEnable;
+			// TODO: Check push constant value count/types?
+		}
+
+		u64 GraphicsPipelineCreateInfo::Hash()
+		{
+			// NOTE: Is this hash cryptographically secure? Heck no! Does it work for my purposes? Yes it does :)
+			u64 result = 0;
+
+			result += (u64)shaderID * 11;
+			result += (u64)vertexAttributes * 2;
+			result += (u64)topology * 5;
+			result <<= 2;
+			result *= 982451653;
+			result += (u64)cullMode * 3;
+			result += (u64)renderPass;
+			result += (u64)subpass * 5;
+			result += (u64)(pushConstantRangeCount + 1) * 7;
+			result += (u64)descriptorSetLayoutIndex * 13;
+			result += (u64)(bSetDynamicStates ? 68 : 458);
+			result += (u64)(bEnableColourBlending ? 19956 : 15485863);
+			result += (u64)(bEnableAdditiveColourBlending ? 898 : 123456789);
+			result += (u64)(depthTestEnable ? 77 : 2829);
+			result <<= 1;
+			result *= 492876847;
+			result += (u64)(depthWriteEnable ? 13 : 9);
+			result += (u64)depthCompareOp * 6;
+			result += (u64)(stencilTestEnable ? 3 : 199);
+
+			return result;
 		}
 
 		std::string VulkanErrorString(VkResult errorCode)
@@ -2714,8 +2762,7 @@ namespace flex
 		}
 
 		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
-			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
-			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
+			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{
 		}
 

@@ -562,11 +562,30 @@ namespace flex
 
 			VDeleter<VkPipeline> pipeline;
 			VDeleter<VkPipelineLayout> layout;
+			// TODO: Store pipeline cache here
+		};
+
+		struct GraphicsPipelineConfiguration
+		{
+			GraphicsPipelineConfiguration(GraphicsPipelineID pipelineID, GraphicsPipeline* pipeline) :
+				pipelineID(pipelineID),
+				pipeline(pipeline),
+				usageCount(1)
+			{}
+
+			~GraphicsPipelineConfiguration()
+			{
+				delete pipeline;
+			}
+
+			GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipeline* pipeline = nullptr;
+			u32 usageCount = 0;
 		};
 
 		struct VulkanRenderObject final
 		{
-			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
+			VulkanRenderObject(RenderID renderID);
 
 			VulkanRenderObject(const VulkanRenderObject&) = delete;
 			VulkanRenderObject(const VulkanRenderObject&&) = delete;
@@ -608,13 +627,16 @@ namespace flex
 			u64 dynamicVertexBufferOffset = InvalidBufferID;
 			u64 dynamicIndexBufferOffset = InvalidBufferID;
 
-			GraphicsPipeline graphicsPipeline;
+			GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 
 			RenderPassType renderPassOverride = RenderPassType::_NONE;
 		};
 
 		struct GraphicsPipelineCreateInfo
 		{
+			bool operator=(const GraphicsPipelineCreateInfo& other);
+			u64 Hash();
+
 			ShaderID shaderID = InvalidShaderID;
 			VertexAttributes vertexAttributes = 0;
 
@@ -641,11 +663,6 @@ namespace flex
 			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 
 			const char* DBG_Name = nullptr;
-
-			// Out variables
-			VkPipelineCache* pipelineCache = nullptr;
-			VkPipelineLayout* pipelineLayout = nullptr;
-			VkPipeline* graphicsPipeline = nullptr;
 		};
 
 		struct BufferDescriptorInfo
@@ -692,7 +709,7 @@ namespace flex
 			ParticleSystemID ID = InvalidParticleSystemID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
-			VDeleter<VkPipeline> graphicsPipeline;
+			GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 			VDeleter<VkPipeline> computePipeline;
 			ParticleSystem* system = nullptr;
 		};
