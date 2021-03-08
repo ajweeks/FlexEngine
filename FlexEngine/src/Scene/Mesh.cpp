@@ -72,6 +72,11 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
+	void Mesh::RemoveSubmesh(u32 index)
+	{
+		m_Meshes[index] = nullptr;
+	}
+
 	bool Mesh::LoadFromFile(
 		const std::string& relativeFilePath,
 		MaterialID materialID,
@@ -255,6 +260,23 @@ namespace flex
 
 		m_Meshes = { new MeshComponent(this, materialID, false) };
 		return m_Meshes[0]->CreateProcedural(initialMaxVertCount, attributes, topologyMode, optionalCreateInfo);
+	}
+
+	i32 Mesh::AddSubMesh(MeshComponent* meshComponent)
+	{
+		for (i32 i = 0; i < (i32)m_Meshes.size(); ++i)
+		{
+			if (m_Meshes[i] == nullptr)
+			{
+				m_Meshes[i] = meshComponent;
+				return i;
+			}
+		}
+
+		i32 newIndex = (i32)m_Meshes.size();
+		m_Meshes.emplace_back(meshComponent);
+
+		return newIndex;
 	}
 
 	LoadedMesh* Mesh::LoadMesh(const std::string& relativeFilePath)

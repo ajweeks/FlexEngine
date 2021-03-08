@@ -434,7 +434,7 @@ namespace flex
 		bool m_bCaptureScreenshot = false;
 		bool m_bCaptureReflectionProbes = false;
 
-		bool m_bEnableTAA = true;
+		bool m_bEnableTAA = false;
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 

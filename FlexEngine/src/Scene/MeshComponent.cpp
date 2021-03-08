@@ -474,6 +474,8 @@ namespace flex
 
 		newMeshComponent->m_bInitialized = true;
 
+		owningMesh->AddSubMesh(newMeshComponent);
+
 		return newMeshComponent;
 	}
 

@@ -33,6 +33,8 @@ namespace flex
 		void Destroy();
 		void Reload();
 
+		void RemoveSubmesh(u32 index);
+
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			MaterialID materialID,
@@ -70,6 +72,8 @@ namespace flex
 			MaterialID materialID,
 			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+
+		i32 AddSubMesh(MeshComponent* meshComponent);
 
 		void SetOwner(GameObject* owner);
 

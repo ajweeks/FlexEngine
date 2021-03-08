@@ -13,7 +13,7 @@ glm::vec2 ImGui::BezierValue(real dt01, real* P)
 	glm::vec2 Q[4] = { { 0, 0 }, { P[0], P[1] }, { P[2], P[3] }, { 1, 1 } };
 	glm::vec2 results[STEPS + 1];
 	bezier_table<STEPS>(Q, results);
-	return results[(i32)((dt01 < 0 ? 0 : dt01 > 1 ? 1 : dt01) * STEPS)];
+	return results[(i32)((dt01 < 0 ? 0 : dt01 > 1 ? 1 : dt01) * (real)STEPS)];
 }
 
 // areaWidth in pixels. 0 for adaptive size (will use max avail width)

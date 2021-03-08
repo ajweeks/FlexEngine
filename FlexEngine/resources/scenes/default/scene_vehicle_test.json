@@ -14,7 +14,7 @@
 		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
-		"fov" : 0.923279,
+		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -22,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-27.447, 114.257, -92.248",
-			"pitch" : -0.870761,
-			"yaw" : 1.281597
+			"position" : "20.000, 8.000, -16.000",
+			"pitch" : -0.174533,
+			"yaw" : 2.268928
 		}
 	},
 	"objects" : 
@@ -73,8 +73,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "-0.129, 0.329, -4.950",
-				"rot" : "-0.007, 0.040, -0.004",
+				"pos" : "-0.124, 0.329, -7.096",
+				"rot" : "-0.008, 0.097, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -143,6 +143,40 @@
 				"pin center" : true,
 				"pinned center" : "0.22, 18.74, -3.03"
 			}
+		},
+		{
+			"name" : "blob",
+			"id" : "38CB844333BA598B46F8147A4C4E407A",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "48.166, 0.000, 17.630",
+				"scale" : "4.540, 4.540, 4.540"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "sphere.glb",
+			"materials" : 
+			[
+				"Raymarched"
+			]
+		},
+		{
+			"name" : "blob0",
+			"id" : "58C43E44B1F5DBBF415611823E71DA98",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "31.580, 0.000, 31.530",
+				"scale" : "2.871, 2.871, 2.871"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "sphere.glb",
+			"materials" : 
+			[
+				"Raymarched"
+			]
 		}
 	]
 }

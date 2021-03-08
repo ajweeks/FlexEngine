@@ -30,5 +30,7 @@ void main()
 
 	dist = smoothstep(dist, 0.0, 0.1);
 
-	fragmentColour = vec4(mix(ex_Colour.rgb, vec3(0), pow(dist, 0.2)), 1.0);
+	vec3 groundCol = mix(vec3(0.08, 0.18, 0.04), vec3(0.00, 0.04, 0.01), 1.0-clamp(ex_Colour.r * 3.0 - 1.05, 0.0, 1.0));
+	fragmentColour = vec4(mix(groundCol, vec3(0), pow(dist, 0.2)), 1.0);
+	// fragmentColour = vec4(ex_Colour.rgb, 1.0);
 }

@@ -1133,7 +1133,7 @@ namespace flex
 			{
 				MeshComponent* meshComponent = subMeshes[slotIndex];
 
-				if (meshComponent->renderID == InvalidRenderID)
+				if (meshComponent == nullptr || meshComponent->renderID == InvalidRenderID)
 				{
 					continue;
 				}
@@ -1704,6 +1704,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = false;
+		m_Shaders[shaderID]->maxObjectCount = 512;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |

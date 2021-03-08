@@ -1036,6 +1036,7 @@ namespace flex
 
 			// Per chunk outputs
 			volatile glm::vec3* positions;
+			volatile glm::vec3* normals;
 			volatile u32* indices;
 		};
 
@@ -1050,6 +1051,7 @@ namespace flex
 
 		void DiscoverChunks();
 		void GenerateChunks();
+		void UpdateNormalsForMesh(const glm::vec2i& chunkIndex, std::vector<glm::vec3>& normalsVec, std::vector<glm::vec3>& tangentsVec);
 		void DestroyAllChunks();
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
@@ -1069,7 +1071,6 @@ namespace flex
 
 		void* criticalSection = nullptr;
 
-		real nscale = 1.0f;
 		real m_LoadedChunkRadius = 100.0f;
 
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
