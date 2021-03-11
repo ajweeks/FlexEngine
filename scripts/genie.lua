@@ -196,11 +196,11 @@ project "Flex"
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
 		configuration { "vs*", "Profile" }
-			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 		configuration { "vs*", "Release" }
-			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 		configuration { "vs*", "Release_WithSymbols" }
-			links { "Bullet3Collision", "Bullet3Dynamics", "LinearMath", "freetype" }
+			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
 			links { "glfw3", "openal", "BulletDynamics", "Bullet3Collision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
