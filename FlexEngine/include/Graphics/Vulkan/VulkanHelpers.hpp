@@ -567,11 +567,14 @@ namespace flex
 
 		struct GraphicsPipelineConfiguration
 		{
-			GraphicsPipelineConfiguration(GraphicsPipelineID pipelineID, GraphicsPipeline* pipeline) :
+			GraphicsPipelineConfiguration(GraphicsPipelineID pipelineID, GraphicsPipeline* pipeline, bool bPersistent, const char* DBG_Name) :
 				pipelineID(pipelineID),
 				pipeline(pipeline),
-				usageCount(1)
-			{}
+				usageCount(1),
+				bPersistent(bPersistent)
+			{
+				strcpy(this->DBG_Name, DBG_Name);
+			}
 
 			~GraphicsPipelineConfiguration()
 			{
@@ -581,6 +584,10 @@ namespace flex
 			GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
 			GraphicsPipeline* pipeline = nullptr;
 			u32 usageCount = 0;
+			bool bPersistent;
+
+			// Debug-only
+			char DBG_Name[256];
 		};
 
 		struct VulkanRenderObject final
@@ -654,6 +661,7 @@ namespace flex
 			bool bSetDynamicStates = false;
 			bool bEnableColourBlending = false;
 			bool bEnableAdditiveColourBlending = false;
+			bool bPersistent = false;
 
 			VkBool32 depthTestEnable = VK_TRUE;
 			VkBool32 depthWriteEnable = VK_TRUE;

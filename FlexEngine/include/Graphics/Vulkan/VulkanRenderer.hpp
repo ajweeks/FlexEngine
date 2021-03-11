@@ -202,6 +202,7 @@ namespace flex
 			void CreateGraphicsPipeline(RenderID renderID);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo, GraphicsPipelineID& outPipelineID);
 			void DestroyAllGraphicsPipelines();
+			void DestroyNonPersistentGraphicsPipelines();
 			void DestroyGraphicsPipeline(GraphicsPipelineID pipelineID);
 			bool IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const;
 			GraphicsPipelineConfiguration* GetGraphicsPipeline(GraphicsPipelineID pipelineID) const;
@@ -525,6 +526,7 @@ namespace flex
 
 			std::map<u64, GraphicsPipelineID> m_GraphicsPipelineHashes;
 			std::map<GraphicsPipelineID, GraphicsPipelineConfiguration*> m_GraphicsPipelines;
+			u32 m_LastGraphicsPipelineID = 0; // Monotonically increasing value to give unique IDs to pipelines
 
 			// TODO: Make RenderAPI-agnostic and move to resource manager
 			std::vector<VulkanParticleSystem*> m_ParticleSystems;

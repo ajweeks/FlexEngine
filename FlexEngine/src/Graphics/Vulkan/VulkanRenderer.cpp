@@ -486,8 +486,7 @@ namespace flex
 				CreateUniformBuffers((VulkanMaterial*)matPair.second);
 			}
 
-			m_GraphicsPipelineHashes.clear();
-			m_GraphicsPipelines.clear();
+			DestroyNonPersistentGraphicsPipelines();
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				CreateDescriptorSet(i);
@@ -1429,6 +1428,7 @@ namespace flex
 				createInfo.depthWriteEnable = VK_FALSE;
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
+				createInfo.bPersistent = true;
 				CreateGraphicsPipeline(&createInfo, m_SpriteArrGraphicsPipelineID);
 			}
 
@@ -1445,6 +1445,7 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
+				createInfo.bPersistent = true;
 				CreateGraphicsPipeline(&createInfo, m_PostProcessGraphicsPipelineID);
 			}
 
@@ -1461,6 +1462,7 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
+				createInfo.bPersistent = true;
 				CreateGraphicsPipeline(&createInfo, m_GammaCorrectGraphicsPipelineID);
 			}
 
@@ -1486,6 +1488,7 @@ namespace flex
 				createInfo.fragSpecializationInfo = taaResolveShader->fragSpecializationInfo;
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
+				createInfo.bPersistent = true;
 				CreateGraphicsPipeline(&createInfo, m_TAAResolveGraphicsPipelineID);
 			}
 		}
@@ -1572,6 +1575,7 @@ namespace flex
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.renderPass = fullscreenShader->renderPass;
+				pipelineCreateInfo.bPersistent = true;
 				CreateGraphicsPipeline(&pipelineCreateInfo, m_BlitGraphicsPipelineID);
 			}
 		}
@@ -2495,6 +2499,9 @@ namespace flex
 					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
 				}
 
+				GraphicsPipelineConfiguration* graphicsPipelineConfig = GetGraphicsPipeline(renderObject->graphicsPipelineID);
+				--graphicsPipelineConfig->usageCount;
+
 				delete renderObject;
 				renderObject = nullptr;
 			}
@@ -2822,6 +2829,7 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
+			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
@@ -3093,6 +3101,7 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
+			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
@@ -3359,6 +3368,7 @@ namespace flex
 			pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 			pipelineCreateInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 			pipelineCreateInfo.pushConstants = pushConstantRanges.data();
+			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
@@ -3555,6 +3565,7 @@ namespace flex
 				pipelineCreateInfo.subpass = 0;
 				pipelineCreateInfo.depthTestEnable = VK_FALSE;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
+				pipelineCreateInfo.bPersistent = true;
 				CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
@@ -3608,6 +3619,7 @@ namespace flex
 			pipelineCreateInfo.topology = gBufferObject->topology;
 			pipelineCreateInfo.cullMode = gBufferObject->cullMode;
 			pipelineCreateInfo.bEnableColourBlending = false;
+			pipelineCreateInfo.bPersistent = true;
 
 			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials[m_SSAOMatID];
 			VulkanShader* ssaoShader = (VulkanShader*)m_Shaders[ssaoMaterial->shaderID];
@@ -3711,6 +3723,7 @@ namespace flex
 			pipelineCreateInfo.depthTestEnable = false;
 			pipelineCreateInfo.depthWriteEnable = wireframeShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = wireframeShader->renderPass;
+			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipelineConfiguration* pipelineConfig = GetGraphicsPipeline(pipelineID);
 
@@ -3902,6 +3915,7 @@ namespace flex
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.renderPass = renderPass;
+				pipelineCreateInfo.bPersistent = true;
 				CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
@@ -4657,6 +4671,7 @@ namespace flex
 			pipelineCreateInfo.renderPass = shadowShader->renderPass;
 			pipelineCreateInfo.pushConstantRangeCount = 1;
 			pipelineCreateInfo.pushConstants = &pushConstantRange;
+			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_ShadowGraphicsPipelineID);
 
 			// Shadow map descriptor set
@@ -6201,11 +6216,14 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline->pipeline));
 			SetPipelineName(m_VulkanDevice, newPipeline->pipeline, createInfo->DBG_Name);
 
-			// TODO: Reuse IDs
-			GraphicsPipelineID newPipelineID = (GraphicsPipelineID)m_GraphicsPipelines.size();
-			m_GraphicsPipelines.emplace(newPipelineID, new GraphicsPipelineConfiguration(newPipelineID, newPipeline));
+			GraphicsPipelineID newPipelineID = (GraphicsPipelineID)m_LastGraphicsPipelineID++;
+			bool bPersistent = createInfo->bPersistent;
+			GraphicsPipelineConfiguration* newPipelineConfig = new GraphicsPipelineConfiguration(newPipelineID, newPipeline, bPersistent, createInfo->DBG_Name);
+			m_GraphicsPipelines.emplace(newPipelineID, newPipelineConfig);
 			m_GraphicsPipelineHashes.emplace(pipelineHash, newPipelineID);
 			outPipelineID = newPipelineID;
+
+			assert(m_GraphicsPipelineHashes.size() == m_GraphicsPipelines.size());
 		}
 
 		void VulkanRenderer::DestroyAllGraphicsPipelines()
@@ -6213,11 +6231,43 @@ namespace flex
 			for (auto& pipelineConfigPair : m_GraphicsPipelines)
 			{
 				GraphicsPipelineConfiguration* pipelineConfig = pipelineConfigPair.second;
-				delete pipelineConfig->pipeline;
 				delete pipelineConfig;
 			}
 			m_GraphicsPipelineHashes.clear();
 			m_GraphicsPipelines.clear();
+		}
+
+		void VulkanRenderer::DestroyNonPersistentGraphicsPipelines()
+		{
+			auto iter = m_GraphicsPipelines.begin();
+			while (iter != m_GraphicsPipelines.end())
+			{
+				GraphicsPipelineConfiguration* pipelineConfig = iter->second;
+				if (!pipelineConfig->bPersistent)
+				{
+					GraphicsPipelineID pipelineID = pipelineConfig->pipelineID;
+
+					delete pipelineConfig;
+					iter = m_GraphicsPipelines.erase(iter);
+
+					bool bFoundHash = false;
+					for (auto iter2 = m_GraphicsPipelineHashes.begin(); iter2 != m_GraphicsPipelineHashes.end(); ++iter2)
+					{
+						if (iter2->first == pipelineID)
+						{
+							m_GraphicsPipelineHashes.erase(iter2);
+							bFoundHash = true;
+							break;
+						}
+					}
+
+					assert(bFoundHash);
+				}
+				else
+				{
+					++iter;
+				}
+			}
 		}
 
 		void VulkanRenderer::DestroyGraphicsPipeline(GraphicsPipelineID pipelineID)
@@ -7429,17 +7479,18 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
 					}
 
+					GraphicsPipeline* pipeline = GetGraphicsPipeline(m_ShadowGraphicsPipelineID)->pipeline;
+
+					DrawCallInfo shadowDrawCallInfo = {};
+					shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
+					shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)pipeline->pipeline;
+					shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)pipeline->layout;
+					shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
+					shadowDrawCallInfo.bRenderingShadows = true;
+
 					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
 					{
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
-
-						DrawCallInfo shadowDrawCallInfo = {};
-						shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
-						GraphicsPipeline* pipeline = GetGraphicsPipeline(m_ShadowGraphicsPipelineID)->pipeline;
-						shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)pipeline->pipeline;
-						shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)pipeline->layout;
-						shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
-						shadowDrawCallInfo.bRenderingShadows = true;
 
 						// TODO: Upload as one draw
 						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
@@ -8009,7 +8060,7 @@ namespace flex
 				m_UIRenderPass->m_FrameBuffer->frameBuffer = m_SwapChainFramebuffers[m_CurrentSwapChainBufferIndex]->frameBuffer;
 				m_UIRenderPass->Begin(commandBuffer, clearValues.data(), (u32)clearValues.size());
 
-				GraphicsPipeline* blitPipeline = GetGraphicsPipeline(m_SSAOBlurHGraphicsPipelineID)->pipeline;
+				GraphicsPipeline* blitPipeline = GetGraphicsPipeline(m_BlitGraphicsPipelineID)->pipeline;
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blitPipeline->pipeline);
 
 				// Fullscreen blit from offscreen frame buffer onto swap chain
@@ -8876,6 +8927,7 @@ namespace flex
 				// NOTE: We ignore the font shader's render pass since we have one font shader, but
 				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
 				pipelineCreateInfo.renderPass = *m_UIRenderPass;
+				pipelineCreateInfo.bPersistent = true;
 				CreateGraphicsPipeline(&pipelineCreateInfo, m_FontSSGraphicsPipelineID);
 			}
 
@@ -8899,6 +8951,7 @@ namespace flex
 				// NOTE: We ignore the font shader's render pass since we have one font shader, but
 				// two passes that fonts are rendered in (Forward pass for 3D, UI pass for 2D)
 				pipelineCreateInfo.renderPass = *m_ForwardRenderPass;
+				pipelineCreateInfo.bPersistent = true;
 				CreateGraphicsPipeline(&pipelineCreateInfo, m_FontWSGraphicsPipelineID);
 			}
 		}
@@ -8920,20 +8973,6 @@ namespace flex
 					GenerateCubemapFromHDR(renderObject, renderObjectMat->environmentMapPath);
 					GenerateIrradianceSampler(renderObject);
 					GeneratePrefilteredCube(renderObject);
-				}
-			}
-
-			// Generate graphics pipelines with correct render pass set
-			// TODO: Just invalidate incorrect pipelines, then let recreation early out for others
-			m_GraphicsPipelineHashes.clear();
-			m_GraphicsPipelines.clear();
-			for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
-			{
-				VulkanRenderObject* renderObject = GetRenderObject(renderID);
-				if (renderObject != nullptr)
-				{
-					CreateDescriptorSet(renderID);
-					CreateGraphicsPipeline(renderID);
 				}
 			}
 		}
@@ -8982,8 +9021,8 @@ namespace flex
 
 			CreateShadowResources();
 
-			m_GraphicsPipelineHashes.clear();
-			m_GraphicsPipelines.clear();
+			DestroyNonPersistentGraphicsPipelines();
+
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				CreateDescriptorSet(i);
