@@ -7504,13 +7504,11 @@ namespace flex
 
 			Chunk* chunk = new Chunk();
 			chunk->meshComponent = nullptr;
-			chunk->linearIndex = (u32)m_Meshes.size();
+			chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
 			// TODO: Reuse slots
 			m_Meshes.emplace(chunkIndex, chunk);
 
-			u32 chunkIdx = chunk->linearIndex;
-
-			volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[chunkIdx];
+			volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
 			terrainChunkData->chunkIndex.x = chunkIndex.x;
 			terrainChunkData->chunkIndex.y = chunkIndex.y;
 
@@ -7587,12 +7585,12 @@ namespace flex
 			static std::vector<u32> indices;
 			indices.resize(indexCount);
 
+			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
 				glm::vec2i chunkIndex = *chunkToLoadIter;
-				u32 chunkIdx = m_Meshes[chunkIndex]->linearIndex;
 
-				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[chunkIdx];
+				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
 
 				memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
 				memcpy((void*)vertexBufferCreateInfo.normals.data(), (void*)terrainChunkData->normals, sizeof(glm::vec3) * vertexCount);
@@ -7612,10 +7610,12 @@ namespace flex
 				}
 
 				RenderObjectCreateInfo renderObjectCreateInfo = {};
-				MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo);
+				i32 submeshIndex;
+				MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
 				if (meshComponent != nullptr)
 				{
 					m_Meshes[chunkIndex]->meshComponent = meshComponent;
+					m_Meshes[chunkIndex]->linearIndex = submeshIndex;
 				}
 			}
 

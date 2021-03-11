@@ -406,9 +406,10 @@ namespace flex
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
-		bool bCreateRenderObject /* = true */)
+		bool bCreateRenderObject /* = true */,
+		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
@@ -418,9 +419,10 @@ namespace flex
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
-		bool bCreateRenderObject /* = true */)
+		bool bCreateRenderObject /* = true */,
+		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryInternal(
@@ -430,8 +432,9 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
-		bool bCreateRenderObject)
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject,
+		i32* outSubmeshIndex)
 	{
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
@@ -474,7 +477,11 @@ namespace flex
 
 		newMeshComponent->m_bInitialized = true;
 
-		owningMesh->AddSubMesh(newMeshComponent);
+		i32 submeshIndex = owningMesh->AddSubMesh(newMeshComponent);
+		if (outSubmeshIndex != nullptr)
+		{
+			*outSubmeshIndex = submeshIndex;
+		}
 
 		return newMeshComponent;
 	}

@@ -1128,75 +1128,86 @@ namespace flex
 			ImGui::Text("Materials");
 
 			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
-			bool bMatChanged = false;
-			for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
+
+			real windowWidth = ImGui::GetContentRegionAvailWidth();
+			real maxWindowHeight = 170.0f;
+			real maxItemCount = 5.0f;
+			real verticalPad = 8.0f;
+			real windowHeight = glm::min(subMeshes.size() * maxWindowHeight / maxItemCount + verticalPad, maxWindowHeight);
+			if (ImGui::BeginChild("materials", ImVec2(windowWidth - 4.0f, windowHeight), true))
 			{
-				MeshComponent* meshComponent = subMeshes[slotIndex];
-
-				if (meshComponent == nullptr || meshComponent->renderID == InvalidRenderID)
-				{
-					continue;
-				}
-
-				MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
-
+				// TODO: Obliterate!
 				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames();
 
-				i32 selectedMaterialShortIndex = 0;
-				std::string currentMaterialName = "NONE";
-				i32 matShortIndex = 0;
-				for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+				bool bMatChanged = false;
+				for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
 				{
-					if (matPair.second == matID)
+					MeshComponent* meshComponent = subMeshes[slotIndex];
+
+					if (meshComponent == nullptr || meshComponent->renderID == InvalidRenderID)
 					{
-						selectedMaterialShortIndex = matShortIndex;
-						currentMaterialName = matPair.first;
-						break;
+						continue;
 					}
 
-					++matShortIndex;
-				}
+					MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
 
-				std::string comboStrID = std::to_string(slotIndex);
-				if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
-				{
-					matShortIndex = 0;
+					i32 selectedMaterialShortIndex = 0;
+					std::string currentMaterialName = "NONE";
+					i32 matShortIndex = 0;
 					for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 					{
-						bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-						std::string materialName = matPair.first;
-						if (ImGui::Selectable(materialName.c_str(), &bSelected))
+						if (matPair.second == matID)
 						{
-							bAnyPropertyChanged = true;
-							meshComponent->SetMaterialID(matPair.second);
 							selectedMaterialShortIndex = matShortIndex;
-							bMatChanged = true;
+							currentMaterialName = matPair.first;
+							break;
 						}
 
 						++matShortIndex;
 					}
 
-					ImGui::EndCombo();
-				}
-
-				if (ImGui::BeginDragDropTarget())
-				{
-					const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
-
-					if (payload && payload->Data)
+					std::string comboStrID = std::to_string(slotIndex);
+					if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
 					{
-						MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-						if (draggedMaterialID)
+						matShortIndex = 0;
+						for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
 						{
-							bAnyPropertyChanged = true;
-							meshComponent->SetMaterialID(*draggedMaterialID);
-							bMatChanged = true;
+							bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+							std::string materialName = matPair.first;
+							if (ImGui::Selectable(materialName.c_str(), &bSelected))
+							{
+								bAnyPropertyChanged = true;
+								meshComponent->SetMaterialID(matPair.second);
+								selectedMaterialShortIndex = matShortIndex;
+								bMatChanged = true;
+							}
+
+							++matShortIndex;
 						}
+
+						ImGui::EndCombo();
 					}
 
-					ImGui::EndDragDropTarget();
+					if (ImGui::BeginDragDropTarget())
+					{
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
+
+						if (payload && payload->Data)
+						{
+							MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+							if (draggedMaterialID)
+							{
+								bAnyPropertyChanged = true;
+								meshComponent->SetMaterialID(*draggedMaterialID);
+								bMatChanged = true;
+							}
+						}
+
+						ImGui::EndDragDropTarget();
+					}
 				}
 			}
+			ImGui::EndChild();
 
 			bAnyPropertyChanged = mesh->DrawImGui() || bAnyPropertyChanged;
 
@@ -1320,7 +1331,7 @@ namespace flex
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
-		m_Shaders[shaderID]->maxObjectCount =  32;
+		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
@@ -1336,7 +1347,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2; // TODO: Work out automatically from samplers?
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
-		m_Shaders[shaderID]->maxObjectCount =   32;
+		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1367,7 +1378,7 @@ namespace flex
 		// PBR - WORLD SPACE
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2;
-		m_Shaders[shaderID]->maxObjectCount =  8;
+		m_Shaders[shaderID]->maxObjectCount = 8;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1704,7 +1715,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = false;
-		m_Shaders[shaderID]->maxObjectCount = 512;
+		m_Shaders[shaderID]->maxObjectCount = 1024;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |

@@ -65,7 +65,8 @@ namespace flex
 			const std::vector<u32>& indices,
 			MaterialID materialID,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
-			bool bCreateRenderObject = true);
+			bool bCreateRenderObject = true,
+			i32* outSubmeshIndex = nullptr);
 
 		static MeshComponent* LoadFromMemoryDynamic(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
@@ -73,7 +74,8 @@ namespace flex
 			MaterialID materialID,
 			u32 initialMaxVertexCount,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
-			bool bCreateRenderObject = true);
+			bool bCreateRenderObject = true,
+			i32* outSubmeshIndex = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
@@ -124,7 +126,8 @@ namespace flex
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
 			RenderObjectCreateInfo* optionalCreateInfo,
-			bool bCreateRenderObject);
+			bool bCreateRenderObject,
+			i32* outSubmeshIndex);
 
 		static MeshComponent* LoadFromCGLTFInternal(Mesh* owningMesh,
 			cgltf_primitive* primitive,
