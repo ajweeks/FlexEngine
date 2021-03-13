@@ -47,6 +47,7 @@ namespace flex
 
 			virtual void Update() override;
 			virtual void Draw() override;
+			virtual void DrawImGuiRendererInfo() override;
 			virtual void DrawImGuiWindows() override;
 
 			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
@@ -456,6 +457,7 @@ namespace flex
 				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
 			};
 
+			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;
 			std::vector<const char*> m_EnabledInstanceExtensions;
 
 			bool m_bDiagnosticCheckpointsEnabled = false;

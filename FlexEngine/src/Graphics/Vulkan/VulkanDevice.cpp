@@ -145,6 +145,27 @@ namespace flex
 			return enabledFeatures;
 		}
 
+		void VulkanDevice::DrawImGuiRendererInfo() const
+		{
+			if (ImGui::TreeNode("Enabled device extensions"))
+			{
+				for (const char* extension : m_EnabledExtensions)
+				{
+					ImGui::BulletText("%s", extension);
+				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Supported device extensions"))
+			{
+				for (const VkExtensionProperties& extension : m_SupportedExtensions)
+				{
+					ImGui::BulletText("%s", extension.extensionName);
+				}
+				ImGui::TreePop();
+			}
+		}
+
 		bool VulkanDevice::ExtensionSupported(const char* extensionName) const
 		{
 			for (auto iter = m_SupportedExtensions.begin(); iter != m_SupportedExtensions.end(); ++iter)

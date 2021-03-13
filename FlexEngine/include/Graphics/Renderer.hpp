@@ -107,6 +107,7 @@ namespace flex
 		virtual void Update();
 		virtual void Draw() = 0;
 		virtual void DrawImGuiWindows() = 0;
+		virtual void DrawImGuiRendererInfo() = 0;
 
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
 		virtual void FreeDynamicVertexData(RenderID renderID) = 0;
@@ -421,6 +422,7 @@ namespace flex
 
 		u32 m_FramesRendered = 0;
 
+		bool m_bInitialized = false;
 		bool m_bPostInitialized = false;
 		bool m_bSwapChainNeedsRebuilding = false;
 		bool m_bRebatchRenderObjects = true; // TODO: Replace with simply checking dirty flags

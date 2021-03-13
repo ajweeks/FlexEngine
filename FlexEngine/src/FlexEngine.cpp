@@ -1183,6 +1183,8 @@ namespace flex
 					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
+					g_Renderer->DrawImGuiRendererInfo();
+
 					ImGui::TreePop();
 				}
 

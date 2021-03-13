@@ -399,6 +399,8 @@ namespace flex
 			m_TAA_ks[1] = 100.0f; // KH
 
 			CreateAllDynamicVertexAndIndexBuffers();
+
+			m_bInitialized = true;
 		}
 
 		void VulkanRenderer::PostInitialize()
@@ -1776,6 +1778,29 @@ namespace flex
 			}
 
 			++m_FramesRendered;
+		}
+
+		void VulkanRenderer::DrawImGuiRendererInfo()
+		{
+			if (ImGui::TreeNode("Enabled instance extensions"))
+			{
+				for (const char* extension : m_EnabledInstanceExtensions)
+				{
+					ImGui::BulletText("%s", extension);
+				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Supported instance extensions"))
+			{
+				for (const VkExtensionProperties& extension : m_SupportedInstanceExtensions)
+				{
+					ImGui::BulletText("%s", extension.extensionName);
+				}
+				ImGui::TreePop();
+			}
+
+			m_VulkanDevice->DrawImGuiRendererInfo();
 		}
 
 		void VulkanRenderer::DrawImGuiWindows()

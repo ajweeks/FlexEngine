@@ -29,6 +29,8 @@ namespace flex
 
 			VkPhysicalDeviceFeatures GetEnabledFeatures();
 
+			void DrawImGuiRendererInfo() const;
+
 			operator VkDevice();
 
 			static std::vector<VkExtensionProperties> GetSupportedExtensionsForDevice(VkPhysicalDevice device);
@@ -41,6 +43,7 @@ namespace flex
 			VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
 			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures;
 			VkPhysicalDeviceMemoryProperties m_MemoryProperties;
+			VkPhysicalDeviceMemoryProperties2 m_MemoryProperties2;
 			std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;
 			VulkanQueueFamilyIndices m_QueueFamilyIndices;
 			std::vector<VkExtensionProperties> m_SupportedExtensions;
