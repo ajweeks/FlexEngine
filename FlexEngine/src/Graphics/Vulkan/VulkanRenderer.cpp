@@ -58,6 +58,7 @@ namespace flex
 		PFN_vkSetDebugUtilsObjectNameEXT VulkanRenderer::m_vkSetDebugUtilsObjectNameEXT = nullptr;
 		PFN_vkCmdBeginDebugUtilsLabelEXT VulkanRenderer::m_vkCmdBeginDebugUtilsLabelEXT = nullptr;
 		PFN_vkCmdEndDebugUtilsLabelEXT VulkanRenderer::m_vkCmdEndDebugUtilsLabelEXT = nullptr;
+		PFN_vkGetPhysicalDeviceMemoryProperties2 VulkanRenderer::m_vkGetPhysicalDeviceMemoryProperties2 = nullptr;
 
 		VulkanRenderer::VulkanRenderer() :
 			m_ClearColour({ 1.0f, 0.0f, 1.0f, 1.0f }),
@@ -118,6 +119,7 @@ namespace flex
 			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
 
 			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+			m_bMemoryBudgetExtensionEnabled = m_VulkanDevice->ExtensionEnabled(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
 			vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, 0, &m_PresentQueue);
@@ -295,6 +297,9 @@ namespace flex
 
 			// TODO: Create compute pool for creating compute-compatible (if different to graphics family) command buffers
 			m_CommandBufferManager.CreatePool();
+
+			// TODO: Always returning null for some reason...
+			m_vkGetPhysicalDeviceMemoryProperties2 = reinterpret_cast<PFN_vkGetPhysicalDeviceMemoryProperties2>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkGetPhysicalDeviceMemoryProperties2"));
 
 			CreateFrameBufferAttachments();
 			CreateDepthResources();
@@ -4968,12 +4973,12 @@ namespace flex
 				u32 instanceExtensionCount;
 				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, nullptr);
 
-				std::vector<VkExtensionProperties> instanceExtensions(instanceExtensionCount);
-				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, instanceExtensions.data());
+				m_SupportedInstanceExtensions.resize(instanceExtensionCount);
+				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, m_SupportedInstanceExtensions.data());
 
 				for (const char* optionalExtName : m_OptionalInstanceExtensions)
 				{
-					for (VkExtensionProperties& properties : instanceExtensions)
+					for (VkExtensionProperties& properties : m_SupportedInstanceExtensions)
 					{
 						if (strcmp(properties.extensionName, optionalExtName) == 0)
 						{
@@ -8320,6 +8325,28 @@ namespace flex
 				return m_ShadowCascades[0]->attachment;
 			}
 			return m_FrameBufferAttachments.at(frameBufferAttachmentID);
+		}
+
+		void VulkanRenderer::PrintMemoryUsage()
+		{
+			if (m_bMemoryBudgetExtensionEnabled && m_vkGetPhysicalDeviceMemoryProperties2 != nullptr)
+			{
+				VkPhysicalDeviceMemoryProperties2 memoryProperties;
+				m_vkGetPhysicalDeviceMemoryProperties2(m_VulkanDevice->m_PhysicalDevice, &memoryProperties);
+				VkPhysicalDeviceMemoryBudgetPropertiesEXT* memoryPropertiesEXT = (VkPhysicalDeviceMemoryBudgetPropertiesEXT*)memoryProperties.pNext;
+
+				Print("%d heaps\n", VK_MAX_MEMORY_HEAPS);
+				for (u32 i = 0; i < (i32)VK_MAX_MEMORY_HEAPS; ++i)
+				{
+					char heapBudgetBuf[64];
+					char heapUsageBuf[64];
+					ByteCountToString(heapBudgetBuf, 64, (u32)memoryPropertiesEXT->heapBudget[i]);
+					ByteCountToString(heapUsageBuf, 64, (u32)memoryPropertiesEXT->heapUsage[i]);
+					Print("Heap budget: %s\n", heapBudgetBuf);
+					Print("Heap usage: %s (%.2f%%)\n", heapUsageBuf,
+						(real)memoryPropertiesEXT->heapUsage[i] / memoryPropertiesEXT->heapBudget[i] * 100.0f);
+				}
+			}
 		}
 
 		void VulkanRenderer::GetCheckPointData()

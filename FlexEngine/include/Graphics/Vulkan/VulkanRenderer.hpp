@@ -132,6 +132,7 @@ namespace flex
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
 			void GetCheckPointData();
+			void PrintMemoryUsage();
 
 			static void SetObjectName(VulkanDevice* device, u64 object, VkObjectType type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
@@ -151,6 +152,7 @@ namespace flex
 			static PFN_vkSetDebugUtilsObjectNameEXT m_vkSetDebugUtilsObjectNameEXT;
 			static PFN_vkCmdBeginDebugUtilsLabelEXT m_vkCmdBeginDebugUtilsLabelEXT;
 			static PFN_vkCmdEndDebugUtilsLabelEXT m_vkCmdEndDebugUtilsLabelEXT;
+			static PFN_vkGetPhysicalDeviceMemoryProperties2 m_vkGetPhysicalDeviceMemoryProperties2;
 
 		protected:
 			virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) override;
@@ -455,12 +457,14 @@ namespace flex
 			{
 				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
+				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 			};
 
 			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;
 			std::vector<const char*> m_EnabledInstanceExtensions;
 
 			bool m_bDiagnosticCheckpointsEnabled = false;
+			bool m_bMemoryBudgetExtensionEnabled = false;
 
 #ifdef RELEASE
 			const bool m_bEnableValidationLayers = false;
