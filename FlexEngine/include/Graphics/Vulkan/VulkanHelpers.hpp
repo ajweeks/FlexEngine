@@ -620,8 +620,6 @@ namespace flex
 			u32 shadowVertexOffset = 0;
 			u32 shadowIndexOffset = 0;
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
@@ -748,6 +746,40 @@ namespace flex
 				: vendorID == 0x1414 ? GPUVendor::Software   // Microsoft WARP
 				: GPUVendor::Unknown;
 		}
+
+		struct VulkanDescriptorPool
+		{
+			VulkanDescriptorPool();
+			VulkanDescriptorPool(VulkanDevice* device);
+			~VulkanDescriptorPool();
+
+			VulkanDescriptorPool(const VulkanDescriptorPool& other) = delete;
+			VulkanDescriptorPool(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool operator=(const VulkanDescriptorPool& other) = delete;
+			VulkanDescriptorPool operator=(const VulkanDescriptorPool&& other) = delete;
+
+			VkDescriptorSet CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
+			void CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			void CreateDescriptorSetLayout(ShaderID shaderID);
+			void Replace();
+			void Reset();
+			void FreeSet(VkDescriptorSet descSet);
+
+			// TODO: Monitor number of used desc sets to set this value intelligently
+			u32 maxNumDescSets = 256;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 16;
+			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
+
+			VulkanDevice* device = nullptr;
+			VkDescriptorPool pool = VK_NULL_HANDLE;
+			u32 size = 0;
+
+			std::vector<VkDescriptorSetLayout> descriptorSetLayouts; // One per shader
+			std::vector<VkDescriptorSet> descriptorSets; // One per material
+			u32 allocatedSetCount = 0;
+		};
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);

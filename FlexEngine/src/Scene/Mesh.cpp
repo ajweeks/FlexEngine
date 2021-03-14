@@ -33,8 +33,11 @@ namespace flex
 	{
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			meshComponent->Destroy();
-			delete meshComponent;
+			if (meshComponent != nullptr)
+			{
+				meshComponent->Destroy();
+				delete meshComponent;
+			}
 		}
 		m_Meshes.clear();
 
@@ -430,7 +433,7 @@ namespace flex
 	{
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			if (meshComponent->renderID == renderID)
+			if (meshComponent != nullptr && meshComponent->renderID == renderID)
 			{
 				return meshComponent;
 			}
@@ -661,8 +664,11 @@ namespace flex
 
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			m_MinPoint = glm::min(m_MinPoint, meshComponent->m_MinPoint);
-			m_MaxPoint = glm::max(m_MaxPoint, meshComponent->m_MaxPoint);
+			if (meshComponent != nullptr)
+			{
+				m_MinPoint = glm::min(m_MinPoint, meshComponent->m_MinPoint);
+				m_MaxPoint = glm::max(m_MaxPoint, meshComponent->m_MaxPoint);
+			}
 		}
 
 		m_BoundingSphereRadius = glm::distance(m_MaxPoint, m_MinPoint) / 2.0f;

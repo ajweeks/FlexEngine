@@ -654,6 +654,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
+			// TODO: Set smaller range with srcStageMask & dstStageMask?
 
 			// Copy the cube map faces from the staging buffer to the optimal tiled image
 			vkCmdCopyBufferToImage(
@@ -682,32 +683,42 @@ namespace flex
 		{
 			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
 
-			if (imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			VkImageSubresourceRange subresourceRange = {};
+			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+
+			// Transition first mip to transfer src
 			{
-				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+				VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+				barrier.image = image;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.oldLayout = imageLayout;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.subresourceRange = subresourceRange;
+
+				vkCmdPipelineBarrier(cmdBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
 			}
 
 			VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
 			barrier.image = image;
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 			barrier.subresourceRange.levelCount = 1;
 
 			i32 mipWidth = width;
 			i32 mipHeight = height;
 
+			// Copy mips down from i-1 to i iteratively, halving each time
 			for (u32 i = 1; i < mipLevels; ++i)
 			{
-				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
-				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
-
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				barrier.subresourceRange.baseMipLevel = i - 1;
-
 				VkImageSubresourceLayers srcSubresource = {};
 				srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				srcSubresource.mipLevel = i - 1;
@@ -720,6 +731,9 @@ namespace flex
 				dstSubresource.baseArrayLayer = 0;
 				dstSubresource.layerCount = 1;
 
+				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+
 				VkImageBlit blitRegion = {};
 				blitRegion.srcOffsets[0] = { 0, 0, 0 };
 				blitRegion.srcOffsets[1] = { mipWidth, mipHeight, 1 };
@@ -728,33 +742,67 @@ namespace flex
 				blitRegion.srcSubresource = srcSubresource;
 				blitRegion.dstSubresource = dstSubresource;
 
-				vkCmdBlitImage(cmdBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+				barrier.subresourceRange.baseMipLevel = i;// -1;
 
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				// Transition blit region to transfer dest
+				{
+					barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					barrier.srcAccessMask = 0;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-				vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier);
+					vkCmdPipelineBarrier(cmdBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,        // Wait on any previous _transfer work_ before
+						VK_PIPELINE_STAGE_TRANSFER_BIT, // doing any _fragment work_
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+				}
+
+				// Dispatch downsample
+				vkCmdBlitImage(cmdBuffer,
+					image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1, &blitRegion, VK_FILTER_LINEAR);
+
+				// Transition current mip level to src for next level
+				{
+					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+					vkCmdPipelineBarrier(cmdBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+				}
 
 				mipWidth = nextMipWidth;
 				mipHeight = nextMipHeight;
 			}
 
-			// Transition final mip layer
-			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			// Transition all layers from transfer src to shader readable
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = mipLevels;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-			vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			vkCmdPipelineBarrier(cmdBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				0,
 				0, nullptr,
 				0, nullptr,
 				1, &barrier);
+
+			imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
 		}
@@ -1490,7 +1538,9 @@ namespace flex
 			}
 
 			// TODO: Set src & dst stage masks intelligently
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
@@ -2920,6 +2970,346 @@ namespace flex
 			{
 				return VK_ERROR_EXTENSION_NOT_PRESENT;
 			}
+		}
+
+		VulkanDescriptorPool::VulkanDescriptorPool()
+		{
+		}
+
+		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device) :
+			device(device),
+			size(maxNumDescSets)
+		{
+			std::vector<VkDescriptorPoolSize> poolSizes
+			{
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
+			};
+
+			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxNumDescSets);
+			// TODO: Avoid using this flag at all
+			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed individually
+
+			VK_CHECK_RESULT(vkCreateDescriptorPool(device->m_LogicalDevice, &poolInfo, nullptr, &pool));
+		}
+
+		VulkanDescriptorPool::~VulkanDescriptorPool()
+		{
+			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
+		}
+
+		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
+		{
+			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
+			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(pool, layouts, 1);
+
+			if ((allocatedSetCount + 1) > maxNumDescSets)
+			{
+				// TODO: Create new pool or recreate and copy old one?
+				//maxNumDescSets *= 2;
+				assert(false);
+			}
+
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+			// TODO: Optimization: Allocate all required descriptor sets in one call rather than 1 at a time
+			VK_CHECK_RESULT(vkAllocateDescriptorSets(device->m_LogicalDevice, &allocInfo, &descriptorSet));
+
+			++allocatedSetCount;
+			Print("Allocated %u desc sets (%d slots)\n", allocatedSetCount, descriptorSets.size());
+
+			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
+
+			Uniforms constantBufferUniforms = shader->constantBufferUniforms;
+			Uniforms dynamicBufferUniforms = shader->dynamicBufferUniforms;
+			Uniforms additionalBufferUniforms = shader->additionalBufferUniforms;
+			Uniforms textureUniforms = shader->textureUniforms;
+
+			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
+			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
+
+			u32 binding = 0;
+
+			std::vector<VkDescriptorBufferInfo> bufferInfos(createInfo->bufferDescriptors.Count());
+			u32 i = 0;
+			for (auto& pair : createInfo->bufferDescriptors)
+			{
+				const u64 uniformID = pair.uniformID;
+				const BufferDescriptorInfo& bufferDescInfo = pair.object;
+				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
+				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
+
+				VkDescriptorType type;
+				switch (bufferDescInfo.type)
+				{
+				case UniformBufferType::STATIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					break;
+				case UniformBufferType::DYNAMIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::PARTICLE_DATA:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				default:
+					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+					ENSURE_NO_ENTRY();
+					break;
+				}
+
+				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
+				bufferInfo.buffer = pair.object.buffer;
+				bufferInfo.range = pair.object.bufferSize;
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, type, binding, &bufferInfo));
+
+				++binding;
+				++i;
+			}
+
+			std::vector<VkDescriptorImageInfo> imageInfos(createInfo->imageDescriptors.Count());
+			i = 0;
+			for (auto& pair : createInfo->imageDescriptors)
+			{
+				const u64 uniformID = pair.uniformID;
+				assert(textureUniforms.HasUniform(uniformID));
+				const ImageDescriptorInfo& imageDescInfo = pair.object;
+
+				VkDescriptorImageInfo& imageInfo = imageInfos[i];
+				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				if (imageDescInfo.imageView != VK_NULL_HANDLE)
+				{
+					imageInfo.imageView = imageDescInfo.imageView;
+					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
+					{
+						imageInfo.sampler = imageDescInfo.imageSampler;
+					}
+					else
+					{
+						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_LinMipLinSampler;
+					}
+				}
+				else
+				{
+					VulkanTexture* blankTexture = ((VulkanTexture*)g_Renderer->m_BlankTexture);
+					imageInfo.imageView = blankTexture->imageView;
+					imageInfo.sampler = blankTexture->sampler;
+				}
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
+
+				++binding;
+				++i;
+			}
+
+			if (!writeDescriptorSets.empty())
+			{
+				vkUpdateDescriptorSets(device->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
+			}
+
+			if (createInfo->DBG_Name)
+			{
+				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
+			}
+
+			return descriptorSet;
+		}
+
+		void VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
+		{
+			DescriptorSetCreateInfo createInfo = {};
+			createInfo.DBG_Name = DBG_Name;
+
+			if (descriptorSets.size() > materialID)
+			{
+				if (descriptorSets[materialID] != VK_NULL_HANDLE)
+				{
+					vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descriptorSets[materialID]);
+					descriptorSets[materialID] = VK_NULL_HANDLE;
+					--allocatedSetCount;
+				}
+			}
+
+			VulkanMaterial* material = (VulkanMaterial*)g_Renderer->GetMaterial(materialID);
+
+			createInfo.descriptorSetLayout = &descriptorSetLayouts[material->shaderID];
+			createInfo.shaderID = material->shaderID;
+			createInfo.uniformBufferList = &material->uniformBufferList;
+
+			((VulkanRenderer*)g_Renderer)->FillOutImageDescriptorInfos(&createInfo.imageDescriptors, materialID);
+			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
+
+			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
+			if (descriptorSets.size() <= materialID)
+			{
+				descriptorSets.resize(materialID + 1);
+			}
+			descriptorSets[materialID] = descriptorSet;
+		}
+
+		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
+		{
+			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
+			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
+
+			VulkanShader* shader = (VulkanShader*)g_Renderer->GetShader(shaderID);
+
+			struct DescriptorSetInfo
+			{
+				u64 uniform;
+				VkDescriptorType descriptorType;
+				VkShaderStageFlags shaderStageFlags;
+			};
+
+			// TODO: Specify stage flags per shader
+			static DescriptorSetInfo descriptorSetInfos[] = {
+				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
+
+				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_FB_0_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_COMPUTE_BIT },
+			};
+
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+			for (DescriptorSetInfo& descSetInfo : descriptorSetInfos)
+			{
+				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->additionalBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->textureUniforms.HasUniform(descSetInfo.uniform))
+				{
+					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
+					descSetLayoutBinding.binding = (u32)bindings.size();
+					descSetLayoutBinding.descriptorCount = 1;
+					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
+					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
+					bindings.push_back(descSetLayoutBinding);
+				}
+			}
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
+
+			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+		}
+
+		void VulkanDescriptorPool::Replace()
+		{
+			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			{
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+			}
+			descriptorSetLayouts.clear();
+
+			descriptorSets.clear();
+
+			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
+			pool = VK_NULL_HANDLE;
+
+			allocatedSetCount = 0;
+		}
+
+		void VulkanDescriptorPool::Reset()
+		{
+			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			{
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+			}
+			descriptorSetLayouts.clear();
+			descriptorSets.clear();
+
+			vkResetDescriptorPool(device->m_LogicalDevice, pool, 0);
+
+			allocatedSetCount = 0;
+		}
+
+		void VulkanDescriptorPool::FreeSet(VkDescriptorSet descSet)
+		{
+			bool bFound = false;
+			for (u32 i = 0; i < descriptorSets.size(); ++i)
+			{
+				if (descriptorSets[i] == descSet)
+				{
+					descriptorSets[i] = VK_NULL_HANDLE;
+					--allocatedSetCount;
+					bFound = true;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %d\n", descSet);
+			}
+
+			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
 		}
 	} // namespace vk
 } // namespace flex

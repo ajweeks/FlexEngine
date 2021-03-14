@@ -65,7 +65,6 @@ namespace flex
 
 		if (m_PreviousSceneIndex != InvalidID)
 		{
-			g_Renderer->OnPreSceneChange();
 			g_EngineInstance->OnSceneChanged();
 			g_ResourceManager->OnSceneChanged();
 			g_Editor->OnSceneChanged();
@@ -115,6 +114,7 @@ namespace flex
 		{
 			g_Editor->PreSceneChange();
 			g_ResourceManager->PreSceneChange();
+			g_Renderer->OnPreSceneChange();
 		}
 
 		// Any modifications will now be lost, so all prefabs will be clean again

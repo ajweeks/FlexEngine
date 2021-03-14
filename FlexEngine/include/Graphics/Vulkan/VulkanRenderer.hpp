@@ -163,6 +163,7 @@ namespace flex
 		private:
 			friend VulkanPhysicsDebugDraw;
 			friend VulkanRenderPass;
+			friend VulkanDescriptorPool;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
 
@@ -178,8 +179,6 @@ namespace flex
 			void CreateSSAODescriptorSets();
 
 			void CreateWireframeDescriptorSets();
-			GraphicsPipelineConfiguration* CreateWireframePipeline(VertexAttributes vertexAttributes);
-			GraphicsPipelineConfiguration* GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
 			void DestroyWireframePipelines();
 
 			RenderID GetNextAvailableRenderID() const;
@@ -197,11 +196,11 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
+			void FillOutImageDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
 			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
-			void CreateDescriptorSet(RenderID renderID);
-			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
-			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateDescriptorSetLayout(ShaderID shaderID);
+
+			void CreateDescriptorSets();
+
 			void CreateGraphicsPipeline(RenderID renderID);
 			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo, GraphicsPipelineID& outPipelineID);
 			void DestroyAllGraphicsPipelines();
@@ -245,7 +244,6 @@ namespace flex
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
-			void CreateDescriptorPool();
 			u32 AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap = true);
@@ -324,13 +322,6 @@ namespace flex
 				VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
 				const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 				void* pUserData);
-
-			// TODO: Monitor number of used desc sets to set this value intelligently
-			static const u32 MAX_NUM_DESC_SETS = 1024;
-			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
-			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
-			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
-			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
 			inline VulkanRenderObject* GetRenderObject(RenderID renderID)
 			{
@@ -534,16 +525,16 @@ namespace flex
 			std::map<GraphicsPipelineID, GraphicsPipelineConfiguration*> m_GraphicsPipelines;
 			u32 m_LastGraphicsPipelineID = 0; // Monotonically increasing value to give unique IDs to pipelines
 
+			//std::map<u64, GraphicsPipelineID> m_DescriptorSetsHashes;
+			u32 m_LastDescriptorSetID = 0; // Monotonically increasing value to give unique IDs to descriptor sets
+
 			// TODO: Make RenderAPI-agnostic and move to resource manager
 			std::vector<VulkanParticleSystem*> m_ParticleSystems;
 
-			VDeleter<VkDescriptorPool> m_DescriptorPool;
-			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
+			VulkanDescriptorPool* m_DescriptorPoolPersistent = nullptr; // Persistent across scene loads (only destroyed at application quit)
+			VulkanDescriptorPool* m_DescriptorPool = nullptr; // Non-persistent pool (destroyed on scene change)
 
 			VulkanCommandBufferManager m_CommandBufferManager;
-
-			VulkanTexture* m_BlankTexture = nullptr;
-			VulkanTexture* m_BlankTextureArr = nullptr;
 
 			// Pair is: (stride, vertex buffer pair)
 			// Indexed into through Shader::vertexBufferIndex
@@ -569,7 +560,6 @@ namespace flex
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
-			VulkanTexture* m_NoiseTexture = nullptr;
 
 			GraphicsPipelineID m_SSAOGraphicsPipelineID = InvalidGraphicsPipelineID;
 			GraphicsPipelineID m_SSAOBlurHGraphicsPipelineID = InvalidGraphicsPipelineID;

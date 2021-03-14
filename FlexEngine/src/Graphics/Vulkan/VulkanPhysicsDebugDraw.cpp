@@ -214,7 +214,10 @@ namespace flex
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 
-			m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+			if (!m_VertexBufferCreateInfo.positions_3D.empty())
+			{
+				m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+			}
 		}
 
 		void VulkanPhysicsDebugDraw::Clear()

@@ -229,8 +229,6 @@ namespace flex
 				*(m_RenderPasses[i]) = new VulkanRenderPass(m_VulkanDevice);
 			}
 
-			m_DescriptorPool = { m_VulkanDevice->m_LogicalDevice, vkDestroyDescriptorPool };
-
 			m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 			m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
@@ -313,12 +311,12 @@ namespace flex
 			{
 				u32 blankData = 0xFFFFFFFF;
 				m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank");
-				m_BlankTexture->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1);
+				((VulkanTexture*)m_BlankTexture)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1);
 				blankTextureID = g_ResourceManager->AddLoadedTexture(m_BlankTexture);
 
 				m_BlankTextureArr = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank_arr");
 				m_BlankTextureArr->bIsArray = true;
-				m_BlankTextureArr->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1);
+				((VulkanTexture*)m_BlankTextureArr)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1);
 				blankTextureArrID = g_ResourceManager->AddLoadedTexture(m_BlankTextureArr);
 			}
 
@@ -412,7 +410,8 @@ namespace flex
 		{
 			Renderer::PostInitialize();
 
-			CreateDescriptorPool();
+			m_DescriptorPool = new VulkanDescriptorPool(m_VulkanDevice);
+			m_DescriptorPoolPersistent = new VulkanDescriptorPool(m_VulkanDevice);
 
 			GenerateGBuffer();
 
@@ -455,7 +454,8 @@ namespace flex
 
 			for (u32 i = 0; i < m_Shaders.size(); ++i)
 			{
-				CreateDescriptorSetLayout(i);
+				m_DescriptorPool->CreateDescriptorSetLayout(i);
+				m_DescriptorPoolPersistent->CreateDescriptorSetLayout(i);
 			}
 
 			// TODO: (not so EZ): Move to base renderer
@@ -496,9 +496,10 @@ namespace flex
 			DestroyNonPersistentGraphicsPipelines();
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
-				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i);
 			}
+
+			CreateDescriptorSets();
 
 			GenerateBRDFLUT();
 
@@ -530,7 +531,7 @@ namespace flex
 				init_info.QueueFamily = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
 				init_info.Queue = m_GraphicsQueue;
 				init_info.PipelineCache = VK_NULL_HANDLE;
-				init_info.DescriptorPool = m_DescriptorPool;
+				init_info.DescriptorPool = m_DescriptorPoolPersistent->pool;
 				init_info.Allocator = NULL;
 				init_info.CheckVkResultFn = NULL;
 				ImGui_ImplVulkan_Init(&init_info, *m_UIRenderPass);
@@ -596,9 +597,9 @@ namespace flex
 
 			InitializeAllParticleSystemBuffers();
 
-			// TODO: Move down?
 			m_bPostInitialized = true;
 
+			PrintMemoryUsage();
 		}
 
 		void VulkanRenderer::Destroy()
@@ -621,10 +622,13 @@ namespace flex
 			delete m_CascadedShadowMapPushConstantBlock;
 			m_CascadedShadowMapPushConstantBlock = nullptr;
 
-			for (const VkDescriptorSetLayout& descriptorSetLayout : m_DescriptorSetLayouts)
-			{
-				vkDestroyDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, descriptorSetLayout, nullptr);
-			}
+			m_DescriptorPoolPersistent->Replace();
+			delete m_DescriptorPoolPersistent;
+			m_DescriptorPoolPersistent = nullptr;
+
+			m_DescriptorPool->Replace();
+			delete m_DescriptorPool;
+			m_DescriptorPool = nullptr;
 
 			m_PresentCompleteSemaphore.replace();
 			m_RenderCompleteSemaphore.replace();
@@ -790,8 +794,6 @@ namespace flex
 			m_WireframePipelineLayout.replace();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
-
-			m_DescriptorPool.replace();
 
 			m_LinMipLinSampler.replace();
 			m_DepthSampler.replace();
@@ -1132,7 +1134,7 @@ namespace flex
 					void* buffer = ssaoNoise.data();
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
-					m_NoiseTexture->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
+					((VulkanTexture*)m_NoiseTexture)->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
 						VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
 					g_ResourceManager->AddLoadedTexture(m_NoiseTexture);
 				}
@@ -1221,8 +1223,15 @@ namespace flex
 			// We've already been post initialized, so we need to create a descriptor set and pipeline here
 			if (m_bPostInitialized)
 			{
-				CreateDescriptorSet(renderID);
 				CreateGraphicsPipeline(renderID);
+				if (GetMaterial(renderObject->materialID)->persistent)
+				{
+					m_DescriptorPoolPersistent->CreateDescriptorSet(renderObject->materialID);
+				}
+				else
+				{
+					m_DescriptorPool->CreateDescriptorSet(renderObject->materialID);
+				}
 			}
 
 			Material* gameObjectMat = GetMaterial(renderObject->materialID);
@@ -1365,45 +1374,42 @@ namespace flex
 			{
 				VulkanMaterial* postProcessMaterial = (VulkanMaterial*)m_Materials[m_PostProcessMatID];
 				ShaderID postProcessShaderID = postProcessMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[postProcessShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[postProcessShaderID];
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Post Process descriptor set";
-				descSetCreateInfo.descriptorSet = &m_PostProcessDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = postProcessShaderID;
 				descSetCreateInfo.uniformBufferList = &postProcessMaterial->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_LinMipLinSampler });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				m_PostProcessDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
 			// Gamma Correct descriptor set
 			{
 				VulkanMaterial* gammaCorrectMaterial = (VulkanMaterial*)m_Materials[m_GammaCorrectMaterialID];
 				ShaderID gammaCorrectShaderID = gammaCorrectMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[gammaCorrectShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[gammaCorrectShaderID];
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Gamma Correct descriptor set";
-				descSetCreateInfo.descriptorSet = &m_GammaCorrectDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.uniformBufferList = &gammaCorrectMaterial->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColourAttachment0->view, m_LinMipLinSampler });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				m_GammaCorrectDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
 			// TAA Resolve descriptor set
 			{
 				VulkanMaterial* taaResolveMaterial = (VulkanMaterial*)m_Materials[m_TAAResolveMaterialID];
 				ShaderID taaResolveShaderID = taaResolveMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[taaResolveShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[taaResolveShaderID];
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "TAA Resolve descriptor set";
-				descSetCreateInfo.descriptorSet = &m_TAAResolveDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = taaResolveShaderID;
 				descSetCreateInfo.uniformBufferList = &taaResolveMaterial->uniformBufferList;
@@ -1411,7 +1417,7 @@ namespace flex
 				descSetCreateInfo.imageDescriptors.Add(U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_LinMipLinSampler });
 				descSetCreateInfo.imageDescriptors.Add(U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_LinMipLinSampler });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				m_TAAResolveDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
 			// Sprite array pipeline
@@ -1553,18 +1559,17 @@ namespace flex
 			VulkanShader* fullscreenShader = (VulkanShader*)m_Shaders[fullscreenShaderID];
 
 			{
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fullscreenShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[fullscreenShaderID];
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Fullscreen blit descriptor set";
-				descSetCreateInfo.descriptorSet = &m_FinalFullscreenBlitDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = fullscreenShaderID;
 				descSetCreateInfo.uniformBufferList = &fullscreenBlitMat->uniformBufferList;
 				FrameBufferAttachment* sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFB1ColourAttachment0 : m_OffscreenFB0ColourAttachment0;
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment->view, m_LinMipLinSampler });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				m_FinalFullscreenBlitDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
 			{
@@ -1610,17 +1615,16 @@ namespace flex
 				VulkanShader* particleSimulationShader = (VulkanShader*)m_Shaders[particleSimulationMaterial->shaderID];
 
 				// Particle simulation descriptor set
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleSimulationMaterial->shaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[particleSimulationMaterial->shaderID];
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				std::string descSetName = "Particle simulation descriptor set " + idStr;
 				descSetCreateInfo.DBG_Name = descSetName.c_str();
-				descSetCreateInfo.descriptorSet = &particleSystem->computeDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = particleSimulationMaterial->shaderID;
 				descSetCreateInfo.uniformBufferList = &particleSimulationMaterial->uniformBufferList;
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				particleSystem->computeDescriptorSet = m_DescriptorPool->CreateDescriptorSet(&descSetCreateInfo);
 
 				// Particle simulation compute pipeline
 				if (m_ParticleSimulationComputePipelineLayout == VK_NULL_HANDLE)
@@ -1644,13 +1648,12 @@ namespace flex
 				VulkanMaterial* particleRenderingMaterial = (VulkanMaterial*)m_Materials.at(particleSystem->system->renderingMaterialID);
 				VulkanShader* particleRenderingShader = (VulkanShader*)m_Shaders[particleRenderingMaterial->shaderID];
 
-				VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[particleRenderingMaterial->shaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[particleRenderingMaterial->shaderID];
 
 				// Particles descriptor set
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				std::string descSetName = "Particle rendering descriptor set " + idStr;
 				descSetCreateInfo.DBG_Name = descSetName.c_str();
-				descSetCreateInfo.descriptorSet = &particleSystem->renderingDescriptorSet;
 				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 				descSetCreateInfo.shaderID = particleRenderingMaterial->shaderID;
 				descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
@@ -1659,7 +1662,7 @@ namespace flex
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, m_LinMipLinSampler });
 
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-				CreateDescriptorSet(&descSetCreateInfo);
+				particleSystem->renderingDescriptorSet = m_DescriptorPool->CreateDescriptorSet(&descSetCreateInfo);
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 				std::string pipelineName = "Particle rendering graphics pipeline " + idStr;
@@ -1693,6 +1696,7 @@ namespace flex
 
 				// Update GBuffer pipeline in case blur or SSAO entirely was toggled
 				CreateGraphicsPipeline(m_GBufferQuadRenderID);
+				m_DescriptorPoolPersistent->CreateDescriptorSet(GetRenderObject(m_GBufferQuadRenderID)->materialID);
 
 				// Update SSAO pipelines in case kernel size changed
 				CreateSSAOPipelines();
@@ -2318,7 +2322,7 @@ namespace flex
 			FLEX_UNUSED(width);
 			FLEX_UNUSED(height);
 
-			if (width != 0 && height != 0)
+			if (m_bPostInitialized && width != 0 && height != 0)
 			{
 				m_bSwapChainNeedsRebuilding = true;
 			}
@@ -2331,7 +2335,18 @@ namespace flex
 
 		void VulkanRenderer::OnPreSceneChange()
 		{
+			// TODO: Consolidate all recreation functions
 			GenerateGBuffer();
+
+			// Clear non-persistent descriptor pool
+			m_DescriptorPool->Reset();
+
+			for (u32 i = 0; i < m_Shaders.size(); ++i)
+			{
+				m_DescriptorPool->CreateDescriptorSetLayout(i);
+			}
+
+			// TODO: CreateDescriptorSets here?
 
 			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
@@ -2384,7 +2399,10 @@ namespace flex
 		void VulkanRenderer::SetVSyncEnabled(bool bEnableVSync)
 		{
 			m_bVSyncEnabled = bEnableVSync;
-			m_bSwapChainNeedsRebuilding = true;
+			if (m_bInitialized)
+			{
+				m_bSwapChainNeedsRebuilding = true;
+			}
 		}
 
 		u32 VulkanRenderer::GetRenderObjectCount() const
@@ -2524,11 +2542,6 @@ namespace flex
 			{
 				FreeDynamicVertexData(renderID);
 
-				if (renderObject->descriptorSet)
-				{
-					vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(renderObject->descriptorSet));
-				}
-
 				GraphicsPipelineConfiguration* graphicsPipelineConfig = GetGraphicsPipeline(renderObject->graphicsPipelineID);
 				--graphicsPipelineConfig->usageCount;
 
@@ -2623,8 +2636,8 @@ namespace flex
 			{
 				if (m_RenderObjects[i] != nullptr && m_RenderObjects[i]->materialID == materialID)
 				{
-					CreateDescriptorSet(i);
 					CreateGraphicsPipeline(i);
+					m_DescriptorPool->CreateDescriptorSet(m_RenderObjects[i]->materialID);
 				}
 			}
 		}
@@ -2826,17 +2839,15 @@ namespace flex
 			ShaderID equirectangularToCubeShaderID = equirectangularToCubeMat->shaderID;
 			VulkanShader* equirectangularToCubeShader = (VulkanShader*)m_Shaders[equirectangularToCubeShaderID];
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
 			equirectangularToCubeDescriptorCreateInfo.DBG_Name = "Equirectangular to cube descriptor set";
-			equirectangularToCubeDescriptorCreateInfo.descriptorSet = &descriptorSet;
-			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[equirectangularToCubeShaderID];
+			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[equirectangularToCubeShaderID];
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
 			equirectangularToCubeDescriptorCreateInfo.uniformBufferList = &equirectangularToCubeMat->uniformBufferList;
 			VulkanTexture* equirectTexture = (VulkanTexture*)equirectangularToCubeMat->textures[U_HDR_EQUIRECTANGULAR_SAMPLER];
 			equirectangularToCubeDescriptorCreateInfo.imageDescriptors.Add(U_HDR_EQUIRECTANGULAR_SAMPLER, ImageDescriptorInfo{ equirectTexture->imageView, m_LinMipLinSampler });
 			FillOutBufferDescriptorInfos(&equirectangularToCubeDescriptorCreateInfo.bufferDescriptors, equirectangularToCubeDescriptorCreateInfo.uniformBufferList, equirectangularToCubeDescriptorCreateInfo.shaderID);
-			CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
+			VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&equirectangularToCubeDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -3098,17 +3109,15 @@ namespace flex
 			VulkanMaterial* irradianceMaterial = (VulkanMaterial*)m_Materials[m_IrradianceMaterialID];
 			VulkanShader* irradianceShader = (VulkanShader*)m_Shaders[irradianceMaterial->shaderID];
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
 			irradianceDescriptorCreateInfo.DBG_Name = "Irradiance descriptor set";
-			irradianceDescriptorCreateInfo.descriptorSet = &descriptorSet;
-			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[irradianceMaterial->shaderID];
+			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[irradianceMaterial->shaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceMaterial->shaderID;
 			irradianceDescriptorCreateInfo.uniformBufferList = &irradianceMaterial->uniformBufferList;
 			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[U_CUBEMAP_SAMPLER];
 			irradianceDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_LinMipLinSampler });
 			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.uniformBufferList, irradianceDescriptorCreateInfo.shaderID);
-			CreateDescriptorSet(&irradianceDescriptorCreateInfo);
+			VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&irradianceDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -3365,17 +3374,15 @@ namespace flex
 			VulkanMaterial* prefilterMaterial = (VulkanMaterial*)m_Materials[m_PrefilterMaterialID];
 			VulkanShader* prefilterShader = (VulkanShader*)m_Shaders[prefilterMaterial->shaderID];
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
 			prefilterDescriptorCreateInfo.DBG_Name = "Prefilter descriptor set";
-			prefilterDescriptorCreateInfo.descriptorSet = &descriptorSet;
-			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[prefilterMaterial->shaderID];
+			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[prefilterMaterial->shaderID];
 			prefilterDescriptorCreateInfo.shaderID = prefilterMaterial->shaderID;
 			prefilterDescriptorCreateInfo.uniformBufferList = &prefilterMaterial->uniformBufferList;
 			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[U_CUBEMAP_SAMPLER];
 			prefilterDescriptorCreateInfo.imageDescriptors.Add(U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_LinMipLinSampler });
 			FillOutBufferDescriptorInfos(&prefilterDescriptorCreateInfo.bufferDescriptors, prefilterDescriptorCreateInfo.uniformBufferList, prefilterDescriptorCreateInfo.shaderID);
-			CreateDescriptorSet(&prefilterDescriptorCreateInfo);
+			VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&prefilterDescriptorCreateInfo);
 
 			std::array<VkPushConstantRange, 1> pushConstantRanges = {};
 			pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -3572,14 +3579,7 @@ namespace flex
 				VulkanMaterial* brdfMaterial = (VulkanMaterial*)m_Materials[m_BRDFMaterialID];
 				VulkanShader* brdfShader = (VulkanShader*)m_Shaders[brdfMaterial->shaderID];
 
-				VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-				DescriptorSetCreateInfo brdfDescriptorCreateInfo = {};
-				brdfDescriptorCreateInfo.DBG_Name = "BRDF descriptor set";
-				brdfDescriptorCreateInfo.descriptorSet = &descriptorSet;
-				brdfDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[brdfMaterial->shaderID];
-				brdfDescriptorCreateInfo.shaderID = brdfMaterial->shaderID;
-				brdfDescriptorCreateInfo.uniformBufferList = &brdfMaterial->uniformBufferList;
-				CreateDescriptorSet(&brdfDescriptorCreateInfo);
+				m_DescriptorPoolPersistent->CreateDescriptorSet(m_BRDFMaterialID, "BRDF descriptor set");
 
 				GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -3691,11 +3691,10 @@ namespace flex
 		{
 			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials[m_SSAOMatID];
 
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[ssaoMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[ssaoMaterial->shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "SSAO descriptor set";
-			descSetCreateInfo.descriptorSet = &m_SSAODescSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &ssaoMaterial->uniformBufferList;
@@ -3704,14 +3703,13 @@ namespace flex
 			VulkanTexture* noiseTexture = (VulkanTexture*)ssaoMaterial->textures[U_NOISE_SAMPLER];
 			descSetCreateInfo.imageDescriptors.Add(U_NOISE_SAMPLER, ImageDescriptorInfo{ noiseTexture->imageView, m_NearestClampEdgeSampler });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
+			m_SSAODescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
 
-			descSetLayout = m_DescriptorSetLayouts[ssaoBlurMaterial->shaderID];
+			descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[ssaoBlurMaterial->shaderID];
 
 			descSetCreateInfo = {};
-			descSetCreateInfo.descriptorSet = &m_SSAOBlurHDescSet;
 			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
@@ -3720,10 +3718,9 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOFBColourAttachment0->view, m_NearestClampEdgeSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColourAttachment0->view, m_NearestClampEdgeSampler });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
+			m_SSAOBlurHDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			descSetCreateInfo = {};
-			descSetCreateInfo.descriptorSet = &m_SSAOBlurVDescSet;
 			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
@@ -3732,61 +3729,27 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOBlurHFBColourAttachment0->view, m_NearestClampEdgeSampler });
 			descSetCreateInfo.imageDescriptors.Add(U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColourAttachment0->view, m_NearestClampEdgeSampler });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
-		}
-
-		GraphicsPipelineConfiguration* VulkanRenderer::CreateWireframePipeline(VertexAttributes vertexAttributes)
-		{
-			VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
-			VulkanShader* wireframeShader = (VulkanShader*)m_Shaders[wireframeMaterial->shaderID];
-
-			GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
-			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.DBG_Name = "Wireframe pipeline";
-			pipelineCreateInfo.shaderID = wireframeMaterial->shaderID;
-			pipelineCreateInfo.vertexAttributes = vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = wireframeMaterial->descriptorSetLayoutIndex;
-			pipelineCreateInfo.bEnableColourBlending = wireframeShader->bTranslucent;
-			pipelineCreateInfo.subpass = 0;
-			pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-			pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-			pipelineCreateInfo.depthTestEnable = false;
-			pipelineCreateInfo.depthWriteEnable = wireframeShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.renderPass = wireframeShader->renderPass;
-			pipelineCreateInfo.bPersistent = true;
-			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
-			GraphicsPipelineConfiguration* pipelineConfig = GetGraphicsPipeline(pipelineID);
-
-			return pipelineConfig;
+			m_SSAOBlurVDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 		}
 
 		void VulkanRenderer::CreateWireframeDescriptorSets()
 		{
+			if (m_WireframeDescSet != VK_NULL_HANDLE)
+			{
+				m_DescriptorPoolPersistent->FreeSet(m_WireframeDescSet);
+			}
+
 			VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
 
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[wireframeMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[wireframeMaterial->shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
-			descSetCreateInfo.descriptorSet = &m_WireframeDescSet;
 			descSetCreateInfo.DBG_Name = "Wireframe descriptor set";
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = wireframeMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &wireframeMaterial->uniformBufferList;
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
-		}
-
-		GraphicsPipelineConfiguration* VulkanRenderer::GetOrCreateWireframePipeline(VertexAttributes vertexAttributes)
-		{
-			auto pipelineIter = m_WireframeGraphicsPipelines.find(vertexAttributes);
-			if (pipelineIter != m_WireframeGraphicsPipelines.end())
-			{
-				return pipelineIter->second;
-			}
-
-			GraphicsPipelineConfiguration* newWireframePipeline = CreateWireframePipeline(vertexAttributes);
-			m_WireframeGraphicsPipelines[vertexAttributes] = newWireframePipeline;
-			return newWireframePipeline;
+			m_WireframeDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 		}
 
 		void VulkanRenderer::DestroyWireframePipelines()
@@ -4024,18 +3987,17 @@ namespace flex
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
-					VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[computeSDFShaderID];
-					VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+					VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[computeSDFShaderID];
 
 					DescriptorSetCreateInfo descSetCreateInfo = {};
 					descSetCreateInfo.DBG_Name = "Font SDF descriptor set";
-					descSetCreateInfo.descriptorSet = &descriptorSet;
 					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.uniformBufferList = &computeSDFMaterial->uniformBufferList;
 					descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
 					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-					CreateDescriptorSet(&descSetCreateInfo);
+					// TODO: Allocate from temporary pool
+					VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 					descSets.push_back(descriptorSet);
 
 					BindDescriptorSet(computeSDFMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, pipeline->layout, descriptorSet);
@@ -4075,7 +4037,7 @@ namespace flex
 				}
 				charTextures.clear();
 
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, (u32)descSets.size(), descSets.data());
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPoolPersistent->pool, (u32)descSets.size(), descSets.data());
 				descSets.clear();
 
 				DestroyGraphicsPipeline(pipelineID);
@@ -4430,7 +4392,7 @@ namespace flex
 			PROFILE_AUTO(bScreenSpace ? "DrawTextSS" : "DrawTextWS");
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[fontMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[fontMaterial->shaderID];
 
 			CreateFontGraphicsPipelines();
 
@@ -4465,13 +4427,13 @@ namespace flex
 					{
 						DescriptorSetCreateInfo info;
 						info.DBG_Name = bScreenSpace ? "Font SS descriptor set" : "Font WS descriptor set";
-						info.descriptorSet = (VkDescriptorSet*)&font->userData;
 						info.descriptorSetLayout = &descSetLayout;
 						info.shaderID = fontMaterial->shaderID;
 						info.uniformBufferList = &fontMaterial->uniformBufferList;
 						info.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
 						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.uniformBufferList, info.shaderID);
-						CreateDescriptorSet(&info);
+						VkDescriptorSet* descSet = (VkDescriptorSet*)&font->userData;
+						*descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&info);
 					}
 
 					u32 dynamicOffsetIndex = 0;
@@ -4705,16 +4667,15 @@ namespace flex
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_ShadowGraphicsPipelineID);
 
 			// Shadow map descriptor set
-			VkDescriptorSetLayout descSetLayout = m_DescriptorSetLayouts[shadowMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[shadowMaterial->shaderID];
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "Shadow descriptor set";
-			descSetCreateInfo.descriptorSet = &m_ShadowDescriptorSet;
 			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &shadowMaterial->uniformBufferList;
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
+			m_ShadowDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 		}
 
 		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer /* = 0 */)
@@ -4724,11 +4685,9 @@ namespace flex
 			VulkanMaterial* spriteMat = (VulkanMaterial*)m_Materials.at(spriteMaterialID);
 			VulkanShader* spriteShader = (VulkanShader*)m_Shaders[spriteMat->shaderID];
 
-			VkDescriptorSet descSet = VK_NULL_HANDLE;
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "Sprite descriptor set";
-			descSetCreateInfo.descriptorSet = &descSet;
-			descSetCreateInfo.descriptorSetLayout = &m_DescriptorSetLayouts[spriteMat->shaderID];
+			descSetCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[spriteMat->shaderID];
 			descSetCreateInfo.shaderID = spriteMat->shaderID;
 			descSetCreateInfo.uniformBufferList = &spriteMat->uniformBufferList;
 			if (spriteShader->bTextureArr)
@@ -4741,7 +4700,7 @@ namespace flex
 				descSetCreateInfo.imageDescriptors.Add(U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
-			CreateDescriptorSet(&descSetCreateInfo);
+			VkDescriptorSet descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			return descSet;
 		}
@@ -4867,8 +4826,8 @@ namespace flex
 					Material* objMat = GetMaterial(m_RenderObjects[i]->materialID);
 					if (objMat->shaderID == shaderID)
 					{
-						CreateDescriptorSet(i);
 						CreateGraphicsPipeline(i);
+						m_DescriptorPool->CreateDescriptorSet(m_RenderObjects[i]->materialID);
 					}
 				}
 			}
@@ -4883,7 +4842,6 @@ namespace flex
 			{
 				if (m_RenderObjects[i] != nullptr)
 				{
-					CreateDescriptorSet(i);
 					CreateGraphicsPipeline(i);
 				}
 			}
@@ -5649,6 +5607,56 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::FillOutImageDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID)
+		{
+			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(materialID);
+			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
+
+			for (const auto& texturePair : material->textures)
+			{
+				if (shader->textureUniforms.HasUniform(texturePair.uniformID))
+				{
+					VulkanTexture* texture = (VulkanTexture*)texturePair.object;
+					assert(texture != nullptr);
+					imageDescriptors->Add(texturePair.uniformID, ImageDescriptorInfo{ texture->imageView, texture->sampler });
+				}
+			}
+
+			if (shader->textureUniforms.HasUniform(U_DEPTH_SAMPLER))
+			{
+				imageDescriptors->Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
+			}
+
+			if (shader->textureUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
+			{
+				VkImageView ssaoView = ((VulkanTexture*)m_BlankTexture)->imageView;
+				if (m_SSAOSamplingData.enabled)
+				{
+					if (m_bSSAOBlurEnabled)
+					{
+						ssaoView = m_SSAOBlurVFBColourAttachment0->view;
+					}
+					else
+					{
+						ssaoView = m_SSAOFBColourAttachment0->view;
+					}
+				}
+				imageDescriptors->Add(U_SSAO_FINAL_SAMPLER, ImageDescriptorInfo{ ssaoView, m_NearestClampEdgeSampler });
+			}
+
+			if (shader->textureUniforms.HasUniform(U_SHADOW_SAMPLER))
+			{
+				VkImageView imageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : ((VulkanTexture*)m_BlankTextureArr)->imageView;
+				imageDescriptors->Add(U_SHADOW_SAMPLER, ImageDescriptorInfo{ imageView, m_DepthSampler });
+			}
+
+			for (u32 i = 0; i < material->sampledFrameBuffers.size(); ++i)
+			{
+				VkImageView imageView = *static_cast<VkImageView*>(material->sampledFrameBuffers[i].second);
+				imageDescriptors->Add(NextPowerOfTwo(U_FB_0_SAMPLER + i), ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
+			}
+		}
+
 		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID)
 		{
 			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
@@ -5662,7 +5670,7 @@ namespace flex
 			if (shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
 				UniformBuffer const* dynamicBuffer = uniformBufferList->Get(UniformBufferType::DYNAMIC);
-				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBuffer->fullDynamicBufferSize, UniformBufferType::DYNAMIC });
+				descriptors->Add(U_UNIFORM_BUFFER_DYNAMIC, BufferDescriptorInfo{ dynamicBuffer->buffer.m_Buffer, dynamicBuffer->data.unitSize, UniformBufferType::DYNAMIC });
 			}
 
 			if (shader->additionalBufferUniforms.HasUniform(U_PARTICLE_BUFFER))
@@ -5672,304 +5680,19 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateDescriptorSet(RenderID renderID)
+		void VulkanRenderer::CreateDescriptorSets()
 		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject == nullptr)
+			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{
-				return;
-			}
-
-			DescriptorSetCreateInfo createInfo = {};
-
-			char debugName[256];
-			std::string gameObjectName = "";
-			if (renderObject->gameObject != nullptr)
-			{
-				gameObjectName = renderObject->gameObject->GetName();
-			}
-			snprintf(debugName, 256, "Render Object %s (render ID %u) descriptor set", gameObjectName.c_str(), renderID);
-			createInfo.DBG_Name = debugName;
-			// NOTE: Existing descriptor sets get released in CreateDescriptorSet
-			createInfo.descriptorSet = &renderObject->descriptorSet;
-
-			CreateDescriptorSet(createInfo, renderObject->materialID);
-		}
-
-		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID)
-		{
-			assert(createInfo.descriptorSet != nullptr);
-
-			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(materialID);
-			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
-
-			createInfo.descriptorSetLayout = &m_DescriptorSetLayouts[material->shaderID];
-			createInfo.shaderID = material->shaderID;
-			createInfo.uniformBufferList = &material->uniformBufferList;
-
-			for (const auto& texturePair : material->textures)
-			{
-				if (shader->textureUniforms.HasUniform(texturePair.uniformID))
+				if (iter->second->persistent)
 				{
-					VulkanTexture* texture = (VulkanTexture*)texturePair.object;
-					assert(texture != nullptr);
-					createInfo.imageDescriptors.Add(texturePair.uniformID, ImageDescriptorInfo{ texture->imageView, texture->sampler });
-				}
-			}
-
-			if (shader->textureUniforms.HasUniform(U_DEPTH_SAMPLER))
-			{
-				createInfo.imageDescriptors.Add(U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
-			}
-
-			if (shader->textureUniforms.HasUniform(U_SSAO_FINAL_SAMPLER))
-			{
-				VkImageView ssaoView = m_BlankTexture->imageView;
-				if (m_SSAOSamplingData.enabled)
-				{
-					if (m_bSSAOBlurEnabled)
-					{
-						ssaoView = m_SSAOBlurVFBColourAttachment0->view;
-					}
-					else
-					{
-						ssaoView = m_SSAOFBColourAttachment0->view;
-					}
-				}
-				createInfo.imageDescriptors.Add(U_SSAO_FINAL_SAMPLER, ImageDescriptorInfo{ ssaoView, m_NearestClampEdgeSampler });
-			}
-
-			if (shader->textureUniforms.HasUniform(U_SHADOW_SAMPLER))
-			{
-				VkImageView imageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : m_BlankTextureArr->imageView;
-				createInfo.imageDescriptors.Add(U_SHADOW_SAMPLER, ImageDescriptorInfo{ imageView, m_DepthSampler });
-			}
-
-			for (u32 i = 0; i < material->sampledFrameBuffers.size(); ++i)
-			{
-				VkImageView imageView = *static_cast<VkImageView*>(material->sampledFrameBuffers[i].second);
-				createInfo.imageDescriptors.Add(NextPowerOfTwo(U_FB_0_SAMPLER + i), ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
-			}
-
-			FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
-
-			CreateDescriptorSet(&createInfo);
-		}
-
-		void VulkanRenderer::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
-		{
-			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
-			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(m_DescriptorPool, layouts, 1);
-
-			if (*createInfo->descriptorSet != nullptr)
-			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, createInfo->descriptorSet);
-			}
-			// TODO: Optimization: Allocate all required descriptor sets in one call rather than 1 at a time
-			VK_CHECK_RESULT(vkAllocateDescriptorSets(m_VulkanDevice->m_LogicalDevice, &allocInfo, createInfo->descriptorSet));
-
-			Uniforms constantBufferUniforms = m_Shaders[createInfo->shaderID]->constantBufferUniforms;
-			Uniforms dynamicBufferUniforms = m_Shaders[createInfo->shaderID]->dynamicBufferUniforms;
-			Uniforms additionalBufferUniforms = m_Shaders[createInfo->shaderID]->additionalBufferUniforms;
-			Uniforms textureUniforms = m_Shaders[createInfo->shaderID]->textureUniforms;
-
-			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
-
-			u32 binding = 0;
-
-			std::vector<VkDescriptorBufferInfo> bufferInfos(createInfo->bufferDescriptors.Count());
-			u32 i = 0;
-			for (auto& pair : createInfo->bufferDescriptors)
-			{
-				const u64 uniformID = pair.uniformID;
-				const BufferDescriptorInfo& bufferDescInfo = pair.object;
-				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
-				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
-
-				VkDescriptorType type;
-				switch (bufferDescInfo.type)
-				{
-				case UniformBufferType::STATIC:
-					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-					break;
-				case UniformBufferType::DYNAMIC:
-					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-					break;
-				case UniformBufferType::PARTICLE_DATA:
-					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-					break;
-				default:
-					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-					ENSURE_NO_ENTRY();
-					break;
-				}
-
-				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
-				bufferInfo.buffer = pair.object.buffer;
-				bufferInfo.range = pair.object.bufferSize;
-				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, type, binding, &bufferInfo));
-
-				++binding;
-				++i;
-			}
-
-			std::vector<VkDescriptorImageInfo> imageInfos(createInfo->imageDescriptors.Count());
-			i = 0;
-			for (auto& pair : createInfo->imageDescriptors)
-			{
-				const u64 uniformID = pair.uniformID;
-				assert(textureUniforms.HasUniform(uniformID));
-				const ImageDescriptorInfo& imageDescInfo = pair.object;
-
-				VkDescriptorImageInfo& imageInfo = imageInfos[i];
-				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				if (imageDescInfo.imageView != VK_NULL_HANDLE)
-				{
-					imageInfo.imageView = imageDescInfo.imageView;
-					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
-					{
-						imageInfo.sampler = imageDescInfo.imageSampler;
-					}
-					else
-					{
-						imageInfo.sampler = m_LinMipLinSampler;
-					}
+					m_DescriptorPoolPersistent->CreateDescriptorSet(iter->first);
 				}
 				else
 				{
-					imageInfo.imageView = m_BlankTexture->imageView;
-					imageInfo.sampler = m_BlankTexture->sampler;
-				}
-				writeDescriptorSets.push_back(vks::writeDescriptorSet(*createInfo->descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
-
-				++binding;
-				++i;
-			}
-
-			if (!writeDescriptorSets.empty())
-			{
-				vkUpdateDescriptorSets(m_VulkanDevice->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
-			}
-
-			if (createInfo->DBG_Name)
-			{
-				SetDescriptorSetName(m_VulkanDevice, *createInfo->descriptorSet, createInfo->DBG_Name);
-			}
-		}
-
-		void VulkanRenderer::CreateDescriptorSetLayout(ShaderID shaderID)
-		{
-			m_DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VkDescriptorSetLayout* descriptorSetLayout = &m_DescriptorSetLayouts.back();
-
-			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
-
-			struct DescriptorSetInfo
-			{
-				u64 uniform;
-				VkDescriptorType descriptorType;
-				VkShaderStageFlags shaderStageFlags;
-			};
-
-			// TODO: Specify stage flags per shader
-			static DescriptorSetInfo descriptorSets[] = {
-				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
-
-				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
-
-				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_FB_0_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VK_SHADER_STAGE_FRAGMENT_BIT },
-
-				{ U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
-				VK_SHADER_STAGE_COMPUTE_BIT },
-			};
-
-			std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-			for (DescriptorSetInfo& descSetInfo : descriptorSets)
-			{
-				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
-					shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniform) ||
-					shader->additionalBufferUniforms.HasUniform(descSetInfo.uniform) ||
-					shader->textureUniforms.HasUniform(descSetInfo.uniform))
-				{
-					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
-					descSetLayoutBinding.binding = (u32)bindings.size();
-					descSetLayoutBinding.descriptorCount = 1;
-					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
-					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
-					bindings.push_back(descSetLayoutBinding);
+					m_DescriptorPool->CreateDescriptorSet(iter->first);
 				}
 			}
-
-			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
-
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(m_VulkanDevice->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
 		}
 
 		MaterialID VulkanRenderer::GetRenderObjectMaterialID(RenderID renderID)
@@ -6050,8 +5773,6 @@ namespace flex
 			{
 				GraphicsPipelineID pipelineID = iter->second;
 				GraphicsPipelineConfiguration* pipelineConfig = m_GraphicsPipelines[pipelineID];
-
-				Print("Graphics pipeline %lu is now used by %u objects\n", pipelineID, pipelineConfig->usageCount);
 
 				outPipelineID = pipelineConfig->pipelineID;
 
@@ -6196,7 +5917,15 @@ namespace flex
 			colorBlending.blendConstants[2] = 0.0f;
 			colorBlending.blendConstants[3] = 0.0f;
 
-			VkDescriptorSetLayout setLayout = m_DescriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+			VkDescriptorSetLayout setLayout;
+			if (createInfo->bPersistent)
+			{
+				setLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+			}
+			else
+			{
+				setLayout = m_DescriptorPool->descriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+			}
 			VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &setLayout);
 			pipelineLayoutInfo.pushConstantRangeCount = createInfo->pushConstantRangeCount;
 			pipelineLayoutInfo.pPushConstantRanges = createInfo->pushConstants;
@@ -6283,7 +6012,7 @@ namespace flex
 					bool bFoundHash = false;
 					for (auto iter2 = m_GraphicsPipelineHashes.begin(); iter2 != m_GraphicsPipelineHashes.end(); ++iter2)
 					{
-						if (iter2->first == pipelineID)
+						if (iter2->second == pipelineID)
 						{
 							m_GraphicsPipelineHashes.erase(iter2);
 							bFoundHash = true;
@@ -6541,7 +6270,7 @@ namespace flex
 			linMipLinSamplerCreateInfo.minLod = 0.0f;
 			linMipLinSamplerCreateInfo.maxLod = 1.0f;
 			linMipLinSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &linMipLinSamplerCreateInfo, nullptr, m_LinMipLinSampler.replace()));
+			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &linMipLinSamplerCreateInfo, nullptr, &m_LinMipLinSampler));
 			SetSamplerName(m_VulkanDevice, m_LinMipLinSampler, "Lin Mip Lin sampler");
 
 			VkSamplerCreateInfo depthSamplerCreateInfo = vks::samplerCreateInfo();
@@ -6968,23 +6697,6 @@ namespace flex
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 		}
 
-		void VulkanRenderer::CreateDescriptorPool()
-		{
-			std::vector<VkDescriptorPoolSize> poolSizes
-			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
-			};
-
-			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, MAX_NUM_DESC_SETS);
-			// TODO: Avoid using this flag at all
-			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed individually
-
-			VK_CHECK_RESULT(vkCreateDescriptorPool(m_VulkanDevice->m_LogicalDevice, &poolInfo, nullptr, m_DescriptorPool.replace()));
-		}
-
 		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount /* = -1 */)
 		{
 			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
@@ -7298,8 +7010,14 @@ namespace flex
 					matID = drawCallInfo->materialIDOverride;
 				}
 
+				// TODO: Check persistance
+
 				VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
 				VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
+
+				VkDescriptorSet descriptorSet = material->persistent ?
+					m_DescriptorPoolPersistent->descriptorSets[matID] :
+					m_DescriptorPool->descriptorSets[matID];
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
@@ -7308,7 +7026,6 @@ namespace flex
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(renderObject->graphicsPipelineID)->pipeline;
 					VkPipeline graphicsPipeline = pipeline->pipeline;
 					VkPipelineLayout pipelineLayout = pipeline->layout;
-					VkDescriptorSet descriptorSet = renderObject->descriptorSet;
 					u32 dynamicUBOOffset = renderObject->dynamicUBOOffset;
 
 					if (drawCallInfo)
@@ -7331,7 +7048,39 @@ namespace flex
 						{
 							VulkanMaterial* objectMaterial = (VulkanMaterial*)m_Materials[matBatch.materialID];
 							VulkanShader* objectShader = (VulkanShader*)m_Shaders[objectMaterial->shaderID];
-							graphicsPipeline = GetOrCreateWireframePipeline(objectShader->vertexAttributes)->pipeline->pipeline;
+
+							auto pipelineIter = m_WireframeGraphicsPipelines.find(objectShader->vertexAttributes);
+							if (pipelineIter != m_WireframeGraphicsPipelines.end())
+							{
+								graphicsPipeline = pipelineIter->second->pipeline->pipeline;
+							}
+							else
+							{
+								// Create wireframe pipeline for given vertex attributes
+								VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+								VulkanShader* wireframeShader = (VulkanShader*)m_Shaders[wireframeMaterial->shaderID];
+
+								GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
+								GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+								pipelineCreateInfo.DBG_Name = "Wireframe pipeline";
+								pipelineCreateInfo.shaderID = wireframeMaterial->shaderID;
+								pipelineCreateInfo.vertexAttributes = objectShader->vertexAttributes;
+								pipelineCreateInfo.descriptorSetLayoutIndex = wireframeMaterial->descriptorSetLayoutIndex;
+								pipelineCreateInfo.bEnableColourBlending = wireframeShader->bTranslucent;
+								pipelineCreateInfo.subpass = 0;
+								pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
+								pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+								pipelineCreateInfo.depthTestEnable = false;
+								pipelineCreateInfo.depthWriteEnable = wireframeShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+								pipelineCreateInfo.renderPass = wireframeShader->renderPass;
+								pipelineCreateInfo.bPersistent = true;
+								CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
+								GraphicsPipelineConfiguration* newWireframePipeline = GetGraphicsPipeline(pipelineID);
+
+								m_WireframeGraphicsPipelines[objectShader->vertexAttributes] = newWireframePipeline;
+								graphicsPipeline = newWireframePipeline->pipeline->pipeline;
+							}
+
 							pipelineLayout = m_WireframePipelineLayout;
 							descriptorSet = m_WireframeDescSet;
 						}
@@ -7623,7 +7372,7 @@ namespace flex
 						VkRect2D ssaoBlurScissor = vks::scissor(0u, 0u, m_SSAOBlurHFBColourAttachment0->width, m_SSAOBlurHFBColourAttachment0->height);
 						vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &ssaoBlurScissor);
 
-						BindDescriptorSet(ssaoBlurMat, 0 * m_DynamicAlignment, m_OffScreenCmdBuffer, blurHPipeline->layout, m_SSAOBlurHDescSet);
+						BindDescriptorSet(ssaoBlurMat, 0, m_OffScreenCmdBuffer, blurHPipeline->layout, m_SSAOBlurHDescSet);
 
 						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 
@@ -7642,7 +7391,7 @@ namespace flex
 						GraphicsPipeline* blurVPipeline = GetGraphicsPipeline(m_SSAOBlurVGraphicsPipelineID)->pipeline;
 						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blurVPipeline->pipeline);
 
-						BindDescriptorSet(ssaoBlurMat, 1 * m_DynamicAlignment, m_OffScreenCmdBuffer, blurVPipeline->layout, m_SSAOBlurVDescSet);
+						BindDescriptorSet(ssaoBlurMat, 0, m_OffScreenCmdBuffer, blurVPipeline->layout, m_SSAOBlurVDescSet);
 
 						overrides.bSSAOVerticalPass = true;
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
@@ -7756,9 +7505,10 @@ namespace flex
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
+				VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->descriptorSets[gBufferObject->materialID];
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(gBufferObject->graphicsPipelineID)->pipeline;
 				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, gBufferObject->materialID,
-					pipeline->layout, pipeline->pipeline, gBufferObject->descriptorSet, true);
+					pipeline->layout, pipeline->pipeline, descriptorSet, true);
 
 				EndDebugMarkerRegion(commandBuffer, "End Shade deferred");
 			}
@@ -8269,15 +8019,16 @@ namespace flex
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i);
 			}
 
 			for (auto& iter : m_SpriteDescSets)
 			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
 				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
 			}
+
+			CreateDescriptorSets();
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
@@ -9077,21 +8828,22 @@ namespace flex
 
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				CreateDescriptorSet(i);
 				CreateGraphicsPipeline(i);
 			}
 
 			for (auto& iter : m_SpriteDescSets)
 			{
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPool, 1, &(iter.second.descSet));
+				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
 				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
 			}
+
+			CreateDescriptorSets();
 
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
-			CreateWireframeDescriptorSets();
 			DestroyWireframePipelines();
+			CreateWireframeDescriptorSets();
 
 			InitializeAllParticleSystemBuffers();
 

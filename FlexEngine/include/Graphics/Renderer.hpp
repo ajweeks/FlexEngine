@@ -326,6 +326,10 @@ namespace flex
 		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 
+		Texture* m_BlankTexture = nullptr;
+		Texture* m_BlankTextureArr = nullptr;
+		Texture* m_NoiseTexture = nullptr;
+
 	protected:
 		void LoadShaders();
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
