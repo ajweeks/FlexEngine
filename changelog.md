@@ -2,6 +2,10 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_March_
+- Refactor graphics pipeline & descriptor set creation to be much more efficient
+- Optimize & multithread terrain generation
+
 _February_
 - Add support for road generation
 - Add sounds for vehicle motor
