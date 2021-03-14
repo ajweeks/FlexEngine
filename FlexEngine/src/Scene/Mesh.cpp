@@ -649,7 +649,7 @@ namespace flex
 
 	MaterialID Mesh::GetMaterialID(u32 slotIndex)
 	{
-		return m_Meshes[slotIndex]->GetMaterialID();
+		return m_Meshes[slotIndex] != nullptr ? m_Meshes[slotIndex]->GetMaterialID() : InvalidMaterialID;
 	}
 
 	RenderID Mesh::GetRenderID(u32 slotIndex)

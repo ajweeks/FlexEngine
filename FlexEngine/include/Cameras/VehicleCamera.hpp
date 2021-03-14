@@ -43,8 +43,8 @@ namespace flex
 
 		real m_ClosestDist = 10.0f;
 		real m_FurthestDist = 14.0f;
-		real m_MaxDownwardAngle = 0.65f; // Angle which is used when vehicle is at min speed
-		real m_MinDownwardAngle = 0.4f; // Angle which is used when vehicle is at max speed
+		real m_MaxDownwardAngle = 0.35f; // Angle which is used when vehicle is at min speed
+		real m_MinDownwardAngle = 0.2f; // Angle which is used when vehicle is at max speed
 		real m_MinSpeed = 2.0f; // Distance at which when begin zooming out
 		real m_MaxSpeed = 15.0f; // Distance at which we're the furthest zoomed out
 

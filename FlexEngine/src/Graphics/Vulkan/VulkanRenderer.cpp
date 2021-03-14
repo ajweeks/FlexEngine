@@ -236,8 +236,6 @@ namespace flex
 			m_DepthSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 			m_NearestClampEdgeSampler = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 
-			m_WireframePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
-
 			m_ParticleSimulationComputePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
 			m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
@@ -791,7 +789,6 @@ namespace flex
 			m_ShadowImageMemory.replace();
 
 			DestroyWireframePipelines();
-			m_WireframePipelineLayout.replace();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
 
@@ -7052,7 +7049,7 @@ namespace flex
 							auto pipelineIter = m_WireframeGraphicsPipelines.find(objectShader->vertexAttributes);
 							if (pipelineIter != m_WireframeGraphicsPipelines.end())
 							{
-								graphicsPipeline = pipelineIter->second->pipeline->pipeline;
+								pipeline = pipelineIter->second->pipeline;
 							}
 							else
 							{
@@ -7078,10 +7075,11 @@ namespace flex
 								GraphicsPipelineConfiguration* newWireframePipeline = GetGraphicsPipeline(pipelineID);
 
 								m_WireframeGraphicsPipelines[objectShader->vertexAttributes] = newWireframePipeline;
-								graphicsPipeline = newWireframePipeline->pipeline->pipeline;
+								pipeline = newWireframePipeline->pipeline;
 							}
 
-							pipelineLayout = m_WireframePipelineLayout;
+							graphicsPipeline = pipeline->pipeline;
+							pipelineLayout = pipeline->layout;
 							descriptorSet = m_WireframeDescSet;
 						}
 						if (drawCallInfo->bCalculateDynamicUBOOffset)

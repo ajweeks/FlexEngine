@@ -3017,7 +3017,6 @@ namespace flex
 			VK_CHECK_RESULT(vkAllocateDescriptorSets(device->m_LogicalDevice, &allocInfo, &descriptorSet));
 
 			++allocatedSetCount;
-			Print("Allocated %u desc sets (%d slots)\n", allocatedSetCount, descriptorSets.size());
 
 			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
 

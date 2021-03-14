@@ -570,7 +570,6 @@ namespace flex
 
 			// Maps vertex attributes to pipeline
 			std::map<VertexAttributes, GraphicsPipelineConfiguration*> m_WireframeGraphicsPipelines;
-			VDeleter<VkPipelineLayout> m_WireframePipelineLayout;
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;

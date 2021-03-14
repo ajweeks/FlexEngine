@@ -1395,45 +1395,46 @@ namespace flex
 
 			object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
 
-			if (m_Mesh &&
-				m_bSerializeMesh &&
-				!m_PrefabIDLoadedFrom.IsValid())
+			if (m_Mesh != nullptr)
 			{
-				object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
-			}
-
-			if (m_Mesh)
-			{
-				std::vector<JSONField> materialFields;
-				for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
+				if (m_bSerializeMesh && !m_PrefabIDLoadedFrom.IsValid())
 				{
-					MaterialID matID = InvalidMaterialID;
-					if (m_Mesh)
-					{
-						matID = m_Mesh->GetMaterialID(slotIndex);
-					}
+					object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
+				}
 
-					if (matID != InvalidMaterialID)
+				if (m_bSerializeMaterial)
+				{
+					std::vector<JSONField> materialFields;
+					for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
 					{
-						Material* material = g_Renderer->GetMaterial(matID);
-						if (material->bSerializable)
+						MaterialID matID = InvalidMaterialID;
+						if (m_Mesh)
 						{
-							std::string materialName = material->name;
-							if (!materialName.empty())
+							matID = m_Mesh->GetMaterialID(slotIndex);
+						}
+
+						if (matID != InvalidMaterialID)
+						{
+							Material* material = g_Renderer->GetMaterial(matID);
+							if (material->bSerializable)
 							{
-								materialFields.emplace_back(materialName, JSONValue(""));
-							}
-							else
-							{
-								PrintWarn("Game object contains material with empty material name!\n");
+								std::string materialName = material->name;
+								if (!materialName.empty())
+								{
+									materialFields.emplace_back(materialName, JSONValue(""));
+								}
+								else
+								{
+									PrintWarn("Game object contains material with empty material name!\n");
+								}
 							}
 						}
 					}
-				}
 
-				if (!materialFields.empty())
-				{
-					object.fields.emplace_back("materials", JSONValue(materialFields));
+					if (!materialFields.empty())
+					{
+						object.fields.emplace_back("materials", JSONValue(materialFields));
+					}
 				}
 			}
 
@@ -4064,6 +4065,7 @@ namespace flex
 		GameObject(name, SID("gerstner wave"), gameObjectID)
 	{
 		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 		wave_workQueue = new ThreadSafeArray<WaveGenData>(32);
 
 		// Defaults to use if not set in file
@@ -7018,6 +7020,7 @@ namespace flex
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 		terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
 	}
 
@@ -7177,6 +7180,8 @@ namespace flex
 			}
 		}
 
+		bRegen = ImGui::SliderFloat("Base octave scale", &m_BaseOctave, 1.0f, 400.0f) || bRegen;
+
 		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
 		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
 		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
@@ -7184,7 +7189,7 @@ namespace flex
 		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
 
 		u32 oldtableWidth = m_BasePerlinTableWidth;
-		if (ImGuiExt::InputUInt("Base table width", &m_BasePerlinTableWidth, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 1, 512))
 		{
 			m_BasePerlinTableWidth = NextPowerOfTwo(m_BasePerlinTableWidth);
 			if (m_BasePerlinTableWidth != oldtableWidth)
@@ -7205,6 +7210,7 @@ namespace flex
 			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
 		}
 
+		const u32 previousVertCountPerChunkAxis = VertCountPerChunkAxis;
 		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
 
 		if (VertCountPerChunkAxis > 2)
@@ -7224,11 +7230,9 @@ namespace flex
 			VertCountPerChunkAxis *= 2;
 		}
 
-		bRegen = ImGui::InputFloat("Chunk size", &ChunkSize, 0.1f, 1.0f, "%.0f", ImGuiInputTextFlags_EnterReturnsTrue) || bRegen;
+		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 1.0f, 128.0f) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 512.0f) || bRegen;
-
-		bRegen = ImGui::SliderFloat("octave", &m_BaseOctave, 1.0f, 2048.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 500.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
@@ -7238,9 +7242,31 @@ namespace flex
 		{
 			GenerateGradients();
 			DestroyAllChunks();
+
+			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			{
+				(*terrain_workQueue)[i].baseOctave = m_BaseOctave;
+				(*terrain_workQueue)[i].chunkSize = ChunkSize;
+				(*terrain_workQueue)[i].maxHeight = MaxHeight;
+				(*terrain_workQueue)[i].octaveScale = m_OctaveScale;
+				(*terrain_workQueue)[i].numOctaves = m_NumOctaves;
+				(*terrain_workQueue)[i].vertCountPerChunkAxis = VertCountPerChunkAxis;
+				(*terrain_workQueue)[i].isolateOctave = m_IsolateOctave;
+
+				(*terrain_workQueue)[i].randomTables = &m_RandomTables;
+			}
+
+			if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
+			{
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					FreeWorkQueueEntry(i);
+					AllocWorkQueueEntry(i);
+				}
+			}
 		}
 
-		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 8192.0f);
+		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 3000.0f);
 	}
 
 	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -7601,7 +7627,7 @@ namespace flex
 				{
 					for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
 					{
-						real height = vertexBufferCreateInfo.positions_3D[vertIndex].y / MaxHeight;
+						real height = vertexBufferCreateInfo.positions_3D[vertIndex].y / MaxHeight + 0.5f;
 						vertexBufferCreateInfo.texCoords_UV[vertIndex] = glm::vec2(x / (real)VertCountPerChunkAxis, z / (real)VertCountPerChunkAxis);
 						vertexBufferCreateInfo.colours_R32G32B32A32[vertIndex] = glm::vec4(height, height, height, 1.0f);
 
@@ -7737,7 +7763,7 @@ namespace flex
 						glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
 						real height = SampleTerrain(work, sampleCenter);
 
-						vertPosWS.y = height * maxHeight;
+						vertPosWS.y = (height - 0.5f) * maxHeight;
 
 						const real e = 0.01f;
 						real heightDX = (SampleTerrain(work, sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(work, sampleCenter + glm::vec2(e, 0.0f))) * maxHeight;
@@ -9810,6 +9836,7 @@ namespace flex
 		GameObject(name, SID("road"), gameObjectID)
 	{
 		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 	}
 
 	void Road::Initialize()

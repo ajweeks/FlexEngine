@@ -337,6 +337,7 @@ namespace flex
 		bool m_bIsTemplate = false;
 
 		bool m_bSerializeMesh = true;
+		bool m_bSerializeMaterial = true;
 
 		// Editor only
 		bool m_bUniformScale = false;
