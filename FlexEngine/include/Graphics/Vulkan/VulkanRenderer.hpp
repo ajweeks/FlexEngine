@@ -432,7 +432,6 @@ namespace flex
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
-				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
 
 			const std::vector<const char*> m_RequiredInstanceExtensions =
@@ -465,7 +464,7 @@ namespace flex
 #else
 			const bool m_bEnableValidationLayers = true;
 			const bool m_bEnableGPUAssistanceValidationFeature = true;
-			const bool m_bEnableBestPracticesValidationFeature = true;
+			const bool m_bEnableBestPracticesValidationFeature = false;
 #endif
 
 			bool m_bShaderErrorWindowShowing = true;
