@@ -134,7 +134,7 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
-		GameObject* GetGameObject(const GameObjectID& gameObjectID);
+		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
 
 		bool GameObjectIDField(const char* label, GameObjectID& ID);
 

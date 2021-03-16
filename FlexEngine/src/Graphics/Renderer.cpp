@@ -551,12 +551,15 @@ namespace flex
 
 	void Renderer::RemovePointLight(PointLightID ID)
 	{
-		if (m_PointLights[ID].colour.x != -1.0f)
+		if (ID != InvalidPointLightID)
 		{
-			m_PointLights[ID].colour = VEC4_NEG_ONE;
-			m_PointLights[ID].enabled = 0;
-			m_NumPointLightsEnabled--;
-			assert(m_NumPointLightsEnabled >= 0);
+			if (m_PointLights[ID].colour.x != -1.0f)
+			{
+				m_PointLights[ID].colour = VEC4_NEG_ONE;
+				m_PointLights[ID].enabled = 0;
+				m_NumPointLightsEnabled--;
+				assert(m_NumPointLightsEnabled >= 0);
+			}
 		}
 	}
 

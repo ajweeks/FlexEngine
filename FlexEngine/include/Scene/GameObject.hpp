@@ -372,6 +372,7 @@ namespace flex
 	{
 	public:
 		DirectionalLight();
+		DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation);
 		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
@@ -382,11 +383,6 @@ namespace flex
 		virtual void OnTransformChanged() override;
 
 		bool operator==(const DirectionalLight& other);
-
-		void SetPos(const glm::vec3& newPos);
-		glm::vec3 GetPos() const;
-		void SetRot(const glm::quat& newRot);
-		glm::quat GetRot() const;
 
 		DirLightData data;
 
@@ -418,9 +414,6 @@ namespace flex
 		virtual void OnTransformChanged() override;
 
 		bool operator==(const PointLight& other);
-
-		void SetPos(const glm::vec3& pos);
-		glm::vec3 GetPos() const;
 
 		PointLightData data;
 		PointLightID pointLightID = InvalidPointLightID;

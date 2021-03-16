@@ -473,10 +473,8 @@ namespace flex
 #endif
 
 		// Default directional light
-		DirectionalLight* dirLight = new DirectionalLight();
+		DirectionalLight* dirLight = new DirectionalLight("Directional light", glm::vec3(0.0f, 15.0f, 0.0f), glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
 		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
-		dirLight->SetRot(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
-		dirLight->SetPos(glm::vec3(0.0f, 15.0f, 0.0f));
 		dirLight->data.brightness = 3.0f;
 		dirLight->Initialize();
 		dirLight->PostInitialize();
@@ -1632,7 +1630,7 @@ namespace flex
 		return newPrefabInstance;
 	}
 
-	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID)
+	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID) const
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
 		if (iter == m_GameObjectLUT.end())

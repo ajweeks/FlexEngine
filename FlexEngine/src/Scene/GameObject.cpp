@@ -3154,6 +3154,20 @@ namespace flex
 	{
 	}
 
+	DirectionalLight::DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation) :
+		GameObject(name, SID("directional light"), InvalidGameObjectID)
+	{
+		m_Transform.SetWorldPosition(initialPos);
+
+		data.enabled = m_bVisible ? 1 : 0;
+		data.dir = glm::rotate(initialOrientation, VEC3_RIGHT);
+		data.colour = VEC3_ONE;
+		data.brightness = 1.0f;
+		data.castShadows = 1;
+		data.shadowDarkness = 1.0f;
+		data.pad[0] = data.pad[1] = 0;
+	}
+
 	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("directional light"), gameObjectID)
 	{
@@ -3297,21 +3311,6 @@ namespace flex
 		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
 	}
 
-	void DirectionalLight::SetPos(const glm::vec3& newPos)
-	{
-		m_Transform.SetLocalPosition(newPos);
-	}
-
-	glm::vec3 DirectionalLight::GetPos() const
-	{
-		return m_Transform.GetWorldPosition();
-	}
-
-	glm::quat DirectionalLight::GetRot() const
-	{
-		return m_Transform.GetWorldRotation();
-	}
-
 	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
@@ -3389,12 +3388,6 @@ namespace flex
 			other.data.brightness == data.brightness;
 	}
 
-	void DirectionalLight::SetRot(const glm::quat& newRot)
-	{
-		m_Transform.SetWorldRotation(newRot);
-		data.dir = glm::rotate(newRot, VEC3_RIGHT);
-	}
-
 	PointLight::PointLight(BaseScene* scene) :
 		PointLight(scene->GetUniqueObjectName("PointLight_", 2))
 	{
@@ -3404,7 +3397,7 @@ namespace flex
 		GameObject(name, SID("point light"), gameObjectID)
 	{
 		data.enabled = 1;
-		data.pos = VEC4_ZERO;
+		data.pos = m_Transform.GetWorldPosition();
 		data.colour = VEC4_ONE;
 		data.brightness = 500.0f;
 	}
@@ -3462,35 +3455,41 @@ namespace flex
 			}
 		}
 
-		if (data.enabled && g_EngineInstance->IsRenderingEditorObjects())
+		if (data.enabled)
 		{
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			data.pos = m_Transform.GetWorldPosition();
+			g_Renderer->UpdatePointLightData(pointLightID, &data);
 
-			if (!cam->bIsGameplayCam)
+			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				const real minSpriteDist = 1.5f;
-				const real maxSpriteDist = 3.0f;
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
 
-				glm::vec3 scale(1.0f, -1.0f, 1.0f);
+				if (!cam->bIsGameplayCam)
+				{
+					const real minSpriteDist = 1.5f;
+					const real maxSpriteDist = 3.0f;
 
-				SpriteQuadDrawInfo drawInfo = {};
-				drawInfo.bScreenSpace = false;
-				drawInfo.bReadDepth = true;
-				drawInfo.bWriteDepth = true;
-				drawInfo.scale = scale;
-				drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
+					glm::vec3 scale(1.0f, -1.0f, 1.0f);
 
-				glm::vec3 camPos = cam->position;
-				glm::vec3 camUp = cam->up;
+					SpriteQuadDrawInfo drawInfo = {};
+					drawInfo.bScreenSpace = false;
+					drawInfo.bReadDepth = true;
+					drawInfo.bWriteDepth = true;
+					drawInfo.scale = scale;
+					drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
 
-				drawInfo.textureID = g_Renderer->pointLightIconID;
-				// TODO: Sort back to front? Or clear depth and then enable depth test
-				drawInfo.pos = data.pos;
-				glm::mat4 rotMat = glm::lookAt(drawInfo.pos, camPos, camUp);
-				drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
-				real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
-				drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
-				g_Renderer->EnqueueSprite(drawInfo);
+					glm::vec3 camPos = cam->position;
+					glm::vec3 camUp = cam->up;
+
+					drawInfo.textureID = g_Renderer->pointLightIconID;
+					// TODO: Sort back to front? Or clear depth and then enable depth test
+					drawInfo.pos = data.pos;
+					glm::mat4 rotMat = glm::lookAt(drawInfo.pos, camPos, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
+					drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
+					g_Renderer->EnqueueSprite(drawInfo);
+				}
 			}
 		}
 
@@ -3546,26 +3545,11 @@ namespace flex
 
 	void PointLight::OnTransformChanged()
 	{
-		data.pos = m_Transform.GetLocalPosition();
+		data.pos = m_Transform.GetWorldPosition();
 		if (pointLightID != InvalidPointLightID)
 		{
 			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
-	}
-
-	void PointLight::SetPos(const glm::vec3& pos)
-	{
-		m_Transform.SetLocalPosition(pos);
-		data.pos = pos;
-		if (pointLightID != InvalidPointLightID)
-		{
-			g_Renderer->UpdatePointLightData(pointLightID, &data);
-		}
-	}
-
-	glm::vec3 PointLight::GetPos() const
-	{
-		return m_Transform.GetWorldPosition();
 	}
 
 	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
