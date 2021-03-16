@@ -107,6 +107,7 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 
 void main()
 {
+	// TODO:!!!
 	vec4 res = vec4(1842, 1057, 1.0/1842, 1.0/1057);
 	// Get screen coord in range [-1, 1]
 	vec2 screenCoordN = (2.0 * gl_FragCoord.xy - res.xy) * res.zw;// uboConstant.screenSize.zw;

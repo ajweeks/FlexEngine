@@ -1723,8 +1723,20 @@ namespace flex
 			(u32)VertexAttribute::NORMAL;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CAM_POS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
+		// TODO:
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
+
+		//m_Shaders[shaderID]->textureUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);

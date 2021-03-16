@@ -175,6 +175,7 @@ void main()
     float depth = texture(depthBuffer, ex_TexCoord).r;
     vec3 viewPos = ReconstructVSPosFromDepth(ex_TexCoord, depth);
     vec3 worldPos = ReconstructWSPosFromDepth(ex_TexCoord, depth);
+    // TODO: ?
     float depthN = viewPos.z*(1/48.0);
 	
     float invDist = 1.0f/(uboConstant.zFar-uboConstant.zNear);
