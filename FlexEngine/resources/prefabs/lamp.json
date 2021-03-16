@@ -1,0 +1,40 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "A1C03DF3CCA893B2427F6A4A5EB79F51",
+	"root" : 
+	{
+		"name" : "lamp",
+		"id" : "D381E3A9A3CF079E405027703FC50B41",
+		"type" : "object",
+		"transform" : 
+		{
+			"pos" : "6.866, 1.271, 0.000"
+		},
+		"visible" : true,
+		"casts shadow" : true,
+		"mesh" : "lamp.glb",
+		"materials" : 
+		[
+			"pbr grey",
+			"pbr light grey"
+		],
+		"children" : 
+		[
+			{
+				"name" : "LampPointLight1",
+				"id" : "E32DBAC020CA37B94C3680AD4F4C3119",
+				"type" : "point light",
+				"visible" : true,
+				"casts shadow" : true,
+				"point light info" : 
+				{
+					"pos" : "0.000, 0.000, 0.000",
+					"colour" : "1.00, 1.00, 1.00",
+					"enabled" : true,
+					"brightness" : 500.000000
+				}
+			}
+		]
+	}
+}
