@@ -413,6 +413,7 @@ namespace flex
 		char fileBuf[MAX_FILE_PATH_LEN];
 		memset(fileBuf + MAX_FILE_PATH_LEN - 1, '\0', 1);
 		openFileName.lpstrFile = fileBuf;
+		openFileName.lpstrFile[0] = '\0';
 		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
 		openFileName.lpstrTitle = windowTitle.c_str();
 		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
