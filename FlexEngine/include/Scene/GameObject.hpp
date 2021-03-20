@@ -76,8 +76,9 @@ namespace flex
 			RIGIDBODY				= (1 << 2),
 			ADD_TO_SCENE			= (1 << 3),
 			CREATE_RENDER_OBJECT	= (1 << 4),
+			COPYING_TO_PREFAB		= (1 << 5),
 
-			ALL = 0xFFFFFFFF,
+			ALL = 0xFFFFFFFF & ~COPYING_TO_PREFAB,
 			_NONE = 0
 		};
 
@@ -129,6 +130,8 @@ namespace flex
 		virtual bool AllowInteractionWith(GameObject* gameObject);
 		virtual void SetInteractingWith(GameObject* gameObject);
 
+		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
+
 		bool IsBeingInteractedWith() const;
 
 		// Returns true if this object was deleted or duplicated
@@ -138,10 +141,16 @@ namespace flex
 		const Transform* GetTransform() const;
 
 		bool DrawImGuiDuplicateGameObjectButton();
+		void SaveAsPrefab();
+		// Overwrite new object's children's IDs with matching previous IDs
+		// Child hierarchy is assumed to match exactly
+		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);
 
 		GameObject* GetObjectInteractingWith();
 
-		JSONObject Serialize(const BaseScene* scene, bool bSerializePrefabData = false) const;
+		JSONObject Serialize(const BaseScene* scene,
+			bool bIsRoot = false,
+			bool bSerializePrefabData = false) const;
 
 		void RemoveRigidBody();
 
@@ -184,6 +193,7 @@ namespace flex
 
 
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
+		GameObject* GetChild(u32 childIndex);
 
 		void UpdateSiblingIndices(i32 myIndex);
 		i32 GetSiblingIndex() const;
@@ -282,6 +292,9 @@ namespace flex
 
 		bool GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const;
 		bool GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const;
+
+		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID);
+
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -1336,6 +1349,8 @@ namespace flex
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;
+
+		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject) override;
 
 		enum class SoundEffect
 		{

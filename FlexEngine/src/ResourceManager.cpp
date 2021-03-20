@@ -1095,7 +1095,7 @@ namespace flex
 		std::string prefabIDStr = prefabID.ToString();
 		prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 
-		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true);
+		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
 		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
 
 		std::string fileContents = prefabJSON.Print(0);

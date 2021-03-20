@@ -868,7 +868,7 @@ namespace flex
 
 		std::string prefix = existingName.substr(0, existingName.length() - digits);
 
-		i32 newIndex = existingIndex + 1;
+		i32 newIndex = existingIndex;
 		bool bNameTaken = true;
 		std::string name;
 		while (bNameTaken)
@@ -1791,7 +1791,7 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				objectsArray.push_back(rootObject->Serialize(this));
+				objectsArray.push_back(rootObject->Serialize(this, true));
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
@@ -1934,14 +1934,7 @@ namespace flex
 	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID)
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
-		if (iter == m_GameObjectLUT.end())
-		{
-			// Silently fail (this case is hit with e.g. editor gizmo objects that aren't ever registered)
-
-			//std::string idStr = gameObjectID.ToString();
-			//PrintError("Attempted to unregister non-registered object with ID %s\n", idStr.c_str());
-		}
-		else
+		if (iter != m_GameObjectLUT.end())
 		{
 			m_GameObjectLUT.erase(iter);
 		}

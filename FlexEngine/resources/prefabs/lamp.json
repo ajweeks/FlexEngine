@@ -7,10 +7,6 @@
 		"name" : "lamp",
 		"id" : "D381E3A9A3CF079E405027703FC50B41",
 		"type" : "object",
-		"transform" : 
-		{
-			"pos" : "6.866, 1.271, 0.000"
-		},
 		"visible" : true,
 		"casts shadow" : true,
 		"mesh" : "lamp.glb",
