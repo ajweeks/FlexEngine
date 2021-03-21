@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -152,7 +153,7 @@ namespace flex
 
 	void OverheadCamera::FindPlayer()
 	{
-		m_Player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 	}
 
 	void OverheadCamera::ResetValues()

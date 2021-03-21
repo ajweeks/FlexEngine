@@ -1025,6 +1025,8 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) const override;
 
+		real Sample(const glm::vec2& pos);
+
 		struct TerrainChunkData
 		{
 			// General info
@@ -1458,6 +1460,7 @@ namespace flex
 		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 		virtual void DrawImGuiObjects() override;
@@ -1490,6 +1493,9 @@ namespace flex
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 
 		u32 m_QuadCountPerSegment = 10;
+
+		// Non-serialized fields
+		GameObjectID m_TerrainGameObjectID = InvalidGameObjectID;
 
 	};
 } // namespace flex

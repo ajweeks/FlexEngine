@@ -62,7 +62,7 @@ namespace flex
 
 		Mode m_Mode = Mode::FIRST_PERSON;
 		i32 m_PlayerIndex = -1;
-		Player* m_Player = nullptr;
+		Player* m_Player = nullptr; // TODO: Store as GameObjectID
 
 
 	};

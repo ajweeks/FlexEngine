@@ -7084,6 +7084,7 @@ namespace flex
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
+		AddTag("terrain");
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
 		terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
@@ -7389,6 +7390,18 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
+	}
+
+	real TerrainGenerator::Sample(const glm::vec2& pos)
+	{
+		TerrainGenerator::TerrainChunkData chunkData = {};
+		chunkData.baseOctave = m_BaseOctave;
+		chunkData.numOctaves = m_NumOctaves;
+		chunkData.isolateOctave = m_IsolateOctave;
+		chunkData.octaveScale = m_OctaveScale;
+		chunkData.randomTables = &m_RandomTables;
+		real sample = SampleTerrain(&chunkData, pos);
+		return (sample - 0.5f) * MaxHeight + m_Transform.GetWorldPosition().y;
 	}
 
 	real TerrainGenerator::SmoothBlend(real t)
@@ -7885,7 +7898,7 @@ namespace flex
 		real result = 0.0f;
 		real octave = chunkData->baseOctave;
 		i32 numOctaves = chunkData->numOctaves;
-		u32 octaveIdx = chunkData->numOctaves - 1;
+		u32 octaveIdx = (i32)chunkData->numOctaves - 1;
 		i32 isolateOctave = chunkData->isolateOctave;
 		real octaveScale = chunkData->octaveScale;
 
@@ -9497,7 +9510,10 @@ namespace flex
 		real maxSteerVel = 30.0f;
 		real steeringScale = Lerp(0.45f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
 
-		bool bOccupied = (m_ObjectInteractingWith != nullptr) && (m_ObjectInteractingWith->GetTypeID() == SID("player"));
+		bool bOccupied =
+			(m_ObjectInteractingWith != nullptr) &&
+			(m_ObjectInteractingWith->GetTypeID() == SID("player")) &&
+			g_CameraManager->CurrentCamera()->bIsGameplayCam;
 
 		if (bOccupied)
 		{
@@ -9622,7 +9638,7 @@ namespace flex
 		}
 
 		// Check if fell below the level
-		if (m_Transform.GetWorldPosition().y < -10.0f)
+		if (m_Transform.GetWorldPosition().y < -100.0f)
 		{
 			ResetTransform();
 		}
@@ -9956,10 +9972,20 @@ namespace flex
 
 		m_QuadCountPerSegment = 25;
 
+		GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->RegisterRoad(this);
+	}
+
+	void Road::PostInitialize()
+	{
 		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
 
 		if (curveSegments.empty())
 		{
+			if (m_TerrainGameObjectID == InvalidGameObjectID)
+			{
+				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
+			}
+
 			std::vector<glm::vec3> newPoints =
 			{
 				start,
@@ -9970,7 +9996,23 @@ namespace flex
 				glm::vec3(64.0f, 0.0, -24.0f),
 				start
 			};
-			GenerateSegmentsThroughPoints(newPoints);
+
+			if (m_TerrainGameObjectID != InvalidGameObjectID)
+			{
+				TerrainGenerator* terrainGenerator = (TerrainGenerator*)g_SceneManager->CurrentScene()->GetGameObject(m_TerrainGameObjectID);
+
+				real offset = 0.5f;
+
+				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
+				{
+					newPoints[i].y = terrainGenerator->Sample(glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
+				}
+				GenerateSegmentsThroughPoints(newPoints);
+			}
+			else
+			{
+				GenerateSegmentsThroughPoints(newPoints);
+			}
 		}
 		else
 		{
@@ -9979,8 +10021,6 @@ namespace flex
 				GenerateSegment(i);
 			}
 		}
-
-		GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->RegisterRoad(this);
 	}
 
 	void Road::Destroy(bool bDetachFromParent /* = true */)
@@ -10036,7 +10076,7 @@ namespace flex
 	void Road::GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points)
 	{
 		const i32 startingCurveCount = (i32)curveSegments.size();
-		const real roadWidth = 3.0f;
+		const real roadWidth = 4.0f;
 
 		curveSegments.reserve(curveSegments.size() + points.size());
 

@@ -2173,18 +2173,18 @@ namespace flex
 		}
 	}
 
-	GameObject* BaseScene::FirstObjectWithTag(const std::string& tag)
+	GameObjectID BaseScene::FirstObjectWithTag(const std::string& tag)
 	{
 		for (GameObject* gameObject : m_RootObjects)
 		{
-			GameObject* result = FindObjectWithTag(tag, gameObject);
-			if (result)
+			GameObjectID result = FindObjectWithTag(tag, gameObject);
+			if (result.IsValid())
 			{
 				return result;
 			}
 		}
 
-		return nullptr;
+		return InvalidGameObjectID;
 	}
 
 	Player* BaseScene::GetPlayer(i32 index)
@@ -2204,23 +2204,23 @@ namespace flex
 		}
 	}
 
-	GameObject* BaseScene::FindObjectWithTag(const std::string& tag, GameObject* gameObject)
+	GameObjectID BaseScene::FindObjectWithTag(const std::string& tag, GameObject* gameObject)
 	{
 		if (gameObject->HasTag(tag))
 		{
-			return gameObject;
+			return gameObject->ID;
 		}
 
 		for (GameObject* child : gameObject->m_Children)
 		{
-			GameObject* result = FindObjectWithTag(tag, child);
-			if (result)
+			GameObjectID result = FindObjectWithTag(tag, child);
+			if (result.IsValid())
 			{
 				return result;
 			}
 		}
 
-		return nullptr;
+		return InvalidGameObjectID;
 	}
 
 	void BaseScene::ReadGameObjectTypesFile()

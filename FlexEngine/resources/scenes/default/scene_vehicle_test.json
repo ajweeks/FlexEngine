@@ -22,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "6.586, 13.168, -21.391",
-			"pitch" : -0.506373,
-			"yaw" : 1.589536
+			"position" : "11.826, 10.042, -14.218",
+			"pitch" : -0.510820,
+			"yaw" : 2.629479
 		}
 	},
 	"objects" : 
@@ -73,39 +73,9 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.427, 0.329, -6.818",
-				"rot" : "-0.008, 0.272, -0.004",
+				"pos" : "-1.049, 0.916, -1.305",
+				"rot" : "-0.007, 0.035, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
-			}
-		},
-		{
-			"name" : "plane",
-			"id" : "C4C2924E21AFB0914B00C8F7A213E65D",
-			"type" : "object",
-			"transform" : 
-			{
-				"pos" : "0.000, -0.336, 0.000",
-				"scale" : "200.000, 0.495, 200.000"
-			},
-			"visible" : false,
-			"casts shadow" : true,
-			"mesh" : "cube.glb",
-			"materials" : 
-			[
-				"grid"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
 			}
 		},
 		{
@@ -128,7 +98,7 @@
 			"chunk generator info" : 
 			{
 				"vert count per chunk axis" : 32,
-				"chunk size" : 67.146004,
+				"chunk size" : 128.000000,
 				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 5,
@@ -189,6 +159,37 @@
 				"pos" : "8.650, 3.919, 1.928",
 				"rot" : "0.000, 0.747, 0.000",
 				"scale" : "0.526, 0.526, 0.526"
+			}
+		},
+		{
+			"name" : "starting_cube",
+			"id" : "DBB6F73BA6F655994B1A190CD9D43C84",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-2.418, 0.000, -1.391",
+				"rot" : "0.000, -0.522, 0.000",
+				"scale" : "6.893, 1.000, 9.292"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr red"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
 			}
 		}
 	]

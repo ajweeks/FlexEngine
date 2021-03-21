@@ -85,7 +85,7 @@ namespace flex
 		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
 		GameObject* ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance);
 
-		GameObject* FirstObjectWithTag(const std::string& tag);
+		GameObjectID FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
 
@@ -199,7 +199,7 @@ namespace flex
 		* Recursively searches through all game objects and returns first
 		* one containing given tag, or nullptr if none exist
 		*/
-		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
+		GameObjectID FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
 		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
 

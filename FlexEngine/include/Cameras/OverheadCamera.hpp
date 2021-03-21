@@ -7,6 +7,7 @@
 namespace flex
 {
 	class GameObject;
+	class Player;
 
 	class OverheadCamera final : public BaseCamera
 	{
@@ -28,7 +29,7 @@ namespace flex
 
 		void ResetValues();
 
-		GameObject* m_Player0 = nullptr;
+		Player* m_Player0 = nullptr;
 
 		RollingAverage<glm::vec3> m_PlayerPosRollingAvg;
 		RollingAverage<glm::vec3> m_PlayerForwardRollingAvg;

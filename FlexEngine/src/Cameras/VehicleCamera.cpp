@@ -14,6 +14,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -165,7 +166,7 @@ namespace flex
 
 	void VehicleCamera::FindActiveVehicle()
 	{
-		GameObject* player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player0 != nullptr)
 		{
 			GameObject* interactingWith = player0->GetObjectInteractingWith();

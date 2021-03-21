@@ -86,7 +86,7 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		m_Player = static_cast<Player*>(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
+		m_Player = g_SceneManager->CurrentScene()->GetPlayer(0);
 	}
 
 } // namespace flex
