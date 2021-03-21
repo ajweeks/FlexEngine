@@ -13,6 +13,28 @@
 
 namespace flex
 {
+	// Local global function to avoid having to forward declare cgltf_result
+	bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
+	{
+		if (result != cgltf_result_success)
+		{
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	outErrorMessage = "Data too short"; break;
+			case cgltf_result_unknown_format:	outErrorMessage = "Unknown format"; break;
+			case cgltf_result_invalid_json:		outErrorMessage = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		outErrorMessage = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	outErrorMessage = "Invalid options"; break;
+			case cgltf_result_file_not_found:	outErrorMessage = "File not found"; break;
+			case cgltf_result_io_error:			outErrorMessage = "IO error"; break;
+			case cgltf_result_out_of_memory:	outErrorMessage = "Out of memory"; break;
+			default:							outErrorMessage = ""; break;
+			}
+			return false;
+		}
+		return true;
+	}
+
 	Mesh::Mesh(GameObject* owner) :
 		m_OwningGameObject(owner),
 		m_MinPoint(VEC3_ZERO),
@@ -373,27 +395,6 @@ namespace flex
 		return mesh;
 	}
 
-	bool Mesh::CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
-	{
-		if (result != cgltf_result_success)
-		{
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	outErrorMessage = "Data too short"; break;
-			case cgltf_result_unknown_format:	outErrorMessage = "Unknown format"; break;
-			case cgltf_result_invalid_json:		outErrorMessage = "Invalid json"; break;
-			case cgltf_result_invalid_gltf:		outErrorMessage = "Invalid gltf"; break;
-			case cgltf_result_invalid_options:	outErrorMessage = "Invalid options"; break;
-			case cgltf_result_file_not_found:	outErrorMessage = "File not found"; break;
-			case cgltf_result_io_error:			outErrorMessage = "IO error"; break;
-			case cgltf_result_out_of_memory:	outErrorMessage = "Out of memory"; break;
-			default:							outErrorMessage = ""; break;
-			}
-			return false;
-		}
-		return true;
-	}
-
 	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, bool bCreateRenderObject /* = true */)
 	{
 		return ImportFromFile(meshFilePath, owner, { g_Renderer->GetPlaceholderMaterialID() }, bCreateRenderObject);
@@ -674,5 +675,4 @@ namespace flex
 		m_BoundingSphereRadius = glm::distance(m_MaxPoint, m_MinPoint) / 2.0f;
 		m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
 	}
-
 } // namespace flex

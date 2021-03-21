@@ -1,10 +1,6 @@
 #pragma once
 #if COMPILE_VULKAN
 
-IGNORE_WARNINGS_PUSH
-#include "volk/volk.h"
-IGNORE_WARNINGS_POP
-
 #include "VDeleter.hpp"
 
 namespace flex

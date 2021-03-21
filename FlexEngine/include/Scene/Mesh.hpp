@@ -2,8 +2,6 @@
 
 #include "Graphics/RendererTypes.hpp" // For TopologyMode
 
-#include "cgltf/cgltf.h" // for cgltf_result
-
 namespace flex
 {
 	struct LoadedMesh;
@@ -113,8 +111,6 @@ namespace flex
 
 		std::vector<MeshComponent*> m_Meshes;
 	private:
-		static bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage);
-
 		void CalculateBounds();
 
 		bool LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,

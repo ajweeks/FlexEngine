@@ -2,8 +2,6 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include "volk/volk.h"
-
 #if COMPILE_SHADER_COMPILER
 #include "shaderc/shaderc.h" // For shaderc_shader_kind
 #endif
