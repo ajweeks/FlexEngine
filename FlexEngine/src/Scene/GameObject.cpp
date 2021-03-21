@@ -9507,29 +9507,32 @@ namespace flex
 			// The faster we get, the slower we accelerate
 			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / MAX_ENGINE_FORCE, 0.0f, 1.0f), 5.0f);
 
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_UP))
+			real accelerateInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_ACCELERATE);
+			real reverseInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_REVERSE);
+			real brakeInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_BRAKE);
+			real turnLeftInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_TURN_LEFT);
+			real turnRightInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_TURN_RIGHT);
+			if (accelerateInput != 0.0f)
 			{
-				m_EngineForce += m_MoveAccel * g_DeltaTime * accelFactor;
-				//force += ToBtVec3(m_Transform.GetForward()) * m_MoveAccel;
+				m_EngineForce += accelerateInput * m_MoveAccel * g_DeltaTime * accelFactor;
 			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_DOWN))
+			if (reverseInput != 0.0f)
 			{
-				m_EngineForce -= m_MoveAccel * g_DeltaTime * accelFactor;
-				//force += ToBtVec3(-m_Transform.GetForward()) * m_MoveAccel;
+				m_EngineForce -= reverseInput * m_MoveAccel * g_DeltaTime * accelFactor;
 			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT))
+			if (turnLeftInput != 0.0f)
 			{
-				m_Steering -= m_TurnAccel * g_DeltaTime * steeringScale;
+				m_Steering -= turnLeftInput * m_TurnAccel * g_DeltaTime * steeringScale;
 				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
 			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT))
+			if (turnRightInput != 0.0f)
 			{
-				m_Steering += m_TurnAccel * g_DeltaTime * steeringScale;
+				m_Steering += turnRightInput * m_TurnAccel * g_DeltaTime * steeringScale;
 				m_Steering = glm::clamp(m_Steering, -MAX_STEER, MAX_STEER);
 			}
-			if (g_InputManager->GetKeyDown(KeyCode::KEY_SPACE))
+			if (brakeInput != 0.0f)
 			{
-				m_BrakeForce = MAX_BRAKE_FORCE;
+				m_BrakeForce = MAX_BRAKE_FORCE * brakeInput;
 				engineForceSlowScale = 0.0f;
 			}
 			else

@@ -179,6 +179,56 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Vehicle accelerate" : 
+	{
+		"key code" : 40,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 5,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Vehicle reverse" : 
+	{
+		"key code" : 36,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 4,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Vehicle brake" : 
+	{
+		"key code" : 0,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : 0,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Vehicle turn left" : 
+	{
+		"key code" : 18,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 0,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : true
+	},
+	"Vehicle turn right" : 
+	{
+		"key code" : 21,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 0,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Take screenshot" : 
 	{
 		"key code" : 103,

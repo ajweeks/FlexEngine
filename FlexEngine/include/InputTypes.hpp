@@ -457,6 +457,13 @@ namespace flex
 		// Inventory
 		TOGGLE_ITEM_HOLDING,
 
+		// Vehicle
+		VEHICLE_ACCELERATE,
+		VEHICLE_REVERSE,
+		VEHICLE_BRAKE,
+		VEHICLE_TURN_LEFT,
+		VEHICLE_TURN_RIGHT,
+
 		// Misc
 		TAKE_SCREENSHOT,
 
@@ -520,6 +527,13 @@ namespace flex
 
 		// Inventory
 		"Toggle holding item",
+
+		// Vehicle
+		"Vehicle accelerate",
+		"Vehicle reverse",
+		"Vehicle brake",
+		"Vehicle turn left",
+		"Vehicle turn right",
 
 		// Misc
 		"Take screenshot",
