@@ -25,4 +25,5 @@ void main()
 	vec4 worldPos = uboDynamic.model * vec4(in_Position, 1);
 	
 	gl_Position = (pushConstants.proj * pushConstants.view) * worldPos;
+	gl_Position.z = 1.0;
 }

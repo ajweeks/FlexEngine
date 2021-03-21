@@ -18,7 +18,7 @@
 #define ENABLE_PROFILING 1
 #ifdef _WINDOWS
 // RenderDoc API only supported on windows
-#define COMPILE_RENDERDOC_API 0
+#define COMPILE_RENDERDOC_API 1
 #endif //  _WINDOWS
 #define COMPILE_SHADER_COMPILER 1
 #else

@@ -134,7 +134,6 @@ namespace flex
 			RenderObjectCreateInfo fullScreenTriCreateInfo = {};
 			fullScreenTriCreateInfo.vertexBufferData = &m_FullScreenTriVertexBufferData;
 			fullScreenTriCreateInfo.materialID = m_PostProcessMatID;
-			fullScreenTriCreateInfo.bDepthWriteEnable = false;
 			fullScreenTriCreateInfo.gameObject = fullScreenTriGameObject;
 			fullScreenTriCreateInfo.cullFace = CullFace::NONE;
 			fullScreenTriCreateInfo.visibleInSceneExplorer = false;
@@ -183,7 +182,6 @@ namespace flex
 			RenderObjectCreateInfo quad3DCreateInfo = {};
 			quad3DCreateInfo.vertexBufferData = &m_Quad3DVertexBufferData;
 			quad3DCreateInfo.materialID = m_SpriteMatWSID;
-			quad3DCreateInfo.bDepthWriteEnable = false;
 			quad3DCreateInfo.gameObject = quad3DGameObject;
 			quad3DCreateInfo.cullFace = CullFace::NONE;
 			quad3DCreateInfo.visibleInSceneExplorer = false;
@@ -194,6 +192,7 @@ namespace flex
 
 			m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
 
+			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 			quad3DCreateInfo.materialID = m_SpriteMatSSID;
 			quad3DCreateInfo.renderPassOverride = RenderPassType::UI;
 			m_Quad3DSSRenderID = InitializeRenderObject(&quad3DCreateInfo);
@@ -439,7 +438,6 @@ namespace flex
 		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
 		drawInfo.bScreenSpace = true;
 		drawInfo.bReadDepth = false;
-		drawInfo.bWriteDepth = false;
 		drawInfo.anchor = anchor;
 		drawInfo.colour = colour;
 		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
@@ -458,7 +456,6 @@ namespace flex
 		drawInfo.scale = glm::vec3(size.x, size.y, 1.0f);
 		drawInfo.bScreenSpace = true;
 		drawInfo.bReadDepth = false;
-		drawInfo.bWriteDepth = false;
 		drawInfo.bRaw = true;
 		drawInfo.colour = colour;
 		drawInfo.pos = glm::vec3(pos.x, pos.y, 1.0f);
@@ -792,7 +789,6 @@ namespace flex
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.bScreenSpace = true;
 			drawInfo.bReadDepth = true;
-			drawInfo.bWriteDepth = true;
 			drawInfo.materialID = m_SpriteArrMatID;
 			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
 			drawInfo.scale = glm::vec3(0.2f);
@@ -1468,7 +1464,7 @@ namespace flex
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
-		m_Shaders[shaderID]->maxObjectCount = 16;
+		m_Shaders[shaderID]->maxObjectCount = 64;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -1938,7 +1934,6 @@ namespace flex
 			gBufferQuadCreateInfo.cullFace = CullFace::NONE;
 			gBufferQuadCreateInfo.visibleInSceneExplorer = false;
 			gBufferQuadCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-			gBufferQuadCreateInfo.bDepthWriteEnable = false;
 			gBufferQuadCreateInfo.bSetDynamicStates = true;
 
 			m_GBufferQuadRenderID = InitializeRenderObject(&gBufferQuadCreateInfo);

@@ -163,7 +163,6 @@ namespace flex
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.anchor = AnchorPoint::CENTER;
 			drawInfo.bScreenSpace = true;
-			drawInfo.bWriteDepth = false;
 			drawInfo.bReadDepth = false;
 			drawInfo.scale = glm::vec3(0.02f);
 			drawInfo.textureID = m_CrosshairTextureID;

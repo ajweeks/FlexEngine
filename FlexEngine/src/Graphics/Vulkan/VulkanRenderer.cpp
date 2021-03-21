@@ -7849,6 +7849,11 @@ namespace flex
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
 
+					{
+						PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
+						Profiler::DrawDisplayedFrame();
+					}
+
 					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
 					m_QueuedSSSprites.clear();
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);

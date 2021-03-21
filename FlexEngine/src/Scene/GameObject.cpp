@@ -3319,7 +3319,6 @@ namespace flex
 					SpriteQuadDrawInfo drawInfo = {};
 					drawInfo.bScreenSpace = false;
 					drawInfo.bReadDepth = true;
-					drawInfo.bWriteDepth = true;
 					drawInfo.scale = scale;
 					drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
 
@@ -3549,7 +3548,6 @@ namespace flex
 					SpriteQuadDrawInfo drawInfo = {};
 					drawInfo.bScreenSpace = false;
 					drawInfo.bReadDepth = true;
-					drawInfo.bWriteDepth = true;
 					drawInfo.scale = scale;
 					drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
 
@@ -7180,7 +7178,6 @@ namespace flex
 				SpriteQuadDrawInfo drawInfo = {};
 				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
 				drawInfo.bScreenSpace = true;
-				drawInfo.bWriteDepth = false;
 				drawInfo.bReadDepth = false;
 				drawInfo.scale = glm::vec3(textureScale);
 				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);

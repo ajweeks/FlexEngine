@@ -326,6 +326,8 @@ namespace flex
 			return;
 		}
 
+		glm::vec4 fontColour = glm::vec4(0.85f, 0.85f, 0.85f, 1.0f);
+
 		BitmapFont* font = g_Renderer->SetFont(SID("editor-01"));
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
@@ -353,10 +355,10 @@ namespace flex
 											  glm::vec4(1.0f, 1.0f, 1.0f, 0.03f));
 		}
 		std::string frameDurationStr = FloatToString(frameDuration, 2) + "ms";
-		real letterSpacing = 5;
+		real letterSpacing = 6.0f;
 		real durationStrWidth = g_Renderer->GetStringWidth(frameDurationStr, font, letterSpacing, true);
 		g_Renderer->DrawStringSS(frameDurationStr,
-							     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+							     fontColour,
 								 AnchorPoint::CENTER,
 								 glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
 								 letterSpacing,
@@ -392,7 +394,7 @@ namespace flex
 				real strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				glm::vec2 pos(blockCenterNorm.x - strWidth * aspectRatio, frameCenter.y - frameSizeHalf.y * 1.2f);
 				g_Renderer->DrawStringSS(timing.blockName,
-										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 fontColour,
 										 AnchorPoint::CENTER,
 										 pos,
 										 letterSpacing,
@@ -400,11 +402,11 @@ namespace flex
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
-				pos.y -= 0.05f;
+				pos.y -= g_Renderer->GetStringHeight(str, font, true) * 5.0f;
 				g_Renderer->DrawStringSS(str,
-										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 fontColour,
 										 AnchorPoint::CENTER,
-										 pos ,
+										 pos,
 										 letterSpacing,
 										 true);
 			}

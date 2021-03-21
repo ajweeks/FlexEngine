@@ -1432,7 +1432,6 @@ namespace flex
 		createInfo.visibleInSceneExplorer = overrides.visibleInSceneExplorer;
 		createInfo.cullFace = overrides.cullFace;
 		createInfo.depthTestReadFunc = overrides.depthTestReadFunc;
-		createInfo.bDepthWriteEnable = overrides.bDepthWriteEnable;
 		createInfo.bEditorObject = overrides.bEditorObject;
 		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
 		createInfo.bIndexed = overrides.bIndexed;

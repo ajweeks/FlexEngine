@@ -788,8 +788,6 @@ namespace flex
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
-		bool bDepthWriteEnable = true;
-		bool bDepthTestEnable = true;
 		bool bEditorObject = false;
 		bool bSetDynamicStates = false;
 		bool bIndexed = false;
@@ -884,7 +882,6 @@ namespace flex
 
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
-		bool bWriteDepth = true;
 		bool bEnableAlbedoSampler = true;
 		bool bRaw = false; // If true no further pos/scale processing is down, values are directly uploaded to GPU
 		bool bFullscreen = false;

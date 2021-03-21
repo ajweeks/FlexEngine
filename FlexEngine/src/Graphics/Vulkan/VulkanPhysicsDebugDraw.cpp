@@ -199,7 +199,6 @@ namespace flex
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.materialID = m_MaterialID;
 			createInfo.bEditorObject = true;
-			createInfo.bDepthWriteEnable = false;
 			createInfo.bIndexed = true;
 			createInfo.indices = &indexBuffer;
 			m_Object = new GameObject("Vk Physics Debug Draw", SID("object"));
