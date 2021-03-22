@@ -6,6 +6,7 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/norm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -1261,6 +1262,151 @@ namespace flex
 		return str;
 	}
 
+	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2)
+	{
+		auto sign = [](const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
+		{
+			return (p0.x - p2.x) * (p1.y - p2.y) - (p1.x - p2.x) * (p0.y - p2.y);
+		};
+
+		real sign0 = sign(point, tri0, tri1);
+		real sign1 = sign(point, tri1, tri2);
+		real sign2 = sign(point, tri2, tri0);
+
+		bool bHasNeg = (sign0 < 0.0f || sign1 < 0.0f || sign2 < 0.0f);
+		bool bHasPos = (sign0 > 0.0f || sign1 > 0.0f || sign2 > 0.0f);
+
+		return !(bHasNeg && bHasPos);
+	}
+
+	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint)
+	{
+		const real errorVal = -9999.0f;
+
+#if 0
+		glm::vec3 planeNorm = glm::cross((p1 - p0), (p2 - p0));
+		real normLen = glm::length(planeNorm);
+		if (normLen < 1.0e-30)
+		{
+			// Degenerate
+			return errorVal;
+		}
+		else
+		{
+			planeNorm /= normLen;
+		}
+
+		// Project onto plane
+		real dist = glm::dot(point, planeNorm) - glm::dot(tri0, planeNorm);
+		glm::vec3 projectedPoint = point - dist * planeNorm;
+
+		// Find distance from projected point to triangle  (via https://blackpawn.com/texts/pointinpoly/default.html)
+		// Compute edge vectors
+		real v0x = tri2.x - tri0.x;
+		real v0y = tri2.y - tri0.y;
+		real v0z = tri2.z - tri0.z;
+		real v1x = tri1.x - tri0.x;
+		real v1y = tri1.y - tri0.y;
+		real v1z = tri1.z - tri0.z;
+		real v2x = proj.x - tri0.x;
+		real v2y = proj.y - tri0.y;
+		real v2z = proj.z - tri0.z;
+
+		// Compute dot products
+		real dot00 = v0x * v0x + v0y * v0y + v0z * v0z;
+		real dot01 = v0x * v1x + v0y * v1y + v0z * v1z;
+		real dot02 = v0x * v2x + v0y * v2y + v0z * v2z;
+		real dot11 = v1x * v1x + v1y * v1y + v1z * v1z;
+		real dot12 = v1x * v2x + v1y * v2y + v1z * v2z;
+
+		// Compute barycentric coordinates of projected point
+		real denom = (dot00 * dot11 - dot01 * dot01);
+		if (glm::abs(denom) < 1.0e-30)
+		{
+			// Degenerate
+			return null;
+		}
+		real invDenom = 1.0 / denom;
+		real u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+		real v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+		real distToTri = glm::sqrt(u * u + v * v);
+
+		// Check barycentric coordinates
+		if ((u >= 0) && (v >= 0) && (u + v < 1))
+		{
+			 return -1.0f;
+		}
+		else
+		{
+			return distToTri;
+		}
+#endif
+
+		glm::vec3 planeNorm = glm::cross((tri1 - tri0), (tri2 - tri0));
+		//real normLen = glm::length(planeNorm);
+
+		glm::vec3 planeABNorm = glm::cross(planeNorm, tri1 - tri0);
+		bool bPointAboveAB = glm::dot(point - tri0, planeABNorm) > 0.0f;
+
+		glm::vec3 planeBCNorm = glm::cross(planeNorm, tri2 - tri1);
+		bool bPointAboveBC = glm::dot(point - tri1, planeBCNorm) > 0.0f;
+
+		glm::vec3 planeCANorm = glm::cross(planeNorm, tri0 - tri2);
+		bool bPointAboveCA = glm::dot(point - tri2, planeCANorm) > 0.0f;
+
+		// Find the projection of the point onto the edge
+
+		glm::vec3 ab = (tri1 - tri0);
+		real abLen2 = glm::length2(ab);
+		glm::vec3 ca = (tri0 - tri2);
+		real caLen2 = glm::length2(ca);
+		real uab = glm::dot((point - tri0), ab) / abLen2;
+		real uca = glm::dot((point - tri2), ca) / caLen2;
+
+		if (uca > 1.0f && uab < 0.0f)
+		{
+			outClosestPoint = tri0;
+		}
+		else
+		{
+			glm::vec3 bc = (tri2 - tri1);
+			real bcLen2 = glm::length2(bc);
+			real ubc = glm::dot((point - tri1), bc) / bcLen2;
+
+			if (uab > 1.0f && ubc < 0.0f)
+			{
+				outClosestPoint = tri1;
+			}
+			else if (ubc > 1.0f && uca < 0.0f)
+			{
+				outClosestPoint = tri2;
+			}
+			else if (uab >= 0.0f && uab <= 1.0f && !bPointAboveAB)
+			{
+				outClosestPoint = tri0 + uab * (tri1 - tri0);
+			}
+			else if (ubc >= 0.0f && ubc <= 1.0f && !bPointAboveBC)
+			{
+				outClosestPoint = tri0 + ubc * (tri2 - tri1);
+			}
+			else if (uca >= 0.0f && uca <= 1.0f && !bPointAboveCA)
+			{
+				outClosestPoint = tri0 + uca * (tri0 - tri2);
+			}
+			else
+			{
+				// The closest point is in the triangle, just tri0 for now
+				outClosestPoint = glm::vec3(errorVal);
+				return -1.0f;
+			}
+		}
+
+		real dist = glm::distance(point, outClosestPoint);
+
+		return dist;
+	}
+
 	std::string& ToUpper(std::string& str)
 	{
 		for (char& c : str)
@@ -1872,7 +2018,13 @@ namespace flex
 
 			return bResult;
 		}
+	}
 
+	void AABB::DrawDebug(const btVector3& lineColour)
+	{
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
 	}
 	// namespace ImGuiExt
 } // namespace flex

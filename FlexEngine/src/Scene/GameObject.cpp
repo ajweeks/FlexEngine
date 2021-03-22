@@ -1813,7 +1813,7 @@ namespace flex
 	}
 
 	void GameObject::GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID)
-		{
+	{
 		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
 		{
 			newObjectName = m_Name;
@@ -7132,7 +7132,7 @@ namespace flex
 		WRITE_BARRIER;
 
 		DiscoverChunks();
-		GenerateChunks();
+		// Wait to generate chunks until road has been generated
 
 		GameObject::Initialize();
 	}
@@ -7168,7 +7168,11 @@ namespace flex
 		WRITE_BARRIER;
 
 		DiscoverChunks();
-		GenerateChunks();
+		// Wait for road gen to call us back to fill out our road segments
+		if (!m_RoadGameObjectID.IsValid() || !m_RoadSegments.empty())
+		{
+			GenerateChunks();
+		}
 
 		if (m_bDisplayTables)
 		{
@@ -7219,6 +7223,8 @@ namespace flex
 
 		Platform::FreeCriticalSection(criticalSection);
 		criticalSection = nullptr;
+
+		m_RoadSegments.clear();
 
 		GameObject::Destroy(bDetachFromParent);
 	}
@@ -7317,8 +7323,6 @@ namespace flex
 				(*terrain_workQueue)[i].numOctaves = m_NumOctaves;
 				(*terrain_workQueue)[i].vertCountPerChunkAxis = VertCountPerChunkAxis;
 				(*terrain_workQueue)[i].isolateOctave = m_IsolateOctave;
-
-				(*terrain_workQueue)[i].randomTables = &m_RandomTables;
 			}
 
 			if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
@@ -7332,6 +7336,54 @@ namespace flex
 		}
 
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 3000.0f);
+
+		if (ImGui::TreeNode("Road segments"))
+		{
+			static glm::vec2i selectedChunkIndex;
+			static i32 selectedRoadSegmentIndex = -1;
+			static AABB* selectedChunkAABB = nullptr;
+			for (auto& iter : m_RoadSegments)
+			{
+				glm::vec2i chunkIndex = iter.first;
+
+				bool bSelectedSegmentInChunk = chunkIndex == selectedChunkIndex;
+
+				ImGui::PushID((const void*)((u64)((u64)chunkIndex.x + 9999) * 99999 + ((u64)chunkIndex.y + 9999)));
+
+				const std::vector<RoadSegment*>& roadSegments = iter.second;
+
+				if (ImGui::TreeNode("chunk road segments", "%i, %i", chunkIndex.x, chunkIndex.y))
+				{
+					for (i32 i = 0; i < (i32)roadSegments.size(); ++i)
+					{
+						RoadSegment* roadSegment = roadSegments[i];
+						ImGui::PushID((const void*)(roadSegment));
+
+						bool bSelected = (bSelectedSegmentInChunk && i == selectedRoadSegmentIndex);
+						std::string label = "segment " + std::to_string(i);
+						if (ImGui::Selectable(label.c_str(), &bSelected))
+						{
+							selectedChunkIndex = chunkIndex;
+							selectedRoadSegmentIndex = i;
+							selectedChunkAABB = &roadSegment->aabb;
+						}
+
+						ImGui::PopID();
+					}
+
+					ImGui::TreePop();
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::TreePop();
+
+			if (selectedChunkAABB != nullptr)
+			{
+				selectedChunkAABB->DrawDebug(btVector3(0.1f, 0.1f, 0.9f));
+			}
+		}
 	}
 
 	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -7459,6 +7511,49 @@ namespace flex
 				(u32)(textureMem.size() * sizeof(u32) * 4),
 				VK_FORMAT_R32G32B32A32_SFLOAT,
 				"Perlin random table", tableWidth, tableWidth, 4, VK_FILTER_NEAREST);
+		}
+	}
+
+	void TerrainGenerator::UpdateRoadSegments()
+	{
+		m_RoadSegments.clear();
+
+		Road* road = (Road*)m_RoadGameObjectID.Get();
+		if (road == nullptr)
+		{
+			m_RoadGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("road");
+			road = (Road*)m_RoadGameObjectID.Get();
+		}
+
+		if (road == nullptr)
+		{
+			return;
+		}
+
+		glm::vec3 pos = m_Transform.GetWorldPosition();
+		for (const RoadSegment& roadSegment : road->roadSegments)
+		{
+			// TODO:  + 0.5f?
+			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x) / ChunkSize);
+			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x) / ChunkSize);
+			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z) / ChunkSize);
+			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z) / ChunkSize);
+			for (i32 x = minChunkIndexX; x < maxChunkIndexX; ++x)
+			{
+				for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
+				{
+					glm::vec2i chunkIndex = glm::vec2i(x, z);
+					auto iter = m_RoadSegments.find(chunkIndex);
+					if (iter == m_RoadSegments.end())
+					{
+						m_RoadSegments.emplace(chunkIndex, std::vector<RoadSegment*>{ (RoadSegment*)&roadSegment });
+					}
+					else
+					{
+						iter->second.emplace_back((RoadSegment*)&roadSegment);
+					}
+				}
+			}
 		}
 	}
 
@@ -7762,6 +7857,7 @@ namespace flex
 		chunkData.isolateOctave = m_IsolateOctave;
 
 		chunkData.randomTables = &m_RandomTables;
+		chunkData.roadSegments = &m_RoadSegments;
 	}
 
 	void TerrainGenerator::FreeWorkQueueEntry(u32 workQueueIndex)
@@ -7817,6 +7913,14 @@ namespace flex
 				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
 				real maxHeight = work->maxHeight;
+				std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments = work->roadSegments;
+
+				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
+				auto roadSegmentIter = roadSegments->find(chunkIndex);
+				if (roadSegmentIter != roadSegments->end())
+				{
+					overlappingRoadSegments = &roadSegmentIter->second;
+				}
 
 				// Outputs
 				volatile glm::vec3* positions = work->positions;
@@ -7837,16 +7941,54 @@ namespace flex
 						glm::vec3 pos = glm::vec3(uv.x * chunkSize, 0.0f, uv.y * chunkSize);
 
 						glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * chunkSize, 0.0f, chunkIndex.y * chunkSize);
-						glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
-						real height = SampleTerrain(work, sampleCenter);
 
-						vertPosWS.y = (height - 0.5f) * maxHeight;
+						glm::vec3 normal;
 
-						const real e = 0.01f;
-						real heightDX = (SampleTerrain(work, sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(work, sampleCenter + glm::vec2(e, 0.0f))) * maxHeight;
-						real heightDZ = (SampleTerrain(work, sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(work, sampleCenter + glm::vec2(0.0f, e))) * maxHeight;
+						real distToRoad = 99999.0f;
+						glm::vec3 closestPointToRoad;
+						if (overlappingRoadSegments != nullptr)
+						{
+							glm::vec3 outClosestPoint;
+							for (RoadSegment* overlappingRoadSegment : *overlappingRoadSegments)
+							{
+								real d = overlappingRoadSegment->SignedDistanceTo(vertPosWS, outClosestPoint);
+								if (d < distToRoad)
+								{
+									distToRoad = d;
+									closestPointToRoad = outClosestPoint;
+								}
+							}
+						}
 
-						glm::vec3 normal = glm::normalize(glm::vec3(heightDX, 2.0f * e, heightDZ));
+						bool bOverlapsRoad = distToRoad < 0.0f;
+
+						if (bOverlapsRoad)
+						{
+							normal = VEC3_UP;
+							// Clip point by setting to NaN
+							vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
+						}
+						else
+						{
+							glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
+							real height = SampleTerrain(work, sampleCenter);
+
+							vertPosWS.y = (height - 0.5f) * maxHeight;
+
+							real lerpToRoadPosAlpha = 1.0f - glm::clamp((distToRoad - 10.0f) / 50.0f, 0.0f, 1.0f);
+							if (x == 0 || z == 0 || x == vertCountPerChunkAxis - 1 || z == vertCountPerChunkAxis - 1)
+							{
+								lerpToRoadPosAlpha = 0.0f;
+							}
+
+							vertPosWS = Lerp(vertPosWS, closestPointToRoad, lerpToRoadPosAlpha);
+
+							const real e = 0.01f;
+							real heightDX = (SampleTerrain(work, sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(work, sampleCenter + glm::vec2(e, 0.0f))) * maxHeight;
+							real heightDZ = (SampleTerrain(work, sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(work, sampleCenter + glm::vec2(0.0f, e))) * maxHeight;
+
+							normal = glm::normalize(glm::vec3(heightDX, 2.0f * e, heightDZ));
+						}
 
 						memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
 						memcpy((void*)&normals[posIndex], (void*)&normal, sizeof(glm::vec3));
@@ -9637,6 +9779,7 @@ namespace flex
 			}
 		}
 
+		// TODO: Check in player class? Store min level in scene
 		// Check if fell below the level
 		if (m_Transform.GetWorldPosition().y < -100.0f)
 		{
@@ -9956,11 +10099,81 @@ namespace flex
 		}
 	}
 
+	bool RoadSegment::Overlaps(const glm::vec2& point)
+	{
+		VertexBufferData* vertexBufferData = mesh->GetVertexBufferData();
+		u32* indexBuffer = mesh->GetIndexBufferUnsafePtr();
+		u32 indexCount = mesh->GetIndexCount();
+		u8* vertexData = (u8*)vertexBufferData->vertexData;
+		u32 vertexStride = vertexBufferData->VertexStride;
+
+		for (u32 i = 0; i < indexCount - 2; i += 3)
+		{
+			glm::vec3 tri0(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 0]));
+			glm::vec3 tri1(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 1]));
+			glm::vec3 tri2(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 2]));
+
+			if (PointOverlapsTriangle(point, glm::vec2(tri0.x, tri0.z), glm::vec2(tri1.x, tri1.z), glm::vec2(tri2.x, tri2.z)))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	real RoadSegment::SignedDistanceTo(const glm::vec3& point, glm::vec3& outClosestPoint)
+	{
+		VertexBufferData* vertexBufferData = mesh->GetVertexBufferData();
+		u32* indexBuffer = mesh->GetIndexBufferUnsafePtr();
+		u32 indexCount = mesh->GetIndexCount();
+		u8* vertexData = (u8*)vertexBufferData->vertexData;
+		u32 vertexStride = vertexBufferData->VertexStride;
+
+		glm::vec3 closestPoint;
+		real dist = 99999.0f;
+		for (u32 i = 0; i < indexCount - 2; i += 3)
+		{
+			glm::vec3 tri0(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 0]));
+			glm::vec3 tri1(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 1]));
+			glm::vec3 tri2(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 2]));
+
+			real d = SignedDistanceToTriangle(point, tri0, tri1, tri2, closestPoint);
+			if (d < dist)
+			{
+				dist = d;
+				outClosestPoint = closestPoint;
+			}
+		}
+
+		return dist;
+	}
+
+	void RoadSegment::ComputeAABB()
+	{
+		aabb.minX = aabb.minY = aabb.minZ = 99999.0f;
+		aabb.maxX = aabb.maxY = aabb.maxZ = -99999.0f;
+		const u32 sampleCount = 10;
+		real maxWidth = glm::max(widthStart, widthEnd);
+		for (u32 i = 0; i < sampleCount; ++i)
+		{
+			real t = ((real)i / (sampleCount - 1));
+			glm::vec3 point = curve.GetPointOnCurve(t);
+			aabb.minX = glm::min(aabb.minX, point.x - maxWidth);
+			aabb.minY = glm::min(aabb.minY, point.y - maxWidth);
+			aabb.minZ = glm::min(aabb.minZ, point.z - maxWidth);
+			aabb.maxX = glm::max(aabb.maxX, point.x + maxWidth);
+			aabb.maxY = glm::max(aabb.maxY, point.y + maxWidth);
+			aabb.maxZ = glm::max(aabb.maxZ, point.z + maxWidth);
+		}
+	}
+
 	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("road"), gameObjectID)
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
+		AddTag("road");
 	}
 
 	void Road::Initialize()
@@ -9979,11 +10192,13 @@ namespace flex
 	{
 		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
 
-		if (curveSegments.empty())
+		if (roadSegments.empty())
 		{
-			if (m_TerrainGameObjectID == InvalidGameObjectID)
+			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
+			if (terrainGenerator == nullptr)
 			{
 				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
+				terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
 			}
 
 			std::vector<glm::vec3> newPoints =
@@ -9997,26 +10212,23 @@ namespace flex
 				start
 			};
 
-			if (m_TerrainGameObjectID != InvalidGameObjectID)
+			if (terrainGenerator != nullptr)
 			{
-				TerrainGenerator* terrainGenerator = (TerrainGenerator*)g_SceneManager->CurrentScene()->GetGameObject(m_TerrainGameObjectID);
-
 				real offset = 0.5f;
 
 				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
 				{
 					newPoints[i].y = terrainGenerator->Sample(glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
 				}
-				GenerateSegmentsThroughPoints(newPoints);
 			}
-			else
-			{
-				GenerateSegmentsThroughPoints(newPoints);
-			}
+
+			GenerateSegmentsThroughPoints(newPoints);
+
+			terrainGenerator->UpdateRoadSegments();
 		}
 		else
 		{
-			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
 			{
 				GenerateSegment(i);
 			}
@@ -10030,8 +10242,7 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 
 		// Mesh components will have already been destroyed by Mesh Destroy
-		m_Meshes.clear();
-		curveSegments.clear();
+		roadSegments.clear();
 
 		for (u32 i = 0; i < (u32)m_RigidBodies.size(); ++i)
 		{
@@ -10047,15 +10258,21 @@ namespace flex
 	{
 		GameObject::Update();
 
-		if (!g_Renderer->GetPhysicsDebuggingSettings().bDisableAll &&
+		const PhysicsDebuggingSettings& debuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+		if (!debuggingSettings.bDisableAll &&
 			g_Renderer->GetDebugDrawer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
 		{
-			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
 			{
-				Segment& segment = curveSegments[i];
+				RoadSegment& segment = roadSegments[i];
 
 				// TOOD: move curve segment by our transform/offset it
 				segment.curve.DrawDebug(false, btVector4(0.0f, 1.0f, 0.0f, 1.0f), btVector4(1.0f, 1.0f, 1.0f, 1.0f));
+
+				if (debuggingSettings.bDrawAabb)
+				{
+					segment.aabb.DrawDebug(btVector3(1.0f, 0.5f, 0.0f));
+				}
 			}
 		}
 	}
@@ -10066,7 +10283,7 @@ namespace flex
 
 		if (ImGuiExt::DragUInt("Quad count per segment", &m_QuadCountPerSegment, 0.1f, 1u, 32u))
 		{
-			for (u32 i = 0; i < (u32)curveSegments.size(); ++i)
+			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
 			{
 				GenerateSegment(i);
 			}
@@ -10075,20 +10292,19 @@ namespace flex
 
 	void Road::GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points)
 	{
-		const i32 startingCurveCount = (i32)curveSegments.size();
-		const real roadWidth = 4.0f;
+		const i32 startingCurveCount = (i32)roadSegments.size();
 
-		curveSegments.reserve(curveSegments.size() + points.size());
+		roadSegments.reserve(roadSegments.size() + points.size());
 
 		// First pass: set control points without yet setting handle points
 		{
-			Segment segment = {};
-			segment.widthStart = roadWidth;
-			segment.widthEnd = roadWidth;
+			RoadSegment segment = {};
+			segment.widthStart = m_MaxWidth;
+			segment.widthEnd = m_MaxWidth;
 			for (u32 i = 1; i < (u32)points.size(); ++i)
 			{
 				segment.curve = BezierCurve3D(points[i - 1], VEC3_ZERO, VEC3_ZERO, points[i]);
-				curveSegments.push_back(segment);
+				roadSegments.push_back(segment);
 			}
 		}
 
@@ -10099,8 +10315,8 @@ namespace flex
 			for (u32 i = 1; i < (u32)points.size() - 1; ++i)
 			{
 				i32 prevPointIndex = i - 1;
-				Segment& prevSeg = curveSegments[startingCurveCount + prevPointIndex];
-				Segment& currSeg = curveSegments[startingCurveCount + i];
+				RoadSegment& prevSeg = roadSegments[startingCurveCount + prevPointIndex];
+				RoadSegment& currSeg = roadSegments[startingCurveCount + i];
 
 				glm::vec3 pointDiff = (currSeg.curve.points[3] - prevSeg.curve.points[0]) * tangentScale;
 
@@ -10110,16 +10326,16 @@ namespace flex
 
 			// Set final one (or two if looping) tangent point(s)
 			i32 finalSegmentIndex = (i32)(startingCurveCount + points.size() - 2);
-			if (NearlyEquals(curveSegments[finalSegmentIndex].curve.points[3], curveSegments[0].curve.points[0], 0.1f))
+			if (NearlyEquals(roadSegments[finalSegmentIndex].curve.points[3], roadSegments[0].curve.points[0], 0.1f))
 			{
 				// Loop
-				glm::vec3 tangent = (curveSegments[0].curve.points[3] - curveSegments[finalSegmentIndex].curve.points[0]) * tangentScale;
-				curveSegments[0].curve.points[1] = curveSegments[0].curve.points[0] + tangent;
-				curveSegments[finalSegmentIndex].curve.points[2] = curveSegments[finalSegmentIndex].curve.points[3] - tangent;
+				glm::vec3 tangent = (roadSegments[0].curve.points[3] - roadSegments[finalSegmentIndex].curve.points[0]) * tangentScale;
+				roadSegments[0].curve.points[1] = roadSegments[0].curve.points[0] + tangent;
+				roadSegments[finalSegmentIndex].curve.points[2] = roadSegments[finalSegmentIndex].curve.points[3] - tangent;
 			}
 			else
 			{
-				curveSegments[finalSegmentIndex].curve.points[2] = curveSegments[finalSegmentIndex].curve.points[3] - curveSegments[finalSegmentIndex].curve.points[0];
+				roadSegments[finalSegmentIndex].curve.points[2] = roadSegments[finalSegmentIndex].curve.points[3] - roadSegments[finalSegmentIndex].curve.points[0];
 			}
 		}
 
@@ -10132,7 +10348,7 @@ namespace flex
 
 	void Road::GenerateSegment(i32 index)
 	{
-		if (index >= (i32)curveSegments.size())
+		if (index >= (i32)roadSegments.size())
 		{
 			PrintError("Attempted to generate road segment without curve defined!\n");
 			return;
@@ -10140,15 +10356,15 @@ namespace flex
 
 		PROFILE_AUTO("Generate road segment");
 
-		if (index < (i32)m_Meshes.size() && m_Meshes[index] != nullptr)
+		if (index < (i32)roadSegments.size() && roadSegments[index].mesh != nullptr)
 		{
-			m_Meshes[index]->Destroy();
-			m_Meshes[index] = nullptr;
+			roadSegments[index].mesh->Destroy();
+			roadSegments[index].mesh = nullptr;
 		}
 
-		if (index >= (i32)m_Meshes.size())
+		if (index >= (i32)roadSegments.size())
 		{
-			m_Meshes.resize(index + 1);
+			roadSegments.resize(index + 1);
 		}
 
 		GenerateMaterial();
@@ -10156,12 +10372,14 @@ namespace flex
 		Material* roadMaterial = g_Renderer->GetMaterial(m_RoadMaterialID);
 		Shader* roadShader = g_Renderer->GetShader(roadMaterial->shaderID);
 
-		Segment& segment = curveSegments[index];
+		RoadSegment& segment = roadSegments[index];
 		BezierCurve3D& curve = segment.curve;
 
-		//if (m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+		segment.ComputeAABB();
+
+		//if (roadSegments.size() >= terrainShader->maxObjectCount - 1)
 		//{
-		//	terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
+		//	terrainShader->maxObjectCount = (u32)(roadSegments.size() + 1);
 		//	g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
 		//}
 
@@ -10229,8 +10447,8 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_RoadMaterialID, &renderObjectCreateInfo);
 		if (meshComponent != nullptr)
 		{
-			assert(m_Meshes[index] == nullptr);
-			m_Meshes[index] = meshComponent;
+			assert(roadSegments[index].mesh == nullptr);
+			roadSegments[index].mesh = meshComponent;
 		}
 
 		CreateRigidBody(index);
@@ -10247,7 +10465,7 @@ namespace flex
 
 		CopyGenericFields(newGameObject, parent, CopyFlags::ADD_TO_SCENE);
 
-		newGameObject->curveSegments = curveSegments;
+		newGameObject->roadSegments = roadSegments;
 		newGameObject->m_RoadMaterialID = m_RoadMaterialID;
 		newGameObject->m_QuadCountPerSegment = m_QuadCountPerSegment;
 
@@ -10276,7 +10494,7 @@ namespace flex
 
 	void Road::CreateRigidBody(u32 meshIndex)
 	{
-		if (m_Meshes.empty())
+		if (roadSegments.empty())
 		{
 			return;
 		}
@@ -10303,7 +10521,7 @@ namespace flex
 		m_MeshVertexArrays[meshIndex] = new btTriangleIndexVertexArray();
 		btIndexedMesh part = {};
 
-		MeshComponent* submesh = m_Meshes[meshIndex];
+		MeshComponent* submesh = roadSegments[meshIndex].mesh;
 		VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
 		u32* indexBufferData = submesh->GetIndexBufferDataPtr();
 		u32 indexCount = submesh->GetIndexCount();

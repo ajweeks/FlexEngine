@@ -164,6 +164,9 @@ namespace flex
 	FLEX_NO_DISCARD glm::vec3 PasteColour3FromClipboard();
 	FLEX_NO_DISCARD glm::vec4 PasteColour4FromClipboard();
 
+	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2);
+	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint);
+
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
 	std::string& ToUpper(std::string& str);
@@ -467,6 +470,56 @@ namespace flex
 		void* criticalSection = nullptr;
 		volatile bool running = true;
 
+	};
+
+	struct AABB2D
+	{
+		real minX, maxX, minZ, maxZ;
+
+		bool Overlaps(const AABB2D& other)
+		{
+			return !(other.maxX < minX || other.maxZ < minZ ||
+				other.minX > maxX || other.minZ < maxZ);
+		}
+
+		bool Contains(const glm::vec2& point)
+		{
+			return (point.x >= minX && point.x < maxX &&
+				point.y >= minZ && point.y < maxZ);
+		}
+
+	};
+
+	struct AABB
+	{
+		// NOTE: ! Order = X Z Y so we can cast directly to AABB2D !
+		real minX, maxX, minZ, maxZ, minY, maxY;
+
+		// TODO: Add tests
+		bool Overlaps(const AABB& other)
+		{
+			return !(other.maxX < minX || other.maxY < minY || other.maxZ < minZ ||
+				other.minX > maxX || other.minY < maxY || other.minZ < maxZ);
+		}
+
+		bool Overlaps(const AABB2D& other)
+		{
+			return ((AABB2D*)this)->Overlaps(other);
+		}
+
+		bool Contains(const glm::vec3& point)
+		{
+			return (point.x >= minX && point.x < maxX &&
+				point.z >= minZ && point.z < maxZ &&
+				point.y >= minY && point.y < maxY);
+		}
+
+		bool Contains(const glm::vec2& point)
+		{
+			return ((AABB2D*)this)->Contains(point);
+		}
+
+		void DrawDebug(const btVector3& lineColour);
 	};
 
 	namespace ImGuiExt

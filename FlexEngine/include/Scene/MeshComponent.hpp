@@ -104,6 +104,7 @@ namespace flex
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
 
 		VertexBufferData* GetVertexBufferData();
+		u32* GetIndexBufferUnsafePtr();
 		std::vector<u32> GetIndexBufferCopy();
 		u32* GetIndexBufferDataPtr();
 		u32 GetIndexCount();

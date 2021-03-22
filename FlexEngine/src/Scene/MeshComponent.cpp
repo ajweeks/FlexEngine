@@ -1195,6 +1195,11 @@ namespace flex
 		return &m_VertexBufferData;
 	}
 
+	u32* MeshComponent::GetIndexBufferUnsafePtr()
+	{
+		return &m_Indices[0];
+	}
+
 	std::vector<u32> MeshComponent::GetIndexBufferCopy()
 	{
 		return m_Indices;

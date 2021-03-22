@@ -30,6 +30,7 @@ namespace flex
 	class TerminalCamera;
 	class Wire;
 	class SoftBody;
+	struct RoadSegment;
 
 	namespace VM
 	{
@@ -1039,6 +1040,7 @@ namespace flex
 			i32 isolateOctave;
 
 			std::vector<std::vector<glm::vec2>>* randomTables;
+			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
 
 			// Per chunk inputs
 			volatile glm::vec2i chunkIndex;
@@ -1054,17 +1056,21 @@ namespace flex
 		real MaxHeight = 3.0f;
 
 	private:
+		friend Road;
+
 		static real SmoothBlend(real t);
 
 		void GenerateGradients();
+		void UpdateRoadSegments();
 
 		void DiscoverChunks();
 		void GenerateChunks();
-		void UpdateNormalsForMesh(const glm::vec2i& chunkIndex, std::vector<glm::vec3>& normalsVec, std::vector<glm::vec3>& tangentsVec);
 		void DestroyAllChunks();
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
+
+		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 
 		MaterialID m_TerrainMatID = InvalidMaterialID;
 
@@ -1107,6 +1113,9 @@ namespace flex
 
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
 		u32 m_BasePerlinTableWidth = 16;
+
+		// Map of chunk index to overlapping road segments
+		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
 
 		std::vector<TextureID> m_TableTextureIDs;
 
@@ -1454,6 +1463,19 @@ namespace flex
 	static_assert((ARRAY_LENGTH(VehicleSoundEffectNames) - 1) == (i32)Vehicle::SoundEffect::_COUNT, "VehicleSoundEffectNames length does not match the number of entries in the Vehicle::SoundEffect enum");
 
 
+	struct RoadSegment
+	{
+		BezierCurve3D curve;
+		real widthStart;
+		real widthEnd;
+		AABB aabb;
+		MeshComponent* mesh = nullptr;
+
+		bool Overlaps(const glm::vec2& point);
+		real SignedDistanceTo(const glm::vec3& point, glm::vec3& outClosestPoint);
+		void ComputeAABB();
+	};
+
 	class Road : public GameObject
 	{
 	public:
@@ -1471,6 +1493,8 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		std::vector<RoadSegment> roadSegments;
+
 	private:
 		void GenerateSegment(i32 index);
 		void GenerateMaterial();
@@ -1478,19 +1502,12 @@ namespace flex
 
 		void CreateRigidBody(u32 meshIndex);
 
-		struct Segment
-		{
-			BezierCurve3D curve;
-			real widthStart;
-			real widthEnd;
-		};
-
-		std::vector<Segment> curveSegments;
-		std::vector<MeshComponent*> m_Meshes;
 		std::vector<RigidBody*> m_RigidBodies;
 		std::vector<class btTriangleIndexVertexArray*> m_MeshVertexArrays;
 
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
+
+		real m_MaxWidth = 4.0f;
 
 		u32 m_QuadCountPerSegment = 10;
 
