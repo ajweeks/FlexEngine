@@ -365,6 +365,17 @@ namespace flex
 		return false;
 	}
 
+	GameObjectID JSONObject::GetGameObjectID(const std::string& label) const
+	{
+		GUID guid = GetGUID(label);
+		return *(GameObjectID*)&guid;
+	}
+
+	bool JSONObject::SetGameObjectIDChecked(const std::string& label, GameObjectID& value) const
+	{
+		return SetGUIDChecked(label, *(GUID*)&value);
+	}
+
 	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
 	{
 		for (const JSONField& field : fields)

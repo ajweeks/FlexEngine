@@ -175,7 +175,7 @@ namespace flex
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
 		bool m_bSpawnPlayer = false;
-		GUID m_PlayerGUIDs[2];
+		GameObjectID m_PlayerGUIDs[2];
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 

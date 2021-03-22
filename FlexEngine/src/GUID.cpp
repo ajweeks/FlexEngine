@@ -3,11 +3,13 @@
 #include "GUID.hpp"
 
 #include "Helpers.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/SceneManager.hpp"
 
 namespace flex
 {
 	const GUID InvalidGUID = {};
-	const GUID InvalidGameObjectID = InvalidGUID;
+	const GameObjectID InvalidGameObjectID = {};
 	const GUID InvalidPrefabID = InvalidGUID;
 
 	GUID::GUID()
@@ -162,5 +164,36 @@ namespace flex
 		}
 
 		return result;
+	}
+
+	GameObjectID::GameObjectID() :
+		GUID()
+	{
+	}
+
+	GameObjectID::GameObjectID(u64 data1, u64 data2) :
+		GUID(data1, data2)
+	{
+	}
+
+	GameObject* GameObjectID::Get()
+	{
+		if (!IsValid())
+		{
+			return nullptr;
+		}
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (scene != nullptr)
+		{
+			return scene->GetGameObject(*this);
+		}
+		return nullptr;
+	}
+
+	GameObjectID GameObjectID::FromString(const std::string& str)
+	{
+		// TODO: Avoid copy
+		GUID guid = GUID::FromString(str);
+		return *(GameObjectID*)&guid;
 	}
 } // namespace flex

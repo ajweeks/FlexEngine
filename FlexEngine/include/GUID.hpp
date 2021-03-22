@@ -33,10 +33,18 @@ namespace flex
 		u64 Data2; // Stores most significant quad word
 	};
 
-	using GameObjectID = GUID;
+	struct GameObjectID : public GUID
+	{
+		GameObjectID();
+		GameObjectID(u64 data1, u64 data2);
+
+		GameObject* Get();
+
+		static GameObjectID FromString(const std::string& str);
+	};
 	using PrefabID = GUID;
 
 	extern const GUID InvalidGUID;
-	extern const GUID InvalidGameObjectID;
+	extern const GameObjectID InvalidGameObjectID;
 	extern const GUID InvalidPrefabID;
 } // namespace flex

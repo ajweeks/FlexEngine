@@ -157,7 +157,7 @@ namespace flex
 		GameObjectID gameObjectID;
 		if (sceneFileVersion >= 5)
 		{
-			gameObjectID = obj.GetGUID("id");
+			gameObjectID = obj.GetGameObjectID("id");
 		}
 		else
 		{

@@ -42,6 +42,9 @@ namespace flex
 		GUID GetGUID(const std::string& label) const;
 		bool SetGUIDChecked(const std::string& label, GUID& value) const;
 
+		GameObjectID GetGameObjectID(const std::string& label) const;
+		bool SetGameObjectIDChecked(const std::string& label, GameObjectID& value) const;
+
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
 		bool SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const;
 
