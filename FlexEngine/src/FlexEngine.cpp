@@ -343,6 +343,8 @@ namespace flex
 		// TODO: Support params like "aa=0"
 		m_ConsoleCommands.emplace_back("aa.off", []() { g_Renderer->SetTAAEnabled(false); });
 		m_ConsoleCommands.emplace_back("aa.taa", []() { g_Renderer->SetTAAEnabled(true); });
+		m_ConsoleCommands.emplace_back("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); });
+		m_ConsoleCommands.emplace_back("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); });
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1278,7 +1280,7 @@ namespace flex
 		{
 			const real consoleWindowWidth = 350.0f;
 			float fontScale = ImGui::GetIO().FontGlobalScale;
-			real consoleWindowHeight = 25.0f + m_CmdAutoCompletions.size() * 17.0f * fontScale;
+			real consoleWindowHeight = 28.0f + m_CmdAutoCompletions.size() * 16.0f * fontScale;
 			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
@@ -1315,7 +1317,8 @@ namespace flex
 					ImGuiInputTextFlags_CallbackAlways |
 					ImGuiInputTextFlags_CallbackHistory |
 					ImGuiInputTextFlags_CallbackCompletion |
-					ImGuiInputTextFlags_CallbackCharFilter,
+					ImGuiInputTextFlags_CallbackCharFilter |
+					ImGuiInputTextFlags_DeleteCallback,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
@@ -1336,6 +1339,7 @@ namespace flex
 							}
 							m_PreviousCmdLineIndex = -1;
 							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+							break;
 						}
 					}
 					if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
@@ -1441,6 +1445,27 @@ namespace flex
 			m_bInvalidCmdLine = false;
 		}
 
+		auto FillOutAutoCompletions = [this](const char* buffer)
+		{
+			m_PreviousCmdLineIndex = -1;
+
+			m_CmdAutoCompletions.clear();
+
+			if (!m_bShowAllConsoleCommands && strlen(buffer) == 0)
+			{
+				// Don't show suggestions with empty buffer to allow navigating history
+				return;
+			}
+
+			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			{
+				if (StartsWith(cmd.name, buffer))
+				{
+					m_CmdAutoCompletions.push_back(cmd.name);
+				}
+			}
+		};
+
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
 			if (m_CmdAutoCompletions.empty())
@@ -1534,15 +1559,7 @@ namespace flex
 					}
 				}
 
-				m_PreviousCmdLineIndex = -1;
-				m_CmdAutoCompletions.clear();
-				for (const ConsoleCommand& cmd : m_ConsoleCommands)
-				{
-					if (StartsWith(cmd.name, data->Buf))
-					{
-						m_CmdAutoCompletions.push_back(cmd.name);
-					}
-				}
+				FillOutAutoCompletions(data->Buf);
 			}
 			return 0;
 		}
@@ -1557,6 +1574,7 @@ namespace flex
 			}
 
 			char eventChar = (char)data->EventChar;
+			// TODO: Insert at data->CursorPos
 			char* cmdLine = strncat(m_CmdLineStrBuf, &eventChar, 1);
 
 			if (m_SelectedCmdLineAutoCompleteIndex != -1)
@@ -1567,31 +1585,42 @@ namespace flex
 				}
 			}
 
-			m_PreviousCmdLineIndex = -1;
-			m_CmdAutoCompletions.clear();
-			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			FillOutAutoCompletions(cmdLine);
+			if (m_SelectedCmdLineAutoCompleteIndex == -1)
 			{
-				if (StartsWith(cmd.name, cmdLine))
-				{
-					m_CmdAutoCompletions.push_back(cmd.name);
-				}
+				m_SelectedCmdLineAutoCompleteIndex = 0;
+			}
+		}
+		else if (data->EventFlag == ImGuiInputTextFlags_DeleteCallback)
+		{
+			char cmdLine[128];
+			strncpy(cmdLine, m_CmdLineStrBuf, ARRAY_LENGTH(cmdLine));
+
+			// Delete char
+			if (strlen(m_CmdLineStrBuf) == 1)
+			{
+				memset(cmdLine, 0, ARRAY_LENGTH(cmdLine));
+			}
+			else
+			{
+				memmove(&cmdLine[data->CursorPos + 1], &cmdLine[data->CursorPos + 2], strlen(m_CmdLineStrBuf) - data->CursorPos);
+			}
+
+			FillOutAutoCompletions(cmdLine);
+			if (strlen(cmdLine) == 0)
+			{
+				m_SelectedCmdLineAutoCompleteIndex = -1;
+			}
+			else if (m_SelectedCmdLineAutoCompleteIndex == -1)
+			{
+				m_SelectedCmdLineAutoCompleteIndex = 0;
 			}
 		}
 		else
 		{
 			if (m_PreviousCmdLineIndex == -1)
 			{
-				m_CmdAutoCompletions.clear();
-				if (strlen(m_CmdLineStrBuf) > 0)
-				{
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
-					{
-						if (StartsWith(cmd.name, m_CmdLineStrBuf))
-						{
-							m_CmdAutoCompletions.push_back(cmd.name);
-						}
-					}
-				}
+				FillOutAutoCompletions(m_CmdLineStrBuf);
 			}
 		}
 
@@ -1787,6 +1816,10 @@ namespace flex
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
 			{
 				m_bShowingConsole = !m_bShowingConsole;
+				m_bShowAllConsoleCommands = bShiftDown;
+				m_CmdAutoCompletions.clear();
+				m_PreviousCmdLineIndex = -1;
+				m_SelectedCmdLineAutoCompleteIndex = -1;
 				if (m_bShowingConsole)
 				{
 					m_bShouldFocusKeyboardOnConsole = true;

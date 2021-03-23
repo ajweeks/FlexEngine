@@ -305,6 +305,9 @@ namespace flex
 		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
 		void SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex);
 
+		void ToggleWireframeOverlay();
+		void ToggleWireframeSelectionOverlay();
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 

@@ -3504,12 +3504,22 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 {
                     event_flag = ImGuiInputTextFlags_CallbackCompletion;
                     event_key = ImGuiKey_Tab;
-                }
-                else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_UpArrow))
-                {
-                    event_flag = ImGuiInputTextFlags_CallbackHistory;
-                    event_key = ImGuiKey_UpArrow;
-                }
+				}
+				else if ((flags & ImGuiInputTextFlags_DeleteCallback) != 0 && IsKeyPressedMap(ImGuiKey_Backspace))
+				{
+					event_flag = ImGuiInputTextFlags_DeleteCallback;
+					event_key = ImGuiKey_Backspace;
+				}
+				else if ((flags & ImGuiInputTextFlags_DeleteCallback) != 0 && IsKeyPressedMap(ImGuiKey_Delete))
+				{
+					event_flag = ImGuiInputTextFlags_DeleteCallback;
+					event_key = ImGuiKey_Delete;
+				}
+				else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_UpArrow))
+				{
+					event_flag = ImGuiInputTextFlags_CallbackHistory;
+					event_key = ImGuiKey_UpArrow;
+				}
                 else if ((flags & ImGuiInputTextFlags_CallbackHistory) != 0 && IsKeyPressedMap(ImGuiKey_DownArrow))
                 {
                     event_flag = ImGuiInputTextFlags_CallbackHistory;

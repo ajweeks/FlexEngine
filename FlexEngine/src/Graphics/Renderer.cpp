@@ -782,6 +782,16 @@ namespace flex
 		}
 	}
 
+	void Renderer::ToggleWireframeOverlay()
+	{
+		m_bEnableWireframeOverlay = !m_bEnableWireframeOverlay;
+	}
+
+	void Renderer::ToggleWireframeSelectionOverlay()
+	{
+		m_bEnableSelectionWireframe = !m_bEnableSelectionWireframe;
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)

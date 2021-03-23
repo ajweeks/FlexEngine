@@ -194,6 +194,7 @@ namespace flex
 		};
 		std::vector<ConsoleCommand> m_ConsoleCommands;
 		bool m_bShowingConsole = false;
+		bool m_bShowAllConsoleCommands = false;
 		static const u32 MAX_CHARS_CMD_LINE_STR = 256;
 		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
 		i32 m_SelectedCmdLineAutoCompleteIndex = -1;
