@@ -116,8 +116,8 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "48.166, 0.000, 17.630",
-				"scale" : "4.540, 4.540, 4.540"
+				"pos" : "66.446, 52.293, 25.470",
+				"scale" : "13.181, 13.181, 13.181"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -133,8 +133,8 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "31.580, 0.000, 31.530",
-				"scale" : "2.871, 2.871, 2.871"
+				"pos" : "35.889, 45.023, 59.114",
+				"scale" : "8.791, 8.791, 8.791"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -187,6 +187,47 @@
 				"mask" : 1,
 				"group" : 1
 			}
+		},
+		{
+			"name" : "blob1",
+			"id" : "09800A82CFBA60A6487E3E202B121031",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "107.559, 45.023, 59.114",
+				"scale" : "8.791, 8.791, 8.791"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "sphere.glb",
+			"materials" : 
+			[
+				"Raymarched"
+			]
+		},
+		{
+			"name" : "New_Object_00",
+			"id" : "5DEEC5ED49DCD780439A3952CD9D4504",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "4.000, 0.000, 0.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb"
+		},
+		{
+			"name" : "New_Object_01",
+			"id" : "2B32D4C7B551E4B14624774049588943",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "7.129, 0.000, -4.650"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb"
 		}
 	]
 }

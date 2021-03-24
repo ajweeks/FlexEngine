@@ -1813,6 +1813,7 @@ namespace flex
 		// Raymarched
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->vertexAttributes = (u32)VertexAttribute::POSITION;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);

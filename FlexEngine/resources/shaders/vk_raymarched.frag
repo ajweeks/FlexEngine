@@ -40,12 +40,31 @@ layout (location = 0) in vec4 ex_PositionOS;
 
 layout (location = 0) out vec4 outColour;
 
+float rand(vec2 seed)
+{
+  return fract(sin(dot(seed.xy ,vec2(12.9898,78.233))) * 43758.5453);
+}
+
+float noise(vec3 x)
+{
+    vec3 p = floor(x);
+    vec3 f = fract(x);
+    f = f * f * (3.0 - 2.0 * f);
+    
+    vec2 uv = (p.xy + vec2(37.0,17.0) * p.z) + f.xy;
+    float rand0 = rand(x.xy);
+    float rand1 = rand(x.yz);
+    return mix(rand0, rand1, f.z);
+}
+
 float sdf(vec3 p)
 {
 	p /=  uboDynamic.model[0][0];
-	p.xy *= sin(p.z * 15.0 + uboConstant.time * 4.5) * 0.09 + 0.85;
-	p.y *= cos((p.y+p.z) * 12.3 + uboConstant.time * 3.6) * 0.07 + 0.85;
-	p.x *= cos((p.x) * 9.3 + uboConstant.time * 2.6) * 0.02 + 0.98;
+	p.y *= sin(p.z * 5.0 + uboConstant.time * 2.5) * 0.04 + 0.85;
+	p.x *= sin(p.x * 6.0 + uboConstant.time * 2.71) * 0.03 + 0.95;
+	p.x *= sin(p.y * 3.0 + uboConstant.time * 1.3) * 0.02 + 0.98;
+	//p.y *= cos((p.y+p.z) * 12.3 + uboConstant.time * 3.6) * 0.07 + 0.85;
+	//p.x *= cos((p.x) * 9.3 + uboConstant.time * 2.6) * 0.02 + 0.98;
 	p.z = mix(p.z, p.z * p.y, 0.3);
 
 	float radius = 0.5;
@@ -63,6 +82,41 @@ vec3 calcNormal(vec3 pos)
 		sdf(pos + epsillon_zero.xyy),
 		sdf(pos + epsillon_zero.yxy),
 		sdf(pos + epsillon_zero.yyx)) - center);
+}
+
+float cloudDensity(vec3 point)
+{
+	float d = 0.1 + 0.8 * sin(0.6 * point.z) * sin(0.5 * point.x);
+
+	vec3 q = point;
+    float f;
+    
+    f  = 0.5000 * noise(q); q = q * 2.02;
+    f += 0.2500 * noise(q); q = q * 2.03;
+    f += 0.1250 * noise(q); q = q * 2.01;
+    f += 0.0625 * noise(q);
+    d += 2.75 * f;
+
+    return clamp(d, 0.0, 1.0);
+}
+
+float density(vec3 rayOrigin, vec3 rayDir, float searchDist)
+{
+	float density = 0.0;
+
+	float t = 0.0;
+	int stepCount = 20;
+	float stepSize = searchDist / stepCount;
+	float maxDist = 0.0;
+	for (int i = 0; i < stepCount; ++i)
+	{
+		float dist = sdf(rayOrigin + t * rayDir);
+		density += dist < 0.0 ? 1.0 : 0.0;
+
+		t += stepSize;
+	}
+
+	return clamp(density / stepCount, 0.0, 1.0);
 }
 
 vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
@@ -83,14 +137,16 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 		// break;
 		if (dist < 0.001 * t)
 		{
-			vec3 N = calcNormal(rayOrigin + t * rayDir);
+			vec3 intersection = rayOrigin + t * rayDir;
+			vec3 N = calcNormal(intersection);
 			//result.xyz = (N) * 0.5 + 0.5;
 			float d = dot(N, -lightDir);
 			float light = d * 0.5 + 0.5;
-			vec3 diffuse = mix(max(d, 0.0), light, 0.05) * vec3(0.05, 0.64, 0.15);
+			vec3 col = vec3(0.75, 0.74, 0.78);
+			vec3 diffuse = mix(max(d, 0.0), light, 0.05) * col;
 			vec3 sky = (dot(N, vec3(0, 1, 0)) * 0.5 + 0.5) * vec3(0.02, 0.06, 0.3);
 			result.xyz = diffuse + sky * 0.5;
-			result.w = 1.0;
+			result.w = density(intersection, rayDir, 2.0);
 			break;
 		}
 

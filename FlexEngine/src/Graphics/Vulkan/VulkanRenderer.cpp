@@ -6787,6 +6787,7 @@ namespace flex
 						}
 						else
 						{
+							// TODO: Sort translucents front to back here
 							matBatchPair.batch.objects.push_back(renderID);
 						}
 					}
