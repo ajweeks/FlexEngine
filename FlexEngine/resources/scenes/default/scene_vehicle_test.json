@@ -22,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-48.036, 32.196, 8.200",
-			"pitch" : -0.462094,
-			"yaw" : 0.314469
+			"position" : "-5.863, 20.312, -29.689",
+			"pitch" : -0.658603,
+			"yaw" : -5.448478
 		}
 	},
 	"objects" : 
@@ -73,8 +73,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "-0.972, 0.916, -1.294",
-				"rot" : "-0.007, 0.061, -0.004",
+				"pos" : "-0.728, 0.916, -1.251",
+				"rot" : "-0.008, 0.178, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -98,7 +98,7 @@
 				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 5,
-				"loaded chunk radius" : 295.575989,
+				"loaded chunk radius" : 177.348999,
 				"base table width" : 128,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",

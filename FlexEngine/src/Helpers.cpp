@@ -1279,7 +1279,7 @@ namespace flex
 		return !(bHasNeg && bHasPos);
 	}
 
-	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint)
+	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint)//, glm::vec3& outTangentAtClosestPoint)
 	{
 		const real errorVal = -9999.0f;
 
@@ -1344,7 +1344,7 @@ namespace flex
 #endif
 
 		glm::vec3 planeNorm = glm::cross((tri1 - tri0), (tri2 - tri0));
-		//real normLen = glm::length(planeNorm);
+		real normLen = glm::length(planeNorm);
 
 		glm::vec3 planeABNorm = glm::cross(planeNorm, tri1 - tri0);
 		bool bPointAboveAB = glm::dot(point - tri0, planeABNorm) > 0.0f;
@@ -1354,6 +1354,8 @@ namespace flex
 
 		glm::vec3 planeCANorm = glm::cross(planeNorm, tri0 - tri2);
 		bool bPointAboveCA = glm::dot(point - tri2, planeCANorm) > 0.0f;
+
+		planeNorm /= normLen;
 
 		// Find the projection of the point onto the edge
 
@@ -1367,6 +1369,7 @@ namespace flex
 		if (uca > 1.0f && uab < 0.0f)
 		{
 			outClosestPoint = tri0;
+			//outTangentAtClosestPoint = glm::normalize(ab);
 		}
 		else
 		{
@@ -1377,6 +1380,7 @@ namespace flex
 			if (uab > 1.0f && ubc < 0.0f)
 			{
 				outClosestPoint = tri1;
+				//outTangentAtClosestPoint = glm::normalize(ab);
 			}
 			else if (ubc > 1.0f && uca < 0.0f)
 			{
@@ -1384,25 +1388,57 @@ namespace flex
 			}
 			else if (uab >= 0.0f && uab <= 1.0f && !bPointAboveAB)
 			{
-				outClosestPoint = tri0 + uab * (tri1 - tri0);
+				outClosestPoint = tri0 + uab * ab;
 			}
 			else if (ubc >= 0.0f && ubc <= 1.0f && !bPointAboveBC)
 			{
-				outClosestPoint = tri0 + ubc * (tri2 - tri1);
+				outClosestPoint = tri0 + ubc * bc;
 			}
 			else if (uca >= 0.0f && uca <= 1.0f && !bPointAboveCA)
 			{
-				outClosestPoint = tri0 + uca * (tri0 - tri2);
+				outClosestPoint = tri0 + uca * ca;
 			}
 			else
 			{
-				// The closest point is in the triangle, just tri0 for now
-				outClosestPoint = glm::vec3(errorVal);
-				return -1.0f;
+				// The closest point is in the triangle
+				//outClosestPoint = tri0 + 0.5f * (tri0 - tri2) + 0.5f * (tri1 - tri0);
+				//outClosestPoint = uab < uca ? (uca < ubc ? tri0 : (uca < ubc ? tri1 : tri2)) : tri1;
+				// Shortest edge is road side
+				if (abLen2 < bcLen2)
+				{
+					if (abLen2 < caLen2)
+					{
+						outClosestPoint = tri1 + ab * uab;
+					}
+					else
+					{
+						outClosestPoint = tri0 + ca * uca;
+					}
+				}
+				else
+				{
+					if (bcLen2 < caLen2)
+					{
+						outClosestPoint = tri2 + bc * ubc;
+					}
+					else
+					{
+						outClosestPoint = tri0 + ca * uca;
+					}
+				}
+
+				real distAlongNormal = glm::dot(point, planeNorm) - glm::dot(tri0, planeNorm);
+				glm::vec3 projectedPoint = point - distAlongNormal * planeNorm;
+
+				real dist = glm::distance(projectedPoint, outClosestPoint);
+				return -dist;
 			}
 		}
 
-		real dist = glm::distance(point, outClosestPoint);
+		real distAlongNormal = glm::dot(point, planeNorm) - glm::dot(tri0, planeNorm);
+		glm::vec3 projectedPoint = point - distAlongNormal * planeNorm;
+
+		real dist = glm::distance(projectedPoint, outClosestPoint);
 
 		return dist;
 	}

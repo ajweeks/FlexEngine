@@ -19,6 +19,8 @@ namespace flex
 		static BezierCurve3D FromString(const std::string& str);
 		std::string ToString() const;
 
+		real FindDistanceAlong(const glm::vec3& point);
+
 		glm::vec3 points[4];
 
 		real calculatedLength = -1.0f;

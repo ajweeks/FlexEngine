@@ -26,9 +26,10 @@ void main()
 	mat4 invView = inverse(uboConstant.view);
 	vec3 camPos = vec3(invView[3][0], invView[3][1], invView[3][2]);
 
-	float dist = clamp(length(camPos - ex_PositionWS)*0.0002,0.15,1.0);
+	// TODO: Get proper linear depth
+	float dist = clamp(length(camPos - ex_PositionWS)*0.002 - 0.3,0.0,1.0);
 
-	dist = smoothstep(dist, 0.0, 0.1);
+	//dist = smoothstep(dist, 0.0, 0.13);
 
 	vec3 V = normalize(camPos.xyz - ex_PositionWS);
 
@@ -36,13 +37,12 @@ void main()
 	float light = dot(N, L) * 0.5 + 0.5;
 	float fresnel = pow(1.0 - dot(N, V), 6.0);
 
-
 	vec3 groundCol;
 
 	float min = 0.45;
 	float max = 0.52;
-	vec3 lowCol = vec3(0.13, 0.11, 0.041);
-	vec3 highCol = vec3(0.08, 0.16, 0.04);// vec3(0.00, 0.04, 0.01);
+	vec3 lowCol = vec3(0.06, 0.05, 0.02);
+	vec3 highCol = vec3(0.04, 0.07, 0.02);// vec3(0.00, 0.04, 0.01);
 	if (ex_Colour.r > max)
 	{
 		groundCol = highCol;
@@ -58,6 +58,7 @@ void main()
 	}
 	groundCol *= light;
 	groundCol += (fresnel * 1.2) * groundCol;
-	fragmentColour = vec4(mix(groundCol, vec3(0), pow(dist, 0.2)), 1.0);
+	vec3 fogCol = vec3(0.3, 0.38, 0.52);
+	fragmentColour = vec4(mix(groundCol, fogCol, dist), 1.0);
 	// fragmentColour = vec4(ex_Colour.rgb, 1.0);
 }

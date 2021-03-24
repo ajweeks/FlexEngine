@@ -7259,6 +7259,9 @@ namespace flex
 
 		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
 
+		bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
+
 		u32 oldtableWidth = m_BasePerlinTableWidth;
 		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 1, 512))
 		{
@@ -7530,14 +7533,17 @@ namespace flex
 			return;
 		}
 
+		// Amount of extra distance blending can affect, must be taken into account
+		// here to ensure there are no discontinuities between chunks where there is falloff
+		real blendRadiusBoost = m_RoadBlendDist + m_RoadBlendThreshold;
 		glm::vec3 pos = m_Transform.GetWorldPosition();
 		for (const RoadSegment& roadSegment : road->roadSegments)
 		{
 			// TODO:  + 0.5f?
-			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x) / ChunkSize);
-			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x) / ChunkSize);
-			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z) / ChunkSize);
-			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z) / ChunkSize);
+			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / ChunkSize);
+			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / ChunkSize);
+			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / ChunkSize);
+			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / ChunkSize);
 			for (i32 x = minChunkIndexX; x < maxChunkIndexX; ++x)
 			{
 				for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
@@ -7852,6 +7858,8 @@ namespace flex
 		chunkData.chunkSize = ChunkSize;
 		chunkData.maxHeight = MaxHeight;
 		chunkData.octaveScale = m_OctaveScale;
+		chunkData.roadBlendDist = m_RoadBlendDist;
+		chunkData.roadBlendThreshold = m_RoadBlendThreshold;
 		chunkData.numOctaves = m_NumOctaves;
 		chunkData.vertCountPerChunkAxis = VertCountPerChunkAxis;
 		chunkData.isolateOctave = m_IsolateOctave;
@@ -7913,6 +7921,8 @@ namespace flex
 				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
 				real maxHeight = work->maxHeight;
+				real roadBlendDist = work->roadBlendDist;
+				real roadBlendThreshold = work->roadBlendThreshold;
 				std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments = work->roadSegments;
 
 				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
@@ -7938,13 +7948,16 @@ namespace flex
 					{
 						glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
 
-						glm::vec3 pos = glm::vec3(uv.x * chunkSize, 0.0f, uv.y * chunkSize);
-
-						glm::vec3 vertPosWS = pos + glm::vec3(chunkIndex.x * chunkSize, 0.0f, chunkIndex.y * chunkSize);
+						glm::vec3 vertPosOS = glm::vec3(uv.x * chunkSize, 0.0f, uv.y * chunkSize);
+						glm::vec3 vertPosWS = vertPosOS + glm::vec3(chunkIndex.x * chunkSize, 0.0f, chunkIndex.y * chunkSize);
 
 						glm::vec3 normal;
 
+						real roadWidth = 0.0f;
+						real diffLen = 0.0f;
 						real distToRoad = 99999.0f;
+						glm::vec3 roadTangentAtClosestPoint;
+						glm::vec3 roadCurvePosAtClosestPoint;
 						glm::vec3 closestPointToRoad;
 						if (overlappingRoadSegments != nullptr)
 						{
@@ -7956,16 +7969,50 @@ namespace flex
 								{
 									distToRoad = d;
 									closestPointToRoad = outClosestPoint;
+
+									real distAlongCurve = overlappingRoadSegment->curve.FindDistanceAlong(outClosestPoint);
+
+									// Find a tangent vector which lies parallel to road, won't
+									// be purely perpendicular to road forward, but good enough
+									glm::vec3 diff = (vertPosWS - closestPointToRoad);
+									diff.y = 0.0f;
+									diffLen = glm::length(diff);
+
+									roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distToRoad);
+									if (distToRoad - roadBlendThreshold < roadBlendDist)
+									{
+										glm::vec3 curveForward = glm::normalize(overlappingRoadSegment->curve.GetFirstDerivativeOnCurve(distAlongCurve));
+										roadTangentAtClosestPoint = glm::cross(curveForward, VEC3_UP);
+										if (glm::dot(roadTangentAtClosestPoint, vertPosWS - roadCurvePosAtClosestPoint) < 0.0f)
+										{
+											// Negate when point is on left side of road
+											roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
+										}
+										roadWidth = overlappingRoadSegment->widthStart;
+									}
 								}
 							}
 						}
 
-						bool bOverlapsRoad = distToRoad < 0.0f;
+						real vergeLen = roadBlendThreshold * 0.5f;
 
-						if (bOverlapsRoad)
+						// zero at edge, grows further into road (zero outside road)
+						real distanceInsideRoad = glm::max(-distToRoad, 0.0f);
+						// zero at edge, grows further out from road (zero inside road)
+						real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
+						// [0, 1] from inner verge to outer verge and beyond (zero inside road)
+						real distanceAlongVerge = glm::clamp(distanceOutsideRoad / vergeLen, 0.0f, 1.0f);
+						real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
+						// [0, 1] one at road edge, zero at blend dist (zero inside road)
+						//real roadBlendWeight = 1.0f - glm::min(distanceOutsideRoad / roadBlendDist, 1.0f);
+						real roadBlendWeight = 1.0f - glm::clamp((distToRoad - roadBlendThreshold) / roadBlendDist, 0.0f, 1.0f);
+
+						// Distance calc must be slightly off, if this checks for 0.0
+						// we get some verts in the road on the edges
+						if (distToRoad < 0.2f)
 						{
-							normal = VEC3_UP;
 							// Clip point by setting to NaN
+							normal = VEC3_UP;
 							vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
 						}
 						else
@@ -7975,14 +8022,21 @@ namespace flex
 
 							vertPosWS.y = (height - 0.5f) * maxHeight;
 
-							real lerpToRoadPosAlpha = 1.0f - glm::clamp((distToRoad - 10.0f) / 50.0f, 0.0f, 1.0f);
-							if (x == 0 || z == 0 || x == vertCountPerChunkAxis - 1 || z == vertCountPerChunkAxis - 1)
+							if (roadBlendWeight > 0.0f)
 							{
-								lerpToRoadPosAlpha = 0.0f;
+								real lerpToRoadPosAlpha = roadBlendWeight;
+								lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
+
+								real alpha = 1.0f;
+								glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * diffLen;
+
+								vertPosWS = vertPosWS + (closestPointToRoad - vertPosWS) * lerpToRoadPosAlpha;
+								if (vergeBlendWeight > 0)
+									vertPosWS = projectedPoint;
+								//vertPosWS = Lerp(vertPosWS, projectedPoint, vergeBlendWeight);
 							}
 
-							vertPosWS = Lerp(vertPosWS, closestPointToRoad, lerpToRoadPosAlpha);
-
+							// TODO: Compute in post process using neighboring vertices
 							const real e = 0.01f;
 							real heightDX = (SampleTerrain(work, sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(work, sampleCenter + glm::vec2(e, 0.0f))) * maxHeight;
 							real heightDZ = (SampleTerrain(work, sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(work, sampleCenter + glm::vec2(0.0f, e))) * maxHeight;

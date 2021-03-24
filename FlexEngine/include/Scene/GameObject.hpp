@@ -1035,6 +1035,8 @@ namespace flex
 			real chunkSize;
 			real maxHeight;
 			real octaveScale;
+			real roadBlendDist;
+			real roadBlendThreshold;
 			u32 numOctaves;
 			u32 vertCountPerChunkAxis;
 			i32 isolateOctave;
@@ -1100,6 +1102,9 @@ namespace flex
 		real m_OctaveScale = 1.0f;
 		real m_BaseOctave = 1.0f;
 		u32 m_NumOctaves = 1;
+
+		real m_RoadBlendDist = 10.0f;
+		real m_RoadBlendThreshold = 10.0f;
 
 		bool m_bHighlightGrid = false;
 		bool m_bDisplayTables = false;

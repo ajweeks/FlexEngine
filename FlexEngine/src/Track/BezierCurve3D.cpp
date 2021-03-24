@@ -2,6 +2,10 @@
 
 #include "Track/BezierCurve3D.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/norm.hpp>
+IGNORE_WARNINGS_POP
+
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
@@ -121,5 +125,24 @@ namespace flex
 			VecToString(points[3], precision));
 
 		return result;
+	}
+
+	real BezierCurve3D::FindDistanceAlong(const glm::vec3& point)
+	{
+		i32 sampleCount = 20;
+		real shortestDist2 = 9999.0f;
+		real tAtShortestDist = -1.0f;
+		for (i32 i = 0; i < sampleCount; ++i)
+		{
+			real t = ((real)i - 1.0f) / sampleCount;
+			real dist2 = glm::distance2(point, GetPointOnCurve(t));
+			if (dist2 < shortestDist2)
+			{
+				shortestDist2 = dist2;
+				tAtShortestDist = t;
+			}
+		}
+
+		return tAtShortestDist;
 	}
 } // namespace flex
