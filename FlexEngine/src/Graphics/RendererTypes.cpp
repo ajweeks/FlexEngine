@@ -138,19 +138,19 @@ namespace flex
 #elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
-			vertexShaderFilePath = SPV_DIRECTORY + inVertexShaderFilePath;
+			vertexShaderFilePath = COMPILED_SHADERS_DIRECTORY + inVertexShaderFilePath;
 		}
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = SPV_DIRECTORY + inFragmentShaderFilePath;
+			fragmentShaderFilePath = COMPILED_SHADERS_DIRECTORY + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = SPV_DIRECTORY + inGeometryShaderFilePath;
+			geometryShaderFilePath = COMPILED_SHADERS_DIRECTORY + inGeometryShaderFilePath;
 		}
 		if (!inComputeShaderFilePath.empty())
 		{
-			computeShaderFilePath = SPV_DIRECTORY + inComputeShaderFilePath;
+			computeShaderFilePath = COMPILED_SHADERS_DIRECTORY + inComputeShaderFilePath;
 		}
 #endif
 	}

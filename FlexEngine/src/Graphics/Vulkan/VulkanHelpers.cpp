@@ -2331,10 +2331,10 @@ namespace flex
 		{
 			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
-			const std::string spvDirectory = RelativePathToAbsolute(SPV_DIRECTORY);
-			if (!Platform::DirectoryExists(spvDirectory))
+			const std::string spvDirectoryAbs = RelativePathToAbsolute(COMPILED_SHADERS_DIRECTORY);
+			if (!Platform::DirectoryExists(spvDirectoryAbs))
 			{
-				Platform::CreateDirectoryRecursive(spvDirectory);
+				Platform::CreateDirectoryRecursive(spvDirectoryAbs);
 			}
 
 			// Absolute file path => checksum
@@ -2459,7 +2459,7 @@ namespace flex
 									{
 										std::vector<char> spvBytes(assemblyResult.begin(), assemblyResult.end());
 										std::string strippedFileName = StripFileType(fileName);
-										std::string spvFilePath = RelativePathToAbsolute(SPV_DIRECTORY) + strippedFileName + "_" + fileType + ".asm";
+										std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".asm";
 										std::ofstream fileStream(spvFilePath, std::ios::out);
 										if (fileStream.is_open())
 										{
@@ -2483,7 +2483,7 @@ namespace flex
 
 									std::vector<u32> spvBytes(result.begin(), result.end());
 									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = RelativePathToAbsolute(SPV_DIRECTORY) + strippedFileName + "_" + fileType + ".spv";
+									std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".spv";
 									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 									if (fileStream.is_open())
 									{
