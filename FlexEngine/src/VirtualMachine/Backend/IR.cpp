@@ -1058,7 +1058,7 @@ namespace flex
 				{
 					return new IR::Assignment(state, assignment->span, assignment->lhs, loweredRHS);
 				}
-			}
+			} break;
 			//case StatementType::INDEX_OPERATION:
 			//	return Assignment(NextTemporary(), expression->GetValue());
 			//case StatementType::LIST_INITIALIZER:
@@ -1079,7 +1079,7 @@ namespace flex
 					irOpType = IR::UnaryOperatorType::BIN_INVERT;
 					break;
 				default:
-					assert(false);
+					ENSURE_NO_ENTRY();
 				}
 
 				IR::Value* loweredExpr = LowerExpression(unaryOperation->expression);
@@ -1087,7 +1087,7 @@ namespace flex
 				{
 					return new IR::UnaryValue(state, unaryOperation->span, irOpType, loweredExpr);
 				}
-			}
+			} break;
 			case AST::StatementType::BINARY_OPERATION:
 			{
 				AST::BinaryOperation* binaryOperation = (AST::BinaryOperation*)expression;
@@ -1256,7 +1256,7 @@ namespace flex
 				{
 					return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
 				}
-			}
+			} break;
 			case AST::StatementType::FUNC_CALL:
 			{
 				AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;

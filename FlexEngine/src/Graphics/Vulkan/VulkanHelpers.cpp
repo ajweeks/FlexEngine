@@ -3305,7 +3305,7 @@ namespace flex
 
 			if (!bFound)
 			{
-				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %d\n", descSet);
+				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %lu\n", (u64)descSet);
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);

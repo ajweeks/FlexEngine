@@ -31,7 +31,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo apt update`
-  - `sudo apt-get install g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev`
+  - `sudo apt-get install g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev`
   - `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
 2. `cd scripts`
@@ -50,7 +50,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 1. Run the following commands to install prerequisites:
   - `sudo eopkg upgrade`
   - `sudo eopkg install gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel`
-  - `sudo eopkg install -c system.devel`
+  - `sudo eopkg install -c system.devel uuid-dev`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
 3. `git config --global init.defaultBranchName main`
@@ -63,7 +63,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo dnf update`
-  - `sudo dnf install gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib`
+  - `sudo dnf install gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib uuid-dev`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
 3. `git config --global init.defaultBranchName main`

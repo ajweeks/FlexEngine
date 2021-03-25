@@ -1281,9 +1281,8 @@ namespace flex
 
 	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint)//, glm::vec3& outTangentAtClosestPoint)
 	{
-		const real errorVal = -9999.0f;
-
 #if 0
+		const real errorVal = -9999.0f;
 		glm::vec3 planeNorm = glm::cross((p1 - p0), (p2 - p0));
 		real normLen = glm::length(planeNorm);
 		if (normLen < 1.0e-30)

@@ -1644,7 +1644,7 @@ namespace flex
 	{
 		bool bChanged = false;
 
-		ImGui::Text(label);
+		ImGui::Text("%s", label);
 		GameObject* gameObject = nullptr;
 
 		if (ID.IsValid())

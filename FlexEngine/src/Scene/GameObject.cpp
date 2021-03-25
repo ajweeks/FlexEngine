@@ -1101,14 +1101,14 @@ namespace flex
 		if (m_PrefabIDLoadedFrom.IsValid())
 		{
 			CopyFlags copyFlags = (CopyFlags)(
-				CopyFlags::ALL
-				& ~CopyFlags::ADD_TO_SCENE
-				& ~CopyFlags::CREATE_RENDER_OBJECT
+				(CopyFlags::ALL &
+				~CopyFlags::ADD_TO_SCENE &
+				~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
 			g_SceneManager->CurrentScene()->UnregisterGameObject(previousPrefabTemplate->ID);
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
-			GameObjectID previousPrefabID = previousPrefabTemplate->ID;
+			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
 			newPrefabTemplate->m_bIsTemplate = true;
 			newPrefabTemplate->m_PrefabIDLoadedFrom = InvalidPrefabID;

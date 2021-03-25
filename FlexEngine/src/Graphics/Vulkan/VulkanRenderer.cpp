@@ -5779,7 +5779,7 @@ namespace flex
 				if (pipelineConfig->usageCount == 2)
 				{
 					char reusedDebugName[256];
-					snprintf(reusedDebugName, 256, "Graphics pipeline ID %lu", pipelineID);
+					snprintf(reusedDebugName, 256, "Graphics pipeline ID %u", pipelineID);
 					SetPipelineName(m_VulkanDevice, pipelineConfig->pipeline->pipeline, reusedDebugName);
 				}
 
@@ -6029,7 +6029,6 @@ namespace flex
 		void VulkanRenderer::DestroyGraphicsPipeline(GraphicsPipelineID pipelineID)
 		{
 			bool bFoundHash = false;
-			bool bFoundConfig = false;
 			for (auto iter = m_GraphicsPipelineHashes.begin(); iter != m_GraphicsPipelineHashes.end(); ++iter)
 			{
 				if (iter->second == pipelineID)
@@ -6045,8 +6044,6 @@ namespace flex
 				GraphicsPipelineConfiguration* pipelineConfig = iter->second;
 				if (pipelineConfig->pipelineID == pipelineID)
 				{
-					bFoundConfig = true;
-
 					// TODO: Look for usages when pipelineConfig->usageCount > 1
 
 					delete pipelineConfig;
@@ -8569,10 +8566,6 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			glm::mat4 projection = cam->GetProjection();
-			glm::mat4 view = cam->GetView();
-			glm::mat4 viewProj = cam->GetViewProjection();
 			glm::vec4 colourMultiplier = material->colourMultiplier;
 			u32 enableAlbedoSampler = material->enableAlbedoSampler;
 			u32 enableEmissiveSampler = material->enableEmissiveSampler;
@@ -8590,10 +8583,6 @@ namespace flex
 
 			if (uniformOverrides != nullptr)
 			{
-				if (uniformOverrides->overridenUniforms.HasUniform(U_VIEW_PROJECTION))
-				{
-					viewProj = uniformOverrides->viewProjection;
-				}
 				if (uniformOverrides->overridenUniforms.HasUniform(U_ENABLE_ALBEDO_SAMPLER))
 				{
 					enableAlbedoSampler = uniformOverrides->enableAlbedoSampler;

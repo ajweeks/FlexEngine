@@ -8,7 +8,7 @@
 #elif defined(_MSC_VER)
 #define IGNORE_WARNINGS_PUSH __pragma(warning(push, 0))
 #define IGNORE_WARNINGS_POP __pragma(warning(pop))
-#elif defined(__GNUG__)
+#elif defined(__GNUG__) || defined(__GNUC__)
 #define IGNORE_WARNINGS_PUSH \
 		_Pragma("GCC diagnostic push") \
 		_Pragma("GCC diagnostic ignored \"-Wall\"")

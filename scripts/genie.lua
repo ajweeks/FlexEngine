@@ -166,8 +166,11 @@ project "Flex"
 		linkoptions {
 			-- lpthread for shaderc?
 			"-pthread", -- For pthread_create
-			"-ldl", -- For dlopen, etc.
 			"-L/usr/lib64/",
+			"-ldl", -- For dlopen, etc.
+			"-L/lib/x86_64-linux-gnu/", -- for bzip2
+			"-lbz2",
+			"-fsanitize=undefined",
 		}
 		buildoptions {
 			"-Wfatal-errors",
@@ -203,7 +206,7 @@ project "Flex"
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "Bullet3Collision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined", "uuid" }
 configuration {}
 
 --Source files

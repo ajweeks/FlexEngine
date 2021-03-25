@@ -19,6 +19,10 @@ IGNORE_WARNINGS_PUSH
 #include <dirent.h> // For readdir
 #include <sched.h> // For sched_yield
 #include <pthread.h>
+#include <libgen.h> // for dirname
+#include <unistd.h> // for readlink
+#include <linux/limits.h> // for PATH_MAX
+#include <uuid/uuid.h>
 
 #include <stdlib.h>
 IGNORE_WARNINGS_POP
@@ -165,6 +169,19 @@ namespace flex
 		}
 	}
 
+	void Platform::RetrievePathToExecutable()
+	{
+		char result[PATH_MAX];
+		ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+		if (count != -1)
+		{
+			const char* path = dirname(result);
+			FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(path));
+
+			// TODO: Set directory to FlexEngine::s_ExecutablePath like on windows?
+		}
+	}
+
 	bool Platform::CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
@@ -259,6 +276,27 @@ namespace flex
 		}
 	}
 
+	bool Platform::GetFileModifcationTime(const char* filePath, Date& outModificationDate)
+	{
+		struct stat st;
+		if (stat(filePath, &st) != 0)
+		{
+			tm* timeUTC = gmtime(&st.st_mtime);
+
+			outModificationDate.year = timeUTC->tm_year;
+			outModificationDate.month = timeUTC->tm_mon;
+			outModificationDate.day = timeUTC->tm_mday;
+			outModificationDate.hour = timeUTC->tm_hour;
+			outModificationDate.minute = timeUTC->tm_min;
+			outModificationDate.second = timeUTC->tm_sec;
+			outModificationDate.millisecond = 0;
+
+			return true;
+		}
+
+		return false;
+	}
+
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
 	{
 		std::string cleanedFileType = fileType;
@@ -297,19 +335,60 @@ namespace flex
 				}
 				else
 				{
-					size_t dotPos = fileNameStr.find('.');
+					std::string fileType = ExtractFileType(fileNameStr);
 
-					if (dotPos != std::string::npos)
+					if (fileType == cleanedFileType)
 					{
-						std::vector<std::string> parts = Split(fileNameStr, '.');
-						if (parts.size() > 0)
-						{
-							std::string foundFileType = parts[1];
-							if (foundFileType == cleanedFileType)
-							{
-								bFoundFileTypeMatches = true;
-							}
-						}
+						bFoundFileTypeMatches = true;
+					}
+				}
+
+				if (bFoundFileTypeMatches)
+				{
+					filePaths.push_back(cleanedDirPath + fileNameStr);
+				}
+			}
+			closedir(dir);
+		}
+		else
+		{
+			/* could not open directory */
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return !filePaths.empty();
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	{
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		{
+			cleanedDirPath += '/';
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		struct dirent* ent;
+		DIR* dir = opendir(cleanedDirPath.c_str());
+		if (dir != NULL)
+		{
+			/* print all the files and directories within directory */
+			while ((ent = readdir(dir)) != NULL)
+			{
+				std::string fileNameStr(ent->d_name);
+				bool bFoundFileTypeMatches = false;
+				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
+				{
+					bFoundFileTypeMatches = false;
+				}
+				else
+				{
+					std::string fileType = ExtractFileType(fileNameStr);
+					if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+					{
+						bFoundFileTypeMatches = true;
 					}
 				}
 
@@ -431,6 +510,15 @@ namespace flex
 		// Adds the seconds (10^0)
 		result += (tv.tv_sec * 1000000);
 
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		uuid_t uuid;
+		uuid_generate_random(uuid);
+
+		GameObjectID result(*(u64*)uuid, *((u64*)uuid + 1));
 		return result;
 	}
 

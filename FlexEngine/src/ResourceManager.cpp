@@ -2151,8 +2151,8 @@ namespace flex
 								real mouseXN = glm::clamp((ImGui::GetIO().MousePos.x - cursorStart.x) / (conf.frame_size.x - cursorStart.x), 0.0f, 1.0f);
 								real scrollY = ImGui::GetIO().MouseWheel;
 
-								const u32 lastZoomHalfLength = zoomHalfLength;
-								const u32 lastZoomCenter = zoomCenter;
+								//const u32 lastZoomHalfLength = zoomHalfLength;
+								//const u32 lastZoomCenter = zoomCenter;
 								real inverseZoomPercent = zoomHalfLength / (valsCount / 2.0f);
 								real alpha = (real)glm::pow(inverseZoomPercent, 2.0f);
 								real deltaSlow = valsCount / 150.0f;
