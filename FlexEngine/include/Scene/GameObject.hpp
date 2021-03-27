@@ -1049,7 +1049,8 @@ namespace flex
 
 			// Per chunk outputs
 			volatile glm::vec3* positions;
-			volatile glm::vec3* normals;
+			volatile glm::vec4* colours;
+			volatile glm::vec2* uvs;
 			volatile u32* indices;
 		};
 

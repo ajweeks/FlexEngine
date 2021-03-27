@@ -5017,7 +5017,7 @@ namespace flex
 		WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel) : nullptr;
 		WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel) : nullptr;
 
-		const real cellSize = size / chunkVertCountPerAxis;
+		const real quadSize = size / chunkVertCountPerAxis;
 		for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 		{
 			for (u32 x = 0; x < chunkVertCountPerAxis; ++x)
@@ -5073,7 +5073,7 @@ namespace flex
 
 				real dX = left - right;
 				real dZ = back - forward;
-				normals[vertIdx] = glm::vec3(dX, 2.0f * cellSize, dZ);
+				normals[vertIdx] = glm::vec3(dX, 2.0f * quadSize, dZ);
 				tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
 			}
 		}
@@ -7134,15 +7134,6 @@ namespace flex
 		DiscoverChunks();
 		// Wait to generate chunks until road has been generated
 
-		real y = 10.0f;
-		m_TriSampleBounds = { -4.0f, 4.0f, -4.0f, 4.0f, y - 0.2f, y + 0.2f };
-		m_TriA = glm::vec3(-2.0f, y, -2.0f);
-		m_TriB = glm::vec3(0.0f, y, 2.0f);
-		m_TriC = glm::vec3(2.0f, y, -2.0f);
-		m_PointTests = PointTest::ComputePointTests(
-			m_TriA, m_TriB, m_TriC,
-			m_TriSampleBounds, 750);
-
 		GameObject::Initialize();
 	}
 
@@ -7201,22 +7192,6 @@ namespace flex
 				textureY -= (textureScale * 2.0f + 0.01f);
 				textureScale /= 2.0f;
 			}
-		}
-
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawTriangle(ToBtVec3(m_TriA), ToBtVec3(m_TriB), ToBtVec3(m_TriC), btVector3(1.0f, 0.0f, 0.0f), 1.0f);
-		debugDrawer->drawBox(
-			btVector3(m_TriSampleBounds.minX, m_TriSampleBounds.minY, m_TriSampleBounds.minZ),
-			btVector3(m_TriSampleBounds.maxX, m_TriSampleBounds.maxY, m_TriSampleBounds.maxZ),
-			btVector3(1.0f, 0.0f, 0.0f));
-		btVector3 insideCol(0.0f, 0.0f, 0.0f);
-		btVector3 outsideCol(0.2f, 0.3f, 0.9f);
-		for (u32 i = 0; i < (u32)m_PointTests.size(); ++i)
-		{
-			btVector3 col = m_PointTests[i].dist < 0.0f ? insideCol : outsideCol;
-			debugDrawer->drawLine(ToBtVec3(m_PointTests[i].start), ToBtVec3(m_PointTests[i].closest), col);
-			debugDrawer->drawBox(ToBtVec3(m_PointTests[i].start), ToBtVec3(m_PointTests[i].start + glm::vec3(0.05f)), col);
-			debugDrawer->drawBox(ToBtVec3(m_PointTests[i].closest), ToBtVec3(m_PointTests[i].closest + glm::vec3(0.05f)), col);
 		}
 
 		GameObject::Update();
@@ -7814,6 +7789,8 @@ namespace flex
 			static std::vector<u32> indices;
 			indices.resize(indexCount);
 
+			// TODO: Generate all new vertex buffers first, then do post pass to compute normals
+			u32 vertexBufferStride = CalculateVertexStride(vertexBufferCreateInfo.attributes);
 			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
@@ -7822,17 +7799,105 @@ namespace flex
 				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
 
 				memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
-				memcpy((void*)vertexBufferCreateInfo.normals.data(), (void*)terrainChunkData->normals, sizeof(glm::vec3) * vertexCount);
+				memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
+				memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
 				memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
 
+				auto chunkLeftIter = m_Meshes.find(chunkIndex - glm::vec2i(1, 0));
+				auto chunkRightIter = m_Meshes.find(chunkIndex + glm::vec2i(0, 1));
+				auto chunkBackIter = m_Meshes.find(chunkIndex - glm::vec2i(0, 1));
+				auto chunkForwardIter = m_Meshes.find(chunkIndex + glm::vec2i(1, 0));
+				u8* chunkLeftVertBuf = nullptr;
+				u8* chunkRightVertBuf = nullptr;
+				u8* chunkBackVertBuf = nullptr;
+				u8* chunkForwardVertBuf = nullptr;
+				if (chunkLeftIter != m_Meshes.end())
+				{
+					MeshComponent* meshComponent = chunkLeftIter->second->meshComponent;
+					if (meshComponent != nullptr)
+					{
+						chunkLeftVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+					}
+				}
+				if (chunkRightIter != m_Meshes.end())
+				{
+					MeshComponent* meshComponent = chunkRightIter->second->meshComponent;
+					if (meshComponent != nullptr)
+					{
+						chunkRightVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+					}
+				}
+				if (chunkBackIter != m_Meshes.end())
+				{
+					MeshComponent* meshComponent = chunkBackIter->second->meshComponent;
+					if (meshComponent != nullptr)
+					{
+						chunkBackVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+					}
+				}
+				if (chunkForwardIter != m_Meshes.end())
+				{
+					MeshComponent* meshComponent = chunkForwardIter->second->meshComponent;
+					if (meshComponent != nullptr)
+					{
+						chunkForwardVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+					}
+				}
+
+				real quadSize = ChunkSize / VertCountPerChunkAxis;
 				u32 vertIndex = 0;
 				for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
 				{
 					for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
 					{
-						real height = vertexBufferCreateInfo.positions_3D[vertIndex].y / MaxHeight + 0.5f;
-						vertexBufferCreateInfo.texCoords_UV[vertIndex] = glm::vec2(x / (real)VertCountPerChunkAxis, z / (real)VertCountPerChunkAxis);
-						vertexBufferCreateInfo.colours_R32G32B32A32[vertIndex] = glm::vec4(height, height, height, 1.0f);
+						real left = 0.0f;
+						if (x > 0)
+						{
+							left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
+						}
+						else if (chunkLeftVertBuf != nullptr)
+						{
+							glm::vec3* pos = (glm::vec3*)&chunkLeftVertBuf[(vertIndex + (VertCountPerChunkAxis - 1)) * vertexBufferStride];
+							left = pos->y;
+						}
+
+						real right = 0.0f;
+						if (x < VertCountPerChunkAxis - 1)
+						{
+							right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
+						}
+						else if (chunkRightVertBuf != nullptr)
+						{
+							glm::vec3* pos = (glm::vec3*)&chunkRightVertBuf[(vertIndex - (VertCountPerChunkAxis - 1)) * vertexBufferStride];
+							right = pos->y;
+						}
+
+						real back = 0.0f;
+						if (z > 0)
+						{
+							back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
+						}
+						else if (chunkBackVertBuf != nullptr)
+						{
+							glm::vec3* pos = (glm::vec3*)&chunkBackVertBuf[(x + (VertCountPerChunkAxis - 1) * VertCountPerChunkAxis) * vertexBufferStride];
+							back = pos->y;
+						}
+
+						real forward = 0.0f;
+						if (z < VertCountPerChunkAxis - 1)
+						{
+							forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
+						}
+						else if (chunkForwardVertBuf != nullptr)
+						{
+							glm::vec3* pos = (glm::vec3*)&chunkBackVertBuf[x * vertexBufferStride];
+							forward = pos->y;
+						}
+
+						real dX = left - right;
+						real dZ = back - forward;
+						vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f * quadSize, dZ));
+						//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
 
 						++vertIndex;
 					}
@@ -7874,8 +7939,11 @@ namespace flex
 
 		chunkData.positions = (glm::vec3*)malloc(vertCountPerChunk * sizeof(glm::vec3));
 		assert(chunkData.positions != nullptr);
-		chunkData.normals = (glm::vec3*)malloc(vertCountPerChunk * sizeof(glm::vec3));
-		assert(chunkData.normals != nullptr);
+		chunkData.colours = (glm::vec4*)malloc(vertCountPerChunk * sizeof(glm::vec4));
+		assert(chunkData.colours != nullptr);
+		chunkData.uvs = (glm::vec2*)malloc(vertCountPerChunk * sizeof(glm::vec2));
+		assert(chunkData.uvs != nullptr);
+
 		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
 		assert(chunkData.indices != nullptr);
 
@@ -7901,9 +7969,13 @@ namespace flex
 		free((void*)chunkData.positions);
 		chunkData.positions = nullptr;
 
-		assert(chunkData.normals != nullptr);
-		free((void*)chunkData.normals);
-		chunkData.normals = nullptr;
+		assert(chunkData.colours != nullptr);
+		free((void*)chunkData.colours);
+		chunkData.colours = nullptr;
+
+		assert(chunkData.uvs != nullptr);
+		free((void*)chunkData.uvs);
+		chunkData.uvs = nullptr;
 
 		assert(chunkData.indices != nullptr);
 		free((void*)chunkData.indices);
@@ -7959,7 +8031,8 @@ namespace flex
 
 				// Outputs
 				volatile glm::vec3* positions = work->positions;
-				volatile glm::vec3* normals = work->normals;
+				volatile glm::vec4* colours = work->colours;
+				volatile glm::vec2* uvs = work->uvs;
 				volatile u32* indices = work->indices;
 
 				const u32 vertexCount = vertCountPerChunkAxis * vertCountPerChunkAxis;
@@ -7976,7 +8049,12 @@ namespace flex
 						glm::vec3 vertPosOS = glm::vec3(uv.x * chunkSize, 0.0f, uv.y * chunkSize);
 						glm::vec3 vertPosWS = vertPosOS + glm::vec3(chunkIndex.x * chunkSize, 0.0f, chunkIndex.y * chunkSize);
 
-						glm::vec3 normal;
+						glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
+						real height = SampleTerrain(work, sampleCenter);
+
+						vertPosWS.y = (height - 0.5f) * maxHeight;
+
+						glm::vec4 colour(height);
 
 						real roadWidth = 0.0f;
 						real diffLen = 0.0f;
@@ -7986,7 +8064,7 @@ namespace flex
 						glm::vec3 closestPointToRoad;
 						if (overlappingRoadSegments != nullptr)
 						{
-							glm::vec3 outClosestPoint;
+							glm::vec3 outClosestPoint(VEC3_ZERO);
 							for (RoadSegment* overlappingRoadSegment : *overlappingRoadSegments)
 							{
 								real d = overlappingRoadSegment->SignedDistanceTo(vertPosWS, outClosestPoint);
@@ -7997,18 +8075,12 @@ namespace flex
 
 									real distAlongCurve = overlappingRoadSegment->curve.FindDistanceAlong(outClosestPoint);
 
-									// Find a tangent vector which lies parallel to road, won't
-									// be purely perpendicular to road forward, but good enough
-									glm::vec3 diff = (vertPosWS - closestPointToRoad);
-									diff.y = 0.0f;
-									diffLen = glm::length(diff);
-
-									roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distToRoad);
+									roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distAlongCurve);
 									if (distToRoad - roadBlendThreshold < roadBlendDist)
 									{
 										glm::vec3 curveForward = glm::normalize(overlappingRoadSegment->curve.GetFirstDerivativeOnCurve(distAlongCurve));
 										roadTangentAtClosestPoint = glm::cross(curveForward, VEC3_UP);
-										if (glm::dot(roadTangentAtClosestPoint, vertPosWS - roadCurvePosAtClosestPoint) < 0.0f)
+										if (glm::dot(roadTangentAtClosestPoint, closestPointToRoad - roadCurvePosAtClosestPoint) < 0.0f)
 										{
 											// Negate when point is on left side of road
 											roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
@@ -8019,58 +8091,50 @@ namespace flex
 							}
 						}
 
-						real vergeLen = roadBlendThreshold * 0.5f;
+						real vergeLen = roadBlendDist * 0.35f;
 
-						// zero at edge, grows further into road (zero outside road)
-						real distanceInsideRoad = glm::max(-distToRoad, 0.0f);
+						// Epsilon value accounts for verts that are _just_ outside of triangle edge
+						// that for some reason aren't picked up by other triangle
+						bool bInsideRoad = distToRoad <= 0.1f;
 						// zero at edge, grows further out from road (zero inside road)
 						real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
 						// [0, 1] from inner verge to outer verge and beyond (zero inside road)
-						real distanceAlongVerge = glm::clamp(distanceOutsideRoad / vergeLen, 0.0f, 1.0f);
-						real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
+						real distanceAlongVerge = glm::clamp((distToRoad - roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
+						//real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
+						real vergeBlendWeight = glm::pow(glm::sin(distanceAlongVerge * PI), 4.0f);
+
 						// [0, 1] one at road edge, zero at blend dist (zero inside road)
 						//real roadBlendWeight = 1.0f - glm::min(distanceOutsideRoad / roadBlendDist, 1.0f);
 						real roadBlendWeight = 1.0f - glm::clamp((distToRoad - roadBlendThreshold) / roadBlendDist, 0.0f, 1.0f);
 
+						colour = glm::vec4(height);
+
 						// Distance calc must be slightly off, if this checks for 0.0
 						// we get some verts in the road on the edges
-						if (distToRoad < 0.2f)
+						if (bInsideRoad)
 						{
 							// Clip point by setting to NaN
-							normal = VEC3_UP;
 							vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
 						}
 						else
 						{
-							glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
-							real height = SampleTerrain(work, sampleCenter);
-
-							vertPosWS.y = (height - 0.5f) * maxHeight;
-
 							if (roadBlendWeight > 0.0f)
 							{
 								real lerpToRoadPosAlpha = roadBlendWeight;
 								lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
 
-								real alpha = 1.0f;
-								glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * diffLen;
-
 								vertPosWS = vertPosWS + (closestPointToRoad - vertPosWS) * lerpToRoadPosAlpha;
-								if (vergeBlendWeight > 0)
-									vertPosWS = projectedPoint;
-								//vertPosWS = Lerp(vertPosWS, projectedPoint, vergeBlendWeight);
+
+								// Move points near road closer to "verge" position to give road shoulders
+								// and a smoother falloff on hills
+								glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * (distanceAlongVerge * vergeLen);
+								vertPosWS = Lerp(vertPosWS, projectedPoint, glm::pow(1.0f - distanceAlongVerge, 0.5f));
 							}
-
-							// TODO: Compute in post process using neighboring vertices
-							const real e = 0.01f;
-							real heightDX = (SampleTerrain(work, sampleCenter - glm::vec2(e, 0.0f)) - SampleTerrain(work, sampleCenter + glm::vec2(e, 0.0f))) * maxHeight;
-							real heightDZ = (SampleTerrain(work, sampleCenter - glm::vec2(0.0f, e)) - SampleTerrain(work, sampleCenter + glm::vec2(0.0f, e))) * maxHeight;
-
-							normal = glm::normalize(glm::vec3(heightDX, 2.0f * e, heightDZ));
 						}
 
 						memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
-						memcpy((void*)&normals[posIndex], (void*)&normal, sizeof(glm::vec3));
+						memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
+						memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
 
 						//vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
 						//bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (vertCountPerChunkAxis - 1) || z == 0 || z == (vertCountPerChunkAxis - 1)));
@@ -10213,11 +10277,11 @@ namespace flex
 		real dist = 99999.0f;
 		for (u32 i = 0; i < indexCount - 2; i += 3)
 		{
-			glm::vec3 tri0(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 0]));
-			glm::vec3 tri1(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 1]));
-			glm::vec3 tri2(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 2]));
+			glm::vec3 a(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 0]));
+			glm::vec3 b(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 1]));
+			glm::vec3 c(*(glm::vec3*)(vertexData + vertexStride * indexBuffer[i + 2]));
 
-			real d = SignedDistanceToTriangle(point, tri0, tri1, tri2, closestPoint);
+			real d = SignedDistanceToTriangle(point, a, b, c, closestPoint);
 			if (d < dist)
 			{
 				dist = d;

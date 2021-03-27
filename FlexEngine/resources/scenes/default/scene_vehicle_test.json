@@ -22,9 +22,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "2.721, 15.375, 11.077",
-			"pitch" : -0.440387,
-			"yaw" : -1.811679
+			"position" : "11.641, 27.201, -24.493",
+			"pitch" : -0.582397,
+			"yaw" : 1.678982
 		}
 	},
 	"objects" : 
@@ -73,8 +73,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "-0.692, 0.916, -1.273",
-				"rot" : "-0.008, 0.243, -0.004",
+				"pos" : "-0.584, 0.916, -1.282",
+				"rot" : "-0.008, 0.282, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -82,17 +82,13 @@
 			"name" : "Road",
 			"id" : "868430323533558740C132FED8F0E1C0",
 			"type" : "road",
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true
 		},
 		{
 			"name" : "Terrain",
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
 			"type" : "terrain generator",
-			"transform" : 
-			{
-				"pos" : "0.000, 2.837, 0.000"
-			},
 			"visible" : true,
 			"casts shadow" : true,
 			"chunk generator info" : 
@@ -102,7 +98,7 @@
 				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 5,
-				"loaded chunk radius" : 40.000000,
+				"loaded chunk radius" : 384.244995,
 				"base table width" : 128,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
@@ -111,7 +107,7 @@
 				"octave scale" : 198.125000,
 				"num octaves" : 6,
 				"pin center" : true,
-				"pinned center" : "105.18, 15.26, 57.20"
+				"pinned center" : "76.64, 157.87, 42.79"
 			}
 		},
 		{

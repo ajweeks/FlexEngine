@@ -61,4 +61,6 @@ void main()
 	vec3 fogCol = vec3(0.3, 0.38, 0.52);
 	fragmentColour = vec4(mix(groundCol, fogCol, dist), 1.0);
 	// fragmentColour = vec4(ex_Colour.rgb, 1.0);
+	//fragmentColour = vec4(ex_TexCoord, 0.0, 1.0);
+	// fragmentColour = vec4(N*0.5+0.5, 1.0);
 }
