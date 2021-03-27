@@ -7576,7 +7576,12 @@ namespace flex
 						if (m_bEnableWireframeOverlay)
 						{
 							// All objects wireframe
+
+							VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+							const UniformBuffer* wireframeDynamicBuffer = wireframeMaterial->uniformBufferList.Get(UniformBufferType::DYNAMIC);
+
 							ShaderBatch* batches[] = { &m_ForwardObjectBatches, &m_DeferredObjectBatches };
+							u32 dynamicUBOOffset = 0;
 							for (ShaderBatch* batch : batches)
 							{
 								for (const ShaderBatchPair& shaderBatch : batch->batches)
@@ -7590,7 +7595,8 @@ namespace flex
 										for (RenderID renderID : matBatch.batch.objects)
 										{
 											VulkanRenderObject* renderObject = GetRenderObject(renderID);
-											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, renderObject->dynamicUBOOffset);
+											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+											dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 										}
 									}
 								}
@@ -7598,6 +7604,8 @@ namespace flex
 
 							DrawCallInfo wireframeDrawCallInfo = {};
 							wireframeDrawCallInfo.bWireframe = true;
+							wireframeDrawCallInfo.bCalculateDynamicUBOOffset = true;
+							wireframeDrawCallInfo.dynamicUBOOffset = 0;
 
 							for (ShaderBatch* batch : batches)
 							{
