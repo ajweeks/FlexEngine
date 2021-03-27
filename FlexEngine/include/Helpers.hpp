@@ -165,7 +165,9 @@ namespace flex
 	FLEX_NO_DISCARD glm::vec4 PasteColour4FromClipboard();
 
 	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2);
-	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& tri0, const glm::vec3& tri1, const glm::vec3& tri2, glm::vec3& outClosestPoint);// , glm::vec3& outTangentAtClosestPoint);
+	// Return closest point on triangle (either at vertex, at edge, or on face) and return signed distance
+	// to that point (negative inside, positive outside)
+	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, glm::vec3& outClosestPoint);
 
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);

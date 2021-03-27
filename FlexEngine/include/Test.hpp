@@ -1808,6 +1808,91 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		// Triangles
+
+		// https://www.desmos.com/calculator/byciziyo4k
+		UNIT_TEST(SignedDistanceToTriangle0)
+		{
+			/*
+			   *
+			  / \
+			 / p \
+			*-----*
+			*/
+			glm::vec3 a(-1.0f, 0.0f, -1.0f);
+			glm::vec3 b(0.0f, 0.0f, 1.0f);
+			glm::vec3 c(1.0f, 0.0f, -1.0f);
+			glm::vec3 p(VEC3_ZERO);
+			glm::vec3 closestPoint;
+			real dist = SignedDistanceToTriangle(p, a, b, c, closestPoint);
+
+			EXPECT(NearlyEquals(dist, -0.4472135955f, 1e-7f), true);
+			EXPECT(NearlyEquals(closestPoint, p, 1e-7f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(SignedDistanceToTriangle1)
+		{
+			/*
+			   *
+			  / \ p
+			 /   \
+			*-----*
+			*/
+			glm::vec3 a(-1.0f, 0.0f, -1.0f);
+			glm::vec3 b(0.0f, 0.0f, 1.0f);
+			glm::vec3 c(1.0f, 0.0f, -1.0f);
+			glm::vec3 p(0.5f, 0.0f, 0.5f);
+			glm::vec3 closestPoint;
+			real dist = SignedDistanceToTriangle(p, a, b, c, closestPoint);
+
+			EXPECT(NearlyEquals(dist, 0.22360679775f, 1e-7f), true);
+			EXPECT(NearlyEquals(closestPoint, glm::vec3(0.3f, 0.0f, 0.4f), 1e-7f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(SignedDistanceToTriangle2)
+		{
+			/*
+			   p
+
+			   *
+			  / \
+			 /   \
+			*-----*
+			*/
+			glm::vec3 a(-1.0f, 0.0f, -1.0f);
+			glm::vec3 b(0.0f, 0.0f, 1.0f);
+			glm::vec3 c(1.0f, 0.0f, -1.0f);
+			glm::vec3 p(0.0f, 0.0f, 2.0f);
+			glm::vec3 closestPoint;
+			real dist = SignedDistanceToTriangle(p, a, b, c, closestPoint);
+
+			EXPECT(NearlyEquals(dist, 1.0f, 1e-7f), true);
+			EXPECT(NearlyEquals(closestPoint, b, 1e-7f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(SignedDistanceToTriangle3)
+		{
+			/*
+			   *
+			  / \
+			 /   \
+			*-----*
+			        p
+			*/
+			glm::vec3 a(-1.0f, 0.0f, -1.0f);
+			glm::vec3 b(0.0f, 0.0f, 1.0f);
+			glm::vec3 c(1.0f, 0.0f, -1.0f);
+			glm::vec3 p(1.1f, 0.0f, -1.1f);
+			glm::vec3 closestPoint;
+			real dist = SignedDistanceToTriangle(p, a, b, c, closestPoint);
+
+			EXPECT(NearlyEquals(dist, 0.141421356237f, 1e-7f), true);
+			EXPECT(NearlyEquals(closestPoint, c, 1e-7f), true);
+		}
+		UNIT_TEST_END;
 
 	public:
 		static void Run()
@@ -1846,7 +1931,9 @@ namespace flex
 				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID1, InvalidGUID1,
 				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1,
 				// Hash tests
-				HashesDeterministic, HashEmpty, HashCompare0
+				HashesDeterministic, HashEmpty, HashCompare0,
+				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
+
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			u32 failedTestCount = 0;
