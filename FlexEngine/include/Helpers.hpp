@@ -524,6 +524,17 @@ namespace flex
 		void DrawDebug(const btVector3& lineColour);
 	};
 
+	struct PointTest
+	{
+		glm::vec3 start;
+		glm::vec3 closest;
+		real dist;
+
+		static std::vector<PointTest> ComputePointTests(
+			const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+			const AABB& sampleBounds, i32 numSamples);
+	};
+
 	namespace ImGuiExt
 	{
 		bool InputUInt(const char* message, u32* v, u32 step = 1, u32 step_fast = 100, ImGuiInputTextFlags flags = 0);

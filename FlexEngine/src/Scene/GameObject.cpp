@@ -7134,6 +7134,15 @@ namespace flex
 		DiscoverChunks();
 		// Wait to generate chunks until road has been generated
 
+		real y = 10.0f;
+		m_TriSampleBounds = { -4.0f, 4.0f, -4.0f, 4.0f, y - 0.2f, y + 0.2f };
+		m_TriA = glm::vec3(-2.0f, y, -2.0f);
+		m_TriB = glm::vec3(0.0f, y, 2.0f);
+		m_TriC = glm::vec3(2.0f, y, -2.0f);
+		m_PointTests = PointTest::ComputePointTests(
+			m_TriA, m_TriB, m_TriC,
+			m_TriSampleBounds, 750);
+
 		GameObject::Initialize();
 	}
 
@@ -7192,6 +7201,22 @@ namespace flex
 				textureY -= (textureScale * 2.0f + 0.01f);
 				textureScale /= 2.0f;
 			}
+		}
+
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		debugDrawer->drawTriangle(ToBtVec3(m_TriA), ToBtVec3(m_TriB), ToBtVec3(m_TriC), btVector3(1.0f, 0.0f, 0.0f), 1.0f);
+		debugDrawer->drawBox(
+			btVector3(m_TriSampleBounds.minX, m_TriSampleBounds.minY, m_TriSampleBounds.minZ),
+			btVector3(m_TriSampleBounds.maxX, m_TriSampleBounds.maxY, m_TriSampleBounds.maxZ),
+			btVector3(1.0f, 0.0f, 0.0f));
+		btVector3 insideCol(0.0f, 0.0f, 0.0f);
+		btVector3 outsideCol(0.2f, 0.3f, 0.9f);
+		for (u32 i = 0; i < (u32)m_PointTests.size(); ++i)
+		{
+			btVector3 col = m_PointTests[i].dist < 0.0f ? insideCol : outsideCol;
+			debugDrawer->drawLine(ToBtVec3(m_PointTests[i].start), ToBtVec3(m_PointTests[i].closest), col);
+			debugDrawer->drawBox(ToBtVec3(m_PointTests[i].start), ToBtVec3(m_PointTests[i].start + glm::vec3(0.05f)), col);
+			debugDrawer->drawBox(ToBtVec3(m_PointTests[i].closest), ToBtVec3(m_PointTests[i].closest + glm::vec3(0.05f)), col);
 		}
 
 		GameObject::Update();

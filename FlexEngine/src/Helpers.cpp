@@ -245,6 +245,11 @@ namespace flex
 	{
 	}
 
+	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	{
+		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+	}
+
 	bool FileExists(const std::string& filePath)
 	{
 		FILE* file = fopen(filePath.c_str(), "r");
@@ -1376,7 +1381,9 @@ namespace flex
 			}
 		}
 
-		real dist = glm::distance(point, outClosestPoint);
+		real distAlongNormal = glm::dot(point, planeNorm) - glm::dot(a, planeNorm);
+		glm::vec3 projectedPoint = point - distAlongNormal * planeNorm;
+		real dist = glm::distance(projectedPoint, outClosestPoint);
 		return dist;
 	}
 
@@ -1924,9 +1931,34 @@ namespace flex
 		return bResult;
 	}
 
-	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	void AABB::DrawDebug(const btVector3& lineColour)
 	{
-		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
+	}
+
+	std::vector<PointTest> PointTest::ComputePointTests(
+		const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+		const AABB& sampleBounds, i32 numSamples)
+	{
+		std::vector<PointTest> result;
+		result.reserve(numSamples);
+
+		for (i32 i = 0; i < numSamples; ++i)
+		{
+			PointTest test = {};
+
+			test.start = glm::vec3(
+				RandomFloat(sampleBounds.minX, sampleBounds.maxX),
+				RandomFloat(sampleBounds.minY, sampleBounds.maxY),
+				RandomFloat(sampleBounds.minZ, sampleBounds.maxZ));
+			test.dist = SignedDistanceToTriangle(test.start, a, b, c, test.closest);
+
+			result.push_back(test);
+		}
+
+		return result;
 	}
 
 	namespace ImGuiExt
@@ -1991,14 +2023,6 @@ namespace flex
 
 			return bResult;
 		}
-	}
-
-	void AABB::DrawDebug(const btVector3& lineColour)
-	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
-
-		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
-	}
-	// namespace ImGuiExt
+	} // namespace ImGuiExt
 } // namespace flex
 
