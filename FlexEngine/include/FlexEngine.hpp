@@ -43,6 +43,8 @@ namespace flex
 
 		void SetFramesToFakeDT(i32 frameCount);
 
+		real GetSimulationSpeed() const;
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis

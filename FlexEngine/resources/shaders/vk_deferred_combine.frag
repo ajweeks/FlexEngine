@@ -48,6 +48,14 @@ struct SSAOSamplingData
 	vec2 _pad;
 };
 
+struct SkyboxData
+{
+	vec4 colourTop;
+	vec4 colourMid;
+	vec4 colourBtm;
+	vec4 colourFog;
+};
+
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
@@ -55,6 +63,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
+	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
 	SSAOSamplingData ssaoData;
 	float zNear;
@@ -198,6 +207,7 @@ void main()
 		}
 	}
 
+	float fogDist = clamp(length(uboConstant.camPos.xyz - worldPos)*0.0003 - 0.1,0.0,1.0);
 	vec3 V = normalize(uboConstant.camPos.xyz - worldPos);
 	vec3 R = reflect(-V, N);
 
@@ -287,16 +297,20 @@ void main()
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
+	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
+	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
+
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
-    vec3 irradiance = texture(irradianceSampler, N).rgb;
+    vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.5);
     vec3 diffuse = irradiance * albedo;
 
 	// Specular ambient term (IBL)
 	const float MAX_REFLECTION_LOAD = 5.0;
 	vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
+	prefilteredColour += skyColour * 0.2;
 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
 
@@ -304,6 +318,7 @@ void main()
 
 	// TODO: Apply SSAO to ambient term
 	vec3 colour = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);
+	colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction

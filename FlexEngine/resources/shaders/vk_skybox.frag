@@ -12,14 +12,17 @@ struct SkyboxData
 	vec4 colourTop;
 	vec4 colourMid;
 	vec4 colourBtm;
+	vec4 colourFog;
 };
 
 layout (binding = 0) uniform UBOConstant
 {
 	SkyboxData skyboxData;
+	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
 } uboConstant;
 
 layout (binding = 1) uniform samplerCube cubemap;
+layout (binding = 2) uniform sampler2D whiteNoise;
 
 float noise(float s)
 {
@@ -31,14 +34,17 @@ void main()
 	vec3 dir = normalize(ex_TexCoord);
 
 	// Noise to prevent banding
-	float n = noise(abs(ex_TexCoord.x + ex_TexCoord.y)) * 0.03;
+	float n = noise(abs(ex_TexCoord.x + ex_TexCoord.y));
+
+	vec2 uv = vec2(abs(dir.x), abs(dir.y));
+	float n_w = texture(whiteNoise, uv).r;
 
 	// Night theme
 	//vec3 top = vec3(0.07, 0.09, 0.14); // dark pale blue
 	//vec3 mid = vec3(0.06, 0.08, 0.12); // pale blue
 	//vec3 btm = vec3(0.07, 0.07, 0.14); // dark-blue
 
-	float h = sign(dir.y) * pow(abs(dir.y), 0.3) + n;
+	float h = sign(dir.y) * pow(abs(dir.y), 0.3) + n * 0.03;
 
 	float tw = 1.0-max(h, 0.0);
 	// float mw = pow(1.0-abs(dir.y), 10.0);

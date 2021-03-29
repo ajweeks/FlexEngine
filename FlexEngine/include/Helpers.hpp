@@ -246,6 +246,9 @@ namespace flex
 	// globally-unique value use Platform::GenerateGUID instead)
 	FLEX_NO_DISCARD u32 GenerateUID();
 
+	FLEX_NO_DISCARD real SmootherStep01(real t);
+	FLEX_NO_DISCARD real SmootherStep(real a, real b, real t);
+
 	static const u64 FNV1_64_Prime = 1099511628211u;
 	static const u64 FNV1_64_Offset = 14695981039346656037u;
 

@@ -43,11 +43,32 @@ namespace flex
 		m_TrackManager(this),
 		m_CartManager(this)
 	{
-		// Default day sky
+		// Daylight
+		m_SkyboxDatas[0].top = glm::vec4(0.220f, 0.580f, 0.880f, 1.000f);
+		m_SkyboxDatas[0].mid = glm::vec4(0.660f, 0.860f, 0.950f, 1.000f);
+		m_SkyboxDatas[0].btm = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
+		m_SkyboxDatas[0].fog = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
+		// Evening
+		m_SkyboxDatas[1].top = glm::vec4(0.559f, 0.720f, 0.883f, 1.000f);
+		m_SkyboxDatas[1].mid = glm::vec4(0.519f, 0.663f, 0.825f, 1.000f);
+		m_SkyboxDatas[1].btm = glm::vec4(0.135f, 0.162f, 0.182f, 1.000f);
+		m_SkyboxDatas[1].fog = glm::vec4(0.405f, 0.467f, 0.550f, 1.000f);
+		// Midnight
+		m_SkyboxDatas[2].top = glm::vec4(0.107f, 0.107f, 0.013f, 1.000f);
+		m_SkyboxDatas[2].mid = glm::vec4(0.098f, 0.098f, 0.137f, 1.000f);
+		m_SkyboxDatas[2].btm = glm::vec4(0.020f, 0.020f, 0.020f, 1.000f);
+		m_SkyboxDatas[2].fog = glm::vec4(0.029f, 0.029f, 0.032f, 1.000f);
+		// Sunrise
+		m_SkyboxDatas[3].top = glm::vec4(0.917f, 0.733f, 0.458f, 1.000f);
+		m_SkyboxDatas[3].mid = glm::vec4(0.862f, 0.529f, 0.028f, 1.000f);
+		m_SkyboxDatas[3].btm = glm::vec4(0.896f, 0.504f, 0.373f, 1.000f);
+		m_SkyboxDatas[3].fog = glm::vec4(0.958f, 0.757f, 0.623f, 1.000f);
+
 		m_SkyboxData = {};
-		m_SkyboxData.top = glm::pow(glm::vec4(0.22f, 0.58f, 0.88f, 0.0f), glm::vec4(2.2f));
-		m_SkyboxData.mid = glm::pow(glm::vec4(0.66f, 0.86f, 0.95f, 0.0f), glm::vec4(2.2f));
-		m_SkyboxData.btm = glm::pow(glm::vec4(0.75f, 0.91f, 0.99f, 0.0f), glm::vec4(2.2f));
+		m_SkyboxData.top = m_SkyboxDatas[0].top;
+		m_SkyboxData.mid = m_SkyboxDatas[0].mid;
+		m_SkyboxData.btm = m_SkyboxDatas[0].btm;
+		m_SkyboxData.fog = m_SkyboxDatas[0].fog;
 	}
 
 	BaseScene::~BaseScene()
@@ -167,7 +188,7 @@ namespace flex
 
 	void BaseScene::Update()
 	{
-		PROFILE_BEGIN("Update Scene");
+		PROFILE_AUTO("Update Scene");
 
 		if (m_PhysicsWorld)
 		{
@@ -197,7 +218,22 @@ namespace flex
 
 		m_TrackManager.DrawDebug();
 
-		PROFILE_END("Update Scene");
+		if (!m_bPauseTimeOfDay)
+		{
+			m_TimeOfDay = glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f);
+		}
+
+		i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
+		i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
+		real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
+
+		alpha = SmootherStep01(alpha);
+		alpha = SmootherStep01(alpha);
+		alpha = SmootherStep01(alpha);
+		m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
+		m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
+		m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
+		m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
 	}
 
 	void BaseScene::LateUpdate()
@@ -321,23 +357,23 @@ namespace flex
 			m_PlayerGUIDs[1] = InvalidGameObjectID;
 		}
 
-		JSONObject skyboxDataObj;
-		if (sceneRootObject.SetObjectChecked("skybox data", skyboxDataObj))
-		{
-			// TODO: Add SetGammaColourChecked
-			if (skyboxDataObj.SetVec4Checked("top colour", m_SkyboxData.top))
-			{
-				m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
-			}
-			if (skyboxDataObj.SetVec4Checked("mid colour", m_SkyboxData.mid))
-			{
-				m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
-			}
-			if (skyboxDataObj.SetVec4Checked("btm colour", m_SkyboxData.btm))
-			{
-				m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
-			}
-		}
+		//JSONObject skyboxDataObj;
+		//if (sceneRootObject.SetObjectChecked("skybox data", skyboxDataObj))
+		//{
+		//	// TODO: Add SetGammaColourChecked
+		//	if (skyboxDataObj.SetVec4Checked("top colour", m_SkyboxData.top))
+		//	{
+		//		m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
+		//	}
+		//	if (skyboxDataObj.SetVec4Checked("mid colour", m_SkyboxData.mid))
+		//	{
+		//		m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
+		//	}
+		//	if (skyboxDataObj.SetVec4Checked("btm colour", m_SkyboxData.btm))
+		//	{
+		//		m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
+		//	}
+		//}
 
 		JSONObject cameraObj;
 		if (sceneRootObject.SetObjectChecked("camera", cameraObj))
@@ -484,9 +520,56 @@ namespace flex
 	{
 		ImGui::Checkbox("Spawn player", &m_bSpawnPlayer);
 
+		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+		ImGui::PushID("main");
 		ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxData.top.x);
 		ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxData.mid.x);
 		ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxData.btm.x);
+		ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxData.fog.x);
+		ImGui::PopID();
+		ImGui::PopStyleColor();
+
+		if (ImGui::TreeNode("Skybox colours"))
+		{
+			ImGui::PushID("Afternoon");
+			ImGui::Text("Afternoon");
+			ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxDatas[0].top.x);
+			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[0].mid.x);
+			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[0].btm.x);
+			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[0].fog.x);
+			ImGui::PopID();
+
+			ImGui::PushID("Evening");
+			ImGui::Text("Evening");
+			ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxDatas[1].top.x);
+			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[1].mid.x);
+			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[1].btm.x);
+			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[1].fog.x);
+			ImGui::PopID();
+
+			ImGui::PushID("Night");
+			ImGui::Text("Night");
+			ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxDatas[2].top.x);
+			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[2].mid.x);
+			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[2].btm.x);
+			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[2].fog.x);
+			ImGui::PopID();
+
+			ImGui::PushID("Morning");
+			ImGui::Text("Morning");
+			ImGuiExt::ColorEdit3Gamma("Top", &m_SkyboxDatas[3].top.x);
+			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[3].mid.x);
+			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[3].btm.x);
+			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[3].fog.x);
+			ImGui::PopID();
+
+			ImGui::TreePop();
+		}
+
+		ImGui::Checkbox("Pause time of day", &m_bPauseTimeOfDay);
+		ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.1f, 180.0f);
+		ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 1.0f);
+		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();
 	}
@@ -1706,6 +1789,11 @@ namespace flex
 		return bChanged;
 	}
 
+	real BaseScene::GetTimeOfDay() const
+	{
+		return m_TimeOfDay;
+	}
+
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
 		auto iter = GameObjectTypeStringIDPairs.find(typeID);
@@ -1750,11 +1838,11 @@ namespace flex
 			rootSceneObject.fields.emplace_back("player 1 guid", JSONValue(m_Player1->ID));
 		}
 
-		JSONObject skyboxDataObj = {};
-		skyboxDataObj.fields.emplace_back("top colour", JSONValue(VecToString(glm::pow(m_SkyboxData.top, glm::vec4(1.0f / 2.2f)))));
-		skyboxDataObj.fields.emplace_back("mid colour", JSONValue(VecToString(glm::pow(m_SkyboxData.mid, glm::vec4(1.0f / 2.2f)))));
-		skyboxDataObj.fields.emplace_back("btm colour", JSONValue(VecToString(glm::pow(m_SkyboxData.btm, glm::vec4(1.0f / 2.2f)))));
-		rootSceneObject.fields.emplace_back("skybox data", JSONValue(skyboxDataObj));
+		//JSONObject skyboxDataObj = {};
+		//skyboxDataObj.fields.emplace_back("top colour", JSONValue(VecToString(glm::pow(m_SkyboxData.top, glm::vec4(1.0f / 2.2f)))));
+		//skyboxDataObj.fields.emplace_back("mid colour", JSONValue(VecToString(glm::pow(m_SkyboxData.mid, glm::vec4(1.0f / 2.2f)))));
+		//skyboxDataObj.fields.emplace_back("btm colour", JSONValue(VecToString(glm::pow(m_SkyboxData.btm, glm::vec4(1.0f / 2.2f)))));
+		//rootSceneObject.fields.emplace_back("skybox data", JSONValue(skyboxDataObj));
 
 		{
 			JSONObject cameraObj = {};

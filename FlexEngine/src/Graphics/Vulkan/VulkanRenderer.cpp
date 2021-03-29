@@ -7594,7 +7594,6 @@ namespace flex
 									{
 										for (RenderID renderID : matBatch.batch.objects)
 										{
-											VulkanRenderObject* renderObject = GetRenderObject(renderID);
 											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
 											dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 										}
@@ -8424,6 +8423,7 @@ namespace flex
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
 		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			glm::mat4 projection = cam->GetProjection();
 			glm::mat4 projectionInv; // Calculated below
@@ -8434,6 +8434,7 @@ namespace flex
 			real exposure = cam->exposure;
 			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
 			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
+			glm::vec4 time(g_SecElapsedSinceProgramStart, scene->GetTimeOfDay(), 0.0f, 0.0f);
 
 			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), 1.0f, 3.0f, 1.0f, 1.0f, 1.0f, { } };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
@@ -8492,7 +8493,7 @@ namespace flex
 				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
 				{ U_OCEAN_DATA, (void*)&defaultOceanData, US_OCEAN_DATA },
 				{ U_SKYBOX_DATA, (void*)&skyboxData, US_SKYBOX_DATA},
-				{ U_TIME, (void*)&g_SecElapsedSinceProgramStart, US_TIME },
+				{ U_TIME, (void*)&time, US_TIME },
 				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
 				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
 				{ U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant, US_SSAO_BLUR_DATA_CONSTANT },

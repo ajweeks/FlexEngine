@@ -1794,6 +1794,18 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	// https://www.desmos.com/calculator/pnao7fi1yi
+	real SmootherStep01(real t)
+	{
+		return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+	}
+
+	real SmootherStep(real a, real b, real t)
+	{
+		t = Lerp(a, b, t);
+		return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+	}
+
 	bool Contains(const std::vector<const char*>& vec, const char* val)
 	{
 		for (u32 i = 0; i < (u32)vec.size(); ++i)

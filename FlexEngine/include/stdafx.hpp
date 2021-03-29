@@ -246,9 +246,13 @@ namespace flex
 	extern glm::vec3 VEC3_ONE;
 	extern glm::vec3 VEC3_NEG_ONE;
 	extern glm::vec3 VEC3_ZERO;
+	extern glm::vec3 VEC3_GAMMA;
+	extern glm::vec3 VEC3_GAMMA_INVERSE;
 	extern glm::vec4 VEC4_ONE;
 	extern glm::vec4 VEC4_NEG_ONE;
 	extern glm::vec4 VEC4_ZERO;
+	extern glm::vec4 VEC4_GAMMA;
+	extern glm::vec4 VEC4_GAMMA_INVERSE;
 	extern glm::quat QUAT_IDENTITY;
 	extern glm::mat4 MAT4_IDENTITY;
 	extern glm::mat4 MAT4_ZERO;

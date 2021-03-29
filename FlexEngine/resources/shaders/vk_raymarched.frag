@@ -27,7 +27,7 @@ layout (binding = 0) uniform UBOConstant
 {
 	mat4 view;
 	mat4 viewProjection;
-	float time;
+	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
 	// vec4 screenSize; // (w, h, 1/w, 1/h)
 } uboConstant;
 
@@ -60,11 +60,11 @@ float noise(vec3 x)
 float sdf(vec3 p)
 {
 	p /=  uboDynamic.model[0][0];
-	p.y *= sin(p.z * 5.0 + uboConstant.time * 2.5) * 0.04 + 0.85;
-	p.x *= sin(p.x * 6.0 + uboConstant.time * 2.71) * 0.03 + 0.95;
-	p.x *= sin(p.y * 3.0 + uboConstant.time * 1.3) * 0.02 + 0.98;
-	//p.y *= cos((p.y+p.z) * 12.3 + uboConstant.time * 3.6) * 0.07 + 0.85;
-	//p.x *= cos((p.x) * 9.3 + uboConstant.time * 2.6) * 0.02 + 0.98;
+	p.y *= sin(p.z * 5.0 + uboConstant.time.x * 2.5) * 0.04 + 0.85;
+	p.x *= sin(p.x * 6.0 + uboConstant.time.x * 2.71) * 0.03 + 0.95;
+	p.x *= sin(p.y * 3.0 + uboConstant.time.x * 1.3) * 0.02 + 0.98;
+	//p.y *= cos((p.y+p.z) * 12.3 + uboConstant.time.x * 3.6) * 0.07 + 0.85;
+	//p.x *= cos((p.x) * 9.3 + uboConstant.time.x * 2.6) * 0.02 + 0.98;
 	p.z = mix(p.z, p.z * p.y, 0.3);
 
 	float radius = 0.5;
@@ -163,6 +163,13 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 
 void main()
 {
+	
+
+
+	// TODO:
+
+
+
 	vec4 res = vec4(1842, 1057, 1.0/1842, 1.0/1057);
 	// Get screen coord in range [-1, 1]
 	vec2 screenCoordN = (2.0 * gl_FragCoord.xy - res.xy) * res.zw;// uboConstant.screenSize.zw;

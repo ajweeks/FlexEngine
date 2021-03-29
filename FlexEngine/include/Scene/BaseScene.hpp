@@ -138,6 +138,8 @@ namespace flex
 
 		bool GameObjectIDField(const char* label, GameObjectID& ID);
 
+		real GetTimeOfDay() const;
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
@@ -179,6 +181,11 @@ namespace flex
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
+		bool m_bPauseTimeOfDay = false;
+		real m_TimeOfDay; // [0, 1) - 0 = noon, 0.5 = midnight
+		real m_SecondsPerDay = 150.0f;
+
+		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
 
 		Player* m_Player0 = nullptr;

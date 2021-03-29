@@ -1765,6 +1765,11 @@ namespace flex
 		m_FramesToFakeDT = frameCount;
 	}
 
+	real FlexEngine::GetSimulationSpeed() const
+	{
+		return m_SimulationSpeed;
+	}
+
 	std::string FlexEngine::EngineVersionString()
 	{
 		return IntToString(EngineVersionMajor) + "." +

@@ -36,9 +36,13 @@ namespace flex
 	glm::vec3 VEC3_ONE = glm::vec3(1.0f);
 	glm::vec3 VEC3_NEG_ONE = glm::vec3(-1.0f);
 	glm::vec3 VEC3_ZERO = glm::vec3(0.0f);
+	glm::vec3 VEC3_GAMMA = glm::vec3(2.2f);
+	glm::vec3 VEC3_GAMMA_INVERSE = glm::vec3(1.0f/2.2f);
 	glm::vec4 VEC4_ONE = glm::vec4(1.0f);
 	glm::vec4 VEC4_NEG_ONE = glm::vec4(-1.0f);
 	glm::vec4 VEC4_ZERO = glm::vec4(0.0f);
+	glm::vec4 VEC4_GAMMA = glm::vec4(2.2f);
+	glm::vec4 VEC4_GAMMA_INVERSE = glm::vec4(1.0f / 2.2f);
 	glm::quat QUAT_IDENTITY = glm::quat(VEC3_ZERO);
 	glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	glm::mat4 MAT4_ZERO = glm::mat4(0.0f);

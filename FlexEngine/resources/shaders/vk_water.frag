@@ -51,7 +51,7 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 	OceanData oceanData;
 	SkyboxData skyboxData;
-	float time;
+	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
 } uboConstant;
 
 // Just needed for binding
@@ -80,8 +80,8 @@ vec3 SampleSkybox(vec3 dir)
 void main()
 {
 	vec2 uv0 = ex_TexCoord;
-	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time, 0.005 * uboConstant.time));
-	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time, 0.011 * uboConstant.time));
+	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time.x, 0.005 * uboConstant.time.x));
+	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time.x, 0.011 * uboConstant.time.x));
 	vec3 n1 = texture(normalSampler, uv1).xyz;
 	vec3 n2 = texture(normalSampler, uv2).xyz;
 	vec3 n3 = mix(n1, n2, 0.3);

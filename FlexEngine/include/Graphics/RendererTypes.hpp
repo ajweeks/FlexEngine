@@ -135,12 +135,13 @@ namespace flex
 		real pad[3];				// 12
 	};
 
-	// 48 bytes
+	// 64 bytes
 	struct SkyboxData
 	{
 		glm::vec4 top; // 16
 		glm::vec4 mid; // 16
 		glm::vec4 btm; // 16
+		glm::vec4 fog; // 16
 	};
 
 	// Uniforms
@@ -183,7 +184,7 @@ namespace flex
 	const u64 U_UNIFORM_BUFFER_CONSTANT			= (1ull << 35);
 	const u64 U_UNIFORM_BUFFER_DYNAMIC			= (1ull << 36);
 	const u64 U_TEXTURE_SCALE					= (1ull << 37); const u32 US_TEXTURE_SCALE				= sizeof(real);
-	const u64 U_TIME							= (1ull << 38); const u32 US_TIME						= sizeof(real);
+	const u64 U_TIME							= (1ull << 38); const u32 US_TIME						= sizeof(glm::vec4);
 	const u64 U_SDF_DATA						= (1ull << 39); const u32 US_SDF_DATA					= sizeof(glm::vec4);
 	const u64 U_TEX_CHANNEL						= (1ull << 40); const u32 US_TEX_CHANNEL				= sizeof(i32);
 	const u64 U_HIGH_RES_TEX					= (1ull << 41);
