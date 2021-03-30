@@ -8280,7 +8280,6 @@ namespace flex
 						glm::vec4 colour(height);
 
 						real roadWidth = 0.0f;
-						real diffLen = 0.0f;
 						real distToRoad = 99999.0f;
 						glm::vec3 roadTangentAtClosestPoint;
 						glm::vec3 roadCurvePosAtClosestPoint;
@@ -8320,11 +8319,11 @@ namespace flex
 						// that for some reason aren't picked up by other triangle
 						bool bInsideRoad = distToRoad <= 0.1f;
 						// zero at edge, grows further out from road (zero inside road)
-						real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
+						//real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
 						// [0, 1] from inner verge to outer verge and beyond (zero inside road)
 						real distanceAlongVerge = glm::clamp((distToRoad - roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
 						//real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
-						real vergeBlendWeight = glm::pow(glm::sin(distanceAlongVerge * PI), 4.0f);
+						//real vergeBlendWeight = glm::pow(glm::sin(distanceAlongVerge * PI), 4.0f);
 
 						// [0, 1] one at road edge, zero at blend dist (zero inside road)
 						//real roadBlendWeight = 1.0f - glm::min(distanceOutsideRoad / roadBlendDist, 1.0f);
