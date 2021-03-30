@@ -48,6 +48,11 @@ namespace flex
 		real m_MinSpeed = 2.0f; // Distance at which when begin zooming out
 		real m_MaxSpeed = 15.0f; // Distance at which we're the furthest zoomed out
 
+		RollingAverage<glm::vec2> m_LookOffsetRollingAvg;
+		glm::vec2 m_LastLookOffset;
+		real m_LookDistLerpSpeed = 15.0f;
+		real m_LookOffsetMagnitude = 1.25f;
+
 		// Debug
 		Histogram m_SpeedFactors;
 		Histogram m_TargetFollowDist;

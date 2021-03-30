@@ -730,6 +730,18 @@ namespace flex
 		return slerpVal;
 	}
 
+	glm::vec2 MoveTowards(const glm::vec2& a, const glm::vec2& b, real delta)
+	{
+		delta = glm::clamp(delta, 0.00001f, 1.0f);
+		glm::vec2 diff = (b - a);
+		delta = glm::min(delta, glm::length(diff));
+		if (abs(delta) < 0.00001f)
+		{
+			return b;
+		}
+		return a + glm::normalize(diff) * delta;
+	}
+
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta)
 	{
 		delta = glm::clamp(delta, 0.00001f, 1.0f);

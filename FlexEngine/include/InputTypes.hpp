@@ -463,6 +463,10 @@ namespace flex
 		VEHICLE_BRAKE,
 		VEHICLE_TURN_LEFT,
 		VEHICLE_TURN_RIGHT,
+		VEHICLE_LOOK_LEFT,
+		VEHICLE_LOOK_RIGHT,
+		VEHICLE_LOOK_UP,
+		VEHICLE_LOOK_DOWN,
 
 		// Misc
 		TAKE_SCREENSHOT,
@@ -534,6 +538,10 @@ namespace flex
 		"Vehicle brake",
 		"Vehicle turn left",
 		"Vehicle turn right",
+		"Vehicle look left",
+		"Vehicle look right",
+		"Vehicle look up",
+		"Vehicle look down",
 
 		// Misc
 		"Take screenshot",

@@ -30,20 +30,35 @@ namespace flex
 			i32 valueCount = (i32)prevValues.size();
 			for (i32 i = 0; i < valueCount; ++i)
 			{
+				real sampleWeight;
+
 				switch (samplingType)
 				{
 				case SamplingType::CONSTANT:
-					currentAverage += prevValues[i];
-					sampleCount++;
-					break;
+				{
+					sampleWeight = 1.0f;
+				} break;
 				case SamplingType::LINEAR:
-					real sampleWeight = (real)(i <= currentIndex ? i + (valueCount - currentIndex) : i - currentIndex);
-					currentAverage += prevValues[i] * sampleWeight;
-					sampleCount += (i32)sampleWeight;
-					break;
+				{
+					sampleWeight = (real)((i - currentIndex + valueCount) % valueCount);
+				} break;
+				case SamplingType::CUBIC:
+				{
+					real alpha = (real)((i - currentIndex + valueCount) % valueCount) / ((real)valueCount - 1);
+					sampleWeight = alpha * alpha * alpha;
+				} break;
+				default:
+				{
+					ENSURE_NO_ENTRY();
+					sampleWeight = 0.0f;
+				} break;
 				}
+
+				currentAverage += prevValues[i] * sampleWeight;
+				sampleCount += (i32)sampleWeight;
 			}
 
+			// TODO: Somehow make this frame-rate independent even when added to every frame!
 			if (sampleCount > 0)
 			{
 				currentAverage /= sampleCount;

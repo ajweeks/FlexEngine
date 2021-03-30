@@ -72,6 +72,7 @@ namespace flex
 	FLEX_NO_DISCARD bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold);
 
 	FLEX_NO_DISCARD glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
+	FLEX_NO_DISCARD glm::vec2 MoveTowards(const glm::vec2& a, const glm::vec2& b, real delta);
 	FLEX_NO_DISCARD glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta);
 	FLEX_NO_DISCARD real MoveTowards(const real& a, const real b, real delta);
 

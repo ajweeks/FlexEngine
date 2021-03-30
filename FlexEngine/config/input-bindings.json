@@ -229,6 +229,46 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Vehicle look left" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 2,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : true
+	},
+	"Vehicle look right" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 2,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Vehicle look up" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 3,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : true
+	},
+	"Vehicle look down" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : 3,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Take screenshot" : 
 	{
 		"key code" : 103,

@@ -121,7 +121,8 @@ namespace flex
 	enum class SamplingType
 	{
 		CONSTANT, // All samples are equally-weighted
-		LINEAR    // Latest sample is weighted N times higher than Nth sample
+		LINEAR,   // Latest sample is weighted N times higher than Nth sample
+		CUBIC,    // Latest samples contribute much more than old samples
 	};
 
 	enum class TurningDir

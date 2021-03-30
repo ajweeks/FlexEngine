@@ -25,7 +25,8 @@ namespace flex
 	VehicleCamera::VehicleCamera(real FOV) :
 		BaseCamera("vehicle", CameraType::VEHICLE, true, FOV),
 		m_SpeedFactors(256),
-		m_TargetFollowDist(256)
+		m_TargetFollowDist(256),
+		m_LastLookOffset(VEC2_ZERO)
 	{
 		bPossessPlayer = true;
 		m_SpeedFactors.overrideMin = 0.0f;
@@ -49,6 +50,7 @@ namespace flex
 			m_TargetPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
 			m_TargetForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
 			m_TargetVelMagnitudeRollingAvg = RollingAverage<real>(30, SamplingType::LINEAR);
+			m_LookOffsetRollingAvg = RollingAverage<glm::vec2>(15, SamplingType::CUBIC);
 
 			ResetValues();
 
@@ -83,6 +85,10 @@ namespace flex
 
 		m_TargetPosRollingAvg.AddValue(targetTransform->GetWorldPosition());
 		m_TargetLookAtPos = m_TargetPosRollingAvg.currentAverage;
+
+		real newLookOffsetH = -g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_RIGHT);
+		real newLookOffsetV = -g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_UP) + g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_DOWN);
+		m_LookOffsetRollingAvg.AddValue(glm::vec2(newLookOffsetH, newLookOffsetV) * m_LookOffsetMagnitude);
 
 #if THOROUGH_CHECKS
 		ENSURE(!IsNanOrInf(m_TargetLookAtPos));
@@ -137,7 +143,12 @@ namespace flex
 		m_SpeedFactors.AddElement(speedFactor);
 		m_TargetFollowDist.AddElement(glm::length(offsetVec));
 
-		return lookAtPos + offsetVec;
+		Transform* targetTransform = m_TrackedVehicle->GetTransform();
+		glm::vec2 lookOffset = MoveTowards(m_LastLookOffset, m_LookOffsetRollingAvg.currentAverage, g_DeltaTime * m_LookDistLerpSpeed);
+		glm::vec3 lookOffset3 = targetTransform->GetRight() * lookOffset.x + targetTransform->GetUp() * lookOffset.y;
+		m_LastLookOffset = lookOffset;
+
+		return lookAtPos + offsetVec + lookOffset3;
 	}
 
 	void VehicleCamera::SetPosAndLookAt()
