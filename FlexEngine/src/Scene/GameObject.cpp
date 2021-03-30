@@ -277,6 +277,7 @@ namespace flex
 		case SID("rising block"): return new RisingBlock(objectName, gameObjectID);
 		case SID("glass pane"): return new GlassPane(objectName, gameObjectID);
 		case SID("point light"): return new PointLight(objectName, gameObjectID);
+		case SID("spot light"): return new SpotLight(objectName, gameObjectID);
 		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID);
 		case SID("cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateCart(objectName, gameObjectID);
 		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
@@ -3672,6 +3673,228 @@ namespace flex
 			other.data.colour == data.colour &&
 			other.data.enabled == data.enabled &&
 			other.data.brightness == data.brightness;
+	}
+
+	SpotLight::SpotLight(BaseScene* scene) :
+		SpotLight(scene->GetUniqueObjectName("SpotLight_", 2))
+	{
+	}
+
+	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("spot light"), gameObjectID)
+	{
+		data.enabled = 1;
+		data.pos = m_Transform.GetWorldPosition();
+		data.colour = VEC4_ONE;
+		data.brightness = 500.0f;
+		data.dir = VEC3_RIGHT;
+	}
+
+	GameObject* SpotLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+
+		if (g_Renderer->GetNumSpotLights() >= MAX_SPOT_LIGHT_COUNT)
+		{
+			PrintError("Failed to duplicate spot light, max number already in scene (%i)\n", MAX_SPOT_LIGHT_COUNT);
+			return nullptr;
+		}
+
+		SpotLight* newGameObject = new SpotLight(newObjectName, newGameObjectID);
+
+		memcpy(&newGameObject->data, &data, sizeof(SpotLightData));
+		// newGameObject->spotLightID will be filled out in Initialize
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	void SpotLight::Initialize()
+	{
+		spotLightID = g_Renderer->RegisterSpotLight(&data);
+
+		m_Transform.updateParentOnStateChange = true;
+
+		GameObject::Initialize();
+	}
+
+	void SpotLight::Destroy(bool bDetachFromParent)
+	{
+		g_Renderer->RemoveSpotLight(spotLightID);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void SpotLight::Update()
+	{
+		if (sockets.size() >= 1)
+		{
+			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			if (receivedSignal != -1)
+			{
+				m_bVisible = receivedSignal == 1;
+				data.enabled = m_bVisible ? 1 : 0;
+				g_Renderer->UpdateSpotLightData(spotLightID, &data);
+			}
+		}
+
+		if (data.enabled)
+		{
+			data.pos = m_Transform.GetWorldPosition();
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
+			g_Renderer->UpdateSpotLightData(spotLightID, &data);
+
+			if (g_EngineInstance->IsRenderingEditorObjects())
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+				if (!cam->bIsGameplayCam)
+				{
+					const real minSpriteDist = 1.5f;
+					const real maxSpriteDist = 3.0f;
+
+					glm::vec3 scale(1.0f, -1.0f, 1.0f);
+
+					SpriteQuadDrawInfo drawInfo = {};
+					drawInfo.bScreenSpace = false;
+					drawInfo.bReadDepth = true;
+					drawInfo.scale = scale;
+					drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
+
+					glm::vec3 camPos = cam->position;
+					glm::vec3 camUp = cam->up;
+
+					drawInfo.textureID = g_Renderer->spotLightIconID;
+					// TODO: Sort back to front? Or clear depth and then enable depth test
+					drawInfo.pos = data.pos;
+					glm::mat4 rotMat = glm::lookAt(drawInfo.pos, camPos, camUp);
+					drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+					real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
+					drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
+					g_Renderer->EnqueueSprite(drawInfo);
+				}
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void SpotLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (spotLightID != InvalidSpotLightID)
+		{
+			static const ImGuiColorEditFlags colorEditFlags =
+				ImGuiColorEditFlags_NoInputs |
+				ImGuiColorEditFlags_Float |
+				ImGuiColorEditFlags_RGB |
+				ImGuiColorEditFlags_PickerHueWheel |
+				ImGuiColorEditFlags_HDR;
+
+			ImGui::Text("Spot Light");
+			bool bRemovedSpotLight = false;
+			bool bEditedSpotLightData = false;
+
+			if (!bRemovedSpotLight)
+			{
+				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				{
+					bEditedSpotLightData = true;
+					data.enabled = m_bVisible ? 1 : 0;
+				}
+
+				ImGui::SameLine();
+				bEditedSpotLightData |= ImGui::ColorEdit4("Colour ", &data.colour.r, colorEditFlags);
+				bEditedSpotLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
+				bEditedSpotLightData |= ImGui::SliderFloat("Cone angle", &data.angle, 0.0f, 1.0f);
+
+				if (bEditedSpotLightData)
+				{
+					g_Renderer->UpdateSpotLightData(spotLightID, &data);
+				}
+			}
+		}
+	}
+
+	void SpotLight::SetVisible(bool bVisible, bool bEffectChildren)
+	{
+		data.enabled = (bVisible ? 1 : 0);
+		GameObject::SetVisible(bVisible, bEffectChildren);
+		if (spotLightID != InvalidSpotLightID)
+		{
+			g_Renderer->UpdateSpotLightData(spotLightID, &data);
+		}
+	}
+
+	void SpotLight::OnTransformChanged()
+	{
+		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
+		data.pos = m_Transform.GetWorldPosition();
+		if (spotLightID != InvalidSpotLightID)
+		{
+			g_Renderer->UpdateSpotLightData(spotLightID, &data);
+		}
+	}
+
+	bool SpotLight::operator==(const SpotLight& other)
+	{
+		return other.data.pos == data.pos &&
+			other.data.colour == data.colour &&
+			other.data.enabled == data.enabled &&
+			other.data.brightness == data.brightness &&
+			other.data.dir == data.dir &&
+			other.data.angle == data.angle;
+	}
+
+	void SpotLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject spotLightObj;
+		if (parentObject.SetObjectChecked("spot light info", spotLightObj))
+		{
+			std::string posStr = spotLightObj.GetString("pos");
+			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
+			m_Transform.SetLocalPosition(pos);
+			data.pos = pos;
+
+			spotLightObj.SetVec3Checked("colour", data.colour);
+
+			spotLightObj.SetFloatChecked("brightness", data.brightness);
+
+			if (spotLightObj.HasField("enabled"))
+			{
+				m_bVisible = spotLightObj.GetBool("enabled") ? 1 : 0;
+				data.enabled = m_bVisible ? 1 : 0;
+			}
+
+			spotLightObj.SetVec3Checked("direction", data.dir);
+			spotLightObj.SetFloatChecked("angle", data.angle);
+		}
+	}
+
+	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	{
+		JSONObject spotLightObj = {};
+
+		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
+		spotLightObj.fields.emplace_back("pos", JSONValue(posStr));
+
+		std::string colourStr = VecToString(data.colour, 2);
+		spotLightObj.fields.emplace_back("colour", JSONValue(colourStr));
+
+		spotLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
+		spotLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
+
+		spotLightObj.fields.emplace_back("direction", JSONValue(VecToString(data.dir)));
+		spotLightObj.fields.emplace_back("angle", JSONValue(data.angle));
+
+		parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
 	}
 
 	Cart::Cart(CartID cartID) :

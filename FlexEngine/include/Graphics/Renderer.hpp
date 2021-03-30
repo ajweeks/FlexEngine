@@ -249,14 +249,19 @@ namespace flex
 		bool RegisterDirectionalLight(DirectionalLight* dirLight);
 		PointLightID RegisterPointLight(PointLightData* pointLightData);
 		void UpdatePointLightData(PointLightID ID, PointLightData* data);
+		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
+		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
 
 		void RemoveDirectionalLight();
 		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
+		void RemoveSpotLight(SpotLightID ID);
+		void RemoveAllSpotLights();
 
 		DirLightData* GetDirectionalLight();
 		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
+		i32 GetNumSpotLights();
 
 		i32 GetFramesRenderedCount() const;
 
@@ -321,6 +326,7 @@ namespace flex
 		TextureID alphaBGTextureID = InvalidTextureID;
 
 		TextureID pointLightIconID = InvalidTextureID;
+		TextureID spotLightIconID = InvalidTextureID;
 		TextureID directionalLightIconID = InvalidTextureID;
 
 		StringID previewedFont = InvalidStringID;
@@ -363,8 +369,11 @@ namespace flex
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
-		PointLightData* m_PointLights = nullptr;
+		u8* m_LightData = nullptr;
+		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
+		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer
 		i32 m_NumPointLightsEnabled = 0;
+		i32 m_NumSpotLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo

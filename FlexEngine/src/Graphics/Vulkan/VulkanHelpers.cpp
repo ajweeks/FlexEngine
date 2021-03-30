@@ -2448,6 +2448,8 @@ namespace flex
 							{
 								shaderc::CompileOptions options = {};
 								options.SetOptimizationLevel(shaderc_optimization_level_performance);
+								// TODO: Remove for release builds
+								options.SetGenerateDebugInfo();
 								options.SetWarningsAsErrors();
 
 								//options.SetIncluder(std::unique_ptr<shaderc::CompileOptions::IncluderInterface>(includer));

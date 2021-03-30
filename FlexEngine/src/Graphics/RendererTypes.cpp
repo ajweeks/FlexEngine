@@ -72,7 +72,7 @@ namespace flex
 				_u(COLOUR_MULTIPLIER)
 				_u(CAM_POS)
 				_u(DIR_LIGHT)
-				_u(POINT_LIGHTS)
+				_u(LIGHTS)
 				_u(CONST_ALBEDO)
 				_u(CONST_METALLIC)
 				_u(CONST_ROUGHNESS)

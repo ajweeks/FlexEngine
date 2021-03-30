@@ -19,6 +19,7 @@ namespace flex
 	class GameObject;
 
 	static const i32 MAX_POINT_LIGHT_COUNT = 8;
+	static const i32 MAX_SPOT_LIGHT_COUNT = 4;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
@@ -40,6 +41,17 @@ namespace flex
 		i32 enabled;     // 12
 		glm::vec3 colour; // 16
 		real brightness; // 28
+	};
+
+	// 48 bytes
+	struct SpotLightData
+	{
+		glm::vec3 pos;   // 0
+		i32 enabled;     // 12
+		glm::vec3 colour; // 16
+		real brightness; // 28
+		glm::vec3 dir; // 32
+		real angle; // 44
 	};
 
 	const i32 MAX_SSAO_KERNEL_SIZE = 64;
@@ -156,7 +168,7 @@ namespace flex
 	const u64 U_COLOUR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOUR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 9);  const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_POINT_LIGHTS					= (1ull << 10); const u32 US_POINT_LIGHTS				= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT;
+	const u64 U_LIGHTS      					= (1ull << 10); const u32 US_LIGHTS						= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT + sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
 	const u64 U_METALLIC_SAMPLER				= (1ull << 13);

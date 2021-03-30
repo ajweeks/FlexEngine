@@ -174,6 +174,7 @@ namespace flex
 		g_Renderer->SetSkyboxMesh(nullptr);
 		g_Renderer->RemoveDirectionalLight();
 		g_Renderer->RemoveAllPointLights();
+		g_Renderer->RemoveAllSpotLights();
 
 		if (m_PhysicsWorld)
 		{
@@ -1141,6 +1142,19 @@ namespace flex
 				newPointLight->PostInitialize();
 
 				g_Editor->SetSelectedObject(newPointLight->ID);
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Add spot light"))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				SpotLight* newSpotLight = new SpotLight(scene);
+				scene->AddRootObject(newSpotLight);
+				newSpotLight->Initialize();
+				newSpotLight->PostInitialize();
+
+				g_Editor->SetSelectedObject(newSpotLight->ID);
 			}
 		}
 

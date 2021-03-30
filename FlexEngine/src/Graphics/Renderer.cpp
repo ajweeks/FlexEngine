@@ -53,12 +53,19 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_PointLights = (PointLightData*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
-		assert(m_PointLights != nullptr);
+		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData));
+		m_PointLightData = (PointLightData*)m_LightData;
+		m_SpotLightData = (SpotLightData*)(m_LightData + MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		assert(m_LightData != nullptr);
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
-			m_PointLights[i].colour = VEC3_NEG_ONE;
-			m_PointLights[i].enabled = 0;
+			m_PointLightData[i].colour = VEC3_NEG_ONE;
+			m_PointLightData[i].enabled = 0;
+		}
+		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
+		{
+			m_SpotLightData[i].colour = VEC3_NEG_ONE;
+			m_SpotLightData[i].enabled = 0;
 		}
 
 		// TODO: Move these defaults to config file
@@ -211,7 +218,10 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
-		free(m_PointLights);
+		free(m_LightData);
+		m_LightData = nullptr;
+		m_PointLightData = nullptr;
+		m_SpotLightData = nullptr;
 
 		delete m_ShaderDirectoryWatcher;
 
@@ -517,7 +527,7 @@ namespace flex
 
 			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 			{
-				PointLightData* data = m_PointLights + i;
+				PointLightData* data = m_PointLightData + i;
 				if (data->colour.x == -1.0f)
 				{
 					newPointLightID = (PointLightID)i;
@@ -526,19 +536,51 @@ namespace flex
 			}
 			assert(newPointLightID != InvalidPointLightID);
 
-			memcpy(m_PointLights + newPointLightID, pointLightData, sizeof(PointLightData));
+			memcpy(m_PointLightData + newPointLightID, pointLightData, sizeof(PointLightData));
 			m_NumPointLightsEnabled++;
 			return newPointLightID;
 		}
 		return InvalidPointLightID;
 	}
 
-	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
+	void Renderer::UpdatePointLightData(SpotLightID ID, PointLightData* data)
 	{
 		assert(ID < MAX_POINT_LIGHT_COUNT);
 		assert(data != nullptr);
 
-		memcpy(m_PointLights + ID, data, sizeof(PointLightData));
+		memcpy(m_PointLightData + ID, data, sizeof(PointLightData));
+	}
+
+	SpotLightID Renderer::RegisterSpotLight(SpotLightData* spotLightData)
+	{
+		if (m_NumSpotLightsEnabled < MAX_SPOT_LIGHT_COUNT)
+		{
+			SpotLightID newSpotLightID = InvalidSpotLightID;
+
+			for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
+			{
+				SpotLightData* data = m_SpotLightData + i;
+				if (data->colour.x == -1.0f)
+				{
+					newSpotLightID = (SpotLightID)i;
+					break;
+				}
+			}
+			assert(newSpotLightID != InvalidSpotLightID);
+
+			memcpy(m_SpotLightData + newSpotLightID, spotLightData, sizeof(SpotLightData));
+			m_NumSpotLightsEnabled++;
+			return newSpotLightID;
+		}
+		return InvalidSpotLightID;
+	}
+
+	void Renderer::UpdateSpotLightData(SpotLightID ID, SpotLightData* data)
+	{
+		assert(ID < MAX_SPOT_LIGHT_COUNT);
+		assert(data != nullptr);
+
+		memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
 	}
 
 	void Renderer::RemoveDirectionalLight()
@@ -550,10 +592,10 @@ namespace flex
 	{
 		if (ID != InvalidPointLightID)
 		{
-			if (m_PointLights[ID].colour.x != -1.0f)
+			if (m_PointLightData[ID].colour.x != -1.0f)
 			{
-				m_PointLights[ID].colour = VEC4_NEG_ONE;
-				m_PointLights[ID].enabled = 0;
+				m_PointLightData[ID].colour = VEC4_NEG_ONE;
+				m_PointLightData[ID].enabled = 0;
 				m_NumPointLightsEnabled--;
 				assert(m_NumPointLightsEnabled >= 0);
 			}
@@ -564,10 +606,34 @@ namespace flex
 	{
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
-			m_PointLights[i].colour = VEC4_NEG_ONE;
-			m_PointLights[i].enabled = 0;
+			m_PointLightData[i].colour = VEC4_NEG_ONE;
+			m_PointLightData[i].enabled = 0;
 		}
 		m_NumPointLightsEnabled = 0;
+	}
+
+	void Renderer::RemoveSpotLight(SpotLightID ID)
+	{
+		if (ID != InvalidSpotLightID)
+		{
+			if (m_SpotLightData[ID].colour.x != -1.0f)
+			{
+				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
+				m_SpotLightData[ID].enabled = 0;
+				m_NumSpotLightsEnabled--;
+				assert(m_NumSpotLightsEnabled >= 0);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllSpotLights()
+	{
+		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
+		{
+			m_SpotLightData[i].colour = VEC4_NEG_ONE;
+			m_SpotLightData[i].enabled = 0;
+		}
+		m_NumSpotLightsEnabled = 0;
 	}
 
 	DirLightData* Renderer::GetDirectionalLight()
@@ -579,14 +645,14 @@ namespace flex
 		return nullptr;
 	}
 
-	PointLightData* Renderer::GetPointLight(PointLightID ID)
-	{
-		return &m_PointLights[ID];
-	}
-
 	i32 Renderer::GetNumPointLights()
 	{
 		return m_NumPointLightsEnabled;
+	}
+
+	i32 Renderer::GetNumSpotLights()
+	{
+		return m_NumSpotLightsEnabled;
 	}
 
 	i32 Renderer::GetFramesRenderedCount() const
@@ -1320,7 +1386,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION_INV);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);

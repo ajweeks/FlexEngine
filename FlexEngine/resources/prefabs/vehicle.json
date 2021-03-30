@@ -55,7 +55,7 @@
 				"transform" : 
 				{
 					"pos" : "-0.846, -0.135, 1.534",
-					"rot" : "0.024, -0.000, 0.000"
+					"rot" : "0.036, -0.000, -0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -73,7 +73,7 @@
 				"transform" : 
 				{
 					"pos" : "0.742, -0.131, 1.537",
-					"rot" : "-0.015, -0.000, 0.000"
+					"rot" : "-0.006, 0.000, -0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -91,7 +91,7 @@
 				"transform" : 
 				{
 					"pos" : "-0.720, -0.145, -1.187",
-					"rot" : "0.017, -0.000, 0.000"
+					"rot" : "0.030, -0.000, -0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -109,7 +109,7 @@
 				"transform" : 
 				{
 					"pos" : "0.738, -0.151, -1.153",
-					"rot" : "-0.017, -0.000, 0.000"
+					"rot" : "-0.007, 0.000, -0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -119,6 +119,46 @@
 					"black plastic",
 					"pbr chrome"
 				]
+			},
+			{
+				"name" : "SpotLight_L-1",
+				"id" : "98DD88BC75F882B5447C92BA8E8A91BE",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.419, 0.000, 2.584"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "-0.419, 0.000, 2.584",
+					"colour" : "1.00, 1.00, 1.00",
+					"enabled" : true,
+					"brightness" : 500.000000,
+					"direction" : "-0.32, -0.01, -0.95",
+					"angle" : 0.750000
+				}
+			},
+			{
+				"name" : "SpotLight_R-1",
+				"id" : "023A489D948C68904F4DBC0B7E1A38E4",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.318, 0.000, 2.584"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "0.318, 0.000, 2.584",
+					"colour" : "0.96, 0.97, 0.59",
+					"enabled" : true,
+					"brightness" : 500.000000,
+					"direction" : "-0.32, -0.01, -0.95",
+					"angle" : 0.750000
+				}
 			}
 		]
 	}

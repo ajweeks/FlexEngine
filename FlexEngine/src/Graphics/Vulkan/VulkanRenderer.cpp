@@ -320,6 +320,7 @@ namespace flex
 
 			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", false, false, false);
 			pointLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/point-light-icon-256.png", false, true, false);
+			spotLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/spot-light-icon-256.png", false, true, false);
 			directionalLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/directional-light-icon-256.png", false, true, false);
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
@@ -8490,7 +8491,7 @@ namespace flex
 				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
 				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
 				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
-				{ U_POINT_LIGHTS, (void*)m_PointLights, US_POINT_LIGHTS },
+				{ U_LIGHTS, (void*)m_LightData, US_LIGHTS },
 				{ U_OCEAN_DATA, (void*)&defaultOceanData, US_OCEAN_DATA },
 				{ U_SKYBOX_DATA, (void*)&skyboxData, US_SKYBOX_DATA},
 				{ U_TIME, (void*)&time, US_TIME },

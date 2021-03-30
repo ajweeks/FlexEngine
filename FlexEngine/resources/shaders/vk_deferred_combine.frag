@@ -3,6 +3,7 @@
 // Deferred PBR Combine
 
 #define NUM_POINT_LIGHTS 8
+#define NUM_SPOT_LIGHTS 4
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
@@ -35,6 +36,16 @@ struct PointLight
 	float brightness;
 };
 
+struct SpotLight 
+{
+	vec3 position;
+	int enabled;
+	vec3 colour;
+	float brightness;
+	vec3 direction;
+	float angle;
+};
+
 struct ShadowSamplingData
 {
 	mat4 cascadeViewProjMats[NUM_CASCADES];
@@ -63,6 +74,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
+	SpotLight spotLights[NUM_SPOT_LIGHTS];
 	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
 	SSAOSamplingData ssaoData;
@@ -241,6 +253,43 @@ void main()
 		float NoL = max(dot(N, L), 0.0);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
+	}
+
+	for (int i = 0; i < NUM_SPOT_LIGHTS; ++i)
+	{
+		if (uboConstant.spotLights[i].enabled == 0)
+		{
+			continue;
+		}
+
+		float distance = length(uboConstant.spotLights[i].position - worldPos);
+
+		if (distance > 125)
+		{
+			// TODO: Define radius on spot lights individually
+			continue;
+		}
+
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		vec3 pointToLight = normalize(uboConstant.spotLights[i].position - worldPos);
+		vec3 L = normalize(uboConstant.spotLights[i].direction);
+		float attenuation = 1.0 / max((distance * distance), 0.001);
+		//attenuation *= max(dot(L, pointToLight), 0.0);
+		vec3 radiance = uboConstant.spotLights[i].colour.rgb * attenuation * uboConstant.spotLights[i].brightness;
+		float NoL = max(dot(N, pointToLight), 0.0);
+		float LoPointToLight = max(dot(L, pointToLight), 0.0);
+		float inCone = LoPointToLight - uboConstant.spotLights[i].angle;
+		float blendThreshold = 0.1;
+		if (inCone < 0.0)
+		{
+			radiance = vec3(0.0);
+		}
+		else if (inCone < blendThreshold)
+		{
+			radiance *= clamp(inCone / blendThreshold, 0.001, 1.0);
+		}
+
+		Lo += DoLighting(radiance, N, V, L, NoV, LoPointToLight, roughness, metallic, F0, albedo);
 	}
 
 	if (uboConstant.dirLight.enabled != 0)

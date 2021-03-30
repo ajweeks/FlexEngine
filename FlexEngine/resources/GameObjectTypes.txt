@@ -6,6 +6,7 @@ terrain generator
 player
 directional light
 point light
+spot light
 reflection probe
 rising block
 engine cart
