@@ -48,26 +48,28 @@ void main()
 
 	vec3 groundCol;
 
-	float min = 0.45;
-	float max = 0.52;
+	float minHeight = 0.45;
+	float maxHeight = 0.52;
 	vec3 lowCol = pow(vec3(0.06, 0.05, 0.02), vec3(2.2));
 	vec3 highCol = pow(vec3(0.04, 0.07, 0.02), vec3(2.2));// vec3(0.00, 0.04, 0.01);
-	if (ex_Colour.r > max)
+	if (ex_Colour.r > maxHeight)
 	{
 		groundCol = highCol;
 	}
-	else if (ex_Colour.r < min)
+	else if (ex_Colour.r < minHeight)
 	{
 		groundCol = lowCol;
 	}
 	else
 	{
-		float alpha = (ex_Colour.r - min) / (max - min);
+		float alpha = (ex_Colour.r - minHeight) / (maxHeight - minHeight);
 		groundCol = mix(lowCol, highCol, clamp(alpha, 0.0, 1.0));
 	}
 	groundCol *= light;
 	groundCol += (fresnel * 1.2) * groundCol;
+	groundCol += (1.0 * max(dot(N, vec3(0, 1, 0)), 0.0)) * uboConstant.skyboxData.colourTop.rgb * groundCol;
 	fragmentColour = vec4(mix(groundCol, uboConstant.skyboxData.colourFog.rgb, dist), 1.0);
+
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0f)); // Reinhard tone-mapping
 	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0f / 2.2f)); // Gamma correction

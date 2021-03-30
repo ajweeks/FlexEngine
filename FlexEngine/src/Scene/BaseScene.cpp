@@ -567,8 +567,8 @@ namespace flex
 		}
 
 		ImGui::Checkbox("Pause time of day", &m_bPauseTimeOfDay);
-		ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.1f, 180.0f);
-		ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 1.0f);
+		ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.1f, 6000.0f);
+		ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f);
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();

@@ -304,13 +304,13 @@ void main()
 	vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
-    vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.5);
+    vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.2);
     vec3 diffuse = irradiance * albedo;
 
 	// Specular ambient term (IBL)
 	const float MAX_REFLECTION_LOAD = 5.0;
 	vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
-	prefilteredColour += skyColour * 0.2;
+	prefilteredColour += skyColour * 0.1;
 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
 

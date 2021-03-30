@@ -3,18 +3,12 @@
 	"name" : "scene_vehicle_test",
 	"spawn player" : true,
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 5000.000000,
-		"fov" : 0.785398,
+		"fov" : 1.399754,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -22,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "11.641, 27.201, -24.493",
-			"pitch" : -0.582397,
-			"yaw" : 1.678982
+			"position" : "4.733, 6.709, -32.522",
+			"pitch" : 0.346769,
+			"yaw" : 1.210230
 		}
 	},
 	"objects" : 
@@ -73,8 +67,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "-0.584, 0.916, -1.282",
-				"rot" : "-0.008, 0.282, -0.004",
+				"pos" : "-0.546, 0.916, -1.287",
+				"rot" : "-0.008, 0.295, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
