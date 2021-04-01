@@ -412,6 +412,11 @@ namespace flex
 		}
 	}
 
+	void SoundClip_LoopingSimple::SetGainMultiplier(real gainMultiplier)
+	{
+		AudioManager::SetSourceGainMultiplier(loop, gainMultiplier);
+	}
+
 	bool SoundClip_LoopingSimple::DrawImGui()
 	{
 		bool bTreeOpen = false;
@@ -632,6 +637,20 @@ namespace flex
 		return sourceID;
 	}
 
+	void AudioManager::UpdateSourceGain(AudioSourceID sourceID)
+	{
+		real newGain = Saturate(s_Sources[sourceID].gain * s_Sources[sourceID].gainMultiplier);
+
+		real currGain;
+		alGetSourcef(sourceID, AL_GAIN, &currGain);
+		if (currGain != newGain)
+		{
+			alSourcef(s_Sources[sourceID].source, AL_GAIN, newGain);
+
+			DisplayALError("SetSourceGain", alGetError());
+		}
+	}
+
 	AudioSourceID AudioManager::SynthesizeSound(sec length, real freq)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
@@ -819,39 +838,12 @@ namespace flex
 		s_Sources[sourceID].fadeDurationRemaining = fadeDuration;
 	}
 
-	void AudioManager::ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero /* = true */)
-	{
-		assert(sourceID < s_Sources.size());
-
-		const real epsilon = 0.00001f;
-
-		if (bPreventZero && s_Sources[sourceID].gain == 0.0f)
-		{
-			s_Sources[sourceID].gain = epsilon;
-		}
-
-		real newGain = s_Sources[sourceID].gain * gainScale;
-		if (bPreventZero && newGain < epsilon)
-		{
-			// Prevent gain from reaching 0, so it can be scaled up again
-			newGain = epsilon;
-		}
-		SetSourceGain(sourceID, newGain);
-	}
-
 	void AudioManager::SetSourceGain(AudioSourceID sourceID, real gain)
 	{
 		assert(sourceID < s_Sources.size());
+		s_Sources[sourceID].gain = gain;
 
-		gain = Saturate(gain);
-
-		if (s_Sources[sourceID].gain != gain)
-		{
-			s_Sources[sourceID].gain = gain;
-			alSourcef(s_Sources[sourceID].source, AL_GAIN, gain);
-
-			DisplayALError("SetSourceGain", alGetError());
-		}
+		UpdateSourceGain(sourceID);
 	}
 
 	real AudioManager::GetSourceGain(AudioSourceID sourceID)
@@ -859,6 +851,14 @@ namespace flex
 		assert(sourceID < s_Sources.size());
 
 		return s_Sources[sourceID].gain;
+	}
+
+	void AudioManager::SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier)
+	{
+		assert(sourceID < s_Sources.size());
+		s_Sources[sourceID].gainMultiplier = gainMultiplier;
+
+		UpdateSourceGain(sourceID);
 	}
 
 	void AudioManager::AddToSourcePitch(AudioSourceID sourceID, real deltaPitch)

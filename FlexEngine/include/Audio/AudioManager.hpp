@@ -83,6 +83,7 @@ namespace flex
 		void KillCurrentlyPlaying();
 
 		void SetPitch(real pitch);
+		void SetGainMultiplier(real gainMultiplier);
 
 		// Returns true when sound clip has changed
 		bool DrawImGui();
@@ -116,6 +117,7 @@ namespace flex
 		{
 			ALuint source = InvalidAudioSourceID;
 			real gain = 1.0f;
+			real gainMultiplier = 1.0f;
 			real pitch = 1.0f;
 			real length = -1.0f;
 
@@ -155,16 +157,10 @@ namespace flex
 		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
 		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
 
-		/*
-		* Multiplies the source by gainScale
-		* Optionally prevents gain from reaching zero so that it
-		* can be scale up again later
-		*/
-		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero = true);
-
 		/* Volume of sound [0.0, 1.0] (logarithmic) */
 		static void SetSourceGain(AudioSourceID sourceID, real gain);
 		static real GetSourceGain(AudioSourceID sourceID);
+		static void SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier);
 
 		static void AddToSourcePitch(AudioSourceID sourceID, real deltaPitch);
 
@@ -202,6 +198,8 @@ namespace flex
 		static ALuint GetNextAvailableSourceAndBufferIndex();
 
 		static AudioSourceID AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr);
+
+		static void UpdateSourceGain(AudioSourceID sourceID);
 
 		static real s_MasterGain;
 		static bool s_Muted;

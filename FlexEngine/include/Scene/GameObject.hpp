@@ -1437,7 +1437,7 @@ namespace flex
 		const real MAX_BRAKE_FORCE = 55.0f;
 		const real ENGINE_FORCE_SLOW_FACTOR = 10.0f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
-		const real WHEEL_SLIP_SCREECH_THRESHOLD = 0.9f;
+		const real WHEEL_SLIP_SCREECH_THRESHOLD = 0.8f; // 0 = no screech, 1 = screech on any traction loss
 
 		const real m_MoveAccel = 9500.0f;
 		const real m_TurnAccel = 1.8f;

@@ -10237,10 +10237,11 @@ namespace flex
 		vehicle->renderScene();
 #endif
 
-		real motorPitch = glm::clamp(forwardVel / 30.0f + 0.85f, 0.95f, 1.5f);
+		real motorPitch = glm::clamp(forwardVel / 35.0f + 0.75f, 0.95f, 1.5f);
+		real motorGain = glm::clamp(m_EngineForce / MAX_ENGINE_FORCE * 3.0f, 0.0f, 1.0f);
 
 		// TODO: Drive gain with vel/motor/wheel speed
-		if (abs(forwardVel) < 0.1f)
+		if (motorGain < 0.1f)
 		{
 			m_SoundEffects[(u32)SoundEffect::ENGINE].FadeOut();
 		}
@@ -10265,6 +10266,7 @@ namespace flex
 		}
 
 		m_SoundEffects[(u32)SoundEffect::ENGINE].SetPitch(motorPitch);
+		m_SoundEffects[(u32)SoundEffect::ENGINE].SetGainMultiplier(motorGain);
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
