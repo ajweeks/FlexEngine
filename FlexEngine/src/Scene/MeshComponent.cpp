@@ -9,6 +9,9 @@ IGNORE_WARNINGS_PUSH
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
 
+#include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
+#include <BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> // For make_vec3
 #include <glm/gtx/norm.hpp> // For length2
@@ -98,6 +101,28 @@ namespace flex
 	void MeshComponent::SetOwner(Mesh* owner)
 	{
 		m_OwningMesh = owner;
+	}
+
+	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape)
+	{
+		*outTriangleIndexVertexArray = new btTriangleIndexVertexArray();
+		btIndexedMesh part = {};
+
+		VertexBufferData* vertexBufferData = GetVertexBufferData();
+		u32* indexBufferData = GetIndexBufferDataPtr();
+		u32 indexCount = GetIndexCount();
+
+		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
+		part.m_vertexStride = vertexBufferData->VertexStride;
+		part.m_numVertices = vertexBufferData->UsedVertexCount;
+		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
+		part.m_triangleIndexStride = sizeof(u32) * 3;
+		part.m_numTriangles = (i32)(indexCount / 3);
+
+		(*outTriangleIndexVertexArray)->addIndexedMesh(part, PHY_INTEGER);
+
+		bool useQuantizedAabbCompression = false;
+		*outbvhTriangleMeshShape = new btBvhTriangleMeshShape(*outTriangleIndexVertexArray, useQuantizedAabbCompression);
 	}
 
 	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)

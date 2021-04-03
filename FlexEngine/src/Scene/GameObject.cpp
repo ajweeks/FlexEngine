@@ -8176,30 +8176,16 @@ namespace flex
 			return;
 		}
 
+		MeshComponent* submesh = m_Meshes[chunkIndex]->meshComponent;
+
+		btBvhTriangleMeshShape* shape;
+		submesh->CreateCollisionMesh(&m_Meshes[chunkIndex]->triangleIndexVertexArray, &shape);
+
+		// TODO: Don't even create rb?
 		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
-
-		m_Meshes[chunkIndex]->rigidBody = rigidBody;
-		m_Meshes[chunkIndex]->triangleIndexVertexArray = new btTriangleIndexVertexArray();
-		btIndexedMesh part = {};
-
-		VertexBufferData* vertexBufferData = m_Meshes[chunkIndex]->meshComponent->GetVertexBufferData();
-		u32* indexBufferData = m_Meshes[chunkIndex]->meshComponent->GetIndexBufferDataPtr();
-		u32 indexCount = m_Meshes[chunkIndex]->meshComponent->GetIndexCount();
-
-		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
-		part.m_vertexStride = vertexBufferData->VertexStride;
-		part.m_numVertices = vertexBufferData->UsedVertexCount;
-		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
-		part.m_triangleIndexStride = sizeof(u32) * 3;
-		part.m_numTriangles = (i32)(indexCount / 3);
-
-		m_Meshes[chunkIndex]->triangleIndexVertexArray->addIndexedMesh(part, PHY_INTEGER);
-
-		bool useQuantizedAabbCompression = false;
-		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(m_Meshes[chunkIndex]->triangleIndexVertexArray, useQuantizedAabbCompression);
-
 		rigidBody->Initialize(shape, &m_Transform);
+		m_Meshes[chunkIndex]->rigidBody = rigidBody;
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
@@ -10938,32 +10924,15 @@ namespace flex
 			m_MeshVertexArrays.resize(meshIndex + 1, nullptr);
 		}
 
+		MeshComponent* submesh = roadSegments[meshIndex].mesh;
+
+		btBvhTriangleMeshShape* shape;
+		submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
+
 		// TODO: Don't even create rb?
 		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
-
-		m_RigidBodies[meshIndex] = rigidBody;
-
-		m_MeshVertexArrays[meshIndex] = new btTriangleIndexVertexArray();
-		btIndexedMesh part = {};
-
-		MeshComponent* submesh = roadSegments[meshIndex].mesh;
-		VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
-		u32* indexBufferData = submesh->GetIndexBufferDataPtr();
-		u32 indexCount = submesh->GetIndexCount();
-
-		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
-		part.m_vertexStride = vertexBufferData->VertexStride;
-		part.m_numVertices = vertexBufferData->UsedVertexCount;
-		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
-		part.m_triangleIndexStride = sizeof(u32) * 3;
-		part.m_numTriangles = (i32)(indexCount / 3);
-
-		m_MeshVertexArrays[meshIndex]->addIndexedMesh(part, PHY_INTEGER);
-
-		bool useQuantizedAabbCompression = false;
-		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(m_MeshVertexArrays[meshIndex], useQuantizedAabbCompression);
-
 		rigidBody->Initialize(shape, &m_Transform);
+		m_RigidBodies[meshIndex] = rigidBody;
 	}
 } // namespace flex

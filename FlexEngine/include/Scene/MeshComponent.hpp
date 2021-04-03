@@ -8,6 +8,8 @@
 
 struct cgltf_data;
 struct cgltf_primitive;
+class btTriangleIndexVertexArray;
+class btBvhTriangleMeshShape;
 
 namespace flex
 {
@@ -39,6 +41,8 @@ namespace flex
 
 		void Destroy();
 		void SetOwner(Mesh* owner);
+
+		void CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape);
 
 		/*
 		* Call before loading to force certain attributes to be filled/ignored based on shader
