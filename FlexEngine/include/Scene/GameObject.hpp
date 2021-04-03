@@ -1100,7 +1100,7 @@ namespace flex
 		void GenerateChunks();
 		void DestroyAllChunks();
 
-		void DisableChunkRigidBody(const glm::vec2i& chunkIndex);
+		void DestroyChunkRigidBody(const glm::vec2i& chunkIndex);
 		void CreateChunkRigidBody(const glm::vec2i& chunkIndex);
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);

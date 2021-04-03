@@ -7433,9 +7433,9 @@ namespace flex
 			}
 			else
 			{
-				if (iter->second->rigidBody != nullptr && iter->second->rigidBody->GetRigidBodyInternal()->getActivationState() != WANTS_DEACTIVATION)
+				if (iter->second->rigidBody != nullptr)
 				{
-					DisableChunkRigidBody(chunkIndex);
+					DestroyChunkRigidBody(chunkIndex);
 				}
 			}
 		}
@@ -8161,18 +8161,20 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::DisableChunkRigidBody(const glm::vec2i& chunkIndex)
+	void TerrainGenerator::DestroyChunkRigidBody(const glm::vec2i& chunkIndex)
 	{
-		m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+		m_Meshes[chunkIndex]->rigidBody->Destroy();
+		delete m_Meshes[chunkIndex]->rigidBody;
+		m_Meshes[chunkIndex]->rigidBody = nullptr;
+		delete m_Meshes[chunkIndex]->triangleIndexVertexArray;
+		m_Meshes[chunkIndex]->triangleIndexVertexArray = nullptr;
 	}
 
 	void TerrainGenerator::CreateChunkRigidBody(const glm::vec2i& chunkIndex)
 	{
 		if (m_Meshes[chunkIndex]->rigidBody != nullptr)
 		{
-			// Enable if already exists
-			m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(DISABLE_DEACTIVATION);
-			m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->activate(true);
+			// Already exists
 			return;
 		}
 
@@ -8186,6 +8188,7 @@ namespace flex
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(shape, &m_Transform);
 		m_Meshes[chunkIndex]->rigidBody = rigidBody;
+		m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
