@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Time.hpp"
 
 class btCollisionShape;
+class btTriangleIndexVertexArray;
 
 namespace flex
 {
@@ -1099,6 +1100,9 @@ namespace flex
 		void GenerateChunks();
 		void DestroyAllChunks();
 
+		void DisableChunkRigidBody(const glm::vec2i& chunkIndex);
+		void CreateChunkRigidBody(const glm::vec2i& chunkIndex);
+
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
 
@@ -1108,6 +1112,8 @@ namespace flex
 
 		struct Chunk
 		{
+			btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
+			RigidBody* rigidBody = nullptr;
 			MeshComponent* meshComponent = nullptr;
 			//glm::vec2i chunkIndex;
 			u32 linearIndex = 0;
@@ -1119,6 +1125,7 @@ namespace flex
 		void* criticalSection = nullptr;
 
 		real m_LoadedChunkRadius = 100.0f;
+		real m_LoadedChunkRigidBodyRadius2 = 100.0f * 100.0f;
 
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
@@ -1429,21 +1436,14 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		void CreateRigidBody();
 		void MatchCorrespondingID(const GameObjectID& existingID, GameObject* newGameObject, const char* objectName, GameObjectID& outCorrespondingID);
-
 		void SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID);
 
 		std::array<StringID, (i32)SoundEffect::_COUNT> m_SoundEffectSIDs;
 
 		const real MAX_STEER = 0.5f;
-		const real MAX_ENGINE_FORCE = 6000.0f;
-		const real MAX_BRAKE_FORCE = 55.0f;
-		const real ENGINE_FORCE_SLOW_FACTOR = 10.0f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
-		const real WHEEL_SLIP_SCREECH_THRESHOLD = 0.8f; // 0 = no screech, 1 = screech on any traction loss
-
-		const real m_MoveAccel = 9500.0f;
-		const real m_TurnAccel = 1.8f;
 
 		void ResetTransform();
 
@@ -1452,11 +1452,17 @@ namespace flex
 		GameObjectID m_TireIDs[m_TireCount];
 		GameObjectID m_BrakeLightIDs[2];
 
+		real m_MaxEngineForce = 9000.0f;
 		real m_EngineForce = 0.0f;
+		real m_EngineAccel = 25000.0f;
+		real m_MaxBrakeForce = 55.0f;
 		real m_BrakeForce = 0.0f;
+		real m_EngineForceDecelerationSpeed = 10.0f;
+		real m_TurnAccel = 1.8f;
+		real m_WheelSlipScreechThreshold = 0.8f; // 0 = no screech, 1 = screech on any traction loss
 		real m_Steering = 0.0f;
 		real m_RollInfluence = 0.05f;
-		real m_WheelFriction = 3.0f;
+		real m_WheelFriction = 6.0f;
 		real m_WheelRadius = 0.5f;
 		real m_WheelWidth = 0.4f;
 		real m_SuspensionStiffness = 20.f;
@@ -1548,7 +1554,7 @@ namespace flex
 		void CreateRigidBody(u32 meshIndex);
 
 		std::vector<RigidBody*> m_RigidBodies;
-		std::vector<class btTriangleIndexVertexArray*> m_MeshVertexArrays;
+		std::vector<btTriangleIndexVertexArray*> m_MeshVertexArrays;
 
 		MaterialID m_RoadMaterialID = InvalidMaterialID;
 

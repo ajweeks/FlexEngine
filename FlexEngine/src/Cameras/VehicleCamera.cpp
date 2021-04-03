@@ -121,6 +121,18 @@ namespace flex
 				ImGui::SliderFloat("Rotation update speed", &m_RotationUpdateSpeed, 0.001f, 50.0f);
 				ImGui::SliderFloat("Dist update speed", &m_DistanceUpdateSpeed, 0.001f, 10.0f);
 
+				ImGui::SliderFloat("Min target speed zoom threshold", &m_MinSpeed, 1.0f, 50.0f);
+				ImGui::SliderFloat("Max target speed zoom threshold", &m_MaxSpeed, 1.0f, 50.0f);
+
+				ImGui::SliderFloat("Closest dist", &m_ClosestDist, 1.0f, 60.0f);
+				ImGui::SliderFloat("Furthest dist", &m_FurthestDist, 1.0f, 90.0f);
+
+				ImGui::SliderFloat("Min downward angle", &m_MinDownwardAngle, 0.0f, 3.0f);
+				ImGui::SliderFloat("Max downward angle", &m_MaxDownwardAngle, 0.0f, 3.0f);
+
+				ImGui::SliderFloat("Look dist lerp speed", &m_LookDistLerpSpeed, 0.0f, 50.0f);
+				ImGui::SliderFloat("Look offset magnitude", &m_LookOffsetMagnitude, 0.0f, 10.0f);
+
 				m_SpeedFactors.DrawImGui();
 				m_TargetFollowDist.DrawImGui();
 			}
@@ -131,6 +143,15 @@ namespace flex
 	{
 		// TODO: Handle camera cut to stationary vehicle? (use vehicle forward rather than vel)
 		glm::vec3 backward = -m_TargetForwardRollingAvg.currentAverage;
+
+		real minOffsetY = 0.0f;
+		if (backward.y < minOffsetY)
+		{
+			backward.y = minOffsetY;
+			backward = glm::normalize(backward);
+		}
+
+		// TODO: Check for collisions
 
 		real speedFactor = glm::clamp((m_TargetVelMagnitudeRollingAvg.currentAverage - m_MinSpeed) / (m_MaxSpeed - m_MinSpeed), 0.0f, 1.0f);
 		glm::vec3 upward = VEC3_UP * Lerp(m_MaxDownwardAngle, m_MinDownwardAngle, speedFactor);

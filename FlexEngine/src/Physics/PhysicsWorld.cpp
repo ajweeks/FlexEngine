@@ -38,6 +38,8 @@ namespace flex
 
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
+			m_World->getSolverInfo().m_globalCfm = 0.00001f;
+
 			//m_World->getPairCache()->setInternalGhostPairCallback()
 			//m_World->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawAabb);
 		}

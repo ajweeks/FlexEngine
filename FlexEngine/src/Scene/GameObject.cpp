@@ -7415,6 +7415,31 @@ namespace flex
 			}
 		}
 
+		glm::vec3 playerPos = g_SceneManager->CurrentScene()->GetPlayer(0)->GetTransform()->GetWorldPosition();
+		glm::vec2 playerPos2D(playerPos.x, playerPos.z);
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		{
+			glm::vec2i chunkIndex = iter->first;
+			glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+			real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
+
+			bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
+			if (bShouldBeLoaded)
+			{
+				if (iter->second->rigidBody == nullptr)
+				{
+					CreateChunkRigidBody(chunkIndex);
+				}
+			}
+			else
+			{
+				if (iter->second->rigidBody != nullptr && iter->second->rigidBody->GetRigidBodyInternal()->getActivationState() != WANTS_DEACTIVATION)
+				{
+					DisableChunkRigidBody(chunkIndex);
+				}
+			}
+		}
+
 		GameObject::Update();
 	}
 
@@ -7428,6 +7453,13 @@ namespace flex
 		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 		{
 			// Mesh components will be destroyed by Mesh::Destroy
+			if (iter->second->rigidBody != nullptr)
+			{
+				iter->second->rigidBody->Destroy();
+				delete iter->second->rigidBody;
+			}
+			delete iter->second->triangleIndexVertexArray;
+
 			delete iter->second;
 		}
 		m_Meshes.clear();
@@ -7559,7 +7591,8 @@ namespace flex
 			}
 		}
 
-		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 0.01f, 3000.0f);
+		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 10.0f, 3000.0f);
+		ImGui::SliderFloat("Rigid body load radius sqr", &m_LoadedChunkRigidBodyRadius2, 10.0f, 9000.0f);
 
 		if (ImGui::TreeNode("Road segments"))
 		{
@@ -7625,6 +7658,7 @@ namespace flex
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
 			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
+			chunkGenInfo.SetFloatChecked("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
 			chunkGenInfo.SetUIntChecked("base table width", m_BasePerlinTableWidth);
 
 			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
@@ -7651,6 +7685,7 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
+		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
 
 		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
 
@@ -7884,6 +7919,17 @@ namespace flex
 				u32 submeshIndex = iter->second->linearIndex;
 				m_Mesh->RemoveSubmesh(submeshIndex);
 				m_Meshes.erase(iter);
+				// TODO:
+				/*
+					if (iter->second->rigidBody != nullptr)
+					{
+						iter->second->rigidBody->Destroy();
+						delete iter->second->rigidBody;
+					}
+					delete iter->second->triangleIndexVertexArray;
+
+					delete iter->second;
+				*/
 				mesh->Destroy();
 				delete mesh;
 
@@ -7950,30 +7996,6 @@ namespace flex
 			terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
 			g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
 		}
-
-		/*
-
-		{
-			PROFILE_AUTO("Generate terrain chunks");
-			ns start = Time::CurrentNanoseconds();
-			i32 iterationCount = 0;
-			while (!m_ChunksToLoad.empty())
-			{
-				GenerateChunk(*m_ChunksToLoad.begin());
-				Profiler::PrintBlockDuration("Generate terrain chunk");
-				m_ChunksToLoad.erase(m_ChunksToLoad.begin());
-
-				++iterationCount;
-
-				ns now = Time::CurrentNanoseconds();
-				if ((now - start) > m_CreationBudgetPerFrame)
-				{
-					break;
-				}
-			}
-		}
-
-		*/
 
 		// Wait for all threads to complete
 		// TODO: Call later in frame
@@ -8137,6 +8159,47 @@ namespace flex
 			Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
 			m_ChunksToLoad.clear();
 		}
+	}
+
+	void TerrainGenerator::DisableChunkRigidBody(const glm::vec2i& chunkIndex)
+	{
+		m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+	}
+
+	void TerrainGenerator::CreateChunkRigidBody(const glm::vec2i& chunkIndex)
+	{
+		if (m_Meshes[chunkIndex]->rigidBody != nullptr)
+		{
+			// Enable if already exists
+			m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(DISABLE_DEACTIVATION);
+			m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->activate(true);
+			return;
+		}
+
+		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		rigidBody->SetStatic(true);
+
+		m_Meshes[chunkIndex]->rigidBody = rigidBody;
+		m_Meshes[chunkIndex]->triangleIndexVertexArray = new btTriangleIndexVertexArray();
+		btIndexedMesh part = {};
+
+		VertexBufferData* vertexBufferData = m_Meshes[chunkIndex]->meshComponent->GetVertexBufferData();
+		u32* indexBufferData = m_Meshes[chunkIndex]->meshComponent->GetIndexBufferDataPtr();
+		u32 indexCount = m_Meshes[chunkIndex]->meshComponent->GetIndexCount();
+
+		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
+		part.m_vertexStride = vertexBufferData->VertexStride;
+		part.m_numVertices = vertexBufferData->UsedVertexCount;
+		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
+		part.m_triangleIndexStride = sizeof(u32) * 3;
+		part.m_numTriangles = (i32)(indexCount / 3);
+
+		m_Meshes[chunkIndex]->triangleIndexVertexArray->addIndexedMesh(part, PHY_INTEGER);
+
+		bool useQuantizedAabbCompression = false;
+		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(m_Meshes[chunkIndex]->triangleIndexVertexArray, useQuantizedAabbCompression);
+
+		rigidBody->Initialize(shape, &m_Transform);
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
@@ -9832,7 +9895,40 @@ namespace flex
 	{
 		GameObject::Initialize();
 
-#if 1
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		GameObject* tireFL = scene->GetGameObject(m_TireIDs[(u32)Tire::FL]);
+		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
+		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
+		if (brakeLightL != nullptr && brakeLightR != nullptr &&
+			brakeLightL->GetTypeID() == SID("spot light") &&
+			brakeLightR->GetTypeID() == SID("spot light"))
+		{
+			((SpotLight*)brakeLightL)->SetVisible(false, true);
+			((SpotLight*)brakeLightR)->SetVisible(false, true);
+		}
+		else
+		{
+			PrintError("Expected vehicle brake light objects to be spot lights\n");
+		}
+
+		m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
+		m_CarPaintMatID = GetMesh()->GetSubMesh(1)->GetMaterialID();
+		m_BrakeLightMatID = GetMesh()->GetSubMesh(2)->GetMaterialID();
+		m_ReverseLightMatID = GetMesh()->GetSubMesh(3)->GetMaterialID();
+		m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
+		m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+
+		m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
+		m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
+
+		m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
+		m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+
+		CreateRigidBody();
+	}
+
+	void Vehicle::CreateRigidBody()
+	{
 		if (m_RigidBody != nullptr)
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
@@ -9840,58 +9936,12 @@ namespace flex
 			GameObject* tireFR = scene->GetGameObject(m_TireIDs[(u32)Tire::FR]);
 			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
 			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
-			GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
-			GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
-			if (brakeLightL != nullptr && brakeLightR != nullptr &&
-				brakeLightL->GetTypeID() == SID("spot light") &&
-				brakeLightR->GetTypeID() == SID("spot light"))
-			{
-				((SpotLight*)brakeLightL)->SetVisible(false, true);
-				((SpotLight*)brakeLightR)->SetVisible(false, true);
-			}
-			else
-			{
-				PrintError("Expected vehicle brake light objects to be spot lights\n");
-			}
-
-			// TODO: Retrieve via name?
-			m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
-			m_CarPaintMatID = GetMesh()->GetSubMesh(1)->GetMaterialID();
-			m_BrakeLightMatID = GetMesh()->GetSubMesh(2)->GetMaterialID();
-			m_ReverseLightMatID = GetMesh()->GetSubMesh(3)->GetMaterialID();
-			m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
-			m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
-
-			m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
-			m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
-
-			m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
-			m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
 
 			m_tuning = {};
 
-			// ?
 			btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
-			dynamicsWorld->getSolverInfo().m_globalCfm = 0.00001f;
 
 			btRigidBody* chassisRB = m_RigidBody->GetRigidBodyInternal();
-
-			//chassisRB->setDamping(0.2,0.2);
-
-			//m_wheelShape = new btCylinderShapeX(btVector3(wheelWidth, wheelRadius, wheelRadius));
-
-			//m_guiHelper->createCollisionShapeGraphicsObject(m_wheelShape);
-			//int wheelGraphicsIndex = m_wheelShape->getUserIndex();
-			//
-			//const real position[4] = { 0, 10, 10, 0 };
-			//const real quaternion[4] = { 0, 0, 0, 1 };
-			//const real color[4] = { 0, 1, 0, 1 };
-			//const real scaling[4] = { 1, 1, 1, 1 };
-			//
-			//for (int i = 0; i < 4; i++)
-			//{
-			//	m_wheelInstances[i] = m_guiHelper->registerGraphicsInstance(wheelGraphicsIndex, position, quaternion, color, scaling);
-			//}
 
 			m_VehicleRaycaster = new btDefaultVehicleRaycaster(dynamicsWorld);
 			m_Vehicle = new btRaycastVehicle(m_tuning, chassisRB, m_VehicleRaycaster);
@@ -9927,55 +9977,6 @@ namespace flex
 				wheel.m_rollInfluence = m_RollInfluence;
 			}
 		}
-#endif
-
-#if 0
-		if (tireFL != nullptr && tireFR != nullptr &&
-			tireRL != nullptr && tireRR != nullptr)
-		{
-			btRigidBody* bodyA = m_RigidBody->GetRigidBodyInternal();
-
-			btVector3 axisA(0, 1, 0); // Allow wheel to pivot about Z for steering
-			btVector3 axisB(1, 0, 0); // Allow wheel to roll about X
-
-			for (const GameObjectID& tireID : m_TireIDs)
-			{
-				GameObject* tireObjet = scene->GetGameObject(tireID);
-
-				btVector3 anchor = ToBtVec3(tireObjet->GetTransform()->GetLocalPosition());
-				btHinge2Constraint* constraint = new btHinge2Constraint(
-					*bodyA, *tireObjet->GetRigidBody()->GetRigidBodyInternal(),
-					anchor, axisA, axisB);
-
-				// Drive engine
-				constraint->enableMotor(3, true);
-				constraint->setMaxMotorForce(3, 1000);
-				constraint->setTargetVelocity(3, 0);
-
-				// Steer engine
-				constraint->enableMotor(5, true);
-				constraint->setMaxMotorForce(5, 1000);
-				constraint->setTargetVelocity(5, 0);
-
-				constraint->setParam(BT_CONSTRAINT_CFM, 0.15f, 2);
-				constraint->setParam(BT_CONSTRAINT_ERP, 0.35f, 2);
-
-				constraint->setDamping(2, 2.0);
-				constraint->setStiffness(2, 40.0);
-
-				constraint->setDbgDrawSize(btScalar(5.f));
-
-				m_RigidBody->AddConstraint(constraint);
-			}
-		}
-#endif
-
-#if 0
-		static DummyGUIHelper helperInterface;
-
-		CommonExampleOptions options(&helperInterface);
-		vehicle = Hinge2VehicleCreateFunc(options);
-#endif
 	}
 
 	void Vehicle::PostInitialize()
@@ -9991,14 +9992,14 @@ namespace flex
 
 	void Vehicle::Destroy(bool bDetachFromParent /* = true */)
 	{
-		GameObject::Destroy(bDetachFromParent);
-
 		if (g_SceneManager->HasSceneLoaded())
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
 			btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
 			dynamicsWorld->removeVehicle(m_Vehicle);
 		}
+
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Vehicle::Update()
@@ -10010,7 +10011,7 @@ namespace flex
 
 		//btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
 
-		real engineForceSlowScale = (1.0f - g_DeltaTime * ENGINE_FORCE_SLOW_FACTOR);
+		real engineForceSlowScale = (1.0f - g_DeltaTime * m_EngineForceDecelerationSpeed);
 		real steeringSlowScale = (1.0f - g_DeltaTime * STEERING_SLOW_FACTOR);
 
 		real maxSteerVel = 30.0f;
@@ -10024,7 +10025,7 @@ namespace flex
 		if (bOccupied)
 		{
 			// The faster we get, the slower we accelerate
-			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / MAX_ENGINE_FORCE, 0.0f, 1.0f), 5.0f);
+			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / m_MaxEngineForce, 0.0f, 1.0f), 5.0f);
 
 			real accelerateInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_ACCELERATE);
 			real reverseInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_REVERSE);
@@ -10033,11 +10034,11 @@ namespace flex
 			real turnRightInput = g_InputManager->GetActionAxisValue(Action::VEHICLE_TURN_RIGHT);
 			if (accelerateInput != 0.0f)
 			{
-				m_EngineForce += accelerateInput * m_MoveAccel * g_DeltaTime * accelFactor;
+				m_EngineForce += accelerateInput * m_EngineAccel * g_DeltaTime * accelFactor;
 			}
 			if (reverseInput != 0.0f)
 			{
-				m_EngineForce -= reverseInput * m_MoveAccel * g_DeltaTime * accelFactor;
+				m_EngineForce -= reverseInput * m_EngineAccel * g_DeltaTime * accelFactor;
 			}
 			if (turnLeftInput != 0.0f)
 			{
@@ -10051,7 +10052,7 @@ namespace flex
 			}
 			if (brakeInput != 0.0f)
 			{
-				m_BrakeForce = MAX_BRAKE_FORCE * brakeInput;
+				m_BrakeForce = m_MaxBrakeForce * brakeInput;
 				engineForceSlowScale = 0.0f;
 			}
 			else
@@ -10115,7 +10116,8 @@ namespace flex
 			// Check if flipped upside down and stuck
 			glm::vec3 chassisUp = m_Transform.GetUp();
 			real uprightedness = glm::dot(chassisUp, VEC3_UP);
-			bool bUpsideDown = uprightedness < 0.1f;
+			// TODO: Also check num wheels on ground
+			bool bUpsideDown = uprightedness < 0.25f;
 			if (bUpsideDown)
 			{
 				m_SecUpsideDown += g_DeltaTime;
@@ -10165,7 +10167,7 @@ namespace flex
 
 		real maxWheelSlip = 1.0f;
 
-		for (i32 i = 0; i < 4; i++)
+		for (i32 i = 0; i < m_TireCount; i++)
 		{
 			//synchronize the wheels with the (interpolated) chassis world transform
 			m_Vehicle->updateWheelTransform(i, true);
@@ -10193,7 +10195,7 @@ namespace flex
 		}
 
 		real motorPitch = glm::clamp(forwardVel / 35.0f + 0.75f, 0.95f, 1.5f);
-		real motorGain = glm::clamp(m_EngineForce / MAX_ENGINE_FORCE * 3.0f, 0.0f, 1.0f);
+		real motorGain = glm::clamp(m_EngineForce / m_MaxEngineForce * 3.0f, 0.0f, 1.0f);
 
 		if (motorGain < 0.1f)
 		{
@@ -10204,7 +10206,7 @@ namespace flex
 			m_SoundEffects[(u32)SoundEffect::ENGINE].FadeIn();
 		}
 
-		if (abs(maxWheelSlip) > WHEEL_SLIP_SCREECH_THRESHOLD)
+		if (abs(maxWheelSlip) > m_WheelSlipScreechThreshold)
 		{
 			m_SoundEffects[(u32)SoundEffect::BRAKE].FadeOut();
 		}
@@ -10316,14 +10318,15 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		BaseScene* scene = g_SceneManager->CurrentScene();
+
 		for (i32 i = 0; i < m_TireCount; ++i)
 		{
 			char buf[32];
 			memcpy(buf, TireNames[i], strlen(TireNames[i]));
 			buf[strlen(TireNames[i])] = ':';
 			buf[strlen(TireNames[i]) + 1] = 0;
-			currentScene->DrawImGuiGameObjectIDField(buf, m_TireIDs[i]);
+			scene->DrawImGuiGameObjectIDField(buf, m_TireIDs[i]);
 		}
 
 		for (i32 i = 0; i < 2; ++i)
@@ -10332,15 +10335,21 @@ namespace flex
 			memcpy(buf, BrakeLightNames[i], strlen(BrakeLightNames[i]));
 			buf[strlen(BrakeLightNames[i])] = ':';
 			buf[strlen(BrakeLightNames[i]) + 1] = 0;
-			currentScene->DrawImGuiGameObjectIDField(buf, m_BrakeLightIDs[i]);
+			scene->DrawImGuiGameObjectIDField(buf, m_BrakeLightIDs[i]);
 		}
 
 		//AudioManager::AudioFileNameSIDField("engine", )
 
 
+		ImGui::SliderFloat("Max engine force", &m_MaxEngineForce, 0.0f, 20000.0f);
+		ImGui::SliderFloat("Engine accel", &m_EngineAccel, 0.0f, 30000.0f);
 		ImGui::Text("Engine force: %.2f", m_EngineForce);
+		ImGui::SliderFloat("Max brake force", &m_MaxBrakeForce, 0.0f, 200.0f);
 		ImGui::Text("Braking force: %.2f", m_BrakeForce);
+		ImGui::SliderFloat("Turn acceleration", &m_TurnAccel, 0.0f, 5.0f);
+		ImGui::SliderFloat("Deceleration speed", &m_EngineForceDecelerationSpeed, 0.0f, 30.0f);
 		ImGui::Text("Steering: %.2f", m_Steering);
+		ImGui::SliderFloat("Screech threshold", &m_WheelSlipScreechThreshold, 0.0f, 1.0f);
 		if (m_bFlippingRightSideUp)
 		{
 			ImGui::ProgressBar(m_SecFlipppingRightSideUp / MAX_FLIPPING_UPRIGHT_TIME, ImVec2(-1, 0), "Flipping right side up");
@@ -10350,7 +10359,63 @@ namespace flex
 			ImGui::ProgressBar(m_SecUpsideDown / SEC_UPSIDE_DOWN_BEFORE_FLIP, ImVec2(-1, 0), "Sec upside down");
 		}
 
+		// Tires
+		{
+			real tireWidth = 20.0f;
+			real tireHeight = 45.0f;
+			real suspWidth = 8.0f;
+			real suspHeight = 16.0f;
+			ImU32 tireColGrounded = IM_COL32(250, 200, 200, 255);
+			ImU32 tireColInAir = IM_COL32(200, 250, 200, 255);
+			ImVec2 cursor = ImGui::GetCursorScreenPos();
+			ImDrawList* drawList = ImGui::GetWindowDrawList();
+			real spacingX = 50.0f;
+			real spacingY = 110.0f;
+			real lowestWheelSlip = 1.0f;
+			for (i32 i = 0; i < m_TireCount; i++)
+			{
+				// Assume this is called in update loop:
+				 m_Vehicle->updateWheelTransform(i, true);
+
+				const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
+				Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
+				GameObject* tireObject = scene->GetGameObject(m_TireIDs[i]);
+				Transform* tireTransform = tireObject->GetTransform();
+				tireTransform->SetWorldRotation(newWheelTransform.GetWorldRotation());
+
+				real x = (real)(i % 2);
+				real y = (real)(i / 2);
+				ImVec2 rectStart = cursor + ImVec2(20.0f + x * spacingX, y * spacingY);
+				// NOTE: TODO: wheelInfo.m_raycastInfo.m_isInContact isn't returning true ever...
+				drawList->AddRect(rectStart, rectStart + ImVec2(tireWidth, tireHeight), wheelInfo.m_raycastInfo.m_isInContact ? tireColGrounded : tireColInAir);
+				rectStart += ImVec2(x == 0 ? -10.0f - suspWidth : tireWidth + 10.0f, 0.0f);
+				drawList->AddRect(rectStart, rectStart + ImVec2(suspWidth, suspHeight), tireColGrounded);
+				real suspensionLen = wheelInfo.m_raycastInfo.m_suspensionLength;
+				rectStart += ImVec2(1.0f, 1.0f);
+				drawList->AddRectFilled(rectStart, rectStart + ImVec2(suspWidth - 2.0f, suspensionLen * (suspHeight - 2.0f)), tireColInAir);
+
+				lowestWheelSlip = glm::min(lowestWheelSlip, wheelInfo.m_skidInfo);
+			}
+			ImGui::SetCursorScreenPos(cursor + ImVec2(0, spacingY + tireHeight + + 20.0f));
+			ImGui::Text("Lowest wheel slip: %.2f", lowestWheelSlip);
+		}
+
+		ImGui::SliderFloat("Wheel friction", &m_WheelFriction, 0.0f, 10.0f);
 		ImGui::SliderFloat("Roll influence", &m_RollInfluence, 0.0f, 1.0f);
+		ImGui::SliderFloat("Wheel radius", &m_WheelRadius, 0.0f, 2.0f);
+		ImGui::SliderFloat("Wheel width", &m_WheelWidth, 0.0f, 2.0f);
+
+		if (ImGui::Button("Recreate rigid body"))
+		{
+			if (m_RigidBody != nullptr)
+			{
+				btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
+				dynamicsWorld->removeVehicle(m_Vehicle);
+				m_Vehicle = nullptr;
+			}
+
+			CreateRigidBody();
+		}
 
 		ImGui::Spacing();
 
@@ -10874,10 +10939,10 @@ namespace flex
 		}
 
 		// TODO: Don't even create rb?
-		RigidBody* rb = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
-		rb->SetStatic(true);
+		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		rigidBody->SetStatic(true);
 
-		m_RigidBodies[meshIndex] = rb;
+		m_RigidBodies[meshIndex] = rigidBody;
 
 		m_MeshVertexArrays[meshIndex] = new btTriangleIndexVertexArray();
 		btIndexedMesh part = {};
@@ -10899,6 +10964,6 @@ namespace flex
 		bool useQuantizedAabbCompression = false;
 		btBvhTriangleMeshShape* shape = new btBvhTriangleMeshShape(m_MeshVertexArrays[meshIndex], useQuantizedAabbCompression);
 
-		rb->Initialize(shape, &m_Transform);
+		rigidBody->Initialize(shape, &m_Transform);
 	}
 } // namespace flex
