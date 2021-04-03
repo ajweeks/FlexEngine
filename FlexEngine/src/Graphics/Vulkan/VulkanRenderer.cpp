@@ -2025,8 +2025,8 @@ namespace flex
 
 			VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
 			VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertSubBufferSize);
-			memcpy(indexBuffer->m_Mapped, indexData.data(), indexSubBufferSize);
+			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertexBufferData->UsedVertexBufferSize);
+			memcpy(indexBuffer->m_Mapped, indexData.data(), newIndexDataSize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
 
