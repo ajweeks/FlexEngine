@@ -493,10 +493,10 @@ namespace flex
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 
-		SpecializationConstantID m_SSAOKernelSizeSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_TAASampleCountSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_ShaderQualityLevelSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_ShadowCascadeCountSpecializationID = InvalidSpecializationConstantID;
+		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID = 0;
+		static const SpecializationConstantID m_TAASampleCountSpecializationID = 1;
+		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID = 2;
+		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID = 3;
 
 		std::string m_RendererSettingsFilePathAbs;
 

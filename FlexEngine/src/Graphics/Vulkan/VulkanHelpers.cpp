@@ -31,7 +31,7 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
 
-		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
 #endif //  COMPILE_SHADER_COMPILER
 
 		void VK_CHECK_RESULT(VkResult result)
@@ -2394,25 +2394,55 @@ namespace flex
 					u32 compiledShaderCount = 0;
 					u32 invalidShaderCount = 0;
 
-					//class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
-					//{
-					//	virtual shaderc_include_result* GetInclude(const char* requested_source,
-					//		shaderc_include_type type,
-					//		const char* requesting_source,
-					//		size_t include_depth) override
-					//	{
-					//		FLEX_UNUSED(type);
-					//		FLEX_UNUSED(include_depth);
-					//		Print("%s, requesting %s\n", requesting_source, requested_source);
-					//		shaderc_include_result* result;
-					//	}
+					class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
+					{
+						virtual shaderc_include_result* GetInclude(const char* requested_source,
+							shaderc_include_type type,
+							const char* requesting_source,
+							size_t include_depth) override
+						{
+							Print("%s, requesting %s (%s, depth: %u)\n", requesting_source, requested_source, (type == shaderc_include_type_relative ? "relative" : "standard"), include_depth);
 
-					//	virtual void ReleaseInclude(shaderc_include_result* data) override
-					//	{
-					//		FLEX_UNUSED(data);
-					//	}
-					//};
-					//FlexIncluder includer;
+							shaderc_include_result* result = new shaderc_include_result();
+
+							std::string requestedFilePath = SHADER_SOURCE_DIRECTORY + std::string(requested_source);
+							std::string fileContent;
+							if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, fileContent, false))
+							{
+								u32 requestedFilePathLen = (u32)requestedFilePath.size();
+								result->source_name = (const char*)malloc(requestedFilePathLen + 1);
+								memset((void*)result->source_name, 0, requestedFilePathLen + 1);
+								strncpy((char*)result->source_name, requestedFilePath.c_str(), requestedFilePathLen);
+								result->source_name_length = requestedFilePathLen;
+
+								u32 fileContentLen = (u32)fileContent.size();
+								result->content = (const char*)malloc(fileContentLen);
+								memset((void*)result->content, 0, fileContentLen + 1);
+								strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
+								result->content_length = strlen(result->content);
+							}
+							else
+							{
+								result->source_name = "";
+								result->source_name_length = 0;
+								result->content = "Failed to include shader";
+								result->content_length = strlen(result->content);
+							}
+
+							return result;
+						}
+
+						virtual void ReleaseInclude(shaderc_include_result* data) override
+						{
+							// This causes heap corruption for some reason... but it's leaking without this.
+							//if (data->source_name_length != 0)
+							//{
+							//	free((void*)data->source_name);
+							//	free((void*)data->content);
+							//}
+							delete data;
+						}
+					};
 
 					std::string newChecksumFileContents;
 
@@ -2452,7 +2482,10 @@ namespace flex
 								options.SetGenerateDebugInfo();
 								options.SetWarningsAsErrors();
 
-								//options.SetIncluder(std::unique_ptr<shaderc::CompileOptions::IncluderInterface>(includer));
+								options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
+								options.SetTargetSpirv(shaderc_spirv_version_1_5);
+
+								options.SetIncluder(std::make_unique<FlexIncluder>());
 
 								if (bEnableAssemblyCompilation)
 								{
@@ -2469,11 +2502,21 @@ namespace flex
 											fileStream.close();
 										}
 									}
+									else
+									{
+										if (g_bEnableLogging_Shaders)
+										{
+											PrintWarn("%d shader compilation errors, %d warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
+										}
+										std::string errorStr = assemblyResult.GetErrorMessage();
+										if (g_bEnableLogging_Shaders)
+										{
+											PrintWarn("%s\n", errorStr.c_str());
+										}
+									}
 								}
 
-								options.SetTargetSpirv(shaderc_spirv_version_1_5);
-
-								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str());
+								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str(), options);
 								if (result.GetCompilationStatus() == shaderc_compilation_status_success)
 								{
 									Print("Compiled %s\n", fileName.c_str());
@@ -2501,6 +2544,10 @@ namespace flex
 								}
 								else
 								{
+									if (g_bEnableLogging_Shaders)
+									{
+										PrintWarn("%d shader compilation errors, %d warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
+									}
 									std::string errorStr = result.GetErrorMessage();
 									if (g_bEnableLogging_Shaders)
 									{
@@ -2533,12 +2580,6 @@ namespace flex
 								++invalidShaderCount;
 								bSuccess = false;
 							}
-						}
-						else
-						{
-							PrintError("Unhandled shader kind %s\n", filePath.c_str());
-							DEBUG_BREAK();
-							bSuccess = false;
 						}
 					}
 
@@ -2700,9 +2741,61 @@ namespace flex
 				std::string fileContents;
 				if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
 				{
+					const char* includeString = "include ";
+
 					u64 i = 1;
+					u32 fileContentsLen = (u32)fileContents.size();
 					for (char c : fileContents)
 					{
+						if (c == '#' && i < (fileContentsLen + strlen(includeString)))
+						{
+							if (memcmp((void*)&fileContents[i], (void*)includeString, strlen(includeString)) == 0)
+							{
+								// Handle include
+								bool bFoundInclude = false;
+
+								size_t newLine = fileContents.find('\n', i);
+								if (newLine != std::string::npos)
+								{
+									u32 includePathStart = i + strlen(includeString);
+									std::string includePathRaw = fileContents.substr(includePathStart, newLine - includePathStart);
+									includePathRaw = Trim(includePathRaw);
+
+									if (includePathRaw.size() >= 3)
+									{
+										std::string includedPath;
+										if (includePathRaw[0] == '"')
+										{
+											size_t endQuote = includePathRaw.find('"', 1);
+											if (endQuote != std::string::npos)
+											{
+												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endQuote - 1);
+											}
+										}
+										else if (includePathRaw[0] == '<')
+										{
+											size_t endBracket = includePathRaw.find('>', 1);
+											if (endBracket != std::string::npos)
+											{
+												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endBracket - 1);
+											}
+										}
+
+										if (!includedPath.empty() && FileExists(includedPath))
+										{
+											bFoundInclude = true;
+											checksum += CalculteChecksum(includedPath);
+										}
+									}
+								}
+
+								if (!bFoundInclude)
+								{
+									PrintWarn("Invalid include directive in shader, ignoring.\n");
+								}
+							}
+						}
+
 						checksum += i * (u64)c;
 						++i;
 					}
