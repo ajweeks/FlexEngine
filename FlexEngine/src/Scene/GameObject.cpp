@@ -3688,6 +3688,7 @@ namespace flex
 		data.colour = VEC4_ONE;
 		data.brightness = 500.0f;
 		data.dir = VEC3_RIGHT;
+		data.angle = 0.1f;
 	}
 
 	GameObject* SpotLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
@@ -3824,10 +3825,7 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		if (spotLightID != InvalidSpotLightID)
-		{
-			g_Renderer->UpdateSpotLightData(spotLightID, &data);
-		}
+		OnTransformChanged();
 	}
 
 	void SpotLight::OnTransformChanged()
@@ -9803,6 +9801,7 @@ namespace flex
 		// Children now exist
 		SUPPRESS_WARN_BEGIN("-Wclass-memaccess");
 		memset(newGameObject->m_TireIDs, 0, sizeof(GameObjectID) * m_TireCount);
+		memset(newGameObject->m_BrakeLightIDs, 0, sizeof(GameObjectID) * 2);
 		SUPPRESS_WARN_END();
 
 		// Temporarily set sibling indices as if these objects are both root objects (this will
@@ -9812,25 +9811,12 @@ namespace flex
 
 		for (i32 i = 0; i < m_TireCount; ++i)
 		{
-			ChildIndex childIndex = GetChildIndexWithID(m_TireIDs[i]);
-			bool bSuccess = childIndex.IsValid();
+			MatchCorrespondingID(m_TireIDs[i], newGameObject, TireNames[i], newGameObject->m_TireIDs[i]);
+		}
 
-			if (bSuccess)
-			{
-				GameObjectID correspondingID = newGameObject->GetIDAtChildIndex(childIndex);
-				bSuccess = (correspondingID != InvalidGameObjectID);
-
-				if (bSuccess)
-				{
-					newGameObject->m_TireIDs[i] = correspondingID;
-				}
-			}
-
-			if (!bSuccess)
-			{
-				std::string idStr = m_TireIDs[i].ToString();
-				PrintError("Failed to find corresponding game object ID for vehicle child %s (%s)\n", TireNames[i], idStr.c_str());
-			}
+		for (i32 i = 0; i < 2; ++i)
+		{
+			MatchCorrespondingID(m_BrakeLightIDs[i], newGameObject, BrakeLightNames[i], newGameObject->m_BrakeLightIDs[i]);
 		}
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
@@ -9854,6 +9840,19 @@ namespace flex
 			GameObject* tireFR = scene->GetGameObject(m_TireIDs[(u32)Tire::FR]);
 			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
 			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
+			GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
+			GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
+			if (brakeLightL != nullptr && brakeLightR != nullptr &&
+				brakeLightL->GetTypeID() == SID("spot light") &&
+				brakeLightR->GetTypeID() == SID("spot light"))
+			{
+				((SpotLight*)brakeLightL)->SetVisible(false, true);
+				((SpotLight*)brakeLightR)->SetVisible(false, true);
+			}
+			else
+			{
+				PrintError("Expected vehicle brake light objects to be spot lights\n");
+			}
 
 			// TODO: Retrieve via name?
 			m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
@@ -10061,7 +10060,9 @@ namespace flex
 			}
 		}
 
-		if (m_BrakeForce > 0.0f)
+		bool bBraking = m_BrakeForce > 0.0f;
+		bool bReversing = m_EngineForce < 0.0f;
+		if (bBraking)
 		{
 			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
 		}
@@ -10070,13 +10071,24 @@ namespace flex
 			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
 		}
 
-		if (m_EngineForce < 0.0f)
+		if (bReversing)
 		{
 			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
 		}
 		else
 		{
 			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
+		}
+
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
+		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
+		if (brakeLightL != nullptr && brakeLightR != nullptr &&
+			brakeLightL->GetTypeID() == SID("spot light") &&
+			brakeLightR->GetTypeID() == SID("spot light"))
+		{
+			((SpotLight*)brakeLightL)->SetVisible(bBraking, true);
+			((SpotLight*)brakeLightR)->SetVisible(bBraking, true);
 		}
 
 		m_Steering *= glm::clamp(steeringSlowScale, 0.0f, 1.0f);
@@ -10153,8 +10165,6 @@ namespace flex
 
 		real maxWheelSlip = 1.0f;
 
-#if 1
-		BaseScene* scene = g_SceneManager->CurrentScene();
 		for (i32 i = 0; i < 4; i++)
 		{
 			//synchronize the wheels with the (interpolated) chassis world transform
@@ -10182,65 +10192,9 @@ namespace flex
 			m_Vehicle->setSteeringValue(m_Steering, wheelIndex);
 		}
 
-#endif
-
-#if 0
-		//if (m_RigidBody != nullptr)
-		{
-			BaseScene* scene = g_SceneManager->CurrentScene();
-			GameObject* tireFL = scene->GetGameObject(m_TireIDs[(u32)Tire::FL]);
-			GameObject* tireFR = scene->GetGameObject(m_TireIDs[(u32)Tire::FR]);
-			GameObject* tireRL = scene->GetGameObject(m_TireIDs[(u32)Tire::RL]);
-			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
-
-			btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
-
-			btTransform mainTransform;
-			rb->getMotionState()->getWorldTransform(mainTransform);
-
-			if (tireRL != nullptr && tireRR != nullptr)
-			{
-				btTransform tireRLTransform, tireRRTransform;
-				tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(tireRLTransform);
-				tireRR->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(tireRRTransform);
-				mainTransform.setOrigin((tireRLTransform.getOrigin() + tireRRTransform.getOrigin()) / 2.0f);
-				rb->activate(true);
-
-				btVector3 torque = btVector3(m_EngineForce, 0.0f, 0.0f);
-
-				//btTransform rlTransform, rrTransform;
-				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(rlTransform);
-				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(rrTransform);
-				//
-				//rlTransform.setRotation(rlTransform.getRotation() * btQuaternion(btVector3(1, 0, 0), m_TireSpeed));
-				//rrTransform.setRotation(rrTransform.getRotation() * btQuaternion(btVector3(1, 0, 0), m_TireSpeed));
-				//
-				//tireRL->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->setWorldTransform(rlTransform);
-				//tireRL->GetRigidBody()->GetRigidBodyInternal()->activate(true);
-				//
-				//tireRR->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->setWorldTransform(rrTransform);
-				//tireRR->GetRigidBody()->GetRigidBodyInternal()->activate(true);
-
-				//tireRL->GetRigidBody()->GetRigidBodyInternal()->applyTorque(torque);
-				//tireRR->GetRigidBody()->GetRigidBodyInternal()->applyTorque(torque);
-			}
-
-			//rb->applyCentralForce(force);
-			//rb->applyTorque(torque);
-		}
-#endif
-
-#if 0
-		vehicle->stepSimulation(g_DeltaTime);
-
-		vehicle->updateGraphics();
-		vehicle->renderScene();
-#endif
-
 		real motorPitch = glm::clamp(forwardVel / 35.0f + 0.75f, 0.95f, 1.5f);
 		real motorGain = glm::clamp(m_EngineForce / MAX_ENGINE_FORCE * 3.0f, 0.0f, 1.0f);
 
-		// TODO: Drive gain with vel/motor/wheel speed
 		if (motorGain < 0.1f)
 		{
 			m_SoundEffects[(u32)SoundEffect::ENGINE].FadeOut();
@@ -10287,6 +10241,16 @@ namespace flex
 				}
 			}
 
+			std::vector<JSONField> brakeLightIDs;
+			if (vehicleObj.SetFieldArrayChecked("brake light ids", brakeLightIDs))
+			{
+				assert((i32)brakeLightIDs.size() == 2);
+				for (i32 i = 0; i < 2; ++i)
+				{
+					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].label);
+				}
+			}
+
 			std::vector<JSONField> soundEffectSIDs;
 			if (vehicleObj.SetFieldArrayChecked("sound effect sids", soundEffectSIDs))
 			{
@@ -10321,6 +10285,17 @@ namespace flex
 
 		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
 
+		std::vector<JSONField> brakeLightIDs;
+		brakeLightIDs.reserve(2);
+		for (i32 i = 0; i < 2; ++i)
+		{
+			JSONField brakeLightIDField = {};
+			brakeLightIDField.label = m_BrakeLightIDs[i].ToString();
+			brakeLightIDs.push_back(brakeLightIDField);
+		}
+
+		vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
+
 		std::vector<JSONField> soundEffectSIDs;
 		soundEffectSIDs.resize(m_SoundEffectSIDs.size());
 		for (i32 i = 0; i < (i32)m_SoundEffectSIDs.size(); ++i)
@@ -10348,7 +10323,16 @@ namespace flex
 			memcpy(buf, TireNames[i], strlen(TireNames[i]));
 			buf[strlen(TireNames[i])] = ':';
 			buf[strlen(TireNames[i]) + 1] = 0;
-			currentScene->GameObjectIDField(buf, m_TireIDs[i]);
+			currentScene->DrawImGuiGameObjectIDField(buf, m_TireIDs[i]);
+		}
+
+		for (i32 i = 0; i < 2; ++i)
+		{
+			char buf[32];
+			memcpy(buf, BrakeLightNames[i], strlen(BrakeLightNames[i]));
+			buf[strlen(BrakeLightNames[i])] = ':';
+			buf[strlen(BrakeLightNames[i]) + 1] = 0;
+			currentScene->DrawImGuiGameObjectIDField(buf, m_BrakeLightIDs[i]);
 		}
 
 		//AudioManager::AudioFileNameSIDField("engine", )
@@ -10414,6 +10398,29 @@ namespace flex
 		GameObject::SetInteractingWith(gameObject);
 	}
 
+	void Vehicle::MatchCorrespondingID(const GameObjectID& existingID, GameObject* newGameObject, const char* objectName, GameObjectID& outCorrespondingID)
+	{
+		ChildIndex childIndex = GetChildIndexWithID(existingID);
+		bool bSuccess = childIndex.IsValid();
+
+		if (bSuccess)
+		{
+			GameObjectID correspondingID = newGameObject->GetIDAtChildIndex(childIndex);
+			bSuccess = (correspondingID != InvalidGameObjectID);
+
+			if (bSuccess)
+			{
+				outCorrespondingID = correspondingID;
+			}
+		}
+
+		if (!bSuccess)
+		{
+			std::string idStr = existingID.ToString();
+			PrintError("Failed to find corresponding game object ID for child %s (%s)\n", objectName, idStr.c_str());
+		}
+	}
+
 	void Vehicle::SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID)
 	{
 		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID);
@@ -10444,25 +10451,12 @@ namespace flex
 
 		for (i32 i = 0; i < m_TireCount; ++i)
 		{
-			ChildIndex childIndex = GetChildIndexWithID(m_TireIDs[i]);
-			bool bSuccess = childIndex.IsValid();
+			MatchCorrespondingID(m_TireIDs[i], newGameObject, TireNames[i], newVehicle->m_TireIDs[i]);
+		}
 
-			if (bSuccess)
-			{
-				GameObjectID correspondingID = newGameObject->GetIDAtChildIndex(childIndex);
-				bSuccess = (correspondingID != InvalidGameObjectID);
-
-				if (bSuccess)
-				{
-					newVehicle->m_TireIDs[i] = correspondingID;
-				}
-			}
-
-			if (!bSuccess)
-			{
-				std::string idStr = m_TireIDs[i].ToString();
-				PrintError("Failed to find corresponding game object ID for vehicle child %s (%s)\n", TireNames[i], idStr.c_str());
-			}
+		for (i32 i = 0; i < 2; ++i)
+		{
+			MatchCorrespondingID(m_BrakeLightIDs[i], newGameObject, BrakeLightNames[i], newVehicle->m_BrakeLightIDs[i]);
 		}
 	}
 

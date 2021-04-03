@@ -19,7 +19,7 @@ namespace flex
 	class GameObject;
 
 	static const i32 MAX_POINT_LIGHT_COUNT = 8;
-	static const i32 MAX_SPOT_LIGHT_COUNT = 4;
+	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes

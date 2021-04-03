@@ -1375,6 +1375,7 @@ namespace flex
 	};
 
 	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
+	static const char* BrakeLightNames[] = { "Left", "Right" };
 
 	class Vehicle final : public GameObject
 	{
@@ -1428,12 +1429,14 @@ namespace flex
 
 		static const i32 m_TireCount = 4;
 
+		void MatchCorrespondingID(const GameObjectID& existingID, GameObject* newGameObject, const char* objectName, GameObjectID& outCorrespondingID);
+
 		void SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID);
 
 		std::array<StringID, (i32)SoundEffect::_COUNT> m_SoundEffectSIDs;
 
 		const real MAX_STEER = 0.5f;
-		const real MAX_ENGINE_FORCE = 4000.0f;
+		const real MAX_ENGINE_FORCE = 6000.0f;
 		const real MAX_BRAKE_FORCE = 55.0f;
 		const real ENGINE_FORCE_SLOW_FACTOR = 10.0f;
 		const real STEERING_SLOW_FACTOR = 4.0f;
@@ -1447,6 +1450,7 @@ namespace flex
 		std::array<SoundClip_LoopingSimple, (u32)SoundEffect::_COUNT> m_SoundEffects;
 
 		GameObjectID m_TireIDs[m_TireCount];
+		GameObjectID m_BrakeLightIDs[2];
 
 		real m_EngineForce = 0.0f;
 		real m_BrakeForce = 0.0f;

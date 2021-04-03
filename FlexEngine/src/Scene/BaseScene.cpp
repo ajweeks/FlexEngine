@@ -1737,7 +1737,7 @@ namespace flex
 		return iter->second;
 	}
 
-	bool BaseScene::GameObjectIDField(const char* label, GameObjectID& ID)
+	bool BaseScene::DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID)
 	{
 		bool bChanged = false;
 

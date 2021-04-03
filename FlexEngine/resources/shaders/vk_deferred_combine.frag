@@ -3,7 +3,7 @@
 // Deferred PBR Combine
 
 #define NUM_POINT_LIGHTS 8
-#define NUM_SPOT_LIGHTS 4
+#define NUM_SPOT_LIGHTS 8
 
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable

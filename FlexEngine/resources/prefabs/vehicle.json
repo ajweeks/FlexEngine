@@ -40,6 +40,11 @@
 				"44557119936CE5A547ABCB66CA9A22C4",
 				"DFD3693D4A26F892498B39384880B063"
 			],
+			"brake light ids" : 
+			[
+				"F10766F7E76602894EBBCF69E4F5B254",
+				"0F754E00DF3CE1A14E01098DD658F1D5"
+			],
 			"sound effect sids" : 
 			[
 				"15097858619646670995",
@@ -55,7 +60,7 @@
 				"transform" : 
 				{
 					"pos" : "-0.846, -0.135, 1.534",
-					"rot" : "0.036, -0.000, -0.000"
+					"rot" : "0.250, -0.000, 0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -73,7 +78,7 @@
 				"transform" : 
 				{
 					"pos" : "0.742, -0.131, 1.537",
-					"rot" : "-0.006, 0.000, -0.000"
+					"rot" : "2.214, -0.000, 0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -91,7 +96,7 @@
 				"transform" : 
 				{
 					"pos" : "-0.720, -0.145, -1.187",
-					"rot" : "0.030, -0.000, -0.000"
+					"rot" : "0.160, -0.000, 0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -109,7 +114,7 @@
 				"transform" : 
 				{
 					"pos" : "0.738, -0.151, -1.153",
-					"rot" : "-0.007, 0.000, -0.000"
+					"rot" : "0.905, -0.000, 0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -121,8 +126,8 @@
 				]
 			},
 			{
-				"name" : "SpotLight_L-1",
-				"id" : "98DD88BC75F882B5447C92BA8E8A91BE",
+				"name" : "HeadLight_L-1",
+				"id" : "03126946173EF58E4457502532726B15",
 				"type" : "spot light",
 				"transform" : 
 				{
@@ -133,16 +138,16 @@
 				"spot light info" : 
 				{
 					"pos" : "-0.419, 0.000, 2.584",
-					"colour" : "1.00, 1.00, 1.00",
+					"colour" : "0.96, 0.97, 0.59",
 					"enabled" : true,
 					"brightness" : 500.000000,
-					"direction" : "-0.32, -0.01, -0.95",
+					"direction" : "-0.25, 0.08, -0.96",
 					"angle" : 0.750000
 				}
 			},
 			{
-				"name" : "SpotLight_R-1",
-				"id" : "023A489D948C68904F4DBC0B7E1A38E4",
+				"name" : "HeadLight_R-1",
+				"id" : "95CD9014EB292A96410F402E416D56E9",
 				"type" : "spot light",
 				"transform" : 
 				{
@@ -156,8 +161,50 @@
 					"colour" : "0.96, 0.97, 0.59",
 					"enabled" : true,
 					"brightness" : 500.000000,
-					"direction" : "-0.32, -0.01, -0.95",
+					"direction" : "-0.25, 0.08, -0.96",
 					"angle" : 0.750000
+				}
+			},
+			{
+				"name" : "TailLight_L-1",
+				"id" : "F10766F7E76602894EBBCF69E4F5B254",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.740, 0.295, -1.958",
+					"rot" : "-2.750, 0.229, 0.094"
+				},
+				"visible" : false,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "-0.740, 0.295, -1.958",
+					"colour" : "0.91, 0.07, 0.07",
+					"enabled" : false,
+					"brightness" : 80.000000,
+					"direction" : "0.32, -0.46, 0.83",
+					"angle" : 0.245000
+				}
+			},
+			{
+				"name" : "TailLight_R-1",
+				"id" : "0F754E00DF3CE1A14E01098DD658F1D5",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.712, 0.343, -1.954",
+					"rot" : "-2.759, -0.289, 0.000"
+				},
+				"visible" : false,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "0.712, 0.343, -1.954",
+					"colour" : "0.91, 0.07, 0.07",
+					"enabled" : false,
+					"brightness" : 80.000000,
+					"direction" : "-0.18, -0.39, 0.91",
+					"angle" : 0.245000
 				}
 			}
 		]

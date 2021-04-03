@@ -136,7 +136,7 @@ namespace flex
 
 		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
 
-		bool GameObjectIDField(const char* label, GameObjectID& ID);
+		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID);
 
 		real GetTimeOfDay() const;
 

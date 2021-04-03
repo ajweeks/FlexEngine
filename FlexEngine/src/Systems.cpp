@@ -278,7 +278,7 @@ namespace flex
 			{
 				char buf[256];
 				sprintf(buf, "Road segment %i:", i);
-				scene->GameObjectIDField(buf, m_RoadIDs[i]);
+				scene->DrawImGuiGameObjectIDField(buf, m_RoadIDs[i]);
 			}
 
 			ImGui::TreePop();
