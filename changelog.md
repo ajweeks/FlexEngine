@@ -2,9 +2,14 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_April_
+- Add collision to terrain (active zone moves with player)
+- Add shader include support
+
 _March_
 - Refactor graphics pipeline & descriptor set creation to be much more efficient
 - Optimize & multithread terrain generation
+- Make road meet terrain smoothly
 
 _February_
 - Add support for road generation
