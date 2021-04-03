@@ -88,11 +88,6 @@ namespace flex
 		m_SSAOSamplingData.powExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
-
-		m_SSAOKernelSizeSpecializationID = 0;
-		m_TAASampleCountSpecializationID = 1;
-		m_ShaderQualityLevelSpecializationID = 2;
-		m_ShadowCascadeCountSpecializationID = 3;
 	}
 
 	void Renderer::PostInitialize()
@@ -1802,13 +1797,16 @@ namespace flex
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
 		++shaderID;
 
 		// Water

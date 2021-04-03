@@ -1,5 +1,7 @@
 #version 420
 
+#include "vk_misc.glsl"
+
 layout (location = 0) in vec2 ex_TexCoord;
 
 layout (location = 0) out vec4 out_Colour;
@@ -20,8 +22,6 @@ layout (push_constant) uniform PushConstants
 layout (binding = 1) uniform sampler2D in_DepthBuffer;
 layout (binding = 2) uniform sampler2D in_SceneTexture;
 layout (binding = 3) uniform sampler2D in_HistoryTexture;
-
-layout (constant_id = 1) const int TAA_SAMPLE_COUNT = 2;
 
 vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
 {

@@ -1,10 +1,10 @@
 #version 450
 
+#include "vk_misc.glsl"
+
 layout (location = 0) out float fragColour;
 
 layout (location = 0) in vec2 ex_TexCoord;
-
-layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 
 layout (binding = 0) uniform UBOConstant
 {
