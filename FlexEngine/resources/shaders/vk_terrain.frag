@@ -41,7 +41,7 @@ void main()
 	float light = dot(N, L) * 0.5 + 0.5;
 	float fresnel = pow(1.0 - dot(N, V), 6.0);
 
-	float linDepth = 1.0-ex_PositionVS.z;
+	float linDepth = (1.0-ex_PositionVS.z)*.001;
 
 	vec3 groundCol;
 
@@ -79,7 +79,7 @@ void main()
 		float NoL = max(dot(N, L), 0.0);
 
 		float dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowMaps, NoL);
-		light *= dirLightShadowOpacity;
+		light *= (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= radiance;
 	}
 
@@ -91,6 +91,7 @@ void main()
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0f)); // Reinhard tone-mapping
 	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0f / 2.2f)); // Gamma correction
 
+	// fragmentColour.rgb *= ColourByShadowCascade(cascadeIndex);
 	// fragmentColour = vec4(ex_Colour.rgb, 1.0);
 	//fragmentColour = vec4(ex_TexCoord, 0.0, 1.0);
 	// fragmentColour = vec4(N*0.5+0.5, 1.0);

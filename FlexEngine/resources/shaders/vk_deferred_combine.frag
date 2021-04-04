@@ -140,13 +140,14 @@ void main()
 		Lo += DoLighting(radiance, N, V, L, NoV, LoPointToLight, roughness, metallic, F0, albedo);
 	}
 
+	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction);
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		float dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, cascadeIndex, shadowMaps, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, cascadeIndex, shadowMaps, NoL);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
@@ -155,6 +156,7 @@ void main()
 
 	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
 	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
+	skyColour *= dirLightShadowOpacity;
 
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
@@ -168,7 +170,9 @@ void main()
 	vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
 	prefilteredColour += skyColour * 0.1;
 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
-	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y);
+	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y) * (0.75 * dirLightShadowOpacity + 0.25);
+	// Dampen specular on downward facing normals
+	specular *= dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
 
 	vec3 ambient = (kD * diffuse + specular);
 
@@ -180,17 +184,6 @@ void main()
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
 
 	fragColour = vec4(colour, 1.0);
-
-#if 0
-	switch (cascadeIndex)
-	{
-		case 0: fragColour *= vec4(0.85f, 0.4f, 0.3f, 0.0f); return;
-		case 1: fragColour *= vec4(0.2f, 1.0f, 1.0f, 0.0f); return;
-		case 2: fragColour *= vec4(1.0f, 1.0f, 0.2f, 0.0f); return;
-		case 3: fragColour *= vec4(0.4f, 0.8f, 0.2f, 0.0f); return;
-		default: fragColour = vec4(1.0f, 0.0f, 1.0f, 0.0f); return;
-	}
-#endif
 
 	// fragColour = vec4(F, 1);
 

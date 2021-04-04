@@ -2743,7 +2743,7 @@ namespace flex
 				{
 					const char* includeString = "include ";
 
-					u64 i = 1;
+					u32 i = 1;
 					u32 fileContentsLen = (u32)fileContents.size();
 					for (char c : fileContents)
 					{
@@ -2757,7 +2757,7 @@ namespace flex
 								size_t newLine = fileContents.find('\n', i);
 								if (newLine != std::string::npos)
 								{
-									u32 includePathStart = i + strlen(includeString);
+									u32 includePathStart = i + (u32)strlen(includeString);
 									std::string includePathRaw = fileContents.substr(includePathStart, newLine - includePathStart);
 									includePathRaw = Trim(includePathRaw);
 
@@ -2796,7 +2796,7 @@ namespace flex
 							}
 						}
 
-						checksum += i * (u64)c;
+						checksum += (u64)i * (u64)c;
 						++i;
 					}
 				}

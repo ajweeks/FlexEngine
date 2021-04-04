@@ -5,10 +5,10 @@
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "vehicle",
 		"near plane" : 0.500000,
 		"far plane" : 5000.000000,
-		"fov" : 1.399754,
+		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "0.227, 4.251, 6.284",
-			"pitch" : -0.845031,
-			"yaw" : -1.831322
+			"position" : "260.061, 3.634, 86.842",
+			"pitch" : -0.334211,
+			"yaw" : 0.914044
 		}
 	},
 	"objects" : 
@@ -44,13 +44,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.767, 0.536, -1.103"
+				"rot" : "1.207, 0.095, 1.317"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.436, 0.020, -0.553, 0.710",
+				"rotation" : "0.425, 0.378, 0.482, 0.667",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "1.00, 0.98, 0.86",
 				"enabled" : true,
@@ -67,8 +67,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "-0.472, 0.916, -1.295",
-				"rot" : "-0.008, 0.321, -0.004",
+				"pos" : "265.978, 0.368, 94.514",
+				"rot" : "-0.334, 0.629, -0.107",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -93,6 +93,7 @@
 				"use manual seed" : true,
 				"manual seed" : 5,
 				"loaded chunk radius" : 384.244995,
+				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 128,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
@@ -198,6 +199,68 @@
 			[
 				"Raymarched"
 			]
+		},
+		{
+			"name" : "starting_cube-1",
+			"id" : "FCDD2EF95923519D4423F21B9F812F9D",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.431, 9.213, 32.166",
+				"rot" : "0.000, -0.522, 0.000",
+				"scale" : "6.893, 1.000, 9.292"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr red"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "starting_cube-2",
+			"id" : "7E18CB2A71D3539740BA8F5C2EF63875",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "3.580, 9.213, 52.601",
+				"rot" : "0.000, -0.522, 0.000",
+				"scale" : "6.893, 1.000, 9.292"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr red"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500, 0.500, 0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		}
 	]
 }
