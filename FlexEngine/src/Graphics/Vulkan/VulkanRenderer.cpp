@@ -4651,7 +4651,7 @@ namespace flex
 			pipelineCreateInfo.DBG_Name = "Shadow pipeline";
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			pipelineCreateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 			pipelineCreateInfo.bEnableColourBlending = false;
 			pipelineCreateInfo.shaderID = shadowMaterial->shaderID;
 			pipelineCreateInfo.vertexAttributes = shadowShader->vertexAttributes;
@@ -6278,7 +6278,7 @@ namespace flex
 			depthSamplerCreateInfo.mipLodBias = 0.0f;
 			depthSamplerCreateInfo.minLod = 0.0f;
 			depthSamplerCreateInfo.maxLod = 1.0f;
-			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+			depthSamplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 			VK_CHECK_RESULT(vkCreateSampler(m_VulkanDevice->m_LogicalDevice, &depthSamplerCreateInfo, nullptr, m_DepthSampler.replace()));
 			SetSamplerName(m_VulkanDevice, m_DepthSampler, "Depth sampler");
 		}
