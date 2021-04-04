@@ -8133,7 +8133,7 @@ namespace flex
 						}
 						else if (chunkForwardVertBuf != nullptr)
 						{
-							glm::vec3* pos = (glm::vec3*)&chunkBackVertBuf[x * vertexBufferStride];
+							glm::vec3* pos = (glm::vec3*)&chunkForwardVertBuf[x * vertexBufferStride];
 							forward = pos->y;
 						}
 
