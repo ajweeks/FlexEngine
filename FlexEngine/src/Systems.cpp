@@ -4,12 +4,18 @@
 
 #include "Graphics/Renderer.hpp" // For PhysicsDebugDrawBase
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp" // For DirectoryWatcher
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 
 namespace flex
 {
+	const char* TerminalManager::SavePopupName = "Save script";
+	GameObjectID TerminalManager::m_TerminalSavingID = InvalidGameObjectID;
+	bool TerminalManager::m_bOpenSavePopup = false;
+
 	void System::DrawImGui()
 	{
 	}
@@ -304,5 +310,269 @@ namespace flex
 				return;
 			}
 		}
+	}
+
+	TerminalManager::TerminalManager()
+	{
+		m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+	}
+
+	TerminalManager::~TerminalManager()
+	{
+		delete m_ScriptDirectoryWatch;
+	}
+
+	void TerminalManager::Initialize()
+	{
+		std::vector<std::string> modifiedFiles;
+		UpdateScriptHashes(modifiedFiles);
+	}
+
+	void TerminalManager::Destroy()
+	{
+	}
+
+	u64 TerminalManager::CalculteChecksum(const std::string& filePath)
+	{
+		u64 checksum = 0;
+
+		std::string fileContents;
+		if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
+		{
+			u32 i = 1;
+			for (char c : fileContents)
+			{
+				checksum += (u64)i * (u64)c;
+				++i;
+			}
+		}
+		return checksum;
+	}
+
+	void TerminalManager::UpdateScriptHashes(std::vector<std::string>& outModifiedFiles)
+	{
+		std::vector<std::string> scriptFilePaths;
+		if (Platform::FindFilesInDirectory(SCRIPTS_DIRECTORY, scriptFilePaths, ".flex_script"))
+		{
+			for (const std::string& scriptFilePath : scriptFilePaths)
+			{
+				u64 hash = CalculteChecksum(scriptFilePath);
+				auto iter = m_ScriptHashes.find(scriptFilePath);
+				if (iter == m_ScriptHashes.end())
+				{
+					// New script
+					m_ScriptHashes.emplace(scriptFilePath, hash);
+				}
+				else
+				{
+					// Existing script
+					if (iter->second != hash)
+					{
+						// File was modified
+						std::string scriptFileName = StripLeadingDirectories(scriptFilePath);
+						outModifiedFiles.push_back(scriptFileName);
+						m_ScriptHashes[scriptFilePath] = hash;
+					}
+				}
+			}
+		}
+	}
+
+	void TerminalManager::Update()
+	{
+		if (m_ScriptSaveTimer != 0)
+		{
+			--m_ScriptSaveTimer;
+		}
+
+		if (m_ScriptDirectoryWatch->Update())
+		{
+			std::vector<std::string> modifiedFiles;
+			UpdateScriptHashes(modifiedFiles);
+
+			for (Terminal* terminal : m_Terminals)
+			{
+				if (Contains(modifiedFiles, terminal->m_ScriptFileName))
+				{
+					// Ignore updates to files we just saved
+					if (m_ScriptSaveTimer == 0 || terminal->m_ScriptFileName != m_LastSavedScriptFileName)
+					{
+						terminal->OnScriptChanged();
+					}
+				}
+			}
+		}
+	}
+
+	void TerminalManager::DrawImGui()
+	{
+		if (ImGui::TreeNode("Terminal Manager"))
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			for (i32 i = 0; i < (i32)m_Terminals.size(); ++i)
+			{
+				char buf[256];
+				sprintf(buf, "Terminal %i:", i);
+				scene->DrawImGuiGameObjectIDField(buf, m_Terminals[i]->ID, true);
+			}
+
+			ImGui::TreePop();
+		}
+
+		static char newScriptNameBuffer[256];
+		bool bFocusTextBox = false;
+		if (m_bOpenSavePopup)
+		{
+			m_bOpenSavePopup = false;
+			bFocusTextBox = true;
+			strncpy(newScriptNameBuffer, ".flex_script", 256);
+			ImGui::OpenPopup(SavePopupName);
+		}
+
+		if (ImGui::BeginPopupModal(SavePopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			bool bNameEntered = ImGui::InputText("Name", newScriptNameBuffer, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+			if (bFocusTextBox)
+			{
+				ImGui::SetKeyboardFocusHere();
+			}
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			bNameEntered = ImGui::Button("Save") || bNameEntered;
+
+			if (bNameEntered)
+			{
+				std::string newScriptPath = std::string(newScriptNameBuffer);
+				newScriptPath = Trim(newScriptPath);
+
+				bool bNameIsValid = true;
+
+				size_t finalDot = newScriptPath.rfind('.');
+				if (finalDot == std::string::npos || finalDot == newScriptPath.length() - 1)
+				{
+					bNameIsValid = false;
+				}
+				else
+				{
+					std::string fileType = newScriptPath.substr(finalDot + 1);
+					bNameIsValid = (fileType == "flex_script");
+				}
+
+				if (newScriptPath.find('\\') != std::string::npos || newScriptPath.find('/') != std::string::npos)
+				{
+					bNameIsValid = false;
+				}
+
+				if (bNameIsValid)
+				{
+					newScriptPath = SCRIPTS_DIRECTORY + newScriptPath;
+
+					Terminal* terminal = (Terminal*)g_SceneManager->CurrentScene()->GetGameObject(m_TerminalSavingID);
+					bool bSaved = SaveScript(newScriptPath, terminal->lines);
+
+					if (bSaved)
+					{
+						terminal->m_ScriptFileName = newScriptPath;
+						ImGui::CloseCurrentPopup();
+					}
+					else
+					{
+						std::string terminalIDStr = m_TerminalSavingID.ToString();
+						PrintError("Failed to save terminal script, invalid terminal game object ID given (%s)\n", terminalIDStr.c_str());
+					}
+				}
+				else
+				{
+					PrintError("Invalid terminal script name provided: \"%s\"\n", newScriptPath.c_str());
+				}
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	void TerminalManager::OpenSavePopup(const GameObjectID& terminalID)
+	{
+		m_TerminalSavingID = terminalID;
+		m_bOpenSavePopup = true;
+	}
+
+	void TerminalManager::RegisterTerminal(Terminal* terminal)
+	{
+		m_Terminals.push_back(terminal);
+	}
+
+	void TerminalManager::DeregisterTerminal(Terminal* terminal)
+	{
+		for (i32 i = 0; i < (i32)m_Terminals.size(); ++i)
+		{
+			if (m_Terminals[i]->ID == terminal->ID)
+			{
+				m_Terminals.erase(m_Terminals.begin() + i);
+				break;
+			}
+		}
+	}
+
+	bool TerminalManager::LoadScript(const std::string& fileName, std::vector<std::string>& outFileLines)
+	{
+		std::string filePath = SCRIPTS_DIRECTORY + fileName;
+		if (FileExists(filePath))
+		{
+			std::string fileContent;
+			if (ReadFile(filePath, fileContent, false))
+			{
+				outFileLines = SplitNoStrip(fileContent, '\n');
+
+				if (outFileLines.empty())
+				{
+					outFileLines.emplace_back("");
+				}
+
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool TerminalManager::SaveScript(const std::string& fileName, const std::vector<std::string>& fileLines)
+	{
+		std::string filePath = SCRIPTS_DIRECTORY + fileName;
+		StringBuilder stringBuilder;
+		for (i32 i = 0; i < (i32)fileLines.size(); ++i)
+		{
+			if (!fileLines[i].empty())
+			{
+				stringBuilder.Append(fileLines[i]);
+
+				if (i < (i32)fileLines.size() - 1)
+				{
+					stringBuilder.Append('\n');
+				}
+			}
+			else
+			{
+				stringBuilder.Append('\n');
+			}
+		}
+
+		std::string fileContent = stringBuilder.ToString();
+
+		bool bSuccess = WriteFile(filePath, fileContent, false);
+
+		if (bSuccess)
+		{
+			m_ScriptSaveTimer = 2;
+			m_LastSavedScriptFileName = fileName;
+		}
+
+		return bSuccess;
 	}
 } // namespace flex

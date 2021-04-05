@@ -648,6 +648,36 @@ namespace flex
 		return result;
 	}
 
+	std::vector<std::string> Split(const std::string& str, const char* delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		size_t strLen = str.size();
+		size_t delimLen = strlen(delim);
+		while (i < (strLen - delimLen))
+		{
+			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) == 0)
+			{
+				i += delimLen;
+			}
+
+			size_t j = i;
+			while (j < (strLen - delimLen) && memcmp((void*)&str[j], (void*)delim, delimLen) != 0)
+			{
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
 	std::vector<std::string> SplitNoStrip(const std::string& str, char delim)
 	{
 		std::vector<std::string> result;
@@ -655,7 +685,7 @@ namespace flex
 		size_t j = 0;
 
 		size_t strLen = str.size();
-		while (i < strLen)
+		while (i <= strLen)
 		{
 			while (i != strLen && str[i] != delim)
 			{
@@ -664,6 +694,29 @@ namespace flex
 
 			result.push_back(str.substr(j, i - j));
 			++i;
+			j = i;
+		}
+
+		return result;
+	}
+
+	std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+		size_t j = 0;
+
+		size_t strLen = str.size();
+		size_t delimLen = strlen(delim);
+		while (i < (strLen - delimLen))
+		{
+			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) != 0)
+			{
+				++i;
+			}
+
+			result.push_back(str.substr(j, i - j));
+			i += delimLen;
 			j = i;
 		}
 

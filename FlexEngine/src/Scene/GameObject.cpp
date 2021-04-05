@@ -1377,7 +1377,7 @@ namespace flex
 
 	JSONObject GameObject::Serialize(const BaseScene* scene,
 		bool bIsRoot /* = false */,
-		bool bSerializePrefabData /* = false */) const
+		bool bSerializePrefabData /* = false */)
 	{
 		JSONObject object = {};
 
@@ -1847,7 +1847,7 @@ namespace flex
 		// Generic game objects have no unique fields
 	}
 
-	void GameObject::SerializeTypeUniqueFields(JSONObject& /* parentObject */) const
+	void GameObject::SerializeTypeUniqueFields(JSONObject& /* parentObject */)
 	{
 		// Generic game objects have no unique fields
 	}
@@ -2698,7 +2698,7 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject valveInfo = {};
 
@@ -2904,7 +2904,7 @@ namespace flex
 		}
 	}
 
-	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject blockInfo = {};
 
@@ -3065,7 +3065,7 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject windowInfo = {};
 
@@ -3152,7 +3152,7 @@ namespace flex
 		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		FLEX_UNUSED(parentObject);
 
@@ -3196,7 +3196,7 @@ namespace flex
 		InternalInit(matIDs[0]);
 	}
 
-	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
@@ -3430,7 +3430,7 @@ namespace flex
 		}
 	}
 
-	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject dirLightObj = {};
 
@@ -3651,7 +3651,7 @@ namespace flex
 		}
 	}
 
-	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject pointLightObj = {};
 
@@ -3876,7 +3876,7 @@ namespace flex
 		}
 	}
 
-	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject spotLightObj = {};
 
@@ -3908,6 +3908,9 @@ namespace flex
 		GameObject(name, typeID, gameObjectID),
 		cartID(cartID)
 	{
+		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
+
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr grey", matID))
 		{
@@ -4153,7 +4156,7 @@ namespace flex
 		distAlongTrack = cartInfo.GetFloat("dist along track");
 	}
 
-	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject cartInfo = {};
 
@@ -4267,7 +4270,7 @@ namespace flex
 		powerRemaining = cartInfo.GetFloat("power remaining");
 	}
 
-	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject cartInfo = {};
 
@@ -4340,7 +4343,7 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 	}
 
-	void MobileLiquidBox::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void MobileLiquidBox::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		FLEX_UNUSED(parentObject);
 	}
@@ -5712,7 +5715,7 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject gerstnerWaveObj = {};
 
@@ -5919,7 +5922,7 @@ namespace flex
 		obj.SetVec3Checked("endPoint", endPoint);
 	}
 
-	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject obj = {};
 
@@ -6004,7 +6007,7 @@ namespace flex
 
 	}
 
-	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject obj = {};
 
@@ -6100,6 +6103,8 @@ namespace flex
 		cursor(0, 0)
 	{
 		m_bInteractable = true;
+		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 
 		MaterialID matID;
 		// TODO: Don't rely on material names!
@@ -6123,6 +6128,8 @@ namespace flex
 	{
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 20);
 		ParseCode();
+
+		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->RegisterTerminal(this);
 
 		GameObject::Initialize();
 	}
@@ -6149,11 +6156,22 @@ namespace flex
 			delete m_VM;
 		}
 
+		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->DeregisterTerminal(this);
+
 		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Terminal::Update()
 	{
+		if (m_DisplayReloadTimeRemaining != -1.0f)
+		{
+			m_DisplayReloadTimeRemaining -= g_DeltaTime;
+			if (m_DisplayReloadTimeRemaining <= 0.0f)
+			{
+				m_DisplayReloadTimeRemaining = -1.0f;
+			}
+		}
+
 		m_CursorBlinkTimer += g_DeltaTime;
 		bool bRenderCursor = (m_ObjectInteractingWith != nullptr);
 		if (fmod(m_CursorBlinkTimer, m_CursorBlinkRate) > m_CursorBlinkRate / 2.0f)
@@ -6308,11 +6326,34 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void Terminal::DrawTerminalUI()
+	void Terminal::DrawImGuiWindow()
 	{
 		ImGui::Begin("Terminal");
 		{
 			ImGui::TextWrapped("Hit F5 to compile and evaluate code.");
+
+			ImGui::Separator();
+
+			if (m_ScriptFileName.empty())
+			{
+				ImGui::Text("Unsaved");
+			}
+			else
+			{
+				ImGui::Text("%s", m_ScriptFileName.c_str());
+			}
+
+			if (ImGui::Button(m_bDirtyFlag ? "Save *" : "Save"))
+			{
+				if (m_ScriptFileName.empty())
+				{
+					TerminalManager::OpenSavePopup(ID);
+				}
+				else
+				{
+					SaveScript();
+				}
+			}
 
 			ImGui::Separator();
 
@@ -6337,6 +6378,19 @@ namespace flex
 			//ImGui::EndChild();
 
 			bool bSuccess = m_VM->diagnosticContainer->diagnostics.empty();
+
+			if (m_DisplayReloadTimeRemaining != -1.0f)
+			{
+				real alpha = glm::clamp(m_DisplayReloadTimeRemaining / m_ReloadPopupInfoDuration * 2.0f, 0.0f, 1.0f);
+				ImVec4 textCol = ImVec4(0.6f, 0.9f, 0.66f, alpha);
+				ImGui::PushStyleColor(ImGuiCol_Text, textCol);
+				ImGui::Text("Reloaded code");
+				ImGui::PopStyleColor();
+			}
+			else
+			{
+				ImGui::NewLine();
+			}
 
 			if (!bSuccess)
 			{
@@ -6495,6 +6549,38 @@ namespace flex
 			}
 		}
 		ImGui::End();
+
+		const char* externalScriptChangeStr = "Script changed externally";
+		if (m_bShowExternalChangePopup)
+		{
+			m_bShowExternalChangePopup = false;
+			ImGui::OpenPopup(externalScriptChangeStr);
+		}
+
+		if (ImGui::BeginPopupModal(externalScriptChangeStr, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Script %s was modified on disk, do you want to reload?", m_ScriptFileName.c_str());
+			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.2f, 1.0f));
+			ImGui::Text("Warning: you will lose any changes you've made!");
+			ImGui::PopStyleColor();
+
+			if (ImGui::Button("Ignore external change"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reload"))
+			{
+				m_bDirtyFlag = false;
+				OnScriptChanged();
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
 	}
 
 	bool Terminal::AllowInteractionWith(GameObject* gameObject)
@@ -6524,6 +6610,21 @@ namespace flex
 		return false;
 	}
 
+	void Terminal::OnScriptChanged()
+	{
+		if (m_bDirtyFlag)
+		{
+			m_bShowExternalChangePopup = true;
+			return;
+		}
+
+		cursor.x = cursor.y = cursorMaxX = 0;
+		m_CursorBlinkTimer = 0.0f;
+		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->LoadScript(m_ScriptFileName, lines);
+		ParseCode();
+		m_DisplayReloadTimeRemaining = m_ReloadPopupInfoDuration;
+	}
+
 	void Terminal::SetCamera(TerminalCamera* camera)
 	{
 		m_Camera = camera;
@@ -6534,36 +6635,34 @@ namespace flex
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("terminal");
-		std::string str = obj.GetString("str");
+		JSONObject terminalObj = parentObject.GetObject("terminal");
 
-		lines = Split(str, '\n');
+		m_ScriptFileName = terminalObj.GetString("script file path");
+
+		if (!m_ScriptFileName.empty())
+		{
+			if (!GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->LoadScript(m_ScriptFileName, lines))
+			{
+				PrintWarn("Failed to load terminal script from \"%s\"\n", m_ScriptFileName.c_str());
+				lines.emplace_back("// Failed to load from script");
+			}
+		}
 
 		if (lines.empty())
 		{
-			lines.push_back("");
+			lines.emplace_back("");
 		}
 
 		MoveCursorToStart();
 	}
 
-	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject terminalObj = {};
 
-		std::string str = "";
-		for (i32 i = 0; i < (i32)lines.size(); ++i)
-		{
-			str += lines[i];
-			if (i < (i32)lines.size() - 1)
-			{
-				str.push_back('\n');
-			}
-		}
+		SaveScript();
 
-		str = Replace(str, "\"", "\\\"");
-
-		terminalObj.fields.emplace_back("str", JSONValue(str));
+		terminalObj.fields.emplace_back("script file path", JSONValue(m_ScriptFileName));
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
 	}
@@ -6574,7 +6673,7 @@ namespace flex
 
 		if (lines.empty())
 		{
-			lines.push_back("");
+			lines.emplace_back("");
 		}
 
 		std::string& curLine = lines[cursor.y];
@@ -6604,6 +6703,7 @@ namespace flex
 			MoveCursorRight();
 			cursorMaxX = cursor.x;
 		}
+		m_bDirtyFlag = true;
 		ParseCode();
 	}
 
@@ -6647,6 +6747,7 @@ namespace flex
 			cursorMaxX = cursor.x;
 			ClampCursorX();
 		}
+		m_bDirtyFlag = true;
 		ParseCode();
 	}
 
@@ -6686,14 +6787,8 @@ namespace flex
 				curLine.erase(curLine.begin() + cursor.x);
 			}
 		}
+		m_bDirtyFlag = true;
 		ParseCode();
-	}
-
-	void Terminal::Clear()
-	{
-		m_CursorBlinkTimer = 0.0f;
-		lines.clear();
-		cursor.x = cursor.y = cursorMaxX = 0;
 	}
 
 	void Terminal::MoveCursorToStart()
@@ -6904,6 +6999,21 @@ namespace flex
 	void Terminal::EvaluateCode()
 	{
 		m_VM->Execute();
+	}
+
+	bool Terminal::SaveScript()
+	{
+		if (!m_ScriptFileName.empty())
+		{
+			if (GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->SaveScript(m_ScriptFileName, lines))
+			{
+				m_bDirtyFlag = false;
+				return true;
+			}
+		}
+
+		PrintError("Failed to save terminal script to %s\n", m_ScriptFileName.c_str());
+		return false;
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
@@ -7241,7 +7351,7 @@ namespace flex
 		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
 	}
 
-	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject particleSystemObj = {};
 
@@ -7674,7 +7784,7 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject chunkGenInfo = {};
 
@@ -8755,7 +8865,7 @@ namespace flex
 		}
 	}
 
-	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject springObj = {};
 
@@ -9619,7 +9729,7 @@ namespace flex
 		}
 	}
 
-	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject softBodyObject = JSONObject();
 
@@ -10261,7 +10371,7 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 	}
 
-	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject) const
+	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		JSONObject vehicleObj = JSONObject();
 
@@ -10364,7 +10474,7 @@ namespace flex
 			for (i32 i = 0; i < m_TireCount; i++)
 			{
 				// Assume this is called in update loop:
-				 m_Vehicle->updateWheelTransform(i, true);
+				m_Vehicle->updateWheelTransform(i, true);
 
 				const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
 				Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
@@ -10385,7 +10495,7 @@ namespace flex
 
 				lowestWheelSlip = glm::min(lowestWheelSlip, wheelInfo.m_skidInfo);
 			}
-			ImGui::SetCursorScreenPos(cursor + ImVec2(0, spacingY + tireHeight + + 20.0f));
+			ImGui::SetCursorScreenPos(cursor + ImVec2(0, spacingY + tireHeight + +20.0f));
 			ImGui::Text("Lowest wheel slip: %.2f", lowestWheelSlip);
 		}
 

@@ -263,6 +263,9 @@ namespace flex
 		g_Systems[(i32)SystemType::ROAD_MANAGER] = new RoadManager();
 		g_Systems[(i32)SystemType::ROAD_MANAGER]->Initialize();
 
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager();
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Initialize();
+
 
 		g_ResourceManager->DiscoverMeshes();
 		g_ResourceManager->ParseMaterialsFile();
@@ -371,8 +374,6 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
-		GetSystem<PluggablesSystem>(SystemType::ROAD_MANAGER)->Destroy();
-		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->Destroy();
 		g_Renderer->DestroyPersistentObjects();
 		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
@@ -388,6 +389,9 @@ namespace flex
 
 		g_Systems[(i32)SystemType::PLUGGABLES]->Destroy();
 		g_Systems[(i32)SystemType::PLUGGABLES] = nullptr;
+
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Destroy();
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = nullptr;
 
 		delete g_SceneManager;
 		g_SceneManager = nullptr;
@@ -672,8 +676,10 @@ namespace flex
 
 				if (bSimulateFrame)
 				{
-					GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->Update();
-					GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->Update();
+					for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+					{
+						g_Systems[i]->Update();
+					}
 
 					g_SceneManager->CurrentScene()->LateUpdate();
 				}

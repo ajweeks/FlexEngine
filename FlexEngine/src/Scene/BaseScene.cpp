@@ -1737,7 +1737,7 @@ namespace flex
 		return iter->second;
 	}
 
-	bool BaseScene::DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID)
+	bool BaseScene::DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly /* = false */)
 	{
 		bool bChanged = false;
 
@@ -1767,7 +1767,7 @@ namespace flex
 				ImGui::EndTooltip();
 			}
 
-			if (ImGui::BeginPopupContextItem("##gid-context"))
+			if (!bReadOnly && ImGui::BeginPopupContextItem("##gid-context"))
 			{
 				if (ImGui::Button("Clear"))
 				{
@@ -1782,7 +1782,7 @@ namespace flex
 
 		}
 
-		if (ImGui::BeginDragDropTarget())
+		if (!bReadOnly && ImGui::BeginDragDropTarget())
 		{
 			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
 			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)

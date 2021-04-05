@@ -55,9 +55,11 @@ namespace flex
 	FLEX_NO_DISCARD std::string TrimTrailingWhitespace(const std::string& str);
 
 	FLEX_NO_DISCARD std::vector<std::string> Split(const std::string& str, char delim);
+	FLEX_NO_DISCARD std::vector<std::string> Split(const std::string& str, const char* delim);
 	// Includes blank entries for subsequent delims
 	// (e.g. "\n\n\n" will return a vector of length 3, while Strip will return an empty vector)
 	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, char delim);
+	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim);
 
 	/*
 	 * Returns the index of the first character which isn't a number

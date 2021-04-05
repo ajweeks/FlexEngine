@@ -3,8 +3,10 @@
 
 **2021**
 _April_
-- Add collision to terrain (active zone moves with player)
+- Support hot reloading externally-edited terminal scripts
+- Support reading terminal scripts from file
 - Add shader include support
+- Add collision to terrain (active zone moves with player)
 
 _March_
 - Refactor graphics pipeline & descriptor set creation to be much more efficient

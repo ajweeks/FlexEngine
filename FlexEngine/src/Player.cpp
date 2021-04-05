@@ -189,7 +189,7 @@ namespace flex
 				if (g_EngineInstance->IsRenderingImGui())
 				{
 					Terminal* terminal = static_cast<Terminal*>(m_ObjectInteractingWith);
-					terminal->DrawTerminalUI();
+					terminal->DrawImGuiWindow();
 				}
 			} break;
 			case SID("vehicle"):
