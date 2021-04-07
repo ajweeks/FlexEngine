@@ -251,11 +251,6 @@ namespace flex
 			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo, bCreateRenderObject);
 		}
 
-		if (meshComponent)
-		{
-			m_Meshes.push_back(meshComponent);
-		}
-
 		CalculateBounds();
 
 		m_bInitialized = true;
