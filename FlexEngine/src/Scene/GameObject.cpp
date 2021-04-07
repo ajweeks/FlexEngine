@@ -4755,11 +4755,18 @@ namespace flex
 				}
 			}
 
-			for (const WaveInfo& waveInfo : waveContributions)
+			for (i32 i = 0; i <(i32) waveContributions.size(); ++i)
 			{
+				const WaveInfo& waveInfo = waveContributions[i];
+
 				if (waveInfo.a < amplitudeLODCutoff)
 				{
 					break;
+				}
+
+				if (soloWaveIndex != -1 && soloWaveIndex != i)
+				{
+					continue;
 				}
 
 				if (waveInfo.enabled)
@@ -4850,7 +4857,7 @@ namespace flex
 			waveGenData->waveChunks = &waveChunks;
 			waveGenData->waveSamplingLODs = &waveSamplingLODs;
 			waveGenData->waveTessellationLODs = &waveTessellationLODs;
-			waveGenData->soloWave = soloWave;
+			waveGenData->soloWave = soloWaveIndex != -1 ? &waveContributions[soloWaveIndex] : nullptr;
 			waveGenData->size = size;
 			waveGenData->chunkIdx = chunkIdx;
 			waveGenData->bDisableLODs = bDisableLODs;
@@ -5521,7 +5528,7 @@ namespace flex
 		{
 			for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 			{
-				const bool bWasDisabled = soloWave != nullptr && soloWave != &waveContributions[i];
+				const bool bWasDisabled = (soloWaveIndex != -1) && (soloWaveIndex != i);
 				if (bWasDisabled)
 				{
 					ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);

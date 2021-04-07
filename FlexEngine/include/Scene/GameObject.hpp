@@ -851,7 +851,7 @@ namespace flex
 		std::vector<WaveSamplingLOD> waveSamplingLODs;
 
 		std::vector<WaveInfo> waveContributions;
-		WaveInfo const* soloWave = nullptr;
+		i32 soloWaveIndex = -1;
 
 		std::vector<WaveChunk> waveChunks;
 
