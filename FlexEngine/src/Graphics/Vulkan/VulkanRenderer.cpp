@@ -492,7 +492,6 @@ namespace flex
 				CreateUniformBuffers((VulkanMaterial*)matPair.second);
 			}
 
-			DestroyNonPersistentGraphicsPipelines();
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				CreateGraphicsPipeline(i);
@@ -789,7 +788,7 @@ namespace flex
 			m_ShadowImageView.replace();
 			m_ShadowImageMemory.replace();
 
-			DestroyWireframePipelines();
+			m_WireframeGraphicsPipelines.clear();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
 
@@ -3750,15 +3749,6 @@ namespace flex
 			m_WireframeDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 		}
 
-		void VulkanRenderer::DestroyWireframePipelines()
-		{
-			for (auto& pipelineIter : m_WireframeGraphicsPipelines)
-			{
-				DestroyGraphicsPipeline(pipelineIter.second->pipelineID);
-			}
-			m_WireframeGraphicsPipelines.clear();
-		}
-
 		u32 VulkanRenderer::GetActiveRenderObjectCount() const
 		{
 			u32 capacity = 0;
@@ -5992,6 +5982,7 @@ namespace flex
 			}
 			m_GraphicsPipelineHashes.clear();
 			m_GraphicsPipelines.clear();
+			m_WireframeGraphicsPipelines.clear();
 		}
 
 		void VulkanRenderer::DestroyNonPersistentGraphicsPipelines()
@@ -6018,6 +6009,15 @@ namespace flex
 						}
 					}
 
+					for (auto iter3 = m_WireframeGraphicsPipelines.begin(); iter3 != m_WireframeGraphicsPipelines.end(); ++iter3)
+					{
+						if (iter3->second == pipelineID)
+						{
+							m_WireframeGraphicsPipelines.erase(iter3);
+							break;
+						}
+					}
+
 					assert(bFoundHash);
 				}
 				else
@@ -6030,6 +6030,7 @@ namespace flex
 		void VulkanRenderer::DestroyGraphicsPipeline(GraphicsPipelineID pipelineID)
 		{
 			bool bFoundHash = false;
+			bool bFoundPipeline = false;
 			for (auto iter = m_GraphicsPipelineHashes.begin(); iter != m_GraphicsPipelineHashes.end(); ++iter)
 			{
 				if (iter->second == pipelineID)
@@ -6046,14 +6047,23 @@ namespace flex
 				if (pipelineConfig->pipelineID == pipelineID)
 				{
 					// TODO: Look for usages when pipelineConfig->usageCount > 1
-
 					delete pipelineConfig;
 					m_GraphicsPipelines.erase(iter);
-					return;
+					bFoundPipeline = true;
+					break;
 				}
 			}
 
-			assert(bFoundHash == false);
+			for (auto iter = m_WireframeGraphicsPipelines.begin(); iter != m_WireframeGraphicsPipelines.end(); ++iter)
+			{
+				if (iter->second == pipelineID)
+				{
+					m_WireframeGraphicsPipelines.erase(iter);
+					break;
+				}
+			}
+
+			assert(!bFoundHash || (bFoundHash && bFoundPipeline));
 		}
 
 		bool VulkanRenderer::IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const
@@ -7048,7 +7058,8 @@ namespace flex
 							auto pipelineIter = m_WireframeGraphicsPipelines.find(objectShader->vertexAttributes);
 							if (pipelineIter != m_WireframeGraphicsPipelines.end())
 							{
-								pipeline = pipelineIter->second->pipeline;
+								GraphicsPipelineID pipelineID = pipelineIter->second;
+								pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 							}
 							else
 							{
@@ -7073,7 +7084,7 @@ namespace flex
 								CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 								GraphicsPipelineConfiguration* newWireframePipeline = GetGraphicsPipeline(pipelineID);
 
-								m_WireframeGraphicsPipelines[objectShader->vertexAttributes] = newWireframePipeline;
+								m_WireframeGraphicsPipelines[objectShader->vertexAttributes] = pipelineID;
 								pipeline = newWireframePipeline->pipeline;
 							}
 
@@ -8845,7 +8856,7 @@ namespace flex
 			CreateSSAODescriptorSets();
 			CreateSSAOPipelines();
 
-			DestroyWireframePipelines();
+			m_WireframeGraphicsPipelines.clear();
 			CreateWireframeDescriptorSets();
 
 			InitializeAllParticleSystemBuffers();

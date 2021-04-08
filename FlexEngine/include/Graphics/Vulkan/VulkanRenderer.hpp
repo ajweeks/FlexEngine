@@ -179,7 +179,6 @@ namespace flex
 			void CreateSSAODescriptorSets();
 
 			void CreateWireframeDescriptorSets();
-			void DestroyWireframePipelines();
 
 			RenderID GetNextAvailableRenderID() const;
 			ParticleSystemID GetNextAvailableParticleSystemID() const;
@@ -568,8 +567,8 @@ namespace flex
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
 
-			// Maps vertex attributes to pipeline
-			std::map<VertexAttributes, GraphicsPipelineConfiguration*> m_WireframeGraphicsPipelines;
+			// Maps vertex attributes to pipeline (this map doesn't have ownership over pipelines, only references)
+			std::map<VertexAttributes, GraphicsPipelineID> m_WireframeGraphicsPipelines;
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
