@@ -189,6 +189,7 @@ namespace flex
 			RETURN,
 			VARIABLE_DECL,
 			IDENTIFIER,
+			FUNC_ARG,
 			ASSIGNMENT,
 			COMPOUND_ASSIGNMENT,
 			INT_LIT,
@@ -211,6 +212,7 @@ namespace flex
 
 		bool IsLiteral(StatementType statementType);
 		bool IsExpression(StatementType statementType);
+		bool IsSimple(StatementType statementType);
 
 		struct Statement
 		{
@@ -478,6 +480,7 @@ namespace flex
 			std::string identifierStr;
 		};
 
+		// TODO: Make statement
 		struct Assignment final : public Expression
 		{
 			Assignment(const Span& span, const std::string& lhs, Expression* rhs) :
@@ -731,6 +734,25 @@ namespace flex
 			}
 
 			virtual ~FunctionCall();
+
+			virtual std::string ToString() const override;
+			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
+
+			std::string target;
+			std::vector<Expression*> arguments;
+		};
+
+		struct FunctionArgument final : public Expression
+		{
+			FunctionArgument(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
+				Expression(span, StatementType::FUNC_CALL),
+				target(target),
+				arguments(arguments)
+			{
+			}
+
+			virtual ~FunctionArgument();
 
 			virtual std::string ToString() const override;
 			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;

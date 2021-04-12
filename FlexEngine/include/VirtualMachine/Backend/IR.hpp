@@ -91,6 +91,7 @@ namespace flex
 			std::list<Block*> predecessors;
 			std::list<Assignment*> assignments;
 			Terminator* terminator = nullptr;
+			std::string funcName; // If this block corresponds to a function, this is its name
 			Span origin;
 		};
 
@@ -246,6 +247,16 @@ namespace flex
 			Constant(const IR::Value& value) :
 				Value(value)
 			{}
+		};
+
+		struct Argmuent : IR::Value
+		{
+			Argmuent(State* irState, const std::string& name) :
+				Value(Span(Span::Source::GENERATED), irState, Value::Type::ARGUMENT),
+				name(name)
+			{}
+
+			std::string name;
 		};
 
 		enum class UnaryOperatorType
@@ -457,10 +468,6 @@ namespace flex
 			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);
 
 			void SetBlockIndices();
-
-			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
-			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
-			i32 GenerateCallInstruction(AST::FunctionCall* funcCall);
 		};
 
 	} // namespace IR

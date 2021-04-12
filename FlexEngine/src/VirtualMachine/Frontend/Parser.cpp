@@ -249,6 +249,13 @@ namespace flex
 				statementType == StatementType::FUNC_CALL;
 		}
 
+		bool IsSimple(StatementType statementType)
+		{
+			return IsLiteral(statementType) ||
+				statementType == StatementType::IDENTIFIER ||
+				statementType == StatementType::FUNC_ARG;
+		}
+
 		Statement::Statement(const Span& span, StatementType statementType) :
 			span(span),
 			statementType(statementType)
@@ -1535,11 +1542,14 @@ namespace flex
 				{
 					span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
 					Expression* target = NextPrimary();
-					if (target->typeName == typeName)
+					if (target != nullptr)
 					{
-						return target;
+						if (target->typeName == typeName)
+						{
+							return target;
+						}
+						return new Cast(span, typeName, target);
 					}
-					return new Cast(span, typeName, target);
 				}
 
 				if (NextIs(TokenKind::OPEN_SQUARE))

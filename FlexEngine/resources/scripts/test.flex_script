@@ -1,2 +1,25 @@
+func do_math(float val0, int add, float mul)
+  -> float {
+  float result = val0;
+  result += (float)add;
+  result *= mul;
+  return result;
+}
 
-int test_code = 99 + 12;
+func square(int num) -> int {
+  return num * num;
+}
+
+func double(int num) -> int {
+  return num * 2;
+}
+
+int twelve = double(6);
+int twenty_four = double(twelve);
+int five_seven_six = square(twenty_four);
+
+out_0 = five_seven_six;
+
+float r = do_math(10.0, 2, (float)40);
+out_1 = (int)r;
+

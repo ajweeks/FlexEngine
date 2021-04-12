@@ -165,21 +165,22 @@ namespace flex
 				} break;
 				case IR::Value::Type::UNARY:
 				{
-
+					// TODO:
 				} break;
 				case IR::Value::Type::BINARY:
 				{
 					IR::BinaryValue* binary = (IR::BinaryValue*)value;
 
+					// TODO:
 					return GetValueWrapperFromIRValue(irState, binary->left);
 					//i32 reg = state->varRegisterMap[binary->left];
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
 				case IR::Value::Type::FUNC_CALL:
 				{
-					//AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
-					//i32 registerStored = GenerateCallInstruction(funcCall);
-					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+					IR::FunctionCallValue* funcCallValue = (IR::FunctionCallValue*)value;
+					i32 registerStored = GenerateCallInstruction(irState, funcCallValue);
+					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
 				} break;
 				case IR::Value::Type::CAST:
 				{
@@ -194,6 +195,115 @@ namespace flex
 			}
 
 			return valWrapper;
+		}
+
+		i32 VirtualMachine::GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue)
+		{
+			// Temporary identifier for the function since we
+			// don't know where it will be located in the end
+			assert(state->funcNameToBlockIndexTable.find(funcCallValue->target) != state->funcNameToBlockIndexTable.end());
+			i32 funcUID = state->funcNameToBlockIndexTable[funcCallValue->target];
+
+			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+
+			// Push return IP
+			i32 pushInstructionIndex = -1;
+			{
+				// Actual IP will be patched up below
+				pushInstructionIndex = (i32)currentInstBlock.instructions.size();
+				Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(0)));
+				currentInstBlock.PushBack(pushReturnIP, Span(Span::Source::GENERATED));
+			}
+
+			// Push arguments in reverse order
+			for (i32 i = (i32)funcCallValue->arguments.size() - 1; i >= 0; --i)
+			{
+				IR::Value* arg = funcCallValue->arguments[i];
+
+				ValueWrapper argVal;
+				if (IR::Value::IsLiteral(arg->type))
+				{
+					argVal = GetValueWrapperFromIRValue(irState, arg);
+				}
+				else
+				{
+					switch (arg->type)
+					{
+					case IR::Value::Type::IDENTIFIER:
+					{
+						IR::Identifier* initializerIdent = (IR::Identifier*)arg;
+						i32 getRegister = state->varRegisterMap[initializerIdent->variable];
+						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(getRegister));
+					} break;
+					case IR::Value::Type::UNARY:
+					{
+						IR::UnaryValue* unaryValue = (IR::UnaryValue*)arg;
+						argVal = GetValueWrapperFromIRValue(irState, unaryValue);
+					} break;
+					case IR::Value::Type::BINARY:
+					{
+						IR::BinaryValue* binaryValue = (IR::BinaryValue*)arg;
+						argVal = GetValueWrapperFromIRValue(irState, binaryValue);
+					} break;
+					case IR::Value::Type::TERNARY:
+					{
+						IR::TernaryValue* ternaryValue = (IR::TernaryValue*)arg;
+						argVal = GetValueWrapperFromIRValue(irState, ternaryValue);
+					} break;
+					case IR::Value::Type::FUNC_CALL:
+					{
+						IR::FunctionCallValue* subFuncCall = (IR::FunctionCallValue*)arg;
+						i32 registerStored = GenerateCallInstruction(irState, subFuncCall);
+						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
+					} break;
+					case IR::Value::Type::CAST:
+					{
+						IR::CastValue* castValue = (IR::CastValue*)arg;
+						argVal = GetValueWrapperFromIRValue(irState, castValue);
+					} break;
+					case IR::Value::Type::VOID:
+					{
+						ENSURE_NO_ENTRY();
+					} break;
+					}
+				}
+
+				Instruction pushArg(OpCode::PUSH, argVal);
+				currentInstBlock.PushBack(pushArg, arg->origin);
+			}
+
+			// Call
+			Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcUID)));
+			currentInstBlock.PushBack(inst, funcCallValue->origin);
+
+			// Resume point
+			{
+				// Patch up push call to current instruction offset
+				//i32 instructionBlockIndex = (i32)state->instructionBlocks.size();
+				i32 instructionIndex = (i32)currentInstBlock.instructions.size();
+				i32 value = currentInstBlock.startOffset + instructionIndex;
+				currentInstBlock.instructions[pushInstructionIndex].val0.value.valInt = value;
+			}
+
+			i32 returnValueRegister = 0;
+			Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(returnValueRegister)));
+			currentInstBlock.PushBack(popReturnVal, funcCallValue->origin);
+			return returnValueRegister;
+		}
+
+		i32 VirtualMachine::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
+		{
+			u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
+			assert((value >> 16) == (u32)instructionBlockIndex);
+			assert((value & 0xFFFF) == (u32)instructionIndex);
+			return static_cast<i32>(value);
+		}
+
+		void VirtualMachine::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
+		{
+			u32 valueUnsigned = static_cast<u32>(combined);
+			outInstructionBlockIndex = (i32)(valueUnsigned >> 16);
+			outInstructionIndex = (i32)(valueUnsigned & 0xFFFF);
 		}
 
 		bool VirtualMachine::IsTerminalOutputVar(const std::string& varName)
@@ -374,10 +484,26 @@ namespace flex
 
 			state->Clear();
 
+			// Find all function block indices
+			for (i32 i = 0; i < (i32)ir->blocks.size(); ++i)
+			{
+				IR::Block* block = ir->blocks[i];
+				if (!block->funcName.empty())
+				{
+					state->funcNameToBlockIndexTable[block->funcName] = i;
+				}
+			}
+
+			u32 instructionIndex = 0;
 			for (u32 i = 0; i < (u32)ir->blocks.size(); ++i)
 			{
 				IR::Block* block = ir->blocks[i];
 				state->PushInstructionBlock();
+
+				{
+					InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+					currentInstBlock.startOffset = instructionIndex;
+				}
 
 				for (auto assignmentIter = block->assignments.begin(); assignmentIter != block->assignments.end(); ++assignmentIter)
 				{
@@ -385,6 +511,11 @@ namespace flex
 					ValueWrapper outputVal;
 					if (state->varRegisterMap.find(assignment->variable) == state->varRegisterMap.end())
 					{
+						if (state->varRegisterMap.size() == REGISTER_COUNT)
+						{
+							ir->state->diagnosticContainer->AddDiagnostic(assignment->origin, "Ran out of registers!");
+							return;
+						}
 						state->varRegisterMap[assignment->variable] = (i32)state->varRegisterMap.size();
 					}
 
@@ -450,6 +581,11 @@ namespace flex
 						{
 							currentInstBlock.PushBack(Instruction(opCode, outputVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin);
 						}
+					} break;
+					case IR::Value::Type::ARGUMENT:
+					{
+						IR::Argmuent* argument = (IR::Argmuent*)assignment->value;
+						currentInstBlock.PushBack(Instruction(OpCode::POP, outputVal), argument->origin);
 					} break;
 					case IR::Value::Type::TERNARY:
 					{
@@ -572,24 +708,24 @@ namespace flex
 					}
 					//currentInstBlock.PushBack(Instruction(OpCode::JMP, block->terminator));
 				}
+
+				InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
+				instructionIndex += (u32)currentInstBlock.instructions.size();
 			}
 
 			std::vector<std::string> sourceLines = SplitNoStrip(m_AST->lexer->sourceIter.source, '\n');
 
 			// Turn instruction blocks into contiguous instruction list
 			{
-				u32 instructionIndex = 0;
 				for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
 				{
 					std::vector<Instruction>& blockInstructions = state->instructionBlocks[i].instructions;
 					std::vector<Span>& blockInstructionOrigins = state->instructionBlocks[i].instructionOrigins;
-					state->instructionBlocks[i].startOffset = instructionIndex;
 					for (u32 j = 0; j < (u32)blockInstructions.size(); ++j)
 					{
 						instructions.push_back(blockInstructions[j]);
 						blockInstructionOrigins[j].ComputeLineColumnIndicesFromSource(sourceLines);
 						instructionOrigins.push_back(blockInstructionOrigins[j]);
-						++instructionIndex;
 					}
 				}
 			}
@@ -623,10 +759,10 @@ namespace flex
 				} break;
 				case OpCode::CALL:
 				{
-					i32 blockIndex = inst.val0.Get(this).valInt;
-					if (blockIndex < (i32)state->instructionBlocks.size())
+					i32 funcUID = inst.val0.Get(this).valInt;
+					if (funcUID < (i32)state->instructionBlocks.size())
 					{
-						i32 funcAddress = state->instructionBlocks[blockIndex].startOffset;
+						i32 funcAddress = state->instructionBlocks[funcUID].startOffset;
 						inst.val0.value.valInt = funcAddress;
 					}
 					else
@@ -784,6 +920,11 @@ namespace flex
 				case OpCode::POP:
 					if (inst.val0.Valid())
 					{
+						if (inst.val0.type == VM::ValueWrapper::Type::REGISTER)
+						{
+							// Registers can hold any type
+							inst.val0.GetW(this).type = VM::Value::Type::_NONE;
+						}
 						inst.val0.GetW(this) = stack.top();
 					}
 					stack.pop();

@@ -48,6 +48,13 @@ namespace flex
 				type == Type::FLOAT;
 		}
 
+		bool Value::IsSimple(Type type)
+		{
+			return IsLiteral(type) ||
+				type == Type::IDENTIFIER ||
+				type == Type::ARGUMENT;
+		}
+
 		std::string Value::ToString() const
 		{
 			switch (type)

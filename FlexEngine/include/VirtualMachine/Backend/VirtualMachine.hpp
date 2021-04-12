@@ -37,8 +37,8 @@ namespace flex
 			AND,
 			OR,
 			XOR,
-			ITF,
-			FTI,
+			ITF, // int-to-float cast
+			FTI, // float-to-int cast
 			CALL,
 			PUSH,
 			POP,
@@ -276,7 +276,7 @@ namespace flex
 			bool ZeroFlagSet() const;
 			bool SignFlagSet() const;
 
-			static const i32 REGISTER_COUNT = 64;
+			static const i32 REGISTER_COUNT = 32;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
 			static ValueWrapper g_ZeroIntValueWrapper;
@@ -341,10 +341,12 @@ namespace flex
 			void DispatchExternalCall(FuncAddress funcAddress);
 
 			ValueWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
+			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
+			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
+			i32 GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue);
 
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
-
 
 			bool m_bCompiled = false;
 

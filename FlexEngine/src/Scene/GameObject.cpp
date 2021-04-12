@@ -6435,18 +6435,54 @@ namespace flex
 			}
 
 			{
-				for (u32 i = 0; i < 8; ++i)
 				{
-					const VM::Value& regVal = m_VM->registers[i];
-					if (regVal.type != VM::Value::Type::_NONE)
+					ImVec2 regionAvail = ImGui::GetContentRegionAvail();
+					real runtimeChildWindowHeight = glm::min(regionAvail.y, 200.0f);
+					ImGui::BeginChildFrame(ImGui::GetID("registers"), ImVec2(regionAvail.x / 2.0f - 2, runtimeChildWindowHeight));
 					{
-						std::string regValStr = regVal.ToString();
-						ImGui::Text("r%i = %s", i, regValStr.c_str());
+						ImGui::Text("Registers");
+						ImGui::BeginColumns("registers-columns", 2, ImGuiColumnsFlags_NoResize);
+						real colWidth = 100.0f;
+						ImGui::SetColumnWidth(0, colWidth);
+						ImGui::SetColumnWidth(1, colWidth);
+						for (u32 i = 0; i < (u32)m_VM->registers.size(); ++i)
+						{
+							const VM::Value& registerValue = m_VM->registers[i];
+							if (registerValue.type != VM::Value::Type::_NONE)
+							{
+								std::string regValStr = registerValue.ToString();
+								ImGui::Text("r%i = %s", i, regValStr.c_str());
+							}
+							else
+							{
+								ImGui::Text("r%i");
+							}
+
+							if (i == (u32)(m_VM->registers.size() / 2 - 1))
+							{
+								ImGui::NextColumn();
+							}
+						}
+						ImGui::EndColumns(); // registers-columns
 					}
-					else
+					ImGui::EndChildFrame(); // runtime state
+
+					ImGui::SameLine();
+
+					ImGui::BeginChildFrame(ImGui::GetID("stack"), ImVec2(regionAvail.x / 2.0f - 2, runtimeChildWindowHeight));
 					{
-						ImGui::NewLine();
+						ImGui::Text("Stack");
+						// Copy of stack that we can pop elements off of to see contents
+						std::stack<VM::Value> stackCopy = m_VM->stack;
+						while (!stackCopy.empty())
+						{
+							const VM::Value& value = stackCopy.top();
+							std::string valStr = value.ToString();
+							ImGui::Text("%s", valStr.c_str());
+							stackCopy.pop();
+						}
 					}
+					ImGui::EndChildFrame(); // stack
 				}
 
 				for (u32 i = 0; i < Terminal::MAX_OUTPUT_COUNT; ++i)
@@ -6463,59 +6499,105 @@ namespace flex
 					}
 				}
 
-				ImGui::Text("zf: %d", m_VM->ZeroFlagSet() ? 1 : 0);
-				ImGui::SameLine();
-				ImGui::Text("sf: %d", m_VM->SignFlagSet() ? 1 : 0);
+				ImGui::Text("zf: %d sf: %d", m_VM->ZeroFlagSet() ? 1 : 0, m_VM->SignFlagSet() ? 1 : 0);
 
 				ImGui::Text("Inst index: %d", m_VM->m_RunningState.instructionIdx);
 				ImGui::SameLine();
-				ImGui::Text("%s", m_VM->m_RunningState.terminated ? "terminated" : "");
+				ImGui::Text("%s", (m_VM->m_RunningState.terminated ? "terminated" : ""));
 
-				if (!m_VM->astStr.empty())
+				ImVec2 regionAvail = ImGui::GetContentRegionAvail();
+				if (ImGui::BeginChild("source representations", ImVec2(regionAvail.x - 2, glm::max(regionAvail.y, 50.0f)), true))
 				{
-					ImGui::Separator();
-					ImGui::Text("AST");
-					ImGui::Text("%s", m_VM->astStr.c_str());
-				}
-
-				if (!m_VM->irStr.empty())
-				{
-					ImGui::Separator();
-					ImGui::Text("IR");
-					ImGui::Text("%s", m_VM->irStr.c_str());
-				}
-
-				if (!m_VM->unpatchedInstructionStr.empty())
-				{
-					ImGui::Separator();
-					ImGui::Text("Instructions (unpatched)");
-					const ImVec2 preCursorPos = ImGui::GetCursorPos();
-					ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
-					const ImVec2 postCursorPos = ImGui::GetCursorPos();
-
-					if (m_VM->IsExecuting())
+					if (!m_VM->astStr.empty())
 					{
-						i32 strLineNum = 0;
-						bool bFound = false;
-						i32 instIdx = m_VM->InstructionIndex();
-						for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
+						ImGui::Text("AST");
+						ImGui::Text("%s", m_VM->astStr.c_str());
+					}
+
+					if (!m_VM->irStr.empty())
+					{
+						ImGui::Separator();
+						ImGui::Text("IR");
+						ImGui::Text("%s", m_VM->irStr.c_str());
+					}
+
+					if (!m_VM->unpatchedInstructionStr.empty())
+					{
+						ImGui::Separator();
+						ImGui::Text("Instructions (unpatched)");
+						const ImVec2 preCursorPos = ImGui::GetCursorPos();
+						ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
+						const ImVec2 postCursorPos = ImGui::GetCursorPos();
+
+						if (m_VM->IsExecuting())
 						{
-							i32 startOffset = (i32)m_VM->state->instructionBlocks[i].startOffset;
-							i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].instructions.size();
-							if (instIdx >= startOffset &&
-								instIdx < (startOffset + lineCountInBlock))
+							i32 strLineNum = 0;
+							bool bFound = false;
+							i32 instIdx = m_VM->InstructionIndex();
+							for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
 							{
-								bFound = true;
-								strLineNum += (instIdx - startOffset);
-								break;
+								i32 startOffset = (i32)m_VM->state->instructionBlocks[i].startOffset;
+								i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].instructions.size();
+								if (instIdx >= startOffset &&
+									instIdx < (startOffset + lineCountInBlock))
+								{
+									bFound = true;
+									strLineNum += (instIdx - startOffset);
+									break;
+								}
+								strLineNum += lineCountInBlock + 2; // Two additional lines for "label: {\n" & "\n}"
 							}
-							strLineNum += lineCountInBlock + 2; // Two additional lines for "label: {\n" & "\n}"
+
+							if (bFound)
+							{
+								strLineNum += 1;
+								std::string underlineStr = strLineNum == 0 ? "" : std::string(strLineNum, '\n');
+								underlineStr += "____________________";
+								ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
+								ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
+								ImGui::Text("%s", underlineStr.c_str());
+								ImGui::PopStyleColor();
+
+								ImGui::SetCursorPos(postCursorPos);
+							}
+						}
+					}
+
+					if (!m_VM->instructionStr.empty())
+					{
+						ImGui::Separator();
+						ImGui::Text("Instructions");
+
+						if (!m_VM->IsExecuting())
+						{
+							ImGui::SameLine();
+							if (ImGui::Button("Start (F10)"))
+							{
+								m_VM->Execute(true);
+							}
+						}
+						else
+						{
+							ImGui::SameLine();
+							if (ImGui::Button("Step (F10)"))
+							{
+								m_VM->Execute(true);
+							}
+							ImGui::SameLine();
+							if (ImGui::Button("Reset"))
+							{
+								m_VM->ClearRuntimeState();
+							}
 						}
 
-						if (bFound)
+						const ImVec2 preCursorPos = ImGui::GetCursorPos();
+						ImGui::Text("%s", m_VM->instructionStr.c_str());
+						const ImVec2 postCursorPos = ImGui::GetCursorPos();
+
+						if (m_VM->IsExecuting())
 						{
-							strLineNum += 1;
-							std::string underlineStr = strLineNum == 0 ? "" : std::string(strLineNum, '\n');
+							i32 instIdx = m_VM->InstructionIndex();
+							std::string underlineStr = instIdx == 0 ? "" : std::string(instIdx, '\n');
 							underlineStr += "____________________";
 							ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
 							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
@@ -6526,51 +6608,7 @@ namespace flex
 						}
 					}
 				}
-
-				if (!m_VM->instructionStr.empty())
-				{
-					ImGui::Separator();
-					ImGui::Text("Instructions");
-
-					if (!m_VM->IsExecuting())
-					{
-						ImGui::SameLine();
-						if (ImGui::Button("Start (F10)"))
-						{
-							m_VM->Execute(true);
-						}
-					}
-					else
-					{
-						ImGui::SameLine();
-						if (ImGui::Button("Step (F10)"))
-						{
-							m_VM->Execute(true);
-						}
-						ImGui::SameLine();
-						if (ImGui::Button("Reset"))
-						{
-							m_VM->ClearRuntimeState();
-						}
-					}
-
-					const ImVec2 preCursorPos = ImGui::GetCursorPos();
-					ImGui::Text("%s", m_VM->instructionStr.c_str());
-					const ImVec2 postCursorPos = ImGui::GetCursorPos();
-
-					if (m_VM->IsExecuting())
-					{
-						i32 instIdx = m_VM->InstructionIndex();
-						std::string underlineStr = instIdx == 0 ? "" : std::string(instIdx, '\n');
-						underlineStr += "____________________";
-						ImGui::SetCursorPos(ImVec2(preCursorPos.x, preCursorPos.y + 1.0f));
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.35f, 0.25f, 0.7f, 1.0f));
-						ImGui::Text("%s", underlineStr.c_str());
-						ImGui::PopStyleColor();
-
-						ImGui::SetCursorPos(postCursorPos);
-					}
-				}
+				ImGui::EndChild();
 			}
 		}
 		ImGui::End();

@@ -34,6 +34,7 @@ namespace flex
 				BINARY,
 				TERNARY,
 				FUNC_CALL,
+				ARGUMENT,
 				CAST,
 				VOID,
 
@@ -52,6 +53,7 @@ namespace flex
 				"binary",
 				"ternary",
 				"func call",
+				"argument",
 				"cast",
 				"void",
 
@@ -66,6 +68,8 @@ namespace flex
 
 			static bool IsLiteral(Type type);
 			static bool IsNumeric(Type type);
+
+			static bool IsSimple(Type type);
 
 			Value(Span origin, State* irState) :
 				origin(origin),
