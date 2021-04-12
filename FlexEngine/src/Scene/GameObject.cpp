@@ -94,6 +94,10 @@ namespace flex
 	static volatile u32 terrain_workQueueEntriesCompleted = 0;
 	static ThreadSafeArray<TerrainGenerator::TerrainChunkData>* terrain_workQueue = nullptr;
 
+	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
+	static const char* BrakeLightNames[] = { "Left", "Right" };
+	static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Vehicle::Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
+
 	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		m_Name(name),
 		m_TypeID(typeID)
@@ -5555,17 +5559,17 @@ namespace flex
 
 				ImGui::SameLine();
 
-				bool bSolo = soloWave == &waveContributions[i];
+				bool bSolo = soloWaveIndex == i;
 				std::string soloStr = "Solo" + childName;
 				if (ImGui::Checkbox(soloStr.c_str(), &bSolo))
 				{
 					if (bSolo)
 					{
-						soloWave = &waveContributions[i];
+						soloWaveIndex = i;
 					}
 					else
 					{
-						soloWave = nullptr;
+						soloWaveIndex = -1;
 					}
 				}
 
@@ -5806,22 +5810,23 @@ namespace flex
 	void GerstnerWave::SortWaves()
 	{
 		WaveInfo soloWaveCopy;
-		if (soloWave)
+		if (soloWaveIndex != -1)
 		{
-			soloWaveCopy = *soloWave;
+			soloWaveCopy = waveContributions[soloWaveIndex];
 		}
 		std::sort(waveContributions.begin(), waveContributions.end(),
 			[](const WaveInfo& waveA, const WaveInfo& waveB)
 		{
 			return abs(waveA.a) > abs(waveB.a);
 		});
-		if (soloWave)
+		if (soloWaveIndex != -1)
 		{
-			for (const WaveInfo& waveInfo : waveContributions)
+			for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 			{
+				const WaveInfo& waveInfo = waveContributions[i];
 				if (waveInfo == soloWaveCopy)
 				{
-					soloWave = &waveInfo;
+					soloWaveIndex = i;
 					break;
 				}
 			}
@@ -8425,7 +8430,7 @@ namespace flex
 				volatile glm::vec2* uvs = work->uvs;
 				volatile u32* indices = work->indices;
 
-				const u32 vertexCount = vertCountPerChunkAxis * vertCountPerChunkAxis;
+				//const u32 vertexCount = vertCountPerChunkAxis * vertCountPerChunkAxis;
 				//const u32 triCount = ((vertCountPerChunkAxis - 1) * (vertCountPerChunkAxis - 1)) * 2;
 				//const u32 indexCount = triCount * 3;
 
@@ -8446,7 +8451,7 @@ namespace flex
 
 						glm::vec4 colour(height);
 
-						real roadWidth = 0.0f;
+						//real roadWidth = 0.0f;
 						real distToRoad = 99999.0f;
 						glm::vec3 roadTangentAtClosestPoint;
 						glm::vec3 roadCurvePosAtClosestPoint;
@@ -8474,7 +8479,7 @@ namespace flex
 											// Negate when point is on left side of road
 											roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
 										}
-										roadWidth = overlappingRoadSegment->widthStart;
+										//roadWidth = overlappingRoadSegment->widthStart;
 									}
 								}
 							}

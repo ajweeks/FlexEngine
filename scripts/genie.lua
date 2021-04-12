@@ -168,13 +168,15 @@ project "Flex"
 			"-pthread", -- For pthread_create
 			"-L/usr/lib64/",
 			"-ldl", -- For dlopen, etc.
+			"-L/usr/lib64/",
+			"-fsanitize=undefined",
 			"-L/lib/x86_64-linux-gnu/", -- for bzip2
 			"-lbz2",
 			"-fsanitize=undefined",
 		}
 		buildoptions {
 			"-Wfatal-errors",
-			"-march=haswell"
+			"-march=haswell",
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:

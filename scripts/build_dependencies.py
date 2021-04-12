@@ -41,9 +41,13 @@ def run_git(arguments = []):
 	subprocess.check_call(cmd, stderr=subprocess.STDOUT, shell=False)
 
 
+def print_usage():
+	print('Usage: "python ' + sys.argv[0] + ' [platform] [target] [config] <build_extras>"\n'
+			'e.g: "python ' + sys.argv[0] + ' windows vs2019 Debug"')
+
+
 if len(sys.argv) < 4 or len(sys.argv) > 5:
-	print('Usage: "python build_dependencies.py [platform] [target] [config] <build_extras>"\n'
-			'e.g: "python build_dependencies.py windows vs2019 Debug"')
+	print_usage()
 	exit(1)
 
 platform = sys.argv[1]
@@ -54,11 +58,13 @@ build_extras = len(sys.argv) == 5 and sys.argv[4] == 'build_extras'
 supported_configs = ['Debug', 'Release', 'All']
 if in_config not in supported_configs:
 	print('Invalid config specified. Must be one of: ' + ', '.join(supported_configs))
+	print_usage()
 	exit(1)
 
 supported_platforms = ['windows', 'linux']
 if platform not in supported_platforms:
 	print('Invalid platform specified. Must be one of: ' + ', '.join(supported_platforms))
+	print_usage()
 	exit(1)
 
 git_path = git_path_windows if platform == 'windows' else git_path_linux

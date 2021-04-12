@@ -1391,9 +1391,6 @@ namespace flex
 
 	};
 
-	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
-	static const char* BrakeLightNames[] = { "Left", "Right" };
-
 	class Vehicle final : public GameObject
 	{
 	public:
@@ -1431,7 +1428,6 @@ namespace flex
 			_COUNT
 		};
 
-	private:
 		enum class Tire : u32
 		{
 			FL = 0,
@@ -1442,8 +1438,7 @@ namespace flex
 			_NONE
 		};
 
-		static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
-
+	private:
 		static const i32 m_TireCount = 4;
 
 		void CreateRigidBody();

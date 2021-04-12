@@ -240,15 +240,13 @@ namespace flex
 			return false;
 		}
 
-		MeshComponent* meshComponent = nullptr;
-
 		if (bDynamic)
 		{
-			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
+			MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 		}
 		else
 		{
-			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo, bCreateRenderObject);
+			MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo, bCreateRenderObject);
 		}
 
 		CalculateBounds();

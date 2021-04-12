@@ -49,7 +49,7 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo eopkg upgrade`
-  - `sudo eopkg install gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel`
+  - `sudo eopkg install gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel openal-soft-devel libpng-devel bzip2-devel`
   - `sudo eopkg install -c system.devel uuid-dev`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
