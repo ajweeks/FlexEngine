@@ -840,6 +840,7 @@ namespace flex
 		real blendDist = 10.0f;
 		bool bDisableLODs = false;
 		u32 maxChunkVertCountPerAxis = 64;
+		real reverseWaveAmplitude = 0.5f;
 
 		OceanData oceanData;
 

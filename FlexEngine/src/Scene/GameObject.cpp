@@ -80,7 +80,7 @@ namespace flex
 
 	ChildIndex InvalidChildIndex = ChildIndex({});
 
-#define SIMD_WAVES 1
+#define SIMD_WAVES 0
 
 	// Wave generation globals accessed from threads
 	static volatile u32 wave_workQueueEntriesCreated = 0;
@@ -4791,6 +4791,16 @@ namespace flex
 								-waveVecN.x * waveInfo.a * s,
 								waveInfo.a * c,
 								-waveVecN.y * waveInfo.a * s);
+
+							real reversePhaseOffset = fmod(abs(waveVec.x + 1.0f) * 29193.123456f, 1.0f);
+							glm::vec2 waveVecR(-waveVec);
+							real dr = waveVecR.x * positions[vertIdx].x + waveVecR.y * positions[vertIdx].z; // Inline dot
+							real cr = cos(dr + waveInfo.accumOffset + reversePhaseOffset);
+							real sr = sin(dr + waveInfo.accumOffset + reversePhaseOffset);
+							positions[vertIdx] += glm::vec3(
+								-waveVecN.x * waveInfo.a * sr * reverseWaveAmplitude,
+								waveInfo.a * cr * reverseWaveAmplitude,
+								-waveVecN.y * waveInfo.a * sr * reverseWaveAmplitude);
 						}
 					}
 				}
@@ -5368,6 +5378,9 @@ namespace flex
 			}
 		}
 
+		ImGui::SliderFloat("Reverse wave amp", &reverseWaveAmplitude, 0.0f, 2.0f);
+
+		// TODO: Remove
 		ImGuiExt::ColorEdit3Gamma("Top", &oceanData.top.x);
 		ImGuiExt::ColorEdit3Gamma("Mid", &oceanData.mid.x);
 		ImGuiExt::ColorEdit3Gamma("Bottom", &oceanData.btm.x);

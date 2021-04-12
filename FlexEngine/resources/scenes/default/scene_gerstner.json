@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "Scene Gerstner",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.54, 0.75, 0.95, 0.00",
-		"mid colour" : "0.41, 0.56, 0.66, 0.00",
-		"btm colour" : "0.41, 0.56, 0.66, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -21,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "51.588, 7.863, 59.260",
-			"pitch" : -0.044222,
-			"yaw" : -2.172696
+			"position" : "50.729, 4.326, 45.601",
+			"pitch" : -0.150249,
+			"yaw" : -2.487423
 		}
 	},
 	"objects" : 
@@ -34,9 +28,6 @@
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,28 +40,28 @@
 			"name" : "Reflection Probe 01",
 			"id" : "37FA95F9BFAF47AD4C9E3BF2DB7F7643",
 			"type" : "reflection probe",
-			"visible" : false,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
-			}
+			},
+			"visible" : false,
+			"casts shadow" : true
 		},
 		{
 			"name" : "Directional Light",
 			"id" : "A4291E50B494F4B54F45C73D2AEC4901",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "-0.002, 1.296, 1.308"
+				"pos" : "0.638, 20.078, -1.444",
+				"rot" : "-0.002, 1.296, -1.698"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "-0.368, 0.479, 0.485, 0.632",
-				"pos" : "0.000, 15.000, 0.000",
+				"rotation" : "0.452, 0.399, -0.598, 0.527",
+				"pos" : "0.638, 20.078, -1.444",
 				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 2.578000,
@@ -84,72 +75,57 @@
 			"type" : "gerstner wave",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"gerstner wave" : 
 			{
 				"waves" : 
 				[
 					{
 						"enabled" : true,
-						"amplitude" : 1.400000,
-						"waveDir" : 0.384000,
-						"waveLen" : 95.839996
+						"amplitude" : 1.170000,
+						"waveDir" : 1.491000,
+						"waveLen" : 200.000000
+					},
+					{
+						"enabled" : true,
+						"amplitude" : 0.550000,
+						"waveDir" : 2.561000,
+						"waveLen" : 100.000000
 					},
 					{
 						"enabled" : true,
 						"amplitude" : 0.300000,
-						"waveDir" : 2.832000,
-						"waveLen" : 19.190001
+						"waveDir" : 0.010000,
+						"waveLen" : 50.000000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.180000,
-						"waveDir" : 0.000000,
-						"waveLen" : 20.350000
+						"amplitude" : 0.250000,
+						"waveDir" : 1.813000,
+						"waveLen" : 25.000000
 					},
 					{
 						"enabled" : true,
 						"amplitude" : 0.120000,
-						"waveDir" : 1.700000,
-						"waveLen" : 8.690000
+						"waveDir" : 2.682000,
+						"waveLen" : 12.000000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.090000,
-						"waveDir" : 3.120000,
-						"waveLen" : 6.730000
+						"amplitude" : 0.060000,
+						"waveDir" : 0.182000,
+						"waveLen" : 6.000000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : 0.070000,
-						"waveDir" : 0.856000,
-						"waveLen" : 15.360000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.055000,
-						"waveDir" : -1.936000,
-						"waveLen" : 2.150000
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.050000,
+						"amplitude" : 0.030000,
 						"waveDir" : 0.968000,
-						"waveLen" : 4.040000
+						"waveLen" : 3.000000
 					},
 					{
 						"enabled" : true,
-						"amplitude" : -0.050000,
-						"waveDir" : 0.309000,
-						"waveLen" : 47.830002
-					},
-					{
-						"enabled" : true,
-						"amplitude" : 0.040000,
-						"waveDir" : -1.332000,
-						"waveLen" : 4.720000
+						"amplitude" : 0.015000,
+						"waveDir" : 0.121000,
+						"waveLen" : 1.500000
 					}
 				],
 				"max chunk vert count per axis" : 96,
@@ -184,12 +160,12 @@
 			"name" : "PointLight_00",
 			"id" : "1A7273F28FFB93AE4CC39F5F8CA6E410",
 			"type" : "point light",
-			"visible" : false,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 26.277, -16.438"
 			},
+			"visible" : false,
+			"casts shadow" : true,
 			"point light info" : 
 			{
 				"pos" : "0.000, 26.277, -16.438",
@@ -202,12 +178,12 @@
 			"name" : "PointLight_01",
 			"id" : "FB8EFADB928129954EE21986E495E377",
 			"type" : "point light",
-			"visible" : false,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 21.528, 14.364"
 			},
+			"visible" : false,
+			"casts shadow" : true,
 			"point light info" : 
 			{
 				"pos" : "0.000, 21.528, 14.364",
