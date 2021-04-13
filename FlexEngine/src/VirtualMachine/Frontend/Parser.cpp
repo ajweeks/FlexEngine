@@ -1391,6 +1391,17 @@ namespace flex
 
 		bool Parser::NextIsBinaryOperator()
 		{
+			// Handle "x-1" case where there's no whitespace between numbers
+			if (NextIs(TokenKind::INT_LITERAL) || NextIs(TokenKind::FLOAT_LITERAL))
+			{
+				if (!m_Current.value.empty() && m_Current.value[0] == '-')
+				{
+					m_Current.kind = TokenKind::MINUS;
+					m_Lexer->Backtrack();
+					return true;
+				}
+			}
+
 			return NextIs(TokenKind::PLUS) ||
 				NextIs(TokenKind::MINUS) ||
 				NextIs(TokenKind::STAR) ||
@@ -1538,20 +1549,6 @@ namespace flex
 
 				TypeName typeName = TokenKindToTypeName(typeToken.kind);
 
-				if (NextIs(TokenKind::CLOSE_PAREN))
-				{
-					span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
-					Expression* target = NextPrimary();
-					if (target != nullptr)
-					{
-						if (target->typeName == typeName)
-						{
-							return target;
-						}
-						return new Cast(span, typeName, target);
-					}
-				}
-
 				if (NextIs(TokenKind::OPEN_SQUARE))
 				{
 					Eat(TokenKind::OPEN_SQUARE);
@@ -1580,13 +1577,37 @@ namespace flex
 			else if (NextIs(TokenKind::OPEN_PAREN))
 			{
 				Eat(TokenKind::OPEN_PAREN);
-				Expression* subexpression = NextExpression();
-				// TODO: Require matching paren
-				if (NextIs(TokenKind::CLOSE_PAREN))
+
+				// Cast
+				if (NextIsTypename())
 				{
-					Eat(TokenKind::CLOSE_PAREN);
+					Token typeToken = Eat(m_Current.kind);
+
+					if (NextIs(TokenKind::CLOSE_PAREN))
+					{
+						Span span = m_Current.span;
+
+						TypeName typeName = TokenKindToTypeName(typeToken.kind);
+
+						span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
+						Expression* target = NextPrimary();
+						if (target != nullptr)
+						{
+							// Ignore redundant casts
+							if (target->typeName == typeName)
+							{
+								return target;
+							}
+							return new Cast(span, typeName, target);
+						}
+					}
 				}
-				return subexpression;
+				else
+				{
+					Expression* subexpression = NextExpression();
+					Eat(TokenKind::CLOSE_PAREN);
+					return subexpression;
+				}
 			}
 			else if (NextIs(TokenKind::INT_LITERAL))
 			{

@@ -6442,7 +6442,7 @@ namespace flex
 					{
 						ImGui::Text("Registers");
 						ImGui::BeginColumns("registers-columns", 2, ImGuiColumnsFlags_NoResize);
-						real colWidth = 100.0f;
+						real colWidth = regionAvail.x / 4.0f - 2.0f;
 						ImGui::SetColumnWidth(0, colWidth);
 						ImGui::SetColumnWidth(1, colWidth);
 						for (u32 i = 0; i < (u32)m_VM->registers.size(); ++i)
@@ -7061,6 +7061,7 @@ namespace flex
 
 	void Terminal::EvaluateCode()
 	{
+		m_VM->ClearRuntimeState();
 		m_VM->Execute();
 	}
 

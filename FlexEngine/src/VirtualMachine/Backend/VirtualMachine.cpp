@@ -470,7 +470,9 @@ namespace flex
 					currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper), binary->origin);
 					opCode = bInvCondition ? InverseOpCode(opCode) : opCode;
 					i32 jumpBlockIndex = (i32)(bInvCondition ? ifFalseBlockIndex : ifTrueBlockIndex);
+					i32 jumpBlockIndexOther = (i32)(bInvCondition ? ifTrueBlockIndex : ifFalseBlockIndex);
 					currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))), binary->origin);
+					currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndexOther))), binary->origin);
 				}
 			} break;
 			}
@@ -851,6 +853,7 @@ namespace flex
 
 			if (m_RunningState.instructionIdx == -1)
 			{
+				ClearRuntimeState();
 				m_RunningState.instructionIdx = 0;
 				m_RunningState.terminated = false;
 				if (bSingleStep)
@@ -915,9 +918,24 @@ namespace flex
 					}
 				} break;
 				case OpCode::PUSH:
+					if (stack.size() >= MAX_STACK_HEIGHT)
+					{
+						std::string errorMessage = "Stack overflow (reached max value: " + IntToString(MAX_STACK_HEIGHT) + ")";
+						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), errorMessage);
+						m_RunningState.terminated = true;
+						break;
+					}
 					stack.push(inst.val0.Get(this));
 					break;
 				case OpCode::POP:
+					if (stack.empty())
+					{
+						std::string errorMessage = "Mismatched stack pop (attempted to pop from empty stack)";
+						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), errorMessage);
+						m_RunningState.terminated = true;
+						break;
+					}
+
 					if (inst.val0.Valid())
 					{
 						if (inst.val0.type == VM::ValueWrapper::Type::REGISTER)
@@ -1071,6 +1089,7 @@ namespace flex
 			ZeroOutTerminalOutputs();
 			ClearStack();
 			ExternalFuncTable.clear();
+			diagnosticContainer->diagnostics.clear();
 		}
 
 		bool VirtualMachine::ZeroFlagSet() const
@@ -1148,12 +1167,12 @@ namespace flex
 		{
 			switch (opType)
 			{
-			case IR::BinaryOperatorType::EQUAL_TEST: return OpCode::JEQ;
-			case IR::BinaryOperatorType::NOT_EQUAL_TEST: return OpCode::JNE;
-			case IR::BinaryOperatorType::GREATER_TEST: return OpCode::JGT;
-			case IR::BinaryOperatorType::GREATER_EQUAL_TEST: return OpCode::JGE;
-			case IR::BinaryOperatorType::LESS_TEST: return OpCode::JLT;
-			case IR::BinaryOperatorType::LESS_EQUAL_TEST: return OpCode::JLE;
+			case IR::BinaryOperatorType::EQUAL_TEST:			return OpCode::JEQ;
+			case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return OpCode::JNE;
+			case IR::BinaryOperatorType::GREATER_TEST:			return OpCode::JGT;
+			case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return OpCode::JGE;
+			case IR::BinaryOperatorType::LESS_TEST:				return OpCode::JLT;
+			case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return OpCode::JLE;
 			default:
 			{
 

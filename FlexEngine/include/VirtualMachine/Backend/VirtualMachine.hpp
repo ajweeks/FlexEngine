@@ -277,6 +277,7 @@ namespace flex
 			bool SignFlagSet() const;
 
 			static const i32 REGISTER_COUNT = 32;
+			static const i32 MAX_STACK_HEIGHT = 2048;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
 			static ValueWrapper g_ZeroIntValueWrapper;

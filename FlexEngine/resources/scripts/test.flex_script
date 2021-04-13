@@ -1,3 +1,10 @@
+func recurse(int val, int depth) -> int {
+  if (depth > 0) {
+    return val * recurse(val, depth - 1);
+  }
+  return val;
+}
+
 func do_math(float val0, int add, float mul)
   -> float {
   float result = val0;
@@ -14,12 +21,10 @@ func double(int num) -> int {
   return num * 2;
 }
 
-int twelve = double(6);
-int twenty_four = double(twelve);
-int five_seven_six = square(twenty_four);
-
-out_0 = five_seven_six;
+out_0 = recurse(5, 5-1);
 
 float r = do_math(10.0, 2, (float)40);
 out_1 = (int)r;
+
+
 

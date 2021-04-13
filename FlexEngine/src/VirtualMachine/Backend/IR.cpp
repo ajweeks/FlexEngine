@@ -782,6 +782,11 @@ namespace flex
 
 		void IntermediateRepresentation::CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block)
 		{
+			if (block == nullptr)
+			{
+				return;
+			}
+
 			if (block->terminator != nullptr)
 			{
 				switch (block->terminator->type)
@@ -1467,6 +1472,10 @@ namespace flex
 				if (returnStatement->returnValue != nullptr)
 				{
 					IR::Value* loweredVal = LowerExpression(returnStatement->returnValue);
+					if (loweredVal == nullptr)
+					{
+						return nullptr;
+					}
 					if (IR::Value::IsSimple(loweredVal->type))
 					{
 						state->InsertionBlock()->AddReturn(returnStatement->span, loweredVal);
