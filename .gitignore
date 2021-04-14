@@ -22,6 +22,8 @@ FlexEngine/dependencies/shaderc**
 
 AdditionalFiles/flex-cppcheck-build-dir/**
 AdditionalFiles/FlexVTune/**
+AdditionalFiles/flex/**
+!AdditionalFiles/flex/*.ngfx-proj
 
 build/**
 
