@@ -970,6 +970,9 @@ namespace flex
 		void MoveCursorRight(bool bSkipToNextBreak = false);
 		void MoveCursorUp();
 		void MoveCursorDown();
+		void ScrollCursorToView();
+		void PageUp();
+		void PageDown();
 
 		void ClampCursorX();
 
@@ -1010,6 +1013,8 @@ namespace flex
 		// Keeps track of the cursor x to be able to position the cursor correctly
 		// after moving from a long line, over a short line, onto a longer line again
 		i32 cursorMaxX = 0;
+		real scrollY = 0.0f;
+		i32 screenRowCount = 31;
 
 		TerminalCamera* m_Camera = nullptr;
 		//const i32 m_Columns = 45;

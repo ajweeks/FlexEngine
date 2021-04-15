@@ -6239,7 +6239,7 @@ namespace flex
 			if (bRenderCursor)
 			{
 				glm::vec3 cursorPos = pos;
-				cursorPos += (right * (charWidth * (-cursor.x + 0.5f))) + up * (cursor.y * -lineHeight);
+				cursorPos += (right * (charWidth * (-cursor.x + 0.5f))) + up * ((cursor.y - scrollY) * -lineHeight);
 				g_Renderer->DrawStringWS("|", VEC4_ONE, cursorPos, rot, letterSpacing, m_LetterScale);
 			}
 
@@ -6253,7 +6253,10 @@ namespace flex
 				static const glm::vec4 commentColour(0.35f, 0.35f, 0.35f, 1.0f);
 
 				glm::vec3 firstLinePos = pos;
-				for (i32 lineNumber = 0; lineNumber < (i32)lines.size(); ++lineNumber)
+				i32 lineCount = (i32)lines.size();
+				i32 firstRenderedLineIndex = (i32)scrollY;
+				i32 lastRenderedLineIndex = firstRenderedLineIndex + glm::min(lineCount - (i32)scrollY, screenRowCount);
+				for (i32 lineNumber = firstRenderedLineIndex; lineNumber < lastRenderedLineIndex; ++lineNumber)
 				{
 					std::string line = lines[lineNumber];
 					size_t lineCommentIdx = line.find("//");
@@ -6682,6 +6685,7 @@ namespace flex
 		}
 
 		cursor.x = cursor.y = cursorMaxX = 0;
+		scrollY = 0.0f;
 		m_CursorBlinkTimer = 0.0f;
 		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->LoadScript(m_ScriptFileName, lines);
 		ParseCode();
@@ -6751,6 +6755,7 @@ namespace flex
 			cursor.y += 1;
 			cursor.x = 0;
 			ClampCursorX();
+			ScrollCursorToView();
 			cursorMaxX = cursor.x;
 		}
 		else
@@ -6860,6 +6865,7 @@ namespace flex
 		cursor.y = 0;
 		cursor.x = 0;
 		cursorMaxX = cursor.x;
+		scrollY = 0.0f;
 	}
 
 	void Terminal::MoveCursorToStartOfLine()
@@ -6882,6 +6888,9 @@ namespace flex
 			cursor.x = cursor.y = 0;
 		}
 		cursorMaxX = cursor.x;
+
+		i32 lineCount = (i32)lines.size();
+		scrollY = (real)(lineCount - glm::min(lineCount, (i32)screenRowCount));
 	}
 
 	void Terminal::MoveCursorToEndOfLine()
@@ -6974,7 +6983,7 @@ namespace flex
 		{
 			cursor.y -= 1;
 			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
-			ClampCursorX();
+			ScrollCursorToView();
 		}
 	}
 
@@ -6990,7 +6999,58 @@ namespace flex
 		{
 			cursor.y += 1;
 			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
-			ClampCursorX();
+			ScrollCursorToView();
+		}
+	}
+
+	void Terminal::ScrollCursorToView()
+	{
+		i32 cursorYInScreen = (i32)(cursor.y - scrollY);
+		if (cursorYInScreen < 0)
+		{
+			// Scrolled up past top of screen
+			scrollY = (real)cursor.y;
+
+			// We've deleted the bottom-most line, so only one will be visible now,
+			// Scroll up a (nearly) full page length
+			if ((i32)scrollY == ((i32)lines.size() - 1))
+			{
+				scrollY = glm::max(0.0f, scrollY - (real)(screenRowCount - 1));
+			}
+		}
+		else if (cursorYInScreen >= screenRowCount)
+		{
+			// Scrolled down past bottom of screen
+			scrollY = (real)(cursor.y - screenRowCount + 1);
+		}
+	}
+
+	void Terminal::PageUp()
+	{
+		if (cursor.y < screenRowCount)
+		{
+			MoveCursorToStart();
+		}
+		else
+		{
+			cursor.y -= screenRowCount;
+			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
+			scrollY = glm::max(0.0f, scrollY - (real)screenRowCount);
+		}
+	}
+
+	void Terminal::PageDown()
+	{
+		i32 lineCount = (i32)lines.size();
+		if (cursor.y >= (lineCount - screenRowCount - 1))
+		{
+			MoveCursorToEnd();
+		}
+		else
+		{
+			cursor.y += screenRowCount;
+			cursor.x = glm::min(glm::max(cursor.x, cursorMaxX), (i32)lines[cursor.y].size());
+			scrollY = glm::min((real)(lineCount - screenRowCount - 1), scrollY + (real)screenRowCount);
 		}
 	}
 
@@ -7089,28 +7149,38 @@ namespace flex
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
 				const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 				const bool bCtrlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
-				if (keyCode == KeyCode::KEY_F7)
+				if (keyCode == KeyCode::KEY_PAGE_UP)
+				{
+					PageUp();
+					return EventReply::CONSUMED;
+				}
+				else if (keyCode == KeyCode::KEY_PAGE_DOWN)
+				{
+					PageDown();
+					return EventReply::CONSUMED;
+				}
+				else if (keyCode == KeyCode::KEY_F7)
 				{
 					ParseCode();
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_F5)
+				else if (keyCode == KeyCode::KEY_F5)
 				{
 					ParseCode();
 					EvaluateCode();
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_F10)
+				else if (keyCode == KeyCode::KEY_F10)
 				{
 					m_VM->Execute(true);
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_ESCAPE)
+				else if (keyCode == KeyCode::KEY_ESCAPE)
 				{
 					m_Camera->TransitionOut();
 					return EventReply::CONSUMED;
 				}
-				if (keyCode == KeyCode::KEY_SLASH)
+				else if (keyCode == KeyCode::KEY_SLASH)
 				{
 					if (bCtrlDown) // Comment line
 					{
@@ -7152,6 +7222,7 @@ namespace flex
 					}
 					return EventReply::CONSUMED;
 				}
+
 				if ((i32)keyCode >= (i32)KeyCode::KEY_APOSTROPHE && (i32)keyCode <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];
