@@ -273,7 +273,7 @@ namespace flex
 			}
 
 			// Call
-			Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcUID)));
+			Instruction inst(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcUID)));
 			currentInstBlock.PushBack(inst, funcCallValue->origin);
 
 			// Resume point
@@ -444,6 +444,9 @@ namespace flex
 				case IR::BinaryOperatorType::BIN_XOR:
 					opCode = OpCode::XOR;
 					break;
+				case IR::BinaryOperatorType::ADD:
+
+					break;
 				case IR::BinaryOperatorType::BOOLEAN_AND:
 				{
 					HandleComparison(ir, binary->left, ifTrueBlockIndex, ifFalseBlockIndex, true);
@@ -464,6 +467,12 @@ namespace flex
 
 				if (!bHandled)
 				{
+					if (opCode == OpCode::_NONE)
+					{
+						ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Invalid comparison");
+						return;
+					}
+
 					ValueWrapper lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
 					ValueWrapper rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
 
@@ -474,6 +483,22 @@ namespace flex
 					currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))), binary->origin);
 					currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndexOther))), binary->origin);
 				}
+			} break;
+			case IR::Value::Type::IDENTIFIER:
+			case IR::Value::Type::FUNC_CALL:
+			case IR::Value::Type::CAST:
+			case IR::Value::Type::UNARY:
+			{
+				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Unhandled conditional");
+				//ValueWrapper conditionWrapper = GetValueWrapperFromIRValue(ir->state, condition);
+				//ValueWrapper zeroWrapper = GetValueWrapperFromIRValue(ir->state, condition);
+				//currentInstBlock.PushBack(Instruction(OpCode::CMP, conditionWrapper, rhsWrapper), condition->origin);
+				//currentInstBlock.PushBack(Instruction(OpCode::JNE, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))), binary->origin);
+				//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndexOther))), binary->origin);
+			} break;
+			default:
+			{
+				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Unhandled conditional type");
 			} break;
 			}
 		}
@@ -696,7 +721,7 @@ namespace flex
 
 						i32 thenBlockIndex = conditional->then->index;
 						// TODO: +1?
-						i32 otherwiseBlockIndex = conditional->otherwise ? conditional->otherwise->index : conditional->then->index + 1;
+						i32 otherwiseBlockIndex = conditional->otherwise != nullptr ? conditional->otherwise->index : conditional->then->index + 1;
 						HandleComparison(ir, conditional->condition, thenBlockIndex, otherwiseBlockIndex, false);
 
 						//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)ifFalseBlock->index))));
@@ -889,6 +914,7 @@ namespace flex
 				case OpCode::MOD:
 					inst.val0.GetW(this) = inst.val1.Get(this) % inst.val2.Get(this);
 					break;
+					// TODO:
 					//case OpCode::INV:
 					//case OpCode::AND:
 					//case OpCode::OR:

@@ -266,6 +266,10 @@ namespace flex
 			case Value::Type::FLOAT:
 				result.valFloat = lhs.AsFloat() - rhs.AsFloat();
 				break;
+			case Value::Type::BOOL:
+				// Used by compare operator
+				result.valBool = (lhs.AsBool() != rhs.AsBool()) ? 1 : 0;
+				break;
 			default:
 				PrintError("Attempted to subtract non-numeric types!\n");
 				break;

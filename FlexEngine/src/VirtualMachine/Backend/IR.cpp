@@ -908,8 +908,105 @@ namespace flex
 					Block* mergeBlock = new Block(state, state->InsertionBlock()->origin);
 					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(state, ifStatement->otherwise->span);
 
-					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, LowerExpression(ifStatement->condition), ifTrueBlock, ifFalseBlock);
+					IR::Value* conditionExpr = LowerExpression(ifStatement->condition);
+					if (conditionExpr == nullptr)
+					{
+						return;
+					}
 
+					bool bAlwaysTakeTrue = false;
+					bool bAlwaysTakeFalse = false;
+
+					// Eliminate dead branches
+					if (conditionExpr->type == IR::Value::Type::INT ||
+						conditionExpr->type == IR::Value::Type::FLOAT ||
+						conditionExpr->type == IR::Value::Type::BOOL)
+					{
+						if (conditionExpr->AsInt() == 0)
+						{
+							bAlwaysTakeFalse = true;
+						}
+						else
+						{
+							bAlwaysTakeTrue = true;
+						}
+					}
+					else if (conditionExpr->type == IR::Value::Type::STRING ||
+							conditionExpr->type == IR::Value::Type::CHAR)
+					{
+						state->diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid conditional expression");
+						return;
+					}
+
+					if (bAlwaysTakeTrue)
+					{
+						delete conditionExpr;
+						conditionExpr = nullptr;
+						delete ifFalseBlock;
+						ifFalseBlock = nullptr;
+
+						state->InsertionBlock()->AddBranch(ifStatement->span, ifTrueBlock);
+						state->PushInstructionBlock(ifTrueBlock);
+						LowerStatement(ifStatement->then);
+						state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
+						state->InsertionBlock()->SealBlock();
+						state->PushInstructionBlock(mergeBlock);
+						return;
+					}
+
+					if (bAlwaysTakeFalse)
+					{
+						delete conditionExpr;
+						conditionExpr = nullptr;
+						delete ifTrueBlock;
+						ifTrueBlock = nullptr;
+
+						if (ifStatement->otherwise != nullptr)
+						{
+							state->InsertionBlock()->AddBranch(ifStatement->span, ifFalseBlock);
+							state->PushInstructionBlock(ifFalseBlock);
+							LowerStatement(ifStatement->otherwise);
+							state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
+							state->InsertionBlock()->SealBlock();
+							state->PushInstructionBlock(mergeBlock);
+						}
+						else
+						{
+							delete ifFalseBlock;
+							ifFalseBlock = nullptr;
+						}
+						return;
+					}
+
+					IR::Value::Type valueType = state->GetValueType(conditionExpr);
+
+					std::string tempIdent = state->NextTemporary();
+					state->WriteVariableInBlock(tempIdent, conditionExpr);
+
+					IR::Identifier* newTemp = new IR::Identifier(state, conditionExpr->origin, tempIdent);
+					IR::Value* zeroConst;
+					if (valueType == IR::Value::Type::INT)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, 0);
+					}
+					else if (valueType == IR::Value::Type::FLOAT)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, 0.0f);
+					}
+					else if (valueType == IR::Value::Type::BOOL)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, false);
+					}
+					else
+					{
+						std::string ifString = ifStatement->condition->ToString();
+						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
+						return;
+					}
+
+					conditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
+
+					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, conditionExpr, ifTrueBlock, ifFalseBlock);
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);
 					state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);

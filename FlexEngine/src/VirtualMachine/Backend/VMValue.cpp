@@ -38,6 +38,7 @@ namespace flex
 			{
 			case Type::INT:		return valInt == 0;
 			case Type::FLOAT:	return valFloat == 0.0f;
+			case Type::BOOL:	return valBool == 0;
 			default:
 			{
 				PrintError("Value::IsZero called on non-numeric type\n");
@@ -53,9 +54,10 @@ namespace flex
 			{
 			case Type::INT:		return valInt > 0;
 			case Type::FLOAT:	return valFloat > 0.0f;
+			case Type::BOOL:	return valBool > 0;
 			default:
 			{
-				PrintError("Value::IsZero called on non-numeric type\n");
+				PrintError("Value::IsPositive called on non-numeric type\n");
 				return false;
 			}
 			}
@@ -194,6 +196,10 @@ namespace flex
 				break;
 			case Value::Type::FLOAT:
 				result.valFloat = lhs.valFloat - rhs.valFloat;
+				break;
+			case Value::Type::BOOL:
+				// Used by compare operator
+				result.valBool = (lhs.valBool != rhs.valBool) ? 1 : 0;
 				break;
 			default:
 				PrintError("Attempted to subtract non-numeric types!\n");
