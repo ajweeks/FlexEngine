@@ -282,6 +282,7 @@ namespace flex
 		case SID("glass pane"): return new GlassPane(objectName, gameObjectID);
 		case SID("point light"): return new PointLight(objectName, gameObjectID);
 		case SID("spot light"): return new SpotLight(objectName, gameObjectID);
+		case SID("area light"): return new AreaLight(objectName, gameObjectID);
 		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID);
 		case SID("cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateCart(objectName, gameObjectID);
 		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
@@ -431,6 +432,11 @@ namespace flex
 			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
+		}
+
+		if (m_Name == "Spinner")
+		{
+			m_Transform.SetWorldRotation(glm::quat(glm::vec3(0.0f, g_SecElapsedSinceProgramStart, 0.0f)));
 		}
 
 		// Clear every frame
@@ -1107,8 +1113,8 @@ namespace flex
 		{
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
-				~CopyFlags::ADD_TO_SCENE &
-				~CopyFlags::CREATE_RENDER_OBJECT)
+					~CopyFlags::ADD_TO_SCENE &
+					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
 			g_SceneManager->CurrentScene()->UnregisterGameObject(previousPrefabTemplate->ID);
@@ -1398,7 +1404,12 @@ namespace flex
 
 		if (bSerializePrefabData)
 		{
-			object.fields.emplace_back("type", JSONValue(BaseScene::GameObjectTypeIDToString(m_TypeID)));
+			std::string typeIDStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+			if (typeIDStr.empty())
+			{
+				PrintWarn("Prefab type not serialized, unknown typeID: %llu\n", m_TypeID);
+			}
+			object.fields.emplace_back("type", JSONValue(typeIDStr));
 		}
 		else
 		{
@@ -1413,7 +1424,12 @@ namespace flex
 			}
 			else
 			{
-				object.fields.emplace_back("type", JSONValue(BaseScene::GameObjectTypeIDToString(m_TypeID)));
+				std::string typeIDStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+				if (typeIDStr.empty())
+				{
+					PrintWarn("Object type not serialized, unknown typeID: %llu\n", m_TypeID);
+				}
+				object.fields.emplace_back("type", JSONValue(typeIDStr));
 			}
 		}
 
@@ -3899,6 +3915,232 @@ namespace flex
 		parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
 	}
 
+	AreaLight::AreaLight(BaseScene* scene) :
+		AreaLight(scene->GetUniqueObjectName("AreaLight_", 2))
+	{
+	}
+
+	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("area light"), gameObjectID)
+	{
+		data.enabled = 1;
+		data.colour = VEC4_ONE;
+		data.brightness = 500.0f;
+		UpdatePoints();
+	}
+
+	GameObject* AreaLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+
+		if (g_Renderer->GetNumAreaLights() >= MAX_AREA_LIGHT_COUNT)
+		{
+			PrintError("Failed to duplicate area light, max number already in scene (%i)\n", MAX_AREA_LIGHT_COUNT);
+			return nullptr;
+		}
+
+		AreaLight* newGameObject = new AreaLight(newObjectName, newGameObjectID);
+
+		memcpy(&newGameObject->data, &data, sizeof(AreaLightData));
+		// newGameObject->areaLightID will be filled out in Initialize
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	void AreaLight::Initialize()
+	{
+		areaLightID = g_Renderer->RegisterAreaLight(&data);
+
+		m_Transform.updateParentOnStateChange = true;
+
+		GameObject::Initialize();
+	}
+
+	void AreaLight::Destroy(bool bDetachFromParent)
+	{
+		g_Renderer->RemoveAreaLight(areaLightID);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void AreaLight::Update()
+	{
+		if (sockets.size() >= 1)
+		{
+			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			if (receivedSignal != -1)
+			{
+				m_bVisible = receivedSignal == 1;
+				data.enabled = m_bVisible ? 1 : 0;
+				g_Renderer->UpdateAreaLightData(areaLightID, &data);
+			}
+		}
+
+		if (data.enabled)
+		{
+			UpdatePoints();
+
+			g_Renderer->UpdateAreaLightData(areaLightID, &data);
+
+			if (g_EngineInstance->IsRenderingEditorObjects())
+			{
+				PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+				btVector3 lineColour(0.1f, 0.8f, 0.1f);
+				btVector3 p0(ToBtVec3(data.points[0]));
+				btVector3 p1(ToBtVec3(data.points[1]));
+				btVector3 p2(ToBtVec3(data.points[2]));
+				btVector3 p3(ToBtVec3(data.points[3]));
+				btVector3 center(ToBtVec3((data.points[0] + data.points[1] + data.points[2] + data.points[3]) / 4.0f));
+				glm::vec3 dir = glm::normalize(glm::cross(glm::vec3(data.points[1]) - glm::vec3(data.points[0]), glm::vec3(data.points[2]) - glm::vec3(data.points[0])));
+				btVector3 dirBt = ToBtVec3(dir);
+				debugDrawer->drawLine(p0, p1, lineColour);
+				debugDrawer->drawLine(p1, p2, lineColour);
+				debugDrawer->drawLine(p2, p3, lineColour);
+				debugDrawer->drawLine(p3, p0, lineColour);
+
+				debugDrawer->drawLine(center, center + dirBt, lineColour);
+
+				//BaseCamera* cam = g_CameraManager->CurrentCamera();
+				//
+				//if (!cam->bIsGameplayCam)
+				//{
+				//	const real minSpriteDist = 1.5f;
+				//	const real maxSpriteDist = 3.0f;
+				//
+				//	glm::vec3 scale(1.0f, -1.0f, 1.0f);
+				//
+				//	SpriteQuadDrawInfo drawInfo = {};
+				//	drawInfo.bScreenSpace = false;
+				//	drawInfo.bReadDepth = true;
+				//	drawInfo.scale = scale;
+				//	drawInfo.materialID = g_Renderer->m_SpriteMatWSID;
+				//
+				//	glm::vec3 camPos = cam->position;
+				//	glm::vec3 camUp = cam->up;
+				//
+				//	drawInfo.textureID = g_Renderer->areaLightIconID;
+				//	// TODO: Sort back to front? Or clear depth and then enable depth test
+				//	drawInfo.pos = m_Transform.GetWorldPosition();
+				//	glm::mat4 rotMat = glm::lookAt(drawInfo.pos, camPos, camUp);
+				//	drawInfo.rotation = glm::conjugate(glm::toQuat(rotMat));
+				//	real alpha = Saturate(glm::distance(drawInfo.pos, camPos) / maxSpriteDist - minSpriteDist);
+				//	drawInfo.colour = glm::vec4(data.colour * 1.5f, alpha);
+				//	g_Renderer->EnqueueSprite(drawInfo);
+				//}
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void AreaLight::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		if (areaLightID != InvalidAreaLightID)
+		{
+			static const ImGuiColorEditFlags colorEditFlags =
+				ImGuiColorEditFlags_NoInputs |
+				ImGuiColorEditFlags_Float |
+				ImGuiColorEditFlags_RGB |
+				ImGuiColorEditFlags_PickerHueWheel |
+				ImGuiColorEditFlags_HDR;
+
+			ImGui::Text("Area Light");
+			bool bRemovedAreaLight = false;
+			bool bEditedAreaLightData = false;
+
+			if (!bRemovedAreaLight)
+			{
+				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				{
+					bEditedAreaLightData = true;
+					data.enabled = m_bVisible ? 1 : 0;
+				}
+
+				ImGui::SameLine();
+				bEditedAreaLightData |= ImGui::ColorEdit4("Colour ", &data.colour.r, colorEditFlags);
+				bEditedAreaLightData |= ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 1000.0f);
+
+				if (bEditedAreaLightData)
+				{
+					g_Renderer->UpdateAreaLightData(areaLightID, &data);
+				}
+			}
+		}
+	}
+
+	void AreaLight::SetVisible(bool bVisible, bool bEffectChildren)
+	{
+		data.enabled = (bVisible ? 1 : 0);
+		GameObject::SetVisible(bVisible, bEffectChildren);
+		OnTransformChanged();
+	}
+
+	void AreaLight::OnTransformChanged()
+	{
+		UpdatePoints();
+
+		if (areaLightID != InvalidAreaLightID)
+		{
+			g_Renderer->UpdateAreaLightData(areaLightID, &data);
+		}
+	}
+
+	bool AreaLight::operator==(const AreaLight& other)
+	{
+		return other.data.colour == data.colour &&
+			other.data.enabled == data.enabled &&
+			other.data.brightness == data.brightness;
+	}
+
+	void AreaLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject areaLightObj;
+		if (parentObject.SetObjectChecked("area light info", areaLightObj))
+		{
+			areaLightObj.SetVec3Checked("colour", data.colour);
+
+			areaLightObj.SetFloatChecked("brightness", data.brightness);
+
+			if (areaLightObj.HasField("enabled"))
+			{
+				m_bVisible = areaLightObj.GetBool("enabled");
+				data.enabled = m_bVisible ? 1 : 0;
+			}
+		}
+	}
+
+	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	{
+		JSONObject areaLightObj = {};
+
+		std::string colourStr = VecToString(data.colour, 2);
+		areaLightObj.fields.emplace_back("colour", JSONValue(colourStr));
+
+		areaLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
+		areaLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
+
+		parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
+	}
+
+	void AreaLight::UpdatePoints()
+	{
+		const glm::mat4& model = m_Transform.GetWorldTransform();
+		data.points[0] = model * glm::vec4(-1.0f, 1.0f, 0.0f, 1.0f);
+		data.points[1] = model * glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+		data.points[2] = model * glm::vec4(1.0f, -1.0f, 0.0f, 1.0f);
+		data.points[3] = model * glm::vec4(-1.0f, -1.0f, 0.0f, 1.0f);
+	}
+
 	Cart::Cart(CartID cartID) :
 		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4))
 	{
@@ -4759,7 +5001,7 @@ namespace flex
 				}
 			}
 
-			for (i32 i = 0; i <(i32) waveContributions.size(); ++i)
+			for (i32 i = 0; i < (i32)waveContributions.size(); ++i)
 			{
 				const WaveInfo& waveInfo = waveContributions[i];
 

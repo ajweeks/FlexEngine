@@ -2401,7 +2401,9 @@ namespace flex
 							const char* requesting_source,
 							size_t include_depth) override
 						{
-							Print("%s, requesting %s (%s, depth: %u)\n", requesting_source, requested_source, (type == shaderc_include_type_relative ? "relative" : "standard"), include_depth);
+							FLEX_UNUSED(type);
+							FLEX_UNUSED(requesting_source);
+							FLEX_UNUSED(include_depth);
 
 							shaderc_include_result* result = new shaderc_include_result();
 
@@ -3202,7 +3204,7 @@ namespace flex
 				vkUpdateDescriptorSets(device->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
 			}
 
-			if (createInfo->DBG_Name)
+			if (createInfo->DBG_Name != nullptr)
 			{
 				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
 			}
@@ -3298,6 +3300,12 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_LTC_SAMPLERS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_LTC_SAMPLERS + 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

@@ -36,6 +36,7 @@ namespace flex
 	using GraphicsPipelineID = u32;
 	using PointLightID = u32;
 	using SpotLightID = u32;
+	using AreaLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
 	using CartID = u32;
@@ -78,6 +79,7 @@ namespace flex
 	static constexpr auto InvalidGraphicsPipelineID = ((GraphicsPipelineID)u32_max);
 	static constexpr auto InvalidPointLightID = ((PointLightID)u32_max);
 	static constexpr auto InvalidSpotLightID = ((SpotLightID)u32_max);
+	static constexpr auto InvalidAreaLightID = ((AreaLightID)u32_max);
 	static constexpr auto InvalidAudioSourceID = ((AudioSourceID)u32_max);
 	static constexpr auto InvalidTrackID = ((TrackID)u32_max);
 	static constexpr auto InvalidCartID = ((CartChainID)u32_max);

@@ -559,6 +559,8 @@ namespace flex
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
+			TextureID m_LTCMatricesID = InvalidTextureID;
+			TextureID m_LTCAmplitudesID = InvalidTextureID;
 
 			GraphicsPipelineID m_SSAOGraphicsPipelineID = InvalidGraphicsPipelineID;
 			GraphicsPipelineID m_SSAOBlurHGraphicsPipelineID = InvalidGraphicsPipelineID;

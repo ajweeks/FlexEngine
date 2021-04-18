@@ -1156,6 +1156,17 @@ namespace flex
 
 				g_Editor->SetSelectedObject(newSpotLight->ID);
 			}
+
+			if (ImGui::Button("Add area light"))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				AreaLight* newAreaLight = new AreaLight(scene);
+				scene->AddRootObject(newAreaLight);
+				newAreaLight->Initialize();
+				newAreaLight->PostInitialize();
+
+				g_Editor->SetSelectedObject(newAreaLight->ID);
+			}
 		}
 
 		const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;

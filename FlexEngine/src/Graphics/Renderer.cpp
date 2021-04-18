@@ -53,10 +53,11 @@ namespace flex
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
 
-		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData));
-		m_PointLightData = (PointLightData*)m_LightData;
-		m_SpotLightData = (SpotLightData*)(m_LightData + MAX_POINT_LIGHT_COUNT * sizeof(PointLightData));
+		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData) + MAX_AREA_LIGHT_COUNT * sizeof(AreaLightData));
 		assert(m_LightData != nullptr);
+		m_PointLightData = (PointLightData*)m_LightData;
+		m_SpotLightData = (SpotLightData*)(m_PointLightData + MAX_POINT_LIGHT_COUNT);
+		m_AreaLightData = (AreaLightData*)(m_SpotLightData + MAX_SPOT_LIGHT_COUNT);
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			m_PointLightData[i].colour = VEC3_NEG_ONE;
@@ -66,6 +67,11 @@ namespace flex
 		{
 			m_SpotLightData[i].colour = VEC3_NEG_ONE;
 			m_SpotLightData[i].enabled = 0;
+		}
+		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
+		{
+			m_AreaLightData[i].colour = VEC3_NEG_ONE;
+			m_AreaLightData[i].enabled = 0;
 		}
 
 		// TODO: Move these defaults to config file
@@ -578,6 +584,39 @@ namespace flex
 		memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
 	}
 
+	AreaLightID Renderer::RegisterAreaLight(AreaLightData* areaLightData)
+	{
+		if (m_NumAreaLightsEnabled < MAX_AREA_LIGHT_COUNT)
+		{
+			AreaLightID newAreaLightID = InvalidAreaLightID;
+
+			for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
+			{
+				AreaLightData* data = m_AreaLightData + i;
+				if (data->colour.x == -1.0f)
+				{
+					newAreaLightID = (AreaLightID)i;
+					break;
+				}
+			}
+			assert(newAreaLightID != InvalidAreaLightID);
+
+			memcpy(m_AreaLightData + newAreaLightID, areaLightData, sizeof(AreaLightData));
+			m_NumAreaLightsEnabled++;
+			return newAreaLightID;
+		}
+		return InvalidAreaLightID;
+	}
+
+	void Renderer::UpdateAreaLightData(AreaLightID ID, AreaLightData* data)
+	{
+		assert(ID < MAX_AREA_LIGHT_COUNT);
+		assert(data != nullptr);
+
+		memcpy(m_AreaLightData + ID, data, sizeof(AreaLightData));
+
+	}
+
 	void Renderer::RemoveDirectionalLight()
 	{
 		m_DirectionalLight = nullptr;
@@ -631,6 +670,30 @@ namespace flex
 		m_NumSpotLightsEnabled = 0;
 	}
 
+	void Renderer::RemoveAreaLight(AreaLightID ID)
+	{
+		if (ID != InvalidAreaLightID)
+		{
+			if (m_AreaLightData[ID].colour.x != -1.0f)
+			{
+				m_AreaLightData[ID].colour = VEC4_NEG_ONE;
+				m_AreaLightData[ID].enabled = 0;
+				m_NumAreaLightsEnabled--;
+				assert(m_NumAreaLightsEnabled >= 0);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllAreaLights()
+	{
+		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
+		{
+			m_AreaLightData[i].colour = VEC4_NEG_ONE;
+			m_AreaLightData[i].enabled = 0;
+		}
+		m_NumAreaLightsEnabled = 0;
+	}
+
 	DirLightData* Renderer::GetDirectionalLight()
 	{
 		if (m_DirectionalLight)
@@ -648,6 +711,11 @@ namespace flex
 	i32 Renderer::GetNumSpotLights()
 	{
 		return m_NumSpotLightsEnabled;
+	}
+
+	i32 Renderer::GetNumAreaLights()
+	{
+		return m_NumAreaLightsEnabled;
 	}
 
 	i32 Renderer::GetFramesRenderedCount() const
@@ -1343,7 +1411,7 @@ namespace flex
 			{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
 			{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv" },
 			{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
-			{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv" },
+			//{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv" },
 			{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
 			{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
 			{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
@@ -1395,6 +1463,8 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_0_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_1_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLERS);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLERS + 1);
 		++shaderID;
 
 		// Colour
@@ -1587,16 +1657,15 @@ namespace flex
 		++shaderID;
 
 		// Post FXAA
-		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
-		m_Shaders[shaderID]->vertexAttributes =
-			(u32)VertexAttribute::POSITION2 |
-			(u32)VertexAttribute::UV;
+		//m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD; // TODO: FIXME:
+		//m_Shaders[shaderID]->vertexAttributes =
+		//	(u32)VertexAttribute::POSITION2 |
+		//	(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_FXAA_DATA);
+		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
-		++shaderID;
+		//m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
+		//++shaderID;
 
 		// Compute SDF
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
@@ -2161,13 +2230,13 @@ namespace flex
 		postProcessMatCreateInfo.bSerializable = false;
 		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 
-		MaterialCreateInfo postFXAAMatCreateInfo = {};
-		postFXAAMatCreateInfo.name = "fxaa";
-		postFXAAMatCreateInfo.shaderName = "post_fxaa";
-		postFXAAMatCreateInfo.persistent = true;
-		postFXAAMatCreateInfo.visibleInEditor = false;
-		postFXAAMatCreateInfo.bSerializable = false;
-		m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
+		//MaterialCreateInfo postFXAAMatCreateInfo = {};
+		//postFXAAMatCreateInfo.name = "fxaa";
+		//postFXAAMatCreateInfo.shaderName = "post_fxaa";
+		//postFXAAMatCreateInfo.persistent = true;
+		//postFXAAMatCreateInfo.visibleInEditor = false;
+		//postFXAAMatCreateInfo.bSerializable = false;
+		//m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 
 		MaterialCreateInfo selectedObjectMatCreateInfo = {};
 		selectedObjectMatCreateInfo.name = "Selected Object";

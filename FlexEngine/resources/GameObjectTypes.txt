@@ -7,6 +7,7 @@ player
 directional light
 point light
 spot light
+area light
 reflection probe
 rising block
 engine cart

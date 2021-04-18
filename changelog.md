@@ -3,6 +3,8 @@
 
 **2021**
 _April_
+- Add support for area lights (using Linearly Transformed Cosines)
+- Add support for function calls in scripting language
 - Support hot reloading externally-edited terminal scripts
 - Support reading terminal scripts from file
 - Add shader include support

@@ -16,12 +16,256 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
 	SpotLight spotLights[NUM_SPOT_LIGHTS];
+	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
 	SSAOSamplingData ssaoData;
 	float zNear;
 	float zFar;
 } uboConstant;
+
+mat3 identity33()
+{
+    return mat3(1);
+}
+
+mat3 mat3_from_columns(vec3 c0, vec3 c1, vec3 c2)
+{
+    mat3 m = mat3(c0, c1, c2);
+    return m;
+}
+
+mat3 mat3_from_rows(vec3 c0, vec3 c1, vec3 c2)
+{
+    mat3 m = mat3(c0, c1, c2);
+    m = transpose(m);
+    return m;
+}
+
+vec2 LTC_Coords(float cosTheta, float roughness)
+{
+    float theta = acos(cosTheta);
+    vec2 coords = vec2(roughness, theta / (0.5 * PI));
+
+    const float LUT_SIZE = 32.0;
+    const float LUT_BIAS = 0.5 / LUT_SIZE;
+    // Scale and bias coordinates, for correct filtered lookup
+    coords *= (LUT_SIZE - 1.0) / LUT_SIZE + LUT_BIAS;
+
+    return coords;
+}
+
+mat3 LTC_Matrix(sampler2D texLSDMat, vec2 coord)
+{
+    // load inverse matrix
+    vec4 t = texture(texLSDMat, coord);
+    mat3 Minv = mat3_from_columns(
+        vec3(1.0, 0.0, t.y),
+        vec3(0.0, t.z, 0.0),
+        vec3(t.w, 0.0, t.x)
+    );
+
+    return Minv;
+}
+
+float IntegrateEdge2(vec3 v1, vec3 v2)
+{
+    float x = dot(v1, v2);
+    float y = abs(x);
+
+    float a = 0.8543985 + (0.4965155 + 0.0145206*y)*y;
+    float b = 3.4175940 + (4.1616724 + y)*y;
+    float v = a / b;
+
+    float theta_sintheta = (x > 0.0) ? v : 0.5*inversesqrt(max(1.0 - x*x, 1e-7)) - v;
+
+    return cross(v1, v2).z*theta_sintheta;
+}
+
+float IntegrateEdge(vec3 v1, vec3 v2)
+{
+    float cosTheta = dot(v1, v2);
+    cosTheta = clamp(cosTheta, -0.9999, 0.9999);
+
+    float theta = acos(cosTheta);    
+    float res = cross(v1, v2).z * theta / sin(theta);
+
+    return res;
+}
+
+void ClipQuadToHorizon(inout vec3 L[5], out int n)
+{
+    // detect clipping config
+    int config = 0;
+    if (L[0].z > 0.0) config += 1;
+    if (L[1].z > 0.0) config += 2;
+    if (L[2].z > 0.0) config += 4;
+    if (L[3].z > 0.0) config += 8;
+
+    // clip
+    n = 0;
+
+    if (config == 0)
+    {
+        // clip all
+    }
+    else if (config == 1) // V1 clip V2 V3 V4
+    {
+        n = 3;
+        L[1] = -L[1].z * L[0] + L[0].z * L[1];
+        L[2] = -L[3].z * L[0] + L[0].z * L[3];
+    }
+    else if (config == 2) // V2 clip V1 V3 V4
+    {
+        n = 3;
+        L[0] = -L[0].z * L[1] + L[1].z * L[0];
+        L[2] = -L[2].z * L[1] + L[1].z * L[2];
+    }
+    else if (config == 3) // V1 V2 clip V3 V4
+    {
+        n = 4;
+        L[2] = -L[2].z * L[1] + L[1].z * L[2];
+        L[3] = -L[3].z * L[0] + L[0].z * L[3];
+    }
+    else if (config == 4) // V3 clip V1 V2 V4
+    {
+        n = 3;
+        L[0] = -L[3].z * L[2] + L[2].z * L[3];
+        L[1] = -L[1].z * L[2] + L[2].z * L[1];
+    }
+    else if (config == 5) // V1 V3 clip V2 V4) impossible
+    {
+        n = 0;
+    }
+    else if (config == 6) // V2 V3 clip V1 V4
+    {
+        n = 4;
+        L[0] = -L[0].z * L[1] + L[1].z * L[0];
+        L[3] = -L[3].z * L[2] + L[2].z * L[3];
+    }
+    else if (config == 7) // V1 V2 V3 clip V4
+    {
+        n = 5;
+        L[4] = -L[3].z * L[0] + L[0].z * L[3];
+        L[3] = -L[3].z * L[2] + L[2].z * L[3];
+    }
+    else if (config == 8) // V4 clip V1 V2 V3
+    {
+        n = 3;
+        L[0] = -L[0].z * L[3] + L[3].z * L[0];
+        L[1] = -L[2].z * L[3] + L[3].z * L[2];
+        L[2] =  L[3];
+    }
+    else if (config == 9) // V1 V4 clip V2 V3
+    {
+        n = 4;
+        L[1] = -L[1].z * L[0] + L[0].z * L[1];
+        L[2] = -L[2].z * L[3] + L[3].z * L[2];
+    }
+    else if (config == 10) // V2 V4 clip V1 V3) impossible
+    {
+        n = 0;
+    }
+    else if (config == 11) // V1 V2 V4 clip V3
+    {
+        n = 5;
+        L[4] = L[3];
+        L[3] = -L[2].z * L[3] + L[3].z * L[2];
+        L[2] = -L[2].z * L[1] + L[1].z * L[2];
+    }
+    else if (config == 12) // V3 V4 clip V1 V2
+    {
+        n = 4;
+        L[1] = -L[1].z * L[2] + L[2].z * L[1];
+        L[0] = -L[0].z * L[3] + L[3].z * L[0];
+    }
+    else if (config == 13) // V1 V3 V4 clip V2
+    {
+        n = 5;
+        L[4] = L[3];
+        L[3] = L[2];
+        L[2] = -L[1].z * L[2] + L[2].z * L[1];
+        L[1] = -L[1].z * L[0] + L[0].z * L[1];
+    }
+    else if (config == 14) // V2 V3 V4 clip V1
+    {
+        n = 5;
+        L[4] = -L[0].z * L[3] + L[3].z * L[0];
+        L[0] = -L[0].z * L[1] + L[1].z * L[0];
+    }
+    else if (config == 15) // V1 V2 V3 V4
+    {
+        n = 4;
+    }
+    
+    if (n == 3)
+    {
+    	L[3] = L[0];
+	}
+    if (n == 4)
+    {
+    	L[4] = L[0];
+    }
+}
+
+vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSided)
+{
+    // construct orthonormal basis around N
+    vec3 T1, T2;
+    T1 = normalize(V - N * dot(V, N));
+    T2 = cross(N, T1);
+
+    // rotate area light in (T1, T2, R) basis
+    Minv = Minv * mat3_from_rows(T1, T2, N);
+
+    // polygon (allocate 5 vertices for clipping)
+    vec3 L[5];
+    L[0] = Minv * (points[0].xyz - P);
+    L[1] = Minv * (points[1].xyz - P);
+    L[2] = Minv * (points[2].xyz - P);
+    L[3] = Minv * (points[3].xyz - P);
+    L[4] = L[3]; // avoid warning
+
+    int n;
+    ClipQuadToHorizon(L, n);
+    
+    if (n == 0)
+    {
+    	return vec3(0, 0, 0);
+    }
+
+    // project onto sphere
+    L[0] = normalize(L[0]);
+    L[1] = normalize(L[1]);
+    L[2] = normalize(L[2]);
+    L[3] = normalize(L[3]);
+    L[4] = normalize(L[4]);
+
+    // integrate
+    float sum = 0.0;
+
+    sum += IntegrateEdge(L[0], L[1]);
+    sum += IntegrateEdge(L[1], L[2]);
+    sum += IntegrateEdge(L[2], L[3]);
+    if (n >= 4)
+    {
+    	sum += IntegrateEdge(L[3], L[4]);
+    }
+    if (n == 5)
+    {
+    	sum += IntegrateEdge(L[4], L[0]);
+    }
+
+    // note: negated due to winding order
+    sum = twoSided ? abs(sum) : max(0.0, -sum);
+
+    vec3 Lo_i = vec3(sum, sum, sum);
+
+    // scale by filtered light color
+    //Lo_i *= textureLight;
+
+    return Lo_i;
+}
 
 layout (binding = 1) uniform sampler2D brdfLUT;
 layout (binding = 2) uniform samplerCube irradianceSampler;
@@ -32,6 +276,8 @@ layout (binding = 6) uniform sampler2DArray shadowMaps;
 
 layout (binding = 7) uniform sampler2D normalRoughnessTex;
 layout (binding = 8) uniform sampler2D albedoMetallicTex;
+layout (binding = 9) uniform sampler2D ltcMatricesTex;
+layout (binding = 10) uniform sampler2D ltcAmplitudesTex;
 
 void main()
 {
@@ -55,6 +301,7 @@ void main()
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
     float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
+	ssao = pow(ssao, uboConstant.ssaoData.powExp);
 
 	// fragColour = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
 
@@ -140,6 +387,48 @@ void main()
 		Lo += DoLighting(radiance, N, V, L, NoV, LoPointToLight, roughness, metallic, F0, albedo);
 	}
 
+	for (int i = 0; i < NUM_AREA_LIGHTS; ++i)
+	{
+		AreaLight areaLight = uboConstant.areaLights[i];
+
+		if (areaLight.enabled == 0)
+		{
+			continue;
+		}
+
+//		float distance = length(areaLight.position - posWS);
+//		if (distance > 125)
+//		{
+//			// TODO: Define radius on lights individually
+//			continue;
+//		}
+
+		float angleOfIncidence = clamp(dot(N, V), 0.01, 0.99);
+    	vec2 lookupUV = LTC_Coords(angleOfIncidence, roughness);
+
+		mat3 Minv = LTC_Matrix(ltcMatricesTex, lookupUV);
+    	
+		vec4 points[4];
+	    points[0] = areaLight.points[0];
+	    points[1] = areaLight.points[1];
+	    points[2] = areaLight.points[2];
+	    points[3] = areaLight.points[3];
+		bool twoSided = false;
+		vec3 Lo_i_diff = LTC_Evaluate(N, V, posWS, identity33(), points, twoSided);
+		vec3 Lo_i_spec = LTC_Evaluate(N, V, posWS, Minv, points, twoSided);
+
+		Lo_i_diff *= albedo;
+
+		// Specular
+    	vec2 schlick = texture(ltcAmplitudesTex, lookupUV).xy;
+    	vec3 specColour = metallic * albedo;
+	    Lo_i_spec *= specColour * schlick.x + (1.0 - specColour) * schlick.y;
+
+	    float dist = length(areaLight.points[0].xyz - posWS) + 0.001;
+	    vec3 radiance = areaLight.brightness * pow(areaLight.colour, vec3(2.2));
+		Lo += radiance * (Lo_i_diff + Lo_i_spec) / (2.0 * PI);
+	}
+
 	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
 	{
@@ -156,29 +445,31 @@ void main()
 
 	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
 	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
-	skyColour *= dirLightShadowOpacity;
+	skyColour *= 0.0;// dirLightShadowOpacity;
 
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
     vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.2);
+	irradiance = vec3(0.0);
     vec3 diffuse = irradiance * albedo;
 
 	// Specular ambient term (IBL)
 	const float MAX_REFLECTION_LOAD = 5.0;
 	vec3 prefilteredColour = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOAD).rgb;
 	prefilteredColour += skyColour * 0.1;
+	prefilteredColour = vec3(0.0);
 	vec2 brdf = texture(brdfLUT, vec2(max(dot(N, V), 0.0), roughness)).rg;
 	vec3 specular = prefilteredColour * (F * brdf.x + brdf.y) * (0.75 * dirLightShadowOpacity + 0.25);
 	// Dampen specular on downward facing normals
-	specular *= dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
+	//specular *= dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
 
-	vec3 ambient = (kD * diffuse + specular);
+	vec3 ambient = vec3(0);// (kD * diffuse + specular);
 
 	// TODO: Apply SSAO to ambient term
-	vec3 colour = ambient + Lo * pow(ssao, uboConstant.ssaoData.powExp);
-	colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
+	vec3 colour = ambient + Lo * ssao;
+	//colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction

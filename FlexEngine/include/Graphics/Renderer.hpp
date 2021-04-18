@@ -251,17 +251,22 @@ namespace flex
 		void UpdatePointLightData(PointLightID ID, PointLightData* data);
 		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
 		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
+		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
+		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
 
 		void RemoveDirectionalLight();
 		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
 		void RemoveSpotLight(SpotLightID ID);
 		void RemoveAllSpotLights();
+		void RemoveAreaLight(AreaLightID ID);
+		void RemoveAllAreaLights();
 
 		DirLightData* GetDirectionalLight();
 		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
 		i32 GetNumSpotLights();
+		i32 GetNumAreaLights();
 
 		i32 GetFramesRenderedCount() const;
 
@@ -327,6 +332,7 @@ namespace flex
 
 		TextureID pointLightIconID = InvalidTextureID;
 		TextureID spotLightIconID = InvalidTextureID;
+		TextureID areaLightIconID = InvalidTextureID;
 		TextureID directionalLightIconID = InvalidTextureID;
 
 		StringID previewedFont = InvalidStringID;
@@ -372,8 +378,10 @@ namespace flex
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
 		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer
+		AreaLightData* m_AreaLightData = nullptr; // Points into m_LightData buffer
 		i32 m_NumPointLightsEnabled = 0;
 		i32 m_NumSpotLightsEnabled = 0;
+		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
@@ -538,8 +546,6 @@ namespace flex
 		glm::vec2u m_SSAORes;
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
-
-		FXAAData m_FXAAData;
 
 		FT_Library m_FTLibrary;
 

@@ -6,6 +6,7 @@
 
 #define NUM_POINT_LIGHTS 8
 #define NUM_SPOT_LIGHTS 8
+#define NUM_AREA_LIGHTS 8
 
 // Specialization constants
 layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
@@ -50,6 +51,15 @@ struct SpotLight
 	float brightness;
 	vec3 direction;
 	float angle;
+};
+
+struct AreaLight 
+{
+	vec3 colour;
+	float brightness;
+	vec3 _pad;
+	int enabled;
+	vec4 points[4];
 };
 
 struct ShadowSamplingData

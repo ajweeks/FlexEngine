@@ -12,8 +12,8 @@
 		{
 			"name" : "pbr grey",
 			"shader" : "pbr",
-			"const albedo" : "0.128, 0.128, 0.128, 1.000",
-			"const roughness" : 1.000000
+			"const albedo" : "0.004, 0.004, 0.004, 1.000",
+			"const roughness" : 0.280000
 		},
 		{
 			"name" : "pbr light grey",
@@ -30,8 +30,8 @@
 		{
 			"name" : "pbr red",
 			"shader" : "pbr",
-			"const albedo" : "0.740, 0.060, 0.030, 1.000",
-			"const roughness" : 0.520000
+			"const albedo" : "0.010, 0.067, 0.085, 1.000",
+			"const roughness" : 0.020000
 		},
 		{
 			"name" : "skybox 01",
@@ -449,6 +449,18 @@
 			"shader" : "pbr",
 			"const albedo" : "0.055, 0.715, 0.076, 1.000",
 			"const roughness" : 1.000000
+		},
+		{
+			"name" : "area light 0",
+			"shader" : "colour"
+		},
+		{
+			"name" : "area light 1",
+			"shader" : "colour"
+		},
+		{
+			"name" : "area light 2",
+			"shader" : "colour"
 		}
 	]
 }

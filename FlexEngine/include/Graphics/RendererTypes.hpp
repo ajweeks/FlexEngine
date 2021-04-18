@@ -20,6 +20,7 @@ namespace flex
 
 	static const i32 MAX_POINT_LIGHT_COUNT = 8;
 	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
+	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 
 	// 48 bytes
@@ -27,7 +28,7 @@ namespace flex
 	{
 		glm::vec3 dir;       // 0
 		i32 enabled;         // 12
-		glm::vec3 colour;     // 16
+		glm::vec3 colour;    // 16
 		real brightness;     // 28
 		i32 castShadows;     // 32
 		real shadowDarkness; // 36
@@ -37,21 +38,31 @@ namespace flex
 	// 32 bytes
 	struct PointLightData
 	{
-		glm::vec3 pos;   // 0
-		i32 enabled;     // 12
+		glm::vec3 pos;    // 0
+		i32 enabled;      // 12
 		glm::vec3 colour; // 16
-		real brightness; // 28
+		real brightness;  // 28
 	};
 
 	// 48 bytes
 	struct SpotLightData
 	{
-		glm::vec3 pos;   // 0
-		i32 enabled;     // 12
-		glm::vec3 colour; // 16
-		real brightness; // 28
-		glm::vec3 dir; // 32
-		real angle; // 44
+		glm::vec3 pos;		// 0
+		i32 enabled;		// 12
+		glm::vec3 colour;	// 16
+		real brightness;	// 28
+		glm::vec3 dir;		// 32
+		real angle;			// 44
+	};
+
+	// 96 bytes
+	struct AreaLightData
+	{
+		glm::vec3 colour;		// 0
+		real brightness;		// 12
+		real pad[3];			// 20
+		i32 enabled;			// 16
+		glm::vec4 points[4];	// 32
 	};
 
 	const i32 MAX_SSAO_KERNEL_SIZE = 64;
@@ -168,7 +179,7 @@ namespace flex
 	const u64 U_COLOUR_MULTIPLIER				= (1ull << 7);	const u32 US_COLOUR_MULTIPLIER			= sizeof(glm::vec4);
 	const u64 U_CAM_POS							= (1ull << 8);	const u32 US_CAM_POS					= sizeof(glm::vec4);
 	const u64 U_DIR_LIGHT						= (1ull << 9);  const u32 US_DIR_LIGHT					= sizeof(DirLightData);
-	const u64 U_LIGHTS      					= (1ull << 10); const u32 US_LIGHTS						= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT + sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT;
+	const u64 U_LIGHTS      					= (1ull << 10); const u32 US_LIGHTS						= sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT + sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT + sizeof(AreaLightData) * MAX_AREA_LIGHT_COUNT;
 	const u64 U_ALBEDO_SAMPLER					= (1ull << 11);
 	const u64 U_CONST_ALBEDO					= (1ull << 12); const u32 US_CONST_ALBEDO				= sizeof(glm::vec4);
 	const u64 U_METALLIC_SAMPLER				= (1ull << 13);
@@ -209,7 +220,7 @@ namespace flex
 	const u64 U_SSAO_BLUR_DATA_DYNAMIC			= (1ull << 48); const u32 US_SSAO_BLUR_DATA_DYNAMIC		= sizeof(SSAOBlurDataDynamic);
 	const u64 U_SSAO_BLUR_DATA_CONSTANT			= (1ull << 49); const u32 US_SSAO_BLUR_DATA_CONSTANT	= sizeof(SSAOBlurDataConstant);
 	const u64 U_SSAO_SAMPLING_DATA				= (1ull << 50); const u32 US_SSAO_SAMPLING_DATA			= sizeof(SSAOSamplingData);
-	const u64 U_FXAA_DATA						= (1ull << 51); const u32 US_FXAA_DATA					= sizeof(FXAAData);
+	const u64 U_LTC_SAMPLERS					= (1ull << 51);
 	const u64 U_SHADOW_SAMPLER					= (1ull << 52);
 	const u64 U_SHADOW_SAMPLING_DATA			= (1ull << 53); const u32 US_SHADOW_SAMPLING_DATA		= sizeof(ShadowSamplingData);
 	const u64 U_NEAR_FAR_PLANES					= (1ull << 54); const u32 US_NEAR_FAR_PLANES			= sizeof(glm::vec2);
@@ -473,7 +484,7 @@ namespace flex
 		using iter = typename std::vector<TexPair>::iterator;
 		using const_iter = typename std::vector<TexPair>::const_iterator;
 
-		void Add(u64 uniformID, const UniformType object, std::string slotName = "")
+		void SetUniform(u64 uniformID, const UniformType object, std::string slotName = "")
 		{
 			for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
 			{

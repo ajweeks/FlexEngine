@@ -467,6 +467,38 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 	};
 
+	class AreaLight final : public GameObject
+	{
+	public:
+		explicit AreaLight(BaseScene* scene);
+		explicit AreaLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects() override;
+		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
+		virtual void OnTransformChanged() override;
+
+		bool operator==(const AreaLight& other);
+
+		AreaLightData data;
+		AreaLightID areaLightID = InvalidAreaLightID;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+		void UpdatePoints();
+
+	};
+
 	class Valve final : public GameObject
 	{
 	public:
