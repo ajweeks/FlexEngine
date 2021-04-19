@@ -10313,7 +10313,8 @@ namespace flex
 	}
 
 	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("vehicle"), gameObjectID)
+		GameObject(name, SID("vehicle"), gameObjectID),
+		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
 	{
 		m_bInteractable = true;
 
@@ -10370,6 +10371,8 @@ namespace flex
 	void Vehicle::Initialize()
 	{
 		GameObject::Initialize();
+
+		m_pLinearVelocity = ToBtVec3(VEC3_ZERO);
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		GameObject* tireFL = scene->GetGameObject(m_TireIDs[(u32)Tire::FL]);
@@ -10482,8 +10485,13 @@ namespace flex
 	{
 		GameObject::Update();
 
-		const btVector3 linearVel = m_RigidBody->GetRigidBodyInternal()->getLinearVelocity();
+		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+		const btVector3 linearVel = rb->getLinearVelocity();
+		const btVector3 linearAccel = (linearVel - m_pLinearVelocity) / g_DeltaTime;
 		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
+		const real forwardAccel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
+		// How much our acceleration opposes our current velocity
+		real slowingVelocity = glm::clamp(1.0f - glm::min(glm::dot(ToVec3(linearAccel), ToVec3(linearVel)) / linearVel.length(), 0.0f), 0.0f, 1.0f);
 
 		//btVector3 force = btVector3(0.0f, 0.0f, 0.0f);
 
@@ -10655,6 +10663,7 @@ namespace flex
 			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
 
+		m_WheelSlipHisto.AddValue(maxWheelSlip);
 
 		{
 			i32 wheelIndex = 2;
@@ -10672,6 +10681,11 @@ namespace flex
 
 		real motorPitch = glm::clamp(forwardVel / 35.0f + 0.75f, 0.95f, 1.5f);
 		real motorGain = glm::clamp(m_EngineForce / m_MaxEngineForce * 3.0f, 0.0f, 1.0f);
+
+		motorGain = motorGain + glm::clamp(forwardVel / 35.0f, 0.0f, 1.0f - motorGain);
+
+		real brakeGainMultiplier = slowingVelocity;
+		brakeGainMultiplier *= m_WheelSlipHisto.currentAverage * m_WheelSlipHisto.currentAverage;
 
 		if (motorGain < 0.1f)
 		{
@@ -10691,6 +10705,7 @@ namespace flex
 			m_SoundEffects[(u32)SoundEffect::BRAKE].FadeIn();
 		}
 
+		m_SoundEffects[(u32)SoundEffect::BRAKE].SetGainMultiplier(brakeGainMultiplier);
 
 		for (u32 i = 0; i < (u32)SoundEffect::_COUNT; ++i)
 		{
@@ -10699,6 +10714,8 @@ namespace flex
 
 		m_SoundEffects[(u32)SoundEffect::ENGINE].SetPitch(motorPitch);
 		m_SoundEffects[(u32)SoundEffect::ENGINE].SetGainMultiplier(motorGain);
+
+		m_pLinearVelocity = linearVel;
 	}
 
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)

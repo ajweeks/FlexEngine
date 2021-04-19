@@ -1505,7 +1505,7 @@ namespace flex
 		real m_WheelSlipScreechThreshold = 0.8f; // 0 = no screech, 1 = screech on any traction loss
 		real m_Steering = 0.0f;
 		real m_RollInfluence = 0.05f;
-		real m_WheelFriction = 6.0f;
+		real m_WheelFriction = 60.0f;
 		real m_WheelRadius = 0.5f;
 		real m_WheelWidth = 0.4f;
 		real m_SuspensionStiffness = 20.f;
@@ -1534,6 +1534,10 @@ namespace flex
 		btRaycastVehicle* m_Vehicle;
 
 		btRaycastVehicle::btVehicleTuning m_tuning;
+
+		btVector3 m_pLinearVelocity;
+
+		RollingAverage<real> m_WheelSlipHisto;
 
 		sec m_SecUpsideDown = 0.0f;
 		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;

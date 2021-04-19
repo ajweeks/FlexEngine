@@ -161,6 +161,7 @@ namespace flex
 		static void SetSourceGain(AudioSourceID sourceID, real gain);
 		static real GetSourceGain(AudioSourceID sourceID);
 		static void SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier);
+		static real GetSourceGainMultiplier(AudioSourceID sourceID);
 
 		static void AddToSourcePitch(AudioSourceID sourceID, real deltaPitch);
 

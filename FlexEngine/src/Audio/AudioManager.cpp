@@ -450,6 +450,7 @@ namespace flex
 				0.0f, 1.0f);
 
 			ImGui::Text("Gain: %.2f", AudioManager::GetSourceGain(loop));
+			ImGui::Text("Pitch: %.2f", AudioManager::GetSourcePitch(loop));
 			ImGui::Text("fadeInTimeRemaining: %.2f", fadeInTimeRemaining);
 			ImGui::Text("fadeOutTimeRemaining: %.2f", fadeOutTimeRemaining);
 			ImGui::Text("bPlaying: %s", (bPlaying ? "true" : "false"));
@@ -571,9 +572,18 @@ namespace flex
 		}
 
 		StopSource(sourceID);
+		bool bSourceWasLooping = GetSourceLooping(sourceID);
+		real sourcePitch = GetSourcePitch(sourceID);
+		real sourceGain = GetSourceGain(sourceID);
+		real sourceGainMultiplier = GetSourceGainMultiplier(sourceID);
 		DestroyAudioSource(sourceID);
 
-		return AddAudioSourceInternal(sourceID, filePath, outErrorStr);
+		AudioSourceID newID = AddAudioSourceInternal(sourceID, filePath, outErrorStr);
+		SetSourceLooping(newID, bSourceWasLooping);
+		SetSourcePitch(newID, sourcePitch);
+		SetSourceGain(newID, sourceGain);
+		SetSourceGainMultiplier(newID, sourceGainMultiplier);
+		return newID;
 	}
 
 	AudioSourceID AudioManager::AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr)
@@ -859,6 +869,13 @@ namespace flex
 		s_Sources[sourceID].gainMultiplier = gainMultiplier;
 
 		UpdateSourceGain(sourceID);
+	}
+
+	real AudioManager::GetSourceGainMultiplier(AudioSourceID sourceID)
+	{
+		assert(sourceID < s_Sources.size());
+
+		return s_Sources[sourceID].gainMultiplier;
 	}
 
 	void AudioManager::AddToSourcePitch(AudioSourceID sourceID, real deltaPitch)
