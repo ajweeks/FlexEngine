@@ -210,9 +210,11 @@ namespace flex
 			i32 ip;
 		};
 
+		struct State;
+
 		struct InstructionBlock
 		{
-			void PushBack(const Instruction& inst, Span origin);
+			void PushBack(const Instruction& inst, Span origin, State* state);
 
 			std::vector<Instruction> instructions;
 			std::vector<Span> instructionOrigins;

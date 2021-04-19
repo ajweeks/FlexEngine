@@ -39,8 +39,24 @@ namespace flex
 			diagnosticContainer->diagnostics.clear();
 		}
 
-		void InstructionBlock::PushBack(const Instruction& inst, Span origin)
+		void InstructionBlock::PushBack(const Instruction& inst, Span origin, State* state)
 		{
+			if (inst.opCode == OpCode::JMP ||
+				inst.opCode == OpCode::JZ ||
+				inst.opCode == OpCode::JNZ ||
+				inst.opCode == OpCode::JEQ ||
+				inst.opCode == OpCode::JNE ||
+				inst.opCode == OpCode::JLT ||
+				inst.opCode == OpCode::JLE ||
+				inst.opCode == OpCode::JGT ||
+				inst.opCode == OpCode::JGE)
+			{
+				if (inst.val0.value.AsInt() == -1)
+				{
+					state->diagnosticContainer->AddDiagnostic(origin, "Compiler error: jump to -1 generated");
+				}
+			}
+
 			instructions.push_back(inst);
 			instructionOrigins.push_back(origin);
 		}
@@ -212,7 +228,7 @@ namespace flex
 				// Actual IP will be patched up below
 				pushInstructionIndex = (i32)currentInstBlock.instructions.size();
 				Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(0)));
-				currentInstBlock.PushBack(pushReturnIP, Span(Span::Source::GENERATED));
+				currentInstBlock.PushBack(pushReturnIP, Span(Span::Source::GENERATED), state);
 			}
 
 			// Push arguments in reverse order
@@ -269,12 +285,12 @@ namespace flex
 				}
 
 				Instruction pushArg(OpCode::PUSH, argVal);
-				currentInstBlock.PushBack(pushArg, arg->origin);
+				currentInstBlock.PushBack(pushArg, arg->origin, state);
 			}
 
 			// Call
 			Instruction inst(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcUID)));
-			currentInstBlock.PushBack(inst, funcCallValue->origin);
+			currentInstBlock.PushBack(inst, funcCallValue->origin, state);
 
 			// Resume point
 			{
@@ -287,7 +303,7 @@ namespace flex
 
 			i32 returnValueRegister = 0;
 			Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(returnValueRegister)));
-			currentInstBlock.PushBack(popReturnVal, funcCallValue->origin);
+			currentInstBlock.PushBack(popReturnVal, funcCallValue->origin, state);
 			return returnValueRegister;
 		}
 
@@ -370,31 +386,31 @@ namespace flex
 
 			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
-			currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->left), g_ZeroIntValueWrapper), binaryValue->origin);
+			currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->left), g_ZeroIntValueWrapper), binaryValue->origin, state);
 
 			i32 trueBlock = 0;
 			i32 falseBlock = 1;
 
 			if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_AND)
 			{
-				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))), binaryValue->origin);
+				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))), binaryValue->origin, state);
 
-				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper), binaryValue->origin);
+				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper), binaryValue->origin, state);
 
 			}
 			else if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_OR)
 			{
-				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))), binaryValue->origin);
+				currentInstBlock.PushBack(Instruction(OpCode::JEQ, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))), binaryValue->origin, state);
 
-				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper), binaryValue->origin);
+				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntValueWrapper), binaryValue->origin, state);
 			}
 			else
 			{
-				currentInstBlock.PushBack(Instruction(BinaryOperatorTypeToInverseOpCode(binaryValue->opType), ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))), binaryValue->origin);
-				currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))), binaryValue->origin);
+				currentInstBlock.PushBack(Instruction(BinaryOperatorTypeToInverseOpCode(binaryValue->opType), ValueWrapper(ValueWrapper::Type::CONSTANT, Value(falseBlock))), binaryValue->origin, state);
+				currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(trueBlock))), binaryValue->origin, state);
 			}
 
-			currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal), binaryValue->origin);
+			currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal), binaryValue->origin, state);
 
 			// Move up?
 			if (binaryValue->right->type == IR::Value::Type::BINARY)
@@ -476,12 +492,12 @@ namespace flex
 					ValueWrapper lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
 					ValueWrapper rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
 
-					currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper), binary->origin);
+					currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper), binary->origin, state);
 					opCode = bInvCondition ? InverseOpCode(opCode) : opCode;
 					i32 jumpBlockIndex = (i32)(bInvCondition ? ifFalseBlockIndex : ifTrueBlockIndex);
 					i32 jumpBlockIndexOther = (i32)(bInvCondition ? ifTrueBlockIndex : ifFalseBlockIndex);
-					currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))), binary->origin);
-					currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndexOther))), binary->origin);
+					currentInstBlock.PushBack(Instruction(opCode, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndex))), binary->origin, state);
+					currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value(jumpBlockIndexOther))), binary->origin, state);
 				}
 			} break;
 			case IR::Value::Type::IDENTIFIER:
@@ -576,15 +592,15 @@ namespace flex
 						{
 							IR::Value::Type operandType = ir->state->GetValueType(unaryValue->operand);
 							ValueWrapper zeroVal = operandType == IR::Value::Type::INT ? g_ZeroIntValueWrapper : g_ZeroFloatValueWrapper;
-							currentInstBlock.PushBack(Instruction(VM::OpCode::SUB, outputVal, zeroVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)), unaryValue->origin);
+							currentInstBlock.PushBack(Instruction(VM::OpCode::SUB, outputVal, zeroVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)), unaryValue->origin, state);
 						} break;
 						case IR::UnaryOperatorType::NOT:
 						{
 							ValueWrapper val = GetValueWrapperFromIRValue(ir->state, unaryValue->operand);
-							currentInstBlock.PushBack(Instruction(VM::OpCode::XOR, outputVal, val, val), unaryValue->origin);
+							currentInstBlock.PushBack(Instruction(VM::OpCode::XOR, outputVal, val, val), unaryValue->origin, state);
 						} break;
 						case IR::UnaryOperatorType::BIN_INVERT:
-							currentInstBlock.PushBack(Instruction(VM::OpCode::INV, outputVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)), unaryValue->origin);
+							currentInstBlock.PushBack(Instruction(VM::OpCode::INV, outputVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)), unaryValue->origin, state);
 							break;
 						default:
 							assert(false);
@@ -601,18 +617,18 @@ namespace flex
 							i32 ifFalseBlockIndex = (i32)state->instructionBlocks.size() + 1;
 							//i32 mergeBlockIndex = (i32)state->instructionBlocks.size() + 2;
 							HandleComparison(ir, binaryValue, ifTrueBlockIndex, ifFalseBlockIndex, true);
-							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin);
-							currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal), binaryValue->origin);
+							currentInstBlock.PushBack(Instruction(opCode, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin, state);
+							currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal), binaryValue->origin, state);
 						}
 						else
 						{
-							currentInstBlock.PushBack(Instruction(opCode, outputVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin);
+							currentInstBlock.PushBack(Instruction(opCode, outputVal, GetValueWrapperFromIRValue(ir->state, binaryValue->left), GetValueWrapperFromIRValue(ir->state, binaryValue->right)), binaryValue->origin, state);
 						}
 					} break;
 					case IR::Value::Type::ARGUMENT:
 					{
 						IR::Argmuent* argument = (IR::Argmuent*)assignment->value;
-						currentInstBlock.PushBack(Instruction(OpCode::POP, outputVal), argument->origin);
+						currentInstBlock.PushBack(Instruction(OpCode::POP, outputVal), argument->origin, state);
 					} break;
 					case IR::Value::Type::TERNARY:
 					{
@@ -625,11 +641,11 @@ namespace flex
 
 						ValueWrapper mergeBlockIndexValueWrapper(ValueWrapper::Type::CONSTANT, Value(mergeBlockIndex));
 						InstructionBlock& ifTrueBlock = state->PushInstructionBlock();
-						ifTrueBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifTrue)), ternaryValue->origin);
-						ifTrueBlock.PushBack(Instruction(OpCode::JMP, mergeBlockIndexValueWrapper), ternaryValue->origin);
+						ifTrueBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifTrue)), ternaryValue->origin, state);
+						ifTrueBlock.PushBack(Instruction(OpCode::JMP, mergeBlockIndexValueWrapper), ternaryValue->origin, state);
 
 						InstructionBlock& ifFalseBlock = state->PushInstructionBlock();
-						ifFalseBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifFalse)), ternaryValue->origin);
+						ifFalseBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, ternaryValue->ifFalse)), ternaryValue->origin, state);
 
 						state->PushInstructionBlock();
 					} break;
@@ -647,7 +663,7 @@ namespace flex
 								// no-op
 								break;
 							case IR::Value::Type::FLOAT:
-								currentInstBlock.PushBack(Instruction(OpCode::FTI, outputVal, GetValueWrapperFromIRValue(ir->state, castValue->target)), castValue->origin);
+								currentInstBlock.PushBack(Instruction(OpCode::FTI, outputVal, GetValueWrapperFromIRValue(ir->state, castValue->target)), castValue->origin, state);
 								break;
 							default:
 								state->diagnosticContainer->AddDiagnostic(assignment->value->origin, "Unexpected type in cast statement");
@@ -660,7 +676,7 @@ namespace flex
 							switch (irValueType)
 							{
 							case IR::Value::Type::INT:
-								currentInstBlock.PushBack(Instruction(OpCode::ITF, outputVal, GetValueWrapperFromIRValue(ir->state, castValue->target)), castValue->origin);
+								currentInstBlock.PushBack(Instruction(OpCode::ITF, outputVal, GetValueWrapperFromIRValue(ir->state, castValue->target)), castValue->origin, state);
 								break;
 							case IR::Value::Type::FLOAT:
 								// no-op
@@ -678,7 +694,7 @@ namespace flex
 					} break;
 					default:
 					{
-						currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, assignment->value)), assignment->origin);
+						currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, assignment->value)), assignment->origin, state);
 					} break;
 					}
 				}
@@ -699,7 +715,7 @@ namespace flex
 							returnVal = GetValueWrapperFromIRValue(ir->state, ret->returnValue);
 						}
 
-						currentInstBlock.PushBack(Instruction(OpCode::RETURN, returnVal), ret->origin);
+						currentInstBlock.PushBack(Instruction(OpCode::RETURN, returnVal), ret->origin, state);
 
 						//state->PushInstructionBlock();
 					} break;
@@ -710,7 +726,7 @@ namespace flex
 						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
 						IR::Branch* branch = (IR::Branch*)block->terminator;
-						currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)branch->target->index))), branch->origin);
+						currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)branch->target->index))), branch->origin, state);
 						//state->PushInstructionBlock();
 					} break;
 					case IR::TerminatorType::CONDITIONAL_BRANCH:
@@ -724,16 +740,16 @@ namespace flex
 						i32 otherwiseBlockIndex = conditional->otherwise != nullptr ? conditional->otherwise->index : conditional->then->index + 1;
 						HandleComparison(ir, conditional->condition, thenBlockIndex, otherwiseBlockIndex, false);
 
-						//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)ifFalseBlock->index))));
+						//currentInstBlock.PushBack(Instruction(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, Value((i32)ifFalseBlock->index)), state));
 						//state->PushInstructionBlock();
 					} break;
 					case IR::TerminatorType::HALT:
 					{
 						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
-						currentInstBlock.PushBack(Instruction(OpCode::HALT), Span(Span::Source::GENERATED));
+						currentInstBlock.PushBack(Instruction(OpCode::HALT), Span(Span::Source::GENERATED), state);
 					} break;
 					}
-					//currentInstBlock.PushBack(Instruction(OpCode::JMP, block->terminator));
+					//currentInstBlock.PushBack(Instruction(OpCode::JMP, block->terminator), state);
 				}
 
 				InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
@@ -777,7 +793,15 @@ namespace flex
 					i32 blockIndex = inst.val0.Get(this).valInt;
 					if (blockIndex < (i32)state->instructionBlocks.size())
 					{
-						inst.val0.value.valInt = state->instructionBlocks[blockIndex].startOffset;
+						i32 blockStartOffset = state->instructionBlocks[blockIndex].startOffset;
+						if (blockStartOffset != -1)
+						{
+							inst.val0.value.valInt = blockStartOffset;
+						}
+						else
+						{
+							diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Compiler error: Jump to invalid block offset (-1)");
+						}
 					}
 					else
 					{
@@ -790,7 +814,14 @@ namespace flex
 					if (funcUID < (i32)state->instructionBlocks.size())
 					{
 						i32 funcAddress = state->instructionBlocks[funcUID].startOffset;
-						inst.val0.value.valInt = funcAddress;
+						if (funcAddress != -1)
+						{
+							inst.val0.value.valInt = funcAddress;
+						}
+						else
+						{
+							diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Compiler error: Calling invalid function (block start offset = -1)");
+						}
 					}
 					else
 					{
