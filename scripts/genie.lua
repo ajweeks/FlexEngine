@@ -172,7 +172,6 @@ project "Flex"
 			"-fsanitize=undefined",
 			"-L/lib/x86_64-linux-gnu/", -- for bzip2
 			"-lbz2",
-			"-fsanitize=undefined",
 		}
 		buildoptions {
 			"-Wfatal-errors",
@@ -180,7 +179,8 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch"
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch",
+			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {
 			-- no-reorder isn't valid in c
