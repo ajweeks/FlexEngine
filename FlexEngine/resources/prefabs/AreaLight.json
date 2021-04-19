@@ -18,8 +18,8 @@
 		"children" : 
 		[
 			{
-				"name" : "AreaLightPlane",
-				"id" : "5CB59BD81599919840C22F06C1F59A16",
+				"name" : "AreaLightPlane-1",
+				"id" : "3507C2F99B6411AE4877C18C7FF4B882",
 				"type" : "object",
 				"transform" : 
 				{
@@ -31,7 +31,7 @@
 				"mesh" : "unit-plane.glb",
 				"materials" : 
 				[
-					"area light 0"
+					"area light 1"
 				]
 			}
 		]

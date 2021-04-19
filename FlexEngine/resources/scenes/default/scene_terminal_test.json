@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "terminal",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "16.321, 8.857, -15.521",
-			"pitch" : -0.242588,
-			"yaw" : 2.162309
+			"position" : "-1.078, 1.001, 5.914",
+			"pitch" : -0.000238,
+			"yaw" : 2.137813
 		}
 	},
 	"objects" : 

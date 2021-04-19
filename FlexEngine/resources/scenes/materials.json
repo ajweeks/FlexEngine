@@ -5,7 +5,7 @@
 		{
 			"name" : "pbr chrome",
 			"shader" : "pbr",
-			"const albedo" : "0.533, 0.533, 0.533, 1.000",
+			"const albedo" : "1.000, 0.306, 0.306, 1.000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.520000
 		},
@@ -13,7 +13,7 @@
 			"name" : "pbr grey",
 			"shader" : "pbr",
 			"const albedo" : "0.004, 0.004, 0.004, 1.000",
-			"const roughness" : 0.280000
+			"const roughness" : 0.400000
 		},
 		{
 			"name" : "pbr light grey",
@@ -451,8 +451,9 @@
 			"const roughness" : 1.000000
 		},
 		{
-			"name" : "area light 0",
-			"shader" : "colour"
+			"name" : "area light red",
+			"shader" : "colour",
+			"colour multiplier" : "1.000, 0.177, 0.177, 1.000"
 		},
 		{
 			"name" : "area light 1",

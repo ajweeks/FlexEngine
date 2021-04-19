@@ -15,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-11.292, 10.589, -21.889",
-			"pitch" : -0.406011,
-			"yaw" : 1.094520
+			"position" : "46.329, 23.289, -39.308",
+			"pitch" : -0.372816,
+			"yaw" : 2.357243
 		}
 	},
 	"objects" : 
@@ -87,9 +87,9 @@
 			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "1.00, 1.00, 1.00",
+				"colour" : "0.95, 0.24, 0.28",
 				"enabled" : true,
-				"brightness" : 36.458000
+				"brightness" : 14.778000
 			},
 			"children" : 
 			[
@@ -107,7 +107,85 @@
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
-						"area light 0"
+						"area light red"
+					]
+				}
+			]
+		},
+		{
+			"name" : "Area Light-1",
+			"id" : "CA9D301714EB609B44D622C2866B39CB",
+			"type" : "area light",
+			"transform" : 
+			{
+				"pos" : "15.500, 3.803, 0.000",
+				"rot" : "0.171, 0.292, 2.110",
+				"scale" : "4.696, 2.743, 1.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"area light info" : 
+			{
+				"colour" : "0.95, 0.24, 0.28",
+				"enabled" : true,
+				"brightness" : 14.778000
+			},
+			"children" : 
+			[
+				{
+					"name" : "New_Object_02",
+					"id" : "5BE8271507A3DF914E74992EAA407700",
+					"type" : "object",
+					"transform" : 
+					{
+						"rot" : "-1.571, -0.000, 0.000",
+						"scale" : "2.000, 2.000, 2.000"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"area light red"
+					]
+				}
+			]
+		},
+		{
+			"name" : "Area Light-2",
+			"id" : "CA620C560FA048A6477180E750AE1BB9",
+			"type" : "area light",
+			"transform" : 
+			{
+				"pos" : "7.780, 9.442, -1.973",
+				"rot" : "0.337, -0.007, -3.121",
+				"scale" : "5.552, 1.455, 1.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"area light info" : 
+			{
+				"colour" : "0.95, 0.24, 0.28",
+				"enabled" : true,
+				"brightness" : 14.778000
+			},
+			"children" : 
+			[
+				{
+					"name" : "New_Object_03",
+					"id" : "561E3223C9CE029A4804E87861066017",
+					"type" : "object",
+					"transform" : 
+					{
+						"rot" : "-1.571, -0.000, 0.000",
+						"scale" : "2.000, 2.000, 2.000"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"area light red"
 					]
 				}
 			]

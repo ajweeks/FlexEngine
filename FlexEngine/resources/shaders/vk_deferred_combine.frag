@@ -445,14 +445,13 @@ void main()
 
 	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
 	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
-	skyColour *= 0.0;// dirLightShadowOpacity;
+	skyColour *= dirLightShadowOpacity;
 
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
     vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.2);
-	irradiance = vec3(0.0);
     vec3 diffuse = irradiance * albedo;
 
 	// Specular ambient term (IBL)
@@ -465,11 +464,11 @@ void main()
 	// Dampen specular on downward facing normals
 	//specular *= dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
 
-	vec3 ambient = vec3(0);// (kD * diffuse + specular);
+	vec3 ambient = (kD * diffuse + specular);
 
 	// TODO: Apply SSAO to ambient term
 	vec3 colour = ambient + Lo * ssao;
-	//colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
+	colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
