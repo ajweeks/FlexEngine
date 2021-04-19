@@ -71,6 +71,7 @@ namespace flex
 	class GameObject
 	{
 	public:
+		// Non enum class so we can use bit operators without a cast
 		enum CopyFlags : u32
 		{
 			CHILDREN				= (1 << 0),
@@ -1511,10 +1512,6 @@ namespace flex
 		real m_SuspensionStiffness = 20.f;
 		real m_SuspensionDamping = 2.3f;
 		real m_SuspensionCompression = 4.4f;
-
-#if 0
-		class CommonExampleInterface* vehicle;
-#endif
 
 		MaterialID m_GlassMatID = InvalidMaterialID;
 		MaterialID m_CarPaintMatID = InvalidMaterialID;

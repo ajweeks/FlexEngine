@@ -502,10 +502,13 @@ namespace flex
 
 		newMeshComponent->m_bInitialized = true;
 
-		i32 submeshIndex = owningMesh->AddSubMesh(newMeshComponent);
-		if (outSubmeshIndex != nullptr)
+		if (owningMesh != nullptr)
 		{
-			*outSubmeshIndex = submeshIndex;
+			i32 submeshIndex = owningMesh->AddSubMesh(newMeshComponent);
+			if (outSubmeshIndex != nullptr)
+			{
+				*outSubmeshIndex = submeshIndex;
+			}
 		}
 
 		return newMeshComponent;

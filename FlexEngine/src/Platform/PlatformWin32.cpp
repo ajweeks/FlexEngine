@@ -593,7 +593,15 @@ namespace flex
 		DWORD byteOffset = 0;
 		PCACHE_DESCRIPTOR Cache;
 
-		glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
+		HMODULE kernel32Handle = GetModuleHandle(TEXT("kernel32"));
+
+		if (kernel32Handle == 0)
+		{
+			PrintError("GetModuleHandle(\"kernel32\") failed.\n");
+			return;
+		}
+
+		glpi = (LPFN_GLPI)GetProcAddress(kernel32Handle, "GetLogicalProcessorInformation");
 		if (glpi == NULL)
 		{
 			PrintError("GetLogicalProcessorInformation is not supported.\n");
@@ -623,7 +631,7 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Error encountered in GetLogicalProcessorCount: %d\n", GetLastError());
+					PrintError("Error encountered in GetLogicalProcessorCount: %lu\n", GetLastError());
 					return;
 				}
 			}

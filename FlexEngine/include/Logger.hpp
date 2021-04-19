@@ -8,9 +8,9 @@
 namespace flex
 {
 	void PrintSimple(const char* str);
-	void Print(const char* str, ...) FORMAT_STRING(1, 2);
-	void PrintWarn(const char* str, ...) FORMAT_STRING(1,2);
-	void PrintError(const char* str, ...) FORMAT_STRING(1,2);
+	void Print(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
+	void PrintWarn(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
+	void PrintError(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
 	// Call when results are expected to be larger than MAX_CHARS
 	void PrintLong(const char* str);
 	void Print(const char* str, va_list argList);

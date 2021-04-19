@@ -693,6 +693,7 @@ namespace flex
 		{
 			DisplayALError("OpenAndParseWAVFile", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			free(data);
 			return InvalidAudioSourceID;
 		}
 
@@ -704,6 +705,7 @@ namespace flex
 		{
 			DisplayALError("alBufferData", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			free(data);
 			return InvalidAudioSourceID;
 		}
 		free(data);

@@ -617,10 +617,21 @@ namespace flex
 				switch (unary->opType)
 				{
 				case IR::UnaryOperatorType::NOT:
+					outResultType = Type::BOOL;
 					return lhsType == Type::BOOL;
 				case IR::UnaryOperatorType::NEGATE:
-					return lhsType == Type::INT || lhsType == Type::FLOAT;
+					if (lhsType == Type::INT)
+					{
+						outResultType = Type::BOOL;
+						return true;
+					}
+					else if (lhsType == Type::FLOAT)
+					{
+						outResultType = Type::FLOAT;
+						return true;
+					}
 				case IR::UnaryOperatorType::BIN_INVERT:
+					outResultType = Type::INT;
 					return lhsType == Type::INT;
 				default:
 					irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Unhandled unary operator type");

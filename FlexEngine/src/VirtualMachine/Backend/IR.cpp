@@ -911,6 +911,9 @@ namespace flex
 					IR::Value* conditionExpr = LowerExpression(ifStatement->condition);
 					if (conditionExpr == nullptr)
 					{
+						delete ifTrueBlock;
+						delete mergeBlock;
+						delete ifFalseBlock;
 						return;
 					}
 
@@ -999,12 +1002,17 @@ namespace flex
 					}
 					else
 					{
+						delete newTemp;
 						std::string ifString = ifStatement->condition->ToString();
 						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
+						delete conditionExpr;
 						return;
 					}
 
+					IR::Value* previosuConditionExpr = conditionExpr;
 					conditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
+					delete previosuConditionExpr;
+					previosuConditionExpr = nullptr;
 
 					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, conditionExpr, ifTrueBlock, ifFalseBlock);
 					state->PushInstructionBlock(ifTrueBlock);
@@ -1571,6 +1579,7 @@ namespace flex
 					IR::Value* loweredVal = LowerExpression(returnStatement->returnValue);
 					if (loweredVal == nullptr)
 					{
+						delete nextBlock;
 						return nullptr;
 					}
 					if (IR::Value::IsSimple(loweredVal->type))

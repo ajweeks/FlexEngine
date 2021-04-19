@@ -1258,10 +1258,9 @@ namespace flex
 							if (duplicatedObject != nullptr)
 							{
 								duplicatedObject->AddSelfIDAndChildrenToVec(newSelectedGameObjectIDs);
+								duplicatedObject->Initialize();
+								duplicatedObject->PostInitialize();
 							}
-
-							duplicatedObject->Initialize();
-							duplicatedObject->PostInitialize();
 						}
 					}
 

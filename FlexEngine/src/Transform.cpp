@@ -104,12 +104,12 @@ namespace flex
 	}
 
 	Transform::Transform(const Transform&& other) :
-		localPosition(std::move(other.localPosition)),
-		localRotation(std::move(other.localRotation)),
-		localScale(std::move(other.localScale)),
-		worldPosition(std::move(other.worldPosition)),
-		worldRotation(std::move(other.worldRotation)),
-		worldScale(std::move(other.worldScale)),
+		localPosition(other.localPosition),
+		localRotation(other.localRotation),
+		localScale(other.localScale),
+		worldPosition(other.worldPosition),
+		worldRotation(other.worldRotation),
+		worldScale(other.worldScale),
 		forward(VEC3_FORWARD),
 		up(VEC3_UP),
 		right(VEC3_RIGHT)
@@ -146,12 +146,12 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			localPosition = std::move(other.localPosition);
-			localRotation = std::move(other.localRotation);
-			localScale = std::move(other.localScale);
-			worldPosition = std::move(other.worldPosition);
-			worldRotation = std::move(other.worldRotation);
-			worldScale = std::move(other.worldScale);
+			localPosition = other.localPosition;
+			localRotation = other.localRotation;
+			localScale = other.localScale;
+			worldPosition = other.worldPosition;
+			worldRotation = other.worldRotation;
+			worldScale = other.worldScale;
 			localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
 				glm::mat4(localRotation) *
 				glm::scale(MAT4_IDENTITY, localScale));

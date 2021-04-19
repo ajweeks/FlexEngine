@@ -102,7 +102,7 @@ namespace flex
 		const i32 numCameras = (i32)m_Cameras.size();
 
 		const i32 desiredIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
-		i32 newIndex = desiredIndex;
+		i32 newIndex;
 		i32 offset = 0;
 		do
 		{

@@ -404,11 +404,8 @@ namespace flex
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			VehicleCamera* vehicleCamera = nullptr;
-			if (cam->type == CameraType::VEHICLE)
-			{
-				vehicleCamera = static_cast<VehicleCamera*>(cam);
-			}
-			else
+			// Switch to vehicle cam
+			if (cam->type != CameraType::VEHICLE)
 			{
 				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
 				g_CameraManager->PushCamera(vehicleCamera, false, true);

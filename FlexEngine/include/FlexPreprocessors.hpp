@@ -22,18 +22,18 @@
 
 #ifndef SUPPRESS_WARN_BEGIN
 #if defined(__GNUG__)
-#define SUPPRESS_WARN_BEGIN(warn) \
+#define SUPPRESS_WARN_BEGIN \
 		_Pragma("GCC diagnostic push"); \
 		_Pragma("GCC diagnostic ignored \"-Wmissing-field-initializers\"")
-#define SUPPRESS_WARN_END()  _Pragma("GCC diagnostic pop")
+#define SUPPRESS_WARN_END  _Pragma("GCC diagnostic pop")
 #elif defined(__clang__)
-#define SUPPRESS_WARN_BEGIN(warn) \
+#define SUPPRESS_WARN_BEGIN \
 		_Pragma("clang diagnostic push"); \
-		_Pragma("clang diagnostic ignored " #warn)
-#define SUPPRESS_WARN_END()  _Pragma("clang diagnostic pop")
+		_Pragma("clang diagnostic ignored \"-Wmissing-field-initializers\"")
+#define SUPPRESS_WARN_END  _Pragma("clang diagnostic pop")
 #else
-#define SUPPRESS_WARN_BEGIN(warn)
-#define SUPPRESS_WARN_END()
+#define SUPPRESS_WARN_BEGIN
+#define SUPPRESS_WARN_END
 #endif
 #endif // ifndef SUPPRESS_WARN_BEGIN
 

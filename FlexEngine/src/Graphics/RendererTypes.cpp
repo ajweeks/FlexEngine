@@ -463,6 +463,11 @@ namespace flex
 			materialObject.fields.emplace_back("texture scale", JSONValue(textureScale));
 		}
 
+		if (colourMultiplier != VEC4_ONE)
+		{
+			std::string colourMultiplierStr = VecToString(colourMultiplier, 3);
+			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplierStr));
+		}
 		return materialObject;
 	}
 

@@ -79,19 +79,20 @@
 
 #include "FlexPreprocessors.hpp"
 
-#undef FORMAT_STRING
-
 #undef TRUE
 #undef FALSE
 
 // Markup variadic arguments. n = index of format string, m = index of first variadic ar
 // Indices are 1-based due to implicit this param
 #if defined(__clang__)
-#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
+#define FORMAT_STRING_POST __attribute__ (( format( __printf__, 1, 2 )))
+#define FORMAT_STRING_PRE
 #elif defined(_MSC_VER)
-#define FORMAT_STRING(n,m) _Printf_format_string_
+#define FORMAT_STRING_POST
+#define FORMAT_STRING_PRE _Printf_format_string_
 #elif defined(__GNUG__)
-#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, n, m )))
+#define FORMAT_STRING_POST __attribute__ (( format( __printf__, 1, 2 )))
+#define FORMAT_STRING_PRE
 #endif
 
 #define FT_EXPORT(Type) Type

@@ -908,9 +908,8 @@ namespace flex
 				}
 			}
 
-			if (width == 0 ||
-				height == 0 ||
-				channelCount == 0)
+			if (width == 0 || height == 0 || channelCount == 0 ||
+				((bHDR && hdrImage.pixels == nullptr) || (!bHDR && pixels == nullptr)))
 			{
 				const char* failureReasonStr = stbi_failure_reason();
 				PrintError("Failed to load texture data from %s error: %s\n", relativeFilePath.c_str(), failureReasonStr);
@@ -2459,7 +2458,7 @@ namespace flex
 						}
 
 						shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType);
-						if (shaderKind != -1)
+						if (shaderKind != (shaderc_shader_kind)-1)
 						{
 							const std::string fileName = StripLeadingDirectories(filePath);
 
@@ -2508,7 +2507,7 @@ namespace flex
 									{
 										if (g_bEnableLogging_Shaders)
 										{
-											PrintWarn("%d shader compilation errors, %d warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
+											PrintWarn("%llu shader compilation errors, %llu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
 										}
 										std::string errorStr = assemblyResult.GetErrorMessage();
 										if (g_bEnableLogging_Shaders)
@@ -2548,7 +2547,7 @@ namespace flex
 								{
 									if (g_bEnableLogging_Shaders)
 									{
-										PrintWarn("%d shader compilation errors, %d warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
+										PrintWarn("%llu shader compilation errors, %llu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
 									}
 									std::string errorStr = result.GetErrorMessage();
 									if (g_bEnableLogging_Shaders)
@@ -3408,7 +3407,7 @@ namespace flex
 
 			if (!bFound)
 			{
-				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %lu\n", (u64)descSet);
+				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %llu\n", (u64)descSet);
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);

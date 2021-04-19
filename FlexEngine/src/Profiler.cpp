@@ -138,7 +138,7 @@ namespace flex
 			Timing frameTiming = {};
 			frameTiming.start = s_FrameStartTime;
 			frameTiming.end = s_FrameEndTime;
-			strcpy(frameTiming.blockName, "Total frame time");
+			strncpy(frameTiming.blockName, "Total frame time", Timing::MAX_NAME_LEN);
 			s_DisplayedFrameTimings.emplace_back(frameTiming);
 
 			for (auto timingPair : s_Timings)
@@ -170,7 +170,7 @@ namespace flex
 			Timing timing = {};
 			timing.start = now;
 			timing.end = real_min;
-			strcpy(timing.blockName, blockName);
+			strncpy(timing.blockName, blockName, Timing::MAX_NAME_LEN);
 			s_Timings.insert({ hash, timing });
 
 			++s_UnendedTimings;
@@ -194,7 +194,7 @@ namespace flex
 		auto iter = s_Timings.find(hash);
 		if (iter == s_Timings.end())
 		{
-			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %lu)\n", blockName, hash);
+			PrintError("Profiler::End called before Begin was called! Block name: %s (hash: %llu)\n", blockName, hash);
 			return;
 		}
 

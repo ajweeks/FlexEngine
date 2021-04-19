@@ -403,7 +403,7 @@ namespace flex
 						if (fontMetaData.find(fontNameID) != fontMetaData.end())
 						{
 							// TODO: Handle collision
-							PrintError("Hash collision detected in font meta data for %s : %lu\n", fontName.c_str(), fontNameID);
+							PrintError("Hash collision detected in font meta data for %s : %llu\n", fontName.c_str(), fontNameID);
 						}
 						fontMetaData[fontNameID] = metaData;
 					}
@@ -640,10 +640,17 @@ namespace flex
 			return false;
 		}
 
+		i32 fontHeight = metaData.size * sampleDensity;
 		error = FT_Set_Char_Size(face,
-			0, metaData.size * sampleDensity,
+			0, fontHeight,
 			(FT_UInt)g_Monitor->DPI.x,
 			(FT_UInt)g_Monitor->DPI.y);
+
+		if (error != FT_Err_Ok)
+		{
+			PrintError("Failed to set font size to %d for font %s\n", fontHeight, metaData.filePath.c_str());
+			return false;
+		}
 
 		if (g_bEnableLogging_Loading)
 		{

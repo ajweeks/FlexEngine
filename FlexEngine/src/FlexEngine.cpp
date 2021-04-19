@@ -944,18 +944,16 @@ namespace flex
 				if (ImGui::MenuItem("Shader editor path"))
 				{
 					bOpenShaderEditorPathPopup = true;
-					memset(shaderEditorBuf, 0, buffSize);
-					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
+					strncpy(shaderEditorBuf, m_ShaderEditorPath.c_str(), buffSize);
 				}
 
 #if COMPILE_RENDERDOC_API
 				if (ImGui::MenuItem("Renderdoc DLL path"))
 				{
 					bOpenRenderDocDLLPathPopup = true;
-					memset(renderDocDLLBuf, 0, buffSize);
 					std::string renderDocDLLPath;
 					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
-					strcpy(renderDocDLLBuf, renderDocDLLPath.c_str());
+					strncpy(renderDocDLLBuf, renderDocDLLPath.c_str(), buffSize);
 				}
 #endif
 

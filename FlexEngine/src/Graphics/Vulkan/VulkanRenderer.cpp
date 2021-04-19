@@ -61,7 +61,7 @@ namespace flex
 		PFN_vkGetPhysicalDeviceMemoryProperties2 VulkanRenderer::m_vkGetPhysicalDeviceMemoryProperties2 = nullptr;
 
 		VulkanRenderer::VulkanRenderer() :
-			m_ClearColour({ 1.0f, 0.0f, 1.0f, 1.0f }),
+			m_ClearColour(VkClearColorValue{ 1.0f, 0.0f, 1.0f, 1.0f }),
 			m_BRDFSize({ 512, 512 }),
 			m_CubemapFramebufferSize({ 512, 512 })
 		{
@@ -403,8 +403,8 @@ namespace flex
 
 			CreateAllDynamicVertexAndIndexBuffers();
 
-			m_LTCMatricesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_mat.tga", false, false, true);
-			m_LTCAmplitudesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_amp.tga", false, false, true);
+			m_LTCMatricesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_mat.hdr", false, false, true);
+			m_LTCAmplitudesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_amp.hdr", false, false, true);
 
 			m_bInitialized = true;
 		}
@@ -1238,7 +1238,7 @@ namespace flex
 			Material* gameObjectMat = GetMaterial(renderObject->materialID);
 			if (gameObjectMat != nullptr)
 			{
-				if (renderObject->vertexBufferData->bDynamic)
+				if (renderObject->vertexBufferData != nullptr && renderObject->vertexBufferData->bDynamic)
 				{
 					Shader* gameObjectShader = GetShader(gameObjectMat->shaderID);
 					u32 dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(gameObjectShader->vertexAttributes));
@@ -2315,7 +2315,7 @@ namespace flex
 
 		void VulkanRenderer::SetClearColour(real r, real g, real b)
 		{
-			m_ClearColour = { r, g, b, 1.0f };
+			m_ClearColour = VkClearColorValue{ r, g, b, 1.0f };
 		}
 
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
@@ -3882,7 +3882,7 @@ namespace flex
 				renderPassBeginInfo.renderArea.extent = { (u32)textureSize.x, (u32)textureSize.y };
 				renderPassBeginInfo.clearValueCount = 1;
 				VkClearValue clearCol = {};
-				clearCol.color = { 0.0f, 0.0f, 0.0f, 0.0f };
+				clearCol.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 0.0f };
 				renderPassBeginInfo.pClearValues = &clearCol;
 				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -5450,17 +5450,17 @@ namespace flex
 			// Handle passes which sample a FB which was previously written to
 			for (i32 i = 1; i < (i32)m_AutoTransitionedRenderPasses.size(); ++i)
 			{
-				VulkanRenderPass* prevPass = m_AutoTransitionedRenderPasses[i - 1];
 				VulkanRenderPass* currPass = m_AutoTransitionedRenderPasses[i];
 
 				std::vector<FrameBufferAttachmentID> unresolvedSampledAttachments(currPass->m_SampledAttachmentIDs);
 
+				VulkanRenderPass* prevPass = nullptr;
 				i32 prevPassIndex = i - 1;
 				while (prevPassIndex >= 0 && !unresolvedSampledAttachments.empty())
 				{
 					prevPass = m_AutoTransitionedRenderPasses[prevPassIndex];
 
-					if (prevPass->m_TargetColourAttachmentIDs.size() > 0)
+					if (!prevPass->m_TargetColourAttachmentIDs.empty())
 					{
 						auto sampledAttachmentIter = unresolvedSampledAttachments.begin();
 						while (sampledAttachmentIter != unresolvedSampledAttachments.end())
@@ -5806,6 +5806,7 @@ namespace flex
 				if ((VkShaderModule)shader->vertShaderModule == VK_NULL_HANDLE)
 				{
 					PrintError("Failed to create graphics pipeline, required vertex shader module is empty\n");
+					delete newPipeline;
 					return;
 				}
 				else
@@ -5821,6 +5822,7 @@ namespace flex
 				if ((VkShaderModule)shader->fragShaderModule == VK_NULL_HANDLE)
 				{
 					PrintError("Failed to create graphics pipeline, required fragment shader module is empty\n");
+					delete newPipeline;
 					return;
 				}
 				else
@@ -5837,6 +5839,7 @@ namespace flex
 				if ((VkShaderModule)shader->geomShaderModule == VK_NULL_HANDLE)
 				{
 					PrintError("Failed to create graphics pipeline, required geometry shader module is empty\n");
+					delete newPipeline;
 					return;
 				}
 				else
@@ -7257,7 +7260,7 @@ namespace flex
 				{
 					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
 
-					VkClearValue depthStencilClearValue = { 0.0f, 0 };
+					VkClearValue depthStencilClearValue = VkClearValue { 0.0f, 0 };
 
 					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
 					{
@@ -7290,7 +7293,7 @@ namespace flex
 
 					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
 					{
-						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, (VkClearValue*)&depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
+						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, &depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 
 						// TODO: Upload as one draw
 						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);

@@ -1160,7 +1160,7 @@ namespace flex
 				if (bOpenRename)
 				{
 					ImGui::OpenPopup(renamePopupWindowStr.c_str());
-					strcpy(newNameBuf, material->name.c_str());
+					strncpy(newNameBuf, material->name.c_str(), bufSize);
 				}
 
 				if (ImGui::BeginPopupModal(renamePopupWindowStr.c_str(), NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
@@ -1188,6 +1188,8 @@ namespace flex
 
 					if (bRename)
 					{
+						// TODO: Look through scene files and replace with new name
+
 						newNameBuf[bufSize - 1] = '\0';
 						material->name = std::string(newNameBuf);
 						bMaterialSelectionChanged = true;
@@ -1371,7 +1373,7 @@ namespace flex
 	void Renderer::LoadShaders()
 	{
 		std::vector<ShaderInfo> shaderInfos;
-		SUPPRESS_WARN_BEGIN("-Wmissing-field-initializers");
+		SUPPRESS_WARN_BEGIN;
 #if COMPILE_OPEN_GL
 		shaderInfos = {
 			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
@@ -1399,38 +1401,38 @@ namespace flex
 		};
 #elif COMPILE_VULKAN
 		shaderInfos = {
-			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv" },
-			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv" },
-			{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv" },
-			{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv" },
-			{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv" },
-			{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv" },
-			{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv" },
-			{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv" },
-			{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv" },
-			{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv" },
-			{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv" },
-			{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv" },
-			//{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv" },
-			{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv" },
-			{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv" },
-			{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv" },
-			{ "shadow", "vk_shadow_vert.spv" },
-			{ "ssao", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_frag.spv" }, // TODO: Why not barebones pos2?
-			{ "ssao_blur", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_blur_frag.spv" },
-			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv" },
-			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv" },
-			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv" },
-			{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
-			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv" },
-			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv" },
-			{ "water", "vk_water_vert.spv", "vk_water_frag.spv" },
-			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv" },
-			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv" },
-			{ "raymarched", "vk_raymarched_vert.spv", "vk_raymarched_frag.spv" },
+			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv", "", "" },
+			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv", "", "" },
+			{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv", "", "" },
+			{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv", "", "" },
+			{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv", "", "" },
+			{ "equirectangular_to_cube", "vk_skybox_vert.spv", "vk_equirectangular_to_cube_frag.spv", "", "" },
+			{ "irradiance", "vk_skybox_vert.spv", "vk_irradiance_frag.spv", "", "" },
+			{ "prefilter", "vk_skybox_vert.spv", "vk_prefilter_frag.spv", "", "" },
+			{ "brdf", "vk_brdf_vert.spv", "vk_brdf_frag.spv", "", "" },
+			{ "sprite", "vk_sprite_vert.spv", "vk_sprite_frag.spv", "", "" },
+			{ "sprite_arr", "vk_sprite_vert.spv", "vk_sprite_arr_frag.spv", "", "" },
+			{ "post_process", "vk_post_process_vert.spv", "vk_post_process_frag.spv", "", "" },
+			//{ "post_fxaa", "vk_barebones_pos2_uv_vert.spv", "vk_post_fxaa_frag.spv", "", "" },
+			{ "compute_sdf", "vk_compute_sdf_vert.spv", "vk_compute_sdf_frag.spv", "", "" },
+			{ "font_ss", "vk_font_ss_vert.spv", "vk_font_frag.spv", "vk_font_ss_geom.spv", "" },
+			{ "font_ws", "vk_font_ws_vert.spv", "vk_font_frag.spv", "vk_font_ws_geom.spv", "" },
+			{ "shadow", "vk_shadow_vert.spv", "", "", "" },
+			{ "ssao", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_frag.spv", "", "" }, // TODO: Why not barebones pos2?
+			{ "ssao_blur", "vk_barebones_pos2_uv_vert.spv", "vk_ssao_blur_frag.spv", "", "" },
+			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv", "", "" },
+			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv", "", "" },
+			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv", "", "" },
+			{ "particle_sim", "", "", "vk_simulate_particles_comp.spv", "" },
+			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
+			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
+			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
+			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
+			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
+			{ "raymarched", "vk_raymarched_vert.spv", "vk_raymarched_frag.spv", "", "" },
 		};
 #endif
-		SUPPRESS_WARN_END();
+		SUPPRESS_WARN_END;
 
 		InitializeShaders(shaderInfos);
 
@@ -1469,7 +1471,7 @@ namespace flex
 
 		// Colour
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
 		m_Shaders[shaderID]->maxObjectCount = 32;

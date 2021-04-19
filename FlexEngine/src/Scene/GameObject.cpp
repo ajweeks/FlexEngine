@@ -1056,7 +1056,7 @@ namespace flex
 				{
 					ImGui::BeginTooltip();
 
-					ImGui::Text("Data1, Data2: %lu, %lu", ID.Data1, ID.Data2);
+					ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
 
 					ImGui::EndTooltip();
 				}
@@ -1940,7 +1940,7 @@ namespace flex
 			case Mesh::Type::FILE:
 			{
 				std::string filePath = m_Mesh->GetRelativeFilePath();
-				newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject, nullptr);
+				newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject);
 			} break;
 			default:
 			{
@@ -6700,7 +6700,7 @@ namespace flex
 							}
 							else
 							{
-								ImGui::Text("r%i");
+								ImGui::Text("r%i", i);
 							}
 
 							if (i == (u32)(m_VM->registers.size() / 2 - 1))
@@ -7902,27 +7902,31 @@ namespace flex
 			}
 		}
 
-		glm::vec3 playerPos = g_SceneManager->CurrentScene()->GetPlayer(0)->GetTransform()->GetWorldPosition();
-		glm::vec2 playerPos2D(playerPos.x, playerPos.z);
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
 		{
-			glm::vec2i chunkIndex = iter->first;
-			glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
-			real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
+			glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+			glm::vec2 playerPos2D(playerPos.x, playerPos.z);
+			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			{
+				glm::vec2i chunkIndex = iter->first;
+				glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+				real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
 
-			bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
-			if (bShouldBeLoaded)
-			{
-				if (iter->second->rigidBody == nullptr)
+				bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
+				if (bShouldBeLoaded)
 				{
-					CreateChunkRigidBody(chunkIndex);
+					if (iter->second->rigidBody == nullptr)
+					{
+						CreateChunkRigidBody(chunkIndex);
+					}
 				}
-			}
-			else
-			{
-				if (iter->second->rigidBody != nullptr)
+				else
 				{
-					DestroyChunkRigidBody(chunkIndex);
+					if (iter->second->rigidBody != nullptr)
+					{
+						DestroyChunkRigidBody(chunkIndex);
+					}
 				}
 			}
 		}
@@ -9845,7 +9849,7 @@ namespace flex
 		m_Mesh = new Mesh(this);
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.cullFace = CullFace::NONE;
-		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, &renderObjectCreateInfo))
+		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, true, &renderObjectCreateInfo))
 		{
 			PrintError("Failed to load mesh\n");
 			m_Mesh->Destroy();
@@ -10339,10 +10343,8 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		// Children now exist
-		SUPPRESS_WARN_BEGIN("-Wclass-memaccess");
-		memset(newGameObject->m_TireIDs, 0, sizeof(GameObjectID) * m_TireCount);
-		memset(newGameObject->m_BrakeLightIDs, 0, sizeof(GameObjectID) * 2);
-		SUPPRESS_WARN_END();
+		memset(&newGameObject->m_TireIDs[0], 0, sizeof(GameObjectID) * m_TireCount);
+		memset(&newGameObject->m_BrakeLightIDs[0], 0, sizeof(GameObjectID) * 2);
 
 		// Temporarily set sibling indices as if these objects are both root objects (this will
 		// be overwritten by the proper values soon)

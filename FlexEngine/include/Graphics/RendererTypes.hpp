@@ -700,7 +700,10 @@ namespace flex
 					assert(size == dataSize || size == 0);
 
 					size = dataSize;
-					data = malloc(dataSize);
+					if (dataSize != 0)
+					{
+						data = malloc(dataSize);
+					}
 				}
 				else
 				{

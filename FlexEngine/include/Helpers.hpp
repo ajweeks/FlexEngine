@@ -15,7 +15,7 @@ namespace flex
 
 	static const i32 DEFAULT_FLOAT_PRECISION = 2;
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* channelCountOut = nullptr);
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* outChannelCount = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
 	bool FileExists(const std::string& filePath);

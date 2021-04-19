@@ -15,7 +15,9 @@ namespace flex
 {
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
-		m_CurrentWindowMode(WindowMode::WINDOWED)
+		m_CurrentWindowMode(WindowMode::WINDOWED),
+		m_LastWindowedSize(glm::vec2i(0)),
+		m_LastWindowedPos(glm::vec2i(0))
 	{
 		g_Window = this;
 	}

@@ -68,10 +68,9 @@ namespace flex
 
 	static u32 _lastUID = 0;
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* outChannelCount /* = nullptr */)
 	{
-		assert(requestedChannelCount == 3 ||
-			requestedChannelCount == 4);
+		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
@@ -90,23 +89,21 @@ namespace flex
 			&channelCount,
 			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
-		if (channelCountOut)
-		{
-			*channelCountOut = (u32)channelCount;
-		}
-
 		if (data == nullptr)
 		{
 			const char* failureReasonStr = stbi_failure_reason();
 			PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
 			return result;
 		}
-		else
-		{
-			assert((u32)result.width <= MAX_TEXTURE_DIM);
-			assert((u32)result.height <= MAX_TEXTURE_DIM);
 
-			result.pixels = static_cast<unsigned char*>(data);
+		assert((u32)result.width <= MAX_TEXTURE_DIM);
+		assert((u32)result.height <= MAX_TEXTURE_DIM);
+
+		result.pixels = static_cast<unsigned char*>(data);
+
+		if (outChannelCount != nullptr)
+		{
+			*outChannelCount = (u32)channelCount;
 		}
 
 		return result;
@@ -120,8 +117,7 @@ namespace flex
 
 	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
 	{
-		assert(requestedChannelCount == 3 ||
-			requestedChannelCount == 4);
+		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		filePath = hdrFilePath;
 
@@ -140,15 +136,15 @@ namespace flex
 			&tempC,
 			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
-		width = (u32)tempW;
-		height = (u32)tempH;
-
-		channelCount = 4;
-
 		if (!pixels)
 		{
 			return false;
 		}
+
+		width = (u32)tempW;
+		height = (u32)tempH;
+
+		channelCount = 4;
 
 		assert(width <= MAX_TEXTURE_DIM);
 		assert(height <= MAX_TEXTURE_DIM);
@@ -1573,7 +1569,6 @@ namespace flex
 			if (lastSlash == std::string::npos)
 			{
 				// No more directories to remove from relative path
-				nextDoubleDot = std::string::npos;
 				break;
 			}
 			else
@@ -1617,7 +1612,6 @@ namespace flex
 			if (lastSlash == std::string::npos)
 			{
 				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
-				nextDoubleDot = std::string::npos;
 				break;
 			}
 			else
