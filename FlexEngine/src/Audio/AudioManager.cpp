@@ -652,7 +652,7 @@ namespace flex
 		real newGain = Saturate(s_Sources[sourceID].gain * s_Sources[sourceID].gainMultiplier);
 
 		real currGain;
-		alGetSourcef(sourceID, AL_GAIN, &currGain);
+		alGetSourcef(s_Sources[sourceID].source, AL_GAIN, &currGain);
 		if (currGain != newGain)
 		{
 			alSourcef(s_Sources[sourceID].source, AL_GAIN, newGain);
@@ -671,21 +671,30 @@ namespace flex
 		}
 
 		// WAVE file
-		i32 format = AL_FORMAT_STEREO8;
+		i32 format = AL_FORMAT_MONO16;
 		i32 sampleRate = 44100;
-		i32 size = (i32)(sampleRate * length);
-		u8* data = (u8*)malloc((u32)size);
+		u32 sampleCount = (i32)(sampleRate * length);
+		u32 bufferSize = sampleCount * sizeof(i16);
+		i16* data = (i16*)malloc(bufferSize);
 		assert(data != nullptr);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
-		for (i32 i = 0; i < size; ++i)
+		for (i32 i = 0; i < (i32)sampleCount; ++i)
 		{
-			real t = (real)i / (real)(size - 1);
+			real t = (real)i / (real)(sampleCount - 1);
 			//t -= fmod(t, 0.5f); // Linear fade in/out
 			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
-			real y = 6.0f * t * exp(-2.0f * t) * sin(freq * t);
-			y *= 0.8f + 0.2f * cos(16.0f * t);
-			data[i] = (u8)(y * 15.0f);
+
+			real fadePercent = 0.05f;
+			real fadeIn = SmoothStep01(glm::clamp(t / fadePercent, 0.0f, 1.0f));
+			real fadeOut = SmoothStep01(glm::clamp((1.0f - t) / fadePercent, 0.0f, 1.0f));
+
+			real y = sin(freq * t) * fadeIn * fadeOut;
+
+			//real y = 6.0f * t * exp(-2.0f * t) * sin(freq * t);
+			//y *= 0.8f + 0.2f * cos(16.0f * t);
+
+			data[i] = (i16)(y * 32767.0f);
 		}
 
 		ALenum error = alGetError();
@@ -699,7 +708,7 @@ namespace flex
 
 
 		// Buffer
-		alBufferData(s_Buffers[newID], format, data, size, sampleRate);
+		alBufferData(s_Buffers[newID], format, data, bufferSize, sampleRate);
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{

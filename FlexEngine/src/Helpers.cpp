@@ -1853,6 +1853,11 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	real SmoothStep01(real t)
+	{
+		return t * t * (3.0f - 2.0f * t);
+	}
+
 	// https://www.desmos.com/calculator/pnao7fi1yi
 	real SmootherStep01(real t)
 	{

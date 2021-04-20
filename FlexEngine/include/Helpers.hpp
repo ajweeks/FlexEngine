@@ -249,6 +249,7 @@ namespace flex
 	// globally-unique value use Platform::GenerateGUID instead)
 	FLEX_NO_DISCARD u32 GenerateUID();
 
+	FLEX_NO_DISCARD real SmoothStep01(real t);
 	FLEX_NO_DISCARD real SmootherStep01(real t);
 	FLEX_NO_DISCARD real SmootherStep(real a, real b, real t);
 

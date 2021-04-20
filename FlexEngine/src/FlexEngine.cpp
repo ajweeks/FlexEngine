@@ -294,13 +294,25 @@ namespace flex
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 400.645f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 500.099f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 600.091f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 700.20f));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 523.25f)); // C5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 587.33f)); // D5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 659.25f)); // E5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 698.46f)); // F5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 783.99f)); // G5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 880.00f)); // A5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 987.77f)); // B5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1046.50f)); // C6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1174.66f)); // D6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1318.51f)); // E6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1396.91f)); // F6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1567.98f)); // G6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1760.00f)); // A6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1975.53f)); // B6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 2093.00f)); // C7
+			for (u32 i = (u32)SoundEffect::synthesized_00; i <= (u32)SoundEffect::synthesized_14; ++i)
+			{
+				AudioManager::SetSourceGain(s_AudioSourceIDs[i], 0.5f);
+			}
 		}
 
 		i32 springCount = 6;
@@ -1898,37 +1910,44 @@ namespace flex
 
 			if (keyCode == KeyCode::KEY_4)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_00 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_5)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_01 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_6)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_02 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_7)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_03 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_8)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_04 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_9)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_05 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_0)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_06 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 
