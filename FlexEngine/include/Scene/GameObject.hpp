@@ -70,7 +70,7 @@ namespace flex
 
 	struct GameObjectStack
 	{
-		StringID gameObjectTypeID;
+		PrefabID prefabID;
 		i32 count;
 	};
 
@@ -103,8 +103,8 @@ namespace flex
 
 		static GameObject* CreateObjectFromPrefabTemplate(
 			const PrefabID& prefabID,
-			std::string& objectName,
 			const GameObjectID& gameObjectID,
+			std::string* optionalObjectName = nullptr,
 			GameObject* parent = nullptr,
 			Transform* optionalTransform = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL);
@@ -277,8 +277,8 @@ namespace flex
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
-		StringID Itemize();
-		static GameObject* Deitemize(StringID objectTypeID);
+		PrefabID Itemize();
+		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS);
 
 		bool IsItemizable() const;
 
@@ -745,6 +745,8 @@ namespace flex
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		virtual void Initialize() override;
 
 		virtual void DrawImGuiObjects() override;
 

@@ -29,6 +29,8 @@ namespace flex
 		void AddToPitch(real deltaPitch);
 		real GetPitch() const;
 
+		void Reset();
+
 		glm::vec3 GetLookDirection() const;
 
 		i32 GetIndex() const;
@@ -49,7 +51,7 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		void AddToInventory(StringID objectTypeID, i32 count);
+		void AddToInventory(PrefabID prefabID, i32 count);
 
 		bool IsRidingTrack();
 

@@ -440,7 +440,7 @@ namespace flex
 		_COUNT
 	};
 
-	enum class Action	
+	enum class Action
 	{
 		MOVE_LEFT,
 		MOVE_RIGHT,
@@ -508,10 +508,6 @@ namespace flex
 		DBG_CAM_LOOK_LEFT,
 		DBG_CAM_LOOK_RIGHT,
 		DBG_CAM_ZOOM,
-
-		DBG_ADD_CART_TO_INV,
-		DBG_ADD_ENGINE_CART_TO_INV,
-		DBG_ADD_LIQUID_BOX_TO_INV,
 
 		_NONE
 	};
@@ -585,10 +581,6 @@ namespace flex
 		"DBG CAM Look left",
 		"DBG CAM Look right",
 		"DBG CAM Zoom",
-
-		"DBG Add cart to inventory",
-		"DBG Add engine cart to inventory",
-		"DBG Add liquid box to inventory",
 
 		"None"
 	};

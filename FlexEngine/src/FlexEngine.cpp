@@ -44,6 +44,9 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/CartManager.hpp"
+#include "Systems/TrackManager.hpp"
+#include "Systems/Systems.hpp"
 #include "Time.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
@@ -266,6 +269,9 @@ namespace flex
 		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager();
 		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Initialize();
 
+		g_Systems[(i32)SystemType::TRACK_MANAGER] = new TrackManager();
+
+		g_Systems[(i32)SystemType::CART_MANAGER] = new CartManager();
 
 		g_ResourceManager->DiscoverMeshes();
 		g_ResourceManager->ParseMaterialsFile();
@@ -288,6 +294,10 @@ namespace flex
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
 		g_InputManager->BindActionCallback(&m_ActionCallback, 10);
+
+		// Must be called post scene load
+		g_Systems[(i32)SystemType::TRACK_MANAGER]->Initialize();
+		g_Systems[(i32)SystemType::CART_MANAGER]->Initialize();
 
 		if (s_AudioSourceIDs.empty())
 		{
@@ -396,14 +406,10 @@ namespace flex
 
 		AudioManager::Destroy();
 
-		g_Systems[(i32)SystemType::ROAD_MANAGER]->Destroy();
-		g_Systems[(i32)SystemType::ROAD_MANAGER] = nullptr;
-
-		g_Systems[(i32)SystemType::PLUGGABLES]->Destroy();
-		g_Systems[(i32)SystemType::PLUGGABLES] = nullptr;
-
-		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Destroy();
-		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = nullptr;
+		for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+		{
+			g_Systems[i]->Destroy();
+		}
 
 		delete g_SceneManager;
 		g_SceneManager = nullptr;
@@ -929,20 +935,7 @@ namespace flex
 				Player* player = scene->GetPlayer(0);
 				if (player != nullptr && ImGui::BeginMenu("Add to inventory"))
 				{
-					if (ImGui::MenuItem("Cart"))
-					{
-						player->AddToInventory(SID("cart"), 1);
-					}
-
-					if (ImGui::MenuItem("Engine cart"))
-					{
-						player->AddToInventory(SID("engine cart"), 1);
-					}
-
-					if (ImGui::MenuItem("Mobile liquid box"))
-					{
-						player->AddToInventory(SID("mobile liquid box"), 1);
-					}
+					g_ResourceManager->DrawImGuiMenuItemizableItems();
 
 					ImGui::EndMenu();
 				}
@@ -1246,9 +1239,6 @@ namespace flex
 				ImGui::Spacing();
 
 				ImGui::Text("Debugging");
-
-				currentScene->GetTrackManager()->DrawImGuiObjects();
-				currentScene->GetCartManager()->DrawImGuiObjects();
 
 				for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
 				{
@@ -2159,10 +2149,9 @@ namespace flex
 		outRayEnd = outRayStart + rayDir * maxDist;
 	}
 
-	void FlexEngine::GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd)
+	void FlexEngine::GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist)
 	{
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		const real maxDist = 1000.0f;
 		outRayStart = ToBtVec3(cam->position);
 		btVector3 rayDir = ToBtVec3(cam->forward);
 		outRayEnd = outRayStart + rayDir * maxDist;

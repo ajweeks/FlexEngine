@@ -2,6 +2,7 @@
 
 #include "Callbacks/GameObjectCallbacks.hpp"
 #include "Helpers.hpp" // For GameObjectID
+#include "Systems/System.hpp"
 
 namespace flex
 {
@@ -34,14 +35,17 @@ namespace flex
 
 	};
 
-	class CartManager
+	class CartManager : public System
 	{
 	public:
-		explicit CartManager(BaseScene* owningScene);
+		CartManager();
+		virtual ~CartManager() = default;
 
-		void Initialize();
-		void Destroy();
-		void Update();
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
+
+		virtual void DrawImGui() override;
 
 		// Creates a new cart with given name and adds to the current scene
 		Cart* CreateCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID, bool bPrefabTemplate = false);
@@ -50,7 +54,6 @@ namespace flex
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);
 
-		void DrawImGuiObjects();
 
 	private:
 		void OnGameObjectDestroyed(GameObject* gameObject);
@@ -61,8 +64,6 @@ namespace flex
 
 		std::vector<Cart*> m_Carts;
 		std::vector<CartChain> m_CartChains;
-
-		BaseScene* m_OwningScene = nullptr;
 
 	};
 } // namespace flex

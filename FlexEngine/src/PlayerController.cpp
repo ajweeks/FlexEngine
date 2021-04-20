@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 #include "UIMesh.hpp"
 #include "Window/Window.hpp"
 
@@ -87,7 +88,7 @@ namespace flex
 			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
 			btVector3 rayStart, rayEnd;
-			FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd);
+			FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, m_ItemPickupMaxDist);
 
 			const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
 
@@ -108,7 +109,7 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+				TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
 				if (m_Player->m_bPlacingTrack)
 				{
@@ -376,91 +377,32 @@ namespace flex
 				}
 
 				GameObjectStack& gameObjectStack = m_Player->m_Inventory[m_Player->m_HeldItemSlot];
-				bool bPlaced = false;
 
 				if (gameObjectStack.count >= 1)
 				{
-					switch (gameObjectStack.gameObjectTypeID)
+					glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
+					if (gameObjectStack.prefabID.IsValid())
 					{
-					case SID("engine cart"):
-					{
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
-						gameObjectStack.count--;
-						EngineCart* engineCart = static_cast<EngineCart*>(gameObject);
-
-						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-						real rangeThreshold = 4.0f;
-						real distAlongNearestTrack;
-						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
-
-						if (nearestTrackID != InvalidTrackID)
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
+						if (gameObject != nullptr)
 						{
-							bPlaced = true;
-							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-							engineCart->SetVisible(true);
-						}
-					} break;
-					case SID("cart"):
-					{
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
-						gameObjectStack.count--;
-						Cart* cart = static_cast<Cart*>(gameObject);
+							gameObjectStack.count--;
 
-						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-						real rangeThreshold = 4.0f;
-						real distAlongNearestTrack;
-						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
-
-						if (nearestTrackID != InvalidTrackID)
-						{
-							bPlaced = true;
-							cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-							cart->SetVisible(true);
-						}
-					} break;
-					case SID("mobile liquid box"):
-					{
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
-						gameObjectStack.count--;
-						MobileLiquidBox* mobileLiquidBox = static_cast<MobileLiquidBox*>(gameObject);
-
-						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>(SID("cart"));
-						glm::vec3 playerPos = m_Player->m_Transform.GetWorldPosition();
-						real threshold = 8.0f;
-						real closestCartDist = threshold;
-						i32 closestCartIdx = -1;
-						for (i32 i = 0; i < (i32)carts.size(); ++i)
-						{
-							real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
-							if (d <= closestCartDist)
+							if (gameObjectStack.count == 0)
 							{
-								closestCartDist = d;
-								closestCartIdx = i;
+								m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->m_HeldItemSlot);
 							}
 						}
-
-						if (closestCartIdx != -1)
+						else
 						{
-							g_SceneManager->CurrentScene()->RemoveObjectImmediate(mobileLiquidBox->ID, false);
-
-							bPlaced = true;
-
-							carts[closestCartIdx]->AddChild(mobileLiquidBox);
-							mobileLiquidBox->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
-							mobileLiquidBox->SetVisible(true);
+							std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+							PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
 						}
-					} break;
-					default:
-					{
-						PrintWarn("Attempted to place item from inventory slot %i, unhandled type ID: %llu\n", m_Player->m_HeldItemSlot, gameObjectStack.gameObjectTypeID);
-					} break;
 					}
-
-					if (gameObjectStack.count == 0)
+					else
 					{
-						m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->m_HeldItemSlot);
+						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+						PrintError("Failed to de-itemize item from player inventory, invalid prefab ID\n");
 					}
 				}
 			}
@@ -475,7 +417,7 @@ namespace flex
 		glm::vec3 up = transform->GetUp();
 		glm::vec3 right = transform->GetRight();
 		glm::vec3 forward = transform->GetForward();
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
@@ -657,7 +599,7 @@ namespace flex
 
 	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack)
 	{
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
 		LookDirection desiredDir = LookDirection::CENTER;
@@ -820,25 +762,6 @@ namespace flex
 					m_bAttemptInteract = true;
 					// TODO: Determine if we can interact with anything here to allow
 					// others to consume this event in the case we don't want it
-					return EventReply::CONSUMED;
-				}
-
-				// TODO: Set flags here and move "real" code to Update?
-				if (action == Action::DBG_ADD_CART_TO_INV)
-				{
-					m_Player->AddToInventory(SID("cart"), 1);
-					return EventReply::CONSUMED;
-				}
-
-				if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
-				{
-					m_Player->AddToInventory(SID("engine cart"), 1);
-					return EventReply::CONSUMED;
-				}
-
-				if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
-				{
-					m_Player->AddToInventory(SID("mobile liquid box"), 1);
 					return EventReply::CONSUMED;
 				}
 			}

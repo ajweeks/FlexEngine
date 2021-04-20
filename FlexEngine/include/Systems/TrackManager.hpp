@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JSONTypes.hpp"
+#include "Systems/System.hpp"
 
 namespace flex
 {
@@ -22,10 +23,11 @@ namespace flex
 		i32 curveIndices[MAX_TRACKS]{ -1, -1, -1, -1 };
 	};
 
-	class TrackManager
+	class TrackManager : public System
 	{
 	public:
-		explicit TrackManager(BaseScene* owningScene);
+		TrackManager();
+		virtual ~TrackManager() = default;
 
 		void InitializeFromJSON(const JSONObject& obj);
 
@@ -33,7 +35,11 @@ namespace flex
 		TrackID AddTrack(const BezierCurveList& track);
 		BezierCurveList* GetTrack(TrackID trackID);
 
-		void Update();
+		virtual void Initialize() override;
+		virtual void Update() override;
+		virtual void Destroy() override;
+
+		virtual void DrawImGui() override;
 
 		glm::vec3 GetPointOnTrack(TrackID trackID,
 			real distAlongTrack,
@@ -57,8 +63,6 @@ namespace flex
 		bool GetPointInRange(const glm::vec3& p, bool bIncludeHandles, real range, glm::vec3* outPoint);
 		bool GetPointInRange(const glm::vec3& p, real range, TrackID* outTrackID, i32* outCurveIndex, i32* outPointIdx);
 
-		void Destroy();
-
 		// Compares curve end points on all BezierCurves and creates junctions when positions are
 		// within a threshold of each other
 		void FindJunctions();
@@ -68,8 +72,6 @@ namespace flex
 
 		void DrawDebug();
 
-		void DrawImGuiObjects();
-
 		// Moves t along track according to curve length
 		real AdvanceTAlongTrack(TrackID trackID, real amount, real t);
 
@@ -77,14 +79,12 @@ namespace flex
 
 		real GetCartTargetDistAlongTrackInChain(CartChainID cartChainID, CartID cartID) const;
 
-		std::vector<BezierCurveList> m_Tracks;
-		std::vector<Junction> m_Junctions;
+		std::vector<BezierCurveList> tracks;
+		std::vector<Junction> junctions;
 
 	private:
 		i32 GetTrackIndexInDir(const glm::vec3& desiredDir, Junction& junc, TrackID trackID, bool bEndOfTheLine);
 		TrackState GetTrackStateInDir(const glm::vec3& desiredDir, TrackID trackID, real distAlongTrack, bool bReversing);
-
-		BaseScene* m_OwningScene = nullptr;
 
 		static const real JUNCTION_THRESHOLD_DIST;
 

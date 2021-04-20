@@ -56,6 +56,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/CartManager.hpp"
+#include "Systems/TrackManager.hpp"
 #include "Time.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
@@ -213,7 +215,7 @@ namespace flex
 					transform = Transform::ParseJSON(transformObj);
 				}
 
-				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, objectName, gameObjectID, nullptr, &transform, copyFlags);
+				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
 
 				std::vector<JSONObject> children;
 				if (obj.SetObjectArrayChecked("children", children))
@@ -248,14 +250,20 @@ namespace flex
 
 	GameObject* GameObject::CreateObjectFromPrefabTemplate(
 		const PrefabID& prefabID,
-		std::string& objectName,
 		const GameObjectID& gameObjectID,
+		std::string* optionalObjectName /* = nullptr */,
 		GameObject* parent /* = nullptr */,
 		Transform* optionalTransform /* = nullptr */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
-		GameObject* prefabInstance = prefabTemplate->CopySelf(parent, copyFlags, &objectName, gameObjectID);
+		if (prefabTemplate == nullptr)
+		{
+			std::string prefabTemplateIDStr = prefabID.ToString();
+			PrintError("Failed to create game objet from prefab template with ID %s\n", prefabTemplateIDStr.c_str());
+			return nullptr;
+		}
+		GameObject* prefabInstance = prefabTemplate->CopySelf(parent, copyFlags, optionalObjectName, gameObjectID);
 
 		prefabInstance->m_PrefabIDLoadedFrom = prefabID;
 
@@ -285,8 +293,8 @@ namespace flex
 		case SID("spot light"): return new SpotLight(objectName, gameObjectID);
 		case SID("area light"): return new AreaLight(objectName, gameObjectID);
 		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID);
-		case SID("cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateCart(objectName, gameObjectID, bIsPrefabTemplate);
-		case SID("engine cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateEngineCart(objectName, gameObjectID, bIsPrefabTemplate);
+		case SID("cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateCart(objectName, gameObjectID, bIsPrefabTemplate);
+		case SID("engine cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateEngineCart(objectName, gameObjectID, bIsPrefabTemplate);
 		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
 		case SID("terminal"): return new Terminal(objectName, gameObjectID);
 		case SID("gerstner wave"): return new GerstnerWave(objectName, gameObjectID);
@@ -1815,20 +1823,28 @@ namespace flex
 		return result;
 	}
 
-	StringID GameObject::Itemize()
+	PrefabID GameObject::Itemize()
 	{
-		StringID typeID = m_TypeID;
+		PrefabID prefabID = m_PrefabIDLoadedFrom;
+
+		if (!prefabID.IsValid())
+		{
+			PrintError("Attempted to itemize object not loaded from prefab\n");
+			return prefabID;
+		}
 
 		g_SceneManager->CurrentScene()->RemoveObject(this, true);
 
-		return typeID;
+		return prefabID;
 	}
 
-	GameObject* GameObject::Deitemize(StringID objectTypeID)
+	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
 
-		GameObject* newObject = CreateObjectOfType(objectTypeID, "", InvalidGameObjectID, "");
+		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID);
+
+		newObject->m_Transform.SetWorldPosition(positionWS);
 
 		newObject->Initialize();
 		newObject->PostInitialize();
@@ -1840,7 +1856,8 @@ namespace flex
 
 	bool GameObject::IsItemizable() const
 	{
-		return m_bItemizable;
+		// Only prefabs are itemizable, we store the prefab ID
+		return m_bItemizable && (m_bIsTemplate || m_PrefabIDLoadedFrom.IsValid());
 	}
 
 	bool GameObject::GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const
@@ -4260,7 +4277,7 @@ namespace flex
 		{
 			currentTrackID = trackID;
 
-			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 			i32 curveIndex, juncIndex;
 			TrackID newTrackID = trackID;
 			TrackState trackState;
@@ -4295,7 +4312,7 @@ namespace flex
 	{
 		if (currentTrackID != InvalidTrackID)
 		{
-			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
 			real pDistAlongTrack = distAlongTrack;
 			distAlongTrack = trackManager->AdvanceTAlongTrack(currentTrackID, dT, distAlongTrack);
@@ -4336,8 +4353,8 @@ namespace flex
 		{
 			if (chainID != InvalidCartChainID)
 			{
-				BaseScene* baseScene = g_SceneManager->CurrentScene();
-				TrackManager* trackManager = baseScene->GetTrackManager();
+				TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+				CartManager* cartManager = GetSystem<CartManager>(SystemType::CART_MANAGER);
 
 				//real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
 				//assert(targetT != -1.0f);
@@ -4398,7 +4415,6 @@ namespace flex
 
 				//distAlongTrack = newDistAlongTrack;
 
-				CartManager* cartManager = baseScene->GetCartManager();
 
 				const CartChain* chain = cartManager->GetCartChain(chainID);
 				i32 cartInChainIndex = chain->GetCartIndex(cartID);
@@ -4608,6 +4624,37 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		return newGameObject;
+	}
+
+	void MobileLiquidBox::Initialize()
+	{
+		// TODO: Query from CartManager?
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		std::vector<Cart*> carts = scene->GetObjectsOfType<Cart>(SID("cart"));
+		Player* player = scene->GetPlayer(0);
+		if (player != nullptr)
+		{
+			glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+			real threshold = 8.0f;
+			real closestCartDist = threshold;
+			i32 closestCartIdx = -1;
+			for (i32 i = 0; i < (i32)carts.size(); ++i)
+			{
+				real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
+				if (d <= closestCartDist)
+				{
+					closestCartDist = d;
+					closestCartIdx = i;
+				}
+			}
+
+			if (closestCartIdx != -1)
+			{
+				carts[closestCartIdx]->AddChild(this);
+				m_Transform.SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
+				SetVisible(true);
+			}
+		}
 	}
 
 	void MobileLiquidBox::DrawImGuiObjects()

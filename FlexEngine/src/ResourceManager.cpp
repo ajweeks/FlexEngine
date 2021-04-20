@@ -20,6 +20,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
+#include "Player.hpp"
 #include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -1186,6 +1187,21 @@ namespace flex
 			}
 		}
 		ImGui::EndChild();
+	}
+
+	void ResourceManager::DrawImGuiMenuItemizableItems()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		for (PrefabTemplatePair& pair : prefabTemplates)
+		{
+			if (pair.templateObject->IsItemizable())
+			{
+				if (ImGui::MenuItem(pair.templateObject->m_Name.c_str()))
+				{
+					player->AddToInventory(pair.prefabID, 1);
+				}
+			}
+		}
 	}
 
 	void ResourceManager::DrawImGuiWindows()

@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#include "Managers/CartManager.hpp"
+#include "Systems/CartManager.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // For distance2
@@ -14,7 +14,6 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Track/TrackManager.hpp"
 
 namespace flex
 {
@@ -31,7 +30,7 @@ namespace flex
 			carts.push_back(cartID);
 			bAdded = true;
 		}
-		g_SceneManager->CurrentScene()->GetCartManager()->GetCart(cartID)->chainID = chainID;
+		GetSystem<CartManager>(SystemType::CART_MANAGER)->GetCart(cartID)->chainID = chainID;
 
 		if (bAdded)
 		{
@@ -48,7 +47,7 @@ namespace flex
 			return;
 		}
 
-		g_SceneManager->CurrentScene()->GetCartManager()->GetCart(*iter)->chainID = InvalidCartChainID;
+		GetSystem<CartManager>(SystemType::CART_MANAGER)->GetCart(*iter)->chainID = InvalidCartChainID;
 		carts.erase(iter);
 	}
 
@@ -82,7 +81,7 @@ namespace flex
 	real CartChain::GetCartAtIndexDistAlongTrack(i32 cartIndex)
 	{
 		assert(cartIndex >= 0 && cartIndex < (i32)carts.size());
-		return g_SceneManager->CurrentScene()->GetCartManager()->GetCart(carts[cartIndex])->distAlongTrack;
+		return GetSystem<CartManager>(SystemType::CART_MANAGER)->GetCart(carts[cartIndex])->distAlongTrack;
 	}
 
 	void CartChain::Reset()
@@ -98,7 +97,7 @@ namespace flex
 			return;
 		}
 
-		CartManager* cartManager = g_SceneManager->CurrentScene()->GetCartManager();
+		CartManager* cartManager = GetSystem<CartManager>(SystemType::CART_MANAGER);
 		std::sort(carts.begin(), carts.end(), [cartManager, this](CartID cartAID, CartID cartBID) -> bool
 			{
 				assert(cartManager->GetCart(cartAID)->chainID == chainID &&
@@ -109,9 +108,8 @@ namespace flex
 			});
 	}
 
-	CartManager::CartManager(BaseScene* owningScene) :
-		m_OnGameObjectDestroyedCallback(this, &CartManager::OnGameObjectDestroyed),
-		m_OwningScene(owningScene)
+	CartManager::CartManager() :
+		m_OnGameObjectDestroyedCallback(this, &CartManager::OnGameObjectDestroyed)
 	{
 	}
 
@@ -122,7 +120,10 @@ namespace flex
 
 	void CartManager::Destroy()
 	{
-		g_SceneManager->CurrentScene()->UnbindOnGameObjectDestroyedCallback(&m_OnGameObjectDestroyedCallback);
+		if (g_SceneManager->HasSceneLoaded())
+		{
+			g_SceneManager->CurrentScene()->UnbindOnGameObjectDestroyedCallback(&m_OnGameObjectDestroyedCallback);
+		}
 
 		m_Carts.clear();
 		m_CartChains.clear();
@@ -379,11 +380,10 @@ namespace flex
 		return m_Carts[cartID];
 	}
 
-	void CartManager::DrawImGuiObjects()
+	void CartManager::DrawImGui()
 	{
 		if (ImGui::TreeNode("Carts"))
 		{
-			CartManager* cartManager = m_OwningScene->GetCartManager();
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
 				if (m_CartChains[i].chainID != InvalidCartChainID)
@@ -393,7 +393,7 @@ namespace flex
 					{
 						for (CartID cartID : m_CartChains[i].carts)
 						{
-							ImGui::Text("%s", cartManager->GetCart(cartID)->GetName().c_str());
+							ImGui::Text("%s", GetCart(cartID)->GetName().c_str());
 						}
 						ImGui::TreePop();
 					}

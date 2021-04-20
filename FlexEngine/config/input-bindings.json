@@ -518,35 +518,5 @@
 		"gamepad axis" : -1,
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
-	},
-	"DBG Add cart to inventory" : 
-	{
-		"key code" : 20,
-		"mouse button" : -1,
-		"mouse axis" : -1,
-		"gamepad button" : -1,
-		"gamepad axis" : -1,
-		"invert mouse axis" : false,
-		"invert gamepad axis" : false
-	},
-	"DBG Add engine cart to inventory" : 
-	{
-		"key code" : 39,
-		"mouse button" : -1,
-		"mouse axis" : -1,
-		"gamepad button" : -1,
-		"gamepad axis" : -1,
-		"invert mouse axis" : false,
-		"invert gamepad axis" : false
-	},
-	"DBG Add liquid box to inventory" : 
-	{
-		"key code" : 30,
-		"mouse button" : -1,
-		"mouse axis" : -1,
-		"gamepad button" : -1,
-		"gamepad axis" : -1,
-		"invert mouse axis" : false,
-		"invert gamepad axis" : false
 	}
 }

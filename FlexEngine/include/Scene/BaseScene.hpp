@@ -1,9 +1,7 @@
 #pragma once
 
 #include "Graphics/RendererTypes.hpp"
-#include "Managers/CartManager.hpp"
 #include "Scene/GameObject.hpp"
-#include "Track/TrackManager.hpp"
 
 namespace flex
 {
@@ -111,9 +109,6 @@ namespace flex
 			return result;
 		}
 
-		TrackManager* GetTrackManager();
-		CartManager* GetCartManager();
-
 		std::string GetUniqueObjectName(const std::string& existingName);
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
@@ -140,6 +135,9 @@ namespace flex
 
 		real GetTimeOfDay() const;
 
+		real GetPlayerMinHeight() const;
+		glm::vec3 GetPlayerSpawnPoint() const;
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
@@ -151,7 +149,6 @@ namespace flex
 
 	protected:
 		friend GameObject;
-		friend CartManager;
 		friend SceneManager;
 
 		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
@@ -188,11 +185,12 @@ namespace flex
 		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
 
+		// Kill zone for player
+		real m_PlayerMinHeight = -500.0f;
+		glm::vec3 m_PlayerSpawnPoint;
+
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
-
-		TrackManager m_TrackManager;
-		CartManager m_CartManager;
 
 		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
 

@@ -31,6 +31,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 #include "StringBuilder.hpp"
 #include "Track/BezierCurve3D.hpp"
 
@@ -39,9 +40,7 @@ namespace flex
 	std::map<StringID, std::string> BaseScene::GameObjectTypeStringIDPairs;
 
 	BaseScene::BaseScene(const std::string& fileName) :
-		m_FileName(fileName),
-		m_TrackManager(this),
-		m_CartManager(this)
+		m_FileName(fileName)
 	{
 		// Daylight
 		m_SkyboxDatas[0].top = glm::vec4(0.220f, 0.580f, 0.880f, 1.000f);
@@ -69,6 +68,8 @@ namespace flex
 		m_SkyboxData.mid = m_SkyboxDatas[0].mid;
 		m_SkyboxData.btm = m_SkyboxDatas[0].btm;
 		m_SkyboxData.fog = m_SkyboxDatas[0].fog;
+
+		m_PlayerSpawnPoint = glm::vec3(0.0f, 2.0f, 0.0f);
 	}
 
 	BaseScene::~BaseScene()
@@ -90,8 +91,6 @@ namespace flex
 
 			m_PhysicsWorld->GetWorld()->setGravity({ 0.0f, -9.81f, 0.0f });
 
-			m_CartManager.Initialize();
-
 			g_ResourceManager->DiscoverPrefabs();
 
 			const std::string filePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
@@ -108,7 +107,7 @@ namespace flex
 			if (m_bSpawnPlayer)
 			{
 				m_Player0 = new Player(0, m_PlayerGUIDs[0]);
-				m_Player0->GetTransform()->SetWorldPosition(glm::vec3(0.0f, 2.0f, 0.0f));
+				m_Player0->GetTransform()->SetWorldPosition(m_PlayerSpawnPoint);
 				AddRootObjectImmediate(m_Player0);
 
 				//m_Player1 = new Player(1, m_PlayerGUIDs[1]);
@@ -161,9 +160,6 @@ namespace flex
 		m_RootObjects.clear();
 		m_GameObjectLUT.clear();
 
-		m_TrackManager.Destroy();
-		m_CartManager.Destroy();
-
 		m_PendingDestroyObjects.clear();
 		m_PendingRemoveObjects.clear();
 		m_PendingAddObjects.clear();
@@ -196,7 +192,6 @@ namespace flex
 			m_PhysicsWorld->Update(g_DeltaTime);
 		}
 
-		m_CartManager.Update();
 		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
 		{
 			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
@@ -216,8 +211,6 @@ namespace flex
 				}
 			}
 		}
-
-		m_TrackManager.DrawDebug();
 
 		if (!m_bPauseTimeOfDay)
 		{
@@ -467,7 +460,8 @@ namespace flex
 		{
 			const JSONObject& trackManagerObj = sceneRootObject.GetObject("track manager");
 
-			m_TrackManager.InitializeFromJSON(trackManagerObj);
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+			trackManager->InitializeFromJSON(trackManagerObj);
 		}
 
 		return true;
@@ -931,16 +925,6 @@ namespace flex
 		}
 
 		return result;
-	}
-
-	TrackManager* BaseScene::GetTrackManager()
-	{
-		return &m_TrackManager;
-	}
-
-	CartManager* BaseScene::GetCartManager()
-	{
-		return &m_CartManager;
 	}
 
 	std::string BaseScene::GetUniqueObjectName(const std::string& existingName)
@@ -1687,7 +1671,7 @@ namespace flex
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 		std::string prefabName = prefabTemplate->GetName();
 		std::string newObjectName = GetUniqueObjectName(prefabName);
-		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, newObjectName, InvalidGameObjectID, parent);
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, &newObjectName, parent);
 
 		newPrefabInstance->Initialize();
 		newPrefabInstance->PostInitialize();
@@ -1706,7 +1690,7 @@ namespace flex
 		std::string previousName = previousInstance->m_Name;
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
 
-		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousName, previousGameObjectID, previousParent, nullptr, copyFlags);
+		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousGameObjectID, &previousName, previousParent, nullptr, copyFlags);
 
 		// Place in root object list or as child of parent
 		if (previousParent == nullptr)
@@ -1819,6 +1803,16 @@ namespace flex
 		return m_TimeOfDay;
 	}
 
+	real BaseScene::GetPlayerMinHeight() const
+	{
+		return m_PlayerMinHeight;
+	}
+
+	glm::vec3 BaseScene::GetPlayerSpawnPoint() const
+	{
+		return m_PlayerSpawnPoint;
+	}
+
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
 		auto iter = GameObjectTypeStringIDPairs.find(typeID);
@@ -1909,9 +1903,10 @@ namespace flex
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
 
-		if (!m_TrackManager.m_Tracks.empty())
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+		if (!trackManager->tracks.empty())
 		{
-			rootSceneObject.fields.emplace_back("track manager", JSONValue(m_TrackManager.Serialize()));
+			rootSceneObject.fields.emplace_back("track manager", JSONValue(trackManager->Serialize()));
 		}
 
 		Print("Serializing scene to %s\n", m_FileName.c_str());

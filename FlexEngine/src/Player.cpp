@@ -28,10 +28,12 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 
 namespace flex
 {
@@ -146,7 +148,7 @@ namespace flex
 
 		if (m_TrackRidingID != InvalidTrackID)
 		{
-			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 			glm::vec3 trackForward = trackManager->GetTrack(m_TrackRidingID)->GetCurveDirectionAt(m_DistAlongTrack);
 			real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
 			if (m_TrackState == TrackState::FACING_FORWARD)
@@ -203,6 +205,12 @@ namespace flex
 			}
 		}
 
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (m_Transform.GetWorldPosition().y < scene->GetPlayerMinHeight())
+		{
+			Reset();
+		}
+
 		GameObject::Update();
 	}
 
@@ -221,6 +229,20 @@ namespace flex
 	real Player::GetPitch() const
 	{
 		return m_Pitch;
+	}
+
+	void Player::Reset()
+	{
+		glm::vec3 spawnPoint = g_SceneManager->CurrentScene()->GetPlayerSpawnPoint();
+		m_Transform.SetWorldPosition(spawnPoint);
+		m_Transform.SetWorldRotation(QUAT_IDENTITY);
+		btRigidBody* rigidBodyInternal = m_RigidBody->GetRigidBodyInternal();
+		rigidBodyInternal->clearForces();
+		rigidBodyInternal->clearGravity();
+		rigidBodyInternal->setLinearVelocity(btVector3(0, 0, 0));
+		rigidBodyInternal->setAngularVelocity(btVector3(0, 0, 0));
+
+		m_Pitch = 0.0f;
 	}
 
 	glm::vec3 Player::GetLookDirection() const
@@ -282,7 +304,6 @@ namespace flex
 
 			ImGui::Text("Inventory:");
 			ImGui::Indent();
-			BaseScene* scene = g_SceneManager->CurrentScene();
 			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
 				//if (gameObject == m_HeldItem)
@@ -290,7 +311,18 @@ namespace flex
 				//	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
 				//}
 
-				ImGui::Text("%s (%i)", scene->GameObjectTypeIDToString(gameObjectStack.gameObjectTypeID), gameObjectStack.count);
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+				if (prefabTemplate != nullptr)
+				{
+					std::string prefabTemplateName = prefabTemplate->GetName();
+					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+					ImGui::Text("INVALID (%i)", gameObjectStack.count);
+					ImGui::PopStyleColor();
+				}
 
 				//if (gameObject == m_HeldItem)
 				//{
@@ -470,7 +502,8 @@ namespace flex
 		if (snapThreshold != -1.0f)
 		{
 			glm::vec3 pointInRange;
-			if (g_SceneManager->CurrentScene()->GetTrackManager()->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+			if (trackManager->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
 			{
 				point = pointInRange;
 			}
@@ -481,7 +514,7 @@ namespace flex
 
 	void Player::AttachToTrack(TrackID trackID, real distAlongTrack)
 	{
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		BezierCurveList* track = trackManager->GetTrack(trackID);
 		assert(track);
 
@@ -539,18 +572,18 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(StringID objectTypeID, i32 count)
+	void Player::AddToInventory(PrefabID prefabID, i32 count)
 	{
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
-			if (gameObjectStack.gameObjectTypeID == objectTypeID)
+			if (gameObjectStack.prefabID == prefabID)
 			{
 				gameObjectStack.count += count;
 				return;
 			}
 		}
 
-		m_Inventory.push_back(GameObjectStack{ objectTypeID, count });
+		m_Inventory.push_back(GameObjectStack{ prefabID, count });
 	}
 
 	bool Player::IsRidingTrack()

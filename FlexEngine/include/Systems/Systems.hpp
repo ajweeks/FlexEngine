@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Systems/System.hpp"
+
 namespace flex
 {
 	class Wire;
@@ -7,26 +9,6 @@ namespace flex
 	class Road;
 	class Terminal;
 	class DirectoryWatcher;
-
-	enum class SystemType
-	{
-		PLUGGABLES,
-		ROAD_MANAGER,
-		TERMINAL_MANAGER,
-
-		_NONE
-	};
-
-	class System
-	{
-	public:
-		virtual void Initialize() = 0;
-		virtual void Destroy() = 0;
-		virtual void Update() = 0;
-
-		virtual void DrawImGui();
-
-	};
 
 	class PluggablesSystem : public System
 	{
