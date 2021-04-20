@@ -623,6 +623,7 @@ namespace flex
 
 			bool bEditorObject = false;
 			bool bSetDynamicStates = false;
+			bool bAllowDynamicBufferShrinking = true;
 
 			u32 dynamicUBOOffset = 0;
 			u32 dynamicShadowUBOOffset = 0;

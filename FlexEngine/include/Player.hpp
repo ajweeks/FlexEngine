@@ -49,7 +49,7 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		void AddToInventory(GameObject* obj);
+		void AddToInventory(StringID objectTypeID, i32 count);
 
 		bool IsRidingTrack();
 
@@ -91,8 +91,9 @@ namespace flex
 
 		TrackState m_TrackState;
 
-		std::vector<GameObject*> m_Inventory;
-		GameObject* m_HeldItem = nullptr;
+		std::vector<GameObjectStack> m_Inventory;
+		i32 m_HeldItemSlot = -1;
+		//GameObject* m_HeldItem = nullptr;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

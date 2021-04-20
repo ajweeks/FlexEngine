@@ -74,7 +74,7 @@ namespace flex
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<Editor> m_KeyEventCallback;
 
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<Editor> m_ActionCallback;
 
 		void CreateObjects();

@@ -818,6 +818,7 @@ namespace flex
 		bool bEditorObject = false;
 		bool bSetDynamicStates = false;
 		bool bIndexed = false;
+		bool bAllowDynamicBufferShrinking = true;
 	};
 
 	struct Uniforms

@@ -1155,6 +1155,12 @@ namespace flex
 
 	EventReply Editor::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
 		if (button == MouseButton::LEFT)
 		{
 			if (action == KeyAction::KEY_PRESS)
@@ -1214,6 +1220,12 @@ namespace flex
 	{
 		FLEX_UNUSED(dMousePos);
 
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
 		if (m_bDraggingGizmo)
 		{
 			HandleGizmoMovement();
@@ -1224,6 +1236,12 @@ namespace flex
 
 	EventReply Editor::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 
 		if (action == KeyAction::KEY_PRESS)
@@ -1286,94 +1304,102 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	EventReply Editor::OnActionEvent(Action action)
+	EventReply Editor::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::EDITOR_RENAME_SELECTED)
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
 		{
-			m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
-			return EventReply::CONSUMED;
+			return EventReply::UNCONSUMED;
 		}
 
-		// TODO: Check for exact matches, don't match if additional modifiers are down
-		if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			SetTransformState(TransformState::TRANSLATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
-		{
-			SetTransformState(TransformState::ROTATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
-		{
-			SetTransformState(TransformState::SCALE);
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::PAUSE)
-		{
-			if (m_CurrentlySelectedObjectIDs.empty())
+			if (action == Action::EDITOR_RENAME_SELECTED)
 			{
-				//m_bSimulationPaused = !m_bSimulationPaused;
+				m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
+				return EventReply::CONSUMED;
 			}
-			else
+
+			// TODO: Check for exact matches, don't match if additional modifiers are down
+			if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
 			{
-				SelectNone();
+				SetTransformState(TransformState::TRANSLATE);
+				return EventReply::CONSUMED;
 			}
-			return EventReply::CONSUMED;
-		}
-
-		CameraType currentCameraType = g_CameraManager->CurrentCamera()->type;
-		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjectIDs.empty() && currentCameraType == CameraType::DEBUG_CAM)
-		{
-			BaseScene* currentScene = g_SceneManager->CurrentScene();
-
-			glm::vec3 minPos(FLT_MAX);
-			glm::vec3 maxPos(-FLT_MAX);
-			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+			if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
 			{
-				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
-				Mesh* mesh = gameObject->GetMesh();
-				if (mesh)
+				SetTransformState(TransformState::ROTATE);
+				return EventReply::CONSUMED;
+			}
+			if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
+			{
+				SetTransformState(TransformState::SCALE);
+				return EventReply::CONSUMED;
+			}
+
+			if (action == Action::PAUSE)
+			{
+				if (m_CurrentlySelectedObjectIDs.empty())
 				{
-					Transform* transform = gameObject->GetTransform();
-					glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-					glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-					minPos = glm::min(minPos, min);
-					maxPos = glm::max(maxPos, max);
-				}
-			}
-
-			if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
-			{
-				minPos = glm::vec3(-1.0f);
-				maxPos = glm::vec3(1.0f);
-			}
-
-			glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-			real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-			if (sphereRadius > 0.0f)
-			{
-				glm::vec3 currentOffset = cam->position - sphereCenterWS;
-				glm::vec3 newOffset;
-				if (currentOffset != VEC3_ZERO)
-				{
-					newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+					//m_bSimulationPaused = !m_bSimulationPaused;
 				}
 				else
 				{
-					newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+					SelectNone();
 				}
-				cam->position = sphereCenterWS + newOffset;
+				return EventReply::CONSUMED;
 			}
 
-			cam->LookAt(m_SelectedObjectsCenterPos);
-			return EventReply::CONSUMED;
+			CameraType currentCameraType = g_CameraManager->CurrentCamera()->type;
+			if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjectIDs.empty() && currentCameraType == CameraType::DEBUG_CAM)
+			{
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+				glm::vec3 minPos(FLT_MAX);
+				glm::vec3 maxPos(-FLT_MAX);
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+				{
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					Mesh* mesh = gameObject->GetMesh();
+					if (mesh)
+					{
+						Transform* transform = gameObject->GetTransform();
+						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+						minPos = glm::min(minPos, min);
+						maxPos = glm::max(maxPos, max);
+					}
+				}
+
+				if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
+				{
+					minPos = glm::vec3(-1.0f);
+					maxPos = glm::vec3(1.0f);
+				}
+
+				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+				if (sphereRadius > 0.0f)
+				{
+					glm::vec3 currentOffset = cam->position - sphereCenterWS;
+					glm::vec3 newOffset;
+					if (currentOffset != VEC3_ZERO)
+					{
+						newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+					}
+					else
+					{
+						newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+					}
+					cam->position = sphereCenterWS + newOffset;
+				}
+
+				cam->LookAt(m_SelectedObjectsCenterPos);
+				return EventReply::CONSUMED;
+			}
 		}
+
 		return EventReply::UNCONSUMED;
 	}
 

@@ -169,6 +169,16 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Pickup Item" : 
+	{
+		"key code" : 37,
+		"mouse button" : 0,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Toggle holding item" : 
 	{
 		"key code" : 0,

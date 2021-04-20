@@ -141,6 +141,8 @@ namespace flex
 			return nullptr;
 		}
 
+		g_InputManager->ClearAllInputs();
+
 		BaseCamera* pActiveCam = nullptr;
 		if (!m_CameraStack.empty())
 		{
@@ -185,6 +187,8 @@ namespace flex
 			PrintError("CameraManager::PopCamera - Attempted to pop final camera from stack\n");
 			return;
 		}
+
+		g_InputManager->ClearAllInputs();
 
 		BaseCamera* currentCamera = CurrentCamera();
 		currentCamera->OnDepossess();
@@ -305,17 +309,20 @@ namespace flex
 		to->FOV = from->FOV;
 	}
 
-	EventReply CameraManager::OnActionEvent(Action action)
+	EventReply CameraManager::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			CycleCamera(-1, false);
-			return EventReply::CONSUMED;
-		}
-		else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
-		{
-			CycleCamera(1, false);
-			return EventReply::CONSUMED;
+			if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+			{
+				CycleCamera(-1, false);
+				return EventReply::CONSUMED;
+			}
+			else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
+			{
+				CycleCamera(1, false);
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;

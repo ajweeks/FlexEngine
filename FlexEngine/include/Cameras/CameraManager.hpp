@@ -38,7 +38,7 @@ namespace flex
 		void DrawImGuiObjects();
 
 	private:
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<CameraManager> m_ActionCallback;
 
 		i32 GetCameraIndex(BaseCamera* camera);

@@ -931,23 +931,17 @@ namespace flex
 				{
 					if (ImGui::MenuItem("Cart"))
 					{
-						CartManager* cartManager = scene->GetCartManager();
-						Cart* cart = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-						player->AddToInventory(cart);
+						player->AddToInventory(SID("cart"), 1);
 					}
 
 					if (ImGui::MenuItem("Engine cart"))
 					{
-						CartManager* cartManager = scene->GetCartManager();
-						EngineCart* engineCart = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-						player->AddToInventory(engineCart);
+						player->AddToInventory(SID("engine cart"), 1);
 					}
 
 					if (ImGui::MenuItem("Mobile liquid box"))
 					{
-						MobileLiquidBox* box = new MobileLiquidBox();
-						scene->AddRootObject(box);
-						player->AddToInventory(box);
+						player->AddToInventory(SID("mobile liquid box"), 1);
 					}
 
 					ImGui::EndMenu();
@@ -1971,21 +1965,24 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	EventReply FlexEngine::OnActionEvent(Action action)
+	EventReply FlexEngine::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::DBG_ENTER_NEXT_SCENE)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			g_SceneManager->SetNextSceneActive();
-			g_SceneManager->InitializeCurrentScene();
-			g_SceneManager->PostInitializeCurrentScene();
-			return EventReply::CONSUMED;
-		}
-		else if (action == Action::DBG_ENTER_PREV_SCENE)
-		{
-			g_SceneManager->SetPreviousSceneActive();
-			g_SceneManager->InitializeCurrentScene();
-			g_SceneManager->PostInitializeCurrentScene();
-			return EventReply::CONSUMED;
+			if (action == Action::DBG_ENTER_NEXT_SCENE)
+			{
+				g_SceneManager->SetNextSceneActive();
+				g_SceneManager->InitializeCurrentScene();
+				g_SceneManager->PostInitializeCurrentScene();
+				return EventReply::CONSUMED;
+			}
+			else if (action == Action::DBG_ENTER_PREV_SCENE)
+			{
+				g_SceneManager->SetPreviousSceneActive();
+				g_SceneManager->InitializeCurrentScene();
+				g_SceneManager->PostInitializeCurrentScene();
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;
@@ -2162,9 +2159,24 @@ namespace flex
 		outRayEnd = outRayStart + rayDir * maxDist;
 	}
 
+	void FlexEngine::GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd)
+	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		const real maxDist = 1000.0f;
+		outRayStart = ToBtVec3(cam->position);
+		btVector3 rayDir = ToBtVec3(cam->forward);
+		outRayEnd = outRayStart + rayDir * maxDist;
+
+	}
+
 	bool FlexEngine::IsSimulationPaused() const
 	{
 		return m_bSimulationPaused;
+	}
+
+	void FlexEngine::SetSimulationPaused(bool bPaused)
+	{
+		m_bSimulationPaused = bPaused;
 	}
 
 	bool FlexEngine::InstallShaderDirectoryWatch() const

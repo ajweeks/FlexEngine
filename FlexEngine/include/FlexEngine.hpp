@@ -22,7 +22,7 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 
-		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data);
+		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data);
 
 		void OnSceneChanged();
 
@@ -32,6 +32,7 @@ namespace flex
 		void SetRenderingEditorObjects(bool bRenderingEditorObjects);
 
 		bool IsSimulationPaused() const;
+		void SetSimulationPaused(bool bPaused);
 
 		bool InstallShaderDirectoryWatch() const;
 
@@ -46,6 +47,7 @@ namespace flex
 		real GetSimulationSpeed() const;
 
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
+		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis
 		static glm::vec3 CalculateRayPlaneIntersectionAlongAxis(
@@ -106,7 +108,7 @@ namespace flex
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<FlexEngine> m_KeyEventCallback;
 
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<FlexEngine> m_ActionCallback;
 
 #if COMPILE_RENDERDOC_API

@@ -1,0 +1,32 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "A6A08D627C3486914B009C28C8394D61",
+	"root" : 
+	{
+		"name" : "Cart_00",
+		"id" : "4F5C7B9E0D52C484401567D9337167F7",
+		"type" : "cart",
+		"visible" : true,
+		"casts shadow" : true,
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.100, 1.200, 1.500",
+			"offset pos" : "0.000, 1.100, 0.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : true,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
+		"cart info" : 
+		{
+			"track ID" : 4294967295,
+			"dist along track" : -1.000000
+		}
+	}
+}

@@ -56,9 +56,9 @@ namespace flex
 		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const;
 
 		void CursorPosCallback(double x, double y);
-		void MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods);
+		void MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
-		void KeyCallback(KeyCode keyCode, KeyAction action, i32 mods);
+		void KeyCallback(KeyCode keyCode, KeyAction keyAction, i32 mods);
 		void CharCallback(u32 character);
 
 		bool DidMouseWrap() const;

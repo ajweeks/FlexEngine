@@ -48,6 +48,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "UIMesh.hpp"
 #include "volk/volk.h"
 #include "Window/GLFWWindowWrapper.hpp"
 
@@ -1211,6 +1212,7 @@ namespace flex
 			renderObject->depthCompareOp = DepthTestFuncToVkCompareOp(createInfo->depthTestReadFunc);
 			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
 			renderObject->renderPassOverride = createInfo->renderPassOverride;
+			renderObject->bAllowDynamicBufferShrinking = createInfo->bAllowDynamicBufferShrinking;
 
 			if (createInfo->indices != nullptr)
 			{
@@ -1220,6 +1222,7 @@ namespace flex
 			{
 				renderObject->bIndexed = true;
 			}
+
 
 			// We've already been post initialized, so we need to create a descriptor set and pipeline here
 			if (m_bPostInitialized)
@@ -1999,7 +2002,7 @@ namespace flex
 			}
 
 			// Shrink
-			if (vertSubBufferSize > 0)
+			if (renderObject->bAllowDynamicBufferShrinking && vertSubBufferSize > 0)
 			{
 				real vertExcess = 1.0f - (real)vertexBufferData->UsedVertexBufferSize / vertSubBufferSize;
 				real indexExcess = 1.0f - (real)newIndexDataSize / indexSubBufferSize;
@@ -2562,6 +2565,8 @@ namespace flex
 
 		void VulkanRenderer::NewFrame()
 		{
+			Renderer::NewFrame();
+
 			if (m_PhysicsDebugDrawer != nullptr)
 			{
 				m_PhysicsDebugDrawer->ClearLines();
@@ -4554,6 +4559,120 @@ namespace flex
 				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
 
 				++i;
+			}
+		}
+
+		void VulkanRenderer::DrawUIMesh(UIMesh* uiMesh, VkCommandBuffer commandBuffer)
+		{
+			Mesh* mesh = uiMesh->GetMesh();
+			u32 submeshCount = mesh->GetSubmeshCount();
+			if (submeshCount == 0)
+			{
+				return;
+			}
+
+			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+
+			VkDeviceSize offsets[1] = { 0 };
+
+			MaterialID matID = mesh->GetMaterialID(0);
+			VulkanMaterial* uiMat = (VulkanMaterial*)m_Materials.at(matID);
+			VulkanShader* uiShader = (VulkanShader*)m_Shaders[uiMat->shaderID];
+
+			// TODO: Use instancing!
+			u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(uiShader->vertexAttributes));
+			const std::pair<u32, VertexIndexBufferPair*>& vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[dynamicVertexBufferIndex];
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair.second->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair.second->indexBuffer;
+
+			//if ((i32)batch.size() > uiShader->maxObjectCount)
+			//{
+			//	UpdateShaderMaxObjectCount(uiMat->shaderID, (i32)batch.size());
+			//	// TODO: Flush GPU queues here?
+			//}
+
+			for (u32 i = 0; i < submeshCount; ++i)
+			{
+				if (!uiMesh->IsSubmeshActive(i))
+				{
+					continue;
+				}
+
+				MeshComponent* meshComponent = mesh->GetSubMesh(i);
+
+				glm::vec3 translation = VEC3_ZERO;
+				glm::quat rotation = QUAT_IDENTITY;
+				glm::vec3 scale = VEC3_ONE;
+
+				//if (!drawInfo.bRaw)
+				//{
+				//	if (drawInfo.bScreenSpace)
+				//	{
+				//		glm::vec2 normalizedTranslation;
+				//		glm::vec2 normalizedScale;
+				//		NormalizeSpritePos(translation, drawInfo.anchor, scale, normalizedTranslation, normalizedScale);
+				//
+				//		translation = glm::vec3(normalizedTranslation, 0.0f);
+				//		scale = glm::vec3(normalizedScale, 1.0f);
+				//	}
+				//}
+
+				glm::mat4 model = MAT4_IDENTITY;
+					//glm::translate(MAT4_IDENTITY, translation) *
+					//glm::mat4(rotation) *
+					//glm::scale(MAT4_IDENTITY, scale);
+
+				u32 dynamicUBOOffset = i * m_DynamicAlignment;
+
+				RenderID renderID = meshComponent->renderID;
+				VulkanRenderObject* renderObject = GetRenderObject(renderID);
+
+				GraphicsPipeline* graphicsPipeline = GetGraphicsPipeline(renderObject->graphicsPipelineID)->pipeline;
+				VkPipeline pipeline = graphicsPipeline->pipeline;
+				VkPipelineLayout pipelineLayout = graphicsPipeline->layout;
+
+				//Material::PushConstantBlock* pushBlock = nullptr;
+				//if (drawInfo.bScreenSpace)
+				//{
+				//	if (spriteShader->bTextureArr)
+				//	{
+				//		real r = aspectRatio;
+				//		real t = 1.0f;
+				//		m_SpriteOrthoArrPushConstBlock->SetData(MAT4_IDENTITY, glm::ortho(-r, r, -t, t), drawInfo.textureLayer);
+				//
+				//		pushBlock = m_SpriteOrthoArrPushConstBlock;
+				//
+				//		graphicsPipeline = GetGraphicsPipeline(m_SpriteArrGraphicsPipelineID)->pipeline;
+				//		pipeline = graphicsPipeline->pipeline;
+				//		pipelineLayout = graphicsPipeline->layout;
+				//	}
+				//	else
+				//	{
+				//		pushBlock = m_SpriteOrthoPushConstBlock;
+				//	}
+				//}
+				//else
+				//{
+				//	pushBlock = m_SpritePerspPushConstBlock;
+				//}
+				//
+				//vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, pushBlock->size, pushBlock->data);
+
+				UniformOverrides overrides = {};
+				overrides.colourMultiplier = VEC4_ONE;
+				overrides.overridenUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
+
+				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer->m_Buffer, offsets);
+				vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+
+				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+				VkDescriptorSet descSet = m_DescriptorPoolPersistent->descriptorSets[matID];
+				BindDescriptorSet(uiMat, dynamicUBOOffset, commandBuffer, pipelineLayout, descSet);
+
+				vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, 0, renderObject->vertexOffset, 0);
 			}
 		}
 
@@ -6899,6 +7018,12 @@ namespace flex
 					const bool bDeferred = m_Shaders[shaderID]->numAttachments > 1;
 					ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
 
+					// Blocklist certain shaders
+					if (m_Shaders[shaderID]->name == "ui")
+					{
+						continue;
+					}
+
 					for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
 					{
 						ShaderBatchPair shaderBatchPair = {};
@@ -7032,7 +7157,7 @@ namespace flex
 					matID = drawCallInfo->materialIDOverride;
 				}
 
-				// TODO: Check persistance
+				// TODO: Check persistence
 
 				VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
 				VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
@@ -7903,6 +8028,15 @@ namespace flex
 
 					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");
 				}
+
+				{
+					BeginDebugMarkerRegion(commandBuffer, "UI Mesh");
+
+					DrawUIMesh(m_UIMesh, commandBuffer);
+
+					EndDebugMarkerRegion(commandBuffer, "UI Mesh");
+				}
+
 
 				if (g_EngineInstance->IsRenderingImGui())
 				{

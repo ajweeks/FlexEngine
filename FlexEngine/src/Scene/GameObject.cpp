@@ -235,7 +235,7 @@ namespace flex
 
 		StringID gameObjectTypeID = Hash(gameObjectTypeStr.c_str());
 
-		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str());
+		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str(), bIsPrefabTemplate);
 
 		if (newGameObject != nullptr)
 		{
@@ -271,7 +271,8 @@ namespace flex
 		StringID gameObjectTypeID,
 		const std::string& objectName,
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		const char* optionalTypeStr /* = nullptr */)
+		const char* optionalTypeStr /* = nullptr */,
+		bool bIsPrefabTemplate /* = false */)
 	{
 		switch (gameObjectTypeID)
 		{
@@ -284,7 +285,8 @@ namespace flex
 		case SID("spot light"): return new SpotLight(objectName, gameObjectID);
 		case SID("area light"): return new AreaLight(objectName, gameObjectID);
 		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID);
-		case SID("cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateCart(objectName, gameObjectID);
+		case SID("cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateCart(objectName, gameObjectID, bIsPrefabTemplate);
+		case SID("engine cart"): return g_SceneManager->CurrentScene()->GetCartManager()->CreateEngineCart(objectName, gameObjectID, bIsPrefabTemplate);
 		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
 		case SID("terminal"): return new Terminal(objectName, gameObjectID);
 		case SID("gerstner wave"): return new GerstnerWave(objectName, gameObjectID);
@@ -345,7 +347,7 @@ namespace flex
 			m_Mesh->PostInitialize();
 		}
 
-		if (rb)
+		if (rb != nullptr)
 		{
 			rb->GetRigidBodyInternal()->setUserPointer(this);
 		}
@@ -376,21 +378,21 @@ namespace flex
 		}
 		m_Children.clear();
 
-		if (m_Mesh)
+		if (m_Mesh != nullptr)
 		{
 			m_Mesh->Destroy();
 			delete m_Mesh;
 			m_Mesh = nullptr;
 		}
 
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			m_RigidBody->Destroy();
 			delete m_RigidBody;
 			m_RigidBody = nullptr;
 		}
 
-		if (m_CollisionShape)
+		if (m_CollisionShape != nullptr)
 		{
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
@@ -1813,6 +1815,34 @@ namespace flex
 		return result;
 	}
 
+	StringID GameObject::Itemize()
+	{
+		StringID typeID = m_TypeID;
+
+		g_SceneManager->CurrentScene()->RemoveObject(this, true);
+
+		return typeID;
+	}
+
+	GameObject* GameObject::Deitemize(StringID objectTypeID)
+	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+
+		GameObject* newObject = CreateObjectOfType(objectTypeID, "", InvalidGameObjectID, "");
+
+		newObject->Initialize();
+		newObject->PostInitialize();
+
+		scene->AddRootObject(newObject);
+
+		return newObject;
+	}
+
+	bool GameObject::IsItemizable() const
+	{
+		return m_bItemizable;
+	}
+
 	bool GameObject::GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const
 	{
 		if (!childIndex.siblingIndices.empty() && childIndex.siblingIndices.front() < m_Children.size())
@@ -2845,6 +2875,7 @@ namespace flex
 	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("rising block"), gameObjectID)
 	{
+		m_bItemizable = true;
 	}
 
 	GameObject* RisingBlock::CopySelf(
@@ -3029,6 +3060,7 @@ namespace flex
 	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("glass pane"), gameObjectID)
 	{
+		m_bItemizable = true;
 	}
 
 	GameObject* GlassPane::CopySelf(
@@ -4150,10 +4182,12 @@ namespace flex
 		const std::string& name,
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		StringID typeID /* = SID('cart') */,
-		const char* meshName /* = emptyCartMeshName */) :
+		const char* meshName /* = emptyCartMeshName */,
+		bool bPrefabTemplate /* = false */) :
 		GameObject(name, typeID, gameObjectID),
 		cartID(cartID)
 	{
+		m_bItemizable = true;
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
 
@@ -4166,7 +4200,8 @@ namespace flex
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
 		std::string meshFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
-		if (!mesh->LoadFromFile(meshFilePath, matID))
+		bool bCreateRenderObject = !bPrefabTemplate;
+		if (!mesh->LoadFromFile(meshFilePath, matID, false, bCreateRenderObject))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
@@ -4185,11 +4220,13 @@ namespace flex
 		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
 
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		Cart* newGameObject = new Cart(cartID, newObjectName, newGameObjectID);
+		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
+		Cart* newGameObject = new Cart(cartID, newObjectName, newGameObjectID, m_TypeID, emptyCartMeshName, bCopyingToPrefabTemplate);
 
 		newGameObject->currentTrackID = currentTrackID;
 		newGameObject->distAlongTrack = distAlongTrack;
 
+		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::MESH);
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		return newGameObject;
@@ -4417,8 +4454,11 @@ namespace flex
 	{
 	}
 
-	EngineCart::EngineCart(CartID cartID, const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		Cart(cartID, name, gameObjectID, SID("engine cart"), engineMeshName)
+	EngineCart::EngineCart(CartID cartID,
+		const std::string& name,
+		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
+		bool bPrefabTemplate /* = false */) :
+		Cart(cartID, name, gameObjectID, SID("engine cart"), engineMeshName, bPrefabTemplate)
 	{
 	}
 
@@ -4530,6 +4570,7 @@ namespace flex
 	}
 
 	MobileLiquidBox::MobileLiquidBox() :
+		// TODO: Extract string to m_UniqueObjectNamePrefix
 		MobileLiquidBox(g_SceneManager->CurrentScene()->GetUniqueObjectName("MobileLiquidBox_", 4), InvalidGameObjectID)
 	{
 	}
@@ -6291,12 +6332,12 @@ namespace flex
 		{
 		case SID("player"):
 		{
-			Player* player = (Player*)gameObject;
-			if (player->m_HeldItem != nullptr)
-			{
-				return (player->m_HeldItem->GetTypeID() == SID("wire"));
-			}
-			else
+			//Player* player = (Player*)gameObject;
+			//if (player->m_HeldItem != nullptr)
+			//{
+			//	return (player->m_HeldItem->GetTypeID() == SID("wire"));
+			//}
+			//else
 			{
 				return (connectedWire != nullptr);
 			}
@@ -6322,35 +6363,35 @@ namespace flex
 		{
 		case SID("player"):
 		{
-			Player* player = (Player*)gameObject;
-			if (player->m_HeldItem != nullptr)
-			{
-				if (player->m_HeldItem->GetTypeID() == SID("wire"))
-				{
-					Wire* wire = (Wire*)player->m_HeldItem;
-					if (connectedWire == nullptr)
-					{
-						connectedWire = wire;
-						wire->PlugIn(this);
-					}
-					else
-					{
-						wire->Unplug(this);
-						connectedWire = nullptr;
-					}
-				}
-
-			}
-			else
-			{
-				if (connectedWire != nullptr)
-				{
-					connectedWire->Unplug(this);
-					connectedWire->SetInteractingWith(player);
-					player->m_HeldItem = connectedWire;
-					connectedWire = nullptr;
-				}
-			}
+			//Player* player = (Player*)gameObject;
+			//if (player->m_HeldItem != nullptr)
+			//{
+			//	if (player->m_HeldItem->GetTypeID() == SID("wire"))
+			//	{
+			//		Wire* wire = (Wire*)player->m_HeldItem;
+			//		if (connectedWire == nullptr)
+			//		{
+			//			connectedWire = wire;
+			//			wire->PlugIn(this);
+			//		}
+			//		else
+			//		{
+			//			wire->Unplug(this);
+			//			connectedWire = nullptr;
+			//		}
+			//	}
+			//
+			//}
+			//else
+			//{
+			//	if (connectedWire != nullptr)
+			//	{
+			//		connectedWire->Unplug(this);
+			//		connectedWire->SetInteractingWith(player);
+			//		player->m_HeldItem = connectedWire;
+			//		connectedWire = nullptr;
+			//	}
+			//}
 		} break;
 		default:
 		{
@@ -6901,7 +6942,7 @@ namespace flex
 		if (gameObject->GetTypeID() == SID("player"))
 		{
 			Player* player = static_cast<Player*>(gameObject);
-			if (player->m_HeldItem == nullptr)
+			//if (player->m_HeldItem == nullptr)
 			{
 				Transform* playerTransform = player->GetTransform();
 				glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();

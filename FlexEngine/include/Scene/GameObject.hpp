@@ -68,6 +68,12 @@ namespace flex
 
 	extern ChildIndex InvalidChildIndex;
 
+	struct GameObjectStack
+	{
+		StringID gameObjectTypeID;
+		i32 count;
+	};
+
 	class GameObject
 	{
 	public:
@@ -103,7 +109,12 @@ namespace flex
 			Transform* optionalTransform = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
-		static GameObject* CreateObjectOfType(StringID typeID, const std::string& objectName, const GameObjectID& gameObjectID = InvalidGameObjectID, const char* optionalTypeStr = nullptr);
+		static GameObject* CreateObjectOfType(
+			StringID typeID,
+			const std::string& objectName,
+			const GameObjectID& gameObjectID = InvalidGameObjectID,
+			const char* optionalTypeStr = nullptr,
+			bool bIsPrefabTemplate = false);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
@@ -266,6 +277,11 @@ namespace flex
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
+		StringID Itemize();
+		static GameObject* Deitemize(StringID objectTypeID);
+
+		bool IsItemizable() const;
+
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
@@ -357,6 +373,8 @@ namespace flex
 
 		// Editor only
 		bool m_bUniformScale = false;
+
+		bool m_bItemizable = false;
 
 		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
 
@@ -635,7 +653,8 @@ namespace flex
 			const std::string& name,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
 			StringID typeID = SID("cart"),
-			const char* meshName = emptyCartMeshName);
+			const char* meshName = emptyCartMeshName,
+			bool bPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -685,7 +704,10 @@ namespace flex
 	{
 	public:
 		explicit EngineCart(CartID cartID);
-		EngineCart(CartID cartID, const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		EngineCart(CartID cartID,
+			const std::string& name,
+			const GameObjectID& gameObjectID = InvalidGameObjectID,
+			bool bPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,

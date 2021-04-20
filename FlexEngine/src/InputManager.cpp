@@ -242,17 +242,17 @@ namespace flex
 
 		for (i32 i = 0; i < GAMEPAD_BUTTON_COUNT; ++i)
 		{
-			if (IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i))
+			bool bPress = IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i);
+
+			Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
+			ActionEvent actionEvent = bPress ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			if (gamepadButtonAction != Action::_NONE)
 			{
-				Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
-				if (gamepadButtonAction != Action::_NONE)
+				for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
 				{
-					for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
+					if (iter->first->Execute(gamepadButtonAction, actionEvent) == EventReply::CONSUMED)
 					{
-						if (iter->first->Execute(gamepadButtonAction) == EventReply::CONSUMED)
-						{
-							break;
-						}
+						break;
 					}
 				}
 			}
@@ -702,13 +702,13 @@ namespace flex
 		}
 	}
 
-	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
+	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods)
 	{
 		FLEX_UNUSED(mods);
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
-		if (action == KeyAction::KEY_PRESS)
+		if (keyAction == KeyAction::KEY_PRESS)
 		{
 			if (m_MousePosition.x == -1.0f)
 			{
@@ -722,7 +722,7 @@ namespace flex
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}
-		else if (action == KeyAction::KEY_RELEASE)
+		else if (keyAction == KeyAction::KEY_RELEASE)
 		{
 			m_MouseButtonStates &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsPressed &= ~(1 << (u32)mouseButton);
@@ -749,14 +749,12 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
 			Action mouseButtonAction = Action::_NONE;
+			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
 
-			if (action == KeyAction::KEY_PRESS)
+			mouseButtonAction = GetActionFromMouseButton(mouseButton);
+			if (mouseButtonAction != Action::_NONE)
 			{
-				mouseButtonAction = GetActionFromMouseButton(mouseButton);
-				if (mouseButtonAction != Action::_NONE)
-				{
-					actionIter = m_ActionCallbacks.begin();
-				}
+				actionIter = m_ActionCallbacks.begin();
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
@@ -765,7 +763,7 @@ namespace flex
 			{
 				if (actionIter == m_ActionCallbacks.end())
 				{
-					if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+					if (mouseButtonIter->first->Execute(mouseButton, keyAction) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -773,7 +771,7 @@ namespace flex
 				}
 				else if (mouseButtonIter == m_MouseButtonCallbacks.end())
 				{
-					if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+					if (actionIter->first->Execute(mouseButtonAction, actionEvent) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -783,7 +781,7 @@ namespace flex
 				{
 					if (actionIter->second >= mouseButtonIter->second)
 					{
-						if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+						if (actionIter->first->Execute(mouseButtonAction, actionEvent) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -791,7 +789,7 @@ namespace flex
 					}
 					else
 					{
-						if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+						if (mouseButtonIter->first->Execute(mouseButton, keyAction) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -799,8 +797,7 @@ namespace flex
 					}
 				}
 
-				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-					(mouseButtonIter != m_MouseButtonCallbacks.end());
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) || (mouseButtonIter != m_MouseButtonCallbacks.end());
 			}
 		}
 	}
@@ -819,21 +816,21 @@ namespace flex
 		}
 	}
 
-	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)
+	void InputManager::KeyCallback(KeyCode keyCode, KeyAction keyAction, i32 mods)
 	{
 		FLEX_UNUSED(mods);
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 
-		if (action == KeyAction::KEY_PRESS)
+		if (keyAction == KeyAction::KEY_PRESS)
 		{
 			m_Keys[keyCode].down = 1;
 		}
-		else if (action == KeyAction::KEY_REPEAT)
+		else if (keyAction == KeyAction::KEY_REPEAT)
 		{
 			// Ignore repeat events (we're already counting how long the key is down for
 		}
-		else if (action == KeyAction::KEY_RELEASE)
+		else if (keyAction == KeyAction::KEY_RELEASE)
 		{
 			m_Keys[keyCode].down = 0;
 		}
@@ -858,9 +855,10 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto keyEventIter = m_KeyEventCallbacks.begin();
 			Action keyPressAction = Action::_NONE;
+			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
 
 			// TODO: Allow modifiers to be down once supported properly
-			if (action == KeyAction::KEY_PRESS && !bModiferDown)
+			if (keyAction == KeyAction::KEY_PRESS && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)
@@ -875,7 +873,7 @@ namespace flex
 			{
 				if (actionIter == m_ActionCallbacks.end())
 				{
-					if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+					if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -883,7 +881,7 @@ namespace flex
 				}
 				else if (keyEventIter == m_KeyEventCallbacks.end())
 				{
-					if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+					if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -893,7 +891,7 @@ namespace flex
 				{
 					if (actionIter->second >= keyEventIter->second)
 					{
-						if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+						if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -901,7 +899,7 @@ namespace flex
 					}
 					else
 					{
-						if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+						if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -909,8 +907,7 @@ namespace flex
 					}
 				}
 
-				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-					(keyEventIter != m_KeyEventCallbacks.end());
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) || (keyEventIter != m_KeyEventCallbacks.end());
 			}
 		}
 	}
@@ -1105,12 +1102,15 @@ namespace flex
 			mouseDrag.startLocation = VEC2_ZERO;
 			mouseDrag.endLocation = VEC2_ZERO;
 		}
+
 		g_Window->SetCursorMode(CursorMode::NORMAL);
 
-
-		ImGuiIO& io = ImGui::GetIO();
-		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-		io.MouseWheel = m_ScrollYOffset;
+		if (ImGui::GetCurrentContext() != nullptr)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+			io.MouseWheel = m_ScrollYOffset;
+		}
 	}
 
 	void InputManager::ClearKeyboadInput()
@@ -1400,9 +1400,11 @@ namespace flex
 			static InputType inputBindingTypeToEdit = InputType::_NONE;
 			static bool bMouseReleasedAfterButtonClick = false;
 
-			static const char* emptyButtonStr = "Unset";
+			static const char* unboundButtonString = "Unset";
 
 			bool bCtrlDown = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) != 0 || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true) != 0;
+
+			ImVec4 unboundButtonColour = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 
 			for (i32 i = 0; i < (i32)Action::_NONE; ++i)
 			{
@@ -1417,7 +1419,9 @@ namespace flex
 
 				// Keyboard
 				ImGui::PushID("keyboard");
-				if (ImGui::Button(binding.keyCode != KeyCode::_NONE ? KeyCodeStrings[(u32)binding.keyCode] : emptyButtonStr))
+				bool bBound = (binding.keyCode != KeyCode::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? KeyCodeStrings[(u32)binding.keyCode] : unboundButtonString))
 				{
 					if (bCtrlDown)
 					{
@@ -1434,13 +1438,16 @@ namespace flex
 						inputBindingTypeToEdit = InputType::KEYBOARD;
 					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
 				ImGui::PopID();
 
 				ImGui::NextColumn();
 
 				// Mouse button
 				ImGui::PushID("mouse button");
-				if (ImGui::Button(binding.mouseButton != MouseButton::_NONE ? MouseButtonStrings[(u32)binding.mouseButton] : emptyButtonStr))
+				bBound = (binding.mouseButton != MouseButton::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? MouseButtonStrings[(u32)binding.mouseButton] : unboundButtonString))
 				{
 					if (bCtrlDown)
 					{
@@ -1457,13 +1464,16 @@ namespace flex
 						inputBindingTypeToEdit = InputType::MOUSE_BUTTON;
 					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
 				ImGui::PopID();
 
 				ImGui::NextColumn();
 
 				// Mouse axis
 				ImGui::PushID("mouse axis");
-				if (ImGui::Button(binding.mouseAxis != MouseAxis::_NONE ? MouseAxisStrings[(u32)binding.mouseAxis] : emptyButtonStr))
+				bBound = (binding.mouseAxis != MouseAxis::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? MouseAxisStrings[(u32)binding.mouseAxis] : unboundButtonString))
 				{
 					if (bCtrlDown)
 					{
@@ -1480,6 +1490,7 @@ namespace flex
 						inputBindingTypeToEdit = InputType::MOUSE_AXIS;
 					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
 				if (binding.mouseAxis != MouseAxis::_NONE)
 				{
 					ImGui::SameLine();
@@ -1494,7 +1505,9 @@ namespace flex
 
 				// Gamepad button
 				ImGui::PushID("gamepad button");
-				if (ImGui::Button(binding.gamepadButton != GamepadButton::_NONE ? GamepadButtonStrings[(u32)binding.gamepadButton] : emptyButtonStr))
+				bBound = (binding.gamepadButton != GamepadButton::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? GamepadButtonStrings[(u32)binding.gamepadButton] : unboundButtonString))
 				{
 					if (bCtrlDown)
 					{
@@ -1511,13 +1524,16 @@ namespace flex
 						inputBindingTypeToEdit = InputType::GAMEPAD_BUTTON;
 					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
 				ImGui::PopID();
 
 				ImGui::NextColumn();
 
 				// Gamepad axis
 				ImGui::PushID("gamepad axis");
-				if (ImGui::Button(binding.gamepadAxis != GamepadAxis::_NONE ? GamepadAxisStrings[(i32)binding.gamepadAxis] : emptyButtonStr))
+				bBound = (binding.gamepadAxis != GamepadAxis::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? GamepadAxisStrings[(i32)binding.gamepadAxis] : unboundButtonString))
 				{
 					if (bCtrlDown)
 					{
@@ -1534,6 +1550,7 @@ namespace flex
 						inputBindingTypeToEdit = InputType::GAMEPAD_AXIS;
 					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
 				if (IsGamepadAxisInvertable(binding.gamepadAxis))
 				{
 					ImGui::SameLine();
@@ -1739,7 +1756,7 @@ namespace flex
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
-			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, (u32)rootObject.fields.size());
+			PrintWarn("Unexpected number of inputs found in %s! (%u expected, %u found)\n", INPUT_BINDINGS_LOCATION, actionCount, (u32)rootObject.fields.size());
 			bFileComplete = false;
 		}
 
@@ -1748,7 +1765,7 @@ namespace flex
 			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
 			if (child.fields.empty())
 			{
-				PrintWarn("Couldn't find action with name: %s in input-bindings.ini - using default values\n", ActionStrings[i]);
+				PrintWarn("Couldn't find action with name: %s in %s - using default values\n", ActionStrings[i], INPUT_BINDINGS_LOCATION);
 			}
 			else
 			{

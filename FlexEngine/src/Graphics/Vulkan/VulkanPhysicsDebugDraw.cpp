@@ -206,10 +206,11 @@ namespace flex
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);
 			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
-			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID)->shaderID)->vertexAttributes;
+			Material* mat = m_Renderer->GetMaterial(m_MaterialID);
+			const VertexAttributes vertexAttributes = m_Renderer->GetShader(mat->shaderID)->vertexAttributes;
 			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
-				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
+				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 

@@ -28,18 +28,29 @@ namespace flex
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
 
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<PlayerController> m_ActionCallback;
 
-		real m_MoveAcceleration = 120.0f;
+		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
+		MouseMovedCallback<PlayerController> m_MouseMovedCallback;
+
+		real m_MoveAcceleration = 200.0f;
 		real m_MaxMoveSpeed = 20.0f;
 		real m_RotateHSpeedFirstPerson = 1.5f;
 		real m_RotateHSpeedThirdPerson = 4.0f;
 		real m_RotateVSpeed = 1.0f;
+		real m_MouseRotateHSpeed = 0.1f;
+		real m_MouseRotateVSpeed = 0.1f;
+		bool m_bInvertMouseV = false;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0
 		// TODO: Use again
 		//real m_MaxSlowDownRotationSpeedVel = 10.0f;
+
+		real m_ItemPickupMaxDist = 100.0f;
+		GameObject* m_ItemPickingUp = nullptr;
+		const real m_ItemPickingDuration = 0.5f;
+		real m_ItemPickingTimer = -1.0f;
 
 		sec m_SecondsAttemptingToTurn = 0.0f;
 		// How large the joystick x value must be to enter a turning state
@@ -50,9 +61,12 @@ namespace flex
 
 		TurningDir m_DirTurning = TurningDir::NONE;
 
+		bool m_bCaptureMouseMode = true;
+
 		bool m_bAttemptCompleteTrack = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
 		bool m_bAttemptInteract = false;
+		bool m_bAttemptPickup = false;
 
 		enum class Mode
 		{

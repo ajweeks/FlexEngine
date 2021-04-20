@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -28,11 +29,14 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
+#include "UIMesh.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
 	PlayerController::PlayerController() :
-		m_ActionCallback(this, &PlayerController::OnActionEvent)
+		m_ActionCallback(this, &PlayerController::OnActionEvent),
+		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent)
 	{
 	}
 
@@ -51,15 +55,25 @@ namespace flex
 		m_Player->UpdateIsPossessed();
 
 		g_InputManager->BindActionCallback(&m_ActionCallback, 15);
+		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 15);
 	}
 
 	void PlayerController::Destroy()
 	{
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
+		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
 	}
 
 	void PlayerController::Update()
 	{
+		if (m_bCaptureMouseMode &&
+			m_Player->m_bPossessed &&
+			g_Window->HasFocus() &&
+			!g_EngineInstance->IsSimulationPaused())
+		{
+			g_Window->SetCursorMode(CursorMode::DISABLED);
+		}
+
 		// TODO: Make frame-rate-independent!
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -67,6 +81,28 @@ namespace flex
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
 		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+
+		auto GetObjectPointedAt = [this]() -> GameObject*
+		{
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+			btVector3 rayStart, rayEnd;
+			FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd);
+
+			const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+
+			if (pickedBody != nullptr)
+			{
+				GameObject* gameObject = static_cast<GameObject*>(pickedBody->getUserPointer());
+				real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Player->m_Transform.GetWorldPosition());
+				if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
+				{
+					return gameObject;
+				}
+			}
+
+			return nullptr;
+		};
 
 		if (m_Player->m_bPossessed)
 		{
@@ -199,125 +235,176 @@ namespace flex
 					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 				}
 
-				// TODO: Allow player to (dis)connect pluggables together
-
-				GameObject* nearestInteractable = nullptr;
-				if (m_Player->m_ObjectInteractingWith == nullptr)
+				if (m_bAttemptPickup)
 				{
-					std::vector<GameObject*> allInteractableObjects;
-					g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+					m_bAttemptPickup = false;
 
-					if (!allInteractableObjects.empty())
+					GameObject* pickedItem = GetObjectPointedAt();
+					if (pickedItem != nullptr)
 					{
-						// List of objects sorted by sqr dist (closest to farthest)
-						std::list<Pair<GameObject*, real>> nearbyInteractables;
-
-						// TODO: Move to All.variables
-						real maxDistSqr = 7.0f * 7.0f;
-						const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
-						for (GameObject* obj : allInteractableObjects)
-						{
-							if (obj != m_Player)
-							{
-								real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
-								if (dist2 <= maxDistSqr)
-								{
-									// Insert into sorted list
-									bool bInserted = false;
-									for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
-									{
-										if (iter->second > dist2)
-										{
-											nearbyInteractables.insert(iter, { obj, dist2 });
-											bInserted = true;
-											break;
-										}
-									}
-									if (!bInserted)
-									{
-										nearbyInteractables.emplace_back(obj, dist2);
-									}
-								}
-							}
-						}
-
-						for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
-						{
-							GameObject* nearbyInteractable = iter->first;
-							if (!nearbyInteractable->IsBeingInteractedWith())
-							{
-								if (nearbyInteractable->AllowInteractionWith(m_Player))
-								{
-									nearestInteractable = nearbyInteractable;
-									nearestInteractable->SetNearbyInteractable(m_Player);
-									break;
-								}
-							}
-						}
+						m_ItemPickingUp = pickedItem;
+						m_ItemPickingTimer = m_ItemPickingDuration;
 					}
 				}
+			}
 
-				if (m_bAttemptInteract)
+			if (m_ItemPickingTimer != -1.0f)
+			{
+				m_ItemPickingTimer -= g_DeltaTime;
+
+				if (m_ItemPickingTimer <= 0.0f)
 				{
-					if (m_Player->m_ObjectInteractingWith)
+					m_ItemPickingTimer = -1.0f;
+
+					m_Player->AddToInventory(m_ItemPickingUp->Itemize(), 1);
+				}
+				else
+				{
+					GameObject* pickedItem = GetObjectPointedAt();
+					if (pickedItem == nullptr || pickedItem != m_ItemPickingUp)
 					{
-						// Toggle interaction when already interacting
-						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-						m_Player->SetInteractingWith(nullptr);
-						m_bAttemptInteract = false;
+						m_ItemPickingUp = nullptr;
+						m_ItemPickingTimer = -1.0f;
 					}
 					else
 					{
-						if (nearestInteractable != nullptr)
+						real startAngle = 0.0f;
+						real endAngle = (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+						g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+					}
+				}
+			}
+
+			// TODO: Allow player to (dis)connect pluggables together
+
+			GameObject* nearestInteractable = nullptr;
+			if (m_Player->m_ObjectInteractingWith == nullptr)
+			{
+				std::vector<GameObject*> allInteractableObjects;
+				g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+
+				if (!allInteractableObjects.empty())
+				{
+					// List of objects sorted by sqr dist (closest to farthest)
+					std::list<Pair<GameObject*, real>> nearbyInteractables;
+
+					// TODO: Move to All.variables
+					real maxDistSqr = 7.0f * 7.0f;
+					const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
+					for (GameObject* obj : allInteractableObjects)
+					{
+						if (obj != m_Player)
 						{
-							nearestInteractable->SetInteractingWith(m_Player);
-							m_Player->SetInteractingWith(nearestInteractable);
-							m_bAttemptInteract = false;
-						}
-						else if (m_Player->m_HeldItem != nullptr)
-						{
-							if (m_Player->m_HeldItem->GetTypeID() == SID("wire"))
+							real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
+							if (dist2 <= maxDistSqr)
 							{
-								Wire* wire = (Wire*)m_Player->m_HeldItem;
-								wire->SetInteractingWith(nullptr);
+								// Insert into sorted list
+								bool bInserted = false;
+								for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+								{
+									if (iter->second > dist2)
+									{
+										nearbyInteractables.insert(iter, { obj, dist2 });
+										bInserted = true;
+										break;
+									}
+								}
+								if (!bInserted)
+								{
+									nearbyInteractables.emplace_back(obj, dist2);
+								}
 							}
-							m_Player->m_HeldItem = nullptr;
+						}
+					}
+
+					for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+					{
+						GameObject* nearbyInteractable = iter->first;
+						if (!nearbyInteractable->IsBeingInteractedWith())
+						{
+							if (nearbyInteractable->AllowInteractionWith(m_Player))
+							{
+								nearestInteractable = nearbyInteractable;
+								nearestInteractable->SetNearbyInteractable(m_Player);
+								break;
+							}
 						}
 					}
 				}
 			}
 
-			if (!m_Player->m_Inventory.empty())
+			if (m_bAttemptInteract)
 			{
-				// Place item from inventory
-				if (m_bAttemptPlaceItemFromInventory)
+				if (m_Player->m_ObjectInteractingWith)
 				{
-					m_bAttemptPlaceItemFromInventory = false;
+					// Toggle interaction when already interacting
+					m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
+					m_Player->SetInteractingWith(nullptr);
+					m_bAttemptInteract = false;
+				}
+				else
+				{
+					if (nearestInteractable != nullptr)
+					{
+						nearestInteractable->SetInteractingWith(m_Player);
+						m_Player->SetInteractingWith(nearestInteractable);
+						m_bAttemptInteract = false;
+					}
+					//else if (m_Player->m_HeldItem != nullptr)
+					//{
+					//	if (m_Player->m_HeldItem->GetTypeID() == SID("wire"))
+					//	{
+					//		Wire* wire = (Wire*)m_Player->m_HeldItem;
+					//		wire->SetInteractingWith(nullptr);
+					//	}
+					//	m_Player->m_HeldItem = nullptr;
+					//}
+				}
+			}
+		}
 
-					GameObject* gameObject = m_Player->m_Inventory[0];
-					bool bPlaced = false;
+		if (!m_Player->m_Inventory.empty())
+		{
+			// Place item from inventory
+			if (m_bAttemptPlaceItemFromInventory)
+			{
+				m_bAttemptPlaceItemFromInventory = false;
 
-					switch (gameObject->GetTypeID())
+				if (m_Player->m_HeldItemSlot == -1)
+				{
+					m_Player->m_HeldItemSlot = 0;
+				}
+
+				GameObjectStack& gameObjectStack = m_Player->m_Inventory[m_Player->m_HeldItemSlot];
+				bool bPlaced = false;
+
+				if (gameObjectStack.count >= 1)
+				{
+					switch (gameObjectStack.gameObjectTypeID)
 					{
 					case SID("engine cart"):
 					{
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
+						gameObjectStack.count--;
 						EngineCart* engineCart = static_cast<EngineCart*>(gameObject);
 
-							TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-							glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-							real rangeThreshold = 4.0f;
-							real distAlongNearestTrack;
-							TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
+						real rangeThreshold = 4.0f;
+						real distAlongNearestTrack;
+						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
 
-							if (nearestTrackID != InvalidTrackID)
-							{
-								bPlaced = true;
-								engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-								engineCart->SetVisible(true);
-							}
+						if (nearestTrackID != InvalidTrackID)
+						{
+							bPlaced = true;
+							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
+							engineCart->SetVisible(true);
+						}
 					} break;
 					case SID("cart"):
 					{
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
+						gameObjectStack.count--;
 						Cart* cart = static_cast<Cart*>(gameObject);
 
 						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
@@ -335,6 +422,8 @@ namespace flex
 					} break;
 					case SID("mobile liquid box"):
 					{
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.gameObjectTypeID);
+						gameObjectStack.count--;
 						MobileLiquidBox* mobileLiquidBox = static_cast<MobileLiquidBox*>(gameObject);
 
 						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>(SID("cart"));
@@ -365,13 +454,13 @@ namespace flex
 					} break;
 					default:
 					{
-						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", gameObject->GetName().c_str());
+						PrintWarn("Attempted to place item from inventory slot %i, unhandled type ID: %llu\n", m_Player->m_HeldItemSlot, gameObjectStack.gameObjectTypeID);
 					} break;
 					}
 
-					if (bPlaced)
+					if (gameObjectStack.count == 0)
 					{
-						m_Player->m_Inventory.erase(m_Player->m_Inventory.begin());
+						m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->m_HeldItemSlot);
 					}
 				}
 			}
@@ -539,6 +628,7 @@ namespace flex
 		m_bAttemptCompleteTrack = false;
 		m_bAttemptPlaceItemFromInventory = false;
 		m_bAttemptInteract = false;
+		m_bAttemptPickup = false;
 	}
 
 	void PlayerController::ResetTransformAndVelocities()
@@ -644,103 +734,159 @@ namespace flex
 		m_Mode = cam->bIsFirstPerson ? Mode::FIRST_PERSON : Mode::THIRD_PERSON;
 	}
 
-	EventReply PlayerController::OnActionEvent(Action action)
+	EventReply PlayerController::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
 		if (m_Player->m_bPossessed)
 		{
-			if (action == Action::ENTER_TRACK_BUILD_MODE)
+			if (actionEvent == ActionEvent::TRIGGER)
 			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::PAUSE)
 				{
-					m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-					m_Player->m_bEditingTrack = false;
+					g_EngineInstance->SetSimulationPaused(!g_EngineInstance->IsSimulationPaused());
+					g_Window->SetCursorMode(CursorMode::NORMAL);
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::ENTER_TRACK_EDIT_MODE)
-			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::ENTER_TRACK_BUILD_MODE)
 				{
-					m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-					m_Player->m_bPlacingTrack = false;
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+						m_Player->m_bEditingTrack = false;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::ENTER_TRACK_EDIT_MODE)
+				{
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+						m_Player->m_bPlacingTrack = false;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::COMPLETE_TRACK)
+				{
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_bAttemptCompleteTrack = true;
+						return EventReply::CONSUMED;
+					}
+				}
+				if (action == Action::PICKUP_ITEM)
+				{
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_bAttemptPickup = true;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::TOGGLE_ITEM_HOLDING)
+				{
+					//if (m_Player->m_HeldItem == nullptr)
+					//{
+					//	if (!m_Player->m_Inventory.empty())
+					//	{
+					//		m_Player->m_HeldItem = m_Player->m_Inventory[0];
+					//	}
+					//}
+					//else
+					//{
+					//	m_Player->m_HeldItem = nullptr;
+					//}
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::COMPLETE_TRACK)
-			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::TOGGLE_TABLET)
 				{
-					m_bAttemptCompleteTrack = true;
+					m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::TOGGLE_ITEM_HOLDING)
-			{
-				if (m_Player->m_HeldItem == nullptr)
+				if (action == Action::PLACE_ITEM)
 				{
 					if (!m_Player->m_Inventory.empty())
 					{
-						m_Player->m_HeldItem = m_Player->m_Inventory[0];
+						m_bAttemptPlaceItemFromInventory = true;
+						return EventReply::CONSUMED;
 					}
 				}
-				else
+
+				if (action == Action::INTERACT)
 				{
-					m_Player->m_HeldItem = nullptr;
+					m_bAttemptInteract = true;
+					// TODO: Determine if we can interact with anything here to allow
+					// others to consume this event in the case we don't want it
+					return EventReply::CONSUMED;
 				}
-				return EventReply::CONSUMED;
-			}
 
-			if (action == Action::TOGGLE_TABLET)
-			{
-				m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-				return EventReply::CONSUMED;
-			}
-
-			if (action == Action::PLACE_ITEM)
-			{
-				if (!m_Player->m_Inventory.empty())
+				// TODO: Set flags here and move "real" code to Update?
+				if (action == Action::DBG_ADD_CART_TO_INV)
 				{
-					m_bAttemptPlaceItemFromInventory = true;
+					m_Player->AddToInventory(SID("cart"), 1);
+					return EventReply::CONSUMED;
+				}
+
+				if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
+				{
+					m_Player->AddToInventory(SID("engine cart"), 1);
+					return EventReply::CONSUMED;
+				}
+
+				if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
+				{
+					m_Player->AddToInventory(SID("mobile liquid box"), 1);
 					return EventReply::CONSUMED;
 				}
 			}
-
-			if (action == Action::INTERACT)
+			else if (actionEvent == ActionEvent::RELEASE)
 			{
-				m_bAttemptInteract = true;
-				// TODO: Determine if we can interact with anything here to allow
-				// others to consume this event in the case we don't want it
-				return EventReply::CONSUMED;
+				if (action == Action::PICKUP_ITEM)
+				{
+					if (m_ItemPickingTimer != -1.0f)
+					{
+						m_ItemPickingTimer = -1.0f;
+						return EventReply::CONSUMED;
+					}
+				}
+			}
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
+	EventReply PlayerController::OnMouseMovedEvent(const glm::vec2& dMousePos)
+	{
+		if (m_bCaptureMouseMode && g_Window->HasFocus())
+		{
+			bool bInteractingWithTerminal = false;
+			bool bInteractingWithVehicle = false;
+			{
+				GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
+				bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
+				bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
 			}
 
-			// TODO: Set flags here and move "real" code to Update?
-			if (action == Action::DBG_ADD_CART_TO_INV)
+			if (m_Player->m_bPossessed &&
+				!bInteractingWithTerminal &&
+				!bInteractingWithVehicle &&
+				m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				Cart* cart = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-				cart->SetVisible(false);
-				m_Player->m_Inventory.push_back(cart);
-				return EventReply::CONSUMED;
-			}
+				real lookH = dMousePos.x;
+				real lookV = dMousePos.y;
 
-			if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				EngineCart* engineCart = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-				engineCart->SetVisible(false);
-				m_Player->m_Inventory.push_back(engineCart);
-				return EventReply::CONSUMED;
-			}
+				Transform* transform = m_Player->GetTransform();
+				glm::vec3 up = transform->GetUp();
+				glm::quat rot = transform->GetLocalRotation();
+				real angle = lookH * m_MouseRotateHSpeed * g_DeltaTime;
+				rot = glm::rotate(rot, angle, up);
+				transform->SetWorldRotation(rot);
 
-			if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
-			{
-				MobileLiquidBox* box = new MobileLiquidBox();
-				g_SceneManager->CurrentScene()->AddRootObject(box);
-				box->SetVisible(false);
-				m_Player->m_Inventory.push_back(box);
+				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * g_DeltaTime * (m_bInvertMouseV ? -1.0f : 1.0f));
+
 				return EventReply::CONSUMED;
 			}
 		}

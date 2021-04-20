@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "UIMesh.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
 
@@ -94,11 +95,14 @@ namespace flex
 		m_SSAOSamplingData.powExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+
+		m_UIMesh = new UIMesh();
 	}
 
 	void Renderer::PostInitialize()
 	{
 		// TODO: Use MeshComponent for these objects?
+		m_UIMesh->Initialize();
 
 		if (g_EngineInstance->InstallShaderDirectoryWatch())
 		{
@@ -229,6 +233,10 @@ namespace flex
 		m_Quad3DVertexBufferData.Destroy();
 		m_FullScreenTriVertexBufferData.Destroy();
 
+		m_UIMesh->Destroy();
+		delete m_UIMesh;
+		m_UIMesh = nullptr;
+
 		DestroyRenderObject(m_FullScreenTriRenderID);
 		DestroyRenderObject(m_Quad3DRenderID);
 		DestroyRenderObject(m_Quad3DSSRenderID);
@@ -240,6 +248,11 @@ namespace flex
 			delete m_PhysicsDebugDrawer;
 			m_PhysicsDebugDrawer = nullptr;
 		}
+	}
+
+	void Renderer::NewFrame()
+	{
+		m_UIMesh->EndFrame();
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -921,6 +934,11 @@ namespace flex
 		m_bEnableSelectionWireframe = !m_bEnableSelectionWireframe;
 	}
 
+	UIMesh* Renderer::GetUIMesh()
+	{
+		return m_UIMesh;
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -1037,6 +1055,8 @@ namespace flex
 				lastSplitDist = depthSplits[c];
 			}
 		}
+
+		m_UIMesh->Draw();
 	}
 
 	static ImGuiTextFilter materialFilter;
@@ -1364,6 +1384,8 @@ namespace flex
 
 	void Renderer::OnPostSceneChange()
 	{
+		m_UIMesh->OnPostSceneChange();
+
 		if (m_PhysicsDebugDrawer != nullptr)
 		{
 			m_PhysicsDebugDrawer->OnPostSceneChange();
@@ -1403,6 +1425,7 @@ namespace flex
 		shaderInfos = {
 			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv", "", "" },
 			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv", "", "" },
+			{ "ui", "vk_ui_vert.spv","vk_ui_frag.spv", "", "" },
 			{ "pbr", "vk_pbr_vert.spv", "vk_pbr_frag.spv", "", "" },
 			{ "pbr_ws", "vk_pbr_ws_vert.spv", "vk_pbr_ws_frag.spv", "", "" },
 			{ "skybox", "vk_skybox_vert.spv", "vk_skybox_frag.spv", "", "" },
@@ -1481,6 +1504,22 @@ namespace flex
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+		++shaderID;
+
+		// UI
+		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->maxObjectCount = 32;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION2 |
+			(u32)VertexAttribute::UV |
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
+
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);

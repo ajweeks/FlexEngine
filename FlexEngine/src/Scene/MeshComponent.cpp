@@ -58,7 +58,10 @@ namespace flex
 
 	void MeshComponent::PostInitialize()
 	{
-		g_Renderer->PostInitializeRenderObject(renderID);
+		if (renderID != InvalidRenderID)
+		{
+			g_Renderer->PostInitializeRenderObject(renderID);
+		}
 	}
 
 	void MeshComponent::Update()
@@ -78,6 +81,7 @@ namespace flex
 
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
+		assert(renderID != InvalidRenderID);
 		m_VertexBufferData.UpdateData(newData);
 		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
 		m_Indices = indexData;
@@ -1468,6 +1472,7 @@ namespace flex
 		createInfo.bEditorObject = overrides.bEditorObject;
 		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
 		createInfo.bIndexed = overrides.bIndexed;
+		createInfo.bAllowDynamicBufferShrinking = overrides.bAllowDynamicBufferShrinking;
 
 		if (overrides.vertexBufferData != nullptr)
 		{

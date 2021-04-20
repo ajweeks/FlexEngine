@@ -278,23 +278,24 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item: %s", m_HeldItem != nullptr ? m_HeldItem->GetName().c_str() : "");
+			//ImGui::Text("Held item: %s", m_HeldItem != nullptr ? m_HeldItem->GetName().c_str() : "");
 
 			ImGui::Text("Inventory:");
 			ImGui::Indent();
-			for (GameObject* gameObject : m_Inventory)
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
-				if (gameObject == m_HeldItem)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
-				}
+				//if (gameObject == m_HeldItem)
+				//{
+				//	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				//}
 
-				ImGui::Text("%s", gameObject->GetName().c_str());
+				ImGui::Text("%s (%i)", scene->GameObjectTypeIDToString(gameObjectStack.gameObjectTypeID), gameObjectStack.count);
 
-				if (gameObject == m_HeldItem)
-				{
-					ImGui::PopStyleColor();
-				}
+				//if (gameObject == m_HeldItem)
+				//{
+				//	ImGui::PopStyleColor();
+				//}
 			}
 			ImGui::Unindent();
 
@@ -372,30 +373,30 @@ namespace flex
 		} break;
 		case SID("wire"):
 		{
-			Wire* wire = static_cast<Wire*>(gameObject);
+			//Wire* wire = static_cast<Wire*>(gameObject);
 
-			m_HeldItem = wire;
+			//m_HeldItem = wire;
 		} break;
 		case SID("socket"):
 		{
-			Socket* socket = static_cast<Socket*>(gameObject);
+			//Socket* socket = static_cast<Socket*>(gameObject);
 
-			if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
-			{
-				Wire* wire = (Wire*)m_HeldItem;
-				if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
-				{
-					wire->SetInteractingWith(nullptr);
-					m_HeldItem = nullptr;
-				}
-			}
-			else
-			{
-				if (socket->connectedWire != nullptr)
-				{
-					m_HeldItem = socket->connectedWire;
-				}
-			}
+			//if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
+			//{
+			//	Wire* wire = (Wire*)m_HeldItem;
+			//	if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
+			//	{
+			//		wire->SetInteractingWith(nullptr);
+			//		m_HeldItem = nullptr;
+			//	}
+			//}
+			//else
+			//{
+			//	if (socket->connectedWire != nullptr)
+			//	{
+			//		m_HeldItem = socket->connectedWire;
+			//	}
+			//}
 		} break;
 		case SID("vehicle"):
 		{
@@ -538,9 +539,18 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(GameObject* obj)
+	void Player::AddToInventory(StringID objectTypeID, i32 count)
 	{
-		m_Inventory.push_back(obj);
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.gameObjectTypeID == objectTypeID)
+			{
+				gameObjectStack.count += count;
+				return;
+			}
+		}
+
+		m_Inventory.push_back(GameObjectStack{ objectTypeID, count });
 	}
 
 	bool Player::IsRidingTrack()

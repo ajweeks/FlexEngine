@@ -432,7 +432,15 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(MouseAxisStrings) == (u32)MouseAxis::_NONE + 1, "MouseAxisStrings length must match MouseAxis enum");
 
-	enum class Action
+	enum class ActionEvent
+	{
+		TRIGGER,
+		RELEASE,
+
+		_COUNT
+	};
+
+	enum class Action	
 	{
 		MOVE_LEFT,
 		MOVE_RIGHT,
@@ -453,6 +461,7 @@ namespace flex
 		ENTER_TRACK_BUILD_MODE,
 		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
+		PICKUP_ITEM,
 
 		// Inventory
 		TOGGLE_ITEM_HOLDING,
@@ -528,6 +537,7 @@ namespace flex
 		"Enter track build mode",
 		"Enter track edit mode",
 		"Complete track",
+		"Pickup Item",
 
 		// Inventory
 		"Toggle holding item",

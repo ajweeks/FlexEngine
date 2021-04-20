@@ -312,20 +312,23 @@ namespace flex
 
 	void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
 	{
-		Window::SetCursorMode(mode);
-
-		i32 glfwCursorMode = 0;
-
-		switch (mode)
+		if (m_CursorMode != mode)
 		{
-		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		case CursorMode::_NONE:
-		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
-		}
+			Window::SetCursorMode(mode);
 
-		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+			i32 glfwCursorMode = 0;
+
+			switch (mode)
+			{
+			case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
+			case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
+			case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+			case CursorMode::_NONE:
+			default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
+			}
+
+			glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+		}
 	}
 
 	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool bForce)
@@ -448,10 +451,6 @@ namespace flex
 				bPrevP1JoystickPresent = false;
 			}
 		}
-
-		ImGuiIO& io = ImGui::GetIO();
-		// Hide OS mouse cursor if ImGui is drawing it
-		glfwSetInputMode(m_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 	}
 
 	GLFWwindow* GLFWWindowWrapper::GetWindow() const

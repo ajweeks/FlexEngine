@@ -336,19 +336,40 @@ namespace flex
 		PROFILE_END("Cart manager update");
 	}
 
-	Cart* CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
+	Cart* CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */, bool bPrefabTemplate /* = false */)
 	{
 		CartID cartID = (CartID)m_Carts.size();
-		Cart* newCart = new Cart(cartID, name, gameObjectID);
-		m_Carts.push_back(newCart);
+		std::string newName = name;
+		if (newName.empty())
+		{
+			newName = g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 2);
+		}
+
+		Cart* newCart = new Cart(cartID, newName, gameObjectID, SID("cart"), Cart::emptyCartMeshName, bPrefabTemplate);
+
+		if (!bPrefabTemplate)
+		{
+			m_Carts.push_back(newCart);
+		}
+
 		return newCart;
 	}
 
-	EngineCart* CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */)
+	EngineCart* CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */, bool bPrefabTemplate /* = false */)
 	{
 		CartID cartID = (CartID)m_Carts.size();
-		EngineCart* newCart = new EngineCart(cartID, name, gameObjectID);
-		m_Carts.push_back(newCart);
+		std::string newName = name;
+		if (newName.empty())
+		{
+			newName = g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 2);
+		}
+		EngineCart* newCart = new EngineCart(cartID, newName, gameObjectID, bPrefabTemplate);
+
+		if (!bPrefabTemplate)
+		{
+			m_Carts.push_back(newCart);
+		}
+
 		return newCart;
 	}
 

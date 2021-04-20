@@ -22,6 +22,7 @@ namespace flex
 	class Mesh;
 	class ParticleSystem;
 	class PointLight;
+	class UIMesh;
 	struct TextCache;
 
 	class PhysicsDebugDrawBase : public btIDebugDraw
@@ -157,7 +158,7 @@ namespace flex
 
 		virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) = 0;
 
-		virtual void NewFrame() = 0;
+		virtual void NewFrame();
 
 		virtual void RenderObjectMaterialChanged(MaterialID materialID) = 0;
 
@@ -318,6 +319,8 @@ namespace flex
 		void ToggleWireframeOverlay();
 		void ToggleWireframeSelectionOverlay();
 
+		UIMesh* GetUIMesh();
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -443,6 +446,8 @@ namespace flex
 		BitmapFont* m_CurrentFont = nullptr;
 
 		PostProcessSettings m_PostProcessSettings;
+
+		UIMesh* m_UIMesh = nullptr;
 
 		u32 m_FramesRendered = 0;
 

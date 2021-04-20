@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "terminal",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-1.078, 1.001, 5.914",
-			"pitch" : -0.000238,
-			"yaw" : 2.137813
+			"position" : "20.707, 9.425, -14.543",
+			"pitch" : -0.218452,
+			"yaw" : 2.232194
 		}
 	},
 	"objects" : 
@@ -94,13 +94,13 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "-2.876, 0.890, 2.207"
+						"rot" : "-2.886, 0.890, 2.207"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.454, 0.773, -0.299, 0.327",
+						"rotation" : "0.452, 0.775, -0.295, 0.329",
 						"pos" : "0.000, 15.000, 0.000",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
@@ -115,16 +115,16 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "-9.843, 0.708, 12.554"
+						"pos" : "-13.187, 0.708, 8.244"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-9.843, 0.708, 12.554",
+						"pos" : "-13.187, 0.708, 8.244",
 						"colour" : "0.49, 0.78, 0.91",
 						"enabled" : true,
-						"brightness" : 1000.000000
+						"brightness" : 140.625000
 					},
 					"children" : 
 					[
@@ -147,16 +147,16 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "16.636, 7.943, -3.520"
+						"pos" : "18.486, 7.943, -3.520"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "16.636, 7.943, -3.520",
+						"pos" : "18.486, 7.943, -3.520",
 						"colour" : "0.94, 0.80, 0.57",
 						"enabled" : true,
-						"brightness" : 760.416992
+						"brightness" : 395.833008
 					},
 					"children" : 
 					[
@@ -179,16 +179,16 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "-1.775, 0.938, 16.134"
+						"pos" : "2.159, 0.938, 17.654"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-1.775, 0.938, 16.134",
+						"pos" : "2.159, 0.938, 17.654",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 500.000000
+						"brightness" : 135.417007
 					},
 					"children" : 
 					[
@@ -211,13 +211,13 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "9.063, 4.930, 29.718"
+						"pos" : "9.644, 4.930, 29.718"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "9.063, 4.930, 29.718",
+						"pos" : "9.644, 4.930, 29.718",
 						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 827.585999
@@ -354,18 +354,6 @@
 			]
 		},
 		{
-			"name" : "Cart_00",
-			"id" : "EA025375D92D69A7497FD89137C6D5D3",
-			"type" : "cart",
-			"visible" : false,
-			"casts shadow" : true,
-			"cart info" : 
-			{
-				"track ID" : 4294967295,
-				"dist along track" : -1.000000
-			}
-		},
-		{
 			"name" : "moka",
 			"id" : "ECA2903A8E1C42A749F15519C5EF09D9",
 			"type" : "object",
@@ -450,6 +438,17 @@
 			{
 				"startPoint" : "-9.23, 0.60, 6.36",
 				"endPoint" : "-7.56, 0.60, 7.47"
+			}
+		},
+		{
+			"name" : "Cart_00",
+			"id" : "4F5C7B9E0D52C484401567D9337167F7",
+			"type" : "prefab",
+			"prefab type" : "Cart_00",
+			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
+			"transform" : 
+			{
+				"pos" : "-0.000, 0.410, 0.000"
 			}
 		}
 	]
