@@ -699,6 +699,8 @@ namespace flex
 						g_Systems[i]->Update();
 					}
 
+					GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->DrawDebug();
+
 					g_SceneManager->CurrentScene()->LateUpdate();
 				}
 
