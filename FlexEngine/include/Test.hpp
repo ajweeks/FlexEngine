@@ -1523,7 +1523,7 @@ namespace flex
 		{
 			const std::string str = "";
 			std::vector<std::string> result = SplitNoStrip(str, '\n');
-			EXPECT((u32)result.size(), 0u);
+			EXPECT((u32)result.size(), 1u);
 		}
 		UNIT_TEST_END;
 
@@ -1531,10 +1531,11 @@ namespace flex
 		{
 			const std::string str = "\n\n\n";
 			std::vector<std::string> result = SplitNoStrip(str, '\n');
-			EXPECT((u32)result.size(), 3u);
+			EXPECT((u32)result.size(), 4u);
 			EXPECT(result[0].c_str(), "");
 			EXPECT(result[1].c_str(), "");
 			EXPECT(result[2].c_str(), "");
+			EXPECT(result[3].c_str(), "");
 		}
 		UNIT_TEST_END;
 
@@ -1547,6 +1548,214 @@ namespace flex
 			EXPECT(result[1].c_str(), "");
 			EXPECT(result[2].c_str(), "beta");
 			EXPECT(result[3].c_str(), "charlie");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseInt0)
+		{
+			const std::string str = "9999";
+			i32 result = ParseInt(str);
+			EXPECT(result, 9999);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseInt1)
+		{
+			const std::string str = "-9999";
+			i32 result = ParseInt(str);
+			EXPECT(result, -9999);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseInt2)
+		{
+			const std::string str = "0";
+			i32 result = ParseInt(str);
+			EXPECT(result, 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseInt3)
+		{
+			const std::string str = "2147483647";
+			i32 result = ParseInt(str);
+			EXPECT(result, 2147483647);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseUInt0)
+		{
+			const std::string str = "9999";
+			u32 result = ParseUInt(str);
+			EXPECT(result, 9999);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseUInt1)
+		{
+			const std::string str = "0003";
+			u32 result = ParseUInt(str);
+			EXPECT(result, 3);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseUInt2)
+		{
+			const std::string str = "0";
+			u32 result = ParseUInt(str);
+			EXPECT(result, 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseUInt3)
+		{
+			const std::string str = "4294967295";
+			u32 result = ParseUInt(str);
+			EXPECT(result, 4294967295);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseULong0)
+		{
+			const std::string str = "9999";
+			u64 result = ParseULong(str);
+			EXPECT(result, 9999);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseULong1)
+		{
+			const std::string str = "00003";
+			u64 result = ParseULong(str);
+			EXPECT(result, 3);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseULong2)
+		{
+			const std::string str = "0";
+			u64 result = ParseULong(str);
+			EXPECT(result, 0);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersParseULong3)
+		{
+			const std::string str = "18446744073709551615";
+			u64 result = ParseULong(str);
+			EXPECT(result, 18446744073709551615);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString0)
+		{
+			i32 num = 9999;
+			std::string result = IntToString(num, 0);
+			EXPECT(result.c_str(), "9999");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString1)
+		{
+			i32 num = -9999;
+			std::string result = IntToString(num, 0);
+			EXPECT(result.c_str(), "-9999");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString2)
+		{
+			i32 num = 0;
+			std::string result = IntToString(num, 0);
+			EXPECT(result.c_str(), "0");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString3)
+		{
+			i32 num = 5;
+			std::string result = IntToString(num, 6);
+			EXPECT(result.c_str(), "000005");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString4)
+		{
+			i32 num = 5;
+			std::string result = IntToString(num, 3, '*');
+			EXPECT(result.c_str(), "**5");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString5)
+		{
+			i32 num = 2147483647;
+			std::string result = IntToString(num);
+			EXPECT(result.c_str(), "2147483647");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString6)
+		{
+			i32 num = (-2147483647 - 1); // MSVC warns if -2147483648 is typed explicitly
+			std::string result = IntToString(num);
+			EXPECT(result.c_str(), "-2147483648");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersIntToString7)
+		{
+			i32 num = -64;
+			std::string result = IntToString(num, 4);
+			EXPECT(result.c_str(), "-0064");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersUIntToString0)
+		{
+			u32 num = 4294967295;
+			std::string result = UIntToString(num);
+			EXPECT(result.c_str(), "4294967295");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersULongToString0)
+		{
+			u64 num = 18446744073709551615;
+			std::string result = ULongToString(num);
+			EXPECT(result.c_str(), "18446744073709551615");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFloatToString0)
+		{
+			real num = 3.333333f;
+			std::string result = FloatToString(num, 2);
+			EXPECT(result.c_str(), "3.33");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFloatToString1)
+		{
+			real num = 0.0f;
+			std::string result = FloatToString(num, 1);
+			EXPECT(result.c_str(), "0.0");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFloatToString2)
+		{
+			real num = 0.1f;
+			std::string result = FloatToString(num, 2);
+			EXPECT(result.c_str(), "0.10");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(HelpersFloatToString3)
+		{
+			real num = -1234567.5999f;
+			std::string result = FloatToString(num, 1);
+			EXPECT(result.c_str(), "-1234567.6");
 		}
 		UNIT_TEST_END;
 
@@ -1924,6 +2133,12 @@ namespace flex
 				HelpersTrim0, HelpersTrim1, HelpersTrim2, HelpersTrim3,
 				HelpersSplit0, HelpersSplit1, HelpersSplit2, HelpersSplit3, HelpersSplit4,
 				HelpersSplitNoStrip0, HelpersSplitNoStrip1, HelpersSplitNoStrip2,
+				HelpersParseInt0, HelpersParseInt1, HelpersParseInt2, HelpersParseInt3,
+				HelpersParseUInt0, HelpersParseUInt1, HelpersParseUInt2, HelpersParseUInt3,
+				HelpersParseULong0, HelpersParseULong1, HelpersParseULong2, HelpersParseULong3,
+				HelpersIntToString0, HelpersIntToString1, HelpersIntToString2, HelpersIntToString3, HelpersIntToString4, HelpersIntToString5, HelpersIntToString6, HelpersIntToString7,
+				HelpersUIntToString0,
+				HelpersFloatToString0, HelpersFloatToString1, HelpersFloatToString2, HelpersFloatToString3,
 				HelpersNextNonAlphaNumeric0, HelpersNextNonAlphaNumeric1, HelpersNextNonAlphaNumeric2,
 				HelpersRelativeToAbsolutePath0, HelpersRelativeToAbsolutePath1, HelpersRelativeToAbsolutePath2,
 				HelpersRelativeToAbsolutePath3, HelpersRelativeToAbsolutePath4, HelpersRelativeToAbsolutePath5,
