@@ -1849,8 +1849,6 @@ namespace flex
 		newObject->Initialize();
 		newObject->PostInitialize();
 
-		scene->AddRootObject(newObject);
-
 		return newObject;
 	}
 
