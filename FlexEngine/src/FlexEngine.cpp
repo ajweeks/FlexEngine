@@ -280,7 +280,13 @@ namespace flex
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
 
-		LoadCommonSettingsFromDisk();
+		if (!LoadCommonSettingsFromDisk())
+		{
+			// Common file doesn't exist or is corrupt, load first present scene
+			g_SceneManager->SetNextSceneActive();
+			// Set timer to max value so new config file will be immediately written to disk
+			m_SecondsSinceLastCommonSettingsFileSave = m_SecondsBetweenCommonSettingsFileSave;
+		}
 
 		ImGui::CreateContext();
 		SetupImGuiStyles();

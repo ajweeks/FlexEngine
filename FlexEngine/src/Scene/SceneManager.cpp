@@ -183,19 +183,9 @@ namespace flex
 
 	void SceneManager::SetNextSceneActive()
 	{
-		const size_t sceneCount = m_Scenes.size();
-		if (sceneCount == 1)
-		{
-			m_CurrentSceneIndex = 0;
-			return;
-		}
+		u32 sceneCount = (u32)m_Scenes.size();
 
-		if (m_CurrentSceneIndex == InvalidID)
-		{
-			m_CurrentSceneIndex = 0;
-		}
-
-		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
+		u32 newCurrentSceneIndex = m_CurrentSceneIndex != InvalidID ? ((m_CurrentSceneIndex + 1) % sceneCount) : 0;
 		SetCurrentScene(newCurrentSceneIndex);
 	}
 
