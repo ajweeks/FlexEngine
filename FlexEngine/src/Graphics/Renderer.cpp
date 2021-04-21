@@ -1710,7 +1710,7 @@ namespace flex
 
 		// Compute SDF
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 256;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
