@@ -24,7 +24,7 @@ solution "Flex"
 
 	location "../build/"
 	objdir "../build/"
-	windowstargetplatformversion "10.0.17763.0"
+	windowstargetplatformversion "10.0"
 
 -- Put intermediate files under build/Intermediate/config_platform/project
 -- Put binaries under bin/config/project/platform --TODO: Really? confirm
