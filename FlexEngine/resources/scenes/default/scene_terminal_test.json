@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "terminal",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "20.707, 9.425, -14.543",
-			"pitch" : -0.218452,
-			"yaw" : 2.232194
+			"position" : "-1.078, 1.001, 5.914",
+			"pitch" : -0.000035,
+			"yaw" : 2.137906
 		}
 	},
 	"objects" : 
@@ -94,7 +94,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "-2.886, 0.890, 2.207"
+						"rot" : "-2.885, 0.889, 2.208"
 					},
 					"visible" : true,
 					"casts shadow" : true,
@@ -450,6 +450,45 @@
 			{
 				"pos" : "-0.000, 0.410, 0.000"
 			}
+		},
+		{
+			"name" : "New_Object_01",
+			"id" : "87A3091457AE338349F5D2BFFA33D061",
+			"type" : "area light",
+			"transform" : 
+			{
+				"pos" : "-11.952, 2.943, 33.765",
+				"rot" : "-1.605, 0.000, 0.000",
+				"scale" : "3.923, 1.840, 3.923"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"area light info" : 
+			{
+				"colour" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 41.667000
+			},
+			"children" : 
+			[
+				{
+					"name" : "New_Object_02",
+					"id" : "4997CA417B45399641AC88288BD61949",
+					"type" : "object",
+					"transform" : 
+					{
+						"rot" : "3.141, 1.569, 3.141",
+						"scale" : "0.010, 2.000, 2.000"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"mesh" : "cube.glb",
+					"materials" : 
+					[
+						"pbr white"
+					]
+				}
+			]
 		}
 	]
 }

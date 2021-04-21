@@ -1840,8 +1840,6 @@ namespace flex
 
 	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS)
 	{
-		BaseScene* scene = g_SceneManager->CurrentScene();
-
 		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID);
 
 		newObject->m_Transform.SetWorldPosition(positionWS);
@@ -7449,8 +7447,11 @@ namespace flex
 
 	void Terminal::EvaluateCode()
 	{
-		m_VM->ClearRuntimeState();
-		m_VM->Execute();
+		if (m_VM->IsCompiled())
+		{
+			m_VM->ClearRuntimeState();
+			m_VM->Execute();
+		}
 	}
 
 	bool Terminal::SaveScript()

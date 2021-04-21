@@ -2,13 +2,15 @@
 
 #include <stack>
 
-#include "VirtualMachine/Backend/VMValue.hpp"
+#include "VirtualMachine/Backend/FunctionBindings.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
+#include "VirtualMachine/Backend/VMValue.hpp"
 #include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
 
 namespace flex
 {
 	struct DiagnosticContainer;
+	class FunctionBindings;
 
 	namespace IR
 	{
@@ -121,53 +123,6 @@ namespace flex
 		//	PtrType ptr;
 		//};
 
-		struct FuncPtr
-		{
-			typedef Value(*PtrType)(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4, const Value& val5);
-
-			FuncPtr(PtrType ptr) :
-				ptr(ptr)
-			{
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4, const Value& val5)
-			{
-				return ptr(val0, val1, val2, val3, val4, val5);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4)
-			{
-				return ptr(val0, val1, val2, val3, val4, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3)
-			{
-				return ptr(val0, val1, val2, val3, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2)
-			{
-				return ptr(val0, val1, val2, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1)
-			{
-				return ptr(val0, val1, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0)
-			{
-				return ptr(val0, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()()
-			{
-				return ptr(g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			PtrType ptr;
-		};
-
 		struct Instruction
 		{
 			Instruction(OpCode opCode) :
@@ -263,7 +218,7 @@ namespace flex
 			// Caller pops registers off stack
 
 			void GenerateFromSource(const char* source);
-			void GenerateFromIR(IR::IntermediateRepresentation* ir);
+			void GenerateFromIR(IR::IntermediateRepresentation* ir, FunctionBindings* functionBindings);
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 
 			void Execute(bool bSingleStep = false);
@@ -277,6 +232,8 @@ namespace flex
 
 			bool ZeroFlagSet() const;
 			bool SignFlagSet() const;
+
+			bool IsCompiled() const;
 
 			static const i32 REGISTER_COUNT = 32;
 			static const i32 MAX_STACK_HEIGHT = 2048;
@@ -312,9 +269,6 @@ namespace flex
 
 			u32* memory = nullptr;
 
-			using FuncAddress = i32;
-			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
-
 			State* state = nullptr;
 			DiagnosticContainer* diagnosticContainer = nullptr;
 
@@ -340,8 +294,9 @@ namespace flex
 			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);
 
 			bool IsExternal(FuncAddress funcAddress);
+			FuncAddress GetExternalFuncAddress(const std::string& functionName);
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
-			void DispatchExternalCall(FuncAddress funcAddress);
+			bool DispatchExternalCall(FuncAddress funcAddress);
 
 			ValueWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
 			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
@@ -350,6 +305,7 @@ namespace flex
 
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
+			FunctionBindings* m_FunctionBindings = nullptr;
 
 			bool m_bCompiled = false;
 

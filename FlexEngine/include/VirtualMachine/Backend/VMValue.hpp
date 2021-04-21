@@ -1,5 +1,7 @@
 #pragma once
 
+#undef VOID
+
 namespace flex
 {
 	namespace IR
@@ -20,6 +22,7 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
+				VOID,
 
 				_NONE
 			};

@@ -90,7 +90,12 @@ namespace flex
 				m_AST->Destroy();
 				delete m_AST;
 			}
-
+			if (m_FunctionBindings != nullptr)
+			{
+				m_FunctionBindings->ClearBindings();
+				delete m_FunctionBindings;
+				m_FunctionBindings = nullptr;
+			}
 			if (m_IR != nullptr)
 			{
 				m_IR->Destroy();
@@ -114,6 +119,12 @@ namespace flex
 				delete m_AST;
 				m_AST = nullptr;
 			}
+			if (m_FunctionBindings != nullptr)
+			{
+				m_FunctionBindings->ClearBindings();
+				delete m_FunctionBindings;
+				m_FunctionBindings = nullptr;
+			}
 			if (m_IR != nullptr)
 			{
 				m_IR->Destroy();
@@ -127,14 +138,17 @@ namespace flex
 			{
 				astStr = m_AST->rootBlock->ToString();
 
+				m_FunctionBindings = new FunctionBindings();
+				m_FunctionBindings->RegisterBindings();
+
 				m_IR = new IR::IntermediateRepresentation();
-				m_IR->GenerateFromAST(m_AST);
+				m_IR->GenerateFromAST(m_AST, m_FunctionBindings);
 
 				if (!m_IR->blocks.empty() && m_IR->state->diagnosticContainer->diagnostics.empty())
 				{
 					irStr = m_IR->ToString();
 
-					GenerateFromIR(m_IR);
+					GenerateFromIR(m_IR, m_FunctionBindings);
 				}
 
 				for (const Diagnostic& diagnostic : m_IR->state->diagnosticContainer->diagnostics)
@@ -196,7 +210,10 @@ namespace flex
 				{
 					IR::FunctionCallValue* funcCallValue = (IR::FunctionCallValue*)value;
 					i32 registerStored = GenerateCallInstruction(irState, funcCallValue);
-					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
+					if (registerStored != -1)
+					{
+						valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
+					}
 				} break;
 				case IR::Value::Type::CAST:
 				{
@@ -215,10 +232,15 @@ namespace flex
 
 		i32 VirtualMachine::GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue)
 		{
+			if (state->funcNameToBlockIndexTable.find(funcCallValue->target) == state->funcNameToBlockIndexTable.end())
+			{
+				std::string errorMessage = "Unexpected function: " + funcCallValue->target;
+				irState->diagnosticContainer->AddDiagnostic(funcCallValue->origin, errorMessage);
+				return -1;
+			}
 			// Temporary identifier for the function since we
 			// don't know where it will be located in the end
-			assert(state->funcNameToBlockIndexTable.find(funcCallValue->target) != state->funcNameToBlockIndexTable.end());
-			i32 funcUID = state->funcNameToBlockIndexTable[funcCallValue->target];
+			i32 funcAddress = state->funcNameToBlockIndexTable[funcCallValue->target];
 
 			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
@@ -270,7 +292,14 @@ namespace flex
 					{
 						IR::FunctionCallValue* subFuncCall = (IR::FunctionCallValue*)arg;
 						i32 registerStored = GenerateCallInstruction(irState, subFuncCall);
-						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
+						if (registerStored != -1)
+						{
+							argVal = ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(registerStored));
+						}
+						else
+						{
+							return -1;
+						}
 					} break;
 					case IR::Value::Type::CAST:
 					{
@@ -289,7 +318,7 @@ namespace flex
 			}
 
 			// Call
-			Instruction inst(OpCode::JMP, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcUID)));
+			Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(funcAddress)));
 			currentInstBlock.PushBack(inst, funcCallValue->origin, state);
 
 			// Resume point
@@ -519,7 +548,7 @@ namespace flex
 			}
 		}
 
-		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir)
+		void VirtualMachine::GenerateFromIR(IR::IntermediateRepresentation* ir, FunctionBindings* functionBindings)
 		{
 			instructions.clear();
 			instructionOrigins.clear();
@@ -527,7 +556,7 @@ namespace flex
 
 			state->Clear();
 
-			// Find all function block indices
+			// Find all internal function block indices
 			for (i32 i = 0; i < (i32)ir->blocks.size(); ++i)
 			{
 				IR::Block* block = ir->blocks[i];
@@ -535,6 +564,12 @@ namespace flex
 				{
 					state->funcNameToBlockIndexTable[block->funcName] = i;
 				}
+			}
+
+			for (auto iter = functionBindings->ExternalFuncTable.begin(); iter != functionBindings->ExternalFuncTable.end(); ++iter)
+			{
+				FuncPtr* funcPtr = iter->second;
+				state->funcNameToBlockIndexTable[funcPtr->name] = funcPtr->address;
 			}
 
 			u32 instructionIndex = 0;
@@ -603,7 +638,8 @@ namespace flex
 							currentInstBlock.PushBack(Instruction(VM::OpCode::INV, outputVal, GetValueWrapperFromIRValue(ir->state, unaryValue->operand)), unaryValue->origin, state);
 							break;
 						default:
-							assert(false);
+							diagnosticContainer->AddDiagnostic(assignment->origin, "Unexpected assignment type in unary expression\n");
+							return;
 							break;
 						}
 					} break;
@@ -810,22 +846,25 @@ namespace flex
 				} break;
 				case OpCode::CALL:
 				{
-					i32 funcUID = inst.val0.Get(this).valInt;
-					if (funcUID < (i32)state->instructionBlocks.size())
+					FuncAddress funcAddress = inst.val0.Get(this).valInt;
+					if (!IsExternal(funcAddress))
 					{
-						i32 funcAddress = state->instructionBlocks[funcUID].startOffset;
-						if (funcAddress != -1)
+						if (funcAddress < (i32)state->instructionBlocks.size())
 						{
-							inst.val0.value.valInt = funcAddress;
+							i32 funcAddressLocal = state->instructionBlocks[funcAddress].startOffset;
+							if (funcAddressLocal != -1)
+							{
+								inst.val0.value.valInt = funcAddressLocal;
+							}
+							else
+							{
+								diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Compiler error: Calling invalid function (block start offset = -1)");
+							}
 						}
 						else
 						{
-							diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Compiler error: Calling invalid function (block start offset = -1)");
+							diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid block index");
 						}
-					}
-					else
-					{
-						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid block index");
 					}
 				} break;
 				}
@@ -967,7 +1006,10 @@ namespace flex
 					FuncAddress funcAddress = inst.val0.Get(this).valInt;
 					if (IsExternal(funcAddress))
 					{
-						DispatchExternalCall(funcAddress);
+						if (!DispatchExternalCall(funcAddress))
+						{
+							m_RunningState.terminated = true;
+						}
 					}
 					else
 					{
@@ -1145,7 +1187,6 @@ namespace flex
 			ZeroOutRegisters();
 			ZeroOutTerminalOutputs();
 			ClearStack();
-			ExternalFuncTable.clear();
 			diagnosticContainer->diagnostics.clear();
 		}
 
@@ -1157,6 +1198,11 @@ namespace flex
 		bool VirtualMachine::SignFlagSet() const
 		{
 			return m_RunningState.sf != 0;
+		}
+
+		bool VirtualMachine::IsCompiled() const
+		{
+			return m_bCompiled;
 		}
 
 		void VirtualMachine::AllocateMemory()
@@ -1199,20 +1245,78 @@ namespace flex
 
 		bool VirtualMachine::IsExternal(FuncAddress funcAddress)
 		{
-			return funcAddress > 0xFFFF;
+			return funcAddress >= 0xFFFF;
+		}
+
+		FuncAddress VirtualMachine::GetExternalFuncAddress(const std::string& functionName)
+		{
+			for (auto& funcPtrPair : m_FunctionBindings->ExternalFuncTable)
+			{
+				if (funcPtrPair.second->name == functionName)
+				{
+					return funcPtrPair.second->address;
+				}
+			}
+
+			return InvalidFuncAddress;
 		}
 
 		i32 VirtualMachine::TranslateLocalFuncAddress(FuncAddress localFuncAddress)
 		{
-			// TODO:
 			return localFuncAddress;
 		}
 
-		void VirtualMachine::DispatchExternalCall(FuncAddress funcAddress)
+		bool VirtualMachine::DispatchExternalCall(FuncAddress funcAddress)
 		{
-			FuncPtr* funcPtr = ExternalFuncTable[funcAddress];
-			i32 returnVal = (*funcPtr)().valInt;
-			stack.push(VM::Value(returnVal));
+			auto iter = m_FunctionBindings->ExternalFuncTable.find(funcAddress);
+			if (iter != m_FunctionBindings->ExternalFuncTable.end())
+			{
+				FuncPtr* funcPtr = iter->second;
+
+				std::vector<Value> args;
+				i32 argCount = (i32)funcPtr->argTypes.size();
+				args.reserve(argCount);
+				for (i32 i = 0; i < argCount; ++i)
+				{
+					const Value& arg = stack.top();
+					args.emplace_back(arg);
+					stack.pop();
+				}
+
+				Value returnVal;
+
+				switch (argCount)
+				{
+				case 0:
+					returnVal = (*funcPtr)();
+					break;
+				case 1:
+					returnVal = (*funcPtr)(args[0]);
+					break;
+				case 2:
+					returnVal = (*funcPtr)(args[0], args[1]);
+					break;
+				case 3:
+					returnVal = (*funcPtr)(args[0], args[1], args[2]);
+					break;
+				case 4:
+					returnVal = (*funcPtr)(args[0], args[1], args[2], args[3]);
+					break;
+				case 5:
+					returnVal = (*funcPtr)(args[0], args[1], args[2], args[3], args[4]);
+					break;
+				default:
+					diagnosticContainer->AddDiagnostic(Span(0, 0), "Too many arguments supplied\n");
+					return false;
+				}
+
+				if (funcPtr->returnType != VM::Value::Type::VOID)
+				{
+					stack.push(returnVal);
+				}
+			}
+
+			return true;
 		}
 
 		const char* OpCodeToString(OpCode opCode)

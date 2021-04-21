@@ -2526,15 +2526,6 @@ namespace flex
 				m_TAASampleCount = (i32)RoundToNearestPowerOfTwo((real)m_TAASampleCount);
 			}
 
-			ImGui::Checkbox("FXAA", &m_PostProcessSettings.bEnableFXAA);
-
-			if (m_PostProcessSettings.bEnableFXAA)
-			{
-				ImGui::Indent();
-				ImGui::Checkbox("Show edges", &m_PostProcessSettings.bEnableFXAADEBUGShowEdges);
-				ImGui::Unindent();
-			}
-
 			real maxBrightness = 2.5f;
 			ImGui::SliderFloat3("Brightness", &m_PostProcessSettings.brightness.r, 0.0f, maxBrightness);
 			ImGui::SameLine();

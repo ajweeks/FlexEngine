@@ -115,6 +115,7 @@ namespace flex
 			deviceCreateInfo.surface = m_Surface;
 			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
 			deviceCreateInfo.optionalExtensions = &m_OptionalDeviceExtensions;
+			// TODO: If device creation fails, try again without validation layers enabled
 			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
 			deviceCreateInfo.validationLayers = &m_ValidationLayers;
 			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);

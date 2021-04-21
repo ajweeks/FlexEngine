@@ -673,7 +673,7 @@ namespace flex
 			}
 		}
 
-		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
+		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast, FunctionBindings* functionBindings)
 		{
 			if (state)
 			{
@@ -711,6 +711,26 @@ namespace flex
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
 				DiscoverFunctionDefinitions(ast->rootBlock);
+
+				for (auto& funcPtrPair : functionBindings->ExternalFuncTable)
+				{
+					FuncPtr* funcPtr = funcPtrPair.second;
+
+					IR::Value::Type returnType = (IR::Value::Type)funcPtr->returnType;
+
+					std::vector<IR::Value::Type> argumentTypes;
+					argumentTypes.reserve(funcPtr->argTypes.size());
+					for (VM::Value::Type argType : funcPtr->argTypes)
+					{
+						argumentTypes.emplace_back((IR::Value::Type)argType);
+					}
+
+					if (!AddFunctionType(Span(Span::Source::GENERATED), funcPtr->name, returnType, argumentTypes))
+					{
+						PrintWarn("Failed to bind external function with name %s\n", funcPtr->name.c_str());
+					}
+				}
+
 				if (state->diagnosticContainer->diagnostics.empty())
 				{
 					LowerStatement(ast->rootBlock);

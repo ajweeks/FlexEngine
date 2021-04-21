@@ -29,6 +29,7 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
+				VOID,
 				IDENTIFIER,
 				UNARY,
 				BINARY,
@@ -36,7 +37,6 @@ namespace flex
 				FUNC_CALL,
 				ARGUMENT,
 				CAST,
-				VOID,
 
 				_NONE
 			};
@@ -48,6 +48,7 @@ namespace flex
 				"bool",
 				"string",
 				"char",
+				"void",
 				"identifier",
 				"unary",
 				"binary",
@@ -55,7 +56,6 @@ namespace flex
 				"func call",
 				"argument",
 				"cast",
-				"void",
 
 				"NONE"
 			};

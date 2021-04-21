@@ -380,9 +380,10 @@ namespace flex
 
 				if (gameObjectStack.count >= 1)
 				{
-					glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
 					if (gameObjectStack.prefabID.IsValid())
 					{
+						glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() +
+							m_Player->m_Transform.GetForward() * 3.0f;
 						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
 						if (gameObject != nullptr)
 						{

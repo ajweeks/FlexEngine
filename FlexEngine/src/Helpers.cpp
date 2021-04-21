@@ -165,19 +165,15 @@ namespace flex
 		return stream.str();
 	}
 
-	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
+	std::string IntToString(i32 i, u16 minChars /* = 0 */, char pad /* = '0' */)
 	{
-		std::string result = std::to_string(glm::abs(i));
+		std::string result = std::to_string(i);
 
-		if (i < 0)
+		if (!result.empty() && result[0] == '-')
 		{
-			if (result.length() < minChars)
+			if ((result.length() - 1) < minChars)
 			{
-				result = "-" + std::string(minChars - result.length(), pad) + result;
-			}
-			else
-			{
-				result = "-" + result;
+				result = "-" + std::string(minChars - (result.length() - 1), pad) + result.substr(1);
 			}
 		}
 		else

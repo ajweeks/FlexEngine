@@ -8,6 +8,7 @@
 namespace flex
 {
 	struct DiagnosticContainer;
+	class FunctionBindings;
 
 	namespace AST
 	{
@@ -446,7 +447,7 @@ namespace flex
 
 		struct IntermediateRepresentation
 		{
-			void GenerateFromAST(AST::AST* ast);
+			void GenerateFromAST(AST::AST* ast, FunctionBindings* functionBindings);
 			void Destroy();
 
 			std::string ToString() const;

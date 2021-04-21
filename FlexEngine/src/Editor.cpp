@@ -1236,13 +1236,19 @@ namespace flex
 
 	EventReply Editor::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
+		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
+
+		if (bControlDown && action == KeyAction::KEY_PRESS && keyCode == KeyCode::KEY_S)
+		{
+			g_SceneManager->CurrentScene()->SerializeToFile(true);
+			return EventReply::CONSUMED;
+		}
+
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		if (cam->bIsGameplayCam)
 		{
 			return EventReply::UNCONSUMED;
 		}
-
-		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 
 		if (action == KeyAction::KEY_PRESS)
 		{
@@ -1291,12 +1297,6 @@ namespace flex
 			if (bControlDown && keyCode == KeyCode::KEY_A)
 			{
 				SelectAll();
-				return EventReply::CONSUMED;
-			}
-
-			if (bControlDown && keyCode == KeyCode::KEY_S)
-			{
-				g_SceneManager->CurrentScene()->SerializeToFile(true);
 				return EventReply::CONSUMED;
 			}
 		}
