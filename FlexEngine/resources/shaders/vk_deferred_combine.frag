@@ -267,6 +267,52 @@ vec3 LTC_Evaluate(vec3 N, vec3 V, vec3 P, mat3 Minv, vec4 points[4], bool twoSid
     return Lo_i;
 }
 
+float FrostbiteAnalyicAreaLight(AreaLight areaLight, vec3 posWS, vec3 normalWS)
+{
+	vec3 Lunormalized = areaLight.points[0].xyz - posWS;
+	vec3 L = normalize(Lunormalized);
+	float sqrDist = dot(Lunormalized, Lunormalized);
+
+	float lightRadius = 2.0;
+
+	//#define WITHOUT_CORRECT_HORIZON
+	#if WITHOUT_CORRECT_HORIZON // Analytical solution above horizon
+
+	// Patch to Sphere frontal equation ( Quilez version )
+	float sqrLightRadius = lightRadius * lightRadius;
+	// Do not allow object to penetrate the light ( max )
+	// Form factor equation include a (1 / FB_PI ) that need to be cancel
+	// thus the " FB_PI *"
+	float illuminance = PI * (sqrLightRadius / (max(sqrLightRadius, sqrDist))) * clamp(dot(normalWS, L), 0.0, 1.0);
+
+	# else // Analytical solution with horizon
+
+	// Tilted patch to sphere equation
+	float Beta = acos(dot(normalWS, L));
+	float H = sqrt (sqrDist);
+	float h = H / lightRadius;
+	float x = sqrt(h * h - 1);
+	float y = -x * (1 / tan(Beta));
+
+	float illuminance = 0;
+	if (h * cos(Beta) > 1)
+	{
+		illuminance = cos(Beta) / (h * h);
+	}
+	else
+	{
+		illuminance = (1 / (PI * h * h)) *
+			(cos(Beta) * acos(y) - x * sin(Beta) * sqrt (1 - y * y)) +
+			(1 / PI ) * atan(sin(Beta) * sqrt (1 - y * y) / x);
+	}
+
+	illuminance *= PI;
+
+	# endif
+
+	return illuminance;
+}
+
 layout (binding = 1) uniform sampler2D brdfLUT;
 layout (binding = 2) uniform samplerCube irradianceSampler;
 layout (binding = 3) uniform samplerCube prefilterMap;
