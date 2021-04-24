@@ -202,7 +202,7 @@ namespace flex
 			UNARY_OPERATION,
 			BINARY_OPERATION,
 			TERNARY_OPERATION,
-			FUNC_CALL,
+			CALL,
 			CAST,
 
 			_NONE
@@ -727,7 +727,7 @@ namespace flex
 		struct FunctionCall final : public Expression
 		{
 			FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
-				Expression(span, StatementType::FUNC_CALL),
+				Expression(span, StatementType::CALL),
 				target(target),
 				arguments(arguments)
 			{
@@ -746,7 +746,7 @@ namespace flex
 		struct FunctionArgument final : public Expression
 		{
 			FunctionArgument(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
-				Expression(span, StatementType::FUNC_CALL),
+				Expression(span, StatementType::CALL),
 				target(target),
 				arguments(arguments)
 			{

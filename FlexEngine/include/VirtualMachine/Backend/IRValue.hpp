@@ -34,7 +34,7 @@ namespace flex
 				UNARY,
 				BINARY,
 				TERNARY,
-				FUNC_CALL,
+				CALL,
 				ARGUMENT,
 				CAST,
 
@@ -53,7 +53,7 @@ namespace flex
 				"unary",
 				"binary",
 				"ternary",
-				"func call",
+				"call",
 				"argument",
 				"cast",
 
@@ -63,6 +63,8 @@ namespace flex
 			static_assert(ARRAY_LENGTH(g_TypeStrings) == ((size_t)Type::_NONE + 1), "Length of g_TypeStrings must match length of IR::Value::Type enum");
 
 			static const char* TypeToString(Type type);
+
+			virtual std::string ToString() const;
 
 			static Type FromASTTypeName(AST::TypeName typeName);
 
@@ -145,8 +147,6 @@ namespace flex
 
 			virtual void Destroy()
 			{}
-
-			virtual std::string ToString() const;
 
 			bool IsZero() const;
 			bool IsPositive() const;

@@ -7,5 +7,11 @@ func recurse(int val, int depth) -> int {
 
 out_0 = recurse(5, 1);
 
-out_1 = DoMath(1, 2, 3);
+out_1 = DoMathSmall(1, 2, 3);
+
+out_2 = Quintuple(2);
+
+Print(false);
+Print(1000);
+Print(100.50);
 

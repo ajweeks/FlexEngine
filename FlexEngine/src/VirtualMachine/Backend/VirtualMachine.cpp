@@ -206,7 +206,7 @@ namespace flex
 					//i32 reg = state->varRegisterMap[binary->left];
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
-				case IR::Value::Type::FUNC_CALL:
+				case IR::Value::Type::CALL:
 				{
 					IR::FunctionCallValue* funcCallValue = (IR::FunctionCallValue*)value;
 					i32 registerStored = GenerateCallInstruction(irState, funcCallValue);
@@ -241,16 +241,20 @@ namespace flex
 			// Temporary identifier for the function since we
 			// don't know where it will be located in the end
 			i32 funcAddress = state->funcNameToBlockIndexTable[funcCallValue->target];
+			bool bFuncIsExternal = IsExternal(funcAddress);
 
 			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
 			// Push return IP
-			i32 pushInstructionIndex = -1;
+			// We don't jump to external functions, so a resume
+			// point doesn't need to be pushed
+			i32 resumePointPushInstructionIndex = -1;
+			if (!bFuncIsExternal)
 			{
 				// Actual IP will be patched up below
-				pushInstructionIndex = (i32)currentInstBlock.instructions.size();
+				resumePointPushInstructionIndex = (i32)currentInstBlock.instructions.size();
 				Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, VM::Value(0)));
-				currentInstBlock.PushBack(pushReturnIP, Span(Span::Source::GENERATED), state);
+				currentInstBlock.PushBack(pushReturnIP, funcCallValue->origin, state);
 			}
 
 			// Push arguments in reverse order
@@ -288,7 +292,7 @@ namespace flex
 						IR::TernaryValue* ternaryValue = (IR::TernaryValue*)arg;
 						argVal = GetValueWrapperFromIRValue(irState, ternaryValue);
 					} break;
-					case IR::Value::Type::FUNC_CALL:
+					case IR::Value::Type::CALL:
 					{
 						IR::FunctionCallValue* subFuncCall = (IR::FunctionCallValue*)arg;
 						i32 registerStored = GenerateCallInstruction(irState, subFuncCall);
@@ -314,7 +318,7 @@ namespace flex
 				}
 
 				Instruction pushArg(OpCode::PUSH, argVal);
-				currentInstBlock.PushBack(pushArg, arg->origin, state);
+				currentInstBlock.PushBack(pushArg, funcCallValue->origin, state);
 			}
 
 			// Call
@@ -322,18 +326,26 @@ namespace flex
 			currentInstBlock.PushBack(inst, funcCallValue->origin, state);
 
 			// Resume point
+			if (!bFuncIsExternal)
 			{
 				// Patch up push call to current instruction offset
-				//i32 instructionBlockIndex = (i32)state->instructionBlocks.size();
 				i32 instructionIndex = (i32)currentInstBlock.instructions.size();
 				i32 value = currentInstBlock.startOffset + instructionIndex;
-				currentInstBlock.instructions[pushInstructionIndex].val0.value.valInt = value;
+				currentInstBlock.instructions[resumePointPushInstructionIndex].val0.value.valInt = value;
 			}
 
+			IR::Value::Type funcReturnType = irState->functionTypes[funcCallValue->target].returnType;
+
+			// TODO: Choose register intelligently
 			i32 returnValueRegister = 0;
-			Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(returnValueRegister)));
-			currentInstBlock.PushBack(popReturnVal, funcCallValue->origin, state);
-			return returnValueRegister;
+			if (funcReturnType != IR::Value::Type::VOID)
+			{
+				Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, VM::Value(returnValueRegister)));
+				currentInstBlock.PushBack(popReturnVal, funcCallValue->origin, state);
+				return returnValueRegister;
+			}
+
+			return -1;
 		}
 
 		i32 VirtualMachine::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
@@ -530,7 +542,7 @@ namespace flex
 				}
 			} break;
 			case IR::Value::Type::IDENTIFIER:
-			case IR::Value::Type::FUNC_CALL:
+			case IR::Value::Type::CALL:
 			case IR::Value::Type::CAST:
 			case IR::Value::Type::UNARY:
 			{
@@ -568,8 +580,9 @@ namespace flex
 
 			for (auto iter = functionBindings->ExternalFuncTable.begin(); iter != functionBindings->ExternalFuncTable.end(); ++iter)
 			{
-				FuncPtr* funcPtr = iter->second;
-				state->funcNameToBlockIndexTable[funcPtr->name] = funcPtr->address;
+				FuncAddress funcAddress = iter->first;
+				IFunction* function = iter->second;
+				state->funcNameToBlockIndexTable[function->name] = funcAddress;
 			}
 
 			u32 instructionIndex = 0;
@@ -730,7 +743,12 @@ namespace flex
 					} break;
 					default:
 					{
-						currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal, GetValueWrapperFromIRValue(ir->state, assignment->value)), assignment->origin, state);
+						ValueWrapper valueWrapper = GetValueWrapperFromIRValue(ir->state, assignment->value);
+						// Calls to void functions will return empty ValueWrappers
+						if (valueWrapper.type != ValueWrapper::Type::NONE)
+						{
+							currentInstBlock.PushBack(Instruction(OpCode::MOV, outputVal, valueWrapper), assignment->origin, state);
+						}
 					} break;
 					}
 				}
@@ -751,7 +769,12 @@ namespace flex
 							returnVal = GetValueWrapperFromIRValue(ir->state, ret->returnValue);
 						}
 
-						currentInstBlock.PushBack(Instruction(OpCode::RETURN, returnVal), ret->origin, state);
+						// TODO: Select register intelligently
+						i32 resumePointRegister = 0;
+						ValueWrapper resumePoint(ValueWrapper::Type::REGISTER, Value(resumePointRegister));
+						currentInstBlock.PushBack(Instruction(OpCode::POP, resumePoint), ret->origin, state);
+						currentInstBlock.PushBack(Instruction(OpCode::PUSH, returnVal), ret->origin, state);
+						currentInstBlock.PushBack(Instruction(OpCode::JMP, resumePoint), ret->origin, state);
 
 						//state->PushInstructionBlock();
 					} break;
@@ -1109,17 +1132,14 @@ namespace flex
 					break;
 				case OpCode::RETURN:
 				{
-					const bool bVoid = !inst.val0.Valid();
-
-					Value returnVal;
-					if (!bVoid)
-					{
-						returnVal = inst.val0.Get(this);
-					}
-					m_RunningState.instructionIdx = stack.top().valInt;
+					i32 resumePoint = stack.top().valInt;
+					m_RunningState.instructionIdx = resumePoint;
 					stack.pop();
+
+					const bool bVoid = !inst.val0.Valid();
 					if (!bVoid)
 					{
+						Value returnVal = Value(inst.val0.Get(this));
 						stack.push(returnVal);
 					}
 				} break;
@@ -1254,7 +1274,7 @@ namespace flex
 			{
 				if (funcPtrPair.second->name == functionName)
 				{
-					return funcPtrPair.second->address;
+					return funcPtrPair.first;
 				}
 			}
 
@@ -1271,7 +1291,7 @@ namespace flex
 			auto iter = m_FunctionBindings->ExternalFuncTable.find(funcAddress);
 			if (iter != m_FunctionBindings->ExternalFuncTable.end())
 			{
-				FuncPtr* funcPtr = iter->second;
+				IFunction* funcPtr = iter->second;
 
 				std::vector<Value> args;
 				i32 argCount = (i32)funcPtr->argTypes.size();
@@ -1283,32 +1303,7 @@ namespace flex
 					stack.pop();
 				}
 
-				Value returnVal;
-
-				switch (argCount)
-				{
-				case 0:
-					returnVal = (*funcPtr)();
-					break;
-				case 1:
-					returnVal = (*funcPtr)(args[0]);
-					break;
-				case 2:
-					returnVal = (*funcPtr)(args[0], args[1]);
-					break;
-				case 3:
-					returnVal = (*funcPtr)(args[0], args[1], args[2]);
-					break;
-				case 4:
-					returnVal = (*funcPtr)(args[0], args[1], args[2], args[3]);
-					break;
-				case 5:
-					returnVal = (*funcPtr)(args[0], args[1], args[2], args[3], args[4]);
-					break;
-				default:
-					diagnosticContainer->AddDiagnostic(Span(0, 0), "Too many arguments supplied\n");
-					return false;
-				}
+				Value returnVal = funcPtr->Execute(args);
 
 				if (funcPtr->returnType != VM::Value::Type::VOID)
 				{

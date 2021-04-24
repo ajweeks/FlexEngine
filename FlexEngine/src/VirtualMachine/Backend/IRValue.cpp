@@ -19,6 +19,20 @@ namespace flex
 			return g_TypeStrings[(u32)type];
 		}
 
+		std::string Value::ToString() const
+		{
+			switch (type)
+			{
+			case Type::INT:		return IntToString(valInt);
+			case Type::FLOAT:	return FloatToString(valFloat);
+			case Type::BOOL:	return IntToString(valBool);
+			case Type::STRING:	return std::string(valStr);
+			case Type::CHAR:	return std::string(1, valChar);
+				// Non-basic types override ToString()
+			default:			return "";
+			}
+		}
+
 		Value::Type Value::FromASTTypeName(AST::TypeName typeName)
 		{
 			switch (typeName)
@@ -53,19 +67,6 @@ namespace flex
 			return IsLiteral(type) ||
 				type == Type::IDENTIFIER ||
 				type == Type::ARGUMENT;
-		}
-
-		std::string Value::ToString() const
-		{
-			switch (type)
-			{
-			case Type::INT:		return IntToString(valInt);
-			case Type::FLOAT:	return FloatToString(valFloat);
-			case Type::BOOL:	return IntToString(valBool);
-			case Type::STRING:	return std::string(valStr);
-			case Type::CHAR:	return std::string(1, valChar);
-			default:			return "";
-			}
 		}
 
 		bool Value::IsZero() const

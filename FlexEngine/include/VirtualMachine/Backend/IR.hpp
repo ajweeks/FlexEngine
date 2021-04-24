@@ -81,7 +81,7 @@ namespace flex
 			void AddReturn(Span returnOrigin, Value* returnVal);
 			void AddYield(Span yieldOrigin, Value* yieldVal);
 			void AddBranch(Span branchOrigin, Block* target);
-			void AddCall(State* state, const std::string& target, const std::vector<Value*>& arguments);
+			void AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<Value*>& arguments);
 			void AddHalt();
 			void SealBlock();
 			void AddConditionalBranch(State* state, Span branchOrigin, Value* condition, Block* then, Block* otherwise);
@@ -392,7 +392,7 @@ namespace flex
 		struct FunctionCallValue : IR::Value
 		{
 			FunctionCallValue(State* state, Span origin, const std::string& target, const std::vector<IR::Value*>& arguments) :
-				Value(origin, state, Value::Type::FUNC_CALL),
+				Value(origin, state, Value::Type::CALL),
 				target(target),
 				arguments(arguments)
 			{}

@@ -88,17 +88,14 @@ namespace flex
 			}
 		}
 
-		void Block::AddCall(State* state, const std::string& target, const std::vector<IR::Value*>& arguments)
+		void Block::AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<IR::Value*>& arguments)
 		{
-			FLEX_UNUSED(state);
-			FLEX_UNUSED(target);
-			FLEX_UNUSED(arguments);
 			if (!Filled())
 			{
-				// TODO: Look up arg address
-				// TODO: Args
-				//Block targetBlock;
-				//terminator = new Branch(targetBlock);
+				// Empty variable name signals call to void function. Calls to
+				// functions with return values go through AddAssignment path.
+				std::string variable = "";
+				assignments.push_back(new Assignment(state, callOrigin, variable, new FunctionCallValue(state, callOrigin, target, arguments)));
 			}
 		}
 
@@ -286,7 +283,7 @@ namespace flex
 				}
 				return ifTrueType;
 			}
-			case Value::Type::FUNC_CALL:
+			case Value::Type::CALL:
 			{
 				FunctionCallValue* funcCall = (FunctionCallValue*)value;
 				auto iter = functionTypes.find(funcCall->target);
@@ -356,19 +353,23 @@ namespace flex
 		{
 			StringBuilder builder;
 
-			if (value->type == Value::Type::ARGUMENT)
+			if (value->type == Value::Type::CALL)
+			{
+				// variable will be empty for functions with a return type of void
+				if (!variable.empty())
+				{
+					builder.Append(variable);
+					builder.Append(" = ");
+				}
+
+				builder.Append(value->ToString());
+			}
+			else
 			{
 				const char* typeStr = IR::Value::TypeToString(value->type);
 				builder.Append(typeStr);
 				builder.Append(" ");
 				builder.Append(variable);
-				builder.Append(" (arg)");
-			}
-			else
-			{
-				builder.Append(variable);
-				builder.Append(" = ");
-				builder.Append(value->ToString());
 			}
 
 			return builder.ToString();
@@ -558,6 +559,9 @@ namespace flex
 				}
 			}
 			builder.Append(")");
+			builder.Append(" -> ");
+			State::FuncSig funcSig = irState->functionTypes[target];
+			builder.Append(TypeToString(funcSig.returnType));
 
 			return builder.ToString();
 		}
@@ -714,7 +718,7 @@ namespace flex
 
 				for (auto& funcPtrPair : functionBindings->ExternalFuncTable)
 				{
-					FuncPtr* funcPtr = funcPtrPair.second;
+					IFunction* funcPtr = funcPtrPair.second;
 
 					IR::Value::Type returnType = (IR::Value::Type)funcPtr->returnType;
 
@@ -909,12 +913,39 @@ namespace flex
 		{
 			if (IsExpression(statement->statementType))
 			{
-				state->WriteVariableInBlock(state->NextTemporary(), LowerExpression((AST::Expression*)statement));
+				IR::Value* value = LowerExpression((AST::Expression*)statement);
+
+				if (statement->statementType == AST::StatementType::CALL)
+				{
+					IR::FunctionCallValue* call = (IR::FunctionCallValue*)value;
+					auto iter = state->functionTypes.find(call->target);
+					if (iter != state->functionTypes.end())
+					{
+						if (iter->second.returnType == Value::Type::VOID)
+						{
+							state->InsertionBlock()->AddCall(state, call->origin, call->target, call->arguments);
+							return;
+						}
+						else
+						{
+							state->WriteVariableInBlock(state->NextTemporary(), value);
+							return;
+						}
+					}
+					else
+					{
+						state->diagnosticContainer->AddDiagnostic(statement->span, "Function with name %s not found\n");
+						return;
+					}
+				}
+				state->WriteVariableInBlock(state->NextTemporary(), value);
+				return;
 			}
 
 			if (IsLiteral(statement->statementType))
 			{
 				//ValueWrapper val1 = ValueWrapper(ValueWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
+				DEBUG_BREAK();
 			}
 			else
 			{
@@ -1456,7 +1487,7 @@ namespace flex
 					return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
 				}
 			} break;
-			case AST::StatementType::FUNC_CALL:
+			case AST::StatementType::CALL:
 			{
 				AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;
 				std::vector<IR::Value*> arguments;
@@ -1482,7 +1513,8 @@ namespace flex
 					{
 						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
 						{
-							if (state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
+							if (funcSig.argumentTypes[i] != IR::Value::Type::VOID &&
+								state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
 							{
 								bSigMatches = false;
 								break;
@@ -1727,7 +1759,7 @@ namespace flex
 					//i32 reg = state->varToRegisterMap[ident->identifierStr];
 					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
-				case AST::StatementType::FUNC_CALL:
+				case AST::StatementType::CALL:
 				{
 					AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
 					i32 registerStored = GenerateCallInstruction(funcCall);

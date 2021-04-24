@@ -218,7 +218,7 @@ namespace flex
 			return statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
 				statementType == StatementType::TERNARY_OPERATION ||
-				statementType == StatementType::FUNC_CALL ||
+				statementType == StatementType::CALL ||
 				statementType == StatementType::INDEX_OPERATION;
 		}
 
@@ -246,7 +246,7 @@ namespace flex
 				statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
 				statementType == StatementType::TERNARY_OPERATION ||
-				statementType == StatementType::FUNC_CALL;
+				statementType == StatementType::CALL;
 		}
 
 		bool IsSimple(StatementType statementType)

@@ -152,26 +152,6 @@ namespace flex
 			Type type;
 			Value value;
 
-			//void operator=(const ValueWrapper& other)
-			//{
-			//	switch (type)
-			//	{
-			//	case Type::REGISTER:
-			//	{
-			//		registers[constValue.valInt] = other.value;
-			//	} break;
-			//	case Type::CONSTANT:
-			//	{
-			//		PrintError("Attempted to assign to constant value\n");
-			//		assert(false);
-			//	} break;
-			//	default:
-			//	{
-			//		assert(false);
-			//	} break;
-			//	}
-			//}
-
 			Value& Get(VirtualMachine* vm);
 			Value& GetW(VirtualMachine* vm);
 			bool Valid() const;
