@@ -138,9 +138,12 @@ namespace flex
 		static void Destroy();
 		static void Update();
 
+		static real NoteToFrequencyHz(i32 note);
+
 		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
+		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
 
@@ -191,6 +194,7 @@ namespace flex
 		static bool AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen);
 
 	private:
+		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format);
 
 		static void DisplayALError(const std::string& str, ALenum error);
 

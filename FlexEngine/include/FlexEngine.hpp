@@ -92,6 +92,8 @@ namespace flex
 			synthesized_12,
 			synthesized_13,
 			synthesized_14,
+			melody_0,
+			melody_0_fast,
 
 			LAST_ELEMENT
 		};

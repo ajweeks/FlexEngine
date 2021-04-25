@@ -329,6 +329,10 @@ namespace flex
 			{
 				AudioManager::SetSourceGain(s_AudioSourceIDs[i], 0.5f);
 			}
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeMelody()); // melody
+			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0], 0.5f);
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeMelody(500.0f)); // melody fast
+			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0_fast], 0.5f);
 		}
 
 		i32 springCount = 6;
@@ -1940,6 +1944,12 @@ namespace flex
 			{
 				i32 audioSourceIndex = (i32)SoundEffect::synthesized_06 + (bShiftDown ? 7 : 0);
 				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_O)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[bShiftDown ? (i32)SoundEffect::melody_0_fast : (i32)SoundEffect::melody_0]);
 				return EventReply::CONSUMED;
 			}
 

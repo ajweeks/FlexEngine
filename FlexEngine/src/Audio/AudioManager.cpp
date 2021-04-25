@@ -550,6 +550,12 @@ namespace flex
 		}
 	}
 
+	real AudioManager::NoteToFrequencyHz(i32 note)
+	{
+		const real pitchStandardHz = 440.0f;
+		return pitchStandardHz * std::pow(2.0f, (real)(note - 69) / 12.0f);
+	}
+
 	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr /* = nullptr */)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
@@ -697,44 +703,60 @@ namespace flex
 			data[i] = (i16)(y * 32767.0f);
 		}
 
-		ALenum error = alGetError();
-		if (error != AL_NO_ERROR)
+		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format);
+	}
+
+	AudioSourceID AudioManager::SynthesizeMelody(real bpm /* = 340.0f */)
+	{
+		const i32 notes[] = {
+			88, 86, 78, 78, 80, 80,
+			85, 83, 74, 74, 76, 76,
+			83, 81, 73, 73, 76, 76,
+			81, 81, 81, 81
+		};
+
+		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
+		if (newID == InvalidAudioSourceID)
 		{
-			DisplayALError("OpenAndParseWAVFile", error);
-			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
-			free(data);
+			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
 			return InvalidAudioSourceID;
 		}
 
+		real msCounter = 0.0f;
+		real phase = 0.0f;
+		real delta = 0.0f;
+		i32 noteIndex = 0;
+		real noteDurationMs = 60'000.0f / bpm;
 
-		// Buffer
-		alBufferData(s_Buffers[newID], format, data, bufferSize, sampleRate);
-		error = alGetError();
-		if (error != AL_NO_ERROR)
+		sec lengthSec = noteDurationMs / 1000.0f * ARRAY_LENGTH(notes);
+		i32 format = AL_FORMAT_MONO16;
+		i32 sampleRate = 44100;
+		u32 sampleCount = (i32)(sampleRate * lengthSec);
+		u32 bufferSize = sampleCount * sizeof(i16);
+		i16* data = (i16*)malloc(bufferSize);
+		assert(data != nullptr);
+
+		for (i32 i = 0; i < (i32)sampleCount; ++i)
 		{
-			DisplayALError("alBufferData", error);
-			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
-			free(data);
-			return InvalidAudioSourceID;
+			real noteFrequency = NoteToFrequencyHz(notes[noteIndex]);
+			delta = 2.0f * noteFrequency * (PI / sampleRate);
+
+			// Crude square wave
+			real sample = std::copysign(0.1f, std::sin(phase));
+			phase = std::fmod(phase + delta, 2.0f * PI);
+
+			data[i] = (i16)(sample * 32767.0f);
+
+			msCounter += 1000.0f / sampleRate;
+			if (msCounter >= noteDurationMs)
+			{
+				msCounter = 0.0f;
+				noteIndex = std::min(noteIndex + 1, (i32)ARRAY_LENGTH(notes) - 1);
+			}
 		}
-		free(data);
 
+		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format);
 
-		// Source
-		alGenSources(1, &s_Sources[newID].source);
-		error = alGetError();
-		if (error != AL_NO_ERROR)
-		{
-			DisplayALError("alGenSources 1", error);
-			return InvalidAudioSourceID;
-		}
-
-		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
-		DisplayALError("alSourcei", alGetError());
-
-		alGetSourcef(s_Sources[newID].source, AL_SEC_OFFSET, &s_Sources[newID].length);
-
-		return newID;
 	}
 
 	bool AudioManager::DestroyAudioSource(AudioSourceID sourceID)
@@ -1098,6 +1120,46 @@ namespace flex
 		assert(sourceID < s_Sources.size());
 
 		return s_Sources[sourceID].pitch;
+	}
+
+	AudioSourceID AudioManager::SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format)
+	{
+		ALenum error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("OpenAndParseWAVFile", error);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			free(data);
+			return InvalidAudioSourceID;
+		}
+
+		// Buffer
+		alBufferData(s_Buffers[newID], format, data, bufferSize, sampleRate);
+		error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("alBufferData", error);
+			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+			free(data);
+			return InvalidAudioSourceID;
+		}
+		free(data);
+
+		// Source
+		alGenSources(1, &s_Sources[newID].source);
+		error = alGetError();
+		if (error != AL_NO_ERROR)
+		{
+			DisplayALError("alGenSources 1", error);
+			return InvalidAudioSourceID;
+		}
+
+		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
+		DisplayALError("alSourcei", alGetError());
+
+		alGetSourcef(s_Sources[newID].source, AL_SEC_OFFSET, &s_Sources[newID].length);
+
+		return newID;
 	}
 
 	void AudioManager::DisplayALError(const std::string& str, ALenum error)
