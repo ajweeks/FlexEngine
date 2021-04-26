@@ -522,21 +522,6 @@ namespace flex
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-
-		//if (window->GetFullscreenMode() != Window::FullscreenMode::WINDOWED)
-		//{
-		//	if (focused)
-		//	{
-		//		glfwRestoreWindow(glfwWindow);
-		//		Print("found\n");
-		//	}
-		//	else
-		//	{
-		//		glfwIconifyWindow(glfwWindow);
-		//		Print("lost\n");
-		//	}
-		//}
-
 		window->WindowFocusCallback(focused);
 	}
 

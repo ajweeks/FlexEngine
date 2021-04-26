@@ -159,6 +159,7 @@ namespace flex
 	void Window::WindowFocusCallback(i32 focused)
 	{
 		m_bHasFocus = (focused != 0);
+		g_InputManager->OnWindowFocusChanged(m_bHasFocus);
 	}
 
 	void Window::CursorPosCallback(double x, double y)
@@ -379,6 +380,11 @@ namespace flex
 				g_Renderer->SetVSyncEnabled(bEnabled);
 			}
 		}
+	}
+
+	CursorMode Window::GetCursorMode() const
+	{
+		return m_CursorMode;
 	}
 
 } // namespace flex

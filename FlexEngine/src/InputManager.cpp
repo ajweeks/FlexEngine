@@ -621,72 +621,85 @@ namespace flex
 	{
 		m_MousePosition = glm::vec2((real)x, (real)y);
 
-		ImGuiIO& io = ImGui::GetIO();
-
-		if (IsAnyMouseButtonDown(true) && !io.WantCaptureMouse)
+		if (m_PrevMousePosition.x == -1.0f && m_PrevMousePosition.y == -1.0f)
 		{
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.x -= (frameBufferSize.x - 1);
-				m_PrevMousePosition.x = m_MousePosition.x;
-				io.MousePosPrev.x = m_MousePosition.x;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
-			else if (m_MousePosition.x <= 0)
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.x += (frameBufferSize.x - 1);
-				m_PrevMousePosition.x = m_MousePosition.x;
-				io.MousePosPrev.x = m_MousePosition.x;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
-
-			if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.y -= (frameBufferSize.y - 1);
-				m_PrevMousePosition.y = m_MousePosition.y;
-				io.MousePosPrev.y = m_MousePosition.y;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
-			else if (m_MousePosition.y <= 0)
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.y += (frameBufferSize.y - 1);
-				m_PrevMousePosition.y = m_MousePosition.y;
-				io.MousePosPrev.y = m_MousePosition.y;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
+			m_PrevMousePosition = m_MousePosition;
 		}
 
-		io.MousePos = m_MousePosition;
+		ImGuiIO& io = ImGui::GetIO();
 
-		if (m_PrevMousePosition.x == -1.0f)
+		if (g_Window->GetCursorMode() == CursorMode::NORMAL)
 		{
-			io.MousePosPrev = m_MousePosition;
-			m_PrevMousePosition = m_MousePosition;
+			if (IsAnyMouseButtonDown(true) && !io.WantCaptureMouse)
+			{
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.x -= (frameBufferSize.x - 1);
+					m_PrevMousePosition.x = m_MousePosition.x;
+					io.MousePosPrev.x = m_MousePosition.x;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
+				else if (m_MousePosition.x <= 0)
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.x += (frameBufferSize.x - 1);
+					m_PrevMousePosition.x = m_MousePosition.x;
+					io.MousePosPrev.x = m_MousePosition.x;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
+
+				if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.y -= (frameBufferSize.y - 1);
+					m_PrevMousePosition.y = m_MousePosition.y;
+					io.MousePosPrev.y = m_MousePosition.y;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
+				else if (m_MousePosition.y <= 0)
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.y += (frameBufferSize.y - 1);
+					m_PrevMousePosition.y = m_MousePosition.y;
+					io.MousePosPrev.y = m_MousePosition.y;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
+			}
+
+			io.MousePos = m_MousePosition;
+
+			if (m_PrevMousePosition.x == -1.0f)
+			{
+				io.MousePosPrev = m_MousePosition;
+				m_PrevMousePosition = m_MousePosition;
+			}
+		}
+		else
+		{
+			io.WantCaptureMouse = false;
+			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 		}
 
 		if (!io.WantCaptureMouse)
@@ -1712,6 +1725,11 @@ namespace flex
 		}
 
 		ImGui::End();
+	}
+
+	void InputManager::OnWindowFocusChanged(bool bNowFocused)
+	{
+		m_PrevMousePosition = m_MousePosition;
 	}
 
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html

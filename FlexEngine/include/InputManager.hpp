@@ -104,6 +104,8 @@ namespace flex
 
 		void DrawImGuiKeyMapper(bool* bOpen);
 
+		void OnWindowFocusChanged(bool bNowFocused);
+
 		static char GetShiftModifiedKeyCode(char c);
 
 		static i32 s_JoystickDisconnected;

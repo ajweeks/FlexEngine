@@ -119,6 +119,8 @@ namespace flex
 		bool GetVSyncEnabled() const;
 		void SetVSyncEnabled(bool bEnabled);
 
+		CursorMode GetCursorMode() const;
+
 	protected:
 
 #if COMPILE_OPEN_GL || COMPILE_VULKAN

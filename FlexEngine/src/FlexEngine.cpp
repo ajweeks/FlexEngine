@@ -2173,7 +2173,6 @@ namespace flex
 		outRayStart = ToBtVec3(cam->position);
 		btVector3 rayDir = ToBtVec3(cam->forward);
 		outRayEnd = outRayStart + rayDir * maxDist;
-
 	}
 
 	bool FlexEngine::IsSimulationPaused() const
