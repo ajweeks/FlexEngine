@@ -46,66 +46,23 @@ namespace flex
 		}
 	}
 
-	bool Uniforms::HasUniform(u64 uniform) const
+	bool UniformList::HasUniform(const Uniform& uniform) const
 	{
-		return (uniforms & uniform) != 0;
+		return uniforms.find(uniform.id) != uniforms.end();
 	}
 
-	void Uniforms::AddUniform(u64 uniform)
+	void UniformList::AddUniform(const Uniform& uniform)
 	{
-		uniforms = (uniforms | uniform);
-	}
-
-	u32 Uniforms::CalculateSizeInBytes() const
-	{
-		u32 size = 0;
-
+		if (!HasUniform(uniform))
 		{
-#define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
-			_u(MODEL)
-				_u(VIEW)
-				_u(VIEW_INV)
-				_u(VIEW_PROJECTION)
-				_u(PROJECTION)
-				_u(PROJECTION_INV)
-				_u(BLEND_SHARPNESS)
-				_u(COLOUR_MULTIPLIER)
-				_u(CAM_POS)
-				_u(DIR_LIGHT)
-				_u(LIGHTS)
-				_u(CONST_ALBEDO)
-				_u(CONST_METALLIC)
-				_u(CONST_ROUGHNESS)
-				_u(ENABLE_ALBEDO_SAMPLER)
-				_u(ENABLE_METALLIC_SAMPLER)
-				_u(ENABLE_ROUGHNESS_SAMPLER)
-				_u(ENABLE_NORMAL_SAMPLER)
-				_u(ENABLE_EMISSIVE_SAMPLER)
-				_u(LIGHT_VIEW_PROJS)
-				_u(EXPOSURE)
-				_u(TEX_SIZE)
-				_u(TEXTURE_SCALE)
-				_u(TIME)
-				_u(SDF_DATA)
-				_u(TEX_CHANNEL)
-				_u(FONT_CHAR_DATA)
-				_u(SSAO_GEN_DATA)
-				_u(SSAO_BLUR_DATA_DYNAMIC)
-				_u(SSAO_BLUR_DATA_CONSTANT)
-				_u(SSAO_SAMPLING_DATA)
-				_u(SHADOW_SAMPLING_DATA)
-				_u(NEAR_FAR_PLANES)
-				_u(POST_PROCESS_MAT)
-				_u(LAST_FRAME_VIEWPROJ)
-				_u(PARTICLE_BUFFER)
-				_u(PARTICLE_SIM_DATA)
-				_u(OCEAN_DATA)
-				_u(SKYBOX_DATA)
-				_u(CONST_EMISSIVE)
-#undef _u
+			uniforms.emplace(uniform.id);
+			totalSizeInBytes += (u32)uniform.size;
 		}
+	}
 
-		return size;
+	u32 UniformList::GetSizeInBytes() const
+	{
+		return totalSizeInBytes;
 	}
 
 	Shader::Shader(const ShaderInfo& shaderInfo) :

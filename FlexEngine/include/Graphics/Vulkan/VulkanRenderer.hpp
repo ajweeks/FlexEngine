@@ -92,7 +92,7 @@ namespace flex
 
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
-			virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) override;
+			virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) override;
 
 			virtual void NewFrame() override;
 
@@ -409,6 +409,7 @@ namespace flex
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
 
+			// Maps uniform IDs to data & data length
 			std::map<u64, Pair<void*, u32>> m_GlobalUserUniforms;
 
 			// TODO: Create other query pools

@@ -3116,10 +3116,10 @@ namespace flex
 
 			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
 
-			Uniforms constantBufferUniforms = shader->constantBufferUniforms;
-			Uniforms dynamicBufferUniforms = shader->dynamicBufferUniforms;
-			Uniforms additionalBufferUniforms = shader->additionalBufferUniforms;
-			Uniforms textureUniforms = shader->textureUniforms;
+			UniformList constantBufferUniforms = shader->constantBufferUniforms;
+			UniformList dynamicBufferUniforms = shader->dynamicBufferUniforms;
+			UniformList additionalBufferUniforms = shader->additionalBufferUniforms;
+			UniformList textureUniforms = shader->textureUniforms;
 
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
 			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
@@ -3252,7 +3252,7 @@ namespace flex
 
 			struct DescriptorSetInfo
 			{
-				u64 uniform;
+				const Uniform& uniform;
 				VkDescriptorType descriptorType;
 				VkShaderStageFlags shaderStageFlags;
 			};
@@ -3301,10 +3301,10 @@ namespace flex
 				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_LTC_SAMPLERS, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ U_LTC_SAMPLER_0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_LTC_SAMPLERS + 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ U_LTC_SAMPLER_1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

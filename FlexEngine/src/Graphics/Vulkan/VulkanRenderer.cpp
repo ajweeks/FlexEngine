@@ -438,7 +438,7 @@ namespace flex
 				for (u32 i = 0; i < m_Shaders.size(); ++i)
 				{
 					VulkanShader* shader = (VulkanShader*)m_Shaders[i];
-					u32 size = GetAlignedUBOSize(shader->dynamicBufferUniforms.CalculateSizeInBytes());
+					u32 size = GetAlignedUBOSize(shader->dynamicBufferUniforms.GetSizeInBytes());
 					u32 dynamicDataSize = size;
 					u32 dynamicAllignment =
 						(dynamicDataSize / uboAlignment) * uboAlignment +
@@ -974,7 +974,7 @@ namespace flex
 			struct TextureInfo
 			{
 				TextureInfo(const std::string& relativeFilePath,
-					u64 textureUniform,
+					const Uniform& textureUniform,
 					const std::string& slotName,
 					VkFormat format = VK_FORMAT_R8G8B8A8_UNORM,
 					bool bHDR = false) :
@@ -986,7 +986,7 @@ namespace flex
 				{}
 
 				const std::string relativeFilePath;
-				u64 textureUniform;
+				const Uniform& textureUniform;
 				const std::string slotName;
 				VkFormat format;
 				bool bHDR;
@@ -1310,7 +1310,7 @@ namespace flex
 			if (shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT))
 			{
 				UniformBuffer* constantBuffer = material->uniformBufferList.Get(UniformBufferType::STATIC);
-				constantBuffer->data.unitSize = shader->constantBufferUniforms.CalculateSizeInBytes();
+				constantBuffer->data.unitSize = shader->constantBufferUniforms.GetSizeInBytes();
 				if (constantBuffer->data.unitSize > 0)
 				{
 					free(constantBuffer->data.data);
@@ -1334,7 +1334,7 @@ namespace flex
 			if (shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC))
 			{
 				UniformBuffer* dynamicBuffer = material->uniformBufferList.Get(UniformBufferType::DYNAMIC);
-				dynamicBuffer->data.unitSize = shader->dynamicBufferUniforms.CalculateSizeInBytes();
+				dynamicBuffer->data.unitSize = shader->dynamicBufferUniforms.GetSizeInBytes();
 				if (dynamicBuffer->data.unitSize > 0)
 				{
 					flex_aligned_free(dynamicBuffer->data.data);
@@ -2557,9 +2557,9 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
-		void VulkanRenderer::SetGlobalUniform(u64 uniform, void* data, u32 dataSize)
+		void VulkanRenderer::SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize)
 		{
-			auto& pair = m_GlobalUserUniforms[uniform];
+			auto& pair = m_GlobalUserUniforms[uniform.id];
 			pair.first = data;
 			pair.second = dataSize;
 		}
@@ -5762,19 +5762,24 @@ namespace flex
 				imageDescriptors->SetUniform(U_SHADOW_SAMPLER, ImageDescriptorInfo{ imageView, m_DepthSampler });
 			}
 
-			for (u32 i = 0; i < material->sampledFrameBuffers.size(); ++i)
+			if (shader->textureUniforms.HasUniform(U_FB_0_SAMPLER))
 			{
-				VkImageView imageView = *static_cast<VkImageView*>(material->sampledFrameBuffers[i].second);
-				imageDescriptors->SetUniform(NextPowerOfTwo(U_FB_0_SAMPLER + i), ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
+				VkImageView imageView = *static_cast<VkImageView*>(material->sampledFrameBuffers[0].second);
+				imageDescriptors->SetUniform(U_FB_0_SAMPLER, ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
+			}
+			if (shader->textureUniforms.HasUniform(U_FB_1_SAMPLER))
+			{
+				VkImageView imageView = *static_cast<VkImageView*>(material->sampledFrameBuffers[1].second);
+				imageDescriptors->SetUniform(U_FB_1_SAMPLER, ImageDescriptorInfo{ imageView, m_LinMipLinSampler });
 			}
 
-			if (!material->sampledFrameBuffers.empty())
+			if (shader->textureUniforms.HasUniform(U_LTC_SAMPLER_0))
 			{
+				assert(shader->textureUniforms.HasUniform(U_LTC_SAMPLER_1));
 				VulkanTexture* ltcMatrices = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCMatricesID);
 				VulkanTexture* ltcAmplitudes = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCAmplitudesID);
-				imageDescriptors->SetUniform(U_LTC_SAMPLERS, ImageDescriptorInfo{ ltcMatrices->imageView, ltcMatrices->sampler });
-				// TODO: Use new uniform system for less gross solution
-				imageDescriptors->SetUniform(U_LTC_SAMPLERS + 1, ImageDescriptorInfo{ ltcAmplitudes->imageView, ltcAmplitudes->sampler });
+				imageDescriptors->SetUniform(U_LTC_SAMPLER_0, ImageDescriptorInfo{ ltcMatrices->imageView, ltcMatrices->sampler });
+				imageDescriptors->SetUniform(U_LTC_SAMPLER_1, ImageDescriptorInfo{ ltcAmplitudes->imageView, ltcAmplitudes->sampler });
 			}
 		}
 
@@ -8610,15 +8615,13 @@ namespace flex
 
 			struct UniformInfo
 			{
-				UniformInfo(u64 uniform, void* dataStart, u32 copySize) :
+				UniformInfo(const Uniform& uniform, void* dataStart) :
 					uniform(uniform),
-					dataStart(dataStart),
-					copySize(copySize)
+					dataStart(dataStart)
 				{}
 
-				u64 uniform;
+				const Uniform& uniform;
 				void* dataStart = nullptr;
-				u32 copySize;
 			};
 
 			if (overridenUniforms)
@@ -8645,29 +8648,29 @@ namespace flex
 			projectionInv = glm::inverse(projection);
 
 			UniformInfo uniformInfos[] = {
-				{ U_CAM_POS, (void*)&camPos, US_CAM_POS },
-				{ U_VIEW, (void*)&view, US_VIEW },
-				{ U_VIEW_INV, (void*)&viewInv, US_VIEW_INV },
-				{ U_VIEW_PROJECTION, (void*)&viewProjection, US_VIEW_PROJECTION },
-				{ U_PROJECTION, (void*)&projection, US_PROJECTION },
-				{ U_PROJECTION_INV, (void*)&projectionInv, US_PROJECTION_INV },
-				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj, US_LAST_FRAME_VIEWPROJ },
-				{ U_DIR_LIGHT, (void*)dirLightData, US_DIR_LIGHT },
-				{ U_LIGHTS, (void*)m_LightData, US_LIGHTS },
-				{ U_OCEAN_DATA, (void*)&defaultOceanData, US_OCEAN_DATA },
-				{ U_SKYBOX_DATA, (void*)&skyboxData, US_SKYBOX_DATA},
-				{ U_TIME, (void*)&time, US_TIME },
-				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData, US_SHADOW_SAMPLING_DATA },
-				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData, US_SSAO_GEN_DATA },
-				{ U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant, US_SSAO_BLUR_DATA_CONSTANT },
-				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData, US_SSAO_SAMPLING_DATA },
-				{ U_EXPOSURE, (void*)&exposure, US_EXPOSURE },
-				{ U_NEAR_FAR_PLANES, (void*)&nearFarPlanes, US_NEAR_FAR_PLANES },
+				{ U_CAM_POS, (void*)&camPos },
+				{ U_VIEW, (void*)&view },
+				{ U_VIEW_INV, (void*)&viewInv },
+				{ U_VIEW_PROJECTION, (void*)&viewProjection },
+				{ U_PROJECTION, (void*)&projection },
+				{ U_PROJECTION_INV, (void*)&projectionInv },
+				{ U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj },
+				{ U_DIR_LIGHT, (void*)dirLightData },
+				{ U_LIGHTS, (void*)m_LightData },
+				{ U_OCEAN_DATA, (void*)&defaultOceanData },
+				{ U_SKYBOX_DATA, (void*)&skyboxData },
+				{ U_TIME, (void*)&time },
+				{ U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData },
+				{ U_SSAO_GEN_DATA, (void*)&m_SSAOGenData },
+				{ U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant },
+				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData },
+				{ U_EXPOSURE, (void*)&exposure },
+				{ U_NEAR_FAR_PLANES, (void*)&nearFarPlanes },
 			};
 
 			for (UniformInfo& info : uniformInfos)
 			{
-				auto iter = m_GlobalUserUniforms.find(info.uniform);
+				auto iter = m_GlobalUserUniforms.find(info.uniform.id);
 				if (iter != m_GlobalUserUniforms.end())
 				{
 					info.dataStart = iter->second.first;
@@ -8678,7 +8681,7 @@ namespace flex
 			{
 				VulkanMaterial* material = (VulkanMaterial*)MaterialPair.second;
 				VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
-				Uniforms& constantUniforms = shader->constantBufferUniforms;
+				UniformList& constantUniforms = shader->constantBufferUniforms;
 				UniformBuffer* constantBuffer = material->uniformBufferList.Get(UniformBufferType::STATIC);
 
 				if (constantBuffer == nullptr || constantBuffer->data.data == nullptr || constantBuffer->data.unitSize == 0)
@@ -8692,8 +8695,10 @@ namespace flex
 				{
 					if (constantUniforms.HasUniform(uniformInfo.uniform))
 					{
-						memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.copySize);
-						index += uniformInfo.copySize;
+						assert(uniformInfo.uniform.size != 0);
+
+						memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.uniform.size);
+						index += uniformInfo.uniform.size;
 					}
 				}
 
@@ -8809,39 +8814,40 @@ namespace flex
 
 			struct UniformInfo
 			{
-				u64 uniform;
+				const Uniform& uniform;
 				void* dataStart = nullptr;
-				u32 copySize;
 			};
 			UniformInfo uniformInfos[] = {
-				{ U_MODEL, (void*)&model, US_MODEL },
-				{ U_COLOUR_MULTIPLIER, (void*)&colourMultiplier, US_COLOUR_MULTIPLIER },
-				{ U_CONST_ALBEDO, (void*)&material->constAlbedo, US_CONST_ALBEDO },
-				{ U_CONST_EMISSIVE, (void*)&material->constEmissive, US_CONST_EMISSIVE},
-				{ U_CONST_METALLIC, (void*)&material->constMetallic, US_CONST_METALLIC },
-				{ U_CONST_ROUGHNESS, (void*)&material->constRoughness, US_CONST_ROUGHNESS },
-				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler, US_ENABLE_ALBEDO_SAMPLER },
-				{ U_ENABLE_EMISSIVE_SAMPLER, (void*)&enableEmissiveSampler, US_ENABLE_EMISSIVE_SAMPLER},
-				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler, US_ENABLE_METALLIC_SAMPLER },
-				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler, US_ENABLE_ROUGHNESS_SAMPLER },
-				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler, US_ENABLE_NORMAL_SAMPLER },
-				{ U_BLEND_SHARPNESS, (void*)&blendSharpness, US_BLEND_SHARPNESS },
-				{ U_TEXTURE_SCALE, (void*)&textureScale, US_TEXTURE_SCALE },
-				{ U_FONT_CHAR_DATA, (void*)&fontCharData, US_FONT_CHAR_DATA },
-				{ U_TEX_SIZE, (void*)&texSize, US_TEX_SIZE },
-				{ U_SDF_DATA, (void*)&sdfData, US_SDF_DATA },
-				{ U_TEX_CHANNEL, (void*)&texChannel, US_TEX_CHANNEL },
-				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic, US_SSAO_BLUR_DATA_DYNAMIC },
-				{ U_POST_PROCESS_MAT, (void*)&postProcessMatrix, US_POST_PROCESS_MAT },
-				{ U_PARTICLE_SIM_DATA, (void*)&particleSimData, US_PARTICLE_SIM_DATA },
+				{ U_MODEL, (void*)&model },
+				{ U_COLOUR_MULTIPLIER, (void*)&colourMultiplier },
+				{ U_CONST_ALBEDO, (void*)&material->constAlbedo },
+				{ U_CONST_EMISSIVE, (void*)&material->constEmissive },
+				{ U_CONST_METALLIC, (void*)&material->constMetallic },
+				{ U_CONST_ROUGHNESS, (void*)&material->constRoughness },
+				{ U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler },
+				{ U_ENABLE_EMISSIVE_SAMPLER, (void*)&enableEmissiveSampler },
+				{ U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler },
+				{ U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler },
+				{ U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler },
+				{ U_BLEND_SHARPNESS, (void*)&blendSharpness },
+				{ U_TEXTURE_SCALE, (void*)&textureScale },
+				{ U_FONT_CHAR_DATA, (void*)&fontCharData },
+				{ U_TEX_SIZE, (void*)&texSize  },
+				{ U_SDF_DATA, (void*)&sdfData },
+				{ U_TEX_CHANNEL, (void*)&texChannel },
+				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic },
+				{ U_POST_PROCESS_MAT, (void*)&postProcessMatrix },
+				{ U_PARTICLE_SIM_DATA, (void*)&particleSimData },
 			};
 
 			u32 index = 0;
-			const Uniforms& dynamicUniforms = shader->dynamicBufferUniforms;
-			for (UniformInfo& uniformInfo : uniformInfos)
+			const UniformList& dynamicUniforms = shader->dynamicBufferUniforms;
+			for (const UniformInfo& uniformInfo : uniformInfos)
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
+					assert(uniformInfo.uniform.size != 0);
+
 					// Resize buffer is not large enough
 					if (dynamicOffset + index > dynamicBuffer->fullDynamicBufferSize)
 					{
@@ -8855,8 +8861,8 @@ namespace flex
 						UpdateShaderMaxObjectCount(material->shaderID, newMax);
 					}
 
-					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.copySize);
-					index += uniformInfo.copySize;
+					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.uniform.size);
+					index += uniformInfo.uniform.size;
 				}
 			}
 

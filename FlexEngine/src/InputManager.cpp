@@ -1729,6 +1729,7 @@ namespace flex
 
 	void InputManager::OnWindowFocusChanged(bool bNowFocused)
 	{
+		FLEX_UNUSED(bNowFocused);
 		m_PrevMousePosition = m_MousePosition;
 	}
 

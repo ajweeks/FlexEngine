@@ -1488,8 +1488,8 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_0_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_1_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLERS);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLERS + 1);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLER_0);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLER_1);
 		++shaderID;
 
 		// Colour
