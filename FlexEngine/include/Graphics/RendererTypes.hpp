@@ -247,6 +247,7 @@ namespace flex
 	const Uniform U_PARTICLE_SIM_DATA(SID("particleSimData"), sizeof(ParticleSimData));
 	const Uniform U_OCEAN_DATA(SID("oceanData"), sizeof(OceanData));
 	const Uniform U_SKYBOX_DATA(SID("skyboxData"), sizeof(SkyboxData));
+	const Uniform U_UV_BLEND_AMOUNT(SID("uvBlendAmount"), sizeof(glm::vec2));
 
 	enum class ClearFlag
 	{
@@ -1004,6 +1005,7 @@ namespace flex
 		glm::vec4 colourMultiplier;
 		bool bSSAOVerticalPass;
 		ParticleSimData* particleSimData = nullptr;
+		glm::vec2 uvBlendAmount;
 	};
 
 	struct DeviceDiagnosticCheckpoint

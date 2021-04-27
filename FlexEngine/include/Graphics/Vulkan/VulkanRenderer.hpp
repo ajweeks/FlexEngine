@@ -549,6 +549,8 @@ namespace flex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
 			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
+			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair;
+
 			u32 m_DynamicAlignment = 0;
 
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;

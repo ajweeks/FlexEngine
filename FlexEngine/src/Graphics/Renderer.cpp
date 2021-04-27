@@ -1523,6 +1523,7 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UV_BLEND_AMOUNT);
 		++shaderID;
 
 		// PBR
@@ -2050,6 +2051,9 @@ namespace flex
 				PrintError("\n");
 			}
 		}
+
+		// Cache shader IDs
+		GetShaderID("ui", m_UIShaderID);
 	}
 
 	void Renderer::GenerateGBuffer()

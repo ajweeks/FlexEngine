@@ -516,6 +516,8 @@ namespace flex
 		Mesh* m_SkyBoxMesh = nullptr;
 		ShaderID m_SkyboxShaderID = InvalidShaderID;
 
+		ShaderID m_UIShaderID = InvalidShaderID;
+
 		glm::mat4 m_LastFrameViewProj;
 
 		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory

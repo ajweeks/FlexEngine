@@ -269,12 +269,38 @@ namespace flex
 					}
 					else
 					{
-						real startAngle = 0.0f;
-						real endAngle = (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+						real startAngle = PI_DIV_TWO - (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+						real endAngle = PI_DIV_TWO;
 						g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
 					}
 				}
 			}
+
+#if 0 // Arc & rect tests
+			real startAngle = PI_DIV_TWO;
+			real endAngle = PI_DIV_TWO - TWO_PI - 0.1f;
+			g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = PI - 0.1f;
+			endAngle = PI + PI_DIV_TWO;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = -PI_DIV_TWO;
+			endAngle = 0.1f;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.03f, 32, glm::vec4(0.9f, 0.92f, 0.97f, 1.0f));
+
+			startAngle = (sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * TWO_PI;
+			endAngle = startAngle + (sin(g_SecElapsedSinceProgramStart * 0.5f + 1.0f) * 0.5f + 0.51f) * TWO_PI;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.0f, -0.2f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = 0.0f;
+			endAngle = TWO_PI;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.2f), startAngle, endAngle, 0.07f, 0.035f, 32, VEC4_ONE);
+
+			glm::vec2 rectPos(sin(g_SecElapsedSinceProgramStart) * 0.05f - 0.3f, 0.0f);
+			glm::vec2 halfRectSize(sin(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f, cos(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f);
+			g_Renderer->GetUIMesh()->DrawRect(rectPos - halfRectSize, rectPos + halfRectSize, VEC4_ONE, 0.0f);
+#endif
 
 			// TODO: Allow player to (dis)connect pluggables together
 

@@ -672,6 +672,10 @@ namespace flex
 			}
 			m_DynamicVertexIndexBufferPairs.clear();
 
+			m_DynamicUIVertexIndexBufferPair->Destroy();
+			delete m_DynamicUIVertexIndexBufferPair;
+			m_DynamicUIVertexIndexBufferPair = nullptr;
+
 			m_ShadowVertexIndexBufferPair->Destroy();
 			delete m_ShadowVertexIndexBufferPair;
 			m_ShadowVertexIndexBufferPair = nullptr;
@@ -1969,7 +1973,15 @@ namespace flex
 			}
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[material->dynamicVertexIndexBufferIndex].second;
+			VertexIndexBufferPair* vertexIndexBufferPair;
+			if (material->shaderID == m_UIShaderID)
+			{
+				vertexIndexBufferPair = m_DynamicUIVertexIndexBufferPair;
+			}
+			else
+			{
+				vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[material->dynamicVertexIndexBufferIndex].second;
+			}
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
@@ -4579,13 +4591,13 @@ namespace flex
 
 			MaterialID matID = mesh->GetMaterialID(0);
 			VulkanMaterial* uiMat = (VulkanMaterial*)m_Materials.at(matID);
-			VulkanShader* uiShader = (VulkanShader*)m_Shaders[uiMat->shaderID];
+			//VulkanShader* uiShader = (VulkanShader*)m_Shaders[uiMat->shaderID];
 
-			// TODO: Use instancing!
-			u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(uiShader->vertexAttributes));
-			const std::pair<u32, VertexIndexBufferPair*>& vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[dynamicVertexBufferIndex];
-			VulkanBuffer* vertexBuffer = vertexIndexBufferPair.second->vertexBuffer;
-			VulkanBuffer* indexBuffer = vertexIndexBufferPair.second->indexBuffer;
+			VkDescriptorSet descSet = m_DescriptorPoolPersistent->descriptorSets[matID];
+
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicUIVertexIndexBufferPair;
+			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
+			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
 			//if ((i32)batch.size() > uiShader->maxObjectCount)
 			//{
@@ -4663,6 +4675,8 @@ namespace flex
 				UniformOverrides overrides = {};
 				overrides.colourMultiplier = VEC4_ONE;
 				overrides.overridenUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+				overrides.uvBlendAmount = uiMesh->GetUVBlendAmount(i);
+				overrides.overridenUniforms.AddUniform(U_UV_BLEND_AMOUNT);
 				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer->m_Buffer, offsets);
@@ -4670,10 +4684,9 @@ namespace flex
 
 				vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-				VkDescriptorSet descSet = m_DescriptorPoolPersistent->descriptorSets[matID];
 				BindDescriptorSet(uiMat, dynamicUBOOffset, commandBuffer, pipelineLayout, descSet);
 
-				vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, 0, renderObject->vertexOffset, 0);
+				vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 			}
 		}
 
@@ -6692,6 +6705,22 @@ namespace flex
 			}
 
 			CreateDynamicVertexAndIndexBuffers();
+
+			// UI Shader
+			{
+				ShaderID uiShaderID;
+				GetShaderID("ui", uiShaderID);
+				VulkanShader* uiShader = (VulkanShader*)GetShader(uiShaderID);
+				const u32 stride = CalculateVertexStride(uiShader->vertexAttributes);
+
+				m_DynamicUIVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
+
+				u32 vertMemoryReq = uiShader->dynamicVertexBufferSize;
+				u32 vertexCount = (u32)glm::ceil(uiShader->dynamicVertexBufferSize / (real)stride / sizeof(real));
+				u32 indexMemoryReq = vertexCount * sizeof(u32);
+				CreateDynamicVertexBuffer(m_DynamicUIVertexIndexBufferPair->vertexBuffer, vertMemoryReq);
+				CreateDynamicIndexBuffer(m_DynamicUIVertexIndexBufferPair->indexBuffer, indexMemoryReq);
+			}
 		}
 
 		void VulkanRenderer::CreateStaticIndexBuffer()
@@ -8754,6 +8783,7 @@ namespace flex
 			glm::vec4 fontCharData = material->fontCharData;
 			glm::vec4 sdfData(0.5f, -0.01f, -0.008f, 0.035f);
 			i32 texChannel = 0;
+			glm::vec2 uvBlendAmount = VEC2_ZERO;
 			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
 			ParticleSimData particleSimData = {};
 
@@ -8810,6 +8840,10 @@ namespace flex
 				{
 					particleSimData = *uniformOverrides->particleSimData;
 				}
+				if (uniformOverrides->overridenUniforms.HasUniform(U_UV_BLEND_AMOUNT))
+				{
+					uvBlendAmount = uniformOverrides->uvBlendAmount;
+				}
 			}
 
 			struct UniformInfo
@@ -8838,6 +8872,7 @@ namespace flex
 				{ U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic },
 				{ U_POST_PROCESS_MAT, (void*)&postProcessMatrix },
 				{ U_PARTICLE_SIM_DATA, (void*)&particleSimData },
+				{ U_UV_BLEND_AMOUNT, (void*)&uvBlendAmount },
 			};
 
 			u32 index = 0;

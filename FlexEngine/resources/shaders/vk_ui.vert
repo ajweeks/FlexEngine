@@ -11,6 +11,8 @@ layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
 	vec4 colourMultiplier;
+	vec2 uvBlendAmount;
+	vec2 _pad;
 } uboDynamic;
 
 layout (location = 0) out vec4 ex_Colour;

@@ -50,21 +50,74 @@ namespace flex
 		CreateDebugObject();
 	}
 
-	void UIMesh::DrawArc(const glm::vec2& centerPos, real startAngle, real endAngle, real innerRadius, real thickness, i32 segmentsInFullCircle, const glm::vec4& colour)
+	void UIMesh::DrawRect(const glm::vec2& bottomLeft, const glm::vec2& topRight, const glm::vec4& colour, real cornerRadius)
 	{
-		if (endAngle < startAngle)
+		if (bottomLeft.x >= topRight.x || bottomLeft.y >= topRight.y)
 		{
-			PrintWarn("Invalid arc parameters, end angle must be greater than start angle (start, end = %.2f, %.2f)\n", startAngle, endAngle);
+			PrintWarn("Invalid rect parameters, (bottom left, top right = (%.2f, %.2f), (%.2f,%.2f)\n",
+				bottomLeft.x, bottomLeft.y, topRight.x, topRight.y);
 			return;
 		}
 
 		glm::vec2i windowSize = g_Window->GetSize();
 		real invAspectRatio = windowSize.y / (real)windowSize.x;
 
-		real totalAngle = endAngle - startAngle;
+		real widthN = (topRight.x - bottomLeft.x) * invAspectRatio;
+		real heightN = (topRight.y - bottomLeft.y);
+		real width = (widthN * windowSize.x);
+		real height = (heightN * windowSize.y);
+
+		u32 vertCount = 4;
+		u32 triCount = 2;
+		u32 indexCount = triCount * 3;
+
+		std::vector<glm::vec2> points;
+		std::vector<glm::vec2> texCoords;
+		std::vector<u32> indices;
+
+		points.reserve(vertCount);
+		texCoords.reserve(vertCount);
+		indices.reserve(indexCount);
+
+		{
+			points.emplace_back(glm::vec2(bottomLeft.x, bottomLeft.y));
+			points.emplace_back(glm::vec2(topRight.x, topRight.y));
+			points.emplace_back(glm::vec2(bottomLeft.x, topRight.y));
+			points.emplace_back(glm::vec2(topRight.x, bottomLeft.y));
+
+			texCoords.emplace_back(glm::vec2(0.0f, 0.0f));
+			texCoords.emplace_back(glm::vec2(1.0f, 1.0f));
+			texCoords.emplace_back(glm::vec2(0.0f, 1.0f));
+			texCoords.emplace_back(glm::vec2(1.0f, 0.0f));
+		}
+
+		{
+			indices.emplace_back(0);
+			indices.emplace_back(2);
+			indices.emplace_back(1);
+
+			indices.emplace_back(0);
+			indices.emplace_back(1);
+			indices.emplace_back(3);
+		}
+
+		assert((u32)points.size() == vertCount);
+		assert((u32)indices.size() == indexCount);
+
+		glm::vec2 uvBlendAmount(0.5f / width, 0.5f / height);
+
+		DrawPolygon(points, texCoords, indices, colour, uvBlendAmount);
+	}
+
+	void UIMesh::DrawArc(const glm::vec2& centerPos, real startAngle, real endAngle, real innerRadius, real thickness, i32 segmentsInFullCircle, const glm::vec4& colour)
+	{
+		glm::vec2i windowSize = g_Window->GetSize();
+		real invAspectRatio = windowSize.y / (real)windowSize.x;
+
+		real totalAngle = glm::abs(endAngle - startAngle);
 		real segmentsPerRadian = segmentsInFullCircle / TWO_PI;
-		real radiansPerSegment = TWO_PI / segmentsInFullCircle;
-		u32 quadCount = (u32)glm::ceil(totalAngle * segmentsPerRadian);
+		real radiansPerSegment = copysign(1.0f, totalAngle) * TWO_PI / segmentsInFullCircle;
+		u32 quadCount = glm::min((u32)glm::ceil(totalAngle * segmentsPerRadian), 8192u);
 		u32 vertCount = quadCount * 2 + 2;
 		u32 triCount = quadCount * 2;
 		u32 indexCount = triCount * 3;
@@ -81,19 +134,19 @@ namespace flex
 
 		for (u32 i = 0; i <= quadCount; ++i)
 		{
-			real angle = startAngle - radiansPerSegment * i;
+			real angle = startAngle + radiansPerSegment * i;
 
 			// Interpolate final segment for smoother animations
 			if (i == quadCount)
 			{
-				angle = -endAngle;
+				angle = endAngle;
 			}
 
-			glm::vec2 radialPos(glm::cos(angle + PI_DIV_TWO) * invAspectRatio, glm::sin(angle + PI_DIV_TWO));
+			glm::vec2 radialPos(glm::cos(angle) * invAspectRatio, glm::sin(angle));
 			points.emplace_back(centerPos + innerRadius * radialPos);
 			points.emplace_back(centerPos + outerRadius * radialPos);
 
-			real alpha = (-angle - startAngle) / (endAngle - startAngle);
+			real alpha = (i / (real)quadCount);
 			texCoords.emplace_back(glm::vec2(0.0f, alpha));
 			texCoords.emplace_back(glm::vec2(1.0f, alpha));
 		}
@@ -101,25 +154,50 @@ namespace flex
 		for (u32 i = 0; i < quadCount; ++i)
 		{
 			u32 indexStart = i * 2;
-			indices.emplace_back(indexStart + 0);
-			indices.emplace_back(indexStart + 1);
-			indices.emplace_back(indexStart + 3);
+			if (radiansPerSegment < 0.0f)
+			{
+				indices.emplace_back(indexStart + 0);
+				indices.emplace_back(indexStart + 1);
+				indices.emplace_back(indexStart + 3);
 
-			indices.emplace_back(indexStart + 0);
-			indices.emplace_back(indexStart + 3);
-			indices.emplace_back(indexStart + 2);
+				indices.emplace_back(indexStart + 0);
+				indices.emplace_back(indexStart + 3);
+				indices.emplace_back(indexStart + 2);
+			}
+			else
+			{
+				indices.emplace_back(indexStart + 0);
+				indices.emplace_back(indexStart + 3);
+				indices.emplace_back(indexStart + 1);
+
+				indices.emplace_back(indexStart + 0);
+				indices.emplace_back(indexStart + 2);
+				indices.emplace_back(indexStart + 3);
+			}
 		}
 
 		assert((u32)points.size() == vertCount);
 		assert((u32)indices.size() == indexCount);
 
-		DrawPolygon(points, texCoords, indices, colour);
+		real width = thickness * windowSize.x; // strip width
+		real height = totalAngle * (innerRadius + thickness * 0.5f) * windowSize.y; // circumference
+		glm::vec2 uvBlendAmount(4.0f / width, 4.0f / height);
+
+		// When drawing a full circle, don't blend ends to ensure we get a clean continuous loop
+		if (glm::abs(std::fmod(endAngle - startAngle, TWO_PI)) < 0.001f)
+		{
+			// Non-zero small value to prevent divide by zero
+			uvBlendAmount.y = 0.000001f;
+		}
+
+		DrawPolygon(points, texCoords, indices, colour, uvBlendAmount);
 	}
 
 	void UIMesh::DrawPolygon(const std::vector<glm::vec2>& points,
 		const std::vector<glm::vec2>& texCoords,
 		const std::vector<u32>& indices,
-		const glm::vec4& colour)
+		const glm::vec4& colour,
+		const glm::vec2& uvBlendAmount)
 	{
 		// TODO: Search for existing draw data instance which hasn't been used yet this frame,
 		// ideally one that is large enough for this draw
@@ -186,6 +264,7 @@ namespace flex
 		else
 		{
 			mesh->GetSubMesh(submeshIndex)->UpdateDynamicVertexData(drawData->vertexBufferCreateInfo, indices);
+			m_DrawData[submeshIndex]->uvBlendAmount = uvBlendAmount;
 		}
 	}
 
@@ -197,7 +276,7 @@ namespace flex
 
 		for (u32 i = 0; i < (u32)m_DrawData.size(); ++i)
 		{
-			DrawData const * drawData = m_DrawData[i];
+			DrawData const* drawData = m_DrawData[i];
 
 			//PROFILE_BEGIN("Hash vertex buffer");
 			//u32 oldHash = HashVertexBufferDataCreateInfo(drawData->vertexBufferCreateInfo);
@@ -277,6 +356,11 @@ namespace flex
 	bool UIMesh::IsSubmeshActive(i32 submeshIndex)
 	{
 		return m_DrawData[submeshIndex]->bInUse;
+	}
+
+	glm::vec2 UIMesh::GetUVBlendAmount(i32 drawIndex)
+	{
+		return m_DrawData[drawIndex]->uvBlendAmount;
 	}
 
 	void UIMesh::CreateDebugObject()
