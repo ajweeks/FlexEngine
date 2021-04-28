@@ -4584,8 +4584,8 @@ namespace flex
 				return;
 			}
 
-			const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
+			//const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+			//const real aspectRatio = (real)frameBufferSize.x / (real)frameBufferSize.y;
 
 			VkDeviceSize offsets[1] = { 0 };
 
@@ -4614,9 +4614,9 @@ namespace flex
 
 				MeshComponent* meshComponent = mesh->GetSubMesh(i);
 
-				glm::vec3 translation = VEC3_ZERO;
-				glm::quat rotation = QUAT_IDENTITY;
-				glm::vec3 scale = VEC3_ONE;
+				//glm::vec3 translation = VEC3_ZERO;
+				//glm::quat rotation = QUAT_IDENTITY;
+				//glm::vec3 scale = VEC3_ONE;
 
 				//if (!drawInfo.bRaw)
 				//{

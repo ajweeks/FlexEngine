@@ -626,11 +626,12 @@ namespace flex
 						outResultType = Type::BOOL;
 						return true;
 					}
-					else if (lhsType == Type::FLOAT)
+					if (lhsType == Type::FLOAT)
 					{
 						outResultType = Type::FLOAT;
 						return true;
 					}
+					break;
 				case IR::UnaryOperatorType::BIN_INVERT:
 					outResultType = Type::INT;
 					return lhsType == Type::INT;

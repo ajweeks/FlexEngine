@@ -31,12 +31,28 @@ namespace flex
 		VM::Value::Type returnType;
 	};
 
+	template<typename RetVal, typename... Args, size_t... Is>
+	RetVal CallWithVariableArgCountHelper(RetVal(*func)(Args...), VM::Value* args, IndexSequence<Is...>)
+	{
+		return func(args[Is]...);
+	}
+
+	template<typename RetVal, typename... Args>
+	RetVal CallWithVariableArgCount(RetVal(*func)(Args...), VM::Value* args, i32 argCount)
+	{
+		if (sizeof...(Args) != argCount)
+		{
+			PrintError("Invalid number of arguments passed to FunctionRP (%u, expected: %u)\n", (u32)argCount, (u32)sizeof...(Args));
+			return RetVal(0);
+		}
+		return CallWithVariableArgCountHelper(func, args, BuildIndexSequence<sizeof...(Args)>{});
+	}
+
 	template<typename RetVal, typename... Args>
 	struct FunctionRP : public IFunction
 	{
 		RetVal(*func)(Args...);
 
-		template<typename RetVal, typename... Args>
 		FunctionRP(const std::string& name, RetVal(*f)(Args...), VM::Value::Type retType, VM::Value::Type* argTypesList, u32 argCount) :
 			func(f)
 		{
@@ -59,23 +75,6 @@ namespace flex
 			return CallWithVariableArgCount(func, args, argCount);
 		}
 	};
-
-	template<typename RetVal, typename... Args, size_t... Is>
-	RetVal CallWithVariableArgCountHelper(RetVal(*func)(Args...), VM::Value* args, IndexSequence<Is...>)
-	{
-		return func(args[Is]...);
-	}
-
-	template<typename RetVal, typename... Args>
-	RetVal CallWithVariableArgCount(RetVal(*func)(Args...), VM::Value* args, i32 argCount)
-	{
-		if (sizeof...(Args) != argCount)
-		{
-			PrintError("Invalid number of arguments passed to FunctionRP (%u, expected: %u)\n", (u32)argCount, (u32)sizeof...(Args));
-			return RetVal(0);
-		}
-		return CallWithVariableArgCountHelper(func, args, BuildIndexSequence<sizeof...(Args)>{});
-	}
 
 	class FunctionBindings
 	{

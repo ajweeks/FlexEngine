@@ -223,7 +223,8 @@ def build_project(config):
 		# Directory exists, check if on correct commit
 		pdir = os.getcwd()
 		os.chdir(shader_c_path)
-		curr_shader_c_commit = subprocess.check_output(["git", "describe"]).strip()
+		subprocess.check_output(["git", "fetch", "--tags"]).strip()
+		curr_shader_c_commit = subprocess.check_output(["git", "describe", "--always"]).strip()
 		curr_shader_c_commit = curr_shader_c_commit.decode()
 		os.chdir(pdir)
 		if curr_shader_c_commit == shaderc_tag:
@@ -249,9 +250,11 @@ def build_project(config):
 			run_git(['checkout', 'tags/' + shaderc_tag, '-b', 'master'])
 			os.chdir(pdir)
 		else:
-			checkout_tag_cmd = ['pushd ' + shader_c_path + '; git fetch --tags; git checkout ' + 'tags/' + shaderc_tag + ' -b master']
-			# NOTE: Shell must be *True* for pushd to work!!
-			subprocess.check_call(checkout_tag_cmd, stderr=subprocess.STDOUT, shell=True)
+			pdir = os.getcwd()
+			os.chdir(shader_c_path)
+			run_git(['fetch', '--tags'])
+			run_git(['checkout', 'tags/' + shaderc_tag, '-b', 'master'])
+			os.chdir(pdir)
 
 	if os.path.exists(shader_c_build_path):
 		shutil.rmtree(shader_c_build_path)

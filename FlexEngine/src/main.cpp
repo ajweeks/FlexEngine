@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
 #if RUN_UNIT_TESTS
 	flex::FlexTest::Run();
 
+	// TODO: Use cross-platform solution here
 	system("pause");
 	return 0;
 

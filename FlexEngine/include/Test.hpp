@@ -33,13 +33,11 @@ namespace flex
 
 #define UNIT_TEST_END }
 
-
-		template<class T>
-		static void Expect(const char* funcName, int lineNumber, T val, T exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, bool val, bool exp, const char* msg)
 		{
 			if (val != exp)
 			{
-				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + (exp ? "true" : "false") + ", got " + (val ? "true" : "false") + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
 			}
 		}
@@ -53,7 +51,34 @@ namespace flex
 			}
 		}
 
-		static void Expect(const char* funcName, int lineNumber, std::size_t val, std::size_t exp, const char* msg)
+		static void Expect(const char* funcName, int lineNumber, u32 val, u32 exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+			}
+		}
+
+		static void Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+			}
+		}
+
+		static void Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+			}
+		}
+
+		static void Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
 		{
 			if (val != exp)
 			{
@@ -109,7 +134,7 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 1u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
 			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::STRING);
 			EXPECT(jsonObj.fields[0].value.strValue.c_str(), "strValue");
@@ -139,10 +164,10 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 1u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
 			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::OBJECT);
-			EXPECT(jsonObj.fields[0].value.objectValue.fields.size(), 1u);
+			EXPECT((u64)jsonObj.fields[0].value.objectValue.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].label.c_str(), "sublabel");
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.type, JSONValue::Type::STRING);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.strValue.c_str(), "childValue1");
@@ -162,10 +187,10 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 1u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
 			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue.size(), 1u);
+			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].label.c_str(), "array elem 0");
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, JSONValue::Type::FIELD_ENTRY);
 		}
@@ -216,7 +241,7 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 1u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -231,7 +256,7 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 2u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)2u);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -265,7 +290,7 @@ namespace flex
 
 			EXPECT(bSuccess, true);
 			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue.size(), 2u);
+			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)2u);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -336,14 +361,14 @@ namespace flex
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields.size(), 4u);
+			EXPECT((u64)jsonObj.fields.size(), (u64)4u);
 			EXPECT(jsonObj.fields[2].value.type, JSONValue::Type::BOOL); // Spawn player
 			EXPECT(jsonObj.fields[2].value.boolValue, false); // Spawn player is false
 			EXPECT(jsonObj.fields[3].value.type, JSONValue::Type::OBJECT_ARRAY);
-			EXPECT(jsonObj.fields[3].value.objectArrayValue.size(), 2u); // 2 objects
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[0].fields.size(), 6u); // 6 fields in skybox object
+			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue.size(), (u64)2u); // 2 objects
+			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue[0].fields.size(), (u64)6u); // 6 fields in skybox object
 			EXPECT(jsonObj.fields[3].value.objectArrayValue[0].fields[4].value.type, JSONValue::Type::FIELD_ARRAY); // skybox materials array
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[0].fields[4].value.fieldArrayValue.size(), 1u); // 1 material in materials array
+			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue[0].fields[4].value.fieldArrayValue.size(), (u64)1u); // 1 material in materials array
 			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].label.c_str(), "directional light info"); // Directional light info label
 			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].value.objectValue.fields[4].value.type, JSONValue::Type::FLOAT); // Directional light brightness type
 			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].value.objectValue.fields[4].value.floatValue, 3.047f); // Directional light brightness value
@@ -522,36 +547,36 @@ namespace flex
 
 		UNIT_TEST(CountSetBitsValid)
 		{
-			EXPECT(CountSetBits(0b00000000), 0);
-			EXPECT(CountSetBits(0b00000001), 1);
-			EXPECT(CountSetBits(0b10000000), 1);
-			EXPECT(CountSetBits(0b01010101), 4);
-			EXPECT(CountSetBits(0b11111111), 8);
-			EXPECT(CountSetBits(0b1111111100000000), 8);
-			EXPECT(CountSetBits(0b1111111111111111), 16);
+			EXPECT(CountSetBits(0b00000000), 0u);
+			EXPECT(CountSetBits(0b00000001), 1u);
+			EXPECT(CountSetBits(0b10000000), 1u);
+			EXPECT(CountSetBits(0b01010101), 4u);
+			EXPECT(CountSetBits(0b11111111), 8u);
+			EXPECT(CountSetBits(0b1111111100000000), 8u);
+			EXPECT(CountSetBits(0b1111111111111111), 16u);
 		}
 		UNIT_TEST_END;
 
 		UNIT_TEST(PoolTests)
 		{
 			PoolAllocator<real, 4> pool;
-			EXPECT(pool.GetPoolSize(), 4);
-			EXPECT(pool.GetPoolCount(), 0);
+			EXPECT((u64)pool.GetPoolSize(), (u64)4);
+			EXPECT((u64)pool.GetPoolCount(), (u64)0);
 
 			pool.Alloc();
 			pool.Alloc();
 			pool.Alloc();
 			pool.Alloc();
-			EXPECT(pool.GetPoolCount(), 1);
-			EXPECT(pool.MemoryUsed(), sizeof(real) * 4);
+			EXPECT((u64)pool.GetPoolCount(), (u64)1);
+			EXPECT((u64)pool.MemoryUsed(), (u64)(sizeof(real) * 4));
 
 			pool.Alloc();
-			EXPECT(pool.GetPoolCount(), 2);
-			EXPECT(pool.MemoryUsed(), sizeof(real) * 8);
+			EXPECT((u64)pool.GetPoolCount(), (u64)2);
+			EXPECT((u64)pool.MemoryUsed(), (u64)(sizeof(real) * 8));
 
 			pool.ReleaseAll();
-			EXPECT(pool.GetPoolCount(), 0);
-			EXPECT(pool.MemoryUsed(), 0);
+			EXPECT((u64)pool.GetPoolCount(), (u64)0);
+			EXPECT((u64)pool.MemoryUsed(), (u64)0);
 		}
 		UNIT_TEST_END;
 
@@ -560,24 +585,24 @@ namespace flex
 			Pair<real, u32> p(1.0f, 23);
 
 			EXPECT(p.first, 1.0f);
-			EXPECT(p.second, 23);
+			EXPECT(p.second, (u32)23);
 
 			p.first = 2.9f;
 			p.second = 992;
 			EXPECT(p.first, 2.9f);
-			EXPECT(p.second, 992);
+			EXPECT(p.second, (u32)992);
 
 			Pair<real, u32> p2 = p;
 			EXPECT(p2.first, 2.9f);
-			EXPECT(p2.second, 992);
+			EXPECT(p2.second, (u32)992);
 
 			Pair<real, u32> p3(p);
 			EXPECT(p3.first, 2.9f);
-			EXPECT(p3.second, 992);
+			EXPECT(p3.second, (u32)992);
 
 			Pair<real, u32> p4(std::move(p));
 			EXPECT(p4.first, 2.9f);
-			EXPECT(p4.second, 992);
+			EXPECT(p4.second, (u32)992);
 
 		}
 		UNIT_TEST_END;
@@ -602,7 +627,7 @@ namespace flex
 			std::string reconstructedStr = ast->rootBlock->ToString();
 			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
-			EXPECT(ast->rootBlock->statements.size(), 1);
+			EXPECT((u64)ast->rootBlock->statements.size(), (u64)1);
 			AST::Declaration* decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[0]);
 			EXPECT(decl != nullptr, true);
 			EXPECT((u32)decl->typeName, (u32)AST::TypeName::INT);
@@ -636,7 +661,7 @@ namespace flex
 			std::string reconstructedStr = ast->rootBlock->ToString();
 			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
-			EXPECT(ast->rootBlock->statements.size(), 3);
+			EXPECT((u64)ast->rootBlock->statements.size(), (u64)3);
 
 			AST::Declaration* decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[0]);
 			EXPECT(decl != nullptr, true);
@@ -697,7 +722,7 @@ namespace flex
 			std::string reconstructedStr = ast->rootBlock->ToString();
 			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
-			EXPECT(ast->rootBlock->statements.size(), 1);
+			EXPECT((u64)ast->rootBlock->statements.size(), (u64)1);
 
 			AST::ForStatement* forStatement = dynamic_cast<AST::ForStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(forStatement != nullptr, true);
@@ -707,7 +732,7 @@ namespace flex
 			EXPECT(forStatement->body != nullptr, true);
 			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(forStatement->body);
 			EXPECT(body != nullptr, true);
-			EXPECT(body->statements.size(), 0);
+			EXPECT((u64)body->statements.size(), (u64)0);
 
 			ast->Destroy();
 			delete ast;
@@ -731,7 +756,7 @@ namespace flex
 			std::string reconstructedStr = ast->rootBlock->ToString();
 			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
-			EXPECT(ast->rootBlock->statements.size(), 1);
+			EXPECT((u64)ast->rootBlock->statements.size(), (u64)1);
 
 			AST::WhileStatement* whileStatement = dynamic_cast<AST::WhileStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(whileStatement != nullptr, true);
@@ -741,7 +766,7 @@ namespace flex
 			EXPECT(whileStatement->body != nullptr, true);
 			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(whileStatement->body);
 			EXPECT(body != nullptr, true);
-			EXPECT(body->statements.size(), 0);
+			EXPECT((u64)body->statements.size(), (u64)0);
 
 			ast->Destroy();
 			delete ast;
@@ -765,7 +790,7 @@ namespace flex
 			std::string reconstructedStr = ast->rootBlock->ToString();
 			EXPECT(strcmp(reconstructedStr.c_str(), source), 0);
 
-			EXPECT(ast->rootBlock->statements.size(), 1);
+			EXPECT((u64)ast->rootBlock->statements.size(), (u64)1);
 
 			AST::DoWhileStatement* doWhileStatement = dynamic_cast<AST::DoWhileStatement*>(ast->rootBlock->statements[0]);
 			EXPECT(doWhileStatement != nullptr, true);
@@ -775,7 +800,7 @@ namespace flex
 			EXPECT(doWhileStatement->body != nullptr, true);
 			AST::StatementBlock* body = dynamic_cast<AST::StatementBlock*>(doWhileStatement->body);
 			EXPECT(body != nullptr, true);
-			EXPECT(body->statements.size(), 0);
+			EXPECT((u64)body->statements.size(), (u64)0);
 
 			ast->Destroy();
 			delete ast;
@@ -856,7 +881,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->state->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -866,12 +891,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -924,11 +949,11 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -938,12 +963,12 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			EXPECT(vm->registers[1].valInt, (12 + 20) % ((1 + 2) * 2));
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			EXPECT(vm->registers[0].valInt, ((1 + 2) * 2) / ((12 + 20) % ((1 + 2) * 2)));
 
 			EXPECT(vm->stack.empty(), true);
@@ -972,11 +997,11 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1041,11 +1066,11 @@ namespace flex
 
 			vm->GenerateFromInstStream(instStream);
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1066,11 +1091,11 @@ namespace flex
 				"func foo() -> int { return 2 * 7 + 9 - 6; }"
 				"int bar = foo() * foo() + foo(); \n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1091,11 +1116,11 @@ namespace flex
 				"func foo() -> float { return 2.00 * 7.F + 9.0f - 6.; }"
 				"float bar = foo() * foo() + foo(); \n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1116,11 +1141,11 @@ namespace flex
 				"int[] list = [1, 2, 3, 4];"
 				"int val1 = list[1]; \n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1142,11 +1167,11 @@ namespace flex
 				"int baz = a * 5 - (a + 12) / b; \n"
 				"// (int a = 5; a < bar * baz; a += 2) { baz = 2 * baz + a; } \n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1187,11 +1212,11 @@ namespace flex
 				"} \n"
 				"}}\n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)0);
 			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
 			{
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
@@ -1208,7 +1233,7 @@ namespace flex
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 			vm->GenerateFromSource("func foo() -> int { } \n");
 
-			EXPECT(vm->state->diagnosticContainer->diagnostics.size(), 0);
+			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
 			vm->Execute();
 
@@ -1277,7 +1302,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
 
 			delete vm;
 		}
@@ -1294,7 +1319,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
 
 			delete vm;
 		}
@@ -1308,7 +1333,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
 
 			delete vm;
 		}
@@ -1323,7 +1348,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT(vm->diagnosticContainer->diagnostics.size(), 1);
+			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
 
 			delete vm;
 		}
@@ -1587,7 +1612,7 @@ namespace flex
 		{
 			const std::string str = "9999";
 			u32 result = ParseUInt(str);
-			EXPECT(result, 9999);
+			EXPECT(result, (u32)9999);
 		}
 		UNIT_TEST_END;
 
@@ -1595,7 +1620,7 @@ namespace flex
 		{
 			const std::string str = "0003";
 			u32 result = ParseUInt(str);
-			EXPECT(result, 3);
+			EXPECT(result, (u32)3);
 		}
 		UNIT_TEST_END;
 
@@ -1603,7 +1628,7 @@ namespace flex
 		{
 			const std::string str = "0";
 			u32 result = ParseUInt(str);
-			EXPECT(result, 0);
+			EXPECT(result, (u32)0);
 		}
 		UNIT_TEST_END;
 
@@ -1611,7 +1636,7 @@ namespace flex
 		{
 			const std::string str = "4294967295";
 			u32 result = ParseUInt(str);
-			EXPECT(result, 4294967295);
+			EXPECT(result, (u32)4294967295);
 		}
 		UNIT_TEST_END;
 
@@ -1619,7 +1644,7 @@ namespace flex
 		{
 			const std::string str = "9999";
 			u64 result = ParseULong(str);
-			EXPECT(result, 9999);
+			EXPECT(result, (u64)9999);
 		}
 		UNIT_TEST_END;
 
@@ -1627,7 +1652,7 @@ namespace flex
 		{
 			const std::string str = "00003";
 			u64 result = ParseULong(str);
-			EXPECT(result, 3);
+			EXPECT(result, (u64)3);
 		}
 		UNIT_TEST_END;
 
@@ -1635,7 +1660,7 @@ namespace flex
 		{
 			const std::string str = "0";
 			u64 result = ParseULong(str);
-			EXPECT(result, 0);
+			EXPECT(result, (u64)0);
 		}
 		UNIT_TEST_END;
 
@@ -1643,7 +1668,7 @@ namespace flex
 		{
 			const std::string str = "18446744073709551615";
 			u64 result = ParseULong(str);
-			EXPECT(result, 18446744073709551615);
+			EXPECT(result, (u64)18446744073709551615u);
 		}
 		UNIT_TEST_END;
 
@@ -1721,7 +1746,7 @@ namespace flex
 
 		UNIT_TEST(HelpersULongToString0)
 		{
-			u64 num = 18446744073709551615;
+			u64 num = 18446744073709551615u;
 			std::string result = ULongToString(num);
 			EXPECT(result.c_str(), "18446744073709551615");
 		}
@@ -1903,16 +1928,16 @@ namespace flex
 		{
 			std::string inputStr = "6E63A06A6FD9D39C4608AF519EFB8A2E";
 			GUID a = GUID::FromString(inputStr);
-			EXPECT(a.Data1, 5046476147563137582);
-			EXPECT(a.Data2, 7954377745869951900);
+			EXPECT(a.Data1, (u64)5046476147563137582);
+			EXPECT(a.Data2, (u64)7954377745869951900);
 		}
 		UNIT_TEST_END;
 
 		UNIT_TEST(GUIDGeneration3)
 		{
 			GUID a;
-			a.Data1 = 5046476147563137582;
-			a.Data2 = 7954377745869951900;
+			a.Data1 = (u64)5046476147563137582u;
+			a.Data2 = (u64)7954377745869951900u;
 			std::string generatedStr = a.ToString();
 			EXPECT(generatedStr.compare("6E63A06A6FD9D39C4608AF519EFB8A2E"), 0);
 		}
@@ -1936,11 +1961,11 @@ namespace flex
 		UNIT_TEST(GUIDLessThan0)
 		{
 			GUID a;
-			a.Data1 = 1;
-			a.Data2 = 0;
+			a.Data1 = 1u;
+			a.Data2 = 0u;
 			GUID b;
-			b.Data1 = 2;
-			b.Data2 = 0;
+			b.Data1 = 2u;
+			b.Data2 = 0u;
 			EXPECT(a < b, true);
 		}
 		UNIT_TEST_END;
@@ -1948,11 +1973,11 @@ namespace flex
 		UNIT_TEST(GUIDNotLessThan0)
 		{
 			GUID a;
-			a.Data1 = 2;
-			a.Data2 = 0;
+			a.Data1 = 2u;
+			a.Data2 = 0u;
 			GUID b;
-			b.Data1 = 1;
-			b.Data2 = 0;
+			b.Data1 = 1u;
+			b.Data2 = 0u;
 			EXPECT(a > b, true);
 		}
 		UNIT_TEST_END;
@@ -1960,11 +1985,11 @@ namespace flex
 		UNIT_TEST(GUIDLessThan1)
 		{
 			GUID a;
-			a.Data1 = 1;
-			a.Data2 = 0;
+			a.Data1 = 1u;
+			a.Data2 = 0u;
 			GUID b;
-			b.Data1 = 1;
-			b.Data2 = 1;
+			b.Data1 = 1u;
+			b.Data2 = 1u;
 			EXPECT(a < b, true);
 		}
 		UNIT_TEST_END;
@@ -1972,11 +1997,11 @@ namespace flex
 		UNIT_TEST(GUIDNotLessThan1)
 		{
 			GUID a;
-			a.Data1 = 0;
-			a.Data2 = 1;
+			a.Data1 = 0u;
+			a.Data2 = 1u;
 			GUID b;
-			b.Data1 = 2;
-			b.Data2 = 0;
+			b.Data1 = 2u;
+			b.Data2 = 0u;
 			EXPECT(a > b, true);
 		}
 		UNIT_TEST_END;

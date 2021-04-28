@@ -1066,7 +1066,7 @@ namespace flex
 				{
 					ImGui::BeginTooltip();
 
-					ImGui::Text("Data1, Data2: %llu, %llu", ID.Data1, ID.Data2);
+					ImGui::Text("Data1, Data2: %lu, %lu", ID.Data1, ID.Data2);
 
 					ImGui::EndTooltip();
 				}
@@ -1417,7 +1417,7 @@ namespace flex
 			std::string typeIDStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
 			if (typeIDStr.empty())
 			{
-				PrintWarn("Prefab type not serialized, unknown typeID: %llu\n", m_TypeID);
+				PrintWarn("Prefab type not serialized, unknown typeID: %lu\n", m_TypeID);
 			}
 			object.fields.emplace_back("type", JSONValue(typeIDStr));
 		}
@@ -1437,7 +1437,7 @@ namespace flex
 				std::string typeIDStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
 				if (typeIDStr.empty())
 				{
-					PrintWarn("Object type not serialized, unknown typeID: %llu\n", m_TypeID);
+					PrintWarn("Object type not serialized, unknown typeID: %lu\n", m_TypeID);
 				}
 				object.fields.emplace_back("type", JSONValue(typeIDStr));
 			}
@@ -10578,7 +10578,7 @@ namespace flex
 		const btVector3 linearVel = rb->getLinearVelocity();
 		const btVector3 linearAccel = (linearVel - m_pLinearVelocity) / g_DeltaTime;
 		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
-		const real forwardAccel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
+		//const real forwardAccel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
 		// How much our acceleration opposes our current velocity
 		real slowingVelocity = glm::clamp(1.0f - glm::min(glm::dot(ToVec3(linearAccel), ToVec3(linearVel)) / linearVel.length(), 0.0f), 0.0f, 1.0f);
 

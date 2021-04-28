@@ -223,7 +223,7 @@ PlotStatus Plot(const char* label, const PlotConfig& conf) {
                     uint32_t end = start;
                     if (conf.selection.sanitize_fn)
                         end = conf.selection.sanitize_fn(end - start) + start;
-                    if (end < conf.values.offset + conf.values.count) {
+                    if (end < (uint32_t)(conf.values.offset + conf.values.count)) {
                         *conf.selection.start = start;
                         *conf.selection.length = end - start;
                         status = PlotStatus::selection_updated;
@@ -239,7 +239,7 @@ PlotStatus Plot(const char* label, const PlotConfig& conf) {
                     if (end > start) {
                         if (conf.selection.sanitize_fn)
                             end = conf.selection.sanitize_fn(end - start) + start;
-                        if (end < conf.values.offset + conf.values.count) {
+                        if (end < (uint32_t)(conf.values.offset + conf.values.count)) {
                             *conf.selection.length = end - start;
                             status = PlotStatus::selection_updated;
                         }

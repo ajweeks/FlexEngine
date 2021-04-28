@@ -2507,7 +2507,7 @@ namespace flex
 									{
 										if (g_bEnableLogging_Shaders)
 										{
-											PrintWarn("%llu shader compilation errors, %llu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
+											PrintWarn("%lu shader compilation errors, %lu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
 										}
 										std::string errorStr = assemblyResult.GetErrorMessage();
 										if (g_bEnableLogging_Shaders)
@@ -2547,7 +2547,7 @@ namespace flex
 								{
 									if (g_bEnableLogging_Shaders)
 									{
-										PrintWarn("%llu shader compilation errors, %llu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
+										PrintWarn("%lu shader compilation errors, %lu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
 									}
 									std::string errorStr = result.GetErrorMessage();
 									if (g_bEnableLogging_Shaders)
@@ -3407,7 +3407,7 @@ namespace flex
 
 			if (!bFound)
 			{
-				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %llu\n", (u64)descSet);
+				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %lu\n", (u64)descSet);
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
