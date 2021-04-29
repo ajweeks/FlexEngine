@@ -250,6 +250,53 @@ namespace flex
 
 				*offset = (i32)nextNonAlphaNumeric;
 			} break;
+			case JSONValue::Type::LONG:
+			{
+				size_t intStart = quoteEnd + 2;
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
+				size_t intCharCount = nextNonAlphaNumeric - intStart;
+				std::string longStr = fileContents.substr(intStart, intCharCount);
+				i64 longValue = 0;
+				if (!longStr.empty())
+				{
+					if (longStr == "nan" || longStr == "-nan")
+					{
+						PrintWarn("Found NaN in json string, replacing with 0\n");
+						longValue = 0;
+					}
+					else
+					{
+						// TODO: use strto family of functions
+						longValue = stol(longStr);
+					}
+				}
+				field.value = JSONValue(longValue);
+
+				*offset = (i32)nextNonAlphaNumeric;
+			} break;
+			case JSONValue::Type::ULONG:
+			{
+				size_t intStart = quoteEnd + 2;
+				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
+				size_t intCharCount = nextNonAlphaNumeric - intStart;
+				std::string ulongStr = fileContents.substr(intStart, intCharCount);
+				u64 ulongValue = 0;
+				if (!ulongStr.empty())
+				{
+					if (ulongStr == "nan" || ulongStr == "-nan")
+					{
+						PrintWarn("Found NaN in json string, replacing with 0\n");
+						ulongValue = 0;
+					}
+					else
+					{
+						ulongValue = stoull(ulongStr);
+					}
+				}
+				field.value = JSONValue(ulongValue);
+
+				*offset = (i32)nextNonAlphaNumeric;
+			} break;
 			case JSONValue::Type::FLOAT:
 			{
 				size_t floatStart = quoteEnd + 2;

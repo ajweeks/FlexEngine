@@ -199,6 +199,18 @@ namespace flex
 		return result;
 	}
 
+	std::string LongToString(i64 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (result.length() < minChars)
+		{
+			result = std::string(minChars - result.length(), pad) + result;
+		}
+
+		return result;
+	}
+
 	std::string ULongToString(u64 i, u16 minChars, char pad)
 	{
 		std::string result = std::to_string(i);

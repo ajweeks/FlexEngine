@@ -135,6 +135,7 @@ namespace flex
 	// String will be padded to be at least minChars long (excluding a leading '-' for negative numbers)
 	FLEX_NO_DISCARD std::string IntToString(i32 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD std::string LongToString(i64 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string ULongToString(u64 i, u16 minChars = 0, char pad = '0');
 
 	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);

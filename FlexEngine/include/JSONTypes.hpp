@@ -17,6 +17,8 @@ namespace flex
 
 		std::string GetString(const std::string& label) const;
 		bool TryGetString(const std::string& label, std::string& value) const;
+		StringID GetStringID(const std::string& label) const;
+		bool TryGetStringID(const std::string& label, StringID& value) const;
 		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
 		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
 		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
@@ -30,6 +32,12 @@ namespace flex
 
 		u32 GetUInt(const std::string& label) const;
 		bool TryGetUInt(const std::string& label, u32& value) const;
+
+		i64 GetLong(const std::string& label) const;
+		bool TryGetLong(const std::string& label, i64& value) const;
+
+		u64 GetULong(const std::string& label) const;
+		bool TryGetULong(const std::string& label, u64& value) const;
 
 		real GetFloat(const std::string& label) const;
 		bool TryGetFloat(const std::string& label, real& value) const;
@@ -68,6 +76,8 @@ namespace flex
 			STRING,
 			INT,
 			UINT,
+			LONG,
+			ULONG,
 			FLOAT,
 			BOOL,
 			OBJECT,
@@ -86,6 +96,8 @@ namespace flex
 		explicit JSONValue(const char* inStrValue);
 		explicit JSONValue(i32 inIntValue);
 		explicit JSONValue(u32 inUIntValue);
+		explicit JSONValue(i64 inLongValue);
+		explicit JSONValue(u64 inULongValue);
 		explicit JSONValue(real inFloatValue);
 		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
@@ -99,6 +111,8 @@ namespace flex
 		{
 			i32 intValue = 0;
 			u32 uintValue;
+			i64 longValue;
+			u64 ulongValue;
 			real floatValue;
 			bool boolValue;
 		};

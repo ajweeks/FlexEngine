@@ -47,13 +47,19 @@ namespace flex
 				}
 				else
 				{
+					std::string numberStr = std::to_string(c) + stringAfter.substr(0, nextNonAlphaNumeric);
+
 					if (isNegation)
 					{
-						return Type::INT;
+						i64 result = strtoll(numberStr.c_str(), nullptr, 10);
+
+						return (result < -INT_MAX || result > INT_MAX) ? Type::LONG : Type::INT;
 					}
 					else
 					{
-						return Type::UINT;
+						u64 result = strtoull(numberStr.c_str(), nullptr, 10);
+
+						return (result > INT_MAX) ? Type::ULONG : Type::UINT;
 					}
 				}
 			}
@@ -88,6 +94,18 @@ namespace flex
 	JSONValue::JSONValue(u32 inUIntValue) :
 		type(Type::UINT),
 		uintValue(inUIntValue)
+	{
+	}
+
+	JSONValue::JSONValue(i64 inLongValue) :
+		type(Type::LONG),
+		longValue(inLongValue)
+	{
+	}
+
+	JSONValue::JSONValue(u64 inULongValue) :
+		type(Type::ULONG),
+		ulongValue(inULongValue)
 	{
 	}
 
@@ -169,6 +187,26 @@ namespace flex
 		return false;
 	}
 
+	StringID JSONObject::GetStringID(const std::string& label) const
+	{
+		if (HasField(label))
+		{
+			u64 result = GetULong(label);
+			return (StringID)result;
+		}
+		return InvalidStringID;
+	}
+
+	bool JSONObject::TryGetStringID(const std::string& label, StringID& value) const
+	{
+		if (HasField(label))
+		{
+			value = (StringID)GetULong(label);
+			return true;
+		}
+		return false;
+	}
+
 	bool JSONObject::TryGetVec2(const std::string& label, glm::vec2& value) const
 	{
 		if (HasField(label))
@@ -241,13 +279,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				if (field.value.intValue != 0)
-				{
-					ENSURE(!IsNanOrInf((real)field.value.intValue));
-					return field.value.intValue;
-				}
-				ENSURE(!IsNanOrInf(field.value.floatValue));
-				return (i32)field.value.floatValue;
+				return field.value.intValue;
 			}
 		}
 		return 0;
@@ -269,13 +301,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				if (field.value.uintValue != 0)
-				{
-					ENSURE(!IsNanOrInf((real)field.value.uintValue));
-					return field.value.uintValue;
-				}
-				ENSURE(!IsNanOrInf(field.value.floatValue));
-				return (u32)field.value.floatValue;
+				return field.value.uintValue;
 			}
 		}
 		return 0;
@@ -286,6 +312,50 @@ namespace flex
 		if (HasField(label))
 		{
 			value = GetUInt(label);
+			return true;
+		}
+		return false;
+	}
+
+	i64 JSONObject::GetLong(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.longValue;
+			}
+		}
+		return 0;
+	}
+
+	bool JSONObject::TryGetLong(const std::string& label, i64& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetLong(label);
+			return true;
+		}
+		return false;
+	}
+
+	u64 JSONObject::GetULong(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.ulongValue;
+			}
+		}
+		return 0;
+	}
+
+	bool JSONObject::TryGetULong(const std::string& label, u64& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetULong(label);
 			return true;
 		}
 		return false;
@@ -468,6 +538,12 @@ namespace flex
 			break;
 		case JSONValue::Type::UINT:
 			result += UIntToString(value.uintValue);
+			break;
+		case JSONValue::Type::LONG:
+			result += LongToString(value.longValue);
+			break;
+		case JSONValue::Type::ULONG:
+			result += ULongToString(value.ulongValue);
 			break;
 		case JSONValue::Type::FLOAT:
 			result += FloatToString(value.floatValue, value.floatPrecision);
