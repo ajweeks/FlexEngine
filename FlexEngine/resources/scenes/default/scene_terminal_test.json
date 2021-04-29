@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-24.617, 6.448, -5.621",
-			"pitch" : -0.038621,
-			"yaw" : 1.284825
+			"position" : "-1.977, 8.565, -21.420",
+			"pitch" : -0.166899,
+			"yaw" : 1.688574
 		}
 	},
 	"objects" : 
@@ -236,6 +236,45 @@
 							}
 						}
 					]
+				},
+				{
+					"name" : "AreaLight",
+					"id" : "87A3091457AE338349F5D2BFFA33D061",
+					"type" : "area light",
+					"transform" : 
+					{
+						"pos" : "-11.952, 0.716, 35.616",
+						"rot" : "-0.696, 0.000, 0.000",
+						"scale" : "3.923, 1.840, 3.923"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"area light info" : 
+					{
+						"colour" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 41.667000
+					},
+					"children" : 
+					[
+						{
+							"name" : "New_Object_02",
+							"id" : "4997CA417B45399641AC88288BD61949",
+							"type" : "object",
+							"transform" : 
+							{
+								"rot" : "3.141, 1.569, 3.141",
+								"scale" : "0.010, 2.000, 2.000"
+							},
+							"visible" : true,
+							"casts shadow" : true,
+							"mesh" : "cube.glb",
+							"materials" : 
+							[
+								"pbr white"
+							]
+						}
+					]
 				}
 			]
 		},
@@ -450,45 +489,6 @@
 			{
 				"pos" : "-0.000, 0.410, 0.000"
 			}
-		},
-		{
-			"name" : "New_Object_01",
-			"id" : "87A3091457AE338349F5D2BFFA33D061",
-			"type" : "area light",
-			"transform" : 
-			{
-				"pos" : "-11.952, 2.943, 33.765",
-				"rot" : "-1.605, 0.000, 0.000",
-				"scale" : "3.923, 1.840, 3.923"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"area light info" : 
-			{
-				"colour" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 41.667000
-			},
-			"children" : 
-			[
-				{
-					"name" : "New_Object_02",
-					"id" : "4997CA417B45399641AC88288BD61949",
-					"type" : "object",
-					"transform" : 
-					{
-						"rot" : "3.141, 1.569, 3.141",
-						"scale" : "0.010, 2.000, 2.000"
-					},
-					"visible" : true,
-					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"materials" : 
-					[
-						"pbr white"
-					]
-				}
-			]
 		}
 	]
 }

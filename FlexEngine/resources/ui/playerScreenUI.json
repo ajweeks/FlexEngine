@@ -1,4 +1,5 @@
 {
+	"type" : "Base",
 	"cut type" : "Top",
 	"amount" : 1.000000,
 	"visible" : false,
@@ -6,6 +7,7 @@
 	"children" : 
 	[
 		{
+			"type" : "Base",
 			"cut type" : "Bottom",
 			"amount" : 0.087500,
 			"visible" : false,
@@ -13,12 +15,14 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Left",
 					"amount" : 0.145000,
 					"visible" : false,
 					"relative" : true
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
@@ -27,60 +31,70 @@
 					"tag" : 16612773434777059667
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Item",
 					"cut type" : "Left",
 					"amount" : 0.061000,
 					"visible" : true,

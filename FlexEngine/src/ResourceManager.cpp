@@ -113,29 +113,18 @@ namespace flex
 						uiContainersToPush.erase(uiContainersToPush.begin());
 					}
 
-					for (u32 i = 0; i < (u32)uiContainers.size(); ++i)
+					for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
 					{
 						i32 heldItemSlotIndex = player->heldItemSlot;
 						UIContainer* uiContainer = uiContainers[i];
 						if (uiContainer->tag == SID("slot0"))
 						{
-							if (uiContainer->uiElement == nullptr)
+							for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
 							{
-								uiContainer->uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
+								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
+								itemContainer->stack = &player->m_QuickAccessInventory[n];
+								itemContainer->bHighlighted = (n == heldItemSlotIndex);
 							}
-
-							uiContainers[i]->bHighlighted = false;
-
-							for (u32 n = 1; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
-							{
-								if (uiContainers[i + n]->uiElement == nullptr)
-								{
-									uiContainers[i + n]->uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
-								}
-								uiContainers[i + n]->bHighlighted = false;
-							}
-
-							uiContainers[i + heldItemSlotIndex]->bHighlighted = true;
 						}
 					}
 
@@ -650,7 +639,7 @@ namespace flex
 		return meshObject;
 	}
 
-	bool ResourceManager::ParseUIConfig(const char* filePath, UIContainer* uiContainer)
+	UIContainer* ResourceManager::ParseUIConfig(const char* filePath)
 	{
 		std::string fileContents;
 		if (ReadFile(filePath, fileContents, false))
@@ -659,30 +648,31 @@ namespace flex
 			if (!JSONParser::Parse(fileContents, rootObject))
 			{
 				PrintError("Failed to parse UI config file at %s\n", filePath);
-				return false;
+				return nullptr;
 			}
 
-			UIContainer::Deserialize(rootObject, uiContainer);
+			UIContainer* uiContainer = UIContainer::Deserialize(rootObject);
 
-			return true;
+			return uiContainer;
 		}
 
-		return false;
+		return nullptr;
 	}
 
 	void ResourceManager::ParseUIConfigs()
 	{
-		if (m_PlayerScreenUI == nullptr)
+		if (m_PlayerScreenUI != nullptr)
 		{
-			m_PlayerScreenUI = new UIContainer();
+			delete m_PlayerScreenUI;
 		}
 
-		if (m_PlayerInventoryUI == nullptr)
+		if (m_PlayerInventoryUI != nullptr)
 		{
-			m_PlayerInventoryUI = new UIContainer();
+			delete m_PlayerInventoryUI;
 		}
 
-		if (ParseUIConfig(UI_PLAYER_SCREEN_LOCATION, m_PlayerScreenUI))
+		m_PlayerScreenUI = ParseUIConfig(UI_PLAYER_SCREEN_LOCATION);
+		if (m_PlayerScreenUI != nullptr)
 		{
 			m_bPlayerScreenUIConfigDirty = false;
 		}
@@ -691,7 +681,8 @@ namespace flex
 			PrintError("Failed to read player screen UI config to %s\n", UI_PLAYER_SCREEN_LOCATION);
 		}
 
-		if (ParseUIConfig(UI_PLAYER_INVENTORY_LOCATION, m_PlayerInventoryUI))
+		m_PlayerInventoryUI = ParseUIConfig(UI_PLAYER_INVENTORY_LOCATION);
+		if (m_PlayerInventoryUI != nullptr)
 		{
 			m_bPlayerInventoryUIConfigDirty = false;
 		}
@@ -2439,7 +2430,7 @@ namespace flex
 		{
 			if (ImGui::Begin("UI", &bUIEditorShowing))
 			{
-				auto drawButtons = [this](UIContainer* uiContainer, const char* filePath, bool bDirty)
+				auto drawButtons = [this](UIContainer* uiContainer, const char* filePath, bool& bDirty)
 				{
 					ImGui::PushID(filePath);
 
@@ -2460,7 +2451,12 @@ namespace flex
 
 						if (ImGui::Button("Reload"))
 						{
-							if (!ParseUIConfig(filePath, uiContainer))
+							UIContainer* newUIContainer = ParseUIConfig(filePath);
+							if (newUIContainer != nullptr)
+							{
+								uiContainer = newUIContainer;
+							}
+							else
 							{
 								// There was no file to read, just clear data
 								delete uiContainer;
@@ -2478,13 +2474,11 @@ namespace flex
 					ImGui::PopID();
 				};
 
-				UIMesh* uiMesh = g_Renderer->GetUIMesh();
-
 				drawButtons(m_PlayerScreenUI, UI_PLAYER_SCREEN_LOCATION, m_bPlayerScreenUIConfigDirty);
-				uiMesh->DrawImGuiRectCut(m_PlayerScreenUI, m_bPlayerScreenUIConfigDirty, "Player screen");
+				m_PlayerScreenUI->DrawImGui(m_bPlayerScreenUIConfigDirty, "Player screen");
 
 				drawButtons(m_PlayerInventoryUI, UI_PLAYER_INVENTORY_LOCATION, m_bPlayerInventoryUIConfigDirty);
-				uiMesh->DrawImGuiRectCut(m_PlayerInventoryUI, m_bPlayerInventoryUIConfigDirty, "Player inventory");
+				m_PlayerInventoryUI->DrawImGui(m_bPlayerInventoryUIConfigDirty, "Player inventory");
 			}
 
 			ImGui::End();

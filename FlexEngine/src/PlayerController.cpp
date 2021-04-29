@@ -402,47 +402,44 @@ namespace flex
 			}
 		}
 
-		if (!m_Player->m_Inventory.empty())
+		// Place item from inventory
+		if (m_bAttemptPlaceItemFromInventory)
 		{
-			// Place item from inventory
-			if (m_bAttemptPlaceItemFromInventory)
+			m_bAttemptPlaceItemFromInventory = false;
+
+			if (m_Player->heldItemSlot == -1)
 			{
-				m_bAttemptPlaceItemFromInventory = false;
+				m_Player->heldItemSlot = 0;
+			}
 
-				if (m_Player->heldItemSlot == -1)
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+
+			if (gameObjectStack.count >= 1)
+			{
+				if (gameObjectStack.prefabID.IsValid())
 				{
-					m_Player->heldItemSlot = 0;
-				}
-
-				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
-
-				if (gameObjectStack.count >= 1)
-				{
-					if (gameObjectStack.prefabID.IsValid())
+					glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() +
+						m_Player->m_Transform.GetForward() * 3.0f;
+					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
+					if (gameObject != nullptr)
 					{
-						glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() +
-							m_Player->m_Transform.GetForward() * 3.0f;
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
-						if (gameObject != nullptr)
-						{
-							gameObjectStack.count--;
+						gameObjectStack.count--;
 
-							if (gameObjectStack.count == 0)
-							{
-								m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->heldItemSlot);
-							}
-						}
-						else
+						if (gameObjectStack.count == 0)
 						{
-							std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-							PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
+							gameObjectStack.prefabID = InvalidPrefabID;
 						}
 					}
 					else
 					{
 						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-						PrintError("Failed to de-itemize item from player inventory, invalid prefab ID\n");
+						PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
 					}
+				}
+				else
+				{
+					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID\n");
 				}
 			}
 		}
@@ -795,11 +792,8 @@ namespace flex
 
 				if (action == Action::PLACE_ITEM)
 				{
-					if (!m_Player->m_Inventory.empty())
-					{
-						m_bAttemptPlaceItemFromInventory = true;
-						return EventReply::CONSUMED;
-					}
+					m_bAttemptPlaceItemFromInventory = true;
+					return EventReply::CONSUMED;
 				}
 
 				if (action == Action::INTERACT)

@@ -53,6 +53,9 @@ namespace flex
 
 		void AddToInventory(PrefabID prefabID, i32 count);
 
+		i32 GetNextFreeQuickAccessInventorySlot();
+		i32 GetNextFreeInventorySlot();
+
 		bool IsRidingTrack();
 
 		PlayerController* m_Controller = nullptr;
@@ -94,8 +97,9 @@ namespace flex
 		TrackState m_TrackState;
 
 		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
+		static const i32 INVENTORY_ITEM_COUNT = 7 * 5;
 
-		std::vector<GameObjectStack> m_Inventory;
+		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
 		bool bInventoryShowing = false;
 		i32 heldItemSlot = 0;

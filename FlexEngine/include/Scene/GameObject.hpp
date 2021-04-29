@@ -70,8 +70,8 @@ namespace flex
 
 	struct GameObjectStack
 	{
-		PrefabID prefabID;
-		i32 count;
+		PrefabID prefabID = InvalidPrefabID;
+		i32 count = 0;
 	};
 
 	class GameObject

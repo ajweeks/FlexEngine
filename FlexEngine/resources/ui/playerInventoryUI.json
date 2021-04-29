@@ -1,4 +1,5 @@
 {
+	"type" : "Base",
 	"cut type" : "Top",
 	"amount" : 1.000000,
 	"visible" : false,
@@ -6,30 +7,35 @@
 	"children" : 
 	[
 		{
+			"type" : "Base",
 			"cut type" : "Bottom",
 			"amount" : 0.200000,
 			"visible" : false,
 			"relative" : true
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Top",
 			"amount" : 0.200000,
 			"visible" : false,
 			"relative" : true
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Right",
 			"amount" : 0.205000,
 			"visible" : false,
 			"relative" : true
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.205000,
 			"visible" : false,
 			"relative" : true
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -37,36 +43,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -75,6 +87,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -82,36 +95,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -120,6 +139,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -127,36 +147,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -165,6 +191,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -172,36 +199,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -210,6 +243,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -217,36 +251,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -255,6 +295,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -262,36 +303,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
@@ -300,6 +347,7 @@
 			]
 		},
 		{
+			"type" : "Base",
 			"cut type" : "Left",
 			"amount" : 0.090000,
 			"visible" : false,
@@ -307,36 +355,42 @@
 			"children" : 
 			[
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.010000,
 					"visible" : false,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,
 					"relative" : false
 				},
 				{
+					"type" : "Base",
 					"cut type" : "Top",
 					"amount" : 0.125000,
 					"visible" : true,

@@ -306,17 +306,20 @@ namespace flex
 			ImGui::Indent();
 			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
-				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-				if (prefabTemplate != nullptr)
+				if (gameObjectStack.count != 0)
 				{
-					std::string prefabTemplateName = prefabTemplate->GetName();
-					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
-				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-					ImGui::Text("INVALID (%i)", gameObjectStack.count);
-					ImGui::PopStyleColor();
+					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+					if (prefabTemplate != nullptr)
+					{
+						std::string prefabTemplateName = prefabTemplate->GetName();
+						ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("INVALID (%i)", gameObjectStack.count);
+						ImGui::PopStyleColor();
+					}
 				}
 			}
 			ImGui::Unindent();
@@ -325,6 +328,7 @@ namespace flex
 			ImGui::Indent();
 			for (i32 i = 0;i < (i32)m_QuickAccessInventory.size(); ++i)
 			{
+
 				const bool bHeld = (i == heldItemSlot);
 				if (bHeld)
 				{
@@ -594,6 +598,15 @@ namespace flex
 
 	void Player::AddToInventory(PrefabID prefabID, i32 count)
 	{
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.prefabID == prefabID)
+			{
+				gameObjectStack.count += count;
+				return;
+			}
+		}
+
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
 			if (gameObjectStack.prefabID == prefabID)
@@ -603,7 +616,45 @@ namespace flex
 			}
 		}
 
-		m_Inventory.push_back(GameObjectStack{ prefabID, count });
+		i32 inventorySlot = GetNextFreeQuickAccessInventorySlot();
+		if (inventorySlot != -1)
+		{
+			m_QuickAccessInventory[inventorySlot] = GameObjectStack{ prefabID, count };
+		}
+		else
+		{
+			inventorySlot = GetNextFreeInventorySlot();
+			if (inventorySlot != -1)
+			{
+				m_Inventory[inventorySlot] = GameObjectStack{ prefabID, count };
+			}
+		}
+	}
+
+	i32 Player::GetNextFreeQuickAccessInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
+		{
+			if (m_QuickAccessInventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	i32 Player::GetNextFreeInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_Inventory.size(); ++i)
+		{
+			if (m_Inventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	bool Player::IsRidingTrack()

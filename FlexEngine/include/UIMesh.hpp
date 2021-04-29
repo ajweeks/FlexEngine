@@ -10,6 +10,7 @@
 namespace flex
 {
 	struct JSONObject;
+	struct GameObjectStack;
 
 	struct Rect
 	{
@@ -39,7 +40,8 @@ namespace flex
 		_NONE
 	};
 
-	static const char* RectCutTypeStrings[] = {
+	static const char* RectCutTypeStrings[] =
+	{
 		"Left",
 		"Right",
 		"Top",
@@ -48,7 +50,17 @@ namespace flex
 		"NONE"
 	};
 
+	static_assert((ARRAY_LENGTH(RectCutTypeStrings) - 1) == (u32)RectCutType::_NONE, "RectCutTypeStrings length did not match RectCutType enum");
+
 	RectCutType RectCutTypeFromString(const char* cutTypeStr);
+
+	enum class RectCutResult
+	{
+		REMOVE,
+		DUPLICATE,
+		CHANGE_SELF_TYPE,
+		DO_NOTHING
+	};
 
 	enum class UIElementType
 	{
@@ -107,24 +119,51 @@ namespace flex
 		StringID fontID;
 	};
 
+	enum class UIContainerType
+	{
+		BASE,
+		ITEM,
+
+		_NONE
+	};
+
+	static const char* UIContainerTypeStrings[] =
+	{
+		"Base",
+		"Item",
+
+		"NONE"
+	};
+
+	static_assert((ARRAY_LENGTH(UIContainerTypeStrings) - 1) == (u32)UIContainerType::_NONE, "UIContainerTypeStrings length did not match UIContainerType enum");
+
+	UIContainerType UIContainerTypeFromString(const char* str);
+
 	struct UIContainer
 	{
-		UIContainer()
+		UIContainer(UIContainerType type = UIContainerType::BASE) :
+			type(type)
 		{
 		}
 
-		UIContainer(RectCutType cutType, real amount, bool bVisible, bool bRelative,
-			StringID tag, const std::vector<UIContainer*>& children) :
+		UIContainer(RectCutType cutType,
+			real amount,
+			bool bVisible,
+			bool bRelative,
+			StringID tag,
+			const std::vector<UIContainer*>& children,
+			UIContainerType type = UIContainerType::BASE) :
 			cutType(cutType),
 			amount(amount),
 			bVisible(bVisible),
 			bRelative(bRelative),
 			tag(tag),
-			children(children)
+			children(children),
+			type(type)
 		{
 		}
 
-		~UIContainer()
+		virtual ~UIContainer()
 		{
 			delete uiElement;
 			uiElement = nullptr;
@@ -143,6 +182,10 @@ namespace flex
 
 		UIContainer* Duplicate();
 
+		virtual void Update();
+
+		RectCutResult DrawImGui(bool& bDirtyFlag, const char* optionalTreeNodeName = nullptr);
+
 		RectCutType cutType = RectCutType::_NONE;
 		real amount = 0.0f;
 		bool bVisible = true;
@@ -150,6 +193,7 @@ namespace flex
 		bool bHighlighted = false;
 		std::string tagSourceStr; // Editor only
 		StringID tag = InvalidStringID;
+		UIContainerType type = UIContainerType::_NONE;
 
 		UIElement* uiElement = nullptr;
 
@@ -158,20 +202,32 @@ namespace flex
 		Rect Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour);
 		glm::vec4 GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const;
 		JSONObject Serialize() const;
-		static void Deserialize(const JSONObject& object, UIContainer* uiContainer);
+		static UIContainer* Deserialize(const JSONObject& object);
+	};
+
+	struct ItemUIContainer : public UIContainer
+	{
+		ItemUIContainer() :
+			UIContainer(UIContainerType::ITEM)
+		{
+		}
+
+		ItemUIContainer(RectCutType cutType, real amount, bool bVisible, bool bRelative,
+			StringID tag, const std::vector<UIContainer*>& children, GameObjectStack* stack) :
+			UIContainer(cutType, amount, bVisible, bRelative, tag, children, UIContainerType::ITEM),
+			stack(stack)
+		{
+		}
+
+		virtual void Update() override;
+
+		GameObjectStack* stack = nullptr;
 	};
 
 	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour);
 	Rect CutRight(Rect* rect, real amount, bool bRelative, const glm::vec4& colour);
 	Rect CutTop(Rect* rect, real amount, bool bRelative, const glm::vec4& colour);
 	Rect CutBottom(Rect* rect, real amount, bool bRelative, const glm::vec4& colour);
-
-	enum class RectCutResult
-	{
-		REMOVE,
-		DUPLICATE,
-		DO_NOTHING
-	};
 
 	class UIMesh final
 	{
@@ -199,8 +255,6 @@ namespace flex
 		bool IsSubmeshActive(i32 submeshIndex);
 
 		glm::vec2 GetUVBlendAmount(i32 drawIndex);
-
-		RectCutResult DrawImGuiRectCut(UIContainer* rectCut, bool& bDirtyFlag, const char* optionalTreeNodeName = nullptr);
 
 		static void ComputeRects(UIContainer* parent, Rect& rootRect, std::vector<Rect>& outputRects, const glm::vec4& normalColour, const glm::vec4& highlightedColour);
 

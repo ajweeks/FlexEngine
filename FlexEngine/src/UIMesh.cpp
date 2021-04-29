@@ -18,7 +18,25 @@ namespace flex
 {
 	UIContainer* UIContainer::Duplicate()
 	{
-		UIContainer* newUIContainer = new UIContainer(cutType, amount, bVisible, bRelative, tag, children);
+		UIContainer* newUIContainer;
+
+		switch (type)
+		{
+		case UIContainerType::BASE:
+		{
+			newUIContainer = new UIContainer(cutType, amount, bVisible, bRelative, tag, children);
+		} break;
+		case UIContainerType::ITEM:
+		{
+			newUIContainer = new ItemUIContainer(cutType, amount, bVisible, bRelative, tag, children, ((ItemUIContainer*)this)->stack);
+		} break;
+		default:
+		{
+			ENSURE_NO_ENTRY();
+			return nullptr;
+		} break;
+		}
+
 		newUIContainer->tagSourceStr = tagSourceStr;
 
 		if (uiElement != nullptr)
@@ -48,6 +66,140 @@ namespace flex
 		}
 
 		return newUIContainer;
+	}
+
+	void UIContainer::Update()
+	{
+	}
+
+	RectCutResult UIContainer::DrawImGui(bool& bDirtyFlag, const char* optionalTreeNodeName /* = nullptr */)
+	{
+		bool bRemoveSelf = false;
+		bool bDuplicateSelf = false;
+		bool bChangeSelfType = false;
+
+		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIContainer");
+
+		bHighlighted = ImGui::IsItemHovered();
+
+		if (ImGui::BeginPopupContextItem(nullptr))
+		{
+			if (ImGui::Button("Duplicate"))
+			{
+				bDuplicateSelf = true;
+			}
+			ImGui::EndPopup();
+		}
+
+		if (bTreeOpen)
+		{
+			if (ImGui::BeginCombo("##type", UIContainerTypeStrings[(i32)type]))
+			{
+				for (u32 i = 0; i < (u32)ARRAY_LENGTH(UIContainerTypeStrings) - 1; ++i)
+				{
+					bool bSelected = (i == (u32)type);
+					if (ImGui::Selectable(UIContainerTypeStrings[i], &bSelected))
+					{
+						type = (UIContainerType)i;
+						bDirtyFlag = true;
+						bChangeSelfType = true;
+					}
+
+				}
+				ImGui::EndCombo();
+			}
+
+			if (ImGui::BeginCombo("##cutType", RectCutTypeStrings[(i32)cutType]))
+			{
+				for (u32 i = 0; i < (u32)ARRAY_LENGTH(RectCutTypeStrings) - 1; ++i)
+				{
+					bool bSelected = (i == (u32)cutType);
+					if (ImGui::Selectable(RectCutTypeStrings[i], &bSelected))
+					{
+						cutType = (RectCutType)i;
+						bDirtyFlag = true;
+					}
+
+				}
+				ImGui::EndCombo();
+			}
+
+			bDirtyFlag = ImGui::SliderFloat("##amount", &amount, 0.0f, 1.0f) || bDirtyFlag;
+
+			bDirtyFlag = ImGui::Checkbox("Visible", &bVisible) || bDirtyFlag;
+
+			ImGui::SameLine();
+
+			bDirtyFlag = ImGui::Checkbox("Relative", &bRelative) || bDirtyFlag;
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("-"))
+			{
+				bRemoveSelf = true;
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("+"))
+			{
+				children.emplace_back(new UIContainer(RectCutType::TOP, 0.5f, false, true, InvalidStringID, {}));
+				bDirtyFlag = true;
+			}
+
+			tagSourceStr.resize(256);
+			if (ImGui::InputText("Tag", (char*)tagSourceStr.c_str(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				tagSourceStr = std::string(tagSourceStr.c_str());
+				tag = Hash(tagSourceStr.c_str());
+				bDirtyFlag = true;
+			}
+
+			for (i32 i = 0; i < (i32)children.size(); ++i)
+			{
+				ImGui::PushID(i);
+				RectCutResult result = children[i]->DrawImGui(bDirtyFlag);
+				ImGui::PopID();
+
+				if (result == RectCutResult::REMOVE)
+				{
+					children.erase(children.begin() + i);
+					bDirtyFlag = true;
+					--i;
+				}
+				else if (result == RectCutResult::DUPLICATE)
+				{
+					children.emplace(children.begin() + i, children[i]->Duplicate());
+					bDirtyFlag = true;
+				}
+				else if (result == RectCutResult::CHANGE_SELF_TYPE)
+				{
+					UIContainer* oldUIContainer = children[i];
+
+					// type will have already been changed to new value
+					UIContainer* newUIContainer = oldUIContainer->Duplicate();
+
+					children[i] = newUIContainer;
+					delete oldUIContainer;
+				}
+			}
+			ImGui::TreePop();
+		}
+
+		if (bRemoveSelf)
+		{
+			return RectCutResult::REMOVE;
+		}
+		if (bDuplicateSelf)
+		{
+			return RectCutResult::DUPLICATE;
+		}
+		if (bChangeSelfType)
+		{
+			return RectCutResult::CHANGE_SELF_TYPE;
+		}
+
+		return RectCutResult::DO_NOTHING;
 	}
 
 	Rect UIContainer::Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
@@ -80,6 +232,7 @@ namespace flex
 	{
 		JSONObject result = {};
 
+		result.fields.emplace_back("type", JSONValue(UIContainerTypeStrings[(i32)type]));
 		result.fields.emplace_back("cut type", JSONValue(RectCutTypeStrings[(i32)cutType]));
 		result.fields.emplace_back("amount", JSONValue(amount));
 		result.fields.emplace_back("visible", JSONValue(bVisible));
@@ -110,8 +263,32 @@ namespace flex
 		return result;
 	}
 
-	void UIContainer::Deserialize(const JSONObject& object, UIContainer* uiContainer)
+	UIContainer* UIContainer::Deserialize(const JSONObject& object)
 	{
+		UIContainer* uiContainer;
+
+		UIContainerType containerType = UIContainerType::BASE;
+
+		std::string containerTypeStr;
+		if (object.TryGetString("type", containerTypeStr))
+		{
+			containerType = UIContainerTypeFromString(containerTypeStr.c_str());
+		}
+
+		if (containerType == UIContainerType::BASE)
+		{
+			uiContainer = new UIContainer(containerType);
+		}
+		else if (containerType == UIContainerType::ITEM)
+		{
+			uiContainer = new ItemUIContainer();
+		}
+		else
+		{
+			ENSURE_NO_ENTRY();
+			return nullptr;
+		}
+
 		std::string cutTypeStr;
 		if (object.TryGetString("cut type", cutTypeStr))
 		{
@@ -129,8 +306,30 @@ namespace flex
 			uiContainer->children.resize(childrenObjects.size());
 			for (u32 i = 0; i < (u32)childrenObjects.size(); ++i)
 			{
-				uiContainer->children[i] = new UIContainer();
-				UIContainer::Deserialize(childrenObjects[i], uiContainer->children[i]);
+				uiContainer->children[i] = UIContainer::Deserialize(childrenObjects[i]);
+			}
+		}
+
+		return uiContainer;
+	}
+
+	void ItemUIContainer::Update()
+	{
+		UIContainer::Update();
+
+		if (stack != nullptr && stack->count > 0)
+		{
+			if (uiElement == nullptr)
+			{
+				uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
+			}
+		}
+		else
+		{
+			if (uiElement != nullptr)
+			{
+				delete uiElement;
+				uiElement = nullptr;
 			}
 		}
 	}
@@ -146,6 +345,19 @@ namespace flex
 		}
 
 		return RectCutType::_NONE;
+	}
+
+	UIContainerType UIContainerTypeFromString(const char* str)
+	{
+		for (u32 i = 0; i < (u32)UIContainerType::_NONE; ++i)
+		{
+			if (strcmp(UIContainerTypeStrings[i], str) == 0)
+			{
+				return (UIContainerType)i;
+			}
+		}
+
+		return UIContainerType::_NONE;
 	}
 
 	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
@@ -435,12 +647,14 @@ namespace flex
 		outputRects.push_back(parent->Cut(&rootRect, normalColour, highlightedColour));
 		i32 newRectIndex = (i32)outputRects.size() - 1;
 
-		if (parent->bHighlighted)
+		if (parent->bHighlighted && parent->bVisible)
 		{
-			// Grow highlighted rects
+			// Grow when highlighted
 			real growFactor = 1.05f;
 			outputRects[newRectIndex].Scale(growFactor);
 		}
+
+		parent->Update();
 
 		if (parent->uiElement != nullptr)
 		{
@@ -510,96 +724,6 @@ namespace flex
 				mesh->GetSubMesh(i)->UpdateDynamicVertexData(drawData->vertexBufferCreateInfo, drawData->indexBuffer);
 			}
 		}
-	}
-
-	RectCutResult UIMesh::DrawImGuiRectCut(UIContainer* rectCut, bool& bDirtyFlag, const char* optionalTreeNodeName /* = nullptr */)
-	{
-		bool bRemoveSelf = false;
-		bool bDuplicateSelf = false;
-
-		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIContainer");
-
-		rectCut->bHighlighted = ImGui::IsItemHovered();
-
-		if (ImGui::BeginPopupContextItem(nullptr))
-		{
-			if (ImGui::Button("Duplicate"))
-			{
-				bDuplicateSelf = true;
-			}
-			ImGui::EndPopup();
-		}
-
-		if (bTreeOpen)
-		{
-			if (ImGui::BeginCombo("##cutType", RectCutTypeStrings[(i32)rectCut->cutType]))
-			{
-				for (u32 i = 0; i < (u32)ARRAY_LENGTH(RectCutTypeStrings); ++i)
-				{
-					bool bSelected = (i == (u32)rectCut->cutType);
-					if (ImGui::Selectable(RectCutTypeStrings[i], &bSelected))
-					{
-						rectCut->cutType = (RectCutType)i;
-						bDirtyFlag = true;
-					}
-
-				}
-				ImGui::EndCombo();
-			}
-
-			bDirtyFlag = ImGui::SliderFloat("##amount", &rectCut->amount, 0.0f, 1.0f) || bDirtyFlag;
-
-			bDirtyFlag = ImGui::Checkbox("Visible", &rectCut->bVisible) || bDirtyFlag;
-
-			ImGui::SameLine();
-
-			bDirtyFlag = ImGui::Checkbox("Relative", &rectCut->bRelative) || bDirtyFlag;
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("-"))
-			{
-				bRemoveSelf = true;
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("+"))
-			{
-				rectCut->children.emplace_back(new UIContainer(RectCutType::TOP, 0.5f, false, true, InvalidStringID, {}));
-				bDirtyFlag = true;
-			}
-
-			rectCut->tagSourceStr.resize(256);
-			if (ImGui::InputText("Tag", (char*)rectCut->tagSourceStr.c_str(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				rectCut->tagSourceStr = std::string(rectCut->tagSourceStr.c_str());
-				rectCut->tag = Hash(rectCut->tagSourceStr.c_str());
-				bDirtyFlag = true;
-			}
-
-			for (i32 i = 0; i < (i32)rectCut->children.size(); ++i)
-			{
-				ImGui::PushID(i);
-				RectCutResult result = DrawImGuiRectCut(rectCut->children[i], bDirtyFlag);
-				ImGui::PopID();
-
-				if (result == RectCutResult::REMOVE)
-				{
-					rectCut->children.erase(rectCut->children.begin() + i);
-					bDirtyFlag = true;
-					--i;
-				}
-				else if (result == RectCutResult::DUPLICATE)
-				{
-					rectCut->children.emplace(rectCut->children.begin() + i, rectCut->children[i]->Duplicate());
-					bDirtyFlag = true;
-				}
-			}
-			ImGui::TreePop();
-		}
-
-		return bRemoveSelf ? RectCutResult::REMOVE : (bDuplicateSelf ? RectCutResult::DUPLICATE : RectCutResult::DO_NOTHING);
 	}
 
 	void UIMesh::EndFrame()

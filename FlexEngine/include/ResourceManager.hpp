@@ -181,7 +181,7 @@ namespace flex
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
 
-		bool ParseUIConfig(const char* filePath, UIContainer* uiContainer);
+		UIContainer* ParseUIConfig(const char* filePath);
 		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
 
 		std::string m_FontsFilePathAbs;
