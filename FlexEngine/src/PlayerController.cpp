@@ -67,12 +67,11 @@ namespace flex
 
 	void PlayerController::Update()
 	{
-		if (m_bCaptureMouseMode &&
-			m_Player->m_bPossessed &&
+		if (m_Player->m_bPossessed &&
 			g_Window->HasFocus() &&
 			!g_EngineInstance->IsSimulationPaused())
 		{
-			g_Window->SetCursorMode(CursorMode::DISABLED);
+			g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
 		}
 
 		// TODO: Make frame-rate-independent!
@@ -397,12 +396,12 @@ namespace flex
 			{
 				m_bAttemptPlaceItemFromInventory = false;
 
-				if (m_Player->m_HeldItemSlot == -1)
+				if (m_Player->heldItemSlot == -1)
 				{
-					m_Player->m_HeldItemSlot = 0;
+					m_Player->heldItemSlot = 0;
 				}
 
-				GameObjectStack& gameObjectStack = m_Player->m_Inventory[m_Player->m_HeldItemSlot];
+				GameObjectStack& gameObjectStack = m_Player->m_Inventory[m_Player->heldItemSlot];
 
 				if (gameObjectStack.count >= 1)
 				{
@@ -417,7 +416,7 @@ namespace flex
 
 							if (gameObjectStack.count == 0)
 							{
-								m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->m_HeldItemSlot);
+								m_Player->m_Inventory.erase(m_Player->m_Inventory.begin() + m_Player->heldItemSlot);
 							}
 						}
 						else
@@ -709,6 +708,13 @@ namespace flex
 		{
 			if (actionEvent == ActionEvent::TRIGGER)
 			{
+				if (action == Action::SHOW_INVENTORY)
+				{
+					m_Player->bInventoryShowing = !m_Player->bInventoryShowing;
+					g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
+					return EventReply::CONSUMED;
+				}
+
 				if (action == Action::PAUSE)
 				{
 					g_EngineInstance->SetSimulationPaused(!g_EngineInstance->IsSimulationPaused());
@@ -810,7 +816,7 @@ namespace flex
 
 	EventReply PlayerController::OnMouseMovedEvent(const glm::vec2& dMousePos)
 	{
-		if (m_bCaptureMouseMode && g_Window->HasFocus())
+		if (m_Player != nullptr && !m_Player->bInventoryShowing && g_Window->HasFocus())
 		{
 			bool bInteractingWithTerminal = false;
 			bool bInteractingWithVehicle = false;

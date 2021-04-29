@@ -21,5 +21,5 @@ void main()
 	fragmentColour = ex_Colour;
 	// Anti-alias edges
 	vec2 edges = clamp((vec2(1.0)-abs(ex_TexCoord-vec2(0.5))*vec2(2.0)) / uboDynamic.uvBlendAmount, vec2(0.0), vec2(1.0));
-	fragmentColour.a = min(edges.x, edges.y);
+	fragmentColour.a *= min(edges.x, edges.y);
 }

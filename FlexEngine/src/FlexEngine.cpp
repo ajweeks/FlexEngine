@@ -1086,6 +1086,7 @@ namespace flex
 				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
 				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("UI Editor", nullptr, &g_Renderer->bUIEditorShowing);
 				ImGui::Separator();
 				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
 				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);

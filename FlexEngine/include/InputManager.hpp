@@ -11,6 +11,7 @@ namespace flex
 	class ICallbackMouseMoved;
 	class ICallbackKeyEvent;
 	class ICallbackAction;
+	enum class CursorMode;
 
 	/*
 	* There are three main ways of retrieving input:
@@ -105,6 +106,7 @@ namespace flex
 		void DrawImGuiKeyMapper(bool* bOpen);
 
 		void OnWindowFocusChanged(bool bNowFocused);
+		void OnCursorModeChanged(CursorMode newMode);
 
 		static char GetShiftModifiedKeyCode(char c);
 

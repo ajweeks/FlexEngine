@@ -94,7 +94,9 @@ namespace flex
 		TrackState m_TrackState;
 
 		std::vector<GameObjectStack> m_Inventory;
-		i32 m_HeldItemSlot = -1;
+		std::vector<GameObjectStack> m_QuickAccessInventory;
+		bool bInventoryShowing = false;
+		i32 heldItemSlot = -1;
 		//GameObject* m_HeldItem = nullptr;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;

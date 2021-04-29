@@ -464,6 +464,7 @@ namespace flex
 		PICKUP_ITEM,
 
 		// Inventory
+		SHOW_INVENTORY,
 		TOGGLE_ITEM_HOLDING,
 
 		// Vehicle
@@ -536,6 +537,7 @@ namespace flex
 		"Pickup Item",
 
 		// Inventory
+		"Show inventory",
 		"Toggle holding item",
 
 		// Vehicle

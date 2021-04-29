@@ -323,6 +323,7 @@ namespace flex
 
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
+		bool bUIEditorShowing = false;
 
 		static const u32 MAX_PARTICLE_COUNT = 65536;
 		static const u32 PARTICLES_PER_DISPATCH = 256;

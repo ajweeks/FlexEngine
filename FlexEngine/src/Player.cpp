@@ -300,17 +300,12 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			//ImGui::Text("Held item: %s", m_HeldItem != nullptr ? m_HeldItem->GetName().c_str() : "");
+			ImGui::Text("Held item slot: %i", heldItemSlot);
 
 			ImGui::Text("Inventory:");
 			ImGui::Indent();
 			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
-				//if (gameObject == m_HeldItem)
-				//{
-				//	ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
-				//}
-
 				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 				if (prefabTemplate != nullptr)
 				{
@@ -323,11 +318,36 @@ namespace flex
 					ImGui::Text("INVALID (%i)", gameObjectStack.count);
 					ImGui::PopStyleColor();
 				}
+			}
+			ImGui::Unindent();
 
-				//if (gameObject == m_HeldItem)
-				//{
-				//	ImGui::PopStyleColor();
-				//}
+			ImGui::Text("Quick access inventory:");
+			ImGui::Indent();
+			for (i32 i = 0;i < (i32)m_QuickAccessInventory.size(); ++i)
+			{
+				const bool bHeld = (i == heldItemSlot);
+				if (bHeld)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				}
+
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QuickAccessInventory[i].prefabID);
+				if (prefabTemplate != nullptr)
+				{
+					std::string prefabTemplateName = prefabTemplate->GetName();
+					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), m_QuickAccessInventory[i].count);
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, bHeld ? ImVec4(0.7f, 0.7f, 0.7f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1));
+					ImGui::Text("Empty");
+					ImGui::PopStyleColor();
+				}
+
+				if (bHeld)
+				{
+					ImGui::PopStyleColor();
+				}
 			}
 			ImGui::Unindent();
 

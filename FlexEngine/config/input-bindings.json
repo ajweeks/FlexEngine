@@ -179,6 +179,16 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Show inventory" : 
+	{
+		"key code" : 52,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Toggle holding item" : 
 	{
 		"key code" : 0,

@@ -113,7 +113,11 @@ namespace flex
 
 	void Window::SetCursorMode(CursorMode mode)
 	{
-		m_CursorMode = mode;
+		if (m_CursorMode != mode)
+		{
+			m_CursorMode = mode;
+			g_InputManager->OnCursorModeChanged(mode);
+		}
 	}
 
 	WindowMode Window::GetWindowMode()

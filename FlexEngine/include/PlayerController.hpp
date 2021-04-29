@@ -61,8 +61,6 @@ namespace flex
 
 		TurningDir m_DirTurning = TurningDir::NONE;
 
-		bool m_bCaptureMouseMode = true;
-
 		bool m_bAttemptCompleteTrack = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
 		bool m_bAttemptInteract = false;

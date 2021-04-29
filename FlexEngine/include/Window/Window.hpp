@@ -8,9 +8,9 @@ namespace flex
 {
 	enum class CursorMode
 	{
-		NORMAL,
-		HIDDEN,
-		DISABLED,
+		NORMAL, // Show
+		HIDDEN, // Hide, but don't restrict movement
+		DISABLED, // Hide and keep within screen bounds
 
 		_NONE
 	};

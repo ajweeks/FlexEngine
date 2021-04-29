@@ -4,6 +4,10 @@
 
 #include "Graphics/Renderer.hpp"
 #include "Profiler.hpp"
+#include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "JSONParser.hpp"
+#include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -13,6 +17,121 @@
 
 namespace flex
 {
+	Rect UIScreen::Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
+	{
+		glm::vec4 colour = GetColour(normalColour, highlightedColour);
+
+		switch (cutType)
+		{
+		case RectCutType::LEFT: return CutLeft(rect, amount, bRelative, colour);
+		case RectCutType::RIGHT: return CutRight(rect, amount, bRelative, colour);
+		case RectCutType::TOP: return CutTop(rect, amount, bRelative, colour);
+		case RectCutType::BOTTOM: return CutBottom(rect, amount, bRelative, colour);
+		}
+
+		PrintError("Unhandled rect cut type\n");
+		return {};
+	}
+
+	glm::vec4 UIScreen::GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const
+	{
+		glm::vec4 colour = bHighlighted ? highlightedColour : normalColour;
+		if (!bVisible)
+		{
+			colour.a = bHighlighted ? 0.2f : 0.0f;
+		}
+		return colour;
+	}
+
+	JSONObject UIScreen::Serialize() const
+	{
+		JSONObject result = {};
+
+		result.fields.emplace_back("cut type", JSONValue(RectCutTypeStrings[(i32)cutType]));
+		result.fields.emplace_back("amount", JSONValue(amount));
+		result.fields.emplace_back("visible", JSONValue(bVisible));
+		result.fields.emplace_back("relative", JSONValue(bRelative));
+
+		if (!children.empty())
+		{
+			std::vector<JSONObject> childrenObjects;
+			childrenObjects.reserve(children.size());
+			for (const UIScreen& child : children)
+			{
+				childrenObjects.emplace_back(child.Serialize());
+			}
+			result.fields.emplace_back("children", JSONValue(childrenObjects));
+		}
+
+		return result;
+	}
+
+	UIScreen UIScreen::Deserialize(const JSONObject& object)
+	{
+		UIScreen result = {};
+
+		std::string cutTypeStr;
+		if (object.SetStringChecked("cut type", cutTypeStr))
+		{
+			result.cutType = RectCutTypeFromString(cutTypeStr.c_str());
+		}
+		object.SetFloatChecked("amount", result.amount);
+		object.SetBoolChecked("visible", result.bVisible);
+		object.SetBoolChecked("relative", result.bRelative);
+
+		std::vector<JSONObject> childrenObjects;
+		if (object.SetObjectArrayChecked("children", childrenObjects))
+		{
+			for (const JSONObject& childObj : childrenObjects)
+			{
+				result.children.emplace_back(UIScreen::Deserialize(childObj));
+			}
+		}
+
+		return result;
+	}
+
+	RectCutType RectCutTypeFromString(const char* cutTypeStr)
+	{
+		for (u32 i = 0; i < (u32)ARRAY_LENGTH(RectCutTypeStrings); ++i)
+		{
+			if (strcmp(cutTypeStr, RectCutTypeStrings[i]) == 0)
+			{
+				return (RectCutType)i;
+			}
+		}
+
+		return RectCutType::_NONE;
+	}
+
+	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
+	{
+		real minX = rect->minX;
+		rect->minX = glm::min(rect->maxX, rect->minX + amount * (bRelative ? (rect->maxX - rect->minX) : 1.0f));
+		return Rect{ minX, rect->minY, rect->minX, rect->maxY, colour };
+	}
+
+	Rect CutRight(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
+	{
+		real maxX = rect->maxX;
+		rect->maxX = glm::max(rect->minX, rect->maxX - amount * (bRelative ? (rect->maxX - rect->minX) : 1.0f));
+		return Rect{ rect->maxX, rect->minY, maxX, rect->maxY, colour };
+	}
+
+	Rect CutTop(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
+	{
+		real maxY = rect->maxY;
+		rect->maxY = glm::max(rect->minY, rect->maxY - amount * (bRelative ? (rect->maxY - rect->minY) : 1.0f));
+		return Rect{ rect->minX, rect->maxY, rect->maxX, maxY, colour };
+	}
+
+	Rect CutBottom(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
+	{
+		real minY = rect->minY;
+		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? (rect->maxY - rect->minY) : 1.0f));
+		return Rect{ rect->minX, minY, rect->maxX, rect->minY, colour };
+	}
+
 	UIMesh::UIMesh()
 	{
 	}
@@ -37,6 +156,8 @@ namespace flex
 		}
 
 		CreateDebugObject();
+
+		Deserialize();
 	}
 
 	void UIMesh::Destroy()
@@ -50,8 +171,60 @@ namespace flex
 		CreateDebugObject();
 	}
 
+	bool UIMesh::Deserialize()
+	{
+		std::string fileContents;
+		if (ReadFile(UI_CONFIG_FILE_LOCATION, fileContents, false))
+		{
+			JSONObject rootObject;
+			if (!JSONParser::Parse(fileContents, rootObject))
+			{
+				PrintError("Failed to parse UI config file at %s\n", UI_CONFIG_FILE_LOCATION);
+				return false;
+			}
+
+			JSONObject playerScreenObject;
+			if (rootObject.SetObjectChecked("player screen", playerScreenObject))
+			{
+				m_PlayerScreenUI = UIScreen::Deserialize(playerScreenObject);
+			}
+
+			JSONObject playerInventoryScreenObject;
+			if (rootObject.SetObjectChecked("player inventory screen", playerInventoryScreenObject))
+			{
+				m_PlayerInventoryUI = UIScreen::Deserialize(playerInventoryScreenObject);
+			}
+
+			m_bUIConfigDirty = false;
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void UIMesh::Serialize()
+	{
+		JSONObject rootObject = {};
+
+		rootObject.fields.emplace_back("player screen", JSONValue(m_PlayerScreenUI.Serialize()));
+		rootObject.fields.emplace_back("player inventory screen", JSONValue(m_PlayerInventoryUI.Serialize()));
+
+		std::string fileContents = rootObject.ToString();
+		if (!WriteFile(UI_CONFIG_FILE_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to write UI config file to %s\n", UI_CONFIG_FILE_LOCATION);
+		}
+		else
+		{
+			m_bUIConfigDirty = false;
+		}
+	}
+
 	void UIMesh::DrawRect(const glm::vec2& bottomLeft, const glm::vec2& topRight, const glm::vec4& colour, real cornerRadius)
 	{
+		FLEX_UNUSED(cornerRadius);
+
 		if (bottomLeft.x >= topRight.x || bottomLeft.y >= topRight.y)
 		{
 			PrintWarn("Invalid rect parameters, (bottom left, top right = (%.2f, %.2f), (%.2f,%.2f)\n",
@@ -199,9 +372,6 @@ namespace flex
 		const glm::vec4& colour,
 		const glm::vec2& uvBlendAmount)
 	{
-		// TODO: Search for existing draw data instance which hasn't been used yet this frame,
-		// ideally one that is large enough for this draw
-
 		Mesh* mesh = m_Object->GetMesh();
 
 		u32 vertCount = (u32)points.size();
@@ -268,71 +438,199 @@ namespace flex
 		}
 	}
 
+	void UIMesh::ComputeRects(UIScreen& parent, Rect& rootRect, std::vector<Rect>& outputRects, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
+	{
+		outputRects.push_back(parent.Cut(&rootRect, normalColour, highlightedColour));
+		i32 newRectIndex = (i32)outputRects.size() - 1;
+
+		for (i32 i = 0; i < (i32)parent.children.size(); ++i)
+		{
+			// newRect can't be cached by ref because vec resize is likely to occur
+			ComputeRects(parent.children[i], outputRects[newRectIndex], outputRects, normalColour, highlightedColour);
+		}
+	}
+
 	void UIMesh::Draw()
 	{
 		PROFILE_AUTO("UIMesh > Draw");
+
+		if (g_CameraManager->CurrentCamera()->bIsGameplayCam)
+		{
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+
+			if (player != nullptr)
+			{
+				// TODO: Preallocate room here for rect count
+				std::vector<Rect> rects;
+
+				static const glm::vec4 normalColour(0.9f, 0.9f, 0.9f, 1.0f);
+				static const glm::vec4 highlightedColour(1.0f, 1.0f, 1.0f, 1.0f);
+				static const glm::vec4 darkenedColour(0.3f, 0.3f, 0.3f, 0.5f);
+				static const glm::vec4 darkenedHighlightedColour(0.4f, 0.4f, 0.4f, 0.5f);
+
+				if (m_PlayerScreenUI.cutType != RectCutType::_NONE)
+				{
+					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					ComputeRects(m_PlayerScreenUI, rect, rects, normalColour, highlightedColour);
+				}
+
+				if (m_PlayerInventoryUI.cutType != RectCutType::_NONE &&
+					player->bInventoryShowing)
+				{
+					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					i32 inventoryUIRectIndex = (i32)rects.size();
+					ComputeRects(m_PlayerInventoryUI, rect, rects, normalColour, highlightedColour);
+					if (inventoryUIRectIndex < (i32)rects.size())
+					{
+						rects[inventoryUIRectIndex].colour = m_PlayerInventoryUI.GetColour(darkenedColour, darkenedHighlightedColour);
+					}
+				}
+
+				// TODO: Allow configurable margins (or use hidden rects)
+				real shrinkFactor = 0.01f;
+				for (i32 i = 0; i < (i32)rects.size(); ++i)
+				{
+					glm::vec4 colour = rects[i].colour;
+					if (colour.a != 0.0f)
+					{
+						DrawRect(
+							glm::vec2(rects[i].minX + shrinkFactor, rects[i].minY + shrinkFactor) * 2.0f - 1.0f,
+							glm::vec2(rects[i].maxX - shrinkFactor, rects[i].maxY - shrinkFactor) * 2.0f - 1.0f, colour, 0.0f);
+					}
+				}
+			}
+		}
 
 		Mesh* mesh = m_Object->GetMesh();
 
 		for (u32 i = 0; i < (u32)m_DrawData.size(); ++i)
 		{
 			DrawData const* drawData = m_DrawData[i];
-
-			//PROFILE_BEGIN("Hash vertex buffer");
-			//u32 oldHash = HashVertexBufferDataCreateInfo(drawData->vertexBufferCreateInfo);
-			//PROFILE_END("Hash vertex buffer");
-
-			//drawData.vertexBufferCreateInfo.positions_3D.clear();
-			//drawData.vertexBufferCreateInfo.colours_R32G32B32A32.clear();
-			//drawData.indexBuffer.clear();
-			//
-			//if (lineCount > 0)
-			//{
-			//	u32 numVerts = lineCount * 2;
-			//
-			//	if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
-			//	{
-			//		if (!m_VertexBufferCreateInfo.positions_3D.empty())
-			//		{
-			//			// Double in size when growing
-			//			numVerts = numVerts * 2;
-			//		}
-			//	}
-			//
-			//	drawData.vertexBufferCreateInfo.positions_3D.resize(numVerts);
-			//	drawData.vertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
-			//	drawData.indexBuffer.resize(numVerts);
-			//
-			//	i32 i = 0;
-			//	glm::vec3* posData = drawData.vertexBufferCreateInfo.positions_3D.data();
-			//	glm::vec4* colData = drawData.vertexBufferCreateInfo.colours_R32G32B32A32.data();
-			//	u32* idxData = indexBuffer.data();
-			//	for (u32 li = 0; li < lineCount; ++li)
-			//	{
-			//		memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
-			//		memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
-			//
-			//		memcpy(colData + i, m_LineSegments[li].colourFrom, sizeof(real) * 4);
-			//		memcpy(colData + i + 1, m_LineSegments[li].colourTo, sizeof(real) * 4);
-			//
-			//		u32 idx0 = li * 2;
-			//		u32 idx1 = li * 2 + 1;
-			//		memcpy(idxData + i, &idx0, sizeof(u32));
-			//		memcpy(idxData + i + 1, &idx1, sizeof(u32));
-			//
-			//		i += 2;
-			//	}
-			//}
-
-			//PROFILE_BEGIN("Hash vertex buffer");
-			//u32 newHash = HashVertexBufferDataCreateInfo(drawData->vertexBufferCreateInfo);
-			//PROFILE_END("Hash vertex buffer");
-
-			//if (newHash != oldHash)
+			if (drawData->bInUse)
 			{
 				mesh->GetSubMesh(i)->UpdateDynamicVertexData(drawData->vertexBufferCreateInfo, drawData->indexBuffer);
 			}
 		}
+	}
+
+	UIMesh::RectCutResult UIMesh::DrawImGuiRectCut(UIScreen& rectCut, const char* optionalTreeNodeName /* = nullptr */)
+	{
+		bool bRemoveSelf = false;
+		bool bDuplicateSelf = false;
+
+		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIScreen");
+
+		rectCut.bHighlighted = ImGui::IsItemHovered();
+
+		if (ImGui::BeginPopupContextItem(nullptr))
+		{
+			if (ImGui::Button("Duplicate"))
+			{
+				bDuplicateSelf = true;
+			}
+			ImGui::EndPopup();
+		}
+
+		if (bTreeOpen)
+		{
+			if (ImGui::BeginCombo("##cutType", RectCutTypeStrings[(i32)rectCut.cutType]))
+			{
+				for (u32 i = 0; i < (u32)ARRAY_LENGTH(RectCutTypeStrings); ++i)
+				{
+					bool bSelected = (i == (u32)rectCut.cutType);
+					if (ImGui::Selectable(RectCutTypeStrings[i], &bSelected))
+					{
+						rectCut.cutType = (RectCutType)i;
+						m_bUIConfigDirty = true;
+					}
+
+				}
+				ImGui::EndCombo();
+			}
+
+			m_bUIConfigDirty = ImGui::SliderFloat("##amount", &rectCut.amount, 0.0f, 1.0f) || m_bUIConfigDirty;
+
+			m_bUIConfigDirty = ImGui::Checkbox("Visible", &rectCut.bVisible) || m_bUIConfigDirty;
+
+			ImGui::SameLine();
+
+			m_bUIConfigDirty = ImGui::Checkbox("Relative", &rectCut.bRelative) || m_bUIConfigDirty;
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("-"))
+			{
+				bRemoveSelf = true;
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("+"))
+			{
+				rectCut.children.emplace_back(UIScreen(RectCutType::TOP, 0.5f, false, true, false, {}));
+				m_bUIConfigDirty = true;
+			}
+
+			for (i32 i = 0; i < (i32)rectCut.children.size(); ++i)
+			{
+				ImGui::PushID(i);
+				RectCutResult result = DrawImGuiRectCut(rectCut.children[i]);
+				ImGui::PopID();
+
+				if (result == RectCutResult::REMOVE)
+				{
+					rectCut.children.erase(rectCut.children.begin() + i);
+					m_bUIConfigDirty = true;
+					--i;
+				}
+				else if (result == RectCutResult::DUPLICATE)
+				{
+					rectCut.children.emplace(rectCut.children.begin() + i, rectCut.children[i]);
+					m_bUIConfigDirty = true;
+				}
+			}
+			ImGui::TreePop();
+		}
+
+		return bRemoveSelf ? RectCutResult::REMOVE : (bDuplicateSelf ? RectCutResult::DUPLICATE : RectCutResult::DO_NOTHING);
+	}
+
+	void UIMesh::DrawImGui(bool* bShowing)
+	{
+		if (ImGui::Begin("UI", bShowing))
+		{
+			if (ImGui::Button(m_bUIConfigDirty ? "Save*" : "Save"))
+			{
+				Serialize();
+			}
+
+			ImGui::SameLine();
+
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+				if (ImGui::Button("Reload"))
+				{
+					if (!Deserialize())
+					{
+						// There was no file to read, just clear data
+						m_PlayerScreenUI = {};
+						m_PlayerInventoryUI = {};
+					}
+				}
+
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+			}
+
+			DrawImGuiRectCut(m_PlayerScreenUI, "Player screen");
+			DrawImGuiRectCut(m_PlayerInventoryUI, "Player inventory");
+		}
+
+		ImGui::End();
 	}
 
 	void UIMesh::EndFrame()

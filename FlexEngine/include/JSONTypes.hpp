@@ -13,7 +13,10 @@ namespace flex
 
 	struct JSONObject
 	{
+
+		//
 		// TODO: Rename SetXChecked functions to TryGetX
+		//
 
 		bool HasField(const std::string& label) const;
 
