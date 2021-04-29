@@ -328,7 +328,7 @@ namespace flex
 		if (printSceneContentsToConsole)
 		{
 			Print("Parsed scene file:\n");
-			PrintLong(sceneRootObject.Print(0).c_str());
+			PrintLong(sceneRootObject.ToString().c_str());
 		}
 
 		if (!sceneRootObject.SetIntChecked("version", m_SceneFileVersion))
@@ -451,7 +451,7 @@ namespace flex
 			}
 			else
 			{
-				std::string firstFieldName = rootObjectJSON.fields.empty() ? std::string() : rootObjectJSON.fields[0].Print(0);
+				std::string firstFieldName = rootObjectJSON.fields.empty() ? std::string() : rootObjectJSON.fields[0].ToString(0);
 				PrintError("Failed to create game object from JSON object with first field %s\n", firstFieldName.c_str());
 			}
 		}
@@ -1911,7 +1911,7 @@ namespace flex
 
 		Print("Serializing scene to %s\n", m_FileName.c_str());
 
-		std::string fileContents = rootSceneObject.Print(0);
+		std::string fileContents = rootSceneObject.ToString();
 
 		const std::string defaultSaveFilePath = SCENE_DEFAULT_DIRECTORY + m_FileName;
 		const std::string savedSaveFilePath = SCENE_SAVED_DIRECTORY + m_FileName;

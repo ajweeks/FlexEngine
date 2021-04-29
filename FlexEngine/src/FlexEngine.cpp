@@ -1739,7 +1739,7 @@ namespace flex
 
 		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 
 		if (!WriteFile(m_CommonSettingsAbsFilePath, fileContents, false))
 		{
@@ -2110,7 +2110,7 @@ namespace flex
 	{
 		JSONObject rootObject;
 		rootObject.fields.emplace_back("lib path", JSONValue(dllDir));
-		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.Print(0), false);
+		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.ToString(), false);
 	}
 #endif // COMPILE_RENDERDOC_API
 

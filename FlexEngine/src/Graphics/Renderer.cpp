@@ -306,7 +306,7 @@ namespace flex
 		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
 		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
 		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 
 		if (WriteFile(m_RendererSettingsFilePathAbs, fileContents, false))
 		{

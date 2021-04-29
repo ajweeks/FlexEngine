@@ -270,7 +270,7 @@ namespace flex
 			// TODO: Add counter events (ph: c, args: {num: 99})
 			JSONObject traceEvents = {};
 			traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
-			std::string tracingObjectContents = traceEvents.Print(0);
+			std::string tracingObjectContents = traceEvents.ToString();
 			if (WriteFile(filePath, tracingObjectContents, false))
 			{
 				Print("Wrote tracing results to %s\n", filePath.c_str());

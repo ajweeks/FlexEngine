@@ -279,7 +279,7 @@ namespace flex
 		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
 		rootObject.fields.emplace_back("v-sync", JSONValue(m_bVSyncEnabled));
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 
 		if (!WriteFile(WINDOW_CONFIG_LOCATION, fileContents, false))
 		{

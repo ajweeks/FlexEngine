@@ -1839,7 +1839,7 @@ namespace flex
 
 		std::string inputBindingsFileName = StripLeadingDirectories(INPUT_BINDINGS_LOCATION);
 
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 		if (WriteFile(INPUT_BINDINGS_LOCATION, fileContents, false))
 		{
 			Print("Saved input bindings file to %s\n", inputBindingsFileName.c_str());

@@ -443,7 +443,7 @@ namespace flex
 		JSONObject fontSettings;
 		fontSettings.fields.emplace_back("fonts", JSONValue(fontObjs));
 
-		std::string fileContents = fontSettings.Print(0);
+		std::string fileContents = fontSettings.ToString();
 
 		if (!WriteFile(m_FontsFilePathAbs, fileContents, false))
 		{
@@ -506,7 +506,7 @@ namespace flex
 
 		materialsObj.fields.emplace_back("materials", JSONValue(materialJSONObjects));
 
-		std::string fileContents = materialsObj.Print(0);
+		std::string fileContents = materialsObj.ToString();
 
 		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
 		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
@@ -1106,7 +1106,7 @@ namespace flex
 		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
 		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
 
-		std::string fileContents = prefabJSON.Print(0);
+		std::string fileContents = prefabJSON.ToString();
 		if (WriteFile(path, fileContents, false))
 		{
 			prefabTemplatePair.bDirty = false;

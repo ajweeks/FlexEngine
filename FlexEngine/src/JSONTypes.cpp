@@ -453,7 +453,7 @@ namespace flex
 	{
 	}
 
-	std::string JSONField::Print(i32 tabCount) const
+	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + '\"' + label + "\" : ");
@@ -479,7 +479,7 @@ namespace flex
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
-				result += value.objectValue.fields[i].Print(tabCount + 1);
+				result += value.objectValue.fields[i].ToString(tabCount + 1);
 				if (i != value.objectValue.fields.size() - 1)
 				{
 					result += ",\n";
@@ -495,7 +495,7 @@ namespace flex
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
-				result += value.objectArrayValue[i].Print(tabCount + 1);
+				result += value.objectArrayValue[i].ToString(tabCount + 1);
 				if (i != value.objectArrayValue.size() - 1)
 				{
 					result += ",\n";
@@ -535,7 +535,7 @@ namespace flex
 		return result;
 	}
 
-	std::string JSONObject::Print(i32 tabCount) const
+	std::string JSONObject::ToString(i32 tabCount /* = 0 */) const
 	{
 		// TODO: Use StringBuilder in PrintFunctions
 		const std::string tabs(tabCount, '\t');
@@ -543,7 +543,7 @@ namespace flex
 
 		for (u32 i = 0; i < fields.size(); ++i)
 		{
-			result += fields[i].Print(tabCount + 1);
+			result += fields[i].ToString(tabCount + 1);
 			if (i != fields.size() - 1)
 			{
 				result += ",\n";

@@ -54,7 +54,7 @@ namespace flex
 		const JSONObject& GetObject(const std::string& label) const;
 		bool SetObjectChecked(const std::string& label, JSONObject& value) const;
 
-		std::string Print(i32 tabCount) const;
+		std::string ToString(i32 tabCount = 0) const;
 
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
@@ -119,6 +119,6 @@ namespace flex
 		std::string label;
 		JSONValue value;
 
-		std::string Print(i32 tabCount) const;
+		std::string ToString(i32 tabCount) const;
 	};
 } // namespace flex
