@@ -160,8 +160,8 @@ namespace flex
 
 	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
 	{
-		material.SetStringChecked("name", createInfoOut.name);
-		material.SetStringChecked("shader", createInfoOut.shaderName);
+		material.TryGetString("name", createInfoOut.name);
+		material.TryGetString("shader", createInfoOut.shaderName);
 
 		struct FilePathMaterialParam
 		{
@@ -188,35 +188,35 @@ namespace flex
 			}
 		}
 
-		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("enable emissive sampler", createInfoOut.enableEmissiveSampler);
-		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
-		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
-		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
-		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
-		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
-		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
-		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
-		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
-		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
-		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
-		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
-		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
-		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
+		material.TryGetBool("enable albedo sampler", createInfoOut.enableAlbedoSampler);
+		material.TryGetBool("enable emissive sampler", createInfoOut.enableEmissiveSampler);
+		material.TryGetBool("enable metallic sampler", createInfoOut.enableMetallicSampler);
+		material.TryGetBool("enable roughness sampler", createInfoOut.enableRoughnessSampler);
+		material.TryGetBool("enable normal sampler", createInfoOut.enableNormalSampler);
+		material.TryGetBool("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
+		material.TryGetBool("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
+		material.TryGetBool("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
+		material.TryGetBool("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
+		material.TryGetBool("enable brdf lut", createInfoOut.enableBRDFLUT);
+		material.TryGetBool("render to cubemap", createInfoOut.renderToCubemap);
+		material.TryGetBool("enable cubemap sampler", createInfoOut.enableCubemapSampler);
+		material.TryGetBool("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
+		material.TryGetBool("generate cubemap sampler", createInfoOut.generateCubemapSampler);
+		material.TryGetBool("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
+		material.TryGetBool("generate prefiltered map", createInfoOut.generatePrefilteredMap);
+		material.TryGetBool("enable prefiltered map", createInfoOut.enablePrefilteredMap);
+		material.TryGetBool("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
 
-		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
-		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
-		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.SetVec4Checked("colour multiplier", createInfoOut.colourMultiplier);
-		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
-		material.SetVec3Checked("const emissive", createInfoOut.constEmissive);
-		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
-		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
+		material.TryGetVec2("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
+		material.TryGetVec2("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
+		material.TryGetVec2("generated cubemap size", createInfoOut.generatedCubemapSize);
+		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
+		material.TryGetVec3("const albedo", createInfoOut.constAlbedo);
+		material.TryGetVec3("const emissive", createInfoOut.constEmissive);
+		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
+		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 
-		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
+		material.TryGetFloat("texture scale", createInfoOut.textureScale);
 	}
 
 	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
@@ -225,7 +225,7 @@ namespace flex
 		if (fileVersion >= 3)
 		{
 			std::vector<JSONField> materialNames;
-			if (object.SetFieldArrayChecked("materials", materialNames))
+			if (object.TryGetFieldArray("materials", materialNames))
 			{
 				for (const JSONField& materialNameField : materialNames)
 				{
@@ -262,7 +262,7 @@ namespace flex
 		{
 			MaterialID materialID = InvalidMaterialID;
 			std::string materialName;
-			if (object.SetStringChecked("material", materialName))
+			if (object.TryGetString("material", materialName))
 			{
 				if (!materialName.empty())
 				{

@@ -331,49 +331,49 @@ namespace flex
 			PrintLong(sceneRootObject.ToString().c_str());
 		}
 
-		if (!sceneRootObject.SetIntChecked("version", m_SceneFileVersion))
+		if (!sceneRootObject.TryGetInt("version", m_SceneFileVersion))
 		{
 			m_SceneFileVersion = 1;
 			PrintError("Scene version missing from scene file. Assuming version 1\n");
 		}
 
-		sceneRootObject.SetStringChecked("name", m_Name);
+		sceneRootObject.TryGetString("name", m_Name);
 
 		// TODO: Serialize player's game object ID
-		sceneRootObject.SetBoolChecked("spawn player", m_bSpawnPlayer);
+		sceneRootObject.TryGetBool("spawn player", m_bSpawnPlayer);
 
-		if (!sceneRootObject.SetGUIDChecked("player 0 guid", m_PlayerGUIDs[0]))
+		if (!sceneRootObject.TryGetGUID("player 0 guid", m_PlayerGUIDs[0]))
 		{
 			m_PlayerGUIDs[0] = InvalidGameObjectID;
 		}
-		if (!sceneRootObject.SetGUIDChecked("player 1 guid", m_PlayerGUIDs[1]))
+		if (!sceneRootObject.TryGetGUID("player 1 guid", m_PlayerGUIDs[1]))
 		{
 			m_PlayerGUIDs[1] = InvalidGameObjectID;
 		}
 
 		//JSONObject skyboxDataObj;
-		//if (sceneRootObject.SetObjectChecked("skybox data", skyboxDataObj))
+		//if (sceneRootObject.TryGetObject("skybox data", skyboxDataObj))
 		//{
 		//	// TODO: Add SetGammaColourChecked
-		//	if (skyboxDataObj.SetVec4Checked("top colour", m_SkyboxData.top))
+		//	if (skyboxDataObj.TryGetVec4("top colour", m_SkyboxData.top))
 		//	{
 		//		m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
 		//	}
-		//	if (skyboxDataObj.SetVec4Checked("mid colour", m_SkyboxData.mid))
+		//	if (skyboxDataObj.TryGetVec4("mid colour", m_SkyboxData.mid))
 		//	{
 		//		m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
 		//	}
-		//	if (skyboxDataObj.SetVec4Checked("btm colour", m_SkyboxData.btm))
+		//	if (skyboxDataObj.TryGetVec4("btm colour", m_SkyboxData.btm))
 		//	{
 		//		m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
 		//	}
 		//}
 
 		JSONObject cameraObj;
-		if (sceneRootObject.SetObjectChecked("camera", cameraObj))
+		if (sceneRootObject.TryGetObject("camera", cameraObj))
 		{
 			std::string camType;
-			if (cameraObj.SetStringChecked("type", camType))
+			if (cameraObj.TryGetString("type", camType))
 			{
 				if (camType.compare("terminal") == 0)
 				{
@@ -389,14 +389,14 @@ namespace flex
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 
 			real zNear, zFar, fov, aperture, shutterSpeed, lightSensitivity, exposure, moveSpeed;
-			if (cameraObj.SetFloatChecked("near plane", zNear)) cam->zNear = zNear;
-			if (cameraObj.SetFloatChecked("far plane", zFar)) cam->zFar = zFar;
-			if (cameraObj.SetFloatChecked("fov", fov)) cam->FOV = fov;
-			if (cameraObj.SetFloatChecked("aperture", aperture)) cam->aperture = aperture;
-			if (cameraObj.SetFloatChecked("shutter speed", shutterSpeed)) cam->shutterSpeed = shutterSpeed;
-			if (cameraObj.SetFloatChecked("light sensitivity", lightSensitivity)) cam->lightSensitivity = lightSensitivity;
-			if (cameraObj.SetFloatChecked("exposure", exposure)) cam->exposure = exposure;
-			if (cameraObj.SetFloatChecked("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
+			if (cameraObj.TryGetFloat("near plane", zNear)) cam->zNear = zNear;
+			if (cameraObj.TryGetFloat("far plane", zFar)) cam->zFar = zFar;
+			if (cameraObj.TryGetFloat("fov", fov)) cam->FOV = fov;
+			if (cameraObj.TryGetFloat("aperture", aperture)) cam->aperture = aperture;
+			if (cameraObj.TryGetFloat("shutter speed", shutterSpeed)) cam->shutterSpeed = shutterSpeed;
+			if (cameraObj.TryGetFloat("light sensitivity", lightSensitivity)) cam->lightSensitivity = lightSensitivity;
+			if (cameraObj.TryGetFloat("exposure", exposure)) cam->exposure = exposure;
+			if (cameraObj.TryGetFloat("move speed", moveSpeed)) cam->moveSpeed = moveSpeed;
 
 			if (cameraObj.HasField("aperture"))
 			{
@@ -406,7 +406,7 @@ namespace flex
 			}
 
 			JSONObject cameraTransform;
-			if (cameraObj.SetObjectChecked("transform", cameraTransform))
+			if (cameraObj.TryGetObject("transform", cameraTransform))
 			{
 				glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
 				if (IsNanOrInf(camPos))

@@ -1827,8 +1827,8 @@ namespace flex
 					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
 				}
 
-				child.SetBoolChecked("invert mouse axis", m_InputBindings[i].bInvertMouseAxis);
-				child.SetBoolChecked("invert gamepad axis", m_InputBindings[i].bInvertGamepadAxis);
+				child.TryGetBool("invert mouse axis", m_InputBindings[i].bInvertMouseAxis);
+				child.TryGetBool("invert gamepad axis", m_InputBindings[i].bInvertGamepadAxis);
 			}
 		}
 

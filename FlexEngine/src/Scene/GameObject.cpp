@@ -210,7 +210,7 @@ namespace flex
 			{
 				JSONObject transformObj;
 				Transform transform = Transform::Identity();
-				if (obj.SetObjectChecked("transform", transformObj))
+				if (obj.TryGetObject("transform", transformObj))
 				{
 					transform = Transform::ParseJSON(transformObj);
 				}
@@ -218,7 +218,7 @@ namespace flex
 				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
 
 				std::vector<JSONObject> children;
-				if (obj.SetObjectArrayChecked("children", children))
+				if (obj.TryGetObjectArray("children", children))
 				{
 					for (JSONObject& child : children)
 					{
@@ -1227,9 +1227,9 @@ namespace flex
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		bool bVisible = true;
-		obj.SetBoolChecked("visible", bVisible);
+		obj.TryGetBool("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
-		obj.SetBoolChecked("visible in scene graph", bVisibleInSceneGraph);
+		obj.TryGetBool("visible in scene graph", bVisibleInSceneGraph);
 
 		std::vector<MaterialID> matIDs;
 		if (overriddenMatID != InvalidMaterialID)
@@ -1247,7 +1247,7 @@ namespace flex
 		}
 
 		JSONObject transformObj;
-		if (obj.SetObjectChecked("transform", transformObj))
+		if (obj.TryGetObject("transform", transformObj))
 		{
 			m_Transform = Transform::ParseJSON(transformObj);
 		}
@@ -1261,7 +1261,7 @@ namespace flex
 		glm::vec3 localScale(1.0f);
 
 		JSONObject colliderObj;
-		if (obj.SetObjectChecked("collider", colliderObj))
+		if (obj.TryGetObject("collider", colliderObj))
 		{
 			std::string shapeStr = colliderObj.GetString("shape");
 			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
@@ -1271,7 +1271,7 @@ namespace flex
 			case BOX_SHAPE_PROXYTYPE:
 			{
 				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
+				colliderObj.TryGetVec3("half extents", halfExtents);
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
 
@@ -1303,7 +1303,7 @@ namespace flex
 			case CYLINDER_SHAPE_PROXYTYPE:
 			{
 				glm::vec3 halfExtents;
-				colliderObj.SetVec3Checked("half extents", halfExtents);
+				colliderObj.TryGetVec3("half extents", halfExtents);
 				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
 				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
 
@@ -1315,20 +1315,20 @@ namespace flex
 			} break;
 			}
 
-			if (colliderObj.SetVec3Checked("offset pos", localPos))
+			if (colliderObj.TryGetVec3("offset pos", localPos))
 			{
 				bColliderContainsOffset = true;
 			}
 
 			glm::vec3 localRotEuler;
-			if (colliderObj.SetVec3Checked("offset rot", localRotEuler))
+			if (colliderObj.TryGetVec3("offset rot", localRotEuler))
 			{
 				localRot = glm::quat(localRotEuler);
 				bColliderContainsOffset = true;
 			}
 
 			//
-			//if (colliderObj.SetVec3Checked("offset scale", localScale))
+			//if (colliderObj.TryGetVec3("offset scale", localScale))
 			//{
 			//	bColliderContainsOffset = true;
 			//}
@@ -1338,7 +1338,7 @@ namespace flex
 		}
 
 		JSONObject rigidBodyObj;
-		if (obj.SetObjectChecked("rigid body", rigidBodyObj))
+		if (obj.TryGetObject("rigid body", rigidBodyObj))
 		{
 			if (GetCollisionShape() == nullptr)
 			{
@@ -1377,16 +1377,16 @@ namespace flex
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
 
 		bool bStatic = false;
-		if (obj.SetBoolChecked("static", bStatic))
+		if (obj.TryGetBool("static", bStatic))
 		{
 			SetStatic(bStatic);
 		}
 
-		obj.SetBoolChecked("casts shadow", m_bCastsShadow);
+		obj.TryGetBool("casts shadow", m_bCastsShadow);
 
 
 		std::vector<JSONObject> children;
-		if (obj.SetObjectArrayChecked("children", children))
+		if (obj.TryGetObjectArray("children", children))
 		{
 			for (JSONObject& child : children)
 			{
@@ -2714,10 +2714,10 @@ namespace flex
 	void Valve::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject valveInfo;
-		if (parentObj.SetObjectChecked("valve info", valveInfo))
+		if (parentObj.TryGetObject("valve info", valveInfo))
 		{
 			glm::vec2 valveRange;
-			valveInfo.SetVec2Checked("range", valveRange);
+			valveInfo.TryGetVec2("range", valveRange);
 			minRotation = valveRange.x;
 			maxRotation = valveRange.y;
 			if (glm::abs(maxRotation - minRotation) <= 0.0001f)
@@ -2932,7 +2932,7 @@ namespace flex
 		std::string valveName;
 
 		JSONObject blockInfo;
-		if (parentObj.SetObjectChecked("block info", blockInfo))
+		if (parentObj.TryGetObject("block info", blockInfo))
 		{
 			valveName = blockInfo.GetString("valve name");
 		}
@@ -2959,9 +2959,9 @@ namespace flex
 			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
 		}
 
-		blockInfo.SetBoolChecked("affected by gravity", bAffectedByGravity);
+		blockInfo.TryGetBool("affected by gravity", bAffectedByGravity);
 
-		blockInfo.SetVec3Checked("move axis", moveAxis);
+		blockInfo.TryGetVec3("move axis", moveAxis);
 		if (moveAxis == VEC3_ZERO)
 		{
 			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
@@ -3100,9 +3100,9 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject glassInfo;
-		if (parentObj.SetObjectChecked("window info", glassInfo))
+		if (parentObj.TryGetObject("window info", glassInfo))
 		{
-			glassInfo.SetBoolChecked("broken", bBroken);
+			glassInfo.TryGetBool("broken", bBroken);
 
 			if (!m_Mesh)
 			{
@@ -3249,10 +3249,10 @@ namespace flex
 		assert(matIDs.size() == 1);
 
 		JSONObject skyboxInfo;
-		if (parentObj.SetObjectChecked("skybox info", skyboxInfo))
+		if (parentObj.TryGetObject("skybox info", skyboxInfo))
 		{
 			glm::vec3 rotEuler;
-			if (skyboxInfo.SetVec3Checked("rot", rotEuler))
+			if (skyboxInfo.TryGetVec3("rot", rotEuler))
 			{
 				m_Transform.SetWorldRotation(glm::quat(rotEuler));
 			}
@@ -3456,7 +3456,7 @@ namespace flex
 		i32 sceneFileVersion = scene->GetSceneFileVersion();
 
 		JSONObject directionalLightObj;
-		if (parentObject.SetObjectChecked("directional light info", directionalLightObj))
+		if (parentObject.TryGetObject("directional light info", directionalLightObj))
 		{
 			std::string rotStr = directionalLightObj.GetString("rotation");
 			if (sceneFileVersion >= 2)
@@ -3477,9 +3477,9 @@ namespace flex
 				pos = m_Transform.GetWorldPosition();
 			}
 
-			directionalLightObj.SetVec3Checked("colour", data.colour);
+			directionalLightObj.TryGetVec3("colour", data.colour);
 
-			directionalLightObj.SetFloatChecked("brightness", data.brightness);
+			directionalLightObj.TryGetFloat("brightness", data.brightness);
 
 			if (directionalLightObj.HasField("enabled"))
 			{
@@ -3487,11 +3487,11 @@ namespace flex
 			}
 
 			bool bCastShadow = false;
-			if (directionalLightObj.SetBoolChecked("cast shadows", bCastShadow))
+			if (directionalLightObj.TryGetBool("cast shadows", bCastShadow))
 			{
 				data.castShadows = bCastShadow ? 1 : 0;
 			}
-			directionalLightObj.SetFloatChecked("shadow darkness", data.shadowDarkness);
+			directionalLightObj.TryGetFloat("shadow darkness", data.shadowDarkness);
 		}
 	}
 
@@ -3697,16 +3697,16 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject pointLightObj;
-		if (parentObject.SetObjectChecked("point light info", pointLightObj))
+		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
 			std::string posStr = pointLightObj.GetString("pos");
 			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
 			m_Transform.SetLocalPosition(pos);
 			data.pos = pos;
 
-			pointLightObj.SetVec3Checked("colour", data.colour);
+			pointLightObj.TryGetVec3("colour", data.colour);
 
-			pointLightObj.SetFloatChecked("brightness", data.brightness);
+			pointLightObj.TryGetFloat("brightness", data.brightness);
 
 			if (pointLightObj.HasField("enabled"))
 			{
@@ -3919,16 +3919,16 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject spotLightObj;
-		if (parentObject.SetObjectChecked("spot light info", spotLightObj))
+		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
 			std::string posStr = spotLightObj.GetString("pos");
 			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
 			m_Transform.SetLocalPosition(pos);
 			data.pos = pos;
 
-			spotLightObj.SetVec3Checked("colour", data.colour);
+			spotLightObj.TryGetVec3("colour", data.colour);
 
-			spotLightObj.SetFloatChecked("brightness", data.brightness);
+			spotLightObj.TryGetFloat("brightness", data.brightness);
 
 			if (spotLightObj.HasField("enabled"))
 			{
@@ -3936,8 +3936,8 @@ namespace flex
 				data.enabled = m_bVisible ? 1 : 0;
 			}
 
-			spotLightObj.SetVec3Checked("direction", data.dir);
-			spotLightObj.SetFloatChecked("angle", data.angle);
+			spotLightObj.TryGetVec3("direction", data.dir);
+			spotLightObj.TryGetFloat("angle", data.angle);
 		}
 	}
 
@@ -4150,11 +4150,11 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject areaLightObj;
-		if (parentObject.SetObjectChecked("area light info", areaLightObj))
+		if (parentObject.TryGetObject("area light info", areaLightObj))
 		{
-			areaLightObj.SetVec3Checked("colour", data.colour);
+			areaLightObj.TryGetVec3("colour", data.colour);
 
-			areaLightObj.SetFloatChecked("brightness", data.brightness);
+			areaLightObj.TryGetFloat("brightness", data.brightness);
 
 			if (areaLightObj.HasField("enabled"))
 			{
@@ -5965,10 +5965,10 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject gerstnerWaveObj;
-		if (parentObject.SetObjectChecked("gerstner wave", gerstnerWaveObj))
+		if (parentObject.TryGetObject("gerstner wave", gerstnerWaveObj))
 		{
 			std::vector<JSONObject> waveObjs;
-			if (gerstnerWaveObj.SetObjectArrayChecked("waves", waveObjs))
+			if (gerstnerWaveObj.TryGetObjectArray("waves", waveObjs))
 			{
 				for (const JSONObject& waveObj : waveObjs)
 				{
@@ -5981,18 +5981,18 @@ namespace flex
 				}
 			}
 
-			gerstnerWaveObj.SetUIntChecked("max chunk vert count per axis", maxChunkVertCountPerAxis);
-			gerstnerWaveObj.SetFloatChecked("chunk size", size);
-			gerstnerWaveObj.SetFloatChecked("chunk load radius", loadRadius);
-			gerstnerWaveObj.SetFloatChecked("update speed", updateSpeed);
+			gerstnerWaveObj.TryGetUInt("max chunk vert count per axis", maxChunkVertCountPerAxis);
+			gerstnerWaveObj.TryGetFloat("chunk size", size);
+			gerstnerWaveObj.TryGetFloat("chunk load radius", loadRadius);
+			gerstnerWaveObj.TryGetFloat("update speed", updateSpeed);
 
-			gerstnerWaveObj.SetBoolChecked("pin center", m_bPinCenter);
-			gerstnerWaveObj.SetVec3Checked("pinned center position", m_PinnedPos);
+			gerstnerWaveObj.TryGetBool("pin center", m_bPinCenter);
+			gerstnerWaveObj.TryGetVec3("pinned center position", m_PinnedPos);
 
-			gerstnerWaveObj.SetFloatChecked("blend dist", blendDist);
+			gerstnerWaveObj.TryGetFloat("blend dist", blendDist);
 
 			std::vector<JSONField> waveSamplingLODsArrObj;
-			if (gerstnerWaveObj.SetFieldArrayChecked("wave sampling lods", waveSamplingLODsArrObj))
+			if (gerstnerWaveObj.TryGetFieldArray("wave sampling lods", waveSamplingLODsArrObj))
 			{
 				waveSamplingLODs.clear();
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
@@ -6016,7 +6016,7 @@ namespace flex
 			}
 
 			std::vector<JSONField> waveTessellationLODsArrObj;
-			if (gerstnerWaveObj.SetFieldArrayChecked("wave tessellation lods", waveTessellationLODsArrObj))
+			if (gerstnerWaveObj.TryGetFieldArray("wave tessellation lods", waveTessellationLODsArrObj))
 			{
 				waveTessellationLODs.clear();
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
@@ -6037,23 +6037,23 @@ namespace flex
 				}
 			}
 
-			if (gerstnerWaveObj.SetVec4Checked("colour top", oceanData.top))
+			if (gerstnerWaveObj.TryGetVec4("colour top", oceanData.top))
 			{
 				oceanData.top = glm::pow(oceanData.top, glm::vec4(2.2f));
 			}
-			if (gerstnerWaveObj.SetVec4Checked("colour mid", oceanData.mid))
+			if (gerstnerWaveObj.TryGetVec4("colour mid", oceanData.mid))
 			{
 				oceanData.mid = glm::pow(oceanData.mid, glm::vec4(2.2f));
 			}
-			if (gerstnerWaveObj.SetVec4Checked("colour btm", oceanData.btm))
+			if (gerstnerWaveObj.TryGetVec4("colour btm", oceanData.btm))
 			{
 				oceanData.btm = glm::pow(oceanData.btm, glm::vec4(2.2f));
 			}
-			gerstnerWaveObj.SetFloatChecked("fresnel factor", oceanData.fresnelFactor);
-			gerstnerWaveObj.SetFloatChecked("fresnel power", oceanData.fresnelPower);
-			gerstnerWaveObj.SetFloatChecked("sky reflection factor", oceanData.skyReflectionFactor);
-			gerstnerWaveObj.SetFloatChecked("fog falloff", oceanData.fogFalloff);
-			gerstnerWaveObj.SetFloatChecked("fog density", oceanData.fogDensity);
+			gerstnerWaveObj.TryGetFloat("fresnel factor", oceanData.fresnelFactor);
+			gerstnerWaveObj.TryGetFloat("fresnel power", oceanData.fresnelPower);
+			gerstnerWaveObj.TryGetFloat("sky reflection factor", oceanData.skyReflectionFactor);
+			gerstnerWaveObj.TryGetFloat("fog falloff", oceanData.fogFalloff);
+			gerstnerWaveObj.TryGetFloat("fog density", oceanData.fogDensity);
 		}
 
 		SortWaves();
@@ -6269,8 +6269,8 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("wire");
-		obj.SetVec3Checked("startPoint", startPoint);
-		obj.SetVec3Checked("endPoint", endPoint);
+		obj.TryGetVec3("startPoint", startPoint);
+		obj.TryGetVec3("endPoint", endPoint);
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
@@ -6352,7 +6352,7 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject obj = parentObject.GetObject("socket");
-		obj.SetIntChecked("slotIdx", slotIdx);
+		obj.TryGetInt("slotIdx", slotIdx);
 
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
@@ -7798,16 +7798,16 @@ namespace flex
 
 		Transform::ParseJSON(particleSystemObj, model);
 		m_Transform.SetWorldFromMatrix(model);
-		particleSystemObj.SetFloatChecked("scale", scale);
-		particleSystemObj.SetBoolChecked("enabled", bEnabled);
+		particleSystemObj.TryGetFloat("scale", scale);
+		particleSystemObj.TryGetBool("enabled", bEnabled);
 
 		JSONObject systemDataObj = particleSystemObj.GetObject("data");
 		data = {};
-		systemDataObj.SetVec4Checked("colour0", data.colour0);
-		systemDataObj.SetVec4Checked("colour1", data.colour1);
-		systemDataObj.SetFloatChecked("speed", data.speed);
+		systemDataObj.TryGetVec4("colour0", data.colour0);
+		systemDataObj.TryGetVec4("colour1", data.colour1);
+		systemDataObj.TryGetFloat("speed", data.speed);
 		i32 particleCount;
-		if (systemDataObj.SetIntChecked("particle count", particleCount))
+		if (systemDataObj.TryGetInt("particle count", particleCount))
 		{
 			data.particleCount = particleCount;
 		}
@@ -8235,20 +8235,20 @@ namespace flex
 			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
-			chunkGenInfo.SetFloatChecked("loaded chunk radius", m_LoadedChunkRadius);
-			chunkGenInfo.SetFloatChecked("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
-			chunkGenInfo.SetUIntChecked("base table width", m_BasePerlinTableWidth);
+			chunkGenInfo.TryGetFloat("loaded chunk radius", m_LoadedChunkRadius);
+			chunkGenInfo.TryGetFloat("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
+			chunkGenInfo.TryGetUInt("base table width", m_BasePerlinTableWidth);
 
-			chunkGenInfo.SetVec3Checked("low colour", m_LowCol);
-			chunkGenInfo.SetVec3Checked("mid colour", m_MidCol);
-			chunkGenInfo.SetVec3Checked("high colour", m_HighCol);
+			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
+			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
+			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
 
-			chunkGenInfo.SetFloatChecked("base octave", m_BaseOctave);
-			chunkGenInfo.SetFloatChecked("octave scale", m_OctaveScale);
-			chunkGenInfo.SetUIntChecked("num octaves", m_NumOctaves);
+			chunkGenInfo.TryGetFloat("base octave", m_BaseOctave);
+			chunkGenInfo.TryGetFloat("octave scale", m_OctaveScale);
+			chunkGenInfo.TryGetUInt("num octaves", m_NumOctaves);
 
-			chunkGenInfo.SetBoolChecked("pin center", m_bPinCenter);
-			chunkGenInfo.SetVec3Checked("pinned center", m_PinnedPos);
+			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
+			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
 		}
 	}
 
@@ -9327,7 +9327,7 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject springObj;
-		if (parentObject.SetObjectChecked("spring", springObj))
+		if (parentObject.TryGetObject("spring", springObj))
 		{
 			m_TargetPos = springObj.GetVec3("end point");
 		}
@@ -10096,12 +10096,12 @@ namespace flex
 		FLEX_UNUSED(scene);
 
 		JSONObject softBodyObject;
-		if (parentObject.SetObjectChecked("soft body", softBodyObject))
+		if (parentObject.TryGetObject("soft body", softBodyObject))
 		{
-			softBodyObject.SetUIntChecked("solver iteration count", m_SolverIterationCount);
+			softBodyObject.TryGetUInt("solver iteration count", m_SolverIterationCount);
 
 			std::vector<JSONObject> pointsArr;
-			if (softBodyObject.SetObjectArrayChecked("points", pointsArr))
+			if (softBodyObject.TryGetObjectArray("points", pointsArr))
 			{
 				points.resize(pointsArr.size());
 				initialPositions.resize(pointsArr.size());
@@ -10120,7 +10120,7 @@ namespace flex
 			}
 
 			std::vector<JSONObject> constraintsArr;
-			if (softBodyObject.SetObjectArrayChecked("constraints", constraintsArr))
+			if (softBodyObject.TryGetObjectArray("constraints", constraintsArr))
 			{
 				constraints.resize(constraintsArr.size());
 
@@ -10129,7 +10129,7 @@ namespace flex
 				{
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
-					constraintObj.SetUIntChecked("dragging point index", m_DragPointIndex);
+					constraintObj.TryGetUInt("dragging point index", m_DragPointIndex);
 
 					switch (type)
 					{
@@ -10190,10 +10190,10 @@ namespace flex
 				}
 			}
 
-			softBodyObject.SetBoolChecked("render wireframe", m_bRenderWireframe);
-			softBodyObject.SetFloatChecked("damping", m_Damping);
-			softBodyObject.SetFloatChecked("stiffness", m_Stiffness);
-			softBodyObject.SetFloatChecked("bending stiffness", m_BendingStiffness);
+			softBodyObject.TryGetBool("render wireframe", m_bRenderWireframe);
+			softBodyObject.TryGetFloat("damping", m_Damping);
+			softBodyObject.TryGetFloat("stiffness", m_Stiffness);
+			softBodyObject.TryGetFloat("bending stiffness", m_BendingStiffness);
 		}
 	}
 
@@ -10813,10 +10813,10 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject vehicleObj;
-		if (parentObject.SetObjectChecked("vehicle", vehicleObj))
+		if (parentObject.TryGetObject("vehicle", vehicleObj))
 		{
 			std::vector<JSONField> tireIDs;
-			if (vehicleObj.SetFieldArrayChecked("tire ids", tireIDs))
+			if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
 			{
 				assert(m_TireCount == (i32)tireIDs.size());
 				for (i32 i = 0; i < m_TireCount; ++i)
@@ -10826,7 +10826,7 @@ namespace flex
 			}
 
 			std::vector<JSONField> brakeLightIDs;
-			if (vehicleObj.SetFieldArrayChecked("brake light ids", brakeLightIDs))
+			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 			{
 				assert((i32)brakeLightIDs.size() == 2);
 				for (i32 i = 0; i < 2; ++i)
@@ -10836,7 +10836,7 @@ namespace flex
 			}
 
 			std::vector<JSONField> soundEffectSIDs;
-			if (vehicleObj.SetFieldArrayChecked("sound effect sids", soundEffectSIDs))
+			if (vehicleObj.TryGetFieldArray("sound effect sids", soundEffectSIDs))
 			{
 				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
 				for (i32 i = 0; i < count; ++i)

@@ -209,7 +209,7 @@ namespace flex
 
 					i32 sceneVersion = 6;
 					// Added in prefab v3, older files use scene version 6
-					prefabObject.SetIntChecked("scene version", sceneVersion);
+					prefabObject.TryGetInt("scene version", sceneVersion);
 
 					PrefabID prefabID;
 					if (prefabVersion >= 2)
@@ -374,21 +374,21 @@ namespace flex
 			if (JSONParser::ParseFromFile(m_FontsFilePathAbs, fontSettings))
 			{
 				std::vector<JSONObject> fontObjs;
-				if (fontSettings.SetObjectArrayChecked("fonts", fontObjs))
+				if (fontSettings.TryGetObjectArray("fonts", fontObjs))
 				{
 					for (const JSONObject& fontObj : fontObjs)
 					{
 						FontMetaData metaData = {};
 
-						fontObj.SetStringChecked("name", metaData.name);
+						fontObj.TryGetString("name", metaData.name);
 						std::string fileName;
-						fontObj.SetStringChecked("file path", fileName);
+						fontObj.TryGetString("file path", fileName);
 						metaData.size = (i16)fontObj.GetInt("size");
-						fontObj.SetBoolChecked("screen space", metaData.bScreenSpace);
-						fontObj.SetFloatChecked("threshold", metaData.threshold);
-						fontObj.SetFloatChecked("shadow opacity", metaData.shadowOpacity);
-						fontObj.SetVec2Checked("shadow offset", metaData.shadowOffset);
-						fontObj.SetFloatChecked("soften", metaData.soften);
+						fontObj.TryGetBool("screen space", metaData.bScreenSpace);
+						fontObj.TryGetFloat("threshold", metaData.threshold);
+						fontObj.TryGetFloat("shadow opacity", metaData.shadowOpacity);
+						fontObj.TryGetVec2("shadow offset", metaData.shadowOffset);
+						fontObj.TryGetFloat("soften", metaData.soften);
 
 						if (fileName.empty())
 						{
@@ -553,7 +553,7 @@ namespace flex
 		bool bCreateRenderObject = !parent->IsTemplate();
 
 		std::string meshFilePath;
-		if (meshObj.SetStringChecked("mesh", meshFilePath))
+		if (meshObj.TryGetString("mesh", meshFilePath))
 		{
 			if (sceneFileVersion >= 4)
 			{
@@ -600,7 +600,7 @@ namespace flex
 		}
 
 		std::string prefabName;
-		if (meshObj.SetStringChecked("prefab", prefabName))
+		if (meshObj.TryGetString("prefab", prefabName))
 		{
 			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
 			return;

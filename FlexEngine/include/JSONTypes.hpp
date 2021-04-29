@@ -13,49 +13,44 @@ namespace flex
 
 	struct JSONObject
 	{
-
-		//
-		// TODO: Rename SetXChecked functions to TryGetX
-		//
-
 		bool HasField(const std::string& label) const;
 
 		std::string GetString(const std::string& label) const;
-		bool SetStringChecked(const std::string& label, std::string& value) const;
-		bool SetVec2Checked(const std::string& label, glm::vec2& value) const;
-		bool SetVec3Checked(const std::string& label, glm::vec3& value) const;
-		bool SetVec4Checked(const std::string& label, glm::vec4& value) const;
+		bool TryGetString(const std::string& label, std::string& value) const;
+		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
+		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
+		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
 
 		glm::vec2 GetVec2(const std::string& label) const;
 		glm::vec3 GetVec3(const std::string& label) const;
 		glm::vec4 GetVec4(const std::string& label) const;
 
 		i32 GetInt(const std::string& label) const;
-		bool SetIntChecked(const std::string& label, i32& value) const;
+		bool TryGetInt(const std::string& label, i32& value) const;
 
 		u32 GetUInt(const std::string& label) const;
-		bool SetUIntChecked(const std::string& label, u32& value) const;
+		bool TryGetUInt(const std::string& label, u32& value) const;
 
 		real GetFloat(const std::string& label) const;
-		bool SetFloatChecked(const std::string& label, real& value) const;
+		bool TryGetFloat(const std::string& label, real& value) const;
 
 		bool GetBool(const std::string& label) const;
-		bool SetBoolChecked(const std::string& label, bool& value) const;
+		bool TryGetBool(const std::string& label, bool& value) const;
 
 		GUID GetGUID(const std::string& label) const;
-		bool SetGUIDChecked(const std::string& label, GUID& value) const;
+		bool TryGetGUID(const std::string& label, GUID& value) const;
 
 		GameObjectID GetGameObjectID(const std::string& label) const;
-		bool SetGameObjectIDChecked(const std::string& label, GameObjectID& value) const;
+		bool TryGetGameObjectID(const std::string& label, GameObjectID& value) const;
 
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
-		bool SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const;
+		bool TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const;
 
 		const std::vector<JSONObject>& GetObjectArray(const std::string& label) const;
-		bool SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const;
+		bool TryGetObjectArray(const std::string& label, std::vector<JSONObject>& value) const;
 
 		const JSONObject& GetObject(const std::string& label) const;
-		bool SetObjectChecked(const std::string& label, JSONObject& value) const;
+		bool TryGetObject(const std::string& label, JSONObject& value) const;
 
 		std::string ToString(i32 tabCount = 0) const;
 

@@ -228,34 +228,34 @@ namespace flex
 
 			if (JSONParser::ParseFromFile(WINDOW_CONFIG_LOCATION, rootObject))
 			{
-				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
-				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
+				rootObject.TryGetBool("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
+				rootObject.TryGetBool("auto restore state", m_bAutoRestoreStateOnBootup);
 
 				if (m_bAutoRestoreStateOnBootup)
 				{
 					glm::vec2 initialWindowPos;
-					if (rootObject.SetVec2Checked("initial window position", initialWindowPos))
+					if (rootObject.TryGetVec2("initial window position", initialWindowPos))
 					{
 						m_Position = (glm::vec2i)initialWindowPos;
 					}
 
 					glm::vec2 initialWindowSize;
-					if (rootObject.SetVec2Checked("initial window size", initialWindowSize))
+					if (rootObject.TryGetVec2("initial window size", initialWindowSize))
 					{
 						m_Size = (glm::vec2i)initialWindowSize;
 					}
 
-					rootObject.SetBoolChecked("maximized", m_bMaximized);
+					rootObject.TryGetBool("maximized", m_bMaximized);
 
 					std::string windowModeStr;
-					if (rootObject.SetStringChecked("window mode", windowModeStr))
+					if (rootObject.TryGetString("window mode", windowModeStr))
 					{
 						m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
 					}
 				}
 
 				bool bVSyncEnabled;
-				if (rootObject.SetBoolChecked("v-sync", bVSyncEnabled))
+				if (rootObject.TryGetBool("v-sync", bVSyncEnabled))
 				{
 					SetVSyncEnabled(bVSyncEnabled);
 				}

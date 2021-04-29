@@ -337,8 +337,8 @@ namespace flex
 			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
 			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
 
-			rootObject.SetIntChecked("shadow cascade count", m_ShadowCascadeCount);
-			rootObject.SetUIntChecked("shadow cascade base resolution", m_ShadowMapBaseResolution);
+			rootObject.TryGetInt("shadow cascade count", m_ShadowCascadeCount);
+			rootObject.TryGetUInt("shadow cascade base resolution", m_ShadowMapBaseResolution);
 
 			// Done loading
 			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;

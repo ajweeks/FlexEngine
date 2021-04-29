@@ -71,16 +71,16 @@ namespace flex
 		UIScreen result = {};
 
 		std::string cutTypeStr;
-		if (object.SetStringChecked("cut type", cutTypeStr))
+		if (object.TryGetString("cut type", cutTypeStr))
 		{
 			result.cutType = RectCutTypeFromString(cutTypeStr.c_str());
 		}
-		object.SetFloatChecked("amount", result.amount);
-		object.SetBoolChecked("visible", result.bVisible);
-		object.SetBoolChecked("relative", result.bRelative);
+		object.TryGetFloat("amount", result.amount);
+		object.TryGetBool("visible", result.bVisible);
+		object.TryGetBool("relative", result.bRelative);
 
 		std::vector<JSONObject> childrenObjects;
-		if (object.SetObjectArrayChecked("children", childrenObjects))
+		if (object.TryGetObjectArray("children", childrenObjects))
 		{
 			for (const JSONObject& childObj : childrenObjects)
 			{
@@ -184,13 +184,13 @@ namespace flex
 			}
 
 			JSONObject playerScreenObject;
-			if (rootObject.SetObjectChecked("player screen", playerScreenObject))
+			if (rootObject.TryGetObject("player screen", playerScreenObject))
 			{
 				m_PlayerScreenUI = UIScreen::Deserialize(playerScreenObject);
 			}
 
 			JSONObject playerInventoryScreenObject;
-			if (rootObject.SetObjectChecked("player inventory screen", playerInventoryScreenObject))
+			if (rootObject.TryGetObject("player inventory screen", playerInventoryScreenObject))
 			{
 				m_PlayerInventoryUI = UIScreen::Deserialize(playerInventoryScreenObject);
 			}

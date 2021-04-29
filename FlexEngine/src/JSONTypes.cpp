@@ -158,7 +158,7 @@ namespace flex
 		return "";
 	}
 
-	bool JSONObject::SetStringChecked(const std::string& label, std::string& value) const
+	bool JSONObject::TryGetString(const std::string& label, std::string& value) const
 	{
 		// TODO: PERFORMANCE: Return index of found item to avoid duplicate looping
 		if (HasField(label))
@@ -169,7 +169,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec2Checked(const std::string& label, glm::vec2& value) const
+	bool JSONObject::TryGetVec2(const std::string& label, glm::vec2& value) const
 	{
 		if (HasField(label))
 		{
@@ -180,7 +180,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec3Checked(const std::string& label, glm::vec3& value) const
+	bool JSONObject::TryGetVec3(const std::string& label, glm::vec3& value) const
 	{
 		if (HasField(label))
 		{
@@ -191,7 +191,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec4Checked(const std::string& label, glm::vec4& value) const
+	bool JSONObject::TryGetVec4(const std::string& label, glm::vec4& value) const
 	{
 		if (HasField(label))
 		{
@@ -253,7 +253,7 @@ namespace flex
 		return 0;
 	}
 
-	bool JSONObject::SetIntChecked(const std::string& label, i32& value) const
+	bool JSONObject::TryGetInt(const std::string& label, i32& value) const
 	{
 		if (HasField(label))
 		{
@@ -281,7 +281,7 @@ namespace flex
 		return 0;
 	}
 
-	bool JSONObject::SetUIntChecked(const std::string& label, u32& value) const
+	bool JSONObject::TryGetUInt(const std::string& label, u32& value) const
 	{
 		if (HasField(label))
 		{
@@ -310,7 +310,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	bool JSONObject::SetFloatChecked(const std::string& label, real& value) const
+	bool JSONObject::TryGetFloat(const std::string& label, real& value) const
 	{
 		if (HasField(label))
 		{
@@ -333,7 +333,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetBoolChecked(const std::string& label, bool& value) const
+	bool JSONObject::TryGetBool(const std::string& label, bool& value) const
 	{
 		if (HasField(label))
 		{
@@ -355,7 +355,7 @@ namespace flex
 		return InvalidGUID;
 	}
 
-	bool JSONObject::SetGUIDChecked(const std::string& label, GUID& value) const
+	bool JSONObject::TryGetGUID(const std::string& label, GUID& value) const
 	{
 		if (HasField(label))
 		{
@@ -371,9 +371,9 @@ namespace flex
 		return *(GameObjectID*)&guid;
 	}
 
-	bool JSONObject::SetGameObjectIDChecked(const std::string& label, GameObjectID& value) const
+	bool JSONObject::TryGetGameObjectID(const std::string& label, GameObjectID& value) const
 	{
-		return SetGUIDChecked(label, *(GUID*)&value);
+		return TryGetGUID(label, *(GUID*)&value);
 	}
 
 	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
@@ -388,7 +388,7 @@ namespace flex
 		return s_EmptyFieldArray;
 	}
 
-	bool JSONObject::SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const
+	bool JSONObject::TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const
 	{
 		if (HasField(label))
 		{
@@ -410,7 +410,7 @@ namespace flex
 		return s_EmptyObjectArray;
 	}
 
-	bool JSONObject::SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const
+	bool JSONObject::TryGetObjectArray(const std::string& label, std::vector<JSONObject>& value) const
 	{
 		if (HasField(label))
 		{
@@ -432,7 +432,7 @@ namespace flex
 		return s_EmptyObject;
 	}
 
-	bool JSONObject::SetObjectChecked(const std::string& label, JSONObject& value) const
+	bool JSONObject::TryGetObject(const std::string& label, JSONObject& value) const
 	{
 		if (HasField(label))
 		{

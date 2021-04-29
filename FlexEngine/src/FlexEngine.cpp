@@ -1680,27 +1680,27 @@ namespace flex
 				}
 
 				bool bRenderImGui;
-				if (rootObject.SetBoolChecked("render imgui", bRenderImGui))
+				if (rootObject.TryGetBool("render imgui", bRenderImGui))
 				{
 					m_bRenderImGui = bRenderImGui;
 				}
 
 				real masterGain;
-				if (rootObject.SetFloatChecked("master gain", masterGain))
+				if (rootObject.TryGetFloat("master gain", masterGain))
 				{
 					AudioManager::SetMasterGain(masterGain);
 				}
 
 				bool bMuted;
-				if (rootObject.SetBoolChecked("muted", bMuted))
+				if (rootObject.TryGetBool("muted", bMuted))
 				{
 					AudioManager::SetMuted(bMuted);
 				}
 
-				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
+				rootObject.TryGetBool("install shader directory watch", m_bInstallShaderDirectoryWatch);
 
 				std::string shaderEditorPath;
-				if (rootObject.SetStringChecked("shader editor path", shaderEditorPath))
+				if (rootObject.TryGetString("shader editor path", shaderEditorPath))
 				{
 					m_ShaderEditorPath = shaderEditorPath;
 				}
