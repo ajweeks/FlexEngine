@@ -199,6 +199,26 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Cycle held item forward" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : 3,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Cycle held item backward" : 
+	{
+		"key code" : -1,
+		"mouse button" : -1,
+		"mouse axis" : 3,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : true,
+		"invert gamepad axis" : false
+	},
 	"Vehicle accelerate" : 
 	{
 		"key code" : 40,

@@ -1903,6 +1903,19 @@ namespace flex
 		return Action::_NONE;
 	}
 
+	Action InputManager::GetActionFromMouseAxis(MouseAxis axis)
+	{
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			if (m_InputBindings[i].mouseAxis == axis)
+			{
+				return (Action)i;
+			}
+		}
+
+		return Action::_NONE;
+	}
+
 	Action InputManager::GetActionFromGamepadButton(GamepadButton button)
 	{
 		for (i32 i = 0; i < (i32)Action::_NONE; ++i)

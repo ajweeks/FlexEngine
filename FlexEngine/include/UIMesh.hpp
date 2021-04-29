@@ -13,8 +13,20 @@ namespace flex
 
 	struct Rect
 	{
+		// [-1, 1]
 		real minX, minY, maxX, maxY;
 		glm::vec4 colour;
+
+		void Scale(real scale)
+		{
+			real halfWidth = (maxX - minX) * 0.5f;
+			real halfHeight = (maxY - minY) * 0.5f;
+			glm::vec2 center(minX + halfWidth, minY + halfHeight);
+			minX = center.x - halfWidth * scale;
+			minY = center.y - halfHeight * scale;
+			maxX = center.x + halfWidth * scale;
+			maxY = center.y + halfHeight * scale;
+		}
 	};
 
 	enum class RectCutType

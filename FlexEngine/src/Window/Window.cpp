@@ -68,6 +68,15 @@ namespace flex
 		return m_Size;
 	}
 
+	real Window::GetAspectRatio() const
+	{
+		return m_Size.x / (real)m_Size.y;
+	}
+
+	real Window::GetInvAspectRatio() const
+	{
+		return m_Size.y / (real)m_Size.x;
+	}
 
 	glm::vec2i Window::GetPosition() const
 	{

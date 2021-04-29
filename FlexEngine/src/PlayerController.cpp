@@ -78,6 +78,19 @@ namespace flex
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
+		real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_HELD_ITEM_FORWARD);
+		if (!ImGui::GetIO().WantCaptureMouse)
+		{
+			if (cycleItemAxis > 0.0f)
+			{
+				m_Player->heldItemSlot = (m_Player->heldItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+			}
+			else if (cycleItemAxis < 0.0f)
+			{
+				m_Player->heldItemSlot = (m_Player->heldItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+			}
+		}
+
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
 		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
@@ -401,7 +414,7 @@ namespace flex
 					m_Player->heldItemSlot = 0;
 				}
 
-				GameObjectStack& gameObjectStack = m_Player->m_Inventory[m_Player->heldItemSlot];
+				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
 
 				if (gameObjectStack.count >= 1)
 				{

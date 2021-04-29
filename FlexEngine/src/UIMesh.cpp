@@ -151,28 +151,28 @@ namespace flex
 	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real minX = rect->minX;
-		rect->minX = glm::min(rect->maxX, rect->minX + amount * (bRelative ? (rect->maxX - rect->minX) : 1.0f));
+		rect->minX = glm::min(rect->maxX, rect->minX + amount * (bRelative ? ((rect->maxX - rect->minX) ) : 2.0f));
 		return Rect{ minX, rect->minY, rect->minX, rect->maxY, colour };
 	}
 
 	Rect CutRight(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real maxX = rect->maxX;
-		rect->maxX = glm::max(rect->minX, rect->maxX - amount * (bRelative ? (rect->maxX - rect->minX) : 1.0f));
+		rect->maxX = glm::max(rect->minX, rect->maxX - amount * (bRelative ? ((rect->maxX - rect->minX) ) : 2.0f));
 		return Rect{ rect->maxX, rect->minY, maxX, rect->maxY, colour };
 	}
 
 	Rect CutTop(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real maxY = rect->maxY;
-		rect->maxY = glm::max(rect->minY, rect->maxY - amount * (bRelative ? (rect->maxY - rect->minY) : 1.0f));
+		rect->maxY = glm::max(rect->minY, rect->maxY - amount * (bRelative ? ((rect->maxY - rect->minY) ) : 2.0f));
 		return Rect{ rect->minX, rect->maxY, rect->maxX, maxY, colour };
 	}
 
 	Rect CutBottom(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real minY = rect->minY;
-		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? (rect->maxY - rect->minY) : 1.0f));
+		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? ((rect->maxY - rect->minY) ) : 2.0f));
 		return Rect{ rect->minX, minY, rect->maxX, rect->minY, colour };
 	}
 
@@ -434,6 +434,60 @@ namespace flex
 	{
 		outputRects.push_back(parent->Cut(&rootRect, normalColour, highlightedColour));
 		i32 newRectIndex = (i32)outputRects.size() - 1;
+
+		if (parent->bHighlighted)
+		{
+			// Grow highlighted rects
+			real growFactor = 1.05f;
+			outputRects[newRectIndex].Scale(growFactor);
+		}
+
+		if (parent->uiElement != nullptr)
+		{
+			switch (parent->uiElement->type)
+			{
+			case UIElementType::IMAGE:
+			{
+				ImageUIElement* imageElement = (ImageUIElement*)parent->uiElement;
+
+				real aspectRatio = g_Window->GetAspectRatio();
+
+				SpriteQuadDrawInfo spriteInfo = {};
+				spriteInfo.textureID = imageElement->textureID;
+				spriteInfo.materialID = g_Renderer->m_SpriteMatSSID;
+				real width = (outputRects[newRectIndex].maxX - outputRects[newRectIndex].minX);
+				real height = (outputRects[newRectIndex].maxY - outputRects[newRectIndex].minY);
+				spriteInfo.pos = glm::vec3(
+					(outputRects[newRectIndex].minX  + width * 0.5f) * aspectRatio,
+					outputRects[newRectIndex].minY  + height * 0.5f,
+					1.0f);
+				spriteInfo.scale = glm::vec3(width * 0.4f, width * 0.4f, 1.0f);
+				spriteInfo.anchor = AnchorPoint::CENTER;
+				spriteInfo.bScreenSpace = true;
+				spriteInfo.bReadDepth = false;
+				spriteInfo.bRaw = true;
+				spriteInfo.zOrder = 75;
+				g_Renderer->EnqueueSprite(spriteInfo);
+			} break;
+			case UIElementType::TEXT:
+			{
+				TextUIElement* textElement = (TextUIElement*)parent->uiElement;
+
+				real aspectRatio = g_Window->GetAspectRatio();
+
+				real width = (outputRects[newRectIndex].maxX - outputRects[newRectIndex].minX);
+				real height = (outputRects[newRectIndex].maxY - outputRects[newRectIndex].minY);
+				glm::vec2 pos = glm::vec2(
+					(outputRects[newRectIndex].minX  + width * 0.5f) * aspectRatio,
+					outputRects[newRectIndex].minY  + height * 0.5f);
+				real spacing = 0.1f;
+				real scale = 0.4f;
+
+				g_Renderer->SetFont(textElement->fontID);
+				g_Renderer->DrawStringSS(textElement->text, VEC4_ONE, AnchorPoint::CENTER, pos, spacing, scale);
+			} break;
+			}
+		}
 
 		for (i32 i = 0; i < (i32)parent->children.size(); ++i)
 		{

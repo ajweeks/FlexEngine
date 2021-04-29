@@ -14,7 +14,7 @@
 			[
 				{
 					"cut type" : "Left",
-					"amount" : 0.196000,
+					"amount" : 0.145000,
 					"visible" : false,
 					"relative" : true
 				},
@@ -23,8 +23,8 @@
 					"amount" : 0.061000,
 					"visible" : true,
 					"relative" : false,
-					"tag source string" : "first-slot",
-					"tag" : 2855974854258516312
+					"tag source string" : "slot0",
+					"tag" : 16612773434777059667
 				},
 				{
 					"cut type" : "Left",

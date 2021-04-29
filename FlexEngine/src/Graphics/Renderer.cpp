@@ -503,7 +503,14 @@ namespace flex
 			}
 			else
 			{
-				m_QueuedSSSprites.push_back(drawInfo);
+				if (drawInfo.zOrder > Z_ORDER_UI)
+				{
+					m_QueuedSSPostUISprites.push_back(drawInfo);
+				}
+				else
+				{
+					m_QueuedSSPreUISprites.push_back(drawInfo);
+				}
 			}
 		}
 		else
@@ -557,7 +564,7 @@ namespace flex
 		return InvalidPointLightID;
 	}
 
-	void Renderer::UpdatePointLightData(SpotLightID ID, PointLightData* data)
+	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
 	{
 		assert(ID < MAX_POINT_LIGHT_COUNT);
 		assert(data != nullptr);

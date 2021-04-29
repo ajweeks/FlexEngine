@@ -8038,24 +8038,20 @@ namespace flex
 				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, blitPipeline->layout, m_FinalFullscreenBlitDescriptorSet);
 
 				EnqueueScreenSpaceSprites();
-				if (!m_QueuedSSSprites.empty() || !m_QueuedSSArrSprites.empty())
+				EnqueueScreenSpaceText();
+
+				if (!m_QueuedSSPreUISprites.empty() || !m_QueuedSSArrSprites.empty())
 				{
-					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites");
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites (Pre UI)");
 
-					{
-						PROFILE_AUTO("DrawScreenSpaceSprites > Display profiler frame");
-						Profiler::DrawDisplayedFrame();
-					}
-
-					DrawSpriteBatch(m_QueuedSSSprites, commandBuffer);
-					m_QueuedSSSprites.clear();
+					DrawSpriteBatch(m_QueuedSSPreUISprites, commandBuffer);
+					m_QueuedSSPreUISprites.clear();
 					DrawSpriteBatch(m_QueuedSSArrSprites, commandBuffer);
 					m_QueuedSSArrSprites.clear();
 
-					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites");
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites (Pre UI)");
 				}
 
-				EnqueueScreenSpaceText();
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
 
@@ -8072,6 +8068,15 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer, "UI Mesh");
 				}
 
+				if (!m_QueuedSSPostUISprites.empty())
+				{
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites (Post UI)");
+
+					DrawSpriteBatch(m_QueuedSSPostUISprites, commandBuffer);
+					m_QueuedSSPostUISprites.clear();
+
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Sprites (Post UI)");
+				}
 
 				if (g_EngineInstance->IsRenderingImGui())
 				{

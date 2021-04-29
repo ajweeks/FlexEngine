@@ -264,7 +264,6 @@ namespace flex
 		void RemoveAllAreaLights();
 
 		DirLightData* GetDirectionalLight();
-		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
 		i32 GetNumSpotLights();
 		i32 GetNumAreaLights();
@@ -420,7 +419,8 @@ namespace flex
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
-		std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSPreUISprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSPostUISprites;
 		std::vector<SpriteQuadDrawInfo> m_QueuedSSArrSprites;
 
 		std::map<MaterialID, Material*> m_Materials;

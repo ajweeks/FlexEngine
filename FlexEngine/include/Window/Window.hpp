@@ -59,6 +59,8 @@ namespace flex
 		virtual void SetSize(i32 width, i32 height) = 0;
 		/* Called when the window's size changes */
 		virtual void OnSizeChanged(i32 width, i32 height) = 0;
+		real GetAspectRatio() const;
+		real GetInvAspectRatio() const;
 
 		glm::vec2i GetPosition() const;
 		/* Set the window's position */

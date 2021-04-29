@@ -466,6 +466,8 @@ namespace flex
 		// Inventory
 		SHOW_INVENTORY,
 		TOGGLE_ITEM_HOLDING,
+		CYCLE_HELD_ITEM_FORWARD,
+		CYCLE_HELD_ITEM_BACKWARD,
 
 		// Vehicle
 		VEHICLE_ACCELERATE,
@@ -539,6 +541,8 @@ namespace flex
 		// Inventory
 		"Show inventory",
 		"Toggle holding item",
+		"Cycle held item forward",
+		"Cycle held item backward",
 
 		// Vehicle
 		"Vehicle accelerate",

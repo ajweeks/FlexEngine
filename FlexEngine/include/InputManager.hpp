@@ -120,6 +120,7 @@ namespace flex
 
 		Action GetActionFromKeyCode(KeyCode keyCode);
 		Action GetActionFromMouseButton(MouseButton button);
+		Action GetActionFromMouseAxis(MouseAxis axis);
 		Action GetActionFromGamepadButton(GamepadButton button);
 
 		static bool IsGamepadAxisInvertable(GamepadAxis gamepadAxis);

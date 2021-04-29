@@ -93,11 +93,12 @@ namespace flex
 
 		TrackState m_TrackState;
 
+		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
+
 		std::vector<GameObjectStack> m_Inventory;
-		std::vector<GameObjectStack> m_QuickAccessInventory;
+		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
 		bool bInventoryShowing = false;
-		i32 heldItemSlot = -1;
-		//GameObject* m_HeldItem = nullptr;
+		i32 heldItemSlot = 0;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

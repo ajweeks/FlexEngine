@@ -910,6 +910,8 @@ namespace flex
 		u32 staticVertexBufferIndex = 0;
 	};
 
+	static const u32 Z_ORDER_UI = 50;
+
 	struct SpriteQuadDrawInfo
 	{
 		TextureID textureID = InvalidTextureID; // If left invalid, blankTextureID will be used
@@ -922,6 +924,7 @@ namespace flex
 		glm::vec3 scale = VEC3_ONE;
 		AnchorPoint anchor = AnchorPoint::TOP_LEFT;
 		glm::vec4 colour = VEC4_ONE;
+		u32 zOrder = 25; // Dictates ordering of sprites, [0, Z_ORDER_UI): renders before UI, [Z_ORDER_UI, 100+]: renders after UI
 
 		bool bScreenSpace = true;
 		bool bReadDepth = true;
@@ -936,7 +939,7 @@ namespace flex
 	{
 		glm::vec2 pos;                        // 0
 		glm::vec2 uv;                         // 8
-		glm::vec4 colour;                      // 16
+		glm::vec4 colour;                     // 16
 		glm::vec4 charSizePixelsCharSizeNorm; // 32 - RG: char size in pixels, BA: char size in [0, 1] in screen space
 		i32 channel;                          // 48 - Uses extra int slot
 	};
@@ -947,7 +950,7 @@ namespace flex
 		glm::vec3 pos;                        // 0
 											  // + 4
 		glm::vec2 uv;                         // 16
-		glm::vec4 colour;                      // 24
+		glm::vec4 colour;                     // 24
 		glm::vec3 tangent;                    // 32
 											  // + 4
 		glm::vec4 charSizePixelsCharSizeNorm; // 48 - RG: char size in pixels, BA: char size in [0, 1] in screen space

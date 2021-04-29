@@ -94,7 +94,52 @@ namespace flex
 
 				if (m_PlayerScreenUI != nullptr && m_PlayerScreenUI->cutType != RectCutType::_NONE)
 				{
-					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					std::vector<UIContainer*> uiContainers;
+					std::vector<UIContainer*> uiContainersToPush;
+
+					uiContainers.push_back(m_PlayerScreenUI);
+					uiContainersToPush.push_back(m_PlayerScreenUI);
+					while (!uiContainersToPush.empty())
+					{
+						UIContainer* uiContainer = uiContainersToPush[0];
+						for (UIContainer* child : uiContainer->children)
+						{
+							uiContainers.push_back(child);
+							if (!child->children.empty())
+							{
+								uiContainersToPush.push_back(child);
+							}
+						}
+						uiContainersToPush.erase(uiContainersToPush.begin());
+					}
+
+					for (u32 i = 0; i < (u32)uiContainers.size(); ++i)
+					{
+						i32 heldItemSlotIndex = player->heldItemSlot;
+						UIContainer* uiContainer = uiContainers[i];
+						if (uiContainer->tag == SID("slot0"))
+						{
+							if (uiContainer->uiElement == nullptr)
+							{
+								uiContainer->uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
+							}
+
+							uiContainers[i]->bHighlighted = false;
+
+							for (u32 n = 1; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
+							{
+								if (uiContainers[i + n]->uiElement == nullptr)
+								{
+									uiContainers[i + n]->uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
+								}
+								uiContainers[i + n]->bHighlighted = false;
+							}
+
+							uiContainers[i + heldItemSlotIndex]->bHighlighted = true;
+						}
+					}
+
+					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
 					UIMesh::ComputeRects(m_PlayerScreenUI, rect, rects, normalColour, highlightedColour);
 				}
 
@@ -102,25 +147,26 @@ namespace flex
 					m_PlayerInventoryUI->cutType != RectCutType::_NONE &&
 					player->bInventoryShowing)
 				{
-					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
 					i32 inventoryUIRectIndex = (i32)rects.size();
 					UIMesh::ComputeRects(m_PlayerInventoryUI, rect, rects, normalColour, highlightedColour);
 					if (inventoryUIRectIndex < (i32)rects.size())
 					{
-						rects[inventoryUIRectIndex].colour = m_PlayerScreenUI->GetColour(darkenedColour, darkenedHighlightedColour);
+						rects[inventoryUIRectIndex].colour = m_PlayerInventoryUI->GetColour(darkenedColour, darkenedHighlightedColour);
 					}
 				}
 
 				// TODO: Allow configurable margins (or use hidden rects)
-				real shrinkFactor = 0.01f;
+				real shrinkFactor = 0.9f;
 				for (i32 i = 0; i < (i32)rects.size(); ++i)
 				{
 					glm::vec4 colour = rects[i].colour;
 					if (colour.a != 0.0f)
 					{
+						rects[i].Scale(shrinkFactor);
 						uiMesh->DrawRect(
-							glm::vec2(rects[i].minX + shrinkFactor, rects[i].minY + shrinkFactor) * 2.0f - 1.0f,
-							glm::vec2(rects[i].maxX - shrinkFactor, rects[i].maxY - shrinkFactor) * 2.0f - 1.0f, colour, 0.0f);
+							glm::vec2(rects[i].minX, rects[i].minY),
+							glm::vec2(rects[i].maxX, rects[i].maxY), colour, 0.0f);
 					}
 				}
 			}
@@ -2399,7 +2445,10 @@ namespace flex
 
 					if (ImGui::Button(bDirty ? "Save*" : "Save"))
 					{
-						SerializeUIConfig(filePath, uiContainer);
+						if (SerializeUIConfig(filePath, uiContainer))
+						{
+							bDirty = false;
+						}
 					}
 
 					ImGui::SameLine();
@@ -2417,6 +2466,8 @@ namespace flex
 								delete uiContainer;
 								uiContainer = new UIContainer();
 							}
+
+							bDirty = false;
 						}
 
 						ImGui::PopStyleColor();
