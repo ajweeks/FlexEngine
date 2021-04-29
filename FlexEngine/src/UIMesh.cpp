@@ -7,7 +7,6 @@
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "JSONParser.hpp"
-#include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -17,7 +16,41 @@
 
 namespace flex
 {
-	Rect UIScreen::Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
+	UIContainer* UIContainer::Duplicate()
+	{
+		UIContainer* newUIContainer = new UIContainer(cutType, amount, bVisible, bRelative, tag, children);
+		newUIContainer->tagSourceStr = tagSourceStr;
+
+		if (uiElement != nullptr)
+		{
+			switch (uiElement->type)
+			{
+			case UIElementType::IMAGE:
+			{
+				ImageUIElement* imageElement = (ImageUIElement*)uiElement;
+				newUIContainer->uiElement = new ImageUIElement(imageElement->textureID);
+			} break;
+			case UIElementType::TEXT:
+			{
+				TextUIElement* textElement = (TextUIElement*)uiElement;
+				newUIContainer->uiElement = new TextUIElement(textElement->text, textElement->fontID);
+			} break;
+			default:
+			{
+				PrintError("Unhandled UI element type in UIContainer::Duplicate\n");
+			}
+			}
+		}
+
+		for (UIContainer* child : children)
+		{
+			newUIContainer->children.emplace_back(child->Duplicate());
+		}
+
+		return newUIContainer;
+	}
+
+	Rect UIContainer::Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
 	{
 		glm::vec4 colour = GetColour(normalColour, highlightedColour);
 
@@ -33,7 +66,7 @@ namespace flex
 		return {};
 	}
 
-	glm::vec4 UIScreen::GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const
+	glm::vec4 UIContainer::GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const
 	{
 		glm::vec4 colour = bHighlighted ? highlightedColour : normalColour;
 		if (!bVisible)
@@ -43,7 +76,7 @@ namespace flex
 		return colour;
 	}
 
-	JSONObject UIScreen::Serialize() const
+	JSONObject UIContainer::Serialize() const
 	{
 		JSONObject result = {};
 
@@ -51,14 +84,25 @@ namespace flex
 		result.fields.emplace_back("amount", JSONValue(amount));
 		result.fields.emplace_back("visible", JSONValue(bVisible));
 		result.fields.emplace_back("relative", JSONValue(bRelative));
+		// TODO: Skip serializing in release builds
+		std::string tagSourceStrStripped = std::string(tagSourceStr.c_str());
+		if (!tagSourceStrStripped.empty())
+		{
+			result.fields.emplace_back("tag source string", JSONValue(tagSourceStrStripped));
+		}
+
+		if (tag != InvalidStringID)
+		{
+			result.fields.emplace_back("tag", JSONValue((u64)tag));
+		}
 
 		if (!children.empty())
 		{
 			std::vector<JSONObject> childrenObjects;
 			childrenObjects.reserve(children.size());
-			for (const UIScreen& child : children)
+			for (UIContainer* child : children)
 			{
-				childrenObjects.emplace_back(child.Serialize());
+				childrenObjects.emplace_back(child->Serialize());
 			}
 			result.fields.emplace_back("children", JSONValue(childrenObjects));
 		}
@@ -66,29 +110,29 @@ namespace flex
 		return result;
 	}
 
-	UIScreen UIScreen::Deserialize(const JSONObject& object)
+	void UIContainer::Deserialize(const JSONObject& object, UIContainer* uiContainer)
 	{
-		UIScreen result = {};
-
 		std::string cutTypeStr;
 		if (object.TryGetString("cut type", cutTypeStr))
 		{
-			result.cutType = RectCutTypeFromString(cutTypeStr.c_str());
+			uiContainer->cutType = RectCutTypeFromString(cutTypeStr.c_str());
 		}
-		object.TryGetFloat("amount", result.amount);
-		object.TryGetBool("visible", result.bVisible);
-		object.TryGetBool("relative", result.bRelative);
+		object.TryGetFloat("amount", uiContainer->amount);
+		object.TryGetBool("visible", uiContainer->bVisible);
+		object.TryGetBool("relative", uiContainer->bRelative);
+		object.TryGetString("tag source string", uiContainer->tagSourceStr);
+		object.TryGetStringID("tag", uiContainer->tag);
 
 		std::vector<JSONObject> childrenObjects;
 		if (object.TryGetObjectArray("children", childrenObjects))
 		{
-			for (const JSONObject& childObj : childrenObjects)
+			uiContainer->children.resize(childrenObjects.size());
+			for (u32 i = 0; i < (u32)childrenObjects.size(); ++i)
 			{
-				result.children.emplace_back(UIScreen::Deserialize(childObj));
+				uiContainer->children[i] = new UIContainer();
+				UIContainer::Deserialize(childrenObjects[i], uiContainer->children[i]);
 			}
 		}
-
-		return result;
 	}
 
 	RectCutType RectCutTypeFromString(const char* cutTypeStr)
@@ -156,8 +200,6 @@ namespace flex
 		}
 
 		CreateDebugObject();
-
-		Deserialize();
 	}
 
 	void UIMesh::Destroy()
@@ -169,56 +211,6 @@ namespace flex
 	{
 		Clear();
 		CreateDebugObject();
-	}
-
-	bool UIMesh::Deserialize()
-	{
-		std::string fileContents;
-		if (ReadFile(UI_CONFIG_FILE_LOCATION, fileContents, false))
-		{
-			JSONObject rootObject;
-			if (!JSONParser::Parse(fileContents, rootObject))
-			{
-				PrintError("Failed to parse UI config file at %s\n", UI_CONFIG_FILE_LOCATION);
-				return false;
-			}
-
-			JSONObject playerScreenObject;
-			if (rootObject.TryGetObject("player screen", playerScreenObject))
-			{
-				m_PlayerScreenUI = UIScreen::Deserialize(playerScreenObject);
-			}
-
-			JSONObject playerInventoryScreenObject;
-			if (rootObject.TryGetObject("player inventory screen", playerInventoryScreenObject))
-			{
-				m_PlayerInventoryUI = UIScreen::Deserialize(playerInventoryScreenObject);
-			}
-
-			m_bUIConfigDirty = false;
-
-			return true;
-		}
-
-		return false;
-	}
-
-	void UIMesh::Serialize()
-	{
-		JSONObject rootObject = {};
-
-		rootObject.fields.emplace_back("player screen", JSONValue(m_PlayerScreenUI.Serialize()));
-		rootObject.fields.emplace_back("player inventory screen", JSONValue(m_PlayerInventoryUI.Serialize()));
-
-		std::string fileContents = rootObject.ToString();
-		if (!WriteFile(UI_CONFIG_FILE_LOCATION, fileContents, false))
-		{
-			PrintError("Failed to write UI config file to %s\n", UI_CONFIG_FILE_LOCATION);
-		}
-		else
-		{
-			m_bUIConfigDirty = false;
-		}
 	}
 
 	void UIMesh::DrawRect(const glm::vec2& bottomLeft, const glm::vec2& topRight, const glm::vec4& colour, real cornerRadius)
@@ -438,68 +430,21 @@ namespace flex
 		}
 	}
 
-	void UIMesh::ComputeRects(UIScreen& parent, Rect& rootRect, std::vector<Rect>& outputRects, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
+	void UIMesh::ComputeRects(UIContainer* parent, Rect& rootRect, std::vector<Rect>& outputRects, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
 	{
-		outputRects.push_back(parent.Cut(&rootRect, normalColour, highlightedColour));
+		outputRects.push_back(parent->Cut(&rootRect, normalColour, highlightedColour));
 		i32 newRectIndex = (i32)outputRects.size() - 1;
 
-		for (i32 i = 0; i < (i32)parent.children.size(); ++i)
+		for (i32 i = 0; i < (i32)parent->children.size(); ++i)
 		{
 			// newRect can't be cached by ref because vec resize is likely to occur
-			ComputeRects(parent.children[i], outputRects[newRectIndex], outputRects, normalColour, highlightedColour);
+			ComputeRects(parent->children[i], outputRects[newRectIndex], outputRects, normalColour, highlightedColour);
 		}
 	}
 
 	void UIMesh::Draw()
 	{
 		PROFILE_AUTO("UIMesh > Draw");
-
-		if (g_CameraManager->CurrentCamera()->bIsGameplayCam)
-		{
-			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-
-			if (player != nullptr)
-			{
-				// TODO: Preallocate room here for rect count
-				std::vector<Rect> rects;
-
-				static const glm::vec4 normalColour(0.9f, 0.9f, 0.9f, 1.0f);
-				static const glm::vec4 highlightedColour(1.0f, 1.0f, 1.0f, 1.0f);
-				static const glm::vec4 darkenedColour(0.3f, 0.3f, 0.3f, 0.5f);
-				static const glm::vec4 darkenedHighlightedColour(0.4f, 0.4f, 0.4f, 0.5f);
-
-				if (m_PlayerScreenUI.cutType != RectCutType::_NONE)
-				{
-					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
-					ComputeRects(m_PlayerScreenUI, rect, rects, normalColour, highlightedColour);
-				}
-
-				if (m_PlayerInventoryUI.cutType != RectCutType::_NONE &&
-					player->bInventoryShowing)
-				{
-					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
-					i32 inventoryUIRectIndex = (i32)rects.size();
-					ComputeRects(m_PlayerInventoryUI, rect, rects, normalColour, highlightedColour);
-					if (inventoryUIRectIndex < (i32)rects.size())
-					{
-						rects[inventoryUIRectIndex].colour = m_PlayerInventoryUI.GetColour(darkenedColour, darkenedHighlightedColour);
-					}
-				}
-
-				// TODO: Allow configurable margins (or use hidden rects)
-				real shrinkFactor = 0.01f;
-				for (i32 i = 0; i < (i32)rects.size(); ++i)
-				{
-					glm::vec4 colour = rects[i].colour;
-					if (colour.a != 0.0f)
-					{
-						DrawRect(
-							glm::vec2(rects[i].minX + shrinkFactor, rects[i].minY + shrinkFactor) * 2.0f - 1.0f,
-							glm::vec2(rects[i].maxX - shrinkFactor, rects[i].maxY - shrinkFactor) * 2.0f - 1.0f, colour, 0.0f);
-					}
-				}
-			}
-		}
 
 		Mesh* mesh = m_Object->GetMesh();
 
@@ -513,14 +458,14 @@ namespace flex
 		}
 	}
 
-	UIMesh::RectCutResult UIMesh::DrawImGuiRectCut(UIScreen& rectCut, const char* optionalTreeNodeName /* = nullptr */)
+	RectCutResult UIMesh::DrawImGuiRectCut(UIContainer* rectCut, bool& bDirtyFlag, const char* optionalTreeNodeName /* = nullptr */)
 	{
 		bool bRemoveSelf = false;
 		bool bDuplicateSelf = false;
 
-		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIScreen");
+		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIContainer");
 
-		rectCut.bHighlighted = ImGui::IsItemHovered();
+		rectCut->bHighlighted = ImGui::IsItemHovered();
 
 		if (ImGui::BeginPopupContextItem(nullptr))
 		{
@@ -533,28 +478,28 @@ namespace flex
 
 		if (bTreeOpen)
 		{
-			if (ImGui::BeginCombo("##cutType", RectCutTypeStrings[(i32)rectCut.cutType]))
+			if (ImGui::BeginCombo("##cutType", RectCutTypeStrings[(i32)rectCut->cutType]))
 			{
 				for (u32 i = 0; i < (u32)ARRAY_LENGTH(RectCutTypeStrings); ++i)
 				{
-					bool bSelected = (i == (u32)rectCut.cutType);
+					bool bSelected = (i == (u32)rectCut->cutType);
 					if (ImGui::Selectable(RectCutTypeStrings[i], &bSelected))
 					{
-						rectCut.cutType = (RectCutType)i;
-						m_bUIConfigDirty = true;
+						rectCut->cutType = (RectCutType)i;
+						bDirtyFlag = true;
 					}
 
 				}
 				ImGui::EndCombo();
 			}
 
-			m_bUIConfigDirty = ImGui::SliderFloat("##amount", &rectCut.amount, 0.0f, 1.0f) || m_bUIConfigDirty;
+			bDirtyFlag = ImGui::SliderFloat("##amount", &rectCut->amount, 0.0f, 1.0f) || bDirtyFlag;
 
-			m_bUIConfigDirty = ImGui::Checkbox("Visible", &rectCut.bVisible) || m_bUIConfigDirty;
+			bDirtyFlag = ImGui::Checkbox("Visible", &rectCut->bVisible) || bDirtyFlag;
 
 			ImGui::SameLine();
 
-			m_bUIConfigDirty = ImGui::Checkbox("Relative", &rectCut.bRelative) || m_bUIConfigDirty;
+			bDirtyFlag = ImGui::Checkbox("Relative", &rectCut->bRelative) || bDirtyFlag;
 
 			ImGui::SameLine();
 
@@ -567,70 +512,40 @@ namespace flex
 
 			if (ImGui::Button("+"))
 			{
-				rectCut.children.emplace_back(UIScreen(RectCutType::TOP, 0.5f, false, true, false, {}));
-				m_bUIConfigDirty = true;
+				rectCut->children.emplace_back(new UIContainer(RectCutType::TOP, 0.5f, false, true, InvalidStringID, {}));
+				bDirtyFlag = true;
 			}
 
-			for (i32 i = 0; i < (i32)rectCut.children.size(); ++i)
+			rectCut->tagSourceStr.resize(256);
+			if (ImGui::InputText("Tag", (char*)rectCut->tagSourceStr.c_str(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				rectCut->tagSourceStr = std::string(rectCut->tagSourceStr.c_str());
+				rectCut->tag = Hash(rectCut->tagSourceStr.c_str());
+				bDirtyFlag = true;
+			}
+
+			for (i32 i = 0; i < (i32)rectCut->children.size(); ++i)
 			{
 				ImGui::PushID(i);
-				RectCutResult result = DrawImGuiRectCut(rectCut.children[i]);
+				RectCutResult result = DrawImGuiRectCut(rectCut->children[i], bDirtyFlag);
 				ImGui::PopID();
 
 				if (result == RectCutResult::REMOVE)
 				{
-					rectCut.children.erase(rectCut.children.begin() + i);
-					m_bUIConfigDirty = true;
+					rectCut->children.erase(rectCut->children.begin() + i);
+					bDirtyFlag = true;
 					--i;
 				}
 				else if (result == RectCutResult::DUPLICATE)
 				{
-					rectCut.children.emplace(rectCut.children.begin() + i, rectCut.children[i]);
-					m_bUIConfigDirty = true;
+					rectCut->children.emplace(rectCut->children.begin() + i, rectCut->children[i]->Duplicate());
+					bDirtyFlag = true;
 				}
 			}
 			ImGui::TreePop();
 		}
 
 		return bRemoveSelf ? RectCutResult::REMOVE : (bDuplicateSelf ? RectCutResult::DUPLICATE : RectCutResult::DO_NOTHING);
-	}
-
-	void UIMesh::DrawImGui(bool* bShowing)
-	{
-		if (ImGui::Begin("UI", bShowing))
-		{
-			if (ImGui::Button(m_bUIConfigDirty ? "Save*" : "Save"))
-			{
-				Serialize();
-			}
-
-			ImGui::SameLine();
-
-			{
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
-
-				if (ImGui::Button("Reload"))
-				{
-					if (!Deserialize())
-					{
-						// There was no file to read, just clear data
-						m_PlayerScreenUI = {};
-						m_PlayerInventoryUI = {};
-					}
-				}
-
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-			}
-
-			DrawImGuiRectCut(m_PlayerScreenUI, "Player screen");
-			DrawImGuiRectCut(m_PlayerInventoryUI, "Player inventory");
-		}
-
-		ImGui::End();
 	}
 
 	void UIMesh::EndFrame()

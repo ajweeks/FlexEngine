@@ -319,7 +319,7 @@ namespace flex
 
 		if (!file)
 		{
-			PrintError("Unable to read file: ");
+			PrintError("Unable to read file: %s\n", filePath.c_str());
 			return false;
 		}
 

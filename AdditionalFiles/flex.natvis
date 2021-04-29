@@ -27,6 +27,9 @@
   <Type Name="flex::JSONValue">
     <DisplayString Condition="type == flex::JSONValue::Type::STRING">{strValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::INT">{intValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::UINT">{uintValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::LONG">{longValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::ULONG">{ulongValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::FLOAT">{floatValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::BOOL">{boolValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::OBJECT">{objectValue}</DisplayString>

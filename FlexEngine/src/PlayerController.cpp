@@ -592,7 +592,6 @@ namespace flex
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 		}
 
-
 		m_bAttemptCompleteTrack = false;
 		m_bAttemptPlaceItemFromInventory = false;
 		m_bAttemptInteract = false;

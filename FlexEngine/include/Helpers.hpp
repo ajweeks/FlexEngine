@@ -18,6 +18,7 @@ namespace flex
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount = 3, bool bFlipVertically = false, u32* outChannelCount = nullptr);
 	void DestroyGLFWimage(GLFWimage& image);
 
+	// TODO: Move to Platform layer
 	bool FileExists(const std::string& filePath);
 
 	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile);

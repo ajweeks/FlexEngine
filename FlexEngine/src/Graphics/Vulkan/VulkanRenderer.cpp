@@ -1958,11 +1958,6 @@ namespace flex
 				ImGui::End();
 			}
 
-			if (bUIEditorShowing)
-			{
-				m_UIMesh->DrawImGui(&bUIEditorShowing);
-			}
-
 #if COMPILE_SHADER_COMPILER
 			VulkanShaderCompiler::DrawImGuiShaderErrorsWindow(&m_bShaderErrorWindowShowing);
 #endif

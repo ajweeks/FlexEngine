@@ -2,6 +2,7 @@
 
 #include "Pair.hpp"
 #include "Platform/Platform.hpp" // For Date
+#include "UIMesh.hpp"
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
@@ -59,6 +60,9 @@ namespace flex
 
 		JSONField SerializeMesh(Mesh* mesh);
 
+		void ParseUIConfigs();
+		void SerializeUIConfigs();
+
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
 
 		bool LoadFontMetrics(const std::vector<char>& fileMemory,
@@ -111,6 +115,7 @@ namespace flex
 		bool bMeshWindowShowing = false;
 		bool bPrefabsWindowShowing = false;
 		bool bSoundsWindowShowing = false;
+		bool bUIEditorShowing = false;
 
 		bool bShowEditorMaterials = false;
 
@@ -167,9 +172,17 @@ namespace flex
 
 		static const char* s_SupportedTextureFormats[];
 
+		UIContainer* m_PlayerScreenUI = nullptr;
+		bool m_bPlayerScreenUIConfigDirty = false;
+		UIContainer* m_PlayerInventoryUI = nullptr;
+		bool m_bPlayerInventoryUIConfigDirty = false;
+
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
+
+		bool ParseUIConfig(const char* filePath, UIContainer* uiContainer);
+		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

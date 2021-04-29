@@ -1,0 +1,92 @@
+{
+	"cut type" : "Top",
+	"amount" : 1.000000,
+	"visible" : false,
+	"relative" : true,
+	"children" : 
+	[
+		{
+			"cut type" : "Bottom",
+			"amount" : 0.087500,
+			"visible" : false,
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"cut type" : "Left",
+					"amount" : 0.196000,
+					"visible" : false,
+					"relative" : true
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"tag source string" : "first-slot",
+					"tag" : 2855974854258516312
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				},
+				{
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false
+				}
+			]
+		}
+	]
+}

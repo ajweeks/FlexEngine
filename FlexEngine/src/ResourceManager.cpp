@@ -16,6 +16,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
@@ -52,6 +53,7 @@ namespace flex
 
 		DiscoverTextures();
 		DiscoverAudioFiles();
+		ParseUIConfigs();
 	}
 
 	void ResourceManager::Update()
@@ -73,6 +75,55 @@ namespace flex
 			// first write to "file0.wav", then delete "file.wav", then rename "file0.wav"
 			// to "file.wav". This delay prevents us from trying to load the temporary file.
 			m_AudioRefreshFrameCountdown = 1;
+		}
+
+		if (g_CameraManager->CurrentCamera()->bIsGameplayCam)
+		{
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+
+			if (player != nullptr)
+			{
+				UIMesh* uiMesh = g_Renderer->GetUIMesh();
+				// TODO: Preallocate room here for rect count
+				std::vector<Rect> rects;
+
+				static const glm::vec4 normalColour(0.9f, 0.9f, 0.9f, 1.0f);
+				static const glm::vec4 highlightedColour(1.0f, 1.0f, 1.0f, 1.0f);
+				static const glm::vec4 darkenedColour(0.3f, 0.3f, 0.3f, 0.5f);
+				static const glm::vec4 darkenedHighlightedColour(0.4f, 0.4f, 0.4f, 0.5f);
+
+				if (m_PlayerScreenUI != nullptr && m_PlayerScreenUI->cutType != RectCutType::_NONE)
+				{
+					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					UIMesh::ComputeRects(m_PlayerScreenUI, rect, rects, normalColour, highlightedColour);
+				}
+
+				if (m_PlayerInventoryUI != nullptr &&
+					m_PlayerInventoryUI->cutType != RectCutType::_NONE &&
+					player->bInventoryShowing)
+				{
+					Rect rect{ 0.0f, 0.0f, 1.0f, 1.0f, VEC4_ONE };
+					i32 inventoryUIRectIndex = (i32)rects.size();
+					UIMesh::ComputeRects(m_PlayerInventoryUI, rect, rects, normalColour, highlightedColour);
+					if (inventoryUIRectIndex < (i32)rects.size())
+					{
+						rects[inventoryUIRectIndex].colour = m_PlayerScreenUI->GetColour(darkenedColour, darkenedHighlightedColour);
+					}
+				}
+
+				// TODO: Allow configurable margins (or use hidden rects)
+				real shrinkFactor = 0.01f;
+				for (i32 i = 0; i < (i32)rects.size(); ++i)
+				{
+					glm::vec4 colour = rects[i].colour;
+					if (colour.a != 0.0f)
+					{
+						uiMesh->DrawRect(
+							glm::vec2(rects[i].minX + shrinkFactor, rects[i].minY + shrinkFactor) * 2.0f - 1.0f,
+							glm::vec2(rects[i].maxX - shrinkFactor, rects[i].maxY - shrinkFactor) * 2.0f - 1.0f, colour, 0.0f);
+					}
+				}
+			}
 		}
 	}
 
@@ -105,6 +156,12 @@ namespace flex
 			delete prefabTemplatePair.templateObject;
 		}
 		prefabTemplates.clear();
+
+		delete m_PlayerScreenUI;
+		m_PlayerScreenUI = nullptr;
+
+		delete m_PlayerInventoryUI;
+		m_PlayerInventoryUI = nullptr;
 	}
 
 	void ResourceManager::DestroyAllLoadedMeshes()
@@ -125,7 +182,6 @@ namespace flex
 			delete prefabTemplatePair.templateObject;
 		}
 		prefabTemplates.clear();
-
 	}
 
 	void ResourceManager::OnSceneChanged()
@@ -546,6 +602,94 @@ namespace flex
 		}
 
 		return meshObject;
+	}
+
+	bool ResourceManager::ParseUIConfig(const char* filePath, UIContainer* uiContainer)
+	{
+		std::string fileContents;
+		if (ReadFile(filePath, fileContents, false))
+		{
+			JSONObject rootObject;
+			if (!JSONParser::Parse(fileContents, rootObject))
+			{
+				PrintError("Failed to parse UI config file at %s\n", filePath);
+				return false;
+			}
+
+			UIContainer::Deserialize(rootObject, uiContainer);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void ResourceManager::ParseUIConfigs()
+	{
+		if (m_PlayerScreenUI == nullptr)
+		{
+			m_PlayerScreenUI = new UIContainer();
+		}
+
+		if (m_PlayerInventoryUI == nullptr)
+		{
+			m_PlayerInventoryUI = new UIContainer();
+		}
+
+		if (ParseUIConfig(UI_PLAYER_SCREEN_LOCATION, m_PlayerScreenUI))
+		{
+			m_bPlayerScreenUIConfigDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to read player screen UI config to %s\n", UI_PLAYER_SCREEN_LOCATION);
+		}
+
+		if (ParseUIConfig(UI_PLAYER_INVENTORY_LOCATION, m_PlayerInventoryUI))
+		{
+			m_bPlayerInventoryUIConfigDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to read player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+		}
+	}
+
+	bool ResourceManager::SerializeUIConfig(const char* filePath, UIContainer* uiContainer)
+	{
+		JSONObject rootObject = uiContainer->Serialize();
+
+		std::string directoryString = RelativePathToAbsolute(ExtractDirectoryString(filePath));
+		if (!Platform::DirectoryExists(directoryString))
+		{
+			Platform::CreateDirectoryRecursive(directoryString);
+		}
+
+		std::string fileContents = rootObject.ToString();
+		bool bSuccess = WriteFile(filePath, fileContents, false);
+
+		return bSuccess;
+	}
+
+	void ResourceManager::SerializeUIConfigs()
+	{
+		if (SerializeUIConfig(UI_PLAYER_SCREEN_LOCATION, m_PlayerScreenUI))
+		{
+			m_bPlayerScreenUIConfigDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to serialize player screen UI config to %s\n", UI_PLAYER_SCREEN_LOCATION);
+		}
+
+		if (SerializeUIConfig(UI_PLAYER_INVENTORY_LOCATION, m_PlayerInventoryUI))
+		{
+			m_bPlayerInventoryUIConfigDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to serialize player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+		}
 	}
 
 	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
@@ -2240,6 +2384,56 @@ namespace flex
 				}
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
+			}
+
+			ImGui::End();
+		}
+
+		if (bUIEditorShowing)
+		{
+			if (ImGui::Begin("UI", &bUIEditorShowing))
+			{
+				auto drawButtons = [this](UIContainer* uiContainer, const char* filePath, bool bDirty)
+				{
+					ImGui::PushID(filePath);
+
+					if (ImGui::Button(bDirty ? "Save*" : "Save"))
+					{
+						SerializeUIConfig(filePath, uiContainer);
+					}
+
+					ImGui::SameLine();
+
+					{
+						ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+						if (ImGui::Button("Reload"))
+						{
+							if (!ParseUIConfig(filePath, uiContainer))
+							{
+								// There was no file to read, just clear data
+								delete uiContainer;
+								uiContainer = new UIContainer();
+							}
+						}
+
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::PopID();
+				};
+
+				UIMesh* uiMesh = g_Renderer->GetUIMesh();
+
+				drawButtons(m_PlayerScreenUI, UI_PLAYER_SCREEN_LOCATION, m_bPlayerScreenUIConfigDirty);
+				uiMesh->DrawImGuiRectCut(m_PlayerScreenUI, m_bPlayerScreenUIConfigDirty, "Player screen");
+
+				drawButtons(m_PlayerInventoryUI, UI_PLAYER_INVENTORY_LOCATION, m_bPlayerInventoryUIConfigDirty);
+				uiMesh->DrawImGuiRectCut(m_PlayerInventoryUI, m_bPlayerInventoryUIConfigDirty, "Player inventory");
 			}
 
 			ImGui::End();
