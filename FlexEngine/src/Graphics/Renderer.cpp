@@ -1514,7 +1514,7 @@ namespace flex
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
-		m_Shaders[shaderID]->maxObjectCount = 32;
+		m_Shaders[shaderID]->maxObjectCount = 64;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV |
