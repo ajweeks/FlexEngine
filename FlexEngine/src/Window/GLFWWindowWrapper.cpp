@@ -328,6 +328,15 @@ namespace flex
 			}
 
 			glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+
+			// Enable raw motion when cursor disabled for smoother camera controls
+			if (glfwCursorMode == GLFW_CURSOR_DISABLED)
+			{
+				if (glfwRawMouseMotionSupported())
+				{
+					glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+				}
+			}
 		}
 	}
 

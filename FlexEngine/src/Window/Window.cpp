@@ -34,33 +34,6 @@ namespace flex
 			m_SecondsSinceTitleUpdate = 0.0f;
 			SetWindowTitle(GenerateWindowTitle());
 		}
-
-		if (m_CursorMode == CursorMode::HIDDEN)
-		{
-			const glm::vec2i windowSize = GetSize();
-			const glm::vec2 oldMousePos = g_InputManager->GetMousePosition();
-			glm::vec2 newMousePos = oldMousePos;
-			if (oldMousePos.x < 0)
-			{
-				newMousePos.x = windowSize.x + oldMousePos.x;
-			}
-			else if (oldMousePos.x >= windowSize.x)
-			{
-				newMousePos.x = 0;
-			}
-
-			if (oldMousePos.y < 0)
-			{
-				newMousePos.y = windowSize.y + oldMousePos.y;
-			}
-			else if (oldMousePos.y >= windowSize.y)
-			{
-				newMousePos.y = 0;
-			}
-
-			g_InputManager->SetMousePosition(newMousePos);
-			SetMousePosition(newMousePos);
-		}
 	}
 
 	glm::vec2i Window::GetSize() const

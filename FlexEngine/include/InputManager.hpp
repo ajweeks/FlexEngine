@@ -64,7 +64,6 @@ namespace flex
 
 		bool DidMouseWrap() const;
 
-		void SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos = true);
 		glm::vec2 GetMousePosition() const;
 		void ClearMouseMovement();
 		// Returns distance mouse has moved since last frame

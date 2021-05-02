@@ -621,6 +621,13 @@ namespace flex
 	{
 		m_MousePosition = glm::vec2((real)x, (real)y);
 
+#if 0
+		{
+			glm::vec2 pos = g_Window->GetMousePosition();
+			Print("%.2f, %.2f (%.2f, %.2f)\n", x, y, pos.x, pos.y);
+		}
+#endif
+
 		ImGuiIO& io = ImGui::GetIO();
 
 		if (g_Window->GetCursorMode() == CursorMode::NORMAL)
@@ -954,16 +961,6 @@ namespace flex
 	void InputManager::ClearMouseMovement()
 	{
 		m_PrevMousePosition = m_MousePosition;
-	}
-
-	void InputManager::SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos)
-	{
-		m_MousePosition = mousePos;
-
-		if (bUpdatePreviousPos)
-		{
-			m_PrevMousePosition = m_MousePosition;
-		}
 	}
 
 	glm::vec2 InputManager::GetMouseMovement(bool bIgnoreImGui /* = false */) const
