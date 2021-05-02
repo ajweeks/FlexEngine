@@ -28,6 +28,12 @@ namespace flex
 			maxX = center.x + halfWidth * scale;
 			maxY = center.y + halfHeight * scale;
 		}
+
+		bool Overlaps(const glm::vec2& point)
+		{
+			return point.x >= minX && point.x < maxX &&
+				point.y >= minY && point.y < maxY;
+		}
 	};
 
 	enum class RectCutType
@@ -222,6 +228,7 @@ namespace flex
 		virtual void Update() override;
 
 		GameObjectStack* stack = nullptr;
+		bool bHovered = false;
 	};
 
 	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour);

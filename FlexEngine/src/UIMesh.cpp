@@ -6,7 +6,9 @@
 #include "Profiler.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -363,28 +365,28 @@ namespace flex
 	Rect CutLeft(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real minX = rect->minX;
-		rect->minX = glm::min(rect->maxX, rect->minX + amount * (bRelative ? ((rect->maxX - rect->minX) ) : 2.0f));
+		rect->minX = glm::min(rect->maxX, rect->minX + amount * (bRelative ? (rect->maxX - rect->minX) : 2.0f));
 		return Rect{ minX, rect->minY, rect->minX, rect->maxY, colour };
 	}
 
 	Rect CutRight(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real maxX = rect->maxX;
-		rect->maxX = glm::max(rect->minX, rect->maxX - amount * (bRelative ? ((rect->maxX - rect->minX) ) : 2.0f));
+		rect->maxX = glm::max(rect->minX, rect->maxX - amount * (bRelative ? (rect->maxX - rect->minX) : 2.0f));
 		return Rect{ rect->maxX, rect->minY, maxX, rect->maxY, colour };
 	}
 
 	Rect CutTop(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real maxY = rect->maxY;
-		rect->maxY = glm::max(rect->minY, rect->maxY - amount * (bRelative ? ((rect->maxY - rect->minY) ) : 2.0f));
+		rect->maxY = glm::max(rect->minY, rect->maxY - amount * (bRelative ? (rect->maxY - rect->minY) : 2.0f));
 		return Rect{ rect->minX, rect->maxY, rect->maxX, maxY, colour };
 	}
 
 	Rect CutBottom(Rect* rect, real amount, bool bRelative, const glm::vec4& colour)
 	{
 		real minY = rect->minY;
-		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? ((rect->maxY - rect->minY) ) : 2.0f));
+		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? (rect->maxY - rect->minY) : 2.0f));
 		return Rect{ rect->minX, minY, rect->maxX, rect->minY, colour };
 	}
 
@@ -654,6 +656,23 @@ namespace flex
 			outputRects[newRectIndex].Scale(growFactor);
 		}
 
+		if (parent->bVisible &&
+			parent->type == UIContainerType::ITEM)
+		{
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr &&
+				// TODO: Move to separate class once rect cuts are GONE
+				player->bInventoryShowing)
+			{
+				ItemUIContainer* itemContainer = (ItemUIContainer*)parent;
+
+				glm::vec2i windowSize = g_Window->GetSize();
+				glm::vec2 mousePos = g_InputManager->GetMousePosition();
+				glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+				itemContainer->bHovered = outputRects[newRectIndex].Overlaps(mousePosN);
+			}
+		}
+
 		parent->Update();
 
 		if (parent->uiElement != nullptr)
@@ -672,8 +691,8 @@ namespace flex
 				real width = (outputRects[newRectIndex].maxX - outputRects[newRectIndex].minX);
 				real height = (outputRects[newRectIndex].maxY - outputRects[newRectIndex].minY);
 				spriteInfo.pos = glm::vec3(
-					(outputRects[newRectIndex].minX  + width * 0.5f) * aspectRatio,
-					outputRects[newRectIndex].minY  + height * 0.5f,
+					(outputRects[newRectIndex].minX + width * 0.5f) * aspectRatio,
+					outputRects[newRectIndex].minY + height * 0.5f,
 					1.0f);
 				spriteInfo.scale = glm::vec3(width * 0.4f, width * 0.4f, 1.0f);
 				spriteInfo.anchor = AnchorPoint::CENTER;
@@ -692,8 +711,8 @@ namespace flex
 				real width = (outputRects[newRectIndex].maxX - outputRects[newRectIndex].minX);
 				real height = (outputRects[newRectIndex].maxY - outputRects[newRectIndex].minY);
 				glm::vec2 pos = glm::vec2(
-					(outputRects[newRectIndex].minX  + width * 0.5f) * aspectRatio,
-					outputRects[newRectIndex].minY  + height * 0.5f);
+					(outputRects[newRectIndex].minX + width * 0.5f) * aspectRatio,
+					outputRects[newRectIndex].minY + height * 0.5f);
 				real spacing = 0.1f;
 				real scale = 0.4f;
 
