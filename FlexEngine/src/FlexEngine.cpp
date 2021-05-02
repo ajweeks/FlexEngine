@@ -48,6 +48,7 @@ IGNORE_WARNINGS_POP
 #include "Systems/TrackManager.hpp"
 #include "Systems/Systems.hpp"
 #include "Time.hpp"
+#include "UI.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 
@@ -93,6 +94,7 @@ namespace flex
 	struct Monitor* g_Monitor = nullptr;
 	class PhysicsManager* g_PhysicsManager = nullptr;
 	class ResourceManager* g_ResourceManager = nullptr;
+	class UIManager* g_UIManager = nullptr;
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
@@ -233,6 +235,8 @@ namespace flex
 		g_ResourceManager = new ResourceManager();
 		g_ResourceManager->Initialize();
 
+		g_UIManager = new UIManager();
+
 		g_Editor = new Editor();
 
 		g_InputManager = new InputManager();
@@ -287,6 +291,8 @@ namespace flex
 			// Set timer to max value so new config file will be immediately written to disk
 			m_SecondsSinceLastCommonSettingsFileSave = m_SecondsBetweenCommonSettingsFileSave;
 		}
+
+		g_UIManager->Initialize();
 
 		ImGui::CreateContext();
 		SetupImGuiStyles();
@@ -411,6 +417,7 @@ namespace flex
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();
 		g_ResourceManager->Destroy();
+		g_UIManager->Destroy();
 		DestroyWindowAndRenderer();
 		g_ResourceManager->DestroyAllLoadedMeshes();
 
@@ -713,6 +720,8 @@ namespace flex
 
 					g_SceneManager->CurrentScene()->LateUpdate();
 				}
+
+				g_UIManager->Update();
 
 				g_Renderer->Update();
 
@@ -1086,6 +1095,7 @@ namespace flex
 				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
 				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("UI Editor", nullptr, &m_bUIEditorShowing);
 				ImGui::Separator();
 				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
 				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);
@@ -1093,7 +1103,6 @@ namespace flex
 				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
 				ImGui::MenuItem("Prefabs", nullptr, &g_ResourceManager->bPrefabsWindowShowing);
 				ImGui::MenuItem("Sounds", nullptr, &g_ResourceManager->bSoundsWindowShowing);
-				ImGui::MenuItem("UI Editor", nullptr, &g_ResourceManager->bUIEditorShowing);
 				ImGui::Separator();
 				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
 				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);
@@ -1447,6 +1456,11 @@ namespace flex
 				ImGui::Text("L3 cache count: %u", Platform::cpuInfo.l3CacheCount);
 			}
 			ImGui::End();
+		}
+
+		if (m_bUIEditorShowing)
+		{
+			g_UIManager->DrawImGui(&m_bUIEditorShowing);
 		}
 	}
 

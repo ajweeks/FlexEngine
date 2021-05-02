@@ -192,6 +192,7 @@ namespace flex
 		bool m_bInputMapperShowing = false;
 		bool m_bShowMemoryStatsWindow = false;
 		bool m_bShowCPUStatsWindow = false;
+		bool m_bUIEditorShowing = false;
 
 		bool m_bWriteProfilerResultsToFile = false;
 

@@ -97,7 +97,9 @@ namespace flex
 		TrackState m_TrackState;
 
 		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
-		static const i32 INVENTORY_ITEM_COUNT = 7 * 5;
+		static const i32 INVENTORY_ITEM_ROW_COUNT = 5;
+		static const i32 INVENTORY_ITEM_COL_COUNT = 7;
+		static const i32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
 
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;

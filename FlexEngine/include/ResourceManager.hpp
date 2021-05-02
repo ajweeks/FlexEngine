@@ -60,9 +60,6 @@ namespace flex
 
 		JSONField SerializeMesh(Mesh* mesh);
 
-		void ParseUIConfigs();
-		void SerializeUIConfigs();
-
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
 
 		bool LoadFontMetrics(const std::vector<char>& fileMemory,
@@ -115,7 +112,6 @@ namespace flex
 		bool bMeshWindowShowing = false;
 		bool bPrefabsWindowShowing = false;
 		bool bSoundsWindowShowing = false;
-		bool bUIEditorShowing = false;
 
 		bool bShowEditorMaterials = false;
 
@@ -171,11 +167,6 @@ namespace flex
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
-
-		UIContainer* m_PlayerScreenUI = nullptr;
-		bool m_bPlayerScreenUIConfigDirty = false;
-		UIContainer* m_PlayerInventoryUI = nullptr;
-		bool m_bPlayerInventoryUIConfigDirty = false;
 
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);

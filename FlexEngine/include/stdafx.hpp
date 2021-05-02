@@ -279,6 +279,7 @@ namespace flex
 	extern struct Monitor* g_Monitor;
 	extern class PhysicsManager* g_PhysicsManager;
 	extern class ResourceManager* g_ResourceManager;
+	extern class UIManager* g_UIManager;
 
 	template<typename T>
 	T* GetSystem(SystemType systemType)
