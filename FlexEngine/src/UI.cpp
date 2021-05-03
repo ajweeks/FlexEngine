@@ -660,7 +660,20 @@ namespace flex
 							if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
 							{
 								player->heldItemSlot = glm::clamp(itemContainer->index, 0, Player::QUICK_ACCESS_ITEM_COUNT - 1);
-								g_UIManager->draggedUIContainer = itemContainer;
+								if (itemContainer->stack->count > 0)
+								{
+									g_UIManager->draggedUIContainer = itemContainer;
+								}
+							}
+
+							if (g_UIManager->draggedUIContainer != nullptr &&
+								itemContainer != g_UIManager->draggedUIContainer)
+							{
+								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								{
+									g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer);
+									g_UIManager->draggedUIContainer = nullptr;
+								}
 							}
 						}
 					}
@@ -801,9 +814,20 @@ namespace flex
 							{
 								itemContainer->lastCutRect.colour = glm::vec4(0.7, 0.7f, 0.7f, 1.0f);
 
-								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
+								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
+									itemContainer->stack->count > 0)
 								{
 									g_UIManager->draggedUIContainer = itemContainer;
+								}
+
+								if (g_UIManager->draggedUIContainer != nullptr &&
+									itemContainer != g_UIManager->draggedUIContainer)
+								{
+									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+									{
+										g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer);
+										g_UIManager->draggedUIContainer = nullptr;
+									}
 								}
 							}
 						}
@@ -839,17 +863,6 @@ namespace flex
 
 			if (player != nullptr)
 			{
-				if (draggedUIContainer != nullptr)
-				{
-					glm::vec2 mousePos = g_InputManager->GetMousePosition();
-					if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT) ||
-						g_InputManager->GetKeyDown(KeyCode::KEY_ESCAPE) ||
-						mousePos.x == -1.0f || mousePos.y == -1.0f)
-					{
-						draggedUIContainer = nullptr;
-					}
-				}
-
 				{
 					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
 					playerQuickAccessUI->Update(rect);
@@ -887,6 +900,17 @@ namespace flex
 					uiMesh->DrawRect(
 						glm::vec2(rect.minX, rect.minY),
 						glm::vec2(rect.maxX, rect.maxY), rect.colour, 0.0f);
+				}
+
+				if (draggedUIContainer != nullptr)
+				{
+					glm::vec2 mousePos = g_InputManager->GetMousePosition();
+					if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT) ||
+						g_InputManager->GetKeyDown(KeyCode::KEY_ESCAPE) ||
+						mousePos.x == -1.0f || mousePos.y == -1.0f)
+					{
+						draggedUIContainer = nullptr;
+					}
 				}
 			}
 		}
@@ -1056,6 +1080,17 @@ namespace flex
 		else
 		{
 			PrintError("Failed to serialize player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+		}
+	}
+
+	void UIManager::MoveItem(ItemUIContainer* from, ItemUIContainer* to)
+	{
+		if (from != to)
+		{
+			to->stack->prefabID = from->stack->prefabID;
+			to->stack->count = from->stack->count;
+			from->stack->prefabID = InvalidPrefabID;
+			from->stack->count = 0;
 		}
 	}
 

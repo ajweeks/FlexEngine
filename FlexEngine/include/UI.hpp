@@ -264,6 +264,8 @@ namespace flex
 		void ParseUIConfigs();
 		void SerializeUIConfigs();
 
+		void MoveItem(ItemUIContainer* from, ItemUIContainer* to);
+
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;
 
