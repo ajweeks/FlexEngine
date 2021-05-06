@@ -13,6 +13,7 @@ DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 solution "Flex"
 	configurations {
 		"Debug",
+		"Sanitize",
 		"Profile",
 		"Release",
 		"Release_WithSymbols"
@@ -47,7 +48,11 @@ function configName(config)
 	local cfgStr = ""
 	if (string.startswith(config, "Debug"))
 		then cfgStr = "Debug"
-		else cfgStr = "Release"
+	elseif (string.startswith(config, "Sanitize"))
+		then cfgStr = "Sanitize"
+	elseif (string.startswith(config, "Profile"))
+		then cfgStr = "Profile"
+	else cfgStr = "Release"
 	end
 	return cfgStr
 end
@@ -88,6 +93,9 @@ end
 
 
 configuration "Debug"
+	defines { "DEBUG", "SYMBOLS" }
+	flags { "Symbols", "ExtraWarnings" }
+configuration "Sanitize"
 	defines { "DEBUG", "SYMBOLS" }
 	flags { "Symbols", "ExtraWarnings" }
 configuration "Profile"
@@ -169,7 +177,6 @@ project "Flex"
 			"-L/usr/lib64/",
 			"-ldl", -- For dlopen, etc.
 			"-L/usr/lib64/",
-			"-fsanitize=undefined",
 			"-L/lib/x86_64-linux-gnu/", -- for bzip2
 			"-lbz2",
 		}
@@ -179,11 +186,16 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch",
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess",
 			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {
 			-- no-reorder isn't valid in c
+		}
+	configuration { "linux*", "Sanitize" }
+		linkoptions {
+			"-fsanitize=undefined,address", -- TODO: try memory
+			"-fno-omit-frame-pointer",
 		}
 	configuration {}
 
@@ -198,6 +210,8 @@ project "Flex"
 				"Rpcrt4" -- For UuidCreate
 			}
 		-- Debug-only
+		configuration { "vs*", "Debug" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
 		configuration { "vs*", "Profile" }
