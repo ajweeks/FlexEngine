@@ -1762,6 +1762,8 @@ namespace flex
 				return;
 			}
 
+			m_SpriteDynamicUBOOffset = 0;
+
 			DrawCallInfo drawCallInfo = {};
 
 			if (!m_PhysicsDebuggingSettings.bDisableAll)
@@ -4522,7 +4524,8 @@ namespace flex
 					glm::mat4(rotation) *
 					glm::scale(MAT4_IDENTITY, scale);
 
-				u32 dynamicUBOOffset = i * m_DynamicAlignment;
+				u32 dynamicUBOOffset = m_SpriteDynamicUBOOffset;
+				m_SpriteDynamicUBOOffset += m_DynamicAlignment;
 
 				GraphicsPipeline* graphicsPipeline = GetGraphicsPipeline(spriteRenderObject->graphicsPipelineID)->pipeline;
 				VkPipeline pipeline = graphicsPipeline->pipeline;

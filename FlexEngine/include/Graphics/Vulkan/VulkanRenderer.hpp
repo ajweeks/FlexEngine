@@ -408,6 +408,8 @@ namespace flex
 			};
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
+			// Value which gets incremented by each sprite draw and reset at the end of every frame
+			u32 m_SpriteDynamicUBOOffset = 0;
 
 			// Maps uniform IDs to data & data length
 			std::map<u64, Pair<void*, u32>> m_GlobalUserUniforms;
