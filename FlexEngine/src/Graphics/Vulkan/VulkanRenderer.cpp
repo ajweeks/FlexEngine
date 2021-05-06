@@ -5037,7 +5037,7 @@ namespace flex
 		{
 			assert(m_Instance == VK_NULL_HANDLE);
 
-			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 1, 0);
+			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 2, 0);
 
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
