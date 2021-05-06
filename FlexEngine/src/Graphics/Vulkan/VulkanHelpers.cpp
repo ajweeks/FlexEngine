@@ -2417,7 +2417,7 @@ namespace flex
 								result->source_name_length = requestedFilePathLen;
 
 								u32 fileContentLen = (u32)fileContent.size();
-								result->content = (const char*)malloc(fileContentLen);
+								result->content = (const char*)malloc(fileContentLen + 1);
 								memset((void*)result->content, 0, fileContentLen + 1);
 								strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
 								result->content_length = strlen(result->content);
