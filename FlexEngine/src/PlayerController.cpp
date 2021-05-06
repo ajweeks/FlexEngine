@@ -761,7 +761,7 @@ namespace flex
 				}
 				if (action == Action::PICKUP_ITEM)
 				{
-					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					if (!m_Player->bInventoryShowing && m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
 					{
 						m_bAttemptPickup = true;
 						return EventReply::CONSUMED;

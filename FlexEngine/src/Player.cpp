@@ -596,11 +596,11 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(PrefabID prefabID, i32 count)
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
 		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
 		{
-			if (gameObjectStack.prefabID == prefabID)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + count) <= MAX_STACK_SIZE)
 			{
 				gameObjectStack.count += count;
 				return;
@@ -609,7 +609,7 @@ namespace flex
 
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
-			if (gameObjectStack.prefabID == prefabID)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + count) <= MAX_STACK_SIZE)
 			{
 				gameObjectStack.count += count;
 				return;

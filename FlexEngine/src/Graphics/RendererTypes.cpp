@@ -428,10 +428,6 @@ namespace flex
 		return materialObject;
 	}
 
-	Texture::Texture()
-	{
-	}
-
 	Texture::Texture(const std::string& name) :
 		name(name)
 	{

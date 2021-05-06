@@ -158,7 +158,7 @@ namespace flex
 		UIContainer& operator=(const UIContainer&&) = delete;
 
 		virtual void Initialize();
-		virtual void Update(Rect& parentRect);
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false);
 		virtual void Draw();
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr);
 		virtual UIContainer* Duplicate();
@@ -204,7 +204,7 @@ namespace flex
 
 		~ItemUIContainer();
 
-		virtual void Update(Rect& parentRect) override;
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
 		virtual void Draw() override;
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
 		virtual void Serialize(JSONObject& rootObject) override;
@@ -212,6 +212,7 @@ namespace flex
 		virtual UIContainer* Duplicate() override;
 
 		ImageUIElement* imageElement = nullptr;
+		u64 lastImageUpdatedStackTypeID = InvalidID;
 		TextUIElement* textElement = nullptr;
 		i32 lastTextElementUpdateCount = -1;
 
@@ -227,7 +228,7 @@ namespace flex
 		InventoryUIContainer();
 
 		virtual void Initialize() override;
-		virtual void Update(Rect& parentRect) override;
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
 		virtual void Draw() override;
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
 
@@ -246,7 +247,7 @@ namespace flex
 		QuickAccessItemUIContainer();
 
 		virtual void Initialize() override;
-		virtual void Update(Rect& parentRect) override;
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
 		virtual void Draw() override;
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
 

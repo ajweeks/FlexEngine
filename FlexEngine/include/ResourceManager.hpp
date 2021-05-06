@@ -80,7 +80,7 @@ namespace flex
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
 		Texture* FindLoadedTextureWithName(const std::string& fileName);
 		Texture* GetLoadedTexture(TextureID textureID);
-		TextureID GetOrLoadTexture(const std::string& textureName);
+		TextureID GetOrLoadTexture(const std::string& textureFilePath);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
 		TextureID GetOrLoadIcon(StringID gameObjectTypeID);
@@ -122,8 +122,10 @@ namespace flex
 		std::vector<BitmapFont*> fontsWorldSpace;
 
 		std::vector<Texture*> loadedTextures;
-		std::vector<std::string> discoveredTextures;
-		std::vector<Pair<StringID, std::string>> icons;
+		std::vector<std::string> discoveredTextures; // Stores relative file paths to all textures in textures directory
+		// Pair of (GameObjectTypeID, (Relative file path, texture ID))
+		// texture ID will be invalid until texture is loaded
+		std::vector<Pair<StringID, Pair<std::string, TextureID>>> icons;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 

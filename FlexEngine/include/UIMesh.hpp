@@ -36,6 +36,8 @@ namespace flex
 
 		Mesh* GetMesh();
 		bool IsSubmeshActive(i32 submeshIndex);
+		i32 GetSubmeshCount();
+		i32 GetUsedSubmeshCount();
 
 		glm::vec2 GetUVBlendAmount(i32 drawIndex);
 
@@ -55,6 +57,7 @@ namespace flex
 		};
 
 		std::vector<DrawData*> m_DrawData;
+		i32 m_LastUsedSubmeshCount = -1;
 
 		GameObject* m_Object = nullptr;
 	};

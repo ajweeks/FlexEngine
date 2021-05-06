@@ -61,9 +61,12 @@ namespace flex
 	{
 	}
 
-	void UIContainer::Update(Rect& parentRect)
+	void UIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
 	{
-		lastCutRect = Cut(&parentRect);
+		if (!bIgnoreCut)
+		{
+			lastCutRect = Cut(&parentRect);
+		}
 
 		if (bHighlighted && bVisible)
 		{
@@ -74,7 +77,7 @@ namespace flex
 
 		for (UIContainer* child : children)
 		{
-			child->Update(lastCutRect);
+			child->Update(lastCutRect, bIgnoreCut);
 		}
 	}
 
@@ -397,13 +400,15 @@ namespace flex
 	{
 		delete imageElement;
 		imageElement = nullptr;
+		lastImageUpdatedStackTypeID = InvalidID;
 		delete textElement;
 		textElement = nullptr;
+		lastTextElementUpdateCount = -1;
 	}
 
-	void ItemUIContainer::Update(Rect& parentRect)
+	void ItemUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
 	{
-		UIContainer::Update(parentRect);
+		UIContainer::Update(parentRect, bIgnoreCut);
 
 		if (stackID != InvalidID)
 		{
@@ -430,6 +435,7 @@ namespace flex
 							textureID = g_Renderer->alphaBGTextureID;
 						}
 					}
+
 					if (textureID != InvalidTextureID)
 					{
 						imageElement = new ImageUIElement(textureID);
@@ -442,14 +448,41 @@ namespace flex
 					{
 						delete imageElement;
 						imageElement = nullptr;
+						lastImageUpdatedStackTypeID = InvalidID;
 						delete textElement;
 						textElement = nullptr;
+						lastTextElementUpdateCount = -1;
 					}
-					else if (textElement != nullptr)
+					else
 					{
-						if (lastTextElementUpdateCount != stack->count)
+						// Update text & image elements
+
+						if (textElement != nullptr)
 						{
-							textElement->text = IntToString(stack->count);
+							if (lastTextElementUpdateCount != stack->count)
+							{
+								textElement->text = IntToString(stack->count);
+								lastTextElementUpdateCount = stack->count;
+							}
+						}
+
+						if (imageElement != nullptr)
+						{
+							GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack->prefabID);
+							if (prefabTemplate != nullptr)
+							{
+								StringID stackTypeID = prefabTemplate->GetTypeID();
+								if (lastImageUpdatedStackTypeID != stackTypeID)
+								{
+									imageElement->textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
+									lastImageUpdatedStackTypeID = stackTypeID;
+								}
+							}
+							else
+							{
+								// No icon exists for type, use placeholder
+								imageElement->textureID = g_Renderer->alphaBGTextureID;
+							}
 						}
 					}
 				}
@@ -478,13 +511,11 @@ namespace flex
 
 				if (textElement != nullptr)
 				{
-					real aspectRatio = g_Window->GetAspectRatio();
-
 					real width = (lastCutRect.maxX - lastCutRect.minX);
 					real height = (lastCutRect.maxY - lastCutRect.minY);
 					glm::vec2 pos = glm::vec2(
-						(lastCutRect.minX + width * 0.5f) * aspectRatio,
-						lastCutRect.minY + height * 0.5f);
+						(lastCutRect.minX + width * 0.75f),
+						lastCutRect.minY + height * 0.20f);
 					real spacing = 0.1f;
 					real scale = 0.4f;
 
@@ -500,8 +531,10 @@ namespace flex
 			{
 				delete imageElement;
 				imageElement = nullptr;
+				lastImageUpdatedStackTypeID = InvalidID;
 				delete textElement;
 				textElement = nullptr;
+				lastTextElementUpdateCount = -1;
 			}
 		}
 	}
@@ -667,9 +700,9 @@ namespace flex
 		}
 	}
 
-	void QuickAccessItemUIContainer::Update(Rect& parentRect)
+	void QuickAccessItemUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
 	{
-		UIContainer::Update(parentRect);
+		UIContainer::Update(parentRect, bIgnoreCut);
 
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
@@ -821,9 +854,9 @@ namespace flex
 		}
 	}
 
-	void InventoryUIContainer::Update(Rect& parentRect)
+	void InventoryUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
 	{
-		UIContainer::Update(parentRect);
+		UIContainer::Update(parentRect, bIgnoreCut);
 
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
@@ -938,6 +971,9 @@ namespace flex
 
 					rect.colour = UIContainer::baseColour;
 					rect.colour.a = 0.5f;
+
+					draggedUIContainer->lastCutRect = rect;
+					draggedUIContainer->Update(rect, true);
 
 					uiMesh->DrawRect(
 						glm::vec2(rect.minX, rect.minY),

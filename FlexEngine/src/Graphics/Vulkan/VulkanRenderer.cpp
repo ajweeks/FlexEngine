@@ -1820,6 +1820,11 @@ namespace flex
 				ImGui::TreePop();
 			}
 
+			ImGui::Text("UI Mesh submeshes: %d(/%d)", m_UIMesh->GetUsedSubmeshCount(), m_UIMesh->GetSubmeshCount());
+
+			ImGui::Text("Persistent desc sets allocated: %d", m_DescriptorPoolPersistent->allocatedSetCount);
+			ImGui::Text("Desc sets allocated: %d", m_DescriptorPool->allocatedSetCount);
+
 			m_VulkanDevice->DrawImGuiRendererInfo();
 		}
 
@@ -2205,14 +2210,14 @@ namespace flex
 			return bValueChanged;
 		}
 
-		bool VulkanRenderer::DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex)
+		bool VulkanRenderer::DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureFilePaths, i32* selectedIndex)
 		{
 			bool bValueChanged = false;
 
-			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : textureNames[*selectedIndex]);
+			std::string currentTexName = (*selectedIndex == 0 ? "NONE" : StripLeadingDirectories(textureFilePaths[*selectedIndex]));
 			if (ImGui::BeginCombo(label, currentTexName.c_str()))
 			{
-				for (i32 i = 0; i < (i32)textureNames.size(); i++)
+				for (i32 i = 0; i < (i32)textureFilePaths.size(); i++)
 				{
 					bool bTextureSelected = (*selectedIndex == i);
 
@@ -2226,7 +2231,7 @@ namespace flex
 					}
 					else
 					{
-						std::string texName = textureNames[i];
+						std::string texName = StripLeadingDirectories(textureFilePaths[i]);
 
 						if (ImGui::Selectable(texName.c_str(), bTextureSelected))
 						{
@@ -8056,19 +8061,19 @@ namespace flex
 				}
 
 				{
-					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
-
-					DrawText(commandBuffer, true);
-
-					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");
-				}
-
-				{
 					BeginDebugMarkerRegion(commandBuffer, "UI Mesh");
 
 					DrawUIMesh(m_UIMesh, commandBuffer);
 
 					EndDebugMarkerRegion(commandBuffer, "UI Mesh");
+				}
+
+				{
+					BeginDebugMarkerRegion(commandBuffer, "Screen Space Text");
+
+					DrawText(commandBuffer, true);
+
+					EndDebugMarkerRegion(commandBuffer, "End Screen Space Text");
 				}
 
 				if (!m_QueuedSSPostUISprites.empty())

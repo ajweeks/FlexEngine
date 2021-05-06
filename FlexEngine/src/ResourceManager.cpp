@@ -346,8 +346,7 @@ namespace flex
 			{
 				for (const std::string& foundFilePath : foundFiles)
 				{
-					std::string fileName = StripLeadingDirectories(foundFilePath);
-					discoveredTextures.push_back(fileName);
+					discoveredTextures.push_back(foundFilePath);
 				}
 
 				if (g_bEnableLogging_Loading)
@@ -377,8 +376,8 @@ namespace flex
 						trimmedFileName = RemoveEndIfPresent(trimmedFileName, "-icon-256");
 					}
 					trimmedFileName = Replace(trimmedFileName, '-', ' ');
-					StringID textureID = Hash(trimmedFileName.c_str());
-					icons.emplace_back(Pair<StringID, std::string>(textureID, foundFilePath));
+					StringID gameObjectTypeID = Hash(trimmedFileName.c_str());
+					icons.emplace_back(Pair<StringID, Pair<std::string, TextureID>>{ gameObjectTypeID, { foundFilePath, InvalidTextureID } });
 				}
 			}
 		}
@@ -872,18 +871,18 @@ namespace flex
 		return nullptr;
 	}
 
-	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureName)
+	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath)
 	{
 		for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 		{
 			Texture* texture = loadedTextures[i];
-			if (texture && texture->fileName.compare(textureName) == 0)
+			if (texture && texture->relativeFilePath.compare(textureFilePath) == 0)
 			{
 				return (TextureID)i;
 			}
 		}
 
-		TextureID texID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY + textureName, false, false, false);
+		TextureID texID = g_Renderer->InitializeTextureFromFile(textureFilePath, false, false, false);
 		return texID;
 	}
 
@@ -914,11 +913,15 @@ namespace flex
 
 	TextureID ResourceManager::GetOrLoadIcon(StringID gameObjectTypeID)
 	{
-		for (const Pair<StringID, std::string>& pair : icons)
+		for (Pair<StringID, Pair<std::string, TextureID>>& pair : icons)
 		{
 			if (pair.first == gameObjectTypeID)
 			{
-				return GetOrLoadTexture(pair.second);
+				if (pair.second.second == InvalidTextureID)
+				{
+					pair.second.second = GetOrLoadTexture(pair.second.first);
+				}
+				return pair.second.second;
 			}
 		}
 
@@ -1232,10 +1235,33 @@ namespace flex
 		{
 			if (pair.templateObject->IsItemizable())
 			{
-				if (ImGui::MenuItem(pair.templateObject->m_Name.c_str()))
+				ImGui::PushID(pair.templateObject->m_Name.c_str());
+
+				ImGui::Text(pair.templateObject->m_Name.c_str());
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("x1"))
 				{
 					player->AddToInventory(pair.prefabID, 1);
 				}
+
+				ImGui::SameLine();
+
+				static char maxStackSizeBuff[6];
+				static bool bMaxStackSizeBuffInitialized = false;
+				if (!bMaxStackSizeBuffInitialized)
+				{
+					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%d", Player::MAX_STACK_SIZE);
+					bMaxStackSizeBuffInitialized = true;
+				}
+
+				if (ImGui::Button(maxStackSizeBuff))
+				{
+					player->AddToInventory(pair.prefabID, Player::MAX_STACK_SIZE);
+				}
+
+				ImGui::PopID();
 			}
 		}
 	}
@@ -1415,7 +1441,7 @@ namespace flex
 					{
 						for (u32 i = 0; i < discoveredTextures.size(); ++i)
 						{
-							if (pair.object->fileName.compare(discoveredTextures[i]) == 0)
+							if (pair.object->relativeFilePath.compare(discoveredTextures[i]) == 0)
 							{
 								selectedTextureIndices[texIndex] = i;
 							}
@@ -1434,8 +1460,8 @@ namespace flex
 						Texture* loadedTex = GetLoadedTexture(loadedTexID);
 						if (loadedTex == nullptr)
 						{
-							const char* failedTexName = discoveredTextures[selectedTextureIndices[texIndex]].c_str();
-							PrintError("Failed to load texture %s\n", failedTexName);
+							const char* textureFilePath = discoveredTextures[selectedTextureIndices[texIndex]].c_str();
+							PrintError("Failed to load texture %s\n", textureFilePath);
 							// If texture failed to be found select blank texture
 							selectedTextureIndices[texIndex] = 0;
 							loadedTex = GetLoadedTexture(g_Renderer->blankTextureID);
@@ -1693,7 +1719,7 @@ namespace flex
 				{
 					for (i32 i = 1; i < (i32)discoveredTextures.size(); ++i)
 					{
-						const std::string& texFileName = discoveredTextures[i];
+						const std::string& texFileName = StripLeadingDirectories(discoveredTextures[i]);
 
 						if (textureFilter.PassFilter(texFileName.c_str()))
 						{

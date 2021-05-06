@@ -454,10 +454,10 @@ namespace flex
 
 	struct Texture
 	{
-		Texture();
+		Texture() = default;
 		Texture(const std::string& name);
 
-		virtual ~Texture() {}
+		virtual ~Texture() = default;
 
 		Texture(const Texture&) = delete;
 		Texture(const Texture&&) = delete;
@@ -571,7 +571,7 @@ namespace flex
 	{
 		struct PushConstantBlock;
 
-		Material() {};
+		Material() = default;
 
 		virtual ~Material()
 		{
@@ -582,7 +582,7 @@ namespace flex
 			}
 		}
 
-		Material(const Material& rhs)
+		explicit Material(const Material& rhs)
 		{
 			if (rhs.pushConstantBlock)
 			{

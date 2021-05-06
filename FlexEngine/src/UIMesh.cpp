@@ -291,15 +291,17 @@ namespace flex
 
 	void UIMesh::EndFrame()
 	{
-		for (u32 i = 0; i < (u32)m_DrawData.size(); ++i)
+		i32 usedCount = 0;
+		for (DrawData* drawData : m_DrawData)
 		{
-			DrawData* drawData = m_DrawData[i];
-
 			if (drawData->bInUse)
 			{
+				++usedCount;
 				drawData->bInUse = false;
 			}
 		}
+
+		m_LastUsedSubmeshCount = usedCount;
 	}
 
 	Mesh* UIMesh::GetMesh()
@@ -310,6 +312,16 @@ namespace flex
 	bool UIMesh::IsSubmeshActive(i32 submeshIndex)
 	{
 		return m_DrawData[submeshIndex]->bInUse;
+	}
+
+	i32 UIMesh::GetSubmeshCount()
+	{
+		return (i32)m_DrawData.size();
+	}
+
+	i32 UIMesh::GetUsedSubmeshCount()
+	{
+		return m_LastUsedSubmeshCount;
 	}
 
 	glm::vec2 UIMesh::GetUVBlendAmount(i32 drawIndex)

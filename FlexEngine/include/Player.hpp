@@ -51,7 +51,7 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		void AddToInventory(PrefabID prefabID, i32 count);
+		void AddToInventory(const PrefabID& prefabID, i32 count);
 
 		i32 GetNextFreeQuickAccessInventorySlot();
 		i32 GetNextFreeInventorySlot();
