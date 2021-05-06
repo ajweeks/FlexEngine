@@ -10488,8 +10488,15 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		// Children now exist
-		memset(&newGameObject->m_TireIDs[0], 0, sizeof(GameObjectID) * m_TireCount);
-		memset(&newGameObject->m_BrakeLightIDs[0], 0, sizeof(GameObjectID) * 2);
+		for (i32 i = 0; i < m_TireCount; ++i)
+		{
+			newGameObject->m_TireIDs[i] = GameObjectID();
+		}
+
+		for (i32 i = 0; i < 2; ++i)
+		{
+			newGameObject->m_BrakeLightIDs[i] = GameObjectID();
+		}
 
 		// Temporarily set sibling indices as if these objects are both root objects (this will
 		// be overwritten by the proper values soon)

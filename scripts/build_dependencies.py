@@ -24,7 +24,8 @@ def run_cmake(source, build, arguments = []):
 	subprocess.check_call(cmakeCmd, stderr=subprocess.STDOUT)
 
 def run_cmake_build(path, arguments):
-	subprocess.check_call([cmake_path, '--build', path] + arguments, stderr=subprocess.STDOUT)
+	args = [cmake_path, '--build', path] + arguments + ['--', '-j6']
+	subprocess.check_call(args, stderr=subprocess.STDOUT)
 
 def run_msbuild(sln, arguments = []):
 	cmd = [msbuild_path, sln]
@@ -55,7 +56,7 @@ genie_target = sys.argv[2]
 in_config = sys.argv[3]
 build_extras = len(sys.argv) == 5 and sys.argv[4] == 'build_extras'
 
-supported_configs = ['Debug', 'Release', 'All']
+supported_configs = ['Debug', 'Sanitize', 'Profile', 'Release', 'All']
 if in_config not in supported_configs:
 	print('Invalid config specified. Must be one of: ' + ', '.join(supported_configs))
 	print_usage()
@@ -94,8 +95,9 @@ start_time = time.perf_counter()
 def build_project(config):
 	project_root = '../FlexEngine/'
 	libs_target = project_root + 'lib/x64/' + config + '/'
+	external_config = 'Debug' if (config == 'Debug' or config == 'Sanitize') else 'Release'
 
-	print("\nBuilding " + config + " config\n\n");
+	print("\nBuilding " + config + " config (external: " + external_config + ")\n\n");
 
 	if not os.path.exists(project_root + 'lib/x64/' + config):
 		os.makedirs(project_root + 'lib/x64/' + config)
@@ -119,7 +121,7 @@ def build_project(config):
 	run_cmake(glfw_path, glfw_build_path, glfw_cmake_args)
 
 	if platform == 'windows':
-		glfw_msbuild_args = ['/property:Configuration=' + config]
+		glfw_msbuild_args = ['/property:Configuration=' + external_config]
 		glfw_lib_path = glfw_build_path + 'src/' + config + '/'
 		run_msbuild(glfw_build_path + 'glfw.sln', glfw_msbuild_args)
 		print('glfw source: ' + glfw_lib_path)
@@ -138,7 +140,7 @@ def build_project(config):
 		if not os.path.exists(openAL_build_path):
 			os.makedirs(openAL_build_path)
 		run_cmake(openAL_path, openAL_build_path, ['-DALSOFT_EXAMPLES=OFF', '-DALSOFT_TESTS=OFF', '-Wno-dev'])
-		openal_msbuild_args = ['/property:Configuration=' + config] # TODO: Investigate MinSizeRel
+		openal_msbuild_args = ['/property:Configuration=' + external_config] # TODO: Investigate MinSizeRel
 		run_msbuild(openAL_build_path + 'openAL.sln', openal_msbuild_args)
 		openal_lib_path = openAL_build_path + config
 		shutil.copyfile(openal_lib_path + '/common.lib', libs_target + 'common.lib')
@@ -152,14 +154,20 @@ def build_project(config):
 	bullet_build_path = bullet_path + 'build/'
 	if not os.path.exists(bullet_build_path):
 		os.makedirs(bullet_build_path)
-	bullet_cmake_args = ['-DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON', '-DBUILD_UNIT_TESTS=OFF', '-DBUILD_CPU_DEMOS=OFF', '-DBUILD_BULLET2_DEMOS=OFF', '-DBUILD_EXTRAS=OFF']
+	bullet_cmake_args = [
+		'-DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON',
+		'-DBUILD_UNIT_TESTS=OFF',
+		'-DBUILD_CPU_DEMOS=OFF',
+		'-DBUILD_BULLET2_DEMOS=OFF',
+		'-DBUILD_EXTRAS=OFF',
+		'-Wno-dev']
 	# TODO: Necessary?
-	bullet_cmake_args += ['-DCMAKE_BUILD_TYPE=' + config]
+	bullet_cmake_args += ['-DCMAKE_BUILD_TYPE=' + external_config]
 	run_cmake(bullet_path, bullet_build_path, bullet_cmake_args)
 	if platform == 'windows':
-		bullet_msbuild_args = ['/property:Configuration=' + config] # TODO: Investigate MinSizeRel
+		bullet_msbuild_args = ['/property:Configuration=' + external_config] # TODO: Investigate MinSizeRel
 		run_msbuild(bullet_build_path + 'BULLET_PHYSICS.sln', bullet_msbuild_args)
-		if config == 'Debug':
+		if external_config == 'Debug':
 			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletCollision_Debug.lib', libs_target + 'BulletCollision_Debug.lib')
 			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
 			shutil.copyfile(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target + 'LinearMath_Debug.lib')
@@ -200,13 +208,15 @@ def build_project(config):
 
 	if platform == 'windows':
 		configuration = config + ' Static'
-		freetype_msbuid_args = ['/property:Configuration=' + config, '/property:Platform=x64']
+		freetype_msbuid_args = ['/property:Configuration=' + external_config, '/property:Platform=x64']
 		run_msbuild(free_type_path + 'builds/windows/vc2010/freetype.sln', freetype_msbuid_args)
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target + 'freetype.lib')
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target + 'freetype.pdb')
 	else:
 		subprocess.check_call('cd ' + free_type_path + ';sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
-		run_cmake(free_type_path, free_type_build_path, ['-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON'])
+		run_cmake(free_type_path, free_type_build_path, [
+			'-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON',
+			'-Wno-dev'])
 		run_make(free_type_build_path, False)
 		shutil.copyfile(free_type_build_path + 'libfreetype.a', libs_target + 'libfreetype.a')
 
@@ -265,14 +275,24 @@ def build_project(config):
 		os.environ['GIT_EXECUTABLE'] = git_path
 	subprocess.check_call([python_path, shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT)
 
-	shader_c_cmake_args = ['-DSHADERC_ENABLE_SPVC=ON', '-DSHADERC_SKIP_TESTS=ON', '-DBUILD_TESTING=OFF', '-DENABLE_CTEST=OFF', '-DSHADERC_ENABLE_SHARED_CRT=ON', '-DLLVM_USE_CRT_DEBUG=MDd', '-DLLVM_USE_CRT_MINSIZEREL=MD', '-DLLVM_USE_CRT_RELEASE=MD', '-DLLVM_USE_CRT_RELWITHDEBINFO=MD', '-Wno-dev']
+	shader_c_cmake_args = [
+		'-DSHADERC_ENABLE_SPVC=ON',
+		'-DSHADERC_SKIP_TESTS=ON',
+		'-DBUILD_TESTING=OFF',
+		'-DENABLE_CTEST=OFF',
+		'-DSHADERC_ENABLE_SHARED_CRT=ON',
+		'-DLLVM_USE_CRT_DEBUG=MDd',
+		'-DLLVM_USE_CRT_MINSIZEREL=MD',
+		'-DLLVM_USE_CRT_RELEASE=MD',
+		'-DLLVM_USE_CRT_RELWITHDEBINFO=MD',
+		'-Wno-dev']
 	if platform == 'linux':
 		shader_c_cmake_args += ['-G', 'Unix Makefiles', '.']
 
-	shader_c_cmake_args += ['-DCMAKE_BUILD_TYPE=' + config]
+	shader_c_cmake_args += ['-DCMAKE_BUILD_TYPE=' + external_config]
 
 	run_cmake(shader_c_path, shader_c_build_path, shader_c_cmake_args)
-	run_cmake_build(shader_c_build_path, ['--config', config])
+	run_cmake_build(shader_c_build_path, ['--config', external_config])
 
 	if platform == 'windows':
 		shader_c_lib_path = shader_c_build_path + 'libshaderc/' + config + '/'
