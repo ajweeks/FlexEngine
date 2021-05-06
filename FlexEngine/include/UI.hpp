@@ -168,8 +168,12 @@ namespace flex
 
 		static UIContainer* CreateContainer(UIContainerType containerType);
 
-		Rect Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour);
-		glm::vec4 GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const;
+		Rect Cut(Rect* rect);
+		glm::vec4 GetColour() const;
+
+		static const glm::vec4 baseColour;
+		static const glm::vec4 hoveredColour;
+		static const glm::vec4 highlightedColour;
 
 		RectCutType cutType = RectCutType::_NONE;
 		Rect lastCutRect;
@@ -184,8 +188,6 @@ namespace flex
 		StringID tag = InvalidStringID;
 		UIContainerType type = UIContainerType::_NONE;
 
-		UIElement* uiElement = nullptr;
-
 		std::vector<UIContainer*> children;
 
 	private:
@@ -198,7 +200,9 @@ namespace flex
 	{
 	public:
 		ItemUIContainer();
-		ItemUIContainer(GameObjectStack* stack, i32 index);
+		ItemUIContainer(GameObjectStackID stackID, i32 index);
+
+		~ItemUIContainer();
 
 		virtual void Update(Rect& parentRect) override;
 		virtual void Draw() override;
@@ -207,7 +211,11 @@ namespace flex
 		virtual void Deserialize(const JSONObject& rootObject) override;
 		virtual UIContainer* Duplicate() override;
 
-		GameObjectStack* stack = nullptr;
+		ImageUIElement* imageElement = nullptr;
+		TextUIElement* textElement = nullptr;
+		i32 lastTextElementUpdateCount = -1;
+
+		GameObjectStackID stackID = InvalidID;
 		i32 index = -1;
 	private:
 

@@ -180,6 +180,7 @@ namespace flex
 
 	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
 	FLEX_NO_DISCARD bool EndsWith(const std::string& str, const std::string& end);
+	FLEX_NO_DISCARD std::string RemoveEndIfPresent(const std::string& str, const std::string& end);
 
 	// Returns the number str ends with or -1 if last char isn't numeral
 	// outNumNumericalChars will be set to the number of chars in the num (e.g. "001" => 3)

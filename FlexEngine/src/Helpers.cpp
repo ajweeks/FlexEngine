@@ -550,9 +550,10 @@ namespace flex
 
 	std::string StripFileType(const std::string& filePath)
 	{
-		if (filePath.find('.') != std::string::npos)
+		size_t lastDot = filePath.rfind('.');
+		if (lastDot != std::string::npos)
 		{
-			return Split(filePath, '.')[0];
+			return filePath.substr(0, lastDot);
 		}
 		return filePath;
 	}
@@ -1485,6 +1486,22 @@ namespace flex
 
 		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
 		return result;
+	}
+
+	std::string RemoveEndIfPresent(const std::string& str, const std::string& end)
+	{
+		if (str.length() < end.length())
+		{
+			return str;
+		}
+
+		std::string strEnd = str.substr(str.length() - end.length());
+		if (strEnd.compare(end) == 0)
+		{
+			return str.substr(0, str.length() - end.length());
+		}
+
+		return str;
 	}
 
 	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars)

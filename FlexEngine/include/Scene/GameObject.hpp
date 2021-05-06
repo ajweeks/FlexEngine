@@ -759,6 +759,26 @@ namespace flex
 
 	};
 
+	class Battery final : public GameObject
+	{
+	public:
+		Battery();
+		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		real chargeAmount = 0.0f;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+	};
+
 	class GerstnerWave final : public GameObject
 	{
 	public:

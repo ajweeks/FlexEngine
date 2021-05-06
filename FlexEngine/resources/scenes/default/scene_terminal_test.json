@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-1.977, 8.565, -21.420",
-			"pitch" : -0.166899,
-			"yaw" : 1.688574
+			"position" : "4.804, 17.370, -7.257",
+			"pitch" : -0.618052,
+			"yaw" : 2.688168
 		}
 	},
 	"objects" : 
@@ -487,7 +487,58 @@
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
-				"pos" : "-0.000, 0.410, 0.000"
+				"pos" : "-9.387, 0.410, 10.428",
+				"rot" : "0.000, 0.605, 0.000"
+			}
+		},
+		{
+			"name" : "Battery",
+			"id" : "49BA1A00D02473914B4C060DFA113653",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-19.363, 0.347, 1.945",
+				"rot" : "0.000, -0.685, -3.142",
+				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "Battery-1",
+			"id" : "FC8A67B3179CE4944867BD17D12BD28E",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-25.728, 0.347, -1.190",
+				"rot" : "-0.000, -0.008, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "EngineCart-1",
+			"id" : "C54A90F938F82C944622007A9EDCFB70",
+			"type" : "prefab",
+			"prefab type" : "EngineCart",
+			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
+			"transform" : 
+			{
+				"pos" : "12.505, 1.347, 0.161"
+			}
+		},
+		{
+			"name" : "Battery-2",
+			"id" : "86598C04552820B64784628C42EE1632",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-25.743, 2.347, -1.199",
+				"rot" : "-0.000, -0.588, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
 			}
 		}
 	]

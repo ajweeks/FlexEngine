@@ -310,9 +310,12 @@ namespace flex
 		if (!Contains(m_CurrentlySelectedObjectIDs, gameObjectID))
 		{
 			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
-			gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
+			if (gameObject != nullptr)
+			{
+				gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 
-			CalculateSelectedObjectsCenter();
+				CalculateSelectedObjectsCenter();
+			}
 		}
 	}
 
@@ -323,9 +326,12 @@ namespace flex
 			if (selectedObj == gameObjectID)
 			{
 				GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
-				gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
-				CalculateSelectedObjectsCenter();
-				return;
+				if (gameObject != nullptr)
+				{
+					gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
+					CalculateSelectedObjectsCenter();
+					return;
+				}
 			}
 		}
 

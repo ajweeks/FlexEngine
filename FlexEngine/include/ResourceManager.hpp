@@ -80,9 +80,10 @@ namespace flex
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
 		Texture* FindLoadedTextureWithName(const std::string& fileName);
 		Texture* GetLoadedTexture(TextureID textureID);
-		Texture* GetOrLoadTexture(const std::string& textureName);
+		TextureID GetOrLoadTexture(const std::string& textureName);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
+		TextureID GetOrLoadIcon(StringID gameObjectTypeID);
 
 		TextureID GetNextAvailableTextureID();
 		TextureID AddLoadedTexture(Texture* texture);
@@ -121,6 +122,8 @@ namespace flex
 		std::vector<BitmapFont*> fontsWorldSpace;
 
 		std::vector<Texture*> loadedTextures;
+		std::vector<std::string> discoveredTextures;
+		std::vector<Pair<StringID, std::string>> icons;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 
@@ -144,7 +147,6 @@ namespace flex
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
 		std::map<std::string, LoadedMesh*> loadedMeshes;
-		std::vector<std::string> discoveredTextures;
 		std::vector<std::string> discoveredMeshes;
 
 		struct AudioFileMetaData

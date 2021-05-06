@@ -321,10 +321,10 @@ namespace flex
 			}
 
 			alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", false, false, false);
-			pointLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/point-light-icon-256.png", false, true, false);
-			spotLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/spot-light-icon-256.png", false, true, false);
-			areaLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/area-light-icon-256.png", false, true, false);
-			directionalLightIconID = InitializeTextureFromFile(TEXTURE_DIRECTORY "icons/directional-light-icon-256.png", false, true, false);
+			pointLightIconID = g_ResourceManager->GetOrLoadIcon(SID("point light"));
+			spotLightIconID = g_ResourceManager->GetOrLoadIcon(SID("spot light"));
+			areaLightIconID = g_ResourceManager->GetOrLoadIcon(SID("area light"));
+			directionalLightIconID = g_ResourceManager->GetOrLoadIcon(SID("directional light"));
 
 			m_SpritePerspPushConstBlock = new Material::PushConstantBlock(128);
 			m_SpriteOrthoPushConstBlock = new Material::PushConstantBlock(128);

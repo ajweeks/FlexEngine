@@ -336,29 +336,51 @@ namespace flex
 
 	void ResourceManager::DiscoverTextures()
 	{
-		discoveredTextures.clear();
-
-		// Zeroth index represents no texture
-		discoveredTextures.emplace_back("");
-
-		std::vector<std::string> foundFiles;
-		if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
 		{
-			for (const std::string& foundFilePath : foundFiles)
-			{
-				std::string fileName = StripLeadingDirectories(foundFilePath);
-				discoveredTextures.push_back(fileName);
-			}
+			discoveredTextures.clear();
 
-			if (g_bEnableLogging_Loading)
+			// Zeroth index represents no texture
+			discoveredTextures.emplace_back("");
+			std::vector<std::string> foundFiles;
+			if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
 			{
-				Print("Discovered %u textures\n", (u32)(discoveredTextures.size() - 1));
+				for (const std::string& foundFilePath : foundFiles)
+				{
+					std::string fileName = StripLeadingDirectories(foundFilePath);
+					discoveredTextures.push_back(fileName);
+				}
+
+				if (g_bEnableLogging_Loading)
+				{
+					Print("Discovered %u textures\n", (u32)(discoveredTextures.size() - 1));
+				}
+			}
+			else
+			{
+				PrintError("Failed to find texture files in \"" TEXTURE_DIRECTORY "\"!\n");
+				return;
 			}
 		}
-		else
+
 		{
-			PrintError("Failed to find texture files in \"" TEXTURE_DIRECTORY "\"!\n");
-			return;
+			icons.clear();
+
+			std::vector<std::string> foundFiles;
+			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
+			{
+				for (const std::string& foundFilePath : foundFiles)
+				{
+					std::string trimmedFileName = RelativePathToAbsolute(foundFilePath);
+					trimmedFileName = StripLeadingDirectories(StripFileType(foundFilePath));
+					if (EndsWith(trimmedFileName, "-icon-256"))
+					{
+						trimmedFileName = RemoveEndIfPresent(trimmedFileName, "-icon-256");
+					}
+					trimmedFileName = Replace(trimmedFileName, '-', ' ');
+					StringID textureID = Hash(trimmedFileName.c_str());
+					icons.emplace_back(Pair<StringID, std::string>(textureID, foundFilePath));
+				}
+			}
 		}
 	}
 
@@ -850,18 +872,19 @@ namespace flex
 		return nullptr;
 	}
 
-	Texture* ResourceManager::GetOrLoadTexture(const std::string& textureName)
+	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureName)
 	{
-		for (Texture* texture : loadedTextures)
+		for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 		{
+			Texture* texture = loadedTextures[i];
 			if (texture && texture->fileName.compare(textureName) == 0)
 			{
-				return texture;
+				return (TextureID)i;
 			}
 		}
 
 		TextureID texID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY + textureName, false, false, false);
-		return GetLoadedTexture(texID);
+		return texID;
 	}
 
 	bool ResourceManager::RemoveLoadedTexture(TextureID textureID, bool bDestroy)
@@ -887,6 +910,19 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	TextureID ResourceManager::GetOrLoadIcon(StringID gameObjectTypeID)
+	{
+		for (const Pair<StringID, std::string>& pair : icons)
+		{
+			if (pair.first == gameObjectTypeID)
+			{
+				return GetOrLoadTexture(pair.second);
+			}
+		}
+
+		return InvalidTextureID;
 	}
 
 	TextureID ResourceManager::GetNextAvailableTextureID()
@@ -1394,7 +1430,8 @@ namespace flex
 
 					for (u32 texIndex = 0; texIndex < material->textures.Count(); ++texIndex)
 					{
-						Texture* loadedTex = GetOrLoadTexture(discoveredTextures[selectedTextureIndices[texIndex]]);
+						TextureID loadedTexID = GetOrLoadTexture(discoveredTextures[selectedTextureIndices[texIndex]]);
+						Texture* loadedTex = GetLoadedTexture(loadedTexID);
 						if (loadedTex == nullptr)
 						{
 							const char* failedTexName = discoveredTextures[selectedTextureIndices[texIndex]].c_str();

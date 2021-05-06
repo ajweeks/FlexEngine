@@ -9,6 +9,7 @@
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Window/Window.hpp"
@@ -16,6 +17,11 @@
 
 namespace flex
 {
+	const glm::vec4 UIContainer::baseColour = glm::vec4(0.1, 0.1f, 0.1f, 1.0f);
+	const glm::vec4 UIContainer::hoveredColour = glm::vec4(0.2, 0.2f, 0.2f, 1.0f);
+	const glm::vec4 UIContainer::highlightedColour = glm::vec4(0.3, 0.3f, 0.3f, 1.0f);
+
+
 	UIContainer::UIContainer(UIContainerType type /* = UIContainerType::BASE */) :
 		type(type)
 	{
@@ -24,9 +30,6 @@ namespace flex
 
 	UIContainer::~UIContainer()
 	{
-		delete uiElement;
-		uiElement = nullptr;
-
 		for (UIContainer* child : children)
 		{
 			delete child;
@@ -46,27 +49,6 @@ namespace flex
 		newUIContainer->tag = tag;
 		newUIContainer->children = children;
 
-		if (uiElement != nullptr)
-		{
-			switch (uiElement->type)
-			{
-			case UIElementType::IMAGE:
-			{
-				ImageUIElement* imageElement = (ImageUIElement*)uiElement;
-				newUIContainer->uiElement = new ImageUIElement(imageElement->textureID);
-			} break;
-			case UIElementType::TEXT:
-			{
-				TextUIElement* textElement = (TextUIElement*)uiElement;
-				newUIContainer->uiElement = new TextUIElement(textElement->text, textElement->fontID);
-			} break;
-			default:
-			{
-				PrintError("Unhandled UI element type in UIContainer::Duplicate\n");
-			}
-			}
-		}
-
 		for (UIContainer* child : children)
 		{
 			newUIContainer->children.emplace_back(child->Duplicate());
@@ -81,57 +63,7 @@ namespace flex
 
 	void UIContainer::Update(Rect& parentRect)
 	{
-		static const glm::vec4 normalColour(0.9f, 0.9f, 0.9f, 1.0f);
-		static const glm::vec4 highlightedColour(1.0f, 1.0f, 1.0f, 1.0f);
-
-		lastCutRect = Cut(&parentRect, normalColour, highlightedColour);
-
-		if (uiElement != nullptr)
-		{
-			switch (uiElement->type)
-			{
-			case UIElementType::IMAGE:
-			{
-				ImageUIElement* imageElement = (ImageUIElement*)uiElement;
-
-				real aspectRatio = g_Window->GetAspectRatio();
-
-				SpriteQuadDrawInfo spriteInfo = {};
-				spriteInfo.textureID = imageElement->textureID;
-				spriteInfo.materialID = g_Renderer->m_SpriteMatSSID;
-				real width = (lastCutRect.maxX - lastCutRect.minX);
-				real height = (lastCutRect.maxY - lastCutRect.minY);
-				spriteInfo.pos = glm::vec3(
-					(lastCutRect.minX + width * 0.5f) * aspectRatio,
-					lastCutRect.minY + height * 0.5f,
-					1.0f);
-				spriteInfo.scale = glm::vec3(width * 0.4f, width * 0.4f, 1.0f);
-				spriteInfo.anchor = AnchorPoint::CENTER;
-				spriteInfo.bScreenSpace = true;
-				spriteInfo.bReadDepth = false;
-				spriteInfo.bRaw = true;
-				spriteInfo.zOrder = 75;
-				g_Renderer->EnqueueSprite(spriteInfo);
-			} break;
-			case UIElementType::TEXT:
-			{
-				TextUIElement* textElement = (TextUIElement*)uiElement;
-
-				real aspectRatio = g_Window->GetAspectRatio();
-
-				real width = (lastCutRect.maxX - lastCutRect.minX);
-				real height = (lastCutRect.maxY - lastCutRect.minY);
-				glm::vec2 pos = glm::vec2(
-					(lastCutRect.minX + width * 0.5f) * aspectRatio,
-					lastCutRect.minY + height * 0.5f);
-				real spacing = 0.1f;
-				real scale = 0.4f;
-
-				g_Renderer->SetFont(textElement->fontID);
-				g_Renderer->DrawStringSS(textElement->text, VEC4_ONE, AnchorPoint::CENTER, pos, spacing, scale);
-			} break;
-			}
-		}
+		lastCutRect = Cut(&parentRect);
 
 		if (bHighlighted && bVisible)
 		{
@@ -302,9 +234,9 @@ namespace flex
 		return RectCutResult::DO_NOTHING;
 	}
 
-	Rect UIContainer::Cut(Rect* rect, const glm::vec4& normalColour, const glm::vec4& highlightedColour)
+	Rect UIContainer::Cut(Rect* rect)
 	{
-		glm::vec4 colour = GetColour(normalColour, highlightedColour);
+		glm::vec4 colour = GetColour();
 
 		switch (cutType)
 		{
@@ -318,9 +250,9 @@ namespace flex
 		return {};
 	}
 
-	glm::vec4 UIContainer::GetColour(const glm::vec4& normalColour, const glm::vec4& highlightedColour) const
+	glm::vec4 UIContainer::GetColour() const
 	{
-		glm::vec4 colour = bHighlighted ? highlightedColour : normalColour;
+		glm::vec4 colour = bHighlighted ? highlightedColour : baseColour;
 		if (!bVisible)
 		{
 			colour.a = bHighlighted ? 0.2f : 0.0f;
@@ -449,35 +381,127 @@ namespace flex
 	}
 
 	ItemUIContainer::ItemUIContainer() :
-		ItemUIContainer(nullptr, -1)
+		ItemUIContainer(InvalidID, -1)
 	{
 	}
 
-	ItemUIContainer::ItemUIContainer(GameObjectStack* stack, i32 index) :
+	ItemUIContainer::ItemUIContainer(GameObjectStackID stackID, i32 index) :
 		UIContainer(UIContainerType::ITEM),
-		stack(stack),
+		stackID(stackID),
 		index(index)
 	{
 		margin = 0.9f;
+	}
+
+	ItemUIContainer::~ItemUIContainer()
+	{
+		delete imageElement;
+		imageElement = nullptr;
+		delete textElement;
+		textElement = nullptr;
 	}
 
 	void ItemUIContainer::Update(Rect& parentRect)
 	{
 		UIContainer::Update(parentRect);
 
-		if (stack != nullptr && stack->count > 0)
+		if (stackID != InvalidID)
 		{
-			if (uiElement == nullptr)
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
 			{
-				uiElement = new ImageUIElement(g_Renderer->alphaBGTextureID);
+				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID);
+
+				if (imageElement == nullptr)
+				{
+					TextureID textureID = InvalidTextureID;
+
+					if (stack != nullptr && stack->prefabID.IsValid())
+					{
+						GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack->prefabID);
+						if (prefabTemplate != nullptr)
+						{
+							StringID stackTypeID = prefabTemplate->GetTypeID();
+							textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
+						}
+						else
+						{
+							// No icon exists for type, use placeholder
+							textureID = g_Renderer->alphaBGTextureID;
+						}
+					}
+					if (textureID != InvalidTextureID)
+					{
+						imageElement = new ImageUIElement(textureID);
+						textElement = new TextUIElement(IntToString(stack->count), SID("editor-01"));
+					}
+				}
+				else
+				{
+					if (stack == nullptr || (!stack->prefabID.IsValid() || stack->count == 0))
+					{
+						delete imageElement;
+						imageElement = nullptr;
+						delete textElement;
+						textElement = nullptr;
+					}
+					else if (textElement != nullptr)
+					{
+						if (lastTextElementUpdateCount != stack->count)
+						{
+							textElement->text = IntToString(stack->count);
+						}
+					}
+				}
+
+				if (imageElement != nullptr)
+				{
+					real aspectRatio = g_Window->GetAspectRatio();
+
+					SpriteQuadDrawInfo spriteInfo = {};
+					spriteInfo.textureID = imageElement->textureID;
+					spriteInfo.materialID = g_Renderer->m_SpriteMatSSID;
+					real width = (lastCutRect.maxX - lastCutRect.minX);
+					real height = (lastCutRect.maxY - lastCutRect.minY);
+					spriteInfo.pos = glm::vec3(
+						(lastCutRect.minX + width * 0.5f) * aspectRatio,
+						lastCutRect.minY + height * 0.5f,
+						1.0f);
+					spriteInfo.scale = glm::vec3(width * 0.4f, -width * 0.4f, 1.0f);
+					spriteInfo.anchor = AnchorPoint::CENTER;
+					spriteInfo.bScreenSpace = true;
+					spriteInfo.bReadDepth = false;
+					spriteInfo.bRaw = true;
+					spriteInfo.zOrder = 75;
+					g_Renderer->EnqueueSprite(spriteInfo);
+				}
+
+				if (textElement != nullptr)
+				{
+					real aspectRatio = g_Window->GetAspectRatio();
+
+					real width = (lastCutRect.maxX - lastCutRect.minX);
+					real height = (lastCutRect.maxY - lastCutRect.minY);
+					glm::vec2 pos = glm::vec2(
+						(lastCutRect.minX + width * 0.5f) * aspectRatio,
+						lastCutRect.minY + height * 0.5f);
+					real spacing = 0.1f;
+					real scale = 0.4f;
+
+					g_Renderer->SetFont(textElement->fontID);
+					g_Renderer->DrawStringSS(textElement->text, VEC4_ONE, AnchorPoint::CENTER, pos, spacing, scale);
+				}
 			}
+
 		}
 		else
 		{
-			if (uiElement != nullptr)
+			if (imageElement != nullptr)
 			{
-				delete uiElement;
-				uiElement = nullptr;
+				delete imageElement;
+				imageElement = nullptr;
+				delete textElement;
+				textElement = nullptr;
 			}
 		}
 	}
@@ -495,11 +519,16 @@ namespace flex
 
 		ImGui::Text("Index: %i", index);
 
-		if (stack != nullptr)
+		if (stackID != InvalidID)
 		{
-			ImGui::Text("Stack count: %d", (stack->count > 0 ? stack->count : 0));
-			std::string stackTypeString = stack->prefabID.ToString();
-			ImGui::Text("Stack type: %s", stackTypeString.c_str());
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
+			{
+				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID);
+				ImGui::Text("Stack count: %d", (stack->count > 0 ? stack->count : 0));
+				std::string stackTypeString = stack->prefabID.ToString();
+				ImGui::Text("Stack type: %s", stackTypeString.c_str());
+			}
 		}
 
 		return result;
@@ -529,7 +558,17 @@ namespace flex
 	{
 		ItemUIContainer* result = (ItemUIContainer*)UIContainer::Duplicate();
 
-		result->stack = stack;
+		if (imageElement != nullptr)
+		{
+			result->imageElement = new ImageUIElement(imageElement->textureID);
+		}
+
+		if (textElement != nullptr)
+		{
+			result->textElement = new TextUIElement(textElement->text, textElement->fontID);
+		}
+
+		result->stackID = stackID;
 		result->index = -1;
 
 		return result;
@@ -610,7 +649,7 @@ namespace flex
 							for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
 							{
 								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
-								itemContainer->stack = &player->m_QuickAccessInventory[n];
+								itemContainer->stackID = Player::GetGameObjectStackIDForQuickAccessInventory(n);
 								itemContainer->index = n;
 
 								itemSlotContainers.emplace_back(itemContainer);
@@ -655,12 +694,12 @@ namespace flex
 
 						if (bOverlaps)
 						{
-							itemContainer->lastCutRect.colour = glm::vec4(0.7, 0.7f, 0.7f, 1.0f);
+							itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
 
 							if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
 							{
-								player->heldItemSlot = glm::clamp(itemContainer->index, 0, Player::QUICK_ACCESS_ITEM_COUNT - 1);
-								if (itemContainer->stack->count > 0)
+								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID);
+								if (stack != nullptr && stack->count > 0)
 								{
 									g_UIManager->draggedUIContainer = itemContainer;
 								}
@@ -762,7 +801,7 @@ namespace flex
 								{
 									ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + r];
 									itemContainer->index = (c * Player::INVENTORY_ITEM_ROW_COUNT) + r;
-									itemContainer->stack = &player->m_Inventory[itemContainer->index];
+									itemContainer->stackID = Player::GetGameObjectStackIDForInventory(itemContainer->index);
 
 									itemContainers.emplace_back(itemContainer);
 								}
@@ -812,10 +851,12 @@ namespace flex
 
 							if (bOverlaps)
 							{
-								itemContainer->lastCutRect.colour = glm::vec4(0.7, 0.7f, 0.7f, 1.0f);
+								itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID);
 
 								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
-									itemContainer->stack->count > 0)
+									stack != nullptr && stack->count > 0)
 								{
 									g_UIManager->draggedUIContainer = itemContainer;
 								}
@@ -895,7 +936,8 @@ namespace flex
 
 					rect.Scale(0.75f);
 
-					rect.colour = glm::vec4(1.0f, 1.0f, 1.0f, 0.5f);
+					rect.colour = UIContainer::baseColour;
+					rect.colour.a = 0.5f;
 
 					uiMesh->DrawRect(
 						glm::vec2(rect.minX, rect.minY),
@@ -1087,10 +1129,11 @@ namespace flex
 	{
 		if (from != to)
 		{
-			to->stack->prefabID = from->stack->prefabID;
-			to->stack->count = from->stack->count;
-			from->stack->prefabID = InvalidPrefabID;
-			from->stack->count = 0;
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
+			{
+				player->MoveItem(from->stackID, to->stackID);
+			}
 		}
 	}
 

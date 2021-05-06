@@ -43,6 +43,7 @@ namespace flex
 	using CartChainID = u32;
 	using VariableID = u32;
 	using ParticleSystemID = u32;
+	using GameObjectStackID = u32;
 
 	using StringID = u64;
 

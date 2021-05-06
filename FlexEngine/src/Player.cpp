@@ -661,4 +661,63 @@ namespace flex
 	{
 		return m_TrackRidingID != InvalidTrackID;
 	}
+
+	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID)
+	{
+		if ((i32)stackID < QUICK_ACCESS_ITEM_COUNT)
+		{
+			return &m_QuickAccessInventory[(i32)stackID];
+		}
+		if ((i32)stackID < (QUICK_ACCESS_ITEM_COUNT + INVENTORY_ITEM_COUNT))
+		{
+			return &m_Inventory[(i32)stackID - QUICK_ACCESS_ITEM_COUNT];
+		}
+
+		PrintWarn("Attempted to get item from inventory with invalid stackID: %d!\n", (i32)stackID);
+		return nullptr;
+	}
+
+	void Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
+	{
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
+
+		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
+		{
+			if (toStack->count == 0)
+			{
+				toStack->prefabID = fromStack->prefabID;
+				toStack->count = fromStack->count;
+				fromStack->prefabID = InvalidPrefabID;
+				fromStack->count = 0;
+			}
+			else if ((toStack->count + fromStack->count) <= MAX_STACK_SIZE)
+			{
+				if (toStack->prefabID == fromStack->prefabID)
+				{
+					toStack->count = toStack->count + fromStack->count;
+					fromStack->prefabID = InvalidPrefabID;
+					fromStack->count = 0;
+				}
+			}
+		}
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < QUICK_ACCESS_ITEM_COUNT)
+		{
+			return (GameObjectStackID)slotIndex;
+		}
+		return InvalidID;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
+		}
+		return InvalidID;
+	}
 } // namespace flex

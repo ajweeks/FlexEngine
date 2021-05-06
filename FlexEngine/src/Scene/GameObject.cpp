@@ -296,6 +296,7 @@ namespace flex
 		case SID("cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateCart(objectName, gameObjectID, bIsPrefabTemplate);
 		case SID("engine cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateEngineCart(objectName, gameObjectID, bIsPrefabTemplate);
 		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
+		case SID("battery"): return new Battery(objectName, gameObjectID);
 		case SID("terminal"): return new Terminal(objectName, gameObjectID);
 		case SID("gerstner wave"): return new GerstnerWave(objectName, gameObjectID);
 		case SID("blocks"): return new Blocks(objectName, gameObjectID);
@@ -1967,28 +1968,35 @@ namespace flex
 
 		bool bCreateRenderObject = (copyFlags & CopyFlags::CREATE_RENDER_OBJECT);
 
-		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr)
+		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && m_bSerializeMesh)
 		{
 			std::vector<MaterialID> matIDs = m_Mesh->GetMaterialIDs();
 
-			Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
-			Mesh::Type meshType = m_Mesh->GetType();
-			switch (meshType)
+			if (newGameObject->GetMesh() != nullptr)
 			{
-			case Mesh::Type::PREFAB:
+				PrintError("New mesh (%s) already has mesh, perhaps it should have m_bSerializeMesh set to false?\n", newGameObject->m_Name.c_str());
+			}
+			else
 			{
-				PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
-				newMesh->LoadPrefabShape(shape, matIDs[0], nullptr, bCreateRenderObject);
-			} break;
-			case Mesh::Type::FILE:
-			{
-				std::string filePath = m_Mesh->GetRelativeFilePath();
-				newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject);
-			} break;
-			default:
-			{
-				PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
-			} break;
+				Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
+				Mesh::Type meshType = m_Mesh->GetType();
+				switch (meshType)
+				{
+				case Mesh::Type::PREFAB:
+				{
+					PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
+					newMesh->LoadPrefabShape(shape, matIDs[0], nullptr, bCreateRenderObject);
+				} break;
+				case Mesh::Type::FILE:
+				{
+					std::string filePath = m_Mesh->GetRelativeFilePath();
+					newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject);
+				} break;
+				default:
+				{
+					PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
+				} break;
+				}
 			}
 		}
 
@@ -4472,6 +4480,10 @@ namespace flex
 		bool bPrefabTemplate /* = false */) :
 		Cart(cartID, name, gameObjectID, SID("engine cart"), engineMeshName, bPrefabTemplate)
 	{
+		// TODO: Serialize and expose in ImGui
+		m_bItemizable = true;
+		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 	}
 
 	GameObject* EngineCart::CopySelf(
@@ -4676,6 +4688,52 @@ namespace flex
 	void MobileLiquidBox::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
 		FLEX_UNUSED(parentObject);
+	}
+
+	Battery::Battery() :
+		Battery(g_SceneManager->CurrentScene()->GetUniqueObjectName("Battery_", 2), InvalidGameObjectID)
+	{
+	}
+
+	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("battery"), gameObjectID)
+	{
+		m_bItemizable = true;
+	}
+
+	GameObject* Battery::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		Battery* newGameObject = new Battery(newObjectName, newGameObjectID);
+
+		newGameObject->chargeAmount = chargeAmount;
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject batteryInfo;
+		if (parentObject.TryGetObject("battery info", batteryInfo))
+		{
+			batteryInfo.TryGetFloat("charge amount", chargeAmount);
+		}
+	}
+
+	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject)
+	{
+		JSONObject batteryInfo = {};
+
+		batteryInfo.fields.emplace_back("charge amount", JSONValue(chargeAmount));
+
+		parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
 	}
 
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
