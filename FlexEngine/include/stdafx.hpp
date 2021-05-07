@@ -49,7 +49,6 @@
 #include "GUID.hpp"
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
-#define NOMINMAX
 
 #if defined(_WINDOWS)
 #define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
