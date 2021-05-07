@@ -1102,6 +1102,21 @@ namespace flex
 		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
 	}
 
+	AudioSourceID ResourceManager::GetAudioID(StringID audioFileSID)
+	{
+		return discoveredAudioFiles[audioFileSID].sourceID;
+	}
+
+	AudioSourceID ResourceManager::GetOrLoadAudioID(StringID audioFileSID)
+	{
+		if (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID)
+		{
+			LoadAudioFile(audioFileSID, nullptr);
+		}
+
+		return discoveredAudioFiles[audioFileSID].sourceID;
+	}
+
 	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder)
 	{
 		std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[audioFileSID].name;
@@ -1237,7 +1252,7 @@ namespace flex
 			{
 				ImGui::PushID(pair.templateObject->m_Name.c_str());
 
-				ImGui::Text(pair.templateObject->m_Name.c_str());
+				ImGui::Text("%s", pair.templateObject->m_Name.c_str());
 
 				ImGui::SameLine();
 
@@ -1264,6 +1279,86 @@ namespace flex
 				ImGui::PopID();
 			}
 		}
+	}
+
+	bool ResourceManager::DrawAudioSourceIDImGui(const char* label, StringID& audioSourceSID)
+	{
+		bool bValuesChanged = false;
+
+		static const char* previewStrNone = "None";
+		const char* previewStr;
+
+		if (audioSourceSID != InvalidStringID)
+		{
+			previewStr = discoveredAudioFiles[audioSourceSID].name.c_str();
+		}
+		else
+		{
+			previewStr = previewStrNone;
+		}
+
+		if (ImGui::BeginCombo(label, previewStr))
+		{
+			for (auto& audioFilePair : discoveredAudioFiles)
+			{
+				const char* audioFileName = audioFilePair.second.name.c_str();
+
+				bool bSelected = (audioFilePair.first == audioSourceSID);
+				bool bWasInvalid = discoveredAudioFiles[audioFilePair.first].bInvalid;
+				if (bWasInvalid)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.2f, 0.2f, 1.0f));
+				}
+				// TODO: Indicate when sound is playing with colour change
+				if (ImGui::Selectable(audioFileName, &bSelected))
+				{
+					//if (audioFilePair.second == InvalidAudioSourceID)
+					//{
+					//	LoadAudioFile(audioFilePair.first, nullptr);
+					//	audioFilePair.second = discoveredAudioFiles[audioFilePair.first].sourceID;
+					//}
+
+					audioSourceSID = audioFilePair.first;
+					bValuesChanged = true;
+				}
+				if (bWasInvalid)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				if (ImGui::IsItemActive())
+				{
+					if (ImGui::BeginDragDropSource())
+					{
+						void* data = (void*)&audioFilePair.first;
+						size_t size = sizeof(StringID);
+
+						ImGui::SetDragDropPayload(Editor::AudioFileNameSIDPayloadCStr, data, size);
+
+						ImGui::Text("%s", audioFileName);
+
+						ImGui::EndDragDropSource();
+					}
+
+					if (ImGui::BeginDragDropTarget())
+					{
+						const ImGuiPayload* audioSourcePayload = ImGui::AcceptDragDropPayload(Editor::AudioFileNameSIDPayloadCStr);
+						if (audioSourcePayload != nullptr && audioSourcePayload->Data != nullptr)
+						{
+							StringID draggedSID = *((StringID*)audioSourcePayload->Data);
+							audioSourceSID = draggedSID;
+							bValuesChanged = true;
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		return bValuesChanged;
 	}
 
 	void ResourceManager::DrawImGuiWindows()

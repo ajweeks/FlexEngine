@@ -75,6 +75,7 @@ namespace flex
 		void DrawImGuiMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter);
 		// Expects to be called from within an ImGui menu
 		void DrawImGuiMenuItemizableItems();
+		bool DrawAudioSourceIDImGui(const char* label, StringID& audioSourceSID);
 
 		// Returns a pointer into loadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
@@ -103,6 +104,8 @@ namespace flex
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
+		AudioSourceID GetAudioID(StringID audioFileSID);
+		AudioSourceID GetOrLoadAudioID(StringID audioFileSID);
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
 
 		// ImGui window flags

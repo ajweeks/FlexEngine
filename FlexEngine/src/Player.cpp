@@ -677,7 +677,7 @@ namespace flex
 		return nullptr;
 	}
 
-	void Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
+	bool Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
 	{
 		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
 		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
@@ -690,6 +690,7 @@ namespace flex
 				toStack->count = fromStack->count;
 				fromStack->prefabID = InvalidPrefabID;
 				fromStack->count = 0;
+				return true;
 			}
 			else if ((toStack->count + fromStack->count) <= MAX_STACK_SIZE)
 			{
@@ -698,9 +699,12 @@ namespace flex
 					toStack->count = toStack->count + fromStack->count;
 					fromStack->prefabID = InvalidPrefabID;
 					fromStack->count = 0;
+					return true;
 				}
 			}
 		}
+
+		return false;
 	}
 
 	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)

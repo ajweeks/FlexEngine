@@ -59,7 +59,7 @@ namespace flex
 		bool IsRidingTrack();
 
 		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID);
-		void MoveItem(GameObjectStackID fromID, GameObjectStackID toID);
+		bool MoveItem(GameObjectStackID fromID, GameObjectStackID toID);
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
 

@@ -270,10 +270,13 @@ namespace flex
 		void Update();
 		void DrawImGui(bool* bUIEditorShowing);
 
-		void ParseUIConfigs();
-		void SerializeUIConfigs();
+		void Deserialize();
+		void Serialize();
 
-		void MoveItem(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveItem(ItemUIContainer* from, ItemUIContainer* to);
+
+		void BeginItemDrag(ItemUIContainer* draggedItem);
+		void EndItemDrag();
 
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;
@@ -283,6 +286,12 @@ namespace flex
 	private:
 		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
 		UIContainer* ParseUIConfig(const char* filePath);
+		bool SerializeUISettings();
+		bool ParseUISettings();
+
+		StringID m_ItemPickupSoundSID = InvalidStringID;
+		StringID m_ItemDropSoundSID = InvalidStringID;
+		real m_ItemSoundGain = 0.5f;
 
 		//i32 m_PlayerInventorySlotIndexHovered = -1;
 

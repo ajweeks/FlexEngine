@@ -734,7 +734,7 @@ namespace flex
 								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID);
 								if (stack != nullptr && stack->count > 0)
 								{
-									g_UIManager->draggedUIContainer = itemContainer;
+									g_UIManager->BeginItemDrag(itemContainer);
 								}
 							}
 
@@ -743,8 +743,10 @@ namespace flex
 							{
 								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
 								{
-									g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer);
-									g_UIManager->draggedUIContainer = nullptr;
+									if (g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer))
+									{
+										g_UIManager->EndItemDrag();
+									}
 								}
 							}
 						}
@@ -891,7 +893,7 @@ namespace flex
 								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
 									stack != nullptr && stack->count > 0)
 								{
-									g_UIManager->draggedUIContainer = itemContainer;
+									g_UIManager->BeginItemDrag(itemContainer);
 								}
 
 								if (g_UIManager->draggedUIContainer != nullptr &&
@@ -899,8 +901,10 @@ namespace flex
 								{
 									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
 									{
-										g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer);
-										g_UIManager->draggedUIContainer = nullptr;
+										if (g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer))
+										{
+											g_UIManager->EndItemDrag();
+										}
 									}
 								}
 							}
@@ -917,7 +921,7 @@ namespace flex
 
 	void UIManager::Initialize()
 	{
-		ParseUIConfigs();
+		Deserialize();
 	}
 
 	void UIManager::Destroy()
@@ -1000,6 +1004,14 @@ namespace flex
 		{
 			if (ImGui::Begin("UI", bUIEditorShowing))
 			{
+				if (ImGui::Button("Save"))
+				{
+					Serialize();
+				}
+
+				g_ResourceManager->DrawAudioSourceIDImGui("Item pickup", m_ItemPickupSoundSID);
+				g_ResourceManager->DrawAudioSourceIDImGui("Item drop", m_ItemDropSoundSID);
+
 				auto drawButtons = [this](UIContainer** uiContainer, const char* filePath)
 				{
 					ImGui::PushID(filePath);
@@ -1080,8 +1092,49 @@ namespace flex
 		return nullptr;
 	}
 
-	void UIManager::ParseUIConfigs()
+	bool UIManager::SerializeUISettings()
 	{
+		JSONObject rootObject = {};
+
+		rootObject.fields.emplace_back("item pickup sound sid", JSONValue(m_ItemPickupSoundSID));
+		rootObject.fields.emplace_back("item drop sound sid", JSONValue(m_ItemDropSoundSID));
+
+		std::string directoryString = RelativePathToAbsolute(ExtractDirectoryString(UI_SETTINGS_LOCATION));
+		if (!Platform::DirectoryExists(directoryString))
+		{
+			Platform::CreateDirectoryRecursive(directoryString);
+		}
+
+		std::string fileContents = rootObject.ToString();
+		bool bSuccess = WriteFile(UI_SETTINGS_LOCATION, fileContents, false);
+
+		return bSuccess;
+	}
+
+	bool UIManager::ParseUISettings()
+	{
+		std::string fileContents;
+		if (ReadFile(UI_SETTINGS_LOCATION, fileContents, false))
+		{
+			JSONObject rootObject;
+			if (!JSONParser::Parse(fileContents, rootObject))
+			{
+				PrintError("Failed to parse UI settings file at %s\n", UI_SETTINGS_LOCATION);
+				return false;
+			}
+
+			rootObject.TryGetULong("item pickup sound sid", m_ItemPickupSoundSID);
+			rootObject.TryGetULong("item drop sound sid", m_ItemDropSoundSID);
+			return true;
+		}
+
+		return false;
+	}
+
+	void UIManager::Deserialize()
+	{
+		ParseUISettings();
+
 		if (playerQuickAccessUI != nullptr)
 		{
 			delete playerQuickAccessUI;
@@ -1140,7 +1193,7 @@ namespace flex
 		return bSuccess;
 	}
 
-	void UIManager::SerializeUIConfigs()
+	void UIManager::Serialize()
 	{
 		if (SerializeUIConfig(UI_PLAYER_QUICK_ACCESS_LOCATION, playerQuickAccessUI))
 		{
@@ -1159,17 +1212,57 @@ namespace flex
 		{
 			PrintError("Failed to serialize player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
 		}
+
+		SerializeUISettings();
 	}
 
-	void UIManager::MoveItem(ItemUIContainer* from, ItemUIContainer* to)
+	bool UIManager::MoveItem(ItemUIContainer* from, ItemUIContainer* to)
 	{
 		if (from != to)
 		{
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				player->MoveItem(from->stackID, to->stackID);
+				return player->MoveItem(from->stackID, to->stackID);
 			}
+		}
+
+		return false;
+	}
+
+	void UIManager::BeginItemDrag(ItemUIContainer* draggedItem)
+	{
+		if (draggedUIContainer != nullptr)
+		{
+			PrintWarn("BeginItemDrag was called when draggedUIContainer was non-null!\n");
+			return;
+		}
+
+		draggedUIContainer = draggedItem;
+
+		if (m_ItemPickupSoundSID != InvalidStringID)
+		{
+			AudioSourceID sourceID = g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID);
+			AudioManager::SetSourceGain(sourceID, m_ItemSoundGain);
+			AudioManager::PlaySource(sourceID);
+		}
+	}
+
+	void UIManager::EndItemDrag()
+	{
+		if (draggedUIContainer == nullptr)
+		{
+			PrintWarn("EndItemDrag was called when draggedUIContainer was null!\n");
+			return;
+		}
+
+		draggedUIContainer = nullptr;
+
+		if (m_ItemDropSoundSID != InvalidStringID)
+		{
+			AudioSourceID sourceID = g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID);
+			AudioManager::SetSourceGain(sourceID, m_ItemSoundGain);
+			AudioManager::PlaySource(sourceID);
 		}
 	}
 

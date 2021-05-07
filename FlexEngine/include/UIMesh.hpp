@@ -62,4 +62,3 @@ namespace flex
 		GameObject* m_Object = nullptr;
 	};
 } // namespace flex
-
