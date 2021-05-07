@@ -23,8 +23,10 @@ def run_cmake(source, build, arguments = []):
 	cmakeCmd += arguments
 	subprocess.check_call(cmakeCmd, stderr=subprocess.STDOUT)
 
-def run_cmake_build(path, arguments):
-	args = [cmake_path, '--build', path] + arguments + ['--', '-j6']
+def run_cmake_build(platform, path, arguments):
+	args = [cmake_path, '--build', path] + arguments
+	if platform == 'linux':
+		args += ['--', '-j6']
 	subprocess.check_call(args, stderr=subprocess.STDOUT)
 
 def run_msbuild(sln, arguments = []):
@@ -124,8 +126,6 @@ def build_project(config):
 		glfw_msbuild_args = ['/property:Configuration=' + external_config]
 		glfw_lib_path = glfw_build_path + 'src/' + config + '/'
 		run_msbuild(glfw_build_path + 'glfw.sln', glfw_msbuild_args)
-		print('glfw source: ' + glfw_lib_path)
-		# TODO: Double check
 		shutil.copyfile(glfw_lib_path + 'glfw3.lib', libs_target + 'glfw3.lib')
 	else:
 		run_make(glfw_build_path, False)
@@ -202,18 +202,16 @@ def build_project(config):
 	free_type_build_path = free_type_path
 	if platform == 'linux':
 		 free_type_build_path += 'build/'
-	print(free_type_build_path)
 	if not os.path.exists(free_type_build_path):
 		os.makedirs(free_type_build_path)
 
 	if platform == 'windows':
-		configuration = config + ' Static'
 		freetype_msbuid_args = ['/property:Configuration=' + external_config, '/property:Platform=x64']
 		run_msbuild(free_type_path + 'builds/windows/vc2010/freetype.sln', freetype_msbuid_args)
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target + 'freetype.lib')
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target + 'freetype.pdb')
 	else:
-		subprocess.check_call('cd ' + free_type_path + ';sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
+		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
 		run_cmake(free_type_path, free_type_build_path, [
 			'-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON',
 			'-Wno-dev'])
@@ -281,10 +279,6 @@ def build_project(config):
 		'-DBUILD_TESTING=OFF',
 		'-DENABLE_CTEST=OFF',
 		'-DSHADERC_ENABLE_SHARED_CRT=ON',
-		'-DLLVM_USE_CRT_DEBUG=MDd',
-		'-DLLVM_USE_CRT_MINSIZEREL=MD',
-		'-DLLVM_USE_CRT_RELEASE=MD',
-		'-DLLVM_USE_CRT_RELWITHDEBINFO=MD',
 		'-Wno-dev']
 	if platform == 'linux':
 		shader_c_cmake_args += ['-G', 'Unix Makefiles', '.']
@@ -292,7 +286,7 @@ def build_project(config):
 	shader_c_cmake_args += ['-DCMAKE_BUILD_TYPE=' + external_config]
 
 	run_cmake(shader_c_path, shader_c_build_path, shader_c_cmake_args)
-	run_cmake_build(shader_c_build_path, ['--config', external_config])
+	run_cmake_build(platform, shader_c_build_path, ['--config', external_config])
 
 	if platform == 'windows':
 		shader_c_lib_path = shader_c_build_path + 'libshaderc/' + config + '/'
