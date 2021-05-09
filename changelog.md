@@ -2,7 +2,14 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_May_
+- Add support for calling functions with arguments & non-void return types from in-game command line
+- Add support for calling C++ functions from script
+- Add support for binding function pointers
+
 _April_
+- Display interactive inventory screen (tab)
+- Add basic UI framework based on Rect Cuts
 - Add support for area lights (using Linearly Transformed Cosines)
 - Add support for function calls in scripting language
 - Support hot reloading externally-edited terminal scripts
