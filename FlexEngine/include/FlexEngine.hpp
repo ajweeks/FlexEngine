@@ -10,6 +10,7 @@ struct ImGuiInputTextCallbackData;
 namespace flex
 {
 	class GameObject;
+	class IFunction;
 	enum class TransformState;
 
 	class FlexEngine final
@@ -196,18 +197,7 @@ namespace flex
 
 		bool m_bWriteProfilerResultsToFile = false;
 
-		struct ConsoleCommand
-		{
-			typedef void(*cmdFunc)();
-			ConsoleCommand(const std::string& name, cmdFunc fun) :
-				name(name),
-				fun(fun)
-			{}
-
-			std::string name;
-			cmdFunc fun;
-		};
-		std::vector<ConsoleCommand> m_ConsoleCommands;
+		std::vector<IFunction*> m_ConsoleCommands;
 		bool m_bShowingConsole = false;
 		bool m_bShowAllConsoleCommands = false;
 		static const u32 MAX_CHARS_CMD_LINE_STR = 256;

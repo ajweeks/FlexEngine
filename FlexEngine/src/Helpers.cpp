@@ -872,17 +872,22 @@ namespace flex
 		return (intStr.compare("true") == 0);
 	}
 
-	glm::i32 ParseInt(const std::string& intStr)
+	i32 ParseInt(const std::string& intStr)
 	{
-		return (i32)atoi(intStr.c_str());
+		return (i64)atoi(intStr.c_str());
 	}
 
-	glm::u32 ParseUInt(const std::string& intStr)
+	u32 ParseUInt(const std::string& intStr)
 	{
 		return (u32)strtoul(intStr.c_str(), NULL, 10);
 	}
 
-	glm::u64 ParseULong(const std::string& intStr)
+	i64 ParseLong(const std::string& intStr)
+	{
+		return (i64)atoll(intStr.c_str());
+	}
+
+	u64 ParseULong(const std::string& intStr)
 	{
 		return (u64)strtoull(intStr.c_str(), NULL, 10);
 	}

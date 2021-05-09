@@ -326,7 +326,7 @@ namespace flex
 
 			ImGui::Text("Quick access inventory:");
 			ImGui::Indent();
-			for (i32 i = 0;i < (i32)m_QuickAccessInventory.size(); ++i)
+			for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
 			{
 
 				const bool bHeld = (i == heldItemSlot);
@@ -598,37 +598,85 @@ namespace flex
 
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
+		i32 initialCount = count;
+
+		auto printResults = [initialCount, &prefabID, &count]()
+		{
+			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
+			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
+		};
+
+		// Fill up any existing slots in quick access
 		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + count) <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
 			{
-				gameObjectStack.count += count;
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
 				return;
 			}
 		}
 
+		// Fill up any existing slots in main inventory
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + count) <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
 			{
-				gameObjectStack.count += count;
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
 				return;
 			}
 		}
 
-		i32 inventorySlot = GetNextFreeQuickAccessInventorySlot();
-		if (inventorySlot != -1)
+		// Fill empty slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
 		{
-			m_QuickAccessInventory[inventorySlot] = GameObjectStack{ prefabID, count };
-		}
-		else
-		{
-			inventorySlot = GetNextFreeInventorySlot();
-			if (inventorySlot != -1)
+			if (gameObjectStack.count == 0)
 			{
-				m_Inventory[inventorySlot] = GameObjectStack{ prefabID, count };
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
 			}
 		}
+
+		// Fill empty slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		printResults();
 	}
 
 	i32 Player::GetNextFreeQuickAccessInventorySlot()

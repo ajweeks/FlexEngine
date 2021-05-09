@@ -133,6 +133,7 @@ namespace flex
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
 
+		void SetTimeOfDay(real time);
 		real GetTimeOfDay() const;
 
 		real GetPlayerMinHeight() const;

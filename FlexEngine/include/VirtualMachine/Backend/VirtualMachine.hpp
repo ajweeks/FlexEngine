@@ -2,10 +2,10 @@
 
 #include <stack>
 
+#include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
+#include "Variant.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
-#include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
 
 namespace flex
 {
@@ -27,6 +27,35 @@ namespace flex
 
 	namespace VM
 	{
+		struct VariantWrapper
+		{
+			enum class Type
+			{
+				REGISTER,
+				CONSTANT,
+				TERMINAL_OUTPUT,
+				NONE
+			};
+
+			VariantWrapper() :
+				type(Type::NONE),
+				variant(g_EmptyVariant)
+			{}
+
+			VariantWrapper(Type type, const Variant& variant) :
+				type(type),
+				variant(variant)
+			{}
+
+			Type type;
+			Variant variant;
+
+			Variant& Get(VirtualMachine* vm);
+			Variant& GetW(VirtualMachine* vm);
+			bool Valid() const;
+			std::string ToString() const;
+		};
+
 		enum class OpCode
 		{
 			MOV,
@@ -127,26 +156,26 @@ namespace flex
 		{
 			Instruction(OpCode opCode) :
 				opCode(opCode),
-				val0(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val1(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val0(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val1(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0) :
+			Instruction(OpCode opCode, const VariantWrapper& val0) :
 				opCode(opCode),
 				val0(val0),
-				val1(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val1(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0, const ValueWrapper& val1) :
+			Instruction(OpCode opCode, const VariantWrapper& val0, const VariantWrapper& val1) :
 				opCode(opCode),
 				val0(val0),
 				val1(val1),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0, const ValueWrapper& val1, const ValueWrapper& val2) :
+			Instruction(OpCode opCode, const VariantWrapper& val0, const VariantWrapper& val1, const VariantWrapper& val2) :
 				opCode(opCode),
 				val0(val0),
 				val1(val1),
@@ -154,9 +183,9 @@ namespace flex
 			{}
 
 			OpCode opCode;
-			ValueWrapper val0;
-			ValueWrapper val1;
-			ValueWrapper val2;
+			VariantWrapper val0;
+			VariantWrapper val1;
+			VariantWrapper val2;
 		};
 
 		struct IntermediateFuncAddress
@@ -239,10 +268,10 @@ namespace flex
 			static const i32 MAX_STACK_HEIGHT = 2048;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
-			static ValueWrapper g_ZeroIntValueWrapper;
-			static ValueWrapper g_ZeroFloatValueWrapper;
-			static ValueWrapper g_OneIntValueWrapper;
-			static ValueWrapper g_OneFloatValueWrapper;
+			static VariantWrapper g_ZeroIntVariantWrapper;
+			static VariantWrapper g_ZeroFloatVariantWrapper;
+			static VariantWrapper g_OneIntVariantWrapper;
+			static VariantWrapper g_OneFloatVariantWrapper;
 
 			struct RunningState
 			{
@@ -263,9 +292,9 @@ namespace flex
 			std::vector<Instruction> instructions;
 			std::vector<Span> instructionOrigins;
 
-			std::array<VM::Value, REGISTER_COUNT> registers;
-			std::array<VM::Value, Terminal::MAX_OUTPUT_COUNT> terminalOutputs;
-			std::stack<VM::Value> stack;
+			std::array<Variant, REGISTER_COUNT> registers;
+			std::array<Variant, Terminal::MAX_OUTPUT_COUNT> terminalOutputs;
+			std::stack<Variant> stack;
 
 			u32* memory = nullptr;
 
@@ -290,7 +319,7 @@ namespace flex
 			void ZeroOutRegisters();
 			void ZeroOutTerminalOutputs();
 			void ClearStack();
-			void HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
+			void HandleComparison(VariantWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
 			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);
 
 			bool IsExternal(FuncAddress funcAddress);
@@ -298,7 +327,7 @@ namespace flex
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
 			bool DispatchExternalCall(FuncAddress funcAddress);
 
-			ValueWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
+			VariantWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
 			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
 			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
 			i32 GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue);

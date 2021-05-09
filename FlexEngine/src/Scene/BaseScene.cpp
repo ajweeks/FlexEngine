@@ -1798,6 +1798,11 @@ namespace flex
 		return bChanged;
 	}
 
+	void BaseScene::SetTimeOfDay(real time)
+	{
+		m_TimeOfDay = glm::clamp(time, 0.0f, 1.0f);
+	}
+
 	real BaseScene::GetTimeOfDay() const
 	{
 		return m_TimeOfDay;

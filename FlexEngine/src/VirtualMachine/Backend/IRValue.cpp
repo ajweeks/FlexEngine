@@ -4,8 +4,8 @@
 
 #include "Helpers.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
+#include "Variant.hpp"
 
 namespace flex
 {
@@ -120,10 +120,10 @@ namespace flex
 			memcpy(&valInt, &other.valInt, sizeof(void*));
 		}
 
-		Value::Value(const VM::Value& other) :
+		Value::Value(const Variant& other) :
 			origin(Span(Span::Source::GENERATED))
 		{
-			if (other.type == VM::Value::Type::_NONE)
+			if (other.type == Variant::Type::_NONE)
 			{
 				type = IR::Value::Type::_NONE;
 			}

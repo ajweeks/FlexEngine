@@ -818,17 +818,18 @@ namespace flex
 
 	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
 	{
+		const char* matNameCStr = materialName.c_str();
 		for (u32 i = 0; i < (u32)m_Materials.size(); ++i)
 		{
 			auto matIter = m_Materials.find(i);
-			if (matIter != m_Materials.end() && matIter->second->name.compare(materialName) == 0)
+			if (matIter != m_Materials.end() && matIter->second->name.compare(matNameCStr) == 0)
 			{
 				materialID = i;
 				return true;
 			}
 		}
 
-		MaterialCreateInfo* matCreateInfo = g_ResourceManager->GetMaterialInfo(materialName);
+		MaterialCreateInfo* matCreateInfo = g_ResourceManager->GetMaterialInfo(matNameCStr);
 		if (matCreateInfo != nullptr)
 		{
 			materialID = InitializeMaterial(matCreateInfo);

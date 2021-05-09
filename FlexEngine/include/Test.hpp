@@ -862,18 +862,18 @@ namespace flex
 		{
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = VM::VariantWrapper::Type;
 			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = 1 + 2
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(1) }, { ValueType::CONSTANT, Variant(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(2) } }); // r0 = r0 * 2
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(12) }, { ValueType::CONSTANT, VM::Value(20) } }); // r1 = 12 + 20
-			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Variant(1) }, { ValueType::CONSTANT, Variant(12) }, { ValueType::CONSTANT, Variant(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Variant(1) }, { ValueType::REGISTER, Variant(1) }, { ValueType::REGISTER, Variant(0) } }); // r1 = r1 % r0
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::HALT });
 
@@ -909,7 +909,7 @@ namespace flex
 		{
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = VM::VariantWrapper::Type;
 			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
@@ -937,13 +937,13 @@ namespace flex
 
 			*/
 
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = 1 + 2
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(1) }, { ValueType::CONSTANT, Variant(2) } }); // r0 = 1 + 2
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(2) } }); // r0 = r0 * 2
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(12) }, { ValueType::CONSTANT, VM::Value(20) } }); // r1 = 12 + 20
-			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(0) } }); // r1 = r1 % r0
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Variant(1) }, { ValueType::CONSTANT, Variant(12) }, { ValueType::CONSTANT, Variant(20) } }); // r1 = 12 + 20
+			instStream.push_back({ OpCode::MOD, { ValueType::REGISTER, Variant(1) }, { ValueType::REGISTER, Variant(1) }, { ValueType::REGISTER, Variant(0) } }); // r1 = r1 % r0
 			instStream.push_back({ OpCode::YIELD });
-			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 / r1
+			instStream.push_back({ OpCode::DIV, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(1) } }); // r0 = r0 / r1
 			instStream.push_back({ OpCode::YIELD });
 			instStream.push_back({ OpCode::HALT });
 
@@ -981,17 +981,17 @@ namespace flex
 		{
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = VM::VariantWrapper::Type;
 			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
 
-			instStream.push_back({ OpCode::MOV, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r1 = 2
+			instStream.push_back({ OpCode::MOV, { ValueType::REGISTER, Variant(1) }, { ValueType::CONSTANT, Variant(2) } }); // r1 = 2
 			// Loop start
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(1) }, { ValueType::REGISTER, VM::Value(1) }, { ValueType::CONSTANT, VM::Value(2) } }); // r1 = r1 * 2
-			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(1) } }); // r0 = r0 + 1
-			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(10) } }); // ro = r0 - 10
-			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, VM::Value(1) } }); // if r0 < 10 jump to line 1
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Variant(1) }, { ValueType::REGISTER, Variant(1) }, { ValueType::CONSTANT, Variant(2) } }); // r1 = r1 * 2
+			instStream.push_back({ OpCode::ADD, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(1) } }); // r0 = r0 + 1
+			instStream.push_back({ OpCode::CMP, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(10) } }); // ro = r0 - 10
+			instStream.push_back({ OpCode::JLT, { ValueType::CONSTANT, Variant(1) } }); // if r0 < 10 jump to line 1
 			// Loop end
 			instStream.push_back({ OpCode::HALT });
 
@@ -1020,7 +1020,7 @@ namespace flex
 		{
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 
-			using ValueType = VM::ValueWrapper::Type;
+			using ValueType = VM::VariantWrapper::Type;
 			using OpCode = VM::OpCode;
 
 			std::vector<VM::Instruction> instStream;
@@ -1042,27 +1042,27 @@ namespace flex
 
 			*/
 
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(4) } }); // return to line 4 after func
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(5) } }); // arg1
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(3) } }); // arg0
-			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, VM::Value(6) } }); // call func 0 on line 6
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Variant(4) } }); // return to line 4 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Variant(5) } }); // arg1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Variant(3) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Variant(6) } }); // call func 0 on line 6
 			// resume point
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Variant(0) } }); // r0 = return val
 			instStream.push_back({ OpCode::HALT });
 			// func 0
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = arg0
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(1) } }); // r1 = arg1
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(1) } }); // r0 = r0 * r1
-			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, VM::Value(12) } }); // return to line 12 after func
-			instStream.push_back({ OpCode::PUSH, { ValueType::REGISTER, VM::Value(0) } }); // arg0
-			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, VM::Value(14) } }); // call func 1 on line 14
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Variant(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Variant(1) } }); // r1 = arg1
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(1) } }); // r0 = r0 * r1
+			instStream.push_back({ OpCode::PUSH, { ValueType::CONSTANT, Variant(12) } }); // return to line 12 after func
+			instStream.push_back({ OpCode::PUSH, { ValueType::REGISTER, Variant(0) } }); // arg0
+			instStream.push_back({ OpCode::CALL, { ValueType::CONSTANT, Variant(14) } }); // call func 1 on line 14
 			// resume point
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = return val
-			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, VM::Value(0) } }); // return r0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Variant(0) } }); // r0 = return val
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Variant(0) } }); // return r0
 			// func 1
-			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, VM::Value(0) } }); // r0 = arg0
-			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, VM::Value(0) }, { ValueType::REGISTER, VM::Value(0) }, { ValueType::CONSTANT, VM::Value(2) } }); // r0 = r0 * 2
-			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, VM::Value(0) } }); // return r0
+			instStream.push_back({ OpCode::POP, { ValueType::REGISTER, Variant(0) } }); // r0 = arg0
+			instStream.push_back({ OpCode::MUL, { ValueType::REGISTER, Variant(0) }, { ValueType::REGISTER, Variant(0) }, { ValueType::CONSTANT, Variant(2) } }); // r0 = r0 * 2
+			instStream.push_back({ OpCode::RETURN, { ValueType::REGISTER, Variant(0) } }); // return r0
 
 			vm->GenerateFromInstStream(instStream);
 

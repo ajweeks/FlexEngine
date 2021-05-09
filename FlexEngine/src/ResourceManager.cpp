@@ -948,7 +948,7 @@ namespace flex
 		return textureID;
 	}
 
-	MaterialCreateInfo* ResourceManager::GetMaterialInfo(const std::string& materialName)
+	MaterialCreateInfo* ResourceManager::GetMaterialInfo(const char* materialName)
 	{
 		for (MaterialCreateInfo& parsedMatInfo : parsedMaterialInfos)
 		{
@@ -962,7 +962,7 @@ namespace flex
 	}
 
 	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
-	GameObject* ResourceManager::GetPrefabTemplate(const std::string& prefabName) const
+	GameObject* ResourceManager::GetPrefabTemplate(const char* prefabName) const
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
@@ -975,7 +975,7 @@ namespace flex
 		return nullptr;
 	}
 
-	PrefabID ResourceManager::GetPrefabID(const std::string& prefabName) const
+	PrefabID ResourceManager::GetPrefabID(const char* prefabName) const
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{

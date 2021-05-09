@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
+#include "Variant.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -248,9 +248,9 @@ namespace flex
 			{
 			}
 
-			virtual VM::Value GetValue()
+			virtual Variant GetValue()
 			{
-				return VM::Value();
+				return Variant();
 			}
 
 			TypeName typeName = TypeName::UNKNOWN;
@@ -535,9 +535,9 @@ namespace flex
 				return IntToString(value);
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			i32 value;
@@ -556,9 +556,9 @@ namespace flex
 				return FloatToString(value) + "f";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			real value;
@@ -577,9 +577,9 @@ namespace flex
 				return value ? "true" : "false";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			bool value;
@@ -598,9 +598,9 @@ namespace flex
 				return "\"" + value + "\"";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value.c_str());
+				return Variant(value.c_str());
 			}
 
 			std::string value;
@@ -619,9 +619,9 @@ namespace flex
 				return std::string(1, value);
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			char value;

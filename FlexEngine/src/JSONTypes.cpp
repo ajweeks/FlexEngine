@@ -41,7 +41,7 @@ namespace flex
 			if (isDigit || isDecimal || isNegation)
 			{
 				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
-				if (isDecimal || stringAfter[nextNonAlphaNumeric] == '.')
+				if (isDecimal || (nextNonAlphaNumeric != -1 && !stringAfter.empty() && stringAfter[nextNonAlphaNumeric] == '.'))
 				{
 					return Type::FLOAT;
 				}

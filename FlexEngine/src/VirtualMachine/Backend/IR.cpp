@@ -3,7 +3,6 @@
 #include "VirtualMachine/Backend/IR.hpp"
 
 #include "VirtualMachine/Backend/VariableContainer.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 #include "StringBuilder.hpp"
@@ -724,7 +723,7 @@ namespace flex
 
 					std::vector<IR::Value::Type> argumentTypes;
 					argumentTypes.reserve(funcPtr->argTypes.size());
-					for (VM::Value::Type argType : funcPtr->argTypes)
+					for (Variant::Type argType : funcPtr->argTypes)
 					{
 						argumentTypes.emplace_back((IR::Value::Type)argType);
 					}
@@ -944,7 +943,7 @@ namespace flex
 
 			if (IsLiteral(statement->statementType))
 			{
-				//ValueWrapper val1 = ValueWrapper(ValueWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
+				//VariantWrapper val1 = VariantWrapper(VariantWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
 				DEBUG_BREAK();
 			}
 			else
@@ -1178,8 +1177,8 @@ namespace flex
 					OpCode binaryOpTranslation = BinaryOperatorTypeToOpCode(binOp->operatorType);
 					assert(binaryOpTranslation != OpCode::_NONE);
 
-					ValueWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
-					ValueWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
+					VariantWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
+					VariantWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
 
 					if (binaryOpTranslation == OpCode::CMP)
 					{
@@ -1190,7 +1189,7 @@ namespace flex
 						if (jumpCode != OpCode::_NONE)
 						{
 							i32 jumpAddress = 0;
-							Instruction jumpInst(jumpCode, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
+							Instruction jumpInst(jumpCode, VariantWrapper(VariantWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
 							state->InsertionBlock()->PushBack(jumpInst);
 						}
 						else
@@ -1730,7 +1729,7 @@ namespace flex
 
 					for (u32 j = 0; j < (u32)funcDecl->arguments.size(); ++j)
 					{
-						Instruction popInst(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
+						Instruction popInst(OpCode::POP, VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
 						instrBlock.PushBack(popInst);
 					}
 
@@ -1741,13 +1740,13 @@ namespace flex
 			}
 		}
 
-		ValueWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
+		VariantWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
 		{
-			ValueWrapper valWrapper;
+			VariantWrapper valWrapper;
 
 			if (IsLiteral(expression->statementType))
 			{
-				valWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, expression->GetValue());
+				valWrapper = VariantWrapper(VariantWrapper::Type::CONSTANT, expression->GetValue());
 			}
 			else
 			{
@@ -1757,13 +1756,13 @@ namespace flex
 				{
 					//AST::Identifier* ident = (AST::Identifier*)expression;
 					//i32 reg = state->varToRegisterMap[ident->identifierStr];
-					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
+					//valWrapper = VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
 				case AST::StatementType::CALL:
 				{
 					AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
 					i32 registerStored = GenerateCallInstruction(funcCall);
-					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+					valWrapper = VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value(registerStored));
 				} break;
 				default:
 				{

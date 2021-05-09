@@ -202,8 +202,8 @@ namespace flex
 			}
 			else
 			{
-				prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabName);
-				prefabID = g_ResourceManager->GetPrefabID(prefabName);
+				prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabName.c_str());
+				prefabID = g_ResourceManager->GetPrefabID(prefabName.c_str());
 			}
 
 			if (prefabTemplate != nullptr)
@@ -6834,8 +6834,8 @@ namespace flex
 						ImGui::SetColumnWidth(1, colWidth);
 						for (u32 i = 0; i < (u32)m_VM->registers.size(); ++i)
 						{
-							const VM::Value& registerValue = m_VM->registers[i];
-							if (registerValue.type != VM::Value::Type::_NONE)
+							const Variant& registerValue = m_VM->registers[i];
+							if (registerValue.type != Variant::Type::_NONE)
 							{
 								std::string regValStr = registerValue.ToString();
 								ImGui::Text("r%i = %s", i, regValStr.c_str());
@@ -6860,10 +6860,10 @@ namespace flex
 					{
 						ImGui::Text("Stack");
 						// Copy of stack that we can pop elements off of to see contents
-						std::stack<VM::Value> stackCopy = m_VM->stack;
+						std::stack<Variant> stackCopy = m_VM->stack;
 						while (!stackCopy.empty())
 						{
-							const VM::Value& value = stackCopy.top();
+							const Variant& value = stackCopy.top();
 							std::string valStr = value.ToString();
 							ImGui::Text("%s", valStr.c_str());
 							stackCopy.pop();
@@ -6874,8 +6874,8 @@ namespace flex
 
 				for (u32 i = 0; i < Terminal::MAX_OUTPUT_COUNT; ++i)
 				{
-					const VM::Value& terminalVal = m_VM->terminalOutputs[i];
-					if (terminalVal.type != VM::Value::Type::_NONE)
+					const Variant& terminalVal = m_VM->terminalOutputs[i];
+					if (terminalVal.type != Variant::Type::_NONE)
 					{
 						std::string terminalValStr = terminalVal.ToString();
 						ImGui::Text("out_%i = %s", i, terminalValStr.c_str());

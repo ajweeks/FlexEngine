@@ -6,6 +6,8 @@
 
 namespace flex
 {
+	struct Variant;
+
 	namespace VM
 	{
 		struct Value;
@@ -128,7 +130,7 @@ namespace flex
 
 			Value(const Value& other);
 			Value(const Value&& other);
-			explicit Value(const VM::Value& other);
+			explicit Value(const Variant& other);
 
 			i32 AsInt() const;
 			real AsFloat() const;

@@ -51,6 +51,8 @@ IGNORE_WARNINGS_POP
 #include "UI.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
+#include "Variant.hpp"
+#include "VirtualMachine/Backend/FunctionBindings.hpp"
 
 #if COMPILE_OPEN_GL
 #include "Graphics/GL/GLRenderer.hpp"
@@ -367,25 +369,59 @@ namespace flex
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
 
-
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.emplace_back("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); });
-		m_ConsoleCommands.emplace_back("reload.scene.hard", []()
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard", []()
 		{
 			g_ResourceManager->DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
-		});
-		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->RecompileShaders(false); });
-		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); });
-		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); });
-		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
-		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
-		m_ConsoleCommands.emplace_back("exit", []() { g_EngineInstance->Stop(); });
-		// TODO: Support params like "aa=0"
-		m_ConsoleCommands.emplace_back("aa.off", []() { g_Renderer->SetTAAEnabled(false); });
-		m_ConsoleCommands.emplace_back("aa.taa", []() { g_Renderer->SetTAAEnabled(true); });
-		m_ConsoleCommands.emplace_back("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); });
-		m_ConsoleCommands.emplace_back("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); });
+		}));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders", []() { g_Renderer->RecompileShaders(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all", []() { g_Editor->SelectAll(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none", []() { g_Editor->SelectNone(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit", []() { g_EngineInstance->Stop(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off", []() { g_Renderer->SetTAAEnabled(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa", []() { g_Renderer->SetTAAEnabled(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled", []() { return Variant(g_Renderer->IsTAAEnabled()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.get",
+			[]()
+		{
+			return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay());
+		}));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.set",
+			[](const Variant& time)
+		{
+			real timeFloat = time.AsFloat();
+			g_SceneManager->CurrentScene()->SetTimeOfDay(timeFloat);
+		}, Variant::Type::FLOAT));
+
+		// TODO: Add usage helper (e.g. "inventory.add ["item_name"] [count]")
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("inventory.add",
+			[](const Variant& item, const Variant& count) -> Variant {
+				{
+					i32 countInt = count.AsInt();
+
+					const char* itemName = item.AsString();
+					PrefabID prefabID = g_ResourceManager->GetPrefabID(itemName);
+
+					if (prefabID.IsValid() &&
+						countInt > 0 && countInt < (Player::MAX_STACK_SIZE * Player::INVENTORY_ITEM_COUNT))
+					{
+						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						if (player != nullptr)
+						{
+							player->AddToInventory(prefabID, countInt);
+						}
+					}
+					return Variant();
+				}
+		}, Variant::Type::VOID,
+			Variant::Type::STRING, Variant::Type::INT));
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1344,34 +1380,105 @@ namespace flex
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
-					const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
-					bool bMatched = false;
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					//const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
+					std::vector<std::string> cmdLineParts = Split(m_CmdLineStrBuf, ' ');
+					if (!cmdLineParts.empty())
 					{
-						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
+						bool bMatched = false;
+						for (IFunction* func : m_ConsoleCommands)
 						{
-							bMatched = true;
-							m_CmdAutoCompletions.clear();
-							m_bShowingConsole = false;
-							cmd.fun();
-							if (m_PreviousCmdLineEntries.empty() ||
-								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
+							if (strcmp(cmdLineParts[0].c_str(), func->name.c_str()) == 0)
 							{
-								m_PreviousCmdLineEntries.emplace_back(m_CmdLineStrBuf);
+								bMatched = true;
+								m_CmdAutoCompletions.clear();
+								m_bShowingConsole = false;
+								bool bExecuted = false;
+								Variant result;
+								u32 argCount = (u32)func->argTypes.size();
+								if (argCount == 0 && cmdLineParts.size() == 1)
+								{
+									result = func->Execute();
+									bExecuted = true;
+								}
+								else if ((argCount + 1) == cmdLineParts.size())
+								{
+									std::vector<Variant> args;
+									args.reserve(argCount);
+									bool bValid = true;
+									for (u32 i = 0; i < argCount; ++i)
+									{
+										std::string& argStr = cmdLineParts[i + 1];
+										if (argStr.empty())
+										{
+											bValid = false;
+											break;
+										}
+
+										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
+										switch (argType)
+										{
+										case JSONValue::Type::INT:
+											args.emplace_back(Variant(ParseInt(argStr)));
+											break;
+										case JSONValue::Type::UINT:
+											args.emplace_back(Variant(ParseUInt(argStr)));
+											break;
+										case JSONValue::Type::LONG:
+											args.emplace_back(Variant(ParseLong(argStr)));
+											break;
+										case JSONValue::Type::ULONG:
+											args.emplace_back(Variant(ParseULong(argStr)));
+											break;
+										case JSONValue::Type::FLOAT:
+											args.emplace_back(Variant(ParseFloat(argStr)));
+											break;
+										case JSONValue::Type::BOOL:
+											args.emplace_back(Variant(ParseBool(argStr)));
+											break;
+										case JSONValue::Type::STRING:
+											argStr[argStr.size() - 1] = '\0'; // Replace trailing slash with null terminator
+											args.emplace_back(Variant(argStr.c_str() + 1)); // + 1 to skip first quote
+											break;
+										default:
+											bValid = false;
+										}
+
+									}
+									if (bValid)
+									{
+										result = func->Execute(args);
+										bExecuted = true;
+									}
+								}
+
+								if (bExecuted)
+								{
+									if (m_PreviousCmdLineEntries.empty() ||
+										strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
+									{
+										m_PreviousCmdLineEntries.emplace_back(m_CmdLineStrBuf);
+									}
+									m_PreviousCmdLineIndex = -1;
+									memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+
+									if (result.IsValid())
+									{
+										std::string resultStr = result.ToString();
+										Print("Result: %s\n", resultStr.c_str());
+									}
+								}
+								break;
 							}
-							m_PreviousCmdLineIndex = -1;
-							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-							break;
 						}
-					}
-					if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
-					{
-						m_bInvalidCmdLine = false;
-					}
-					if (!bMatched)
-					{
-						m_bInvalidCmdLine = true;
-						m_bShouldFocusKeyboardOnConsole = true;
+						if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+						{
+							m_bInvalidCmdLine = false;
+						}
+						if (!bMatched)
+						{
+							m_bInvalidCmdLine = true;
+							m_bShouldFocusKeyboardOnConsole = true;
+						}
 					}
 				}
 				if (bFocusTextBox)
@@ -1484,11 +1591,11 @@ namespace flex
 				return;
 			}
 
-			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			for (IFunction* func : m_ConsoleCommands)
 			{
-				if (StartsWith(cmd.name, buffer))
+				if (StartsWith(func->name, buffer))
 				{
-					m_CmdAutoCompletions.push_back(cmd.name);
+					m_CmdAutoCompletions.push_back(func->name);
 				}
 			}
 		};
@@ -1575,12 +1682,12 @@ namespace flex
 				}
 				else
 				{
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					for (IFunction* func : m_ConsoleCommands)
 					{
-						if (StartsWith(cmd.name, data->Buf) && strcmp(cmd.name.c_str(), data->Buf) != 0)
+						if (StartsWith(func->name, data->Buf) && strcmp(func->name.c_str(), data->Buf) != 0)
 						{
 							data->DeleteChars(0, data->BufTextLen);
-							data->InsertChars(0, cmd.name.data());
+							data->InsertChars(0, func->name.data());
 							break;
 						}
 					}

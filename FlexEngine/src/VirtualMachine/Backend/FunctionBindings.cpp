@@ -4,51 +4,61 @@
 
 namespace flex
 {
-	using Value = VM::Value;
-
-	Value DoMathSmall(const Value& val0, const Value& val1, const Value& val2)
+	Variant DoMathSmall(const Variant& val0, const Variant& val1, const Variant& val2)
 	{
 		i32 result = val0.AsInt() + val1.AsInt() * val2.AsInt();
-		return Value(result);
+		return Variant(result);
 	}
 
-	Value Quintuple(const Value& val0)
+	Variant Quintuple(const Variant& val0)
 	{
 		i32 result = val0.AsInt() * 4;
-		return Value(result);
+		return Variant(result);
 	}
 
-	Value PrintHelper(const Value& val0)
+	Variant PrintHelper(const Variant& val0)
 	{
 		switch (val0.type)
 		{
-		case Value::Type::INT:
+		case Variant::Type::INT:
 			Print("Int: %d\n", val0.AsInt());
 			break;
-		case Value::Type::FLOAT:
+		case Variant::Type::UINT:
+			Print("UInt: %d\n", val0.AsUInt());
+			break;
+		case Variant::Type::LONG:
+			Print("Long: %dll\n", val0.AsLong());
+			break;
+		case Variant::Type::ULONG:
+			Print("ULong: %ull\n", val0.AsULong());
+			break;
+		case Variant::Type::FLOAT:
 			Print("Float: %.3f\n", val0.AsFloat());
 			break;
-		case Value::Type::BOOL:
+		case Variant::Type::BOOL:
 		{
 			const char* boolStr = (val0.AsBool() ? "true" : "false");
 			Print("Bool: %s\n", boolStr);
 		} break;
-		case Value::Type::CHAR:
+		case Variant::Type::CHAR:
 			Print("Char: %c\n", val0.AsChar());
+			break;
+		case Variant::Type::STRING:
+			Print("String: %s\n", val0.AsString());
 			break;
 		default:
 			PrintError("Unhandled arg type in Print\n");
 			break;
 		}
 
-		return Value(0);
+		return Variant(0);
 	}
 
 	void FunctionBindings::RegisterBindings()
 	{
-		Bind("Quintuple", &Quintuple, Value::Type::INT, Value::Type::INT);
-		Bind("DoMathSmall", &DoMathSmall, Value::Type::INT, Value::Type::INT, Value::Type::INT, Value::Type::INT);
-		Bind("Print", &PrintHelper, Value::Type::VOID, Value::Type::VOID);
+		Register(Bind("Quintuple", &Quintuple, Variant::Type::INT, Variant::Type::INT));
+		Register(Bind("DoMathSmall", &DoMathSmall, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT));
+		Register(Bind("Print", &PrintHelper, Variant::Type::VOID, Variant::Type::VOID));
 	}
 
 	void FunctionBindings::ClearBindings()
@@ -58,6 +68,15 @@ namespace flex
 			delete funcPtrPair.second;
 		}
 		ExternalFuncTable.clear();
+	}
+
+	void FunctionBindings::Register(IFunction* func)
+	{
+		if (func != nullptr)
+		{
+			FuncAddress funcAddress = 0xFFFF + (u32)ExternalFuncTable.size();
+			ExternalFuncTable[funcAddress] = func;
+		}
 	}
 } // namespace flex
 

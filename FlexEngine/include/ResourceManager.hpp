@@ -89,11 +89,11 @@ namespace flex
 		TextureID GetNextAvailableTextureID();
 		TextureID AddLoadedTexture(Texture* texture);
 
-		MaterialCreateInfo* GetMaterialInfo(const std::string& materialName);
+		MaterialCreateInfo* GetMaterialInfo(const char* materialName);
 		// DEPRECATED (see cpp)
-		GameObject* GetPrefabTemplate(const std::string& prefabName) const;
+		GameObject* GetPrefabTemplate(const char* prefabName) const;
 		// DEPRECATED (see cpp)
-		PrefabID GetPrefabID(const std::string& prefabName) const;
+		PrefabID GetPrefabID(const char* prefabName) const;
 		GameObject* GetPrefabTemplate(const PrefabID& prefabID) const;
 		std::string GetPrefabFileName(const PrefabID& prefabID) const;
 		bool IsPrefabDirty(const PrefabID& prefabID) const;

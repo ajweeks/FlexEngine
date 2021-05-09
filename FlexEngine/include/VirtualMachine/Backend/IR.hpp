@@ -463,7 +463,7 @@ namespace flex
 			void LowerStatement(AST::Statement* statement);
 			IR::Value* LowerExpression(AST::Expression* expression);
 			void LowerFunctionDefinitions(AST::Statement* statement);
-			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
+			//VariantWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
 			bool AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes);
 			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);

@@ -96,6 +96,7 @@ namespace flex
 
 	FLEX_NO_DISCARD i32 ParseInt(const std::string& intStr);
 	FLEX_NO_DISCARD u32 ParseUInt(const std::string& intStr);
+	FLEX_NO_DISCARD i64 ParseLong(const std::string& intStr);
 	FLEX_NO_DISCARD u64 ParseULong(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
