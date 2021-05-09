@@ -2,8 +2,6 @@
 
 #include "Graphics/RendererTypes.hpp" // For TopologyMode
 
-#include "cgltf/cgltf.h" // for cgltf_result
-
 namespace flex
 {
 	struct LoadedMesh;
@@ -33,32 +31,39 @@ namespace flex
 		void Destroy();
 		void Reload();
 
+		void RemoveSubmesh(u32 index);
+
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			MaterialID materialID,
-			MeshImportSettings* importSettings = nullptr,
+			bool bDynamic = false,
+			bool bCreateRenderObject = true,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromFile(
 			const std::string& relativeFilePath,
 			const std::vector<MaterialID>& inMaterialIDs,
-			MeshImportSettings* importSettings = nullptr,
+			bool bDynamic = false,
+			bool bCreateRenderObject = true,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
 		bool LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID matID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID matID,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
@@ -66,17 +71,20 @@ namespace flex
 			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
 			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
 
+		i32 AddSubMesh(MeshComponent* meshComponent);
+
 		void SetOwner(GameObject* owner);
 
-		void DrawImGui();
+		// Returns true if any property changed
+		bool DrawImGui();
 
 		void SetTypeToMemory();
 
 		std::vector<MaterialID> GetMaterialIDs() const;
 
-		static Mesh* ParseJSON(const JSONObject& object, GameObject* owner, const std::vector<MaterialID>& inMaterialIDs);
-		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner);
-		JSONObject Serialize() const;
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, bool bCreateRenderObject = true);
+		static Mesh* ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject = true);
+		static Mesh* ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject = true);
 
 		Type GetType() const;
 		u32 GetSubmeshCount() const;
@@ -87,18 +95,13 @@ namespace flex
 		std::string GetRelativeFilePath() const;
 		std::string GetFileName() const;
 
-		MeshImportSettings GetImportSettings() const;
-
 		MeshComponent* GetSubMeshWithRenderID(RenderID renderID) const;
 		std::vector<MeshComponent*> GetSubMeshes() const;
+		MeshComponent* GetSubMesh(u32 index) const;
 
 		GameObject* GetOwningGameObject() const;
 
-		static bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-		static LoadedMesh* LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings = nullptr);
-
-		// First field is relative file path (e.g. MESH_DIRECTORY "cube.glb")
-		static std::map<std::string, LoadedMesh*> m_LoadedMeshes;
+		static LoadedMesh* LoadMesh(const std::string& relativeFilePath);
 
 		glm::vec3 m_MinPoint;
 		glm::vec3 m_MaxPoint;
@@ -108,8 +111,6 @@ namespace flex
 
 		std::vector<MeshComponent*> m_Meshes;
 	private:
-		static bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage);
-
 		void CalculateBounds();
 
 		bool LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
@@ -117,16 +118,14 @@ namespace flex
 			MaterialID matID,
 			bool bDynamic,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject);
 
 
 		Type m_Type = Type::_NONE;
 
 		std::string m_RelativeFilePath;
 		std::string m_FileName;
-
-		// Saved so we can reload meshes and serialize contents to file
-		MeshImportSettings m_ImportSettings = {};
 
 		bool m_bInitialized = false;
 

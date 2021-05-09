@@ -40,6 +40,7 @@ namespace flex
 
 		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
+		bool HasSceneLoaded() const; // False during initial load
 		u32 GetSceneCount() const;
 
 		i32 GetCurrentSceneIndex() const;

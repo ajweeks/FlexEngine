@@ -12,12 +12,19 @@ IGNORE_WARNINGS_PUSH
 
 #include <sys/types.h> // For kill
 #include <sys/stat.h> // For stat
+#include <sys/time.h> // fortimeofday
 #include <signal.h> // For kill
 #include <unistd.h> // For getcwd, unlink, getpid, sysconf
 #include <errno.h> // For errno
 #include <dirent.h> // For readdir
 #include <sched.h> // For sched_yield
 #include <pthread.h>
+#include <libgen.h> // for dirname
+#include <unistd.h> // for readlink
+#include <linux/limits.h> // for PATH_MAX
+#include <uuid/uuid.h>
+
+#include <stdlib.h>
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -30,8 +37,8 @@ IGNORE_WARNINGS_POP
 #endif
 
 // Taken from https://stackoverflow.com/a/51846880/2317956
-// These codes set the actual text to the specified color
-#define RESETTEXT  "\x1B[0m" // Set all colors back to normal.
+// These codes set the actual text to the specified colour
+#define RESETTEXT  "\x1B[0m" // Set all colours back to normal.
 #define FOREBLK  "\x1B[30m" // Black
 #define FORERED  "\x1B[31m" // Red
 #define FOREGRN  "\x1B[32m" // Green
@@ -42,7 +49,7 @@ IGNORE_WARNINGS_POP
 #define FOREWHT  "\x1B[37m" // White
 
 /* BACKGROUND */
-// These codes set the background color behind the text.
+// These codes set the background colour behind the text.
 #define BACKBLK "\x1B[40m"
 #define BACKRED "\x1B[41m"
 #define BACKGRN "\x1B[42m"
@@ -72,7 +79,7 @@ namespace flex
 	{
 	}
 
-	void Platform::SetConsoleTextColor(ConsoleColour colour)
+	void Platform::SetConsoleTextColour(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
 		static const char* const w_colours[] = { FOREWHT, FOREYEL, FORERED };
@@ -159,6 +166,19 @@ namespace flex
 		if (str)
 		{
 			FlexEngine::s_CurrentWorkingDirectory = ReplaceBackSlashesWithForward(str);
+		}
+	}
+
+	void Platform::RetrievePathToExecutable()
+	{
+		char result[PATH_MAX];
+		ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
+		if (count != -1)
+		{
+			const char* path = dirname(result);
+			FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(path));
+
+			// TODO: Set directory to FlexEngine::s_ExecutablePath like on windows?
 		}
 	}
 
@@ -256,6 +276,27 @@ namespace flex
 		}
 	}
 
+	bool Platform::GetFileModifcationTime(const char* filePath, Date& outModificationDate)
+	{
+		struct stat st;
+		if (stat(filePath, &st) != 0)
+		{
+			tm* timeUTC = gmtime(&st.st_mtime);
+
+			outModificationDate.year = timeUTC->tm_year;
+			outModificationDate.month = timeUTC->tm_mon;
+			outModificationDate.day = timeUTC->tm_mday;
+			outModificationDate.hour = timeUTC->tm_hour;
+			outModificationDate.minute = timeUTC->tm_min;
+			outModificationDate.second = timeUTC->tm_sec;
+			outModificationDate.millisecond = 0;
+
+			return true;
+		}
+
+		return false;
+	}
+
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
 	{
 		std::string cleanedFileType = fileType;
@@ -294,19 +335,60 @@ namespace flex
 				}
 				else
 				{
-					size_t dotPos = fileNameStr.find('.');
+					std::string fileType = ExtractFileType(fileNameStr);
 
-					if (dotPos != std::string::npos)
+					if (fileType == cleanedFileType)
 					{
-						std::vector<std::string> parts = Split(fileNameStr, '.');
-						if (parts.size() > 0)
-						{
-							std::string foundFileType = parts[1];
-							if (foundFileType == cleanedFileType)
-							{
-								bFoundFileTypeMatches = true;
-							}
-						}
+						bFoundFileTypeMatches = true;
+					}
+				}
+
+				if (bFoundFileTypeMatches)
+				{
+					filePaths.push_back(cleanedDirPath + fileNameStr);
+				}
+			}
+			closedir(dir);
+		}
+		else
+		{
+			/* could not open directory */
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return !filePaths.empty();
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	{
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		{
+			cleanedDirPath += '/';
+		}
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		struct dirent* ent;
+		DIR* dir = opendir(cleanedDirPath.c_str());
+		if (dir != NULL)
+		{
+			/* print all the files and directories within directory */
+			while ((ent = readdir(dir)) != NULL)
+			{
+				std::string fileNameStr(ent->d_name);
+				bool bFoundFileTypeMatches = false;
+				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
+				{
+					bFoundFileTypeMatches = false;
+				}
+				else
+				{
+					std::string fileType = ExtractFileType(fileNameStr);
+					if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+					{
+						bFoundFileTypeMatches = true;
 					}
 				}
 
@@ -409,6 +491,35 @@ namespace flex
 		}
 
 		return result.str();
+	}
+
+	u64 Platform::GetUSSinceEpoch()
+	{
+		struct timeval tv;
+
+		gettimeofday(&tv, NULL);
+
+		u64 result = tv.tv_usec;
+
+		// Convert from micro seconds (10^-6) to milliseconds (10^-3)
+		//result /= 1000;
+
+		// Adds the seconds (10^0) after converting them to milliseconds (10^-3)
+		//result += (tv.tv_sec * 1000);
+
+		// Adds the seconds (10^0)
+		result += (tv.tv_sec * 1000000);
+
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		uuid_t uuid;
+		uuid_generate_random(uuid);
+
+		GameObjectID result(*(u64*)uuid, *((u64*)uuid + 1));
+		return result;
 	}
 
 	u32 Platform::AtomicIncrement(volatile u32* value)

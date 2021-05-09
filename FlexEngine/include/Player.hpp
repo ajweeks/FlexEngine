@@ -3,7 +3,7 @@
 #include "Scene/GameObject.hpp"
 
 #include "Types.hpp" // For TrackState
-#include "Track/BezierCurve.hpp"
+#include "Track/BezierCurve3D.hpp"
 #include "Track/BezierCurveList.hpp"
 
 namespace flex
@@ -15,12 +15,12 @@ namespace flex
 	class Player : public GameObject
 	{
 	public:
-		Player(i32 index, const glm::vec3& initialPos = VEC3_ZERO);
+		explicit Player(i32 index, GameObjectID gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;
-		virtual void Destroy() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;
@@ -28,6 +28,8 @@ namespace flex
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);
 		real GetPitch() const;
+
+		void Reset();
 
 		glm::vec3 GetLookDirection() const;
 
@@ -49,9 +51,18 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		void AddToInventory(GameObject* obj);
+		void AddToInventory(const PrefabID& prefabID, i32 count);
+
+		i32 GetNextFreeQuickAccessInventorySlot();
+		i32 GetNextFreeInventorySlot();
 
 		bool IsRidingTrack();
+
+		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID);
+		bool MoveItem(GameObjectStackID fromID, GameObjectStackID toID);
+		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
+
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -71,7 +82,7 @@ namespace flex
 
 		i32 m_CurveNodesPlaced = 0;
 		BezierCurveList m_TrackPlacing;
-		BezierCurve m_CurvePlacing;
+		BezierCurve3D m_CurvePlacing;
 		bool m_bPlacingTrack = false;
 		TrackID m_TrackEditingID = InvalidTrackID;
 		i32 m_TrackEditingCurveIdx = -1;
@@ -91,7 +102,16 @@ namespace flex
 
 		TrackState m_TrackState;
 
-		std::vector<GameObject*> m_Inventory;
+		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
+		static const i32 INVENTORY_ITEM_ROW_COUNT = 5;
+		static const i32 INVENTORY_ITEM_COL_COUNT = 7;
+		static const i32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
+		static const i32 MAX_STACK_SIZE = 32;
+
+		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
+		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
+		bool bInventoryShowing = false;
+		i32 heldItemSlot = 0;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

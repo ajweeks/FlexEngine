@@ -10,19 +10,14 @@ layout (location = 1) in vec2 ex_TexCoord;
 layout (location = 2) in vec4 ex_Colour;
 layout (location = 3) in mat3 ex_TBN;
 
-layout (location = 0) out vec4 fragColor;
-
-// layout (binding = 1) uniform UBODynamic
-// {
-	// int enableIrradianceSampler;
-// } uboDynamic;
+layout (location = 0) out vec4 fragColour;
 
 // TODO: Move to common header
 struct DirectionalLight 
 {
 	vec3 direction;
 	int enabled;
-	vec3 color;
+	vec3 colour;
 	float brightness;
 	int castShadows;
 	float shadowDarkness;
@@ -56,7 +51,7 @@ layout (binding = 0) uniform UBOConstant
 	DirectionalLight dirLight;
 	OceanData oceanData;
 	SkyboxData skyboxData;
-	float time;
+	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
 } uboConstant;
 
 // Just needed for binding
@@ -85,8 +80,8 @@ vec3 SampleSkybox(vec3 dir)
 void main()
 {
 	vec2 uv0 = ex_TexCoord;
-	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time, 0.005 * uboConstant.time));
-	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time, 0.011 * uboConstant.time));
+	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time.x, 0.005 * uboConstant.time.x));
+	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time.x, 0.011 * uboConstant.time.x));
 	vec3 n1 = texture(normalSampler, uv1).xyz;
 	vec3 n2 = texture(normalSampler, uv2).xyz;
 	vec3 n3 = mix(n1, n2, 0.3);
@@ -97,7 +92,7 @@ void main()
 	vec3 light = vec3(0);
 	if (uboConstant.dirLight.enabled != 0)
 	{
-		light = max(dot(N, uboConstant.dirLight.direction), 0.0) * uboConstant.dirLight.brightness * uboConstant.dirLight.color;
+		light = max(dot(N, uboConstant.dirLight.direction), 0.0) * uboConstant.dirLight.brightness * uboConstant.dirLight.colour;
 	}
 
 	vec3 camViewDir = vec3(uboConstant.view[0][2], uboConstant.view[1][2], uboConstant.view[2][2]);
@@ -124,19 +119,19 @@ void main()
 	vec3 sky = SampleSkybox(R);
 
 	vec3 waterCol = oceanBtm;//mix(oceanBtm, mix(oceanMid, oceanTop, clamp((fresnel - 0.5) * 2.0, 0, 1)), clamp(fresnel * 2.0, 0, 1));
-	fragColor = vec4(waterCol+sky*uboConstant.oceanData.skyReflectionFactor*skyFac, 1);
+	fragColour = vec4(waterCol+sky*uboConstant.oceanData.skyReflectionFactor*skyFac, 1);
 
 	// Fog
 	vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);	
 	float depthFade = clamp(pow(pow(posCS.z, uboConstant.oceanData.fogFalloff)*0.0018, uboConstant.oceanData.fogDensity), 0, 1);
-	fragColor = vec4(mix(fragColor.xyz, skyHorizon, depthFade), 1);
+	fragColour = vec4(mix(fragColour.xyz, skyHorizon, depthFade), 1);
 
-	//fragColor = vec4(SampleSkybox(R), 1);
-	//fragColor = vec4(fresnel.xxx, 1);
-	//fragColor = vec4(deepness.xxx, 1);
-	//fragColor = vec4(camViewDir, 1.0);
-	//fragColor = vec4(ex_TBN[0].xxx*0.5+0.5, 1.0);
-	//fragColor = vec4(clamp(sampledN,0,1), 1);
-	// fragColor = vec4(pow(NoV,2.0).xxx, 1);
-	//fragColor = vec4(V, 1);
+	//fragColour = vec4(SampleSkybox(R), 1);
+	//fragColour = vec4(fresnel.xxx, 1);
+	//fragColour = vec4(deepness.xxx, 1);
+	//fragColour = vec4(camViewDir, 1.0);
+	//fragColour = vec4(ex_TBN[0].xxx*0.5+0.5, 1.0);
+	//fragColour = vec4(clamp(sampledN,0,1), 1);
+	// fragColour = vec4(pow(NoV,2.0).xxx, 1);
+	//fragColour = vec4(V, 1);
 }

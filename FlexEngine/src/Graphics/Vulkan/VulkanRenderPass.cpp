@@ -35,20 +35,20 @@ namespace flex
 
 			const bool bDepthAttachmentPresent = m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID;
 
-			const u32 colorAttachmentCount = (u32)m_TargetColorAttachmentIDs.size();
-			const u32 attachmentCount = colorAttachmentCount + (bDepthAttachmentPresent ? 1 : 0);
+			const u32 colourAttachmentCount = (u32)m_TargetColourAttachmentIDs.size();
+			const u32 attachmentCount = colourAttachmentCount + (bDepthAttachmentPresent ? 1 : 0);
 			i32 frameBufferWidth = -1;
 			i32 frameBufferHeight = -1;
 
-			std::vector<VkAttachmentDescription> colorAttachments(colorAttachmentCount);
-			std::vector<VkAttachmentReference> colorAttachmentReferences(colorAttachmentCount);
+			std::vector<VkAttachmentDescription> colourAttachments(colourAttachmentCount);
+			std::vector<VkAttachmentReference> colourAttachmentReferences(colourAttachmentCount);
 			std::vector<VkImageView> attachmentImageViews(attachmentCount);
-			for (u32 i = 0; i < colorAttachmentCount; ++i)
+			for (u32 i = 0; i < colourAttachmentCount; ++i)
 			{
-				FrameBufferAttachment* attachment = bCreateFrameBuffer ? ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetColorAttachmentIDs[i]) : nullptr;
+				FrameBufferAttachment* attachment = bCreateFrameBuffer ? ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetColourAttachmentIDs[i]) : nullptr;
 
-				colorAttachments[i] = vks::attachmentDescription(attachment ? attachment->format : m_ColorAttachmentFormat, m_TargetColorAttachmentFinalLayouts[i]);
-				colorAttachmentReferences[i] = VkAttachmentReference{ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+				colourAttachments[i] = vks::attachmentDescription(attachment ? attachment->format : m_ColourAttachmentFormat, m_TargetColourAttachmentFinalLayouts[i]);
+				colourAttachmentReferences[i] = VkAttachmentReference{ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
 
 				if (attachment != nullptr)
 				{
@@ -61,12 +61,12 @@ namespace flex
 					}
 				}
 			}
-			for (u32 i = 0; i < m_TargetColorAttachmentInitialLayouts.size(); ++i)
+			for (u32 i = 0; i < m_TargetColourAttachmentInitialLayouts.size(); ++i)
 			{
-				if (m_TargetColorAttachmentInitialLayouts[i] != VK_IMAGE_LAYOUT_UNDEFINED)
+				if (m_TargetColourAttachmentInitialLayouts[i] != VK_IMAGE_LAYOUT_UNDEFINED)
 				{
-					colorAttachments[i].initialLayout = m_TargetColorAttachmentInitialLayouts[i];
-					colorAttachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+					colourAttachments[i].initialLayout = m_TargetColourAttachmentInitialLayouts[i];
+					colourAttachments[i].loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 				}
 			}
 
@@ -84,7 +84,7 @@ namespace flex
 
 			VkAttachmentDescription depthAttachmentDesc = vks::attachmentDescription((bDepthAttachmentPresent && bCreateFrameBuffer) ? depthAttachment->format : m_DepthAttachmentFormat, m_TargetDepthAttachmentFinalLayout);
 
-			VkAttachmentReference depthAttachmentRef = { colorAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			VkAttachmentReference depthAttachmentRef = { colourAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 			if (m_TargetDepthAttachmentInitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
 			{
@@ -93,9 +93,9 @@ namespace flex
 			}
 
 			std::vector<VkAttachmentDescription> attachmentDescriptions(attachmentCount);
-			for (u32 i = 0; i < colorAttachmentCount; ++i)
+			for (u32 i = 0; i < colourAttachmentCount; ++i)
 			{
-				attachmentDescriptions[i] = colorAttachments[i];
+				attachmentDescriptions[i] = colourAttachments[i];
 			}
 
 			if (bDepthAttachmentPresent)
@@ -105,8 +105,8 @@ namespace flex
 
 			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			subpass.colorAttachmentCount = (u32)colorAttachmentReferences.size();
-			subpass.pColorAttachments = colorAttachmentReferences.data();
+			subpass.colorAttachmentCount = (u32)colourAttachmentReferences.size();
+			subpass.pColorAttachments = colourAttachmentReferences.data();
 			subpass.pDepthStencilAttachment = bDepthAttachmentPresent ? &depthAttachmentRef : nullptr;
 
 			std::array<VkSubpassDependency, 2> dependencies;
@@ -145,37 +145,37 @@ namespace flex
 
 		void VulkanRenderPass::Register(
 			const char* passName,
-			const std::vector<FrameBufferAttachmentID>& targtColorAttachmentIDs,
+			const std::vector<FrameBufferAttachmentID>& targtColourAttachmentIDs,
 			FrameBufferAttachmentID targtDepthAttachmentID,
 			const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs)
 		{
-			m_TargetColorAttachmentIDs = targtColorAttachmentIDs;
+			m_TargetColourAttachmentIDs = targtColourAttachmentIDs;
 			m_TargetDepthAttachmentID = targtDepthAttachmentID;
 			m_SampledAttachmentIDs = sampledAttachmentIDs;
 			m_Name = passName;
 
-			m_TargetColorAttachmentFinalLayouts.resize(targtColorAttachmentIDs.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			m_TargetColorAttachmentInitialLayouts.resize(targtColorAttachmentIDs.size(), VK_IMAGE_LAYOUT_UNDEFINED);
+			m_TargetColourAttachmentFinalLayouts.resize(targtColourAttachmentIDs.size(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			m_TargetColourAttachmentInitialLayouts.resize(targtColourAttachmentIDs.size(), VK_IMAGE_LAYOUT_UNDEFINED);
 
 			m_bRegistered = true;
 		}
 
-		void VulkanRenderPass::RegisterForColorAndDepth(
+		void VulkanRenderPass::RegisterForColourAndDepth(
 			const char* passName,
-			FrameBufferAttachmentID targetColorAttachmentID,
+			FrameBufferAttachmentID targetColourAttachmentID,
 			FrameBufferAttachmentID targetDepthAttachmentID,
 			const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs)
 		{
-			Register(passName, { targetColorAttachmentID }, targetDepthAttachmentID, sampledAttachmentIDs);
+			Register(passName, { targetColourAttachmentID }, targetDepthAttachmentID, sampledAttachmentIDs);
 		}
 
-		void VulkanRenderPass::RegisterForMultiColorAndDepth(
+		void VulkanRenderPass::RegisterForMultiColourAndDepth(
 			const char* passName,
-			const std::vector<FrameBufferAttachmentID>& targetColorAttachmentIDs,
+			const std::vector<FrameBufferAttachmentID>& targetColourAttachmentIDs,
 			FrameBufferAttachmentID targetDepthAttachmentID,
 			const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs)
 		{
-			Register(passName, targetColorAttachmentIDs, targetDepthAttachmentID, sampledAttachmentIDs);
+			Register(passName, targetColourAttachmentIDs, targetDepthAttachmentID, sampledAttachmentIDs);
 		}
 
 		void VulkanRenderPass::RegisterForDepthOnly(
@@ -186,12 +186,12 @@ namespace flex
 			Register(passName, {}, targetDepthAttachmentID, sampledAttachmentIDs);
 		}
 
-		void VulkanRenderPass::RegisterForColorOnly(
+		void VulkanRenderPass::RegisterForColourOnly(
 			const char* passName,
-			FrameBufferAttachmentID targetColorAttachmentID,
+			FrameBufferAttachmentID targetColourAttachmentID,
 			const std::vector<FrameBufferAttachmentID>& sampledAttachmentIDs)
 		{
-			Register(passName, { targetColorAttachmentID }, InvalidFrameBufferAttachmentID, sampledAttachmentIDs);
+			Register(passName, { targetColourAttachmentID }, InvalidFrameBufferAttachmentID, sampledAttachmentIDs);
 		}
 
 		void VulkanRenderPass::ManuallySpecifyLayouts(
@@ -200,8 +200,8 @@ namespace flex
 			VkImageLayout finalDepthLayout /* = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL */,
 			VkImageLayout initialDepthLayout /* = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL */)
 		{
-			m_TargetColorAttachmentFinalLayouts = finalLayouts;
-			m_TargetColorAttachmentInitialLayouts = initialLayouts;
+			m_TargetColourAttachmentFinalLayouts = finalLayouts;
+			m_TargetColourAttachmentInitialLayouts = initialLayouts;
 			m_TargetDepthAttachmentFinalLayout = finalDepthLayout;
 			m_TargetDepthAttachmentInitialLayout = initialDepthLayout;
 		}

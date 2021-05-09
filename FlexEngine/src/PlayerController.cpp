@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -28,11 +29,15 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
+#include "UIMesh.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
 	PlayerController::PlayerController() :
-		m_ActionCallback(this, &PlayerController::OnActionEvent)
+		m_ActionCallback(this, &PlayerController::OnActionEvent),
+		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent)
 	{
 	}
 
@@ -51,29 +56,72 @@ namespace flex
 		m_Player->UpdateIsPossessed();
 
 		g_InputManager->BindActionCallback(&m_ActionCallback, 15);
+		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 15);
 	}
 
 	void PlayerController::Destroy()
 	{
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
+		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
 	}
 
 	void PlayerController::Update()
 	{
+		if (m_Player->m_bPossessed &&
+			g_Window->HasFocus() &&
+			!g_EngineInstance->IsSimulationPaused())
+		{
+			g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
+		}
+
 		// TODO: Make frame-rate-independent!
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
 
-		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real moveFB = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
-		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
-		//const real lookUD = g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
+		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+
+		auto GetObjectPointedAt = [this]() -> GameObject*
+		{
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+			btVector3 rayStart, rayEnd;
+			FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, m_ItemPickupMaxDist);
+
+			const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+
+			if (pickedBody != nullptr)
+			{
+				GameObject* gameObject = static_cast<GameObject*>(pickedBody->getUserPointer());
+				real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Player->m_Transform.GetWorldPosition());
+				if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
+				{
+					return gameObject;
+				}
+			}
+
+			return nullptr;
+		};
 
 		if (m_Player->m_bPossessed)
 		{
+			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_HELD_ITEM_FORWARD);
+			if (!ImGui::GetIO().WantCaptureMouse)
+			{
+				if (cycleItemAxis > 0.0f)
+				{
+					m_Player->heldItemSlot = (m_Player->heldItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+				}
+				else if (cycleItemAxis < 0.0f)
+				{
+					m_Player->heldItemSlot = (m_Player->heldItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+				}
+			}
+
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+				TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
 				if (m_Player->m_bPlacingTrack)
 				{
@@ -130,7 +178,7 @@ namespace flex
 
 					static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
 					static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
-					for (const BezierCurve& curve : m_Player->m_TrackPlacing.curves)
+					for (const BezierCurve3D& curve : m_Player->m_TrackPlacing.curves)
 					{
 						curve.DrawDebug(false, placedCurveCol, placedCurveCol);
 
@@ -185,7 +233,7 @@ namespace flex
 
 						static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
 						static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
-						for (const BezierCurve& curve : trackEditing->curves)
+						for (const BezierCurve3D& curve : trackEditing->curves)
 						{
 							curve.DrawDebug(false, editedCurveCol, editingCurveCol);
 						}
@@ -200,163 +248,198 @@ namespace flex
 					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 				}
 
-				GameObject* nearestInteractable = nullptr;
-				if (m_Player->m_ObjectInteractingWith == nullptr)
+				if (m_bAttemptPickup)
 				{
-					std::vector<GameObject*> allInteractableObjects;
-					g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+					m_bAttemptPickup = false;
 
-					if (!allInteractableObjects.empty())
+					GameObject* pickedItem = GetObjectPointedAt();
+					if (pickedItem != nullptr)
 					{
-						// List of objects sorted by sqr dist (closest to farthest)
-						std::list<Pair<GameObject*, real>> nearbyInteractables;
-
-						real maxDistSqr = 7.0f * 7.0f;
-						const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
-						for (GameObject* obj : allInteractableObjects)
-						{
-							if (obj != m_Player)
-							{
-								real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
-								if (dist2 <= maxDistSqr)
-								{
-									// Insert into sorted list
-									bool bInserted = false;
-									for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
-									{
-										if (iter->second > dist2)
-										{
-											nearbyInteractables.insert(iter, { obj, dist2 });
-											bInserted = true;
-											break;
-										}
-									}
-									if (!bInserted)
-									{
-										nearbyInteractables.emplace_back(obj, dist2);
-									}
-									break;
-								}
-							}
-						}
-
-						for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
-						{
-							GameObject* nearbyInteractable = iter->first;
-							if (!nearbyInteractable->IsBeingInteractedWith())
-							{
-								if (nearbyInteractable->AllowInteractionWith(m_Player))
-								{
-									nearestInteractable = nearbyInteractable;
-									nearestInteractable->SetNearbyInteractable(true);
-									break;
-								}
-							}
-						}
+						m_ItemPickingUp = pickedItem;
+						m_ItemPickingTimer = m_ItemPickingDuration;
 					}
 				}
+			}
 
-				if (m_bAttemptInteract)
+			if (m_ItemPickingTimer != -1.0f)
+			{
+				m_ItemPickingTimer -= g_DeltaTime;
+
+				if (m_ItemPickingTimer <= 0.0f)
 				{
-					if (m_Player->m_ObjectInteractingWith)
+					m_ItemPickingTimer = -1.0f;
+
+					m_Player->AddToInventory(m_ItemPickingUp->Itemize(), 1);
+				}
+				else
+				{
+					GameObject* pickedItem = GetObjectPointedAt();
+					if (pickedItem == nullptr || pickedItem != m_ItemPickingUp)
 					{
-						// Toggle interaction when already interacting
-						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-						m_Player->SetInteractingWith(nullptr);
-						m_bAttemptInteract = false;
+						m_ItemPickingUp = nullptr;
+						m_ItemPickingTimer = -1.0f;
 					}
 					else
 					{
-						if (nearestInteractable != nullptr)
+						real startAngle = PI_DIV_TWO - (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+						real endAngle = PI_DIV_TWO;
+						g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+					}
+				}
+			}
+
+#if 0 // Arc & rect tests
+			real startAngle = PI_DIV_TWO;
+			real endAngle = PI_DIV_TWO - TWO_PI - 0.1f;
+			g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = PI - 0.1f;
+			endAngle = PI + PI_DIV_TWO;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = -PI_DIV_TWO;
+			endAngle = 0.1f;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.03f, 32, glm::vec4(0.9f, 0.92f, 0.97f, 1.0f));
+
+			startAngle = (sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * TWO_PI;
+			endAngle = startAngle + (sin(g_SecElapsedSinceProgramStart * 0.5f + 1.0f) * 0.5f + 0.51f) * TWO_PI;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.0f, -0.2f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+
+			startAngle = 0.0f;
+			endAngle = TWO_PI;
+			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.2f), startAngle, endAngle, 0.07f, 0.035f, 32, VEC4_ONE);
+
+			glm::vec2 rectPos(sin(g_SecElapsedSinceProgramStart) * 0.05f - 0.3f, 0.0f);
+			glm::vec2 halfRectSize(sin(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f, cos(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f);
+			g_Renderer->GetUIMesh()->DrawRect(rectPos - halfRectSize, rectPos + halfRectSize, VEC4_ONE, 0.0f);
+#endif
+
+			// TODO: Allow player to (dis)connect pluggables together
+
+			GameObject* nearestInteractable = nullptr;
+			if (m_Player->m_ObjectInteractingWith == nullptr)
+			{
+				std::vector<GameObject*> allInteractableObjects;
+				g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+
+				if (!allInteractableObjects.empty())
+				{
+					// List of objects sorted by sqr dist (closest to farthest)
+					std::list<Pair<GameObject*, real>> nearbyInteractables;
+
+					// TODO: Move to All.variables
+					real maxDistSqr = 7.0f * 7.0f;
+					const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
+					for (GameObject* obj : allInteractableObjects)
+					{
+						if (obj != m_Player)
 						{
-							nearestInteractable->SetInteractingWith(m_Player);
-							m_Player->SetInteractingWith(nearestInteractable);
-							m_bAttemptInteract = false;
+							real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
+							if (dist2 <= maxDistSqr)
+							{
+								// Insert into sorted list
+								bool bInserted = false;
+								for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+								{
+									if (iter->second > dist2)
+									{
+										nearbyInteractables.insert(iter, { obj, dist2 });
+										bInserted = true;
+										break;
+									}
+								}
+								if (!bInserted)
+								{
+									nearbyInteractables.emplace_back(obj, dist2);
+								}
+							}
+						}
+					}
+
+					for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+					{
+						GameObject* nearbyInteractable = iter->first;
+						if (!nearbyInteractable->IsBeingInteractedWith())
+						{
+							if (nearbyInteractable->AllowInteractionWith(m_Player))
+							{
+								nearestInteractable = nearbyInteractable;
+								nearestInteractable->SetNearbyInteractable(m_Player);
+								break;
+							}
 						}
 					}
 				}
 			}
 
-			if (!m_Player->m_Inventory.empty())
+			if (m_bAttemptInteract)
 			{
-				// Place item from inventory
-				if (m_bAttemptPlaceItemFromInventory)
+				if (m_Player->m_ObjectInteractingWith)
 				{
-					m_bAttemptPlaceItemFromInventory = false;
-
-					GameObject* obj = m_Player->m_Inventory[0];
-					bool bPlaced = false;
-
-					if (EngineCart* engineCart = dynamic_cast<EngineCart*>(obj))
+					// Toggle interaction when already interacting
+					m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
+					m_Player->SetInteractingWith(nullptr);
+					m_bAttemptInteract = false;
+				}
+				else
+				{
+					if (nearestInteractable != nullptr)
 					{
-						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-						real rangeThreshold = 4.0f;
-						real distAlongNearestTrack;
-						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
-
-						if (nearestTrackID != InvalidTrackID)
-						{
-							bPlaced = true;
-							engineCart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-							engineCart->SetVisible(true);
-						}
+						nearestInteractable->SetInteractingWith(m_Player);
+						m_Player->SetInteractingWith(nearestInteractable);
+						m_bAttemptInteract = false;
 					}
-					else if (Cart* cart = dynamic_cast<Cart*>(obj))
+					//else if (m_Player->m_HeldItem != nullptr)
+					//{
+					//	if (m_Player->m_HeldItem->GetTypeID() == SID("wire"))
+					//	{
+					//		Wire* wire = (Wire*)m_Player->m_HeldItem;
+					//		wire->SetInteractingWith(nullptr);
+					//	}
+					//	m_Player->m_HeldItem = nullptr;
+					//}
+				}
+			}
+		}
+
+		// Place item from inventory
+		if (m_bAttemptPlaceItemFromInventory)
+		{
+			m_bAttemptPlaceItemFromInventory = false;
+
+			if (m_Player->heldItemSlot == -1)
+			{
+				m_Player->heldItemSlot = 0;
+			}
+
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+
+			if (gameObjectStack.count >= 1)
+			{
+				if (gameObjectStack.prefabID.IsValid())
+				{
+					glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() +
+						m_Player->m_Transform.GetForward() * 3.0f;
+					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
+					if (gameObject != nullptr)
 					{
-						TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
-						glm::vec3 samplePos = m_Player->m_Transform.GetWorldPosition() + m_Player->m_Transform.GetForward() * 1.5f;
-						real rangeThreshold = 4.0f;
-						real distAlongNearestTrack;
-						TrackID nearestTrackID = trackManager->GetTrackInRangeID(samplePos, rangeThreshold, &distAlongNearestTrack);
+						gameObjectStack.count--;
 
-						if (nearestTrackID != InvalidTrackID)
+						if (gameObjectStack.count == 0)
 						{
-							bPlaced = true;
-							cart->OnTrackMount(nearestTrackID, distAlongNearestTrack);
-							cart->SetVisible(true);
-						}
-					}
-					else if (MobileLiquidBox* box = dynamic_cast<MobileLiquidBox*>(obj))
-					{
-						std::vector<Cart*> carts = g_SceneManager->CurrentScene()->GetObjectsOfType<Cart>();
-						glm::vec3 playerPos = m_Player->m_Transform.GetWorldPosition();
-						real threshold = 8.0f;
-						real closestCartDist = threshold;
-						i32 closestCartIdx = -1;
-						for (i32 i = 0; i < (i32)carts.size(); ++i)
-						{
-							real d = glm::distance(carts[i]->GetTransform()->GetWorldPosition(), playerPos);
-							if (d <= closestCartDist)
-							{
-								closestCartDist = d;
-								closestCartIdx = i;
-							}
-						}
-
-						if (closestCartIdx != -1)
-						{
-							if (box->GetParent() == nullptr)
-							{
-								g_SceneManager->CurrentScene()->RemoveRootObject(box, false);
-							}
-
-							bPlaced = true;
-
-							carts[closestCartIdx]->AddChild(box);
-							box->GetTransform()->SetLocalPosition(glm::vec3(0.0f, 1.5f, 0.0f));
-							box->SetVisible(true);
+							gameObjectStack.prefabID = InvalidPrefabID;
 						}
 					}
 					else
 					{
-						PrintWarn("Unhandled object in inventory attempted to be placed! %s\n", obj->GetName().c_str());
+						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+						PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
 					}
-
-					if (bPlaced)
-					{
-						m_Player->m_Inventory.erase(m_Player->m_Inventory.begin());
-					}
+				}
+				else
+				{
+					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID\n");
 				}
 			}
 		}
@@ -370,7 +453,7 @@ namespace flex
 		glm::vec3 up = transform->GetUp();
 		glm::vec3 right = transform->GetRight();
 		glm::vec3 forward = transform->GetForward();
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
@@ -409,6 +492,14 @@ namespace flex
 
 		m_Player->UpdateIsGrounded();
 
+		bool bInteractingWithTerminal = false;
+		bool bInteractingWithVehicle = false;
+		{
+			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
+			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
+			bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
+		}
+
 		if (m_Player->m_bPossessed)
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
@@ -441,14 +532,17 @@ namespace flex
 				m_Player->m_pDTrackMovement = m_Player->m_DistAlongTrack - pDist;
 				pCurveDir = newCurveDir;
 			}
-			else if (!m_Player->GetObjectInteractingWith())
+			else
 			{
-				force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
-				force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
+				if (!bInteractingWithTerminal && !bInteractingWithVehicle)
+				{
+					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
+					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
+				}
 			}
 		}
 
-		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON);
+		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON) && m_Player->IsVisible();
 		if (bDrawLocalAxes)
 		{
 			const real lineLength = 4.0f;
@@ -468,7 +562,6 @@ namespace flex
 			btVector3 xzVelNorm = xzVel.normalized();
 			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
 			rb->setLinearVelocity(newVel);
-			xzVelMagnitude = m_MaxMoveSpeed;
 			bMaxVel = true;
 		}
 
@@ -485,18 +578,20 @@ namespace flex
 		}
 
 		if (m_Player->m_bPossessed &&
-			!m_Player->IsBeingInteractedWith() &&
+			!bInteractingWithTerminal &&
+			!bInteractingWithVehicle &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = lookLR;
+			// TODO: Remove: will never be hit
 			if (m_Player->IsRidingTrack())
 			{
-				lookH += g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+				lookH += -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 			}
 			real lookV = 0.0f;
 			if (m_Mode == Mode::FIRST_PERSON)
 			{
-				lookV = g_InputManager->GetActionAxisValue(Action::LOOK_DOWN) + g_InputManager->GetActionAxisValue(Action::LOOK_UP);
+				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
 			}
 
 			glm::quat rot = transform->GetLocalRotation();
@@ -507,10 +602,10 @@ namespace flex
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
 		}
 
-
 		m_bAttemptCompleteTrack = false;
 		m_bAttemptPlaceItemFromInventory = false;
 		m_bAttemptInteract = false;
+		m_bAttemptPickup = false;
 	}
 
 	void PlayerController::ResetTransformAndVelocities()
@@ -539,13 +634,13 @@ namespace flex
 
 	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack)
 	{
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
 		LookDirection desiredDir = LookDirection::CENTER;
 
 		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real lookLR = g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 
 		if (lookLR > 0.5f)
 		{
@@ -616,89 +711,144 @@ namespace flex
 		m_Mode = cam->bIsFirstPerson ? Mode::FIRST_PERSON : Mode::THIRD_PERSON;
 	}
 
-	EventReply PlayerController::OnActionEvent(Action action)
+	EventReply PlayerController::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
 		if (m_Player->m_bPossessed)
 		{
-			if (action == Action::ENTER_TRACK_BUILD_MODE)
+			if (actionEvent == ActionEvent::TRIGGER)
 			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::SHOW_INVENTORY)
 				{
-					m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-					m_Player->m_bEditingTrack = false;
+					m_Player->bInventoryShowing = !m_Player->bInventoryShowing;
+					g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::ENTER_TRACK_EDIT_MODE)
-			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::PAUSE)
 				{
-					m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-					m_Player->m_bPlacingTrack = false;
+					g_EngineInstance->SetSimulationPaused(!g_EngineInstance->IsSimulationPaused());
+					g_Window->SetCursorMode(CursorMode::NORMAL);
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::COMPLETE_TRACK)
-			{
-				if (m_Player->m_TrackRidingID == InvalidTrackID)
+				if (action == Action::ENTER_TRACK_BUILD_MODE)
 				{
-					m_bAttemptCompleteTrack = true;
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+						m_Player->m_bEditingTrack = false;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::ENTER_TRACK_EDIT_MODE)
+				{
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+						m_Player->m_bPlacingTrack = false;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::COMPLETE_TRACK)
+				{
+					if (m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_bAttemptCompleteTrack = true;
+						return EventReply::CONSUMED;
+					}
+				}
+				if (action == Action::PICKUP_ITEM)
+				{
+					if (!m_Player->bInventoryShowing && m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
+					{
+						m_bAttemptPickup = true;
+						return EventReply::CONSUMED;
+					}
+				}
+
+				if (action == Action::TOGGLE_ITEM_HOLDING)
+				{
+					//if (m_Player->m_HeldItem == nullptr)
+					//{
+					//	if (!m_Player->m_Inventory.empty())
+					//	{
+					//		m_Player->m_HeldItem = m_Player->m_Inventory[0];
+					//	}
+					//}
+					//else
+					//{
+					//	m_Player->m_HeldItem = nullptr;
+					//}
 					return EventReply::CONSUMED;
 				}
-			}
 
-			if (action == Action::TOGGLE_TABLET)
-			{
-				m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-				return EventReply::CONSUMED;
-			}
+				if (action == Action::TOGGLE_TABLET)
+				{
+					m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
+					return EventReply::CONSUMED;
+				}
 
-			if (action == Action::PLACE_ITEM)
-			{
-				if (!m_Player->m_Inventory.empty())
+				if (action == Action::PLACE_ITEM)
 				{
 					m_bAttemptPlaceItemFromInventory = true;
 					return EventReply::CONSUMED;
 				}
+
+				if (action == Action::INTERACT)
+				{
+					m_bAttemptInteract = true;
+					// TODO: Determine if we can interact with anything here to allow
+					// others to consume this event in the case we don't want it
+					return EventReply::CONSUMED;
+				}
+			}
+			else if (actionEvent == ActionEvent::RELEASE)
+			{
+				if (action == Action::PICKUP_ITEM)
+				{
+					if (m_ItemPickingTimer != -1.0f)
+					{
+						m_ItemPickingTimer = -1.0f;
+						return EventReply::CONSUMED;
+					}
+				}
+			}
+		}
+
+		return EventReply::UNCONSUMED;
+	}
+
+	EventReply PlayerController::OnMouseMovedEvent(const glm::vec2& dMousePos)
+	{
+		if (m_Player != nullptr && !m_Player->bInventoryShowing && g_Window->HasFocus())
+		{
+			bool bInteractingWithTerminal = false;
+			bool bInteractingWithVehicle = false;
+			{
+				GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
+				bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
+				bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
 			}
 
-			if (action == Action::INTERACT)
+			if (m_Player->m_bPossessed &&
+				!bInteractingWithTerminal &&
+				!bInteractingWithVehicle &&
+				m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				m_bAttemptInteract = true;
-				// TODO: Determine if we can interact with anything here to allow
-				// others to consume this event in the case we don't want it
-				return EventReply::CONSUMED;
-			}
+				real lookH = dMousePos.x;
+				real lookV = dMousePos.y;
 
-			// TODO: Set flags here and move "real" code to Update?
-			if (action == Action::DBG_ADD_CART_TO_INV)
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-				Cart* cart = scene->GetCartManager()->GetCart(cartID);
-				cart->SetVisible(false);
-				m_Player->m_Inventory.push_back(cart);
-				return EventReply::CONSUMED;
-			}
+				Transform* transform = m_Player->GetTransform();
+				glm::vec3 up = transform->GetUp();
+				glm::quat rot = transform->GetLocalRotation();
+				real angle = lookH * m_MouseRotateHSpeed * g_DeltaTime;
+				rot = glm::rotate(rot, angle, up);
+				transform->SetWorldRotation(rot);
 
-			if (action == Action::DBG_ADD_ENGINE_CART_TO_INV)
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				CartID cartID = scene->GetCartManager()->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-				EngineCart* engineCart = static_cast<EngineCart*>(scene->GetCartManager()->GetCart(cartID));
-				engineCart->SetVisible(false);
-				m_Player->m_Inventory.push_back(engineCart);
-				return EventReply::CONSUMED;
-			}
+				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * g_DeltaTime * (m_bInvertMouseV ? -1.0f : 1.0f));
 
-			if (action == Action::DBG_ADD_LIQUID_BOX_TO_INV)
-			{
-				MobileLiquidBox* box = new MobileLiquidBox();
-				g_SceneManager->CurrentScene()->AddObjectAtEndOFFrame(box);
-				box->SetVisible(false);
-				m_Player->m_Inventory.push_back(box);
 				return EventReply::CONSUMED;
 			}
 		}

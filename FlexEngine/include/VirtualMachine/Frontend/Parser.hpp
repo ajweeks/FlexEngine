@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Helpers.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
+#include "Variant.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -189,6 +189,7 @@ namespace flex
 			RETURN,
 			VARIABLE_DECL,
 			IDENTIFIER,
+			FUNC_ARG,
 			ASSIGNMENT,
 			COMPOUND_ASSIGNMENT,
 			INT_LIT,
@@ -201,7 +202,7 @@ namespace flex
 			UNARY_OPERATION,
 			BINARY_OPERATION,
 			TERNARY_OPERATION,
-			FUNC_CALL,
+			CALL,
 			CAST,
 
 			_NONE
@@ -211,6 +212,7 @@ namespace flex
 
 		bool IsLiteral(StatementType statementType);
 		bool IsExpression(StatementType statementType);
+		bool IsSimple(StatementType statementType);
 
 		struct Statement
 		{
@@ -246,9 +248,9 @@ namespace flex
 			{
 			}
 
-			virtual VM::Value GetValue()
+			virtual Variant GetValue()
 			{
-				return VM::Value();
+				return Variant();
 			}
 
 			TypeName typeName = TypeName::UNKNOWN;
@@ -478,6 +480,7 @@ namespace flex
 			std::string identifierStr;
 		};
 
+		// TODO: Make statement
 		struct Assignment final : public Expression
 		{
 			Assignment(const Span& span, const std::string& lhs, Expression* rhs) :
@@ -532,9 +535,9 @@ namespace flex
 				return IntToString(value);
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			i32 value;
@@ -553,9 +556,9 @@ namespace flex
 				return FloatToString(value) + "f";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			real value;
@@ -574,9 +577,9 @@ namespace flex
 				return value ? "true" : "false";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			bool value;
@@ -595,9 +598,9 @@ namespace flex
 				return "\"" + value + "\"";
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value.c_str());
+				return Variant(value.c_str());
 			}
 
 			std::string value;
@@ -616,9 +619,9 @@ namespace flex
 				return std::string(1, value);
 			}
 
-			virtual VM::Value GetValue() override
+			virtual Variant GetValue() override
 			{
-				return VM::Value(value);
+				return Variant(value);
 			}
 
 			char value;
@@ -724,13 +727,32 @@ namespace flex
 		struct FunctionCall final : public Expression
 		{
 			FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
-				Expression(span, StatementType::FUNC_CALL),
+				Expression(span, StatementType::CALL),
 				target(target),
 				arguments(arguments)
 			{
 			}
 
 			virtual ~FunctionCall();
+
+			virtual std::string ToString() const override;
+			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
+			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
+
+			std::string target;
+			std::vector<Expression*> arguments;
+		};
+
+		struct FunctionArgument final : public Expression
+		{
+			FunctionArgument(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
+				Expression(span, StatementType::CALL),
+				target(target),
+				arguments(arguments)
+			{
+			}
+
+			virtual ~FunctionArgument();
 
 			virtual std::string ToString() const override;
 			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;

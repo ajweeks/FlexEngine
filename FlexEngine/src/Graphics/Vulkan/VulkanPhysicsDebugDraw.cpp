@@ -35,11 +35,12 @@ namespace flex
 			if (!m_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
 			{
 				MaterialCreateInfo debugMatCreateInfo = {};
-				debugMatCreateInfo.shaderName = "color";
+				debugMatCreateInfo.shaderName = "colour";
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.persistent = true;
 				debugMatCreateInfo.visibleInEditor = true;
 				debugMatCreateInfo.bDynamic = true;
+				debugMatCreateInfo.bSerializable = false;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
 
@@ -52,6 +53,7 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::OnPostSceneChange()
 		{
+			Clear();
 			CreateDebugObject();
 		}
 
@@ -77,16 +79,16 @@ namespace flex
 			return m_DebugMode;
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& color)
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colour)
 		{
-			drawLine(from, to, color, color);
+			drawLine(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo)
+		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colourFrom, const btVector3& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colourFrom, colourTo };
 			}
 			else
 			{
@@ -94,25 +96,25 @@ namespace flex
 			}
 		}
 
-		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color)
+		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour)
 		{
 			FLEX_UNUSED(PointOnB);
 			FLEX_UNUSED(normalOnB);
 			FLEX_UNUSED(distance);
 			FLEX_UNUSED(lifeTime);
-			FLEX_UNUSED(color);
+			FLEX_UNUSED(colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color)
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour)
 		{
-			DrawLineWithAlpha(from, to, color, color);
+			DrawLineWithAlpha(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo)
+		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
-				m_LineSegments[m_LineSegmentIndex++] = { from, to, colorFrom, colorTo };
+				m_LineSegments[m_LineSegmentIndex++] = { from, to, colourFrom, colourTo };
 			}
 			else
 			{
@@ -124,10 +126,6 @@ namespace flex
 		void VulkanPhysicsDebugDraw::Draw()
 		{
 			const u32 lineCount = m_LineSegmentIndex;
-			if (lineCount == 0)
-			{
-				return;
-			}
 
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
@@ -137,42 +135,45 @@ namespace flex
 				PROFILE_END("Hash vertex buffer");
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
-				m_VertexBufferCreateInfo.colors_R32G32B32A32.clear();
+				m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
 				indexBuffer.clear();
 
-				u32 numVerts = lineCount * 2;
+				if (lineCount > 0)
+				{
+					u32 numVerts = lineCount * 2;
 
-				if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
-				{
-					m_VertexBufferCreateInfo.positions_3D.resize(numVerts * 2);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts * 2);
-					indexBuffer.resize(numVerts * 2);
-				}
-				else
-				{
+					if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
+					{
+						if (!m_VertexBufferCreateInfo.positions_3D.empty())
+						{
+							// Double in size when growing
+							numVerts = numVerts * 2;
+						}
+					}
+
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
-					m_VertexBufferCreateInfo.colors_R32G32B32A32.resize(numVerts);
+					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
 					indexBuffer.resize(numVerts);
-				}
 
-				i32 i = 0;
-				glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
-				glm::vec4* colData = m_VertexBufferCreateInfo.colors_R32G32B32A32.data();
-				u32* idxData = indexBuffer.data();
-				for (u32 li = 0; li < lineCount; ++li)
-				{
-					memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
-					memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
+					i32 i = 0;
+					glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
+					glm::vec4* colData = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
+					u32* idxData = indexBuffer.data();
+					for (u32 li = 0; li < lineCount; ++li)
+					{
+						memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
+						memcpy(posData + i + 1, m_LineSegments[li].end, sizeof(real) * 3);
 
-					memcpy(colData + i, m_LineSegments[li].colorFrom, sizeof(real) * 4);
-					memcpy(colData + i + 1, m_LineSegments[li].colorTo, sizeof(real) * 4);
+						memcpy(colData + i, m_LineSegments[li].colourFrom, sizeof(real) * 4);
+						memcpy(colData + i + 1, m_LineSegments[li].colourTo, sizeof(real) * 4);
 
-					u32 idx0 = li * 2;
-					u32 idx1 = li * 2 + 1;
-					memcpy(idxData + i, &idx0, sizeof(u32));
-					memcpy(idxData + i + 1, &idx1, sizeof(u32));
+						u32 idx0 = li * 2;
+						u32 idx1 = li * 2 + 1;
+						memcpy(idxData + i, &idx0, sizeof(u32));
+						memcpy(idxData + i + 1, &idx1, sizeof(u32));
 
-					i += 2;
+						i += 2;
+					}
 				}
 
 				PROFILE_BEGIN("Hash vertex buffer");
@@ -181,7 +182,7 @@ namespace flex
 
 				if (newHash != oldHash)
 				{
-					m_ObjectMesh->GetSubMeshes()[0]->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+					m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
 			}
 		}
@@ -198,17 +199,32 @@ namespace flex
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.materialID = m_MaterialID;
 			createInfo.bEditorObject = true;
-			createInfo.bDepthWriteEnable = false;
-			m_Object = new GameObject("Vk Physics Debug Draw", GameObjectType::_NONE);
+			createInfo.bIndexed = true;
+			createInfo.indices = &indexBuffer;
+			m_Object = new GameObject("Vk Physics Debug Draw", SID("object"));
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
+			m_Object->SetCastsShadow(false);
 			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
-			const VertexAttributes vertexAttributes = m_Renderer->GetShader(m_Renderer->GetMaterial(m_MaterialID).shaderID).vertexAttributes;
+			Material* mat = m_Renderer->GetMaterial(m_MaterialID);
+			const VertexAttributes vertexAttributes = m_Renderer->GetShader(mat->shaderID)->vertexAttributes;
 			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
-				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer");
+				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
+
+			if (!m_VertexBufferCreateInfo.positions_3D.empty())
+			{
+				m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+			}
+		}
+
+		void VulkanPhysicsDebugDraw::Clear()
+		{
+			m_VertexBufferCreateInfo.positions_3D.clear();
+			m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
+			indexBuffer.clear();
 		}
 	} // namespace vk
 } // namespace flex

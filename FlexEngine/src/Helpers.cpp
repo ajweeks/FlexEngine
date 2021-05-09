@@ -6,6 +6,7 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/norm.hpp>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -16,7 +17,9 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Platform/Platform.hpp"
+#include "StringBuilder.hpp"
 #include "Transform.hpp"
+#include "Time.hpp"
 
 // Taken from "AL/al.h":
 #define AL_FORMAT_MONO8                           0x1100
@@ -48,16 +51,26 @@ static const __m128 _ps_coscof_p1 = _mm_set1_ps(-1.388731625493765E-003f);
 static const __m128 _ps_coscof_p2 = _mm_set1_ps(4.166664568298827E-002f);
 static const __m128 _ps_cephes_FOPI = _mm_set1_ps(1.27323954473516f);
 
+static const unsigned char base64_table[65] =
+"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+static const int B64index[256] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
+	0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 62, 63, 62, 62, 63, 52, 53, 54, 55,
+	56, 57, 58, 59, 60, 61,  0,  0,  0,  0,  0,  0,  0,  0,  1,  2,  3,  4,  5,  6,
+	7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,  0,
+	0,  0,  0, 63,  0, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+	41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51 };
+
 namespace flex
 {
 	static const real UnitializedMemoryFloat = -431602080.0f;
 
 	static u32 _lastUID = 0;
 
-	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* channelCountOut /* = nullptr */)
+	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* outChannelCount /* = nullptr */)
 	{
-		assert(requestedChannelCount == 3 ||
-			requestedChannelCount == 4);
+		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
@@ -76,23 +89,21 @@ namespace flex
 			&channelCount,
 			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
-		if (channelCountOut)
-		{
-			*channelCountOut = (u32)channelCount;
-		}
-
-		if (data == 0)
+		if (data == nullptr)
 		{
 			const char* failureReasonStr = stbi_failure_reason();
 			PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, filePath.c_str());
 			return result;
 		}
-		else
-		{
-			assert((u32)result.width <= MAX_TEXTURE_DIM);
-			assert((u32)result.height <= MAX_TEXTURE_DIM);
 
-			result.pixels = static_cast<unsigned char*>(data);
+		assert((u32)result.width <= MAX_TEXTURE_DIM);
+		assert((u32)result.height <= MAX_TEXTURE_DIM);
+
+		result.pixels = static_cast<unsigned char*>(data);
+
+		if (outChannelCount != nullptr)
+		{
+			*outChannelCount = (u32)channelCount;
 		}
 
 		return result;
@@ -106,8 +117,7 @@ namespace flex
 
 	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
 	{
-		assert(requestedChannelCount == 3 ||
-			requestedChannelCount == 4);
+		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		filePath = hdrFilePath;
 
@@ -126,16 +136,15 @@ namespace flex
 			&tempC,
 			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
 
+		if (!pixels)
+		{
+			return false;
+		}
+
 		width = (u32)tempW;
 		height = (u32)tempH;
 
 		channelCount = 4;
-
-		if (!pixels)
-		{
-			PrintError("Failed to load HDR image at %s\n", filePath.c_str());
-			return false;
-		}
 
 		assert(width <= MAX_TEXTURE_DIM);
 		assert(height <= MAX_TEXTURE_DIM);
@@ -156,24 +165,15 @@ namespace flex
 		return stream.str();
 	}
 
-	std::string BoolToString(bool b)
+	std::string IntToString(i32 i, u16 minChars /* = 0 */, char pad /* = '0' */)
 	{
-		return b ? "true" : "false";
-	}
+		std::string result = std::to_string(i);
 
-	std::string IntToString(i32 i, u16 minChars/* = 0 */, char pad /* = '0' */)
-	{
-		std::string result = std::to_string(glm::abs(i));
-
-		if (i < 0)
+		if (!result.empty() && result[0] == '-')
 		{
-			if (result.length() < minChars)
+			if ((result.length() - 1) < minChars)
 			{
-				result = "-" + std::string(minChars - result.length(), pad) + result;
-			}
-			else
-			{
-				result = "-" + result;
+				result = "-" + std::string(minChars - (result.length() - 1), pad) + result.substr(1);
 			}
 		}
 		else
@@ -187,14 +187,50 @@ namespace flex
 		return result;
 	}
 
+	std::string UIntToString(u32 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (result.length() < minChars)
+		{
+			result = std::string(minChars - result.length(), pad) + result;
+		}
+
+		return result;
+	}
+
+	std::string LongToString(i64 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (result.length() < minChars)
+		{
+			result = std::string(minChars - result.length(), pad) + result;
+		}
+
+		return result;
+	}
+
+	std::string ULongToString(u64 i, u16 minChars, char pad)
+	{
+		std::string result = std::to_string(i);
+
+		if (result.length() < minChars)
+		{
+			result = std::string(minChars - result.length(), pad) + result;
+		}
+
+		return result;
+	}
+
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
-		const glm::vec4& color, real xSpacing, real scale) :
+		const glm::vec4& colour, real xSpacing, real scale) :
 		str(str),
 		anchor(anchor),
 		pos(pos.x, pos.y, -1.0f),
 		rot(QUAT_IDENTITY),
-		color(color),
+		colour(colour),
 		xSpacing(xSpacing),
 		scale(scale)
 	{
@@ -202,15 +238,20 @@ namespace flex
 
 	// World-space constructor
 	TextCache::TextCache(const std::string& str, const glm::vec3& pos, const glm::quat& rot,
-		const glm::vec4& color, real xSpacing, real scale) :
+		const glm::vec4& colour, real xSpacing, real scale) :
 		str(str),
 		anchor(AnchorPoint::_NONE),
 		pos(pos),
 		rot(rot),
-		color(color),
+		colour(colour),
 		xSpacing(xSpacing),
 		scale(scale)
 	{
+	}
+
+	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	{
+		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
 	}
 
 	bool FileExists(const std::string& filePath)
@@ -237,7 +278,7 @@ namespace flex
 
 		if (!file)
 		{
-			PrintError("Unable to read file: %s\n", filePath.c_str());
+			PrintError("Unable to read file: ");
 			return false;
 		}
 
@@ -325,58 +366,22 @@ namespace flex
 		return Platform::OpenFileDialog(windowTitle, absoluteDirectory, outSelectedAbsFilePath, filter);
 	}
 
-	std::string StripLeadingDirectories(const std::string& filePath)
-	{
-		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos)
-		{
-			return filePath.substr(finalSlash + 1);
-		}
-		return filePath;
-	}
-
-	std::string ExtractDirectoryString(const std::string& filePath)
-	{
-		// TODO: When no trailing slash exists check if final token is directory
-		size_t finalSlash = filePath.rfind('/');
-		if (finalSlash != std::string::npos && finalSlash != filePath.length() - 1)
-		{
-			return filePath.substr(0, finalSlash + 1);
-		}
-		return filePath;
-	}
-
-	std::string StripFileType(const std::string& filePath)
-	{
-		if (filePath.find('.') != std::string::npos)
-		{
-			return Split(filePath, '.')[0];
-		}
-		return filePath;
-	}
-
-	std::string ExtractFileType(const std::string& filePath)
-	{
-		const size_t dotPos = filePath.find_last_of('.');
-		if (dotPos != std::string::npos)
-		{
-			return filePath.substr(dotPos + 1);
-		}
-		return "";
-	}
-
-	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, i32* size, i32* freq)
+	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr)
 	{
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{
-			PrintError("Failed to parse WAV file: %s\n", filePath.c_str());
+			outErrorStr.Append("Failed to parse WAV file: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		if (dataArray.size() < 12)
 		{
-			PrintError("Invalid WAV file: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAV file:\n");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -391,21 +396,27 @@ namespace flex
 			waveID.compare("WAVE") != 0 ||
 			subChunk1ID.compare("fmt ") != 0)
 		{
-			PrintError("Invalid WAVE file header: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAVE file header: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		u32 subChunk1Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
 		if (subChunk1Size != 16)
 		{
-			PrintError("Non-16 bit chunk size in WAVE files in unsupported: %s\n", filePath.c_str());
+			outErrorStr.Append("Non-16 bit chunk size in WAVE files in unsupported: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
 		u16 audioFormat = Parse16u(&dataArray[dataIndex]); dataIndex += 2;
 		if (audioFormat != 1) // WAVE_FORMAT_PCM
 		{
-			PrintError("WAVE file uses unsupported format (only PCM is allowed): %s\n", filePath.c_str());
+			outErrorStr.Append("WAVE file uses unsupported format (only PCM is allowed): ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -418,7 +429,9 @@ namespace flex
 		std::string subChunk2ID(&dataArray[dataIndex], 4); dataIndex += 4;
 		if (subChunk2ID.compare("data") != 0)
 		{
-			PrintError("Invalid WAVE file: %s\n", filePath.c_str());
+			outErrorStr.Append("Invalid WAVE file: ");
+			outErrorStr.AppendLine(filePath);
+			PrintError("%s\n", outErrorStr.ToCString());
 			return false;
 		}
 
@@ -460,7 +473,9 @@ namespace flex
 				*format = AL_FORMAT_MONO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine(bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
 				break;
 			}
 		} break;
@@ -475,13 +490,17 @@ namespace flex
 				*format = AL_FORMAT_STEREO16;
 				break;
 			default:
-				PrintError("WAVE file contains invalid bitsPerSample (must be 8 or 16): %u\n", bitsPerSample);
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine(bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
 				break;
 			}
 		} break;
 		default:
 		{
-			PrintError("WAVE file contains invalid channel count (must be 1 or 2): %u\n", channelCount);
+			outErrorStr.Append("WAVE file contains invalid channel count (must be 1 or 2): ");
+			outErrorStr.AppendLine(channelCount);
+			PrintError("%s\n", outErrorStr.ToCString());
 		} break;
 		}
 
@@ -489,6 +508,64 @@ namespace flex
 		*freq = samplesPerSec;
 
 		return true;
+	}
+
+	std::string StripLeadingDirectories(const std::string& filePath)
+	{
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash != std::string::npos)
+		{
+			return filePath.substr(finalSlash + 1);
+		}
+		return filePath;
+	}
+
+	std::string ExtractDirectoryString(const std::string& filePath)
+	{
+		// TODO: When no trailing slash exists check if final token is directory
+		size_t finalSlash = filePath.rfind('/');
+		if (finalSlash == std::string::npos)
+		{
+			finalSlash = filePath.rfind('\\');
+		}
+
+		if (finalSlash != std::string::npos)
+		{
+			if (finalSlash == filePath.length() - 1)
+			{
+				return filePath;
+			}
+			else
+			{
+				return filePath.substr(0, finalSlash + 1);
+			}
+		}
+		return "";
+	}
+
+	std::string StripFileType(const std::string& filePath)
+	{
+		size_t lastDot = filePath.rfind('.');
+		if (lastDot != std::string::npos)
+		{
+			return filePath.substr(0, lastDot);
+		}
+		return filePath;
+	}
+
+	std::string ExtractFileType(const std::string& filePath)
+	{
+		const size_t dotPos = filePath.find_last_of('.');
+		if (dotPos != std::string::npos)
+		{
+			return filePath.substr(dotPos + 1);
+		}
+		return "";
 	}
 
 	std::string Trim(const std::string& str)
@@ -553,7 +630,7 @@ namespace flex
 		size_t i = 0;
 
 		size_t strLen = str.size();
-		while (i != strLen)
+		while (i < strLen)
 		{
 			while (i != strLen && str[i] == delim)
 			{
@@ -576,6 +653,36 @@ namespace flex
 		return result;
 	}
 
+	std::vector<std::string> Split(const std::string& str, const char* delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		size_t strLen = str.size();
+		size_t delimLen = strlen(delim);
+		while (i < (strLen - delimLen))
+		{
+			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) == 0)
+			{
+				i += delimLen;
+			}
+
+			size_t j = i;
+			while (j < (strLen - delimLen) && memcmp((void*)&str[j], (void*)delim, delimLen) != 0)
+			{
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
 	std::vector<std::string> SplitNoStrip(const std::string& str, char delim)
 	{
 		std::vector<std::string> result;
@@ -583,7 +690,7 @@ namespace flex
 		size_t j = 0;
 
 		size_t strLen = str.size();
-		while (i != strLen)
+		while (i <= strLen)
 		{
 			while (i != strLen && str[i] != delim)
 			{
@@ -592,6 +699,29 @@ namespace flex
 
 			result.push_back(str.substr(j, i - j));
 			++i;
+			j = i;
+		}
+
+		return result;
+	}
+
+	std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+		size_t j = 0;
+
+		size_t strLen = str.size();
+		size_t delimLen = strlen(delim);
+		while (i < (strLen - delimLen))
+		{
+			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) != 0)
+			{
+				++i;
+			}
+
+			result.push_back(str.substr(j, i - j));
+			i += delimLen;
 			j = i;
 		}
 
@@ -656,6 +786,18 @@ namespace flex
 			return b;
 		}
 		return slerpVal;
+	}
+
+	glm::vec2 MoveTowards(const glm::vec2& a, const glm::vec2& b, real delta)
+	{
+		delta = glm::clamp(delta, 0.00001f, 1.0f);
+		glm::vec2 diff = (b - a);
+		delta = glm::min(delta, glm::length(diff));
+		if (abs(delta) < 0.00001f)
+		{
+			return b;
+		}
+		return a + glm::normalize(diff) * delta;
 	}
 
 	glm::vec3 MoveTowards(const glm::vec3& a, const glm::vec3& b, real delta)
@@ -730,9 +872,24 @@ namespace flex
 		return (intStr.compare("true") == 0);
 	}
 
-	glm::i32 ParseInt(const std::string& intStr)
+	i32 ParseInt(const std::string& intStr)
 	{
-		return (i32)atoi(intStr.c_str());
+		return (i64)atoi(intStr.c_str());
+	}
+
+	u32 ParseUInt(const std::string& intStr)
+	{
+		return (u32)strtoul(intStr.c_str(), NULL, 10);
+	}
+
+	i64 ParseLong(const std::string& intStr)
+	{
+		return (i64)atoll(intStr.c_str());
+	}
+
+	u64 ParseULong(const std::string& intStr)
+	{
+		return (u64)strtoull(intStr.c_str(), NULL, 10);
 	}
 
 	real ParseFloat(const std::string& floatStr)
@@ -1075,7 +1232,7 @@ namespace flex
 
 	void CopyVec3ToClipboard(const glm::vec3& vec)
 	{
-		CopyColorToClipboard(glm::vec4(vec, 1.0f));
+		CopyColourToClipboard(glm::vec4(vec, 1.0f));
 	}
 
 	void CopyVec4ToClipboard(const glm::vec4& vec)
@@ -1088,12 +1245,12 @@ namespace flex
 		ImGui::LogFinish();
 	}
 
-	void CopyColorToClipboard(const glm::vec3& col)
+	void CopyColourToClipboard(const glm::vec3& col)
 	{
 		CopyVec4ToClipboard(glm::vec4(col, 1.0f));
 	}
 
-	void CopyColorToClipboard(const glm::vec4& col)
+	void CopyColourToClipboard(const glm::vec4& col)
 	{
 		CopyVec4ToClipboard(col);
 	}
@@ -1135,14 +1292,13 @@ namespace flex
 		return true;
 	}
 
-	glm::vec3 PasteColor3FromClipboard()
+	glm::vec3 PasteColour3FromClipboard()
 	{
-		glm::vec4 color4 = PasteColor4FromClipboard();
-
-		return glm::vec3(color4);
+		glm::vec4 colour4 = PasteColour4FromClipboard();
+		return glm::vec3(colour4);
 	}
 
-	glm::vec4 PasteColor4FromClipboard()
+	glm::vec4 PasteColour4FromClipboard()
 	{
 		const std::string clipboardContents = ImGui::GetClipboardText();
 
@@ -1154,7 +1310,7 @@ namespace flex
 			comma2 == std::string::npos ||
 			comma3 == std::string::npos)
 		{
-			// Clipboard doesn't contain correctly formatted color!
+			// Clipboard doesn't contain correctly formatted colour!
 			return VEC4_ZERO;
 		}
 
@@ -1184,6 +1340,126 @@ namespace flex
 			str[i] = (char)tolower(str[i]);
 		}
 		return str;
+	}
+
+	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2)
+	{
+		auto sign = [](const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
+		{
+			return (p0.x - p2.x) * (p1.y - p2.y) - (p1.x - p2.x) * (p0.y - p2.y);
+		};
+
+		real sign0 = sign(point, tri0, tri1);
+		real sign1 = sign(point, tri1, tri2);
+		real sign2 = sign(point, tri2, tri0);
+
+		bool bHasNeg = (sign0 < 0.0f || sign1 < 0.0f || sign2 < 0.0f);
+		bool bHasPos = (sign0 > 0.0f || sign1 > 0.0f || sign2 > 0.0f);
+
+		return !(bHasNeg && bHasPos);
+	}
+
+	real SignedDistanceToTriangle(const glm::vec3& point, const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, glm::vec3& outClosestPoint)//, glm::vec3& outTangentAtClosestPoint)
+	{
+		glm::vec3 ab = (b - a);
+		glm::vec3 bc = (c - b);
+		glm::vec3 ca = (a - c);
+
+		glm::vec3 planeNorm = glm::cross(ab, -ca);
+		real normLen = glm::length(planeNorm);
+		planeNorm /= normLen;
+
+		// Tangential vector to AB lying along triangle face
+		glm::vec3 planeABNorm = glm::cross(planeNorm, ab);
+		real distAboveABNorm = glm::dot(point - a, planeABNorm);
+		bool bPointAboveAB = distAboveABNorm > 0.0f;
+
+		glm::vec3 planeBCNorm = glm::cross(planeNorm, bc);
+		real distAboveBCNorm = glm::dot(point - b, planeBCNorm);
+		bool bPointAboveBC = distAboveBCNorm > 0.0f;
+
+		glm::vec3 planeCANorm = glm::cross(planeNorm, ca);
+		real distAboveCANorm = glm::dot(point - c, planeCANorm);
+		bool bPointAboveCA = distAboveCANorm > 0.0f;
+
+		// Find the projection of the point onto the edge
+
+		real abLen2 = glm::length2(ab);
+		real caLen2 = glm::length2(ca);
+		real uab = glm::dot((point - a), ab) / abLen2;
+		real uca = glm::dot((point - c), ca) / caLen2;
+
+		if (uca > 1.0f && uab < 0.0f)
+		{
+			outClosestPoint = a;
+		}
+		else
+		{
+			real bcLen2 = glm::length2(bc);
+			real ubc = glm::dot((point - b), bc) / bcLen2;
+
+			if (uab > 1.0f && ubc < 0.0f)
+			{
+				outClosestPoint = b;
+			}
+			else if (ubc > 1.0f && uca < 0.0f)
+			{
+				outClosestPoint = c;
+			}
+			else if (uab >= 0.0f && uab <= 1.0f && !bPointAboveAB)
+			{
+				outClosestPoint = a + uab * ab;
+			}
+			else if (ubc >= 0.0f && ubc <= 1.0f && !bPointAboveBC)
+			{
+				outClosestPoint = b + ubc * bc;
+			}
+			else if (uca >= 0.0f && uca <= 1.0f && !bPointAboveCA)
+			{
+				outClosestPoint = c + uca * ca;
+			}
+			else
+			{
+				// The closest point is in the triangle, find distance to nearest edge
+
+				real distAlongNormal = glm::dot(point, planeNorm) - glm::dot(a, planeNorm);
+				glm::vec3 projectedPoint = point - distAlongNormal * planeNorm;
+				outClosestPoint = projectedPoint;
+
+				glm::vec3 closestPointOnEdge;
+
+				if (distAboveCANorm < distAboveABNorm)
+				{
+					if (distAboveCANorm < distAboveBCNorm)
+					{
+						closestPointOnEdge = c + uca * ca;
+					}
+					else
+					{
+						closestPointOnEdge = b + ubc * bc;
+					}
+				}
+				else
+				{
+					if (distAboveABNorm < distAboveBCNorm)
+					{
+						closestPointOnEdge = a + uab * ab;
+					}
+					else
+					{
+						closestPointOnEdge = b + ubc * bc;
+					}
+				}
+
+				real dist = glm::distance(point, closestPointOnEdge);
+				return -dist;
+			}
+		}
+
+		real distAlongNormal = glm::dot(point, planeNorm) - glm::dot(a, planeNorm);
+		glm::vec3 projectedPoint = point - distAlongNormal * planeNorm;
+		real dist = glm::distance(projectedPoint, outClosestPoint);
+		return dist;
 	}
 
 	std::string& ToUpper(std::string& str)
@@ -1217,6 +1493,22 @@ namespace flex
 		return result;
 	}
 
+	std::string RemoveEndIfPresent(const std::string& str, const std::string& end)
+	{
+		if (str.length() < end.length())
+		{
+			return str;
+		}
+
+		std::string strEnd = str.substr(str.length() - end.length());
+		if (strEnd.compare(end) == 0)
+		{
+			return str.substr(0, str.length() - end.length());
+		}
+
+		return str;
+	}
+
 	i32 GetNumberEndingWith(const std::string& str, i16& outNumNumericalChars)
 	{
 		if (str.empty())
@@ -1246,75 +1538,132 @@ namespace flex
 		return num;
 	}
 
-	const char* GameObjectTypeToString(GameObjectType type)
-	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
-
-		return GameObjectTypeStrings[(i32)type];
-	}
-
-	GameObjectType StringToGameObjectType(const char* gameObjectTypeStr)
-	{
-		assert(ARRAY_LENGTH(GameObjectTypeStrings) == (i32)GameObjectType::_NONE + 1);
-
-		for (i32 i = 0; i < (i32)GameObjectType::_NONE; ++i)
-		{
-			if (strcmp(GameObjectTypeStrings[i], gameObjectTypeStr) == 0)
-			{
-				return (GameObjectType)i;
-			}
-		}
-
-		return GameObjectType::_NONE;
-	}
-
 	std::string ReplaceBackSlashesWithForward(std::string str)
 	{
-		std::for_each(str.begin(), str.end(), [](char& c)
+		for (char& c : str)
 		{
 			if (c == '\\')
 			{
 				c = '/';
 			}
-		});
+		}
 		return str;
 	}
 
-	std::string RelativePathToAbsolute(const std::string& relativePath)
+	std::string RelativePathToAbsolute(std::string relativePath)
 	{
-		if (relativePath.find(':') != std::string::npos)
+		if (relativePath.empty())
 		{
-			// File must already be absolute if it contains a drive character
 			return relativePath;
 		}
 
+		if (Contains(relativePath, '\\'))
+		{
+			PrintWarn("RelativePathToAbsolute was given path containing backslashes");
+			relativePath = ReplaceBackSlashesWithForward(relativePath);
+		}
+
+		// TODO: This is windows-specific, bring out to platform file
+		if (relativePath.find(':') != std::string::npos)
+		{
+			// Remove any double dots but leave drive letter prefix intact
+			// e.g.
+			// "C:/Users/user.name/Documents/Project/../../Subfolder/File.txt"
+			//  v
+			// "C:/Users/user.name/Subfolder/File.txt"
+
+			size_t nextDoubleDot = relativePath.find("..");
+
+			while (nextDoubleDot != std::string::npos)
+			{
+				if (nextDoubleDot > 0 && relativePath[nextDoubleDot - 1] == '/')
+				{
+					size_t precedingSlash = relativePath.rfind('/', nextDoubleDot - 2);
+					if (precedingSlash != std::string::npos)
+					{
+						relativePath = relativePath.substr(0, precedingSlash) + relativePath.substr(nextDoubleDot + 2);
+					}
+				}
+
+				nextDoubleDot = relativePath.find("..");
+			}
+
+			return relativePath;
+		}
+
+		// First check for relative paths in path string to remove
 		size_t nextDoubleDot = relativePath.find("..");
-
-		std::string workingDirectory = FlexEngine::s_CurrentWorkingDirectory;
-
-		std::string strippedFilePath = relativePath;
-
 		while (nextDoubleDot != std::string::npos)
 		{
-			size_t lastSlash = workingDirectory.find_last_of('/');
+			size_t lastSlash = relativePath.rfind('/', nextDoubleDot);
 			if (lastSlash == std::string::npos)
 			{
-				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
-				nextDoubleDot = std::string::npos;
+				// No more directories to remove from relative path
+				break;
 			}
 			else
 			{
-				workingDirectory = workingDirectory.substr(0, lastSlash);
-				strippedFilePath = strippedFilePath.substr(nextDoubleDot);
-				nextDoubleDot = relativePath.find("..", nextDoubleDot + 2);
+				size_t lastSlash2 = (nextDoubleDot == 0 ? std::string::npos : relativePath.rfind('/', nextDoubleDot - 2));
+				if (lastSlash2 == std::string::npos && nextDoubleDot != 0)
+				{
+					lastSlash2 = 0;
+				}
+				if (lastSlash2 == std::string::npos)
+				{
+					relativePath = relativePath.substr(nextDoubleDot + 2);
+				}
+				else
+				{
+					relativePath = relativePath.substr(0, lastSlash2) + relativePath.substr(nextDoubleDot + 2);
+
+				}
+				nextDoubleDot = relativePath.find("..");
 			}
 		}
 
-		strippedFilePath = ReplaceBackSlashesWithForward(strippedFilePath);
+		if (relativePath.size() <= 1)
+		{
+			return relativePath;
+		}
 
-		std::string absolutePath = workingDirectory + '/' + strippedFilePath;
+		// Trim leading slash
+		if (relativePath[0] == '/')
+		{
+			relativePath = relativePath.substr(1);
+		}
+
+		std::string pathPrefix = FlexEngine::s_CurrentWorkingDirectory;
+
+		// Then remove directories from path prefix for each double dot
+		nextDoubleDot = relativePath.find("..");
+		while (nextDoubleDot != std::string::npos)
+		{
+			size_t lastSlash = pathPrefix.find_last_of('/');
+			if (lastSlash == std::string::npos)
+			{
+				PrintWarn("Invalidly formed relative path! %s\n", relativePath.c_str());
+				break;
+			}
+			else
+			{
+				pathPrefix = pathPrefix.substr(0, lastSlash); // remove final directory in string
+				relativePath = relativePath.substr(nextDoubleDot + 3); // remove "../" prefix
+				nextDoubleDot = relativePath.find("..");
+			}
+		}
+
+		std::string absolutePath = pathPrefix + '/' + relativePath;
 
 		return absolutePath;
+	}
+
+	std::string EnsureTrailingSlash(const std::string& str)
+	{
+		if (str[str.size() - 1] != '/')
+		{
+			return str + '/';
+		}
+		return str;
 	}
 
 	// TODO: Test thoroughly
@@ -1376,6 +1725,86 @@ namespace flex
 		// TODO: CLEANUP: FIXME: Don't use rand, please
 		real randN = rand() / (real)RAND_MAX;
 		return randN * (max - min) + min;
+	}
+
+	bool Base64Encode(const u8* src, char* dst, size_t len)
+	{
+		u8* out;
+		u8* pos;
+		const u8* end;
+		const u8* in;
+
+		size_t olen = 4 * ((len + 2) / 3); // 3-byte blocks to 4-byte
+
+		if (olen < len)
+		{
+			// Integer overflow
+			return false;
+		}
+
+		out = (u8*)dst;
+
+		end = src + len;
+		in = src;
+		pos = out;
+		while (end - in >= 3)
+		{
+			*pos++ = base64_table[in[0] >> 2];
+			*pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
+			*pos++ = base64_table[((in[1] & 0x0f) << 2) | (in[2] >> 6)];
+			*pos++ = base64_table[in[2] & 0x3f];
+			in += 3;
+		}
+
+		if (end - in)
+		{
+			*pos++ = base64_table[in[0] >> 2];
+			if (end - in == 1)
+			{
+				*pos++ = base64_table[(in[0] & 0x03) << 4];
+				*pos++ = '=';
+			}
+			else
+			{
+				*pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
+				*pos++ = base64_table[(in[1] & 0x0f) << 2];
+			}
+			*pos++ = '=';
+		}
+
+		return true;
+	}
+
+	bool Base64Decode(const void* src, u8* dst, const size_t len)
+	{
+		u8* p = (u8*)src;
+		int pad = len > 0 && (len % 4 || p[len - 1] == '=');
+		const size_t L = ((len + 3) / 4 - pad) * 4;
+
+		//u32 len = (L / 4 * 3 + pad, '\0');
+
+		u32 j = 0;
+		for (size_t i = 0; i < L; i += 4)
+		{
+			int n = B64index[p[i]] << 18 | B64index[p[i + 1]] << 12 | B64index[p[i + 2]] << 6 | B64index[p[i + 3]];
+			dst[j++] = (u8)(n >> 16);
+			dst[j++] = (u8)(n >> 8 & 0xFF);
+			dst[j++] = (u8)(n & 0xFF);
+		}
+
+		if (pad)
+		{
+			int n = B64index[p[L]] << 18 | B64index[p[L + 1]] << 12;
+			dst[j++] = (u8)(n >> 16);
+
+			if (len > L + 2 && p[L + 2] != '=')
+			{
+				n |= B64index[p[L + 2]] << 6;
+				dst[j++] = ((u8)(n >> 8 & 0xFF));
+			}
+		}
+
+		return true;
 	}
 
 	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
@@ -1454,6 +1883,23 @@ namespace flex
 		return ++_lastUID;
 	}
 
+	real SmoothStep01(real t)
+	{
+		return t * t * (3.0f - 2.0f * t);
+	}
+
+	// https://www.desmos.com/calculator/pnao7fi1yi
+	real SmootherStep01(real t)
+	{
+		return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+	}
+
+	real SmootherStep(real a, real b, real t)
+	{
+		t = Lerp(a, b, t);
+		return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+	}
+
 	bool Contains(const std::vector<const char*>& vec, const char* val)
 	{
 		for (u32 i = 0; i < (u32)vec.size(); ++i)
@@ -1475,6 +1921,18 @@ namespace flex
 	bool Contains(const std::string& str, const std::string& pattern)
 	{
 		return str.find(pattern) != std::string::npos;
+	}
+
+	bool Contains(const std::string& str, char pattern)
+	{
+		for (char c : str)
+		{
+			if (c == pattern)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)
@@ -1579,9 +2037,34 @@ namespace flex
 		return bResult;
 	}
 
-	bool Vec2iCompare::operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const
+	void AABB::DrawDebug(const btVector3& lineColour)
 	{
-		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+
+		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
+	}
+
+	std::vector<PointTest> PointTest::ComputePointTests(
+		const glm::vec3& a, const glm::vec3& b, const glm::vec3& c,
+		const AABB& sampleBounds, i32 numSamples)
+	{
+		std::vector<PointTest> result;
+		result.reserve(numSamples);
+
+		for (i32 i = 0; i < numSamples; ++i)
+		{
+			PointTest test = {};
+
+			test.start = glm::vec3(
+				RandomFloat(sampleBounds.minX, sampleBounds.maxX),
+				RandomFloat(sampleBounds.minY, sampleBounds.maxY),
+				RandomFloat(sampleBounds.minZ, sampleBounds.maxZ));
+			test.dist = SignedDistanceToTriangle(test.start, a, b, c, test.closest);
+
+			result.push_back(test);
+		}
+
+		return result;
 	}
 
 	namespace ImGuiExt
@@ -1596,17 +2079,17 @@ namespace flex
 			return ImGui::SliderScalar(label, ImGuiDataType_U32, v, &v_min, &v_max, format);
 		}
 
-		bool DragUInt(const char* label, u32* v, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
+		bool DragUInt(const char* label, u32* v, real speed /* = 1.0f */, u32 v_min /* = 0 */, u32 v_max /* = 0 */, const char* format /* = "%d" */)
 		{
-			return ImGui::DragScalar(label, ImGuiDataType_U32, v, 1.0f, &v_min, &v_max, format);
+			return ImGui::DragScalar(label, ImGuiDataType_U32, v, speed, &v_min, &v_max, format);
 		}
 
-		bool DragInt16(const char* label, i16* v, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
+		bool DragInt16(const char* label, i16* v, real speed /* = 1.0f */, i16 v_min /* = 0 */, i16 v_max /* = 0 */, const char* format /* = "%d" */)
 		{
 			i32 v32 = (i32)*v;
 			i32 v_min32 = (i32)v_min;
 			i32 v_max32 = (i32)v_max;
-			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, 1.0f, &v_min32, &v_max32, format);
+			bool bResult = ImGui::DragScalar(label, ImGuiDataType_S32, &v32, speed, &v_min32, &v_max32, format);
 
 			if (bResult)
 			{
@@ -1618,7 +2101,7 @@ namespace flex
 
 		bool ColorEdit3Gamma(const char* label, real* v, ImGuiColorEditFlags flags /* = 0 */)
 		{
-			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f/2.2f));
+			glm::vec3 vg = glm::pow(glm::vec3(v[0], v[1], v[2]), glm::vec3(1.0f / 2.2f));
 			bool bResult = ImGui::ColorEdit3(label, &vg.x, flags);
 
 			if (bResult)
@@ -1646,7 +2129,6 @@ namespace flex
 
 			return bResult;
 		}
-
 	} // namespace ImGuiExt
 } // namespace flex
 

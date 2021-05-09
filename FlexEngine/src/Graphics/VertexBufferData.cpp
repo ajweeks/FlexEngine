@@ -116,15 +116,15 @@ namespace flex
 				vertexDataP += 2;
 			}
 
-			if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
-				memcpy(vertexDataP, createInfo.colors_R8G8B8A8.data() + i, sizeof(i32));
+				memcpy(vertexDataP, createInfo.colours_R8G8B8A8.data() + i, sizeof(i32));
 				vertexDataP += 1;
 			}
 
-			if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
-				memcpy(vertexDataP, createInfo.colors_R32G32B32A32.data() + i, sizeof(glm::vec4));
+				memcpy(vertexDataP, createInfo.colours_R32G32B32A32.data() + i, sizeof(glm::vec4));
 				vertexDataP += 4;
 			}
 
@@ -157,7 +157,7 @@ namespace flex
 
 	void VertexBufferData::Destroy()
 	{
-		if (vertexData)
+		if (vertexData != nullptr)
 		{
 			free(vertexData);
 			vertexData = nullptr;
@@ -170,7 +170,7 @@ namespace flex
 		Attributes = 0;
 	}
 
-	void VertexBufferData::Shrink(real minExcess /* = 0.0f */)
+	void VertexBufferData::ShrinkIfExcessGreaterThan(real minExcess /* = 0.0f */)
 	{
 		// Only dynamic buffers can be resized
 		assert(bDynamic);
@@ -205,6 +205,7 @@ namespace flex
 		real* src = vertexData;
 		for (u32 i = 0; i < VertexCount; ++i)
 		{
+			real* vertSrc = src;
 			if (usingAttributes & (u32)VertexAttribute::POSITION)
 			{
 				if (Attributes & (u32)VertexAttribute::POSITION)
@@ -216,6 +217,11 @@ namespace flex
 					memcpy(dst, &VEC3_ZERO, sizeof(glm::vec3));
 				}
 				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION)
+			{
+				src += 3;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::POSITION2)
@@ -231,6 +237,11 @@ namespace flex
 				dst += 2;
 			}
 
+			if (Attributes & (u32)VertexAttribute::POSITION2)
+			{
+				src += 2;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::POSITION4)
 			{
 				if (Attributes & (u32)VertexAttribute::POSITION4)
@@ -242,6 +253,11 @@ namespace flex
 					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::POSITION4)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::VELOCITY3)
@@ -257,6 +273,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::VELOCITY3)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::UV)
 			{
 				if (Attributes & (u32)VertexAttribute::UV)
@@ -270,30 +291,45 @@ namespace flex
 				dst += 2;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (Attributes & (u32)VertexAttribute::UV)
 			{
-				if (Attributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+				src += 2;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
+			{
+				if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 				{
 					memcpy(dst, src, sizeof(i32));
 				}
 				else
 				{
-					memcpy(dst, &COLOR32U_WHITE, sizeof(i32));
+					memcpy(dst, &COLOUR32U_WHITE, sizeof(i32));
 				}
 				dst += 1;
 			}
 
-			if (usingAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (Attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
-				if (Attributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+				src += 1;
+			}
+
+			if (usingAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+			{
+				if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 				{
 					memcpy(dst, src, sizeof(glm::vec4));
 				}
 				else
 				{
-					memcpy(dst, &COLOR128F_WHITE, sizeof(glm::vec4));
+					memcpy(dst, &COLOUR128F_WHITE, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::NORMAL)
@@ -309,6 +345,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::NORMAL)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::TANGENT)
 			{
 				if (Attributes & (u32)VertexAttribute::TANGENT)
@@ -322,6 +363,11 @@ namespace flex
 				dst += 3;
 			}
 
+			if (Attributes & (u32)VertexAttribute::TANGENT)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
 				if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
@@ -333,6 +379,11 @@ namespace flex
 					memcpy(dst, &VEC4_ZERO, sizeof(glm::vec4));
 				}
 				dst += 4;
+			}
+
+			if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
+			{
+				src += 4;
 			}
 
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_INT)
@@ -349,7 +400,12 @@ namespace flex
 				dst += 1;
 			}
 
-			src += VertexStride / sizeof(real);
+			if (Attributes & (u32)VertexAttribute::EXTRA_INT)
+			{
+				src += 1;
+			}
+
+			assert(src == (vertSrc + VertexStride / sizeof(real)));
 		}
 		u32 bytesCopied = (u32)(dst - initialDst) * sizeof(real);
 		return bytesCopied;
@@ -371,23 +427,82 @@ namespace flex
 		}
 	}
 
+	void VertexBufferData::ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount)
+	{
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION)
+		{
+			createInfo.positions_3D.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION2)
+		{
+			createInfo.positions_2D.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::POSITION4)
+		{
+			createInfo.positions_4D.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::VELOCITY3)
+		{
+			createInfo.velocities.resize(vertCount, VEC3_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::UV)
+		{
+			createInfo.texCoords_UV.resize(vertCount, VEC2_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
+		{
+			createInfo.colours_R8G8B8A8.resize(vertCount, COLOUR32U_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+		{
+			createInfo.colours_R32G32B32A32.resize(vertCount, COLOUR128F_WHITE);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::NORMAL)
+		{
+			createInfo.normals.resize(vertCount, VEC3_UP);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::TANGENT)
+		{
+			createInfo.tangents.resize(vertCount, VEC3_RIGHT);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_VEC4)
+		{
+			createInfo.extraVec4s.resize(vertCount, VEC4_ZERO);
+		}
+
+		if (createInfo.attributes & (u32)VertexAttribute::EXTRA_INT)
+		{
+			createInfo.extraInts.resize(vertCount, 0);
+		}
+	}
+
 	u32 HashVertexBufferDataCreateInfo(const VertexBufferDataCreateInfo& info)
 	{
 		u32 result = (u32)info.attributes;
 
 		// TODO: Test
 		// TODO: Use smarter hash
-		for (const glm::vec2& pos : info.positions_2D) result += (u32)(pos.x + pos.y);
-		for (const glm::vec3& pos : info.positions_3D) result += (u32)(pos.x + pos.y + pos.z);
-		for (const glm::vec4& pos : info.positions_4D) result += (u32)(pos.x + pos.y + pos.z + pos.w);
-		for (const glm::vec3& v : info.velocities) result += (u32)(v.x + v.y + v.z);
-		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)(uv.x + uv.y);
-		for (i32 i : info.colors_R8G8B8A8) result += (u32)(i);
-		for (const glm::vec4& col : info.colors_R32G32B32A32) result += (u32)(col.x + col.y + col.z + col.w);
-		for (const glm::vec3& pos : info.tangents) result += (u32)(pos.x + pos.y + pos.z);
-		for (const glm::vec3& pos : info.normals) result += (u32)(pos.x + pos.y + pos.z);
+		const real scale = 1000.0f; // Inverse of how much a quantity needs to change by to compute a different hash
+		for (const glm::vec2& pos : info.positions_2D) result += (u32)((pos.x + pos.y) * scale);
+		for (const glm::vec3& pos : info.positions_3D) result += (u32)((pos.x + pos.y + pos.z) * scale);
+		for (const glm::vec4& pos : info.positions_4D) result += (u32)((pos.x + pos.y + pos.z + pos.w) * scale);
+		for (const glm::vec3& v : info.velocities) result += (u32)((v.x + v.y + v.z));
+		for (const glm::vec2& uv : info.texCoords_UV) result += (u32)((uv.x + uv.y) * scale);
+		for (i32 i : info.colours_R8G8B8A8) result += (u32)(i);
+		for (const glm::vec4& col : info.colours_R32G32B32A32) result += (u32)((col.x + col.y + col.z + col.w) * scale);
+		for (const glm::vec3& tangent : info.tangents) result += (u32)((tangent.x + tangent.y + tangent.z) * scale);
+		for (const glm::vec3& normal : info.normals) result += (u32)((normal.x + normal.y + normal.z) * scale);
 
-		for (const glm::vec4& v : info.extraVec4s) result += (u32)(v.x + v.y + v.z + v.w);
+		for (const glm::vec4& v : info.extraVec4s) result += (u32)((v.x + v.y + v.z + v.w) * scale);
 		for (i32 i : info.extraInts) result += (u32)(i);
 
 		return result;

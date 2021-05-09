@@ -4,7 +4,7 @@ layout (binding = 0) uniform sampler2D in_Texture;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 out_Color;
+layout (location = 0) out vec4 out_Colour;
 
 float LinearToSRGB(float val)
 {
@@ -26,9 +26,9 @@ vec3 LinearToSRGB(vec3 val)
 
 void main()
 {
-	vec4 color = texture(in_Texture, ex_TexCoord);
+	vec4 colour = texture(in_Texture, ex_TexCoord);
 
-	color.rgb = LinearToSRGB(color.rgb);
+	colour.rgb = LinearToSRGB(colour.rgb);
 
-	out_Color = color;
+	out_Colour = colour;
 }

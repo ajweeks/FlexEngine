@@ -1,10 +1,10 @@
 #version 450
 
-layout (location = 0) out float fragColor;
+#include "vk_misc.glsl"
+
+layout (location = 0) out float fragColour;
 
 layout (location = 0) in vec2 ex_TexCoord;
-
-layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -36,7 +36,7 @@ void main()
 	
 	if (depth == 0.0f)
 	{
-		fragColor = 1.0f;
+		fragColour = 1.0f;
 		return;
 	}
 
@@ -85,5 +85,5 @@ void main()
 	}
 	occlusion = 1.0 - (occlusion / float(max(sampleCount,1)));
 	
-	fragColor = occlusion;
+	fragColour = occlusion;
 }

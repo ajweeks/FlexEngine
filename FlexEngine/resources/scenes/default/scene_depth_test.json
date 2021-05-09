@@ -1,18 +1,47 @@
 {
-	"version" : 2,
+	"version" : 5,
 	"name" : "scene_depth_test",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-6.181, 0.337, -3.678",
+			"pitch" : -0.109727,
+			"yaw" : 0.038510
+		}
+	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "C59463449CBDD28D481E059CCC8874E2",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 				"rot" : "0.000, 0.030, 0.160"
 			},
-			"material" : "skybox 01",
+			"materials" : 
+			[
+				"skybox 01"
+			],
 			"skybox info" : 
 			{
 				"rot" : "0.00, 0.03, 0.16"
@@ -20,8 +49,10 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "EB3B3D3BC1583DB34EA8DC977AD9A25F",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -29,18 +60,20 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "151CDCB63155FAB94C65B115824E3FF6",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.195, -0.973, -2.522"
+				"rot" : "1.194, -0.973, -2.523"
 			},
 			"directional light info" : 
 			{
 				"rotation" : "-0.217, -0.591, -0.616, 0.473",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
@@ -49,47 +82,67 @@
 		},
 		{
 			"name" : "block_1",
+			"id" : "D67100FAB06C6E854724987FBE43A400",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "5.500, 0.000, -1.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_2",
+			"id" : "E7231A3E2B9B8BA8455404ED78096047",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "10.500, 0.000, -2.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_3",
+			"id" : "0BBF1B9C7AB51EA049F73550B3FC6712",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "15.500, 0.000, -3.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		},
 		{
 			"name" : "block_4",
+			"id" : "2FADC236E903A08E4970E6ABEBEFF470",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "20.500, 0.000, -4.000"
 			},
-			"mesh" : "cube",
-			"material" : "placeholder"
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
 		}
 	]
 }

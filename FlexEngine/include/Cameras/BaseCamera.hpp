@@ -2,10 +2,21 @@
 
 namespace flex
 {
+	enum class CameraType
+	{
+		DEBUG_CAM,
+		OVERHEAD,
+		FIRST_PERSON,
+		TERMINAL,
+		VEHICLE,
+
+		_NONE
+	};
+
 	class BaseCamera
 	{
 	public:
-		BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
+		BaseCamera(const std::string& cameraName, CameraType type, bool bIsGameplayCam, real FOV = glm::radians(45.0f),
 			real zNear = 0.5f, real zFar = 1000.0f);
 		virtual ~BaseCamera();
 
@@ -75,6 +86,9 @@ namespace flex
 		bool bIsGameplayCam = true;
 		bool bIsFirstPerson = false;
 		bool bDEBUGCyclable = true;
+		bool bPossessPlayer = false;
+
+		CameraType type;
 
 	protected:
 		// Sets right, up, and forward based on yaw and pitch

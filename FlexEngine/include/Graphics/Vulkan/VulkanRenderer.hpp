@@ -7,6 +7,7 @@
 #include <map>
 
 #include "Callbacks/InputCallbacks.hpp"
+#include "Pair.hpp"
 #include "PoolAllocator.hpp"
 #include "VDeleter.hpp"
 #include "VulkanCommandBufferManager.hpp"
@@ -24,7 +25,7 @@ namespace flex
 		struct VulkanBuffer;
 		struct VulkanDevice;
 
-		class VulkanRenderer : public Renderer
+		class VulkanRenderer final : public Renderer
 		{
 		public:
 			VulkanRenderer();
@@ -36,16 +37,17 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
-			virtual void DestroyTexture(TextureID textureID) override;
+			virtual void OnTextureDestroyed(TextureID textureID) override;
 
-			virtual void ClearMaterials(bool bDestroyPersistentMats = false) override;
+			virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) override;
 
 			virtual void Update() override;
 			virtual void Draw() override;
+			virtual void DrawImGuiRendererInfo() override;
 			virtual void DrawImGuiWindows() override;
 
 			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
@@ -54,13 +56,18 @@ namespace flex
 			virtual u32 GetDynamicVertexBufferSize(RenderID renderID) override;
 			virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) override;
 
-			virtual void RecompileShaders(bool bForce) override;
-			virtual void LoadFonts(bool bForceRender) override;
+			virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr);
+			virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) override;
+			virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) override;
+			virtual void DrawImGuiShaderErrors() override;
+			virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
+			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 
-			virtual void ReloadSkybox(bool bRandomizeTexture) override;
+			virtual void ClearShaderHash(const std::string& shaderName) override;
+			virtual void RecompileShaders(bool bForce) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColor(real r, real g, real b) override;
+			virtual void SetClearColour(real r, real g, real b) override;
 
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
@@ -79,52 +86,53 @@ namespace flex
 			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
-			virtual Material& GetMaterial(MaterialID materialID) override;
-			virtual Shader& GetShader(ShaderID shaderID) override;
-
-			virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) override;
-			virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) override;
 			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
 			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
 
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
-			virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) override;
+			virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) override;
 
 			virtual void NewFrame() override;
 
 			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
 
 			virtual void DrawStringSS(const std::string& str,
-				const glm::vec4& color,
+				const glm::vec4& colour,
 				AnchorPoint anchor,
 				const glm::vec2& pos, // Positional offset from anchor
 				real spacing,
 				real scale = 1.0f) override;
 
 			virtual void DrawStringWS(const std::string& str,
-				const glm::vec4& color,
+				const glm::vec4& colour,
 				const glm::vec3& pos,
 				const glm::quat& rot,
 				real spacing,
 				real scale = 1.0f) override;
 
-			virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) override;
-			virtual void DrawImGuiForRenderObject(RenderID renderID) override;
-
 			virtual void RecaptureReflectionProbe() override;
-			virtual void RenderObjectStateChanged() override;
 
-			virtual void RecreateEverything() override;
+			virtual void RenderObjectMaterialChanged(MaterialID materialID) override;
+
+			virtual void RenderObjectStateChanged() override;
+			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) override;
 
 			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
+
+			virtual void RecreateEverything() override;
+
+			virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) override;
+
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
 			void GetCheckPointData();
+			void PrintMemoryUsage();
 
 			static void SetObjectName(VulkanDevice* device, u64 object, VkObjectType type, const char* name);
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
@@ -138,28 +146,24 @@ namespace flex
 			static void SetSamplerName(VulkanDevice* device, VkSampler sampler, const char* name);
 			static void SetBufferName(VulkanDevice* device, VkBuffer buffer, const char* name);
 
-			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 color = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
+			static void BeginDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName, glm::vec4 colour = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f));
 			static void EndDebugMarkerRegion(VkCommandBuffer cmdBuf, const char* markerName = nullptr); // markerName optional, useful for device check-pointing though
 
 			static PFN_vkSetDebugUtilsObjectNameEXT m_vkSetDebugUtilsObjectNameEXT;
 			static PFN_vkCmdBeginDebugUtilsLabelEXT m_vkCmdBeginDebugUtilsLabelEXT;
 			static PFN_vkCmdEndDebugUtilsLabelEXT m_vkCmdEndDebugUtilsLabelEXT;
+			static PFN_vkGetPhysicalDeviceMemoryProperties2 m_vkGetPhysicalDeviceMemoryProperties2;
 
 		protected:
+			virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) override;
 			virtual bool LoadShaderCode(ShaderID shaderID) override;
-			virtual void SetShaderCount(u32 shaderCount) override;
-			virtual void RemoveMaterial(MaterialID materialID, bool bUpdateUsages = true) override;
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual void RecreateShadowFrameBuffers() override;
-
-			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
-
-			virtual void EnqueueScreenSpaceSprites() override;
-			virtual void EnqueueWorldSpaceSprites() override;
 
 		private:
 			friend VulkanPhysicsDebugDraw;
 			friend VulkanRenderPass;
+			friend VulkanDescriptorPool;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
 
@@ -171,19 +175,11 @@ namespace flex
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT();
 
-			void CaptureSceneToCubemap(RenderID cubemapRenderID);
-			void GeneratePrefilteredMapFromCubemap(MaterialID cubemapMaterialID);
-			void GenerateIrradianceSamplerFromCubemap(MaterialID cubemapMaterialID);
-
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
 			void CreateWireframeDescriptorSets();
-			VkPipeline CreateWireframePipeline(VertexAttributes vertexAttributes);
-			VkPipeline GetOrCreateWireframePipeline(VertexAttributes vertexAttributes);
-			void DestroyWireframePipelines();
 
-			MaterialID GetNextAvailableMaterialID() const;
 			RenderID GetNextAvailableRenderID() const;
 			ParticleSystemID GetNextAvailableParticleSystemID() const;
 
@@ -193,20 +189,24 @@ namespace flex
 			void CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface();
-			//void SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height);
 			VkPhysicalDevice PickPhysicalDevice();
 			void CreateSwapChain();
 			void CreateSwapChainImageViews();
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const * uniformBufferList, ShaderID shaderID);
-			void CreateDescriptorSet(RenderID renderID);
-			void CreateDescriptorSet(DescriptorSetCreateInfo& createInfo, MaterialID materialID);
-			void CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateDescriptorSetLayout(ShaderID shaderID);
-			void CreateGraphicsPipeline(RenderID renderID, bool bSetCubemapRenderPass);
-			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo);
+			void FillOutImageDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
+
+			void CreateDescriptorSets();
+
+			void CreateGraphicsPipeline(RenderID renderID);
+			void CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo, GraphicsPipelineID& outPipelineID);
+			void DestroyAllGraphicsPipelines();
+			void DestroyNonPersistentGraphicsPipelines();
+			void DestroyGraphicsPipeline(GraphicsPipelineID pipelineID);
+			bool IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const;
+			GraphicsPipelineConfiguration* GetGraphicsPipeline(GraphicsPipelineID pipelineID) const;
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
@@ -214,6 +214,9 @@ namespace flex
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
+			void CreateStaticUniformBuffer(VulkanMaterial* material);
+			void CreateDynamicUniformBuffer(VulkanMaterial* material);
+			void CreateParticleUniformBuffer(VulkanMaterial* material);
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
@@ -221,25 +224,26 @@ namespace flex
 			void CreateComputeResources();
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
 
-			// Returns a pointer into m_LoadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
-			VulkanTexture* GetLoadedTexture(const std::string& filePath);
-			bool RemoveLoadedTexture(VulkanTexture* texture, bool bDestroy);
-
+			// Creates all static vertex buffers that are marked as dirty
 			void CreateStaticVertexBuffers();
+			void CreateAllStaticVertexBuffers();
+
+			// Creates all dynamic vertex/index buffer pairs that are marked as dirty
 			void CreateDynamicVertexAndIndexBuffers();
+			void CreateAllDynamicVertexAndIndexBuffers();
+
+			// Creates the static index buffer used by all static geometry
+			void CreateStaticIndexBuffer();
 
 			void CreateShadowVertexBuffer();
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
 			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size);
 
-			void CreateStaticIndexBuffers();
-
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
 
-			void CreateDescriptorPool();
-			u32 AllocateDynamicUniformBuffer(u32 dynamicDataSize, void** data, i32 maxObjectCount = -1);
+			u32 AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap = true);
 
@@ -275,7 +279,7 @@ namespace flex
 			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
 			void RecreateSwapChain();
 
-			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& color);
+			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& colour);
 			void EndDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName);
 
 			void SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName);
@@ -300,8 +304,6 @@ namespace flex
 
 			void SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth = 3.0f);
 
-			// Returns true if object was duplicated
-			bool DoTextureSelector(const char* label, const std::vector<VulkanTexture*>& textures, i32* selectedIndex);
 			void ImGuiUpdateTextureIndexOrMaterial(bool bUpdateTextureMaterial,
 				const std::string& texturePath,
 				std::string& matTexturePath,
@@ -309,7 +311,6 @@ namespace flex
 				i32 i,
 				i32* textureIndex,
 				VulkanTexture** textureToUpdate);
-			void DoTexturePreviewTooltip(VulkanTexture* texture);
 
 			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
@@ -320,13 +321,6 @@ namespace flex
 				VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
 				const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 				void* pUserData);
-
-			// TODO: Monitor number of used desc sets to set this value intelligently
-			static const u32 MAX_NUM_DESC_SETS = 1024;
-			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 1024;
-			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 1024;
-			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1024;
-			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
 
 			inline VulkanRenderObject* GetRenderObject(RenderID renderID)
 			{
@@ -339,6 +333,7 @@ namespace flex
 
 			void DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
+			void DrawUIMesh(UIMesh* uiMesh, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
 
 			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
@@ -354,21 +349,18 @@ namespace flex
 			u32 GetStaticVertexIndexBufferIndex(u32 stride);
 			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
-			TextureID GetNextAvailableTextureID();
-			TextureID AddLoadedTexture(VulkanTexture* texture);
-			VulkanTexture* GetLoadedTexture(TextureID textureID);
+			void UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax);
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
-			std::map<MaterialID, VulkanMaterial> m_Materials;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
 			VulkanTexture* m_BRDFTexture = nullptr;
 			bool bRenderedBRDFLUT = false;
 
-			FrameBufferAttachment* m_GBufferColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_GBufferColorAttachment1 = nullptr;
+			FrameBufferAttachment* m_GBufferColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
 			VDeleter<VkSampler> m_LinMipLinSampler;
@@ -376,8 +368,8 @@ namespace flex
 			VDeleter<VkSampler> m_NearestClampEdgeSampler;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
-			FrameBufferAttachment* m_OffscreenFB0ColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_OffscreenFB1ColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB0ColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_OffscreenFB1ColourAttachment0 = nullptr;
 
 			FrameBufferAttachment* m_OffscreenFB0DepthAttachment = nullptr;
 			FrameBufferAttachment* m_OffscreenFB1DepthAttachment = nullptr;
@@ -389,12 +381,12 @@ namespace flex
 			VkDescriptorSet m_TAAResolveDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_FinalFullscreenBlitDescriptorSet = VK_NULL_HANDLE;
 
-			FrameBufferAttachment* m_SSAOFBColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_SSAOBlurHFBColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_SSAOBlurVFBColorAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOFBColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurHFBColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_SSAOBlurVFBColourAttachment0 = nullptr;
 
-			FrameBufferAttachment* m_GBufferCubemapColorAttachment0 = nullptr;
-			FrameBufferAttachment* m_GBufferCubemapColorAttachment1 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColourAttachment0 = nullptr;
+			FrameBufferAttachment* m_GBufferCubemapColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
 
 			VDeleter<VkImage> m_ShadowImage;
@@ -416,7 +408,10 @@ namespace flex
 			};
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
+			// Value which gets incremented by each sprite draw and reset at the end of every frame
+			u32 m_SpriteDynamicUBOOffset = 0;
 
+			// Maps uniform IDs to data & data length
 			std::map<u64, Pair<void*, u32>> m_GlobalUserUniforms;
 
 			// TODO: Create other query pools
@@ -428,6 +423,7 @@ namespace flex
 
 			std::vector<const char*> m_ValidationLayers =
 			{
+				"VK_LAYER_KHRONOS_validation",
 				//"VK_LAYER_LUNARG_standard_validation",
 				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
 				//"VK_LAYER_LUNARG_api_dump", // Log content
@@ -439,7 +435,6 @@ namespace flex
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
-				VK_KHR_MAINTENANCE1_EXTENSION_NAME, // For negative viewport height
 			};
 
 			const std::vector<const char*> m_RequiredInstanceExtensions =
@@ -456,16 +451,23 @@ namespace flex
 			{
 				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
+				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
 			};
 
+			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;
 			std::vector<const char*> m_EnabledInstanceExtensions;
 
 			bool m_bDiagnosticCheckpointsEnabled = false;
+			bool m_bMemoryBudgetExtensionEnabled = false;
 
-#ifdef SHIPPING
+#ifdef RELEASE
 			const bool m_bEnableValidationLayers = false;
+			const bool m_bEnableGPUAssistanceValidationFeature = false;
+			const bool m_bEnableBestPracticesValidationFeature = false;
 #else
 			const bool m_bEnableValidationLayers = true;
+			const bool m_bEnableGPUAssistanceValidationFeature = true;
+			const bool m_bEnableBestPracticesValidationFeature = false;
 #endif
 
 			bool m_bShaderErrorWindowShowing = true;
@@ -507,35 +509,35 @@ namespace flex
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
-			GraphicsPipeline m_ShadowGraphicsPipeline;
+			GraphicsPipelineID m_ShadowGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_FontSSGraphicsPipeline;
-			GraphicsPipeline m_FontWSGraphicsPipeline;
+			GraphicsPipelineID m_FontSSGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_FontWSGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_PostProcessGraphicsPipeline;
-			GraphicsPipeline m_TAAResolveGraphicsPipeline;
-			GraphicsPipeline m_GammaCorrectGraphicsPipeline;
+			GraphicsPipelineID m_PostProcessGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_TAAResolveGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_GammaCorrectGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_SpriteArrGraphicsPipeline;
+			GraphicsPipelineID m_SpriteArrGraphicsPipelineID = InvalidGraphicsPipelineID;
 
-			GraphicsPipeline m_BlitGraphicsPipeline;
-
-			VDeleter<VkPipelineLayout> m_ParticleGraphicsPipelineLayout;
+			GraphicsPipelineID m_BlitGraphicsPipelineID = InvalidGraphicsPipelineID;
 
 			VDeleter<VkPipelineLayout> m_ParticleSimulationComputePipelineLayout;
 
+			std::map<u64, GraphicsPipelineID> m_GraphicsPipelineHashes;
+			std::map<GraphicsPipelineID, GraphicsPipelineConfiguration*> m_GraphicsPipelines;
+			u32 m_LastGraphicsPipelineID = 0; // Monotonically increasing value to give unique IDs to pipelines
+
+			//std::map<u64, GraphicsPipelineID> m_DescriptorSetsHashes;
+			u32 m_LastDescriptorSetID = 0; // Monotonically increasing value to give unique IDs to descriptor sets
+
+			// TODO: Make RenderAPI-agnostic and move to resource manager
 			std::vector<VulkanParticleSystem*> m_ParticleSystems;
 
-			VDeleter<VkDescriptorPool> m_DescriptorPool;
-			std::vector<VkDescriptorSetLayout> m_DescriptorSetLayouts;
+			VulkanDescriptorPool* m_DescriptorPoolPersistent = nullptr; // Persistent across scene loads (only destroyed at application quit)
+			VulkanDescriptorPool* m_DescriptorPool = nullptr; // Non-persistent pool (destroyed on scene change)
 
 			VulkanCommandBufferManager m_CommandBufferManager;
-			std::vector<VulkanShader> m_Shaders;
-
-			std::vector<VulkanTexture*> m_LoadedTextures;
-
-			VulkanTexture* m_BlankTexture = nullptr;
-			VulkanTexture* m_BlankTextureArr = nullptr;
 
 			// Pair is: (stride, vertex buffer pair)
 			// Indexed into through Shader::vertexBufferIndex
@@ -549,6 +551,8 @@ namespace flex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
 			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
+			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair;
+
 			u32 m_DynamicAlignment = 0;
 
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
@@ -557,22 +561,22 @@ namespace flex
 			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
 
-			VkClearColorValue m_ClearColor;
+			VkClearColorValue m_ClearColour;
 
 			u32 m_CurrentSwapChainBufferIndex = 0;
 
-			VulkanTexture* m_NoiseTexture = nullptr;
+			TextureID m_LTCMatricesID = InvalidTextureID;
+			TextureID m_LTCAmplitudesID = InvalidTextureID;
 
-			GraphicsPipeline m_SSAOGraphicsPipeline;
-			GraphicsPipeline m_SSAOBlurHGraphicsPipeline;
-			GraphicsPipeline m_SSAOBlurVGraphicsPipeline;
+			GraphicsPipelineID m_SSAOGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_SSAOBlurHGraphicsPipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipelineID m_SSAOBlurVGraphicsPipelineID = InvalidGraphicsPipelineID;
 			VkDescriptorSet m_SSAODescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurHDescSet = VK_NULL_HANDLE;
 			VkDescriptorSet m_SSAOBlurVDescSet = VK_NULL_HANDLE;
 
-			// Maps vertex attributes to pipeline
-			std::map<VertexAttributes, VkPipeline> m_WireframeGraphicsPipelines;
-			VDeleter<VkPipelineLayout> m_WireframePipelineLayout;
+			// Maps vertex attributes to pipeline (this map doesn't have ownership over pipelines, only references)
+			std::map<VertexAttributes, GraphicsPipelineID> m_WireframeGraphicsPipelines;
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
@@ -581,16 +585,13 @@ namespace flex
 			struct VulkanShaderCompiler* m_ShaderCompiler = nullptr;
 #endif
 
-			const FrameBufferAttachmentID SWAP_CHAIN_COLOR_ATTACHMENT_ID = 11000;
+			const FrameBufferAttachmentID SWAP_CHAIN_COLOUR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
 			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
 
 			VulkanRenderer(const VulkanRenderer&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 		};
-
-		void SetClipboardText(void* userData, const char* text);
-		const char* GetClipboardText(void* userData);
 	} // namespace vk
 } // namespace flex
 

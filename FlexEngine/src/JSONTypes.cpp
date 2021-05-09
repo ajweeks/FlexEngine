@@ -41,13 +41,26 @@ namespace flex
 			if (isDigit || isDecimal || isNegation)
 			{
 				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
-				if (isDecimal || stringAfter[nextNonAlphaNumeric] == '.')
+				if (isDecimal || (nextNonAlphaNumeric != -1 && !stringAfter.empty() && stringAfter[nextNonAlphaNumeric] == '.'))
 				{
 					return Type::FLOAT;
 				}
 				else
 				{
-					return Type::INT;
+					std::string numberStr = std::to_string(c) + stringAfter.substr(0, nextNonAlphaNumeric);
+
+					if (isNegation)
+					{
+						i64 result = strtoll(numberStr.c_str(), nullptr, 10);
+
+						return (result < -INT_MAX || result > INT_MAX) ? Type::LONG : Type::INT;
+					}
+					else
+					{
+						u64 result = strtoull(numberStr.c_str(), nullptr, 10);
+
+						return (result > INT_MAX) ? Type::ULONG : Type::UINT;
+					}
 				}
 			}
 		} return Type::UNINITIALIZED;
@@ -76,6 +89,24 @@ namespace flex
 		intValue(inIntValue)
 	{
 		ENSURE(!IsNanOrInf((real)inIntValue));
+	}
+
+	JSONValue::JSONValue(u32 inUIntValue) :
+		type(Type::UINT),
+		uintValue(inUIntValue)
+	{
+	}
+
+	JSONValue::JSONValue(i64 inLongValue) :
+		type(Type::LONG),
+		longValue(inLongValue)
+	{
+	}
+
+	JSONValue::JSONValue(u64 inULongValue) :
+		type(Type::ULONG),
+		ulongValue(inULongValue)
+	{
 	}
 
 	JSONValue::JSONValue(real inFloatValue) :
@@ -115,6 +146,12 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const GUID& inGUIDValue) :
+		type(Type::STRING),
+		strValue(inGUIDValue.ToString())
+	{
+	}
+
 	bool JSONObject::HasField(const std::string& label) const
 	{
 		for (const JSONField& field : fields)
@@ -139,8 +176,9 @@ namespace flex
 		return "";
 	}
 
-	bool JSONObject::SetStringChecked(const std::string& label, std::string& value) const
+	bool JSONObject::TryGetString(const std::string& label, std::string& value) const
 	{
+		// TODO: PERFORMANCE: Return index of found item to avoid duplicate looping
 		if (HasField(label))
 		{
 			value = GetString(label);
@@ -149,7 +187,27 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec2Checked(const std::string& label, glm::vec2& value) const
+	StringID JSONObject::GetStringID(const std::string& label) const
+	{
+		if (HasField(label))
+		{
+			u64 result = GetULong(label);
+			return (StringID)result;
+		}
+		return InvalidStringID;
+	}
+
+	bool JSONObject::TryGetStringID(const std::string& label, StringID& value) const
+	{
+		if (HasField(label))
+		{
+			value = (StringID)GetULong(label);
+			return true;
+		}
+		return false;
+	}
+
+	bool JSONObject::TryGetVec2(const std::string& label, glm::vec2& value) const
 	{
 		if (HasField(label))
 		{
@@ -160,7 +218,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec3Checked(const std::string& label, glm::vec3& value) const
+	bool JSONObject::TryGetVec3(const std::string& label, glm::vec3& value) const
 	{
 		if (HasField(label))
 		{
@@ -171,7 +229,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetVec4Checked(const std::string& label, glm::vec4& value) const
+	bool JSONObject::TryGetVec4(const std::string& label, glm::vec4& value) const
 	{
 		if (HasField(label))
 		{
@@ -221,19 +279,13 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				if (field.value.intValue != 0)
-				{
-					ENSURE(!IsNanOrInf((real)field.value.intValue));
-					return field.value.intValue;
-				}
-				ENSURE(!IsNanOrInf(field.value.floatValue));
-				return (i32)field.value.floatValue;
+				return field.value.intValue;
 			}
 		}
 		return 0;
 	}
 
-	bool JSONObject::SetIntChecked(const std::string& label, i32& value) const
+	bool JSONObject::TryGetInt(const std::string& label, i32& value) const
 	{
 		if (HasField(label))
 		{
@@ -243,13 +295,67 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetUIntChecked(const std::string& label, u32& value) const
+	u32 JSONObject::GetUInt(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.uintValue;
+			}
+		}
+		return 0;
+	}
+
+	bool JSONObject::TryGetUInt(const std::string& label, u32& value) const
 	{
 		if (HasField(label))
 		{
-			i32 iValue = GetInt(label);
-			value = (u32)iValue;
-			assert((i32)value == iValue); // Lost precision in uint storage! Implement uint serialization!
+			value = GetUInt(label);
+			return true;
+		}
+		return false;
+	}
+
+	i64 JSONObject::GetLong(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.longValue;
+			}
+		}
+		return 0;
+	}
+
+	bool JSONObject::TryGetLong(const std::string& label, i64& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetLong(label);
+			return true;
+		}
+		return false;
+	}
+
+	u64 JSONObject::GetULong(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.ulongValue;
+			}
+		}
+		return 0;
+	}
+
+	bool JSONObject::TryGetULong(const std::string& label, u64& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetULong(label);
 			return true;
 		}
 		return false;
@@ -274,7 +380,7 @@ namespace flex
 		return 0.0f;
 	}
 
-	bool JSONObject::SetFloatChecked(const std::string& label, real& value) const
+	bool JSONObject::TryGetFloat(const std::string& label, real& value) const
 	{
 		if (HasField(label))
 		{
@@ -297,7 +403,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::SetBoolChecked(const std::string& label, bool& value) const
+	bool JSONObject::TryGetBool(const std::string& label, bool& value) const
 	{
 		if (HasField(label))
 		{
@@ -305,6 +411,39 @@ namespace flex
 			return true;
 		}
 		return false;
+	}
+
+	GUID JSONObject::GetGUID(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return GUID::FromString(field.value.strValue);
+			}
+		}
+		return InvalidGUID;
+	}
+
+	bool JSONObject::TryGetGUID(const std::string& label, GUID& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetGUID(label);
+			return true;
+		}
+		return false;
+	}
+
+	GameObjectID JSONObject::GetGameObjectID(const std::string& label) const
+	{
+		GUID guid = GetGUID(label);
+		return *(GameObjectID*)&guid;
+	}
+
+	bool JSONObject::TryGetGameObjectID(const std::string& label, GameObjectID& value) const
+	{
+		return TryGetGUID(label, *(GUID*)&value);
 	}
 
 	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
@@ -319,7 +458,7 @@ namespace flex
 		return s_EmptyFieldArray;
 	}
 
-	bool JSONObject::SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const
+	bool JSONObject::TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const
 	{
 		if (HasField(label))
 		{
@@ -341,7 +480,7 @@ namespace flex
 		return s_EmptyObjectArray;
 	}
 
-	bool JSONObject::SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const
+	bool JSONObject::TryGetObjectArray(const std::string& label, std::vector<JSONObject>& value) const
 	{
 		if (HasField(label))
 		{
@@ -363,7 +502,7 @@ namespace flex
 		return s_EmptyObject;
 	}
 
-	bool JSONObject::SetObjectChecked(const std::string& label, JSONObject& value) const
+	bool JSONObject::TryGetObject(const std::string& label, JSONObject& value) const
 	{
 		if (HasField(label))
 		{
@@ -384,7 +523,7 @@ namespace flex
 	{
 	}
 
-	std::string JSONField::Print(i32 tabCount)
+	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + '\"' + label + "\" : ");
@@ -397,6 +536,15 @@ namespace flex
 		case JSONValue::Type::INT:
 			result += IntToString(value.intValue);
 			break;
+		case JSONValue::Type::UINT:
+			result += UIntToString(value.uintValue);
+			break;
+		case JSONValue::Type::LONG:
+			result += LongToString(value.longValue);
+			break;
+		case JSONValue::Type::ULONG:
+			result += ULongToString(value.ulongValue);
+			break;
 		case JSONValue::Type::FLOAT:
 			result += FloatToString(value.floatValue, value.floatPrecision);
 			break;
@@ -407,7 +555,7 @@ namespace flex
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
-				result += value.objectValue.fields[i].Print(tabCount + 1);
+				result += value.objectValue.fields[i].ToString(tabCount + 1);
 				if (i != value.objectValue.fields.size() - 1)
 				{
 					result += ",\n";
@@ -423,7 +571,7 @@ namespace flex
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
-				result += value.objectArrayValue[i].Print(tabCount + 1);
+				result += value.objectArrayValue[i].ToString(tabCount + 1);
 				if (i != value.objectArrayValue.size() - 1)
 				{
 					result += ",\n";
@@ -463,14 +611,15 @@ namespace flex
 		return result;
 	}
 
-	std::string JSONObject::Print(i32 tabCount)
+	std::string JSONObject::ToString(i32 tabCount /* = 0 */) const
 	{
+		// TODO: Use StringBuilder in PrintFunctions
 		const std::string tabs(tabCount, '\t');
 		std::string result(tabs + "{\n");
 
 		for (u32 i = 0; i < fields.size(); ++i)
 		{
-			result += fields[i].Print(tabCount + 1);
+			result += fields[i].ToString(tabCount + 1);
 			if (i != fields.size() - 1)
 			{
 				result += ",\n";

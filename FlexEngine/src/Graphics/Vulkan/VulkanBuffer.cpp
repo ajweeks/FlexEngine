@@ -19,6 +19,8 @@ namespace flex
 
 		VkResult VulkanBuffer::Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 		{
+			assert(size != 0);
+
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -69,6 +71,11 @@ namespace flex
 				vkUnmapMemory(m_Device->m_LogicalDevice, m_Memory);
 				m_Mapped = nullptr;
 			}
+		}
+
+		void VulkanBuffer::Reset()
+		{
+			allocations.clear();
 		}
 
 		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size, bool bCanResize)
@@ -172,7 +179,7 @@ namespace flex
 					if (result == VK_SUCCESS)
 					{
 						// TODO: Copy previous contents in to new buffer?
-						UpdateAllocationSize(offset, newSize);
+						UpdateAllocationSize(offset, m_Size);
 						return offset;
 					}
 					else
@@ -212,24 +219,11 @@ namespace flex
 			real unused = (real)excessBytes / m_Size;
 			if (unused >= minUnused)
 			{
-				VkDeviceSize newSize = usedSize;
+				VkDeviceSize newSize = glm::max(usedSize, (VkDeviceSize)1); // Size must be greater than zero
 				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
 
 				VK_CHECK_RESULT(result);
 			}
-		}
-
-		VkDeviceSize VulkanBuffer::SizeOf(VkDeviceSize offset)
-		{
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
-			{
-				if (allocations[i].offset == offset)
-				{
-					return allocations[i].size;
-				}
-			}
-
-			return (VkDeviceSize)-1;
 		}
 
 		void VulkanBuffer::UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize)
@@ -242,6 +236,19 @@ namespace flex
 					break;
 				}
 			}
+		}
+
+		VkDeviceSize VulkanBuffer::GetAllocationSize(VkDeviceSize offset) const
+		{
+			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			{
+				if (allocations[i].offset == offset)
+				{
+					return allocations[i].size;
+				}
+			}
+
+			return (VkDeviceSize)-1;
 		}
 	} // namespace vk
 } // namespace flex

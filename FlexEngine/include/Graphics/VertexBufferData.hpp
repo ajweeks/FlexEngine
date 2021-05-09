@@ -13,8 +13,8 @@ namespace flex
 		std::vector<glm::vec4> positions_4D;
 		std::vector<glm::vec3> velocities;
 		std::vector<glm::vec2> texCoords_UV;
-		std::vector<i32> colors_R8G8B8A8;
-		std::vector<glm::vec4> colors_R32G32B32A32;
+		std::vector<i32> colours_R8G8B8A8;
+		std::vector<glm::vec4> colours_R32G32B32A32;
 		std::vector<glm::vec3> tangents;
 		std::vector<glm::vec3> normals;
 
@@ -32,13 +32,16 @@ namespace flex
 		void UpdateData(const VertexBufferDataCreateInfo& createInfo);
 		void Destroy();
 
-		void Shrink(real minExcess = 0.0f);
+		void ShrinkIfExcessGreaterThan(real minExcess = 0.0f);
 
 		// Copies data from this buffer into dst for each given attribute
 		// If this buffer doesn't contain a given attribute, default values will be used
+		// Returns bytes copied
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
 
 		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
+
+		static void ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount);
 
 		bool bDynamic = false;
 		real* vertexData = nullptr;

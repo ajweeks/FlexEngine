@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -21,8 +22,9 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	OverheadCamera::OverheadCamera(real FOV) :
-		BaseCamera("overhead", true, FOV)
+		BaseCamera("overhead", CameraType::OVERHEAD, true, FOV)
 	{
+		bPossessPlayer = true;
 		ResetValues();
 	}
 
@@ -62,7 +64,7 @@ namespace flex
 	{
 		BaseCamera::Update();
 
-		if (!m_Player0)
+		if (m_Player0 == nullptr)
 		{
 			return;
 		}
@@ -104,16 +106,18 @@ namespace flex
 
 	void OverheadCamera::DrawImGuiObjects()
 	{
-		if (ImGui::TreeNode("Overhead camera"))
+		if (m_Player0 != nullptr)
 		{
-			glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
-			glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
-			g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
+			if (ImGui::TreeNode("Overhead camera"))
+			{
+				glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
+				glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
+				g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
-			ImGui::Text("Avg player forward: %s", VecToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
-			ImGui::Text("For: %s", VecToString(forward, 2).c_str());
-
-			ImGui::TreePop();
+				ImGui::Text("Avg player forward: %s", VecToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
+				ImGui::Text("For: %s", VecToString(forward, 2).c_str());
+				ImGui::TreePop();
+			}
 		}
 	}
 
@@ -127,7 +131,7 @@ namespace flex
 
 	void OverheadCamera::SetPosAndLookAt()
 	{
-		if (!m_Player0)
+		if (m_Player0 == nullptr)
 		{
 			return;
 		}
@@ -149,7 +153,7 @@ namespace flex
 
 	void OverheadCamera::FindPlayer()
 	{
-		m_Player0 = g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0");
+		m_Player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 	}
 
 	void OverheadCamera::ResetValues()
@@ -162,7 +166,7 @@ namespace flex
 		pitch = -PI_DIV_FOUR;
 		SetPosAndLookAt();
 
-		if (m_Player0)
+		if (m_Player0 != nullptr)
 		{
 			m_PlayerPosRollingAvg.Reset(m_Player0->GetTransform()->GetWorldPosition());
 			m_PlayerForwardRollingAvg.Reset(m_Player0->GetTransform()->GetForward());

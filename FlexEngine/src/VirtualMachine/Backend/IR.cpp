@@ -3,7 +3,6 @@
 #include "VirtualMachine/Backend/IR.hpp"
 
 #include "VirtualMachine/Backend/VariableContainer.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
 #include "StringBuilder.hpp"
@@ -88,17 +87,14 @@ namespace flex
 			}
 		}
 
-		void Block::AddCall(State* state, const std::string& target, const std::vector<IR::Value*>& arguments)
+		void Block::AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<IR::Value*>& arguments)
 		{
-			FLEX_UNUSED(state);
-			FLEX_UNUSED(target);
-			FLEX_UNUSED(arguments);
 			if (!Filled())
 			{
-				// TODO: Look up arg address
-				// TODO: Args
-				//Block targetBlock;
-				//terminator = new Branch(targetBlock);
+				// Empty variable name signals call to void function. Calls to
+				// functions with return values go through AddAssignment path.
+				std::string variable = "";
+				assignments.push_back(new Assignment(state, callOrigin, variable, new FunctionCallValue(state, callOrigin, target, arguments)));
 			}
 		}
 
@@ -223,7 +219,6 @@ namespace flex
 				{
 					return variableTypes[identifier->variable];
 				}
-
 				std::string str = "Undeclared identifier \"" + identifier->variable + "\"\n";
 				diagnosticContainer->AddDiagnostic(identifier->origin, str);
 				return Value::Type::_NONE;
@@ -287,7 +282,7 @@ namespace flex
 				}
 				return ifTrueType;
 			}
-			case Value::Type::FUNC_CALL:
+			case Value::Type::CALL:
 			{
 				FunctionCallValue* funcCall = (FunctionCallValue*)value;
 				auto iter = functionTypes.find(funcCall->target);
@@ -357,9 +352,24 @@ namespace flex
 		{
 			StringBuilder builder;
 
-			builder.Append(variable);
-			builder.Append(" = ");
-			builder.Append(value->ToString());
+			if (value->type == Value::Type::CALL)
+			{
+				// variable will be empty for functions with a return type of void
+				if (!variable.empty())
+				{
+					builder.Append(variable);
+					builder.Append(" = ");
+				}
+
+				builder.Append(value->ToString());
+			}
+			else
+			{
+				const char* typeStr = IR::Value::TypeToString(value->type);
+				builder.Append(typeStr);
+				builder.Append(" ");
+				builder.Append(variable);
+			}
 
 			return builder.ToString();
 		}
@@ -548,6 +558,9 @@ namespace flex
 				}
 			}
 			builder.Append(")");
+			builder.Append(" -> ");
+			State::FuncSig funcSig = irState->functionTypes[target];
+			builder.Append(TypeToString(funcSig.returnType));
 
 			return builder.ToString();
 		}
@@ -663,7 +676,7 @@ namespace flex
 			}
 		}
 
-		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast)
+		void IntermediateRepresentation::GenerateFromAST(AST::AST* ast, FunctionBindings* functionBindings)
 		{
 			if (state)
 			{
@@ -689,14 +702,46 @@ namespace flex
 			//	PrintError("L%u: %s\n", diagnostic.lineNumber, diagnostic.message.c_str());
 			//}
 
+			{
+				char buffer[256];
+				for (i32 terminalIndex = 0; terminalIndex < Terminal::MAX_OUTPUT_COUNT; ++terminalIndex)
+				{
+					sprintf(buffer, "out_%d", terminalIndex);
+					state->variableTypes[std::string(buffer)] = Value::Type::INT;
+				}
+			}
+
 			if (ast->diagnosticContainer->diagnostics.empty())
 			{
 				DiscoverFunctionDefinitions(ast->rootBlock);
-				LowerStatement(ast->rootBlock);
-				state->InsertionBlock()->AddHalt();
-				LowerFunctionDefinitions(ast->rootBlock);
-				blocks = state->blocks;
-				SetBlockIndices();
+
+				for (auto& funcPtrPair : functionBindings->ExternalFuncTable)
+				{
+					IFunction* funcPtr = funcPtrPair.second;
+
+					IR::Value::Type returnType = (IR::Value::Type)funcPtr->returnType;
+
+					std::vector<IR::Value::Type> argumentTypes;
+					argumentTypes.reserve(funcPtr->argTypes.size());
+					for (Variant::Type argType : funcPtr->argTypes)
+					{
+						argumentTypes.emplace_back((IR::Value::Type)argType);
+					}
+
+					if (!AddFunctionType(Span(Span::Source::GENERATED), funcPtr->name, returnType, argumentTypes))
+					{
+						PrintWarn("Failed to bind external function with name %s\n", funcPtr->name.c_str());
+					}
+				}
+
+				if (state->diagnosticContainer->diagnostics.empty())
+				{
+					LowerStatement(ast->rootBlock);
+					state->InsertionBlock()->AddHalt();
+					LowerFunctionDefinitions(ast->rootBlock);
+					blocks = state->blocks;
+					SetBlockIndices();
+				}
 			}
 
 			//s = firstBlock->ToString();
@@ -760,6 +805,11 @@ namespace flex
 
 		void IntermediateRepresentation::CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block)
 		{
+			if (block == nullptr)
+			{
+				return;
+			}
+
 			if (block->terminator != nullptr)
 			{
 				switch (block->terminator->type)
@@ -821,8 +871,21 @@ namespace flex
 				AST::FunctionDeclaration* funcDecl = (AST::FunctionDeclaration*)statement;
 
 				IR::Block* bodyBlock = new IR::Block(state, funcDecl->span);
+				bodyBlock->funcName = funcDecl->name;
 
 				state->PushInstructionBlock(bodyBlock);
+
+				State::FuncSig& funcSig = state->functionTypes[funcDecl->name];
+				// TODO: Handle lifetimes
+				for (u32 i = 0; i < (u32)funcDecl->arguments.size(); ++i)
+				{
+					AST::Declaration* arg = funcDecl->arguments[i];
+					state->variableTypes[arg->identifierStr] = funcSig.argumentTypes[i];
+					//arg->initializer = new AST::(Span::Source::GENERATED, arg->typeName, AST::StatementType::FUNC_ARG);
+					//state->WriteVariableInBlock(arg->identifierStr, LowerExpression(arg));
+					IR::Argmuent* argument = new IR::Argmuent(state, arg->identifierStr);
+					state->InsertionBlock()->AddAssignment(new IR::Assignment(state, arg->span, arg->identifierStr, argument));
+				}
 				LowerStatement(funcDecl->body);
 				if (bodyBlock->terminator != nullptr)
 				{
@@ -841,8 +904,6 @@ namespace flex
 					}
 				}
 				state->InsertionBlock()->SealBlock();
-
-				assert(state->functionTypes.find(funcDecl->name) != state->functionTypes.end());
 			} break;
 			}
 		}
@@ -851,12 +912,39 @@ namespace flex
 		{
 			if (IsExpression(statement->statementType))
 			{
-				state->WriteVariableInBlock(state->NextTemporary(), LowerExpression((AST::Expression*)statement));
+				IR::Value* value = LowerExpression((AST::Expression*)statement);
+
+				if (statement->statementType == AST::StatementType::CALL)
+				{
+					IR::FunctionCallValue* call = (IR::FunctionCallValue*)value;
+					auto iter = state->functionTypes.find(call->target);
+					if (iter != state->functionTypes.end())
+					{
+						if (iter->second.returnType == Value::Type::VOID)
+						{
+							state->InsertionBlock()->AddCall(state, call->origin, call->target, call->arguments);
+							return;
+						}
+						else
+						{
+							state->WriteVariableInBlock(state->NextTemporary(), value);
+							return;
+						}
+					}
+					else
+					{
+						state->diagnosticContainer->AddDiagnostic(statement->span, "Function with name %s not found\n");
+						return;
+					}
+				}
+				state->WriteVariableInBlock(state->NextTemporary(), value);
+				return;
 			}
 
 			if (IsLiteral(statement->statementType))
 			{
-				//ValueWrapper val1 = ValueWrapper(ValueWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
+				//VariantWrapper val1 = VariantWrapper(VariantWrapper::Type::CONSTANT, ((AST::Expression*)statement)->GetValue());
+				DEBUG_BREAK();
 			}
 			else
 			{
@@ -870,8 +958,113 @@ namespace flex
 					Block* mergeBlock = new Block(state, state->InsertionBlock()->origin);
 					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(state, ifStatement->otherwise->span);
 
-					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, LowerExpression(ifStatement->condition), ifTrueBlock, ifFalseBlock);
+					IR::Value* conditionExpr = LowerExpression(ifStatement->condition);
+					if (conditionExpr == nullptr)
+					{
+						delete ifTrueBlock;
+						delete mergeBlock;
+						delete ifFalseBlock;
+						return;
+					}
 
+					bool bAlwaysTakeTrue = false;
+					bool bAlwaysTakeFalse = false;
+
+					// Eliminate dead branches
+					if (conditionExpr->type == IR::Value::Type::INT ||
+						conditionExpr->type == IR::Value::Type::FLOAT ||
+						conditionExpr->type == IR::Value::Type::BOOL)
+					{
+						if (conditionExpr->AsInt() == 0)
+						{
+							bAlwaysTakeFalse = true;
+						}
+						else
+						{
+							bAlwaysTakeTrue = true;
+						}
+					}
+					else if (conditionExpr->type == IR::Value::Type::STRING ||
+							conditionExpr->type == IR::Value::Type::CHAR)
+					{
+						state->diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid conditional expression");
+						return;
+					}
+
+					if (bAlwaysTakeTrue)
+					{
+						delete conditionExpr;
+						conditionExpr = nullptr;
+						delete ifFalseBlock;
+						ifFalseBlock = nullptr;
+
+						state->InsertionBlock()->AddBranch(ifStatement->span, ifTrueBlock);
+						state->PushInstructionBlock(ifTrueBlock);
+						LowerStatement(ifStatement->then);
+						state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
+						state->InsertionBlock()->SealBlock();
+						state->PushInstructionBlock(mergeBlock);
+						return;
+					}
+
+					if (bAlwaysTakeFalse)
+					{
+						delete conditionExpr;
+						conditionExpr = nullptr;
+						delete ifTrueBlock;
+						ifTrueBlock = nullptr;
+
+						if (ifStatement->otherwise != nullptr)
+						{
+							state->InsertionBlock()->AddBranch(ifStatement->span, ifFalseBlock);
+							state->PushInstructionBlock(ifFalseBlock);
+							LowerStatement(ifStatement->otherwise);
+							state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
+							state->InsertionBlock()->SealBlock();
+							state->PushInstructionBlock(mergeBlock);
+						}
+						else
+						{
+							delete ifFalseBlock;
+							ifFalseBlock = nullptr;
+						}
+						return;
+					}
+
+					IR::Value::Type valueType = state->GetValueType(conditionExpr);
+
+					std::string tempIdent = state->NextTemporary();
+					state->WriteVariableInBlock(tempIdent, conditionExpr);
+
+					IR::Identifier* newTemp = new IR::Identifier(state, conditionExpr->origin, tempIdent);
+					IR::Value* zeroConst;
+					if (valueType == IR::Value::Type::INT)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, 0);
+					}
+					else if (valueType == IR::Value::Type::FLOAT)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, 0.0f);
+					}
+					else if (valueType == IR::Value::Type::BOOL)
+					{
+						zeroConst = new IR::Value(conditionExpr->origin, state, false);
+					}
+					else
+					{
+						delete newTemp;
+						std::string ifString = ifStatement->condition->ToString();
+						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
+						delete conditionExpr;
+						return;
+					}
+
+					IR::Value* previosuConditionExpr = conditionExpr;
+					conditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
+					delete previosuConditionExpr;
+					previosuConditionExpr = nullptr;
+
+					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, conditionExpr, ifTrueBlock, ifFalseBlock);
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);
 					state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
@@ -893,36 +1086,38 @@ namespace flex
 
 					IR::Value* rhs = LowerExpression(assignment->rhs);
 
-					if (state->variableTypes.find(assignment->lhs) == state->variableTypes.end())
+					if (rhs != nullptr)
 					{
-						state->diagnosticContainer->AddDiagnostic(assignment->span, "Undeclared identifier \"" + assignment->lhs + "\"");
-					}
-					else
-					{
-						Value::Type lhsType = state->variableTypes[assignment->lhs];
-						if (Value::TypeAssignable(state, lhsType, rhs))
+						if (state->variableTypes.find(assignment->lhs) == state->variableTypes.end())
 						{
-							assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
-							state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
+							state->diagnosticContainer->AddDiagnostic(assignment->span, "Undeclared identifier \"" + assignment->lhs + "\"");
 						}
 						else
 						{
-							StringBuilder diagnosticStr;
-							diagnosticStr.Append("Mismatched types (");
-							diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(rhs)));
-							diagnosticStr.Append(" & ");
-							diagnosticStr.Append(IR::Value::TypeToString(lhsType));
-							diagnosticStr.Append(")");
-							state->diagnosticContainer->AddDiagnostic(assignment->span, diagnosticStr.ToString());
+							Value::Type lhsType = state->variableTypes[assignment->lhs];
+							if (Value::TypeAssignable(state, lhsType, rhs))
+							{
+								assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
+								state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
+							}
+							else
+							{
+								StringBuilder diagnosticStr;
+								diagnosticStr.Append("Mismatched types (");
+								diagnosticStr.Append(IR::Value::TypeToString(state->GetValueType(rhs)));
+								diagnosticStr.Append(" & ");
+								diagnosticStr.Append(IR::Value::TypeToString(lhsType));
+								diagnosticStr.Append(")");
+								state->diagnosticContainer->AddDiagnostic(assignment->span, diagnosticStr.ToString());
+							}
 						}
 					}
 				} break;
 				case AST::StatementType::IDENTIFIER:
 				{
-					//AST::Identifier* identifier = (AST::Identifier*)statement;
-					//ValueWrapper val1 = GetValueWrapperFromExpression(identifier);
-
-					//state->InsertionBlock()->AddAssignment(new Assignment(identifier->identifierStr, );
+					AST::Identifier* identifier = (AST::Identifier*)statement;
+					Value* value = LowerExpression(identifier);
+					state->InsertionBlock()->AddAssignment(new Assignment(state, identifier->span, identifier->identifierStr, value));
 				} break;
 				case AST::StatementType::STATEMENT_BLOCK:
 				{
@@ -982,8 +1177,8 @@ namespace flex
 					OpCode binaryOpTranslation = BinaryOperatorTypeToOpCode(binOp->operatorType);
 					assert(binaryOpTranslation != OpCode::_NONE);
 
-					ValueWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
-					ValueWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
+					VariantWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
+					VariantWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
 
 					if (binaryOpTranslation == OpCode::CMP)
 					{
@@ -994,7 +1189,7 @@ namespace flex
 						if (jumpCode != OpCode::_NONE)
 						{
 							i32 jumpAddress = 0;
-							Instruction jumpInst(jumpCode, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
+							Instruction jumpInst(jumpCode, VariantWrapper(VariantWrapper::Type::CONSTANT, IR::Value(jumpAddress)));
 							state->InsertionBlock()->PushBack(jumpInst);
 						}
 						else
@@ -1020,6 +1215,52 @@ namespace flex
 					}
 					*/
 				}break;
+				case AST::StatementType::COMPOUND_ASSIGNMENT:
+				{
+					AST::CompoundAssignment* compoundAssignment = (AST::CompoundAssignment*)statement;
+
+					/*
+
+					Simple case:
+						a += 10;
+
+							v
+
+						a = a + 10;
+					else:
+						a += 8 * 9;
+
+							v
+
+						tmp = 8 * 9;
+						a = a + tmp;
+
+					*/
+
+					IR::Value* rhs = LowerExpression(compoundAssignment->rhs);
+
+					IR::Identifier* lhsIdentVal = new IR::Identifier(state, compoundAssignment->span, compoundAssignment->lhs);
+					BinaryOperatorType opType = IRBinaryOperatorTypeFromASTBinaryOperatorType(GetNonCompoundType(compoundAssignment->operatorType));
+
+					IR::BinaryValue* operation;
+					if (IR::Value::IsSimple(rhs->type))
+					{
+						operation = new IR::BinaryValue(state, compoundAssignment->span, opType, lhsIdentVal, rhs);
+
+					}
+					else
+					{
+						// Non simple case requires temporary
+						std::string tempIdent = state->NextTemporary();
+						state->WriteVariableInBlock(tempIdent, rhs);
+
+						IR::Identifier* tempIdentVal = new IR::Identifier(state, compoundAssignment->span, tempIdent);
+						operation = new IR::BinaryValue(state, compoundAssignment->span, opType, lhsIdentVal, tempIdentVal);
+					}
+
+					state->variableTypes[compoundAssignment->lhs] = state->GetValueType(rhs);
+					state->InsertionBlock()->AddAssignment(new IR::Assignment(state, compoundAssignment->span, compoundAssignment->lhs, operation));
+				} break;
 				default:
 				{
 					//std::string errorMsg = "Unhandled statement type in VM::GenerateStatementInstructions: %u\n" + std::to_string((i32)statement->statementType);
@@ -1041,8 +1282,12 @@ namespace flex
 			case AST::StatementType::ASSIGNMENT:
 			{
 				AST::Assignment* assignment = (AST::Assignment*)expression;
-				return new IR::Assignment(state, assignment->span, assignment->lhs, LowerExpression(assignment->rhs));
-			}
+				IR::Value* loweredRHS = LowerExpression(assignment->rhs);
+				if (loweredRHS != nullptr)
+				{
+					return new IR::Assignment(state, assignment->span, assignment->lhs, loweredRHS);
+				}
+			} break;
 			//case StatementType::INDEX_OPERATION:
 			//	return Assignment(NextTemporary(), expression->GetValue());
 			//case StatementType::LIST_INITIALIZER:
@@ -1063,11 +1308,15 @@ namespace flex
 					irOpType = IR::UnaryOperatorType::BIN_INVERT;
 					break;
 				default:
-					assert(false);
+					ENSURE_NO_ENTRY();
 				}
 
-				return new IR::UnaryValue(state, unaryOperation->span, irOpType, LowerExpression(unaryOperation->expression));
-			}
+				IR::Value* loweredExpr = LowerExpression(unaryOperation->expression);
+				if (loweredExpr != nullptr)
+				{
+					return new IR::UnaryValue(state, unaryOperation->span, irOpType, loweredExpr);
+				}
+			} break;
 			case AST::StatementType::BINARY_OPERATION:
 			{
 				AST::BinaryOperation* binaryOperation = (AST::BinaryOperation*)expression;
@@ -1077,8 +1326,12 @@ namespace flex
 					if (binaryOperation->lhs->statementType == AST::StatementType::IDENTIFIER)
 					{
 						AST::Identifier* lhs = (AST::Identifier*)binaryOperation->lhs;
-						// TODO: Add to usages here
-						return new IR::Assignment(state, lhs->span, lhs->identifierStr, LowerExpression(binaryOperation->rhs));
+						IR::Value* loweredRHS = LowerExpression(binaryOperation->rhs);
+						if (loweredRHS != nullptr)
+						{
+							// TODO: Add to usages here
+							return new IR::Assignment(state, lhs->span, lhs->identifierStr, loweredRHS);
+						}
 					}
 
 					return nullptr;
@@ -1116,7 +1369,7 @@ namespace flex
 							return new IR::Constant(val);
 						}
 						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal != *rhsVal));
-						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal > * rhsVal));
+						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal > *rhsVal));
 						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal >= *rhsVal));
 						case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal < *rhsVal));
 						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal <= *rhsVal));
@@ -1228,9 +1481,12 @@ namespace flex
 				IR::Value* ifTrue = LowerExpression(ternary->ifTrue);
 				IR::Value* ifFalse = LowerExpression(ternary->ifFalse);
 
-				return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
-			}
-			case AST::StatementType::FUNC_CALL:
+				if (condition != nullptr && ifTrue != nullptr && ifFalse != nullptr)
+				{
+					return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
+				}
+			} break;
+			case AST::StatementType::CALL:
 			{
 				AST::FunctionCall* functionCall = (AST::FunctionCall*)expression;
 				std::vector<IR::Value*> arguments;
@@ -1256,7 +1512,8 @@ namespace flex
 					{
 						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
 						{
-							if (state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
+							if (funcSig.argumentTypes[i] != IR::Value::Type::VOID &&
+								state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
 							{
 								bSigMatches = false;
 								break;
@@ -1307,9 +1564,20 @@ namespace flex
 			case AST::StatementType::CAST:
 			{
 				AST::Cast* cast = (AST::Cast*)expression;
-				std::string tempIdent = state->NextTemporary();
-				state->WriteVariableInBlock(tempIdent, LowerExpression(cast->target));
-				return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(state, cast->span, tempIdent));
+				IR::Value* loweredVal = LowerExpression(cast->target);
+				if (loweredVal != nullptr)
+				{
+					if (AST::IsSimple(cast->target->statementType))
+					{
+						return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), loweredVal);
+					}
+					else
+					{
+						std::string tempIdent = state->NextTemporary();
+						state->WriteVariableInBlock(tempIdent, loweredVal);
+						return new IR::CastValue(state, cast->span, IR::Value::FromASTTypeName(cast->typeName), new IR::Identifier(state, cast->span, tempIdent));
+					}
+				}
 			} break;
 			case AST::StatementType::BREAK:
 			{
@@ -1329,8 +1597,24 @@ namespace flex
 
 				IR::Block* nextBlock = new IR::Block(state, yieldStatement->span);
 
-				state->InsertionBlock()->AddYield(yieldStatement->span, LowerExpression(yieldStatement->yieldValue));
-				state->InsertionBlock()->SealBlock();
+				if (yieldStatement->yieldValue != nullptr)
+				{
+					IR::Value* loweredVal = LowerExpression(yieldStatement->yieldValue);
+					if (IR::Value::IsLiteral(loweredVal->type) || loweredVal->type == IR::Value::Type::IDENTIFIER)
+					{
+						state->InsertionBlock()->AddYield(yieldStatement->span, loweredVal);
+					}
+					else
+					{
+						std::string tempIdent = state->NextTemporary();
+						state->WriteVariableInBlock(tempIdent, loweredVal);
+						state->InsertionBlock()->AddYield(yieldStatement->span, new IR::Identifier(state, yieldStatement->span, tempIdent));
+					}
+				}
+				else
+				{
+					state->InsertionBlock()->AddYield(yieldStatement->span, nullptr);
+				}
 
 				state->PushInstructionBlock(nextBlock);
 				return nullptr;
@@ -1341,7 +1625,30 @@ namespace flex
 
 				IR::Block* nextBlock = new IR::Block(state, returnStatement->span);
 
-				state->InsertionBlock()->AddReturn(returnStatement->span, returnStatement->returnValue != nullptr ? LowerExpression(returnStatement->returnValue) : nullptr);
+				if (returnStatement->returnValue != nullptr)
+				{
+					IR::Value* loweredVal = LowerExpression(returnStatement->returnValue);
+					if (loweredVal == nullptr)
+					{
+						delete nextBlock;
+						return nullptr;
+					}
+					if (IR::Value::IsSimple(loweredVal->type))
+					{
+						state->InsertionBlock()->AddReturn(returnStatement->span, loweredVal);
+					}
+					else
+					{
+						std::string tempIdent = state->NextTemporary();
+						state->WriteVariableInBlock(tempIdent, loweredVal);
+						state->InsertionBlock()->AddReturn(returnStatement->span, new IR::Identifier(state, returnStatement->span, tempIdent));
+					}
+				}
+				else
+				{
+					state->InsertionBlock()->AddReturn(returnStatement->span, nullptr);
+				}
+
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(nextBlock);
@@ -1352,20 +1659,21 @@ namespace flex
 			return new IR::Value(expression->span, state, IR::Value::Type::_NONE);
 		}
 
-		void IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes)
+		bool IntermediateRepresentation::AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes)
 		{
 			if (state->functionTypes.find(funcName) != state->functionTypes.end())
 			{
 				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of function \"" + funcName + "\"");
-				return;
+				return false;
 			}
 			if (state->variableTypes.find(funcName) != state->variableTypes.end())
 			{
 				state->diagnosticContainer->AddDiagnostic(origin, "Redefinition of name \"" + funcName + "\"");
-				return;
+				return false;
 			}
 
 			state->functionTypes[funcName] = { returnType, argumentTypes };
+			return true;
 		}
 
 		void IntermediateRepresentation::SetBlockIndices()
@@ -1421,7 +1729,7 @@ namespace flex
 
 					for (u32 j = 0; j < (u32)funcDecl->arguments.size(); ++j)
 					{
-						Instruction popInst(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
+						Instruction popInst(OpCode::POP, VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value((i32)j)), GetValueWrapperFromExpression(funcDecl->arguments[j]));
 						instrBlock.PushBack(popInst);
 					}
 
@@ -1431,16 +1739,14 @@ namespace flex
 				}
 			}
 		}
-		*/
 
-		/*
-		ValueWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
+		VariantWrapper IntermediateRepresentation::GetValueWrapperFromExpression(AST::Expression* expression)
 		{
-			ValueWrapper valWrapper;
+			VariantWrapper valWrapper;
 
 			if (IsLiteral(expression->statementType))
 			{
-				valWrapper = ValueWrapper(ValueWrapper::Type::CONSTANT, expression->GetValue());
+				valWrapper = VariantWrapper(VariantWrapper::Type::CONSTANT, expression->GetValue());
 			}
 			else
 			{
@@ -1450,13 +1756,13 @@ namespace flex
 				{
 					//AST::Identifier* ident = (AST::Identifier*)expression;
 					//i32 reg = state->varToRegisterMap[ident->identifierStr];
-					//valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(reg));
+					//valWrapper = VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value(reg));
 				} break;
-				case AST::StatementType::FUNC_CALL:
+				case AST::StatementType::CALL:
 				{
 					AST::FunctionCall* funcCall = (AST::FunctionCall*)expression;
 					i32 registerStored = GenerateCallInstruction(funcCall);
-					valWrapper = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
+					valWrapper = VariantWrapper(VariantWrapper::Type::REGISTER, IR::Value(registerStored));
 				} break;
 				default:
 				{
@@ -1468,90 +1774,5 @@ namespace flex
 			return valWrapper;
 		}
 		*/
-
-		i32 IntermediateRepresentation::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
-		{
-			u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
-			assert((value >> 16) == (u32)instructionBlockIndex);
-			assert((value & 0xFFFF) == (u32)instructionIndex);
-			return static_cast<i32>(value);
-		}
-
-		void IntermediateRepresentation::SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex)
-		{
-			u32 valueUnsigned = static_cast<u32>(combined);
-			outInstructionBlockIndex = (i32)(valueUnsigned >> 16);
-			outInstructionIndex = (i32)(valueUnsigned & 0xFFFF);
-		}
-
-		i32 IntermediateRepresentation::GenerateCallInstruction(AST::FunctionCall* funcCallstate)
-		{
-			FLEX_UNUSED(funcCallstate);
-			/*
-			InstructionBlock& InsertionBlock() = state->CurrentInstructionBlock();
-
-			// Temporary identifier for the function since we
-			// don't know where it will be located in the end
-			i32 funcUID = state->funcNameToBlockIndexTable[funcCall->target];
-
-			// Push return IP
-			i32 pushInstructionIndex = -1;
-			{
-				// Actual IP will be patched up below
-				Instruction pushReturnIP(OpCode::PUSH, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(0)));
-				InsertionBlock().PushBack(pushReturnIP);
-				pushInstructionIndex = (i32)InsertionBlock().instructions.size();
-			}
-
-			// Push arguments in reverse order
-			for (i32 i = (i32)funcCall->arguments.size() - 1; i >= 0; --i)
-			{
-				AST::Expression* arg = funcCall->arguments[i];
-
-				ValueWrapper argVal;
-				if (IsLiteral(arg->statementType))
-				{
-					argVal = ValueWrapper(ValueWrapper::Type::CONSTANT, arg->GetValue());
-				}
-				else
-				{
-					if (arg->statementType == StatementType::IDENTIFIER)
-					{
-						Identifier* initializerIdent = (Identifier*)arg;
-						i32 getRegister = state->varToRegisterMap[initializerIdent->identifierStr];
-						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(getRegister));
-					}
-					else if (arg->statementType == StatementType::FUNC_CALL)
-					{
-						FunctionCall* subFuncCall = (FunctionCall*)arg;
-						i32 registerStored = GenerateCallInstruction(subFuncCall);
-						argVal = ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(registerStored));
-					}
-				}
-
-				Instruction pushArg(OpCode::PUSH, argVal);
-				InsertionBlock().PushBack(pushArg);
-			}
-
-			// Call
-			Instruction inst(OpCode::CALL, ValueWrapper(ValueWrapper::Type::CONSTANT, IR::Value(funcUID)));
-			InsertionBlock().PushBack(inst);
-
-			// Resume point
-			{
-				// Patch up push call to current instruction offset
-				i32 instructionBlockIndex = (i32)state->instructionBlocks.size();
-				i32 instructionIndex = (i32)InsertionBlock().instructions.size();
-				i32 value = CombineInstructionIndex(instructionBlockIndex, instructionIndex);
-				InsertionBlock().instructions[pushInstructionIndex].val0.value.valInt = value;
-			}
-
-			i32 returnValueRegister = 0;
-			Instruction popReturnVal(OpCode::POP, ValueWrapper(ValueWrapper::Type::REGISTER, IR::Value(returnValueRegister)));
-			InsertionBlock().PushBack(popReturnVal);
-			return returnValueRegister;
-			*/
-			return 0;
-		}
-} // namespace IR
+	} // namespace IR
 } // namespace flex

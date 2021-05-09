@@ -1,15 +1,13 @@
 #pragma once
 
 #include "Graphics/RendererTypes.hpp"
-#include "Managers/CartManager.hpp"
-#include "Track/TrackManager.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
 	class PhysicsWorld;
 	class ReflectionProbe;
 	class Player;
-	class GameObject;
 	class PointLight;
 	class DirectionalLight;
 	struct JSONObject;
@@ -17,18 +15,23 @@ namespace flex
 	struct Material;
 	class ICallbackGameObject;
 
-	class BaseScene
+	class BaseScene final
 	{
 	public:
 		// fileName e.g. "scene_01.json"
 		explicit BaseScene(const std::string& fileName);
-		virtual ~BaseScene();
+		~BaseScene();
 
-		virtual void Initialize();
-		virtual void PostInitialize();
-		virtual void Destroy();
-		virtual void Update();
-		virtual void LateUpdate();
+		void Initialize();
+		void PostInitialize();
+		void Destroy();
+		void Update();
+		void LateUpdate();
+
+		void OnPrefabChanged(const PrefabID& prefabID);
+
+		bool LoadFromFile(const std::string& filePath);
+		void CreateBlank(const std::string& filePath);
 
 		void DrawImGuiObjects();
 		void DoSceneContextMenu();
@@ -63,67 +66,53 @@ namespace flex
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
-		void RemoveRootObject(GameObject* gameObject, bool bDestroy);
-		void RemoveAllRootObjects(bool bDestroy);
-		bool RemoveObject(GameObject* gameObject, bool bDestroy);
+		GameObject* AddRootObjectImmediate(GameObject* gameObject);
+		GameObject* AddChildObject(GameObject* parent, GameObject* child);
+		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
+		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
+		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
+		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
+		void RemoveObject(GameObject* gameObject, bool bDestroy);
+		void RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
+		void RemoveObjectImmediate(GameObject* gameObject, bool bDestroy);
+		void RemoveObjects(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
+		void RemoveObjects(const std::vector<GameObject*>& gameObjects, bool bDestroy);
+		void RemoveObjectsImmediate(const std::vector<GameObjectID>& gameObjects, bool bDestroy);
+		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 
-		std::vector<MaterialID> GetMaterialIDs();
-		void AddMaterialID(MaterialID newMaterialID);
-		void RemoveMaterialID(MaterialID materialID);
+		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
+		GameObject* ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance);
 
-		/* Returns the first found game object with tag, or nullptr if none exist */
-		GameObject* FirstObjectWithTag(const std::string& tag);
+		GameObjectID FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
 
-		// Deletes and removes targetObject if exists in scene
-		// Returns true if targetObject was found
-		bool DestroyGameObject(GameObject* targetObject, bool bDestroyChildren);
-
 		bool IsLoaded() const;
 
-		static void ParseFoundMeshFiles();
-		static void ParseFoundMaterialFiles();
-		static void ParseFoundPrefabFiles();
-
-		static std::vector<JSONObject> s_ParsedMaterials;
-		static std::vector<JSONObject> s_ParsedMeshes;
-		static std::vector<JSONObject> s_ParsedPrefabs;
-
-		bool SerializeMeshFile() const;
-		bool SerializeMaterialFile() const;
-		bool SerializePrefabFile() const;
-
 		std::vector<GameObject*> GetAllObjects();
+		std::vector<GameObjectID> GetAllObjectIDs();
 
 		template<class T>
-		std::vector<T*> GetObjectsOfType()
+		std::vector<T*> GetObjectsOfType(StringID typeID)
 		{
-			std::vector<GameObject*> objs = GetAllObjects();
+			std::vector<GameObject*> gameObjects = GetAllObjects();
 			std::vector<T*> result;
 
-			for (GameObject* obj : objs)
+			for (GameObject* gameObject : gameObjects)
 			{
-				if (dynamic_cast<T*>(obj) != nullptr)
+				if (gameObject->GetTypeID() == typeID)
 				{
-					result.push_back((T*)obj);
+					result.push_back((T*)gameObject);
 				}
 			}
 
 			return result;
 		}
 
-		TrackManager* GetTrackManager();
-		CartManager* GetCartManager();
-
+		std::string GetUniqueObjectName(const std::string& existingName);
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
 		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
-
-		void DestroyObjectAtEndOfFrame(GameObject* obj);
-		void DestroyObjectsAtEndOfFrame(const std::vector<GameObject*>& objs);
-		void AddObjectAtEndOFFrame(GameObject* obj);
-		void AddObjectsAtEndOFFrame(const std::vector<GameObject*>& objs);
 
 		i32 GetSceneFileVersion() const;
 
@@ -131,71 +120,102 @@ namespace flex
 
 		const SkyboxData& GetSkyboxData() const;
 
+		void DrawImGuiForSelectedObjects();
+		void DrawImGuiForRenderObjectsList();
+
+		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
+		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
+		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		// Returns true if the parent-child tree changed during this call
+		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
+
+		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
+
+		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
+
+		void SetTimeOfDay(real time);
+		real GetTimeOfDay() const;
+
+		real GetPlayerMinHeight() const;
+		glm::vec3 GetPlayerSpawnPoint() const;
+
+		static const char* GameObjectTypeIDToString(StringID typeID);
+
+		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
+
+		static const i32 LATEST_SCENE_FILE_VERSION = 6;
+		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
+		static const i32 LATEST_MESHES_FILE_VERSION = 1;
+		static const i32 LATETST_PREFAB_FILE_VERSION = 3;
+
 	protected:
 		friend GameObject;
-		friend CartManager;
 		friend SceneManager;
 
-		// Recursively finds targetObject in currentObject's children
-		// Returns true if targetObject was found and deleted
-		bool DestroyGameObjectRecursive(GameObject* currentObject, GameObject* targetObject, bool bDestroyChildren);
-
-		i32 GetMaterialArrayIndex(const Material& material);
-
-		std::vector<MaterialID> RetrieveMaterialIDsFromJSON(const JSONObject& object, i32 fileVersion);
+		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
 
 		void UpdateRootObjectSiblingIndices();
+		void RegisterGameObject(GameObject* gameObject);
+		void UnregisterGameObject(const GameObjectID& gameObjectID);
 
-		static const i32 LATEST_SCENE_FILE_VERSION = 3;
+		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
+
 		i32 m_SceneFileVersion = 1;
-
-		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		i32 m_MaterialsFileVersion = 1;
-
-		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		i32 m_MeshesFileVersion = 1;
-
-		PhysicsWorld* m_PhysicsWorld = nullptr;
 
 		std::string m_Name;
 		std::string m_FileName;
 
+		PhysicsWorld* m_PhysicsWorld = nullptr;
+
+		std::map<GameObjectID, GameObject*> m_GameObjectLUT;
 		std::vector<GameObject*> m_RootObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
 		bool m_bSpawnPlayer = false;
-
-		/*
-		* Stores all unique initialized materials we've created
-		* A "material array index" is used to index into this array
-		*/
-		std::vector<MaterialID> m_LoadedMaterials;
+		GameObjectID m_PlayerGUIDs[2];
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
+		bool m_bPauseTimeOfDay = false;
+		real m_TimeOfDay; // [0, 1) - 0 = noon, 0.5 = midnight
+		real m_SecondsPerDay = 6000.0f;
+
+		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
+
+		// Kill zone for player
+		real m_PlayerMinHeight = -500.0f;
+		glm::vec3 m_PlayerSpawnPoint;
 
 		Player* m_Player0 = nullptr;
 		Player* m_Player1 = nullptr;
 
-		TrackManager m_TrackManager;
-		CartManager m_CartManager;
-
-		std::vector<GameObject*> m_ObjectsToAddAtEndOfFrame;
-		std::vector<GameObject*> m_ObjectsToDestroyAtEndOfFrame;
-
 		std::vector<ICallbackGameObject*> m_OnGameObjectDestroyedCallbacks;
+
+		std::vector<GameObject*> m_PendingAddObjects; // Objects to add as root objects at LateUpdate
+		std::vector<Pair<GameObject*, GameObject*>> m_PendingAddChildObjects; // Objects to add to parents at LateUpdate
+		std::vector<GameObjectID> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
+		std::vector<GameObjectID> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
 
 	private:
 		/*
 		* Recursively searches through all game objects and returns first
 		* one containing given tag, or nullptr if none exist
 		*/
-		GameObject* FindObjectWithTag(const std::string& tag, GameObject* gameObject);
+		GameObjectID FindObjectWithTag(const std::string& tag, GameObject* gameObject);
+
+		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
+
+		void ReadGameObjectTypesFile();
+		void WriteGameObjectTypesFile();
 
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
+
+		Pair<StringID, std::string> m_NewObjectTypeIDPair;
 
 	};
 } // namespace flex

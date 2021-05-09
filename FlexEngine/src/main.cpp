@@ -19,14 +19,20 @@ int main(int argc, char *argv[])
 
 #ifdef _WINDOWS
 	// Enable run-time memory leak check for debug builds
-#if defined(DEBUG)
+#ifdef DEBUG
 	// Notify user if heap is corrupt
 	HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
 
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	// TODO: Somehow redirect output to console
+	_CrtSetDbgFlag(
+		_CRTDBG_ALLOC_MEM_DF // Turn on debug allocation
+		| _CRTDBG_LEAK_CHECK_DF // Leak check at program exit
+	//| _CRTDBG_CHECK_ALWAYS_DF // Check heap every alloc/dealloc
+	//| _CRTDBG_CHECK_EVERY_16_DF // Check heap every 16 heap ops
+	);
 	//_CrtSetBreakAlloc(47947);
-#endif
-#endif
+#endif // DEBUG
+#endif // _WINDOWS
 
 	flex::Platform::GetConsoleHandle();
 	flex::InitializeLogger();
@@ -34,6 +40,7 @@ int main(int argc, char *argv[])
 #if RUN_UNIT_TESTS
 	flex::FlexTest::Run();
 
+	// TODO: Use cross-platform solution here
 	system("pause");
 	return 0;
 

@@ -29,10 +29,19 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
 {
+	// ImGui payload identifiers
+	// (Must be 12 chars or less)
+	const char* Editor::MaterialPayloadCStr = "material";
+	const char* Editor::MeshPayloadCStr = "mesh";
+	const char* Editor::PrefabPayloadCStr = "prefab";
+	const char* Editor::GameObjectPayloadCStr = "gameobject";
+	const char* Editor::AudioFileNameSIDPayloadCStr = "audiosid";
+
 	Editor::Editor() :
 		m_MouseButtonCallback(this, &Editor::OnMouseButtonEvent),
 		m_MouseMovedCallback(this, &Editor::OnMouseMovedEvent),
@@ -53,10 +62,11 @@ namespace flex
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.shaderName = "color";
+			matCreateInfo.shaderName = "colour";
 			matCreateInfo.constAlbedo = VEC3_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bSerializable = false;
 			matCreateInfo.name = "transform x";
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			matCreateInfo.name = "transform y";
@@ -82,10 +92,18 @@ namespace flex
 	{
 		SelectNone();
 
-		if (m_TransformGizmo)
+		if (m_TransformGizmo != nullptr)
 		{
 			m_TransformGizmo->Destroy();
 			delete m_TransformGizmo;
+			m_TransformGizmo = nullptr;
+		}
+
+		if (m_GridObject != nullptr)
+		{
+			m_GridObject->Destroy();
+			delete m_GridObject;
+			m_GridObject = nullptr;
 		}
 
 		if (m_TestShape)
@@ -129,7 +147,7 @@ namespace flex
 		{
 			m_bDraggingGizmo = false;
 			if (!g_CameraManager->CurrentCamera()->bIsGameplayCam &&
-				!m_CurrentlySelectedObjects.empty())
+				!m_CurrentlySelectedObjectIDs.empty())
 			{
 				HandleGizmoHover();
 			}
@@ -143,7 +161,7 @@ namespace flex
 			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
 			g_Renderer->GetDebugDrawer()->drawLine(
 				btVector3(x, 0, z),
-				g_Editor->GetSelectedObjects().size() > 0 ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
+				g_Editor->HasSelectedObject() ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
 				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),
 				btVector3(1.0f, 0.0f, sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f));
 		}
@@ -151,7 +169,7 @@ namespace flex
 
 		FadeOutHeadOnGizmos();
 
-		if (!m_CurrentlySelectedObjects.empty())
+		if (!m_CurrentlySelectedObjectIDs.empty() && !g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
 			m_TransformGizmo->SetVisible(true);
 			UpdateGizmoVisibility();
@@ -193,6 +211,13 @@ namespace flex
 			m_TransformGizmo = nullptr;
 		}
 
+		if (m_GridObject)
+		{
+			m_GridObject->Destroy();
+			delete m_GridObject;
+			m_GridObject = nullptr;
+		}
+
 		SelectNone();
 	}
 
@@ -203,64 +228,75 @@ namespace flex
 
 	bool Editor::HasSelectedObject() const
 	{
-		return m_CurrentlySelectedObjects.empty();
+		return !m_CurrentlySelectedObjectIDs.empty();
 	}
 
-	std::vector<GameObject*> Editor::GetSelectedObjects(bool bForceIncludeChildren)
+	std::vector<GameObjectID> Editor::GetSelectedObjectIDs(bool bForceIncludeChildren) const
 	{
 		if (bForceIncludeChildren)
 		{
-			std::vector<GameObject*> selectedObjects;
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			std::vector<GameObjectID> selectedObjects;
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
-				gameObject->AddSelfAndChildrenToVec(selectedObjects);
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+				gameObject->AddSelfIDAndChildrenToVec(selectedObjects);
 			}
 			return selectedObjects;
 		}
 		else
 		{
-			return m_CurrentlySelectedObjects;
+			return m_CurrentlySelectedObjectIDs;
 		}
 	}
 
-	void Editor::SetSelectedObject(GameObject* gameObject, bool bSelectChildren /* = false */)
+	GameObjectID Editor::GetFirstSelectedObjectID() const
+	{
+		return m_CurrentlySelectedObjectIDs[0];
+	}
+
+	void Editor::SetSelectedObject(const GameObjectID& gameObjectID, bool bSelectChildren /* = false */)
 	{
 		SelectNone();
 
+		GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
 		if (gameObject != nullptr)
 		{
 			if (bSelectChildren)
 			{
-				gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+				gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 			}
 			else
 			{
-				m_CurrentlySelectedObjects.push_back(gameObject);
+				m_CurrentlySelectedObjectIDs.push_back(gameObjectID);
 			}
 		}
 
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::SetSelectedObjects(const std::vector<GameObject*>& selectedObjects)
+	void Editor::SetSelectedObjects(const std::vector<GameObjectID>& selectedObjects)
 	{
-		m_CurrentlySelectedObjects = selectedObjects;
+		SelectNone();
+
+		m_CurrentlySelectedObjectIDs = selectedObjects;
 
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::ToggleSelectedObject(GameObject* gameObject)
+	void Editor::ToggleSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
+		auto iter = FindIter(m_CurrentlySelectedObjectIDs, gameObjectID);
+		if (iter == m_CurrentlySelectedObjectIDs.end())
 		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+			gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 		}
 		else
 		{
-			m_CurrentlySelectedObjects.erase(iter);
+			m_CurrentlySelectedObjectIDs.erase(iter);
 
-			if (m_CurrentlySelectedObjects.empty())
+			if (m_CurrentlySelectedObjectIDs.empty())
 			{
 				SelectNone();
 			}
@@ -269,35 +305,42 @@ namespace flex
 		CalculateSelectedObjectsCenter();
 	}
 
-	void Editor::AddSelectedObject(GameObject* gameObject)
+	void Editor::AddSelectedObject(const GameObjectID& gameObjectID)
 	{
-		auto iter = Find(m_CurrentlySelectedObjects, gameObject);
-		if (iter == m_CurrentlySelectedObjects.end())
+		if (!Contains(m_CurrentlySelectedObjectIDs, gameObjectID))
 		{
-			gameObject->AddSelfAndChildrenToVec(m_CurrentlySelectedObjects);
+			GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+			if (gameObject != nullptr)
+			{
+				gameObject->AddSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 
-			CalculateSelectedObjectsCenter();
+				CalculateSelectedObjectsCenter();
+			}
 		}
 	}
 
-	void Editor::DeselectObject(GameObject* gameObject)
+	void Editor::DeselectObject(const GameObjectID& gameObjectID)
 	{
-		for (GameObject* selectedObj : m_CurrentlySelectedObjects)
+		for (const GameObjectID& selectedObj : m_CurrentlySelectedObjectIDs)
 		{
-			if (selectedObj == gameObject)
+			if (selectedObj == gameObjectID)
 			{
-				gameObject->RemoveSelfAndChildrenToVec(m_CurrentlySelectedObjects);
-				CalculateSelectedObjectsCenter();
-				return;
+				GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
+				if (gameObject != nullptr)
+				{
+					gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
+					CalculateSelectedObjectsCenter();
+					return;
+				}
 			}
 		}
 
 		PrintWarn("Attempted to deselect object which wasn't selected!\n");
 	}
 
-	bool Editor::IsObjectSelected(GameObject* gameObject)
+	bool Editor::IsObjectSelected(const GameObjectID& gameObjectID)
 	{
-		bool bSelected = (Find(m_CurrentlySelectedObjects, gameObject) != m_CurrentlySelectedObjects.end());
+		bool bSelected = Contains(m_CurrentlySelectedObjectIDs, gameObjectID);
 		return bSelected;
 	}
 
@@ -308,7 +351,7 @@ namespace flex
 
 	void Editor::SelectNone()
 	{
-		m_CurrentlySelectedObjects.clear();
+		m_CurrentlySelectedObjectIDs.clear();
 		m_SelectedObjectsCenterPos = VEC3_ZERO;
 		m_SelectedObjectDragStartPos = VEC3_ZERO;
 		m_DraggingGizmoScaleLast = VEC3_ZERO;
@@ -452,27 +495,35 @@ namespace flex
 
 	void Editor::CalculateSelectedObjectsCenter()
 	{
-		if (m_CurrentlySelectedObjects.empty())
+		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			return;
 		}
 
 		glm::vec3 avgPos(0.0f);
-		for (GameObject* gameObject : m_CurrentlySelectedObjects)
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 		{
-			avgPos += gameObject->GetTransform()->GetWorldPosition();
+			GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+			// Object may not have been added to scene yet (e.g. during obj duplication), silently fail
+			if (gameObject != nullptr)
+			{
+				avgPos += gameObject->GetTransform()->GetWorldPosition();
+			}
 		}
 		m_SelectedObjectsCenterPos = m_SelectedObjectDragStartPos;
-		m_SelectedObjectRotation = m_CurrentlySelectedObjects[0]->GetTransform()->GetWorldRotation();
+		GameObject* firstObject = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0]);
+		m_SelectedObjectRotation = (firstObject != nullptr ? firstObject->GetTransform()->GetWorldRotation() : QUAT_IDENTITY);
 
-		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjects.size());
+		m_SelectedObjectsCenterPos = (avgPos / (real)m_CurrentlySelectedObjectIDs.size());
 	}
 
 	void Editor::SelectAll()
 	{
-		for (GameObject* gameObject : g_SceneManager->CurrentScene()->GetAllObjects())
+		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
+		for (GameObject* gameObject : allObjects)
 		{
-			m_CurrentlySelectedObjects.push_back(gameObject);
+			m_CurrentlySelectedObjectIDs.push_back(gameObject->ID);
 		}
 		CalculateSelectedObjectsCenter();
 	}
@@ -509,16 +560,16 @@ namespace flex
 			m_CurrentTransformGizmoState == TransformState::TRANSLATE ? m_TranslationGizmoTag :
 			(m_CurrentTransformGizmoState == TransformState::ROTATE ? m_RotationGizmoTag :
 				m_ScaleGizmoTag));
-		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag);
+		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag, (i32)CollisionType::EDITOR_OBJECT);
 
-		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
-		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
-		Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
+		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
 		glm::vec4 white(1.0f);
 
 		static const real gizmoHoverMultiplier = 0.6f;
-		static const glm::vec4 hoverColor(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
+		static const glm::vec4 hoverColour(gizmoHoverMultiplier, gizmoHoverMultiplier, gizmoHoverMultiplier, 1.0f);
 
 		if (pickedTransformGizmo)
 		{
@@ -529,65 +580,65 @@ namespace flex
 			{
 				std::vector<GameObject*> translationAxes = m_TranslationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == translationAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == translationAxes[X_AXIS_IDX] && xMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationAxes[Y_AXIS_IDX] && yMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationAxes[Z_AXIS_IDX] && zMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat->colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::ROTATE:
 			{
 				std::vector<GameObject*> rotationAxes = m_RotationGizmo->GetChildren();
 
-				if (pickedTransformGizmo == rotationAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == rotationAxes[X_AXIS_IDX] && xMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == rotationAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == rotationAxes[Y_AXIS_IDX] && yMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == rotationAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == rotationAxes[Z_AXIS_IDX] && zMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat->colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::SCALE:
 			{
 				std::vector<GameObject*> scaleAxes = m_ScaleGizmo->GetChildren();
 
-				if (pickedTransformGizmo == scaleAxes[X_AXIS_IDX] && xMat.colorMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == scaleAxes[X_AXIS_IDX] && xMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = X_AXIS_IDX;
-					xMat.colorMultiplier = hoverColor;
+					xMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[Y_AXIS_IDX] && yMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[Y_AXIS_IDX] && yMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Y_AXIS_IDX;
-					yMat.colorMultiplier = hoverColor;
+					yMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[Z_AXIS_IDX] && zMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[Z_AXIS_IDX] && zMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
-					zMat.colorMultiplier = hoverColor;
+					zMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == scaleAxes[ALL_AXES_IDX] && allMat.colorMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == scaleAxes[ALL_AXES_IDX] && allMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = ALL_AXES_IDX;
-					allMat.colorMultiplier = hoverColor;
+					allMat->colourMultiplier = hoverColour;
 				}
 			} break;
 			default:
@@ -603,19 +654,19 @@ namespace flex
 
 		if (m_DraggingAxisIndex != X_AXIS_IDX && m_HoveringAxisIndex != X_AXIS_IDX)
 		{
-			xMat.colorMultiplier = white;
+			xMat->colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != Y_AXIS_IDX && m_HoveringAxisIndex != Y_AXIS_IDX)
 		{
-			yMat.colorMultiplier = white;
+			yMat->colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != Z_AXIS_IDX && m_HoveringAxisIndex != Z_AXIS_IDX)
 		{
-			zMat.colorMultiplier = white;
+			zMat->colourMultiplier = white;
 		}
 		if (m_DraggingAxisIndex != ALL_AXES_IDX && m_HoveringAxisIndex != ALL_AXES_IDX)
 		{
-			allMat.colorMultiplier = white;
+			allMat->colourMultiplier = white;
 		}
 
 		return m_HoveringAxisIndex != -1;
@@ -632,12 +683,12 @@ namespace flex
 		m_SelectedObjectDragStartRot = m_TransformGizmo->GetTransform()->GetWorldRotation();
 
 		real gizmoSelectedMultiplier = 0.4f;
-		glm::vec4 selectedColor(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
+		glm::vec4 selectedColour(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
 
-		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
-		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
-		Material& allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
+		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
 
 		switch (m_CurrentTransformGizmoState)
 		{
@@ -645,15 +696,15 @@ namespace flex
 		{
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat->colourMultiplier = selectedColour;
 			}
 			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
@@ -663,34 +714,34 @@ namespace flex
 
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat->colourMultiplier = selectedColour;
 			}
 		} break;
 		case TransformState::SCALE:
 		{
 			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
-				xMat.colorMultiplier = selectedColor;
+				xMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
-				yMat.colorMultiplier = selectedColor;
+				yMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
-				zMat.colorMultiplier = selectedColor;
+				zMat->colourMultiplier = selectedColour;
 			}
 			else if (m_HoveringAxisIndex == ALL_AXES_IDX)
 			{
-				allMat.colorMultiplier = selectedColor;
+				allMat->colourMultiplier = selectedColour;
 			}
 		} break;
 		default:
@@ -705,7 +756,7 @@ namespace flex
 		assert(m_HoveringAxisIndex != -1);
 		assert(m_DraggingAxisIndex != -1);
 		assert(m_bDraggingGizmo);
-		if (m_CurrentlySelectedObjects.empty())
+		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			SelectNone();
 			return;
@@ -741,7 +792,8 @@ namespace flex
 		glm::vec3 camRight = cam->right;
 		glm::vec3 camUp = cam->up;
 		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-		Transform* transform = m_CurrentlySelectedObjects[0]->GetTransform();
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		Transform* transform = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0])->GetTransform();
 
 		switch (m_CurrentTransformGizmoState)
 		{
@@ -807,10 +859,11 @@ namespace flex
 				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 			}
 
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+				bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Translate(dPos);
@@ -897,10 +950,11 @@ namespace flex
 
 			if (dRotWS != QUAT_IDENTITY)
 			{
-				for (GameObject* gameObject : m_CurrentlySelectedObjects)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 					GameObject* parent = gameObject->GetParent();
-					bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+					bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
 					if (bObjectIsntChild)
 					{
 						Transform* t = gameObject->GetTransform();
@@ -984,10 +1038,11 @@ namespace flex
 
 			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
 
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
+				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
 				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (Find(m_CurrentlySelectedObjects, parent) == m_CurrentlySelectedObjects.end());
+				bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
 				if (bObjectIsntChild)
 				{
 					gameObject->GetTransform()->Scale(dLocalScale);
@@ -1022,12 +1077,12 @@ namespace flex
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
 				{
-					ToggleSelectedObject(pickedObject);
+					ToggleSelectedObject(pickedObject->ID);
 				}
 				else
 				{
 					SelectNone();
-					m_CurrentlySelectedObjects.push_back(pickedObject);
+					m_CurrentlySelectedObjectIDs.push_back(pickedObject->ID);
 				}
 				g_InputManager->ClearMouseInput();
 				CalculateSelectedObjectsCenter();
@@ -1045,7 +1100,7 @@ namespace flex
 
 	void Editor::OnDragDrop(i32 count, const char** paths)
 	{
-		std::vector<GameObject*> createdObjs;
+		std::vector<GameObjectID> createdObjs;
 
 		for (i32 i = 0; i < count; ++i)
 		{
@@ -1057,7 +1112,7 @@ namespace flex
 				if (fileType == "glb" || fileType == "gltf")
 				{
 					BaseScene* scene = g_SceneManager->CurrentScene();
-					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), GameObjectType::OBJECT);
+					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), SID("object"));
 
 					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
 
@@ -1074,7 +1129,7 @@ namespace flex
 					Mesh::ImportFromFile(relativeFilePath, newObj);
 					// TODO: Position object relative to mouse position & camera transform
 					scene->AddRootObject(newObj);
-					createdObjs.push_back(newObj);
+					createdObjs.push_back(newObj->ID);
 				}
 				else
 				{
@@ -1093,11 +1148,28 @@ namespace flex
 		}
 	}
 
+	bool Editor::IsShowingGrid() const
+	{
+		return m_bShowGrid;
+	}
+
+	void Editor::SetShowGrid(bool bShowGrid)
+	{
+		m_bShowGrid = bShowGrid;
+		m_GridObject->SetVisible(bShowGrid);
+	}
+
 	EventReply Editor::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
 		if (button == MouseButton::LEFT)
 		{
-			if (action == KeyAction::PRESS)
+			if (action == KeyAction::KEY_PRESS)
 			{
 				m_LMBDownPos = g_InputManager->GetMousePosition();
 
@@ -1109,11 +1181,11 @@ namespace flex
 
 				return EventReply::UNCONSUMED;
 			}
-			else if (action == KeyAction::RELEASE)
+			else if (action == KeyAction::KEY_RELEASE)
 			{
 				if (m_bDraggingGizmo)
 				{
-					if (m_CurrentlySelectedObjects.empty())
+					if (m_CurrentlySelectedObjectIDs.empty())
 					{
 						m_SelectedObjectDragStartPos = VEC3_NEG_ONE;
 					}
@@ -1154,6 +1226,12 @@ namespace flex
 	{
 		FLEX_UNUSED(dMousePos);
 
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
 		if (m_bDraggingGizmo)
 		{
 			HandleGizmoMovement();
@@ -1166,13 +1244,25 @@ namespace flex
 	{
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 
-		if (action == KeyAction::PRESS)
+		if (bControlDown && action == KeyAction::KEY_PRESS && keyCode == KeyCode::KEY_S)
+		{
+			g_SceneManager->CurrentScene()->SerializeToFile(true);
+			return EventReply::CONSUMED;
+		}
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
+		{
+			return EventReply::UNCONSUMED;
+		}
+
+		if (action == KeyAction::KEY_PRESS)
 		{
 			if (keyCode == KeyCode::KEY_DELETE)
 			{
-				if (!m_CurrentlySelectedObjects.empty())
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
-					g_SceneManager->CurrentScene()->DestroyObjectsAtEndOfFrame(m_CurrentlySelectedObjects);
+					g_SceneManager->CurrentScene()->RemoveObjects(m_CurrentlySelectedObjectIDs, true);
 
 					SelectNone();
 					return EventReply::CONSUMED;
@@ -1181,21 +1271,30 @@ namespace flex
 
 			if (bControlDown && keyCode == KeyCode::KEY_D)
 			{
-				if (!m_CurrentlySelectedObjects.empty())
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
-					std::vector<GameObject*> newSelectedGameObjects;
+					std::vector<GameObjectID> newSelectedGameObjectIDs;
 
-					for (GameObject* gameObject : m_CurrentlySelectedObjects)
+					BaseScene* currentScene = g_SceneManager->CurrentScene();
+					for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 					{
-						GameObject* duplicatedObject = gameObject->CopySelfAndAddToScene(nullptr, true);
+						GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+						GameObject* parent = gameObject->GetParent();
 
-						duplicatedObject->AddSelfAndChildrenToVec(newSelectedGameObjects);
+						if (parent == nullptr || !Contains(m_CurrentlySelectedObjectIDs, parent->ID))
+						{
+							GameObject* duplicatedObject = gameObject->CopySelf();
+
+							if (duplicatedObject != nullptr)
+							{
+								duplicatedObject->AddSelfIDAndChildrenToVec(newSelectedGameObjectIDs);
+								duplicatedObject->Initialize();
+								duplicatedObject->PostInitialize();
+							}
+						}
 					}
 
-					SelectNone();
-
-					m_CurrentlySelectedObjects = newSelectedGameObjects;
-					CalculateSelectedObjectsCenter();
+					SetSelectedObjects(newSelectedGameObjectIDs);
 				}
 				return EventReply::CONSUMED;
 			}
@@ -1206,101 +1305,107 @@ namespace flex
 				SelectAll();
 				return EventReply::CONSUMED;
 			}
-
-			if (bControlDown && keyCode == KeyCode::KEY_S)
-			{
-				g_SceneManager->CurrentScene()->SerializeToFile(true);
-				return EventReply::CONSUMED;
-			}
 		}
 
 		return EventReply::UNCONSUMED;
 	}
 
-	EventReply Editor::OnActionEvent(Action action)
+	EventReply Editor::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::EDITOR_RENAME_SELECTED)
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		if (cam->bIsGameplayCam)
 		{
-			m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
-			return EventReply::CONSUMED;
+			return EventReply::UNCONSUMED;
 		}
 
-		if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			SetTransformState(TransformState::TRANSLATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
-		{
-			SetTransformState(TransformState::ROTATE);
-			return EventReply::CONSUMED;
-		}
-		if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
-		{
-			SetTransformState(TransformState::SCALE);
-			return EventReply::CONSUMED;
-		}
-
-		if (action == Action::PAUSE)
-		{
-			if (m_CurrentlySelectedObjects.empty())
+			if (action == Action::EDITOR_RENAME_SELECTED)
 			{
-				//m_bSimulationPaused = !m_bSimulationPaused;
+				m_bWantRenameActiveElement = !m_bWantRenameActiveElement;
+				return EventReply::CONSUMED;
 			}
-			else
-			{
-				SelectNone();
-			}
-			return EventReply::CONSUMED;
-		}
 
-		// TODO: Add camera types!
-		if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjects.empty() && dynamic_cast<DebugCamera*>(g_CameraManager->CurrentCamera()) != nullptr)
-		{
-			glm::vec3 minPos(FLT_MAX);
-			glm::vec3 maxPos(-FLT_MAX);
-			for (GameObject* gameObject : m_CurrentlySelectedObjects)
+			// TODO: Check for exact matches, don't match if additional modifiers are down
+			if (action == Action::EDITOR_SELECT_TRANSLATE_GIZMO)
 			{
-				Mesh* mesh = gameObject->GetMesh();
-				if (mesh)
+				SetTransformState(TransformState::TRANSLATE);
+				return EventReply::CONSUMED;
+			}
+			if (action == Action::EDITOR_SELECT_ROTATE_GIZMO)
+			{
+				SetTransformState(TransformState::ROTATE);
+				return EventReply::CONSUMED;
+			}
+			if (action == Action::EDITOR_SELECT_SCALE_GIZMO)
+			{
+				SetTransformState(TransformState::SCALE);
+				return EventReply::CONSUMED;
+			}
+
+			if (action == Action::PAUSE)
+			{
+				if (m_CurrentlySelectedObjectIDs.empty())
 				{
-					Transform* transform = gameObject->GetTransform();
-					glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
-					glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
-					minPos = glm::min(minPos, min);
-					maxPos = glm::max(maxPos, max);
-				}
-			}
-
-			if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
-			{
-				minPos = glm::vec3(-1.0f);
-				maxPos = glm::vec3(1.0f);
-			}
-
-			glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
-			real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-
-			if (sphereRadius > 0.0f)
-			{
-				glm::vec3 currentOffset = cam->position - sphereCenterWS;
-				glm::vec3 newOffset;
-				if (currentOffset != VEC3_ZERO)
-				{
-					newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+					//m_bSimulationPaused = !m_bSimulationPaused;
 				}
 				else
 				{
-					newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+					SelectNone();
 				}
-				cam->position = sphereCenterWS + newOffset;
+				return EventReply::CONSUMED;
 			}
 
-			cam->LookAt(m_SelectedObjectsCenterPos);
-			return EventReply::CONSUMED;
+			CameraType currentCameraType = g_CameraManager->CurrentCamera()->type;
+			if (action == Action::EDITOR_FOCUS_ON_SELECTION && !m_CurrentlySelectedObjectIDs.empty() && currentCameraType == CameraType::DEBUG_CAM)
+			{
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+				glm::vec3 minPos(FLT_MAX);
+				glm::vec3 maxPos(-FLT_MAX);
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+				{
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					Mesh* mesh = gameObject->GetMesh();
+					if (mesh)
+					{
+						Transform* transform = gameObject->GetTransform();
+						glm::vec3 min = transform->GetWorldTransform() * glm::vec4(mesh->m_MinPoint, 1.0f);
+						glm::vec3 max = transform->GetWorldTransform() * glm::vec4(mesh->m_MaxPoint, 1.0f);
+						minPos = glm::min(minPos, min);
+						maxPos = glm::max(maxPos, max);
+					}
+				}
+
+				if (minPos.x == FLT_MAX || maxPos.x == -FLT_MAX || minPos == maxPos)
+				{
+					minPos = glm::vec3(-1.0f);
+					maxPos = glm::vec3(1.0f);
+				}
+
+				glm::vec3 sphereCenterWS = minPos + (maxPos - minPos) / 2.0f;
+				real sphereRadius = glm::length(maxPos - minPos) / 2.0f;
+
+				if (sphereRadius > 0.0f)
+				{
+					glm::vec3 currentOffset = cam->position - sphereCenterWS;
+					glm::vec3 newOffset;
+					if (currentOffset != VEC3_ZERO)
+					{
+						newOffset = glm::normalize(currentOffset) * sphereRadius * 3.0f;
+					}
+					else
+					{
+						newOffset = glm::vec3(0.0f, 0.0f, sphereRadius * 3.0f);
+					}
+					cam->position = sphereCenterWS + newOffset;
+				}
+
+				cam->LookAt(m_SelectedObjectsCenterPos);
+				return EventReply::CONSUMED;
+			}
 		}
+
 		return EventReply::UNCONSUMED;
 	}
 
@@ -1313,14 +1418,13 @@ namespace flex
 
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
-		gizmoCreateInfo.bDepthWriteEnable = false;
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
 		if (m_TestShape == nullptr)
 		{
-			m_TestShape = new GameObject("Test Shape", GameObjectType::OBJECT);
+			m_TestShape = new GameObject("Test Shape", SID("object"));
 			Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
 			mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", m_TransformGizmoMatXID);
 			m_TestShape->GetTransform()->Scale(0.5f);
@@ -1328,12 +1432,20 @@ namespace flex
 			m_TestShape->SetVisible(false);
 		}
 
+		m_GridObject = new GameObject("Grid", SID("object"));
+		Mesh* gridMesh = m_GridObject->SetMesh(new Mesh(m_GridObject));
+		RenderObjectCreateInfo gridCreateInfo = {};
+		gridCreateInfo.bEditorObject = true;
+		gridMesh->LoadPrefabShape(PrefabShape::GRID, m_TransformGizmoMatAllID, &gridCreateInfo);
+		m_GridObject->Initialize();
+		m_GridObject->PostInitialize();
+		m_GridObject->SetVisible(m_bShowGrid);
 
-		m_TransformGizmo = new GameObject("Transform gizmo", GameObjectType::_NONE);
+		m_TransformGizmo = new GameObject("Transform gizmo", SID("object"));
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
 		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
-		i32 gizmoRBMask = (i32)CollisionType::DEFAULT;
+		i32 gizmoRBMask = (i32)CollisionType::EDITOR_OBJECT;
 
 		// Translation gizmo
 		{
@@ -1341,7 +1453,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", GameObjectType::_NONE);
+			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", SID("object"));
 			translateXAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* xAxisMesh = translateXAxis->SetMesh(new Mesh(translateXAxis));
 
@@ -1353,10 +1465,10 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", GameObjectType::_NONE);
+			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", SID("object"));
 			translateYAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* yAxisMesh = translateYAxis->SetMesh(new Mesh(translateYAxis));
 
@@ -1368,10 +1480,10 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", GameObjectType::_NONE);
+			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", SID("object"));
 			translateZAxis->AddTag(m_TranslationGizmoTag);
 			Mesh* zAxisMesh = translateZAxis->SetMesh(new Mesh(translateZAxis));
 
@@ -1383,7 +1495,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
@@ -1395,13 +1507,13 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_TranslationGizmo = new GameObject("Translation gizmo", GameObjectType::_NONE);
+			m_TranslationGizmo = new GameObject("Translation gizmo", SID("object"));
 
-			m_TranslationGizmo->AddChild(translateXAxis);
-			m_TranslationGizmo->AddChild(translateYAxis);
-			m_TranslationGizmo->AddChild(translateZAxis);
+			m_TranslationGizmo->AddChildImmediate(translateXAxis);
+			m_TranslationGizmo->AddChildImmediate(translateYAxis);
+			m_TranslationGizmo->AddChildImmediate(translateZAxis);
 
-			m_TransformGizmo->AddChild(m_TranslationGizmo);
+			m_TransformGizmo->AddChildImmediate(m_TranslationGizmo);
 		}
 
 		// Rotation gizmo
@@ -1410,7 +1522,7 @@ namespace flex
 			real cylinderHeight = 0.2f;
 
 			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", GameObjectType::_NONE);
+			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", SID("object"));
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			Mesh* xAxisMesh = rotationXAxis->SetMesh(new Mesh(rotationXAxis));
 
@@ -1422,10 +1534,10 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", GameObjectType::_NONE);
+			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", SID("object"));
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			Mesh* yAxisMesh = rotationYAxis->SetMesh(new Mesh(rotationYAxis));
 
@@ -1437,10 +1549,10 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", GameObjectType::_NONE);
+			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", SID("object"));
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 			Mesh* zAxisMesh = rotationZAxis->SetMesh(new Mesh(rotationZAxis));
 
@@ -1452,7 +1564,7 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
 			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
@@ -1463,13 +1575,13 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_RotationGizmo = new GameObject("Rotation gizmo", GameObjectType::_NONE);
+			m_RotationGizmo = new GameObject("Rotation gizmo", SID("object"));
 
-			m_RotationGizmo->AddChild(rotationXAxis);
-			m_RotationGizmo->AddChild(rotationYAxis);
-			m_RotationGizmo->AddChild(rotationZAxis);
+			m_RotationGizmo->AddChildImmediate(rotationXAxis);
+			m_RotationGizmo->AddChildImmediate(rotationYAxis);
+			m_RotationGizmo->AddChildImmediate(rotationZAxis);
 
-			m_TransformGizmo->AddChild(m_RotationGizmo);
+			m_TransformGizmo->AddChildImmediate(m_RotationGizmo);
 
 			m_RotationGizmo->SetVisible(false);
 		}
@@ -1481,7 +1593,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", GameObjectType::_NONE);
+			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", SID("object"));
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* xAxisMesh = scaleXAxis->SetMesh(new Mesh(scaleXAxis));
 
@@ -1493,10 +1605,10 @@ namespace flex
 			gizmoXAxisRB->SetKinematic(true);
 			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, nullptr, &gizmoCreateInfo);
+			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
 
 			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", GameObjectType::_NONE);
+			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", SID("object"));
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* yAxisMesh = scaleYAxis->SetMesh(new Mesh(scaleYAxis));
 
@@ -1508,10 +1620,10 @@ namespace flex
 			gizmoYAxisRB->SetKinematic(true);
 			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, nullptr, &gizmoCreateInfo);
+			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
 
 			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", GameObjectType::_NONE);
+			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", SID("object"));
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 			Mesh* zAxisMesh = scaleZAxis->SetMesh(new Mesh(scaleZAxis));
 
@@ -1523,10 +1635,10 @@ namespace flex
 			gizmoZAxisRB->SetKinematic(true);
 			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
 
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, nullptr, &gizmoCreateInfo);
+			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
 
 			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", GameObjectType::_NONE);
+			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", SID("object"));
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
 			Mesh* allAxesMesh = scaleAllAxes->SetMesh(new Mesh(scaleAllAxes));
 
@@ -1538,7 +1650,7 @@ namespace flex
 			gizmoAllAxesRB->SetKinematic(true);
 			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
 
-			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, nullptr, &gizmoCreateInfo);
+			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, false, true, &gizmoCreateInfo);
 
 
 			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
@@ -1550,14 +1662,14 @@ namespace flex
 			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
 
 
-			m_ScaleGizmo = new GameObject("Scale gizmo", GameObjectType::_NONE);
+			m_ScaleGizmo = new GameObject("Scale gizmo", SID("object"));
 
-			m_ScaleGizmo->AddChild(scaleXAxis);
-			m_ScaleGizmo->AddChild(scaleYAxis);
-			m_ScaleGizmo->AddChild(scaleZAxis);
-			m_ScaleGizmo->AddChild(scaleAllAxes);
+			m_ScaleGizmo->AddChildImmediate(scaleXAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleYAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleZAxis);
+			m_ScaleGizmo->AddChildImmediate(scaleAllAxes);
 
-			m_TransformGizmo->AddChild(m_ScaleGizmo);
+			m_TransformGizmo->AddChildImmediate(m_ScaleGizmo);
 
 			m_ScaleGizmo->SetVisible(false);
 		}
@@ -1574,9 +1686,9 @@ namespace flex
 		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 		glm::vec3 centerToCam = glm::normalize(g_CameraManager->CurrentCamera()->position - gizmoTransform->GetWorldPosition());
 
-		Material& xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
-		Material& yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
-		Material& zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
+		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
+		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 
 		real camViewXAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetRight()));
 		real camViewYAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetUp()));
@@ -1584,66 +1696,66 @@ namespace flex
 
 		if (m_CurrentTransformGizmoState == TransformState::ROTATE)
 		{
-			real threshold = 0.2f;
+			real threshold = 0.1f;
 			real power = 0.05f;
 			if (camViewXAlignment <= threshold)
 			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
+				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
 			}
 			else
 			{
-				xMat.colorMultiplier.a = 1.0f;
+				xMat->colourMultiplier.a = 1.0f;
 			}
 			if (camViewYAlignment <= threshold)
 			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
+				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
 			}
 			else
 			{
-				yMat.colorMultiplier.a = 1.0f;
+				yMat->colourMultiplier.a = 1.0f;
 			}
 			if (camViewZAlignment <= threshold)
 			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
+				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
 			}
 			else
 			{
-				zMat.colorMultiplier.a = 1.0f;
+				zMat->colourMultiplier.a = 1.0f;
 			}
 		}
 		else
 		{
 			// TODO: Use different scheme for rotating when facing head-on (screen-space rather than world-space)
-			real threshold = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.965f : 0.9f;
-			real power = m_CurrentTransformGizmoState == TransformState::ROTATE ? 0.5f : 0.2f;
+			real threshold = 0.95f;
+			real power = 0.2f;
 			if (camViewXAlignment >= threshold)
 			{
-				xMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
+				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				xMat.colorMultiplier.a = 1.0f;
+				xMat->colourMultiplier.a = 1.0f;
 			}
 			if (camViewYAlignment >= threshold)
 			{
-				yMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
+				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				yMat.colorMultiplier.a = 1.0f;
+				yMat->colourMultiplier.a = 1.0f;
 			}
 			if (camViewZAlignment >= threshold)
 			{
-				zMat.colorMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
+				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
 			}
 			else
 			{
-				zMat.colorMultiplier.a = 1.0f;
+				zMat->colourMultiplier.a = 1.0f;
 			}
 		}
 	}
 
-	btVector3 Editor::GetAxisColor(i32 axisIndex) const
+	btVector3 Editor::GetAxisColour(i32 axisIndex) const
 	{
 		return axisIndex == X_AXIS_IDX ? btVector3(1.0f, 0.0f, 0.0f) : axisIndex == Y_AXIS_IDX ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f);
 	}

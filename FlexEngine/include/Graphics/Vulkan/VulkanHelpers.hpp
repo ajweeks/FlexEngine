@@ -2,8 +2,6 @@
 #if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
-#include "volk/volk.h"
-
 #if COMPILE_SHADER_COMPILER
 #include "shaderc/shaderc.h" // For shaderc_shader_kind
 #endif
@@ -32,7 +30,7 @@ namespace flex
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
 		// Framebuffer for offscreen rendering
-		struct FrameBufferAttachment
+		struct FrameBufferAttachment final
 		{
 			struct CreateInfo
 			{
@@ -49,6 +47,11 @@ namespace flex
 
 			FrameBufferAttachment(VulkanDevice* device, const CreateInfo& createInfo);
 			~FrameBufferAttachment();
+
+			FrameBufferAttachment(const FrameBufferAttachment&) = delete;
+			FrameBufferAttachment(const FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment& operator=(FrameBufferAttachment&) = delete;
+			FrameBufferAttachment& operator=(const FrameBufferAttachment&&) = delete;
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -80,6 +83,11 @@ namespace flex
 			FrameBuffer(VulkanDevice* device);
 			~FrameBuffer();
 
+			FrameBuffer(const FrameBuffer&) = delete;
+			FrameBuffer(const FrameBuffer&&) = delete;
+			FrameBuffer& operator=(FrameBuffer&) = delete;
+			FrameBuffer& operator=(const FrameBuffer&&) = delete;
+
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
 			VkFramebuffer* Replace();
@@ -101,6 +109,11 @@ namespace flex
 		{
 			Cascade(VulkanDevice* device);
 			~Cascade();
+
+			Cascade(const Cascade&) = delete;
+			Cascade(const Cascade&&) = delete;
+			Cascade& operator=(const Cascade&) = delete;
+			Cascade& operator=(const Cascade&&) = delete;
 
 			FrameBuffer frameBuffer;
 			FrameBufferAttachment* attachment = nullptr;
@@ -130,7 +143,7 @@ namespace flex
 		struct VulkanUniformBufferObjectData
 		{
 			u8* data = nullptr;
-			u32 size = 0;
+			u32 unitSize = 0; // Size of each buffer instance (per object)
 		};
 
 		enum class UniformBufferType
@@ -142,10 +155,25 @@ namespace flex
 			_NONE
 		};
 
-		struct UniformBuffer
+		struct UniformBuffer final
 		{
 			UniformBuffer(VulkanDevice* device, UniformBufferType type);
 			~UniformBuffer();
+
+			UniformBuffer(const UniformBuffer&) = delete;
+			UniformBuffer& operator=(const UniformBuffer&) = delete;
+
+			UniformBuffer(const UniformBuffer&& other) :
+				buffer(other.buffer)
+			{
+				if (this != &other)
+				{
+					data = other.data;
+					fullDynamicBufferSize = other.fullDynamicBufferSize;
+					type = other.type;
+				}
+			}
+			UniformBuffer& operator=(const UniformBuffer&&) = delete;
 
 			VulkanBuffer buffer;
 			VulkanUniformBufferObjectData data;
@@ -154,15 +182,20 @@ namespace flex
 			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
-		struct VertexIndexBufferPair
+		struct VertexIndexBufferPair final
 		{
 			VertexIndexBufferPair(VulkanBuffer* vertexBuffer, VulkanBuffer* indexBuffer) :
 				vertexBuffer(vertexBuffer),
 				indexBuffer(indexBuffer)
 			{}
 
+			VertexIndexBufferPair(const VertexIndexBufferPair&) = delete;
+			VertexIndexBufferPair(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&) = delete;
+			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&&) = delete;
+
 			void Destroy();
-			void Empty();
+			void Clear();
 
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
@@ -171,11 +204,17 @@ namespace flex
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
-		struct VulkanTexture
+		struct VulkanTexture final : Texture
 		{
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name, u32 width, u32 height, u32 channelCount);
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
+			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name);
+
+			virtual ~VulkanTexture() {}
+
+			VulkanTexture(const VulkanTexture&) = delete;
+			VulkanTexture(const VulkanTexture&&) = delete;
+			VulkanTexture& operator=(const VulkanTexture&) = delete;
+			VulkanTexture& operator=(const VulkanTexture&&) = delete;
 
 			struct ImageCreateInfo
 			{
@@ -264,7 +303,8 @@ namespace flex
 			// Expects *texture == nullptr
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
 
-			u32 CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
+			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
+				VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
@@ -274,22 +314,22 @@ namespace flex
 			void Build(void* data = nullptr);
 
 			/*
-			 * Creates image, image view, and sampler based on the texture at filePath
+			 * Creates image, image view, and sampler based on the texture at relativeFilePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain = false);
+			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
@@ -299,10 +339,6 @@ namespace flex
 
 			void GenerateMipmaps();
 
-			std::string GetRelativeFilePath() const;
-			std::string GetName() const;
-			void Reload();
-
 			VkFormat CalculateFormat();
 
 			VDeleter<VkImage> image;
@@ -311,19 +347,6 @@ namespace flex
 			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
 			VDeleter<VkSampler> sampler;
 
-			u32 width = 0;
-			u32 height = 0;
-			u32 channelCount = 0;
-			std::string name;
-			std::string relativeFilePath;
-			std::string fileName;
-			std::array<std::string, 6> relativeCubemapFilePaths;
-			u32 mipLevels = 1;
-			bool bFlipVertically = false;
-			bool bGenerateMipMaps = false;
-			bool bHDR = false;
-			bool bIsArray = false;
-			bool bSamplerClampToBorder = false;
 
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
@@ -399,7 +422,7 @@ namespace flex
 		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName = nullptr, const char* DBG_ImageViewName = nullptr);
 
 		template<class T>
-		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle);
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColourSwizzle);
 
 		VkBool32 GetSupportedDepthFormat(VkPhysicalDevice physicalDevice, VkFormat* depthFormat);
 
@@ -412,7 +435,8 @@ namespace flex
 
 		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer = 0);
+		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+			u32 width, u32 height, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
@@ -421,17 +445,10 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
-		struct VulkanCubemapGBuffer
-		{
-			VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat);
-
-			u32 id = 0;
-			const char* name = "";
-			VkFormat internalFormat = VK_FORMAT_UNDEFINED;
-		};
-
 		struct UniformBufferList
 		{
+			UniformBufferList();
+
 			void Add(VulkanDevice* device, UniformBufferType type);
 			UniformBuffer* Get(UniformBufferType type);
 			const UniformBuffer* Get(UniformBufferType type) const;
@@ -440,12 +457,15 @@ namespace flex
 			std::vector<UniformBuffer> uniformBufferList;
 		};
 
-		struct VulkanShader
+		struct VulkanShader final : public Shader
 		{
-			VulkanShader(const VDeleter<VkDevice>& device, Shader* shader);
-			~VulkanShader();
+			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
+			virtual ~VulkanShader();
 
-			Shader* shader = nullptr;
+			VulkanShader(const VulkanShader&) = delete;
+			VulkanShader(const VulkanShader&&) = delete;
+			VulkanShader& operator=(const VulkanShader&) = delete;
+			VulkanShader& operator=(const VulkanShader&&) = delete;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -462,11 +482,20 @@ namespace flex
 		{
 			VulkanShaderCompiler(bool bForceRecompile);
 
+			VulkanShaderCompiler(const VulkanShaderCompiler&) = delete;
+			VulkanShaderCompiler(const VulkanShaderCompiler&&) = delete;
+			VulkanShaderCompiler& operator=(const VulkanShaderCompiler&) = delete;
+			VulkanShaderCompiler& operator=(const VulkanShaderCompiler&&) = delete;
+
 			static void ClearShaderHash(const std::string& shaderName);
 
-			static void DisplayShaderErrorsImGui(bool* bWindowShowing);
+			static void DrawImGuiShaderErrorsWindow(bool* bWindowShowing);
+			static void DrawImGuiShaderErrors();
 
 			bool TickStatus();
+
+			// Whether a textual assembly version should also be generated (unused by runtime)
+			const bool bEnableAssemblyCompilation = true;
 
 			ms startTime = 0.0f;
 			ms lastCompileDuration = 0.0f;
@@ -493,82 +522,22 @@ namespace flex
 		};
 #endif // COMPILE_SHADER_COMPILER
 
-		template<typename T>
-		struct ShaderUniformContainer
+		struct VulkanMaterial final : public Material
 		{
-			using iter = typename std::vector<Pair<u64, T>>::iterator;
+			VulkanMaterial() {};
+			virtual ~VulkanMaterial() {};
 
-			void Add(u64 uniform, const T value, std::string slotName = "")
-			{
-				for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
-				{
-					if (value_iter->first == uniform)
-					{
-						value_iter->second = value;
-						slotNames[value_iter - values.begin()] = slotName;
-						return;
-					}
-				}
-
-				values.emplace_back(uniform, value);
-				slotNames.emplace_back(slotName);
-			}
-
-			u32 Count()
-			{
-				return (u32)values.size();
-			}
-
-			iter begin()
-			{
-				return values.begin();
-			}
-
-			iter end()
-			{
-				return values.end();
-			}
-
-			bool Contains(u64 uniform)
-			{
-				for (auto& pair : values)
-				{
-					if (pair.first == uniform)
-					{
-						return true;
-					}
-				}
-				return false;
-			}
-
-			T operator[](u64 uniform)
-			{
-				for (auto& pair : values)
-				{
-					if (pair.first == uniform)
-					{
-						return pair.second;
-					}
-				}
-				return nullptr;
-			}
-
-			std::vector<Pair<u64, T>> values;
-			std::vector<std::string> slotNames;
-		};
-
-		struct VulkanMaterial
-		{
-			Material material; // More info is stored in the generic material struct
+			VulkanMaterial(const VulkanMaterial&) = delete;
+			VulkanMaterial(const VulkanMaterial&&) = delete;
+			VulkanMaterial& operator=(const VulkanMaterial&) = delete;
+			VulkanMaterial& operator=(const VulkanMaterial&&) = delete;
 
 			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
 			UniformBufferList uniformBufferList;
 
-			ShaderUniformContainer<VulkanTexture*> textures;
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
-			std::vector<VulkanCubemapGBuffer> cubemapSamplerGBuffersIDs;
 			u32 cubemapDepthSamplerID = 0;
 
 			// TODO: Remove, this always equals shaderID
@@ -591,11 +560,42 @@ namespace flex
 
 			VDeleter<VkPipeline> pipeline;
 			VDeleter<VkPipelineLayout> layout;
+			// TODO: Store pipeline cache here
 		};
 
-		struct VulkanRenderObject
+		struct GraphicsPipelineConfiguration
 		{
-			VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID);
+			GraphicsPipelineConfiguration(GraphicsPipelineID pipelineID, GraphicsPipeline* pipeline, bool bPersistent, const char* DBG_Name) :
+				pipelineID(pipelineID),
+				pipeline(pipeline),
+				usageCount(1),
+				bPersistent(bPersistent)
+			{
+				strncpy(this->DBG_Name, DBG_Name, ARRAY_LENGTH(this->DBG_Name));
+			}
+
+			~GraphicsPipelineConfiguration()
+			{
+				delete pipeline;
+			}
+
+			GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
+			GraphicsPipeline* pipeline = nullptr;
+			u32 usageCount = 0;
+			bool bPersistent;
+
+			// Debug-only
+			char DBG_Name[256];
+		};
+
+		struct VulkanRenderObject final
+		{
+			VulkanRenderObject(RenderID renderID);
+
+			VulkanRenderObject(const VulkanRenderObject&) = delete;
+			VulkanRenderObject(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject& operator=(const VulkanRenderObject&) = delete;
+			VulkanRenderObject& operator=(const VulkanRenderObject&&) = delete;
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -618,13 +618,12 @@ namespace flex
 			u32 shadowVertexOffset = 0;
 			u32 shadowIndexOffset = 0;
 
-			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
 			bool bEditorObject = false;
 			bool bSetDynamicStates = false;
+			bool bAllowDynamicBufferShrinking = true;
 
 			u32 dynamicUBOOffset = 0;
 			u32 dynamicShadowUBOOffset = 0;
@@ -632,13 +631,16 @@ namespace flex
 			u64 dynamicVertexBufferOffset = InvalidBufferID;
 			u64 dynamicIndexBufferOffset = InvalidBufferID;
 
-			GraphicsPipeline graphicsPipeline;
+			GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 
 			RenderPassType renderPassOverride = RenderPassType::_NONE;
 		};
 
 		struct GraphicsPipelineCreateInfo
 		{
+			bool operator=(const GraphicsPipelineCreateInfo& other);
+			u64 Hash();
+
 			ShaderID shaderID = InvalidShaderID;
 			VertexAttributes vertexAttributes = 0;
 
@@ -654,8 +656,9 @@ namespace flex
 			u32 descriptorSetLayoutIndex = 0;
 
 			bool bSetDynamicStates = false;
-			bool bEnableColorBlending = false;
-			bool bEnableAdditiveColorBlending = false;
+			bool bEnableColourBlending = false;
+			bool bEnableAdditiveColourBlending = false;
+			bool bPersistent = false;
 
 			VkBool32 depthTestEnable = VK_TRUE;
 			VkBool32 depthWriteEnable = VK_TRUE;
@@ -665,11 +668,6 @@ namespace flex
 			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 
 			const char* DBG_Name = nullptr;
-
-			// Out variables
-			VkPipelineCache* pipelineCache = nullptr;
-			VkPipelineLayout* pipelineLayout = nullptr;
-			VkPipeline* graphicsPipeline = nullptr;
 		};
 
 		struct BufferDescriptorInfo
@@ -706,12 +704,17 @@ namespace flex
 
 		struct VulkanParticleSystem
 		{
-			VulkanParticleSystem(VulkanDevice* device);
+			explicit VulkanParticleSystem(VulkanDevice* device);
+
+			VulkanParticleSystem(const VulkanParticleSystem&) = delete;
+			VulkanParticleSystem(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem& operator=(const VulkanParticleSystem&) = delete;
+			VulkanParticleSystem& operator=(const VulkanParticleSystem&&) = delete;
 
 			ParticleSystemID ID = InvalidParticleSystemID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
-			VDeleter<VkPipeline> graphicsPipeline;
+			GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 			VDeleter<VkPipeline> computePipeline;
 			ParticleSystem* system = nullptr;
 		};
@@ -742,6 +745,40 @@ namespace flex
 				: vendorID == 0x1414 ? GPUVendor::Software   // Microsoft WARP
 				: GPUVendor::Unknown;
 		}
+
+		struct VulkanDescriptorPool
+		{
+			VulkanDescriptorPool();
+			VulkanDescriptorPool(VulkanDevice* device);
+			~VulkanDescriptorPool();
+
+			VulkanDescriptorPool(const VulkanDescriptorPool& other) = delete;
+			VulkanDescriptorPool(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool operator=(const VulkanDescriptorPool& other) = delete;
+			VulkanDescriptorPool operator=(const VulkanDescriptorPool&& other) = delete;
+
+			VkDescriptorSet CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
+			void CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			void CreateDescriptorSetLayout(ShaderID shaderID);
+			void Replace();
+			void Reset();
+			void FreeSet(VkDescriptorSet descSet);
+
+			// TODO: Monitor number of used desc sets to set this value intelligently
+			u32 maxNumDescSets = 1024;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 16;
+			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
+
+			VulkanDevice* device = nullptr;
+			VkDescriptorPool pool = VK_NULL_HANDLE;
+			u32 size = 0;
+
+			std::vector<VkDescriptorSetLayout> descriptorSetLayouts; // One per shader
+			std::vector<VkDescriptorSet> descriptorSets; // One per material
+			u32 allocatedSetCount = 0;
+		};
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);
 		VkCullModeFlagBits CullFaceToVkCullMode(CullFace cullFace);

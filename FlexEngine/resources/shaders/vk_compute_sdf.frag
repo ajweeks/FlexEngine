@@ -2,7 +2,7 @@
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec4 outColor;
+layout (location = 0) out vec4 outColour;
 
 layout (binding = 0) uniform UBODynamic
 {
@@ -46,7 +46,7 @@ void main()
 	float diff = closest / (spread * 2.0);
 	float val = 0.5 + (insideChar ? diff : -diff);
 
-	vec4 color = vec4(0.0);
-	color[uboDynamic.texChannel] = val;
-	outColor = color;
+	vec4 colour = vec4(0.0);
+	colour[uboDynamic.texChannel] = val;
+	outColour = colour;
 }

@@ -1,0 +1,102 @@
+{
+	"version" : 6,
+	"name" : "scene_raymarched",
+	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "2.487, 0.551, 4.492",
+			"pitch" : -0.106848,
+			"yaw" : -2.076474
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "A05A1A496025D1894604B6A0C2EAF247",
+			"type" : "skybox",
+			"visible" : true,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"id" : "980F43487C2F848D465FC6CDF9DBE5E6",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "0.727, 0.666, -0.895"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "0.435, 0.130, -0.487, 0.746",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "1.00, 1.00, 1.00",
+				"enabled" : true,
+				"brightness" : 3.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "New_Object_00",
+			"id" : "2FFEA6C90981698F462E7F3967E5CF93",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -1.930, 0.000",
+				"scale" : "26.310, 0.840, 19.370"
+			},
+			"visible" : false,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grass 01"
+			]
+		},
+		{
+			"name" : "raymarched",
+			"id" : "3A6766EAD54B3F874B8620E21629A3AF",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.036, 0.000",
+				"scale" : "1.159, 1.159, 1.159"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "sphere.glb",
+			"materials" : 
+			[
+				"Raymarched"
+			]
+		}
+	]
+}

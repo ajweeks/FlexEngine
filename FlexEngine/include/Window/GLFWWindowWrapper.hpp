@@ -50,12 +50,12 @@ namespace flex
 		virtual void Maximize() override;
 		virtual void Iconify() override;
 
+		virtual const char* GetClipboardText() override;
+		virtual void SetClipboardText(const char* text) override;
+
 		GLFWwindow* GetWindow() const;
 
 		void SetUpCallbacks();
-
-		const char* GetClipboardText();
-		void SetClipboardText(const char* text);
 
 	protected:
 		virtual void SetWindowTitle(const std::string& title) override;
@@ -65,8 +65,6 @@ namespace flex
 		void MoveConsole();
 
 		GLFWwindow* m_Window = nullptr;
-
-		std::vector<GLFWimage> m_WindowIcons;
 
 	private:
 

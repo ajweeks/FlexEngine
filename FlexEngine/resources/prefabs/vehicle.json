@@ -1,0 +1,212 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+	"root" : 
+	{
+		"name" : "vehicle",
+		"id" : "A1F948B9FD9071BB426EA963F7BB1AB8",
+		"type" : "vehicle",
+		"visible" : true,
+		"casts shadow" : true,
+		"mesh" : "car_paint.glb",
+		"materials" : 
+		[
+			"Black glass",
+			"Blue paint",
+			"Brake-light",
+			"Reverse-light"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.900, 0.300, 2.200",
+			"offset pos" : "0.000, 0.700, 0.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 700.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 5,
+			"group" : 1
+		},
+		"vehicle" : 
+		{
+			"tire ids" : 
+			[
+				"F89CD286DC9C1C8045F6455B45F00BEE",
+				"97E7AB7EB581B4914D61F0BBCC718BB6",
+				"44557119936CE5A547ABCB66CA9A22C4",
+				"DFD3693D4A26F892498B39384880B063"
+			],
+			"brake light ids" : 
+			[
+				"F10766F7E76602894EBBCF69E4F5B254",
+				"0F754E00DF3CE1A14E01098DD658F1D5"
+			],
+			"sound effect sids" : 
+			[
+				"15097858619646670995",
+				"11660463684859516375"
+			]
+		},
+		"children" : 
+		[
+			{
+				"name" : "wheel_FL30",
+				"id" : "F89CD286DC9C1C8045F6455B45F00BEE",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.846, -0.135, 1.534",
+					"rot" : "0.250, -0.000, 0.000"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_FL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_FR30",
+				"id" : "97E7AB7EB581B4914D61F0BBCC718BB6",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.742, -0.131, 1.537",
+					"rot" : "2.214, -0.000, 0.000"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_FR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_RL30",
+				"id" : "44557119936CE5A547ABCB66CA9A22C4",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.720, -0.145, -1.187",
+					"rot" : "0.160, -0.000, 0.000"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_RL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "wheel_RR30",
+				"id" : "DFD3693D4A26F892498B39384880B063",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.738, -0.151, -1.153",
+					"rot" : "0.905, -0.000, 0.000"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"mesh" : "car_tire_RR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"name" : "HeadLight_L-1",
+				"id" : "03126946173EF58E4457502532726B15",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.419, 0.000, 2.584"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "-0.419, 0.000, 2.584",
+					"colour" : "0.96, 0.97, 0.59",
+					"enabled" : true,
+					"brightness" : 500.000000,
+					"direction" : "-0.25, 0.08, -0.96",
+					"angle" : 0.750000
+				}
+			},
+			{
+				"name" : "HeadLight_R-1",
+				"id" : "95CD9014EB292A96410F402E416D56E9",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.318, 0.000, 2.584"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "0.318, 0.000, 2.584",
+					"colour" : "0.96, 0.97, 0.59",
+					"enabled" : true,
+					"brightness" : 500.000000,
+					"direction" : "-0.25, 0.08, -0.96",
+					"angle" : 0.750000
+				}
+			},
+			{
+				"name" : "TailLight_L-1",
+				"id" : "F10766F7E76602894EBBCF69E4F5B254",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.740, 0.295, -1.958",
+					"rot" : "-2.750, 0.229, 0.094"
+				},
+				"visible" : false,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "-0.740, 0.295, -1.958",
+					"colour" : "0.91, 0.07, 0.07",
+					"enabled" : false,
+					"brightness" : 80.000000,
+					"direction" : "0.32, -0.46, 0.83",
+					"angle" : 0.245000
+				}
+			},
+			{
+				"name" : "TailLight_R-1",
+				"id" : "0F754E00DF3CE1A14E01098DD658F1D5",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.712, 0.343, -1.954",
+					"rot" : "-2.759, -0.289, 0.000"
+				},
+				"visible" : false,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "0.712, 0.343, -1.954",
+					"colour" : "0.91, 0.07, 0.07",
+					"enabled" : false,
+					"brightness" : 80.000000,
+					"direction" : "-0.18, -0.39, 0.91",
+					"angle" : 0.245000
+				}
+			}
+		]
+	}
+}

@@ -4,6 +4,7 @@
 
 #include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/VariableContainer.hpp"
+#include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -217,7 +218,7 @@ namespace flex
 			return statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
 				statementType == StatementType::TERNARY_OPERATION ||
-				statementType == StatementType::FUNC_CALL ||
+				statementType == StatementType::CALL ||
 				statementType == StatementType::INDEX_OPERATION;
 		}
 
@@ -245,7 +246,14 @@ namespace flex
 				statementType == StatementType::UNARY_OPERATION ||
 				statementType == StatementType::BINARY_OPERATION ||
 				statementType == StatementType::TERNARY_OPERATION ||
-				statementType == StatementType::FUNC_CALL;
+				statementType == StatementType::CALL;
+		}
+
+		bool IsSimple(StatementType statementType)
+		{
+			return IsLiteral(statementType) ||
+				statementType == StatementType::IDENTIFIER ||
+				statementType == StatementType::FUNC_ARG;
 		}
 
 		Statement::Statement(const Span& span, StatementType statementType) :
@@ -1383,6 +1391,17 @@ namespace flex
 
 		bool Parser::NextIsBinaryOperator()
 		{
+			// Handle "x-1" case where there's no whitespace between numbers
+			if (NextIs(TokenKind::INT_LITERAL) || NextIs(TokenKind::FLOAT_LITERAL))
+			{
+				if (!m_Current.value.empty() && m_Current.value[0] == '-')
+				{
+					m_Current.kind = TokenKind::MINUS;
+					m_Lexer->Backtrack();
+					return true;
+				}
+			}
+
 			return NextIs(TokenKind::PLUS) ||
 				NextIs(TokenKind::MINUS) ||
 				NextIs(TokenKind::STAR) ||
@@ -1530,17 +1549,6 @@ namespace flex
 
 				TypeName typeName = TokenKindToTypeName(typeToken.kind);
 
-				if (NextIs(TokenKind::CLOSE_PAREN))
-				{
-					span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
-					Expression* target = NextPrimary();
-					if (target->typeName == typeName)
-					{
-						return target;
-					}
-					return new Cast(span, typeName, target);
-				}
-
 				if (NextIs(TokenKind::OPEN_SQUARE))
 				{
 					Eat(TokenKind::OPEN_SQUARE);
@@ -1556,19 +1564,50 @@ namespace flex
 				{
 					//span = span.Extend(Eat(TokenKind::SEMICOLON).span);
 
+					if (VM::VirtualMachine::IsTerminalOutputVar(identifierToken.value))
+					{
+						diagnosticContainer->AddDiagnostic(span, "Cannot overwrite system variable");
+						delete initializer;
+						return nullptr;
+					}
+
 					return new Declaration(span, identifierToken.value, initializer, typeName);
 				}
 			}
 			else if (NextIs(TokenKind::OPEN_PAREN))
 			{
 				Eat(TokenKind::OPEN_PAREN);
-				Expression* subexpression = NextExpression();
-				// TODO: Require matching paren
-				if (NextIs(TokenKind::CLOSE_PAREN))
+
+				// Cast
+				if (NextIsTypename())
 				{
-					Eat(TokenKind::CLOSE_PAREN);
+					Token typeToken = Eat(m_Current.kind);
+
+					if (NextIs(TokenKind::CLOSE_PAREN))
+					{
+						Span span = m_Current.span;
+
+						TypeName typeName = TokenKindToTypeName(typeToken.kind);
+
+						span = span.Extend(Eat(TokenKind::CLOSE_PAREN).span);
+						Expression* target = NextPrimary();
+						if (target != nullptr)
+						{
+							// Ignore redundant casts
+							if (target->typeName == typeName)
+							{
+								return target;
+							}
+							return new Cast(span, typeName, target);
+						}
+					}
 				}
-				return subexpression;
+				else
+				{
+					Expression* subexpression = NextExpression();
+					Eat(TokenKind::CLOSE_PAREN);
+					return subexpression;
+				}
 			}
 			else if (NextIs(TokenKind::INT_LITERAL))
 			{
@@ -1757,6 +1796,11 @@ namespace flex
 
 		TernaryOperation* Parser::NextTernary(Expression* condition)
 		{
+			if (condition == nullptr)
+			{
+				return nullptr;
+			}
+
 			Eat(TokenKind::QUESTION);
 			Expression* ifTrue = NextExpression();
 			if (ifTrue != nullptr)
@@ -2056,6 +2100,13 @@ namespace flex
 					Token typeToken = Eat(m_Current.kind);
 					Span span = typeToken.span;
 					Token identifier = Eat(TokenKind::IDENTIFIER);
+
+					if (VM::VirtualMachine::IsTerminalOutputVar(identifier.value))
+					{
+						diagnosticContainer->AddDiagnostic(span, "Cannot overwrite system variable");
+						// TODO: Memory leak - delete list of previous results
+						return {};
+					}
 
 					result.push_back(new Declaration(span.Extend(identifier.span), identifier.value, nullptr, TokenKindToTypeName(typeToken.kind), true));
 

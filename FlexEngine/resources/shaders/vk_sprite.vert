@@ -10,7 +10,7 @@ layout (push_constant) uniform PushConstants
 layout (binding = 0) uniform UBODynamic
 {
 	mat4 model;
-	vec4 colorMultiplier;
+	vec4 colourMultiplier;
 	bool enableAlbedoSampler;
 } uboDynamic;
 
@@ -25,4 +25,5 @@ void main()
 	vec4 worldPos = uboDynamic.model * vec4(in_Position, 1);
 	
 	gl_Position = (pushConstants.proj * pushConstants.view) * worldPos;
+	gl_Position.z = 1.0;
 }

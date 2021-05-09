@@ -13,9 +13,10 @@ DEPENDENCIES_DIR = path.join(SOURCE_DIR, "dependencies/")
 solution "Flex"
 	configurations {
 		"Debug",
-		"Development",
-		"Shipping",
-		"Shipping_WithSymbols"
+		"Sanitize",
+		"Profile",
+		"Release",
+		"Release_WithSymbols"
 	}
 
 	platforms { "x32", "x64" }
@@ -24,7 +25,7 @@ solution "Flex"
 
 	location "../build/"
 	objdir "../build/"
-	windowstargetplatformversion "10.0.17763.0"
+	windowstargetplatformversion "10.0"
 
 -- Put intermediate files under build/Intermediate/config_platform/project
 -- Put binaries under bin/config/project/platform --TODO: Really? confirm
@@ -47,7 +48,11 @@ function configName(config)
 	local cfgStr = ""
 	if (string.startswith(config, "Debug"))
 		then cfgStr = "Debug"
-		else cfgStr = "Release"
+	elseif (string.startswith(config, "Sanitize"))
+		then cfgStr = "Sanitize"
+	elseif (string.startswith(config, "Profile"))
+		then cfgStr = "Profile"
+	else cfgStr = "Release"
 	end
 	return cfgStr
 end
@@ -90,14 +95,17 @@ end
 configuration "Debug"
 	defines { "DEBUG", "SYMBOLS" }
 	flags { "Symbols", "ExtraWarnings" }
-configuration "Development"
-	defines { "DEVELOPMENT", "SYMBOLS" }
+configuration "Sanitize"
+	defines { "DEBUG", "SYMBOLS" }
+	flags { "Symbols", "ExtraWarnings" }
+configuration "Profile"
+	defines { "PROFILE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "ExtraWarnings" }
-configuration "Shipping"
-	defines { "SHIPPING" }
+configuration "Release"
+	defines { "RELEASE" }
 	flags {"OptimizeSpeed", "No64BitChecks" }
-configuration "Shipping_WithSymbols"
-	defines { "SHIPPING", "SYMBOLS" }
+configuration "Release_WithSymbols"
+	defines { "RELEASE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
 configuration "x32"
 	defines "FLEX_32"
@@ -111,12 +119,14 @@ configuration {}
 
 	-- Files to include that shouldn't get warnings reported on
 	systemincludedirs {
+		path.join(SOURCE_DIR, "include/ThirdParty"),
 		path.join(DEPENDENCIES_DIR, "glfw/include"),
 		path.join(DEPENDENCIES_DIR, "glm"),
 		path.join(DEPENDENCIES_DIR, "stb"),
 		path.join(DEPENDENCIES_DIR, "imgui"),
 		path.join(DEPENDENCIES_DIR, "vulkan/include"),
 		path.join(DEPENDENCIES_DIR, "bullet/src"),
+		path.join(DEPENDENCIES_DIR, "bullet/examples"),
 		path.join(DEPENDENCIES_DIR, "openAL/include"),
 		path.join(DEPENDENCIES_DIR, "freetype/include"),
 		path.join(DEPENDENCIES_DIR, "shaderc/libshaderc/include"),
@@ -151,23 +161,41 @@ project "Flex"
 
 	configuration "vs*"
 		flags { "Winmain" }
-		links { "opengl32" }
+		links { "opengl32", "glfw3", "OpenAL32", }
+		buildoptions_cpp {
+			"/w14263", -- 'function' : member function does not override any base class virtual member function
+			"/w14264", -- 'virtual_function' : no override available for virtual member function from base 'class'; function is hidden
+			"/w14265", -- 'class' : class has virtual functions, but destructor is not virtual
+			"/w14266", -- 'function' : no override available for virtual member function from base 'type'; function is hidden
+			"/w15031", -- #pragma warning(pop): likely mismatch, popping warning state pushed in different file
+			"/w15032", -- detected #pragma warning(push) with no corresponding #pragma warning(pop)
+		}
 	configuration "linux*"
 		linkoptions {
 			-- lpthread for shaderc?
 			"-pthread", -- For pthread_create
+			"-L/usr/lib64/",
 			"-ldl", -- For dlopen, etc.
+			"-L/usr/lib64/",
+			"-L/lib/x86_64-linux-gnu/", -- for bzip2
+			"-lbz2",
 		}
 		buildoptions {
 			"-Wfatal-errors",
-			"-march=haswell"
+			"-march=haswell",
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter"
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess",
+			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {
 			-- no-reorder isn't valid in c
+		}
+	configuration { "linux*", "Sanitize" }
+		linkoptions {
+			"-fsanitize=undefined,address", -- TODO: try memory
+			"-fno-omit-frame-pointer",
 		}
 	configuration {}
 
@@ -177,19 +205,24 @@ project "Flex"
 	-- Windows
 		-- Common
 		configuration "vs*"
-			links { "opengl32", "glfw3", "OpenAL32" }
+			links {
+				"opengl32", "glfw3", "OpenAL32",
+				"Rpcrt4" -- For UuidCreate
+			}
 		-- Debug-only
 		configuration { "vs*", "Debug" }
 			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
-		configuration { "vs*", "Development" }
+		configuration { "vs*", "Debug" }
+			links { "BulletCollision_Debug", "BulletDynamics_Debug", "LinearMath_Debug", "freetype", "shaderc_combined" }
+		configuration { "vs*", "Profile" }
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-		configuration { "vs*", "Shipping" }
+		configuration { "vs*", "Release" }
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
-		configuration { "vs*", "Shipping_WithSymbols" }
+		configuration { "vs*", "Release_WithSymbols" }
 			links { "BulletCollision", "BulletDynamics", "LinearMath", "freetype" }
 	-- linux
 		configuration "linux*"
-			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined" }
+			links { "glfw3", "openal", "BulletDynamics", "BulletCollision", "LinearMath", "freetype", "X11", "png", "z", "shaderc_combined", "uuid" }
 configuration {}
 
 --Source files
@@ -197,10 +230,12 @@ files {
 	path.join(SOURCE_DIR, "include/**.h"),
 	path.join(SOURCE_DIR, "include/**.hpp"),
 	path.join(SOURCE_DIR, "src/**.cpp"),
+	path.join(SOURCE_DIR, "src/**.c"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
-	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis")
+	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis"),
+	path.join(PROJECT_DIR, "AdditionalFiles/flex.rc")
 }
 
 --Exclude the following files from the build, but keep in the project

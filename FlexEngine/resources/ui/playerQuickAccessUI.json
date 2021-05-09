@@ -1,0 +1,150 @@
+{
+	"type" : "Quick Access",
+	"cut type" : "Top",
+	"amount" : 1.000000,
+	"visible" : false,
+	"relative" : true,
+	"children" : 
+	[
+		{
+			"type" : "Base",
+			"cut type" : "Bottom",
+			"amount" : 0.087500,
+			"visible" : false,
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.145000,
+					"visible" : false,
+					"relative" : true
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"tag source string" : "slot0",
+					"tag" : 16612773434777059667,
+					"item" : 
+					{
+						"index" : 0
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 1
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 2
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 3
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 4
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 5
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 6
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 7
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 8
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 9
+					}
+				},
+				{
+					"type" : "Item",
+					"cut type" : "Left",
+					"amount" : 0.061000,
+					"visible" : true,
+					"relative" : false,
+					"item" : 
+					{
+						"index" : 10
+					}
+				}
+			]
+		}
+	]
+}

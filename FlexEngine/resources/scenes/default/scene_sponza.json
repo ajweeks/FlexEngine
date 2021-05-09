@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 5,
 	"name" : "Sponza",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,21 +21,23 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-88.448, 25.340, -7.676",
-			"pitch" : -0.278025,
-			"yaw" : 0.086571
+			"position" : "-126.237, 15.621, -2.837",
+			"pitch" : 0.083603,
+			"yaw" : 0.070903
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Sponza",
+			"id" : "8C15102E361213AF489DB2CCAF735860",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 			},
-			"mesh" : "sponza",
+			"mesh" : "sponza.glb",
 			"materials" : 
 			[
 				"pbr grey",
@@ -39,18 +47,20 @@
 		},
 		{
 			"name" : "ground plane",
+			"id" : "B5208F47CA8DB7A8493960E2FA7F2C94",
 			"type" : "object",
 			"visible" : true,
 			"static" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, -0.620, 0.000",
+				"pos" : "0.000, -0.189, 0.000",
 				"scale" : "278.791, 1.000, 124.999"
 			},
-			"mesh" : "cube",
+			"mesh" : "unit-plane.glb",
 			"materials" : 
 			[
-				"pbr light grey"
+				"grid"
 			],
 			"collider" : 
 			{
@@ -68,8 +78,10 @@
 		},
 		{
 			"name" : "Skybox",
+			"id" : "399F2B7FE93B82B4456D6FAAED64295D",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -83,8 +95,10 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "1C0FAB2C31A309B548AB41CA7B9113D3",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "3.100, 16.485, 4.048",
@@ -93,15 +107,17 @@
 		},
 		{
 			"name" : "ball 01",
+			"id" : "A97834FA319F82BC42FD58A96A5E65F6",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "19.371, 0.880, 3.061",
-				"rot" : "-2.609, -0.357, 2.060",
+				"pos" : "19.385, 1.311, 3.071",
+				"rot" : "-2.609, -0.357, 2.046",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -122,15 +138,17 @@
 		},
 		{
 			"name" : "ball 02",
+			"id" : "900B3CA7BB16BDBF4CB9FBF5DB74BEB6",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "17.204, 0.880, 1.965",
-				"rot" : "2.160, 1.322, -0.901",
+				"pos" : "17.221, 1.311, 1.962",
+				"rot" : "2.161, 1.322, -0.916",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -151,15 +169,17 @@
 		},
 		{
 			"name" : "ball 03",
+			"id" : "928F359BF521E68840E000D077A9B3C3",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "5.550, 0.880, 4.970",
-				"rot" : "1.515, -0.501, 2.018",
+				"pos" : "5.550, 1.311, 5.002",
+				"rot" : "1.510, -0.510, 2.021",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -180,15 +200,17 @@
 		},
 		{
 			"name" : "ball 04",
+			"id" : "651183B56E8B90AA429B91D181B3B335",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "22.376, 0.880, 3.644",
-				"rot" : "-0.306, 0.200, -2.293",
+				"pos" : "22.416, 1.311, 3.621",
+				"rot" : "-0.306, 0.200, -2.332",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -209,15 +231,17 @@
 		},
 		{
 			"name" : "ball 05",
+			"id" : "49CE87DDD88207984EEEBC73243C3B26",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "19.973, 0.880, 7.250",
-				"rot" : "-0.603, -0.837, 1.248",
+				"pos" : "19.981, 1.311, 7.255",
+				"rot" : "-0.604, -0.835, 1.241",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -238,15 +262,17 @@
 		},
 		{
 			"name" : "ball 06",
+			"id" : "A2C1458350F900BE4D41CA2CD8C431A5",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "12.110, 0.880, 6.697",
-				"rot" : "1.123, 0.340, 0.059",
+				"pos" : "12.145, 1.311, 6.731",
+				"rot" : "1.137, 0.339, 0.029",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -267,15 +293,17 @@
 		},
 		{
 			"name" : "ball 07",
+			"id" : "DB2166D90E8EC68F4B33075CCF67304B",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "8.651, 0.880, 6.760",
-				"rot" : "0.925, -0.167, 0.971",
+				"pos" : "8.665, 1.311, 6.792",
+				"rot" : "0.935, -0.181, 0.956",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -296,15 +324,17 @@
 		},
 		{
 			"name" : "ball 08",
+			"id" : "829C43CB3823ECB4419B75A02CC8746F",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "4.079, 0.880, 6.864",
-				"rot" : "-0.025, -0.204, 1.902",
+				"pos" : "4.086, 1.311, 6.895",
+				"rot" : "-0.029, -0.213, 1.896",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -325,15 +355,17 @@
 		},
 		{
 			"name" : "ball 09",
+			"id" : "3E35E6DF07FEAFBF4C9F0F92E39A620E",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "1.907, 0.880, 6.837",
-				"rot" : "0.400, -0.328, 1.562",
+				"pos" : "1.911, 1.311, 6.868",
+				"rot" : "0.400, -0.339, 1.560",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -354,15 +386,17 @@
 		},
 		{
 			"name" : "ball 10",
+			"id" : "A245A3FC811808A340D2DBADE7F67D18",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-4.476, 0.880, 6.762",
-				"rot" : "-0.348, 0.162, 2.416",
+				"pos" : "-4.468, 1.311, 6.797",
+				"rot" : "-0.357, 0.154, 2.407",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -383,15 +417,17 @@
 		},
 		{
 			"name" : "ball 11",
+			"id" : "980272AD9173969341833A30A04407E4",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-8.656, 0.880, 6.809",
-				"rot" : "-0.339, 0.094, 2.342",
+				"pos" : "-8.660, 1.311, 6.848",
+				"rot" : "-0.351, 0.082, 2.345",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -412,15 +448,17 @@
 		},
 		{
 			"name" : "ball 12",
+			"id" : "820FE7401C8A299046A172499E4E37C1",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-10.750, 0.880, 6.819",
-				"rot" : "-0.388, 0.155, 2.431",
+				"pos" : "-10.767, 1.311, 6.851",
+				"rot" : "-0.397, 0.148, 2.447",
 				"scale" : "1.000, 1.000, 1.000"
 			},
-			"mesh" : "sphere",
+			"mesh" : "sphere.glb",
 			"materials" : 
 			[
 				"pbr white"
@@ -441,18 +479,20 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "7B9BD2C31D79CD8A41FDCF101D4A4581",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "26.928, -70.728, -18.870",
-				"rot" : "0.000, 0.112, 1.928"
+				"pos" : "38.436, 67.272, 4.517",
+				"rot" : "0.001, -1.482, 1.927"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.046, 0.032, 0.820, 0.569",
-				"pos" : "26.928, -70.728, -18.870",
-				"color" : "1.00, 1.00, 1.00",
+				"rotation" : "0.557, -0.387, 0.603, 0.419",
+				"pos" : "38.436, 67.272, 4.517",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 12.188000,
 				"cast shadows" : true,

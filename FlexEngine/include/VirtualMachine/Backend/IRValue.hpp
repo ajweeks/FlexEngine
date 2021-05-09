@@ -6,6 +6,8 @@
 
 namespace flex
 {
+	struct Variant;
+
 	namespace VM
 	{
 		struct Value;
@@ -29,13 +31,14 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
+				VOID,
 				IDENTIFIER,
 				UNARY,
 				BINARY,
 				TERNARY,
-				FUNC_CALL,
+				CALL,
+				ARGUMENT,
 				CAST,
-				VOID,
 
 				_NONE
 			};
@@ -47,13 +50,14 @@ namespace flex
 				"bool",
 				"string",
 				"char",
+				"void",
 				"identifier",
 				"unary",
 				"binary",
 				"ternary",
-				"func call",
+				"call",
+				"argument",
 				"cast",
-				"void",
 
 				"NONE"
 			};
@@ -62,10 +66,14 @@ namespace flex
 
 			static const char* TypeToString(Type type);
 
+			virtual std::string ToString() const;
+
 			static Type FromASTTypeName(AST::TypeName typeName);
 
 			static bool IsLiteral(Type type);
 			static bool IsNumeric(Type type);
+
+			static bool IsSimple(Type type);
 
 			Value(Span origin, State* irState) :
 				origin(origin),
@@ -122,7 +130,7 @@ namespace flex
 
 			Value(const Value& other);
 			Value(const Value&& other);
-			explicit Value(const VM::Value& other);
+			explicit Value(const Variant& other);
 
 			i32 AsInt() const;
 			real AsFloat() const;
@@ -141,8 +149,6 @@ namespace flex
 
 			virtual void Destroy()
 			{}
-
-			virtual std::string ToString() const;
 
 			bool IsZero() const;
 			bool IsPositive() const;

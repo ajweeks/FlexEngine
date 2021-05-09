@@ -102,7 +102,7 @@ namespace flex
 		const i32 numCameras = (i32)m_Cameras.size();
 
 		const i32 desiredIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
-		i32 newIndex = desiredIndex;
+		i32 newIndex;
 		i32 offset = 0;
 		do
 		{
@@ -123,12 +123,25 @@ namespace flex
 
 	BaseCamera* CameraManager::SetCameraByName(const std::string& name, bool bAlignWithPrevious)
 	{
-		return SetCamera(GetCameraByName(name), bAlignWithPrevious);
+		BaseCamera* cam = GetCameraByName(name);
+		if (cam == nullptr)
+		{
+			std::string errorStr = "Attempted to set camera with invalid name: " + name + "\n";
+			PrintError("%s", errorStr.c_str());
+			return nullptr;
+		}
+		return SetCamera(cam, bAlignWithPrevious);
 	}
 
 	BaseCamera* CameraManager::PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize)
 	{
-		assert(camera != nullptr);
+		if (camera == nullptr)
+		{
+			PrintError("Attempted to push null camera\n");
+			return nullptr;
+		}
+
+		g_InputManager->ClearAllInputs();
 
 		BaseCamera* pActiveCam = nullptr;
 		if (!m_CameraStack.empty())
@@ -157,7 +170,14 @@ namespace flex
 
 	BaseCamera* CameraManager::PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize)
 	{
-		return PushCamera(GetCameraByName(name), bAlignWithPrevious, bInitialize);
+		BaseCamera* cam = GetCameraByName(name);
+		if (cam == nullptr)
+		{
+			std::string errorStr = "Attempted to push camera with invalid name: " + name + "\n";
+			PrintError("%s", errorStr.c_str());
+			return nullptr;
+		}
+		return PushCamera(cam, bAlignWithPrevious, bInitialize);
 	}
 
 	void CameraManager::PopCamera()
@@ -167,6 +187,8 @@ namespace flex
 			PrintError("CameraManager::PopCamera - Attempted to pop final camera from stack\n");
 			return;
 		}
+
+		g_InputManager->ClearAllInputs();
 
 		BaseCamera* currentCamera = CurrentCamera();
 		currentCamera->OnDepossess();
@@ -260,6 +282,8 @@ namespace flex
 				currentCamera->ResetPosition();
 			}
 
+			CurrentCamera()->DrawImGuiObjects();
+
 			ImGui::TreePop();
 		}
 	}
@@ -285,17 +309,20 @@ namespace flex
 		to->FOV = from->FOV;
 	}
 
-	EventReply CameraManager::OnActionEvent(Action action)
+	EventReply CameraManager::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			CycleCamera(-1, false);
-			return EventReply::CONSUMED;
-		}
-		else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
-		{
-			CycleCamera(1, false);
-			return EventReply::CONSUMED;
+			if (action == Action::DBG_SWITCH_TO_PREV_CAM)
+			{
+				CycleCamera(-1, false);
+				return EventReply::CONSUMED;
+			}
+			else if (action == Action::DBG_SWITCH_TO_NEXT_CAM)
+			{
+				CycleCamera(1, false);
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;

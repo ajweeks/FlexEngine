@@ -8,6 +8,7 @@
 namespace flex
 {
 	struct DiagnosticContainer;
+	class FunctionBindings;
 
 	namespace AST
 	{
@@ -80,7 +81,7 @@ namespace flex
 			void AddReturn(Span returnOrigin, Value* returnVal);
 			void AddYield(Span yieldOrigin, Value* yieldVal);
 			void AddBranch(Span branchOrigin, Block* target);
-			void AddCall(State* state, const std::string& target, const std::vector<Value*>& arguments);
+			void AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<Value*>& arguments);
 			void AddHalt();
 			void SealBlock();
 			void AddConditionalBranch(State* state, Span branchOrigin, Value* condition, Block* then, Block* otherwise);
@@ -91,6 +92,7 @@ namespace flex
 			std::list<Block*> predecessors;
 			std::list<Assignment*> assignments;
 			Terminator* terminator = nullptr;
+			std::string funcName; // If this block corresponds to a function, this is its name
 			Span origin;
 		};
 
@@ -248,6 +250,16 @@ namespace flex
 			{}
 		};
 
+		struct Argmuent : IR::Value
+		{
+			Argmuent(State* irState, const std::string& name) :
+				Value(Span(Span::Source::GENERATED), irState, Value::Type::ARGUMENT),
+				name(name)
+			{}
+
+			std::string name;
+		};
+
 		enum class UnaryOperatorType
 		{
 			NEGATE,
@@ -380,7 +392,7 @@ namespace flex
 		struct FunctionCallValue : IR::Value
 		{
 			FunctionCallValue(State* state, Span origin, const std::string& target, const std::vector<IR::Value*>& arguments) :
-				Value(origin, state, Value::Type::FUNC_CALL),
+				Value(origin, state, Value::Type::CALL),
 				target(target),
 				arguments(arguments)
 			{}
@@ -435,7 +447,7 @@ namespace flex
 
 		struct IntermediateRepresentation
 		{
-			void GenerateFromAST(AST::AST* ast);
+			void GenerateFromAST(AST::AST* ast, FunctionBindings* functionBindings);
 			void Destroy();
 
 			std::string ToString() const;
@@ -451,16 +463,12 @@ namespace flex
 			void LowerStatement(AST::Statement* statement);
 			IR::Value* LowerExpression(AST::Expression* expression);
 			void LowerFunctionDefinitions(AST::Statement* statement);
-			//ValueWrapper GetValueWrapperFromExpression(AST::Expression* expression);
+			//VariantWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
-			void AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes);
+			bool AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes);
 			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);
 
 			void SetBlockIndices();
-
-			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
-			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
-			i32 GenerateCallInstruction(AST::FunctionCall* funcCall);
 		};
 
 	} // namespace IR

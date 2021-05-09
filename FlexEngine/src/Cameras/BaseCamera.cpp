@@ -18,8 +18,9 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	BaseCamera::BaseCamera(const std::string& cameraName, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
+	BaseCamera::BaseCamera(const std::string& cameraName, CameraType type, bool bIsGameplayCam, real FOV, real zNear, real zFar) :
 		bIsGameplayCam(bIsGameplayCam),
+		type(type),
 		m_Name(cameraName),
 		m_View(MAT4_ZERO),
 		m_Proj(MAT4_ZERO),
@@ -29,13 +30,13 @@ namespace flex
 		zFar(zFar),
 		moveSpeed(18.0f),
 		panSpeed(60.0f),
-		dragDollySpeed(40.0f),
-		scrollDollySpeed(20.0f),
+		dragDollySpeed(25.0f),
+		scrollDollySpeed(10.0f),
 		orbitingSpeed(0.03f),
 		mouseRotationSpeed(0.015f),
 		gamepadRotationSpeed(2.0f),
-		moveSpeedFastMultiplier(3.5f),
-		moveSpeedSlowMultiplier(0.05f),
+		moveSpeedFastMultiplier(3.0f),
+		moveSpeedSlowMultiplier(0.08f),
 		turnSpeedFastMultiplier(2.0f),
 		turnSpeedSlowMultiplier(0.1f),
 		panSpeedFastMultiplier(2.5f),
@@ -128,7 +129,11 @@ namespace flex
 		forward = glm::normalize(Lerp(forward, targetForward, speed));
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(forward));
+		if (IsNanOrInf(forward))
+		{
+			PrintError("Forward vector was NaN or Inf!\n");
+			forward = VEC3_FORWARD;
+		}
 #endif
 
 		CalculateYawAndPitchFromForward();
@@ -182,8 +187,16 @@ namespace flex
 		roll = 0.0f;
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(pitch));
-		ENSURE(!IsNanOrInf(yaw));
+		if (IsNanOrInf(pitch))
+		{
+			PrintError("Pitch was NaN or Inf!\n");
+			pitch = 0.0f;
+		}
+		if (IsNanOrInf(yaw))
+		{
+			PrintError("Yaw was NaN or Inf!\n");
+			yaw = 0.0f;
+		}
 #endif
 	}
 

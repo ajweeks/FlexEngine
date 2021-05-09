@@ -15,7 +15,9 @@ namespace flex
 {
 	Window::Window(const std::string& title) :
 		m_TitleString(title),
-		m_CurrentWindowMode(WindowMode::WINDOWED)
+		m_CurrentWindowMode(WindowMode::WINDOWED),
+		m_LastWindowedSize(glm::vec2i(0)),
+		m_LastWindowedPos(glm::vec2i(0))
 	{
 		g_Window = this;
 	}
@@ -32,33 +34,6 @@ namespace flex
 			m_SecondsSinceTitleUpdate = 0.0f;
 			SetWindowTitle(GenerateWindowTitle());
 		}
-
-		if (m_CursorMode == CursorMode::HIDDEN)
-		{
-			const glm::vec2i windowSize = GetSize();
-			const glm::vec2 oldMousePos = g_InputManager->GetMousePosition();
-			glm::vec2 newMousePos = oldMousePos;
-			if (oldMousePos.x < 0)
-			{
-				newMousePos.x = windowSize.x + oldMousePos.x;
-			}
-			else if (oldMousePos.x >= windowSize.x)
-			{
-				newMousePos.x = 0;
-			}
-
-			if (oldMousePos.y < 0)
-			{
-				newMousePos.y = windowSize.y + oldMousePos.y;
-			}
-			else if (oldMousePos.y >= windowSize.y)
-			{
-				newMousePos.y = 0;
-			}
-
-			g_InputManager->SetMousePosition(newMousePos);
-			SetMousePosition(newMousePos);
-		}
 	}
 
 	glm::vec2i Window::GetSize() const
@@ -66,6 +41,15 @@ namespace flex
 		return m_Size;
 	}
 
+	real Window::GetAspectRatio() const
+	{
+		return m_Size.x / (real)m_Size.y;
+	}
+
+	real Window::GetInvAspectRatio() const
+	{
+		return m_Size.y / (real)m_Size.x;
+	}
 
 	glm::vec2i Window::GetPosition() const
 	{
@@ -84,16 +68,15 @@ namespace flex
 
 	std::string Window::GenerateWindowTitle()
 	{
-		ImGuiIO& io = ImGui::GetIO();
 		std::string result = m_TitleString;
 		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_bShowMSInWindowTitle)
 		{
-			result += " | " + FloatToString(g_DeltaTime, 2) + "ms";
+			result += " | " + FloatToString(g_DeltaTime * 1000.0f, 2) + "ms";
 		}
 		if (m_bShowFPSInWindowTitle)
 		{
-			result += " : " + FloatToString(io.Framerate, 0) + " FPS "; // Use ImGui's more stable FPS rolling average
+			result += " - " + FloatToString(1.0f / g_DeltaTime, 0) + " FPS ";
 		}
 
 
@@ -112,7 +95,11 @@ namespace flex
 
 	void Window::SetCursorMode(CursorMode mode)
 	{
-		m_CursorMode = mode;
+		if (m_CursorMode != mode)
+		{
+			m_CursorMode = mode;
+			g_InputManager->OnCursorModeChanged(mode);
+		}
 	}
 
 	WindowMode Window::GetWindowMode()
@@ -158,6 +145,7 @@ namespace flex
 	void Window::WindowFocusCallback(i32 focused)
 	{
 		m_bHasFocus = (focused != 0);
+		g_InputManager->OnWindowFocusChanged(m_bHasFocus);
 	}
 
 	void Window::CursorPosCallback(double x, double y)
@@ -222,34 +210,34 @@ namespace flex
 
 			if (JSONParser::ParseFromFile(WINDOW_CONFIG_LOCATION, rootObject))
 			{
-				rootObject.SetBoolChecked("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
-				rootObject.SetBoolChecked("auto restore state", m_bAutoRestoreStateOnBootup);
+				rootObject.TryGetBool("move console to other monitor on bootup", m_bMoveConsoleToOtherMonitor);
+				rootObject.TryGetBool("auto restore state", m_bAutoRestoreStateOnBootup);
 
 				if (m_bAutoRestoreStateOnBootup)
 				{
 					glm::vec2 initialWindowPos;
-					if (rootObject.SetVec2Checked("initial window position", initialWindowPos))
+					if (rootObject.TryGetVec2("initial window position", initialWindowPos))
 					{
 						m_Position = (glm::vec2i)initialWindowPos;
 					}
 
 					glm::vec2 initialWindowSize;
-					if (rootObject.SetVec2Checked("initial window size", initialWindowSize))
+					if (rootObject.TryGetVec2("initial window size", initialWindowSize))
 					{
 						m_Size = (glm::vec2i)initialWindowSize;
 					}
 
-					rootObject.SetBoolChecked("maximized", m_bMaximized);
+					rootObject.TryGetBool("maximized", m_bMaximized);
 
 					std::string windowModeStr;
-					if (rootObject.SetStringChecked("window mode", windowModeStr))
+					if (rootObject.TryGetString("window mode", windowModeStr))
 					{
 						m_CurrentWindowMode = StrToWindowMode(windowModeStr.c_str());
 					}
 				}
 
 				bool bVSyncEnabled;
-				if (rootObject.SetBoolChecked("v-sync", bVSyncEnabled))
+				if (rootObject.TryGetBool("v-sync", bVSyncEnabled))
 				{
 					SetVSyncEnabled(bVSyncEnabled);
 				}
@@ -277,7 +265,7 @@ namespace flex
 		const char* windowModeStr = Window::WindowModeToStr(GetWindowMode());
 		rootObject.fields.emplace_back("window mode", JSONValue(windowModeStr));
 		rootObject.fields.emplace_back("v-sync", JSONValue(m_bVSyncEnabled));
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 
 		if (!WriteFile(WINDOW_CONFIG_LOCATION, fileContents, false))
 		{
@@ -378,6 +366,11 @@ namespace flex
 				g_Renderer->SetVSyncEnabled(bEnabled);
 			}
 		}
+	}
+
+	CursorMode Window::GetCursorMode() const
+	{
+		return m_CursorMode;
 	}
 
 } // namespace flex

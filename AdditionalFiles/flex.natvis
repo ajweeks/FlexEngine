@@ -1,8 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="flex::BaseScene">
+    <DisplayString>{m_FileName}</DisplayString>
+  </Type>
+
+  <Type Name="flex::GameObject">
+    <DisplayString>{m_Name}, ID: {ID.Data1} {ID.Data2}</DisplayString>
+  </Type>
+
   <Type Name="flex::JSONObject">
     <!-- Ugly as heck but it works -->
-    <DisplayString>{{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <DisplayString Condition="fields._Mypair._Myval2._Myfirst != fields._Mypair._Myval2._Mylast">{fields[0]} {{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
+    <DisplayString Condition="fields._Mypair._Myval2._Myfirst == fields._Mypair._Myval2._Mylast">Empty {{size = {fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst} }}</DisplayString>
     <Expand>
       <ArrayItems>
         <Size>fields._Mypair._Myval2._Mylast - fields._Mypair._Myval2._Myfirst</Size>
@@ -18,6 +27,9 @@
   <Type Name="flex::JSONValue">
     <DisplayString Condition="type == flex::JSONValue::Type::STRING">{strValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::INT">{intValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::UINT">{uintValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::LONG">{longValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::ULONG">{ulongValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::FLOAT">{floatValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::BOOL">{boolValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::OBJECT">{objectValue}</DisplayString>

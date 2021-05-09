@@ -9,15 +9,17 @@
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/GameObject.hpp"
 
 namespace flex
 {
 	const char* SceneManager::s_newSceneModalWindowID = "New scene";
 
 	SceneManager::SceneManager() :
-		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_LOCATION)),
-		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_LOCATION))
+		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_DIRECTORY)),
+		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_DIRECTORY))
 	{
 		if (!Platform::DirectoryExists(m_SavedDirStr))
 		{
@@ -63,8 +65,8 @@ namespace flex
 
 		if (m_PreviousSceneIndex != InvalidID)
 		{
-			g_Renderer->OnPreSceneChange();
 			g_EngineInstance->OnSceneChanged();
+			g_ResourceManager->OnSceneChanged();
 			g_Editor->OnSceneChanged();
 			g_CameraManager->OnSceneChanged();
 			g_Renderer->OnPostSceneChange();
@@ -108,14 +110,24 @@ namespace flex
 			return false;
 		}
 
-		g_Editor->PreSceneChange();
+		if (m_CurrentSceneIndex != InvalidID)
+		{
+			g_Editor->PreSceneChange();
+			g_ResourceManager->PreSceneChange();
+			g_Renderer->OnPreSceneChange();
+		}
+
+		// Any modifications will now be lost, so all prefabs will be clean again
+		g_ResourceManager->SetAllPrefabsDirty(false);
 
 		m_PreviousSceneIndex = m_CurrentSceneIndex;
 
-		g_CameraManager->Destroy();
-
 		if (m_CurrentSceneIndex != InvalidID)
 		{
+			g_CameraManager->Destroy();
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->Destroy();
+			GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->Destroy();
+
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
 
@@ -126,6 +138,8 @@ namespace flex
 		InitializeCurrentScene();
 		PostInitializeCurrentScene();
 		g_CameraManager->Initialize();
+
+		g_EngineInstance->SetFramesToFakeDT(3);
 
 		return true;
 	}
@@ -152,6 +166,7 @@ namespace flex
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
+			// TODO: Give scenes GUIDs to prevent name clashes
 			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
 			{
 				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
@@ -168,19 +183,9 @@ namespace flex
 
 	void SceneManager::SetNextSceneActive()
 	{
-		const size_t sceneCount = m_Scenes.size();
-		if (sceneCount == 1)
-		{
-			m_CurrentSceneIndex = 0;
-			return;
-		}
+		u32 sceneCount = (u32)m_Scenes.size();
 
-		if (m_CurrentSceneIndex == InvalidID)
-		{
-			m_CurrentSceneIndex = 0;
-		}
-
-		u32 newCurrentSceneIndex = (m_CurrentSceneIndex + 1) % m_Scenes.size();
+		u32 newCurrentSceneIndex = m_CurrentSceneIndex != InvalidID ? ((m_CurrentSceneIndex + 1) % sceneCount) : 0;
 		SetCurrentScene(newCurrentSceneIndex);
 	}
 
@@ -510,9 +515,11 @@ namespace flex
 
 	void SceneManager::DrawImGuiModals()
 	{
+		bool bFocusNameTextBox = false;
 		if (m_bOpenNewSceneWindow)
 		{
 			m_bOpenNewSceneWindow = false;
+			bFocusNameTextBox = true;
 			ImGui::OpenPopup(s_newSceneModalWindowID);
 		}
 
@@ -522,6 +529,10 @@ namespace flex
 
 			const size_t maxStrLen = 256;
 			newSceneName.resize(maxStrLen);
+			if (bFocusNameTextBox)
+			{
+				ImGui::SetKeyboardFocusHere();
+			}
 			bool bCreate = ImGui::InputText("Scene name",
 				(char*)newSceneName.data(),
 				maxStrLen,
@@ -569,6 +580,11 @@ namespace flex
 	BaseScene* SceneManager::CurrentScene() const
 	{
 		return m_Scenes[m_CurrentSceneIndex];
+	}
+
+	bool SceneManager::HasSceneLoaded() const
+	{
+		return m_CurrentSceneIndex != InvalidID;
 	}
 
 	u32 SceneManager::GetSceneCount() const

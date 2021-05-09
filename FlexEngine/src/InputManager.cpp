@@ -94,6 +94,32 @@ namespace flex
 		Print("\n");
 #endif
 
+#if 0 // Log gamepad states
+		bool bNonZeroGamepadAxis = false;
+		for (u32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+		{
+			if (GetGamepadAxisValue(0, (GamepadAxis)i) != 0.0f)
+			{
+				bNonZeroGamepadAxis = true;
+				break;
+			}
+		}
+		if (bNonZeroGamepadAxis)
+		{
+			Print("gamepad buttons:\n");
+			for (u32 i = 0; i < (i32)GamepadButton::COUNT; ++i)
+			{
+				Print("%s: %i\n", GamepadButtonStrings[i], IsGamepadButtonDown(0, (GamepadButton)i) ? 1 : 0);
+			}
+			Print("gamepad axes:\n");
+			for (u32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+			{
+				Print("%s: %0.2f\n", GamepadAxisStrings[i], GetGamepadAxisValue(0, (GamepadAxis)i));
+			}
+			Print("\n");
+		}
+#endif
+
 		// Mouse buttons
 		for (u32 i = 0; i < MOUSE_BUTTON_COUNT; ++i)
 		{
@@ -192,7 +218,6 @@ namespace flex
 		}
 
 		// Invert Y (0 at bottom, 1 at top)
-		// TODO: Make option for player
 		m_GamepadStates[gamepadIndex].axes[1] = -m_GamepadStates[gamepadIndex].axes[1];
 		m_GamepadStates[gamepadIndex].axes[3] = -m_GamepadStates[gamepadIndex].axes[3];
 
@@ -217,17 +242,17 @@ namespace flex
 
 		for (i32 i = 0; i < GAMEPAD_BUTTON_COUNT; ++i)
 		{
-			if (IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i))
+			bool bPress = IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i);
+
+			Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
+			ActionEvent actionEvent = bPress ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			if (gamepadButtonAction != Action::_NONE)
 			{
-				Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
-				if (gamepadButtonAction != Action::_NONE)
+				for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
 				{
-					for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
+					if (iter->first->Execute(gamepadButtonAction, actionEvent) == EventReply::CONSUMED)
 					{
-						if (iter->first->Execute(gamepadButtonAction) == EventReply::CONSUMED)
-						{
-							break;
-						}
+						break;
 					}
 				}
 			}
@@ -415,49 +440,34 @@ namespace flex
 		{
 			if (GetKeyDown(binding.keyCode) > 0)
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.mouseButton != MouseButton::_NONE)
 		{
 			if (IsMouseButtonDown(binding.mouseButton))
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.gamepadButton != GamepadButton::_NONE)
 		{
 			if (IsGamepadButtonDown(gamepadIndex, binding.gamepadButton))
 			{
-				if (binding.bNegative)
-				{
-					return -1.0f;
-				}
-				else
-				{
-					return 1.0f;
-				}
+				return 1.0f;
 			}
 		}
 		if (binding.gamepadAxis != GamepadAxis::_NONE)
 		{
 			real axisValue = GetGamepadAxisValue(gamepadIndex, binding.gamepadAxis);
-			if ((binding.bNegative && axisValue > 0.0f) ||
-				(!binding.bNegative && axisValue < 0.0f))
+			if (binding.bInvertGamepadAxis && IsGamepadAxisInvertable(binding.gamepadAxis))
+			{
+				axisValue = -axisValue;
+			}
+
+			axisValue = glm::max(axisValue, 0.0f);
+
+			if (axisValue > 0.0f)
 			{
 				return axisValue;
 			}
@@ -466,28 +476,47 @@ namespace flex
 		{
 			if (m_ScrollYOffset != 0.0f)
 			{
-				if (binding.bNegative)
-				{
-					return -m_ScrollYOffset;
-				}
-				else
-				{
-					return m_ScrollYOffset;
-				}
+				return -m_ScrollYOffset;
 			}
 		}
 		else if (binding.mouseAxis == MouseAxis::SCROLL_X)
 		{
 			if (m_ScrollXOffset != 0.0f)
 			{
-				if (binding.bNegative)
-				{
-					return m_ScrollXOffset;
-				}
-				else
-				{
-					return -m_ScrollXOffset;
-				}
+				return m_ScrollXOffset;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::X)
+		{
+			real mouseMovementX = GetMouseMovement(false).x;
+
+			if (binding.bInvertMouseAxis)
+			{
+				mouseMovementX = -mouseMovementX;
+			}
+
+			mouseMovementX = glm::max(mouseMovementX, 0.0f);
+
+			if (mouseMovementX != 0.0f)
+			{
+				// TODO: Expose multiplier to user/make better
+				return mouseMovementX * 1.0f;
+			}
+		}
+		else if (binding.mouseAxis == MouseAxis::Y)
+		{
+			real mouseMovementY = GetMouseMovement(false).y;
+			if (binding.bInvertMouseAxis)
+			{
+				mouseMovementY = -mouseMovementY;
+			}
+
+			mouseMovementY = glm::max(mouseMovementY, 0.0f);
+
+			if (mouseMovementY != 0.0f)
+			{
+				// TODO: Expose multiplier to user/make better
+				return mouseMovementY * 1.0f;
 			}
 		}
 
@@ -576,80 +605,115 @@ namespace flex
 	{
 		assert(gamepadIndex == 0 || gamepadIndex == 1);
 
-		return (m_GamepadStates[gamepadIndex].axes[(i32)axis] >= threshold &&
-			m_pGamepadStates[gamepadIndex].axes[(i32)axis] < threshold);
+		if (threshold >= 0.0f)
+		{
+			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] >= threshold &&
+				m_pGamepadStates[gamepadIndex].axes[(i32)axis] < threshold);
+		}
+		else
+		{
+			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] <= threshold &&
+				m_pGamepadStates[gamepadIndex].axes[(i32)axis] > threshold);
+		}
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
 	{
 		m_MousePosition = glm::vec2((real)x, (real)y);
 
+#if 0
+		{
+			glm::vec2 pos = g_Window->GetMousePosition();
+			Print("%.2f, %.2f (%.2f, %.2f)\n", x, y, pos.x, pos.y);
+		}
+#endif
+
 		ImGuiIO& io = ImGui::GetIO();
 
-		if (IsAnyMouseButtonDown(true) && !io.WantCaptureMouse)
+		if (g_Window->GetCursorMode() == CursorMode::NORMAL)
 		{
-			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
+			// Handle wrapping past screen edge when dragging
+			if (IsAnyMouseButtonDown(true) && !io.WantCaptureMouse)
 			{
-				m_bMouseWrapped = true;
-				m_MousePosition.x -= (frameBufferSize.x - 1);
-				m_PrevMousePosition.x = m_MousePosition.x;
-				io.MousePosPrev.x = m_MousePosition.x;
-				for (MouseDrag& drag : m_MouseButtonDrags)
+				glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+				if (m_MousePosition.x >= (real)(frameBufferSize.x - 1))
 				{
-					drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
-					drag.endLocation = m_MousePosition;
+					m_bMouseWrapped = true;
+					m_MousePosition.x -= (frameBufferSize.x - 1);
+					m_PrevMousePosition.x = m_MousePosition.x;
+					io.MousePosPrev.x = m_MousePosition.x;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation -= glm::vec2(frameBufferSize.x - 1, 0.0f);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
 				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
-			else if (m_MousePosition.x <= 0)
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.x += (frameBufferSize.x - 1);
-				m_PrevMousePosition.x = m_MousePosition.x;
-				io.MousePosPrev.x = m_MousePosition.x;
-				for (MouseDrag& drag : m_MouseButtonDrags)
+				else if (m_MousePosition.x <= 0)
 				{
-					drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
-					drag.endLocation = m_MousePosition;
+					m_bMouseWrapped = true;
+					m_MousePosition.x += (frameBufferSize.x - 1);
+					m_PrevMousePosition.x = m_MousePosition.x;
+					io.MousePosPrev.x = m_MousePosition.x;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation += glm::vec2(frameBufferSize.x - 1, 0.0f);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
 				}
-				g_Window->SetCursorPos(m_MousePosition);
+
+				if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.y -= (frameBufferSize.y - 1);
+					m_PrevMousePosition.y = m_MousePosition.y;
+					io.MousePosPrev.y = m_MousePosition.y;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
+				else if (m_MousePosition.y <= 0)
+				{
+					m_bMouseWrapped = true;
+					m_MousePosition.y += (frameBufferSize.y - 1);
+					m_PrevMousePosition.y = m_MousePosition.y;
+					io.MousePosPrev.y = m_MousePosition.y;
+					for (MouseDrag& drag : m_MouseButtonDrags)
+					{
+						drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
+						drag.endLocation = m_MousePosition;
+					}
+					g_Window->SetCursorPos(m_MousePosition);
+				}
 			}
 
-			if (m_MousePosition.y >= (real)(frameBufferSize.y - 1))
+			io.MousePos = m_MousePosition;
+
+			if (m_PrevMousePosition.x == -1.0f && m_PrevMousePosition.y == -1.0f)
 			{
-				m_bMouseWrapped = true;
-				m_MousePosition.y -= (frameBufferSize.y - 1);
-				m_PrevMousePosition.y = m_MousePosition.y;
-				io.MousePosPrev.y = m_MousePosition.y;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation -= glm::vec2(0.0f, frameBufferSize.y - 1);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
-			}
-			else if (m_MousePosition.y <= 0)
-			{
-				m_bMouseWrapped = true;
-				m_MousePosition.y += (frameBufferSize.y - 1);
-				m_PrevMousePosition.y = m_MousePosition.y;
-				io.MousePosPrev.y = m_MousePosition.y;
-				for (MouseDrag& drag : m_MouseButtonDrags)
-				{
-					drag.startLocation += glm::vec2(0.0f, frameBufferSize.y - 1);
-					drag.endLocation = m_MousePosition;
-				}
-				g_Window->SetCursorPos(m_MousePosition);
+				m_PrevMousePosition = m_MousePosition;
+				io.MousePosPrev = m_MousePosition;
 			}
 		}
-
-		io.MousePos = m_MousePosition;
-
-		if (m_PrevMousePosition.x == -1.0f)
+		else
 		{
-			io.MousePosPrev = m_MousePosition;
-			m_PrevMousePosition = m_MousePosition;
+			if (m_PrevMousePosition.x == -1.0f && m_PrevMousePosition.y == -1.0f)
+			{
+				m_PrevMousePosition = m_MousePosition;
+			}
+
+			// Cursor is hidden - ensure ImGui doesn't grab mouse inputs
+			//glm::vec2i windowSize = g_Window->GetSize();
+			//glm::vec2 mousePos = glm::vec2(windowSize.x / 2.0f, windowSize.y / 2.0f);
+			//m_PrevMousePosition = m_MousePosition;
+			//g_Window->SetCursorPos(mousePos);
+			io.WantCaptureMouse = false;
+			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+			io.MousePosPrev = ImVec2(-FLT_MAX, -FLT_MAX);
 		}
 
 		if (!io.WantCaptureMouse)
@@ -665,13 +729,13 @@ namespace flex
 		}
 	}
 
-	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction action, i32 mods)
+	void InputManager::MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods)
 	{
 		FLEX_UNUSED(mods);
 
 		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
 
-		if (action == KeyAction::PRESS)
+		if (keyAction == KeyAction::KEY_PRESS)
 		{
 			if (m_MousePosition.x == -1.0f)
 			{
@@ -685,7 +749,7 @@ namespace flex
 			m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MousePosition;
 			m_MouseButtonDrags[(i32)mouseButton].endLocation = m_MousePosition;
 		}
-		else if (action == KeyAction::RELEASE)
+		else if (keyAction == KeyAction::KEY_RELEASE)
 		{
 			m_MouseButtonStates &= ~(1 << (u32)mouseButton);
 			m_MouseButtonsPressed &= ~(1 << (u32)mouseButton);
@@ -712,14 +776,12 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
 			Action mouseButtonAction = Action::_NONE;
+			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
 
-			if (action == KeyAction::PRESS)
+			mouseButtonAction = GetActionFromMouseButton(mouseButton);
+			if (mouseButtonAction != Action::_NONE)
 			{
-				mouseButtonAction = GetActionFromMouseButton(mouseButton);
-				if (mouseButtonAction != Action::_NONE)
-				{
-					actionIter = m_ActionCallbacks.begin();
-				}
+				actionIter = m_ActionCallbacks.begin();
 			}
 
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
@@ -728,7 +790,7 @@ namespace flex
 			{
 				if (actionIter == m_ActionCallbacks.end())
 				{
-					if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+					if (mouseButtonIter->first->Execute(mouseButton, keyAction) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -736,7 +798,7 @@ namespace flex
 				}
 				else if (mouseButtonIter == m_MouseButtonCallbacks.end())
 				{
-					if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+					if (actionIter->first->Execute(mouseButtonAction, actionEvent) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -746,7 +808,7 @@ namespace flex
 				{
 					if (actionIter->second >= mouseButtonIter->second)
 					{
-						if (actionIter->first->Execute(mouseButtonAction) == EventReply::CONSUMED)
+						if (actionIter->first->Execute(mouseButtonAction, actionEvent) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -754,7 +816,7 @@ namespace flex
 					}
 					else
 					{
-						if (mouseButtonIter->first->Execute(mouseButton, action) == EventReply::CONSUMED)
+						if (mouseButtonIter->first->Execute(mouseButton, keyAction) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -762,8 +824,7 @@ namespace flex
 					}
 				}
 
-				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-					(mouseButtonIter != m_MouseButtonCallbacks.end());
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) || (mouseButtonIter != m_MouseButtonCallbacks.end());
 			}
 		}
 	}
@@ -773,26 +834,30 @@ namespace flex
 		m_ScrollXOffset = (real)xOffset;
 		m_ScrollYOffset = (real)yOffset;
 
-		ImGuiIO& io = ImGui::GetIO();
-		io.MouseWheelH += m_ScrollXOffset * 0.5f;
-		io.MouseWheel += m_ScrollYOffset * 0.5f;
+		// Will be null during bootup
+		if (ImGui::GetCurrentContext() != nullptr)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			io.MouseWheelH += m_ScrollXOffset * 0.5f;
+			io.MouseWheel += m_ScrollYOffset * 0.5f;
+		}
 	}
 
-	void InputManager::KeyCallback(KeyCode keyCode, KeyAction action, i32 mods)
+	void InputManager::KeyCallback(KeyCode keyCode, KeyAction keyAction, i32 mods)
 	{
 		FLEX_UNUSED(mods);
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 
-		if (action == KeyAction::PRESS)
+		if (keyAction == KeyAction::KEY_PRESS)
 		{
 			m_Keys[keyCode].down = 1;
 		}
-		else if (action == KeyAction::REPEAT)
+		else if (keyAction == KeyAction::KEY_REPEAT)
 		{
 			// Ignore repeat events (we're already counting how long the key is down for
 		}
-		else if (action == KeyAction::RELEASE)
+		else if (keyAction == KeyAction::KEY_RELEASE)
 		{
 			m_Keys[keyCode].down = 0;
 		}
@@ -800,10 +865,16 @@ namespace flex
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeysDown[(i32)keyCode] = m_Keys[keyCode].down > 0;
 
-		io.KeyCtrl = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
-		io.KeyShift = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
-		io.KeyAlt = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
-		io.KeySuper = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
+		const bool bCtrlDown = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true);
+		const bool bShiftDown = GetKeyDown(KeyCode::KEY_LEFT_SHIFT, true) || GetKeyDown(KeyCode::KEY_RIGHT_SHIFT, true);
+		const bool bAltDown = GetKeyDown(KeyCode::KEY_LEFT_ALT, true) || GetKeyDown(KeyCode::KEY_RIGHT_ALT, true);
+		const bool bSuperDown = GetKeyDown(KeyCode::KEY_LEFT_SUPER, true) || GetKeyDown(KeyCode::KEY_RIGHT_SUPER, true);
+		const bool bModiferDown = (bCtrlDown || bShiftDown || bAltDown || bSuperDown);
+
+		io.KeyCtrl = bCtrlDown;
+		io.KeyShift = bShiftDown;
+		io.KeyAlt = bAltDown;
+		io.KeySuper = bSuperDown;
 
 		if (!io.WantCaptureKeyboard)
 		{
@@ -811,8 +882,10 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto keyEventIter = m_KeyEventCallbacks.begin();
 			Action keyPressAction = Action::_NONE;
+			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
 
-			if (action == KeyAction::PRESS)
+			// TODO: Allow modifiers to be down once supported properly
+			if (keyAction == KeyAction::KEY_PRESS && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)
@@ -827,7 +900,7 @@ namespace flex
 			{
 				if (actionIter == m_ActionCallbacks.end())
 				{
-					if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+					if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -835,7 +908,7 @@ namespace flex
 				}
 				else if (keyEventIter == m_KeyEventCallbacks.end())
 				{
-					if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+					if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 					{
 						break;
 					}
@@ -845,7 +918,7 @@ namespace flex
 				{
 					if (actionIter->second >= keyEventIter->second)
 					{
-						if (actionIter->first->Execute(keyPressAction) == EventReply::CONSUMED)
+						if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -853,7 +926,7 @@ namespace flex
 					}
 					else
 					{
-						if (keyEventIter->first->Execute(keyCode, action, mods) == EventReply::CONSUMED)
+						if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 						{
 							break;
 						}
@@ -861,8 +934,7 @@ namespace flex
 					}
 				}
 
-				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
-					(keyEventIter != m_KeyEventCallbacks.end());
+				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) || (keyEventIter != m_KeyEventCallbacks.end());
 			}
 		}
 	}
@@ -891,19 +963,9 @@ namespace flex
 		m_PrevMousePosition = m_MousePosition;
 	}
 
-	void InputManager::SetMousePosition(glm::vec2 mousePos, bool bUpdatePreviousPos)
+	glm::vec2 InputManager::GetMouseMovement(bool bIgnoreImGui /* = false */) const
 	{
-		m_MousePosition = mousePos;
-
-		if (bUpdatePreviousPos)
-		{
-			m_PrevMousePosition = m_MousePosition;
-		}
-	}
-
-	glm::vec2 InputManager::GetMouseMovement() const
-	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return VEC2_ZERO;
 		}
@@ -942,9 +1004,9 @@ namespace flex
 		return false;
 	}
 
-	bool InputManager::IsMouseButtonDown(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonDown(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -954,9 +1016,9 @@ namespace flex
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::IsMouseButtonPressed(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonPressed(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -966,9 +1028,9 @@ namespace flex
 		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
 	}
 
-	bool InputManager::IsMouseButtonReleased(MouseButton mouseButton) const
+	bool InputManager::IsMouseButtonReleased(MouseButton mouseButton, bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return false;
 		}
@@ -978,9 +1040,9 @@ namespace flex
 		return (m_MouseButtonsReleased & (1 << (i32)mouseButton)) != 0;
 	}
 
-	real InputManager::GetVerticalScrollDistance() const
+	real InputManager::GetVerticalScrollDistance(bool bIgnoreImGui /* = false */) const
 	{
-		if (ImGui::GetIO().WantCaptureMouse)
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
 		{
 			return 0.0f;
 		}
@@ -988,9 +1050,24 @@ namespace flex
 		return m_ScrollYOffset;
 	}
 
+	real InputManager::GetHorizontalScrollDistance(bool bIgnoreImGui /* = false */) const
+	{
+		if (!bIgnoreImGui && ImGui::GetIO().WantCaptureMouse)
+		{
+			return 0.0f;
+		}
+
+		return m_ScrollXOffset;
+	}
+
 	void InputManager::ClearVerticalScrollDistance()
 	{
 		m_ScrollYOffset = 0;
+	}
+
+	void InputManager::ClearHorizontalScrollDistance()
+	{
+		m_ScrollXOffset = 0;
 	}
 
 	bool InputManager::IsMouseHoveringRect(const glm::vec2& posNorm, const glm::vec2& sizeNorm)
@@ -1042,12 +1119,15 @@ namespace flex
 			mouseDrag.startLocation = VEC2_ZERO;
 			mouseDrag.endLocation = VEC2_ZERO;
 		}
+
 		g_Window->SetCursorMode(CursorMode::NORMAL);
 
-
-		ImGuiIO& io = ImGui::GetIO();
-		io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-		io.MouseWheel = m_ScrollYOffset;
+		if (ImGui::GetCurrentContext() != nullptr)
+		{
+			ImGuiIO& io = ImGui::GetIO();
+			io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+			io.MouseWheel = m_ScrollYOffset;
+		}
 	}
 
 	void InputManager::ClearKeyboadInput()
@@ -1275,19 +1355,34 @@ namespace flex
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{
-			if (ImGui::Button("Save"))
+			const bool bInputBindingsWereDirty = m_bInputBindingsDirty;
+			if (bInputBindingsWereDirty)
+			{
+				// TODO: Add col var to ImGui style for highlighted buttons etc.
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.6f, 0.1f, 1.0f));
+			}
+			if (ImGui::Button(m_bInputBindingsDirty ? "Save*" : "Save "))
 			{
 				SaveInputBindingsToFile();
+			}
+			if (bInputBindingsWereDirty)
+			{
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
+					LoadInputBindingsFromFile();
+				}
 			}
 
 			ImGui::SameLine();
 
-			if (ImGui::Button("Load"))
-			{
-				LoadInputBindingsFromFile();
-			}
+			ImGui::Text("Ctrl click to unset value");
 
-			const i32 numCols = 4;
+			// TODO: Use new Tables API in ImGui 1.80 once stable
+			const i32 numCols = 6;
 			ImGui::Columns(numCols);
 
 			ImGui::SetColumnWidth(-1, 250);
@@ -1299,59 +1394,353 @@ namespace flex
 			ImGui::NextColumn();
 
 			ImGui::SetColumnWidth(-1, 150);
-			ImGui::Text("Mouse");
+			ImGui::Text("Mouse button");
 			ImGui::NextColumn();
 
 			ImGui::SetColumnWidth(-1, 150);
-			ImGui::Text("Gamepad");
+			ImGui::Text("Mouse axis");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Gamepad button");
+			ImGui::NextColumn();
+
+			ImGui::SetColumnWidth(-1, 150);
+			ImGui::Text("Gamepad axis");
 			ImGui::NextColumn();
 
 			ImGui::Separator();
 			ImGui::Separator();
+
+			bool bOpenInputEditorModal = false;
+			static i32 inputBindingIndexToEdit = -1;
+			static InputType inputBindingTypeToEdit = InputType::_NONE;
+			static bool bMouseReleasedAfterButtonClick = false;
+
+			static const char* unboundButtonString = "Unset";
+
+			bool bCtrlDown = GetKeyDown(KeyCode::KEY_LEFT_CONTROL, true) != 0 || GetKeyDown(KeyCode::KEY_RIGHT_CONTROL, true) != 0;
+
+			ImVec4 unboundButtonColour = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 
 			for (i32 i = 0; i < (i32)Action::_NONE; ++i)
 			{
 				const InputBinding& binding = m_InputBindings[i];
+
+				ImGui::PushID(i);
 
 				ImGui::Columns(numCols);
 
 				ImGui::Text("%s", ActionStrings[i]);
 				ImGui::NextColumn();
 
-				if (binding.keyCode != KeyCode::_NONE)
+				// Keyboard
+				ImGui::PushID("keyboard");
+				bool bBound = (binding.keyCode != KeyCode::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? KeyCodeStrings[(u32)binding.keyCode] : unboundButtonString))
 				{
-					ImGui::Text("%s", KeyCodeStrings[(u32)binding.keyCode]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].keyCode != KeyCode::_NONE)
+						{
+							m_InputBindings[i].keyCode = KeyCode::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::KEYBOARD;
+					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
-				if (binding.mouseButton != MouseButton::_NONE)
+				// Mouse button
+				ImGui::PushID("mouse button");
+				bBound = (binding.mouseButton != MouseButton::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? MouseButtonStrings[(u32)binding.mouseButton] : unboundButtonString))
 				{
-					ImGui::Text("%s", MouseButtonStrings[(u32)binding.mouseButton]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].mouseButton != MouseButton::_NONE)
+						{
+							m_InputBindings[i].mouseButton = MouseButton::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::MOUSE_BUTTON;
+					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
+				ImGui::PopID();
+
+				ImGui::NextColumn();
+
+				// Mouse axis
+				ImGui::PushID("mouse axis");
+				bBound = (binding.mouseAxis != MouseAxis::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? MouseAxisStrings[(u32)binding.mouseAxis] : unboundButtonString))
+				{
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].mouseAxis != MouseAxis::_NONE)
+						{
+							m_InputBindings[i].mouseAxis = MouseAxis::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::MOUSE_AXIS;
+					}
+				}
+				if (!bBound) ImGui::PopStyleColor();
 				if (binding.mouseAxis != MouseAxis::_NONE)
 				{
-					ImGui::Text("%s", MouseAxisStrings[(u32)binding.mouseAxis]);
+					ImGui::SameLine();
+					if (ImGui::Checkbox("invert", &m_InputBindings[i].bInvertMouseAxis))
+					{
+						m_bInputBindingsDirty = true;
+					}
 				}
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
-				if (binding.gamepadButton != GamepadButton::_NONE)
+				// Gamepad button
+				ImGui::PushID("gamepad button");
+				bBound = (binding.gamepadButton != GamepadButton::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? GamepadButtonStrings[(u32)binding.gamepadButton] : unboundButtonString))
 				{
-					ImGui::Text("%s", GamepadButtonStrings[(u32)binding.gamepadButton]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].gamepadButton != GamepadButton::_NONE)
+						{
+							m_InputBindings[i].gamepadButton = GamepadButton::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::GAMEPAD_BUTTON;
+					}
 				}
-				if (binding.gamepadAxis != GamepadAxis::_NONE)
+				if (!bBound) ImGui::PopStyleColor();
+				ImGui::PopID();
+
+				ImGui::NextColumn();
+
+				// Gamepad axis
+				ImGui::PushID("gamepad axis");
+				bBound = (binding.gamepadAxis != GamepadAxis::_NONE);
+				if (!bBound) ImGui::PushStyleColor(ImGuiCol_Button, unboundButtonColour);
+				if (ImGui::Button(bBound ? GamepadAxisStrings[(i32)binding.gamepadAxis] : unboundButtonString))
 				{
-					ImGui::Text("%s", GamepadAxisStrings[(i32)binding.gamepadAxis]);
+					if (bCtrlDown)
+					{
+						if (m_InputBindings[i].gamepadAxis != GamepadAxis::_NONE)
+						{
+							m_InputBindings[i].gamepadAxis = GamepadAxis::_NONE;
+							m_bInputBindingsDirty = true;
+						}
+					}
+					else
+					{
+						bOpenInputEditorModal = true;
+						inputBindingIndexToEdit = i;
+						inputBindingTypeToEdit = InputType::GAMEPAD_AXIS;
+					}
 				}
+				if (!bBound) ImGui::PopStyleColor();
+				if (IsGamepadAxisInvertable(binding.gamepadAxis))
+				{
+					ImGui::SameLine();
+					if (ImGui::Checkbox("invert", &m_InputBindings[i].bInvertGamepadAxis))
+					{
+						m_bInputBindingsDirty = true;
+					}
+				}
+				ImGui::PopID();
+
 				ImGui::NextColumn();
 
 				if (i != (i32)Action::_NONE - 1)
 				{
 					ImGui::Separator();
 				}
+
+				ImGui::PopID();
+			}
+
+			static InputBinding newBinding;
+			const char* editKeybindingPopupName = "Edit keybinding";
+			if (bOpenInputEditorModal)
+			{
+				newBinding = m_InputBindings[inputBindingIndexToEdit];
+				bMouseReleasedAfterButtonClick = false;
+				ImGui::OpenPopup(editKeybindingPopupName);
+			}
+
+			if (!IsMouseButtonDown(MouseButton::LEFT, true))
+			{
+				bMouseReleasedAfterButtonClick = true;
+			}
+
+			if (ImGui::BeginPopupModal(editKeybindingPopupName))
+			{
+				bool bInputReceived = false;
+
+				if (GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+				{
+					ImGui::CloseCurrentPopup();
+				}
+				else
+				{
+					switch (inputBindingTypeToEdit)
+					{
+					case InputType::KEYBOARD:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", KeyCodeStrings[(i32)prevInputBinding.keyCode]);
+						ImGui::Text("Press any key to assign a new binding... (esc to cancel)");
+						for (i32 i = 0; i < (i32)KeyCode::_NONE; ++i)
+						{
+							if (GetKeyPressed((KeyCode)i, true))
+							{
+								newBinding.keyCode = (KeyCode)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					case InputType::MOUSE_BUTTON:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", MouseButtonStrings[(i32)prevInputBinding.mouseButton]);
+						ImGui::Text("Click any button to assign a new binding... (esc to cancel)");
+						if (bMouseReleasedAfterButtonClick)
+						{
+							for (i32 i = 0; i < (i32)MouseButton::COUNT; ++i)
+							{
+								if (IsMouseButtonDown((MouseButton)i, true))
+								{
+									newBinding.mouseButton = (MouseButton)i;
+									bInputReceived = true;
+								}
+							}
+						}
+					} break;
+					case InputType::MOUSE_AXIS:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", MouseAxisStrings[(i32)prevInputBinding.mouseAxis]);
+						ImGui::Text("Input axis to assign a new binding... (esc to cancel)");
+						glm::vec2 mouseMovement = GetMouseMovement(true);
+						const real mouseMoveThreshold = 7.0f;
+						if (GetVerticalScrollDistance(true) != 0.0f)
+						{
+							newBinding.mouseAxis = MouseAxis::SCROLL_Y;
+							bInputReceived = true;
+						}
+						else if (GetHorizontalScrollDistance(true) != 0.0f)
+						{
+							newBinding.mouseAxis = MouseAxis::SCROLL_X;
+							bInputReceived = true;
+						}
+						else if (abs(mouseMovement.x) > mouseMoveThreshold)
+						{
+							newBinding.mouseAxis = MouseAxis::X;
+							bInputReceived = true;
+						}
+						else if (abs(mouseMovement.y) > mouseMoveThreshold)
+						{
+							newBinding.mouseAxis = MouseAxis::Y;
+							bInputReceived = true;
+						}
+					} break;
+					case InputType::GAMEPAD_BUTTON:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", GamepadButtonStrings[(i32)prevInputBinding.gamepadButton]);
+						ImGui::Text("Click any button to assign a new binding... (esc to cancel)");
+
+						for (i32 i = 0; i < (i32)GamepadButton::COUNT; ++i)
+						{
+							if (IsGamepadButtonPressed(0, (GamepadButton)i))
+							{
+								newBinding.gamepadButton = (GamepadButton)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					case InputType::GAMEPAD_AXIS:
+					{
+						const InputBinding& prevInputBinding = m_InputBindings[inputBindingIndexToEdit];
+						ImGui::Text("Previous: %s", GamepadAxisStrings[(i32)prevInputBinding.gamepadAxis]);
+						ImGui::Text("Input axis to assign a new binding... (esc to cancel)");
+
+						for (i32 i = 0; i < (i32)GamepadAxis::COUNT; ++i)
+						{
+							if (HasGamepadAxisValueJustPassedThreshold(0, (GamepadAxis)i, 0.5f))
+							{
+								newBinding.gamepadAxis = (GamepadAxis)i;
+								bInputReceived = true;
+							}
+							else if (HasGamepadAxisValueJustPassedThreshold(0, (GamepadAxis)i, -0.5f))
+							{
+								newBinding.gamepadAxis = (GamepadAxis)i;
+								bInputReceived = true;
+							}
+						}
+					} break;
+					default:
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("Invalid input type!\n");
+						ImGui::PopStyleColor();
+					} break;
+					}
+
+					if (bInputReceived)
+					{
+						m_bInputBindingsDirty = true;
+						m_InputBindings[inputBindingIndexToEdit] = newBinding;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImGui::EndPopup();
 			}
 		}
 
 		ImGui::End();
+	}
+
+	void InputManager::OnWindowFocusChanged(bool bNowFocused)
+	{
+		FLEX_UNUSED(bNowFocused);
+		m_PrevMousePosition = m_MousePosition;
+	}
+
+	void InputManager::OnCursorModeChanged(CursorMode newMode)
+	{
+		FLEX_UNUSED(newMode);
+		m_PrevMousePosition = glm::vec2(-1.0f);
 	}
 
 	// http://www.third-helix.com/2013/04/12/doing-thumbstick-dead-zones-right.html
@@ -1385,12 +1774,18 @@ namespace flex
 			return false;
 		}
 
+		// Clear out all bindings to clear ones that aren't in the file being loaded
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			m_InputBindings[i] = {};
+		}
+
 		bool bFileComplete = true;
 
 		const u32 actionCount = (u32)Action::_NONE;
 		if (rootObject.fields.size() != actionCount)
 		{
-			PrintWarn("Unexpected number of inputs found in input-bindings.ini! (%u expected, %u found)\n", actionCount, (u32)rootObject.fields.size());
+			PrintWarn("Unexpected number of inputs found in %s! (%u expected, %u found)\n", INPUT_BINDINGS_LOCATION, actionCount, (u32)rootObject.fields.size());
 			bFileComplete = false;
 		}
 
@@ -1399,7 +1794,7 @@ namespace flex
 			const JSONObject& child = rootObject.GetObject(ActionStrings[i]);
 			if (child.fields.empty())
 			{
-				PrintWarn("Couldn't find action with name: %s in input-bindings.ini - using default values\n", ActionStrings[i]);
+				PrintWarn("Couldn't find action with name: %s in %s - using default values\n", ActionStrings[i], INPUT_BINDINGS_LOCATION);
 			}
 			else
 			{
@@ -1429,9 +1824,12 @@ namespace flex
 					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
 				}
 
-				m_InputBindings[i].bNegative = child.GetBool("negative");
+				child.TryGetBool("invert mouse axis", m_InputBindings[i].bInvertMouseAxis);
+				child.TryGetBool("invert gamepad axis", m_InputBindings[i].bInvertGamepadAxis);
 			}
 		}
+
+		m_bInputBindingsDirty = false;
 
 		return bFileComplete;
 	}
@@ -1456,17 +1854,19 @@ namespace flex
 			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
 			i32 gamepadAxis = binding.gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)binding.gamepadAxis;
 			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
-			bindingObj.fields.emplace_back("negative", JSONValue(binding.bNegative));
+			bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
+			bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
 
 		std::string inputBindingsFileName = StripLeadingDirectories(INPUT_BINDINGS_LOCATION);
 
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 		if (WriteFile(INPUT_BINDINGS_LOCATION, fileContents, false))
 		{
 			Print("Saved input bindings file to %s\n", inputBindingsFileName.c_str());
+			m_bInputBindingsDirty = false;
 		}
 		else
 		{
@@ -1500,6 +1900,19 @@ namespace flex
 		return Action::_NONE;
 	}
 
+	Action InputManager::GetActionFromMouseAxis(MouseAxis axis)
+	{
+		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
+		{
+			if (m_InputBindings[i].mouseAxis == axis)
+			{
+				return (Action)i;
+			}
+		}
+
+		return Action::_NONE;
+	}
+
 	Action InputManager::GetActionFromGamepadButton(GamepadButton button)
 	{
 		for (i32 i = 0; i < (i32)Action::_NONE; ++i)
@@ -1511,6 +1924,11 @@ namespace flex
 		}
 
 		return Action::_NONE;
+	}
+
+	bool InputManager::IsGamepadAxisInvertable(GamepadAxis gamepadAxis)
+	{
+		return (i32)gamepadAxis < (i32)GamepadAxis::LEFT_TRIGGER;
 	}
 
 	char InputManager::GetShiftModifiedKeyCode(char c)

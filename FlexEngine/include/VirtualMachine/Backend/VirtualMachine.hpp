@@ -2,12 +2,15 @@
 
 #include <stack>
 
-#include "VirtualMachine/Backend/VMValue.hpp"
+#include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
+#include "Variant.hpp"
+#include "VirtualMachine/Backend/FunctionBindings.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
 
 namespace flex
 {
 	struct DiagnosticContainer;
+	class FunctionBindings;
 
 	namespace IR
 	{
@@ -24,6 +27,35 @@ namespace flex
 
 	namespace VM
 	{
+		struct VariantWrapper
+		{
+			enum class Type
+			{
+				REGISTER,
+				CONSTANT,
+				TERMINAL_OUTPUT,
+				NONE
+			};
+
+			VariantWrapper() :
+				type(Type::NONE),
+				variant(g_EmptyVariant)
+			{}
+
+			VariantWrapper(Type type, const Variant& variant) :
+				type(type),
+				variant(variant)
+			{}
+
+			Type type;
+			Variant variant;
+
+			Variant& Get(VirtualMachine* vm);
+			Variant& GetW(VirtualMachine* vm);
+			bool Valid() const;
+			std::string ToString() const;
+		};
+
 		enum class OpCode
 		{
 			MOV,
@@ -36,8 +68,8 @@ namespace flex
 			AND,
 			OR,
 			XOR,
-			ITF,
-			FTI,
+			ITF, // int-to-float cast
+			FTI, // float-to-int cast
 			CALL,
 			PUSH,
 			POP,
@@ -120,77 +152,30 @@ namespace flex
 		//	PtrType ptr;
 		//};
 
-		struct FuncPtr
-		{
-			typedef Value(*PtrType)(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4, const Value& val5);
-
-			FuncPtr(PtrType ptr) :
-				ptr(ptr)
-			{
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4, const Value& val5)
-			{
-				return ptr(val0, val1, val2, val3, val4, val5);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3, const Value& val4)
-			{
-				return ptr(val0, val1, val2, val3, val4, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2, const Value& val3)
-			{
-				return ptr(val0, val1, val2, val3, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1, const Value& val2)
-			{
-				return ptr(val0, val1, val2, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0, const Value& val1)
-			{
-				return ptr(val0, val1, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()(const Value& val0)
-			{
-				return ptr(val0, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			Value operator()()
-			{
-				return ptr(g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue, g_EmptyVMValue);
-			}
-
-			PtrType ptr;
-		};
-
 		struct Instruction
 		{
 			Instruction(OpCode opCode) :
 				opCode(opCode),
-				val0(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val1(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val0(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val1(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0) :
+			Instruction(OpCode opCode, const VariantWrapper& val0) :
 				opCode(opCode),
 				val0(val0),
-				val1(ValueWrapper::Type::CONSTANT, g_EmptyVMValue),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val1(VariantWrapper::Type::CONSTANT, g_EmptyVariant),
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0, const ValueWrapper& val1) :
+			Instruction(OpCode opCode, const VariantWrapper& val0, const VariantWrapper& val1) :
 				opCode(opCode),
 				val0(val0),
 				val1(val1),
-				val2(ValueWrapper::Type::CONSTANT, g_EmptyVMValue)
+				val2(VariantWrapper::Type::CONSTANT, g_EmptyVariant)
 			{}
 
-			Instruction(OpCode opCode, const ValueWrapper& val0, const ValueWrapper& val1, const ValueWrapper& val2) :
+			Instruction(OpCode opCode, const VariantWrapper& val0, const VariantWrapper& val1, const VariantWrapper& val2) :
 				opCode(opCode),
 				val0(val0),
 				val1(val1),
@@ -198,9 +183,9 @@ namespace flex
 			{}
 
 			OpCode opCode;
-			ValueWrapper val0;
-			ValueWrapper val1;
-			ValueWrapper val2;
+			VariantWrapper val0;
+			VariantWrapper val1;
+			VariantWrapper val2;
 		};
 
 		struct IntermediateFuncAddress
@@ -209,9 +194,11 @@ namespace flex
 			i32 ip;
 		};
 
+		struct State;
+
 		struct InstructionBlock
 		{
-			void PushBack(const Instruction& inst, Span origin);
+			void PushBack(const Instruction& inst, Span origin, State* state);
 
 			std::vector<Instruction> instructions;
 			std::vector<Span> instructionOrigins;
@@ -260,7 +247,7 @@ namespace flex
 			// Caller pops registers off stack
 
 			void GenerateFromSource(const char* source);
-			void GenerateFromIR(IR::IntermediateRepresentation* ir);
+			void GenerateFromIR(IR::IntermediateRepresentation* ir, FunctionBindings* functionBindings);
 			void GenerateFromInstStream(const std::vector<Instruction>& inInstructions);
 
 			void Execute(bool bSingleStep = false);
@@ -275,13 +262,16 @@ namespace flex
 			bool ZeroFlagSet() const;
 			bool SignFlagSet() const;
 
-			static const i32 REGISTER_COUNT = 64;
+			bool IsCompiled() const;
+
+			static const i32 REGISTER_COUNT = 32;
+			static const i32 MAX_STACK_HEIGHT = 2048;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
-			static ValueWrapper g_ZeroIntValueWrapper;
-			static ValueWrapper g_ZeroFloatValueWrapper;
-			static ValueWrapper g_OneIntValueWrapper;
-			static ValueWrapper g_OneFloatValueWrapper;
+			static VariantWrapper g_ZeroIntVariantWrapper;
+			static VariantWrapper g_ZeroFloatVariantWrapper;
+			static VariantWrapper g_OneIntVariantWrapper;
+			static VariantWrapper g_OneFloatVariantWrapper;
 
 			struct RunningState
 			{
@@ -302,13 +292,11 @@ namespace flex
 			std::vector<Instruction> instructions;
 			std::vector<Span> instructionOrigins;
 
-			std::array<VM::Value, REGISTER_COUNT> registers;
-			std::stack<VM::Value> stack;
+			std::array<Variant, REGISTER_COUNT> registers;
+			std::array<Variant, Terminal::MAX_OUTPUT_COUNT> terminalOutputs;
+			std::stack<Variant> stack;
 
 			u32* memory = nullptr;
-
-			using FuncAddress = i32;
-			std::map<FuncAddress, FuncPtr*> ExternalFuncTable;
 
 			State* state = nullptr;
 			DiagnosticContainer* diagnosticContainer = nullptr;
@@ -318,25 +306,35 @@ namespace flex
 			std::string unpatchedInstructionStr;
 			std::string instructionStr;
 
+			static bool IsTerminalOutputVar(const std::string& varName);
+			// Returns -1, or terminal output var index if valid name
+			static i32 GetTerminalOutputVar(const std::string& varName);
+
+			RunningState m_RunningState;
+
 		private:
 			IR::Value::Type FindIRType(IR::State* irState, IR::Value* irValue);
 
 			void AllocateMemory();
 			void ZeroOutRegisters();
+			void ZeroOutTerminalOutputs();
 			void ClearStack();
-			void HandleComparison(ValueWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
+			void HandleComparison(VariantWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
 			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);
 
 			bool IsExternal(FuncAddress funcAddress);
+			FuncAddress GetExternalFuncAddress(const std::string& functionName);
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
-			void DispatchExternalCall(FuncAddress funcAddress);
+			bool DispatchExternalCall(FuncAddress funcAddress);
 
-			ValueWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
+			VariantWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
+			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
+			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
+			i32 GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue);
 
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
-
-			RunningState m_RunningState;
+			FunctionBindings* m_FunctionBindings = nullptr;
 
 			bool m_bCompiled = false;
 

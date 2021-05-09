@@ -2,15 +2,38 @@
 
 #include "Scene/Mesh.hpp"
 
-#include "Scene/LoadedMesh.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "Platform/Platform.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/LoadedMesh.hpp"
 #include "Scene/MeshComponent.hpp"
 
 namespace flex
 {
-	std::map<std::string, LoadedMesh*> Mesh::m_LoadedMeshes;
+	// Local global function to avoid having to forward declare cgltf_result
+	bool CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
+	{
+		if (result != cgltf_result_success)
+		{
+			switch (result)
+			{
+			case cgltf_result_data_too_short:	outErrorMessage = "Data too short"; break;
+			case cgltf_result_unknown_format:	outErrorMessage = "Unknown format"; break;
+			case cgltf_result_invalid_json:		outErrorMessage = "Invalid json"; break;
+			case cgltf_result_invalid_gltf:		outErrorMessage = "Invalid gltf"; break;
+			case cgltf_result_invalid_options:	outErrorMessage = "Invalid options"; break;
+			case cgltf_result_file_not_found:	outErrorMessage = "File not found"; break;
+			case cgltf_result_io_error:			outErrorMessage = "IO error"; break;
+			case cgltf_result_out_of_memory:	outErrorMessage = "Out of memory"; break;
+			default:							outErrorMessage = ""; break;
+			}
+			return false;
+		}
+		return true;
+	}
 
 	Mesh::Mesh(GameObject* owner) :
 		m_OwningGameObject(owner),
@@ -32,8 +55,11 @@ namespace flex
 	{
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			meshComponent->Destroy();
-			delete meshComponent;
+			if (meshComponent != nullptr)
+			{
+				meshComponent->Destroy();
+				delete meshComponent;
+			}
 		}
 		m_Meshes.clear();
 
@@ -57,15 +83,13 @@ namespace flex
 		GameObject* owner = m_OwningGameObject;
 		std::vector<MaterialID> materialIDs = GetMaterialIDs();
 		std::string relativeFilePath = m_RelativeFilePath;
-		MeshImportSettings importSettings = m_ImportSettings;
 
 		Destroy();
 
 		SetOwner(owner);
 		m_RelativeFilePath = relativeFilePath;
-		m_ImportSettings = importSettings;
 
-		if (!LoadFromFile(m_RelativeFilePath, materialIDs, &m_ImportSettings))
+		if (!LoadFromFile(m_RelativeFilePath, materialIDs))
 		{
 			PrintError("Failed to reload mesh at %s\n", m_RelativeFilePath.c_str());
 		}
@@ -73,17 +97,26 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
-	bool Mesh::LoadFromFile(const std::string& relativeFilePath,
-		MaterialID materialID,
-		MeshImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	void Mesh::RemoveSubmesh(u32 index)
 	{
-		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), importSettings, optionalCreateInfo);
+		m_Meshes[index] = nullptr;
 	}
 
-	bool Mesh::LoadFromFile(const std::string& relativeFilePath,
+	bool Mesh::LoadFromFile(
+		const std::string& relativeFilePath,
+		MaterialID materialID,
+		bool bDynamic /* = false */,
+		bool bCreateRenderObject /* = true */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	{
+		return LoadFromFile(relativeFilePath, std::vector<MaterialID>({ materialID }), bDynamic, bCreateRenderObject, optionalCreateInfo);
+	}
+
+	bool Mesh::LoadFromFile(
+		const std::string& relativeFilePath,
 		const std::vector<MaterialID>& inMaterialIDs,
-		MeshImportSettings* importSettings /* = nullptr */,
+		bool bDynamic /* = false */,
+		bool bCreateRenderObject /* = true */,
 		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
 	{
 		// TODO: Call SetRequiredAttributesFromMaterialID for each mesh with each matID?
@@ -101,28 +134,13 @@ namespace flex
 		m_BoundingSphereRadius = 0;
 		m_BoundingSphereCenterPoint = VEC3_ZERO;
 
-		LoadedMesh* loadedMesh = nullptr;
-		if (FindPreLoadedMesh(relativeFilePath, &loadedMesh))
-		{
-			// If no import settings have been passed in, grab any from the cached mesh
-			if (importSettings == nullptr)
-			{
-				importSettings = &loadedMesh->importSettings;
-			}
-		}
-		else
-		{
-			// Mesh hasn't been loaded before, load it now
-			loadedMesh = LoadMesh(relativeFilePath, importSettings);
-		}
+		LoadedMesh* loadedMesh = g_ResourceManager->FindOrLoadMesh(relativeFilePath);
 
 		if (loadedMesh == nullptr)
 		{
 			PrintError("Failed to load mesh at %s\n", relativeFilePath.c_str());
 			return false;
 		}
-
-		m_ImportSettings = loadedMesh->importSettings;
 
 		cgltf_data* data = loadedMesh->data;
 		if (data == nullptr)
@@ -154,8 +172,16 @@ namespace flex
 			for (i32 j = 0; j < (i32)mesh->primitives_count; ++j)
 			{
 				MaterialID matID = materialIDs.size() > 1 ? materialIDs[j] : materialIDs.size() == 1 ? materialIDs[0] : g_Renderer->GetPlaceholderMaterialID();
-				MeshComponent* meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, importSettings, optionalCreateInfo);
-				if (meshComponent)
+				MeshComponent* meshComponent;
+				if (bDynamic)
+				{
+					meshComponent = MeshComponent::LoadFromCGLTFDynamic(this, &mesh->primitives[j], matID, u32_max, optionalCreateInfo, bCreateRenderObject);
+				}
+				else
+				{
+					meshComponent = MeshComponent::LoadFromCGLTF(this, &mesh->primitives[j], matID, optionalCreateInfo, bCreateRenderObject);
+				}
+				if (meshComponent != nullptr)
 				{
 					m_Meshes.push_back(meshComponent);
 				}
@@ -173,18 +199,20 @@ namespace flex
 	bool Mesh::LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID matID,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo);
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, false, 0, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID matID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo);
+		return LoadFromMemoryInternal(vertexBufferCreateInfo, indices, matID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
@@ -192,7 +220,8 @@ namespace flex
 		MaterialID matID,
 		bool bDynamic,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo)
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject)
 	{
 		if (m_bInitialized)
 		{
@@ -211,20 +240,13 @@ namespace flex
 			return false;
 		}
 
-		MeshComponent* meshComponent = nullptr;
-
 		if (bDynamic)
 		{
-			meshComponent = MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo);
+			MeshComponent::LoadFromMemoryDynamic(this, vertexBufferCreateInfo, indices, matID, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
 		}
 		else
 		{
-			meshComponent = MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo);
-		}
-
-		if (meshComponent)
-		{
-			m_Meshes.push_back(meshComponent);
+			MeshComponent::LoadFromMemory(this, vertexBufferCreateInfo, indices, matID, optionalCreateInfo, bCreateRenderObject);
 		}
 
 		CalculateBounds();
@@ -234,12 +256,16 @@ namespace flex
 		return true;
 	}
 
-	bool Mesh::LoadPrefabShape(PrefabShape shape, MaterialID materialID, RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+	bool Mesh::LoadPrefabShape(
+		PrefabShape shape,
+		MaterialID materialID,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
 		m_Type = Type::PREFAB;
 
 		m_Meshes = { new MeshComponent(this, materialID, false) };
-		return m_Meshes[0]->LoadPrefabShape(shape, optionalCreateInfo);
+		return m_Meshes[0]->LoadPrefabShape(shape, optionalCreateInfo, bCreateRenderObject);
 	}
 
 	bool Mesh::CreateProcedural(u32 initialMaxVertCount,
@@ -254,21 +280,24 @@ namespace flex
 		return m_Meshes[0]->CreateProcedural(initialMaxVertCount, attributes, topologyMode, optionalCreateInfo);
 	}
 
-	bool Mesh::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
+	i32 Mesh::AddSubMesh(MeshComponent* meshComponent)
 	{
-		auto iter = m_LoadedMeshes.find(relativeFilePath);
-		if (iter == m_LoadedMeshes.end())
+		for (i32 i = 0; i < (i32)m_Meshes.size(); ++i)
 		{
-			return false;
+			if (m_Meshes[i] == nullptr)
+			{
+				m_Meshes[i] = meshComponent;
+				return i;
+			}
 		}
-		else
-		{
-			*loadedMesh = iter->second;
-			return true;
-		}
+
+		i32 newIndex = (i32)m_Meshes.size();
+		m_Meshes.emplace_back(meshComponent);
+
+		return newIndex;
 	}
 
-	LoadedMesh* Mesh::LoadMesh(const std::string& relativeFilePath, MeshImportSettings* importSettings /* = nullptr */)
+	LoadedMesh* Mesh::LoadMesh(const std::string& relativeFilePath)
 	{
 		if (relativeFilePath.find(':') != std::string::npos)
 		{
@@ -287,8 +316,8 @@ namespace flex
 		LoadedMesh* mesh = nullptr;
 		bool bNewMesh = true;
 		{
-			auto existingIter = Mesh::m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter == Mesh::m_LoadedMeshes.end())
+			auto existingIter = g_ResourceManager->loadedMeshes.find(relativeFilePath);
+			if (existingIter == g_ResourceManager->loadedMeshes.end())
 			{
 				if (g_bEnableLogging_Loading)
 				{
@@ -307,21 +336,15 @@ namespace flex
 			}
 		}
 
-		// If import settings were passed in, save them in the cached mesh
-		if (importSettings)
-		{
-			mesh->importSettings = *importSettings;
-		}
-
 		mesh->relativeFilePath = relativeFilePath;
 
 		auto cleanup = [&](const std::string& errorMessage)
 		{
 			Print("%s", errorMessage.c_str());
-			auto existingIter = Mesh::m_LoadedMeshes.find(relativeFilePath);
-			if (existingIter != Mesh::m_LoadedMeshes.end())
+			auto existingIter = g_ResourceManager->loadedMeshes.find(relativeFilePath);
+			if (existingIter != g_ResourceManager->loadedMeshes.end())
 			{
-				Mesh::m_LoadedMeshes.erase(existingIter);
+				g_ResourceManager->loadedMeshes.erase(existingIter);
 			}
 			delete mesh;
 		};
@@ -352,135 +375,42 @@ namespace flex
 			cleanup("Failed to validate gltf/glb file at " + relativeFilePath + " with error:\n\t" + outErrorMessage + "\n");
 			return nullptr;
 		}
-
 		else
 		{
 			mesh->data = data;
 
 			if (bNewMesh)
 			{
-				m_LoadedMeshes.emplace(relativeFilePath, mesh);
+				g_ResourceManager->loadedMeshes.emplace(relativeFilePath, mesh);
 			}
 		}
 
 		return mesh;
 	}
 
-	bool Mesh::CheckCGLTFResult(cgltf_result result, std::string& outErrorMessage)
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, bool bCreateRenderObject /* = true */)
 	{
-		if (result != cgltf_result_success)
-		{
-			switch (result)
-			{
-			case cgltf_result_data_too_short:	outErrorMessage = "Data too short"; break;
-			case cgltf_result_unknown_format:	outErrorMessage = "Unknown format"; break;
-			case cgltf_result_invalid_json:		outErrorMessage = "Invalid json"; break;
-			case cgltf_result_invalid_gltf:		outErrorMessage = "Invalid gltf"; break;
-			case cgltf_result_invalid_options:	outErrorMessage = "Invalid options"; break;
-			case cgltf_result_file_not_found:	outErrorMessage = "File not found"; break;
-			case cgltf_result_io_error:			outErrorMessage = "IO error"; break;
-			case cgltf_result_out_of_memory:	outErrorMessage = "Out of memory"; break;
-			default:							outErrorMessage = ""; break;
-			}
-			return false;
-		}
-		return true;
+		return ImportFromFile(meshFilePath, owner, { g_Renderer->GetPlaceholderMaterialID() }, bCreateRenderObject);
 	}
 
-	Mesh* Mesh::ParseJSON(const JSONObject& object, GameObject* owner, const std::vector<MaterialID>& inMaterialIDs)
-	{
-		Mesh* newMesh = nullptr;
-
-		std::string meshFilePath = object.GetString("file");
-		if (!meshFilePath.empty())
-		{
-			meshFilePath = MESH_DIRECTORY + meshFilePath;
-		}
-		std::string meshPrefabName = object.GetString("prefab");
-		bool bSwapNormalYZ = object.GetBool("swapNormalYZ");
-		bool bFlipNormalZ = object.GetBool("flipNormalZ");
-		bool bFlipU = object.GetBool("flipU");
-		bool bFlipV = object.GetBool("flipV");
-
-		std::vector<MaterialID> materialIDs = inMaterialIDs;
-
-		if (materialIDs.empty() || materialIDs[0] == InvalidMaterialID)
-		{
-			PrintWarn("Mesh component requires material index to be parsed: %s\n", owner->GetName().c_str());
-			materialIDs = { g_Renderer->GetPlaceholderMaterialID() };
-		}
-
-		if (!meshFilePath.empty())
-		{
-			newMesh = new Mesh(owner);
-
-			MeshImportSettings importSettings = {};
-			importSettings.bFlipU = bFlipU;
-			importSettings.bFlipV = bFlipV;
-			importSettings.bFlipNormalZ = bFlipNormalZ;
-			importSettings.bSwapNormalYZ = bSwapNormalYZ;
-
-			owner->SetMesh(newMesh);
-			newMesh->LoadFromFile(meshFilePath, materialIDs, &importSettings);
-		}
-		else if (!meshPrefabName.empty())
-		{
-			newMesh = new Mesh(owner);
-
-			PrefabShape prefabShape = MeshComponent::StringToPrefabShape(meshPrefabName);
-			newMesh->LoadPrefabShape(prefabShape, materialIDs[0]);
-
-			owner->SetMesh(newMesh);
-		}
-		else
-		{
-			PrintError("Unhandled mesh field on object: %s\n", owner->GetName().c_str());
-		}
-
-		return newMesh;
-	}
-
-	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner)
+	Mesh* Mesh::ImportFromFile(const std::string& meshFilePath, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject /* = true */)
 	{
 		Mesh* newMesh = new Mesh(owner);
 
-		std::vector<MaterialID> materialIDs = { g_Renderer->GetPlaceholderMaterialID() };
-
-		MeshImportSettings importSettings = {};
-
 		owner->SetMesh(newMesh);
-		newMesh->LoadFromFile(meshFilePath, materialIDs, &importSettings);
+		newMesh->LoadFromFile(meshFilePath, materialIDs, false, bCreateRenderObject);
 
 		return newMesh;
 	}
 
-	JSONObject Mesh::Serialize() const
+	Mesh* Mesh::ImportFromPrefab(const std::string& prefabName, GameObject* owner, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject /* = true */)
 	{
-		JSONObject meshObject = {};
+		Mesh* newMesh = new Mesh(owner);
 
-		if (m_Type == Mesh::Type::FILE)
-		{
-			std::string prefixStr = MESH_DIRECTORY;
-			std::string meshFilepath = GetRelativeFilePath().substr(prefixStr.length());
-			meshObject.fields.emplace_back("file", JSONValue(meshFilepath));
-		}
-		else if (m_Type == Mesh::Type::PREFAB)
-		{
-			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(m_Meshes[0]->GetShape());
-			meshObject.fields.emplace_back("prefab", JSONValue(prefabShapeStr));
-		}
-		else
-		{
-			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
-		}
+		owner->SetMesh(newMesh);
+		newMesh->LoadPrefabShape(MeshComponent::StringToPrefabShape(prefabName), materialIDs[0], nullptr, bCreateRenderObject);
 
-		MeshImportSettings importSettings = m_ImportSettings;
-		meshObject.fields.emplace_back("swapNormalYZ", JSONValue(importSettings.bSwapNormalYZ));
-		meshObject.fields.emplace_back("flipNormalZ", JSONValue(importSettings.bFlipNormalZ));
-		meshObject.fields.emplace_back("flipU", JSONValue(importSettings.bFlipU));
-		meshObject.fields.emplace_back("flipV", JSONValue(importSettings.bFlipV));
-
-		return meshObject;
+		return newMesh;
 	}
 
 	std::string Mesh::GetRelativeFilePath() const
@@ -493,16 +423,11 @@ namespace flex
 		return m_FileName;
 	}
 
-	MeshImportSettings Mesh::GetImportSettings() const
-	{
-		return m_ImportSettings;
-	}
-
 	MeshComponent* Mesh::GetSubMeshWithRenderID(RenderID renderID) const
 	{
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			if (meshComponent->renderID == renderID)
+			if (meshComponent != nullptr && meshComponent->renderID == renderID)
 			{
 				return meshComponent;
 			}
@@ -516,6 +441,11 @@ namespace flex
 		return m_Meshes;
 	}
 
+	MeshComponent* Mesh::GetSubMesh(u32 index) const
+	{
+		return m_Meshes[index];
+	}
+
 	GameObject* Mesh::GetOwningGameObject() const
 	{
 		return m_OwningGameObject;
@@ -526,9 +456,31 @@ namespace flex
 		m_OwningGameObject = owner;
 	}
 
-	void Mesh::DrawImGui()
+	bool Mesh::DrawImGui()
 	{
+		bool bAnyPropertyChanged = false;
+
+		const char* meshContextMenuStr = "mesh context menu";
+		auto contextMenuCheck = [meshContextMenuStr]()
+		{
+			if (ImGui::IsMouseReleased(1) && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+			{
+				ImGui::OpenPopup(meshContextMenuStr);
+			}
+		};
+
 		ImGui::Text("Mesh");
+
+		contextMenuCheck();
+
+		ImGui::SameLine();
+
+		bool bDeleteSelf = false;
+
+		if (ImGui::Button("Remove"))
+		{
+			bDeleteSelf = true;
+		}
 
 		switch (m_Type)
 		{
@@ -537,7 +489,7 @@ namespace flex
 			i32 selectedMeshIndex = 0;
 			std::string currentMeshFileName = "NONE";
 			i32 i = 0;
-			for (auto iter : m_LoadedMeshes)
+			for (auto iter : g_ResourceManager->loadedMeshes)
 			{
 				const std::string meshFileName = StripLeadingDirectories(iter.first);
 				if (m_FileName.compare(meshFileName) == 0)
@@ -553,7 +505,7 @@ namespace flex
 			{
 				i = 0;
 
-				for (auto meshPair : m_LoadedMeshes)
+				for (auto meshPair : g_ResourceManager->loadedMeshes)
 				{
 					bool bSelected = (i == selectedMeshIndex);
 					const std::string meshFileName = StripLeadingDirectories(meshPair.first);
@@ -561,12 +513,13 @@ namespace flex
 					{
 						if (selectedMeshIndex != i)
 						{
+							bAnyPropertyChanged = true;
 							selectedMeshIndex = i;
 							std::string relativeFilePath = meshPair.first;
 							GameObject* owner = m_OwningGameObject;
 							Destroy();
 							m_OwningGameObject = owner;
-							LoadFromFile(relativeFilePath, GetMaterialIDs(), &m_ImportSettings);
+							LoadFromFile(relativeFilePath, GetMaterialIDs());
 						}
 					}
 
@@ -576,43 +529,27 @@ namespace flex
 				ImGui::EndCombo();
 			}
 
-			if (ImGui::BeginPopupContextItem("mesh context menu"))
-			{
-				if (ImGui::Button("Remove mesh"))
-				{
-					m_OwningGameObject->SetMesh(nullptr);
-				}
-
-				ImGui::EndPopup();
-			}
+			contextMenuCheck();
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Renderer::MeshPayloadCStr);
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MeshPayloadCStr);
 
 				if (payload && payload->Data)
 				{
+					bAnyPropertyChanged = true;
 					std::string draggedMeshFileName((const char*)payload->Data, payload->DataSize);
-					auto meshIter = m_LoadedMeshes.find(draggedMeshFileName);
-					if (meshIter != m_LoadedMeshes.end())
-					{
-						std::string newMeshFilePath = meshIter->first;
-
-						if (m_RelativeFilePath.compare(newMeshFilePath) != 0)
-						{
-							GameObject* owner = m_OwningGameObject;
-							Destroy();
-							m_OwningGameObject = owner;
-							LoadFromFile(newMeshFilePath, GetMaterialIDs(), &m_ImportSettings);
-						}
-					}
+					GameObject* owner = m_OwningGameObject;
+					Destroy();
+					m_OwningGameObject = owner;
+					LoadFromFile(draggedMeshFileName, GetMaterialIDs());
 				}
 				ImGui::EndDragDropTarget();
 			}
 		} break;
 		case Mesh::Type::PREFAB:
 		{
-			MeshComponent* meshComponent = GetSubMeshes()[0];
+			MeshComponent* meshComponent = GetSubMesh(0);
 			i32 selectedMeshIndex = (i32)meshComponent->GetShape();
 			std::string currentMeshName = MeshComponent::PrefabShapeToString(meshComponent->GetShape());
 
@@ -626,6 +563,7 @@ namespace flex
 					{
 						if (selectedMeshIndex != i)
 						{
+							bAnyPropertyChanged = true;
 							selectedMeshIndex = i;
 							Destroy();
 							LoadPrefabShape((PrefabShape)i, GetMaterialID(0));
@@ -633,14 +571,17 @@ namespace flex
 					}
 				}
 
+				contextMenuCheck();
+
 				ImGui::EndCombo();
 			}
 		} break;
 		case Mesh::Type::PROCEDURAL:
 		{
-			MeshComponent* meshComponent = GetSubMeshes()[0];
+			MeshComponent* meshComponent = GetSubMesh(0);
 			ImGui::Text("Procedural mesh");
 			ImGui::Text("Vertex count: %u", meshComponent->GetVertexBufferData()->VertexCount);
+			contextMenuCheck();
 		} break;
 		case Mesh::Type::MEMORY:
 		{
@@ -651,6 +592,25 @@ namespace flex
 			assert(false);
 		} break;
 		}
+
+		if (ImGui::BeginPopup(meshContextMenuStr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
+		{
+			if (ImGui::Button("Remove mesh"))
+			{
+				bAnyPropertyChanged = true;
+				bDeleteSelf = true;
+			}
+
+			ImGui::EndPopup();
+		}
+
+		if (bDeleteSelf)
+		{
+			m_OwningGameObject->SetMesh(nullptr);
+			// We are now deleted!
+		}
+
+		return bAnyPropertyChanged;
 	}
 
 	void Mesh::SetTypeToMemory()
@@ -683,7 +643,7 @@ namespace flex
 
 	MaterialID Mesh::GetMaterialID(u32 slotIndex)
 	{
-		return m_Meshes[slotIndex]->GetMaterialID();
+		return m_Meshes[slotIndex] != nullptr ? m_Meshes[slotIndex]->GetMaterialID() : InvalidMaterialID;
 	}
 
 	RenderID Mesh::GetRenderID(u32 slotIndex)
@@ -698,12 +658,14 @@ namespace flex
 
 		for (MeshComponent* meshComponent : m_Meshes)
 		{
-			m_MinPoint = glm::min(m_MinPoint, meshComponent->m_MinPoint);
-			m_MaxPoint = glm::max(m_MaxPoint, meshComponent->m_MaxPoint);
+			if (meshComponent != nullptr)
+			{
+				m_MinPoint = glm::min(m_MinPoint, meshComponent->m_MinPoint);
+				m_MaxPoint = glm::max(m_MaxPoint, meshComponent->m_MaxPoint);
+			}
 		}
 
 		m_BoundingSphereRadius = glm::distance(m_MaxPoint, m_MinPoint) / 2.0f;
 		m_BoundingSphereCenterPoint = m_MinPoint + (m_MaxPoint - m_MinPoint) / 2.0f;
 	}
-
 } // namespace flex

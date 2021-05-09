@@ -12,6 +12,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <direct.h> // For _getcwd
 #include <stdio.h> // For gcvt, fopen
+
+#include <Rpc.h> // For UuidCreate
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -32,28 +34,13 @@ namespace flex
 	typedef void* HANDLE;
 	typedef unsigned short WORD;
 
-	const WORD CONSOLE_COLOR_DEFAULT = 0 | FOREGROUND_INTENSITY;
-	const WORD CONSOLE_COLOR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
-	const WORD CONSOLE_COLOR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_DEFAULT = 0 | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_WARNING = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY;
+	const WORD CONSOLE_COLOUR_ERROR = FOREGROUND_RED | FOREGROUND_INTENSITY;
 
 	HANDLE g_ConsoleHandle;
 
 	CPUInfo Platform::cpuInfo;
-
-	struct ThreadData
-	{
-		u32 num;
-	};
-
-	struct WorkItem
-	{
-		u32 a;
-	};
-
-	struct CompletedWorkItem
-	{
-		u32 ans;
-	};
 
 	std::vector<HANDLE> ThreadHandles;
 
@@ -65,13 +52,13 @@ namespace flex
 	void Platform::GetConsoleHandle()
 	{
 		g_ConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOR_DEFAULT);
+		SetConsoleTextAttribute(g_ConsoleHandle, CONSOLE_COLOUR_DEFAULT);
 	}
 
-	void Platform::SetConsoleTextColor(ConsoleColour colour)
+	void Platform::SetConsoleTextColour(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
-		static WORD w_colours[] = { CONSOLE_COLOR_DEFAULT, CONSOLE_COLOR_WARNING, CONSOLE_COLOR_ERROR };
+		static WORD w_colours[] = { CONSOLE_COLOUR_DEFAULT, CONSOLE_COLOUR_WARNING, CONSOLE_COLOUR_ERROR };
 
 		SetConsoleTextAttribute(g_ConsoleHandle, w_colours[(u32)colour]);
 #else
@@ -169,6 +156,28 @@ namespace flex
 		}
 	}
 
+	void Platform::RetrievePathToExecutable()
+	{
+		TCHAR szFileName[MAX_PATH];
+		GetModuleFileName(NULL, szFileName, MAX_PATH);
+		char fileNameBuff[MAX_PATH];
+#pragma warning(disable: 4127) // Expression is constant
+		if (sizeof(TCHAR) == sizeof(WCHAR))
+#pragma warning(default: 4127)
+		{
+			sprintf_s(fileNameBuff, MAX_PATH, "%ws", (WCHAR*)szFileName);
+		}
+		else
+		{
+			sprintf_s(fileNameBuff, MAX_PATH, "%s", (char*)szFileName);
+		}
+
+		FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(fileNameBuff));
+
+		std::string exeDir = ExtractDirectoryString(FlexEngine::s_ExecutablePath);
+		SetCurrentDirectory(exeDir.c_str());
+	}
+
 	bool Platform::CreateDirectoryRecursive(const std::string& absoluteDirectoryPath)
 	{
 		if (absoluteDirectoryPath.find("..") != std::string::npos)
@@ -242,30 +251,47 @@ namespace flex
 		}
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	bool Platform::GetFileModifcationTime(const char* filePath, Date& outModificationDate)
 	{
-		std::string cleanedFileType = fileType;
+		HANDLE fileHandle = CreateFile(filePath, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (fileHandle == INVALID_HANDLE_VALUE)
 		{
-			size_t dotPos = cleanedFileType.find('.');
+			return false;
+		}
+		FILETIME fileCreationTime, fileAccessTime, fileWriteTime;
+		if (!GetFileTime(fileHandle, &fileCreationTime, &fileAccessTime, &fileWriteTime))
+		{
+			CloseHandle(fileHandle);
+			return false;
+		}
+
+		SYSTEMTIME fileWriteTimeSystem;
+		bool bSuccess = FileTimeToSystemTime(&fileWriteTime, &fileWriteTimeSystem);
+		assert(bSuccess);
+		// Incorrect hour? TODO: Get in UTC
+		outModificationDate = Date(fileWriteTimeSystem.wYear, fileWriteTimeSystem.wMonth, fileWriteTimeSystem.wDay,
+			fileWriteTimeSystem.wHour, fileWriteTimeSystem.wMinute, fileWriteTimeSystem.wSecond, fileWriteTimeSystem.wMilliseconds);
+
+		CloseHandle(fileHandle);
+		return true;
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter)
+	{
+		std::string cleanedFileTypeFilter = fileTypeFilter;
+		{
+			size_t dotPos = cleanedFileTypeFilter.find('.');
 			if (dotPos != std::string::npos)
 			{
-				cleanedFileType.erase(dotPos, 1);
+				cleanedFileTypeFilter.erase(dotPos, 1);
 			}
 		}
 
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
-		{
-			cleanedDirPath += '/';
-		}
-
+		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
 		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
 
-
-		HANDLE hFind;
 		WIN32_FIND_DATAA findData;
-
-		hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
 
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
@@ -282,27 +308,73 @@ namespace flex
 			}
 			else
 			{
-				bool foundFileTypeMatches = false;
-				if (cleanedFileType == "*")
+				bool bFoundFileTypeMatches = false;
+				if (cleanedFileTypeFilter == "*")
 				{
-					foundFileTypeMatches = true;
+					bFoundFileTypeMatches = true;
 				}
 				else
 				{
 					std::string fileNameStr(findData.cFileName);
-					size_t dotPos = fileNameStr.find('.');
-
-					if (dotPos != std::string::npos)
+					std::string fileType = ExtractFileType(fileNameStr);
+					if (fileType == cleanedFileTypeFilter)
 					{
-						std::string foundFileType = Split(fileNameStr, '.')[1];
-						if (foundFileType == cleanedFileType)
-						{
-							foundFileTypeMatches = true;
-						}
+						bFoundFileTypeMatches = true;
 					}
 				}
 
-				if (foundFileTypeMatches)
+				if (bFoundFileTypeMatches)
+				{
+					// File size retrieval:
+					//LARGE_INTEGER filesize;
+					//filesize.LowPart = findData.nFileSizeLow;
+					//filesize.HighPart = findData.nFileSizeHigh;
+
+					filePaths.push_back(cleanedDirPath + findData.cFileName);
+				}
+			}
+		} while (FindNextFile(hFind, &findData) != 0);
+
+		FindClose(hFind);
+
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		return !filePaths.empty();
+	}
+
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	{
+		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
+
+		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		WIN32_FIND_DATAA findData;
+		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+		if (hFind == INVALID_HANDLE_VALUE)
+		{
+			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			return false;
+		}
+
+		do
+		{
+			if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			{
+				bool bFoundFileTypeMatches = false;
+
+				std::string fileNameStr(findData.cFileName);
+				std::string fileType = ExtractFileType(fileNameStr);
+				if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+				{
+					bFoundFileTypeMatches = true;
+				}
+
+				if (bFoundFileTypeMatches)
 				{
 					// File size retrieval:
 					//LARGE_INTEGER filesize;
@@ -339,8 +411,9 @@ namespace flex
 		openFileName.nFilterIndex = 0;
 		const i32 MAX_FILE_PATH_LEN = 512;
 		char fileBuf[MAX_FILE_PATH_LEN];
-		memset(fileBuf, '\0', MAX_FILE_PATH_LEN - 1);
+		memset(fileBuf + MAX_FILE_PATH_LEN - 1, '\0', 1);
 		openFileName.lpstrFile = fileBuf;
+		openFileName.lpstrFile[0] = '\0';
 		openFileName.nMaxFile = MAX_FILE_PATH_LEN;
 		openFileName.lpstrTitle = windowTitle.c_str();
 		openFileName.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
@@ -393,6 +466,43 @@ namespace flex
 			IntToString(time.wSecond, 2);
 
 		return result.str();
+	}
+
+	u64 Platform::GetUSSinceEpoch()
+	{
+		FILETIME ft;
+		LARGE_INTEGER li;
+
+		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
+		// copy it to a LARGE_INTEGER structure.
+		GetSystemTimeAsFileTime(&ft);
+		li.LowPart = ft.dwLowDateTime;
+		li.HighPart = ft.dwHighDateTime;
+
+		u64 result = li.QuadPart;
+
+		// Convert from file time to UNIX epoch time
+		result -= 116444736000000000LL;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
+		//result /= 10000;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
+		result /= 10;
+
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
+
+		GameObjectID result;
+		::UUID winGuid;
+		RPC_STATUS status = ::UuidCreate(&winGuid);
+		assert(status == RPC_S_OK);
+		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
+		return result;
 	}
 
 	u32 Platform::AtomicIncrement(volatile u32* value)
@@ -483,7 +593,15 @@ namespace flex
 		DWORD byteOffset = 0;
 		PCACHE_DESCRIPTOR Cache;
 
-		glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
+		HMODULE kernel32Handle = GetModuleHandle(TEXT("kernel32"));
+
+		if (kernel32Handle == 0)
+		{
+			PrintError("GetModuleHandle(\"kernel32\") failed.\n");
+			return;
+		}
+
+		glpi = (LPFN_GLPI)GetProcAddress(kernel32Handle, "GetLogicalProcessorInformation");
 		if (glpi == NULL)
 		{
 			PrintError("GetLogicalProcessorInformation is not supported.\n");
@@ -513,7 +631,7 @@ namespace flex
 				}
 				else
 				{
-					PrintError("Error encountered in GetLogicalProcessorCount: %d\n", GetLastError());
+					PrintError("Error encountered in GetLogicalProcessorCount: %lu\n", GetLastError());
 					return;
 				}
 			}
@@ -524,6 +642,7 @@ namespace flex
 		}
 
 		ptr = buffer;
+		assert(ptr != nullptr);
 
 		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 		{
@@ -582,7 +701,7 @@ namespace flex
 			m_ChangeHandle = FindFirstChangeNotification(
 				directory.c_str(),
 				m_bWatchSubtree ? TRUE : FALSE,
-				FILE_NOTIFY_CHANGE_LAST_WRITE);
+				FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
 
 			if (m_ChangeHandle == INVALID_HANDLE_VALUE)
 			{
@@ -612,6 +731,8 @@ namespace flex
 		switch (dwWaitStatus)
 		{
 		case WAIT_OBJECT_0:
+			// A file was created, renamed, or deleted in the directory
+
 			// Clear modification flag (needs to be called twice for some reason...)
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)

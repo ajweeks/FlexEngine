@@ -1,0 +1,198 @@
+{
+	"version" : 6,
+	"name" : "scene_area_light_test",
+	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 1.019272,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-2.688, 1.390, -2.741",
+			"pitch" : -0.118117,
+			"yaw" : 0.810173
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "A88E777AB703778D4EDB89E1B342C090",
+			"type" : "skybox",
+			"visible" : true,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional light",
+			"id" : "C39FBFC00466B6AA449961CAFFA9D949",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "0.871, 0.027, 0.435"
+			},
+			"visible" : false,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "0.409, 0.103, 0.190, 0.886",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "1.00, 1.00, 1.00",
+				"enabled" : false,
+				"brightness" : 3.000000,
+				"cast shadows" : true,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "ground_plane",
+			"id" : "7BC60CBE6479479E47E02F6E43D66444",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.911, 0.000",
+				"scale" : "100.000, 1.000, 100.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			]
+		},
+		{
+			"name" : "Spinner",
+			"id" : "B70BABFF6EEE478149DC6715A1F02390",
+			"type" : "object",
+			"transform" : 
+			{
+				"rot" : "0.000, 0.518, 0.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"children" : 
+			[
+				{
+					"name" : "AreaLight_04",
+					"id" : "7F8E15ACA19627A24D327120F3438323",
+					"type" : "prefab",
+					"prefab type" : "AreaLight",
+					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
+					"transform" : 
+					{
+						"pos" : "0.000, 2.200, 3.000",
+						"rot" : "-0.349, 0.000, 0.000",
+						"scale" : "0.559, 2.239, 1.000"
+					}
+				},
+				{
+					"name" : "AreaLight_05",
+					"id" : "985B1AAA19A4BD8440B789A7E0DE4E68",
+					"type" : "prefab",
+					"prefab type" : "AreaLight",
+					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
+					"transform" : 
+					{
+						"pos" : "3.000, 2.200, 0.000",
+						"rot" : "2.793, 1.396, -3.141",
+						"scale" : "0.599, 2.239, 1.000"
+					}
+				},
+				{
+					"name" : "AreaLight_06",
+					"id" : "C64F4CD1B66E51874FBFE0E544D15E79",
+					"type" : "prefab",
+					"prefab type" : "AreaLight",
+					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
+					"transform" : 
+					{
+						"pos" : "0.000, 2.200, -3.000",
+						"rot" : "2.793, 0.000, 3.141",
+						"scale" : "0.599, 2.239, 1.000"
+					}
+				},
+				{
+					"name" : "AreaLight_07",
+					"id" : "F815A82A713D2DAE4C6D7A7ACED902E2",
+					"type" : "prefab",
+					"prefab type" : "AreaLight",
+					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
+					"transform" : 
+					{
+						"pos" : "-3.000, 2.200, 0.000",
+						"rot" : "0.349, 1.570, 3.142",
+						"scale" : "0.599, 2.239, 1.000"
+					}
+				}
+			]
+		},
+		{
+			"name" : "Dragon",
+			"id" : "AD4E924AAD26E8BF44751C78FFA6EE51",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.420, 0.000",
+				"scale" : "2.440, 2.440, 2.440"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		},
+		{
+			"name" : "ground_plane-1",
+			"id" : "178FAAAAF540418F4486DA1BD0B42899",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.911, 35.932",
+				"rot" : "-1.571, 0.000, 0.000",
+				"scale" : "100.000, 1.000, 100.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			]
+		},
+		{
+			"name" : "ground_plane-2",
+			"id" : "8E93C981369339AE4CBF2A6C522C7A0F",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "41.597, -0.911, 35.932",
+				"rot" : "-1.571, 1.570, 0.000",
+				"scale" : "100.000, 1.000, 100.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			]
+		}
+	]
+}

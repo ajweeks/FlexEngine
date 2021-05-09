@@ -21,34 +21,37 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 
 namespace flex
 {
-	Player::Player(i32 index, const glm::vec3& initialPos /* = VEC3_ZERO */) :
-		GameObject("Player " + std::to_string(index), GameObjectType::PLAYER),
+	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
+		GameObject("Player " + std::to_string(index), SID("player"), gameObjectID),
 		m_Index(index),
 		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
 	{
-		m_Transform.SetWorldPosition(initialPos);
 	}
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_LOCATION "click-02.wav");
-		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_LOCATION "jingle-single-01.wav");
-		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_LOCATION "crunch-13.wav");
-		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_LOCATION "schluck-02.wav");
-		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_LOCATION "whistle-01.wav");
-		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_LOCATION "schluck-07.wav");
+		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "click-02.wav");
+		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "jingle-single-01.wav");
+		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "crunch-13.wav");
+		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-02.wav");
+		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_DIRECTORY "whistle-01.wav");
+		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-07.wav");
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -56,6 +59,7 @@ namespace flex
 		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
+		matCreateInfo.bSerializable = false;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
 		RigidBody* rigidBody = new RigidBody();
@@ -84,9 +88,10 @@ namespace flex
 			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
 			mapTabletMatCreateInfo.constMetallic = 1.0f;
 			mapTabletMatCreateInfo.constRoughness = 0.24f;
+			mapTabletMatCreateInfo.bSerializable = false;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-			m_MapTabletHolder = new GameObject("Map tablet", GameObjectType::_NONE);
+			m_MapTabletHolder = new GameObject("Map tablet", SID("object"));
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
@@ -99,7 +104,7 @@ namespace flex
 				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
 			}
 
-			m_MapTablet = new GameObject("Map tablet mesh", GameObjectType::_NONE);
+			m_MapTablet = new GameObject("Map tablet mesh", SID("object"));
 			Mesh* mapTabletMesh = m_MapTablet->SetMesh(new Mesh(m_MapTablet));
 			mapTabletMesh->LoadFromFile(MESH_DIRECTORY "map_tablet.glb", mapTabletMatID);
 			m_MapTabletHolder->AddChild(m_MapTablet);
@@ -107,7 +112,7 @@ namespace flex
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_LOCATION "cross-hair-01.png", 4, false, false, false);
+		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", false, false, false);
 
 		GameObject::Initialize();
 	}
@@ -120,7 +125,7 @@ namespace flex
 		GameObject::PostInitialize();
 	}
 
-	void Player::Destroy()
+	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
 		if (m_Controller)
 		{
@@ -134,7 +139,7 @@ namespace flex
 		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
 		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
 
-		GameObject::Destroy();
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void Player::Update()
@@ -143,7 +148,7 @@ namespace flex
 
 		if (m_TrackRidingID != InvalidTrackID)
 		{
-			TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 			glm::vec3 trackForward = trackManager->GetTrack(m_TrackRidingID)->GetCurveDirectionAt(m_DistAlongTrack);
 			real invTurnSpeed = m_TurnToFaceDownTrackInvSpeed;
 			if (m_TrackState == TrackState::FACING_FORWARD)
@@ -160,7 +165,6 @@ namespace flex
 			SpriteQuadDrawInfo drawInfo = {};
 			drawInfo.anchor = AnchorPoint::CENTER;
 			drawInfo.bScreenSpace = true;
-			drawInfo.bWriteDepth = false;
 			drawInfo.bReadDepth = false;
 			drawInfo.scale = glm::vec3(0.02f);
 			drawInfo.textureID = m_CrosshairTextureID;
@@ -179,11 +183,32 @@ namespace flex
 
 		if (m_ObjectInteractingWith != nullptr)
 		{
-			Terminal* terminal = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
-			if (terminal != nullptr)
+			StringID interactingWithTypeID = m_ObjectInteractingWith->GetTypeID();
+			switch (interactingWithTypeID)
 			{
-				terminal->DrawTerminalUI();
+			case SID("terminal"):
+			{
+				if (g_EngineInstance->IsRenderingImGui())
+				{
+					Terminal* terminal = static_cast<Terminal*>(m_ObjectInteractingWith);
+					terminal->DrawImGuiWindow();
+				}
+			} break;
+			case SID("vehicle"):
+			{
+				Vehicle* vehicle = static_cast<Vehicle*>(m_ObjectInteractingWith);
+
+				const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+
+				m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
+			} break;
 			}
+		}
+
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (m_Transform.GetWorldPosition().y < scene->GetPlayerMinHeight())
+		{
+			Reset();
 		}
 
 		GameObject::Update();
@@ -204,6 +229,20 @@ namespace flex
 	real Player::GetPitch() const
 	{
 		return m_Pitch;
+	}
+
+	void Player::Reset()
+	{
+		glm::vec3 spawnPoint = g_SceneManager->CurrentScene()->GetPlayerSpawnPoint();
+		m_Transform.SetWorldPosition(spawnPoint);
+		m_Transform.SetWorldRotation(QUAT_IDENTITY);
+		btRigidBody* rigidBodyInternal = m_RigidBody->GetRigidBodyInternal();
+		rigidBodyInternal->clearForces();
+		rigidBodyInternal->clearGravity();
+		rigidBodyInternal->setLinearVelocity(btVector3(0, 0, 0));
+		rigidBodyInternal->setAngularVelocity(btVector3(0, 0, 0));
+
+		m_Pitch = 0.0f;
 	}
 
 	glm::vec3 Player::GetLookDirection() const
@@ -243,7 +282,7 @@ namespace flex
 				ImGui::Text("Object interacting with:");
 				if (ImGui::Button(name.c_str()))
 				{
-					g_Editor->SetSelectedObject(m_ObjectInteractingWith);
+					g_Editor->SetSelectedObject(m_ObjectInteractingWith->ID);
 				}
 			}
 
@@ -261,11 +300,58 @@ namespace flex
 				ImGui::Unindent();
 			}
 
+			ImGui::Text("Held item slot: %i", heldItemSlot);
+
 			ImGui::Text("Inventory:");
 			ImGui::Indent();
-			for (GameObject* gameObject : m_Inventory)
+			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
-				ImGui::Text("%s", gameObject->GetName().c_str());
+				if (gameObjectStack.count != 0)
+				{
+					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+					if (prefabTemplate != nullptr)
+					{
+						std::string prefabTemplateName = prefabTemplate->GetName();
+						ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("INVALID (%i)", gameObjectStack.count);
+						ImGui::PopStyleColor();
+					}
+				}
+			}
+			ImGui::Unindent();
+
+			ImGui::Text("Quick access inventory:");
+			ImGui::Indent();
+			for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
+			{
+
+				const bool bHeld = (i == heldItemSlot);
+				if (bHeld)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				}
+
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QuickAccessInventory[i].prefabID);
+				if (prefabTemplate != nullptr)
+				{
+					std::string prefabTemplateName = prefabTemplate->GetName();
+					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), m_QuickAccessInventory[i].count);
+				}
+				else
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, bHeld ? ImVec4(0.7f, 0.7f, 0.7f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1));
+					ImGui::Text("Empty");
+					ImGui::PopStyleColor();
+				}
+
+				if (bHeld)
+				{
+					ImGui::PopStyleColor();
+				}
 			}
 			ImGui::Unindent();
 
@@ -280,10 +366,11 @@ namespace flex
 			return true;
 		}
 
-		Terminal* terminal = dynamic_cast<Terminal*>(gameObject);
-		if (terminal != nullptr)
+		StringID objTypeID = gameObject->GetTypeID();
+		switch (objTypeID)
 		{
-			return true;
+		case SID("terminal"): return true;
+		case SID("vehicle"): return true;
 		}
 
 		return false;
@@ -293,29 +380,100 @@ namespace flex
 	{
 		if (gameObject == nullptr)
 		{
-			Terminal* terminalWasInteractingWith = dynamic_cast<Terminal*>(m_ObjectInteractingWith);
-			if (terminalWasInteractingWith != nullptr)
+			StringID previousObjectInteractingWithID = m_ObjectInteractingWith->GetTypeID();
+			switch (previousObjectInteractingWithID)
 			{
-				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
+			case SID("terminal"):
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				assert(cam->type == CameraType::TERMINAL);
+				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
 				terminalCam->SetTerminal(nullptr);
-				GameObject::SetInteractingWith(gameObject);
+			} break;
+			case SID("vehicle"):
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				if (cam->type == CameraType::VEHICLE)
+				{
+					g_CameraManager->PopCamera();
+				}
+
+				SetVisible(true);
+			} break;
 			}
 
+			GameObject::SetInteractingWith(nullptr);
 			return;
 		}
 
-		Terminal* terminal = dynamic_cast<Terminal*>(gameObject);
-		if (terminal != nullptr)
+		StringID newObjectInteractingWithID = gameObject->GetTypeID();
+		switch (newObjectInteractingWithID)
 		{
-			m_ObjectInteractingWith = gameObject;
+		case SID("terminal"):
+		{
+			Terminal* terminal = static_cast<Terminal*>(gameObject);
+			GameObject::SetInteractingWith(terminal);
 
-			TerminalCamera* terminalCam = dynamic_cast<TerminalCamera*>(g_CameraManager->CurrentCamera());
-			if (terminalCam == nullptr)
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			TerminalCamera* terminalCam = nullptr;
+			if (cam->type == CameraType::TERMINAL)
+			{
+				terminalCam = static_cast<TerminalCamera*>(cam);
+			}
+			else
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
 				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
 			terminalCam->SetTerminal(terminal);
+		} break;
+		case SID("wire"):
+		{
+			//Wire* wire = static_cast<Wire*>(gameObject);
+
+			//m_HeldItem = wire;
+		} break;
+		case SID("socket"):
+		{
+			//Socket* socket = static_cast<Socket*>(gameObject);
+
+			//if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
+			//{
+			//	Wire* wire = (Wire*)m_HeldItem;
+			//	if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
+			//	{
+			//		wire->SetInteractingWith(nullptr);
+			//		m_HeldItem = nullptr;
+			//	}
+			//}
+			//else
+			//{
+			//	if (socket->connectedWire != nullptr)
+			//	{
+			//		m_HeldItem = socket->connectedWire;
+			//	}
+			//}
+		} break;
+		case SID("vehicle"):
+		{
+			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
+			GameObject::SetInteractingWith(vehicle);
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			VehicleCamera* vehicleCamera = nullptr;
+			// Switch to vehicle cam
+			if (cam->type != CameraType::VEHICLE)
+			{
+				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
+				g_CameraManager->PushCamera(vehicleCamera, false, true);
+			}
+
+			SetVisible(false);
+		} break;
+		default:
+		{
+			GameObject::SetInteractingWith(gameObject);
+		} break;
 		}
 	}
 
@@ -340,15 +498,8 @@ namespace flex
 	{
 		m_bPossessed = false;
 
-		// TODO: Implement more robust solution
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		FirstPersonCamera* fpCam = dynamic_cast<FirstPersonCamera*>(cam);
-		OverheadCamera* ohCam = dynamic_cast<OverheadCamera*>(cam);
-		if (fpCam != nullptr || ohCam != nullptr)
-		{
-			m_bPossessed = true;
-		}
-
+		m_bPossessed = cam->bPossessPlayer;
 		m_Controller->UpdateMode();
 	}
 
@@ -375,7 +526,8 @@ namespace flex
 		if (snapThreshold != -1.0f)
 		{
 			glm::vec3 pointInRange;
-			if (g_SceneManager->CurrentScene()->GetTrackManager()->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+			if (trackManager->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
 			{
 				point = pointInRange;
 			}
@@ -386,7 +538,7 @@ namespace flex
 
 	void Player::AttachToTrack(TrackID trackID, real distAlongTrack)
 	{
-		TrackManager* trackManager = g_SceneManager->CurrentScene()->GetTrackManager();
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		BezierCurveList* track = trackManager->GetTrack(trackID);
 		assert(track);
 
@@ -444,13 +596,180 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(GameObject* obj)
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
-		m_Inventory.push_back(obj);
+		i32 initialCount = count;
+
+		auto printResults = [initialCount, &prefabID, &count]()
+		{
+			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
+			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
+		};
+
+		// Fill up any existing slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill up any existing slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		printResults();
+	}
+
+	i32 Player::GetNextFreeQuickAccessInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
+		{
+			if (m_QuickAccessInventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	i32 Player::GetNextFreeInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_Inventory.size(); ++i)
+		{
+			if (m_Inventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
 	}
 
 	bool Player::IsRidingTrack()
 	{
 		return m_TrackRidingID != InvalidTrackID;
+	}
+
+	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID)
+	{
+		if ((i32)stackID < QUICK_ACCESS_ITEM_COUNT)
+		{
+			return &m_QuickAccessInventory[(i32)stackID];
+		}
+		if ((i32)stackID < (QUICK_ACCESS_ITEM_COUNT + INVENTORY_ITEM_COUNT))
+		{
+			return &m_Inventory[(i32)stackID - QUICK_ACCESS_ITEM_COUNT];
+		}
+
+		PrintWarn("Attempted to get item from inventory with invalid stackID: %d!\n", (i32)stackID);
+		return nullptr;
+	}
+
+	bool Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
+	{
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
+
+		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
+		{
+			if (toStack->count == 0)
+			{
+				toStack->prefabID = fromStack->prefabID;
+				toStack->count = fromStack->count;
+				fromStack->prefabID = InvalidPrefabID;
+				fromStack->count = 0;
+				return true;
+			}
+			else if ((toStack->count + fromStack->count) <= MAX_STACK_SIZE)
+			{
+				if (toStack->prefabID == fromStack->prefabID)
+				{
+					toStack->count = toStack->count + fromStack->count;
+					fromStack->prefabID = InvalidPrefabID;
+					fromStack->count = 0;
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < QUICK_ACCESS_ITEM_COUNT)
+		{
+			return (GameObjectStackID)slotIndex;
+		}
+		return InvalidID;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
+		}
+		return InvalidID;
 	}
 } // namespace flex

@@ -1,12 +1,8 @@
 #include "stdafx.hpp"
 
-#if COMPILE_OPEN_GL
-#include "Graphics/GL/GLHelpers.hpp"
-#elif COMPILE_VULKAN
-#include "Graphics/Vulkan/VulkanHelpers.hpp"
-#endif
-
 #include "Graphics/BitmapFont.hpp"
+
+#include "Graphics/RendererTypes.hpp"
 
 namespace flex
 {
@@ -81,29 +77,16 @@ namespace flex
 		return m_Texture->channelCount;
 	}
 
-#if COMPILE_OPEN_GL
-	gl::GLTexture* BitmapFont::SetTexture(gl::GLTexture* newTex)
+	Texture* BitmapFont::SetTexture(Texture* newTex)
 	{
 		m_Texture = newTex;
 		return newTex;
 	}
 
-	gl::GLTexture* BitmapFont::GetTexture()
+	Texture* BitmapFont::GetTexture()
 	{
 		return m_Texture;
 	}
-#elif COMPILE_VULKAN
-	vk::VulkanTexture* BitmapFont::SetTexture(vk::VulkanTexture* newTex)
-	{
-		m_Texture = newTex;
-		return newTex;
-	}
-
-	vk::VulkanTexture* BitmapFont::GetTexture()
-	{
-		return m_Texture;
-	}
-#endif
 
 	void BitmapFont::ClearCaches()
 	{

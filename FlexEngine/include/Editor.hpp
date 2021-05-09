@@ -20,15 +20,16 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
-		std::vector<GameObject*> GetSelectedObjects(bool bForceIncludeChildren = false);
-		void SetSelectedObject(GameObject* gameObject, bool bSelectChildren = false);
-		void SetSelectedObjects(const std::vector<GameObject*>& selectedObjects);
+		std::vector<GameObjectID> GetSelectedObjectIDs(bool bForceIncludeChildren = false) const;
+		GameObjectID GetFirstSelectedObjectID() const;
+		void SetSelectedObject(const GameObjectID& gameObjectID, bool bSelectChildren = false);
+		void SetSelectedObjects(const std::vector<GameObjectID>& selectedObjects);
 		bool HasSelectedObject() const;
-		void ToggleSelectedObject(GameObject* gameObject);
-		void AddSelectedObject(GameObject* gameObject);
+		void ToggleSelectedObject(const GameObjectID& gameObjectID);
+		void AddSelectedObject(const GameObjectID& gameObjectID);
 		void SelectAll();
-		void DeselectObject(GameObject* gameObject);
-		bool IsObjectSelected(GameObject* gameObject);
+		void DeselectObject(const GameObjectID& gameObjectID);
+		bool IsObjectSelected(const GameObjectID& gameObjectID);
 		glm::vec3 GetSelectedObjectsCenter();
 		void SelectNone();
 
@@ -53,6 +54,16 @@ namespace flex
 
 		void OnDragDrop(i32 count, const char** paths);
 
+		bool IsShowingGrid() const;
+		void SetShowGrid(bool bShowGrid);
+
+		// ImGui payload identifiers
+		static const char* MaterialPayloadCStr;
+		static const char* MeshPayloadCStr;
+		static const char* PrefabPayloadCStr;
+		static const char* GameObjectPayloadCStr;
+		static const char* AudioFileNameSIDPayloadCStr;
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<Editor> m_MouseButtonCallback;
@@ -63,13 +74,13 @@ namespace flex
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<Editor> m_KeyEventCallback;
 
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<Editor> m_ActionCallback;
 
 		void CreateObjects();
 		void FadeOutHeadOnGizmos();
 
-		btVector3 GetAxisColor(i32 axisIndex) const;
+		btVector3 GetAxisColour(i32 axisIndex) const;
 
 		// Parent of translation, rotation, and scale gizmo objects
 		GameObject* m_TransformGizmo = nullptr;
@@ -79,6 +90,8 @@ namespace flex
 		GameObject* m_ScaleGizmo = nullptr;
 
 		GameObject* m_TestShape = nullptr;
+
+		GameObject* m_GridObject = nullptr;
 
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
@@ -110,6 +123,8 @@ namespace flex
 		glm::vec3 m_AxisOfRotation;
 		bool m_bLastDotPos = false;
 
+		bool m_bShowGrid = false;
+
 		// TODO: EZ: Define these in config file
 		real m_ScaleDragSpeed = 0.05f;
 		real m_ScaleSlowDragSpeedMultiplier = 0.2f;
@@ -120,11 +135,12 @@ namespace flex
 		i32 m_DraggingAxisIndex = -1;
 		i32 m_HoveringAxisIndex = -1;
 
-		std::vector<GameObject*> m_CurrentlySelectedObjects;
+		std::vector<GameObjectID> m_CurrentlySelectedObjectIDs;
 
 		glm::vec3 m_SelectedObjectsCenterPos;
 		glm::quat m_SelectedObjectRotation;
 
 		bool m_bWantRenameActiveElement = false;
+
 	};
 } // namespace flex

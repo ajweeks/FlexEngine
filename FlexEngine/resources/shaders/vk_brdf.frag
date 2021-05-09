@@ -5,7 +5,7 @@
 
 layout (location = 0) in vec2 ex_TexCoord;
 
-layout (location = 0) out vec2 FragColor;
+layout (location = 0) out vec2 FragColour;
 
 const float PI = 3.14159265359;
 
@@ -114,5 +114,5 @@ vec2 IntegrateBRDF(float NdotV, float roughness)
 void main() 
 {
     vec2 integratedBRDF = IntegrateBRDF(ex_TexCoord.x, ex_TexCoord.y);
-    FragColor = integratedBRDF;
+    FragColour = integratedBRDF;
 }

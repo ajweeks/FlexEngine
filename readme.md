@@ -1,22 +1,25 @@
 ![](FlexEngine/screenshots/flex_engine_banner_3.png)
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
-<!-- [![Build status](https://ci.appveyor.com/api/projects/status/vae2k07y8a802odn?svg=true)](https://ci.appveyor.com/project/ajweeks/flexengine) -->
+[![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
 
 Flex Engine is a personal game engine I began work on in February 2017. I use it as a playground for learning about real-time techniques. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
 
 #### Notable Features
-- Vulkan and OpenGL backends
-- Signed-distance field font generation & rendering
-- Physically based shading model
-- Image based lighting
-- Screen-space ambient occlusion
-- Stable cascaded shadow mapping
+- Vulkan backend
 - Conditional checksum-based shader compilation
+- Support for Windows & linux
 - Scene editor with serialization
-- Profiling tools
-- In-game scripting language
-- GPU particles (compute shader)
+- In-game scripting language & virtual machine
+- Built-in profiling capture/inspection tools
+- Rendering:
+	- Physically based shading model
+	- Image based lighting
+	- Screen-space ambient occlusion
+	- Stable cascaded shadow mapping
+	- Temporal anti-aliasing
+	- Signed-distance field font generation & rendering
+	- GPU particles
 
 ![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
 

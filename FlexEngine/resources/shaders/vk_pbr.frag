@@ -26,7 +26,7 @@ layout (binding = 1) uniform UBODynamic
 } uboDynamic;
 
 layout (location = 0) in vec2 ex_TexCoord;
-layout (location = 1) in vec4 ex_Color;
+layout (location = 1) in vec4 ex_Colour;
 layout (location = 2) in mat3 ex_TBN;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
@@ -39,8 +39,7 @@ layout (location = 1) out vec4 outAlbedoMetallic;
 
 void main() 
 {
-	vec2 texCoord = ex_TexCoord * 3.0;
-	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, texCoord).rgb : vec3(uboDynamic.constAlbedo);
+	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(uboDynamic.constAlbedo);
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
 	vec3 N = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
@@ -50,6 +49,6 @@ void main()
 	outNormalRoughness.rgb = N;
 	outNormalRoughness.a = roughness;
 	
-	outAlbedoMetallic.rgb = albedo * vec3(ex_Color);
+	outAlbedoMetallic.rgb = albedo * vec3(ex_Colour);
 	outAlbedoMetallic.a = metallic;
 }

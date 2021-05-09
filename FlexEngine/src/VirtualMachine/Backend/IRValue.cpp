@@ -4,8 +4,8 @@
 
 #include "Helpers.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
-#include "VirtualMachine/Backend/VMValue.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
+#include "Variant.hpp"
 
 namespace flex
 {
@@ -17,6 +17,20 @@ namespace flex
 		const char* Value::TypeToString(Value::Type type)
 		{
 			return g_TypeStrings[(u32)type];
+		}
+
+		std::string Value::ToString() const
+		{
+			switch (type)
+			{
+			case Type::INT:		return IntToString(valInt);
+			case Type::FLOAT:	return FloatToString(valFloat);
+			case Type::BOOL:	return IntToString(valBool);
+			case Type::STRING:	return std::string(valStr);
+			case Type::CHAR:	return std::string(1, valChar);
+				// Non-basic types override ToString()
+			default:			return "";
+			}
 		}
 
 		Value::Type Value::FromASTTypeName(AST::TypeName typeName)
@@ -48,17 +62,11 @@ namespace flex
 				type == Type::FLOAT;
 		}
 
-		std::string Value::ToString() const
+		bool Value::IsSimple(Type type)
 		{
-			switch (type)
-			{
-			case Type::INT:		return IntToString(valInt);
-			case Type::FLOAT:	return FloatToString(valFloat);
-			case Type::BOOL:	return IntToString(valBool);
-			case Type::STRING:	return std::string(valStr);
-			case Type::CHAR:	return std::string(1, valChar);
-			default:			return "";
-			}
+			return IsLiteral(type) ||
+				type == Type::IDENTIFIER ||
+				type == Type::ARGUMENT;
 		}
 
 		bool Value::IsZero() const
@@ -112,10 +120,10 @@ namespace flex
 			memcpy(&valInt, &other.valInt, sizeof(void*));
 		}
 
-		Value::Value(const VM::Value& other) :
+		Value::Value(const Variant& other) :
 			origin(Span(Span::Source::GENERATED))
 		{
-			if (other.type == VM::Value::Type::_NONE)
+			if (other.type == Variant::Type::_NONE)
 			{
 				type = IR::Value::Type::_NONE;
 			}
@@ -258,6 +266,10 @@ namespace flex
 				break;
 			case Value::Type::FLOAT:
 				result.valFloat = lhs.AsFloat() - rhs.AsFloat();
+				break;
+			case Value::Type::BOOL:
+				// Used by compare operator
+				result.valBool = (lhs.AsBool() != rhs.AsBool()) ? 1 : 0;
 				break;
 			default:
 				PrintError("Attempted to subtract non-numeric types!\n");
@@ -606,10 +618,22 @@ namespace flex
 				switch (unary->opType)
 				{
 				case IR::UnaryOperatorType::NOT:
+					outResultType = Type::BOOL;
 					return lhsType == Type::BOOL;
 				case IR::UnaryOperatorType::NEGATE:
-					return lhsType == Type::INT || lhsType == Type::FLOAT;
+					if (lhsType == Type::INT)
+					{
+						outResultType = Type::BOOL;
+						return true;
+					}
+					if (lhsType == Type::FLOAT)
+					{
+						outResultType = Type::FLOAT;
+						return true;
+					}
+					break;
 				case IR::UnaryOperatorType::BIN_INVERT:
+					outResultType = Type::INT;
 					return lhsType == Type::INT;
 				default:
 					irState->diagnosticContainer->AddDiagnostic(rhs->origin, "Unhandled unary operator type");

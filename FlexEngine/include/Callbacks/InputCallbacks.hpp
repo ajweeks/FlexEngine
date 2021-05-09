@@ -91,14 +91,14 @@ namespace flex
 	class ICallbackAction
 	{
 	public:
-		virtual EventReply Execute(Action action) = 0;
+		virtual EventReply Execute(Action action, ActionEvent actionEvent) = 0;
 	};
 
 	template<typename T>
 	class ActionCallback : public ICallbackAction
 	{
 	public:
-		using CallbackFunction = EventReply(T::*)(Action);
+		using CallbackFunction = EventReply(T::*)(Action, ActionEvent);
 
 		ActionCallback(T* inst, CallbackFunction func) :
 			inst(inst),
@@ -106,9 +106,9 @@ namespace flex
 		{
 		}
 
-		virtual EventReply Execute(Action action) override
+		virtual EventReply Execute(Action action, ActionEvent actionEvent) override
 		{
-			return (inst->*func)(action);
+			return (inst->*func)(action, actionEvent);
 		}
 
 	private:

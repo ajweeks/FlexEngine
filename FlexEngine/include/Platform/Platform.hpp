@@ -13,6 +13,40 @@ namespace flex
 		u32 l3CacheCount;
 	};
 
+	struct Date
+	{
+		Date() {}
+
+		Date(u32 year, u32 month, u32 day, u32 hour, u32 minute, u32 second, u32 millisecond) :
+			year(year),
+			month(month),
+			day(day),
+			hour(hour),
+			minute(minute),
+			second(second),
+			millisecond(millisecond)
+		{
+		}
+
+		bool operator!=(const Date& other)
+		{
+			return !(*this == other);
+		}
+
+		bool operator==(const Date& other)
+		{
+			return year == other.year &&
+				month == other.month &&
+				day == other.day &&
+				hour == other.hour &&
+				minute == other.minute &&
+				second == other.second &&
+				millisecond == other.millisecond;
+		}
+
+		u32 year, month, day, hour, minute, second, millisecond;
+	};
+
 	class Platform
 	{
 	public:
@@ -28,7 +62,7 @@ namespace flex
 		static void Init();
 
 		static void GetConsoleHandle();
-		static void SetConsoleTextColor(ConsoleColour colour);
+		static void SetConsoleTextColour(ConsoleColour colour);
 
 		static bool IsProcessRunning(u32 PID);
 		static u32 GetCurrentProcessID();
@@ -44,15 +78,19 @@ namespace flex
 
 		// File system helpers
 		static void RetrieveCurrentWorkingDirectory();
+		static void RetrievePathToExecutable();
 		static bool CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
 		static void OpenExplorer(const std::string& absoluteDirectory);
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);
 		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
 		static bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
 
+		static bool GetFileModifcationTime(const char* filePath, Date& outModificationDate);
+
 		// Returns true if any files were found
 		// Set fileType to "*" to retrieve all files
-		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen);
 		static bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
 
 		static void OpenFileWithDefaultApplication(const std::string& absoluteDirectory);
@@ -77,6 +115,9 @@ namespace flex
 		static void LeaveCriticalSection(void* criticalSection);
 
 		static void Sleep(ms milliseconds);
+
+		static u64 GetUSSinceEpoch();
+		static GameObjectID GenerateGUID();
 
 		static CPUInfo cpuInfo;
 

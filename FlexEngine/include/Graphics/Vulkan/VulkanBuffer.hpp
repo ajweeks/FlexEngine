@@ -1,10 +1,6 @@
 #pragma once
 #if COMPILE_VULKAN
 
-IGNORE_WARNINGS_PUSH
-#include "volk/volk.h"
-IGNORE_WARNINGS_POP
-
 #include "VDeleter.hpp"
 
 namespace flex
@@ -23,6 +19,26 @@ namespace flex
 		{
 			VulkanBuffer(VulkanDevice* device);
 
+			VulkanBuffer(const VulkanBuffer& other)
+			{
+				if (this != &other)
+				{
+					m_Device = other.m_Device;
+					m_Buffer = other.m_Buffer;
+					m_Memory = other.m_Memory;
+					m_Size = other.m_Size;
+					m_Alignment = other.m_Alignment;
+					m_Mapped = other.m_Mapped;
+					allocations = other.allocations;
+					m_UsageFlags = other.m_UsageFlags;
+					m_MemoryPropertyFlags = other.m_MemoryPropertyFlags;
+				}
+			}
+
+			VulkanBuffer(const VulkanBuffer&& other) = delete;
+			VulkanBuffer& operator=(const VulkanBuffer& other) = delete;
+			VulkanBuffer& operator=(const VulkanBuffer&& other) = delete;
+
 			VkResult Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 			void Destroy();
 
@@ -31,18 +47,21 @@ namespace flex
 			VkResult Map(VkDeviceSize offset, VkDeviceSize size);
 			void Unmap();
 
+			void Reset();
+
 			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if bCanResize is false and allocation won't fit, or if resize failed
 			// TODO: Add tests
-			VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
 			// TODO: Add tests
-			VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
 			// TODO: Add tests
 			void Free(VkDeviceSize offset);
 			// TODO: Add tests
 			void Shrink(real minUnused = 0.0f);
 			// TODO: Add defragment helper
 
-			VkDeviceSize SizeOf(VkDeviceSize offset);
+			// Returns size of allocation, or (VkDeviceSize)-1 if not found
+			FLEX_NO_DISCARD VkDeviceSize GetAllocationSize(VkDeviceSize offset) const;
 
 			VulkanDevice* m_Device = nullptr;
 			VDeleter<VkBuffer> m_Buffer;

@@ -6,9 +6,9 @@ namespace flex
 {
 	enum class KeyAction
 	{
-		PRESS,
-		RELEASE,
-		REPEAT,
+		KEY_PRESS,
+		KEY_RELEASE,
+		KEY_REPEAT,
 
 		_NONE
 	};
@@ -148,6 +148,8 @@ namespace flex
 		KEY_RIGHT_SUPER,
 		KEY_MENU,
 
+		COUNT,
+
 		_NONE
 	};
 
@@ -275,6 +277,8 @@ namespace flex
 		"R Super",
 		"Menu",
 
+		"Count",
+
 		"NONE"
 	};
 
@@ -282,14 +286,14 @@ namespace flex
 
 	enum class InputModifier
 	{
-		SHIFT		= (1 << 0),
-		CONTROL		= (1 << 1),
-		ALT			= (1 << 2),
-		SUPER		= (1 << 3),
-		CAPS_LOCK	= (1 << 4),
-		NUM_LOCK	= (1 << 5),
+		SHIFT = (1 << 0),
+		CONTROL = (1 << 1),
+		ALT = (1 << 2),
+		SUPER = (1 << 3),
+		CAPS_LOCK = (1 << 4),
+		NUM_LOCK = (1 << 5),
 
-		_NONE		= 0,
+		_NONE = 0,
 	};
 
 	enum class MouseButton
@@ -302,6 +306,7 @@ namespace flex
 		MOUSE_BUTTON_6,
 		MOUSE_BUTTON_7,
 		MOUSE_BUTTON_8,
+		COUNT,
 
 		LEFT = MOUSE_BUTTON_1,
 		RIGHT = MOUSE_BUTTON_2,
@@ -324,7 +329,7 @@ namespace flex
 		"NONE"
 	};
 
-	static_assert(ARRAY_LENGTH(MouseButtonStrings) == (u32)MouseButton::_NONE + 1, "MouseButtonStrings length must match MouseButton enum");
+	static_assert(ARRAY_LENGTH(MouseButtonStrings) == (u32)MouseButton::COUNT + 1, "MouseButtonStrings length must match MouseButton enum");
 
 	enum class GamepadButton
 	{
@@ -343,6 +348,8 @@ namespace flex
 		D_PAD_RIGHT = 12,
 		D_PAD_DOWN = 13,
 		D_PAD_LEFT = 14,
+
+		COUNT,
 
 		_NONE
 	};
@@ -366,6 +373,8 @@ namespace flex
 		"Pad Down",
 		"Pad Left",
 
+		"COUNT",
+
 		"NONE"
 	};
 
@@ -380,6 +389,8 @@ namespace flex
 		LEFT_TRIGGER = 4,
 		RIGHT_TRIGGER = 5,
 
+		COUNT,
+
 		_NONE
 	};
 
@@ -391,6 +402,8 @@ namespace flex
 		"R Stick Y",
 		"L Trigger",
 		"R Trigger",
+
+		"COUNT",
 
 		"NONE"
 	};
@@ -419,6 +432,14 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(MouseAxisStrings) == (u32)MouseAxis::_NONE + 1, "MouseAxisStrings length must match MouseAxis enum");
 
+	enum class ActionEvent
+	{
+		TRIGGER,
+		RELEASE,
+
+		_COUNT
+	};
+
 	enum class Action
 	{
 		MOVE_LEFT,
@@ -440,7 +461,26 @@ namespace flex
 		ENTER_TRACK_BUILD_MODE,
 		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
+		PICKUP_ITEM,
 
+		// Inventory
+		SHOW_INVENTORY,
+		TOGGLE_ITEM_HOLDING,
+		CYCLE_HELD_ITEM_FORWARD,
+		CYCLE_HELD_ITEM_BACKWARD,
+
+		// Vehicle
+		VEHICLE_ACCELERATE,
+		VEHICLE_REVERSE,
+		VEHICLE_BRAKE,
+		VEHICLE_TURN_LEFT,
+		VEHICLE_TURN_RIGHT,
+		VEHICLE_LOOK_LEFT,
+		VEHICLE_LOOK_RIGHT,
+		VEHICLE_LOOK_UP,
+		VEHICLE_LOOK_DOWN,
+
+		// Misc
 		TAKE_SCREENSHOT,
 
 		// Editor
@@ -449,10 +489,8 @@ namespace flex
 		EDITOR_SELECT_ROTATE_GIZMO,
 		EDITOR_SELECT_SCALE_GIZMO,
 		EDITOR_FOCUS_ON_SELECTION,
-
 		EDITOR_MOD_FASTER,
 		EDITOR_MOD_SLOWER,
-
 		EDITOR_ORBIT,
 
 		// Debug
@@ -473,10 +511,6 @@ namespace flex
 		DBG_CAM_LOOK_LEFT,
 		DBG_CAM_LOOK_RIGHT,
 		DBG_CAM_ZOOM,
-
-		DBG_ADD_CART_TO_INV,
-		DBG_ADD_ENGINE_CART_TO_INV,
-		DBG_ADD_LIQUID_BOX_TO_INV,
 
 		_NONE
 	};
@@ -502,7 +536,26 @@ namespace flex
 		"Enter track build mode",
 		"Enter track edit mode",
 		"Complete track",
+		"Pickup Item",
 
+		// Inventory
+		"Show inventory",
+		"Toggle holding item",
+		"Cycle held item forward",
+		"Cycle held item backward",
+
+		// Vehicle
+		"Vehicle accelerate",
+		"Vehicle reverse",
+		"Vehicle brake",
+		"Vehicle turn left",
+		"Vehicle turn right",
+		"Vehicle look left",
+		"Vehicle look right",
+		"Vehicle look up",
+		"Vehicle look down",
+
+		// Misc
 		"Take screenshot",
 
 		// Editor
@@ -535,23 +588,46 @@ namespace flex
 		"DBG CAM Look right",
 		"DBG CAM Zoom",
 
-		"DBG Add cart to inventory",
-		"DBG Add engine cart to inventory",
-		"DBG Add liquid box to inventory",
-
 		"None"
 	};
 
 	static_assert(ARRAY_LENGTH(ActionStrings) == (u32)Action::_NONE + 1, "ActionStrings length must match Action enum");
 
+	enum class InputType
+	{
+		KEYBOARD,
+		MOUSE_BUTTON,
+		MOUSE_AXIS,
+		GAMEPAD_BUTTON,
+		GAMEPAD_AXIS,
+
+		_NONE
+	};
+
+	static const char* InputTypeStrings[] =
+	{
+		"Keyboard",
+		"Mouse button",
+		"Mouse axis",
+		"Gamepad button",
+		"Gamepad axis",
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(InputTypeStrings) == (u32)InputType::_NONE + 1, "InputTypeStrings length must match InputType enum");
+
 	struct InputBinding
 	{
 		KeyCode keyCode = KeyCode::_NONE;
+		// TODO: Support keybindings such as Shift + Ctrl + T by storing optional modifiers:
+		//std::vector<KeyCode> modifiers;
 		MouseButton mouseButton = MouseButton::_NONE;
 		MouseAxis mouseAxis = MouseAxis::_NONE;
 		GamepadButton gamepadButton = GamepadButton::_NONE;
 		GamepadAxis gamepadAxis = GamepadAxis::_NONE;
-		bool bNegative = false;
+		bool bInvertMouseAxis = false;
+		bool bInvertGamepadAxis = false;
 	};
 
 	struct Key

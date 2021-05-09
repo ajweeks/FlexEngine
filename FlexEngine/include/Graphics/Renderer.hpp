@@ -6,17 +6,15 @@ IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
+#include "BitmapFont.hpp"
 #include "VertexBufferData.hpp"
 
 class btIDebugDraw;
 struct FT_LibraryRec_;
-struct FT_FaceRec_;
 typedef struct FT_LibraryRec_* FT_Library;
-typedef struct FT_FaceRec_* FT_Face;
 
 namespace flex
 {
-	class BitmapFont;
 	class DirectionalLight;
 	class DirectoryWatcher;
 	class GameObject;
@@ -24,24 +22,27 @@ namespace flex
 	class Mesh;
 	class ParticleSystem;
 	class PointLight;
+	class UIMesh;
 	struct TextCache;
-	struct FontMetaData;
-	struct FontMetric;
 
 	class PhysicsDebugDrawBase : public btIDebugDraw
 	{
 	public:
+		virtual ~PhysicsDebugDrawBase() {};
+
 		virtual void Initialize() = 0;
 		virtual void Destroy() = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo) = 0;
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) = 0;
+		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) = 0;
 
 		virtual void OnPostSceneChange() = 0;
 
+		virtual void flushLines() override;
+
+		void DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale);
+
 		void UpdateDebugMode();
 		void ClearLines();
-
-		virtual void flushLines() override;
 
 	protected:
 		virtual void Draw() = 0;
@@ -54,25 +55,26 @@ namespace flex
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 3);
-				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 3);
-				colorFrom[3] = 1.0f;
-				colorTo[3] = 1.0f;
+				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 3);
+				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 3);
+				colourFrom[3] = 1.0f;
+				colourTo[3] = 1.0f;
 			}
 			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vColFrom, const btVector3& vColTo)
 			{
 				memcpy(start, vStart.m_floats, sizeof(real) * 3);
 				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colorFrom, vColFrom.m_floats, sizeof(real) * 4);
-				memcpy(colorTo, vColTo.m_floats, sizeof(real) * 4);
+				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 4);
+				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 4);
 			}
 			real start[3];
 			real end[3];
-			real colorFrom[4];
-			real colorTo[4];
+			real colourFrom[4];
+			real colourTo[4];
 		};
 
-		static const u32 MAX_NUM_LINE_SEGMENTS = 65536;
+		// TODO: Allocate from pool to reduce startup alloc size (currently 57MB!)
+		static const u32 MAX_NUM_LINE_SEGMENTS = 1'048'576;
 		u32 m_LineSegmentIndex = 0;
 		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];
 
@@ -89,23 +91,24 @@ namespace flex
 		virtual void Initialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
+		void DestroyPersistentObjects();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
-		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, i32 channelCount, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
+		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
-		virtual void DestroyTexture(TextureID textureID) = 0;
+		virtual void OnTextureDestroyed(TextureID textureID) = 0;
 
-		virtual void ClearMaterials(bool bDestroyPersistentMats = false) = 0;
+		virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) = 0;
 
 		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
-		virtual void SetClearColor(real r, real g, real b) = 0;
+		virtual void SetClearColour(real r, real g, real b) = 0;
 
 		virtual void Update();
 		virtual void Draw() = 0;
-		virtual void DrawImGuiMisc();
-		virtual void DrawImGuiWindows();
+		virtual void DrawImGuiWindows() = 0;
+		virtual void DrawImGuiRendererInfo() = 0;
 
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
 		virtual void FreeDynamicVertexData(RenderID renderID) = 0;
@@ -113,12 +116,16 @@ namespace flex
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
-		void DrawImGuiForGameObject(GameObject* gameObject);
+		// Returns true if value changed
+		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr) = 0;
+		virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
+		virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) = 0;
+		virtual void DrawImGuiShaderErrors() = 0;
+		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
+		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
+		virtual void ClearShaderHash(const std::string& shaderName) = 0;
 		virtual void RecompileShaders(bool bForce) = 0;
-		virtual void LoadFonts(bool bForceRender) = 0;
-
-		virtual void ReloadSkybox(bool bRandomizeTexture) = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -143,53 +150,63 @@ namespace flex
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
 
-		virtual Material& GetMaterial(MaterialID matID) = 0;
-		virtual Shader& GetShader(ShaderID shaderID) = 0;
-
-		virtual bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID) = 0;
 		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
-		virtual bool GetShaderID(const std::string& shaderName, ShaderID& shaderID) = 0;
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
 
 		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void SetGlobalUniform(u64 uniform, void* data, u32 dataSize) = 0;
+		virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) = 0;
 
-		virtual void NewFrame() = 0;
+		virtual void NewFrame();
 
-		virtual void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
+		virtual void RenderObjectMaterialChanged(MaterialID materialID) = 0;
 
 		virtual PhysicsDebugDrawBase* GetDebugDrawer() = 0;
 
 		virtual void DrawStringSS(const std::string& str,
-			const glm::vec4& color,
+			const glm::vec4& colour,
 			AnchorPoint anchor,
 			const glm::vec2& pos,
 			real spacing,
 			real scale = 1.0f) = 0;
 
 		virtual void DrawStringWS(const std::string& str,
-			const glm::vec4& color,
+			const glm::vec4& colour,
 			const glm::vec3& pos,
 			const glm::quat& rot,
 			real spacing,
 			real scale = 1.0f) = 0;
-
-		virtual void DrawAssetWindowsImGui(bool* bMaterialWindowShowing, bool* bShaderWindowShowing, bool* bTextureWindowShowing, bool* bMeshWindowShowing) = 0;
-		virtual void DrawImGuiForRenderObject(RenderID renderID) = 0;
 
 		virtual void RecaptureReflectionProbe() = 0;
 
 		// Call whenever a user-controlled field, such as visibility, changes to rebatch render objects
 		virtual void RenderObjectStateChanged() = 0;
 
+		// TODO: Use MeshID
+		virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) = 0;
+
 		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
 
 		virtual void RecreateEverything() = 0;
 
-		void DrawImGuiRenderObjects();
+		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
+
+		// Will attempt to find pre-rendered font at specified path, and
+		// only render a new file if not present or if bForceRender is true
+		// Returns true if succeeded
+		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
+
+		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
+
+		i32 GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials);
+		// Returns true when the selected material has changed
+		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
+		void DrawImGuiTexturePreviewTooltip(Texture* texture);
+		// Returns true if any property changed
+		bool DrawImGuiForGameObject(GameObject* gameObject);
+
 		void DrawImGuiSettings();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
@@ -200,6 +217,8 @@ namespace flex
 
 		void SaveSettingsToDisk(bool bAddEditorStr = true);
 		void LoadSettingsFromDisk();
+
+		MaterialID GetMaterialID(const std::string& materialName);
 
 		// Pos should lie in range [-1, 1], with y increasing upward
 		// Output pos lies in range [0, 1], with y increasing downward,
@@ -215,9 +234,9 @@ namespace flex
 			glm::vec2& posOut,
 			glm::vec2& scaleOut);
 
-		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& color);
-		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& color);
-		void EnqueueSprite(const SpriteQuadDrawInfo& drawInfo);
+		void EnqueueUntexturedQuad(const glm::vec2& pos, AnchorPoint anchor, const glm::vec2& size, const glm::vec4& colour);
+		void EnqueueUntexturedQuadRaw(const glm::vec2& pos, const glm::vec2& size, const glm::vec4& colour);
+		void EnqueueSprite(SpriteQuadDrawInfo drawInfo);
 
 		void ToggleRenderGrid();
 		bool IsRenderingGrid() const;
@@ -231,21 +250,42 @@ namespace flex
 		bool RegisterDirectionalLight(DirectionalLight* dirLight);
 		PointLightID RegisterPointLight(PointLightData* pointLightData);
 		void UpdatePointLightData(PointLightID ID, PointLightData* data);
+		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
+		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
+		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
+		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
 
 		void RemoveDirectionalLight();
 		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
+		void RemoveSpotLight(SpotLightID ID);
+		void RemoveAllSpotLights();
+		void RemoveAreaLight(AreaLightID ID);
+		void RemoveAllAreaLights();
 
 		DirLightData* GetDirectionalLight();
-		PointLightData* GetPointLight(PointLightID ID);
 		i32 GetNumPointLights();
+		i32 GetNumSpotLights();
+		i32 GetNumAreaLights();
 
 		i32 GetFramesRenderedCount() const;
 
-		BitmapFont* SetFont(std::string fontID);
+		BitmapFont* SetFont(StringID fontID);
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
+
+		i32 GetMaterialCount();
+		Material* GetMaterial(MaterialID materialID);
+		void RemoveMaterial(MaterialID materialID);
+		Shader* GetShader(ShaderID shaderID);
+		MaterialID GetNextAvailableMaterialID() const;
+
+		bool MaterialExists(MaterialID materialID);
+		bool MaterialWithNameExists(const std::string& matName);
+
+		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
+		bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID);
 
 		struct PostProcessSettings
 		{
@@ -263,11 +303,23 @@ namespace flex
 		void SetDisplayShadowCascadePreview(bool bPreview);
 		bool GetDisplayShadowCascadePreview() const;
 
+		void SetTAAEnabled(bool bEnabled);
 		bool IsTAAEnabled() const;
 
 		i32 GetTAASampleCount() const;
 
-		bool bFontWindowShowing = false;
+		void SetDirtyFlags(RenderBatchDirtyFlags flags);
+
+		std::vector<JSONObject> SerializeAllMaterialsToJSON();
+
+		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
+		void SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex);
+
+		void ToggleWireframeOverlay();
+		void ToggleWireframeSelectionOverlay();
+
+		UIMesh* GetUIMesh();
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -275,43 +327,40 @@ namespace flex
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;
 
-		static const char* GameObjectPayloadCStr;
-		static const char* MaterialPayloadCStr;
-		static const char* MeshPayloadCStr;
+		// TODO: Store in map (string name -> TextureID)
+		TextureID blankTextureID = InvalidTextureID; // 1x1 white pixel texture
+		TextureID blankTextureArrID = InvalidTextureID; // 1x1 white pixel with texture array with one layer
+		TextureID alphaBGTextureID = InvalidTextureID;
+
+		TextureID pointLightIconID = InvalidTextureID;
+		TextureID spotLightIconID = InvalidTextureID;
+		TextureID areaLightIconID = InvalidTextureID;
+		TextureID directionalLightIconID = InvalidTextureID;
+
+		StringID previewedFont = InvalidStringID;
+
+		MaterialID m_SpriteMatSSID = InvalidMaterialID;
+		MaterialID m_SpriteMatWSID = InvalidMaterialID;
+		MaterialID m_SpriteArrMatID = InvalidMaterialID;
+
+		Texture* m_BlankTexture = nullptr;
+		Texture* m_BlankTextureArr = nullptr;
+		Texture* m_NoiseTexture = nullptr;
 
 	protected:
 		void LoadShaders();
+		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
-		virtual void SetShaderCount(u32 shaderCount) = 0;
-		virtual void RemoveMaterial(MaterialID materialID, bool bUpdateUsages = true) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 		virtual void RecreateShadowFrameBuffers() = 0;
 
-		// Will attempt to find pre-rendered font at specified path, and
-		// only render a new file if not present or if bForceRender is true
-		// Returns true if succeeded
-		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
-
-		virtual void EnqueueScreenSpaceSprites();
-		virtual void EnqueueWorldSpaceSprites();
-
-		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
-		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
-
-		// Returns true if the parent-child tree changed during this call
-		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		void EnqueueScreenSpaceSprites();
+		void EnqueueWorldSpaceSprites();
 
 		void GenerateGBuffer();
 
 		void EnqueueScreenSpaceText();
 		void EnqueueWorldSpaceText();
-
-		bool LoadFontMetrics(const std::vector<char>& fileMemory,
-			FT_Library& ft,
-			FontMetaData& metaData,
-			std::map<i32, FontMetric*>* outCharacters,
-			std::array<glm::vec2i, 4>* outMaxPositions,
-			FT_Face* outFace);
 
 		void InitializeMaterials();
 
@@ -320,7 +369,7 @@ namespace flex
 		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
 		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
-		glm::vec4 GetSelectedObjectColorMultiplier() const;
+		glm::vec4 GetSelectedObjectColourMultiplier() const;
 		glm::mat4 GetPostProcessingMatrix() const;
 
 		void GenerateSSAONoise(std::vector<glm::vec4>& noise);
@@ -328,14 +377,13 @@ namespace flex
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
-		void ParseFontFile();
-		void SetRenderedSDFFilePath(FontMetaData& metaData);
-		void SerializeFontFile();
-
-		std::vector<Shader> m_BaseShaders;
-
-		PointLightData* m_PointLights = nullptr;
+		u8* m_LightData = nullptr;
+		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
+		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer
+		AreaLightData* m_AreaLightData = nullptr; // Points into m_LightData buffer
 		i32 m_NumPointLightsEnabled = 0;
+		i32 m_NumSpotLightsEnabled = 0;
+		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
 		struct DrawCallInfo
@@ -371,8 +419,12 @@ namespace flex
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
-		std::vector<SpriteQuadDrawInfo> m_QueuedSSSprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSPreUISprites;
+		std::vector<SpriteQuadDrawInfo> m_QueuedSSPostUISprites;
 		std::vector<SpriteQuadDrawInfo> m_QueuedSSArrSprites;
+
+		std::map<MaterialID, Material*> m_Materials;
+		std::vector<Shader*> m_Shaders;
 
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;
@@ -392,17 +444,17 @@ namespace flex
 		std::vector<GameObject*> m_PersistentObjects;
 
 		BitmapFont* m_CurrentFont = nullptr;
-		// TODO: Separate fonts from font buffers
-		std::vector<BitmapFont*> m_FontsSS;
-		std::vector<BitmapFont*> m_FontsWS;
 
 		PostProcessSettings m_PostProcessSettings;
 
+		UIMesh* m_UIMesh = nullptr;
+
 		u32 m_FramesRendered = 0;
 
+		bool m_bInitialized = false;
 		bool m_bPostInitialized = false;
 		bool m_bSwapChainNeedsRebuilding = false;
-		bool m_bRebatchRenderObjects = true;
+		bool m_bRebatchRenderObjects = true; // TODO: Replace with simply checking dirty flags
 
 		bool m_bEnableWireframeOverlay = false;
 		bool m_bEnableSelectionWireframe = false;
@@ -413,22 +465,16 @@ namespace flex
 		bool m_bCaptureScreenshot = false;
 		bool m_bCaptureReflectionProbes = false;
 
-		bool m_bShowEditorMaterials = false;
-
-		bool m_bEnableTAA = true;
+		bool m_bEnableTAA = false;
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 
 		i32 m_ShaderQualityLevel = 1;
 
-		std::string m_PreviewedFont;
-
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;
 		MaterialID m_GridMaterialID = InvalidMaterialID;
 		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
-
-		GameObjectType m_NewObjectImGuiSelectedType = GameObjectType::OBJECT;
 
 		sec m_EditorStrSecRemaining = 0.0f;
 		sec m_EditorStrSecDuration = 1.5f;
@@ -438,9 +484,6 @@ namespace flex
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
 		MaterialID m_GBufferMaterialID = InvalidMaterialID;
-		MaterialID m_SpriteMatSSID = InvalidMaterialID;
-		MaterialID m_SpriteMatWSID = InvalidMaterialID;
-		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 		MaterialID m_FontMatSSID = InvalidMaterialID;
 		MaterialID m_FontMatWSID = InvalidMaterialID;
 		MaterialID m_ShadowMaterialID = InvalidMaterialID;
@@ -463,20 +506,17 @@ namespace flex
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 
-		SpecializationConstantID m_SSAOKernelSizeSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_TAASampleCountSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_ShaderQualityLevelSpecializationID = InvalidSpecializationConstantID;
-		SpecializationConstantID m_ShadowCascadeCountSpecializationID = InvalidSpecializationConstantID;
-
-		std::string m_FontImageExtension = ".png";
-
-		std::map<std::string, FontMetaData> m_Fonts;
+		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID = 0;
+		static const SpecializationConstantID m_TAASampleCountSpecializationID = 1;
+		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID = 2;
+		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID = 3;
 
 		std::string m_RendererSettingsFilePathAbs;
-		std::string m_FontsFilePathAbs;
 
 		Mesh* m_SkyBoxMesh = nullptr;
 		ShaderID m_SkyboxShaderID = InvalidShaderID;
+
+		ShaderID m_UIShaderID = InvalidShaderID;
 
 		glm::mat4 m_LastFrameViewProj;
 
@@ -504,13 +544,6 @@ namespace flex
 		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
 		u32 m_TimestampHistogramIndex = 0;
 
-		TextureID m_AlphaBGTextureID = InvalidTextureID;
-		TextureID m_LoadingTextureID = InvalidTextureID;
-		TextureID m_WorkTextureID = InvalidTextureID;
-
-		TextureID m_PointLightIconID = InvalidTextureID;
-		TextureID m_DirectionalLightIconID = InvalidTextureID;
-
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
 		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
@@ -521,26 +554,12 @@ namespace flex
 		bool m_bSSAOBlurEnabled = true;
 		bool m_bSSAOStateChanged = false;
 
-		FXAAData m_FXAAData;
-
 		FT_Library m_FTLibrary;
-
-		i32 m_DebugMode = 0;
 
 		real m_TAA_ks[2];
 
-		enum DirtyFlags : u32
-		{
-			CLEAN = 0,
-			STATIC_DATA = 1 << 0,
-			DYNAMIC_DATA = 1 << 1,
-			SHADOW_DATA = 1 << 2,
-
-			MAX_VALUE = 1 << 30,
-			_NONE
-		};
-
-		u32 m_DirtyFlagBits = (u32)DirtyFlags::CLEAN;
+		// TODO: Remove
+		RenderBatchDirtyFlags m_DirtyFlagBits = (RenderBatchDirtyFlags)RenderBatchDirtyFlag::CLEAN;
 
 		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
 
@@ -550,6 +569,9 @@ namespace flex
 		i32 m_RendererSettingsFileVersion = 0;
 
 		DirectoryWatcher* m_ShaderDirectoryWatcher = nullptr;
+
+		std::vector<u32> m_DirtyStaticVertexBufferIndices;
+		std::vector<u32> m_DirtyDynamicVertexAndIndexBufferIndices;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

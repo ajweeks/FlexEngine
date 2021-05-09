@@ -9,6 +9,9 @@ IGNORE_WARNINGS_PUSH
 #define CGLTF_IMPLEMENTATION
 #include <cgltf/cgltf.h>
 
+#include <BulletCollision/CollisionShapes/btBvhTriangleMeshShape.h>
+#include <BulletCollision/CollisionShapes/btTriangleIndexVertexArray.h>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp> // For make_vec3
 #include <glm/gtx/norm.hpp> // For length2
@@ -16,7 +19,7 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
-#include "Colors.hpp"
+#include "Colours.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -27,7 +30,7 @@ namespace flex
 	const real MeshComponent::GRID_LINE_SPACING = 1.0f;
 	const u32 MeshComponent::GRID_LINE_COUNT = 151; // Keep odd to align with origin
 
-	glm::vec4 MeshComponent::m_DefaultColor_4(1.0f, 1.0f, 1.0f, 1.0f);
+	glm::vec4 MeshComponent::m_DefaultColour_4(1.0f, 1.0f, 1.0f, 1.0f);
 	glm::vec3 MeshComponent::m_DefaultPosition(0.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultTangent(1.0f, 0.0f, 0.0f);
 	glm::vec3 MeshComponent::m_DefaultNormal(0.0f, 1.0f, 0.0f);
@@ -53,19 +56,12 @@ namespace flex
 	{
 	}
 
-	void MeshComponent::DestroyAllLoadedMeshes()
-	{
-		for (auto& loadedMeshPair : Mesh::m_LoadedMeshes)
-		{
-			cgltf_free(loadedMeshPair.second->data);
-			delete loadedMeshPair.second;
-		}
-		Mesh::m_LoadedMeshes.clear();
-	}
-
 	void MeshComponent::PostInitialize()
 	{
-		g_Renderer->PostInitializeRenderObject(renderID);
+		if (renderID != InvalidRenderID)
+		{
+			g_Renderer->PostInitializeRenderObject(renderID);
+		}
 	}
 
 	void MeshComponent::Update()
@@ -85,17 +81,21 @@ namespace flex
 
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
+		assert(renderID != InvalidRenderID);
 		m_VertexBufferData.UpdateData(newData);
-		m_VertexBufferData.Shrink(0.5f);
+		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
 		m_Indices = indexData;
 		g_Renderer->UpdateDynamicVertexData(renderID, &m_VertexBufferData, indexData);
 	}
 
 	void MeshComponent::Destroy()
 	{
-		if (!g_Renderer->DestroyRenderObject(renderID))
+		if (renderID != InvalidRenderID)
 		{
-			PrintError("Failed to destroy render object of mesh component\n");
+			if (!g_Renderer->DestroyRenderObject(renderID))
+			{
+				PrintError("Failed to destroy render object of mesh component\n");
+			}
 		}
 		m_VertexBufferData.Destroy();
 		m_OwningMesh = nullptr;
@@ -107,20 +107,66 @@ namespace flex
 		m_OwningMesh = owner;
 	}
 
+	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape)
+	{
+		*outTriangleIndexVertexArray = new btTriangleIndexVertexArray();
+		btIndexedMesh part = {};
+
+		VertexBufferData* vertexBufferData = GetVertexBufferData();
+		u32* indexBufferData = GetIndexBufferDataPtr();
+		u32 indexCount = GetIndexCount();
+
+		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
+		part.m_vertexStride = vertexBufferData->VertexStride;
+		part.m_numVertices = vertexBufferData->UsedVertexCount;
+		part.m_triangleIndexBase = (const unsigned char*)indexBufferData;
+		part.m_triangleIndexStride = sizeof(u32) * 3;
+		part.m_numTriangles = (i32)(indexCount / 3);
+
+		(*outTriangleIndexVertexArray)->addIndexedMesh(part, PHY_INTEGER);
+
+		bool useQuantizedAabbCompression = false;
+		*outbvhTriangleMeshShape = new btBvhTriangleMeshShape(*outTriangleIndexVertexArray, useQuantizedAabbCompression);
+	}
+
 	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
 	{
 		assert(matID != InvalidMaterialID);
 
-		Material& mat = g_Renderer->GetMaterial(matID);
-		Shader& shader = g_Renderer->GetShader(mat.shaderID);
-		m_RequiredAttributes = shader.vertexAttributes;
+		Material* mat = g_Renderer->GetMaterial(matID);
+		Shader* shader = g_Renderer->GetShader(mat->shaderID);
+		m_RequiredAttributes = shader->vertexAttributes;
 	}
 
-	MeshComponent* MeshComponent::LoadFromCGLTF(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromCGLTF(
+		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
-		MeshImportSettings* importSettings /* = nullptr */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
+	{
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
+	}
+
+	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(
+		Mesh* owningMesh,
+		cgltf_primitive* primitive,
+		MaterialID materialID,
+		u32 initialMaxVertexCount /* = u32_max */,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
+	{
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
+	}
+
+	MeshComponent* MeshComponent::LoadFromCGLTFInternal(
+		Mesh* owningMesh,
+		cgltf_primitive* primitive,
+		MaterialID materialID,
+		bool bDynamic,
+		u32 initialMaxDynamicVertexCount,
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject)
 	{
 		if (primitive->indices == nullptr)
 		{
@@ -136,7 +182,7 @@ namespace flex
 		VertexBufferDataCreateInfo vertexBufferDataCreateInfo = {};
 
 		bool bCalculateTangents = false;
-		bool bMissingTexCoords = false;
+		//bool bMissingTexCoords = false;
 
 		i32 posAttribIndex = -1;
 		i32 normAttribIndex = -1;
@@ -194,10 +240,10 @@ namespace flex
 		{
 			bCalculateTangents = true;
 
-			if (uvAttribIndex == -1)
-			{
-				bMissingTexCoords = true;
-			}
+			//if (uvAttribIndex == -1)
+			//{
+			//	bMissingTexCoords = true;
+			//}
 		}
 
 		{
@@ -205,8 +251,8 @@ namespace flex
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::POSITION2) vertexBufferDataCreateInfo.positions_2D.resize(vertexBufferDataCreateInfo.positions_2D.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::NORMAL) vertexBufferDataCreateInfo.normals.resize(vertexBufferDataCreateInfo.normals.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::TANGENT) vertexBufferDataCreateInfo.tangents.resize(vertexBufferDataCreateInfo.tangents.size() + vertCount);
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colors_R32G32B32A32.resize(vertexBufferDataCreateInfo.colors_R32G32B32A32.size() + vertCount);
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colors_R8G8B8A8.resize(vertexBufferDataCreateInfo.colors_R8G8B8A8.size() + vertCount);
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT) vertexBufferDataCreateInfo.colours_R32G32B32A32.resize(vertexBufferDataCreateInfo.colours_R32G32B32A32.size() + vertCount);
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM) vertexBufferDataCreateInfo.colours_R8G8B8A8.resize(vertexBufferDataCreateInfo.colours_R8G8B8A8.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::UV) vertexBufferDataCreateInfo.texCoords_UV.resize(vertexBufferDataCreateInfo.texCoords_UV.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::EXTRA_VEC4) vertexBufferDataCreateInfo.extraVec4s.resize(vertexBufferDataCreateInfo.extraVec4s.size() + vertCount);
 			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::EXTRA_INT) vertexBufferDataCreateInfo.extraInts.resize(vertexBufferDataCreateInfo.extraInts.size() + vertCount);
@@ -238,14 +284,6 @@ namespace flex
 
 					glm::vec3 norm;
 					cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
-					if (importSettings && importSettings->bSwapNormalYZ)
-					{
-						std::swap(norm.y, norm.z);
-					}
-					if (importSettings && importSettings->bFlipNormalZ)
-					{
-						norm.z = -norm.z;
-					}
 					vertexBufferDataCreateInfo.normals[vi] = norm;
 				}
 			}
@@ -272,14 +310,14 @@ namespace flex
 				}
 			}
 
-			// Color
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			// Colour
+			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 				if (colAttribIndex == -1)
 				{
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = m_DefaultColor_4;
+					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = m_DefaultColour_4;
 				}
 				else
 				{
@@ -290,7 +328,7 @@ namespace flex
 
 					glm::vec4 col;
 					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32[vi] = col;
+					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = col;
 				}
 			}
 
@@ -314,14 +352,6 @@ namespace flex
 					cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
 
 					uv0 *= newMeshComponent->m_UVScale;
-					if (importSettings && importSettings->bFlipU)
-					{
-						uv0.x = 1.0f - uv0.x;
-					}
-					if (importSettings && importSettings->bFlipV)
-					{
-						uv0.y = 1.0f - uv0.y;
-					}
 					vertexBufferDataCreateInfo.texCoords_UV[vi] = uv0;
 				}
 			}
@@ -346,7 +376,7 @@ namespace flex
 
 		if (bCalculateTangents)
 		{
-			if (!newMeshComponent->CalculateTangents(vertexBufferDataCreateInfo, bMissingTexCoords))
+			if (!MeshComponent::CalculateTangents(vertexBufferDataCreateInfo, newMeshComponent->m_Indices))
 			{
 				PrintWarn("Failed to calculate tangents for mesh!\n");
 			}
@@ -354,63 +384,87 @@ namespace flex
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferDataCreateInfo.positions_3D);
 
-		newMeshComponent->m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
+		if (bDynamic)
+		{
+			if (initialMaxDynamicVertexCount == u32_max)
+			{
+				initialMaxDynamicVertexCount = vertCount;
+			}
+			newMeshComponent->m_VertexBufferData.InitializeDynamic(vertexBufferDataCreateInfo.attributes, initialMaxDynamicVertexCount);
+			newMeshComponent->m_VertexBufferData.UpdateData(vertexBufferDataCreateInfo);
+		}
+		else
+		{
+			newMeshComponent->m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
+		}
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
-		renderObjectCreateInfo.gameObject = owningMesh->GetOwningGameObject();
+		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
-		if (newMeshComponent->renderID != InvalidRenderID)
+		if (bCreateRenderObject)
 		{
-			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			if (newMeshComponent->renderID != InvalidRenderID)
+			{
+				g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			}
+
+			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+
+			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
+
+			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
-
-		newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 
 		newMeshComponent->m_bInitialized = true;
 
 		return newMeshComponent;
 	}
 
-	MeshComponent* MeshComponent::LoadFromMemoryDynamic(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromMemory(
+		Mesh* owningMesh,
+		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
+		const std::vector<u32>& indices,
+		MaterialID materialID,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */,
+		i32* outSubmeshIndex /* = nullptr */)
+	{
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
+	}
+
+	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
+		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */,
+		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
-	MeshComponent* MeshComponent::LoadFromMemory(Mesh* owningMesh,
-		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-		const std::vector<u32>& indices,
-		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
-	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo);
-	}
-
-	MeshComponent* MeshComponent::LoadFromMemoryInternal(Mesh* owningMesh,
+	MeshComponent* MeshComponent::LoadFromMemoryInternal(
+		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
-		{
+		RenderObjectCreateInfo* optionalCreateInfo,
+		bool bCreateRenderObject,
+		i32* outSubmeshIndex)
+	{
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
@@ -426,33 +480,48 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
 
-		renderObjectCreateInfo.gameObject = owningMesh->GetOwningGameObject();
+		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
-		if (newMeshComponent->renderID != InvalidRenderID)
+		if (bCreateRenderObject)
 		{
-			g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			if (newMeshComponent->renderID != InvalidRenderID)
+			{
+				g_Renderer->DestroyRenderObject(newMeshComponent->renderID);
+			}
+
+			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+
+			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
+
+			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
 
-		newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-		newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
-
 		newMeshComponent->m_bInitialized = true;
+
+		if (owningMesh != nullptr)
+		{
+			i32 submeshIndex = owningMesh->AddSubMesh(newMeshComponent);
+			if (outSubmeshIndex != nullptr)
+			{
+				*outSubmeshIndex = submeshIndex;
+			}
+		}
 
 		return newMeshComponent;
 	}
 
-	bool MeshComponent::LoadPrefabShape(PrefabShape shape, RenderObjectCreateInfo* optionalCreateInfo)
+	bool MeshComponent::LoadPrefabShape(
+		PrefabShape shape,
+		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		bool bCreateRenderObject /* = true */)
 	{
 		if (m_bInitialized)
 		{
@@ -466,7 +535,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
@@ -659,15 +728,15 @@ namespace flex
 		case PrefabShape::GRID:
 		{
 			const real lineMaxOpacity = 0.5f;
-			glm::vec4 lineColor = Color::GRAY;
-			lineColor.a = lineMaxOpacity;
+			glm::vec4 lineColour = Colour::GRAY;
+			lineColour.a = lineMaxOpacity;
 
 			const size_t vertexCount = GRID_LINE_COUNT * 2 * 4; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)) / 2.0f;
 
@@ -681,14 +750,14 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(i * GRID_LINE_SPACING - halfWidth, 0.0f, halfWidth);
 
 				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
-				glm::vec4 colorCenter = lineColor;
-				colorCenter.a = opacityCenter;
-				glm::vec4 colorEnds = colorCenter;
-				colorEnds.a = 0.0f;
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+				glm::vec4 colourCenter = lineColour;
+				colourCenter.a = opacityCenter;
+				glm::vec4 colourEnds = colourCenter;
+				colourEnds.a = 0.0f;
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 			}
 
 			// Vertical lines
@@ -700,33 +769,33 @@ namespace flex
 				vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, i * GRID_LINE_SPACING - halfWidth);
 
 				real opacityCenter = glm::pow(1.0f - glm::abs((i / (real)GRID_LINE_COUNT) - 0.5f) * 2.0f, 5.0f);
-				glm::vec4 colorCenter = lineColor;
-				colorCenter.a = opacityCenter;
-				glm::vec4 colorEnds = colorCenter;
-				colorEnds.a = 0.0f;
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-				vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+				glm::vec4 colourCenter = lineColour;
+				colourCenter.a = opacityCenter;
+				glm::vec4 colourEnds = colourCenter;
+				colourEnds.a = 0.0f;
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 			}
 
 			// Make sure we didn't allocate too much data
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
+			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
 		case PrefabShape::WORLD_AXIS_GROUND:
 		{
-			glm::vec4 centerLineColorX = Color::RED;
-			glm::vec4 centerLineColorZ = Color::BLUE;
+			glm::vec4 centerLineColourX = Colour::RED;
+			glm::vec4 centerLineColourZ = Colour::BLUE;
 
 			const size_t vertexCount = 4 * 2; // 4 verts per line (to allow for fading) *------**------*
 			vertexBufferDataCreateInfo.positions_3D.reserve(vertexCount);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.reserve(vertexCount);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.reserve(vertexCount);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			real halfWidth = (GRID_LINE_SPACING * (GRID_LINE_COUNT - 1)); // extend longer than normal grid lines
 
@@ -736,32 +805,32 @@ namespace flex
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, halfWidth);
 
 			real opacityCenter = 1.0f;
-			glm::vec4 colorCenter = centerLineColorZ;
-			colorCenter.a = opacityCenter;
-			glm::vec4 colorEnds = colorCenter;
-			colorEnds.a = 0.0f;
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			glm::vec4 colourCenter = centerLineColourZ;
+			colourCenter.a = opacityCenter;
+			glm::vec4 colourEnds = colourCenter;
+			colourEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(-halfWidth, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(0.0f, 0.0f, 0.0f);
 			vertexBufferDataCreateInfo.positions_3D.emplace_back(halfWidth, 0.0f, 0.0f);
 
-			colorCenter = centerLineColorX;
-			colorCenter.a = opacityCenter;
-			colorEnds = colorCenter;
-			colorEnds.a = 0.0f;
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorCenter);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(colorEnds);
+			colourCenter = centerLineColourX;
+			colourCenter.a = opacityCenter;
+			colourEnds = colourCenter;
+			colourEnds.a = 0.0f;
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourCenter);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			// Make sure we didn't allocate too much data
 			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colors_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colors_R32G32B32A32.size());
+			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -803,7 +872,7 @@ namespace flex
 			};
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
 
-			vertexBufferDataCreateInfo.colors_R32G32B32A32 =
+			vertexBufferDataCreateInfo.colours_R32G32B32A32 =
 			{
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
@@ -813,7 +882,7 @@ namespace flex
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 				{ 1.0f, 1.0f, 1.0f, 1.0f },
 			};
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 			vertexBufferDataCreateInfo.texCoords_UV =
 			{
@@ -832,12 +901,12 @@ namespace flex
 			// Vertices
 			glm::vec3 v1(0.0f, 1.0f, 0.0f); // Top vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(v1);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::RED);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(Colour::RED);
 			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, 1.0f, 0.0f);
 
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
-			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
 			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
@@ -855,11 +924,11 @@ namespace flex
 					real sinA = sin(azimuth);
 					real cosA = cos(azimuth);
 					glm::vec3 point(sinP * cosA, cosP, sinP * sinA);
-					const glm::vec4 color =
-						(i % 2 == 0 ? j % 2 == 0 ? Color::ORANGE : Color::PURPLE : j % 2 == 0 ? Color::WHITE : Color::YELLOW);
+					const glm::vec4 colour =
+						(i % 2 == 0 ? j % 2 == 0 ? Colour::ORANGE : Colour::PURPLE : j % 2 == 0 ? Colour::WHITE : Colour::YELLOW);
 
 					vertexBufferDataCreateInfo.positions_3D.push_back(point);
-					vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(color);
+					vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colour);
 					vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 					vertexBufferDataCreateInfo.normals.emplace_back(1.0f, 0.0f, 0.0f);
 				}
@@ -867,7 +936,7 @@ namespace flex
 
 			glm::vec3 vF(0.0f, -1.0f, 0.0f); // Bottom vertex
 			vertexBufferDataCreateInfo.positions_3D.push_back(vF);
-			vertexBufferDataCreateInfo.colors_R32G32B32A32.push_back(Color::YELLOW);
+			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(Colour::YELLOW);
 			vertexBufferDataCreateInfo.texCoords_UV.emplace_back(0.0f, 0.0f);
 			vertexBufferDataCreateInfo.normals.emplace_back(0.0f, -1.0f, 0.0f);
 
@@ -996,10 +1065,13 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 
-		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
+		if (bCreateRenderObject)
+		{
+			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
-		g_Renderer->SetTopologyMode(renderID, topologyMode);
-		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+			g_Renderer->SetTopologyMode(renderID, topologyMode);
+			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
+		}
 
 		m_bInitialized = true;
 
@@ -1017,7 +1089,7 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo)
+		if (optionalCreateInfo != nullptr)
 		{
 			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
 		}
@@ -1155,9 +1227,24 @@ namespace flex
 		return &m_VertexBufferData;
 	}
 
-	std::vector<u32> MeshComponent::GetIndexBuffer()
+	u32* MeshComponent::GetIndexBufferUnsafePtr()
+	{
+		return &m_Indices[0];
+	}
+
+	std::vector<u32> MeshComponent::GetIndexBufferCopy()
 	{
 		return m_Indices;
+	}
+
+	u32* MeshComponent::GetIndexBufferDataPtr()
+	{
+		return &m_Indices[0];
+	}
+
+	u32 MeshComponent::GetIndexCount()
+	{
+		return (u32)m_Indices.size();
 	}
 
 	real MeshComponent::GetVertexBufferUsage() const
@@ -1178,8 +1265,11 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords)
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
 	{
+		// TODO:
+		FLEX_UNUSED(indices);
+
 		if (createInfo.normals.empty())
 		{
 			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
@@ -1190,55 +1280,148 @@ namespace flex
 			PrintError("Can't calculate tangents for mesh which contains no position data!\n");
 			return false;
 		}
-
-		if (!bMissingTexCoords)
+		if (createInfo.texCoords_UV.empty())
 		{
-			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
-			{
-				glm::vec3 p0 = createInfo.positions_3D[i + 0];
-				glm::vec3 p1 = createInfo.positions_3D[i + 1];
-				glm::vec3 p2 = createInfo.positions_3D[i + 2];
-
-				glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
-				glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
-				glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
-
-				glm::vec3 dPos0 = p1 - p0;
-				glm::vec3 dPos1 = p2 - p0;
-
-				glm::vec2 dUV0 = uv1 - uv0;
-				glm::vec2 dUV1 = uv2 - uv0;
-
-				real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
-				glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
-				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
-
-				createInfo.tangents[i + 0] = tangent;
-				createInfo.tangents[i + 1] = tangent;
-				createInfo.tangents[i + 2] = tangent;
-			}
+			PrintError("Can't calculate tangents for mesh which contains no texcoord data!\n");
+			return false;
 		}
-		else
+
+#if 1
+		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
 		{
-			for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
-			{
-				glm::vec3 p0 = createInfo.positions_3D[i + 0];
-				glm::vec3 p1 = createInfo.positions_3D[i + 1];
-				glm::vec3 p2 = createInfo.positions_3D[i + 2];
+			glm::vec3 p0 = createInfo.positions_3D[i + 0];
+			glm::vec3 p1 = createInfo.positions_3D[i + 1];
+			glm::vec3 p2 = createInfo.positions_3D[i + 2];
 
-				glm::vec3 dPos0 = p1 - p0;
-				glm::vec3 dPos1 = p2 - p0;
+			glm::vec2 uv0 = createInfo.texCoords_UV[i + 0];
+			glm::vec2 uv1 = createInfo.texCoords_UV[i + 1];
+			glm::vec2 uv2 = createInfo.texCoords_UV[i + 2];
 
-				glm::vec3 tangent = glm::normalize(dPos0 - dPos1);
-				//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
 
-				createInfo.tangents[i + 0] = tangent;
-				createInfo.tangents[i + 1] = tangent;
-				createInfo.tangents[i + 2] = tangent;
-			}
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+
+			glm::vec2 dUV0 = uv1 - uv0;
+			glm::vec2 dUV1 = uv2 - uv0;
+
+			real r = 1.0f / (dUV1.x * dUV0.y - dUV1.y * dUV0.x);
+			glm::vec3 tangent = glm::normalize((dPos0 * dUV0.y - dPos1 * dUV1.y) * r);
+			//glm::vec3 bitangent = (dPos1 * dUV1.x - dPos0 * dUV0.x) * r;
+
+			createInfo.tangents[i + 0] = tangent;
+			createInfo.tangents[i + 1] = tangent;
+			createInfo.tangents[i + 2] = tangent;
 		}
 
 		return true;
+
+#else
+
+		for (u32 i = 0; i < indices.size() - 2; i += 3)
+		{
+			i32 index0 = indices[i + 0];
+			i32 index1 = indices[i + 1];
+			i32 index2 = indices[i + 2];
+
+			glm::vec3 p0 = createInfo.positions_3D[index0];
+			glm::vec3 p1 = createInfo.positions_3D[index1];
+			glm::vec3 p2 = createInfo.positions_3D[index2];
+
+			glm::vec3 dPos0 = p1 - p0;
+			glm::vec3 dPos1 = p2 - p0;
+
+			glm::vec3 normal = glm::normalize(glm::cross(dPos0, dPos1));
+
+			createInfo.normals[index0] = normal;
+			createInfo.normals[index1] = normal;
+			createInfo.normals[index2] = normal;
+		}
+
+		struct MikkTUserData
+		{
+			VertexBufferDataCreateInfo* createInfo;
+			std::vector<u32> const* indices;
+		};
+
+		SMikkTSpaceInterface mikkTinterface = {};
+		mikkTinterface.m_getNumFaces = [](const SMikkTSpaceContext* pContext) -> int
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			return (int)(userData->indices->size() / 3);
+		};
+
+		// Returns the number of vertices on face number iFace
+		// iFace is a number in the range {0, 1, ..., getNumFaces()-1}
+		mikkTinterface.m_getNumVerticesOfFace = [](const SMikkTSpaceContext* pContext, const int iFace) -> int
+		{
+			FLEX_UNUSED(pContext);
+			FLEX_UNUSED(iFace);
+			return 3;
+		};
+
+		// returns the position/normal/texcoord of the referenced face of vertex number iVert.
+		// iVert is in the range {0,1,2} for triangles and {0,1,2,3} for quads.
+		mikkTinterface.m_getPosition = [](const SMikkTSpaceContext* pContext, float fvPosOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec3*)fvPosOut) = userData->createInfo->positions_3D[userData->indices->at(iFace * 3 + iVert)];
+		};
+		mikkTinterface.m_getNormal = [](const SMikkTSpaceContext* pContext, float fvNormOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec3*)fvNormOut) = userData->createInfo->normals[userData->indices->at(iFace * 3 + iVert)];
+		};
+		mikkTinterface.m_getTexCoord = [](const SMikkTSpaceContext* pContext, float fvTexcOut[], const int iFace, const int iVert)
+		{
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			*((glm::vec2*)fvTexcOut) = userData->createInfo->texCoords_UV[userData->indices->at(iFace * 3 + iVert)];
+		};
+
+		// either (or both) of the two setTSpace callbacks can be set.
+		// The call-back m_setTSpaceBasic() is sufficient for basic normal mapping.
+
+		// This function is used to return the tangent and fSign to the application.
+		// fvTangent is a unit length vector.
+		// For normal maps it is sufficient to use the following simplified version of the bitangent which is generated at pixel/vertex level.
+		// bitangent = fSign * cross(vN, tangent);
+		// Note that the results are returned unindexed. It is possible to generate a new index list
+		// But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
+		// DO NOT! use an already existing index list.
+		mikkTinterface.m_setTSpaceBasic = [](const SMikkTSpaceContext* pContext, const float fvTangent[], const float fSign, const int iFace, const int iVert)
+		{
+			FLEX_UNUSED(fSign);
+			MikkTUserData* userData = (MikkTUserData*)pContext->m_pUserData;
+			userData->createInfo->tangents[userData->indices->at(iFace * 3 + iVert)] = *((glm::vec3*)fvTangent);
+		};
+
+		// This function is used to return tangent space results to the application.
+		// fvTangent and fvBiTangent are unit length vectors and fMagS and fMagT are their
+		// true magnitudes which can be used for relief mapping effects.
+		// fvBiTangent is the "real" bitangent and thus may not be perpendicular to fvTangent.
+		// However, both are perpendicular to the vertex normal.
+		// For normal maps it is sufficient to use the following simplified version of the bitangent which is generated at pixel/vertex level.
+		// fSign = bIsOrientationPreserving ? 1.0f : (-1.0f);
+		// bitangent = fSign * cross(vN, tangent);
+		// Note that the results are returned unindexed. It is possible to generate a new index list
+		// But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
+		// DO NOT! use an already existing index list.
+		//mikkTinterface.m_setTSpace = [](const SMikkTSpaceContext* pContext, const float fvTangent[], const float fvBiTangent[], const float fMagS, const float fMagT,
+		//	const tbool bIsOrientationPreserving, const int iFace, const int iVert)
+		//{
+		//
+		//};
+
+		MikkTUserData userData = { &createInfo, &indices };
+
+		SMikkTSpaceContext context = {};
+		context.m_pInterface = &mikkTinterface;
+		context.m_pUserData = (void*)&userData;
+		int result = genTangSpaceDefault(&context);
+
+		return result != 0;
+#endif
 	}
 
 	void MeshComponent::CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions)
@@ -1286,9 +1469,10 @@ namespace flex
 		createInfo.visibleInSceneExplorer = overrides.visibleInSceneExplorer;
 		createInfo.cullFace = overrides.cullFace;
 		createInfo.depthTestReadFunc = overrides.depthTestReadFunc;
-		createInfo.bDepthWriteEnable = overrides.bDepthWriteEnable;
 		createInfo.bEditorObject = overrides.bEditorObject;
 		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
+		createInfo.bIndexed = overrides.bIndexed;
+		createInfo.bAllowDynamicBufferShrinking = overrides.bAllowDynamicBufferShrinking;
 
 		if (overrides.vertexBufferData != nullptr)
 		{
@@ -1296,7 +1480,7 @@ namespace flex
 		}
 		if (overrides.indices != nullptr)
 		{
-			PrintWarn("Attempted to override indices! Ignoring passed in data\n");
+			m_Indices = *overrides.indices;
 		}
 	}
 } // namespace flex

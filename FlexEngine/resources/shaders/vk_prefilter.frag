@@ -5,7 +5,7 @@
 
 layout (location = 0) in vec3 ex_SampleDirection;
 
-layout (location = 0) out vec4 FragColor;
+layout (location = 0) out vec4 FragColour;
 
 layout (binding = 0) uniform UBODynamic
 {
@@ -75,38 +75,43 @@ void main()
 	vec3 R = N;
 	vec3 V = R;
 
-    // TODO: Move sample count to push constant?
+    float roughness = uboDynamic.constRoughness;
+
+    // TODO: Make these uniforms/push constants
+    const float resolution = 512.0; // resolution of source cubemap (per face)
 	const uint SAMPLE_COUNT = 2048u;
+
 	float totalWeight = 0.0;
-	vec3 prefilteredColor = vec3(0.0);
+	vec3 prefilteredColour = vec3(0.0);
 	for (uint i = 0u; i < SAMPLE_COUNT; ++i)
 	{
-	    vec2 Xi = Hammersley(i, SAMPLE_COUNT); 
-		vec3 H = ImportanceSampleGGX(Xi, N, uboDynamic.constRoughness);
+	    vec2 Xi = Hammersley(i, SAMPLE_COUNT);
+		vec3 H = ImportanceSampleGGX(Xi, N, roughness);
 		vec3 L = normalize(2.0 * dot(V, H) * H - V);
 
 		float NdotL = max(dot(N, L), 0.0);
 		if (NdotL > 0.0)
 		{
 			// sample from the environment's mip level based on roughness/pdf
-            float D = DistributionGGX(N, H, uboDynamic.constRoughness);
+            float D = DistributionGGX(N, H, roughness);
             float NdotH = max(dot(N, H), 0.0);
             float HdotV = max(dot(H, V), 0.0);
             float pdf = D * NdotH / (4.0 * HdotV) + 0.0001; 
 
-            // TODO: Make this a uniform
-            float resolution = 512.0; // resolution of source cubemap (per face)
             float saTexel  = 4.0 * PI / (6.0 * resolution * resolution);
             float saSample = 1.0 / (float(SAMPLE_COUNT) * pdf + 0.0001);
 
-            float mipLevel = uboDynamic.constRoughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel); 
+            float mipLevel = (roughness == 0.0) ? 0.0 : (0.5 * log2(saSample / saTexel)); 
 
-			prefilteredColor += textureLod(cubemapSampler, L, mipLevel).rgb * NdotL;
+			prefilteredColour += textureLod(cubemapSampler, L, mipLevel).rgb * NdotL;
 			totalWeight += NdotL;
 		}
 	}
 
-	prefilteredColor /= totalWeight;
+    if (totalWeight > 0.001)
+    {
+        prefilteredColour /= totalWeight;
+    }
 
-	FragColor = vec4(prefilteredColor, 1.0);
+	FragColour = vec4(prefilteredColour, 1.0);
 }

@@ -34,6 +34,11 @@ namespace flex
 		return bIterValid;
 	}
 
+	bool Lexer::Backtrack()
+	{
+		return sourceIter.MovePrevious();
+	}
+
 	Token Lexer::Next()
 	{
 		EatWhitespaceAndComments();

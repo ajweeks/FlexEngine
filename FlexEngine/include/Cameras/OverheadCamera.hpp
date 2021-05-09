@@ -7,12 +7,13 @@
 namespace flex
 {
 	class GameObject;
+	class Player;
 
 	class OverheadCamera final : public BaseCamera
 	{
 	public:
 		explicit OverheadCamera(real FOV = glm::radians(45.0f));
-		~OverheadCamera();
+		virtual ~OverheadCamera();
 
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
@@ -28,7 +29,7 @@ namespace flex
 
 		void ResetValues();
 
-		GameObject* m_Player0 = nullptr;
+		Player* m_Player0 = nullptr;
 
 		RollingAverage<glm::vec3> m_PlayerPosRollingAvg;
 		RollingAverage<glm::vec3> m_PlayerForwardRollingAvg;

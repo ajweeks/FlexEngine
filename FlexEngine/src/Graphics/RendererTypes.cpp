@@ -46,67 +46,32 @@ namespace flex
 		}
 	}
 
-	bool Uniforms::HasUniform(u64 uniform) const
+	bool UniformList::HasUniform(const Uniform& uniform) const
 	{
-		return (uniforms & uniform) != 0;
+		return uniforms.find(uniform.id) != uniforms.end();
 	}
 
-	void Uniforms::AddUniform(u64 uniform)
+	void UniformList::AddUniform(const Uniform& uniform)
 	{
-		uniforms = (uniforms | uniform);
-	}
-
-	u32 Uniforms::CalculateSizeInBytes() const
-	{
-		u32 size = 0;
-
+		if (!HasUniform(uniform))
 		{
-#define _u(uniform) if (HasUniform(U_##uniform)) size += US_##uniform;
-			_u(MODEL)
-				_u(VIEW)
-				_u(VIEW_INV)
-				_u(VIEW_PROJECTION)
-				_u(PROJECTION)
-				_u(PROJECTION_INV)
-				_u(BLEND_SHARPNESS)
-				_u(COLOR_MULTIPLIER)
-				_u(CAM_POS)
-				_u(DIR_LIGHT)
-				_u(POINT_LIGHTS)
-				_u(CONST_ALBEDO)
-				_u(CONST_METALLIC)
-				_u(CONST_ROUGHNESS)
-				_u(ENABLE_ALBEDO_SAMPLER)
-				_u(ENABLE_METALLIC_SAMPLER)
-				_u(ENABLE_ROUGHNESS_SAMPLER)
-				_u(ENABLE_NORMAL_SAMPLER)
-				_u(ENABLE_IRRADIANCE_SAMPLER)
-				_u(SHOW_EDGES)
-				_u(LIGHT_VIEW_PROJS)
-				_u(EXPOSURE)
-				_u(TEX_SIZE)
-				_u(TEXTURE_SCALE)
-				_u(TIME)
-				_u(SDF_DATA)
-				_u(TEX_CHANNEL)
-				_u(FONT_CHAR_DATA)
-				_u(SSAO_GEN_DATA)
-				_u(SSAO_BLUR_DATA_DYNAMIC)
-				_u(SSAO_BLUR_DATA_CONSTANT)
-				_u(SSAO_SAMPLING_DATA)
-				_u(FXAA_DATA)
-				_u(SHADOW_SAMPLING_DATA)
-				_u(NEAR_FAR_PLANES)
-				_u(POST_PROCESS_MAT)
-				_u(LAST_FRAME_VIEWPROJ)
-				_u(PARTICLE_BUFFER)
-				_u(PARTICLE_SIM_DATA)
-				_u(OCEAN_DATA)
-				_u(SKYBOX_DATA)
-#undef _u
+			uniforms.emplace(uniform.id);
+			totalSizeInBytes += (u32)uniform.size;
 		}
+	}
 
-		return size;
+	u32 UniformList::GetSizeInBytes() const
+	{
+		return totalSizeInBytes;
+	}
+
+	Shader::Shader(const ShaderInfo& shaderInfo) :
+		Shader(shaderInfo.name,
+			shaderInfo.inVertexShaderFilePath,
+			shaderInfo.inFragmentShaderFilePath,
+			shaderInfo.inGeometryShaderFilePath,
+			shaderInfo.inComputeShaderFilePath)
+	{
 	}
 
 	Shader::Shader(const std::string& name,
@@ -117,31 +82,31 @@ namespace flex
 		name(name)
 	{
 #if COMPILE_OPEN_GL
-		vertexShaderFilePath = SHADER_SOURCE_LOCATION + inVertexShaderFilePath;
+		vertexShaderFilePath = SHADER_SOURCE_DIRECTORY + inVertexShaderFilePath;
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = SHADER_SOURCE_LOCATION + inFragmentShaderFilePath;
+			fragmentShaderFilePath = SHADER_SOURCE_DIRECTORY + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = SHADER_SOURCE_LOCATION + inGeometryShaderFilePath;
+			geometryShaderFilePath = SHADER_SOURCE_DIRECTORY + inGeometryShaderFilePath;
 		}
 #elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
-			vertexShaderFilePath = SPV_LOCATION + inVertexShaderFilePath;
+			vertexShaderFilePath = COMPILED_SHADERS_DIRECTORY + inVertexShaderFilePath;
 		}
 		if (!inFragmentShaderFilePath.empty())
 		{
-			fragmentShaderFilePath = SPV_LOCATION + inFragmentShaderFilePath;
+			fragmentShaderFilePath = COMPILED_SHADERS_DIRECTORY + inFragmentShaderFilePath;
 		}
 		if (!inGeometryShaderFilePath.empty())
 		{
-			geometryShaderFilePath = SPV_LOCATION + inGeometryShaderFilePath;
+			geometryShaderFilePath = COMPILED_SHADERS_DIRECTORY + inGeometryShaderFilePath;
 		}
 		if (!inComputeShaderFilePath.empty())
 		{
-			computeShaderFilePath = SPV_LOCATION + inComputeShaderFilePath;
+			computeShaderFilePath = COMPILED_SHADERS_DIRECTORY + inComputeShaderFilePath;
 		}
 #endif
 	}
@@ -160,12 +125,14 @@ namespace flex
 				generateCubemapSampler == other.generateCubemapSampler &&
 				enableCubemapSampler == other.enableCubemapSampler &&
 				cubemapSamplerSize == other.cubemapSamplerSize &&
-				cubeMapFilePaths[0] == other.cubeMapFilePaths[0] &&
 				constAlbedo == other.constAlbedo &&
+				constEmissive == other.constEmissive &&
 				constMetallic == other.constMetallic &&
 				constRoughness == other.constRoughness &&
 				enableAlbedoSampler == other.enableAlbedoSampler &&
 				albedoTexturePath == other.albedoTexturePath &&
+				enableEmissiveSampler == other.enableEmissiveSampler &&
+				emissiveTexturePath == other.emissiveTexturePath &&
 				enableMetallicSampler == other.enableMetallicSampler &&
 				metallicTexturePath == other.metallicTexturePath &&
 				enableRoughnessSampler == other.enableRoughnessSampler &&
@@ -175,7 +142,6 @@ namespace flex
 				hdrEquirectangularTexturePath == other.hdrEquirectangularTexturePath &&
 				enableCubemapTrilinearFiltering == other.enableCubemapTrilinearFiltering &&
 				generateHDRCubemapSampler == other.generateHDRCubemapSampler &&
-				enableIrradianceSampler == other.enableIrradianceSampler &&
 				generateIrradianceSampler == other.generateIrradianceSampler &&
 				irradianceSamplerSize == other.irradianceSamplerSize &&
 				environmentMapPath == other.environmentMapPath &&
@@ -185,7 +151,7 @@ namespace flex
 				enableBRDFLUT == other.enableBRDFLUT &&
 				renderToCubemap == other.renderToCubemap &&
 				generateReflectionProbeMaps == other.generateReflectionProbeMaps &&
-				colorMultiplier == other.colorMultiplier &&
+				colourMultiplier == other.colourMultiplier &&
 				textureScale == other.textureScale
 				);
 
@@ -194,8 +160,8 @@ namespace flex
 
 	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
 	{
-		material.SetStringChecked("name", createInfoOut.name);
-		material.SetStringChecked("shader", createInfoOut.shaderName);
+		material.TryGetString("name", createInfoOut.name);
+		material.TryGetString("shader", createInfoOut.shaderName);
 
 		struct FilePathMaterialParam
 		{
@@ -206,6 +172,7 @@ namespace flex
 		std::vector<FilePathMaterialParam> filePathParams =
 		{
 			{ &createInfoOut.albedoTexturePath, "albedo texture filepath" },
+			{ &createInfoOut.emissiveTexturePath, "emissive texture filepath" },
 			{ &createInfoOut.metallicTexturePath, "metallic texture filepath" },
 			{ &createInfoOut.roughnessTexturePath, "roughness texture filepath" },
 			{ &createInfoOut.normalTexturePath, "normal texture filepath" },
@@ -217,38 +184,108 @@ namespace flex
 		{
 			if (material.HasField(param.name))
 			{
-				*param.path = TEXTURE_LOCATION + material.GetString(param.name);
+				*param.path = TEXTURE_DIRECTORY + material.GetString(param.name);
 			}
 		}
 
-		material.SetBoolChecked("enable albedo sampler", createInfoOut.enableAlbedoSampler);
-		material.SetBoolChecked("enable metallic sampler", createInfoOut.enableMetallicSampler);
-		material.SetBoolChecked("enable roughness sampler", createInfoOut.enableRoughnessSampler);
-		material.SetBoolChecked("enable normal sampler", createInfoOut.enableNormalSampler);
-		material.SetBoolChecked("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
-		material.SetBoolChecked("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
-		material.SetBoolChecked("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
-		material.SetBoolChecked("enable irradiance sampler", createInfoOut.enableIrradianceSampler);
-		material.SetBoolChecked("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
-		material.SetBoolChecked("enable brdf lut", createInfoOut.enableBRDFLUT);
-		material.SetBoolChecked("render to cubemap", createInfoOut.renderToCubemap);
-		material.SetBoolChecked("enable cubemap sampler", createInfoOut.enableCubemapSampler);
-		material.SetBoolChecked("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
-		material.SetBoolChecked("generate cubemap sampler", createInfoOut.generateCubemapSampler);
-		material.SetBoolChecked("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
-		material.SetBoolChecked("generate prefiltered map", createInfoOut.generatePrefilteredMap);
-		material.SetBoolChecked("enable prefiltered map", createInfoOut.enablePrefilteredMap);
-		material.SetBoolChecked("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
+		material.TryGetBool("enable albedo sampler", createInfoOut.enableAlbedoSampler);
+		material.TryGetBool("enable emissive sampler", createInfoOut.enableEmissiveSampler);
+		material.TryGetBool("enable metallic sampler", createInfoOut.enableMetallicSampler);
+		material.TryGetBool("enable roughness sampler", createInfoOut.enableRoughnessSampler);
+		material.TryGetBool("enable normal sampler", createInfoOut.enableNormalSampler);
+		material.TryGetBool("generate hdr equirectangular sampler", createInfoOut.generateHDREquirectangularSampler);
+		material.TryGetBool("enable hdr equirectangular sampler", createInfoOut.enableHDREquirectangularSampler);
+		material.TryGetBool("generate hdr cubemap sampler", createInfoOut.generateHDRCubemapSampler);
+		material.TryGetBool("generate irradiance sampler", createInfoOut.generateIrradianceSampler);
+		material.TryGetBool("enable brdf lut", createInfoOut.enableBRDFLUT);
+		material.TryGetBool("render to cubemap", createInfoOut.renderToCubemap);
+		material.TryGetBool("enable cubemap sampler", createInfoOut.enableCubemapSampler);
+		material.TryGetBool("enable cubemap trilinear filtering", createInfoOut.enableCubemapTrilinearFiltering);
+		material.TryGetBool("generate cubemap sampler", createInfoOut.generateCubemapSampler);
+		material.TryGetBool("generate cubemap depth buffers", createInfoOut.generateCubemapDepthBuffers);
+		material.TryGetBool("generate prefiltered map", createInfoOut.generatePrefilteredMap);
+		material.TryGetBool("enable prefiltered map", createInfoOut.enablePrefilteredMap);
+		material.TryGetBool("generate reflection probe maps", createInfoOut.generateReflectionProbeMaps);
 
-		material.SetVec2Checked("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
-		material.SetVec2Checked("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
-		material.SetVec2Checked("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.SetVec4Checked("color multiplier", createInfoOut.colorMultiplier);
-		material.SetVec3Checked("const albedo", createInfoOut.constAlbedo);
-		material.SetFloatChecked("const metallic", createInfoOut.constMetallic);
-		material.SetFloatChecked("const roughness", createInfoOut.constRoughness);
+		material.TryGetVec2("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
+		material.TryGetVec2("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
+		material.TryGetVec2("generated cubemap size", createInfoOut.generatedCubemapSize);
+		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
+		material.TryGetVec3("const albedo", createInfoOut.constAlbedo);
+		material.TryGetVec3("const emissive", createInfoOut.constEmissive);
+		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
+		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 
-		material.SetFloatChecked("texture scale", createInfoOut.textureScale);
+		material.TryGetFloat("texture scale", createInfoOut.textureScale);
+	}
+
+	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
+	{
+		std::vector<MaterialID> matIDs;
+		if (fileVersion >= 3)
+		{
+			std::vector<JSONField> materialNames;
+			if (object.TryGetFieldArray("materials", materialNames))
+			{
+				for (const JSONField& materialNameField : materialNames)
+				{
+					std::string materialName = materialNameField.label;
+					bool bSuccess = false;
+					if (!materialName.empty())
+					{
+						MaterialID materialID = g_Renderer->GetMaterialID(materialName);
+
+						if (materialID == InvalidMaterialID)
+						{
+							if (materialName.compare("placeholder") == 0)
+							{
+								materialID = g_Renderer->GetPlaceholderMaterialID();
+							}
+						}
+
+						if (materialID != InvalidMaterialID)
+						{
+							bSuccess = true;
+						}
+
+						matIDs.push_back(materialID);
+					}
+
+					if (!bSuccess)
+					{
+						PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
+					}
+				}
+			}
+		}
+		else // fileVersion < 3
+		{
+			MaterialID materialID = InvalidMaterialID;
+			std::string materialName;
+			if (object.TryGetString("material", materialName))
+			{
+				if (!materialName.empty())
+				{
+					materialID = g_Renderer->GetMaterialID(materialName);
+					if (materialID == InvalidMaterialID)
+					{
+						if (materialName.compare("placeholder") == 0)
+						{
+							materialID = g_Renderer->GetPlaceholderMaterialID();
+						}
+					}
+				}
+
+				if (materialID == InvalidMaterialID)
+				{
+					PrintError("Invalid material name for object %s: %s\n", object.GetString("name").c_str(), materialName.c_str());
+				}
+			}
+
+			matIDs.push_back(materialID);
+		}
+
+		return matIDs;
 	}
 
 	JSONObject Material::Serialize() const
@@ -257,61 +294,85 @@ namespace flex
 
 		materialObject.fields.emplace_back("name", JSONValue(name));
 
-		const Shader& shader = g_Renderer->GetShader(shaderID);
-		materialObject.fields.emplace_back("shader", JSONValue(shader.name));
+		const Shader* shader = g_Renderer->GetShader(shaderID);
+		materialObject.fields.emplace_back("shader", JSONValue(shader->name));
 
-		// TODO: Find out way of determining if the following four  values
-		// are used by the shader (only currently used by PBR I think)
-		std::string constAlbedoStr = VecToString(constAlbedo, 3);
-		materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
-		materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
-		materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
+		if (constAlbedo != VEC4_ONE)
+		{
+			std::string constAlbedoStr = VecToString(constAlbedo, 3);
+			materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
+		}
+		if (constEmissive != VEC4_ONE)
+		{
+			std::string constEmissiveStr = VecToString(constEmissive, 3);
+			materialObject.fields.emplace_back("const emissive", JSONValue(constEmissiveStr));
+		}
+		if (constMetallic != 0.0f)
+		{
+			materialObject.fields.emplace_back("const metallic", JSONValue(constMetallic));
+		}
+		if (constRoughness != 0.0f)
+		{
+			materialObject.fields.emplace_back("const roughness", JSONValue(constRoughness));
+		}
 
 		static const bool defaultEnableAlbedo = false;
-		if (shader.bNeedAlbedoSampler && enableAlbedoSampler != defaultEnableAlbedo)
+		if (shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && enableAlbedoSampler != defaultEnableAlbedo)
 		{
 			materialObject.fields.emplace_back("enable albedo sampler", JSONValue(enableAlbedoSampler));
 		}
 
+		static const bool defaultEnableEmissive = false;
+		if (shader->textureUniforms.HasUniform(U_EMISSIVE_SAMPLER) && enableEmissiveSampler != defaultEnableEmissive)
+		{
+			materialObject.fields.emplace_back("enable emissive sampler", JSONValue(enableEmissiveSampler));
+		}
+
 		static const bool defaultEnableMetallicSampler = false;
-		if (shader.bNeedMetallicSampler && enableMetallicSampler != defaultEnableMetallicSampler)
+		if (shader->textureUniforms.HasUniform(U_METALLIC_SAMPLER) && enableMetallicSampler != defaultEnableMetallicSampler)
 		{
 			materialObject.fields.emplace_back("enable metallic sampler", JSONValue(enableMetallicSampler));
 		}
 
 		static const bool defaultEnableRoughness = false;
-		if (shader.bNeedRoughnessSampler && enableRoughnessSampler != defaultEnableRoughness)
+		if (shader->textureUniforms.HasUniform(U_ROUGHNESS_SAMPLER) && enableRoughnessSampler != defaultEnableRoughness)
 		{
 			materialObject.fields.emplace_back("enable roughness sampler", JSONValue(enableRoughnessSampler));
 		}
 
 		static const bool defaultEnableNormal = false;
-		if (shader.bNeedNormalSampler && enableNormalSampler != defaultEnableNormal)
+		if (shader->textureUniforms.HasUniform(U_NORMAL_SAMPLER) && enableNormalSampler != defaultEnableNormal)
 		{
 			materialObject.fields.emplace_back("enable normal sampler", JSONValue(enableNormalSampler));
 		}
 
-		static const std::string texturePrefixStr = TEXTURE_LOCATION;
+		static const std::string texturePrefixStr = TEXTURE_DIRECTORY;
 
-		if (shader.bNeedAlbedoSampler && !albedoTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER) && !albedoTexturePath.empty())
 		{
 			std::string shortAlbedoTexturePath = albedoTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("albedo texture filepath", JSONValue(shortAlbedoTexturePath));
 		}
 
-		if (shader.bNeedMetallicSampler && !metallicTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_EMISSIVE_SAMPLER) && !emissiveTexturePath.empty())
+		{
+			std::string shortEmissiveTexturePath = emissiveTexturePath.substr(texturePrefixStr.length());
+			materialObject.fields.emplace_back("emissive texture filepath", JSONValue(shortEmissiveTexturePath));
+		}
+
+		if (shader->textureUniforms.HasUniform(U_METALLIC_SAMPLER) && !metallicTexturePath.empty())
 		{
 			std::string shortMetallicTexturePath = metallicTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("metallic texture filepath", JSONValue(shortMetallicTexturePath));
 		}
 
-		if (shader.bNeedRoughnessSampler && !roughnessTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_ROUGHNESS_SAMPLER) && !roughnessTexturePath.empty())
 		{
 			std::string shortRoughnessTexturePath = roughnessTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("roughness texture filepath", JSONValue(shortRoughnessTexturePath));
 		}
 
-		if (shader.bNeedNormalSampler && !normalTexturePath.empty())
+		if (shader->textureUniforms.HasUniform(U_NORMAL_SAMPLER) && !normalTexturePath.empty())
 		{
 			std::string shortNormalTexturePath = normalTexturePath.substr(texturePrefixStr.length());
 			materialObject.fields.emplace_back("normal texture filepath", JSONValue(shortNormalTexturePath));
@@ -322,7 +383,7 @@ namespace flex
 			materialObject.fields.emplace_back("generate hdr cubemap sampler", JSONValue(generateHDRCubemapSampler));
 		}
 
-		if (shader.bNeedCubemapSampler)
+		if (shader->textureUniforms.HasUniform(U_CUBEMAP_SAMPLER))
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
 
@@ -332,7 +393,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
 		}
 
-		if (shader.bNeedIrradianceSampler || irradianceSamplerSize.x > 0)
+		if (shader->textureUniforms.HasUniform(U_IRRADIANCE_SAMPLER) || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
 
@@ -340,7 +401,7 @@ namespace flex
 			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
 		}
 
-		if (shader.bNeedPrefilteredMap || prefilteredMapSize.x > 0)
+		if (shader->textureUniforms.HasUniform(U_PREFILTER_MAP) || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
 
@@ -359,6 +420,17 @@ namespace flex
 			materialObject.fields.emplace_back("texture scale", JSONValue(textureScale));
 		}
 
+		if (colourMultiplier != VEC4_ONE)
+		{
+			std::string colourMultiplierStr = VecToString(colourMultiplier, 3);
+			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplierStr));
+		}
 		return materialObject;
 	}
+
+	Texture::Texture(const std::string& name) :
+		name(name)
+	{
+	}
+
 } // namespace flex

@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 5,
 	"name" : "scene_sibnek",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -15,17 +21,19 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-152.222, 29.300, -65.754",
-			"pitch" : -0.174895,
-			"yaw" : 0.536819
+			"position" : "-57.448, 3.466, 7.706",
+			"pitch" : 0.169489,
+			"yaw" : -0.028459
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "Skybox",
+			"id" : "9E21BB97E67E608D4AD74FCC0530F8D3",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 			},
@@ -39,8 +47,10 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "45440631ED0751AE443997FF4A39A977",
 			"type" : "reflection probe",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -48,39 +58,45 @@
 		},
 		{
 			"name" : "sibnek",
+			"id" : "E7C75C7194CDF4B24C2DFCEF17A6C45A",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 45.000, 0.000",
 				"scale" : "3.000, 3.000, 3.000"
 			},
-			"mesh" : "sibnek",
+			"mesh" : "sibnek.glb",
 			"materials" : 
 			[
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome",
-				"pbr chrome"
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid",
+				"grid"
 			]
 		},
 		{
 			"name" : "PointLight_00",
+			"id" : "EA160EA47EA0A5BC40042E4E323A40D4",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "31.500, 18.434, 0.000",
@@ -89,15 +105,17 @@
 			"point light info" : 
 			{
 				"pos" : "31.500, 18.434, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 885.416992
 			}
 		},
 		{
 			"name" : "PointLight_01",
+			"id" : "17F3514BFAAE13AE4539EDDE82D4C942",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-42.000, 15.400, 0.000"
@@ -105,7 +123,7 @@
 			"point light info" : 
 			{
 				"pos" : "-42.000, 15.400, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 640.625000
 			}

@@ -61,6 +61,14 @@ namespace flex
 			return (index != (u32)source.size());
 		}
 
+		bool MovePrevious()
+		{
+			--index;
+			--columnIndex;
+
+			return (index != 0);
+		}
+
 		bool EndOfFileReached()
 		{
 			return (index == (u32)source.size());
@@ -87,6 +95,7 @@ namespace flex
 		Lexer& operator=(Lexer&&) = delete;
 
 		bool Advance();
+		bool Backtrack();
 
 		Token Next();
 		Token NextNumericLiteral();

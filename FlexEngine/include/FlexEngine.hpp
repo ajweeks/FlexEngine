@@ -10,6 +10,7 @@ struct ImGuiInputTextCallbackData;
 namespace flex
 {
 	class GameObject;
+	class IFunction;
 	enum class TransformState;
 
 	class FlexEngine final
@@ -22,7 +23,7 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 
-		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData *data);
+		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data);
 
 		void OnSceneChanged();
 
@@ -32,6 +33,7 @@ namespace flex
 		void SetRenderingEditorObjects(bool bRenderingEditorObjects);
 
 		bool IsSimulationPaused() const;
+		void SetSimulationPaused(bool bPaused);
 
 		bool InstallShaderDirectoryWatch() const;
 
@@ -41,7 +43,12 @@ namespace flex
 
 		void CreateCameraInstances();
 
+		void SetFramesToFakeDT(i32 frameCount);
+
+		real GetSimulationSpeed() const;
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
+		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
 
 		// Returns the intersection point of the given ray & plane, projected on to axis
 		static glm::vec3 CalculateRayPlaneIntersectionAlongAxis(
@@ -63,12 +70,15 @@ namespace flex
 
 		// TODO: Figure out how to make this not cause a memory leak!
 		static std::string s_CurrentWorkingDirectory;
+		static std::string s_ExecutablePath;
 
+		// TODO: Move to text file
 		enum class SoundEffect
 		{
 			dud_dud_dud_dud,
 			drmapan,
 			blip,
+			synthesized_00,
 			synthesized_01,
 			synthesized_02,
 			synthesized_03,
@@ -76,6 +86,15 @@ namespace flex
 			synthesized_05,
 			synthesized_06,
 			synthesized_07,
+			synthesized_08,
+			synthesized_09,
+			synthesized_10,
+			synthesized_11,
+			synthesized_12,
+			synthesized_13,
+			synthesized_14,
+			melody_0,
+			melody_0_fast,
 
 			LAST_ELEMENT
 		};
@@ -92,7 +111,7 @@ namespace flex
 		EventReply OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers);
 		KeyEventCallback<FlexEngine> m_KeyEventCallback;
 
-		EventReply OnActionEvent(Action action);
+		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<FlexEngine> m_ActionCallback;
 
 #if COMPILE_RENDERDOC_API
@@ -131,7 +150,7 @@ namespace flex
 		bool m_bRenderEditorObjects = true;
 		bool m_bUpdateProfilerFrame = false;
 
-		const sec m_MinDT = 0.0001f;
+		const sec m_MinDT = 1.0f / 360.0f;
 		const sec m_MaxDT = 1.0f;
 
 		bool m_bSimulationPaused = false;
@@ -170,30 +189,17 @@ namespace flex
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
 		bool m_bMainWindowShowing = true;
-		bool m_bMaterialWindowShowing = false;
-		bool m_bShaderWindowShowing = false;
-		bool m_bTextureWindowShowing = false;
-		bool m_bMeshWindowShowing = false;
 		bool m_bDemoWindowShowing = false;
 		bool m_bInputMapperShowing = false;
 		bool m_bShowMemoryStatsWindow = false;
 		bool m_bShowCPUStatsWindow = false;
+		bool m_bUIEditorShowing = false;
 
 		bool m_bWriteProfilerResultsToFile = false;
 
-		struct ConsoleCommand
-		{
-			typedef void(*cmdFunc)();
-			ConsoleCommand(const std::string& name, cmdFunc fun) :
-				name(name),
-				fun(fun)
-			{}
-
-			std::string name;
-			cmdFunc fun;
-		};
-		std::vector<ConsoleCommand> m_ConsoleCommands;
+		std::vector<IFunction*> m_ConsoleCommands;
 		bool m_bShowingConsole = false;
+		bool m_bShowAllConsoleCommands = false;
 		static const u32 MAX_CHARS_CMD_LINE_STR = 256;
 		char m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR];
 		i32 m_SelectedCmdLineAutoCompleteIndex = -1;
@@ -226,6 +232,12 @@ namespace flex
 		i32 m_RenderDocAutoCaptureFrameOffset = -1;
 		i32 m_RenderDocAutoCaptureFrameCount = -1;
 #endif
+
+		// When non-zero we should override g_DeltaTime
+		// Used when doing expensive operations (like scene loading)
+		// to prevent massive dt values messing systems up
+		i32 m_FramesToFakeDT = 3;
+		sec m_FakeDT = 1.0f / 60.0f;
 
 		sec SecSinceLogSave = 0.0f;
 		sec LogSaveRate = 5.0f;

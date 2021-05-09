@@ -16,47 +16,51 @@ namespace flex
 		bool HasField(const std::string& label) const;
 
 		std::string GetString(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetStringChecked(const std::string& label, std::string& value) const;
-		/* Sets value to the result of ParseVec2(GetString(label)) if that field is present */
-		bool SetVec2Checked(const std::string& label, glm::vec2& value) const;
-		/* Sets value to the result of ParseVec3(GetString(label)) if that field is present */
-		bool SetVec3Checked(const std::string& label, glm::vec3& value) const;
-		/* Sets value to the result of ParseVec4(GetString(label)) if that field is present */
-		bool SetVec4Checked(const std::string& label, glm::vec4& value) const;
+		bool TryGetString(const std::string& label, std::string& value) const;
+		StringID GetStringID(const std::string& label) const;
+		bool TryGetStringID(const std::string& label, StringID& value) const;
+		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
+		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
+		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
 
 		glm::vec2 GetVec2(const std::string& label) const;
 		glm::vec3 GetVec3(const std::string& label) const;
 		glm::vec4 GetVec4(const std::string& label) const;
 
 		i32 GetInt(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetIntChecked(const std::string& label, i32& value) const;
+		bool TryGetInt(const std::string& label, i32& value) const;
 
-		bool SetUIntChecked(const std::string& label, u32& value) const;
+		u32 GetUInt(const std::string& label) const;
+		bool TryGetUInt(const std::string& label, u32& value) const;
+
+		i64 GetLong(const std::string& label) const;
+		bool TryGetLong(const std::string& label, i64& value) const;
+
+		u64 GetULong(const std::string& label) const;
+		bool TryGetULong(const std::string& label, u64& value) const;
 
 		real GetFloat(const std::string& label) const;
-		// TODO: Rename SetXChecked functions to TryGetX
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetFloatChecked(const std::string& label, real& value) const;
+		bool TryGetFloat(const std::string& label, real& value) const;
 
 		bool GetBool(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetBoolChecked(const std::string& label, bool& value) const;
+		bool TryGetBool(const std::string& label, bool& value) const;
+
+		GUID GetGUID(const std::string& label) const;
+		bool TryGetGUID(const std::string& label, GUID& value) const;
+
+		GameObjectID GetGameObjectID(const std::string& label) const;
+		bool TryGetGameObjectID(const std::string& label, GameObjectID& value) const;
 
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetFieldArrayChecked(const std::string& label, std::vector<JSONField>& value) const;
+		bool TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const;
 
 		const std::vector<JSONObject>& GetObjectArray(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetObjectArrayChecked(const std::string& label, std::vector<JSONObject>& value) const;
+		bool TryGetObjectArray(const std::string& label, std::vector<JSONObject>& value) const;
 
 		const JSONObject& GetObject(const std::string& label) const;
-		/* Sets value to the result of GetString(label) if that field is present */
-		bool SetObjectChecked(const std::string& label, JSONObject& value) const;
+		bool TryGetObject(const std::string& label, JSONObject& value) const;
 
-		std::string Print(i32 tabCount);
+		std::string ToString(i32 tabCount = 0) const;
 
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
@@ -71,6 +75,9 @@ namespace flex
 		{
 			STRING,
 			INT,
+			UINT,
+			LONG,
+			ULONG,
 			FLOAT,
 			BOOL,
 			OBJECT,
@@ -88,17 +95,24 @@ namespace flex
 		explicit JSONValue(const std::string& inStrValue);
 		explicit JSONValue(const char* inStrValue);
 		explicit JSONValue(i32 inIntValue);
+		explicit JSONValue(u32 inUIntValue);
+		explicit JSONValue(i64 inLongValue);
+		explicit JSONValue(u64 inULongValue);
 		explicit JSONValue(real inFloatValue);
 		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
+		explicit JSONValue(const GUID& inGUIDValue);
 
 		Type type = Type::UNINITIALIZED;
 		union
 		{
 			i32 intValue = 0;
+			u32 uintValue;
+			i64 longValue;
+			u64 ulongValue;
 			real floatValue;
 			bool boolValue;
 		};
@@ -117,6 +131,6 @@ namespace flex
 		std::string label;
 		JSONValue value;
 
-		std::string Print(i32 tabCount);
+		std::string ToString(i32 tabCount) const;
 	};
 } // namespace flex

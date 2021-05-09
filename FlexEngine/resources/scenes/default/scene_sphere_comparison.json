@@ -1,7 +1,13 @@
 {
-	"version" : 3,
+	"version" : 5,
 	"name" : "Scene_sphere_comparison",
 	"spawn player" : false,
+	"skybox data" : 
+	{
+		"top colour" : "0.22, 0.58, 0.88, 0.00",
+		"mid colour" : "0.66, 0.86, 0.95, 0.00",
+		"btm colour" : "0.75, 0.91, 0.99, 0.00"
+	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -24,8 +30,10 @@
 	[
 		{
 			"name" : "Skybox",
+			"id" : "06935B2B9AA8FEBB4B349065A1966D7E",
 			"type" : "skybox",
 			"visible" : true,
+			"casts shadow" : false,
 			"transform" : 
 			{
 				"rot" : "-3.140, 1.410, -3.140"
@@ -41,8 +49,10 @@
 		},
 		{
 			"name" : "Reflection Probe 01",
+			"id" : "D8251972813E62AF496FED60C3F37152",
 			"type" : "reflection probe",
 			"visible" : false,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "14.860, 13.780, 0.000"
@@ -50,8 +60,10 @@
 		},
 		{
 			"name" : "Top spheres",
+			"id" : "28F997285BB14B8F451B5414973B71C7",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "43.000, 12.180, 0.000"
@@ -60,14 +72,16 @@
 			[
 				{
 					"name" : "Sphere 10",
+					"id" : "5033F0F1B0D255A445F1B62CCFDBD453",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 10"
@@ -75,14 +89,16 @@
 				},
 				{
 					"name" : "Sphere 09",
+					"id" : "023990954A04089A4714267041AE593D",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 09"
@@ -90,14 +106,16 @@
 				},
 				{
 					"name" : "Sphere 08",
+					"id" : "078C1E1B53DFC6984072D08530B8B963",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 08"
@@ -105,14 +123,16 @@
 				},
 				{
 					"name" : "Sphere 00",
+					"id" : "C9DE91FC126950AE4E6E802FBB6BF9A6",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 00"
@@ -120,14 +140,16 @@
 				},
 				{
 					"name" : "Sphere 07",
+					"id" : "64E3BF5179E9488A461D3B5542D33215",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 07"
@@ -135,14 +157,16 @@
 				},
 				{
 					"name" : "Sphere 05",
+					"id" : "2B4E49DC285F2E9B412495D1D06C1075",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 05"
@@ -150,14 +174,16 @@
 				},
 				{
 					"name" : "Sphere 06",
+					"id" : "48E3623879D959BF4BD6A182D8B4F022",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 06"
@@ -165,14 +191,16 @@
 				},
 				{
 					"name" : "Sphere 04",
+					"id" : "8CD35BC2BC39368447C28B44D073854E",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 04"
@@ -180,14 +208,16 @@
 				},
 				{
 					"name" : "Sphere 03",
+					"id" : "9CBAA0C5FC36DDA74D1B68811755875C",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 03"
@@ -195,14 +225,16 @@
 				},
 				{
 					"name" : "Sphere 02",
+					"id" : "EFA945D890CE7F8C412158AA54EB3319",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 02"
@@ -210,14 +242,16 @@
 				},
 				{
 					"name" : "Sphere 01",
+					"id" : "7573B9199C3D5DAA4D3E25EAF2FD0D7F",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 01"
@@ -227,8 +261,10 @@
 		},
 		{
 			"name" : "Bottom spheres",
+			"id" : "3E42FD046F8A76974D01724FC1ABBD52",
 			"type" : "object",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 1.880, 0.000"
@@ -237,14 +273,16 @@
 			[
 				{
 					"name" : "Sphere 11",
+					"id" : "7FAED39BC26E17B4462E2C8988717EB0",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 11"
@@ -252,14 +290,16 @@
 				},
 				{
 					"name" : "Sphere 12",
+					"id" : "7C1F345570F3158346A525A9D6E21DFB",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 12"
@@ -267,14 +307,16 @@
 				},
 				{
 					"name" : "Sphere 13",
+					"id" : "D8094E19894788AA4FAC149DB9FA97A4",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 13"
@@ -282,14 +324,16 @@
 				},
 				{
 					"name" : "Sphere 14",
+					"id" : "4C1D99807FF5949A49BE0A9C2D988C42",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 14"
@@ -297,14 +341,16 @@
 				},
 				{
 					"name" : "Sphere 15",
+					"id" : "DC7FB7CDF7BF48844A060946DC88D355",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, -7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 15"
@@ -312,14 +358,16 @@
 				},
 				{
 					"name" : "Sphere 16",
+					"id" : "F8FF1FBB1848C18C438507B64E21D0EA",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 0.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 16"
@@ -327,14 +375,16 @@
 				},
 				{
 					"name" : "Sphere 17",
+					"id" : "66F6F57B54B1BD8A4EC9A66D6DC9B1E2",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 7.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 17"
@@ -342,14 +392,16 @@
 				},
 				{
 					"name" : "Sphere 18",
+					"id" : "0CE13C424A239B9E473C4926BB111E66",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 14.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 18"
@@ -357,14 +409,16 @@
 				},
 				{
 					"name" : "Sphere 19",
+					"id" : "185655F3B2F9FCBB4552C10A0F74F40F",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 21.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 19"
@@ -372,14 +426,16 @@
 				},
 				{
 					"name" : "Sphere 20",
+					"id" : "A29265559792A3BB4845987FD861538D",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 28.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 20"
@@ -387,14 +443,16 @@
 				},
 				{
 					"name" : "Sphere 21",
+					"id" : "95CFB6D2172627BD45AD62AB95D55F98",
 					"type" : "object",
 					"visible" : true,
+					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.880, 35.000",
 						"scale" : "3.000, 3.000, 3.000"
 					},
-					"mesh" : "sphere",
+					"mesh" : "sphere.glb",
 					"materials" : 
 					[
 						"sphere 21"
@@ -404,8 +462,10 @@
 		},
 		{
 			"name" : "Directional Light",
+			"id" : "78885AC04A4795AC48C4C9B974733CE4",
 			"type" : "directional light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 32.400, 0.000",
@@ -415,7 +475,7 @@
 			{
 				"rotation" : "-0.220, -0.184, -0.285, 0.915",
 				"pos" : "0.000, 32.400, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 0.391000,
 				"cast shadows" : false,
@@ -424,8 +484,10 @@
 		},
 		{
 			"name" : "PointLight_00",
+			"id" : "293EF5FAE5DF6FBB45EFE6A789DA2393",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "32.752, 13.554, -20.837"
@@ -433,15 +495,17 @@
 			"point light info" : 
 			{
 				"pos" : "32.752, 13.554, -20.837",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 500.000000
 			}
 		},
 		{
 			"name" : "PointLight_01",
+			"id" : "801DA2951C7AB4944DE337401A5077ED",
 			"type" : "point light",
 			"visible" : true,
+			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "31.325, 13.227, 29.397"
@@ -449,7 +513,7 @@
 			"point light info" : 
 			{
 				"pos" : "31.325, 13.227, 29.397",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 500.000000
 			}

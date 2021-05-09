@@ -8,9 +8,9 @@ namespace flex
 {
 	enum class CursorMode
 	{
-		NORMAL,
-		HIDDEN,
-		DISABLED,
+		NORMAL, // Show
+		HIDDEN, // Hide, but don't restrict movement
+		DISABLED, // Hide and keep within screen bounds
 
 		_NONE
 	};
@@ -59,6 +59,8 @@ namespace flex
 		virtual void SetSize(i32 width, i32 height) = 0;
 		/* Called when the window's size changes */
 		virtual void OnSizeChanged(i32 width, i32 height) = 0;
+		real GetAspectRatio() const;
+		real GetInvAspectRatio() const;
 
 		glm::vec2i GetPosition() const;
 		/* Set the window's position */
@@ -102,10 +104,14 @@ namespace flex
 
 		virtual glm::vec2 GetMousePosition() = 0;
 
-		bool IsMaximized() const;
 		virtual void Maximize() = 0;
-		bool IsIconified() const;
 		virtual void Iconify() = 0;
+
+		virtual const char* GetClipboardText() = 0;
+		virtual void SetClipboardText(const char* text) = 0;
+
+		bool IsMaximized() const;
+		bool IsIconified() const;
 
 		bool InitFromConfig();
 		void SaveToConfig();
@@ -114,6 +120,8 @@ namespace flex
 
 		bool GetVSyncEnabled() const;
 		void SetVSyncEnabled(bool bEnabled);
+
+		CursorMode GetCursorMode() const;
 
 	protected:
 

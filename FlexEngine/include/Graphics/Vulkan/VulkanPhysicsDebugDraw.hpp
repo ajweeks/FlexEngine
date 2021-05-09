@@ -16,7 +16,7 @@ namespace flex
 	{
 		class VulkanRenderer;
 
-		class VulkanPhysicsDebugDraw : public PhysicsDebugDrawBase
+		class VulkanPhysicsDebugDraw final : public PhysicsDebugDrawBase
 		{
 		public:
 			VulkanPhysicsDebugDraw();
@@ -31,17 +31,19 @@ namespace flex
 			virtual void setDebugMode(int debugMode)  override;
 			virtual int	getDebugMode() const override;
 
-			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& color) override;
-			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& colorFrom, const btVector3& colorTo) override;
-			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& color) override;
+			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& colour) override;
+			virtual void drawLine(const btVector3& from, const btVector3& to, const btVector3& colourFrom, const btVector3& colourTo) override;
+			virtual void drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour) override;
 
-			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& color) override;
-			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colorFrom, const btVector4& colorTo) override;
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) override;
+			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) override;
 
 		private:
 			virtual void Draw() override;
 
 			void CreateDebugObject();
+
+			void Clear();
 
 			VulkanRenderer* m_Renderer = nullptr;
 

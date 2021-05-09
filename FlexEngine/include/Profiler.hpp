@@ -68,7 +68,7 @@ namespace flex
 		struct DisplayedFrameOptions
 		{
 			real screenWidthPercent = 0.8f;
-			real screenHeightPercent = 0.2f;
+			real screenHeightPercent = 0.4f;
 			real xOffPercent = 0.0f;
 			real yOffPercent = 0.0f;
 			real opacity = 0.8f;
@@ -81,7 +81,7 @@ namespace flex
 
 		static DisplayedFrameOptions s_DisplayedFrameOptions;
 
-		static glm::vec4 blockColors[];
+		static glm::vec4 blockColours[];
 
 	};
 } // namespace flex

@@ -104,12 +104,12 @@ namespace flex
 	}
 
 	Transform::Transform(const Transform&& other) :
-		localPosition(std::move(other.localPosition)),
-		localRotation(std::move(other.localRotation)),
-		localScale(std::move(other.localScale)),
-		worldPosition(std::move(other.worldPosition)),
-		worldRotation(std::move(other.worldRotation)),
-		worldScale(std::move(other.worldScale)),
+		localPosition(other.localPosition),
+		localRotation(other.localRotation),
+		localScale(other.localScale),
+		worldPosition(other.worldPosition),
+		worldRotation(other.worldRotation),
+		worldScale(other.worldScale),
 		forward(VEC3_FORWARD),
 		up(VEC3_UP),
 		right(VEC3_RIGHT)
@@ -146,12 +146,12 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			localPosition = std::move(other.localPosition);
-			localRotation = std::move(other.localRotation);
-			localScale = std::move(other.localScale);
-			worldPosition = std::move(other.worldPosition);
-			worldRotation = std::move(other.worldRotation);
-			worldScale = std::move(other.worldScale);
+			localPosition = other.localPosition;
+			localRotation = other.localRotation;
+			localScale = other.localScale;
+			worldPosition = other.worldPosition;
+			worldRotation = other.worldRotation;
+			worldScale = other.worldScale;
 			localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
 				glm::mat4(localRotation) *
 				glm::scale(MAT4_IDENTITY, localScale));
@@ -355,7 +355,7 @@ namespace flex
 
 	void Transform::SetWorldTransform(const glm::mat4& desiredWorldTransform)
 	{
-		if (m_GameObject->GetParent())
+		if (m_GameObject->GetParent() != nullptr)
 		{
 			localTransform = glm::inverse(m_GameObject->GetParent()->GetTransform()->GetWorldTransform()) * desiredWorldTransform;
 		}
@@ -428,7 +428,7 @@ namespace flex
 			worldScale = localScale;
 		}
 
-		if (parent)
+		if (parent != nullptr)
 		{
 			parent->GetTransform()->UpdateParentTransform();
 		}
@@ -442,7 +442,7 @@ namespace flex
 		up = rotMat[1];
 		forward = rotMat[2];
 
-		if (updateParentOnStateChange && m_GameObject)
+		if (updateParentOnStateChange && m_GameObject != nullptr)
 		{
 			m_GameObject->OnTransformChanged();
 		}
@@ -453,7 +453,7 @@ namespace flex
 		// Our local matrix should already have been updated at this point (in UpdateParentTransform)
 
 		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
+		if (parent != nullptr)
 		{
 			Transform* parentTransform = parent->GetTransform();
 
@@ -471,9 +471,10 @@ namespace flex
 			worldScale = localScale;
 		}
 
-		if (m_GameObject->GetRigidBody())
+		RigidBody* rigidBody= m_GameObject->GetRigidBody();
+		if (rigidBody != nullptr)
 		{
-			m_GameObject->GetRigidBody()->MatchParentTransform();
+			rigidBody->MatchParentTransform();
 		}
 
 		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
@@ -541,7 +542,7 @@ namespace flex
 	void Transform::SetWorldPosition(const glm::vec3& position, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
+		if (parent != nullptr)
 		{
 			localPosition = position - parent->GetTransform()->GetWorldPosition();
 		}
@@ -570,7 +571,7 @@ namespace flex
 	void Transform::SetWorldRotation(const glm::quat& quatRotation, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
+		if (parent != nullptr)
 		{
 			localRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * quatRotation;
 		}
@@ -599,7 +600,7 @@ namespace flex
 	void Transform::SetWorldScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
 	{
 		GameObject* parent = m_GameObject->GetParent();
-		if (parent)
+		if (parent != nullptr)
 		{
 			localScale = scale / parent->GetTransform()->GetWorldScale();
 		}

@@ -8,6 +8,8 @@
 
 struct cgltf_data;
 struct cgltf_primitive;
+class btTriangleIndexVertexArray;
+class btBvhTriangleMeshShape;
 
 namespace flex
 {
@@ -40,33 +42,48 @@ namespace flex
 		void Destroy();
 		void SetOwner(Mesh* owner);
 
+		void CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape);
+
 		/*
 		* Call before loading to force certain attributes to be filled/ignored based on shader
 		* requirements. Any attribute not set here will be ignored. Any attribute set here will
 		* be enforced (filled with default value if not present in mesh)
 		*/
 		void SetRequiredAttributesFromMaterialID(MaterialID matID);
+
 		static MeshComponent* LoadFromCGLTF(Mesh* owningMesh,
 			cgltf_primitive* primitive,
 			MaterialID materialID,
-			MeshImportSettings* importSettings = nullptr,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
+
+		static MeshComponent* LoadFromCGLTFDynamic(Mesh* owningMesh,
+			cgltf_primitive* primitive,
+			MaterialID materialID,
+			u32 initialMaxVertexCount = u32_max,
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true,
+			i32* outSubmeshIndex = nullptr);
 
 		static MeshComponent* LoadFromMemoryDynamic(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true,
+			i32* outSubmeshIndex = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
@@ -79,10 +96,10 @@ namespace flex
 
 		bool IsInitialized() const;
 
-		static void DestroyAllLoadedMeshes();
-
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
+
+		static bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices);
 
 		PrefabShape GetShape() const;
 		Mesh* GetOwner();
@@ -91,7 +108,10 @@ namespace flex
 		glm::vec3 GetBoundingSphereCenterPointWS() const;
 
 		VertexBufferData* GetVertexBufferData();
-		std::vector<u32> GetIndexBuffer();
+		u32* GetIndexBufferUnsafePtr();
+		std::vector<u32> GetIndexBufferCopy();
+		u32* GetIndexBufferDataPtr();
+		u32 GetIndexCount();
 
 		real GetVertexBufferUsage() const;
 
@@ -110,19 +130,29 @@ namespace flex
 			MaterialID materialID,
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */);
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject,
+			i32* outSubmeshIndex);
+
+		static MeshComponent* LoadFromCGLTFInternal(Mesh* owningMesh,
+			cgltf_primitive* primitive,
+			MaterialID materialID,
+			bool bDynamic,
+			u32 initialMaxDynamicVertexCount,
+			RenderObjectCreateInfo* optionalCreateInfo,
+			bool bCreateRenderObject);
 
 		real CalculateBoundingSphereScale() const;
-		bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, bool bMissingTexCoords);
 
 		void CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions);
 
 		void CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides);
 
+
 		static const real GRID_LINE_SPACING;
 		static const u32 GRID_LINE_COUNT;
 
-		static glm::vec4 m_DefaultColor_4;
+		static glm::vec4 m_DefaultColour_4;
 		static glm::vec3 m_DefaultPosition;
 		static glm::vec3 m_DefaultTangent;
 		static glm::vec3 m_DefaultNormal;

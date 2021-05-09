@@ -31,7 +31,7 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
 
-		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp" };
+		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
 #endif //  COMPILE_SHADER_COMPILER
 
 		void VK_CHECK_RESULT(VkResult result)
@@ -120,7 +120,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::COLOR_R8G8B8A8_UNORM)
+			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -133,7 +133,7 @@ namespace flex
 				++location;
 			}
 
-			if (vertexAttributes & (u32)VertexAttribute::COLOR_R32G32B32A32_SFLOAT)
+			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
 				attributeDescription.binding = 0;
@@ -224,106 +224,78 @@ namespace flex
 
 		void VertexIndexBufferPair::Destroy()
 		{
-			delete vertexBuffer;
-			vertexBuffer = nullptr;
-			delete indexBuffer;
-			indexBuffer = nullptr;
-			vertexCount = 0;
-			indexCount = 0;
-		}
-
-		void VertexIndexBufferPair::Empty()
-		{
 			if (vertexBuffer != nullptr)
 			{
 				vertexBuffer->Destroy();
+				delete vertexBuffer;
+				vertexBuffer = nullptr;
 			}
 			if (indexBuffer != nullptr)
 			{
 				indexBuffer->Destroy();
+				delete indexBuffer;
+				indexBuffer = nullptr;
 			}
 			vertexCount = 0;
 			indexCount = 0;
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
-			const std::string& name, u32 width, u32 height, u32 channelCount) :
+		void VertexIndexBufferPair::Clear()
+		{
+			if (vertexBuffer != nullptr)
+			{
+				vertexBuffer->Reset();
+			}
+			if (indexBuffer != nullptr)
+			{
+				indexBuffer->Reset();
+			}
+			vertexCount = 0;
+			indexCount = 0;
+		}
+
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue) :
+			Texture(),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			width(width),
-			height(height),
-			channelCount(channelCount),
-			name(name),
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue)
 		{
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
-			const std::string& relativeFilePath, u32 channelCount, bool bFlipVertically,
-			bool bGenerateMipMaps, bool bHDR) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name) :
+			Texture(name),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
-			channelCount(channelCount),
-			relativeFilePath(relativeFilePath),
-			fileName(StripLeadingDirectories(relativeFilePath)),
-			bFlipVertically(bFlipVertically),
-			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR),
 			m_VulkanDevice(device),
 			m_GraphicsQueue(graphicsQueue)
 		{
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue,
-			const std::array<std::string, 6>& relativeCubemapFilePaths, u32 channelCount, bool bFlipVertically,
-			bool bGenerateMipMaps, bool bHDR) :
-			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
-			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
-			channelCount(channelCount),
-			relativeCubemapFilePaths(relativeCubemapFilePaths),
-			bFlipVertically(bFlipVertically),
-			bGenerateMipMaps(bGenerateMipMaps),
-			bHDR(bHDR),
-			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
+		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
+			VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{
-		}
-
-		void VulkanTexture::Reload()
-		{
-			// TODO: Implement
-		}
-
-		std::string VulkanTexture::GetRelativeFilePath() const
-		{
-			return relativeFilePath;
-		}
-
-		std::string VulkanTexture::GetName() const
-		{
-			return name;
-		}
-
-		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
-		{
-			assert(width != 0 && height != 0);
+			assert(inWidth != 0 && inHeight != 0);
 			assert(buffer != nullptr);
+			assert(bufferSize != 0);
 			assert((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
+
+			width = inWidth;
+			height = inHeight;
+			channelCount = inChannelCount;
+			imageFormat = inFormat;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.DBG_Name = name.c_str();
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
 			imageCreateInfo.format = inFormat;
-			imageCreateInfo.width = (u32)width;
-			imageCreateInfo.height = (u32)height;
+			imageCreateInfo.width = inWidth;
+			imageCreateInfo.height = inHeight;
 			imageCreateInfo.arrayLayers = layerCount;
 			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -334,7 +306,6 @@ namespace flex
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
 
 			imageLayout = imageCreateInfo.initialLayout;
-			imageFormat = inFormat;
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
 			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -400,11 +371,14 @@ namespace flex
 			height = inHeight;
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
+		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
-			assert(width > 0);
-			assert(height > 0);
+			assert(inWidth > 0);
+			assert(inHeight > 0);
 
+			width = inWidth;
+			height = inHeight;
+			channelCount = inChannelCount;
 			mipLevels = inMipLevels;
 			imageFormat = inFormat;
 
@@ -412,8 +386,8 @@ namespace flex
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
 			imageCreateInfo.format = inFormat;
-			imageCreateInfo.width = width;
-			imageCreateInfo.height = height;
+			imageCreateInfo.width = inWidth;
+			imageCreateInfo.height = inHeight;
 			imageCreateInfo.mipLevels = inMipLevels;
 			imageCreateInfo.usage = inUsage;
 			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -510,11 +484,15 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
-			assert(width > 0);
-			assert(height > 0);
-			assert(channelCount > 0);
+			assert(inWidth > 0);
+			assert(inHeight > 0);
+			assert(inChannelCount > 0);
+
+			width = inWidth;
+			height = inHeight;
+			channelCount = inChannelCount;
 
 			CubemapCreateInfo createInfo = {};
 			createInfo.image = &image;
@@ -573,6 +551,7 @@ namespace flex
 				{
 					const char* failureReasonStr = stbi_failure_reason();
 					PrintError("CreateCubemapFromTextures failed to load image %s, failure reason: %s\n", path.c_str(), failureReasonStr);
+					// NOTE: Potential leak of pixels from other images, too annoying to fix though, won't occur normally
 					return 0;
 				}
 				width = (u32)w;
@@ -596,6 +575,7 @@ namespace flex
 			if (pixels == nullptr)
 			{
 				PrintError("CreateCubemapFromTextures Failed to allocate %u bytes\n", totalSize);
+				// NOTE: Leak of all pixel data
 				return 0;
 			}
 
@@ -603,6 +583,7 @@ namespace flex
 			for (Image& cubeImage : images)
 			{
 				memcpy(pixelData, cubeImage.pixels, cubeImage.size);
+
 				pixelData += (cubeImage.size / sizeof(unsigned char));
 				stbi_image_free(cubeImage.pixels);
 			}
@@ -616,7 +597,6 @@ namespace flex
 			stagingBuffer.Unmap();
 			free(pixels);
 
-
 			CubemapCreateInfo createInfo = {};
 			createInfo.image = &image;
 			createInfo.imageMemory = &imageMemory;
@@ -629,6 +609,10 @@ namespace flex
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
 
+			if (imageSize == 0)
+			{
+				return 0;
+			}
 
 			// Image barrier for optimal image (target)
 			// Set initial layout for all array layers (faces) of the optimal (target) tiled texture
@@ -670,6 +654,7 @@ namespace flex
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				subresourceRange);
+			// TODO: Set smaller range with srcStageMask & dstStageMask?
 
 			// Copy the cube map faces from the staging buffer to the optimal tiled image
 			vkCmdCopyBufferToImage(
@@ -698,32 +683,42 @@ namespace flex
 		{
 			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
 
-			if (imageLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+			VkImageSubresourceRange subresourceRange = {};
+			subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			subresourceRange.layerCount = 1;
+			subresourceRange.levelCount = 1;
+
+			// Transition first mip to transfer src
 			{
-				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+				VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+				barrier.image = image;
+				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				barrier.oldLayout = imageLayout;
+				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+				barrier.subresourceRange = subresourceRange;
+
+				vkCmdPipelineBarrier(cmdBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier);
 			}
 
 			VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
 			barrier.image = image;
 			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			barrier.subresourceRange.baseArrayLayer = 0;
 			barrier.subresourceRange.layerCount = 1;
 			barrier.subresourceRange.levelCount = 1;
 
 			i32 mipWidth = width;
 			i32 mipHeight = height;
 
+			// Copy mips down from i-1 to i iteratively, halving each time
 			for (u32 i = 1; i < mipLevels; ++i)
 			{
-				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
-				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
-
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				barrier.subresourceRange.baseMipLevel = i - 1;
-
 				VkImageSubresourceLayers srcSubresource = {};
 				srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				srcSubresource.mipLevel = i - 1;
@@ -736,6 +731,9 @@ namespace flex
 				dstSubresource.baseArrayLayer = 0;
 				dstSubresource.layerCount = 1;
 
+				i32 nextMipWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+				i32 nextMipHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+
 				VkImageBlit blitRegion = {};
 				blitRegion.srcOffsets[0] = { 0, 0, 0 };
 				blitRegion.srcOffsets[1] = { mipWidth, mipHeight, 1 };
@@ -744,33 +742,67 @@ namespace flex
 				blitRegion.srcSubresource = srcSubresource;
 				blitRegion.dstSubresource = dstSubresource;
 
-				vkCmdBlitImage(cmdBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blitRegion, VK_FILTER_LINEAR);
+				barrier.subresourceRange.baseMipLevel = i;// -1;
 
-				barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-				barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				// Transition blit region to transfer dest
+				{
+					barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					barrier.srcAccessMask = 0;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-				vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier);
+					vkCmdPipelineBarrier(cmdBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,        // Wait on any previous _transfer work_ before
+						VK_PIPELINE_STAGE_TRANSFER_BIT, // doing any _fragment work_
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+				}
+
+				// Dispatch downsample
+				vkCmdBlitImage(cmdBuffer,
+					image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1, &blitRegion, VK_FILTER_LINEAR);
+
+				// Transition current mip level to src for next level
+				{
+					barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+					barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+					barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+					vkCmdPipelineBarrier(cmdBuffer,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						VK_PIPELINE_STAGE_TRANSFER_BIT,
+						0,
+						0, nullptr,
+						0, nullptr,
+						1, &barrier);
+				}
 
 				mipWidth = nextMipWidth;
 				mipHeight = nextMipHeight;
 			}
 
-			// Transition final mip layer
-			barrier.subresourceRange.baseMipLevel = mipLevels - 1;
-			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			// Transition all layers from transfer src to shader readable
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = mipLevels;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-			vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			vkCmdPipelineBarrier(cmdBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				0,
 				0, nullptr,
 				0, nullptr,
 				1, &barrier);
+
+			imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
 		}
@@ -814,7 +846,8 @@ namespace flex
 			if (result != VK_SUCCESS)
 			{
 				// TODO: Handle error gracefully
-				PrintError("VulkanTexture::CreateImage > Invalid image format!\n");
+				PrintError("VulkanTexture::CreateImage: Invalid image format!\n");
+				return 0;
 			}
 
 			VK_CHECK_RESULT(vkCreateImage(device->m_LogicalDevice, &imageInfo, nullptr, createInfo.image));
@@ -833,16 +866,70 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromFile(VkFormat inFormat, bool bGenerateFullMipChain /* = false */)
+		VkDeviceSize VulkanTexture::CreateFromFile(
+			const std::string& inRelativeFilePath,
+			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
+			bool bGenerateFullMipChain /* = false */)
 		{
-			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			relativeFilePath = inRelativeFilePath;
+			fileName = StripLeadingDirectories(inRelativeFilePath);
+
+			if (g_bEnableLogging_Loading)
+			{
+				Print("Loading texture %s\n", fileName.c_str());
+			}
+
+			width = height = channelCount = 0;
+
+			// TODO: Make HDRImage subclass of Image class to unify code paths here
+			HDRImage hdrImage;
+			unsigned char* pixels = nullptr;
+
+			// TODO: Unify hdr path with non-hdr & cubemap paths
+			if (bHDR)
+			{
+				if (hdrImage.Load(relativeFilePath, 4, false))
+				{
+					width = hdrImage.width;
+					height = hdrImage.height;
+					channelCount = hdrImage.channelCount;
+				}
+			}
+			else
+			{
+				int w, h, c;
+				pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
+
+				if (pixels != nullptr)
+				{
+					width = (u32)w;
+					height = (u32)h;
+					channelCount = (u32)c;
+				}
+			}
+
+			if (width == 0 || height == 0 || channelCount == 0 ||
+				((bHDR && hdrImage.pixels == nullptr) || (!bHDR && pixels == nullptr)))
+			{
+				const char* failureReasonStr = stbi_failure_reason();
+				PrintError("Failed to load texture data from %s error: %s\n", relativeFilePath.c_str(), failureReasonStr);
+				return 0;
+			}
+
+			channelCount = 4; // ??
+
+			if (inFormat == VK_FORMAT_UNDEFINED)
+			{
+				inFormat = CalculateFormat();
+			}
+			imageFormat = inFormat;
 
 			if (bGenerateFullMipChain)
 			{
 				bool bFormatSupportsBlit = true;
 
 				VkFormatProperties formatProps;
-				vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, inFormat, &formatProps);
+				vkGetPhysicalDeviceFormatProperties(m_VulkanDevice->m_PhysicalDevice, imageFormat, &formatProps);
 				if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
 				{
 					bFormatSupportsBlit = false;
@@ -855,204 +942,103 @@ namespace flex
 				}
 			}
 
-			// TODO: Unify hdr path with non-hdr & cubemap paths
+			if (bGenerateFullMipChain)
+			{
+				// Mip levels going down to 2x2
+				mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
+			}
+
+			ImageCreateInfo imageCreateInfo = {};
+			imageCreateInfo.image = image.replace();
+			imageCreateInfo.imageMemory = imageMemory.replace();
+			imageCreateInfo.format = imageFormat;
+			imageCreateInfo.width = (u32)width;
+			imageCreateInfo.height = (u32)height;
+			imageCreateInfo.mipLevels = mipLevels;
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
+			imageCreateInfo.usage =
+				VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+				VK_IMAGE_USAGE_SAMPLED_BIT |
+				(bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
+
+			u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
+
+			if (imageSize == 0)
+			{
+				width = 0;
+				height = 0;
+				channelCount = 0;
+				return 0;
+			}
+
+			imageLayout = imageCreateInfo.initialLayout;
+
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+			u32 pixelBufSize = bHDR ?
+				(u32)(width * height * channelCount * sizeof(real)) :
+				(u32)(width * height * channelCount * sizeof(unsigned char));
+
+			void* data = nullptr;
+			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
 			if (bHDR)
 			{
-				HDRImage hdrImage = {};
-				if (!hdrImage.Load(relativeFilePath, 4, false))
-				{
-					const char* failureReasonStr = stbi_failure_reason();
-					PrintError("Couldn't load HDR image, failure reason: %s, filepath: %s\n", failureReasonStr, relativeFilePath.c_str());
-					return 0;
-				}
-
-				width = hdrImage.width;
-				height = hdrImage.height;
-				channelCount = hdrImage.channelCount;
-
-				if (width == 0 ||
-					height == 0 ||
-					channelCount == 0)
-				{
-					PrintError("Failed to load in hdr texture data from %s\n", relativeFilePath.c_str());
-					return 0;
-				}
-
-				if (bGenerateFullMipChain)
-				{
-					mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
-				}
-
-				ImageCreateInfo imageCreateInfo = {};
-				imageCreateInfo.image = image.replace();
-				imageCreateInfo.imageMemory = imageMemory.replace();
-				imageCreateInfo.format = inFormat;
-				imageCreateInfo.width = (u32)width;
-				imageCreateInfo.height = (u32)height;
-				imageCreateInfo.mipLevels = mipLevels;
-				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-
-				u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
-
-				imageFormat = inFormat;
-				imageLayout = imageCreateInfo.initialLayout;
-
-				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(real));
-				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(real));
-
-
-				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-				void* data = nullptr;
-				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
 				memcpy(data, hdrImage.pixels, (size_t)pixelBufSize);
-				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
-
-				hdrImage.Free();
-
-				{
-					VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
-					std::string debugMarkerStr = "Uploading texture data from " + fileName;
-					VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
-
-					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
-					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					if (!bGenerateFullMipChain)
-					{
-						// If generating mipmaps we'll be blitting to and from this image
-						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
-					}
-
-					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
-				}
-
-				ImageViewCreateInfo viewCreateInfo = {};
-				viewCreateInfo.format = inFormat;
-				viewCreateInfo.image = &image;
-				viewCreateInfo.imageView = &imageView;
-				viewCreateInfo.mipLevels = mipLevels;
-				CreateImageView(m_VulkanDevice, viewCreateInfo);
-
-				SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = &sampler;
-				samplerCreateInfo.maxLod = (real)mipLevels;
-				CreateSampler(m_VulkanDevice, samplerCreateInfo);
-
-				if (bGenerateFullMipChain)
-				{
-					GenerateMipmaps();
-				}
-
-				return imageSize;
 			}
 			else
 			{
-				if (g_bEnableLogging_Loading)
-				{
-					Print("Loading texture %s\n", fileName.c_str());
-				}
-
-				int w, h, c;
-				unsigned char* pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
-				width = (u32)w;
-				height = (u32)h;
-				channelCount = (u32)c;
-
-				if (!pixels)
-				{
-					const char* failureReasonStr = stbi_failure_reason();
-					PrintError("Couldn't load image, failure reason: %s, filepath: %s\n", failureReasonStr, relativeFilePath.c_str());
-					return 0;
-				}
-
-				channelCount = 4;
-
-				if (width == 0 ||
-					height == 0 ||
-					channelCount == 0)
-				{
-					PrintError("Failed to load in texture data from %s\n", relativeFilePath.c_str());
-					return 0;
-				}
-
-				if (bGenerateFullMipChain)
-				{
-					mipLevels = (u32)(glm::log2((real)glm::max(width, height))) + 1;
-				}
-
-				ImageCreateInfo imageCreateInfo = {};
-				imageCreateInfo.image = image.replace();
-				imageCreateInfo.imageMemory = imageMemory.replace();
-				imageCreateInfo.format = inFormat;
-				imageCreateInfo.width = (u32)width;
-				imageCreateInfo.height = (u32)height;
-				imageCreateInfo.mipLevels = mipLevels;
-				imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-				imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-				imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | (bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
-				imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-				imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_PREINITIALIZED;
-
-				u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
-
-				imageLayout = imageCreateInfo.initialLayout;
-				imageFormat = inFormat;
-
-				u32 pixelBufSize = (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
-				u32 textureSize = imageSize;// (VkDeviceSize)(width * height * channelCount * sizeof(unsigned char));
-
-				stagingBuffer.Create(textureSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-				void* data = nullptr;
-				VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, textureSize, 0, &data));
 				memcpy(data, pixels, (size_t)pixelBufSize);
-				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
-
-				stbi_image_free(pixels);
-
-				{
-					VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
-					std::string debugMarkerStr = "Uploading texture data from " + fileName;
-					VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
-
-					TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
-					CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
-					if (!bGenerateFullMipChain)
-					{
-						// If generating mipmaps we'll be blitting to and from this image
-						TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
-					}
-
-					VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-					EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
-				}
-
-				ImageViewCreateInfo viewCreateInfo = {};
-				viewCreateInfo.format = inFormat;
-				viewCreateInfo.image = &image;
-				viewCreateInfo.imageView = &imageView;
-				viewCreateInfo.mipLevels = mipLevels;
-				CreateImageView(m_VulkanDevice, viewCreateInfo);
-
-				SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = &sampler;
-				samplerCreateInfo.maxLod = (real)mipLevels;
-				CreateSampler(m_VulkanDevice, samplerCreateInfo);
-
-				if (bGenerateFullMipChain)
-				{
-					GenerateMipmaps();
-				}
-
-				return imageSize;
 			}
 
-			return 0;
+			if (bHDR)
+			{
+				hdrImage.Free();
+			}
+			else
+			{
+				stbi_image_free(pixels);
+			}
+
+			// Upload data via staging buffer
+			{
+				VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+				std::string debugMarkerStr = "Uploading texture data from " + fileName;
+				VulkanRenderer::BeginDebugMarkerRegion(cmdBuffer, debugMarkerStr.c_str());
+
+				TransitionToLayout(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, cmdBuffer);
+				CopyFromBuffer(stagingBuffer.m_Buffer, width, height, cmdBuffer);
+				if (!bGenerateFullMipChain)
+				{
+					// If generating mipmaps we'll be blitting to and from this image
+					TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
+				}
+
+				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+			}
+
+			ImageViewCreateInfo viewCreateInfo = {};
+			viewCreateInfo.format = imageFormat;
+			viewCreateInfo.image = &image;
+			viewCreateInfo.imageView = &imageView;
+			viewCreateInfo.mipLevels = mipLevels;
+			CreateImageView(m_VulkanDevice, viewCreateInfo);
+
+			SamplerCreateInfo samplerCreateInfo = {};
+			samplerCreateInfo.sampler = &sampler;
+			samplerCreateInfo.maxLod = (real)mipLevels;
+			CreateSampler(m_VulkanDevice, samplerCreateInfo);
+
+			if (bGenerateFullMipChain)
+			{
+				GenerateMipmaps();
+			}
+
+			return imageSize;
 		}
 
 		void VulkanTexture::CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo)
@@ -1132,7 +1118,7 @@ namespace flex
 				VkImage dstImage;
 				VkImageCreateInfo createInfo = vks::imageCreateInfo();
 				createInfo.imageType = VK_IMAGE_TYPE_2D;
-				// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain color format would differ
+				// Note that vkCmdBlitImage (if supported) will also do format conversions if the swapchain colour format would differ
 				createInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
 				createInfo.extent.width = width;
 				createInfo.extent.height = height;
@@ -1240,15 +1226,15 @@ namespace flex
 				const u8* data;
 				vkMapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, 0, VK_WHOLE_SIZE, 0, (void**)&data);
 
-				bool bColorSwizzle = false;
+				bool bColourSwizzle = false;
 				// Check if source is BGR
 				if (!bSupportsBlit)
 				{
 					std::vector<VkFormat> formatsBGR = { VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_B8G8R8A8_SNORM, VK_FORMAT_B8G8R8A8_UINT, VK_FORMAT_B8G8R8A8_SINT };
-					bColorSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
+					bColourSwizzle = (std::find(formatsBGR.begin(), formatsBGR.end(), imageFormat) != formatsBGR.end());
 				}
 
-				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, bColorSwizzle);
+				CopyPixels(data, u8Data, (u32)subResourceLayout.offset, width, height, channelCount, (u32)subResourceLayout.rowPitch, bColourSwizzle);
 
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
@@ -1551,7 +1537,9 @@ namespace flex
 			}
 
 			// TODO: Set src & dst stage masks intelligently
-			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			vkCmdPipelineBarrier(commandBuffer,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
@@ -1596,10 +1584,11 @@ namespace flex
 			}
 		}
 
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image, u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = 0 */)
+		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+			u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
 			VkCommandBuffer commandBuffer = optCommandBuffer;
-			if (commandBuffer == 0)
+			if (commandBuffer == VK_NULL_HANDLE)
 			{
 				commandBuffer = BeginSingleTimeCommands(device);
 			}
@@ -1621,7 +1610,7 @@ namespace flex
 
 			vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-			if (optCommandBuffer == 0)
+			if (optCommandBuffer == VK_NULL_HANDLE)
 			{
 				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
 			}
@@ -1689,10 +1678,58 @@ namespace flex
 			return indices;
 		}
 
-		VulkanRenderObject::VulkanRenderObject(const VDeleter<VkDevice>& device, RenderID renderID) :
-			renderID(renderID),
-			graphicsPipeline(device)
+		VulkanRenderObject::VulkanRenderObject(RenderID renderID) :
+			renderID(renderID)
 		{
+		}
+
+		bool GraphicsPipelineCreateInfo::operator=(const GraphicsPipelineCreateInfo& other)
+		{
+			// TODO: memcmp
+			return shaderID == other.shaderID &&
+				vertexAttributes == other.vertexAttributes &&
+				topology == other.topology &&
+				cullMode == other.cullMode &&
+				renderPass == other.renderPass &&
+				subpass == other.subpass &&
+				pushConstantRangeCount == other.pushConstantRangeCount &&
+				descriptorSetLayoutIndex == other.descriptorSetLayoutIndex &&
+				bSetDynamicStates == other.bSetDynamicStates &&
+				bEnableColourBlending == other.bEnableColourBlending &&
+				bEnableAdditiveColourBlending == other.bEnableAdditiveColourBlending &&
+				depthTestEnable == other.depthTestEnable &&
+				depthWriteEnable == other.depthWriteEnable &&
+				depthCompareOp == other.depthCompareOp &&
+				stencilTestEnable == other.stencilTestEnable;
+			// TODO: Check push constant value count/types?
+		}
+
+		u64 GraphicsPipelineCreateInfo::Hash()
+		{
+			// NOTE: Is this hash cryptographically secure? Heck no! Does it work for my purposes? Yes it does :)
+			u64 result = 0;
+
+			result += (u64)shaderID * 11;
+			result += (u64)vertexAttributes * 2;
+			result += (u64)topology * 5;
+			result <<= 2;
+			result *= 982451653;
+			result += (u64)cullMode * 3;
+			result += (u64)renderPass;
+			result += (u64)subpass * 5;
+			result += (u64)(pushConstantRangeCount + 1) * 7;
+			result += (u64)descriptorSetLayoutIndex * 13;
+			result += (u64)(bSetDynamicStates ? 68 : 458);
+			result += (u64)(bEnableColourBlending ? 19956 : 15485863);
+			result += (u64)(bEnableAdditiveColourBlending ? 898 : 123456789);
+			result += (u64)(depthTestEnable ? 77 : 2829);
+			result <<= 1;
+			result *= 492876847;
+			result += (u64)(depthWriteEnable ? 13 : 9);
+			result += (u64)depthCompareOp * 6;
+			result += (u64)(stencilTestEnable ? 3 : 199);
+
+			return result;
 		}
 
 		std::string VulkanErrorString(VkResult errorCode)
@@ -1727,7 +1764,7 @@ namespace flex
 				STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
 #undef STR
 			case VK_SUCCESS:
-				// No error to pri32
+				// No error to print
 				return "";
 			case VK_RESULT_RANGE_SIZE:
 			case VK_RESULT_MAX_ENUM:
@@ -1774,8 +1811,8 @@ namespace flex
 				break;
 
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-				// Image is a color attachment
-				// Make sure any writes to the color buffer have been finished
+				// Image is a colour attachment
+				// Make sure any writes to the colour buffer have been finished
 				imageMemoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				break;
 
@@ -1824,8 +1861,8 @@ namespace flex
 				break;
 
 			case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-				// Image will be used as a color attachment
-				// Make sure any writes to the color buffer have been finished
+				// Image will be used as a colour attachment
+				// Make sure any writes to the colour buffer have been finished
 				imageMemoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 				break;
 
@@ -1910,8 +1947,10 @@ namespace flex
 				1, &imageMemoryBarrier);
 		}
 
-		void CreateAttachment(VulkanDevice* device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height, u32 arrayLayers, VkImageViewType imageViewType,
-			VkImageCreateFlags imageFlags, VkImage* image, VkDeviceMemory* memory, VkImageView* imageView, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, VkFormat format, VkImageUsageFlags usage, u32 width, u32 height,
+			u32 arrayLayers, VkImageViewType imageViewType, VkImageCreateFlags imageFlags, VkImage* image,
+			VkDeviceMemory* memory, VkImageView* imageView,
+			const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
 			assert(format != VK_FORMAT_UNDEFINED);
 			assert(width != 0 && height != 0);
@@ -1937,7 +1976,7 @@ namespace flex
 
 			if (aspectMask == 0)
 			{
-				// NOTE: Assuming color here, if depth texture is needed without DEPTH_STENCIL_ATTACHMENT_BIT more robust solution is required
+				// NOTE: Assuming colour here, if depth texture is needed without DEPTH_STENCIL_ATTACHMENT_BIT more robust solution is required
 				aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 			}
 
@@ -1979,7 +2018,8 @@ namespace flex
 			VulkanRenderer::SetImageViewName(device, *imageView, DBG_ImageViewName);
 		}
 
-		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment, const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
+		void CreateAttachment(VulkanDevice* device, FrameBufferAttachment* frameBufferAttachment,
+			const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
 			if (frameBufferAttachment->image != VK_NULL_HANDLE)
 			{
@@ -2013,12 +2053,12 @@ namespace flex
 		}
 
 		template<class T>
-		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColorSwizzle)
+		void CopyPixels(const T* srcData, T* dstData, u32 dstOffset, u32 width, u32 height, u32 channelCount, u32 pitch, bool bColourSwizzle)
 		{
 			dstData += dstOffset;
 
 			i32 swizzle[4];
-			if (bColorSwizzle)
+			if (bColourSwizzle)
 			{
 				swizzle[0] = 2;
 				swizzle[1] = 1;
@@ -2264,15 +2304,8 @@ namespace flex
 			return &frameBuffer;
 		}
 
-		VulkanCubemapGBuffer::VulkanCubemapGBuffer(u32 id, const char* name, VkFormat internalFormat) :
-			id(id),
-			name(name),
-			internalFormat(internalFormat)
-		{
-		}
-
-		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, Shader* shader) :
-			shader(shader)
+		VulkanShader::VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo) :
+			Shader(shaderInfo)
 		{
 			vertShaderModule = { device, vkDestroyShaderModule };
 			fragShaderModule = { device, vkDestroyShaderModule };
@@ -2297,10 +2330,10 @@ namespace flex
 		{
 			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
-			const std::string spvDirectory = RelativePathToAbsolute(SPV_LOCATION);
-			if (!Platform::DirectoryExists(spvDirectory))
+			const std::string spvDirectoryAbs = RelativePathToAbsolute(COMPILED_SHADERS_DIRECTORY);
+			if (!Platform::DirectoryExists(spvDirectoryAbs))
 			{
-				Platform::CreateDirectoryRecursive(spvDirectory);
+				Platform::CreateDirectoryRecursive(spvDirectoryAbs);
 			}
 
 			// Absolute file path => checksum
@@ -2314,7 +2347,7 @@ namespace flex
 				const char* blockName = "Calculate shader contents checksum";
 				PROFILE_AUTO(blockName);
 
-				const std::string shaderInputDirectory = SHADER_SOURCE_LOCATION;
+				const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
 
 				if (FileExists(SHADER_CHECKSUM_LOCATION))
 				{
@@ -2353,32 +2386,64 @@ namespace flex
 				bSuccess = true;
 
 				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(SHADER_SOURCE_LOCATION, filePaths, "*"))
+				if (Platform::FindFilesInDirectory(SHADER_SOURCE_DIRECTORY, filePaths, "*"))
 				{
 					startTime = Time::CurrentMilliseconds();
 
 					u32 compiledShaderCount = 0;
 					u32 invalidShaderCount = 0;
 
-					//class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
-					//{
-					//	virtual shaderc_include_result* GetInclude(const char* requested_source,
-					//		shaderc_include_type type,
-					//		const char* requesting_source,
-					//		size_t include_depth) override
-					//	{
-					//		FLEX_UNUSED(type);
-					//		FLEX_UNUSED(include_depth);
-					//		Print("%s, requesting %s\n", requesting_source, requested_source);
-					//		shaderc_include_result* result;
-					//	}
+					class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
+					{
+						virtual shaderc_include_result* GetInclude(const char* requested_source,
+							shaderc_include_type type,
+							const char* requesting_source,
+							size_t include_depth) override
+						{
+							FLEX_UNUSED(type);
+							FLEX_UNUSED(requesting_source);
+							FLEX_UNUSED(include_depth);
 
-					//	virtual void ReleaseInclude(shaderc_include_result* data) override
-					//	{
-					//		FLEX_UNUSED(data);
-					//	}
-					//};
-					//FlexIncluder includer;
+							shaderc_include_result* result = new shaderc_include_result();
+
+							std::string requestedFilePath = SHADER_SOURCE_DIRECTORY + std::string(requested_source);
+							std::string fileContent;
+							if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, fileContent, false))
+							{
+								u32 requestedFilePathLen = (u32)requestedFilePath.size();
+								result->source_name = (const char*)malloc(requestedFilePathLen + 1);
+								memset((void*)result->source_name, 0, requestedFilePathLen + 1);
+								strncpy((char*)result->source_name, requestedFilePath.c_str(), requestedFilePathLen);
+								result->source_name_length = requestedFilePathLen;
+
+								u32 fileContentLen = (u32)fileContent.size();
+								result->content = (const char*)malloc(fileContentLen + 1);
+								memset((void*)result->content, 0, fileContentLen + 1);
+								strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
+								result->content_length = strlen(result->content);
+							}
+							else
+							{
+								result->source_name = "";
+								result->source_name_length = 0;
+								result->content = "Failed to include shader";
+								result->content_length = strlen(result->content);
+							}
+
+							return result;
+						}
+
+						virtual void ReleaseInclude(shaderc_include_result* data) override
+						{
+							// This causes heap corruption for some reason... but it's leaking without this.
+							//if (data->source_name_length != 0)
+							//{
+							//	free((void*)data->source_name);
+							//	free((void*)data->content);
+							//}
+							delete data;
+						}
+					};
 
 					std::string newChecksumFileContents;
 
@@ -2393,7 +2458,7 @@ namespace flex
 						}
 
 						shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType);
-						if (shaderKind != -1)
+						if (shaderKind != (shaderc_shader_kind)-1)
 						{
 							const std::string fileName = StripLeadingDirectories(filePath);
 
@@ -2414,12 +2479,45 @@ namespace flex
 							{
 								shaderc::CompileOptions options = {};
 								options.SetOptimizationLevel(shaderc_optimization_level_performance);
+								// TODO: Remove for release builds
+								options.SetGenerateDebugInfo();
 								options.SetWarningsAsErrors();
+
+								options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
 								options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
-								//options.SetIncluder(std::unique_ptr<shaderc::CompileOptions::IncluderInterface>(includer));
+								options.SetIncluder(std::make_unique<FlexIncluder>());
 
-								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str());
+								if (bEnableAssemblyCompilation)
+								{
+									shaderc::AssemblyCompilationResult assemblyResult = compiler.CompileGlslToSpvAssembly(fileContents, shaderKind, fileName.c_str(), options);
+									if (assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success)
+									{
+										std::vector<char> spvBytes(assemblyResult.begin(), assemblyResult.end());
+										std::string strippedFileName = StripFileType(fileName);
+										std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".asm";
+										std::ofstream fileStream(spvFilePath, std::ios::out);
+										if (fileStream.is_open())
+										{
+											fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(char));
+											fileStream.close();
+										}
+									}
+									else
+									{
+										if (g_bEnableLogging_Shaders)
+										{
+											PrintWarn("%lu shader compilation errors, %lu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
+										}
+										std::string errorStr = assemblyResult.GetErrorMessage();
+										if (g_bEnableLogging_Shaders)
+										{
+											PrintWarn("%s\n", errorStr.c_str());
+										}
+									}
+								}
+
+								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str(), options);
 								if (result.GetCompilationStatus() == shaderc_compilation_status_success)
 								{
 									Print("Compiled %s\n", fileName.c_str());
@@ -2431,7 +2529,7 @@ namespace flex
 
 									std::vector<u32> spvBytes(result.begin(), result.end());
 									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = RelativePathToAbsolute(SPV_LOCATION) + strippedFileName + "_" + fileType + ".spv";
+									std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".spv";
 									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 									if (fileStream.is_open())
 									{
@@ -2447,6 +2545,10 @@ namespace flex
 								}
 								else
 								{
+									if (g_bEnableLogging_Shaders)
+									{
+										PrintWarn("%lu shader compilation errors, %lu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
+									}
 									std::string errorStr = result.GetErrorMessage();
 									if (g_bEnableLogging_Shaders)
 									{
@@ -2480,12 +2582,6 @@ namespace flex
 								bSuccess = false;
 							}
 						}
-						else
-						{
-							PrintError("Unhandled shader kind %s\n", filePath.c_str());
-							DEBUG_BREAK();
-							bSuccess = false;
-						}
 					}
 
 					for (auto iter = compiledShaders.begin(); iter != compiledShaders.end(); ++iter)
@@ -2504,7 +2600,7 @@ namespace flex
 						}
 						else
 						{
-							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_LOCATION);
+							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
 						}
 					}
 
@@ -2538,10 +2634,10 @@ namespace flex
 
 		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
 		{
-			if (FileExists(SHADER_SOURCE_LOCATION))
+			if (FileExists(SHADER_SOURCE_DIRECTORY))
 			{
 				std::string fileContents;
-				if (ReadFile(SHADER_SOURCE_LOCATION, fileContents, false))
+				if (ReadFile(SHADER_SOURCE_DIRECTORY, fileContents, false))
 				{
 					std::string searchStr = "vk_" + shaderName + '.';
 					size_t index = 0;
@@ -2569,52 +2665,56 @@ namespace flex
 			}
 		}
 
-		void VulkanShaderCompiler::DisplayShaderErrorsImGui(bool* bWindowShowing)
+		void VulkanShaderCompiler::DrawImGuiShaderErrorsWindow(bool* bWindowShowing)
 		{
 			if (!s_ShaderErrors.empty())
 			{
 				if (bWindowShowing == nullptr || *bWindowShowing)
 				{
 					ImGui::SetNextWindowSize(ImVec2(800.0f, 150.0f), ImGuiCond_Appearing);
-					if (bWindowShowing != nullptr && ImGui::Begin("Shader errors", bWindowShowing))
+					if (ImGui::Begin("Shader errors", bWindowShowing))
 					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-						ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
-						ImGui::PopStyleColor();
+						DrawImGuiShaderErrors();
+					}
 
-						ImGui::Separator();
+					ImGui::End();
+				}
+			}
+		}
 
-						for (const ShaderError& shaderError : s_ShaderErrors)
+		void VulkanShaderCompiler::DrawImGuiShaderErrors()
+		{
+			if (!s_ShaderErrors.empty())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+				ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
+				ImGui::PopStyleColor();
+
+				ImGui::Separator();
+
+				for (const ShaderError& shaderError : s_ShaderErrors)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+					ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
+					ImGui::PopStyleColor();
+
+					std::string fileName = StripLeadingDirectories(shaderError.filePath);
+					std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
+					if (ImGui::Button(openStr.c_str()))
+					{
+						std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
+						if (shaderEditorPath.empty())
 						{
-							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-							ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
-							ImGui::PopStyleColor();
-
-							std::string fileName = StripLeadingDirectories(shaderError.filePath);
-							std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
-							if (ImGui::Button(openStr.c_str()))
-							{
-								std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
-								if (shaderEditorPath.empty())
-								{
-									Platform::OpenFileWithDefaultApplication(shaderError.filePath);
-								}
-								else
-								{
-									std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
-									Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
-								}
-							}
-
-							ImGui::Separator();
+							Platform::OpenFileWithDefaultApplication(shaderError.filePath);
 						}
-
+						else
+						{
+							std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+							Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
+						}
 					}
 
-					if (bWindowShowing != nullptr)
-					{
-						ImGui::End();
-					}
+					ImGui::Separator();
 				}
 			}
 		}
@@ -2640,12 +2740,64 @@ namespace flex
 			if (bGoodStart && bGoodEnd)
 			{
 				std::string fileContents;
-				if (ReadFile(filePath, fileContents, false))
+				if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
 				{
-					u64 i = 1;
+					const char* includeString = "include ";
+
+					u32 i = 1;
+					u32 fileContentsLen = (u32)fileContents.size();
 					for (char c : fileContents)
 					{
-						checksum += i * (u64)c;
+						if (c == '#' && i < (fileContentsLen + strlen(includeString)))
+						{
+							if (memcmp((void*)&fileContents[i], (void*)includeString, strlen(includeString)) == 0)
+							{
+								// Handle include
+								bool bFoundInclude = false;
+
+								size_t newLine = fileContents.find('\n', i);
+								if (newLine != std::string::npos)
+								{
+									u32 includePathStart = i + (u32)strlen(includeString);
+									std::string includePathRaw = fileContents.substr(includePathStart, newLine - includePathStart);
+									includePathRaw = Trim(includePathRaw);
+
+									if (includePathRaw.size() >= 3)
+									{
+										std::string includedPath;
+										if (includePathRaw[0] == '"')
+										{
+											size_t endQuote = includePathRaw.find('"', 1);
+											if (endQuote != std::string::npos)
+											{
+												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endQuote - 1);
+											}
+										}
+										else if (includePathRaw[0] == '<')
+										{
+											size_t endBracket = includePathRaw.find('>', 1);
+											if (endBracket != std::string::npos)
+											{
+												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endBracket - 1);
+											}
+										}
+
+										if (!includedPath.empty() && FileExists(includedPath))
+										{
+											bFoundInclude = true;
+											checksum += CalculteChecksum(includedPath);
+										}
+									}
+								}
+
+								if (!bFoundInclude)
+								{
+									PrintWarn("Invalid include directive in shader, ignoring.\n");
+								}
+							}
+						}
+
+						checksum += (u64)i * (u64)c;
 						++i;
 					}
 				}
@@ -2655,6 +2807,7 @@ namespace flex
 
 		bool VulkanShaderCompiler::TickStatus()
 		{
+			// TODO: Make async again
 			//sec now = Time::CurrentSeconds();
 			//secSinceStatusCheck += (now - lastTime);
 			//totalSecWaiting += (now - lastTime);
@@ -2696,7 +2849,7 @@ namespace flex
 
 		Cascade::~Cascade()
 		{
-			if (attachment)
+			if (attachment != nullptr)
 			{
 				// Prevent cleanup - cascade attachments don't own their resources, they just point at them
 				attachment->image = VK_NULL_HANDLE;
@@ -2705,6 +2858,12 @@ namespace flex
 				delete attachment;
 				attachment = nullptr;
 			}
+		}
+
+		UniformBufferList::UniformBufferList()
+		{
+			// Every instance will have at least one type
+			uniformBufferList.reserve(1);
 		}
 
 		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
@@ -2749,8 +2908,7 @@ namespace flex
 		}
 
 		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
-			computePipeline(device->m_LogicalDevice, vkDestroyPipeline),
-			graphicsPipeline(device->m_LogicalDevice, vkDestroyPipeline)
+			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{
 		}
 
@@ -2910,6 +3068,350 @@ namespace flex
 			}
 		}
 
+		VulkanDescriptorPool::VulkanDescriptorPool()
+		{
+		}
+
+		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device) :
+			device(device),
+			size(maxNumDescSets)
+		{
+			std::vector<VkDescriptorPoolSize> poolSizes
+			{
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
+			};
+
+			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxNumDescSets);
+			// TODO: Avoid using this flag at all
+			poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT; // Allow descriptor sets to be added/removed individually
+
+			VK_CHECK_RESULT(vkCreateDescriptorPool(device->m_LogicalDevice, &poolInfo, nullptr, &pool));
+		}
+
+		VulkanDescriptorPool::~VulkanDescriptorPool()
+		{
+			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
+		}
+
+		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
+		{
+			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
+			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(pool, layouts, 1);
+
+			if ((allocatedSetCount + 1) > maxNumDescSets)
+			{
+				// TODO: Create new pool or recreate and copy old one?
+				//maxNumDescSets *= 2;
+				assert(false);
+			}
+
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+			// TODO: Optimization: Allocate all required descriptor sets in one call rather than 1 at a time
+			VK_CHECK_RESULT(vkAllocateDescriptorSets(device->m_LogicalDevice, &allocInfo, &descriptorSet));
+
+			++allocatedSetCount;
+
+			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
+
+			UniformList constantBufferUniforms = shader->constantBufferUniforms;
+			UniformList dynamicBufferUniforms = shader->dynamicBufferUniforms;
+			UniformList additionalBufferUniforms = shader->additionalBufferUniforms;
+			UniformList textureUniforms = shader->textureUniforms;
+
+			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
+			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
+
+			u32 binding = 0;
+
+			std::vector<VkDescriptorBufferInfo> bufferInfos(createInfo->bufferDescriptors.Count());
+			u32 i = 0;
+			for (auto& pair : createInfo->bufferDescriptors)
+			{
+				const u64 uniformID = pair.uniformID;
+				const BufferDescriptorInfo& bufferDescInfo = pair.object;
+				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
+				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
+
+				VkDescriptorType type;
+				switch (bufferDescInfo.type)
+				{
+				case UniformBufferType::STATIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					break;
+				case UniformBufferType::DYNAMIC:
+					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::PARTICLE_DATA:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				default:
+					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
+					ENSURE_NO_ENTRY();
+					break;
+				}
+
+				VkDescriptorBufferInfo& bufferInfo = bufferInfos[i];
+				bufferInfo.buffer = pair.object.buffer;
+				bufferInfo.range = pair.object.bufferSize;
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, type, binding, &bufferInfo));
+
+				++binding;
+				++i;
+			}
+
+			std::vector<VkDescriptorImageInfo> imageInfos(createInfo->imageDescriptors.Count());
+			i = 0;
+			for (auto& pair : createInfo->imageDescriptors)
+			{
+				const u64 uniformID = pair.uniformID;
+				assert(textureUniforms.HasUniform(uniformID));
+				const ImageDescriptorInfo& imageDescInfo = pair.object;
+
+				VkDescriptorImageInfo& imageInfo = imageInfos[i];
+				imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				if (imageDescInfo.imageView != VK_NULL_HANDLE)
+				{
+					imageInfo.imageView = imageDescInfo.imageView;
+					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
+					{
+						imageInfo.sampler = imageDescInfo.imageSampler;
+					}
+					else
+					{
+						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_LinMipLinSampler;
+					}
+				}
+				else
+				{
+					VulkanTexture* blankTexture = ((VulkanTexture*)g_Renderer->m_BlankTexture);
+					imageInfo.imageView = blankTexture->imageView;
+					imageInfo.sampler = blankTexture->sampler;
+				}
+				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
+
+				++binding;
+				++i;
+			}
+
+			if (!writeDescriptorSets.empty())
+			{
+				vkUpdateDescriptorSets(device->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
+			}
+
+			if (createInfo->DBG_Name != nullptr)
+			{
+				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
+			}
+
+			return descriptorSet;
+		}
+
+		void VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
+		{
+			DescriptorSetCreateInfo createInfo = {};
+			createInfo.DBG_Name = DBG_Name;
+
+			if (descriptorSets.size() > materialID)
+			{
+				if (descriptorSets[materialID] != VK_NULL_HANDLE)
+				{
+					vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descriptorSets[materialID]);
+					descriptorSets[materialID] = VK_NULL_HANDLE;
+					--allocatedSetCount;
+				}
+			}
+
+			VulkanMaterial* material = (VulkanMaterial*)g_Renderer->GetMaterial(materialID);
+
+			createInfo.descriptorSetLayout = &descriptorSetLayouts[material->shaderID];
+			createInfo.shaderID = material->shaderID;
+			createInfo.uniformBufferList = &material->uniformBufferList;
+
+			((VulkanRenderer*)g_Renderer)->FillOutImageDescriptorInfos(&createInfo.imageDescriptors, materialID);
+			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
+
+			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
+			if (descriptorSets.size() <= materialID)
+			{
+				descriptorSets.resize(materialID + 1);
+			}
+			descriptorSets[materialID] = descriptorSet;
+		}
+
+		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
+		{
+			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
+			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
+
+			VulkanShader* shader = (VulkanShader*)g_Renderer->GetShader(shaderID);
+
+			struct DescriptorSetInfo
+			{
+				const Uniform& uniform;
+				VkDescriptorType descriptorType;
+				VkShaderStageFlags shaderStageFlags;
+			};
+
+			// TODO: Specify stage flags per shader
+			static DescriptorSetInfo descriptorSetInfos[] = {
+				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
+
+				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_FB_0_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_LTC_SAMPLER_0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_LTC_SAMPLER_1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_FRAGMENT_BIT },
+
+				{ U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_COMPUTE_BIT },
+			};
+
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+
+			for (DescriptorSetInfo& descSetInfo : descriptorSetInfos)
+			{
+				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->dynamicBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->additionalBufferUniforms.HasUniform(descSetInfo.uniform) ||
+					shader->textureUniforms.HasUniform(descSetInfo.uniform))
+				{
+					VkDescriptorSetLayoutBinding descSetLayoutBinding = {};
+					descSetLayoutBinding.binding = (u32)bindings.size();
+					descSetLayoutBinding.descriptorCount = 1;
+					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
+					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
+					bindings.push_back(descSetLayoutBinding);
+				}
+			}
+
+			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
+
+			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+		}
+
+		void VulkanDescriptorPool::Replace()
+		{
+			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			{
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+			}
+			descriptorSetLayouts.clear();
+
+			descriptorSets.clear();
+
+			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
+			pool = VK_NULL_HANDLE;
+
+			allocatedSetCount = 0;
+		}
+
+		void VulkanDescriptorPool::Reset()
+		{
+			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			{
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+			}
+			descriptorSetLayouts.clear();
+			descriptorSets.clear();
+
+			vkResetDescriptorPool(device->m_LogicalDevice, pool, 0);
+
+			allocatedSetCount = 0;
+		}
+
+		void VulkanDescriptorPool::FreeSet(VkDescriptorSet descSet)
+		{
+			bool bFound = false;
+			for (u32 i = 0; i < descriptorSets.size(); ++i)
+			{
+				if (descriptorSets[i] == descSet)
+				{
+					descriptorSets[i] = VK_NULL_HANDLE;
+					--allocatedSetCount;
+					bFound = true;
+					break;
+				}
+			}
+
+			if (!bFound)
+			{
+				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %lu\n", (u64)descSet);
+			}
+
+			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
+		}
 	} // namespace vk
 } // namespace flex
 

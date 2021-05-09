@@ -47,7 +47,7 @@ void main()
     vec2 uvY = ex_WorldPos.xz * uboDynamic.textureScale;
     vec2 uvZ = ex_WorldPos.xy * uboDynamic.textureScale;
 
-    vec3 geomNorm = ex_TBN[2];
+    vec3 geomNorm = normalize(ex_TBN[2]);
 
 	vec3 albedo;
     if (uboDynamic.enableAlbedoSampler)
@@ -56,10 +56,12 @@ void main()
 		vec3 albedoY = texture(albedoSampler, uvY).rgb * uboDynamic.constAlbedo.rgb;
 		vec3 albedoZ = texture(albedoSampler, uvZ).rgb * uboDynamic.constAlbedo.rgb;
 		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
-		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
-		albedo = albedoX * blendWeights.x +
+		blendWeights = blendWeights / max(blendWeights.x + blendWeights.y + blendWeights.z, 0.001);
+		albedo = clamp(
+				 albedoX * blendWeights.x +
 				 albedoY * blendWeights.y +
-				 albedoZ * blendWeights.z;
+				 albedoZ * blendWeights.z,
+				 0.0, 1.0);
     }
     else
     {
@@ -73,7 +75,7 @@ void main()
 		vec3 normalY = ex_TBN * (texture(normalSampler, uvY).xyz * 2 - 1);
 		vec3 normalZ = ex_TBN * (texture(normalSampler, uvZ).xyz * 2 - 1);
 		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
-		blendWeights = blendWeights / (blendWeights.x + blendWeights.y + blendWeights.z);
+		blendWeights = blendWeights / max(blendWeights.x + blendWeights.y + blendWeights.z, 0.001);
 		N = normalX * blendWeights.x +
 			normalY * blendWeights.y +
 			normalZ * blendWeights.z;
@@ -85,7 +87,8 @@ void main()
 	}
 
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
-	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
+	float roughnessAlpha = clamp((albedo.x-0.025)/(0.001), 0.0, 1.0);
+	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : mix(uboDynamic.constRoughness, 0.04, roughnessAlpha);
 
 	N = normalize(mat3(uboConstant.view) * N);
 

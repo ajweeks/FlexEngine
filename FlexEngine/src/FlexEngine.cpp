@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
+#include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -37,13 +38,21 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Profiler.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/CartManager.hpp"
+#include "Systems/TrackManager.hpp"
+#include "Systems/Systems.hpp"
 #include "Time.hpp"
+#include "UI.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
+#include "Variant.hpp"
+#include "VirtualMachine/Backend/FunctionBindings.hpp"
 
 #if COMPILE_OPEN_GL
 #include "Graphics/GL/GLRenderer.hpp"
@@ -69,9 +78,10 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 5;
+	const u32 FlexEngine::EngineVersionPatch = 6;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
+	std::string FlexEngine::s_ExecutablePath;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
 	// Globals declared in stdafx.hpp
@@ -79,11 +89,14 @@ namespace flex
 	class CameraManager* g_CameraManager = nullptr;
 	class InputManager* g_InputManager = nullptr;
 	class Renderer* g_Renderer = nullptr;
+	System* g_Systems[(i32)SystemType::_NONE];
 	class FlexEngine* g_EngineInstance = nullptr;
 	class Editor* g_Editor = nullptr;
 	class SceneManager* g_SceneManager = nullptr;
 	struct Monitor* g_Monitor = nullptr;
 	class PhysicsManager* g_PhysicsManager = nullptr;
+	class ResourceManager* g_ResourceManager = nullptr;
+	class UIManager* g_UIManager = nullptr;
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
@@ -100,6 +113,7 @@ namespace flex
 	{
 		std::srand((u32)time(NULL));
 
+		Platform::RetrievePathToExecutable();
 		Platform::RetrieveCurrentWorkingDirectory();
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
@@ -120,7 +134,7 @@ namespace flex
 		}
 
 		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_LOCATION);
+			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_DIRECTORY);
 			m_RenderDocSettingsFileName = "renderdoc.json";
 			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
 		}
@@ -171,9 +185,9 @@ namespace flex
 
 #ifdef DEBUG
 		const char* configStr = "Debug";
-#elif defined(DEVELOPMENT)
-		const char* configStr = "Development";
-#elif defined(SHIPPING)
+#elif defined(PROFILE)
+		const char* configStr = "Profile";
+#elif defined(RELEASE)
 #if defined(SYMBOLS)
 		const char* configStr = "Shipping (with symbols)";
 #else
@@ -220,6 +234,11 @@ namespace flex
 
 		CreateWindowAndRenderer();
 
+		g_ResourceManager = new ResourceManager();
+		g_ResourceManager->Initialize();
+
+		g_UIManager = new UIManager();
+
 		g_Editor = new Editor();
 
 		g_InputManager = new InputManager();
@@ -233,7 +252,7 @@ namespace flex
 		Print("Bullet v%d\n", btGetVersion());
 
 #if COMPILE_RENDERDOC_API
-		if (m_RenderDocAPI &&
+		if (m_RenderDocAPI != nullptr &&
 			m_RenderDocAutoCaptureFrameCount != -1 &&
 			m_RenderDocAutoCaptureFrameOffset == 0)
 		{
@@ -247,43 +266,81 @@ namespace flex
 
 		g_Editor->Initialize();
 
-		BaseScene::ParseFoundMeshFiles();
-		BaseScene::ParseFoundMaterialFiles();
-		BaseScene::ParseFoundPrefabFiles();
+		g_Systems[(i32)SystemType::PLUGGABLES] = new PluggablesSystem();
+		g_Systems[(i32)SystemType::PLUGGABLES]->Initialize();
+
+		g_Systems[(i32)SystemType::ROAD_MANAGER] = new RoadManager();
+		g_Systems[(i32)SystemType::ROAD_MANAGER]->Initialize();
+
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager();
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Initialize();
+
+		g_Systems[(i32)SystemType::TRACK_MANAGER] = new TrackManager();
+
+		g_Systems[(i32)SystemType::CART_MANAGER] = new CartManager();
+
+		g_ResourceManager->DiscoverMeshes();
+		g_ResourceManager->ParseMaterialsFile();
+		g_ResourceManager->ParseFontFile();
 
 		g_SceneManager = new SceneManager();
 		g_SceneManager->AddFoundScenes();
 
-		LoadCommonSettingsFromDisk();
+		if (!LoadCommonSettingsFromDisk())
+		{
+			// Common file doesn't exist or is corrupt, load first present scene
+			g_SceneManager->SetNextSceneActive();
+			// Set timer to max value so new config file will be immediately written to disk
+			m_SecondsSinceLastCommonSettingsFileSave = m_SecondsBetweenCommonSettingsFileSave;
+		}
+
+		g_UIManager->Initialize();
 
 		ImGui::CreateContext();
 		SetupImGuiStyles();
 
-		g_SceneManager->InitializeCurrentScene();
-		g_Renderer->PostInitialize();
-		g_SceneManager->PostInitializeCurrentScene();
 		g_Editor->PostInitialize();
 
-		g_InputManager->Initialize();
+		g_Renderer->PostInitialize();
 
-		g_CameraManager->Initialize();
+		g_InputManager->Initialize();
 
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 99);
 		g_InputManager->BindKeyEventCallback(&m_KeyEventCallback, 10);
 		g_InputManager->BindActionCallback(&m_ActionCallback, 10);
 
+		// Must be called post scene load
+		g_Systems[(i32)SystemType::TRACK_MANAGER]->Initialize();
+		g_Systems[(i32)SystemType::CART_MANAGER]->Initialize();
+
 		if (s_AudioSourceIDs.empty())
 		{
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_LOCATION "blip.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 100.727f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 200.068f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 300.811f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 400.645f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 500.099f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 600.091f));
-			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 700.20f));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 523.25f)); // C5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 587.33f)); // D5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 659.25f)); // E5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 698.46f)); // F5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 783.99f)); // G5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 880.00f)); // A5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 987.77f)); // B5
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1046.50f)); // C6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1174.66f)); // D6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1318.51f)); // E6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1396.91f)); // F6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1567.98f)); // G6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1760.00f)); // A6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 1975.53f)); // B6
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 2093.00f)); // C7
+			for (u32 i = (u32)SoundEffect::synthesized_00; i <= (u32)SoundEffect::synthesized_14; ++i)
+			{
+				AudioManager::SetSourceGain(s_AudioSourceIDs[i], 0.5f);
+			}
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeMelody()); // melody
+			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0], 0.5f);
+			s_AudioSourceIDs.push_back(AudioManager::SynthesizeMelody(500.0f)); // melody fast
+			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0_fast], 0.5f);
 		}
 
 		i32 springCount = 6;
@@ -312,20 +369,59 @@ namespace flex
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
 		io.IniSavingRate = 10.0f;
 
-
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.emplace_back("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); });
-		m_ConsoleCommands.emplace_back("reload.scene.hard", []()
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard", []()
 		{
-			MeshComponent::DestroyAllLoadedMeshes();
+			g_ResourceManager->DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
-		});
-		m_ConsoleCommands.emplace_back("reload.shaders", []() { g_Renderer->RecompileShaders(false); });
-		m_ConsoleCommands.emplace_back("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); });
-		m_ConsoleCommands.emplace_back("reload.fontsdfs", []() { g_Renderer->LoadFonts(true); });
-		m_ConsoleCommands.emplace_back("reload.skybox", []() { g_Renderer->ReloadSkybox(true); });
-		m_ConsoleCommands.emplace_back("select.all", []() { g_Editor->SelectAll(); });
-		m_ConsoleCommands.emplace_back("select.none", []() { g_Editor->SelectNone(); });
+		}));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders", []() { g_Renderer->RecompileShaders(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all", []() { g_Editor->SelectAll(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none", []() { g_Editor->SelectNone(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit", []() { g_EngineInstance->Stop(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off", []() { g_Renderer->SetTAAEnabled(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa", []() { g_Renderer->SetTAAEnabled(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled", []() { return Variant(g_Renderer->IsTAAEnabled()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.get",
+			[]()
+		{
+			return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay());
+		}));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.set",
+			[](const Variant& time)
+		{
+			real timeFloat = time.AsFloat();
+			g_SceneManager->CurrentScene()->SetTimeOfDay(timeFloat);
+		}, Variant::Type::FLOAT));
+
+		// TODO: Add usage helper (e.g. "inventory.add ["item_name"] [count]")
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("inventory.add",
+			[](const Variant& item, const Variant& count) -> Variant {
+				{
+					i32 countInt = count.AsInt();
+
+					const char* itemName = item.AsString();
+					PrefabID prefabID = g_ResourceManager->GetPrefabID(itemName);
+
+					if (prefabID.IsValid() &&
+						countInt > 0 && countInt < (Player::MAX_STACK_SIZE * Player::INVENTORY_ITEM_COUNT))
+					{
+						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+						if (player != nullptr)
+						{
+							player->AddToInventory(prefabID, countInt);
+						}
+					}
+					return Variant();
+				}
+		}, Variant::Type::VOID,
+			Variant::Type::STRING, Variant::Type::INT));
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -352,19 +448,30 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
+		g_Renderer->DestroyPersistentObjects();
 		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();
+		g_ResourceManager->Destroy();
+		g_UIManager->Destroy();
 		DestroyWindowAndRenderer();
-		MeshComponent::DestroyAllLoadedMeshes();
+		g_ResourceManager->DestroyAllLoadedMeshes();
 
 		AudioManager::Destroy();
+
+		for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+		{
+			g_Systems[i]->Destroy();
+		}
 
 		delete g_SceneManager;
 		g_SceneManager = nullptr;
 
 		delete g_PhysicsManager;
 		g_PhysicsManager = nullptr;
+
+		delete g_ResourceManager;
+		g_ResourceManager = nullptr;
 
 		delete g_CameraManager;
 		g_CameraManager = nullptr;
@@ -379,7 +486,7 @@ namespace flex
 		g_InputManager = nullptr;
 
 
-		// Reset console color to default
+		// Reset console colour to default
 		Print("\n");
 	}
 
@@ -484,14 +591,23 @@ namespace flex
 
 			g_Window->PollEvents();
 
-			const sec frameEndTime = now;
-			const sec secondsElapsed = frameEndTime - frameStartTime;
+			sec frameEndTime = now;
+
+			if (m_FramesToFakeDT > 0)
+			{
+				--m_FramesToFakeDT;
+				// Pretend this frame started m_FakeDT seconds ago to prevent spike
+				frameStartTime = frameEndTime - m_FakeDT;
+			}
+
+			sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
 
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
 
+			// TODO: Pause audio when editor is paused
 			if (m_bSimulationPaused && !m_bSimulateNextFrame)
 			{
 				g_DeltaTime = 0.0f;
@@ -523,7 +639,7 @@ namespace flex
 				}
 
 #if COMPILE_RENDERDOC_API
-				if (m_RenderDocAPI)
+				if (m_RenderDocAPI != nullptr)
 				{
 					if (!m_bRenderDocCapturingFrame &&
 						m_RenderDocAutoCaptureFrameOffset != -1 &&
@@ -537,7 +653,7 @@ namespace flex
 						}
 					}
 
-					if (m_RenderDocAPI && m_bRenderDocTriggerCaptureNextFrame)
+					if (m_bRenderDocTriggerCaptureNextFrame)
 					{
 						m_bRenderDocTriggerCaptureNextFrame = false;
 						m_bRenderDocCapturingFrame = true;
@@ -601,6 +717,8 @@ namespace flex
 							targetVel = spring.vel;
 						}
 					}
+
+					AudioManager::Update();
 				}
 				else
 				{
@@ -623,12 +741,23 @@ namespace flex
 
 				g_Window->Update();
 
+				g_ResourceManager->Update();
+
 				g_Editor->LateUpdate();
 
 				if (bSimulateFrame)
 				{
+					for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+					{
+						g_Systems[i]->Update();
+					}
+
+					GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->DrawDebug();
+
 					g_SceneManager->CurrentScene()->LateUpdate();
 				}
+
+				g_UIManager->Update();
 
 				g_Renderer->Update();
 
@@ -643,7 +772,7 @@ namespace flex
 			PROFILE_END("Render");
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI && m_bRenderDocCapturingFrame)
+			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
 			{
 				m_bRenderDocCapturingFrame = false;
 				Print("Capturing RenderDoc frame...\n");
@@ -708,7 +837,7 @@ namespace flex
 		//io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 		io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange; // glfwSetCursor overruns buffer somewhere (currently Window::m_FrameBufferSize.y...)
 
-		std::string fontFilePath(FONT_LOCATION "lucon.ttf");
+		std::string fontFilePath(FONT_DIRECTORY "lucon.ttf");
 		io.Fonts->AddFontFromFileTTF(fontFilePath.c_str(), 13);
 
 		io.FontGlobalScale = g_Monitor->contentScaleX;
@@ -756,7 +885,7 @@ namespace flex
 		//colors[ImGuiCol_DockingBg] = ImVec4(0.20f, 0.20f, 0.20f, 1.00f);
 		colors[ImGuiCol_PlotLines] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-		colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+		colors[ImGuiCol_PlotHistogram] = ImVec4(0.039f, 0.238f, 0.616f, 1.000f);
 		colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
 		colors[ImGuiCol_TextSelectedBg] = ImVec4(1.00f, 0.57f, 0.31f, 0.35f);
 		colors[ImGuiCol_DragDropTarget] = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
@@ -784,7 +913,7 @@ namespace flex
 			if (ImGui::BeginMenu("File"))
 			{
 #if COMPILE_RENDERDOC_API
-				if (m_RenderDocAPI && ImGui::MenuItem("Capture RenderDoc frame", "F9"))
+				if (m_RenderDocAPI != nullptr && ImGui::MenuItem("Capture RenderDoc frame", "F9"))
 				{
 					m_bRenderDocTriggerCaptureNextFrame = true;
 				}
@@ -804,7 +933,7 @@ namespace flex
 
 					if (ImGui::MenuItem("Scene (hard: reload all meshes)"))
 					{
-						MeshComponent::DestroyAllLoadedMeshes();
+						g_ResourceManager->DestroyAllLoadedMeshes();
 						g_SceneManager->ReloadCurrentScene();
 					}
 
@@ -820,7 +949,7 @@ namespace flex
 
 					if (ImGui::MenuItem("Font textures (render SDFs)"))
 					{
-						g_Renderer->LoadFonts(true);
+						g_ResourceManager->LoadFonts(true);
 					}
 
 					BaseScene* currentScene = g_SceneManager->CurrentScene();
@@ -834,11 +963,6 @@ namespace flex
 						{
 							currentScene->GetPlayer(1)->GetController()->ResetTransformAndVelocities();
 						}
-					}
-
-					if (ImGui::MenuItem("Skybox (randomize)"))
-					{
-						g_Renderer->ReloadSkybox(true);
 					}
 
 					ImGui::EndMenu();
@@ -868,28 +992,7 @@ namespace flex
 				Player* player = scene->GetPlayer(0);
 				if (player != nullptr && ImGui::BeginMenu("Add to inventory"))
 				{
-					if (ImGui::MenuItem("Cart"))
-					{
-						CartManager* cartManager = scene->GetCartManager();
-						CartID cartID = cartManager->CreateCart(scene->GetUniqueObjectName("Cart_", 2));
-						Cart* cart = cartManager->GetCart(cartID);
-						player->AddToInventory(cart);
-					}
-
-					if (ImGui::MenuItem("Engine cart"))
-					{
-						CartManager* cartManager = scene->GetCartManager();
-						CartID cartID = cartManager->CreateEngineCart(scene->GetUniqueObjectName("EngineCart_", 2));
-						EngineCart* engineCart = static_cast<EngineCart*>(cartManager->GetCart(cartID));
-						player->AddToInventory(engineCart);
-					}
-
-					if (ImGui::MenuItem("Mobile liquid box"))
-					{
-						MobileLiquidBox* box = new MobileLiquidBox();
-						scene->AddObjectAtEndOFFrame(box);
-						player->AddToInventory(box);
-					}
+					g_ResourceManager->DrawImGuiMenuItemizableItems();
 
 					ImGui::EndMenu();
 				}
@@ -897,18 +1000,16 @@ namespace flex
 				if (ImGui::MenuItem("Shader editor path"))
 				{
 					bOpenShaderEditorPathPopup = true;
-					memset(shaderEditorBuf, 0, buffSize);
-					strcpy(shaderEditorBuf, m_ShaderEditorPath.c_str());
+					strncpy(shaderEditorBuf, m_ShaderEditorPath.c_str(), buffSize);
 				}
 
 #if COMPILE_RENDERDOC_API
 				if (ImGui::MenuItem("Renderdoc DLL path"))
 				{
 					bOpenRenderDocDLLPathPopup = true;
-					memset(renderDocDLLBuf, 0, buffSize);
 					std::string renderDocDLLPath;
 					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
-					strcpy(renderDocDLLBuf, renderDocDLLPath.c_str());
+					strncpy(renderDocDLLBuf, renderDocDLLPath.c_str(), buffSize);
 				}
 #endif
 
@@ -1025,24 +1126,27 @@ namespace flex
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", NULL, &m_bMainWindowShowing);
-				ImGui::MenuItem("GPU Timings", NULL, &g_Renderer->bGPUTimingsWindowShowing);
-				ImGui::MenuItem("Memory Stats", NULL, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("CPU Stats", NULL, &m_bShowCPUStatsWindow);
-				ImGui::MenuItem("Uniform Buffers", NULL, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("Main Window", nullptr, &m_bMainWindowShowing);
+				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
+				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
+				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("UI Editor", nullptr, &m_bUIEditorShowing);
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", NULL, &m_bMaterialWindowShowing);
-				ImGui::MenuItem("Shaders", NULL, &m_bShaderWindowShowing);
-				ImGui::MenuItem("Textures", NULL, &m_bTextureWindowShowing);
-				ImGui::MenuItem("Meshes", NULL, &m_bMeshWindowShowing);
+				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
+				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);
+				ImGui::MenuItem("Textures", nullptr, &g_ResourceManager->bTextureWindowShowing);
+				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
+				ImGui::MenuItem("Prefabs", nullptr, &g_ResourceManager->bPrefabsWindowShowing);
+				ImGui::MenuItem("Sounds", nullptr, &g_ResourceManager->bSoundsWindowShowing);
 				ImGui::Separator();
-				ImGui::MenuItem("Key Mapper", NULL, &m_bInputMapperShowing);
-				ImGui::MenuItem("Font Editor", NULL, &g_Renderer->bFontWindowShowing);
+				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
+				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", NULL, &m_bShowingRenderDocWindow);
+				ImGui::MenuItem("Render Doc Captures", nullptr, &m_bShowingRenderDocWindow);
 #endif
 				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", NULL, &m_bDemoWindowShowing);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_bDemoWindowShowing);
 
 				ImGui::EndMenu();
 			}
@@ -1050,7 +1154,7 @@ namespace flex
 			if (ImGui::BeginMenu("View"))
 			{
 				bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
-				if (ImGui::MenuItem("Shadow cascades", NULL, &bPreviewShadows))
+				if (ImGui::MenuItem("Shadow cascades", nullptr, &bPreviewShadows))
 				{
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
@@ -1142,6 +1246,8 @@ namespace flex
 					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
+					g_Renderer->DrawImGuiRendererInfo();
+
 					ImGui::TreePop();
 				}
 
@@ -1181,7 +1287,10 @@ namespace flex
 					g_Editor->SetTransformState(TransformState::SCALE);
 				}
 
-				g_Renderer->DrawImGuiRenderObjects();
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+				currentScene->DrawImGuiForSelectedObjects();
+				currentScene->DrawImGuiForRenderObjectsList();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -1189,10 +1298,10 @@ namespace flex
 
 				ImGui::Text("Debugging");
 
-				g_SceneManager->CurrentScene()->GetTrackManager()->DrawImGuiObjects();
-				g_SceneManager->CurrentScene()->GetCartManager()->DrawImGuiObjects();
-				g_CameraManager->CurrentCamera()->DrawImGuiObjects();
-				g_Renderer->DrawImGuiMisc();
+				for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+				{
+					g_Systems[i]->DrawImGui();
+				}
 
 				if (ImGui::TreeNode("Spring"))
 				{
@@ -1218,7 +1327,7 @@ namespace flex
 
 		g_Renderer->DrawImGuiWindows();
 
-		g_Renderer->DrawAssetWindowsImGui(&m_bMaterialWindowShowing, &m_bShaderWindowShowing, &m_bTextureWindowShowing, &m_bMeshWindowShowing);
+		g_ResourceManager->DrawImGuiWindows();
 
 		if (m_bInputMapperShowing)
 		{
@@ -1229,7 +1338,7 @@ namespace flex
 		{
 			const real consoleWindowWidth = 350.0f;
 			float fontScale = ImGui::GetIO().FontGlobalScale;
-			real consoleWindowHeight = 25.0f + m_CmdAutoCompletions.size() * 17.0f * fontScale;
+			real consoleWindowHeight = 28.0f + m_CmdAutoCompletions.size() * 16.0f * fontScale;
 			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
@@ -1266,37 +1375,110 @@ namespace flex
 					ImGuiInputTextFlags_CallbackAlways |
 					ImGuiInputTextFlags_CallbackHistory |
 					ImGuiInputTextFlags_CallbackCompletion |
-					ImGuiInputTextFlags_CallbackCharFilter,
+					ImGuiInputTextFlags_CallbackCharFilter |
+					ImGuiInputTextFlags_DeleteCallback,
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
-					const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
-					bool bMatched = false;
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					//const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
+					std::vector<std::string> cmdLineParts = Split(m_CmdLineStrBuf, ' ');
+					if (!cmdLineParts.empty())
 					{
-						if (strcmp(cmdLineStrBufClean.c_str(), cmd.name.c_str()) == 0)
+						bool bMatched = false;
+						for (IFunction* func : m_ConsoleCommands)
 						{
-							bMatched = true;
-							m_CmdAutoCompletions.clear();
-							m_bShowingConsole = false;
-							cmd.fun();
-							if (m_PreviousCmdLineEntries.empty() ||
-								strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
+							if (strcmp(cmdLineParts[0].c_str(), func->name.c_str()) == 0)
 							{
-								m_PreviousCmdLineEntries.emplace_back(m_CmdLineStrBuf);
+								bMatched = true;
+								m_CmdAutoCompletions.clear();
+								m_bShowingConsole = false;
+								bool bExecuted = false;
+								Variant result;
+								u32 argCount = (u32)func->argTypes.size();
+								if (argCount == 0 && cmdLineParts.size() == 1)
+								{
+									result = func->Execute();
+									bExecuted = true;
+								}
+								else if ((argCount + 1) == cmdLineParts.size())
+								{
+									std::vector<Variant> args;
+									args.reserve(argCount);
+									bool bValid = true;
+									for (u32 i = 0; i < argCount; ++i)
+									{
+										std::string& argStr = cmdLineParts[i + 1];
+										if (argStr.empty())
+										{
+											bValid = false;
+											break;
+										}
+
+										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
+										switch (argType)
+										{
+										case JSONValue::Type::INT:
+											args.emplace_back(Variant(ParseInt(argStr)));
+											break;
+										case JSONValue::Type::UINT:
+											args.emplace_back(Variant(ParseUInt(argStr)));
+											break;
+										case JSONValue::Type::LONG:
+											args.emplace_back(Variant(ParseLong(argStr)));
+											break;
+										case JSONValue::Type::ULONG:
+											args.emplace_back(Variant(ParseULong(argStr)));
+											break;
+										case JSONValue::Type::FLOAT:
+											args.emplace_back(Variant(ParseFloat(argStr)));
+											break;
+										case JSONValue::Type::BOOL:
+											args.emplace_back(Variant(ParseBool(argStr)));
+											break;
+										case JSONValue::Type::STRING:
+											argStr[argStr.size() - 1] = '\0'; // Replace trailing slash with null terminator
+											args.emplace_back(Variant(argStr.c_str() + 1)); // + 1 to skip first quote
+											break;
+										default:
+											bValid = false;
+										}
+
+									}
+									if (bValid)
+									{
+										result = func->Execute(args);
+										bExecuted = true;
+									}
+								}
+
+								if (bExecuted)
+								{
+									if (m_PreviousCmdLineEntries.empty() ||
+										strcmp((m_PreviousCmdLineEntries.end() - 1)->c_str(), m_CmdLineStrBuf) != 0)
+									{
+										m_PreviousCmdLineEntries.emplace_back(m_CmdLineStrBuf);
+									}
+									m_PreviousCmdLineIndex = -1;
+									memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
+
+									if (result.IsValid())
+									{
+										std::string resultStr = result.ToString();
+										Print("Result: %s\n", resultStr.c_str());
+									}
+								}
+								break;
 							}
-							m_PreviousCmdLineIndex = -1;
-							memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 						}
-					}
-					if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
-					{
-						m_bInvalidCmdLine = false;
-					}
-					if (!bMatched)
-					{
-						m_bInvalidCmdLine = true;
-						m_bShouldFocusKeyboardOnConsole = true;
+						if (memcmp(cmdLineStrBufCopy, m_CmdLineStrBuf, MAX_CHARS_CMD_LINE_STR))
+						{
+							m_bInvalidCmdLine = false;
+						}
+						if (!bMatched)
+						{
+							m_bInvalidCmdLine = true;
+							m_bShouldFocusKeyboardOnConsole = true;
+						}
 					}
 				}
 				if (bFocusTextBox)
@@ -1382,6 +1564,11 @@ namespace flex
 			}
 			ImGui::End();
 		}
+
+		if (m_bUIEditorShowing)
+		{
+			g_UIManager->DrawImGui(&m_bUIEditorShowing);
+		}
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
@@ -1391,6 +1578,27 @@ namespace flex
 		{
 			m_bInvalidCmdLine = false;
 		}
+
+		auto FillOutAutoCompletions = [this](const char* buffer)
+		{
+			m_PreviousCmdLineIndex = -1;
+
+			m_CmdAutoCompletions.clear();
+
+			if (!m_bShowAllConsoleCommands && strlen(buffer) == 0)
+			{
+				// Don't show suggestions with empty buffer to allow navigating history
+				return;
+			}
+
+			for (IFunction* func : m_ConsoleCommands)
+			{
+				if (StartsWith(func->name, buffer))
+				{
+					m_CmdAutoCompletions.push_back(func->name);
+				}
+			}
+		};
 
 		if (data->EventFlag == ImGuiInputTextFlags_CallbackHistory)
 		{
@@ -1474,26 +1682,18 @@ namespace flex
 				}
 				else
 				{
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
+					for (IFunction* func : m_ConsoleCommands)
 					{
-						if (StartsWith(cmd.name, data->Buf) && strcmp(cmd.name.c_str(), data->Buf) != 0)
+						if (StartsWith(func->name, data->Buf) && strcmp(func->name.c_str(), data->Buf) != 0)
 						{
 							data->DeleteChars(0, data->BufTextLen);
-							data->InsertChars(0, cmd.name.data());
+							data->InsertChars(0, func->name.data());
 							break;
 						}
 					}
 				}
 
-				m_PreviousCmdLineIndex = -1;
-				m_CmdAutoCompletions.clear();
-				for (const ConsoleCommand& cmd : m_ConsoleCommands)
-				{
-					if (StartsWith(cmd.name, data->Buf))
-					{
-						m_CmdAutoCompletions.push_back(cmd.name);
-					}
-				}
+				FillOutAutoCompletions(data->Buf);
 			}
 			return 0;
 		}
@@ -1508,6 +1708,7 @@ namespace flex
 			}
 
 			char eventChar = (char)data->EventChar;
+			// TODO: Insert at data->CursorPos
 			char* cmdLine = strncat(m_CmdLineStrBuf, &eventChar, 1);
 
 			if (m_SelectedCmdLineAutoCompleteIndex != -1)
@@ -1518,31 +1719,42 @@ namespace flex
 				}
 			}
 
-			m_PreviousCmdLineIndex = -1;
-			m_CmdAutoCompletions.clear();
-			for (const ConsoleCommand& cmd : m_ConsoleCommands)
+			FillOutAutoCompletions(cmdLine);
+			if (m_SelectedCmdLineAutoCompleteIndex == -1)
 			{
-				if (StartsWith(cmd.name, cmdLine))
-				{
-					m_CmdAutoCompletions.push_back(cmd.name);
-				}
+				m_SelectedCmdLineAutoCompleteIndex = 0;
+			}
+		}
+		else if (data->EventFlag == ImGuiInputTextFlags_DeleteCallback)
+		{
+			char cmdLine[128];
+			strncpy(cmdLine, m_CmdLineStrBuf, ARRAY_LENGTH(cmdLine));
+
+			// Delete char
+			if (strlen(m_CmdLineStrBuf) == 1)
+			{
+				memset(cmdLine, 0, ARRAY_LENGTH(cmdLine));
+			}
+			else
+			{
+				memmove(&cmdLine[data->CursorPos + 1], &cmdLine[data->CursorPos + 2], strlen(m_CmdLineStrBuf) - data->CursorPos);
+			}
+
+			FillOutAutoCompletions(cmdLine);
+			if (strlen(cmdLine) == 0)
+			{
+				m_SelectedCmdLineAutoCompleteIndex = -1;
+			}
+			else if (m_SelectedCmdLineAutoCompleteIndex == -1)
+			{
+				m_SelectedCmdLineAutoCompleteIndex = 0;
 			}
 		}
 		else
 		{
 			if (m_PreviousCmdLineIndex == -1)
 			{
-				m_CmdAutoCompletions.clear();
-				if (strlen(m_CmdLineStrBuf) > 0)
-				{
-					for (const ConsoleCommand& cmd : m_ConsoleCommands)
-					{
-						if (StartsWith(cmd.name, m_CmdLineStrBuf))
-						{
-							m_CmdAutoCompletions.push_back(cmd.name);
-						}
-					}
-				}
+				FillOutAutoCompletions(m_CmdLineStrBuf);
 			}
 		}
 
@@ -1589,27 +1801,27 @@ namespace flex
 				}
 
 				bool bRenderImGui;
-				if (rootObject.SetBoolChecked("render imgui", bRenderImGui))
+				if (rootObject.TryGetBool("render imgui", bRenderImGui))
 				{
 					m_bRenderImGui = bRenderImGui;
 				}
 
 				real masterGain;
-				if (rootObject.SetFloatChecked("master gain", masterGain))
+				if (rootObject.TryGetFloat("master gain", masterGain))
 				{
 					AudioManager::SetMasterGain(masterGain);
 				}
 
 				bool bMuted;
-				if (rootObject.SetBoolChecked("muted", bMuted))
+				if (rootObject.TryGetBool("muted", bMuted))
 				{
 					AudioManager::SetMuted(bMuted);
 				}
 
-				rootObject.SetBoolChecked("install shader directory watch", m_bInstallShaderDirectoryWatch);
+				rootObject.TryGetBool("install shader directory watch", m_bInstallShaderDirectoryWatch);
 
 				std::string shaderEditorPath;
-				if (rootObject.SetStringChecked("shader editor path", shaderEditorPath))
+				if (rootObject.TryGetString("shader editor path", shaderEditorPath))
 				{
 					m_ShaderEditorPath = shaderEditorPath;
 				}
@@ -1635,7 +1847,7 @@ namespace flex
 			return;
 		}
 
-		JSONObject rootObject{};
+		JSONObject rootObject = {};
 
 		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
@@ -1649,7 +1861,7 @@ namespace flex
 
 		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
-		std::string fileContents = rootObject.Print(0);
+		std::string fileContents = rootObject.ToString();
 
 		if (!WriteFile(m_CommonSettingsAbsFilePath, fileContents, false))
 		{
@@ -1682,6 +1894,16 @@ namespace flex
 		}
 	}
 
+	void FlexEngine::SetFramesToFakeDT(i32 frameCount)
+	{
+		m_FramesToFakeDT = frameCount;
+	}
+
+	real FlexEngine::GetSimulationSpeed() const
+	{
+		return m_SimulationSpeed;
+	}
+
 	std::string FlexEngine::EngineVersionString()
 	{
 		return IntToString(EngineVersionMajor) + "." +
@@ -1710,6 +1932,9 @@ namespace flex
 
 		TerminalCamera* terminalCamera = new TerminalCamera();
 		g_CameraManager->AddCamera(terminalCamera, false);
+
+		VehicleCamera* vehicleCamera = new VehicleCamera();
+		g_CameraManager->AddCamera(vehicleCamera, false);
 	}
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
@@ -1723,12 +1948,17 @@ namespace flex
 	{
 		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
+		const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 
-		if (action == KeyAction::PRESS)
+		if (action == KeyAction::KEY_PRESS)
 		{
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
 			{
 				m_bShowingConsole = !m_bShowingConsole;
+				m_bShowAllConsoleCommands = bShiftDown;
+				m_CmdAutoCompletions.clear();
+				m_PreviousCmdLineIndex = -1;
+				m_SelectedCmdLineAutoCompleteIndex = -1;
 				if (m_bShowingConsole)
 				{
 					m_bShouldFocusKeyboardOnConsole = true;
@@ -1736,7 +1966,7 @@ namespace flex
 			}
 
 #if COMPILE_RENDERDOC_API
-			if (m_RenderDocAPI &&
+			if (m_RenderDocAPI != nullptr &&
 				!m_bRenderDocCapturingFrame &&
 				!m_bRenderDocTriggerCaptureNextFrame &&
 				keyCode == KeyCode::KEY_F9)
@@ -1760,7 +1990,7 @@ namespace flex
 			}
 
 			// TODO: Handle elsewhere to handle ignoring ImGuiIO::WantCaptureKeyboard?
-			if (keyCode == KeyCode::KEY_F1)
+			if (bShiftDown && keyCode == KeyCode::KEY_1)
 			{
 				m_bToggleRenderImGui = true;
 				return EventReply::CONSUMED;
@@ -1798,37 +2028,50 @@ namespace flex
 
 			if (keyCode == KeyCode::KEY_4)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_01]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_00 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_5)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_02]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_01 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_6)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_03]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_02 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_7)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_04]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_03 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_8)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_05]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_04 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_9)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_06]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_05 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
 				return EventReply::CONSUMED;
 			}
 			if (keyCode == KeyCode::KEY_0)
 			{
-				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_07]);
+				i32 audioSourceIndex = (i32)SoundEffect::synthesized_06 + (bShiftDown ? 7 : 0);
+				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
+				return EventReply::CONSUMED;
+			}
+
+			if (keyCode == KeyCode::KEY_O)
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[bShiftDown ? (i32)SoundEffect::melody_0_fast : (i32)SoundEffect::melody_0]);
 				return EventReply::CONSUMED;
 			}
 
@@ -1839,7 +2082,7 @@ namespace flex
 			}
 		}
 
-		if (action == KeyAction::PRESS || action == KeyAction::REPEAT)
+		if (action == KeyAction::KEY_PRESS || action == KeyAction::KEY_REPEAT)
 		{
 			if (keyCode == KeyCode::KEY_F10)
 			{
@@ -1852,21 +2095,24 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	EventReply FlexEngine::OnActionEvent(Action action)
+	EventReply FlexEngine::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (action == Action::DBG_ENTER_NEXT_SCENE)
+		if (actionEvent == ActionEvent::TRIGGER)
 		{
-			g_SceneManager->SetNextSceneActive();
-			g_SceneManager->InitializeCurrentScene();
-			g_SceneManager->PostInitializeCurrentScene();
-			return EventReply::CONSUMED;
-		}
-		else if (action == Action::DBG_ENTER_PREV_SCENE)
-		{
-			g_SceneManager->SetPreviousSceneActive();
-			g_SceneManager->InitializeCurrentScene();
-			g_SceneManager->PostInitializeCurrentScene();
-			return EventReply::CONSUMED;
+			if (action == Action::DBG_ENTER_NEXT_SCENE)
+			{
+				g_SceneManager->SetNextSceneActive();
+				g_SceneManager->InitializeCurrentScene();
+				g_SceneManager->PostInitializeCurrentScene();
+				return EventReply::CONSUMED;
+			}
+			else if (action == Action::DBG_ENTER_PREV_SCENE)
+			{
+				g_SceneManager->SetPreviousSceneActive();
+				g_SceneManager->InitializeCurrentScene();
+				g_SceneManager->PostInitializeCurrentScene();
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;
@@ -1986,7 +2232,7 @@ namespace flex
 	{
 		JSONObject rootObject;
 		rootObject.fields.emplace_back("lib path", JSONValue(dllDir));
-		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.Print(0), false);
+		WriteFile(m_RenderDocSettingsAbsFilePath, rootObject.ToString(), false);
 	}
 #endif // COMPILE_RENDERDOC_API
 
@@ -2043,9 +2289,22 @@ namespace flex
 		outRayEnd = outRayStart + rayDir * maxDist;
 	}
 
+	void FlexEngine::GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist)
+	{
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		outRayStart = ToBtVec3(cam->position);
+		btVector3 rayDir = ToBtVec3(cam->forward);
+		outRayEnd = outRayStart + rayDir * maxDist;
+	}
+
 	bool FlexEngine::IsSimulationPaused() const
 	{
 		return m_bSimulationPaused;
+	}
+
+	void FlexEngine::SetSimulationPaused(bool bPaused)
+	{
+		m_bSimulationPaused = bPaused;
 	}
 
 	bool FlexEngine::InstallShaderDirectoryWatch() const

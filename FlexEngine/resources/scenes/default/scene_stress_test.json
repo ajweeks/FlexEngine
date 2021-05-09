@@ -13255,7 +13255,7 @@
 			{
 				"rotation" : "1.195, -0.973, -2.522",
 				"pos" : "0.000, 15.000, 0.000",
-				"color" : "1.00, 1.00, 1.00",
+				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,

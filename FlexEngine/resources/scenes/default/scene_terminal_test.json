@@ -1,16 +1,11 @@
 {
-	"version" : 3,
+	"version" : 6,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
+	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "terminal",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -21,23 +16,25 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-2.381, 1.602, 5.379",
-			"pitch" : -0.000467,
-			"yaw" : 1.783797
+			"position" : "4.804, 17.370, -7.257",
+			"pitch" : -0.618052,
+			"yaw" : 2.688168
 		}
 	},
 	"objects" : 
 	[
 		{
 			"name" : "ground plane",
+			"id" : "69CB35807A080CA94986D8D301C70BE7",
 			"type" : "object",
-			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "0.000, 0.030, 0.000",
+				"pos" : "-2.400, -0.653, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"mesh" : "unit-plane",
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "unit-plane.glb",
 			"materials" : 
 			[
 				"grid"
@@ -59,20 +56,18 @@
 		},
 		{
 			"name" : "Lighting",
+			"id" : "33BF534E4C5D72AC4A02E827589D0CDE",
 			"type" : "object",
 			"visible" : true,
-			"transform" : 
-			{
-			},
+			"casts shadow" : true,
 			"children" : 
 			[
 				{
 					"name" : "Skybox",
+					"id" : "3C40C6CCE0DAA3914AAD5DBE31B94281",
 					"type" : "skybox",
 					"visible" : true,
-					"transform" : 
-					{
-					},
+					"casts shadow" : false,
 					"materials" : 
 					[
 						"skybox 01"
@@ -83,112 +78,217 @@
 				},
 				{
 					"name" : "Reflection Probe 01",
+					"id" : "267350C0434E709B4F2FA545E179963F",
 					"type" : "reflection probe",
-					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "-2.045, 14.562, 0.000"
-					}
+					},
+					"visible" : true,
+					"casts shadow" : true
 				},
 				{
 					"name" : "Directional Light",
+					"id" : "421EA4A9C639B98D43992BC7ED65034E",
 					"type" : "directional light",
-					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.194, -0.973, -2.523"
+						"rot" : "-2.885, 0.889, 2.208"
 					},
+					"visible" : true,
+					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.217, 0.591, 0.616, -0.473",
+						"rotation" : "0.452, 0.775, -0.295, 0.329",
 						"pos" : "0.000, 15.000, 0.000",
-						"color" : "1.00, 1.00, 1.00",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 5.000000,
+						"brightness" : 0.703000,
 						"cast shadows" : true,
 						"shadow darkness" : 1.000000
 					}
 				},
 				{
 					"name" : "PointLight_03",
+					"id" : "771EB1387823558F480559B985C3469D",
 					"type" : "point light",
-					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-20.073, 4.952, 20.109"
+						"pos" : "-13.187, 0.708, 8.244"
 					},
+					"visible" : true,
+					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-20.073, 4.952, 20.109",
-						"color" : "0.49, 0.78, 0.91",
+						"pos" : "-13.187, 0.708, 8.244",
+						"colour" : "0.49, 0.78, 0.91",
 						"enabled" : true,
-						"brightness" : 182.266006
-					}
+						"brightness" : 140.625000
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_005",
+							"id" : "D2B4586102FEFE87433539B90CB0227C",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_02",
+					"id" : "B375AD1A5B18AC8C43966EBC3D651201",
 					"type" : "point light",
-					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-5.788, 8.328, 24.110"
+						"pos" : "18.486, 7.943, -3.520"
 					},
+					"visible" : true,
+					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-5.788, 8.328, 24.110",
-						"color" : "0.94, 0.80, 0.57",
+						"pos" : "18.486, 7.943, -3.520",
+						"colour" : "0.94, 0.80, 0.57",
 						"enabled" : true,
-						"brightness" : 500.000000
-					}
+						"brightness" : 395.833008
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_004",
+							"id" : "564F997157E832B04E56B9B3C26BF4BB",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_01",
+					"id" : "9F360CCEC1A5FF8B43FDE22F4E649704",
 					"type" : "point light",
-					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "10.562, 12.777, -4.604"
+						"pos" : "2.159, 0.938, 17.654"
 					},
+					"visible" : true,
+					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "10.562, 12.777, -4.604",
-						"color" : "1.00, 1.00, 1.00",
+						"pos" : "2.159, 0.938, 17.654",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
-						"brightness" : 500.000000
-					}
+						"brightness" : 135.417007
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_006",
+							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
 				},
 				{
 					"name" : "PointLight_00",
+					"id" : "A922EFB2AA76D2A247E45EA150321530",
 					"type" : "point light",
-					"visible" : true,
 					"transform" : 
 					{
-						"pos" : "-11.401, 11.826, 4.532"
+						"pos" : "9.644, 4.930, 29.718"
 					},
+					"visible" : true,
+					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-11.401, 11.826, 4.532",
-						"color" : "1.00, 1.00, 1.00",
+						"pos" : "9.644, 4.930, 29.718",
+						"colour" : "1.00, 1.00, 1.00",
 						"enabled" : true,
 						"brightness" : 827.585999
-					}
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_007",
+							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
+						}
+					]
+				},
+				{
+					"name" : "AreaLight",
+					"id" : "87A3091457AE338349F5D2BFFA33D061",
+					"type" : "area light",
+					"transform" : 
+					{
+						"pos" : "-11.952, 0.716, 35.616",
+						"rot" : "-0.696, 0.000, 0.000",
+						"scale" : "3.923, 1.840, 3.923"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"area light info" : 
+					{
+						"colour" : "1.00, 1.00, 1.00",
+						"enabled" : true,
+						"brightness" : 41.667000
+					},
+					"children" : 
+					[
+						{
+							"name" : "New_Object_02",
+							"id" : "4997CA417B45399641AC88288BD61949",
+							"type" : "object",
+							"transform" : 
+							{
+								"rot" : "3.141, 1.569, 3.141",
+								"scale" : "0.010, 2.000, 2.000"
+							},
+							"visible" : true,
+							"casts shadow" : true,
+							"mesh" : "cube.glb",
+							"materials" : 
+							[
+								"pbr white"
+							]
+						}
+					]
 				}
 			]
 		},
 		{
 			"name" : "Copper Terminal 01",
+			"id" : "422AC6316779F682468EBD8FF46A9979",
 			"type" : "terminal",
-			"visible" : true,
 			"transform" : 
 			{
-				"pos" : "-3.227, 0.600, 9.288",
-				"rot" : "3.141, 0.213, 3.141"
+				"pos" : "-3.227, 0.000, 9.288",
+				"rot" : "3.141, 0.567, 3.141"
 			},
-			"materials" : 
-			[
-				"terminal copper"
-			],
+			"visible" : true,
+			"casts shadow" : true,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -205,48 +305,240 @@
 			},
 			"terminal" : 
 			{
-				"str" : "int a = 10;
-int b = 20;
-bool bash = a > b ? true : false;
-if (a > 99 || a <= 10 && b == 20)
-{
-  b = 33;
-}"
+				"script file path" : "test.flex_script"
 			},
 			"children" : 
 			[
 				{
 					"name" : "screen",
+					"id" : "291AEF87F82FDB8649C261B1C1A356AD",
 					"type" : "object",
-					"visible" : true,
 					"transform" : 
 					{
 						"pos" : "0.000, 0.933, 0.484",
 						"scale" : "1.760, 1.790, 1.000"
 					},
-					"mesh" : "cube",
+					"visible" : true,
+					"casts shadow" : true,
+					"mesh" : "cube.glb",
 					"materials" : 
 					[
 						"terminal display"
 					]
+				},
+				{
+					"name" : "socket_000",
+					"id" : "2E9E794CEB4608A048825843EF994F7B",
+					"type" : "socket",
+					"transform" : 
+					{
+						"pos" : "-0.755, -0.362, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"socket" : 
+					{
+						"slotIdx" : 0
+					}
+				},
+				{
+					"name" : "socket_001",
+					"id" : "D9DFC1D0A521AEBF4338BF926808D6F2",
+					"type" : "socket",
+					"transform" : 
+					{
+						"pos" : "-0.247, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"socket" : 
+					{
+						"slotIdx" : 1
+					}
+				},
+				{
+					"name" : "socket_002",
+					"id" : "0FA7C44D69B1B9B5479723F2EB967753",
+					"type" : "socket",
+					"transform" : 
+					{
+						"pos" : "0.279, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"socket" : 
+					{
+						"slotIdx" : 2
+					}
+				},
+				{
+					"name" : "socket_003",
+					"id" : "E70FF3A9CE23B4B74863F255F2ABC173",
+					"type" : "socket",
+					"transform" : 
+					{
+						"pos" : "0.802, -0.409, -1.168",
+						"rot" : "3.141, 0.000, 3.141"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"socket" : 
+					{
+						"slotIdx" : 3
+					}
 				}
 			]
 		},
 		{
-			"name" : "Cart_00",
-			"type" : "cart",
-			"visible" : true,
+			"name" : "moka",
+			"id" : "ECA2903A8E1C42A749F15519C5EF09D9",
+			"type" : "object",
 			"transform" : 
 			{
+				"pos" : "-20.859, 0.030, 25.622",
+				"rot" : "0.000, -1.070, 0.000",
+				"scale" : "11.430, 11.430, 11.430"
 			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "moka.glb",
 			"materials" : 
 			[
-				"pbr grey"
-			],
-			"cart info" : 
+				"pbr grey",
+				"black plastic"
+			]
+		},
+		{
+			"name" : "dragon",
+			"id" : "F93A579D7BBDF2A74D51FD2783BB0473",
+			"type" : "object",
+			"transform" : 
 			{
-				"track ID" : -1,
-				"dist along track" : -1.000000
+				"pos" : "12.137, 1.942, 27.655",
+				"rot" : "0.000, -1.059, 0.000",
+				"scale" : "3.450, 3.450, 3.450"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		},
+		{
+			"name" : "New_Object_00",
+			"id" : "3214B079039EE582499DBB446FEE87CB",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "12.025, 0.979, 27.633",
+				"rot" : "0.000, 0.630, 0.000",
+				"scale" : "4.500, 2.000, 2.330"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr white"
+			]
+		},
+		{
+			"name" : "wire_000",
+			"id" : "00A9E8171F66588340AE41238924C246",
+			"type" : "wire",
+			"transform" : 
+			{
+				"pos" : "1.785, 0.600, 8.670"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"wire" : 
+			{
+				"startPoint" : "1.06, 0.60, 7.98",
+				"endPoint" : "2.51, 0.60, 9.36"
+			}
+		},
+		{
+			"name" : "wire_001",
+			"id" : "6C4EE368841B3F9B478C3823B8666D93",
+			"type" : "wire",
+			"transform" : 
+			{
+				"pos" : "-8.395, 0.600, 6.915"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"wire" : 
+			{
+				"startPoint" : "-9.23, 0.60, 6.36",
+				"endPoint" : "-7.56, 0.60, 7.47"
+			}
+		},
+		{
+			"name" : "Cart_00",
+			"id" : "4F5C7B9E0D52C484401567D9337167F7",
+			"type" : "prefab",
+			"prefab type" : "Cart_00",
+			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
+			"transform" : 
+			{
+				"pos" : "-9.387, 0.410, 10.428",
+				"rot" : "0.000, 0.605, 0.000"
+			}
+		},
+		{
+			"name" : "Battery",
+			"id" : "49BA1A00D02473914B4C060DFA113653",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-19.363, 0.347, 1.945",
+				"rot" : "0.000, -0.685, -3.142",
+				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "Battery-1",
+			"id" : "FC8A67B3179CE4944867BD17D12BD28E",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-25.728, 0.347, -1.190",
+				"rot" : "-0.000, -0.008, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "EngineCart-1",
+			"id" : "C54A90F938F82C944622007A9EDCFB70",
+			"type" : "prefab",
+			"prefab type" : "EngineCart",
+			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
+			"transform" : 
+			{
+				"pos" : "12.505, 1.347, 0.161"
+			}
+		},
+		{
+			"name" : "Battery-2",
+			"id" : "86598C04552820B64784628C42EE1632",
+			"type" : "prefab",
+			"prefab type" : "Battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
+			"transform" : 
+			{
+				"pos" : "-25.743, 2.347, -1.199",
+				"rot" : "-0.000, -0.588, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
 			}
 		}
 	]

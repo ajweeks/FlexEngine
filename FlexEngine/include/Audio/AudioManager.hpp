@@ -5,16 +5,145 @@ IGNORE_WARNINGS_PUSH
 #include "AL/alc.h"
 IGNORE_WARNINGS_POP
 
+#include "Histogram.hpp"
+
 namespace flex
 {
+	class StringBuilder;
+
+	struct SoundClip_Looping
+	{
+		SoundClip_Looping();
+		SoundClip_Looping(const char* name, AudioSourceID startID, AudioSourceID loopID, AudioSourceID endID);
+
+		bool IsValid() const;
+		bool IsPlaying() const;
+
+		void Start();
+		void End();
+		void Update();
+		void KillCurrentlyPlaying();
+
+		void DrawImGui();
+
+		enum class State
+		{
+			STARTING,
+			LOOPING,
+			ENDING,
+
+			OFF
+		};
+
+		static constexpr const char* StateStrings[] =
+		{
+			"Starting",
+			"Looping",
+			"Ending",
+			"Off"
+		};
+
+		static_assert(ARRAY_LENGTH(StateStrings) == (u32)State::OFF + 1, "Length of StateStrings must match length of State enum");
+
+		// Optional
+		AudioSourceID start = InvalidAudioSourceID;
+
+		AudioSourceID loop = InvalidAudioSourceID;
+
+		// Optional
+		AudioSourceID end = InvalidAudioSourceID;
+
+		State state = State::OFF;
+		real timeInState = 0.0f;
+		real stateLength = -1.0f;
+
+	private:
+		void ChangeToState(State newState);
+
+		real m_FadeFastDuration = 0.1f;
+		real m_FadeDuration = 0.3f;
+
+		// Debug only
+		const char* m_Name = nullptr;
+		Histogram m_TimeInStateHisto;
+
+	};
+
+	struct SoundClip_LoopingSimple
+	{
+		SoundClip_LoopingSimple();
+		SoundClip_LoopingSimple(const char* name, StringID loopSID);
+
+		bool IsValid() const;
+		bool IsPlaying() const;
+
+		void FadeIn();
+		void FadeOut();
+		void Update();
+		void KillCurrentlyPlaying();
+
+		void SetPitch(real pitch);
+		void SetGainMultiplier(real gainMultiplier);
+
+		// Returns true when sound clip has changed
+		bool DrawImGui();
+
+		// Serialized value
+		StringID loopSID = InvalidStringID;
+		// Runtime value
+		AudioSourceID loop = InvalidAudioSourceID;
+
+		real fadeInTimeRemaining = -1.0f;
+		real fadeOutTimeRemaining = -1.0f;
+
+	private:
+		real m_FadeFastDuration = 0.1f;
+		real m_FadeDuration = 0.3f;
+		bool bPlaying = false;
+
+		// Debug only
+		const char* m_Name = "Uninitialized";
+		Histogram m_VolHisto;
+
+	};
+
+
+	// TODO: Make global instance like every other manager?
+	// TODO: Inherit from System base class?
 	class AudioManager
 	{
 	public:
+		struct Source
+		{
+			ALuint source = InvalidAudioSourceID;
+			real gain = 1.0f;
+			real gainMultiplier = 1.0f;
+			real pitch = 1.0f;
+			real length = -1.0f;
+
+			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
+			ALenum state = AL_INITIAL;
+
+			// If non-zero, we're fading in when bFadingIn, and out otherwise
+			real fadeDuration = 0.0f;
+			real fadeDurationRemaining = 0.0f;
+			bool bFadingIn;
+
+			const char* name = nullptr;
+
+			bool bLooping = false;
+		};
+
 		static void Initialize();
 		static void Destroy();
+		static void Update();
 
-		static AudioSourceID AddAudioSource(const std::string& filePath);
+		static real NoteToFrequencyHz(i32 note);
+
+		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
+		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
+		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
 
@@ -23,19 +152,19 @@ namespace flex
 		static real GetMasterGain();
 
 		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		// Start source partway through (t in [0, 1])
+		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 
-		/*
-		* Multiplies the source by gainScale
-		* Optionally prevents gain from reaching zero so that it
-		* can be scale up again later
-		*/
-		static void ScaleSourceGain(AudioSourceID sourceID, real gainScale, bool bPreventZero = true);
+		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
+		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
 
 		/* Volume of sound [0.0, 1.0] (logarithmic) */
 		static void SetSourceGain(AudioSourceID sourceID, real gain);
 		static real GetSourceGain(AudioSourceID sourceID);
+		static void SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier);
+		static real GetSourceGainMultiplier(AudioSourceID sourceID);
 
 		static void AddToSourcePitch(AudioSourceID sourceID, real deltaPitch);
 
@@ -48,13 +177,24 @@ namespace flex
 
 		static bool IsSourcePlaying(AudioSourceID sourceID);
 
+		static real GetSourceLength(AudioSourceID sourceID);
+
+		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount, u32& outVersion);
+
+		static Source* GetSource(AudioSourceID sourceID);
+
+		static real GetSourcePlaybackPos(AudioSourceID sourceID);
+
 		static void ToggleMuted();
 		static void SetMuted(bool bMuted);
 		static bool IsMuted();
 
 		static void DrawImGuiObjects();
 
+		static bool AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen);
+
 	private:
+		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format);
 
 		static void DisplayALError(const std::string& str, ALenum error);
 
@@ -62,23 +202,22 @@ namespace flex
 
 		static ALuint GetNextAvailableSourceAndBufferIndex();
 
-		static const i32 NUM_BUFFERS = 32;
-		static ALuint s_Buffers[NUM_BUFFERS];
+		static AudioSourceID AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr);
+
+		static void UpdateSourceGain(AudioSourceID sourceID);
 
 		static real s_MasterGain;
 		static bool s_Muted;
 
-		struct Source
-		{
-			ALuint source = InvalidAudioSourceID;
-			real gain = 1.0f;
-			real pitch = 1.0f;
+		static const i32 NUM_BUFFERS = 2048;
+		static ALuint s_Buffers[NUM_BUFFERS];
 
-			// AL_INITIAL, AL_PLAYING, AL_PAUSED, or AL_STOPPED
-			ALenum state = AL_INITIAL;
-
-			bool bLooping = false;
-		};
+		// Editor-only <
+		static u8* s_WaveData[NUM_BUFFERS];
+		static u32 s_WaveDataLengths[NUM_BUFFERS];
+		// Monotonically increasing value, incrementing each time a new version is loaded
+		static u32 s_WaveDataVersions[NUM_BUFFERS];
+		// > End Editor-only
 
 		static std::array<Source, NUM_BUFFERS> s_Sources;
 

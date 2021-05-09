@@ -24,7 +24,7 @@ namespace flex
 	const real Profiler::s_ScrollSpeed = 0.4f;
 	Profiler::DisplayedFrameOptions Profiler::s_DisplayedFrameOptions;
 
-	glm::vec4 Profiler::blockColors[] = {
+	glm::vec4 Profiler::blockColours[] = {
 		glm::vec4(0.43f, 0.48f, 0.58f, 0.8f), // Pale dark blue
 		glm::vec4(0.50f, 0.58f, 0.31f, 0.8f), // Pale green
 		glm::vec4(0.45f, 0.33f, 0.82f, 0.8f), // Royal purple
@@ -86,6 +86,7 @@ namespace flex
 					}
 					// TODO: HACK: Add proper input consumption code
 					g_InputManager->ClearVerticalScrollDistance();
+					g_InputManager->ClearHorizontalScrollDistance();
 				}
 
 				real hDragDist = g_InputManager->GetMouseDragDistance(MouseButton::LEFT).x;
@@ -137,7 +138,7 @@ namespace flex
 			Timing frameTiming = {};
 			frameTiming.start = s_FrameStartTime;
 			frameTiming.end = s_FrameEndTime;
-			strcpy(frameTiming.blockName, "Total frame time");
+			strncpy(frameTiming.blockName, "Total frame time", Timing::MAX_NAME_LEN);
 			s_DisplayedFrameTimings.emplace_back(frameTiming);
 
 			for (auto timingPair : s_Timings)
@@ -169,7 +170,7 @@ namespace flex
 			Timing timing = {};
 			timing.start = now;
 			timing.end = real_min;
-			strcpy(timing.blockName, blockName);
+			strncpy(timing.blockName, blockName, Timing::MAX_NAME_LEN);
 			s_Timings.insert({ hash, timing });
 
 			++s_UnendedTimings;
@@ -269,7 +270,7 @@ namespace flex
 			// TODO: Add counter events (ph: c, args: {num: 99})
 			JSONObject traceEvents = {};
 			traceEvents.fields.emplace_back("traceEvents", JSONValue(s_PendingTraceEvents));
-			std::string tracingObjectContents = traceEvents.Print(0);
+			std::string tracingObjectContents = traceEvents.ToString();
 			if (WriteFile(filePath, tracingObjectContents, false))
 			{
 				Print("Wrote tracing results to %s\n", filePath.c_str());
@@ -325,6 +326,8 @@ namespace flex
 			return;
 		}
 
+		glm::vec4 fontColour = glm::vec4(0.85f, 0.85f, 0.85f, 1.0f);
+
 		BitmapFont* font = g_Renderer->SetFont(SID("editor-01"));
 
 		i32 blockCount = (i32)s_DisplayedFrameTimings.size();
@@ -352,10 +355,10 @@ namespace flex
 											  glm::vec4(1.0f, 1.0f, 1.0f, 0.03f));
 		}
 		std::string frameDurationStr = FloatToString(frameDuration, 2) + "ms";
-		real letterSpacing = 5;
+		real letterSpacing = 6.0f;
 		real durationStrWidth = g_Renderer->GetStringWidth(frameDurationStr, font, letterSpacing, true);
 		g_Renderer->DrawStringSS(frameDurationStr,
-							     glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+							     fontColour,
 								 AnchorPoint::CENTER,
 								 glm::vec2(frameCenter.x - durationStrWidth, frameCenter.y + frameSizeHalf.y * 1.1f),
 								 letterSpacing,
@@ -363,7 +366,7 @@ namespace flex
 
 		real blockHeight = (frameSizeHalf.y / ((real)blockCount + 2));
 
-		i32 colorIndex = 0;
+		i32 colourIndex = 0;
 		for (i32 i = 0; i < blockCount; ++i)
 		{
 			Timing& timing = s_DisplayedFrameTimings[i];
@@ -375,7 +378,7 @@ namespace flex
 			glm::vec2 blockCenterNorm(blockLeftX + halfBlockWidth, blockCenterY);
 			glm::vec2 blockScaleNorm(halfBlockWidth, blockHeight);
 
-			g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColors[colorIndex]);
+			g_Renderer->EnqueueUntexturedQuadRaw(blockCenterNorm, blockScaleNorm, blockColours[colourIndex]);
 
 			bool bMouseHoveredOverBlock = g_InputManager->IsMouseHoveringRect(blockCenterNorm, blockScaleNorm);
 			if (bMouseHoveredOverBlock)
@@ -391,7 +394,7 @@ namespace flex
 				real strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				glm::vec2 pos(blockCenterNorm.x - strWidth * aspectRatio, frameCenter.y - frameSizeHalf.y * 1.2f);
 				g_Renderer->DrawStringSS(timing.blockName,
-										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 fontColour,
 										 AnchorPoint::CENTER,
 										 pos,
 										 letterSpacing,
@@ -399,17 +402,17 @@ namespace flex
 				str = FloatToString(blockDuration, 2) + "ms";
 				strWidth = g_Renderer->GetStringWidth(str, font, letterSpacing, true);
 				pos.x = blockCenterNorm.x - strWidth * aspectRatio;
-				pos.y -= 0.05f;
+				pos.y -= g_Renderer->GetStringHeight(str, font, true) * 5.0f;
 				g_Renderer->DrawStringSS(str,
-										 glm::vec4(0.0f, 0.0f, 0.0f, 1.0f),
+										 fontColour,
 										 AnchorPoint::CENTER,
-										 pos ,
+										 pos,
 										 letterSpacing,
 										 true);
 			}
 
-			++colorIndex;
-			colorIndex %= ARRAY_LENGTH(blockColors);
+			++colourIndex;
+			colourIndex %= ARRAY_LENGTH(blockColours);
 		}
 	}
 

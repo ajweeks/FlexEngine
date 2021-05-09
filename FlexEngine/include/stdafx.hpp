@@ -1,4 +1,5 @@
-// Configuration variables:
+
+// Configuration variables
 
 #define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1
@@ -15,7 +16,10 @@
 #ifdef DEBUG
 #define THOROUGH_CHECKS 1
 #define ENABLE_PROFILING 1
-#define COMPILE_RENDERDOC_API 0
+#ifdef _WINDOWS
+// RenderDoc API only supported on windows
+#define COMPILE_RENDERDOC_API 1
+#endif //  _WINDOWS
 #define COMPILE_SHADER_COMPILER 1
 #else
 #define THOROUGH_CHECKS 0
@@ -42,8 +46,9 @@
 
 #include "memory.hpp"
 
+#include "GUID.hpp"
+
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
-#define NOMINMAX
 
 #if defined(_WINDOWS)
 #define WRITE_BARRIER _WriteBarrier(); _mm_sfence()
@@ -71,35 +76,22 @@
 
 #define FLEX_NO_DISCARD [[nodiscard]]
 
-#if defined(__clang__)
-#define IGNORE_WARNINGS_PUSH \
-		_Pragma("clang diagnostic push") \
-		_Pragma("clang diagnostic ignored \"-Weverything\"")
-#define IGNORE_WARNINGS_POP _Pragma("clang diagnostic pop")
-#elif defined(_MSC_VER)
-#define IGNORE_WARNINGS_PUSH __pragma(warning(push, 0))
-#define IGNORE_WARNINGS_POP __pragma(warning(pop))
-#elif defined(__GNUG__)
-#define IGNORE_WARNINGS_PUSH \
-		_Pragma("GCC diagnostic push") \
-		_Pragma("GCC diagnostic ignored \"-Wall\"")
-#define IGNORE_WARNINGS_POP _Pragma("GCC diagnostic pop")
-#else
-	// Unhandled compiler
-	#error
-#endif
-
-#undef FORMAT_STRING
+#include "FlexPreprocessors.hpp"
 
 #undef TRUE
 #undef FALSE
 
+// Markup variadic arguments. n = index of format string, m = index of first variadic ar
+// Indices are 1-based due to implicit this param
 #if defined(__clang__)
-#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, fmtargnumber, firstvarargnumber )))
+#define FORMAT_STRING_POST __attribute__ (( format( __printf__, 1, 2 )))
+#define FORMAT_STRING_PRE
 #elif defined(_MSC_VER)
-#define FORMAT_STRING(n,m) _Printf_format_string_
+#define FORMAT_STRING_POST
+#define FORMAT_STRING_PRE _Printf_format_string_
 #elif defined(__GNUG__)
-#define FORMAT_STRING(n,m) __attribute__ (( format( __printf__, n, m )))
+#define FORMAT_STRING_POST __attribute__ (( format( __printf__, 1, 2 )))
+#define FORMAT_STRING_PRE
 #endif
 
 #define FT_EXPORT(Type) Type
@@ -129,6 +121,7 @@
 
 #include "Logger.hpp"
 #include "Types.hpp"
+#include "Systems/Systems.hpp"
 
 IGNORE_WARNINGS_PUSH
 #define GLM_FORCE_RADIANS
@@ -152,20 +145,30 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 #endif // COMPILE_VULKAN
 
+IGNORE_WARNINGS_PUSH
+#include <cgltf/cgltf.h>
+IGNORE_WARNINGS_POP
+
+
 #if COMPILE_IMGUI
 IGNORE_WARNINGS_PUSH
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "imgui.h"
 
 namespace flex
 {
-	extern ImVec4 g_WarningTextColor;
-	extern ImVec4 g_WarningButtonColor;
-	extern ImVec4 g_WarningButtonHoveredColor;
-	extern ImVec4 g_WarningButtonActiveColor;
+	extern ImVec4 g_WarningTextColour;
+	extern ImVec4 g_WarningButtonColour;
+	extern ImVec4 g_WarningButtonHoveredColour;
+	extern ImVec4 g_WarningButtonActiveColour;
 }
 
+#include "ImGuiBezier.hpp"
+#include "imgui_plot.h"
 IGNORE_WARNINGS_POP
 #endif // COMPILE_IMGUI
+
+#include <mikktspace.h>
 
 #include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -230,11 +233,10 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 #define GL_POP_DEBUG_GROUP()
 #endif // COMPILE_OPEN_GL
 
+#define SID(str) Hash(str)
+
 namespace flex
 {
-	// TODO: Calculate string hash here
-#define SID(str) (str)
-
 	extern glm::vec3 VEC3_RIGHT;
 	extern glm::vec3 VEC3_UP;
 	extern glm::vec3 VEC3_FORWARD;
@@ -244,16 +246,20 @@ namespace flex
 	extern glm::vec3 VEC3_ONE;
 	extern glm::vec3 VEC3_NEG_ONE;
 	extern glm::vec3 VEC3_ZERO;
+	extern glm::vec3 VEC3_GAMMA;
+	extern glm::vec3 VEC3_GAMMA_INVERSE;
 	extern glm::vec4 VEC4_ONE;
 	extern glm::vec4 VEC4_NEG_ONE;
 	extern glm::vec4 VEC4_ZERO;
+	extern glm::vec4 VEC4_GAMMA;
+	extern glm::vec4 VEC4_GAMMA_INVERSE;
 	extern glm::quat QUAT_IDENTITY;
 	extern glm::mat4 MAT4_IDENTITY;
 	extern glm::mat4 MAT4_ZERO;
-	extern u32 COLOR32U_WHITE;
-	extern u32 COLOR32U_BLACK;
-	extern glm::vec4 COLOR128F_WHITE;
-	extern glm::vec4 COLOR128F_BLACK;
+	extern u32 COLOUR32U_WHITE;
+	extern u32 COLOUR32U_BLACK;
+	extern glm::vec4 COLOUR128F_WHITE;
+	extern glm::vec4 COLOUR128F_BLACK;
 
 	extern std::string EMPTY_STRING;
 
@@ -265,11 +271,20 @@ namespace flex
 
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
+	extern class System* g_Systems[(i32)SystemType::_NONE];
 	extern class FlexEngine* g_EngineInstance;
 	extern class Editor* g_Editor;
 	extern class SceneManager* g_SceneManager;
 	extern struct Monitor* g_Monitor;
 	extern class PhysicsManager* g_PhysicsManager;
+	extern class ResourceManager* g_ResourceManager;
+	extern class UIManager* g_UIManager;
+
+	template<typename T>
+	T* GetSystem(SystemType systemType)
+	{
+		return (T*)g_Systems[(i32)systemType];
+	}
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;

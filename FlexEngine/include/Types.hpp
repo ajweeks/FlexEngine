@@ -33,13 +33,19 @@ namespace flex
 	using MaterialID = u32;
 	using TextureID = u32;
 	using FrameBufferAttachmentID = u32;
+	using GraphicsPipelineID = u32;
 	using PointLightID = u32;
+	using SpotLightID = u32;
+	using AreaLightID = u32;
 	using AudioSourceID = u32;
 	using TrackID = u32;
 	using CartID = u32;
 	using CartChainID = u32;
 	using VariableID = u32;
 	using ParticleSystemID = u32;
+	using GameObjectStackID = u32;
+
+	using StringID = u64;
 
 	using ThreadHandle = u64;
 
@@ -71,7 +77,10 @@ namespace flex
 	static constexpr auto InvalidMaterialID = ((MaterialID)u32_max);
 	static constexpr auto InvalidTextureID = ((TextureID)u32_max);
 	static constexpr auto InvalidFrameBufferAttachmentID = ((FrameBufferAttachmentID)u32_max);
+	static constexpr auto InvalidGraphicsPipelineID = ((GraphicsPipelineID)u32_max);
 	static constexpr auto InvalidPointLightID = ((PointLightID)u32_max);
+	static constexpr auto InvalidSpotLightID = ((SpotLightID)u32_max);
+	static constexpr auto InvalidAreaLightID = ((AreaLightID)u32_max);
 	static constexpr auto InvalidAudioSourceID = ((AudioSourceID)u32_max);
 	static constexpr auto InvalidTrackID = ((TrackID)u32_max);
 	static constexpr auto InvalidCartID = ((CartChainID)u32_max);
@@ -81,58 +90,12 @@ namespace flex
 	static constexpr auto InvalidThreadHandle = ((ThreadHandle)u64_max);
 	static constexpr auto InvalidBufferID = u64_max;
 	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;
+	static constexpr auto InvalidStringID = (StringID)u64_max;
 	static constexpr auto InvalidID = u32_max;
+
 
 	//template<bool> struct StaticAssert;
 	//template<> struct StaticAssert<true> {};
-
-	enum class GameObjectType
-	{
-		OBJECT,
-		POINT_LIGHT,
-		DIRECTIONAL_LIGHT,
-		PLAYER,
-		SKYBOX,
-		REFLECTION_PROBE,
-		VALVE,
-		RISING_BLOCK,
-		GLASS_PANE,
-		CART,
-		ENGINE_CART,
-		MOBILE_LIQUID_BOX,
-		TERMINAL,
-		GERSTNER_WAVE,
-		BLOCKS,
-		PARTICLE_SYSTEM,
-		CHUNK_GENERATOR,
-
-		_NONE
-	};
-
-	static const char* GameObjectTypeStrings[] =
-	{
-		"object",
-		"point light",
-		"directional light",
-		"player",
-		"skybox",
-		"reflection probe",
-		"valve",
-		"rising block",
-		"glass pane",
-		"cart",
-		"engine cart",
-		"mobile liquid box",
-		"terminal",
-		"gerstner wave",
-		"blocks",
-		"particle system",
-		"chunk generator",
-
-		"NONE"
-	};
-
-	static_assert(ARRAY_LENGTH(GameObjectTypeStrings) == (u32)GameObjectType::_NONE + 1, "Length of GameObjectTypeStrings must match length of GameObjectType enum");
 
 	// Screen-space anchors
 	enum class AnchorPoint
@@ -161,7 +124,8 @@ namespace flex
 	enum class SamplingType
 	{
 		CONSTANT, // All samples are equally-weighted
-		LINEAR    // Latest sample is weighted N times higher than Nth sample
+		LINEAR,   // Latest sample is weighted N times higher than Nth sample
+		CUBIC,    // Latest samples contribute much more than old samples
 	};
 
 	enum class TurningDir
@@ -206,17 +170,4 @@ namespace flex
 
 		_NONE
 	};
-
-	struct MeshImportSettings
-	{
-		/* Whether or not to invert the horizontal texture coordinate */
-		bool bFlipU = false;
-		/* Whether or not to invert the vertical texture coordinate */
-		bool bFlipV = false;
-		/* Whether or not to invert the Z component (up) of all normals */
-		bool bFlipNormalZ = false;
-		/* Whether or not to swap Y and Z components of all normals (converts from Y-up to Z-up) */
-		bool bSwapNormalYZ = false;
-	};
-
 } // namespace flex

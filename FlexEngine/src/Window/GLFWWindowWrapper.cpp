@@ -74,12 +74,6 @@ namespace flex
 
 	void GLFWWindowWrapper::Destroy()
 	{
-		for (GLFWimage& icon : m_WindowIcons)
-		{
-			DestroyGLFWimage(icon);
-		}
-		m_WindowIcons.clear();
-
 		if (m_Window)
 		{
 			m_Window = nullptr;
@@ -187,17 +181,6 @@ namespace flex
 
 		glfwFocusWindow(m_Window);
 		m_bHasFocus = true;
-
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_128.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_64.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_48.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_32.png", 4));
-		m_WindowIcons.push_back(LoadGLFWimage(APP_ICON_LOCATION "flex-logo-03_16.png", 4));
-
-		if (!m_WindowIcons.empty() && m_WindowIcons[0].pixels)
-		{
-			glfwSetWindowIcon(m_Window, (i32)m_WindowIcons.size(), m_WindowIcons.data());
-		}
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo()
@@ -329,20 +312,32 @@ namespace flex
 
 	void GLFWWindowWrapper::SetCursorMode(CursorMode mode)
 	{
-		Window::SetCursorMode(mode);
-
-		i32 glfwCursorMode = 0;
-
-		switch (mode)
+		if (m_CursorMode != mode)
 		{
-		case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
-		case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
-		case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
-		case CursorMode::_NONE:
-		default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
-		}
+			Window::SetCursorMode(mode);
 
-		glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+			i32 glfwCursorMode = 0;
+
+			switch (mode)
+			{
+			case CursorMode::NORMAL: glfwCursorMode = GLFW_CURSOR_NORMAL; break;
+			case CursorMode::HIDDEN: glfwCursorMode = GLFW_CURSOR_HIDDEN; break;
+			case CursorMode::DISABLED: glfwCursorMode = GLFW_CURSOR_DISABLED; break;
+			case CursorMode::_NONE:
+			default: PrintError("Unhandled cursor mode passed to GLFWWindowWrapper::SetCursorMode: %i\n", (i32)mode); break;
+			}
+
+			glfwSetInputMode(m_Window, GLFW_CURSOR, glfwCursorMode);
+
+			// Enable raw motion when cursor disabled for smoother camera controls
+			if (glfwCursorMode == GLFW_CURSOR_DISABLED)
+			{
+				if (glfwRawMouseMotionSupported())
+				{
+					glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+				}
+			}
+		}
 	}
 
 	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool bForce)
@@ -465,10 +460,6 @@ namespace flex
 				bPrevP1JoystickPresent = false;
 			}
 		}
-
-		ImGuiIO& io = ImGui::GetIO();
-		// Hide OS mouse cursor if ImGui is drawing it
-		glfwSetInputMode(m_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
 	}
 
 	GLFWwindow* GLFWWindowWrapper::GetWindow() const
@@ -540,21 +531,6 @@ namespace flex
 	void GLFWWindowFocusCallback(GLFWwindow* glfwWindow, i32 focused)
 	{
 		Window* window = static_cast<Window*>(glfwGetWindowUserPointer(glfwWindow));
-
-		//if (window->GetFullscreenMode() != Window::FullscreenMode::WINDOWED)
-		//{
-		//	if (focused)
-		//	{
-		//		glfwRestoreWindow(glfwWindow);
-		//		Print("found\n");
-		//	}
-		//	else
-		//	{
-		//		glfwIconifyWindow(glfwWindow);
-		//		Print("lost\n");
-		//	}
-		//}
-
 		window->WindowFocusCallback(focused);
 	}
 
@@ -636,9 +612,9 @@ namespace flex
 
 		switch (glfwAction)
 		{
-		case GLFW_PRESS: inputAction = KeyAction::PRESS; break;
-		case GLFW_REPEAT: inputAction = KeyAction::REPEAT; break;
-		case GLFW_RELEASE: inputAction = KeyAction::RELEASE; break;
+		case GLFW_PRESS: inputAction = KeyAction::KEY_PRESS; break;
+		case GLFW_REPEAT: inputAction = KeyAction::KEY_REPEAT; break;
+		case GLFW_RELEASE: inputAction = KeyAction::KEY_RELEASE; break;
 		case -1: break; // We don't care about events GLFW can't handle
 		default: PrintError("Unhandled glfw action passed to GLFWActionToInputManagerAction in GLFWWIndowWrapper: %i\n",
 			glfwAction);

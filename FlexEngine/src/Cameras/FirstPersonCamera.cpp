@@ -17,9 +17,10 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	FirstPersonCamera::FirstPersonCamera(real FOV) :
-		BaseCamera("first-person", true, FOV)
+		BaseCamera("first-person", CameraType::FIRST_PERSON, true, FOV)
 	{
 		bIsFirstPerson = true;
+		bPossessPlayer = true;
 		ResetOrientation();
 		RecalculateViewProjection();
 	}
@@ -85,7 +86,7 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		m_Player = static_cast<Player*>(g_SceneManager->CurrentScene()->FirstObjectWithTag("Player0"));
+		m_Player = g_SceneManager->CurrentScene()->GetPlayer(0);
 	}
 
 } // namespace flex

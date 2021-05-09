@@ -16,11 +16,15 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	TerminalCamera::TerminalCamera(real FOV) :
-		BaseCamera("terminal", true, FOV),
+		BaseCamera("terminal", CameraType::TERMINAL, true, FOV),
 		m_StartingPos(VEC3_ZERO)
 	{
 		bDEBUGCyclable = false;
 		bIsFirstPerson = true;
+	}
+
+	TerminalCamera::~TerminalCamera()
+	{
 	}
 
 	void TerminalCamera::Initialize()
@@ -33,7 +37,7 @@ namespace flex
 				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 				if (p0 != nullptr)
 				{
-					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>();
+					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>(SID("terminal"));
 					if (!terminals.empty())
 					{
 						Transform* playerTransform = p0->GetTransform();
