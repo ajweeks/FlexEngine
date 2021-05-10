@@ -651,7 +651,6 @@ namespace flex
 			sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
 
@@ -664,6 +663,9 @@ namespace flex
 			{
 				g_DeltaTime = glm::clamp(secondsElapsed * m_SimulationSpeed, m_MinDT, m_MaxDT);
 			}
+
+			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
+			m_bSimulateNextFrame = false;
 
 			Profiler::StartFrame();
 
@@ -731,9 +733,6 @@ namespace flex
 				g_Editor->EarlyUpdate();
 
 				Profiler::Update();
-
-				const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
-				m_bSimulateNextFrame = false;
 
 				g_CameraManager->Update();
 
@@ -1247,8 +1246,7 @@ namespace flex
 
 					if (ImGui::Button("Step (F10)"))
 					{
-						m_bSimulationPaused = true;
-						m_bSimulateNextFrame = true;
+						StepSimulationFrame();
 					}
 
 					if (ImGui::Button("Continue (F5)"))
@@ -1952,6 +1950,17 @@ namespace flex
 		return m_SimulationSpeed;
 	}
 
+	void FlexEngine::SetSimulationSpeed(real speed)
+	{
+		m_SimulationSpeed = glm::clamp(speed, 0.0f, 10.0f);
+	}
+
+	void FlexEngine::StepSimulationFrame()
+	{
+		m_bSimulationPaused = true;
+		m_bSimulateNextFrame = true;
+	}
+
 	std::string FlexEngine::EngineVersionString()
 	{
 		return IntToString(EngineVersionMajor) + "." +
@@ -2134,8 +2143,7 @@ namespace flex
 		{
 			if (keyCode == KeyCode::KEY_F10)
 			{
-				m_bSimulationPaused = true;
-				m_bSimulateNextFrame = true;
+				StepSimulationFrame();
 				return EventReply::CONSUMED;
 			}
 		}

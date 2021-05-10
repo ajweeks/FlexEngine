@@ -46,6 +46,8 @@ namespace flex
 		void SetFramesToFakeDT(i32 frameCount);
 
 		real GetSimulationSpeed() const;
+		void SetSimulationSpeed(real speed);
+		void StepSimulationFrame();
 
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
