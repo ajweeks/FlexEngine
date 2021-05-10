@@ -1808,6 +1808,26 @@ namespace flex
 		return m_TimeOfDay;
 	}
 
+	void BaseScene::SetSecondsPerDay(real secPerDay)
+	{
+		m_SecondsPerDay = glm::clamp(secPerDay, 0.001f, 6000.0f);
+	}
+
+	real BaseScene::GetSecondsPerDay() const
+	{
+		return m_SecondsPerDay;
+	}
+
+	void BaseScene::SetTimeOfDayPaused(bool bPaused)
+	{
+		m_bPauseTimeOfDay = bPaused;
+	}
+
+	bool BaseScene::GetTimeOfDayPaused() const
+	{
+		return m_bPauseTimeOfDay;
+	}
+
 	real BaseScene::GetPlayerMinHeight() const
 	{
 		return m_PlayerMinHeight;

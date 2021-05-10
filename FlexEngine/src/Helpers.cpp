@@ -223,6 +223,11 @@ namespace flex
 		return result;
 	}
 
+	FLEX_NO_DISCARD const char* BoolToString(bool bValue)
+	{
+		return bValue ? "true" : "false";
+	}
+
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
 		const glm::vec4& colour, real xSpacing, real scale) :

@@ -1426,8 +1426,7 @@ namespace flex
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
-					//const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
-					std::vector<std::string> cmdLineParts = Split(m_CmdLineStrBuf, ' ');
+					std::vector<std::string> cmdLineParts = SplitHandleStrings(m_CmdLineStrBuf, ' ');
 					if (!cmdLineParts.empty())
 					{
 						bool bMatched = false;
@@ -1460,6 +1459,7 @@ namespace flex
 											break;
 										}
 
+										// TODO: Do some type checking using func->argTypes
 										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
 										switch (argType)
 										{
@@ -1486,9 +1486,10 @@ namespace flex
 											args.emplace_back(Variant(argStr.c_str() + 1)); // + 1 to skip first quote
 											break;
 										default:
-											bValid = false;
+											// Assume string
+											args.emplace_back(Variant(argStr.c_str()));
+											break;
 										}
-
 									}
 									if (bValid)
 									{

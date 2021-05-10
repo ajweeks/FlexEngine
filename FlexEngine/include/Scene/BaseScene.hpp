@@ -135,6 +135,10 @@ namespace flex
 
 		void SetTimeOfDay(real time);
 		real GetTimeOfDay() const;
+		void SetSecondsPerDay(real secPerDay);
+		real GetSecondsPerDay() const;
+		void SetTimeOfDayPaused(bool bPaused);
+		bool GetTimeOfDayPaused() const;
 
 		real GetPlayerMinHeight() const;
 		glm::vec3 GetPlayerSpawnPoint() const;

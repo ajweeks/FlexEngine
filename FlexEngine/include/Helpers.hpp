@@ -143,6 +143,7 @@ namespace flex
 	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string LongToString(i64 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string ULongToString(u64 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD const char* BoolToString(bool bValue);
 
 	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 

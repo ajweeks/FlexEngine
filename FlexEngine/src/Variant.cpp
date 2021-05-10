@@ -32,7 +32,7 @@ namespace flex
 		case Type::LONG:	return LongToString(valInt);
 		case Type::ULONG:	return ULongToString(valInt);
 		case Type::FLOAT:	return FloatToString(valFloat);
-		case Type::BOOL:	return IntToString(valBool);
+		case Type::BOOL:	return BoolToString(valBool);
 		case Type::STRING:	return std::string(valStr);
 		case Type::CHAR:	return std::string(1, valChar);
 		default:			return "";
