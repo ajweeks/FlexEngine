@@ -1688,7 +1688,7 @@ namespace flex
 		m_Shaders[shaderID]->bTextureArr = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 16;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
