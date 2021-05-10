@@ -320,6 +320,8 @@ namespace flex
 
 		UIMesh* GetUIMesh();
 
+		void SetDebugOverlayID(i32 newID);
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -414,6 +416,8 @@ namespace flex
 		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
 		u32 m_ShadowMapBaseResolution = 4096;
 
+		i32 m_DebugOverlayID = 0;
+
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;
 
@@ -506,10 +510,11 @@ namespace flex
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 
-		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID = 0;
-		static const SpecializationConstantID m_TAASampleCountSpecializationID = 1;
-		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID = 2;
-		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID = 3;
+		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID =		0;
+		static const SpecializationConstantID m_TAASampleCountSpecializationID =		1;
+		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID =	2;
+		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID =	3;
+		static const SpecializationConstantID m_DebugOverlaySpecializationID =			4;
 
 		std::string m_RendererSettingsFilePathAbs;
 

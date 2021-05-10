@@ -23,6 +23,7 @@ namespace flex
 	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
 	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
+	static const i32 MAX_SSAO_KERNEL_SIZE = 64;
 
 	// 48 bytes
 	struct DirLightData
@@ -66,7 +67,6 @@ namespace flex
 		glm::vec4 points[4];	// 32
 	};
 
-	const i32 MAX_SSAO_KERNEL_SIZE = 64;
 	// 1028 bytes
 	struct SSAOGenData
 	{
@@ -1015,4 +1015,20 @@ namespace flex
 	{
 		char name[48];
 	};
+
+	static const char* DebugOverlayNames[] = {
+		"None",
+		"Albedo",
+		"Normal",
+		"Roughness",
+		"Metallic",
+		"Diffuse lighting",
+		"Specular lighting",
+		"Tex coords",
+		"Linear depth",
+		"Shadow",
+		"SSAO",
+	};
+
+	i32 DebugOverlayNameToID(const char* DebugOverlayName);
 } // namespace flex

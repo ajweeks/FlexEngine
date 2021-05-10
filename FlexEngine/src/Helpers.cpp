@@ -728,6 +728,79 @@ namespace flex
 		return result;
 	}
 
+	std::vector<std::string> SplitHandleStrings(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		bool bInSingleQuotes = false;
+		bool bInDoubleQuotes = false;
+		size_t strLen = str.size();
+		while (i < strLen)
+		{
+			while (i != strLen && (bInSingleQuotes || bInDoubleQuotes || str[i] == delim))
+			{
+				if (str[i] == '\'')
+				{
+					bInSingleQuotes = !bInSingleQuotes;
+				}
+				if (str[i] == '"')
+				{
+					bInDoubleQuotes = !bInDoubleQuotes;
+				}
+				++i;
+			}
+
+			size_t j = i;
+			while (j != strLen && (bInSingleQuotes || bInDoubleQuotes || str[j] != delim))
+			{
+				if (str[j] == '\'')
+				{
+					bInSingleQuotes = !bInSingleQuotes;
+				}
+				if (str[j] == '"')
+				{
+					bInDoubleQuotes = !bInDoubleQuotes;
+				}
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
+	i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares /* = u32_max */)
+	{
+		i32 ret_code = 0;
+		u32 chars_compared = 0;
+
+		if (str1 == nullptr || str2 == nullptr)
+		{
+			ret_code = INT_MIN;
+			return ret_code;
+		}
+
+		while ((chars_compared < maxNumCompares) && (*str1 || *str2))
+		{
+			ret_code = tolower((int)(*str1)) - tolower((int)(*str2));
+			if (ret_code != 0)
+			{
+				break;
+			}
+			chars_compared++;
+			str1++;
+			str2++;
+		}
+
+		return ret_code;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
 		while (offset < (i32)str.size())

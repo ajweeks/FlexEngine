@@ -370,39 +370,89 @@ namespace flex
 		io.IniSavingRate = 10.0f;
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard", []()
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene",
+			[]() { g_SceneManager->ReloadCurrentScene(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard",
+			[]()
 		{
 			g_ResourceManager->DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
 		}));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders", []() { g_Renderer->RecompileShaders(false); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all", []() { g_Editor->SelectAll(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none", []() { g_Editor->SelectNone(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit", []() { g_EngineInstance->Stop(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off", []() { g_Renderer->SetTAAEnabled(false); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa", []() { g_Renderer->SetTAAEnabled(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled", []() { return Variant(g_Renderer->IsTAAEnabled()); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders",
+			[]() { g_Renderer->RecompileShaders(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force",
+			[]() { g_Renderer->RecompileShaders(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs",
+			[]() { g_ResourceManager->LoadFonts(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all",
+			[]() { g_Editor->SelectAll(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none",
+			[]() { g_Editor->SelectNone(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit",
+			[]() { g_EngineInstance->Stop(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off",
+			[]() { g_Renderer->SetTAAEnabled(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa",
+			[]() { g_Renderer->SetTAAEnabled(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled",
+			[]() { return Variant(g_Renderer->IsTAAEnabled()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe",
+			[]() { g_Renderer->ToggleWireframeOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection",
+			[]() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("debug.overlay.clear",
+			[]() { g_Renderer->SetDebugOverlayID(0); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("debug.overlay",
+			[](const Variant& mode)
+		{
+			if (mode.type == Variant::Type::STRING)
+			{
+				std::string modeStr = mode.AsString();
+				i32 newModeID = DebugOverlayNameToID(modeStr.c_str());
+				if (newModeID != -1)
+				{
+					g_Renderer->SetDebugOverlayID(newModeID);
+				}
+			}
+			else
+			{
+				i32 newModeID = mode.AsInt();
+				g_Renderer->SetDebugOverlayID(newModeID);
+			}
+		}, Variant::Type::VOID /* either int or string */));
 
 		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.get",
-			[]()
-		{
-			return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay());
-		}));
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay()); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.set",
-			[](const Variant& time)
-		{
-			real timeFloat = time.AsFloat();
-			g_SceneManager->CurrentScene()->SetTimeOfDay(timeFloat);
-		}, Variant::Type::FLOAT));
+			[](const Variant& time) { g_SceneManager->CurrentScene()->SetTimeOfDay(time.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.paused.get",
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDayPaused()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.paused.set",
+			[](const Variant& timePaused) { g_SceneManager->CurrentScene()->SetTimeOfDayPaused(timePaused.AsBool()); }, Variant::Type::BOOL));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.seconds_per_day.get",
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.seconds_per_day.set",
+			[](const Variant& secPerDay) { g_SceneManager->CurrentScene()->SetSecondsPerDay(secPerDay.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("simulation.paused.get",
+			[]() { return Variant(g_EngineInstance->IsSimulationPaused()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("simulation.paused.set",
+			[](const Variant& simPaused) { g_EngineInstance->SetSimulationPaused(simPaused.AsBool()); }, Variant::Type::BOOL));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("simulation.speed.get",
+			[]() { return Variant(g_EngineInstance->GetSimulationSpeed()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("simulation.speed.set",
+			[](const Variant& simSpeed) { g_EngineInstance->SetSimulationSpeed(simSpeed.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("simulation.step_frame",
+			[]() { g_EngineInstance->StepSimulationFrame(); }));
 
 		// TODO: Add usage helper (e.g. "inventory.add ["item_name"] [count]")
-		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("inventory.add",
-			[](const Variant& item, const Variant& count) -> Variant {
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("inventory.add",
+			[](const Variant& item, const Variant& count) {
 				{
 					i32 countInt = count.AsInt();
 
@@ -418,10 +468,8 @@ namespace flex
 							player->AddToInventory(prefabID, countInt);
 						}
 					}
-					return Variant();
 				}
-		}, Variant::Type::VOID,
-			Variant::Type::STRING, Variant::Type::INT));
+		}, Variant::Type::STRING, Variant::Type::INT));
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)

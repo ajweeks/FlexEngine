@@ -9009,7 +9009,8 @@ namespace flex
 				VulkanShader* deferredCombineShader = (VulkanShader*)m_Shaders[deferredCombineShaderID];
 				deferredCombineShader->fragSpecializationInfo = GenerateSpecializationInfo({
 						{ m_ShaderQualityLevelSpecializationID, sizeof(i32), (void*)&m_ShaderQualityLevel },
-						{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount }
+						{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount },
+						{ m_DebugOverlaySpecializationID, sizeof(i32), (void*)&m_DebugOverlayID },
 					});
 
 				ShaderID taaShaderID = m_Materials[m_TAAResolveMaterialID]->shaderID;
@@ -9021,7 +9022,7 @@ namespace flex
 				ShaderID ssaoShaderID = m_Materials[m_SSAOMatID]->shaderID;
 				VulkanShader* ssaoShader = (VulkanShader*)m_Shaders[ssaoShaderID];
 				ssaoShader->fragSpecializationInfo = GenerateSpecializationInfo({
-						{m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize}
+						{ m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize }
 					});
 			}
 

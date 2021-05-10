@@ -947,6 +947,16 @@ namespace flex
 		return m_UIMesh;
 	}
 
+	void Renderer::SetDebugOverlayID(i32 newID)
+	{
+		newID = glm::clamp(newID, 0, (i32)ARRAY_LENGTH(DebugOverlayNames));
+		if (newID != m_DebugOverlayID)
+		{
+			m_DebugOverlayID = newID;
+			RecreateEverything();
+		}
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -2478,6 +2488,24 @@ namespace flex
 			{
 				m_ShaderQualityLevel = glm::clamp(m_ShaderQualityLevel, 0, 3);
 				RecreateEverything();
+			}
+
+			if (ImGui::BeginCombo("Debug overlay", DebugOverlayNames[m_DebugOverlayID]))
+			{
+				for (i32 i = 0; i < ARRAY_LENGTH(DebugOverlayNames); ++i)
+				{
+					bool bSelected = (i == m_DebugOverlayID);
+					if (ImGui::Selectable(DebugOverlayNames[i], &bSelected))
+					{
+						if (m_DebugOverlayID != i)
+						{
+							m_DebugOverlayID = i;
+							RecreateEverything();
+						}
+					}
+				}
+
+				ImGui::EndCombo();
 			}
 
 			if (ImGui::TreeNode("Debug objects"))
