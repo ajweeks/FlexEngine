@@ -9,7 +9,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/vec4.hpp>
 IGNORE_WARNINGS_POP
 
-#include "Functors.hpp"
 #include "Helpers.hpp" // For Hash
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
