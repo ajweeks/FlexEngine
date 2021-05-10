@@ -8,9 +8,8 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 
 ## Windows
 #### Requirements:
-- [GENie](https://github.com/bkaradzic/GENie)
-- cmake 3.13+
 - Python 3
+- cmake 3.13+
 
 #### Steps
 1. `cd scripts`
@@ -19,7 +18,6 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 4. Change configuration to x64
 5. Build and run!
 
-NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/genie.lua {build_system}` manually after running the build script in step 2, specifying whichever build system you want in place of `{build_system}`, such as `vs2019`.
 
 ## Linux
 #### Requirements:
@@ -39,11 +37,6 @@ NOTE: If GENie isn't on your path, you will need to run `genie --file=scripts/ge
 4. `make`
 5. `cd ../bin/Debug_x64/FlexEngine`
 6. `./Flex`
-### Linux Ubuntu 18.04
-#### Requirements:
-- [GENie](https://github.com/bkaradzic/GENie)
-- Python 3
-- cmake 3.13+
 
 ### Solus 4.2
 #### Steps
