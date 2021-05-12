@@ -131,6 +131,8 @@ namespace flex
 			i32 valBool;
 			const char* valStr;
 			char valChar;
+
+			u64 _largestField;
 		};
 
 		static Type CheckAssignmentType(Type lhsType, Type rhsType);

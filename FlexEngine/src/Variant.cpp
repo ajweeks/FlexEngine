@@ -13,9 +13,17 @@ namespace flex
 
 	Variant::Variant(const IR::Value& other)
 	{
-		type = (Type)other.type;
-		assert((i32)type < (i32)Type::_NONE);
-		valStr = other.valStr;
+		switch (other.type)
+		{
+		case IR::Value::Type::INT: type = Type::INT; break;
+		case IR::Value::Type::FLOAT: type = Type::FLOAT; break;
+		case IR::Value::Type::BOOL: type = Type::BOOL; break;
+		case IR::Value::Type::STRING: type = Type::STRING; break;
+		case IR::Value::Type::CHAR: type = Type::CHAR; break;
+		case IR::Value::Type::VOID: type = Type::VOID; break;
+		default: type = Type::_NONE; break;
+		}
+		_largestField = other._largestField;
 	}
 
 	bool Variant::IsValid() const
@@ -259,7 +267,7 @@ namespace flex
 	{
 		CheckAssignmentType(other.type);
 
-		valStr = other.valStr;
+		_largestField = other._largestField;
 
 		return *this;
 	}
@@ -270,7 +278,7 @@ namespace flex
 		{
 			CheckAssignmentType(other.type);
 
-			valStr = other.valStr;
+			_largestField = other._largestField;
 		}
 
 		return *this;
