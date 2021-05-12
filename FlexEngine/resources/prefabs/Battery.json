@@ -12,7 +12,9 @@
 		"mesh" : "battery_cell.glb",
 		"materials" : 
 		[
-			"pbr grey"
+			"pbr cyan",
+			"pbr chrome",
+			"rubber"
 		],
 		"collider" : 
 		{
@@ -26,6 +28,10 @@
 			"static" : false,
 			"mask" : 1,
 			"group" : 1
+		},
+		"battery info" : 
+		{
+			"charge amount" : 0.000000
 		}
 	}
 }

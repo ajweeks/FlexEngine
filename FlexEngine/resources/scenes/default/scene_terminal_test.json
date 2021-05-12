@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "4.804, 17.370, -7.257",
-			"pitch" : -0.618052,
-			"yaw" : 2.688168
+			"position" : "-13.217, 4.616, 0.651",
+			"pitch" : -0.440171,
+			"yaw" : 3.279650
 		}
 	},
 	"objects" : 
@@ -115,16 +115,16 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "-13.187, 0.708, 8.244"
+						"pos" : "-20.950, 3.565, 5.352"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-13.187, 0.708, 8.244",
+						"pos" : "-20.950, 3.565, 5.352",
 						"colour" : "0.49, 0.78, 0.91",
 						"enabled" : true,
-						"brightness" : 140.625000
+						"brightness" : 31.250000
 					},
 					"children" : 
 					[
@@ -273,6 +273,38 @@
 							[
 								"pbr white"
 							]
+						}
+					]
+				},
+				{
+					"name" : "PointLight_04",
+					"id" : "21ABBE5DCE4780B3476680BC4DA4742F",
+					"type" : "point light",
+					"transform" : 
+					{
+						"pos" : "-32.370, 2.848, 21.634"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"point light info" : 
+					{
+						"pos" : "-32.370, 2.848, 21.634",
+						"colour" : "0.95, 0.96, 0.84",
+						"enabled" : true,
+						"brightness" : 31.250000
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_008",
+							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				}
@@ -499,8 +531,8 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-19.363, 0.347, 1.945",
-				"rot" : "0.000, -0.685, -3.142",
+				"pos" : "-20.870, 0.347, -1.871",
+				"rot" : "0.000, -0.684, 3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -512,9 +544,8 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.728, 0.347, -1.190",
-				"rot" : "-0.000, -0.008, 0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-25.799, 0.347, -1.223",
+				"rot" : "0.000, -0.011, 0.000"
 			}
 		},
 		{
@@ -536,10 +567,61 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.743, 2.347, -1.199",
-				"rot" : "-0.000, -0.588, 0.000",
+				"pos" : "-28.278, 0.347, -1.535",
+				"rot" : "0.202, 0.000, 1.571",
 				"scale" : "1.000, 1.000, 1.000"
 			}
+		},
+		{
+			"name" : "rock-cube",
+			"id" : "3F3242989496499C4660836CE36D7484",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-26.777, 3.115, 15.404",
+				"rot" : "-0.712, 0.037, 0.780"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
+		},
+		{
+			"name" : "rock-cube-1",
+			"id" : "EA678D7D8CF2F8A74A71FD59452C90EE",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-26.921, 3.353, 11.325",
+				"rot" : "0.629, 0.332, -1.486"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
+		},
+		{
+			"name" : "rock-cube-2",
+			"id" : "9567554FE8FB42B64717CD3ECD7F2595",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-27.303, 3.335, 6.916",
+				"rot" : "-1.893, 0.460, 1.137"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
 		}
 	]
 }

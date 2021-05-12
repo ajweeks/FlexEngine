@@ -5,9 +5,9 @@
 		{
 			"name" : "pbr chrome",
 			"shader" : "pbr",
-			"const albedo" : "1.000, 0.306, 0.306, 1.000",
+			"const albedo" : "0.782, 0.782, 0.782, 1.000",
 			"const metallic" : 1.000000,
-			"const roughness" : 0.520000
+			"const roughness" : 0.130000
 		},
 		{
 			"name" : "pbr grey",
@@ -462,6 +462,19 @@
 		{
 			"name" : "area light 2",
 			"shader" : "colour"
+		},
+		{
+			"name" : "Rock",
+			"shader" : "pbr",
+			"const albedo" : "0.001, 0.001, 0.001, 1.000",
+			"const roughness" : 0.890000,
+			"enable normal sampler" : true
+		},
+		{
+			"name" : "rubber",
+			"shader" : "pbr",
+			"const albedo" : "0.014, 0.014, 0.014, 1.000",
+			"const roughness" : 0.980000
 		}
 	]
 }

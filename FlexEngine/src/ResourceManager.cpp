@@ -1562,6 +1562,31 @@ namespace flex
 							loadedTex = GetLoadedTexture(g_Renderer->blankTextureID);
 						}
 						material->textures.values[texIndex].object = loadedTex;
+
+						bool bTextureIsBlankTex = (loadedTexID == loadedTexID);
+						if (loadedTex != nullptr && !bTextureIsBlankTex)
+						{
+							if (material->textures.values[texIndex].uniformID == U_ALBEDO_SAMPLER.id)
+							{
+								material->enableAlbedoSampler = true;
+							}
+							else if (material->textures.values[texIndex].uniformID == U_EMISSIVE_SAMPLER.id)
+							{
+								material->enableEmissiveSampler = true;
+							}
+							else if (material->textures.values[texIndex].uniformID == U_METALLIC_SAMPLER.id)
+							{
+								material->enableMetallicSampler = true;
+							}
+							else if (material->textures.values[texIndex].uniformID == U_ROUGHNESS_SAMPLER.id)
+							{
+								material->enableRoughnessSampler = true;
+							}
+							else if (material->textures.values[texIndex].uniformID == U_NORMAL_SAMPLER.id)
+							{
+								material->enableNormalSampler = true;
+							}
+						}
 					}
 
 					i32 i = 0;
@@ -2009,6 +2034,7 @@ namespace flex
 								else
 								{
 									Mesh::LoadMesh(selectedRelativeFilePath);
+									DiscoverMeshes();
 								}
 							}
 
