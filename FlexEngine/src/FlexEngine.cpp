@@ -370,9 +370,22 @@ namespace flex
 		io.IniSavingRate = 10.0f;
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene",
+
+		// TODO: Support autofill of possible arguments (in this case scene names)
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("scene.load",
+			[](const Variant& newSceneNameStr) {
+				{
+					if (newSceneNameStr.type == Variant::Type::STRING)
+					{
+						std::string newSceneName(newSceneNameStr.AsString());
+						ToLower(newSceneName);
+						g_SceneManager->SetCurrentScene(newSceneName);
+					}
+				}
+		}, Variant::Type::STRING));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("scene.reload",
 			[]() { g_SceneManager->ReloadCurrentScene(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard",
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("scene.reload.hard",
 			[]()
 		{
 			g_ResourceManager->DestroyAllLoadedMeshes();
@@ -1896,7 +1909,7 @@ namespace flex
 
 		JSONObject rootObject = {};
 
-		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
+		std::string lastOpenedSceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
