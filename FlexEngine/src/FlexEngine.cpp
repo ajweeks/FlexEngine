@@ -483,6 +483,16 @@ namespace flex
 					}
 				}
 		}, Variant::Type::STRING, Variant::Type::INT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.shader_quality_level",
+			[](const Variant& shaderQualityLevel)
+		{
+			i32 shaderQualityLevelInt = shaderQualityLevel.AsInt();
+			if (shaderQualityLevelInt != -1)
+			{
+				g_Renderer->SetShaderQualityLevel(shaderQualityLevelInt);
+			}
+		}, Variant::Type::STRING));
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)

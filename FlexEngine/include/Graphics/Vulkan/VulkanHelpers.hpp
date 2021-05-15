@@ -445,6 +445,13 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
+		struct SpecializationInfoType
+		{
+			std::string name;
+			u32 id;
+			i32 defaultValut;
+		};
+
 		struct UniformBufferList
 		{
 			UniformBufferList();

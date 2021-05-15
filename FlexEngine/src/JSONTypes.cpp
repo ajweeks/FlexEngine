@@ -671,7 +671,12 @@ namespace flex
 	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
-		std::string result(tabs + '\"' + label + "\" : ");
+		std::string result(tabs);
+
+		if (!label.empty())
+		{
+			result += '\"' + label + "\" : ";
+		}
 
 		switch (value.type)
 		{
@@ -732,7 +737,7 @@ namespace flex
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
-				result += tabs + "\t\"" + value.fieldArrayValue[i].ToString(0) + "\"";
+				result += tabs + "\t" + value.fieldArrayValue[i].ToString(0);
 
 				if (i != value.fieldArrayValue.size() - 1)
 				{

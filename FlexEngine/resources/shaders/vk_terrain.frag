@@ -26,12 +26,15 @@ void main()
 {
 	vec3 albedo = ex_Colour.rgb * texture(albedoSampler, ex_TexCoord).rgb;
 	vec3 N = normalize(ex_NormalWS);
+	float roughness = 1.0;
+	float metallic = 0.0;
+	float ssao = 0.0;
 
 	mat4 invView = inverse(uboConstant.view);
 	vec3 camPos = vec3(invView[3][0], invView[3][1], invView[3][2]);
 
 	// TODO: Get proper linear depth
-	float dist = clamp(length(camPos - ex_PositionWS)*0.0003 - 0.1,0.0,1.0);
+	float dist = clamp(length(camPos - ex_PositionWS)*0.0001 - 0.1,0.0,1.0);
 
 	//dist = smoothstep(dist, 0.0, 0.13);
 
@@ -72,24 +75,30 @@ void main()
 		}
 	}
 
+	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
 	{
 		vec3 L = normalize(uboConstant.dirLight.direction);
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		float dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowMaps, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowMaps, NoL);
 		light *= (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= radiance;
 	}
 
 	groundCol *= light;
+	vec3 diffuse = groundCol;
+	vec3 specular = vec3(0);
 	groundCol += (fresnel * 1.2) * groundCol;
 	groundCol += (1.0 * max(dot(N, vec3(0, 1, 0)), 0.0)) * uboConstant.skyboxData.colourTop.rgb * groundCol;
 	fragmentColour = vec4(mix(groundCol, uboConstant.skyboxData.colourFog.rgb, dist), 1.0);
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0f)); // Reinhard tone-mapping
 	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0f / 2.2f)); // Gamma correction
+
+    DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
+     linDepth, dirLightShadowOpacity, ssao, /* inout */ fragmentColour);
 
 	// fragmentColour.rgb *= ColourByShadowCascade(cascadeIndex);
 	// fragmentColour = vec4(ex_Colour.rgb, 1.0);

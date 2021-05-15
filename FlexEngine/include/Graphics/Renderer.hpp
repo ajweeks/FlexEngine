@@ -207,7 +207,13 @@ namespace flex
 		// Returns true if any property changed
 		bool DrawImGuiForGameObject(GameObject* gameObject);
 
+		void DrawSpecializationConstantInfoImGui();
 		void DrawImGuiSettings();
+
+		void AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
+		void RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
+		std::vector<StringID>* GetShaderSpecializationConstants(ShaderID shaderID);
+		void DrawShaderSpecializationConstantImGui(ShaderID shaderID);
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
 		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;
@@ -217,6 +223,8 @@ namespace flex
 
 		void SaveSettingsToDisk(bool bAddEditorStr = true);
 		void LoadSettingsFromDisk();
+
+		void SetShaderQualityLevel(i32 newQualityLevel);
 
 		MaterialID GetMaterialID(const std::string& materialName);
 
@@ -379,6 +387,11 @@ namespace flex
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
 
+		void ParseSpecializationConstantInfo();
+		void ParseShaderSpecializationConstants();
+		void SerializeSpecializationConstantInfo();
+		void SerializeShaderSpecializationConstants();
+
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
 		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer
@@ -415,8 +428,6 @@ namespace flex
 
 		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
 		u32 m_ShadowMapBaseResolution = 4096;
-
-		i32 m_DebugOverlayID = 0;
 
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;
@@ -474,6 +485,7 @@ namespace flex
 		bool m_bTAAStateChanged = false;
 
 		i32 m_ShaderQualityLevel = 1;
+		const i32 MAX_SHADER_QUALITY_LEVEL = 3;
 
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;
@@ -509,12 +521,6 @@ namespace flex
 		MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
-
-		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID =		0;
-		static const SpecializationConstantID m_TAASampleCountSpecializationID =		1;
-		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID =	2;
-		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID =	3;
-		static const SpecializationConstantID m_DebugOverlaySpecializationID =			4;
 
 		std::string m_RendererSettingsFilePathAbs;
 
@@ -552,7 +558,6 @@ namespace flex
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
 		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
-		i32 m_SSAOKernelSize = MAX_SSAO_KERNEL_SIZE;
 		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;
@@ -577,6 +582,13 @@ namespace flex
 
 		std::vector<u32> m_DirtyStaticVertexBufferIndices;
 		std::vector<u32> m_DirtyDynamicVertexAndIndexBufferIndices;
+
+		// Maps specialization constant SID to pair of specialization constant ID & value
+		std::map<StringID, SpecializationConstantMetaData> m_SpecializationConstants;
+		// Maps shader ID to the list of specialization constant SIDs that shader uses
+		std::map<ShaderID, std::vector<StringID>> m_ShaderSpecializationConstants;
+		// Editor-only cache of specialization constant names
+		std::map<StringID, std::string> m_SpecializationConstantNames;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

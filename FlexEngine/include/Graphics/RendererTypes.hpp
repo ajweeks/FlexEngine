@@ -1015,8 +1015,18 @@ namespace flex
 		char name[48];
 	};
 
-	static const char* DebugOverlayNames[] = {
-		"None",
+	struct SpecializationConstantMetaData
+	{
+		SpecializationConstantID id;
+		i32 value;
+		// Editor-only:
+		i32 min;
+		i32 max;
+	};
+
+	static const char* DebugOverlayNames[] =
+	{
+		"None"
 		"Albedo",
 		"Normal",
 		"Roughness",
