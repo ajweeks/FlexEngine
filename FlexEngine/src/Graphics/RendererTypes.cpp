@@ -52,7 +52,7 @@ namespace flex
 		{
 			if (StrCmpCaseInsensitive(DebugOverlayNames[i], DebugOverlayName) == 0)
 			{
-				return i;
+				return i + 1; // One-based
 			}
 		}
 
