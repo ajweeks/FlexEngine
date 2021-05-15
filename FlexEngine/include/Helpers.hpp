@@ -343,7 +343,7 @@ namespace flex
 		i32 index = Find(vec, t);
 		if (index != -1)
 		{
-			vec.erase(index);
+			vec.erase(vec.begin() + index);
 			return true;
 		}
 		return false;
