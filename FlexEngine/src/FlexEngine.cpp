@@ -371,6 +371,8 @@ namespace flex
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
 
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("?",
+			[]() { g_EngineInstance->PrintAllConsoleCommands(); }));
 		// TODO: Support autofill of possible arguments (in this case scene names)
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("scene.load",
 			[](const Variant& newSceneNameStr) {
@@ -484,6 +486,12 @@ namespace flex
 				}
 		}, Variant::Type::STRING, Variant::Type::INT));
 
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("open",
+			[](const Variant& windowName)
+		{
+			g_EngineInstance->ToggleUIWindow(windowName.AsString());
+		}, Variant::Type::STRING));
+
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.shader_quality_level",
 			[](const Variant& shaderQualityLevel)
 		{
@@ -493,6 +501,22 @@ namespace flex
 				g_Renderer->SetShaderQualityLevel(shaderQualityLevelInt);
 			}
 		}, Variant::Type::STRING));
+
+		// Register UI windows (names must be lowercase)
+		m_UIWindows[SID("main")] = true;
+		m_UIWindows[SID("imgui demo")] = false;
+		m_UIWindows[SID("input bindings")] = false;
+		m_UIWindows[SID("memory stats")] = false;
+		m_UIWindows[SID("cpu stats")] = false;
+		m_UIWindows[SID("ui editor")] = false;
+		m_UIWindows[SID("fonts")] = false;
+		m_UIWindows[SID("materials")] = false;
+		m_UIWindows[SID("shaders")] = false;
+		m_UIWindows[SID("textures")] = false;
+		m_UIWindows[SID("meshes")] = false;
+		m_UIWindows[SID("prefabs")] = false;
+		m_UIWindows[SID("sounds")] = false;
+		m_UIWindows[SID("render doc")] = false;
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -973,9 +997,10 @@ namespace flex
 			return;
 		}
 
-		if (m_bDemoWindowShowing)
+		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID("imgui demo"));
+		if (*bImGuiDemoWindowShowing)
 		{
-			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);
+			ImGui::ShowDemoWindow(bImGuiDemoWindowShowing);
 		}
 
 		if (ImGui::BeginMainMenuBar())
@@ -1196,27 +1221,27 @@ namespace flex
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", nullptr, &m_bMainWindowShowing);
+				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")]);
 				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
-				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
+				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")]);
+				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")]);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
-				ImGui::MenuItem("UI Editor", nullptr, &m_bUIEditorShowing);
+				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")]);
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
-				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);
-				ImGui::MenuItem("Textures", nullptr, &g_ResourceManager->bTextureWindowShowing);
-				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
-				ImGui::MenuItem("Prefabs", nullptr, &g_ResourceManager->bPrefabsWindowShowing);
-				ImGui::MenuItem("Sounds", nullptr, &g_ResourceManager->bSoundsWindowShowing);
+				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")]);
+				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")]);
+				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")]);
+				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")]);
+				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")]);
+				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")]);
 				ImGui::Separator();
-				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
-				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);
+				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")]);
+				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")]);
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", nullptr, &m_bShowingRenderDocWindow);
+				ImGui::MenuItem("Render Doc Captures", nullptr, &m_UIWindows[SID("render doc")]);
 #endif
 				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_bDemoWindowShowing);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_UIWindows[SID("imgui demo")]);
 
 				ImGui::EndMenu();
 			}
@@ -1239,14 +1264,17 @@ namespace flex
 		{
 			FlexEngine* engine = static_cast<FlexEngine*>(data->UserData);
 			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
-			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
-				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
+			engine->m_ImGuiMainWindowWidth = glm::clamp(
+				engine->m_ImGuiMainWindowWidth,
+				engine->m_ImGuiMainWindowWidthMin,
+				engine->m_ImGuiMainWindowWidthMax);
 		};
 
 		bool bIsMainWindowCollapsed = true;
 
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		if (m_bMainWindowShowing)
+		bool* bShowMainWindow = GetUIWindowOpen(SID("main"));
+		if (*bShowMainWindow)
 		{
 			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 			static const char* titleCharStr = titleString.c_str();
@@ -1259,7 +1287,7 @@ namespace flex
 			real frameBufferHeight = (real)frameBufferSize.y;
 			ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
 				ImGuiCond_Always);
-			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
+			if (ImGui::Begin(titleCharStr, &m_UIWindows[SID("main")], mainWindowFlags))
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
 
@@ -1398,9 +1426,10 @@ namespace flex
 
 		g_ResourceManager->DrawImGuiWindows();
 
-		if (m_bInputMapperShowing)
+		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID("input bindings"));
+		if (*bShowInputBindingsWindow)
 		{
-			g_InputManager->DrawImGuiKeyMapper(&m_bInputMapperShowing);
+			g_InputManager->DrawImGuiBindings(bShowInputBindingsWindow);
 		}
 
 		if (m_bShowingConsole)
@@ -1408,7 +1437,7 @@ namespace flex
 			const real consoleWindowWidth = 350.0f;
 			float fontScale = ImGui::GetIO().FontGlobalScale;
 			real consoleWindowHeight = 28.0f + m_CmdAutoCompletions.size() * 16.0f * fontScale;
-			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
+			const real consoleWindowX = (m_UIWindows[SID("main")] && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(consoleWindowWidth, consoleWindowHeight));
@@ -1564,9 +1593,10 @@ namespace flex
 		}
 
 #if COMPILE_RENDERDOC_API
-		if (m_bShowingRenderDocWindow)
+		bool* bShowRenderDocWindow = GetUIWindowOpen(SID("render doc"));
+		if (*bShowRenderDocWindow)
 		{
-			if (ImGui::Begin("RenderDoc", &m_bShowingRenderDocWindow))
+			if (ImGui::Begin("RenderDoc", bShowRenderDocWindow))
 			{
 				ImGui::Text("RenderDoc connected - API v%i.%i.%i", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);
 				if (ImGui::Button("Trigger capture (F9)"))
@@ -1611,9 +1641,10 @@ namespace flex
 		}
 #endif
 
-		if (m_bShowMemoryStatsWindow)
+		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID("memory stats"));
+		if (*bShowMemoryStatsWindow)
 		{
-			if (ImGui::Begin("Memory", &m_bShowMemoryStatsWindow))
+			if (ImGui::Begin("Memory", bShowMemoryStatsWindow))
 			{
 				ImGui::Text("Memory allocated:       %.3fMB", g_TotalTrackedAllocatedMemory / 1'000'000.0f);
 				ImGui::Text("Delta allocation count: %i", (i32)g_TrackedAllocationCount - (i32)g_TrackedDeallocationCount);
@@ -1621,9 +1652,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (m_bShowCPUStatsWindow)
+		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID("cpu stats"));
+		if (*bShowCPUStatsWindow)
 		{
-			if (ImGui::Begin("CPU Stats", &m_bShowCPUStatsWindow))
+			if (ImGui::Begin("CPU Stats", bShowCPUStatsWindow))
 			{
 				ImGui::Text("Logical processor count: %u", Platform::cpuInfo.logicalProcessorCount);
 				ImGui::Text("Physical core count: %u", Platform::cpuInfo.physicalCoreCount);
@@ -1635,9 +1667,23 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (m_bUIEditorShowing)
+		bool* bShowUIEditorWindow = GetUIWindowOpen(SID("ui editor"));
+		if (*bShowUIEditorWindow)
 		{
-			g_UIManager->DrawImGui(&m_bUIEditorShowing);
+			g_UIManager->DrawImGui(bShowUIEditorWindow);
+		}
+	}
+
+	void FlexEngine::ToggleUIWindow(const std::string& windowName)
+	{
+		std::string nameLower = windowName;
+		ToLower(nameLower);
+		StringID windowNameSID = Hash(nameLower.c_str());
+		auto iter = m_UIWindows.find(windowNameSID);
+		if (iter != m_UIWindows.end())
+		{
+			bool bWindowOpen = iter->second;
+			iter->second = !bWindowOpen;
 		}
 	}
 
@@ -1841,6 +1887,33 @@ namespace flex
 		m_bRunning = false;
 	}
 
+	void FlexEngine::PrintAllConsoleCommands()
+	{
+		for (IFunction* command : m_ConsoleCommands)
+		{
+			Print("%s(", command->name.c_str());
+
+			for (u32 i = 0; i < (u32)command->argTypes.size(); ++i)
+			{
+				Print("%s", Variant::TypeToString(command->argTypes[i]));
+				if (i + 1 < (u32)command->argTypes.size())
+				{
+					Print(", ");
+				}
+			}
+
+			Print(")");
+
+			if (command->returnType != Variant::Type::_NONE &&
+				command->returnType != Variant::Type::VOID)
+			{
+				Print(" -> %s", Variant::TypeToString(command->returnType));
+			}
+
+			Print("\n");
+		}
+	}
+
 	bool FlexEngine::LoadCommonSettingsFromDisk()
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
@@ -1983,6 +2056,11 @@ namespace flex
 	{
 		m_bSimulationPaused = true;
 		m_bSimulateNextFrame = true;
+	}
+
+	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID)
+	{
+		return &m_UIWindows[windowNameSID];
 	}
 
 	std::string FlexEngine::EngineVersionString()

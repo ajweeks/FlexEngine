@@ -18,6 +18,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
+#include "FlexEngine.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
@@ -1363,9 +1364,10 @@ namespace flex
 
 	void ResourceManager::DrawImGuiWindows()
 	{
-		if (bFontWindowShowing)
+		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("fonts"));
+		if (*bFontsWindowOpen)
 		{
-			if (ImGui::Begin("Fonts", &bFontWindowShowing))
+			if (ImGui::Begin("Fonts", bFontsWindowOpen))
 			{
 				for (auto& fontPair : fontMetaData)
 				{
@@ -1491,9 +1493,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bMaterialWindowShowing)
+		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("materials"));
+		if (*bMaterialsWindowOpen)
 		{
-			if (ImGui::Begin("Materials", &bMaterialWindowShowing))
+			if (ImGui::Begin("Materials", bMaterialsWindowOpen))
 			{
 				static bool bUpdateFields = true;
 				static bool bMaterialSelectionChanged = true;
@@ -1784,9 +1787,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bShaderWindowShowing)
+		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("shaders"));
+		if (*bShadersWindowOpen)
 		{
-			if (ImGui::Begin("Shaders", &bShaderWindowShowing))
+			if (ImGui::Begin("Shaders", bShadersWindowOpen))
 			{
 				static i32 selectedShaderIndex = 0;
 				Shader* selectedShader = nullptr;
@@ -1816,14 +1820,19 @@ namespace flex
 					g_Renderer->RecompileShaders(false);
 				}
 #endif
+
+				ImGui::Separator();
+
+				g_Renderer->DrawSpecializationConstantInfoImGui();
 			}
 
 			ImGui::End();
 		}
 
-		if (bTextureWindowShowing)
+		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("textures"));
+		if (*bTexturesWindowOpen)
 		{
-			if (ImGui::Begin("Textures", &bTextureWindowShowing))
+			if (ImGui::Begin("Textures", bTexturesWindowOpen))
 			{
 				static ImGuiTextFilter textureFilter;
 				textureFilter.Draw("##texture-filter");
@@ -1935,9 +1944,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bMeshWindowShowing)
+		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("meshes"));
+		if (*bMeshesWindowOpen)
 		{
-			if (ImGui::Begin("Meshes", &bMeshWindowShowing))
+			if (ImGui::Begin("Meshes", bMeshesWindowOpen))
 			{
 				static i32 selectedMeshIndex = 0;
 
@@ -2065,9 +2075,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bPrefabsWindowShowing)
+		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("prefabs"));
+		if (*bPrefabsWindowOpen)
 		{
-			if (ImGui::Begin("Prefabs", &bPrefabsWindowShowing))
+			if (ImGui::Begin("Prefabs", bPrefabsWindowOpen))
 			{
 				static ImGuiTextFilter prefabFilter;
 				prefabFilter.Draw("##prefab-filter");
@@ -2126,9 +2137,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bSoundsWindowShowing)
+		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("sounds"));
+		if (*bSoundsWindowOpen)
 		{
-			if (ImGui::Begin("Sound clips", &bSoundsWindowShowing))
+			if (ImGui::Begin("Sound clips", bSoundsWindowOpen))
 			{
 				// TODO: Add tickbox/env var somewhere to disable this
 				static bool bAutoPlay = true;

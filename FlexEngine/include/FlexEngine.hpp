@@ -49,6 +49,8 @@ namespace flex
 		void SetSimulationSpeed(real speed);
 		void StepSimulationFrame();
 
+		bool* GetUIWindowOpen(StringID windowNameSID);
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
 
@@ -132,6 +134,8 @@ namespace flex
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
 
+		void PrintAllConsoleCommands();
+
 		//void SelectNone();
 
 		// Returns true if the common settings file existed and was valid
@@ -139,6 +143,8 @@ namespace flex
 		void SaveCommonSettingsToDisk(bool bAddEditorStr);
 
 		void AppendToBootupTimesFile(const std::string& entry);
+
+		void ToggleUIWindow(const std::string& windowName);
 
 		bool m_bRunning = false;
 
@@ -160,9 +166,9 @@ namespace flex
 
 		real m_SimulationSpeed = 1.0f;
 
+		real m_ImGuiMainWindowWidth = 350.0f;
 		real m_ImGuiMainWindowWidthMin = 200.0f;
 		real m_ImGuiMainWindowWidthMax = 0.0f;
-		real m_ImGuiMainWindowWidth = 350.0f;
 
 		std::string m_RendererName;
 		std::string m_CompilerName;
@@ -190,12 +196,8 @@ namespace flex
 		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
 		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
 
-		bool m_bMainWindowShowing = true;
-		bool m_bDemoWindowShowing = false;
-		bool m_bInputMapperShowing = false;
-		bool m_bShowMemoryStatsWindow = false;
-		bool m_bShowCPUStatsWindow = false;
-		bool m_bUIEditorShowing = false;
+		// Maps hashed window names (lower case) to bool storing whether they're open
+		std::map<StringID, bool> m_UIWindows;
 
 		bool m_bWriteProfilerResultsToFile = false;
 
@@ -224,7 +226,6 @@ namespace flex
 		bool m_bRenderDocCapturingFrame = false;
 		i32 m_RenderDocUIPID = -1;
 		HMODULE m_RenderDocModule = 0;
-		bool m_bShowingRenderDocWindow = false;
 		i32 m_RenderDocAPIVerionMajor = -1;
 		i32 m_RenderDocAPIVerionMinor = -1;
 		i32 m_RenderDocAPIVerionPatch = -1;
