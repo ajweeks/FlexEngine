@@ -6056,7 +6056,7 @@ namespace flex
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
 				{
-					std::string samplingPropertyList = waveSamplingLODsArrObj[i].label;
+					std::string samplingPropertyList = waveSamplingLODsArrObj[i].value.AsString();
 					std::vector<std::string> strParts = Split(samplingPropertyList, ',');
 					if (strParts.size() != 2)
 					{
@@ -6080,7 +6080,7 @@ namespace flex
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
 				{
-					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].label;
+					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].value.AsString();
 					std::vector<std::string> strParts = Split(tessellationPropertyList, ',');
 					if (strParts.size() != 2)
 					{
@@ -10886,7 +10886,7 @@ namespace flex
 				assert(m_TireCount == (i32)tireIDs.size());
 				for (i32 i = 0; i < m_TireCount; ++i)
 				{
-					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].label);
+					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
 				}
 			}
 
@@ -10896,7 +10896,7 @@ namespace flex
 				assert((i32)brakeLightIDs.size() == 2);
 				for (i32 i = 0; i < 2; ++i)
 				{
-					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].label);
+					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
 				}
 			}
 
@@ -10906,7 +10906,8 @@ namespace flex
 				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
 				for (i32 i = 0; i < count; ++i)
 				{
-					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].label);
+					// TODO: Store as ints now that that's supported
+					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].value.AsString());
 				}
 			}
 		}

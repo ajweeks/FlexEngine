@@ -11,6 +11,11 @@ namespace flex
 
 	using Type = Variant::Type;
 
+	const char* Variant::TypeToString(Type type)
+	{
+		return VariantTypeNames[(u32)type];
+	}
+
 	Variant::Variant(const IR::Value& other)
 	{
 		switch (other.type)

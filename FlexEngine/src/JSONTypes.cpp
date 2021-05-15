@@ -47,7 +47,7 @@ namespace flex
 				}
 				else
 				{
-					std::string numberStr = std::to_string(c) + stringAfter.substr(0, nextNonAlphaNumeric);
+					std::string numberStr = std::string(1, c) + stringAfter.substr(0, nextNonAlphaNumeric);
 
 					if (isNegation)
 					{
@@ -150,6 +150,150 @@ namespace flex
 		type(Type::STRING),
 		strValue(inGUIDValue.ToString())
 	{
+	}
+
+	i32 JSONValue::AsInt() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return intValue;
+		case Type::UINT:
+			return (i32)uintValue;
+		case Type::LONG:
+			return (i32)longValue;
+		case Type::ULONG:
+			return (i32)ulongValue;
+		case Type::FLOAT:
+			return (i32)floatValue;
+		case Type::BOOL:
+			return boolValue ? 1 : 0;
+		default:
+			PrintError("AsInt was called on non-integer value\\n");
+			return i32_max;
+		}
+	}
+
+	u32 JSONValue::AsUInt() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return (u32)intValue;
+		case Type::UINT:
+			return uintValue;
+		case Type::LONG:
+			return (u32)longValue;
+		case Type::ULONG:
+			return (u32)ulongValue;
+		case Type::FLOAT:
+			return (u32)floatValue;
+		case Type::BOOL:
+			return boolValue;
+		default:
+			PrintError("AsUInt was called on non-integer value\\n");
+			return u32_max;
+		}
+	}
+
+	i64 JSONValue::AsLong() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return (i64)intValue;
+		case Type::UINT:
+			return (i64)uintValue;
+		case Type::LONG:
+			return longValue;
+		case Type::ULONG:
+			return (i64)ulongValue;
+		case Type::FLOAT:
+			return (i64)floatValue;
+		case Type::BOOL:
+			return boolValue;
+		default:
+			PrintError("AsLong was called on non-integer value\\n");
+			return -1;
+		}
+	}
+
+	u64 JSONValue::AsULong() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return (u64)intValue;
+		case Type::UINT:
+			return (u64)uintValue;
+		case Type::LONG:
+			return (u64)longValue;
+		case Type::ULONG:
+			return ulongValue;
+		case Type::FLOAT:
+			return (u64)floatValue;
+		case Type::BOOL:
+			return boolValue;
+		default:
+			PrintError("AsULong was called on non-integer value\\n");
+			return u64_max;
+		}
+	}
+
+	real JSONValue::AsFloat() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return (real)intValue;
+		case Type::UINT:
+			return (real)uintValue;
+		case Type::LONG:
+			return (real)longValue;
+		case Type::ULONG:
+			return (real)ulongValue;
+		case Type::FLOAT:
+			return floatValue;
+		case Type::BOOL:
+			return (boolValue != 0) ? 1.0f : 0.0f;
+		default:
+			PrintError("AsFloat was called on non-floating point value\n");
+			return -1.0f;
+		}
+	}
+
+	bool JSONValue::AsBool() const
+	{
+		switch (type)
+		{
+		case Type::INT:
+			return (intValue != 0) ? 1 : 0;
+		case Type::UINT:
+			return (uintValue != 0) ? 1 : 0;
+		case Type::LONG:
+			return (longValue != 0) ? 1 : 0;
+		case Type::ULONG:
+			return (ulongValue != 0) ? 1 : 0;
+		case Type::FLOAT:
+			return (floatValue != 0.0f ? 1 : 0);
+		case Type::BOOL:
+			return (boolValue != 0 ? 1 : 0);
+		default:
+			PrintError("AsBool was called on non-bool value\\n");
+			return false;
+		}
+	}
+
+	std::string JSONValue::AsString() const
+	{
+		switch (type)
+		{
+		case Type::STRING:
+			return strValue;
+		default:
+			PrintError("AsFloat was called on non-string value\\n");
+			return "";
+		}
 	}
 
 	bool JSONObject::HasField(const std::string& label) const
@@ -345,6 +489,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
+				// TODO: Call AsULong here
 				return field.value.ulongValue;
 			}
 		}
@@ -587,7 +732,7 @@ namespace flex
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
-				result += tabs + "\t\"" + value.fieldArrayValue[i].label + "\"";
+				result += tabs + "\t\"" + value.fieldArrayValue[i].ToString(0) + "\"";
 
 				if (i != value.fieldArrayValue.size() - 1)
 				{

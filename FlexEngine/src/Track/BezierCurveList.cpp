@@ -35,7 +35,7 @@ namespace flex
 
 		for (const JSONField& field : obj.fields)
 		{
-			std::string curveString = field.value.strValue;
+			std::string curveString = field.value.AsString();
 			curves.emplace_back(BezierCurve3D::FromString(curveString));
 		}
 	}

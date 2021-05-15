@@ -11,6 +11,21 @@ namespace flex
 
 	class VirtualMachine;
 
+	static const char* VariantTypeNames[] =
+	{
+		"int",
+		"uint",
+		"long",
+		"ulong",
+		"float",
+		"bool",
+		"string",
+		"char",
+		"void",
+
+		"NONE"
+	};
+
 	struct Variant
 	{
 		enum class Type
@@ -27,6 +42,10 @@ namespace flex
 
 			_NONE
 		};
+
+		static_assert((u32)Type::_NONE == ((u32)ARRAY_LENGTH(VariantTypeNames) - 1), "Variant::VariantTypeNames doesn't contain a matching number of elements to Variant::Type enum");
+
+		static const char* TypeToString(Type type);
 
 		Variant() :
 			type(Type::_NONE),

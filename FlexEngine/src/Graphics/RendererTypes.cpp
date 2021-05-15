@@ -242,7 +242,7 @@ namespace flex
 			{
 				for (const JSONField& materialNameField : materialNames)
 				{
-					std::string materialName = materialNameField.label;
+					std::string materialName = materialNameField.value.strValue;
 					bool bSuccess = false;
 					if (!materialName.empty())
 					{
