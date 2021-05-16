@@ -8063,14 +8063,16 @@ namespace flex
 				{
 					if (iter->second->rigidBody == nullptr)
 					{
-						CreateChunkRigidBody(chunkIndex);
+						Chunk* chunk = m_Meshes[chunkIndex];
+						CreateChunkRigidBody(chunk);
 					}
 				}
 				else
 				{
 					if (iter->second->rigidBody != nullptr)
 					{
-						DestroyChunkRigidBody(chunkIndex);
+						Chunk* chunk = m_Meshes[chunkIndex];
+						DestroyChunkRigidBody(chunk);
 					}
 				}
 			}
@@ -8086,17 +8088,9 @@ namespace flex
 		// TODO: Only join our threads!
 		Platform::JoinThreads();
 
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		for (auto& pair : m_Meshes)
 		{
-			// Mesh components will be destroyed by Mesh::Destroy
-			if (iter->second->rigidBody != nullptr)
-			{
-				iter->second->rigidBody->Destroy();
-				delete iter->second->rigidBody;
-			}
-			delete iter->second->triangleIndexVertexArray;
-
-			delete iter->second;
+			DestroyChunk(pair.second);
 		}
 		m_Meshes.clear();
 
@@ -8797,43 +8791,61 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::DestroyChunkRigidBody(const glm::vec2i& chunkIndex)
+	void TerrainGenerator::DestroyChunkRigidBody(Chunk* chunk)
 	{
-		m_Meshes[chunkIndex]->rigidBody->Destroy();
-		delete m_Meshes[chunkIndex]->rigidBody;
-		m_Meshes[chunkIndex]->rigidBody = nullptr;
-		delete m_Meshes[chunkIndex]->triangleIndexVertexArray;
-		m_Meshes[chunkIndex]->triangleIndexVertexArray = nullptr;
+		if (chunk->rigidBody != nullptr)
+		{
+			chunk->rigidBody->Destroy();
+			delete chunk->rigidBody;
+			chunk->rigidBody = nullptr;
+
+			delete chunk->collisionShape;
+			chunk->collisionShape = nullptr;
+		}
+		delete chunk->triangleIndexVertexArray;
+		chunk->triangleIndexVertexArray = nullptr;
 	}
 
-	void TerrainGenerator::CreateChunkRigidBody(const glm::vec2i& chunkIndex)
+	void TerrainGenerator::CreateChunkRigidBody(Chunk* chunk)
 	{
-		if (m_Meshes[chunkIndex]->rigidBody != nullptr)
+		if (chunk->rigidBody != nullptr)
 		{
 			// Already exists
 			return;
 		}
 
-		MeshComponent* submesh = m_Meshes[chunkIndex]->meshComponent;
+		MeshComponent* submesh = chunk->meshComponent;
 
-		btBvhTriangleMeshShape* shape;
-		submesh->CreateCollisionMesh(&m_Meshes[chunkIndex]->triangleIndexVertexArray, &shape);
+		assert(chunk->collisionShape == nullptr);
+
+		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
 
 		// TODO: Don't even create rb?
 		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
-		rigidBody->Initialize(shape, &m_Transform);
-		m_Meshes[chunkIndex]->rigidBody = rigidBody;
-		m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+		rigidBody->Initialize(chunk->collisionShape, &m_Transform);
+		chunk->rigidBody = rigidBody;
+		chunk->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+	}
+
+	// NOTE: This function assumes that the caller will remove the chunk from m_Meshes themselves
+	void TerrainGenerator::DestroyChunk(Chunk* chunk)
+	{
+		m_Mesh->RemoveSubmesh(chunk->linearIndex);
+
+		DestroyChunkRigidBody(chunk);
+
+		chunk->meshComponent->Destroy();
+		delete chunk->meshComponent;
+
+		delete chunk;
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
 	{
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		for (auto& pair : m_Meshes)
 		{
-			m_Mesh->RemoveSubmesh(iter->second->linearIndex);
-			iter->second->meshComponent->Destroy();
-			delete iter->second;
+			DestroyChunk(pair.second);
 		}
 		m_Meshes.clear();
 	}

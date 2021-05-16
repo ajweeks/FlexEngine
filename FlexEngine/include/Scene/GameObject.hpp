@@ -1182,6 +1182,8 @@ namespace flex
 		real MaxHeight = 3.0f;
 
 	private:
+		struct Chunk;
+
 		friend Road;
 
 		static real SmoothBlend(real t);
@@ -1191,10 +1193,11 @@ namespace flex
 
 		void DiscoverChunks();
 		void GenerateChunks();
+		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
 
-		void DestroyChunkRigidBody(const glm::vec2i& chunkIndex);
-		void CreateChunkRigidBody(const glm::vec2i& chunkIndex);
+		void DestroyChunkRigidBody(Chunk* chunk);
+		void CreateChunkRigidBody(Chunk* chunk);
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
@@ -1208,6 +1211,7 @@ namespace flex
 			btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
 			RigidBody* rigidBody = nullptr;
 			MeshComponent* meshComponent = nullptr;
+			btCollisionShape* collisionShape = nullptr;
 			//glm::vec2i chunkIndex;
 			u32 linearIndex = 0;
 		};
