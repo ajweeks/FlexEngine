@@ -38,7 +38,7 @@ jobs:
 
       - name: build-glfw
         run: |
-          mkdir -p FlexEngine/dependencies/glfw/build/
+          mkdir -p FlexEngine/dependencies/glfw/build/;
           pushd FlexEngine/dependencies/glfw/build/ && make . && popd
       
       - name: copy-glfw-binaries
