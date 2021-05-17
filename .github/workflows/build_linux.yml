@@ -37,8 +37,7 @@ jobs:
             FlexEngine/dependencies/glfw/build/ \
             FlexEngine/dependencies/openAL/build/ \
             FlexEngine/dependencies/bullet/build/ \
-            FlexEngine/dependencies/freetype/build/ \
-            FlexEngine/dependencies/shaderc/build/
+            FlexEngine/dependencies/freetype/build/
 
 # GLFW
       - name: glfw-generate-build-files
@@ -92,6 +91,7 @@ jobs:
           pushd FlexEngine/dependencies/shaderc/; \
           dos2unix autogen.sh; \
           sh autogen.sh; \
+          mkdir build/; \
           cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
           popd
       
