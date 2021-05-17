@@ -475,6 +475,21 @@
 			"shader" : "pbr",
 			"const albedo" : "0.014, 0.014, 0.014, 1.000",
 			"const roughness" : 0.980000
+		},
+		{
+			"name" : "solar-panel-blue",
+			"shader" : "pbr",
+			"const albedo" : "1.000, 1.000, 1.000, 1.000",
+			"const roughness" : 0.080000,
+			"enable albedo sampler" : true,
+			"albedo texture filepath" : "solar-panel-face.png"
+		},
+		{
+			"name" : "solar-panel-trim",
+			"shader" : "pbr",
+			"const albedo" : "0.540, 0.540, 0.540, 1.000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.130000
 		}
 	]
 }
