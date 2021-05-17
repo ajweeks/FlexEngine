@@ -46,6 +46,19 @@ namespace flex
 		}
 	}
 
+	i32 DebugOverlayNameToID(const char* DebugOverlayName)
+	{
+		for (i32 i = 0; i < ARRAY_LENGTH(DebugOverlayNames); ++i)
+		{
+			if (StrCmpCaseInsensitive(DebugOverlayNames[i], DebugOverlayName) == 0)
+			{
+				return i + 1; // One-based
+			}
+		}
+
+		return -1;
+	}
+
 	bool UniformList::HasUniform(const Uniform& uniform) const
 	{
 		return uniforms.find(uniform.id) != uniforms.end();
@@ -229,7 +242,7 @@ namespace flex
 			{
 				for (const JSONField& materialNameField : materialNames)
 				{
-					std::string materialName = materialNameField.label;
+					std::string materialName = materialNameField.value.strValue;
 					bool bSuccess = false;
 					if (!materialName.empty())
 					{

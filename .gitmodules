@@ -10,3 +10,6 @@
 [submodule "FlexEngine/dependencies/bullet"]
 	path = FlexEngine/dependencies/bullet
 	url = https://github.com/ajweeks/bullet3
+[submodule "FlexEngine/dependencies/freetype"]
+	path = FlexEngine/dependencies/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype

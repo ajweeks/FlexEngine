@@ -102,7 +102,7 @@ namespace flex
 		void BindActionCallback(ICallbackAction* callback, i32 priority);
 		void UnbindActionCallback(ICallbackAction* callback);
 
-		void DrawImGuiKeyMapper(bool* bOpen);
+		void DrawImGuiBindings(bool* bOpen);
 
 		void OnWindowFocusChanged(bool bNowFocused);
 		void OnCursorModeChanged(CursorMode newMode);

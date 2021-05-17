@@ -1,11 +1,12 @@
-func recurse(int val, int depth) -> int {
-  if (0) {
-    return val * recurse(val, depth - 1);
+func pow(int val, int depth) -> int {
+  if (depth > 0) {
+    return val * pow(val, depth - 1);
   }
   return val;
 }
 
-out_0 = recurse(5, 1);
+out_0 = pow(2, 8);
+Print(out_0);
 
 out_1 = DoMathSmall(1, 2, 3);
 
@@ -14,4 +15,5 @@ out_2 = Quintuple(2);
 Print(false);
 Print(1000);
 Print(100.50);
+Print("Hello, world!");
 

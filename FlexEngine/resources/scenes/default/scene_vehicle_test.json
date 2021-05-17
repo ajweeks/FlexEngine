@@ -5,9 +5,9 @@
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
 	"camera" : 
 	{
-		"type" : "vehicle",
+		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 5000.000000,
+		"far plane" : 1000.000000,
 		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "260.061, 3.634, 86.842",
-			"pitch" : -0.334211,
-			"yaw" : 0.914044
+			"position" : "-20.285, 40.796, -76.655",
+			"pitch" : -0.431259,
+			"yaw" : 7.370833
 		}
 	},
 	"objects" : 
@@ -44,17 +44,17 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.207, 0.095, 1.317"
+				"rot" : "0.819, 0.180, 0.223"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.425, 0.378, 0.482, 0.667",
+				"rotation" : "0.385, 0.126, 0.066, 0.912",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "1.00, 0.98, 0.86",
 				"enabled" : true,
-				"brightness" : 0.859000,
+				"brightness" : 0.887000,
 				"cast shadows" : true,
 				"shadow darkness" : 1.000000
 			}
@@ -67,8 +67,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "265.978, 0.368, 94.514",
-				"rot" : "-0.334, 0.629, -0.107",
+				"pos" : "67.530, -9.126, 86.222",
+				"rot" : "-0.022, 1.265, -0.002",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},

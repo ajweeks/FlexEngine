@@ -106,6 +106,14 @@ namespace flex
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
 		explicit JSONValue(const GUID& inGUIDValue);
 
+		i32 AsInt() const;
+		u32 AsUInt() const;
+		i64 AsLong() const;
+		u64 AsULong() const;
+		real AsFloat() const;
+		bool AsBool() const;
+		std::string AsString() const;
+
 		Type type = Type::UNINITIALIZED;
 		union
 		{

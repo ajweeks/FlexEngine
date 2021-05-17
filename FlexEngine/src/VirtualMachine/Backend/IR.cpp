@@ -175,6 +175,7 @@ namespace flex
 				blocks[i]->Destroy();
 				delete blocks[i];
 			}
+			blocks.clear();
 		}
 
 		void State::Destroy()
@@ -719,13 +720,13 @@ namespace flex
 				{
 					IFunction* funcPtr = funcPtrPair.second;
 
-					IR::Value::Type returnType = (IR::Value::Type)funcPtr->returnType;
+					IR::Value::Type returnType = IR::Value::IRTypeFromVariantType(funcPtr->returnType);
 
 					std::vector<IR::Value::Type> argumentTypes;
 					argumentTypes.reserve(funcPtr->argTypes.size());
 					for (Variant::Type argType : funcPtr->argTypes)
 					{
-						argumentTypes.emplace_back((IR::Value::Type)argType);
+						argumentTypes.emplace_back(IR::Value::IRTypeFromVariantType(argType));
 					}
 
 					if (!AddFunctionType(Span(Span::Source::GENERATED), funcPtr->name, returnType, argumentTypes))
@@ -1055,16 +1056,12 @@ namespace flex
 						delete newTemp;
 						std::string ifString = ifStatement->condition->ToString();
 						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
-						delete conditionExpr;
 						return;
 					}
 
-					IR::Value* previosuConditionExpr = conditionExpr;
-					conditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
-					delete previosuConditionExpr;
-					previosuConditionExpr = nullptr;
+					IR::Value* rewrittenConditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
 
-					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, conditionExpr, ifTrueBlock, ifFalseBlock);
+					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, rewrittenConditionExpr, ifTrueBlock, ifFalseBlock);
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);
 					state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);

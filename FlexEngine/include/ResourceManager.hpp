@@ -108,15 +108,6 @@ namespace flex
 		AudioSourceID GetOrLoadAudioID(StringID audioFileSID);
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
 
-		// ImGui window flags
-		bool bFontWindowShowing = false;
-		bool bMaterialWindowShowing = false;
-		bool bShaderWindowShowing = false;
-		bool bTextureWindowShowing = false;
-		bool bMeshWindowShowing = false;
-		bool bPrefabsWindowShowing = false;
-		bool bSoundsWindowShowing = false;
-
 		bool bShowEditorMaterials = false;
 
 		std::map<StringID, FontMetaData> fontMetaData;

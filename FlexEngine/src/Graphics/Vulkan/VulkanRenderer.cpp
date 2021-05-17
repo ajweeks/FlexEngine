@@ -38,6 +38,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
@@ -331,6 +332,9 @@ namespace flex
 			m_SpriteOrthoArrPushConstBlock = new Material::PushConstantBlock(132);
 
 			LoadShaders();
+			ParseSpecializationConstantInfo();
+			ParseShaderSpecializationConstants();
+			CreateSpecialzationInfos();
 
 			m_ShadowVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
 
@@ -8998,32 +9002,27 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::CreateSpecialzationInfos()
+		{
+			for (const auto& pair : m_ShaderSpecializationConstants)
+			{
+				VulkanShader* shader = (VulkanShader*)GetShader(pair.first);
+				std::vector<SpecializationConstantCreateInfo> specializationConstants;
+				specializationConstants.reserve(pair.second.size());
+				for (StringID specializationConstantID : pair.second)
+				{
+					SpecializationConstantMetaData specializationConstant = m_SpecializationConstants[specializationConstantID];
+					// TODO: Use pool/heap backed memory to avoid pointer invalidation when entries are added
+					specializationConstants.push_back(SpecializationConstantCreateInfo{ specializationConstant.id, (u32)sizeof(i32), (void*)&specializationConstant.value });
+				}
+				shader->fragSpecializationInfo = GenerateSpecializationInfo(specializationConstants);
+			}
+		}
+
 		void VulkanRenderer::RecreateEverything()
 		{
 			LoadShaders();
-
-			// Recreate specialization infos
-			{
-				ShaderID deferredCombineShaderID = InvalidShaderID;
-				GetShaderID("deferred_combine", deferredCombineShaderID);
-				VulkanShader* deferredCombineShader = (VulkanShader*)m_Shaders[deferredCombineShaderID];
-				deferredCombineShader->fragSpecializationInfo = GenerateSpecializationInfo({
-						{ m_ShaderQualityLevelSpecializationID, sizeof(i32), (void*)&m_ShaderQualityLevel },
-						{ m_ShadowCascadeCountSpecializationID, sizeof(i32), (void*)&m_ShadowCascadeCount }
-					});
-
-				ShaderID taaShaderID = m_Materials[m_TAAResolveMaterialID]->shaderID;
-				VulkanShader* taaShader = (VulkanShader*)m_Shaders[taaShaderID];
-				taaShader->fragSpecializationInfo = GenerateSpecializationInfo({
-						{ m_TAASampleCountSpecializationID, sizeof(i32), (void*)&m_TAASampleCount }
-					});
-
-				ShaderID ssaoShaderID = m_Materials[m_SSAOMatID]->shaderID;
-				VulkanShader* ssaoShader = (VulkanShader*)m_Shaders[ssaoShaderID];
-				ssaoShader->fragSpecializationInfo = GenerateSpecializationInfo({
-						{m_SSAOKernelSizeSpecializationID, sizeof(i32), &m_SSAOKernelSize}
-					});
-			}
+			CreateSpecialzationInfos();
 
 			CreateFrameBufferAttachments();
 			CreateRenderPasses();

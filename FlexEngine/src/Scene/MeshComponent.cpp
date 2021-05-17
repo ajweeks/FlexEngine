@@ -323,7 +323,6 @@ namespace flex
 				{
 					cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
 					assert(primitive->attributes[colAttribIndex].type == cgltf_attribute_type_color);
-					assert(colAccessor->component_type == cgltf_component_type_r_32f);
 					assert(colAccessor->type == cgltf_type_vec4);
 
 					glm::vec4 col;

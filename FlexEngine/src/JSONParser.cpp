@@ -10,6 +10,8 @@ namespace flex
 {
 	std::string JSONParser::s_ErrorStr;
 
+	// TODO: Track line & column index to generate better error messages
+
 	bool JSONParser::ParseFromFile(const std::string& filePath, JSONObject& rootObject)
 	{
 		std::string fileContents;
@@ -58,7 +60,6 @@ namespace flex
 						}
 
 						i += (u32)endLine - i;
-						//fileContents.erase(i, endLine - i);
 						continue;
 					}
 					// Skip all whitespace characters
@@ -149,6 +150,198 @@ namespace flex
 		return true;
 	}
 
+	bool JSONParser::ReadNumericField(const std::string& fileContents, std::string& outValueStr, i32* offset)
+	{
+		size_t start = (size_t)*offset;
+		size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)start + 1);
+		size_t length = nextNonAlphaNumeric - start;
+		outValueStr = fileContents.substr(start, length);
+		if (outValueStr.empty())
+		{
+			return false;
+		}
+
+		if (outValueStr == "nan" || outValueStr == "-nan")
+		{
+			PrintWarn("Found NaN in json string, replacing with 0\n");
+			outValueStr = "0";
+		}
+
+		*offset = (i32)nextNonAlphaNumeric;
+		return true;
+	}
+
+	bool JSONParser::ParseValue(JSONValue::Type fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue)
+	{
+		switch (fieldType)
+		{
+		case JSONValue::Type::STRING:
+		{
+			size_t strQuoteStart = fileContents.find('\"', *offset);
+
+			if (strQuoteStart == std::string::npos)
+			{
+				s_ErrorStr = "Couldn't find quote after offset " + std::to_string(*offset);
+				return false;
+			}
+
+			size_t strQuoteEnd = strQuoteStart;
+			do
+			{
+				strQuoteEnd = fileContents.find('\"', strQuoteEnd + 1);
+			} while (strQuoteEnd != std::string::npos && fileContents[strQuoteEnd - 1] == '\\');
+
+			if (strQuoteEnd == std::string::npos)
+			{
+				s_ErrorStr = "Couldn't find end quote after offset " + std::to_string(*offset);
+				return false;
+			}
+
+			std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
+			stringValue = Replace(stringValue, "\\\"", "\"");
+			outValue = JSONValue(stringValue);
+
+			*offset = (i32)strQuoteEnd + 1;
+		} break;
+		case JSONValue::Type::INT:
+		{
+			std::string valueStr;
+			if (!ReadNumericField(fileContents, valueStr, offset))
+			{
+				return false;
+			}
+
+			i32 value = stoi(valueStr);
+			outValue = JSONValue(value);
+		} break;
+		case JSONValue::Type::UINT:
+		{
+			std::string valueStr;
+			if (!ReadNumericField(fileContents, valueStr, offset))
+			{
+				return false;
+			}
+
+			u32 value = (u32)stoul(valueStr);
+			outValue = JSONValue(value);
+		} break;
+		case JSONValue::Type::LONG:
+		{
+			std::string valueStr;
+			if (!ReadNumericField(fileContents, valueStr, offset))
+			{
+				return false;
+			}
+
+			i64 value = stoll(valueStr);
+			outValue = JSONValue(value);
+		} break;
+		case JSONValue::Type::ULONG:
+		{
+			std::string valueStr;
+			if (!ReadNumericField(fileContents, valueStr, offset))
+			{
+				return false;
+			}
+
+			u64 value = stoull(valueStr);
+			outValue = JSONValue(value);
+		} break;
+		case JSONValue::Type::FLOAT:
+		{
+			size_t floatStart = quoteEnd + 2;
+			size_t decimalIndex = fileContents.find('.', floatStart);
+			size_t floatEnd = NextNonAlphaNumeric(fileContents, (i32)decimalIndex + 1);
+			size_t floatCharCount = floatEnd - floatStart;
+			std::string floatStr = fileContents.substr(floatStart, floatCharCount);
+			real floatValue = 0.0f;
+			if (!floatStr.empty())
+			{
+				if (floatStr == "nan" || floatStr == "-nan")
+				{
+					PrintWarn("Found NaN in json string, replacing with 0.0f\n");
+					floatValue = 0.0f;
+				}
+				else
+				{
+					floatValue = stof(floatStr);
+				}
+			}
+			outValue = JSONValue(floatValue);
+
+			*offset = (i32)floatEnd;
+		} break;
+		case JSONValue::Type::BOOL:
+		{
+			// TODO: Be more strict here? (Require "true" or "false")
+			char valueFirstChar = fileContents[quoteEnd + 2];
+			bool boolValue = valueFirstChar == 't';
+			outValue = JSONValue(boolValue);
+
+			*offset = NextNonAlphaNumeric(fileContents, (i32)quoteEnd + 3);
+		} break;
+		case JSONValue::Type::OBJECT:
+		{
+			JSONObject object;
+			ParseObject(fileContents, offset, object);
+
+			outValue = JSONValue(object);
+		} break;
+		case JSONValue::Type::OBJECT_ARRAY:
+		{
+			std::vector<JSONObject> objects;
+
+			*offset = (i32)quoteEnd + 2;
+
+			i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
+			if (arrayClosingBracket == -1)
+			{
+				s_ErrorStr = "Couldn't find matching square bracket for " + fieldName;
+				return false;
+			}
+
+			*offset += 1;
+
+			while (*offset < arrayClosingBracket)
+			{
+				JSONObject object;
+				ParseObject(fileContents, offset, object);
+
+				objects.push_back(object);
+			}
+
+			*offset = arrayClosingBracket + 1;
+
+			outValue = JSONValue(objects);
+		} break;
+		case JSONValue::Type::FIELD_ARRAY:
+		{
+			std::vector<JSONField> fields;
+
+			*offset = (i32)quoteEnd + 2; // Advance past quotes to land on opening bracket
+
+			if (ParseArray(fileContents, quoteEnd, offset, fieldName, fields))
+			{
+				outValue = JSONValue(fields);
+			}
+			else
+			{
+				return false;
+			}
+		} break;
+		case JSONValue::Type::UNINITIALIZED:
+		default:
+		{
+			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
+			s_ErrorStr = "Unhandled JSON value type: " + fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2));
+			*offset = -1;
+			return false;
+		} break;
+		}
+
+		return true;
+	}
+
 	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
 	{
 		size_t quoteStart = fileContents.find('\"', *offset);
@@ -169,251 +362,142 @@ namespace flex
 		field.label = fileContents.substr(quoteStart + 1, quoteEnd - (quoteStart + 1));
 		*offset = (i32)quoteEnd + 1;
 
-		if (fileContents[quoteEnd + 1] == ':') // Non field-array field
+		if (fileContents[*offset] == ':') // Non field-array field
 		{
-			char valueFirstChar = fileContents[quoteEnd + 2];
-			JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(quoteEnd + 3));
+			*offset += 1; // Advance past colon
 
-			switch (fieldType)
+			char valueFirstChar = fileContents[*offset];
+			JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
+
+			JSONValue newValue;
+			if (ParseValue(fieldType, field.label, fileContents, quoteEnd, offset, newValue))
 			{
-			case JSONValue::Type::STRING:
+				field.value = newValue;
+			}
+			else
 			{
-				size_t strQuoteStart = fileContents.find('\"', *offset);
-
-				if (strQuoteStart == std::string::npos)
-				{
-					s_ErrorStr = "Couldn't find quote after offset " + std::to_string(*offset);
-					return false;
-				}
-
-				size_t strQuoteEnd = strQuoteStart;
-				do
-				{
-					strQuoteEnd = fileContents.find('\"', strQuoteEnd + 1);
-				} while (strQuoteEnd != std::string::npos && fileContents[strQuoteEnd - 1] == '\\');
-
-				if (strQuoteEnd == std::string::npos)
-				{
-					s_ErrorStr = "Couldn't find end quote after offset " + std::to_string(*offset);
-					return false;
-				}
-
-				std::string stringValue = fileContents.substr(strQuoteStart + 1, strQuoteEnd - (strQuoteStart + 1));
-				stringValue = Replace(stringValue, "\\\"", "\"");
-				field.value = JSONValue(stringValue);
-
-				*offset = (i32)strQuoteEnd + 1;
-			} break;
-			case JSONValue::Type::INT:
-			{
-				size_t intStart = quoteEnd + 2;
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
-				size_t intCharCount = nextNonAlphaNumeric - intStart;
-				std::string intStr = fileContents.substr(intStart, intCharCount);
-				i32 intValue = 0;
-				if (!intStr.empty())
-				{
-					if (intStr == "nan" || intStr == "-nan")
-					{
-						PrintWarn("Found NaN in json string, replacing with 0\n");
-						intValue = 0;
-					}
-					else
-					{
-						intValue = stoi(intStr);
-					}
-				}
-				field.value = JSONValue(intValue);
-
-				*offset = (i32)nextNonAlphaNumeric;
-			} break;
-			case JSONValue::Type::UINT:
-			{
-				size_t intStart = quoteEnd + 2;
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
-				size_t intCharCount = nextNonAlphaNumeric - intStart;
-				std::string uintStr = fileContents.substr(intStart, intCharCount);
-				u32 uintValue = 0;
-				if (!uintStr.empty())
-				{
-					if (uintStr == "nan" || uintStr == "-nan")
-					{
-						PrintWarn("Found NaN in json string, replacing with 0\n");
-						uintValue = 0;
-					}
-					else
-					{
-						uintValue = (u32)stoul(uintStr);
-					}
-				}
-				field.value = JSONValue(uintValue);
-
-				*offset = (i32)nextNonAlphaNumeric;
-			} break;
-			case JSONValue::Type::LONG:
-			{
-				size_t intStart = quoteEnd + 2;
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
-				size_t intCharCount = nextNonAlphaNumeric - intStart;
-				std::string longStr = fileContents.substr(intStart, intCharCount);
-				i64 longValue = 0;
-				if (!longStr.empty())
-				{
-					if (longStr == "nan" || longStr == "-nan")
-					{
-						PrintWarn("Found NaN in json string, replacing with 0\n");
-						longValue = 0;
-					}
-					else
-					{
-						// TODO: use strto family of functions
-						longValue = stol(longStr);
-					}
-				}
-				field.value = JSONValue(longValue);
-
-				*offset = (i32)nextNonAlphaNumeric;
-			} break;
-			case JSONValue::Type::ULONG:
-			{
-				size_t intStart = quoteEnd + 2;
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)intStart + 1);
-				size_t intCharCount = nextNonAlphaNumeric - intStart;
-				std::string ulongStr = fileContents.substr(intStart, intCharCount);
-				u64 ulongValue = 0;
-				if (!ulongStr.empty())
-				{
-					if (ulongStr == "nan" || ulongStr == "-nan")
-					{
-						PrintWarn("Found NaN in json string, replacing with 0\n");
-						ulongValue = 0;
-					}
-					else
-					{
-						ulongValue = stoull(ulongStr);
-					}
-				}
-				field.value = JSONValue(ulongValue);
-
-				*offset = (i32)nextNonAlphaNumeric;
-			} break;
-			case JSONValue::Type::FLOAT:
-			{
-				size_t floatStart = quoteEnd + 2;
-				size_t decimalIndex = fileContents.find('.', floatStart);
-				size_t floatEnd = NextNonAlphaNumeric(fileContents, (i32)decimalIndex + 1);
-				size_t floatCharCount = floatEnd - floatStart;
-				std::string floatStr = fileContents.substr(floatStart, floatCharCount);
-				real floatValue = 0.0f;
-				if (!floatStr.empty())
-				{
-					if (floatStr == "nan" || floatStr == "-nan")
-					{
-						PrintWarn("Found NaN in json string, replacing with 0.0f\n");
-						floatValue = 0.0f;
-					}
-					else
-					{
-						floatValue = stof(floatStr);
-					}
-				}
-				field.value = JSONValue(floatValue);
-
-				*offset = (i32)floatEnd;
-			} break;
-			case JSONValue::Type::BOOL:
-			{
-				bool boolValue = valueFirstChar == 't';
-				field.value = JSONValue(boolValue);
-
-				*offset = NextNonAlphaNumeric(fileContents, (i32)quoteEnd + 3);
-			} break;
-			case JSONValue::Type::OBJECT:
-			{
-				*offset = (i32)quoteEnd + 2;
-
-				JSONObject object;
-				ParseObject(fileContents, offset, object);
-
-				field.value = JSONValue(object);
-			} break;
-			case JSONValue::Type::OBJECT_ARRAY:
-			{
-				std::vector<JSONObject> objects;
-
-				*offset = (i32)quoteEnd + 2;
-
-				i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
-				if (arrayClosingBracket == -1)
-				{
-					s_ErrorStr = "Couldn't find matching square bracket for " + field.label;
-					return false;
-				}
-
-				*offset += 1;
-
-				while (*offset < arrayClosingBracket)
-				{
-					JSONObject object;
-					ParseObject(fileContents, offset, object);
-
-					objects.push_back(object);
-				}
-
-				*offset = arrayClosingBracket + 1;
-
-				field.value = JSONValue(objects);
-			} break;
-			case JSONValue::Type::FIELD_ARRAY:
-			{
-				std::vector<JSONField> fields;
-
-				*offset = (i32)quoteEnd + 2;
-
-				i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
-				if (arrayClosingBracket == -1)
-				{
-					s_ErrorStr = "Couldn't find matching square bracket " + field.label;
-					return false;
-				}
-
-				*offset += 1;
-
-				while (*offset < arrayClosingBracket)
-				{
-					JSONField fieldArrayEntry;
-					ParseField(fileContents, offset, fieldArrayEntry);
-
-					if (fileContents[*offset] != ',' &&
-						fileContents[*offset] != '}' &&
-						fileContents[*offset] != ']')
-					{
-						s_ErrorStr = "Expected , } or ] after field array entry " + field.label;
-						return false;
-					}
-
-					fields.push_back(fieldArrayEntry);
-				}
-
-				*offset = arrayClosingBracket + 1;
-
-				field.value = JSONValue(fields);
-			} break;
-			case JSONValue::Type::UNINITIALIZED:
-			default:
-			{
-				size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
-				s_ErrorStr = "Unhandled JSON value type: " + fileContents.substr(quoteEnd + 2, nextNonAlphaNumeric - (quoteEnd + 2));
-				*offset = -1;
 				return false;
-			} break;
 			}
 		}
 		else
 		{
-			field.value.type = JSONValue::Type::FIELD_ENTRY;
-			// Field array entries have no data in their value field
+			PrintError("Invalid json file, expected :\n");
+			return false;
 		}
+
+		return true;
+	}
+
+	bool JSONParser::ParseArray(const std::string& fileContents, size_t quoteEnd, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields)
+	{
+		i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
+		if (arrayClosingBracket == -1)
+		{
+			s_ErrorStr = "Couldn't find matching square bracket " + fieldName;
+			return false;
+		}
+
+		*offset += 1; // Advance past opening bracket
+
+		char valueFirstChar = fileContents[*offset];
+		JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
+
+		// Check what type of int the data requires
+		if (fieldType == JSONValue::Type::INT || fieldType == JSONValue::Type::UINT ||
+			fieldType == JSONValue::Type::LONG || fieldType == JSONValue::Type::ULONG)
+		{
+			bool bRequireSigned = false;
+			bool bRequireLong = false;
+
+			i32 offsetCopy = *offset;
+
+			while (offsetCopy < arrayClosingBracket)
+			{
+				JSONValue::Type fieldType1 = JSONValue::TypeFromChar(fileContents[offsetCopy], fileContents.substr(offsetCopy + 1));
+
+				JSONValue newValue;
+				if (!ParseValue(fieldType1, fieldName, fileContents, quoteEnd, &offsetCopy, newValue))
+				{
+					return false;
+				}
+
+				if (fieldType1 == JSONValue::Type::LONG || fieldType1 == JSONValue::Type::ULONG)
+				{
+					bRequireLong = true;
+				}
+
+				if (fieldType1 == JSONValue::Type::INT || fieldType1 == JSONValue::Type::LONG)
+				{
+					bRequireSigned = true;
+				}
+
+				if (fieldType1 == JSONValue::Type::ULONG && bRequireSigned)
+				{
+					s_ErrorStr = "Mismatched integer types found in array";
+					return false;
+				}
+
+				if (newValue.type != fieldType1)
+				{
+					s_ErrorStr = "Mismatched types found in array";
+					return false;
+				}
+
+
+				if (fileContents[offsetCopy] != ',' &&
+					fileContents[offsetCopy] != ']')
+				{
+					s_ErrorStr = "Expected , or ] after field array entry " + fieldName;
+					return false;
+				}
+
+				if (fileContents[offsetCopy] == ',')
+				{
+					offsetCopy += 1;
+				}
+			}
+
+			if (bRequireLong)
+			{
+				fieldType = bRequireSigned ? JSONValue::Type::LONG : JSONValue::Type::ULONG;
+			}
+			else
+			{
+				fieldType = bRequireSigned ? JSONValue::Type::INT : JSONValue::Type::UINT;
+			}
+		}
+
+		while (*offset < arrayClosingBracket)
+		{
+			JSONValue newValue;
+			if (!ParseValue(fieldType,fieldName, fileContents, quoteEnd, offset, newValue))
+			{
+				return false;
+			}
+
+			if (newValue.type != fieldType)
+			{
+				s_ErrorStr = "Mismatched types found in array";
+				return false;
+			}
+
+
+			if (fileContents[*offset] != ',' &&
+				fileContents[*offset] != ']')
+			{
+				s_ErrorStr = "Expected , or ] after field array entry " + fieldName;
+				return false;
+			}
+
+			fields.emplace_back("", newValue);
+
+			if (fileContents[*offset] == ',')
+			{
+				*offset += 1;
+			}
+		}
+
+		*offset = arrayClosingBracket + 1; // Advance past closing bracket
 
 		return true;
 	}

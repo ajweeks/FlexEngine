@@ -61,6 +61,10 @@ namespace flex
 	// (e.g. "\n\n\n" will return a vector of length 3, while Strip will return an empty vector)
 	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, char delim);
 	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim);
+	// Identical to Split, except anything within quotes is kept together
+	FLEX_NO_DISCARD std::vector<std::string> SplitHandleStrings(const std::string& str, char delim);
+
+	FLEX_NO_DISCARD i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares = u32_max);
 
 	/*
 	 * Returns the index of the first character which isn't a number
@@ -139,6 +143,7 @@ namespace flex
 	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string LongToString(i64 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string ULongToString(u64 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD const char* BoolToString(bool bValue);
 
 	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
@@ -332,13 +337,15 @@ namespace flex
 	bool Contains(const std::string& str, const std::string& pattern);
 	bool Contains(const std::string& str, char pattern);
 
+	std::string Erase(const std::string& str, char c);
+
 	template<typename T>
 	inline bool Erase(std::vector<T>& vec, const T& t)
 	{
 		i32 index = Find(vec, t);
 		if (index != -1)
 		{
-			vec.erase(index);
+			vec.erase(vec.begin() + index);
 			return true;
 		}
 		return false;

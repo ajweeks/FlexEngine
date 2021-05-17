@@ -1134,6 +1134,25 @@ namespace flex
 
 	};
 
+	struct NoiseFunction
+	{
+		enum Type
+		{
+			PERLIN,
+			FBM, // https://www.iquilezles.org/www/articles/fbm/fbm.htm
+			VORONOI, // https://www.iquilezles.org/www/articles/voronoise/voronoise.htm
+
+			_NONE
+		};
+
+		Type type;
+		i32 numOctaves;
+		real H; // controls self-similarity [0, 1]
+		real heightScale;
+		real lacunarity;
+		real frequency;
+	};
+
 	class TerrainGenerator final : public GameObject
 	{
 	public:
@@ -1149,8 +1168,6 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		real Sample(const glm::vec2& pos);
-
 		struct TerrainChunkData
 		{
 			// General info
@@ -1164,6 +1181,7 @@ namespace flex
 			u32 vertCountPerChunkAxis;
 			i32 isolateOctave;
 
+			std::vector<NoiseFunction>* noiseFunctions;
 			std::vector<std::vector<glm::vec2>>* randomTables;
 			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
 
@@ -1177,11 +1195,16 @@ namespace flex
 			volatile u32* indices;
 		};
 
+		void FillInTerrainChunkData(TerrainChunkData& outChunkData);
+		real Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos);
+
 		u32 VertCountPerChunkAxis = 8;
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
 
 	private:
+		struct Chunk;
+
 		friend Road;
 
 		static real SmoothBlend(real t);
@@ -1191,10 +1214,11 @@ namespace flex
 
 		void DiscoverChunks();
 		void GenerateChunks();
+		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
 
-		void DestroyChunkRigidBody(const glm::vec2i& chunkIndex);
-		void CreateChunkRigidBody(const glm::vec2i& chunkIndex);
+		void DestroyChunkRigidBody(Chunk* chunk);
+		void CreateChunkRigidBody(Chunk* chunk);
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
@@ -1208,6 +1232,7 @@ namespace flex
 			btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
 			RigidBody* rigidBody = nullptr;
 			MeshComponent* meshComponent = nullptr;
+			btCollisionShape* collisionShape = nullptr;
 			//glm::vec2i chunkIndex;
 			u32 linearIndex = 0;
 		};
@@ -1246,8 +1271,9 @@ namespace flex
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;
 
+		std::vector<NoiseFunction> m_NoiseFunctions;
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
-		u32 m_BasePerlinTableWidth = 16;
+		u32 m_BasePerlinTableWidth = 32;
 
 		// Map of chunk index to overlapping road segments
 		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
@@ -1265,10 +1291,15 @@ namespace flex
 		std::vector<PointTest> m_PointTests;
 	};
 
+
+	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
+		std::vector<RoadSegment*>* overlappingRoadSegments,
+		const glm::vec2& sampleCenter, glm::vec4& outColour, bool bCilpPointsInsideRoad);
+
 	void* TerrainThreadUpdate(void* inData);
 
-	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos);
-	real SampleNoise(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
+	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
+	real SampleNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
 
 	class SpringObject final : public GameObject
 	{

@@ -11,11 +11,24 @@ namespace flex
 
 	using Type = Variant::Type;
 
+	const char* Variant::TypeToString(Type type)
+	{
+		return VariantTypeNames[(u32)type];
+	}
+
 	Variant::Variant(const IR::Value& other)
 	{
-		type = (Type)other.type;
-		assert((i32)type < (i32)Type::_NONE);
-		valStr = other.valStr;
+		switch (other.type)
+		{
+		case IR::Value::Type::INT: type = Type::INT; break;
+		case IR::Value::Type::FLOAT: type = Type::FLOAT; break;
+		case IR::Value::Type::BOOL: type = Type::BOOL; break;
+		case IR::Value::Type::STRING: type = Type::STRING; break;
+		case IR::Value::Type::CHAR: type = Type::CHAR; break;
+		case IR::Value::Type::VOID: type = Type::VOID; break;
+		default: type = Type::_NONE; break;
+		}
+		_largestField = other._largestField;
 	}
 
 	bool Variant::IsValid() const
@@ -32,11 +45,17 @@ namespace flex
 		case Type::LONG:	return LongToString(valInt);
 		case Type::ULONG:	return ULongToString(valInt);
 		case Type::FLOAT:	return FloatToString(valFloat);
-		case Type::BOOL:	return IntToString(valBool);
+		case Type::BOOL:	return BoolToString(valBool);
 		case Type::STRING:	return std::string(valStr);
 		case Type::CHAR:	return std::string(1, valChar);
 		default:			return "";
 		}
+	}
+
+	bool Variant::IsIntegral(Type type)
+	{
+		return type == Type::INT || type == Type::UINT ||
+			type == Type::LONG || type == Type::ULONG;
 	}
 
 	bool Variant::IsZero() const
@@ -92,7 +111,7 @@ namespace flex
 		case Type::FLOAT:
 			return (i32)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (i32)valBool;
 		case Type::CHAR:
 			return (i32)valChar;
 		default:
@@ -117,7 +136,7 @@ namespace flex
 		case Type::FLOAT:
 			return (u32)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (u32)valBool;
 		case Type::CHAR:
 			return (u32)valChar;
 		default:
@@ -142,7 +161,7 @@ namespace flex
 		case Type::FLOAT:
 			return (i64)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (i64)valBool;
 		case Type::CHAR:
 			return (i64)valChar;
 		default:
@@ -167,7 +186,7 @@ namespace flex
 		case Type::FLOAT:
 			return (u64)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (u64)valBool;
 		case Type::CHAR:
 			return (u64)valChar;
 		default:
@@ -259,7 +278,7 @@ namespace flex
 	{
 		CheckAssignmentType(other.type);
 
-		valStr = other.valStr;
+		_largestField = other._largestField;
 
 		return *this;
 	}
@@ -270,7 +289,7 @@ namespace flex
 		{
 			CheckAssignmentType(other.type);
 
-			valStr = other.valStr;
+			_largestField = other._largestField;
 		}
 
 		return *this;

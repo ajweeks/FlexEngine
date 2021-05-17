@@ -135,6 +135,10 @@ namespace flex
 
 		void SetTimeOfDay(real time);
 		real GetTimeOfDay() const;
+		void SetSecondsPerDay(real secPerDay);
+		real GetSecondsPerDay() const;
+		void SetTimeOfDayPaused(bool bPaused);
+		bool GetTimeOfDayPaused() const;
 
 		real GetPlayerMinHeight() const;
 		glm::vec3 GetPlayerSpawnPoint() const;
@@ -180,7 +184,7 @@ namespace flex
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
 		bool m_bPauseTimeOfDay = false;
-		real m_TimeOfDay; // [0, 1) - 0 = noon, 0.5 = midnight
+		real m_TimeOfDay = 0.0f; // [0, 1) - 0 = noon, 0.5 = midnight
 		real m_SecondsPerDay = 6000.0f;
 
 		SkyboxData m_SkyboxDatas[4];

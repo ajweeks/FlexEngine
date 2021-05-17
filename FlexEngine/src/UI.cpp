@@ -941,15 +941,20 @@ namespace flex
 
 			if (player != nullptr)
 			{
+				real aspectRatio = g_Window->GetAspectRatio();
+				const real targetAspectRatio = 16.0f / 9.0f;
+				real x = aspectRatio > targetAspectRatio ? (aspectRatio / targetAspectRatio) : 1.0f;
+				real y = aspectRatio > targetAspectRatio ? 1.0f : (aspectRatio / targetAspectRatio);
+
 				{
-					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
+					Rect rect{ -x, -y, x, y, VEC4_ONE };
 					playerQuickAccessUI->Update(rect);
 					playerQuickAccessUI->Draw();
 				}
 
 				if (player->bInventoryShowing)
 				{
-					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
+					Rect rect{ -x, -y, x, y, VEC4_ONE };
 					playerInventoryUI->Update(rect);
 					playerInventoryUI->Draw();
 				}

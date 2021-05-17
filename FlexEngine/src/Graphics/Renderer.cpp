@@ -349,6 +349,17 @@ namespace flex
 		}
 	}
 
+	void Renderer::SetShaderQualityLevel(i32 newQualityLevel)
+	{
+		newQualityLevel = glm::clamp(newQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL);
+		SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
+		if (newQualityLevel != specializationConstantMetaData.value)
+		{
+			specializationConstantMetaData.value = newQualityLevel;
+			RecreateEverything();
+		}
+	}
+
 	MaterialID Renderer::GetMaterialID(const std::string& materialName)
 	{
 		for (auto& matPair : m_Materials)
@@ -945,6 +956,17 @@ namespace flex
 	UIMesh* Renderer::GetUIMesh()
 	{
 		return m_UIMesh;
+	}
+
+	void Renderer::SetDebugOverlayID(i32 newID)
+	{
+		newID = glm::clamp(newID, 0, (i32)ARRAY_LENGTH(DebugOverlayNames));
+		SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
+		if (newID != debugOverlayConstant.value)
+		{
+			debugOverlayConstant.value = newID;
+			RecreateEverything();
+		}
 	}
 
 	void Renderer::EnqueueScreenSpaceSprites()
@@ -1678,7 +1700,7 @@ namespace flex
 		m_Shaders[shaderID]->bTextureArr = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 16;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
@@ -2396,6 +2418,101 @@ namespace flex
 		return m_AvailableHDRIs[matIdx];
 	}
 
+	void Renderer::AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			// Add to existing list
+			iter->second.push_back(specializationConstant);
+		}
+		else
+		{
+			// Add first entry
+			m_ShaderSpecializationConstants[shaderID] = { specializationConstant };
+		}
+	}
+
+	void Renderer::RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			Erase(iter->second, specializationConstant);
+		}
+	}
+
+	std::vector<StringID>* Renderer::GetShaderSpecializationConstants(ShaderID shaderID)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			return &iter->second;
+		}
+
+		return nullptr;
+	}
+
+	void Renderer::DrawShaderSpecializationConstantImGui(ShaderID shaderID)
+	{
+		Shader* shader = GetShader(shaderID);
+		if (ImGui::TreeNode("%s", shader->name.c_str()))
+		{
+			std::vector<StringID>* specializationConstants = GetShaderSpecializationConstants(shaderID);
+			for (const auto& pair : m_SpecializationConstants)
+			{
+				const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
+				bool bTicked = specializationConstants != nullptr && Contains(*specializationConstants, pair.first);
+				if (ImGui::Checkbox(specializationConstantName.c_str(), &bTicked))
+				{
+					if (bTicked)
+					{
+						AddShaderSpecialziationConstant(shaderID, pair.first);
+					}
+					else
+					{
+						RemoveShaderSpecialziationConstant(shaderID, pair.first);
+					}
+
+					// NOTE: This is a brute force approach, ideally we'd just reload things which need reloading
+					RecreateEverything();
+				}
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	void Renderer::DrawSpecializationConstantInfoImGui()
+	{
+		if (ImGui::Button("Save"))
+		{
+			SerializeShaderSpecializationConstants();
+			SerializeSpecializationConstantInfo();
+		}
+
+		if (ImGui::TreeNode("Specialization constants"))
+		{
+			for (const auto& pair : m_SpecializationConstants)
+			{
+				const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
+				ImGui::Text("%s (ID: %u) = %i", specializationConstantName.c_str(), pair.second.id, pair.second.value);
+			}
+			ImGui::TreePop();
+		}
+
+		if (ImGui::TreeNode("Shader specialization constants"))
+		{
+			for (const auto& shaderSpecializationConstantPair : m_ShaderSpecializationConstants)
+			{
+				ImGui::PushID(shaderSpecializationConstantPair.first);
+				DrawShaderSpecializationConstantImGui(shaderSpecializationConstantPair.first);
+				ImGui::PopID();
+			}
+			ImGui::TreePop();
+		}
+	}
+
 	void Renderer::DrawImGuiSettings()
 	{
 		if (ImGui::TreeNode("Renderer settings"))
@@ -2474,10 +2591,33 @@ namespace flex
 				RecreateShadowFrameBuffers();
 			}
 
-			if (ImGui::SliderInt("Shader quality level", &m_ShaderQualityLevel, 0, 3))
+			SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
+			if (ImGui::SliderInt("Shader quality level", &specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL))
 			{
-				m_ShaderQualityLevel = glm::clamp(m_ShaderQualityLevel, 0, 3);
-				RecreateEverything();
+				i32 newShaderQualityLevel = glm::clamp(specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL);
+				if (newShaderQualityLevel != specializationConstantMetaData.value)
+				{
+					RecreateEverything();
+				}
+			}
+
+			SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
+			if (ImGui::BeginCombo("Debug overlay", DebugOverlayNames[debugOverlayConstant.value]))
+			{
+				for (i32 i = 0; i < ARRAY_LENGTH(DebugOverlayNames); ++i)
+				{
+					bool bSelected = (i == debugOverlayConstant.value);
+					if (ImGui::Selectable(DebugOverlayNames[i], &bSelected))
+					{
+						if (debugOverlayConstant.value != i)
+						{
+							debugOverlayConstant.value = i;
+							RecreateEverything();
+						}
+					}
+				}
+
+				ImGui::EndCombo();
 			}
 
 			if (ImGui::TreeNode("Debug objects"))
@@ -2585,7 +2725,8 @@ namespace flex
 				}
 			}
 
-			if (ImGui::SliderInt("Kernel Size", &m_SSAOKernelSize, 1, 64))
+			SpecializationConstantMetaData& ssaoKernelSizeConstant = m_SpecializationConstants[SID("ssao_kernel_size")];
+			if (ImGui::SliderInt("Kernel Size", &ssaoKernelSizeConstant.value, 1, 64))
 			{
 				m_bSSAOStateChanged = true;
 			}
@@ -3014,6 +3155,135 @@ namespace flex
 		particleMatCreateInfo.visibleInEditor = false;
 		particleMatCreateInfo.bSerializable = false;
 		return InitializeMaterial(&particleMatCreateInfo);
+	}
+
+	void Renderer::ParseSpecializationConstantInfo()
+	{
+		JSONObject rootObj;
+		std::string fileContents;
+		if (!ReadFile(SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read specialization constants!\n");
+			return;
+		}
+
+		if (!JSONParser::Parse(fileContents, rootObj))
+		{
+			const char* errorStr = JSONParser::GetErrorString();
+			PrintError("Failed to parse specialization constants file! Error: %s\n", errorStr);
+			return;
+		}
+
+		m_SpecializationConstants.clear();
+
+		for (const JSONField& field : rootObj.fields)
+		{
+			u64 specializationConstantSID = Hash(field.label.c_str());
+			SpecializationConstantID id = field.value.objectValue.GetUInt("id");
+			i32 defaultValue = field.value.objectValue.GetInt("default_value");
+			std::vector<JSONField> range;
+			i32 min = -1;
+			i32 max = -1;
+			if (field.value.objectValue.TryGetFieldArray("range", range) && range.size() == 2)
+			{
+				min = range[0].value.AsInt();
+				max = range[1].value.AsInt();
+			}
+
+			m_SpecializationConstants[specializationConstantSID] = SpecializationConstantMetaData{ id, defaultValue, min, max };
+
+			m_SpecializationConstantNames[specializationConstantSID] = field.label;
+		}
+	}
+
+	void Renderer::SerializeSpecializationConstantInfo()
+	{
+		JSONObject rootObj = {};
+
+		rootObj.fields.reserve(m_SpecializationConstants.size());
+		for (const auto& pair : m_SpecializationConstants)
+		{
+			std::string specializationConstantName = m_SpecializationConstantNames[pair.first];
+			JSONObject specializationConstantObj = {};
+			specializationConstantObj.fields.emplace_back("id", JSONValue(pair.second.id));
+			specializationConstantObj.fields.emplace_back("default_value", JSONValue(pair.second.value));
+			std::vector<JSONField> rangeFields = { JSONField("", JSONValue(pair.second.min)), JSONField("", JSONValue(pair.second.max)) };
+			specializationConstantObj.fields.emplace_back("range", JSONValue(rangeFields));
+			rootObj.fields.emplace_back(specializationConstantName, JSONValue(specializationConstantObj));
+		}
+
+		std::string fileContents = rootObj.ToString();
+		if (!WriteFile(SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to write shader specialization constants\n");
+		}
+	}
+
+	void Renderer::ParseShaderSpecializationConstants()
+	{
+		JSONObject rootObj;
+		std::string fileContents;
+		if (!ReadFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read shader specialization constants!\n");
+			return;
+		}
+
+		if (!JSONParser::Parse(fileContents, rootObj))
+		{
+			const char* errorStr = JSONParser::GetErrorString();
+			PrintError("Failed to parse shader specialization constants file! Error: %s\n", errorStr);
+			return;
+		}
+
+		m_ShaderSpecializationConstants.clear();
+
+		for (const JSONField& field : rootObj.fields)
+		{
+			const std::string& shaderName = field.label;
+			ShaderID shaderID = InvalidShaderID;
+			if (GetShaderID(shaderName, shaderID))
+			{
+				std::vector<StringID>& shaderConstants = m_ShaderSpecializationConstants[shaderID];
+				std::vector<JSONField> fields = field.value.fieldArrayValue;
+				shaderConstants.reserve(fields.size());
+				for (const JSONField& specializationConstantNameField : fields)
+				{
+					if (specializationConstantNameField.value.strValue.empty())
+					{
+						PrintWarn("Found empty specialization constant field for shader: %\n", shaderName.c_str());
+						continue;
+					}
+					StringID specializationConstantID = Hash(specializationConstantNameField.value.strValue.c_str());
+					shaderConstants.push_back(specializationConstantID);
+				}
+			}
+		}
+	}
+
+	void Renderer::SerializeShaderSpecializationConstants()
+	{
+		JSONObject rootObj = {};
+
+		rootObj.fields.reserve(m_ShaderSpecializationConstants.size());
+		for (const auto& pair : m_ShaderSpecializationConstants)
+		{
+			Shader* shader = GetShader(pair.first);
+			std::vector<JSONField> specializationConstantFields;
+			specializationConstantFields.reserve(pair.second.size());
+			for (const auto& pair2 : pair.second)
+			{
+				std::string specializationConstantName = m_SpecializationConstantNames[pair2];
+				specializationConstantFields.emplace_back(JSONField("", JSONValue(specializationConstantName)));
+			}
+			rootObj.fields.emplace_back(shader->name, JSONValue(specializationConstantFields));
+		}
+
+		std::string fileContents = rootObj.ToString();
+		if (!WriteFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to write shader specialization constants\n");
+		}
 	}
 
 	void PhysicsDebugDrawBase::flushLines()

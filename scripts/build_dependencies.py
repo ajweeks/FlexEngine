@@ -211,7 +211,7 @@ def build_project(config):
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target + 'freetype.lib')
 		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target + 'freetype.pdb')
 	else:
-		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
+		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; ./autogen.sh', stderr=subprocess.STDOUT, shell=True)
 		run_cmake(free_type_path, free_type_build_path, [
 			'-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON',
 			'-Wno-dev'])

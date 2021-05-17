@@ -67,6 +67,15 @@ namespace flex
 			t * t * t * points[3];
 	}
 
+	glm::vec3 BezierCurve3D::GetPointOnCurveUnclamped(real t) const
+	{
+		real oneMinusT = 1.0f - t;
+		return oneMinusT * oneMinusT * oneMinusT * points[0] +
+			3.0f * oneMinusT * oneMinusT * t * points[1] +
+			3.0f * oneMinusT * t * t * points[2] +
+			t * t * t * points[3];
+	}
+
 	glm::vec3 BezierCurve3D::GetFirstDerivativeOnCurve(real t) const
 	{
 		t = Saturate(t);

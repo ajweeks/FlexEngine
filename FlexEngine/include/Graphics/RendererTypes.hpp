@@ -9,7 +9,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/vec4.hpp>
 IGNORE_WARNINGS_POP
 
-#include "Functors.hpp"
 #include "Helpers.hpp" // For Hash
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
@@ -23,6 +22,7 @@ namespace flex
 	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
 	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
+	static const i32 MAX_SSAO_KERNEL_SIZE = 64;
 
 	// 48 bytes
 	struct DirLightData
@@ -66,7 +66,6 @@ namespace flex
 		glm::vec4 points[4];	// 32
 	};
 
-	const i32 MAX_SSAO_KERNEL_SIZE = 64;
 	// 1028 bytes
 	struct SSAOGenData
 	{
@@ -1015,4 +1014,31 @@ namespace flex
 	{
 		char name[48];
 	};
+
+	struct SpecializationConstantMetaData
+	{
+		SpecializationConstantID id;
+		i32 value;
+		// Editor-only:
+		i32 min;
+		i32 max;
+	};
+
+	static const char* DebugOverlayNames[] =
+	{
+		"None"
+		"Albedo",
+		"Normal",
+		"Roughness",
+		"Metallic",
+		"Diffuse lighting",
+		"Specular lighting",
+		"Tex coords",
+		"Linear depth",
+		"Shadow",
+		"Shadow cascade",
+		"SSAO",
+	};
+
+	i32 DebugOverlayNameToID(const char* DebugOverlayName);
 } // namespace flex

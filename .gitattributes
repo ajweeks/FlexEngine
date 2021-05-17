@@ -16,4 +16,4 @@
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
 
-FlexEngine/dependencies/* linguist-vendored
+FlexEngine/dependencies/** linguist-vendored

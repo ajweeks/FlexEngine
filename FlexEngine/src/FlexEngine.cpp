@@ -78,7 +78,7 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 6;
+	const u32 FlexEngine::EngineVersionPatch = 7;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::string FlexEngine::s_ExecutablePath;
@@ -370,39 +370,128 @@ namespace flex
 		io.IniSavingRate = 10.0f;
 
 		memset(m_CmdLineStrBuf, 0, MAX_CHARS_CMD_LINE_STR);
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene", []() { g_SceneManager->ReloadCurrentScene(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.scene.hard", []()
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("?",
+			[]() { g_EngineInstance->PrintAllConsoleCommands(); }));
+		// TODO: Support autofill of possible arguments (in this case scene names)
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("scene.load",
+			[](const Variant& newSceneNameStr) {
+				{
+					if (newSceneNameStr.type == Variant::Type::STRING)
+					{
+						std::string newSceneName(newSceneNameStr.AsString());
+						ToLower(newSceneName);
+						g_SceneManager->SetCurrentScene(newSceneName);
+					}
+				}
+		}, Variant::Type::STRING));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("scene.reload",
+			[]() { g_SceneManager->ReloadCurrentScene(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("scene.reload.hard",
+			[]()
 		{
 			g_ResourceManager->DestroyAllLoadedMeshes();
 			g_SceneManager->ReloadCurrentScene();
 		}));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders", []() { g_Renderer->RecompileShaders(false); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force", []() { g_Renderer->RecompileShaders(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs", []() { g_ResourceManager->LoadFonts(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all", []() { g_Editor->SelectAll(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none", []() { g_Editor->SelectNone(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit", []() { g_EngineInstance->Stop(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off", []() { g_Renderer->SetTAAEnabled(false); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa", []() { g_Renderer->SetTAAEnabled(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled", []() { return Variant(g_Renderer->IsTAAEnabled()); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe", []() { g_Renderer->ToggleWireframeOverlay(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection", []() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders",
+			[]() { g_Renderer->RecompileShaders(false); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.shaders.force",
+			[]() { g_Renderer->RecompileShaders(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs",
+			[]() { g_ResourceManager->LoadFonts(true); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all",
+			[]() { g_Editor->SelectAll(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none",
+			[]() { g_Editor->SelectNone(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit",
+			[]() { g_EngineInstance->Stop(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.aa",
+			[](const Variant& mode)
+		{
+			if (mode.type == Variant::Type::STRING)
+			{
+				std::string modeStr = Trim(mode.AsString());
+				if (modeStr.compare("taa") == 0)
+				{
+					g_Renderer->SetTAAEnabled(true);
+				}
+				else if (modeStr.compare("off") == 0)
+				{
+					g_Renderer->SetTAAEnabled(false);
+				}
+			}
+			else if (Variant::IsIntegral(mode.type) || mode.type == Variant::Type::BOOL)
+			{
+				i32 enabled = mode.AsInt();
+				if (enabled != -1)
+				{
+					g_Renderer->SetTAAEnabled(enabled == 1);
+				}
+			}
+		}, Variant::Type::VOID));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.aa.taa",
+			[]() { g_Renderer->SetTAAEnabled(true); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("rendering.aa.get_enabled",
+			[]() { return Variant(g_Renderer->IsTAAEnabled()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.wireframe.toggle",
+			[]() { g_Renderer->ToggleWireframeOverlay(); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.wireframe_selection.toggle",
+			[]() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.debug_overlay.clear",
+			[]() { g_Renderer->SetDebugOverlayID(0); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.debug_overlay",
+			[](const Variant& mode)
+		{
+			if (mode.type == Variant::Type::STRING)
+			{
+				std::string modeStr = mode.AsString();
+				i32 newModeID = DebugOverlayNameToID(modeStr.c_str());
+				if (newModeID != -1)
+				{
+					g_Renderer->SetDebugOverlayID(newModeID);
+				}
+			}
+			else
+			{
+				i32 newModeID = mode.AsInt();
+				g_Renderer->SetDebugOverlayID(newModeID);
+			}
+		}, Variant::Type::VOID /* either int or string */));
 
 		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.get",
-			[]()
-		{
-			return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay());
-		}));
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay()); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.set",
-			[](const Variant& time)
-		{
-			real timeFloat = time.AsFloat();
-			g_SceneManager->CurrentScene()->SetTimeOfDay(timeFloat);
-		}, Variant::Type::FLOAT));
+			[](const Variant& time) { g_SceneManager->CurrentScene()->SetTimeOfDay(time.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.paused.get",
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDayPaused()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.paused.set",
+			[](const Variant& timePaused) { g_SceneManager->CurrentScene()->SetTimeOfDayPaused(timePaused.AsBool()); }, Variant::Type::BOOL));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.seconds_per_day.get",
+			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.seconds_per_day.set",
+			[](const Variant& secPerDay) { g_SceneManager->CurrentScene()->SetSecondsPerDay(secPerDay.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("simulation.paused.get",
+			[]() { return Variant(g_EngineInstance->IsSimulationPaused()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("simulation.paused.set",
+			[](const Variant& simPaused) { g_EngineInstance->SetSimulationPaused(simPaused.AsBool()); }, Variant::Type::BOOL));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("simulation.speed.get",
+			[]() { return Variant(g_EngineInstance->GetSimulationSpeed()); }));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("simulation.speed.set",
+			[](const Variant& simSpeed) { g_EngineInstance->SetSimulationSpeed(simSpeed.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("simulation.step_frame",
+			[]() { g_EngineInstance->StepSimulationFrame(); }));
 
 		// TODO: Add usage helper (e.g. "inventory.add ["item_name"] [count]")
-		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("inventory.add",
-			[](const Variant& item, const Variant& count) -> Variant {
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("inventory.add",
+			[](const Variant& item, const Variant& count) {
 				{
 					i32 countInt = count.AsInt();
 
@@ -418,10 +507,40 @@ namespace flex
 							player->AddToInventory(prefabID, countInt);
 						}
 					}
-					return Variant();
 				}
-		}, Variant::Type::VOID,
-			Variant::Type::STRING, Variant::Type::INT));
+		}, Variant::Type::STRING, Variant::Type::INT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("open",
+			[](const Variant& windowName)
+		{
+			g_EngineInstance->ToggleUIWindow(windowName.AsString());
+		}, Variant::Type::STRING));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.shader_quality_level",
+			[](const Variant& shaderQualityLevel)
+		{
+			i32 shaderQualityLevelInt = shaderQualityLevel.AsInt();
+			if (shaderQualityLevelInt != -1)
+			{
+				g_Renderer->SetShaderQualityLevel(shaderQualityLevelInt);
+			}
+		}, Variant::Type::STRING));
+
+		// Register UI windows (names must be lowercase)
+		m_UIWindows[SID("main")] = true;
+		m_UIWindows[SID("imgui demo")] = false;
+		m_UIWindows[SID("input bindings")] = false;
+		m_UIWindows[SID("memory stats")] = false;
+		m_UIWindows[SID("cpu stats")] = false;
+		m_UIWindows[SID("ui editor")] = false;
+		m_UIWindows[SID("fonts")] = false;
+		m_UIWindows[SID("materials")] = false;
+		m_UIWindows[SID("shaders")] = false;
+		m_UIWindows[SID("textures")] = false;
+		m_UIWindows[SID("meshes")] = false;
+		m_UIWindows[SID("prefabs")] = false;
+		m_UIWindows[SID("sounds")] = false;
+		m_UIWindows[SID("render doc")] = false;
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -603,7 +722,6 @@ namespace flex
 			sec secondsElapsed = frameEndTime - frameStartTime;
 			frameStartTime = frameEndTime;
 
-
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
 			g_SecElapsedSinceProgramStart = frameEndTime;
 
@@ -616,6 +734,9 @@ namespace flex
 			{
 				g_DeltaTime = glm::clamp(secondsElapsed * m_SimulationSpeed, m_MinDT, m_MaxDT);
 			}
+
+			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
+			m_bSimulateNextFrame = false;
 
 			Profiler::StartFrame();
 
@@ -683,9 +804,6 @@ namespace flex
 				g_Editor->EarlyUpdate();
 
 				Profiler::Update();
-
-				const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
-				m_bSimulateNextFrame = false;
 
 				g_CameraManager->Update();
 
@@ -903,9 +1021,10 @@ namespace flex
 			return;
 		}
 
-		if (m_bDemoWindowShowing)
+		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID("imgui demo"));
+		if (*bImGuiDemoWindowShowing)
 		{
-			ImGui::ShowDemoWindow(&m_bDemoWindowShowing);
+			ImGui::ShowDemoWindow(bImGuiDemoWindowShowing);
 		}
 
 		if (ImGui::BeginMainMenuBar())
@@ -1126,27 +1245,27 @@ namespace flex
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", nullptr, &m_bMainWindowShowing);
+				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")]);
 				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
-				ImGui::MenuItem("Memory Stats", nullptr, &m_bShowMemoryStatsWindow);
-				ImGui::MenuItem("CPU Stats", nullptr, &m_bShowCPUStatsWindow);
+				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")]);
+				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")]);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
-				ImGui::MenuItem("UI Editor", nullptr, &m_bUIEditorShowing);
+				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")]);
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", nullptr, &g_ResourceManager->bMaterialWindowShowing);
-				ImGui::MenuItem("Shaders", nullptr, &g_ResourceManager->bShaderWindowShowing);
-				ImGui::MenuItem("Textures", nullptr, &g_ResourceManager->bTextureWindowShowing);
-				ImGui::MenuItem("Meshes", nullptr, &g_ResourceManager->bMeshWindowShowing);
-				ImGui::MenuItem("Prefabs", nullptr, &g_ResourceManager->bPrefabsWindowShowing);
-				ImGui::MenuItem("Sounds", nullptr, &g_ResourceManager->bSoundsWindowShowing);
+				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")]);
+				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")]);
+				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")]);
+				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")]);
+				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")]);
+				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")]);
 				ImGui::Separator();
-				ImGui::MenuItem("Key Mapper", nullptr, &m_bInputMapperShowing);
-				ImGui::MenuItem("Font Editor", nullptr, &g_ResourceManager->bFontWindowShowing);
+				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")]);
+				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")]);
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", nullptr, &m_bShowingRenderDocWindow);
+				ImGui::MenuItem("Render Doc Captures", nullptr, &m_UIWindows[SID("render doc")]);
 #endif
 				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_bDemoWindowShowing);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_UIWindows[SID("imgui demo")]);
 
 				ImGui::EndMenu();
 			}
@@ -1169,14 +1288,17 @@ namespace flex
 		{
 			FlexEngine* engine = static_cast<FlexEngine*>(data->UserData);
 			engine->m_ImGuiMainWindowWidth = data->DesiredSize.x;
-			engine->m_ImGuiMainWindowWidth = glm::min(engine->m_ImGuiMainWindowWidthMax,
-				glm::max(engine->m_ImGuiMainWindowWidth, engine->m_ImGuiMainWindowWidthMin));
+			engine->m_ImGuiMainWindowWidth = glm::clamp(
+				engine->m_ImGuiMainWindowWidth,
+				engine->m_ImGuiMainWindowWidthMin,
+				engine->m_ImGuiMainWindowWidthMax);
 		};
 
 		bool bIsMainWindowCollapsed = true;
 
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		if (m_bMainWindowShowing)
+		bool* bShowMainWindow = GetUIWindowOpen(SID("main"));
+		if (*bShowMainWindow)
 		{
 			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
 			static const char* titleCharStr = titleString.c_str();
@@ -1189,7 +1311,7 @@ namespace flex
 			real frameBufferHeight = (real)frameBufferSize.y;
 			ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
 				ImGuiCond_Always);
-			if (ImGui::Begin(titleCharStr, &m_bMainWindowShowing, mainWindowFlags))
+			if (ImGui::Begin(titleCharStr, &m_UIWindows[SID("main")], mainWindowFlags))
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
 
@@ -1199,8 +1321,7 @@ namespace flex
 
 					if (ImGui::Button("Step (F10)"))
 					{
-						m_bSimulationPaused = true;
-						m_bSimulateNextFrame = true;
+						StepSimulationFrame();
 					}
 
 					if (ImGui::Button("Continue (F5)"))
@@ -1329,9 +1450,10 @@ namespace flex
 
 		g_ResourceManager->DrawImGuiWindows();
 
-		if (m_bInputMapperShowing)
+		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID("input bindings"));
+		if (*bShowInputBindingsWindow)
 		{
-			g_InputManager->DrawImGuiKeyMapper(&m_bInputMapperShowing);
+			g_InputManager->DrawImGuiBindings(bShowInputBindingsWindow);
 		}
 
 		if (m_bShowingConsole)
@@ -1339,7 +1461,7 @@ namespace flex
 			const real consoleWindowWidth = 350.0f;
 			float fontScale = ImGui::GetIO().FontGlobalScale;
 			real consoleWindowHeight = 28.0f + m_CmdAutoCompletions.size() * 16.0f * fontScale;
-			const real consoleWindowX = (m_bMainWindowShowing && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
+			const real consoleWindowX = (m_UIWindows[SID("main")] && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(consoleWindowWidth, consoleWindowHeight));
@@ -1380,8 +1502,7 @@ namespace flex
 					[](ImGuiInputTextCallbackData* data) { return g_EngineInstance->ImGuiConsoleInputCallback(data); }))
 				{
 					m_bInvalidCmdLine = false;
-					//const std::string cmdLineStrBufClean = ToLower(m_CmdLineStrBuf);
-					std::vector<std::string> cmdLineParts = Split(m_CmdLineStrBuf, ' ');
+					std::vector<std::string> cmdLineParts = SplitHandleStrings(m_CmdLineStrBuf, ' ');
 					if (!cmdLineParts.empty())
 					{
 						bool bMatched = false;
@@ -1414,6 +1535,7 @@ namespace flex
 											break;
 										}
 
+										// TODO: Do some type checking using func->argTypes
 										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
 										switch (argType)
 										{
@@ -1436,13 +1558,20 @@ namespace flex
 											args.emplace_back(Variant(ParseBool(argStr)));
 											break;
 										case JSONValue::Type::STRING:
-											argStr[argStr.size() - 1] = '\0'; // Replace trailing slash with null terminator
-											args.emplace_back(Variant(argStr.c_str() + 1)); // + 1 to skip first quote
+											argStr = Erase(argStr, '\"');
+											if (argStr.empty())
+											{
+												bValid = false;
+												break;
+											}
+
+											args.emplace_back(Variant(argStr.c_str()));
 											break;
 										default:
-											bValid = false;
+											// Assume string
+											args.emplace_back(Variant(argStr.c_str()));
+											break;
 										}
-
 									}
 									if (bValid)
 									{
@@ -1494,9 +1623,10 @@ namespace flex
 		}
 
 #if COMPILE_RENDERDOC_API
-		if (m_bShowingRenderDocWindow)
+		bool* bShowRenderDocWindow = GetUIWindowOpen(SID("render doc"));
+		if (*bShowRenderDocWindow)
 		{
-			if (ImGui::Begin("RenderDoc", &m_bShowingRenderDocWindow))
+			if (ImGui::Begin("RenderDoc", bShowRenderDocWindow))
 			{
 				ImGui::Text("RenderDoc connected - API v%i.%i.%i", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);
 				if (ImGui::Button("Trigger capture (F9)"))
@@ -1541,9 +1671,10 @@ namespace flex
 		}
 #endif
 
-		if (m_bShowMemoryStatsWindow)
+		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID("memory stats"));
+		if (*bShowMemoryStatsWindow)
 		{
-			if (ImGui::Begin("Memory", &m_bShowMemoryStatsWindow))
+			if (ImGui::Begin("Memory", bShowMemoryStatsWindow))
 			{
 				ImGui::Text("Memory allocated:       %.3fMB", g_TotalTrackedAllocatedMemory / 1'000'000.0f);
 				ImGui::Text("Delta allocation count: %i", (i32)g_TrackedAllocationCount - (i32)g_TrackedDeallocationCount);
@@ -1551,9 +1682,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (m_bShowCPUStatsWindow)
+		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID("cpu stats"));
+		if (*bShowCPUStatsWindow)
 		{
-			if (ImGui::Begin("CPU Stats", &m_bShowCPUStatsWindow))
+			if (ImGui::Begin("CPU Stats", bShowCPUStatsWindow))
 			{
 				ImGui::Text("Logical processor count: %u", Platform::cpuInfo.logicalProcessorCount);
 				ImGui::Text("Physical core count: %u", Platform::cpuInfo.physicalCoreCount);
@@ -1565,9 +1697,23 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (m_bUIEditorShowing)
+		bool* bShowUIEditorWindow = GetUIWindowOpen(SID("ui editor"));
+		if (*bShowUIEditorWindow)
 		{
-			g_UIManager->DrawImGui(&m_bUIEditorShowing);
+			g_UIManager->DrawImGui(bShowUIEditorWindow);
+		}
+	}
+
+	void FlexEngine::ToggleUIWindow(const std::string& windowName)
+	{
+		std::string nameLower = windowName;
+		ToLower(nameLower);
+		StringID windowNameSID = Hash(nameLower.c_str());
+		auto iter = m_UIWindows.find(windowNameSID);
+		if (iter != m_UIWindows.end())
+		{
+			bool bWindowOpen = iter->second;
+			iter->second = !bWindowOpen;
 		}
 	}
 
@@ -1771,6 +1917,33 @@ namespace flex
 		m_bRunning = false;
 	}
 
+	void FlexEngine::PrintAllConsoleCommands()
+	{
+		for (IFunction* command : m_ConsoleCommands)
+		{
+			Print("%s(", command->name.c_str());
+
+			for (u32 i = 0; i < (u32)command->argTypes.size(); ++i)
+			{
+				Print("%s", Variant::TypeToString(command->argTypes[i]));
+				if (i + 1 < (u32)command->argTypes.size())
+				{
+					Print(", ");
+				}
+			}
+
+			Print(")");
+
+			if (command->returnType != Variant::Type::_NONE &&
+				command->returnType != Variant::Type::VOID)
+			{
+				Print(" -> %s", Variant::TypeToString(command->returnType));
+			}
+
+			Print("\n");
+		}
+	}
+
 	bool FlexEngine::LoadCommonSettingsFromDisk()
 	{
 		if (m_CommonSettingsAbsFilePath.empty())
@@ -1849,7 +2022,7 @@ namespace flex
 
 		JSONObject rootObject = {};
 
-		std::string lastOpenedSceneName = g_SceneManager->CurrentScene()->GetFileName();
+		std::string lastOpenedSceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
 		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
@@ -1902,6 +2075,22 @@ namespace flex
 	real FlexEngine::GetSimulationSpeed() const
 	{
 		return m_SimulationSpeed;
+	}
+
+	void FlexEngine::SetSimulationSpeed(real speed)
+	{
+		m_SimulationSpeed = glm::clamp(speed, 0.0f, 10.0f);
+	}
+
+	void FlexEngine::StepSimulationFrame()
+	{
+		m_bSimulationPaused = true;
+		m_bSimulateNextFrame = true;
+	}
+
+	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID)
+	{
+		return &m_UIWindows[windowNameSID];
 	}
 
 	std::string FlexEngine::EngineVersionString()
@@ -2086,8 +2275,7 @@ namespace flex
 		{
 			if (keyCode == KeyCode::KEY_F10)
 			{
-				m_bSimulationPaused = true;
-				m_bSimulateNextFrame = true;
+				StepSimulationFrame();
 				return EventReply::CONSUMED;
 			}
 		}

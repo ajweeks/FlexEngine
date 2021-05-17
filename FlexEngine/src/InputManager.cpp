@@ -1351,7 +1351,7 @@ namespace flex
 		m_ActionCallbacks.erase(found);
 	}
 
-	void InputManager::DrawImGuiKeyMapper(bool* bOpen)
+	void InputManager::DrawImGuiBindings(bool* bOpen)
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{

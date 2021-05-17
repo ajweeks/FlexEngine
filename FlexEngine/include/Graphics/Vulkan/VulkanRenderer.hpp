@@ -195,6 +195,8 @@ namespace flex
 			void CreateRenderPasses();
 			void CalculateAutoLayoutTransitions();
 
+			void CreateSpecialzationInfos();
+
 			void FillOutImageDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
 			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
 
