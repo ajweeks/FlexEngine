@@ -28,7 +28,7 @@ jobs:
       # TODO: Cache shaderc
       
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y cmake g++-multilib libopenal-dev python3 python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
+        run: sudo apt-get update -m && sudo apt-get install -y dos2unix cmake g++-multilib libopenal-dev python3 python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
     
       - name: create-build-directories
         run: |
@@ -65,7 +65,7 @@ jobs:
         run: |
           pushd FlexEngine/dependencies/freetype/; \
           dos2unix autogen.sh; \
-          sh autogen.sh; \
+          ./autogen.sh; \
           cmake -S FlexEngine/dependencies/freetype/ -B FlexEngine/dependencies/freetype/build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
           popd
       
