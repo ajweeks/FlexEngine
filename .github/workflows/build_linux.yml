@@ -63,7 +63,7 @@ jobs:
       - name: bullet-copy-binaries
         uses: canastro/copy-action@master
         with:
-          source: 'FlexEngine/dependencies/bullet/build/src/BulletCollision/{libBulletCollision.a,libBulletDynamics.a,libLinearMath.a}'
+          source: 'FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a}'
           target: 'FlexEngine/lib/x64/Debug/'
       
 # Freetype
