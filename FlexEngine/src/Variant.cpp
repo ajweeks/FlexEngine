@@ -52,6 +52,12 @@ namespace flex
 		}
 	}
 
+	bool Variant::IsIntegral(Type type)
+	{
+		return type == Type::INT || type == Type::UINT ||
+			type == Type::LONG || type == Type::ULONG;
+	}
+
 	bool Variant::IsZero() const
 	{
 		switch (type)
@@ -105,7 +111,7 @@ namespace flex
 		case Type::FLOAT:
 			return (i32)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (i32)valBool;
 		case Type::CHAR:
 			return (i32)valChar;
 		default:
@@ -130,7 +136,7 @@ namespace flex
 		case Type::FLOAT:
 			return (u32)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (u32)valBool;
 		case Type::CHAR:
 			return (u32)valChar;
 		default:
@@ -155,7 +161,7 @@ namespace flex
 		case Type::FLOAT:
 			return (i64)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (i64)valBool;
 		case Type::CHAR:
 			return (i64)valChar;
 		default:
@@ -180,7 +186,7 @@ namespace flex
 		case Type::FLOAT:
 			return (u64)valFloat;
 		case Type::BOOL:
-			return valBool;
+			return (u64)valBool;
 		case Type::CHAR:
 			return (u64)valChar;
 		default:

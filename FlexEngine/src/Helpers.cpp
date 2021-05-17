@@ -2013,6 +2013,21 @@ namespace flex
 		return false;
 	}
 
+	std::string Erase(const std::string& str, char c)
+	{
+		std::string result;
+
+		for (char ch : str)
+		{
+			if (ch != c)
+			{
+				result.push_back(ch);
+			}
+		}
+
+		return result;
+	}
+
 	i32 RoundUp(i32 val, i32 alignment)
 	{
 		return val + alignment - (val % alignment);

@@ -1036,6 +1036,7 @@ namespace flex
 		"Tex coords",
 		"Linear depth",
 		"Shadow",
+		"Shadow cascade",
 		"SSAO",
 	};
 

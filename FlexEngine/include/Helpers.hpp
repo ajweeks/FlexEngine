@@ -337,6 +337,8 @@ namespace flex
 	bool Contains(const std::string& str, const std::string& pattern);
 	bool Contains(const std::string& str, char pattern);
 
+	std::string Erase(const std::string& str, char c);
+
 	template<typename T>
 	inline bool Erase(std::vector<T>& vec, const T& t)
 	{

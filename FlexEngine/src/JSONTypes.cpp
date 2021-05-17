@@ -30,7 +30,11 @@ namespace flex
 			return Type::STRING;
 		case 't':
 		case 'f':
-			return Type::BOOL;
+			if (c == 't' && stringAfter.size() >= 3 && stringAfter.substr(0, 3).compare("rue") == 0)
+				return Type::BOOL;
+			if (c == 'f' && stringAfter.size() >= 4 && stringAfter.substr(0, 4).compare("alse") == 0)
+				return Type::BOOL;
+			// Fall through
 		default:
 		{
 			// Check if number
@@ -63,7 +67,7 @@ namespace flex
 					}
 				}
 			}
-		} return Type::UNINITIALIZED;
+		} return Type::STRING;
 		}
 	}
 

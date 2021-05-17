@@ -118,6 +118,8 @@ namespace flex
 
 		std::string ToString() const;
 
+		static bool IsIntegral(Type type);
+
 		i32 AsInt() const;
 		u32 AsUInt() const;
 		i64 AsLong() const;

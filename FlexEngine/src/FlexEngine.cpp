@@ -399,26 +399,50 @@ namespace flex
 			[]() { g_Renderer->RecompileShaders(true); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("reload.fontsdfs",
 			[]() { g_ResourceManager->LoadFonts(true); }));
+
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.all",
 			[]() { g_Editor->SelectAll(); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("select.none",
 			[]() { g_Editor->SelectNone(); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("exit",
 			[]() { g_EngineInstance->Stop(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.off",
-			[]() { g_Renderer->SetTAAEnabled(false); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("aa.taa",
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.aa",
+			[](const Variant& mode)
+		{
+			if (mode.type == Variant::Type::STRING)
+			{
+				std::string modeStr = Trim(mode.AsString());
+				if (modeStr.compare("taa") == 0)
+				{
+					g_Renderer->SetTAAEnabled(true);
+				}
+				else if (modeStr.compare("off") == 0)
+				{
+					g_Renderer->SetTAAEnabled(false);
+				}
+			}
+			else if (Variant::IsIntegral(mode.type) || mode.type == Variant::Type::BOOL)
+			{
+				i32 enabled = mode.AsInt();
+				if (enabled != -1)
+				{
+					g_Renderer->SetTAAEnabled(enabled == 1);
+				}
+			}
+		}, Variant::Type::VOID));
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.aa.taa",
 			[]() { g_Renderer->SetTAAEnabled(true); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("aa.get.enabled",
+		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("rendering.aa.get_enabled",
 			[]() { return Variant(g_Renderer->IsTAAEnabled()); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe",
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.wireframe.toggle",
 			[]() { g_Renderer->ToggleWireframeOverlay(); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("toggle.wireframe.selection",
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.wireframe_selection.toggle",
 			[]() { g_Renderer->ToggleWireframeSelectionOverlay(); }));
 
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("debug.overlay.clear",
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.debug_overlay.clear",
 			[]() { g_Renderer->SetDebugOverlayID(0); }));
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("debug.overlay",
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.debug_overlay",
 			[](const Variant& mode)
 		{
 			if (mode.type == Variant::Type::STRING)
@@ -1534,8 +1558,14 @@ namespace flex
 											args.emplace_back(Variant(ParseBool(argStr)));
 											break;
 										case JSONValue::Type::STRING:
-											argStr[argStr.size() - 1] = '\0'; // Replace trailing slash with null terminator
-											args.emplace_back(Variant(argStr.c_str() + 1)); // + 1 to skip first quote
+											argStr = Erase(argStr, '\"');
+											if (argStr.empty())
+											{
+												bValid = false;
+												break;
+											}
+
+											args.emplace_back(Variant(argStr.c_str()));
 											break;
 										default:
 											// Assume string
