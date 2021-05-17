@@ -5646,7 +5646,6 @@ namespace flex
 		WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel) : nullptr;
 		WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel) : nullptr;
 
-		const real quadSize = size / chunkVertCountPerAxis;
 		for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 		{
 			for (u32 x = 0; x < chunkVertCountPerAxis; ++x)
@@ -8654,7 +8653,7 @@ namespace flex
 			real quadSize = ChunkSize / VertCountPerChunkAxis;
 
 			// TODO: Generate all new vertex buffers first, then do post pass to compute normals
-			u32 vertexBufferStride = CalculateVertexStride(vertexBufferCreateInfo.attributes);
+			//u32 vertexBufferStride = CalculateVertexStride(vertexBufferCreateInfo.attributes);
 			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
@@ -8667,46 +8666,46 @@ namespace flex
 				memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
 				memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
 
-				auto chunkLeftIter = m_Meshes.find(chunkIndex - glm::vec2i(1, 0));
-				auto chunkRightIter = m_Meshes.find(chunkIndex + glm::vec2i(0, 1));
-				auto chunkBackIter = m_Meshes.find(chunkIndex - glm::vec2i(0, 1));
-				auto chunkForwardIter = m_Meshes.find(chunkIndex + glm::vec2i(1, 0));
-				u8* chunkLeftVertBuf = nullptr;
-				u8* chunkRightVertBuf = nullptr;
-				u8* chunkBackVertBuf = nullptr;
-				u8* chunkForwardVertBuf = nullptr;
-				if (chunkLeftIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkLeftIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkLeftVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkRightIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkRightIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkRightVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkBackIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkBackIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkBackVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkForwardIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkForwardIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkForwardVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
+				//auto chunkLeftIter = m_Meshes.find(chunkIndex - glm::vec2i(1, 0));
+				//auto chunkRightIter = m_Meshes.find(chunkIndex + glm::vec2i(0, 1));
+				//auto chunkBackIter = m_Meshes.find(chunkIndex - glm::vec2i(0, 1));
+				//auto chunkForwardIter = m_Meshes.find(chunkIndex + glm::vec2i(1, 0));
+				//u8* chunkLeftVertBuf = nullptr;
+				//u8* chunkRightVertBuf = nullptr;
+				//u8* chunkBackVertBuf = nullptr;
+				//u8* chunkForwardVertBuf = nullptr;
+				//if (chunkLeftIter != m_Meshes.end())
+				//{
+				//	MeshComponent* meshComponent = chunkLeftIter->second->meshComponent;
+				//	if (meshComponent != nullptr)
+				//	{
+				//		chunkLeftVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+				//	}
+				//}
+				//if (chunkRightIter != m_Meshes.end())
+				//{
+				//	MeshComponent* meshComponent = chunkRightIter->second->meshComponent;
+				//	if (meshComponent != nullptr)
+				//	{
+				//		chunkRightVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+				//	}
+				//}
+				//if (chunkBackIter != m_Meshes.end())
+				//{
+				//	MeshComponent* meshComponent = chunkBackIter->second->meshComponent;
+				//	if (meshComponent != nullptr)
+				//	{
+				//		chunkBackVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+				//	}
+				//}
+				//if (chunkForwardIter != m_Meshes.end())
+				//{
+				//	MeshComponent* meshComponent = chunkForwardIter->second->meshComponent;
+				//	if (meshComponent != nullptr)
+				//	{
+				//		chunkForwardVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
+				//	}
+				//}
 
 				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
 				auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);

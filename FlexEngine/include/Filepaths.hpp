@@ -26,6 +26,7 @@
 #define GAME_OBJECT_TYPES_LOCATION					RESOURCE_LOCATION "GameObjectTypes.txt"
 #define MATERIALS_FILE_LOCATION						RESOURCE_LOCATION "scenes/materials.json"
 #define SPECIALIZATION_CONSTANTS_LOCATION			RESOURCE_LOCATION "specialization_constants.json"
+#define DEBUG_OVERLAY_NAMES_LOCATION				RESOURCE_LOCATION "debug_overlay_names.json"
 
 #define SHADER_SPECIALIZATION_CONSTANTS_LOCATION	SHADER_SOURCE_DIRECTORY "shader_specialization_constants.json"
 

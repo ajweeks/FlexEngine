@@ -960,7 +960,7 @@ namespace flex
 
 	void Renderer::SetDebugOverlayID(i32 newID)
 	{
-		newID = glm::clamp(newID, 0, (i32)ARRAY_LENGTH(DebugOverlayNames));
+		newID = glm::clamp(newID, 0, (i32)g_ResourceManager->debugOverlayNames.size());
 		SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
 		if (newID != debugOverlayConstant.value)
 		{
@@ -2456,7 +2456,7 @@ namespace flex
 	void Renderer::DrawShaderSpecializationConstantImGui(ShaderID shaderID)
 	{
 		Shader* shader = GetShader(shaderID);
-		if (ImGui::TreeNode("%s", shader->name.c_str()))
+		if (ImGui::TreeNode(shader->name.c_str()))
 		{
 			std::vector<StringID>* specializationConstants = GetShaderSpecializationConstants(shaderID);
 			for (const auto& pair : m_SpecializationConstants)
@@ -2602,12 +2602,17 @@ namespace flex
 			}
 
 			SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
-			if (ImGui::BeginCombo("Debug overlay", DebugOverlayNames[debugOverlayConstant.value]))
+			const char* previewValue = "";
+			if (debugOverlayConstant.value >= 0 && debugOverlayConstant.value < (i32)g_ResourceManager->debugOverlayNames.size())
 			{
-				for (i32 i = 0; i < ARRAY_LENGTH(DebugOverlayNames); ++i)
+				previewValue = g_ResourceManager->debugOverlayNames[debugOverlayConstant.value].c_str();
+			}
+			if (ImGui::BeginCombo("Debug overlay", previewValue))
+			{
+				for (i32 i = 0; i < (i32)g_ResourceManager->debugOverlayNames.size(); ++i)
 				{
 					bool bSelected = (i == debugOverlayConstant.value);
-					if (ImGui::Selectable(DebugOverlayNames[i], &bSelected))
+					if (ImGui::Selectable(g_ResourceManager->debugOverlayNames[i].c_str(), &bSelected))
 					{
 						if (debugOverlayConstant.value != i)
 						{
@@ -3251,7 +3256,7 @@ namespace flex
 				{
 					if (specializationConstantNameField.value.strValue.empty())
 					{
-						PrintWarn("Found empty specialization constant field for shader: %\n", shaderName.c_str());
+						PrintWarn("Found empty specialization constant field for shader: %s\n", shaderName.c_str());
 						continue;
 					}
 					StringID specializationConstantID = Hash(specializationConstantNameField.value.strValue.c_str());

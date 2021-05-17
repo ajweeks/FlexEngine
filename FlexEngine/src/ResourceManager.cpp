@@ -54,6 +54,7 @@ namespace flex
 
 		DiscoverTextures();
 		DiscoverAudioFiles();
+		ParseDebugOverlayNamesFile();
 	}
 
 	void ResourceManager::Update()
@@ -542,6 +543,33 @@ namespace flex
 		}
 
 		return true;
+	}
+
+	void ResourceManager::ParseDebugOverlayNamesFile()
+	{
+		debugOverlayNames.clear();
+
+		std::string fileContents;
+		if (!ReadFile(DEBUG_OVERLAY_NAMES_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read debug overlay names definition file\n");
+			return;
+		}
+
+		JSONObject rootObject;
+		if (!JSONParser::Parse(fileContents, rootObject))
+		{
+			PrintError("Failed to parse debug overlay names definition file\n");
+			return;
+		}
+
+		std::vector<JSONField> nameFields = rootObject.GetFieldArray("debug overlay names");
+
+		debugOverlayNames.reserve(nameFields.size());
+		for (JSONField& field : nameFields)
+		{
+			debugOverlayNames.emplace_back(field.value.strValue);
+		}
 	}
 
 	JSONField ResourceManager::SerializeMesh(Mesh* mesh)

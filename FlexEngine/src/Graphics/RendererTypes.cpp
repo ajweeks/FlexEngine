@@ -3,6 +3,7 @@
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
+#include "ResourceManager.hpp"
 
 namespace flex
 {
@@ -48,9 +49,9 @@ namespace flex
 
 	i32 DebugOverlayNameToID(const char* DebugOverlayName)
 	{
-		for (i32 i = 0; i < ARRAY_LENGTH(DebugOverlayNames); ++i)
+		for (i32 i = 0; i < (i32)g_ResourceManager->debugOverlayNames.size(); ++i)
 		{
-			if (StrCmpCaseInsensitive(DebugOverlayNames[i], DebugOverlayName) == 0)
+			if (StrCmpCaseInsensitive(g_ResourceManager->debugOverlayNames[i].c_str(), DebugOverlayName) == 0)
 			{
 				return i + 1; // One-based
 			}

@@ -27,10 +27,10 @@ namespace flex
 			Print("UInt: %d\n", val0.AsUInt());
 			break;
 		case Variant::Type::LONG:
-			Print("Long: %dll\n", val0.AsLong());
+			Print("Long: %ld\n", val0.AsLong());
 			break;
 		case Variant::Type::ULONG:
-			Print("ULong: %ull\n", val0.AsULong());
+			Print("ULong: %lu\n", val0.AsULong());
 			break;
 		case Variant::Type::FLOAT:
 			Print("Float: %.3f\n", val0.AsFloat());

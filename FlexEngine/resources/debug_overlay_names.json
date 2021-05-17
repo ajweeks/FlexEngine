@@ -1,0 +1,17 @@
+{
+	"debug overlay names" :
+	[
+		"None",
+		"Albedo",
+		"Normal",
+		"Roughness",
+		"Metallic",
+		"Diffuse lighting",
+		"Specular lighting",
+		"Tex coords",
+		"Linear depth",
+		"Shadow",
+		"Shadow cascade",
+		"SSAO"
+	]
+}

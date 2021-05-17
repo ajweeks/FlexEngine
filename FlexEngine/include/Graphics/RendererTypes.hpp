@@ -1024,21 +1024,5 @@ namespace flex
 		i32 max;
 	};
 
-	static const char* DebugOverlayNames[] =
-	{
-		"None"
-		"Albedo",
-		"Normal",
-		"Roughness",
-		"Metallic",
-		"Diffuse lighting",
-		"Specular lighting",
-		"Tex coords",
-		"Linear depth",
-		"Shadow",
-		"Shadow cascade",
-		"SSAO",
-	};
-
 	i32 DebugOverlayNameToID(const char* DebugOverlayName);
 } // namespace flex
