@@ -1566,28 +1566,33 @@ namespace flex
 						}
 						material->textures.values[texIndex].object = loadedTex;
 
-						bool bTextureIsBlankTex = (loadedTexID == loadedTexID);
+						bool bTextureIsBlankTex = (loadedTexID == g_Renderer->blankTextureID);
 						if (loadedTex != nullptr && !bTextureIsBlankTex)
 						{
 							if (material->textures.values[texIndex].uniformID == U_ALBEDO_SAMPLER.id)
 							{
 								material->enableAlbedoSampler = true;
+								material->albedoTexturePath = loadedTex->relativeFilePath;
 							}
 							else if (material->textures.values[texIndex].uniformID == U_EMISSIVE_SAMPLER.id)
 							{
 								material->enableEmissiveSampler = true;
+								material->emissiveTexturePath = loadedTex->relativeFilePath;
 							}
 							else if (material->textures.values[texIndex].uniformID == U_METALLIC_SAMPLER.id)
 							{
 								material->enableMetallicSampler = true;
+								material->metallicTexturePath = loadedTex->relativeFilePath;
 							}
 							else if (material->textures.values[texIndex].uniformID == U_ROUGHNESS_SAMPLER.id)
 							{
 								material->enableRoughnessSampler = true;
+								material->roughnessTexturePath = loadedTex->relativeFilePath;
 							}
 							else if (material->textures.values[texIndex].uniformID == U_NORMAL_SAMPLER.id)
 							{
 								material->enableNormalSampler = true;
+								material->normalTexturePath = loadedTex->relativeFilePath;
 							}
 						}
 					}
