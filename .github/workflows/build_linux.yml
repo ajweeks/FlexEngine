@@ -35,12 +35,12 @@ jobs:
 
       - name: create-build-directories
         run: |
-          mkdir -p
-            FlexEngine/lib/x64/Debug/
-            FlexEngine/dependencies/glfw/build/
-            FlexEngine/dependencies/openAL/build/
-            FlexEngine/dependencies/bullet/build/
-            FlexEngine/dependencies/freetype/build/
+          mkdir -p \
+            FlexEngine/lib/x64/Debug/ \
+            FlexEngine/dependencies/glfw/build/ \
+            FlexEngine/dependencies/openAL/build/ \
+            FlexEngine/dependencies/bullet/build/ \
+            FlexEngine/dependencies/freetype/build/ \
             FlexEngine/dependencies/shaderc/build/
 
       - name: build-glfw
