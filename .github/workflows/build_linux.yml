@@ -89,8 +89,6 @@ jobs:
       - name: shaderc-generate-build-files
         run: |
           pushd FlexEngine/dependencies/shaderc/; \
-          dos2unix autogen.sh; \
-          sh autogen.sh; \
           mkdir build/; \
           cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
           popd
