@@ -105,15 +105,23 @@ jobs:
         run: |
           cd scripts; \
           sudo wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie; \
+          sudo chmod +x genie; \
           ./genie gmake; \
           cd ../
       
+# Finally, build!
       - name: build
         run: |
           cd build/debug64/; \
-          make .
+          make . ;\
+          cd ../../
 
-      - name: install-vulkan-sdk
+      - name: run
         run: |
-          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
-          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
+          cd bin/Debug_x64/FlexEngine/; \
+          ./Flex
+
+      #- name: install-vulkan-sdk
+      #  run: |
+      #    wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
+      #    sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
