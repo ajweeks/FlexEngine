@@ -34,11 +34,11 @@ jobs:
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
 
       - name: create-build-directory
-        run: mkdir FlexEngine/lib/x64/Debug/
+        run: mkdir -p FlexEngine/lib/x64/Debug/
 
       - name: build-glfw
         run: |
-          mkdir FlexEngine/dependencies/glfw/build/
+          mkdir -p FlexEngine/dependencies/glfw/build/
           pushd FlexEngine/dependencies/glfw/build/ && make . && popd
       
       - name: copy-glfw-binaries
