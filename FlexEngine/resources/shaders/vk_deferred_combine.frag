@@ -536,5 +536,5 @@ void main()
 	//fragColour = vec4(metallic, metallic, metallic, 1); return;
 
     DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
-     linDepth, dirLightShadowOpacity, ssao, /* inout */ fragColour);
+     linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragColour);
 }

@@ -233,7 +233,7 @@ vec3 ColourByShadowCascade(uint cascadeIndex)
 
 void DrawDebugOverlay(vec3 albedo, vec3 N, float roughness, float metallic,
     vec3 diffuse, vec3 specular, vec2 texCoord, float linDepth,
-    float shadow, float ssao, inout vec4 fragColour)
+    float shadow, uint cascadeIndex, float ssao, inout vec4 fragColour)
 {
     switch (DEBUG_OVERLAY_INDEX)
     {
@@ -264,7 +264,10 @@ void DrawDebugOverlay(vec3 albedo, vec3 N, float roughness, float metallic,
     case 9: // Shadow
         fragColour = vec4(shadow.xxx, 1.0);
         break;
-    case 10: // SSAO
+    case 10: // Shadow cascade
+        fragColour.xyz = ColourByShadowCascade(cascadeIndex) * fragColour.xyz;
+        break;
+    case 11: // SSAO
         fragColour = vec4(ssao.xxx, 1.0);
         break;
     }
