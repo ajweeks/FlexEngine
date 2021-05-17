@@ -32,7 +32,7 @@ jobs:
     
       - name: install-vulkan-sdk
         run: |
-          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add;
+          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
 
       - name: create-build-directories
@@ -45,12 +45,11 @@ jobs:
             FlexEngine/dependencies/freetype/build/ \
             FlexEngine/dependencies/shaderc/build/
 
-      - name: build-glfw
-        run: |
-          cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF;
-          pushd FlexEngine/dependencies/glfw/build/;
-          make . ;
-          popd
+      - name: glfw-generate-build-files
+        run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
+      
+      - name: glfw-build
+        run: pushd FlexEngine/dependencies/glfw/build/ && make . && popd
       
       - name: copy-glfw-binaries
         uses: canastro/copy-action@master
@@ -60,15 +59,15 @@ jobs:
       
       - name: install-genie
         run: |
-          cd scripts;
+          cd scripts; \
           sudo wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie
           
       - name: run-genie
         run: |
-          genie gmake;
+          genie gmake; \
           cd ../
       
       - name: build
         run: |
-          cd build/debug64/;
+          cd build/debug64/; \
           make .
