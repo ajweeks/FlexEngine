@@ -66,7 +66,7 @@ jobs:
           pushd FlexEngine/dependencies/freetype/; \
           dos2unix autogen.sh; \
           ./autogen.sh; \
-          cmake -S FlexEngine/dependencies/freetype/ -B FlexEngine/dependencies/freetype/build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
+          cmake -S . -B build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
           popd
       
       - name: freetype-build
@@ -92,7 +92,7 @@ jobs:
           pushd FlexEngine/dependencies/shaderc/; \
           dos2unix autogen.sh; \
           sh autogen.sh; \
-          cmake -S FlexEngine/dependencies/shaderc/ -B FlexEngine/dependencies/shaderc/build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
+          cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
           popd
       
       - name: shaderc-build
