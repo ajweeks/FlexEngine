@@ -55,7 +55,7 @@ jobs:
       
 # Bullet
       - name: bullet-generate-build-files
-        run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
+        run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
       
       - name: bullet-build
         run: cmake --build FlexEngine/dependencies/bullet/build/
