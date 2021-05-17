@@ -26,15 +26,15 @@ jobs:
       # TODO: Cache shaderc
       
       - name: install-deps
-        run: sudo apt-get install g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
+        run: sudo apt-get install -y g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
     
       - name: install-vulkan-sdk
         run: |
-          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add,
+          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add;
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
 
       - name: Build
         run: |
-          cd scripts,
-          python3 build_dependencies.py linux gmake All,
+          cd scripts;
+          python3 build_dependencies.py linux gmake All;
           make
