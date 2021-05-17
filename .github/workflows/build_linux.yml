@@ -1,0 +1,41 @@
+
+name: 'Build Linux'
+
+on:
+  push:
+    branches: [ master, development ]
+    paths-ignore:
+      - 'AdditionalFiles/**'
+  pull_request:
+    branches: [ master, development ]
+    paths-ignore:
+      - 'AdditionalFiles/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      
+      - name: install-deps
+        # You may pin to the exact commit or the version.
+        # uses: Symbitic/install-cmake@301e932c0011b8d12d8bf33d4975fd1e17972709
+        # uses: Symbitic/install-cmake@v0.1.0
+        with:
+          # Version of CMake to install
+          cmake: 3.18.3
+          # Version of ninja-build to install
+          ninja: 1.8.2
+          # Override default platform with one of [win, mac, linux]
+          platform: linux
+
+      - name: Build
+        run: |
+          cd scripts,
+          python3 build_dependencies.py linux ninja All
