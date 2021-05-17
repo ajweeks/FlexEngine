@@ -33,12 +33,18 @@ jobs:
           wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add;
           sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
 
-      - name: create-build-directory
-        run: mkdir -p FlexEngine/lib/x64/Debug/
+      - name: create-build-directories
+        run: |
+          mkdir -p
+            FlexEngine/lib/x64/Debug/
+            FlexEngine/dependencies/glfw/build/
+            FlexEngine/dependencies/openAL/build/
+            FlexEngine/dependencies/bullet/build/
+            FlexEngine/dependencies/freetype/build/
+            FlexEngine/dependencies/shaderc/build/
 
       - name: build-glfw
         run: |
-          mkdir -p FlexEngine/dependencies/glfw/build/;
           pushd FlexEngine/dependencies/glfw/build/ && make . && popd
       
       - name: copy-glfw-binaries
