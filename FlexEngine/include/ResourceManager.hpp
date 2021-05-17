@@ -58,6 +58,8 @@ namespace flex
 		void ParseMaterialsFile();
 		bool SerializeMaterialFile() const;
 
+		void ParseDebugOverlayNamesFile();
+
 		JSONField SerializeMesh(Mesh* mesh);
 
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
@@ -165,6 +167,8 @@ namespace flex
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
+
+		std::vector<std::string> debugOverlayNames;
 
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);

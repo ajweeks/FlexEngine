@@ -60,15 +60,6 @@ namespace flex
 			}
 		}
 
-		static void Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
-		{
-			if (val != exp)
-			{
-				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
-				PrintError("%s\n", msgStr.c_str());
-			}
-		}
-
 		static void Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
 		{
 			if (val != exp)
@@ -79,6 +70,24 @@ namespace flex
 		}
 
 		static void Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+			}
+		}
+
+		static void Expect(const char* funcName, int lineNumber, i64 val, i64 exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+			}
+		}
+
+		static void Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
 		{
 			if (val != exp)
 			{
@@ -311,11 +320,11 @@ namespace flex
 			EXPECT((u64)fields.size(), (u64)5u);
 			// Smallest possible integer type that can store all values
 			EXPECT(fields[0].value.type, JSONValue::Type::LONG);
-			EXPECT(fields[0].value.AsInt(), 2147483649);
-			EXPECT(fields[1].value.AsInt(), 6789);
-			EXPECT(fields[2].value.AsInt(), 9999);
-			EXPECT(fields[3].value.AsInt(), -10);
-			EXPECT(fields[4].value.AsInt(), 0);
+			EXPECT(fields[0].value.AsLong(), (i64)2147483649);
+			EXPECT(fields[1].value.AsLong(), (i64)6789);
+			EXPECT(fields[2].value.AsLong(), (i64)9999);
+			EXPECT(fields[3].value.AsLong(), (i64)-10);
+			EXPECT(fields[4].value.AsLong(), (i64)0);
 		}
 		JSON_UNIT_TEST_END;
 
