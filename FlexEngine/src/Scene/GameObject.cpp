@@ -1496,7 +1496,7 @@ namespace flex
 								std::string materialName = material->name;
 								if (!materialName.empty())
 								{
-									materialFields.emplace_back(materialName, JSONValue(""));
+									materialFields.emplace_back("", JSONValue(materialName));
 								}
 								else
 								{
