@@ -112,9 +112,9 @@ jobs:
 # Finally, build!
       - name: build
         run: |
-          cd build/debug64/; \
+          cd build/; \
           make . ;\
-          cd ../../
+          cd ../
 
       - name: run
         run: |
