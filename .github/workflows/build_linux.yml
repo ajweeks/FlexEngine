@@ -113,7 +113,7 @@ jobs:
       - name: build
         run: |
           cd build/; \
-          make . ;\
+          make config=debug64;\
           cd ../
 
       - name: run
