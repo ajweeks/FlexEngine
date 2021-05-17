@@ -48,10 +48,7 @@ jobs:
         run: cmake --build FlexEngine/dependencies/glfw/build/
       
       - name: glfw-copy-binaries
-        uses: canastro/copy-action@master
-        with:
-          source: 'FlexEngine/dependencies/glfw/build/src/libglfw3.a'
-          target: 'FlexEngine/lib/x64/Debug/'
+        run: cp FlexEngine/dependencies/glfw/build/src/libglfw3.a FlexEngine/lib/x64/Debug/
       
 # Bullet
       - name: bullet-generate-build-files
@@ -61,10 +58,7 @@ jobs:
         run: cmake --build FlexEngine/dependencies/bullet/build/
       
       - name: bullet-copy-binaries
-        uses: canastro/copy-action@master
-        with:
-          source: 'FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a}'
-          target: 'FlexEngine/lib/x64/Debug/'
+        run: cp FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a} FlexEngine/lib/x64/Debug/
       
 # Freetype
       - name: freetype-generate-build-files
@@ -79,10 +73,7 @@ jobs:
         run: cmake --build FlexEngine/dependencies/freetype/build/
       
       - name: freetype-copy-binaries
-        uses: canastro/copy-action@master
-        with:
-          source: 'FlexEngine/dependencies/freetype/build/libfreetype.a'
-          target: 'FlexEngine/lib/x64/Debug/'
+        run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
       
 # Shaderc
       - name: shaderc-clone
@@ -109,10 +100,7 @@ jobs:
           cmake --build FlexEngine/dependencies/shaderc/build/ --config Debug -- -j6
       
       - name: shaderc-copy-binaries
-        uses: canastro/copy-action@master
-        with:
-          source: 'FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a'
-          target: 'FlexEngine/lib/x64/Debug/'
+        run: cp FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a FlexEngine/lib/x64/Debug/
       
 # Genie
       - name: run-genie
