@@ -30,11 +30,6 @@ jobs:
       - name: install-deps
         run: sudo apt-get update -m && sudo apt-get install -y cmake g++-multilib libopenal-dev python3 python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
     
-      - name: install-vulkan-sdk
-        run: |
-          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
-          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
-
       - name: create-build-directories
         run: |
           mkdir -p \
@@ -49,7 +44,7 @@ jobs:
         run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
       
       - name: glfw-build
-        run: pushd FlexEngine/dependencies/glfw/build/ && make . && popd
+        run: cmake --build FlexEngine/dependencies/glfw/build/
       
       - name: copy-glfw-binaries
         uses: canastro/copy-action@master
@@ -71,3 +66,8 @@ jobs:
         run: |
           cd build/debug64/; \
           make .
+
+      - name: install-vulkan-sdk
+        run: |
+          wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
