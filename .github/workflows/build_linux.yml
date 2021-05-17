@@ -44,7 +44,7 @@ jobs:
       - name: copy-glfw-binaries
         uses: canastro/copy-action@master
         with:
-          source: 'FlexEngine/dependencies/glfw/build/src/libglfw3.a'
+          source: 'FlexEngine/dependencies/glfw/build/src/Debug/libglfw3.a'
           target: 'FlexEngine/lib/x64/Debug/'
       
       - name: install-genie
