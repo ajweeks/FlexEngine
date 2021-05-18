@@ -80,14 +80,14 @@ jobs:
 #       - name: freetype-copy-binaries
 #         run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
       
-# # Shaderc
-#       - name: shaderc-clone
-#         run: |
-#           git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
-#           pushd FlexEngine/dependencies/shaderc/; \
-#           git fetch --tags; \
-#           git checkout tags/v2020.2 -b master; \
-#           popd
+# Shaderc
+      - name: shaderc-clone
+        run: |
+          git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
+          pushd FlexEngine/dependencies/shaderc/; \
+          git fetch --tags; \
+          git checkout tags/v2020.2 -b master; \
+          popd
         
 #       - name: shaderc-sync-deps
 #         run: ./FlexEngine/dependencies/shaderc/utils/git-sync-deps
