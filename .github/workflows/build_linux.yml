@@ -28,7 +28,7 @@ jobs:
       # TODO: Cache shaderc
       
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y dos2unix cmake g++-multilib libopenal-dev python3 python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
+        run: sudo apt-get update -m && sudo apt-get install -y dos2unix ninja-build unzip cmake g++-multilib libopenal-dev python3 python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev
     
       - name: create-build-directories
         run: |
@@ -39,66 +39,72 @@ jobs:
             FlexEngine/dependencies/bullet/build/ \
             FlexEngine/dependencies/freetype/build/
 
-# GLFW
-      - name: glfw-generate-build-files
-        run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G'Unix Makefiles'
+      - name: download-prebuilt-depenencies
+        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip; \
+
+      - name: extract-prebuilt-depenencies
+        run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/
+
+# # GLFW
+#       - name: glfw-generate-build-files
+#         run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G'Unix Makefiles'
       
-      - name: glfw-build
-        run: cmake --build FlexEngine/dependencies/glfw/build/
+#       - name: glfw-build
+#         run: cmake --build FlexEngine/dependencies/glfw/build/
       
-      - name: glfw-copy-binaries
-        run: cp FlexEngine/dependencies/glfw/build/src/libglfw3.a FlexEngine/lib/x64/Debug/
+#       - name: glfw-copy-binaries
+#         run: cp FlexEngine/dependencies/glfw/build/src/libglfw3.a FlexEngine/lib/x64/Debug/
       
-# Bullet
-      - name: bullet-generate-build-files
-        run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
+# # Bullet
+#       - name: bullet-generate-build-files
+#         run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
       
-      - name: bullet-build
-        run: cmake --build FlexEngine/dependencies/bullet/build/
+#       - name: bullet-build
+#         run: cmake --build FlexEngine/dependencies/bullet/build/
       
-      - name: bullet-copy-binaries
-        run: cp FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a} FlexEngine/lib/x64/Debug/
+#       - name: bullet-copy-binaries
+#         run: cp FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a} FlexEngine/lib/x64/Debug/
       
-# Freetype
-      - name: freetype-generate-build-files
-        run: |
-          pushd FlexEngine/dependencies/freetype/; \
-          dos2unix autogen.sh; \
-          ./autogen.sh; \
-          cmake -S . -B build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
-          popd
+# # Freetype
+#       - name: freetype-generate-build-files
+#         run: |
+#           pushd FlexEngine/dependencies/freetype/; \
+#           dos2unix autogen.sh; \
+#           ./autogen.sh; \
+#           cmake -S . -B build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
+#           popd
       
-      - name: freetype-build
-        run: cmake --build FlexEngine/dependencies/freetype/build/
+#       - name: freetype-build
+#         run: cmake --build FlexEngine/dependencies/freetype/build/
       
-      - name: freetype-copy-binaries
-        run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
+#       - name: freetype-copy-binaries
+#         run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
       
-# Shaderc
-      - name: shaderc-clone
-        run: |
-          git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
-          pushd FlexEngine/dependencies/shaderc/; \
-          git fetch --tags; \
-          git checkout tags/v2020.2 -b master; \
-          popd
+# # Shaderc
+#       - name: shaderc-clone
+#         run: |
+#           git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
+#           pushd FlexEngine/dependencies/shaderc/; \
+#           git fetch --tags; \
+#           git checkout tags/v2020.2 -b master; \
+#           popd
         
-      - name: shaderc-sync-deps
-        run: ./FlexEngine/dependencies/shaderc/utils/git-sync-deps
+#       - name: shaderc-sync-deps
+#         run: ./FlexEngine/dependencies/shaderc/utils/git-sync-deps
         
-      - name: shaderc-generate-build-files
-        run: |
-          pushd FlexEngine/dependencies/shaderc/; \
-          mkdir build/; \
-          cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
-          popd
+#       - name: shaderc-generate-build-files
+#         run: |
+#           pushd FlexEngine/dependencies/shaderc/; \
+#           mkdir build/; \
+#           cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
+#           popd
       
-      - name: shaderc-build
-        run: |
-          cmake --build FlexEngine/dependencies/shaderc/build/ --config Debug -- -j6
+#       - name: shaderc-build
+#         run: |
+#           cmake --build FlexEngine/dependencies/shaderc/build/ --config Debug -- -j6
       
-      - name: shaderc-copy-binaries
-        run: cp FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a FlexEngine/lib/x64/Debug/
+#       - name: shaderc-copy-binaries
+#         run: cp FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a FlexEngine/lib/x64/Debug/
       
 # Genie
       - name: run-genie
@@ -106,14 +112,14 @@ jobs:
           cd scripts; \
           sudo wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie; \
           sudo chmod +x genie; \
-          ./genie gmake; \
+          ./genie ninja; \
           cd ../
       
 # Finally, build!
       - name: build
         run: |
-          cd build/; \
-          make config=debug64;\
+          cd build/debug64; \
+          ninja;\
           cd ../
 
       - name: run
