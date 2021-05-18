@@ -43,7 +43,7 @@ jobs:
         run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip; \
 
       - name: extract-prebuilt-depenencies
-        run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/
+        run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/
 
 # # GLFW
 #       - name: glfw-generate-build-files
@@ -127,6 +127,14 @@ jobs:
           cd bin/Debug_x64/FlexEngine/; \
           ./Flex
 
+# Upload built binary
+      - name: upload-artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: flex-linux
+          path: bin/debug64/FlexEngine/Flex
+          retention-days: 14
+            
       #- name: install-vulkan-sdk
       #  run: |
       #    wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
