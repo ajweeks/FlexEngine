@@ -50,6 +50,7 @@ jobs:
           popd
 
   build-dependencies-full:
+    needs: setup
     runs-on: ubuntu-latest
     steps:
       - name: install-deps
