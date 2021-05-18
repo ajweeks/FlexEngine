@@ -16,7 +16,6 @@ on:
 
 jobs:
   build:
-    # The type of runner that the job will run on
     runs-on: ubuntu-latest
 
     steps:
@@ -122,11 +121,6 @@ jobs:
           ninja;\
           cd ../
 
-      - name: run
-        run: |
-          cd bin/Debug_x64/FlexEngine/; \
-          ./Flex
-
 # Upload built binary
       - name: upload-artifacts
         uses: actions/upload-artifact@v2
@@ -135,6 +129,16 @@ jobs:
           path: bin/debug64/FlexEngine/Flex
           retention-days: 14
             
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: run-tests
+        run: |
+          cd bin/Debug_x64/FlexEngine/; \
+          ./Flex --test --headless
+
       #- name: install-vulkan-sdk
       #  run: |
       #    wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
