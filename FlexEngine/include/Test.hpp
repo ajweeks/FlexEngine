@@ -2213,7 +2213,7 @@ namespace flex
 		UNIT_TEST_END;
 
 	public:
-		static void Run()
+		static i32 Run()
 		{
 			TestFunc funcs[] = {
 				// JSON tests
@@ -2260,7 +2260,7 @@ namespace flex
 
 			};
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
-			u32 failedTestCount = 0;
+			i32 failedTestCount = 0;
 			for (auto func : funcs)
 			{
 				try
@@ -2276,13 +2276,15 @@ namespace flex
 
 			if (failedTestCount > 0)
 			{
-				PrintError("%u test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
+				PrintError("%i test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
 			}
 			else
 			{
 				Print("%u/%u tests passed\n", (u32)ARRAY_LENGTH(funcs), (u32)ARRAY_LENGTH(funcs));
 			}
 			Print("\n");
+
+			return failedTestCount;
 		}
 	};
 }

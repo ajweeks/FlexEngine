@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
 
 	if (bRunUnitTests)
 	{
-		flex::FlexTest::Run();
+		i32 result = flex::FlexTest::Run();
 
 		if (!bHeadless)
 		{
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 			system("pause");
 		}
 
-		return 0;
+		return result;
 	}
 
 
