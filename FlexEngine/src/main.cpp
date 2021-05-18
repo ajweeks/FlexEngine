@@ -37,14 +37,22 @@ int main(int argc, char *argv[])
 	flex::Platform::GetConsoleHandle();
 	flex::InitializeLogger();
 
-#if RUN_UNIT_TESTS
-	flex::FlexTest::Run();
+	bool bRunUnitTests = argc >= 2 && strcmp(argv[1], "--test") == 0;
+	bool bHeadless = argc >= 3 && strcmp(argv[2], "--headless") == 0;
 
-	// TODO: Use cross-platform solution here
-	system("pause");
-	return 0;
+	if (bRunUnitTests)
+	{
+		i32 result = flex::FlexTest::Run();
 
-#else
+		if (!bHeadless)
+		{
+			// TODO: Use cross-platform solution here
+			system("pause");
+		}
+
+		return result;
+	}
+
 
 	{
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
@@ -59,7 +67,6 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
-#endif
 }
 
 #ifdef _WINDOWS

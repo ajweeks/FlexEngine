@@ -1,0 +1,173 @@
+
+name: 'Linux'
+
+on:
+  push:
+    branches: [ master, development ]
+    paths-ignore:
+      - 'AdditionalFiles/**'
+  pull_request:
+    branches: [ master, development ]
+    paths-ignore:
+      - 'AdditionalFiles/**'
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      empty:
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: install-deps
+        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip libopenal-dev g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev
+    
+      - name: create-build-directories
+        run: |
+          mkdir -p \
+            FlexEngine/lib/x64/Debug/ \
+            FlexEngine/dependencies/glfw/build/ \
+            FlexEngine/dependencies/openAL/build/ \
+            FlexEngine/dependencies/bullet/build/ \
+            FlexEngine/dependencies/freetype/build/
+
+      - name: download-prebuilt-dependencies
+        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip
+
+      - name: extract-prebuilt-dependencies
+        run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/
+        
+      - name: shaderc-clone
+        run: |
+          git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
+          pushd FlexEngine/dependencies/shaderc/; \
+          git fetch --tags; \
+          git checkout tags/v2020.2 -b master; \
+          popd
+
+
+# Build all dependencies:
+
+#       - name: install-deps
+#         run: sudo apt-get install -y dos2unix cmake g++-multilib libopenal-dev python3
+    
+# # GLFW
+#       - name: glfw-generate-build-files
+#         run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G'Unix Makefiles'
+      
+#       - name: glfw-build
+#         run: cmake --build FlexEngine/dependencies/glfw/build/
+      
+#       - name: glfw-copy-binaries
+#         run: cp FlexEngine/dependencies/glfw/build/src/libglfw3.a FlexEngine/lib/x64/Debug/
+      
+# # Bullet
+#       - name: bullet-generate-build-files
+#         run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
+      
+#       - name: bullet-build
+#         run: cmake --build FlexEngine/dependencies/bullet/build/
+      
+#       - name: bullet-copy-binaries
+#         run: cp FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a} FlexEngine/lib/x64/Debug/
+        
+# # Freetype
+#       - name: freetype-generate-build-files
+#         run: |
+#           pushd FlexEngine/dependencies/freetype/; \
+#           dos2unix autogen.sh; \
+#           ./autogen.sh; \
+#           cmake -S . -B build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
+#           popd
+      
+#       - name: freetype-build
+#         run: cmake --build FlexEngine/dependencies/freetype/build/
+      
+#       - name: freetype-copy-binaries
+#         run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
+      
+# # Shaderc
+#       - name: shaderc-sync-deps
+#         run: ./FlexEngine/dependencies/shaderc/utils/git-sync-deps
+        
+#       - name: shaderc-generate-build-files
+#         run: |
+#           pushd FlexEngine/dependencies/shaderc/; \
+#           mkdir build/; \
+#           cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
+#           popd
+      
+#       - name: shaderc-build
+#         run: |
+#           cmake --build FlexEngine/dependencies/shaderc/build/ --config Debug -- -j6
+      
+#       - name: shaderc-copy-binaries
+#         run: cp FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a FlexEngine/lib/x64/Debug/
+      
+      
+      - name: run-genie
+        run: |
+          cd scripts; \
+          sudo wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie; \
+          sudo chmod +x genie; \
+          ./genie ninja; \
+          cd ../
+ 
+      - name: build
+        run: |
+          cd build/debug64; \
+          ninja -j6;\
+          cd ../../
+
+      - name: compress-artifacts
+        run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
+
+      - name: upload-artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: flex-linux
+          path: Flex.zip
+          retention-days: 14
+          if-no-files-found: error
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: install-deps
+        run: sudo apt-get update -m && sudo apt-get install -y libopenal-dev
+    
+      - name: download-artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: flex-linux
+          path: .
+      
+      - name: decompress-artifacts
+        run: unzip Flex.zip
+
+#       - name: download-shared-objects
+#         run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-shared-libs-debug.zip
+      
+#       - name: decompress-shared-objects
+#         run: |
+#           unzip linux-shared-libs-debug.zip -d . ; \
+#           ln -s libopenal.so.1.20.1 libopenal.so.1
+
+      - name: run-tests
+        run: |
+          sudo chmod +x Flex; \
+          ./Flex --test --headless
+
+      #- name: install-vulkan-sdk
+      #  run: |
+      #    wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
+      #    sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list

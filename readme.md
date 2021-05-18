@@ -1,5 +1,6 @@
 ![](FlexEngine/screenshots/flex_engine_banner_3.png)
 
+[![linux](https://github.com/ajweeks/FlexEngine/actions/workflows/build_linux.yml/badge.svg)](https://github.com/ajweeks/FlexEngine/actions/workflows/build_linux.yml)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
 
