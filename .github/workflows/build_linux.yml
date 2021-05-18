@@ -38,10 +38,10 @@ jobs:
             FlexEngine/dependencies/bullet/build/ \
             FlexEngine/dependencies/freetype/build/
 
-      - name: download-prebuilt-depenencies
-        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip; \
+      - name: download-prebuilt-dependencies
+        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip
 
-      - name: extract-prebuilt-depenencies
+      - name: extract-prebuilt-dependencies
         run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/
 
 # # GLFW
@@ -122,7 +122,7 @@ jobs:
           cd ../../
 
       - name: compress-artifacts
-        run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/Flex
+        run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
 
       - name: upload-artifacts
         uses: actions/upload-artifact@v2
@@ -145,6 +145,14 @@ jobs:
       
       - name: decompress-artifacts
         run: unzip Flex.zip
+
+      - name: download-shared-objects
+        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-shared-libs-debug.zip
+      
+      - name: decompress-shared-objects
+        run: |
+          unzip linux-shared-libs-debug.zip -d . ; \
+          ln -s libopenal.so.1.20.1 libopenal.so.1
 
       - name: run-tests
         run: |
