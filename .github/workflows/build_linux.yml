@@ -119,7 +119,7 @@ jobs:
         run: |
           cd build/debug64; \
           ninja;\
-          cd ../
+          cd ../../
 
 # Upload built binary
       - name: upload-artifacts
