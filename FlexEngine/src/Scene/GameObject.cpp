@@ -8650,10 +8650,9 @@ namespace flex
 			static std::vector<u32> indices;
 			indices.resize(indexCount);
 
-			real quadSize = ChunkSize / VertCountPerChunkAxis;
+			real quadSize = ChunkSize / (VertCountPerChunkAxis - 1);
 
 			// TODO: Generate all new vertex buffers first, then do post pass to compute normals
-			//u32 vertexBufferStride = CalculateVertexStride(vertexBufferCreateInfo.attributes);
 			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
@@ -8665,47 +8664,6 @@ namespace flex
 				memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
 				memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
 				memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
-
-				//auto chunkLeftIter = m_Meshes.find(chunkIndex - glm::vec2i(1, 0));
-				//auto chunkRightIter = m_Meshes.find(chunkIndex + glm::vec2i(0, 1));
-				//auto chunkBackIter = m_Meshes.find(chunkIndex - glm::vec2i(0, 1));
-				//auto chunkForwardIter = m_Meshes.find(chunkIndex + glm::vec2i(1, 0));
-				//u8* chunkLeftVertBuf = nullptr;
-				//u8* chunkRightVertBuf = nullptr;
-				//u8* chunkBackVertBuf = nullptr;
-				//u8* chunkForwardVertBuf = nullptr;
-				//if (chunkLeftIter != m_Meshes.end())
-				//{
-				//	MeshComponent* meshComponent = chunkLeftIter->second->meshComponent;
-				//	if (meshComponent != nullptr)
-				//	{
-				//		chunkLeftVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-				//	}
-				//}
-				//if (chunkRightIter != m_Meshes.end())
-				//{
-				//	MeshComponent* meshComponent = chunkRightIter->second->meshComponent;
-				//	if (meshComponent != nullptr)
-				//	{
-				//		chunkRightVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-				//	}
-				//}
-				//if (chunkBackIter != m_Meshes.end())
-				//{
-				//	MeshComponent* meshComponent = chunkBackIter->second->meshComponent;
-				//	if (meshComponent != nullptr)
-				//	{
-				//		chunkBackVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-				//	}
-				//}
-				//if (chunkForwardIter != m_Meshes.end())
-				//{
-				//	MeshComponent* meshComponent = chunkForwardIter->second->meshComponent;
-				//	if (meshComponent != nullptr)
-				//	{
-				//		chunkForwardVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-				//	}
-				//}
 
 				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
 				auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
@@ -8720,68 +8678,53 @@ namespace flex
 				{
 					for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
 					{
+						glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
+
+						glm::vec2 vertPosOS = glm::vec2(uv.x * ChunkSize, uv.y * ChunkSize);
+						glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+
 						real left = 0.0f;
-						//if (x > 0)
-						//{
-						//	left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
-						//}
-						//else if (chunkLeftVertBuf != nullptr)
-						//{
-						//	glm::vec3* pos = (glm::vec3*)&chunkLeftVertBuf[(vertIndex + (VertCountPerChunkAxis - 1)) * vertexBufferStride];
-						//	left = pos->y;
-						//}
-						//else
+						if (x > 0)
 						{
-							glm::vec2 pos(vertexBufferCreateInfo.positions_3D[vertIndex].x, vertexBufferCreateInfo.positions_3D[vertIndex].z);
-							left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments, pos - glm::vec2(quadSize, 0), colour, false).y;
+							left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
+						}
+						else
+						{
+							left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+								glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
 						}
 
 						real right = 0.0f;
-						//if (x < VertCountPerChunkAxis - 1)
-						//{
-						//	right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
-						//}
-						//else if (chunkRightVertBuf != nullptr)
-						//{
-						//	glm::vec3* pos = (glm::vec3*)&chunkRightVertBuf[(vertIndex - (VertCountPerChunkAxis - 1)) * //vertexBufferStride];
-						//	right = pos->y;
-						//}
-						//else
+						if (x < VertCountPerChunkAxis - 1)
 						{
-							glm::vec2 pos(vertexBufferCreateInfo.positions_3D[vertIndex].x, vertexBufferCreateInfo.positions_3D[vertIndex].z);
-							right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments, pos + glm::vec2(quadSize, 0), colour, false).y;
+							right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
+						}
+						else
+						{
+							right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+								glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
 						}
 
 						real back = 0.0f;
-						//if (z > 0)
-						//{
-						//	back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
-						//}
-						//else if (chunkBackVertBuf != nullptr)
-						//{
-						//	glm::vec3* pos = (glm::vec3*)&chunkBackVertBuf[(x + (VertCountPerChunkAxis - 1) * VertCountPerChunkAxis) * //vertexBufferStride];
-						//	back = pos->y;
-						//}
-						//else
+						if (z > 0)
 						{
-							glm::vec2 pos(vertexBufferCreateInfo.positions_3D[vertIndex].x, vertexBufferCreateInfo.positions_3D[vertIndex].z);
-							back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments, pos - glm::vec2(0, quadSize), colour, false).y;
+							back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
+						}
+						else
+						{
+							back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+								glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
 						}
 
 						real forward = 0.0f;
-						//if (z < VertCountPerChunkAxis - 1)
-						//{
-						//	forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
-						//}
-						//else if (chunkForwardVertBuf != nullptr)
-						//{
-						//	glm::vec3* pos = (glm::vec3*)&chunkForwardVertBuf[x * vertexBufferStride];
-						//	forward = pos->y;
-						//}
-						//else
+						if (z < VertCountPerChunkAxis - 1)
 						{
-							glm::vec2 pos(vertexBufferCreateInfo.positions_3D[vertIndex].x, vertexBufferCreateInfo.positions_3D[vertIndex].z);
-							forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments, pos + glm::vec2(0, quadSize), colour, false).y;
+							forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
+						}
+						else
+						{
+							forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+								glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
 						}
 
 						real dX = left - right;
@@ -8928,7 +8871,6 @@ namespace flex
 
 		glm::vec3 vertPosWS(sampleCenter.x, (height - 0.5f) * chunkData->maxHeight, sampleCenter.y);
 
-		//real roadWidth = 0.0f;
 		real distToRoad = 99999.0f;
 		glm::vec3 roadTangentAtClosestPoint;
 		glm::vec3 roadCurvePosAtClosestPoint;
@@ -8956,7 +8898,6 @@ namespace flex
 							// Negate when point is on left side of road
 							roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
 						}
-						//roadWidth = overlappingRoadSegment->widthStart;
 					}
 				}
 			}
@@ -8967,16 +8908,6 @@ namespace flex
 		// Epsilon value accounts for verts that are _just_ outside of triangle edge
 		// that for some reason aren't picked up by other triangle
 		bool bInsideRoad = distToRoad <= 0.1f;
-		// zero at edge, grows further out from road (zero inside road)
-		//real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
-		// [0, 1] from inner verge to outer verge and beyond (zero inside road)
-		real distanceAlongVerge = glm::clamp((distToRoad - chunkData->roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
-		//real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
-		//real vergeBlendWeight = glm::pow(glm::sin(distanceAlongVerge * PI), 4.0f);
-
-		// [0, 1] one at road edge, zero at blend dist (zero inside road)
-		//real roadBlendWeight = 1.0f - glm::min(distanceOutsideRoad / roadBlendDist, 1.0f);
-		real roadBlendWeight = 1.0f - glm::clamp((distToRoad - chunkData->roadBlendThreshold) / chunkData->roadBlendDist, 0.0f, 1.0f);
 
 		outColour = glm::vec4(height);
 
@@ -8989,8 +8920,13 @@ namespace flex
 		}
 		else
 		{
+			real roadBlendWeight = 1.0f - glm::clamp((distToRoad - chunkData->roadBlendThreshold) / chunkData->roadBlendDist, 0.0f, 1.0f);
+
 			if (roadBlendWeight > 0.0f)
 			{
+				// [0, 1] from inner verge to outer verge and beyond (zero inside road)
+				real distanceAlongVerge = glm::clamp((distToRoad - chunkData->roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
+
 				real lerpToRoadPosAlpha = roadBlendWeight;
 				lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
 
