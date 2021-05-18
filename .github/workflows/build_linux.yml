@@ -1,5 +1,5 @@
 
-name: 'Build Linux'
+name: 'Linux'
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
           submodules: recursive
 
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev
+        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip libopenal-dev g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev
     
       - name: create-build-directories
         run: |
@@ -120,7 +120,7 @@ jobs:
       - name: build
         run: |
           cd build/debug64; \
-          ninja;\
+          ninja -j6;\
           cd ../../
 
       - name: compress-artifacts
