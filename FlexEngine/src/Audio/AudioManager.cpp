@@ -522,7 +522,7 @@ namespace flex
 
 	void AudioManager::Update()
 	{
-		for (u32 i = 0; i < (i32)s_Sources.size(); ++i)
+		for (u32 i = 0; i < (u32)s_Sources.size(); ++i)
 		{
 			Source& source = s_Sources[i];
 

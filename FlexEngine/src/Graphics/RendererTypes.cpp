@@ -53,7 +53,7 @@ namespace flex
 		{
 			if (StrCmpCaseInsensitive(g_ResourceManager->debugOverlayNames[i].c_str(), DebugOverlayName) == 0)
 			{
-				return i + 1; // One-based
+				return i;
 			}
 		}
 
