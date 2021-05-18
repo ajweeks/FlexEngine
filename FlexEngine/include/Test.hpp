@@ -1774,7 +1774,7 @@ namespace flex
 		{
 			i32 num = 9999;
 			std::string result = IntToString(num, 0);
-			EXPECT(result.c_str(), "9999");
+			EXPECT(result.c_str(), "TEST_FAILURE_9999");
 		}
 		UNIT_TEST_END;
 
