@@ -126,18 +126,23 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: flex-linux
-          path: bin/debug64/FlexEngine/Flex
+          path: bin/Debug_x64/FlexEngine/Flex
           retention-days: 14
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn` 
             
   test:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
+      - name: download-artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: flex-linux
+          path: .
+      
       - name: run-tests
-        run: |
-          cd bin/Debug_x64/FlexEngine/; \
-          ./Flex --test --headless
+        run: ./Flex --test --headless
 
       #- name: install-vulkan-sdk
       #  run: |
