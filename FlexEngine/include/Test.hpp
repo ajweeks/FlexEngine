@@ -19,102 +19,116 @@ namespace flex
 	class FlexTest
 	{
 	private:
-		using TestFunc = void(*)();
-
-#define JSON_UNIT_TEST(FuncName) static void FuncName() \
+#define JSON_UNIT_TEST(FuncName) static bool FuncName() \
 	{ \
 		const char* FunctionName = #FuncName;
 
-#define JSON_UNIT_TEST_END JSONParser::ClearErrors(); }
+#define JSON_UNIT_TEST_END JSONParser::ClearErrors(); return true; }
 
-#define UNIT_TEST(FuncName) static void FuncName() \
+#define UNIT_TEST(FuncName) static bool FuncName() \
 	{ \
 		const char* FunctionName = #FuncName;
 
-#define UNIT_TEST_END }
+#define UNIT_TEST_END return true; }
 
-		static void Expect(const char* funcName, int lineNumber, bool val, bool exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, bool val, bool exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + (exp ? "true" : "false") + ", got " + (val ? "true" : "false") + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, glm::vec3 val, glm::vec3 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, glm::vec3 val, glm::vec3 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, u32 val, u32 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, u32 val, u32 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, i64 val, i64 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, i64 val, i64 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, const char* val, const char* exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
 		{
-			Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
+			return Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
 		}
 
 		//
 		// JSON tests
 		//
 
-#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, JSONParser::GetErrorString());
+#define EXPECT(val, exp) if (!Expect(FunctionName, __LINE__, val, exp, JSONParser::GetErrorString())) { return false; }
 
 		JSON_UNIT_TEST(EmptyFileIsParsed)
 		{
@@ -465,7 +479,7 @@ namespace flex
 		// Math tests
 		//
 
-#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, "");
+#define EXPECT(val, exp) if (!Expect(FunctionName, __LINE__, val, exp, "")) { return false; }
 
 		UNIT_TEST(RayPlaneIntersectionOriginValid)
 		{
@@ -2215,6 +2229,8 @@ namespace flex
 	public:
 		static i32 Run()
 		{
+			using TestFunc = bool(*)();
+
 			TestFunc funcs[] = {
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
@@ -2259,18 +2275,22 @@ namespace flex
 				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
 
 			};
+
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
 			i32 failedTestCount = 0;
-			for (auto func : funcs)
+			for (const TestFunc& func : funcs)
 			{
 				try
 				{
-					func();
+					if (!func())
+					{
+						++failedTestCount;
+					}
 				}
 				catch (std::exception& e)
 				{
 					PrintError("%s\n", e.what());
-					failedTestCount += 1;
+					++failedTestCount;
 				}
 			}
 
