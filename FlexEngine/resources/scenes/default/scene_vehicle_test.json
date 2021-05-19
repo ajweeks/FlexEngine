@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-20.285, 40.796, -76.655",
-			"pitch" : -0.431259,
-			"yaw" : 7.370833
+			"position" : "-7.383, 93.514, -91.085",
+			"pitch" : -0.308686,
+			"yaw" : 1.199411
 		}
 	},
 	"objects" : 
@@ -67,8 +67,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "67.530, -9.126, 86.222",
-				"rot" : "-0.022, 1.265, -0.002",
+				"pos" : "66.880, -9.141, 86.236",
+				"rot" : "-0.009, 0.487, 0.003",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -106,24 +106,24 @@
 			}
 		},
 		{
-			"name" : "blob",
+			"name" : "cloud",
 			"id" : "38CB844333BA598B46F8147A4C4E407A",
 			"type" : "object",
 			"transform" : 
 			{
 				"pos" : "66.446, 52.293, 25.470",
-				"scale" : "13.181, 13.181, 13.181"
+				"scale" : "16.010, 16.010, 16.010"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{
-			"name" : "blob0",
+			"name" : "cloud2",
 			"id" : "58C43E44B1F5DBBF415611823E71DA98",
 			"type" : "object",
 			"transform" : 
@@ -136,7 +136,7 @@
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{
@@ -184,7 +184,7 @@
 			}
 		},
 		{
-			"name" : "blob1",
+			"name" : "cloud3",
 			"id" : "09800A82CFBA60A6487E3E202B121031",
 			"type" : "object",
 			"transform" : 
@@ -197,7 +197,7 @@
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{

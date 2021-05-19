@@ -1486,7 +1486,7 @@ namespace flex
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
-			{ "raymarched", "vk_raymarched_vert.spv", "vk_raymarched_frag.spv", "", "" },
+			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -2023,16 +2023,17 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NORMAL_SAMPLER);
 		++shaderID;
 
-		// Raymarched
+		// Cloud
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->vertexAttributes = (u32)VertexAttribute::POSITION;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SCREEN_SIZE);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);

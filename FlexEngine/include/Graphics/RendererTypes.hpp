@@ -247,6 +247,7 @@ namespace flex
 	const Uniform U_OCEAN_DATA(SID("oceanData"), sizeof(OceanData));
 	const Uniform U_SKYBOX_DATA(SID("skyboxData"), sizeof(SkyboxData));
 	const Uniform U_UV_BLEND_AMOUNT(SID("uvBlendAmount"), sizeof(glm::vec2));
+	const Uniform U_SCREEN_SIZE(SID("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
 
 	enum class ClearFlag
 	{

@@ -3,32 +3,16 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-struct DirectionalLight 
-{
-	vec3 direction;
-	int enabled;
-	vec3 colour;
-	float brightness;
-	int castShadows;
-	float shadowDarkness;
-	vec2 _pad;
-};
-
-struct PointLight 
-{
-	vec3 position;
-	int enabled;
-	vec3 colour;
-	float brightness;
-};
+#include "vk_misc.glsl"
 
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
-	mat4 view;
+	mat4 viewInv;
 	mat4 viewProjection;
+	SkyboxData skyboxData;
 	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
-	// vec4 screenSize; // (w, h, 1/w, 1/h)
+	vec4 screenSize; // (w, h, 1/w, 1/h)
 } uboConstant;
 
 layout (binding = 1) uniform UBODynamic
@@ -38,11 +22,11 @@ layout (binding = 1) uniform UBODynamic
 
 layout (location = 0) in vec4 ex_PositionOS;
 
-layout (location = 0) out vec4 outColour;
+layout (location = 0) out vec4 fragmentColour;
 
 float rand(vec2 seed)
 {
-  return fract(sin(dot(seed.xy ,vec2(12.9898,78.233))) * 43758.5453);
+	return fract(sin(dot(seed.xy ,vec2(12.9898,78.233))) * 43758.5453);
 }
 
 float noise(vec3 x)
@@ -119,7 +103,7 @@ float density(vec3 rayOrigin, vec3 rayDir, float searchDist)
 	return clamp(density / stepCount, 0.0, 1.0);
 }
 
-vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
+vec4 raymarch(vec3 rayOrigin, vec3 rayDir, out float depth)
 {
 	vec4 result = vec4(0);
 
@@ -133,8 +117,6 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 	{
 		float dist = sdf(rayOrigin + t * rayDir);
 		result.xyz = dist.xxx;
-		// result.w = 1.0;
-		// break;
 		if (dist < 0.001 * t)
 		{
 			vec3 intersection = rayOrigin + t * rayDir;
@@ -163,35 +145,25 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir)
 
 void main()
 {
-	
-
-
-	// TODO:
-
-
-
-	vec4 res = vec4(1842, 1057, 1.0/1842, 1.0/1057);
 	// Get screen coord in range [-1, 1]
-	vec2 screenCoordN = (2.0 * gl_FragCoord.xy - res.xy) * res.zw;// uboConstant.screenSize.zw;
+	vec2 screenCoordN = (2.0 * gl_FragCoord.xy - uboConstant.screenSize.xy) * uboConstant.screenSize.zw;
 	screenCoordN.y = -screenCoordN.y;
 
-	//outColour = vec4(0.9, 0.1, 0.1, 1.0);
-	// outColour = vec4(abs(ex_PositionOS.xyz), 1.0);
+	vec3 rayDirWS = vec3(mat3(uboConstant.viewInv) * vec3(screenCoordN, 1.0));
+	float depth;
+	vec4 colour = raymarch(ex_PositionOS.xyz, rayDirWS, /* out */ depth);
 
-	vec3 rayDirWS = vec3(inverse(mat3(uboConstant.view)) * vec3(screenCoordN, 1.0));
-	//outColour = vec4((rayDirWS.z > 0.0 ? 1.0 : 0.0).xxx, 1.0);
-	 // outColour = vec4(max(rayDirWS, 0.0), 1);
-	 // return;
-	vec4 col = raymarch(ex_PositionOS.xyz, rayDirWS);
+	//ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 
     // Contrast
     float constrast = 0.3;
-    outColour = mix(outColour, smoothstep(0.0, 1.0, outColour), constrast);
+    fragmentColour.xyz = mix(colour.xyz, smoothstep(0.0, 1.0, colour.xyz), constrast);
+    fragmentColour.w = colour.w;
     
     // Colour mapping
-    outColour *= vec4(0.90,0.96,1.1,1.0);
+    fragmentColour.xyz *= vec3(0.90, 0.96, 1.1);
 
     // Gamma correction
-	col = vec4(pow(col.xyz, vec3(0.4545)), col.w);
-	outColour = col;
+	fragmentColour.xyz = pow(fragmentColour.xyz, vec3(0.4545));
+	fragmentColour.xyz = pow(fragmentColour.xyz, vec3(1.0f / 2.2f)); // Gamma correction
 }

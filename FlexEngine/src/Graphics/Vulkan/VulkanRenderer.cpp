@@ -8660,6 +8660,8 @@ namespace flex
 			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
 			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
 			glm::vec4 time(g_SecElapsedSinceProgramStart, scene->GetTimeOfDay(), 0.0f, 0.0f);
+			glm::vec2i windowSize = g_Window->GetSize();
+			glm::vec4 screenSize(windowSize.x, windowSize.y, 1.0f / windowSize.x, 1.0f / windowSize.y);
 
 			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), 1.0f, 3.0f, 1.0f, 1.0f, 1.0f, { } };
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
@@ -8723,6 +8725,7 @@ namespace flex
 				{ U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData },
 				{ U_EXPOSURE, (void*)&exposure },
 				{ U_NEAR_FAR_PLANES, (void*)&nearFarPlanes },
+				{ U_SCREEN_SIZE, (void*)&screenSize },
 			};
 
 			for (UniformInfo& info : uniformInfos)
