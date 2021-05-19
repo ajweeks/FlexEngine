@@ -9028,7 +9028,7 @@ namespace flex
 				specializationConstants.reserve(pair.second.size());
 				for (StringID specializationConstantID : pair.second)
 				{
-					SpecializationConstantMetaData specializationConstant = m_SpecializationConstants[specializationConstantID];
+					SpecializationConstantMetaData& specializationConstant = m_SpecializationConstants[specializationConstantID];
 					// TODO: Use pool/heap backed memory to avoid pointer invalidation when entries are added
 					specializationConstants.push_back(SpecializationConstantCreateInfo{ specializationConstant.id, (u32)sizeof(i32), (void*)&specializationConstant.value });
 				}

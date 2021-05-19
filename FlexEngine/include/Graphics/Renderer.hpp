@@ -117,8 +117,8 @@ namespace flex
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
 		// Returns true if value changed
-		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr) = 0;
-		virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
+		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader = nullptr) = 0;
+		virtual bool DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
 		virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) = 0;
 		virtual void DrawImGuiShaderErrors() = 0;
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
@@ -213,7 +213,8 @@ namespace flex
 		void AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
 		void RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
 		std::vector<StringID>* GetShaderSpecializationConstants(ShaderID shaderID);
-		void DrawShaderSpecializationConstantImGui(ShaderID shaderID);
+		bool DrawShaderSpecializationConstantImGui(ShaderID shaderID);
+		void SetSpecializationConstantDirty();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
 		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;
@@ -589,6 +590,9 @@ namespace flex
 		std::map<ShaderID, std::vector<StringID>> m_ShaderSpecializationConstants;
 		// Editor-only cache of specialization constant names
 		std::map<StringID, std::string> m_SpecializationConstantNames;
+
+		// Editor-only
+		bool m_bSpecializationConstantsDirty = false;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

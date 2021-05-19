@@ -1009,7 +1009,7 @@ namespace flex
 			}
 		}
 
-		if (m_ShaderDirectoryWatcher && m_ShaderDirectoryWatcher->Update())
+		if (m_ShaderDirectoryWatcher != nullptr && m_ShaderDirectoryWatcher->Update())
 		{
 			RecompileShaders(false);
 		}
@@ -2031,6 +2031,7 @@ namespace flex
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_TIME);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SCREEN_SIZE);
@@ -2458,64 +2459,172 @@ namespace flex
 		return nullptr;
 	}
 
-	void Renderer::DrawShaderSpecializationConstantImGui(ShaderID shaderID)
-	{
-		Shader* shader = GetShader(shaderID);
-		if (ImGui::TreeNode(shader->name.c_str()))
-		{
-			std::vector<StringID>* specializationConstants = GetShaderSpecializationConstants(shaderID);
-			for (const auto& pair : m_SpecializationConstants)
-			{
-				const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
-				bool bTicked = specializationConstants != nullptr && Contains(*specializationConstants, pair.first);
-				if (ImGui::Checkbox(specializationConstantName.c_str(), &bTicked))
-				{
-					if (bTicked)
-					{
-						AddShaderSpecialziationConstant(shaderID, pair.first);
-					}
-					else
-					{
-						RemoveShaderSpecialziationConstant(shaderID, pair.first);
-					}
-
-					// NOTE: This is a brute force approach, ideally we'd just reload things which need reloading
-					RecreateEverything();
-				}
-			}
-
-			ImGui::TreePop();
-		}
-	}
-
 	void Renderer::DrawSpecializationConstantInfoImGui()
 	{
-		if (ImGui::Button("Save"))
+		if (ImGui::Button(m_bSpecializationConstantsDirty ? "Save*" : "Save"))
 		{
 			SerializeShaderSpecializationConstants();
 			SerializeSpecializationConstantInfo();
+			m_bSpecializationConstantsDirty = false;
 		}
 
-		if (ImGui::TreeNode("Specialization constants"))
+		ImGui::SameLine();
+
+		if (ImGui::Button("Reload"))
 		{
-			for (const auto& pair : m_SpecializationConstants)
+			ParseSpecializationConstantInfo();
+			ParseShaderSpecializationConstants();
+			m_bSpecializationConstantsDirty = false;
+		}
+
+		bool bOpenNewConstantPopup = false;
+
+		if (ImGui::TreeNode("Specialization constants##list-view"))
+		{
+			for (auto& pair : m_SpecializationConstants)
 			{
+				ImGui::PushID((i32)pair.first);
+
+				if (ImGui::Button("-##remove-constant"))
+				{
+					auto iter = m_SpecializationConstants.find(pair.first);
+					m_SpecializationConstants.erase(iter);
+					m_bSpecializationConstantsDirty = true;
+					ImGui::PopID();
+					break;
+				}
+
+				ImGui::SameLine();
+
 				const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
-				ImGui::Text("%s (ID: %u) = %i", specializationConstantName.c_str(), pair.second.id, pair.second.value);
+				ImGui::Text("%s (ID: %u)", specializationConstantName.c_str(), pair.second.id);
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				if (ImGui::InputInt("", &pair.second.value, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					RecreateEverything();
+				}
+				ImGui::PopItemWidth();
+
+				ImGui::PopID();
 			}
+
+			bOpenNewConstantPopup = ImGui::Button("Add new");
+
 			ImGui::TreePop();
 		}
-
 		if (ImGui::TreeNode("Shader specialization constants"))
 		{
 			for (const auto& shaderSpecializationConstantPair : m_ShaderSpecializationConstants)
 			{
-				ImGui::PushID(shaderSpecializationConstantPair.first);
-				DrawShaderSpecializationConstantImGui(shaderSpecializationConstantPair.first);
+				ShaderID shaderID = shaderSpecializationConstantPair.first;
+				ImGui::PushID(shaderID);
+
+				Shader* shader = GetShader(shaderID);
+				if (ImGui::TreeNode(shader->name.c_str()))
+				{
+					if (DrawShaderSpecializationConstantImGui(shaderID))
+					{
+						m_bSpecializationConstantsDirty = true;
+					}
+
+					ImGui::TreePop();
+				}
+
 				ImGui::PopID();
 			}
+
 			ImGui::TreePop();
 		}
+
+		const char* newConstantPopupName = "New specialization constant";
+		static char nameBuff[256];
+		static u32 id = 0;
+		static i32 value = 0;
+		static i32 min = 0;
+		static i32 max = 0;
+
+		if (bOpenNewConstantPopup)
+		{
+			ImGui::OpenPopup(newConstantPopupName);
+			memset(nameBuff, 0, 256);
+			id = 0;
+			value = 0;
+			min = 0;
+			max = 0;
+		}
+
+		if (ImGui::BeginPopupModal(newConstantPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::InputText("Name", nameBuff, 256);
+
+			ImGuiExt::InputUInt("ID", &id);
+
+			ImGui::InputInt("Value", &value);
+
+			ImGui::InputInt("Min", &min);
+			ImGui::InputInt("Max", &max);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (strlen(nameBuff) > 0 && id > 0 && max > min &&
+				ImGui::Button("Create"))
+			{
+				std::string name(nameBuff);
+				name = Trim(name);
+
+				StringID specializationConstantSID = Hash(name.c_str());
+				m_SpecializationConstants[specializationConstantSID] =
+					SpecializationConstantMetaData{ (SpecializationConstantID)id, value, min, max };
+				m_SpecializationConstantNames[specializationConstantSID] = name;
+
+				m_bSpecializationConstantsDirty = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	bool Renderer::DrawShaderSpecializationConstantImGui(ShaderID shaderID)
+	{
+		bool bChanged = false;
+
+		std::vector<StringID>* specializationConstants = GetShaderSpecializationConstants(shaderID);
+		// TODO: Display ordered by ID
+		for (const auto& pair : m_SpecializationConstants)
+		{
+			const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
+			bool bTicked = specializationConstants != nullptr && Contains(*specializationConstants, pair.first);
+			if (ImGui::Checkbox(specializationConstantName.c_str(), &bTicked))
+			{
+				if (bTicked)
+				{
+					AddShaderSpecialziationConstant(shaderID, pair.first);
+				}
+				else
+				{
+					RemoveShaderSpecialziationConstant(shaderID, pair.first);
+				}
+
+				// NOTE: This is a brute force approach, ideally we'd just reload things which need reloading
+				RecreateEverything();
+
+				bChanged = true;
+			}
+		}
+
+		return bChanged;
+	}
+
+	void Renderer::SetSpecializationConstantDirty()
+	{
+		m_bSpecializationConstantsDirty = true;
 	}
 
 	void Renderer::DrawImGuiSettings()
