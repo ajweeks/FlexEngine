@@ -790,7 +790,11 @@ namespace flex
 
 	Shader* Renderer::GetShader(ShaderID shaderID)
 	{
-		return m_Shaders[shaderID];
+		if (shaderID != InvalidShaderID)
+		{
+			return m_Shaders[shaderID];
+		}
+		return nullptr;
 	}
 
 	i32 Renderer::GetMaterialCount()

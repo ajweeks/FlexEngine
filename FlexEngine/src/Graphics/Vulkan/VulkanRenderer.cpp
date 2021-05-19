@@ -1232,6 +1232,12 @@ namespace flex
 				renderObject->bIndexed = true;
 			}
 
+			Material* gameObjectMat = GetMaterial(renderObject->materialID);
+			if (gameObjectMat->shaderID == InvalidShaderID)
+			{
+				renderObject->materialID = m_PlaceholderMaterialID;
+				gameObjectMat = GetMaterial(renderObject->materialID);
+			}
 
 			// We've already been post initialized, so we need to create a descriptor set and pipeline here
 			if (m_bPostInitialized)
@@ -1247,12 +1253,11 @@ namespace flex
 				}
 			}
 
-			Material* gameObjectMat = GetMaterial(renderObject->materialID);
 			if (gameObjectMat != nullptr)
 			{
+				Shader* gameObjectShader = GetShader(gameObjectMat->shaderID);
 				if (renderObject->vertexBufferData != nullptr && renderObject->vertexBufferData->bDynamic)
 				{
-					Shader* gameObjectShader = GetShader(gameObjectMat->shaderID);
 					u32 dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(gameObjectShader->vertexAttributes));
 					SetDynamicGeometryBufferDirty(dynamicVertexIndexBufferIndex);
 				}
@@ -1306,9 +1311,12 @@ namespace flex
 
 		void VulkanRenderer::CreateUniformBuffers(VulkanMaterial* material)
 		{
-			CreateStaticUniformBuffer(material);
-			CreateDynamicUniformBuffer(material);
-			CreateParticleUniformBuffer(material);
+			if (material->shaderID != InvalidShaderID)
+			{
+				CreateStaticUniformBuffer(material);
+				CreateDynamicUniformBuffer(material);
+				CreateParticleUniformBuffer(material);
+			}
 		}
 
 		void VulkanRenderer::CreateStaticUniformBuffer(VulkanMaterial* material)
@@ -5835,13 +5843,16 @@ namespace flex
 		{
 			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{
-				if (iter->second->persistent)
+				if (iter->second->shaderID != InvalidShaderID)
 				{
-					m_DescriptorPoolPersistent->CreateDescriptorSet(iter->first);
-				}
-				else
-				{
-					m_DescriptorPool->CreateDescriptorSet(iter->first);
+					if (iter->second->persistent)
+					{
+						m_DescriptorPoolPersistent->CreateDescriptorSet(iter->first);
+					}
+					else
+					{
+						m_DescriptorPool->CreateDescriptorSet(iter->first);
+					}
 				}
 			}
 		}
@@ -8726,36 +8737,39 @@ namespace flex
 			for (auto& MaterialPair : m_Materials)
 			{
 				VulkanMaterial* material = (VulkanMaterial*)MaterialPair.second;
-				VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
-				UniformList& constantUniforms = shader->constantBufferUniforms;
-				UniformBuffer* constantBuffer = material->uniformBufferList.Get(UniformBufferType::STATIC);
-
-				if (constantBuffer == nullptr || constantBuffer->data.data == nullptr || constantBuffer->data.unitSize == 0)
+				if (material->shaderID != InvalidShaderID)
 				{
-					continue; // There is no constant data to update
-				}
+					VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
+					UniformList& constantUniforms = shader->constantBufferUniforms;
+					UniformBuffer* constantBuffer = material->uniformBufferList.Get(UniformBufferType::STATIC);
 
-				u32 index = 0;
-				memset(constantBuffer->data.data, 0, constantBuffer->data.unitSize);
-				for (UniformInfo& uniformInfo : uniformInfos)
-				{
-					if (constantUniforms.HasUniform(uniformInfo.uniform))
+					if (constantBuffer == nullptr || constantBuffer->data.data == nullptr || constantBuffer->data.unitSize == 0)
 					{
-						assert(uniformInfo.uniform.size != 0);
-
-						memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.uniform.size);
-						index += uniformInfo.uniform.size;
+						continue; // There is no constant data to update
 					}
-				}
 
-				u32 bufferUnitSize = constantBuffer->data.unitSize;
+					u32 index = 0;
+					memset(constantBuffer->data.data, 0, constantBuffer->data.unitSize);
+					for (UniformInfo& uniformInfo : uniformInfos)
+					{
+						if (constantUniforms.HasUniform(uniformInfo.uniform))
+						{
+							assert(uniformInfo.uniform.size != 0);
+
+							memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.uniform.size);
+							index += uniformInfo.uniform.size;
+						}
+					}
+
+					u32 bufferUnitSize = constantBuffer->data.unitSize;
 
 #ifdef DEBUG
-				u32 calculatedUnitSize = GetAlignedUBOSize(index);
-				assert(calculatedUnitSize == bufferUnitSize);
+					u32 calculatedUnitSize = GetAlignedUBOSize(index);
+					assert(calculatedUnitSize == bufferUnitSize);
 #endif
 
-				memcpy(material->uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, bufferUnitSize);
+					memcpy(material->uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, bufferUnitSize);
+				}
 			}
 		}
 

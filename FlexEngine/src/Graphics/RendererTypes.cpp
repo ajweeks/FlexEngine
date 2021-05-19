@@ -309,6 +309,12 @@ namespace flex
 		materialObject.fields.emplace_back("name", JSONValue(name));
 
 		const Shader* shader = g_Renderer->GetShader(shaderID);
+		if (shader == nullptr)
+		{
+			materialObject.fields.emplace_back("shader", JSONValue("Invalid"));
+			return materialObject;
+		}
+
 		materialObject.fields.emplace_back("shader", JSONValue(shader->name));
 
 		if (constAlbedo != VEC4_ONE)
