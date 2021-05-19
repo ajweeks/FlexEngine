@@ -144,6 +144,10 @@ namespace flex
 			m_ShaderEditorPath = "C:/Program Files/Sublime Text 3/sublime_text.exe";
 		}
 
+		m_CommonSettingsSaveTimer = Timer(10.0f);
+		m_LogSaveTimer = Timer(5.0f);
+		m_UIWindowCacheSaveTimer = Timer(20.0f);
+
 #if COMPILE_OPEN_GL
 		m_RendererName = "Open GL";
 #elif COMPILE_VULKAN
@@ -291,7 +295,7 @@ namespace flex
 			// Common file doesn't exist or is corrupt, load first present scene
 			g_SceneManager->SetNextSceneActive();
 			// Set timer to max value so new config file will be immediately written to disk
-			m_SecondsSinceLastCommonSettingsFileSave = m_SecondsBetweenCommonSettingsFileSave;
+			m_CommonSettingsSaveTimer.Complete();
 		}
 
 		g_UIManager->Initialize();
@@ -529,31 +533,7 @@ namespace flex
 			g_EngineInstance->ToggleUIWindow(windowName.AsString());
 		}, Variant::Type::STRING));
 
-		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.shader_quality_level",
-			[](const Variant& shaderQualityLevel)
-		{
-			i32 shaderQualityLevelInt = shaderQualityLevel.AsInt();
-			if (shaderQualityLevelInt != -1)
-			{
-				g_Renderer->SetShaderQualityLevel(shaderQualityLevelInt);
-			}
-		}, Variant::Type::STRING));
-
-		// Register UI windows (names must be lowercase)
-		m_UIWindows[SID("main")] = true;
-		m_UIWindows[SID("imgui demo")] = false;
-		m_UIWindows[SID("input bindings")] = false;
-		m_UIWindows[SID("memory stats")] = false;
-		m_UIWindows[SID("cpu stats")] = false;
-		m_UIWindows[SID("ui editor")] = false;
-		m_UIWindows[SID("fonts")] = false;
-		m_UIWindows[SID("materials")] = false;
-		m_UIWindows[SID("shaders")] = false;
-		m_UIWindows[SID("textures")] = false;
-		m_UIWindows[SID("meshes")] = false;
-		m_UIWindows[SID("prefabs")] = false;
-		m_UIWindows[SID("sounds")] = false;
-		m_UIWindows[SID("render doc")] = false;
+		ParseUIWindowCache();
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -567,6 +547,8 @@ namespace flex
 	void FlexEngine::Destroy()
 	{
 		// TODO: Time engine destruction using non-glfw timer
+
+		SerializeUIWindowCache();
 
 #if COMPILE_RENDERDOC_API
 		FreeLibrary(m_RenderDocModule);
@@ -800,10 +782,15 @@ namespace flex
 				// Starts new ImGui frame and clears debug draw lines
 				g_Renderer->NewFrame();
 
-				SecSinceLogSave += g_UnpausedDeltaTime;
-				if (SecSinceLogSave >= LogSaveRate)
+				if (m_UIWindowCacheSaveTimer.Update())
 				{
-					SecSinceLogSave -= LogSaveRate;
+					m_UIWindowCacheSaveTimer.Restart();
+					SerializeUIWindowCache();
+				}
+
+				if (m_LogSaveTimer.Update())
+				{
+					m_LogSaveTimer.Restart();
 					SaveLogBufferToFile();
 				}
 
@@ -936,10 +923,9 @@ namespace flex
 				ImGui::GetIO().WantSetMousePos = false;
 			}
 
-			m_SecondsSinceLastCommonSettingsFileSave += g_DeltaTime;
-			if (m_SecondsSinceLastCommonSettingsFileSave > m_SecondsBetweenCommonSettingsFileSave)
+			if (m_CommonSettingsSaveTimer.Update())
 			{
-				m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
+				m_CommonSettingsSaveTimer.Restart();
 				SaveCommonSettingsToDisk(false);
 				g_Window->SaveToConfig();
 			}
@@ -1258,27 +1244,27 @@ namespace flex
 
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")]);
+				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")].bOpen);
 				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
-				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")]);
-				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")]);
+				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")].bOpen);
+				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")].bOpen);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
-				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")]);
+				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")]);
-				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")]);
-				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")]);
-				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")]);
-				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")]);
-				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")]);
+				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")].bOpen);
+				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")].bOpen);
+				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")].bOpen);
+				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")].bOpen);
+				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")].bOpen);
+				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")].bOpen);
 				ImGui::Separator();
-				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")]);
-				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")]);
+				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")].bOpen);
+				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")].bOpen);
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", nullptr, &m_UIWindows[SID("render doc")]);
+				ImGui::MenuItem("Render Doc Captures", nullptr, &m_UIWindows[SID("render doc")].bOpen);
 #endif
 				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_UIWindows[SID("imgui demo")]);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_UIWindows[SID("imgui demo")].bOpen);
 
 				ImGui::EndMenu();
 			}
@@ -1324,7 +1310,7 @@ namespace flex
 			real frameBufferHeight = (real)frameBufferSize.y;
 			ImGui::SetNextWindowSize(ImVec2(m_ImGuiMainWindowWidth, frameBufferHeight - menuHeight),
 				ImGuiCond_Always);
-			if (ImGui::Begin(titleCharStr, &m_UIWindows[SID("main")], mainWindowFlags))
+			if (ImGui::Begin(titleCharStr, bShowMainWindow, mainWindowFlags))
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
 
@@ -1474,7 +1460,7 @@ namespace flex
 			const real consoleWindowWidth = 350.0f;
 			float fontScale = ImGui::GetIO().FontGlobalScale;
 			real consoleWindowHeight = 28.0f + m_CmdAutoCompletions.size() * 16.0f * fontScale;
-			const real consoleWindowX = (m_UIWindows[SID("main")] && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
+			const real consoleWindowX = (*bShowMainWindow && !bIsMainWindowCollapsed) ? m_ImGuiMainWindowWidth : 0.0f;
 			const real consoleWindowY = frameBufferSize.y - consoleWindowHeight;
 			ImGui::SetNextWindowPos(ImVec2(consoleWindowX, consoleWindowY), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(consoleWindowWidth, consoleWindowHeight));
@@ -1663,8 +1649,7 @@ namespace flex
 
 						if (m_RenderDocUIPID == -1)
 						{
-							std::string cmdLineArgs = captureFilePath;
-							m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
+							m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, captureFilePath.c_str());
 						}
 					}
 				}
@@ -1673,9 +1658,9 @@ namespace flex
 					ImGui::Text("QRenderDoc is already running");
 
 					// Only update periodically
-					m_SecSinceRenderDocPIDCheck += g_DeltaTime;
-					if (m_SecSinceRenderDocPIDCheck > 3.0f)
+					if (m_RenderDocAPICheckTimer.Update())
 					{
+						m_RenderDocAPICheckTimer.Restart();
 						CheckForRenderDocUIRunning();
 					}
 				}
@@ -1725,8 +1710,7 @@ namespace flex
 		auto iter = m_UIWindows.find(windowNameSID);
 		if (iter != m_UIWindows.end())
 		{
-			bool bWindowOpen = iter->second;
-			iter->second = !bWindowOpen;
+			iter->second.bOpen = !iter->second.bOpen;
 		}
 	}
 
@@ -2103,7 +2087,43 @@ namespace flex
 
 	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID)
 	{
-		return &m_UIWindows[windowNameSID];
+		return &m_UIWindows[windowNameSID].bOpen;
+	}
+
+	void FlexEngine::ParseUIWindowCache()
+	{
+		std::string fileContents;
+		if (ReadFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
+		{
+			JSONObject rootObject;
+			if (JSONParser::Parse(fileContents, rootObject))
+			{
+				JSONObject uiWIndowsOpenObj = rootObject.GetObject("ui_windows_open");
+				for (const JSONField& field : uiWIndowsOpenObj.fields)
+				{
+					m_UIWindows[Hash(field.label.c_str())] = UIWindow{ field.value.AsBool(), field.label };
+
+				}
+			}
+		}
+	}
+
+	void FlexEngine::SerializeUIWindowCache()
+	{
+		JSONObject uiWindowsOpenObj = {};
+		for (auto& pair : m_UIWindows)
+		{
+			uiWindowsOpenObj.fields.emplace_back(pair.second.name, JSONValue(pair.second.bOpen));
+		}
+
+		JSONObject rootObject = {};
+		rootObject.fields.emplace_back("ui_windows_open", JSONValue(uiWindowsOpenObj));
+
+		std::string fileContents = rootObject.ToString();
+		if (!WriteFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to serialize ui window cache to %s\n", UI_WINDOW_CACHE_LOCATION);
+		}
 	}
 
 	std::string FlexEngine::EngineVersionString()

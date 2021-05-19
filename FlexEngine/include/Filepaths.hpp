@@ -41,5 +41,6 @@
 #define FONT_DEFINITION_LOCATION					CONFIG_DIRECTORY "fonts.json"
 #define IMGUI_INI_LOCATION							CONFIG_DIRECTORY "imgui.ini"
 #define IMGUI_LOG_LOCATION							CONFIG_DIRECTORY "imgui.log"
+#define UI_WINDOW_CACHE_LOCATION					CONFIG_DIRECTORY "ui_window_cache.json"
 
 #define SHADER_CHECKSUM_LOCATION					SAVED_LOCATION "vk-shader-checksum.dat"

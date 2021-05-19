@@ -773,26 +773,27 @@ namespace flex
 			delete m_OffscreenFB1DepthAttachment;
 			m_OffscreenFB1DepthAttachment = nullptr;
 
-			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
+			for (Cascade* cascade : m_ShadowCascades)
 			{
-				delete m_ShadowCascades[i];
+				delete cascade;
+			}
+			m_ShadowCascades.clear();
+
+			for (VulkanRenderPass** renderPass : m_RenderPasses)
+			{
+				(*renderPass)->Replace();
+				delete (*renderPass);
 			}
 
-			for (u32 i = 0; i < ARRAY_SIZE(m_RenderPasses); ++i)
+			for (FrameBuffer* frameBuffer : m_SwapChainFramebuffers)
 			{
-				(*m_RenderPasses[i])->Replace();
-				delete* m_RenderPasses[i];
-			}
-
-			for (u32 i = 0; i < m_SwapChainFramebuffers.size(); ++i)
-			{
-				delete m_SwapChainFramebuffers[i];
+				delete frameBuffer;
 			}
 			m_SwapChainFramebuffers.clear();
 
-			for (u32 i = 0; i < m_SwapChainFramebufferAttachments.size(); ++i)
+			for (FrameBufferAttachment* frameBufferAttachment : m_SwapChainFramebufferAttachments)
 			{
-				delete m_SwapChainFramebufferAttachments[i];
+				delete frameBufferAttachment;
 			}
 			m_SwapChainFramebufferAttachments.clear();
 
@@ -837,8 +838,6 @@ namespace flex
 			m_TimestampQueryPool = VK_NULL_HANDLE;
 
 			m_CommandBufferManager.DestroyCommandBuffers();
-
-			vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 
 			delete m_VulkanDevice;
 			m_VulkanDevice = nullptr;
@@ -2143,21 +2142,21 @@ namespace flex
 			return (u32)vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
 		}
 
-		bool VulkanRenderer::DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader /* = nullptr */)
+		bool VulkanRenderer::DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader /* = nullptr */)
 		{
 			bool bValueChanged = false;
 
 			ImGui::PushItemWidth(240.0f);
-			if (ImGui::BeginCombo("Shaders", m_Shaders[*selectedShaderIndex]->name.c_str()))
+			if (ImGui::BeginCombo("Shaders", m_Shaders[*selectedShaderID]->name.c_str()))
 			{
 				for (i32 i = 0; i < (i32)m_Shaders.size(); ++i)
 				{
 					ImGui::PushID(i);
 
-					bool bSelected = (i == *selectedShaderIndex);
+					bool bSelected = (i == *selectedShaderID);
 					if (ImGui::Selectable(m_Shaders[i]->name.c_str(), &bSelected))
 					{
-						*selectedShaderIndex = i;
+						*selectedShaderID = i;
 						bValueChanged = true;
 					}
 
@@ -2169,13 +2168,13 @@ namespace flex
 
 			if (outSelectedShader != nullptr)
 			{
-				*outSelectedShader = m_Shaders[*selectedShaderIndex];
+				*outSelectedShader = m_Shaders[*selectedShaderID];
 			}
 
 			return bValueChanged;
 		}
 
-		bool VulkanRenderer::DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader /* = nullptr */)
+		bool VulkanRenderer::DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader /* = nullptr */)
 		{
 			bool bValueChanged = false;
 
@@ -2200,12 +2199,12 @@ namespace flex
 					VulkanShader* shader = (VulkanShader*)m_Shaders[i];
 					if (!bShowFilter || shaderFilter.PassFilter(shader->name.c_str()))
 					{
-						bool bSelected = (i == *selectedShaderIndex);
+						bool bSelected = (i == *selectedShaderID);
 						if (ImGui::Selectable(shader->name.c_str(), &bSelected))
 						{
 							if (bSelected)
 							{
-								*selectedShaderIndex = i;
+								*selectedShaderID = i;
 								bValueChanged = true;
 							}
 						}
@@ -2216,7 +2215,7 @@ namespace flex
 
 			if (outSelectedShader != nullptr)
 			{
-				*outSelectedShader = m_Shaders[*selectedShaderIndex];
+				*outSelectedShader = m_Shaders[*selectedShaderID];
 			}
 
 			return bValueChanged;

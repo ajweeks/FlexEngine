@@ -1,0 +1,19 @@
+{
+	"ui_windows_open" : 
+	{
+		"prefabs" : false,
+		"sounds" : false,
+		"input bindings" : false,
+		"cpu stats" : false,
+		"main" : true,
+		"imgui demo" : false,
+		"render doc" : false,
+		"materials" : true,
+		"textures" : false,
+		"ui editor" : false,
+		"meshes" : false,
+		"memory stats" : false,
+		"fonts" : false,
+		"shaders" : true
+	}
+}

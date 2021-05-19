@@ -2,6 +2,7 @@
 
 #include "Callbacks/InputCallbacks.hpp"
 #include "Spring.hpp"
+#include "Timer.hpp"
 
 struct RENDERDOC_API_1_4_0;
 
@@ -50,6 +51,9 @@ namespace flex
 		void StepSimulationFrame();
 
 		bool* GetUIWindowOpen(StringID windowNameSID);
+
+		void ParseUIWindowCache();
+		void SerializeUIWindowCache();
 
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
@@ -193,11 +197,16 @@ namespace flex
 		std::string m_ImGuiIniFilepathStr;
 		std::string m_ImGuiLogFilepathStr;
 
-		const real m_SecondsBetweenCommonSettingsFileSave = 10.0f;
-		real m_SecondsSinceLastCommonSettingsFileSave = 0.0f;
+		Timer m_CommonSettingsSaveTimer;
 
-		// Maps hashed window names (lower case) to bool storing whether they're open
-		std::map<StringID, bool> m_UIWindows;
+		struct UIWindow
+		{
+			bool bOpen;
+			std::string name;
+		};
+
+		// Maps hashed window names (lower case) to pair of (window name, bool storing whether the window is open)
+		std::map<StringID, UIWindow> m_UIWindows;
 
 		bool m_bWriteProfilerResultsToFile = false;
 
@@ -230,6 +239,7 @@ namespace flex
 		i32 m_RenderDocAPIVerionMinor = -1;
 		i32 m_RenderDocAPIVerionPatch = -1;
 
+		Timer m_RenderDocAPICheckTimer;
 		sec m_SecSinceRenderDocPIDCheck = 0.0f;
 
 		i32 m_RenderDocAutoCaptureFrameOffset = -1;
@@ -242,8 +252,8 @@ namespace flex
 		i32 m_FramesToFakeDT = 3;
 		sec m_FakeDT = 1.0f / 60.0f;
 
-		sec SecSinceLogSave = 0.0f;
-		sec LogSaveRate = 5.0f;
+		Timer m_LogSaveTimer;
+		Timer m_UIWindowCacheSaveTimer;
 
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;

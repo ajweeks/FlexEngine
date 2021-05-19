@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>

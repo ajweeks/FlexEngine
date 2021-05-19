@@ -1547,7 +1547,7 @@ namespace flex
 				Material* material = g_Renderer->GetMaterial(selectedMaterialID);
 
 				static std::string matName = "";
-				static i32 selectedShaderIndex = 0;
+				static i32 selectedShaderID = 0;
 				// One for each of the current material's texture slots, index into discoveredTextures
 				static std::vector<i32> selectedTextureIndices;
 
@@ -1634,7 +1634,7 @@ namespace flex
 						++i;
 					}
 
-					selectedShaderIndex = material->shaderID;
+					selectedShaderID = material->shaderID;
 
 					g_Renderer->RenderObjectMaterialChanged(selectedMaterialID);
 				}
@@ -1651,9 +1651,9 @@ namespace flex
 				ImGui::SameLine();
 
 				ImGui::PushItemWidth(240.0f);
-				if (g_Renderer->DrawImGuiShadersDropdown(&selectedShaderIndex))
+				if (g_Renderer->DrawImGuiShadersDropdown(&selectedShaderID))
 				{
-					material->shaderID = selectedShaderIndex;
+					material->shaderID = selectedShaderID;
 					bUpdateFields = true;
 				}
 				ImGui::PopItemWidth();
@@ -1825,9 +1825,9 @@ namespace flex
 		{
 			if (ImGui::Begin("Shaders", bShadersWindowOpen))
 			{
-				static i32 selectedShaderIndex = 0;
+				static i32 selectedShaderID = 0;
 				Shader* selectedShader = nullptr;
-				g_Renderer->DrawImGuiShadersList(&selectedShaderIndex, true, &selectedShader);
+				g_Renderer->DrawImGuiShadersList(&selectedShaderID, true, &selectedShader);
 
 #if COMPILE_SHADER_COMPILER
 				g_Renderer->DrawImGuiShaderErrors();
@@ -1853,6 +1853,16 @@ namespace flex
 					g_Renderer->RecompileShaders(false);
 				}
 #endif
+
+				if (ImGui::TreeNode("Specialization constants##shader-view"))
+				{
+					if (g_Renderer->DrawShaderSpecializationConstantImGui((ShaderID)selectedShaderID))
+					{
+						g_Renderer->SetSpecializationConstantDirty();
+					}
+
+					ImGui::TreePop();
+				}
 
 				ImGui::Separator();
 
