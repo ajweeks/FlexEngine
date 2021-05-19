@@ -973,6 +973,12 @@ namespace flex
 		}
 	}
 
+	void Renderer::ToggleFogEnabled()
+	{
+		m_SpecializationConstants[SID("enable_fog")].value = 1 - m_SpecializationConstants[SID("enable_fog")].value;
+		RecreateEverything();
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -1946,6 +1952,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
@@ -2737,6 +2744,14 @@ namespace flex
 				}
 
 				ImGui::EndCombo();
+			}
+
+			SpecializationConstantMetaData& enableFogConstant = m_SpecializationConstants[SID("enable_fog")];
+			bool bFogEnabled = enableFogConstant.value != 0;
+			if (ImGui::Checkbox("Enable fog", &bFogEnabled))
+			{
+				enableFogConstant.value = bFogEnabled ? 1 : 0;
+				RecreateEverything();
 			}
 
 			if (ImGui::TreeNode("Debug objects"))

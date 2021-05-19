@@ -2,8 +2,6 @@
 
 #include "vk_misc.glsl"
 
-// Deferred PBR Combine
-
 layout (location = 0) in vec2 ex_TexCoord;
 
 layout (location = 0) out vec4 fragColour;
@@ -336,20 +334,14 @@ void main()
     float depth = texture(depthBuffer, ex_TexCoord).r;
     vec3 posVS = ReconstructVSPosFromDepth(uboConstant.invProj, ex_TexCoord, depth);
     vec3 posWS = ReconstructWSPosFromDepth(uboConstant.invProj, uboConstant.invView, ex_TexCoord, depth);
-    float depthN = posVS.z*(1/48.0);
-	
-    float invDist = 1.0f/(uboConstant.zFar-uboConstant.zNear);
-
-	float linDepth = (posVS.z-uboConstant.zNear)*invDist;
-	// fragColour = vec4(vec3(linDepth), 1); return;
+    
+	float linDepth = (posVS.z - uboConstant.zNear) / (uboConstant.zFar - uboConstant.zNear);
 
     vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
     float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
 
     float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
 	ssao = pow(ssao, uboConstant.ssaoData.powExp);
-
-	// fragColour = vec4(vec3(pow(ssao, uboConstant.ssaoPowExp)), 1); return;
 
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
@@ -360,7 +352,6 @@ void main()
 		}
 	}
 
-	float fogDist = clamp(length(uboConstant.camPos.xyz - posWS)*0.0003 - 0.1,0.0,1.0);
 	vec3 V = normalize(uboConstant.camPos.xyz - posWS);
 	vec3 R = reflect(-V, N);
 
@@ -512,28 +503,13 @@ void main()
 
 	vec3 ambient = (kD * diffuse + specular);
 
-	// TODO: Apply SSAO to ambient term
 	vec3 colour = ambient + Lo * ssao;
-	colour = mix(colour, uboConstant.skyboxData.colourFog.rgb, fogDist);
+    ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
 
 	fragColour = vec4(colour, 1.0);
-
-	// fragColour = vec4(F, 1);
-
-	// Visualize world pos:
-	// fragColour = vec4(posWS*0.1, 1); return;
-
-	// Visualize normals:
-	// fragColour = vec4(N*0.5+0.5, 1); return;
-
-	// Visualize screen coords:
-	//fragColour = vec4(ex_TexCoord, 0, 1); return;
-
-	// Visualize metallic:
-	//fragColour = vec4(metallic, metallic, metallic, 1); return;
 
     DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
      linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragColour);

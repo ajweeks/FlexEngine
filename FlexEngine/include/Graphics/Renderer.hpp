@@ -331,6 +331,8 @@ namespace flex
 
 		void SetDebugOverlayID(i32 newID);
 
+		void ToggleFogEnabled();
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 

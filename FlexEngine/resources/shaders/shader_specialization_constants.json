@@ -3,7 +3,8 @@
 	[
 		"shader_quality_level",
 		"shadow_cascade_count",
-		"debug_overlay_index"
+		"debug_overlay_index",
+		"enable_fog"
 	],
 	"ssao" : 
 	[
@@ -15,6 +16,11 @@
 	],
 	"terrain" : 
 	[
-		"debug_overlay_index"
+		"debug_overlay_index",
+		"enable_fog"
+	],
+	"cloud" : 
+	[
+		"enable_fog"
 	]
 }

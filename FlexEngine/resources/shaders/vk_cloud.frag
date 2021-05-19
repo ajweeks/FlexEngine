@@ -153,7 +153,7 @@ void main()
 	float depth;
 	vec4 colour = raymarch(ex_PositionOS.xyz, rayDirWS, /* out */ depth);
 
-	//ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
+	ApplyFog(depth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 
     // Contrast
     float constrast = 0.3;

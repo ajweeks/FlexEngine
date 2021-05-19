@@ -9,6 +9,16 @@
 			16
 		]
 	},
+	"enable_fog" : 
+	{
+		"id" : 5,
+		"default_value" : 1,
+		"range" : 
+		[
+			0,
+			1
+		]
+	},
 	"debug_overlay_index" : 
 	{
 		"id" : 4,

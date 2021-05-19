@@ -461,6 +461,19 @@ namespace flex
 			}
 		}, Variant::Type::VOID /* either int or string */));
 
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.fog.toggle",
+			[]() {g_Renderer->ToggleFogEnabled(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("rendering.shader_quality_level",
+			[](const Variant& shaderQualityLevel)
+		{
+			i32 shaderQualityLevelInt = shaderQualityLevel.AsInt();
+			if (shaderQualityLevelInt != -1)
+			{
+				g_Renderer->SetShaderQualityLevel(shaderQualityLevelInt);
+			}
+		}, Variant::Type::STRING));
+
 		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("time_of_day.get",
 			[]() { return Variant(g_SceneManager->CurrentScene()->GetTimeOfDay()); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("time_of_day.set",

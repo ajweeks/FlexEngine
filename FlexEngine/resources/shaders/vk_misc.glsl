@@ -14,6 +14,7 @@ layout (constant_id = 1) const int TAA_SAMPLE_COUNT = 2;
 layout (constant_id = 2) const int QUALITY_LEVEL = 1;
 layout (constant_id = 3) const int NUM_CASCADES = 4;
 layout (constant_id = 4) const int DEBUG_OVERLAY_INDEX = 0;
+layout (constant_id = 5) const int ENABLE_FOG = 1;
 
 const float PI = 3.14159265359;
 
@@ -271,4 +272,15 @@ void DrawDebugOverlay(vec3 albedo, vec3 N, float roughness, float metallic,
         fragColour = vec4(ssao.xxx, 1.0);
         break;
     }
+}
+
+void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
+{
+	if (ENABLE_FOG == 1)
+	{
+		float dist = clamp(linearDepth * 0.075 - 0.01, 0.0, 1.0);
+		dist = smoothstep(0.0, 0.5, dist);
+
+		fragmentColour = mix(fragmentColour, colourFog, dist);
+	}
 }
