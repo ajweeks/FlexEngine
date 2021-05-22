@@ -521,6 +521,18 @@ namespace flex
 			g_EngineInstance->ToggleUIWindow(windowName.AsString());
 		}, Variant::Type::STRING));
 
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("audio.toggle_muted",
+			[]() { AudioManager::ToggleMuted(); }));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("audio.set_master_gain",
+			[](const Variant& gain) { AudioManager::SetMasterGain(gain.AsFloat()); }, Variant::Type::FLOAT));
+
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("audio.play_note",
+			[](const Variant& note, const Variant& length)
+		{
+			AudioManager::PlayNote(note.AsFloat(), length.AsFloat(), 1.0f);
+		}, Variant::Type::FLOAT, Variant::Type::FLOAT));
+
 		ParseUIWindowCache();
 	}
 

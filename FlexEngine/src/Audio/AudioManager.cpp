@@ -12,6 +12,7 @@
 namespace flex
 {
 	std::array<AudioManager::Source, AudioManager::NUM_BUFFERS> AudioManager::s_Sources;
+	std::list<AudioSourceID> AudioManager::s_TemporarySources;
 
 	ALCcontext* AudioManager::s_Context = nullptr;
 	ALCdevice* AudioManager::s_Device = nullptr;
@@ -522,6 +523,20 @@ namespace flex
 
 	void AudioManager::Update()
 	{
+		auto iter = s_TemporarySources.begin();
+		while (iter != s_TemporarySources.end())
+		{
+			if (!IsSourcePlaying(*iter))
+			{
+				DestroyAudioSource(*iter);
+				iter = s_TemporarySources.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
+
 		for (u32 i = 0; i < (u32)s_Sources.size(); ++i)
 		{
 			Source& source = s_Sources[i];
@@ -687,13 +702,14 @@ namespace flex
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (i32 i = 0; i < (i32)sampleCount; ++i)
 		{
-			real t = (real)i / (real)(sampleCount - 1);
+			real t = (real)i / (real)(sampleRate);
+			real alpha = (real)i / (real)(sampleCount - 1);
 			//t -= fmod(t, 0.5f); // Linear fade in/out
 			//t = pow(sin(t* PI), 0.01f); // Sinusodal fade in/out
 
 			real fadePercent = 0.05f;
-			real fadeIn = SmoothStep01(glm::clamp(t / fadePercent, 0.0f, 1.0f));
-			real fadeOut = SmoothStep01(glm::clamp((1.0f - t) / fadePercent, 0.0f, 1.0f));
+			real fadeIn = SmoothStep01(glm::clamp(alpha / fadePercent, 0.0f, 1.0f));
+			real fadeOut = SmoothStep01(glm::clamp((1.0f - alpha) / fadePercent, 0.0f, 1.0f));
 
 			real y = sin(freq * t) * fadeIn * fadeOut;
 
@@ -767,6 +783,7 @@ namespace flex
 		}
 
 		alDeleteSources(1, &s_Sources[sourceID].source);
+		delete s_WaveData[sourceID];
 		s_Sources[sourceID].source = InvalidAudioSourceID;
 		return true;
 	}
@@ -784,12 +801,13 @@ namespace flex
 
 		memset(s_WaveData, 0, NUM_BUFFERS * sizeof(u8*));
 		s_Sources.fill({});
+		s_TemporarySources.clear();
 	}
 
 	void AudioManager::SetMasterGain(real masterGain)
 	{
-		s_MasterGain = masterGain;
-		alListenerf(AL_GAIN, masterGain);
+		s_MasterGain = glm::clamp(masterGain, 0.0f, 1.0f);
+		alListenerf(AL_GAIN, s_MasterGain);
 	}
 
 	real AudioManager::GetMasterGain()
@@ -865,6 +883,19 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("StopSource", alGetError());
 		}
+	}
+
+	void AudioManager::PlayNote(real frequency, sec length, real gain)
+	{
+		AudioSourceID sourceID = AudioManager::SynthesizeSound(length, frequency);
+		MarkSourceTemporary(sourceID);
+		SetSourceGain(sourceID, gain);
+		PlaySource(sourceID);
+	}
+
+	void AudioManager::MarkSourceTemporary(AudioSourceID sourceID)
+	{
+		s_TemporarySources.push_back(sourceID);
 	}
 
 	void AudioManager::FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration)
