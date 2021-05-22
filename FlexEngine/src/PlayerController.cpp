@@ -715,7 +715,7 @@ namespace flex
 	{
 		if (m_Player->m_bPossessed)
 		{
-			if (actionEvent == ActionEvent::TRIGGER)
+			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
 				if (action == Action::SHOW_INVENTORY)
 				{
@@ -804,7 +804,7 @@ namespace flex
 					return EventReply::CONSUMED;
 				}
 			}
-			else if (actionEvent == ActionEvent::RELEASE)
+			else if (actionEvent == ActionEvent::ACTION_RELEASE)
 			{
 				if (action == Action::PICKUP_ITEM)
 				{

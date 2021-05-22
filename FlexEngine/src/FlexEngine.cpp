@@ -2306,7 +2306,7 @@ namespace flex
 
 	EventReply FlexEngine::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (actionEvent == ActionEvent::TRIGGER)
+		if (actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
 			if (action == Action::DBG_ENTER_NEXT_SCENE)
 			{

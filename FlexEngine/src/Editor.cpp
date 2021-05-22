@@ -1318,7 +1318,7 @@ namespace flex
 			return EventReply::UNCONSUMED;
 		}
 
-		if (actionEvent == ActionEvent::TRIGGER)
+		if (actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
 			if (action == Action::EDITOR_RENAME_SELECTED)
 			{

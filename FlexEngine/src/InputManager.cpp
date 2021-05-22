@@ -245,7 +245,7 @@ namespace flex
 			bool bPress = IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i);
 
 			Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
-			ActionEvent actionEvent = bPress ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = bPress ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 			if (gamepadButtonAction != Action::_NONE)
 			{
 				for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
@@ -776,7 +776,7 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
 			Action mouseButtonAction = Action::_NONE;
-			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 
 			mouseButtonAction = GetActionFromMouseButton(mouseButton);
 			if (mouseButtonAction != Action::_NONE)
@@ -882,7 +882,7 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto keyEventIter = m_KeyEventCallbacks.begin();
 			Action keyPressAction = Action::_NONE;
-			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 
 			// TODO: Allow modifiers to be down once supported properly
 			if (keyAction == KeyAction::KEY_PRESS && !bModiferDown)

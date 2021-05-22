@@ -434,8 +434,8 @@ namespace flex
 
 	enum class ActionEvent
 	{
-		TRIGGER,
-		RELEASE,
+		ACTION_TRIGGER,
+		ACTION_RELEASE,
 
 		_COUNT
 	};
