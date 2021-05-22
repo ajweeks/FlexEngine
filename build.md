@@ -15,7 +15,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 1. `cd scripts`
 2. `python build_dependencies.py windows vs2019 Debug`
 3. Open `build/Flex.sln`
-4. Change configuration to x64
+4. Change configuration to Debug x64
 5. Build and run!
 
 

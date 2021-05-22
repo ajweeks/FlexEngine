@@ -242,7 +242,7 @@ namespace flex
 				"Did you set bPrintTimings when calling EndFrame?\n");
 		}
 
-		std::string directory = SAVED_LOCATION "profiles/";
+		std::string directory = SAVED_DIRECTORY "profiles/";
 		std::string absoluteDirectory = RelativePathToAbsolute(directory);
 		Platform::CreateDirectoryRecursive(absoluteDirectory);
 		std::string dateString = Platform::GetDateString_YMDHMS();

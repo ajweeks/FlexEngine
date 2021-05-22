@@ -15,7 +15,7 @@ namespace flex
 
 	void InitializeLogger()
 	{
-		g_LogBufferFilePath = SAVED_LOCATION "flex.log";
+		g_LogBufferFilePath = SAVED_DIRECTORY "flex.log";
 
 		ClearLogFile();
 

@@ -122,22 +122,10 @@ namespace flex
 			std::string configPathAbs = RelativePathToAbsolute(COMMON_CONFIG_LOCATION);
 			m_CommonSettingsAbsFilePath = configPathAbs;
 			m_CommonSettingsFileName = StripLeadingDirectories(configPathAbs);
-			std::string configDirAbs = ExtractDirectoryString(configPathAbs);
-			Platform::CreateDirectoryRecursive(configDirAbs);
 		}
 
-		{
-			std::string bootupDirAbs = RelativePathToAbsolute(SAVED_LOCATION "");
-			m_BootupTimesFileName = "bootup-times.log";
-			m_BootupTimesAbsFilePath = bootupDirAbs + m_BootupTimesFileName;
-			Platform::CreateDirectoryRecursive(bootupDirAbs);
-		}
-
-		{
-			std::string renderDocSettingsDirAbs = RelativePathToAbsolute(CONFIG_DIRECTORY);
-			m_RenderDocSettingsFileName = "renderdoc.json";
-			m_RenderDocSettingsAbsFilePath = renderDocSettingsDirAbs + m_RenderDocSettingsFileName;
-		}
+		m_BootupTimesAbsFilePath = RelativePathToAbsolute(BOOTUP_TIMES_LOCATION);
+		m_RenderDocSettingsAbsFilePath = RelativePathToAbsolute(RENDERDOC_LOCATION);
 
 		{
 			// Default, can be overriden in common.json
@@ -2388,7 +2376,7 @@ namespace flex
 			}
 
 			const std::string dateStr = Platform::GetDateString_YMDHMS();
-			const std::string captureFilePath = RelativePathToAbsolute(SAVED_LOCATION "RenderDocCaptures/FlexEngine_" + dateStr);
+			const std::string captureFilePath = RelativePathToAbsolute(SAVED_DIRECTORY "RenderDocCaptures/FlexEngine_" + dateStr);
 			m_RenderDocAPI->SetCaptureFilePathTemplate(captureFilePath.c_str());
 
 			m_RenderDocAPI->MaskOverlayBits(eRENDERDOC_Overlay_None, 0);
