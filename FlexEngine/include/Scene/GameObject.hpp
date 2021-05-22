@@ -1133,15 +1133,6 @@ namespace flex
 
 	};
 
-	static const char* NoiseFunctionTypeNames[] =
-	{
-		"Perlin",
-		"FBM",
-		"Voronoi",
-
-		"None"
-	};
-
 	struct NoiseFunction
 	{
 		enum Type
@@ -1166,6 +1157,17 @@ namespace flex
 		real frequency;
 		i32 isolateOctave = -1;
 	};
+
+	static const char* NoiseFunctionTypeNames[] =
+	{
+		"Perlin",
+		"FBM",
+		"Voronoi",
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(NoiseFunctionTypeNames) == (u32)NoiseFunction::Type::_NONE + 1, "NoiseFunctionTypeNames length must match NoiseFunction::Type enum");
 
 	class TerrainGenerator final : public GameObject
 	{
