@@ -55,6 +55,8 @@ namespace flex
 		void RegisterRoad(Road* road);
 		void DeregisterRoad(Road* road);
 
+		void RegenerateAllRoads();
+
 	private:
 		// TODO: Four proxy objects which the user can manipulate when a road segment is selected
 

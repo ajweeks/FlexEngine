@@ -71,6 +71,19 @@ namespace flex
 		m_bInitialized = false;
 	}
 
+	void Mesh::DestroyAllSubmeshes()
+	{
+		for (MeshComponent* meshComponent : m_Meshes)
+		{
+			if (meshComponent != nullptr)
+			{
+				meshComponent->Destroy();
+				delete meshComponent;
+			}
+		}
+		m_Meshes.clear();
+	}
+
 	// TODO: Test
 	void Mesh::Reload()
 	{
@@ -436,7 +449,7 @@ namespace flex
 		return nullptr;
 	}
 
-	std::vector<MeshComponent*> Mesh::GetSubMeshes() const
+	std::vector<MeshComponent*> Mesh::GetSubMeshesCopy() const
 	{
 		return m_Meshes;
 	}

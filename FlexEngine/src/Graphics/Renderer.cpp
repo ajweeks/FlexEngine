@@ -1327,7 +1327,7 @@ namespace flex
 		{
 			ImGui::Text("Materials");
 
-			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
+			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshesCopy();
 
 			real windowWidth = ImGui::GetContentRegionAvailWidth();
 			real maxWindowHeight = 170.0f;
@@ -1939,7 +1939,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = false;
-		m_Shaders[shaderID]->maxObjectCount = 1024;
+		m_Shaders[shaderID]->maxObjectCount = 4096*4;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |

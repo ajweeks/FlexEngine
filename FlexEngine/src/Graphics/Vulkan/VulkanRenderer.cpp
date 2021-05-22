@@ -7841,7 +7841,7 @@ namespace flex
 								Mesh* mesh = selectedObj->GetMesh();
 								if (mesh != nullptr)
 								{
-									std::vector<MeshComponent*> meshes = mesh->GetSubMeshes();
+									std::vector<MeshComponent*> meshes = mesh->GetSubMeshesCopy();
 									for (MeshComponent* meshComponent : meshes)
 									{
 										renderIDs.push_back(meshComponent->renderID);

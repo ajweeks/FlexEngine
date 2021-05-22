@@ -312,6 +312,19 @@ namespace flex
 		}
 	}
 
+	void RoadManager::RegenerateAllRoads()
+	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		for (const GameObjectID& roadID : m_RoadIDs)
+		{
+			Road* road = static_cast<Road*>(scene->GetGameObject(roadID));
+			if (road != nullptr)
+			{
+				road->RegenerateMesh();
+			}
+		}
+	}
+
 	TerminalManager::TerminalManager()
 	{
 		m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);

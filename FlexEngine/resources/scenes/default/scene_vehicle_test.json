@@ -7,7 +7,7 @@
 	{
 		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 1000.000000,
+		"far plane" : 3000.000000,
 		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-7.383, 93.514, -91.085",
-			"pitch" : -0.308686,
-			"yaw" : 1.199411
+			"position" : "-4.896, 54.222, 192.928",
+			"pitch" : -0.354014,
+			"yaw" : -1.220128
 		}
 	},
 	"objects" : 
@@ -67,8 +67,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "66.880, -9.141, 86.236",
-				"rot" : "-0.009, 0.487, 0.003",
+				"pos" : "3.964, 0.170, -1.955",
+				"rot" : "-0.294, 1.151, -0.359",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -92,17 +92,44 @@
 				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 5,
-				"loaded chunk radius" : 384.244995,
+				"loaded chunk radius" : 400.000000,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 128,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
 				"high colour" : "0.65, 0.70, 0.43",
-				"base octave" : 158.938004,
-				"octave scale" : 198.125000,
-				"num octaves" : 6,
 				"pin center" : true,
-				"pinned center" : "76.64, 157.87, 42.79"
+				"pinned center" : "76.64, 157.87, 42.79",
+				"noise functions" : 
+				[
+					{
+						"type" : 0,
+						"feature size" : 74.818001,
+						"num octaves" : 6,
+						"h" : 0.000000,
+						"height scale" : 2.246000,
+						"lacunarity" : 0.000000,
+						"frequency" : 0.000000
+					},
+					{
+						"type" : 0,
+						"feature size" : 1500.000000,
+						"num octaves" : 6,
+						"h" : 0.000000,
+						"height scale" : 1.286000,
+						"lacunarity" : 0.000000,
+						"frequency" : 0.000000
+					},
+					{
+						"type" : 0,
+						"feature size" : 20.684999,
+						"num octaves" : 6,
+						"h" : 0.000000,
+						"height scale" : 0.358000,
+						"lacunarity" : 0.000000,
+						"frequency" : 0.000000
+					}
+				]
 			}
 		},
 		{
@@ -114,7 +141,7 @@
 				"pos" : "66.446, 52.293, 25.470",
 				"scale" : "16.010, 16.010, 16.010"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
@@ -131,7 +158,7 @@
 				"pos" : "35.889, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
@@ -192,7 +219,7 @@
 				"pos" : "107.559, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 

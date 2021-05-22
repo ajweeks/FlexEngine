@@ -1133,6 +1133,15 @@ namespace flex
 
 	};
 
+	static const char* NoiseFunctionTypeNames[] =
+	{
+		"Perlin",
+		"FBM",
+		"Voronoi",
+
+		"None"
+	};
+
 	struct NoiseFunction
 	{
 		enum Type
@@ -1144,12 +1153,18 @@ namespace flex
 			_NONE
 		};
 
+		static Type TypeFromString(const char* str);
+
+		static NoiseFunction GenerateDefault(Type type);
+
 		Type type;
+		real baseFeatureSize;
 		i32 numOctaves;
 		real H; // controls self-similarity [0, 1]
 		real heightScale;
 		real lacunarity;
 		real frequency;
+		i32 isolateOctave = -1;
 	};
 
 	class TerrainGenerator final : public GameObject
@@ -1170,17 +1185,14 @@ namespace flex
 		struct TerrainChunkData
 		{
 			// General info
-			real baseOctave;
 			real chunkSize;
 			real maxHeight;
-			real octaveScale;
 			real roadBlendDist;
 			real roadBlendThreshold;
-			u32 numOctaves;
 			u32 vertCountPerChunkAxis;
-			i32 isolateOctave;
+			i32 isolateNoiseLayer = -1;
 
-			std::vector<NoiseFunction>* noiseFunctions;
+			std::vector<NoiseFunction>* noiseFunctions = nullptr;
 			std::vector<std::vector<glm::vec2>>* randomTables;
 			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
 
@@ -1194,7 +1206,7 @@ namespace flex
 			volatile u32* indices;
 		};
 
-		void FillInTerrainChunkData(TerrainChunkData& outChunkData);
+		void FillInTerrainChunkData(volatile TerrainChunkData& outChunkData);
 		real Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos);
 
 		u32 VertCountPerChunkAxis = 8;
@@ -1221,6 +1233,11 @@ namespace flex
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
+
+		bool DrawNoiseFunctionImGui(NoiseFunction& noiseFunction, bool& bOutRemoved);
+
+		NoiseFunction ParseNoiseFunction(const JSONObject& noiseFunctionObj);
+		JSONObject SerializeNoiseFunction(const NoiseFunction& noiseFunction);
 
 		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 
@@ -1253,10 +1270,6 @@ namespace flex
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;
 
-		real m_OctaveScale = 1.0f;
-		real m_BaseOctave = 1.0f;
-		u32 m_NumOctaves = 1;
-
 		real m_RoadBlendDist = 10.0f;
 		real m_RoadBlendThreshold = 10.0f;
 
@@ -1272,14 +1285,14 @@ namespace flex
 
 		std::vector<NoiseFunction> m_NoiseFunctions;
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
-		u32 m_BasePerlinTableWidth = 32;
+		u32 m_BasePerlinTableWidth = 128;
 
 		// Map of chunk index to overlapping road segments
 		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
 
 		std::vector<TextureID> m_TableTextureIDs;
 
-		i32 m_IsolateOctave = -1;
+		i32 m_IsolateNoiseLayer = -1;
 
 		TerrainThreadData threadUserData;
 
@@ -1298,7 +1311,8 @@ namespace flex
 	void* TerrainThreadUpdate(void* inData);
 
 	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
-	real SampleNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
+	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
+	real SamplePerlinNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
 
 	class SpringObject final : public GameObject
 	{
@@ -1662,9 +1676,12 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		void RegenerateMesh();
+
 		std::vector<RoadSegment> roadSegments;
 
 	private:
+		void GenerateMesh();
 		void GenerateSegment(i32 index);
 		void GenerateMaterial();
 		void GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points);

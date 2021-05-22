@@ -57,6 +57,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/CartManager.hpp"
+#include "Systems/Systems.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
@@ -7930,6 +7931,56 @@ namespace flex
 		GameObject::Update();
 	}
 
+	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
+	{
+		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
+		{
+			if (strcmp(str, NoiseFunctionTypeNames[i]))
+			{
+				return (Type)i;
+			}
+		}
+
+		return Type::_NONE;
+	}
+
+	NoiseFunction NoiseFunction::GenerateDefault(Type type)
+	{
+		NoiseFunction result = {};
+		result.type = type;
+		result.heightScale = 1.0f;
+
+		switch (type)
+		{
+		case Type::PERLIN:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.isolateOctave = -1;
+		} break;
+		case Type::FBM:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.frequency = 50.0f;
+			result.isolateOctave = -1;
+		} break;
+		case Type::VORONOI:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.frequency = 50.0f;
+			result.isolateOctave = -1;
+		} break;
+		}
+
+		return result;
+	}
+
 	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("terrain generator"), gameObjectID),
 		m_LowCol(0.2f, 0.3f, 0.45f),
@@ -8111,6 +8162,64 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
+	bool TerrainGenerator::DrawNoiseFunctionImGui(NoiseFunction& noiseFunction, bool& bOutRemoved)
+	{
+		bool bValueChanged = false;
+
+		static auto typeNameGetter = [](void* value, i32 index, const char** outName) -> bool
+		{
+			FLEX_UNUSED(value);
+
+			if (index >= 0 && index < (i32)NoiseFunction::Type::_NONE)
+			{
+				*outName = NoiseFunctionTypeNames[index];
+				return true;
+			}
+
+			*outName = "None";
+			return false;
+		};
+
+		const char* typeName = "None";
+		if ((i32)noiseFunction.type >= 0 && (i32)noiseFunction.type < (i32)NoiseFunction::Type::_NONE)
+		{
+			typeName = NoiseFunctionTypeNames[(i32)noiseFunction.type];
+		}
+		// Assumes this function was called within an ImGui::PushID/PopID pair so this doesn't cause conflicts
+		if (ImGui::TreeNode(typeName))
+		{
+			if (ImGui::Combo("Type", (i32*)&noiseFunction.type, typeNameGetter, nullptr, (i32)NoiseFunction::Type::_NONE))
+			{
+				bValueChanged = true;
+				noiseFunction = NoiseFunction::GenerateDefault(noiseFunction.type);
+			}
+
+			bValueChanged = ImGui::SliderFloat("H", &noiseFunction.H, 0.0f, 2.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Feature size", &noiseFunction.baseFeatureSize, 1.0f, 1000.0f) || bValueChanged;
+			const i32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
+			if (ImGui::SliderInt("Num octaves", &noiseFunction.numOctaves, 1, maxNumOctaves))
+			{
+				noiseFunction.numOctaves = glm::clamp(noiseFunction.numOctaves, 1, maxNumOctaves);
+				bValueChanged = true;
+			}
+			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, 0.1f, 10.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Frequency", &noiseFunction.frequency, 1.0f, 250.0f) || bValueChanged;
+
+			if (ImGui::Button("Delete layer"))
+			{
+				bOutRemoved = true;
+				ImGui::TreePop();
+				return true;
+			}
+
+			ImGui::TreePop();
+		}
+
+		return bValueChanged;
+	}
+
 	void TerrainGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
@@ -8133,13 +8242,41 @@ namespace flex
 			}
 		}
 
-		bRegen = ImGui::SliderFloat("Base octave scale", &m_BaseOctave, 1.0f, 400.0f) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
-		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
-		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
+		{
+			i32 i = 0;
+			for (NoiseFunction& noiseFunction : m_NoiseFunctions)
+			{
+				ImGui::PushID(i);
+				bool bRemoved = false;
+				bool bValueChanged = DrawNoiseFunctionImGui(noiseFunction, bRemoved);
+				ImGui::PopID();
 
-		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
+				if (bRemoved)
+				{
+					m_NoiseFunctions.erase(m_NoiseFunctions.begin() + i);
+					bValueChanged = true;
+					bRegen = true;
+					break;
+				}
+
+				if (bValueChanged)
+				{
+					bRegen = true;
+					break;
+				}
+
+				++i;
+			}
+		}
+
+		if (ImGui::Button("Add new noise layer"))
+		{
+			m_NoiseFunctions.push_back(NoiseFunction::GenerateDefault(NoiseFunction::Type::PERLIN));
+			bRegen = true;
+		}
+
+		bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, (i32)m_NoiseFunctions.size() - 1) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
 		bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
@@ -8199,16 +8336,8 @@ namespace flex
 			GenerateGradients();
 			DestroyAllChunks();
 
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-			{
-				(*terrain_workQueue)[i].baseOctave = m_BaseOctave;
-				(*terrain_workQueue)[i].chunkSize = ChunkSize;
-				(*terrain_workQueue)[i].maxHeight = MaxHeight;
-				(*terrain_workQueue)[i].octaveScale = m_OctaveScale;
-				(*terrain_workQueue)[i].numOctaves = m_NumOctaves;
-				(*terrain_workQueue)[i].vertCountPerChunkAxis = VertCountPerChunkAxis;
-				(*terrain_workQueue)[i].isolateOctave = m_IsolateOctave;
-			}
+			RoadManager* roadManager = GetSystem<RoadManager>(SystemType::ROAD_MANAGER);
+			roadManager->RegenerateAllRoads();
 
 			if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
 			{
@@ -8216,6 +8345,13 @@ namespace flex
 				{
 					FreeWorkQueueEntry(i);
 					AllocWorkQueueEntry(i);
+				}
+			}
+			else
+			{
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					FillInTerrainChunkData((*terrain_workQueue)[i]);
 				}
 			}
 		}
@@ -8272,6 +8408,37 @@ namespace flex
 		}
 	}
 
+	NoiseFunction TerrainGenerator::ParseNoiseFunction(const JSONObject& noiseFunctionObj)
+	{
+		NoiseFunction result = {};
+
+		std::string typeName = noiseFunctionObj.GetString("type");
+		result.type = NoiseFunction::TypeFromString(typeName.c_str());
+		result.baseFeatureSize = noiseFunctionObj.GetFloat("feature size");
+		result.numOctaves = noiseFunctionObj.GetInt("num octaves");
+		result.H = noiseFunctionObj.GetFloat("h");
+		result.heightScale = noiseFunctionObj.GetFloat("height scale");
+		result.lacunarity = noiseFunctionObj.GetFloat("lacunarity");
+		result.frequency = noiseFunctionObj.GetFloat("frequency");
+
+		return result;
+	}
+
+	JSONObject TerrainGenerator::SerializeNoiseFunction(const NoiseFunction& noiseFunction)
+	{
+		JSONObject noiseFunctionObj = {};
+
+		noiseFunctionObj.fields.emplace_back("type", JSONValue((i32)noiseFunction.type));
+		noiseFunctionObj.fields.emplace_back("feature size", JSONValue(noiseFunction.baseFeatureSize));
+		noiseFunctionObj.fields.emplace_back("num octaves", JSONValue(noiseFunction.numOctaves));
+		noiseFunctionObj.fields.emplace_back("h", JSONValue(noiseFunction.H));
+		noiseFunctionObj.fields.emplace_back("height scale", JSONValue(noiseFunction.heightScale));
+		noiseFunctionObj.fields.emplace_back("lacunarity", JSONValue(noiseFunction.lacunarity));
+		noiseFunctionObj.fields.emplace_back("frequency", JSONValue((noiseFunction.frequency)));
+
+		return noiseFunctionObj;
+	}
+
 	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
@@ -8294,12 +8461,19 @@ namespace flex
 			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
 			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
 
-			chunkGenInfo.TryGetFloat("base octave", m_BaseOctave);
-			chunkGenInfo.TryGetFloat("octave scale", m_OctaveScale);
-			chunkGenInfo.TryGetUInt("num octaves", m_NumOctaves);
-
 			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
 			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
+
+			std::vector<JSONObject> noiseFunctionsArr;
+			if (chunkGenInfo.TryGetObjectArray("noise functions", noiseFunctionsArr))
+			{
+				m_NoiseFunctions.clear();
+				m_NoiseFunctions.reserve(noiseFunctionsArr.size());
+				for (const JSONObject& noiseFunctionObj : noiseFunctionsArr)
+				{
+					m_NoiseFunctions.emplace_back(ParseNoiseFunction(noiseFunctionObj));
+				}
+			}
 		}
 	}
 
@@ -8322,23 +8496,31 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
 		chunkGenInfo.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
 
-		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
-		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
-		chunkGenInfo.fields.emplace_back("num octaves", JSONValue(m_NumOctaves));
-
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
+
+		std::vector<JSONObject> noiseFunctionsArr;
+		noiseFunctionsArr.reserve(m_NoiseFunctions.size());
+		for (const NoiseFunction& noiseFunction : m_NoiseFunctions)
+		{
+			noiseFunctionsArr.emplace_back(SerializeNoiseFunction(noiseFunction));
+		}
+		chunkGenInfo.fields.emplace_back("noise functions", JSONValue(noiseFunctionsArr));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
-	void TerrainGenerator::FillInTerrainChunkData(TerrainGenerator::TerrainChunkData& outChunkData)
+	void TerrainGenerator::FillInTerrainChunkData(volatile TerrainGenerator::TerrainChunkData& outChunkData)
 	{
-		outChunkData.baseOctave = m_BaseOctave;
-		outChunkData.numOctaves = m_NumOctaves;
-		outChunkData.isolateOctave = m_IsolateOctave;
-		outChunkData.octaveScale = m_OctaveScale;
+		outChunkData.chunkSize = ChunkSize;
+		outChunkData.maxHeight = MaxHeight;
+		outChunkData.roadBlendDist = m_RoadBlendDist;
+		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
+		outChunkData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
+
 		outChunkData.randomTables = &m_RandomTables;
+		outChunkData.roadSegments = &m_RoadSegments;
 		outChunkData.noiseFunctions = &m_NoiseFunctions;
 	}
 
@@ -8357,7 +8539,9 @@ namespace flex
 	{
 		PROFILE_AUTO("Generate terrain chunk gradient tables");
 
-		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
+		const u32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
+
+		m_RandomTables = std::vector<std::vector<glm::vec2>>(maxNumOctaves);
 
 		std::mt19937 m_RandGenerator;
 		std::uniform_real_distribution<real> m_RandDistribution;
@@ -8367,7 +8551,7 @@ namespace flex
 
 		{
 			u32 tableWidth = m_BasePerlinTableWidth;
-			for (u32 octave = 0; octave < m_NumOctaves; ++octave)
+			for (u32 octave = 0; octave < maxNumOctaves; ++octave)
 			{
 				m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
 
@@ -8828,18 +9012,7 @@ namespace flex
 		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
 		assert(chunkData.indices != nullptr);
 
-		chunkData.baseOctave = m_BaseOctave;
-		chunkData.chunkSize = ChunkSize;
-		chunkData.maxHeight = MaxHeight;
-		chunkData.octaveScale = m_OctaveScale;
-		chunkData.roadBlendDist = m_RoadBlendDist;
-		chunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		chunkData.numOctaves = m_NumOctaves;
-		chunkData.vertCountPerChunkAxis = VertCountPerChunkAxis;
-		chunkData.isolateOctave = m_IsolateOctave;
-
-		chunkData.randomTables = &m_RandomTables;
-		chunkData.roadSegments = &m_RoadSegments;
+		FillInTerrainChunkData(chunkData);
 	}
 
 	void TerrainGenerator::FreeWorkQueueEntry(u32 workQueueIndex)
@@ -9043,30 +9216,71 @@ namespace flex
 
 	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
 
+	// Returns value in range [-1, 1]
+	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos)
+	{
+		switch (noiseFunction.type)
+		{
+		case NoiseFunction::Type::PERLIN:
+		{
+			real result = 0.0f;
+
+			i32 numOctaves = noiseFunction.numOctaves;
+			real octave = noiseFunction.baseFeatureSize;
+			u32 octaveIdx = numOctaves - 1;
+			i32 isolateOctave = noiseFunction.isolateOctave;
+			real heightScale = noiseFunction.heightScale * 0.005f; // Normalize value so edited values are reasonable
+
+			for (u32 i = 0; i < (u32)numOctaves; ++i)
+			{
+				if (isolateOctave == -1 || i == (u32)isolateOctave)
+				{
+					result += SamplePerlinNoise(chunkData, pos, octave, octaveIdx) * octave * heightScale;
+				}
+				octave = octave / 2.0f;
+				--octaveIdx;
+			}
+
+			result /= (real)numOctaves;
+
+			return glm::clamp(result, -1.0f, 1.0f);
+		} break;
+		case NoiseFunction::Type::FBM:
+		{
+		} break;
+		case NoiseFunction::Type::VORONOI:
+		{
+		} break;
+		}
+
+		return 0.0f;
+	}
+
 	// Returns a value in [0, 1]
 	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
 	{
 		real result = 0.0f;
-		real octave = chunkData->baseOctave;
-		i32 numOctaves = chunkData->numOctaves;
-		u32 octaveIdx = (i32)chunkData->numOctaves - 1;
-		i32 isolateOctave = chunkData->isolateOctave;
-		real octaveScale = chunkData->octaveScale;
-
-		for (u32 i = 0; i < (u32)numOctaves; ++i)
+		if (chunkData->noiseFunctions != nullptr)
 		{
-			if (isolateOctave == -1 || i == (u32)isolateOctave)
+			i32 numLayers = (i32)(*chunkData->noiseFunctions).size();
+			for (i32 i = 0; i < numLayers; ++i)
 			{
-				result += SampleNoise(chunkData, pos, octave, octaveIdx) * (octave / octaveScale);
+				if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
+				{
+					const NoiseFunction& noiseFunction = (*chunkData->noiseFunctions)[i];
+					result += SampleNoiseFunction(chunkData, noiseFunction, pos);
+				}
 			}
-			octave = octave / 2.0f;
-			--octaveIdx;
+
+			// Divide by 2 to transform range from [-1, 1] to [0, 1]
+			result = result / ((real)numLayers * 2.0f) + 0.5f;
 		}
-		return glm::clamp((result / (real)(numOctaves * 2.0f)) + 0.5f, 0.0f, 1.0f);
+
+		return result;
 	}
 
 	// Returns a value in [-1, 1]
-	real SampleNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx)
+	real SamplePerlinNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx)
 	{
 		const glm::vec2 scaledPos = pos / octave;
 		glm::vec2 posi = glm::vec2((real)(i32)scaledPos.x, (real)(i32)scaledPos.y);
@@ -11222,51 +11436,7 @@ namespace flex
 
 	void Road::PostInitialize()
 	{
-		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
-
-		if (roadSegments.empty())
-		{
-			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
-			if (terrainGenerator == nullptr)
-			{
-				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
-				terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
-			}
-
-			std::vector<glm::vec3> newPoints =
-			{
-				start,
-				glm::vec3(9.0f, 0.0f, 64.0f),
-				glm::vec3(60.0f, 0.0, 84.0f),
-				glm::vec3(96.0f, 0.0, 72.0f),
-				glm::vec3(104.0f, 0.0, 32.0f),
-				glm::vec3(64.0f, 0.0, -24.0f),
-				start
-			};
-
-			if (terrainGenerator != nullptr)
-			{
-				real offset = 0.5f;
-
-				TerrainGenerator::TerrainChunkData chunkData = {};
-				terrainGenerator->FillInTerrainChunkData(chunkData);
-				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
-				{
-					newPoints[i].y = terrainGenerator->Sample(chunkData, glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
-				}
-			}
-
-			GenerateSegmentsThroughPoints(newPoints);
-
-			terrainGenerator->UpdateRoadSegments();
-		}
-		else
-		{
-			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
-			{
-				GenerateSegment(i);
-			}
-		}
+		GenerateMesh();
 	}
 
 	void Road::Destroy(bool bDetachFromParent /* = true */)
@@ -11506,6 +11676,63 @@ namespace flex
 		newGameObject->m_QuadCountPerSegment = m_QuadCountPerSegment;
 
 		return newGameObject;
+	}
+
+	void Road::RegenerateMesh()
+	{
+		m_Mesh->DestroyAllSubmeshes();
+
+		roadSegments.clear();
+		GenerateMesh();
+	}
+
+	void Road::GenerateMesh()
+	{
+		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
+
+		if (roadSegments.empty())
+		{
+			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
+			if (terrainGenerator == nullptr)
+			{
+				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
+				terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
+			}
+
+			std::vector<glm::vec3> newPoints =
+			{
+				start,
+				glm::vec3(9.0f, 0.0f, 64.0f),
+				glm::vec3(60.0f, 0.0, 84.0f),
+				glm::vec3(96.0f, 0.0, 72.0f),
+				glm::vec3(104.0f, 0.0, 32.0f),
+				glm::vec3(64.0f, 0.0, -24.0f),
+				start
+			};
+
+			if (terrainGenerator != nullptr)
+			{
+				real offset = 0.5f;
+
+				TerrainGenerator::TerrainChunkData chunkData = {};
+				terrainGenerator->FillInTerrainChunkData(chunkData);
+				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
+				{
+					newPoints[i].y = terrainGenerator->Sample(chunkData, glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
+				}
+			}
+
+			GenerateSegmentsThroughPoints(newPoints);
+
+			terrainGenerator->UpdateRoadSegments();
+		}
+		else
+		{
+			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
+			{
+				GenerateSegment(i);
+			}
+		}
 	}
 
 	void Road::GenerateMaterial()

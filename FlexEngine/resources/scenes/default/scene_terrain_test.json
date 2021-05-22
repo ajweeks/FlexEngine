@@ -99,7 +99,7 @@
 				"low colour" : "0.20, 0.30, 0.45",
 				"mid colour" : "0.45, 0.55, 0.25",
 				"high colour" : "0.65, 0.67, 0.69",
-				"base octave" : 949.869995,
+				"feature size" : 949.869995,
 				"octave scale" : 151.438004,
 				"num octaves" : 5,
 				"pin center" : true,
