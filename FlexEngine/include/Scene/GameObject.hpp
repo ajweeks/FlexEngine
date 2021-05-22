@@ -1135,16 +1135,20 @@ namespace flex
 
 	struct NoiseFunction
 	{
-		enum Type
+		enum class Type
 		{
 			PERLIN,
 			FBM, // https://www.iquilezles.org/www/articles/fbm/fbm.htm
 			VORONOI, // https://www.iquilezles.org/www/articles/voronoise/voronoise.htm
+			SMOOTH_VORONOI, // https://www.iquilezles.org/www/articles/smoothvoronoi/smoothvoronoi.htm
+
+			// NOTE: New entries should also be added to NoiseFunctionTypeNames & NoiseFunction::GenerateDefault
 
 			_NONE
 		};
 
 		static Type TypeFromString(const char* str);
+		static const char* TypeToString(Type type);
 
 		static NoiseFunction GenerateDefault(Type type);
 
@@ -1154,8 +1158,11 @@ namespace flex
 		real H; // controls self-similarity [0, 1]
 		real heightScale;
 		real lacunarity;
-		real frequency;
+		real wavelength;
+		real sharpness;
 		i32 isolateOctave = -1;
+
+		// TODO: Seed
 	};
 
 	static const char* NoiseFunctionTypeNames[] =
@@ -1163,6 +1170,7 @@ namespace flex
 		"Perlin",
 		"FBM",
 		"Voronoi",
+		"Smooth Voronoi",
 
 		"None"
 	};
@@ -1314,7 +1322,7 @@ namespace flex
 
 	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
-	real SamplePerlinNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
+	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);
 
 	class SpringObject final : public GameObject
 	{

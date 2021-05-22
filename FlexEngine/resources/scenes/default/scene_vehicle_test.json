@@ -7,8 +7,8 @@
 	{
 		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 3000.000000,
-		"fov" : 0.785398,
+		"far plane" : 800.000000,
+		"fov" : 0.968658,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-4.896, 54.222, 192.928",
-			"pitch" : -0.354014,
-			"yaw" : -1.220128
+			"position" : "-30.543, 13.123, -39.132",
+			"pitch" : -0.197461,
+			"yaw" : -24.318634
 		}
 	},
 	"objects" : 
@@ -60,19 +60,6 @@
 			}
 		},
 		{
-			"name" : "vehicle0",
-			"id" : "0F8DA5B02CE493BA4741D38E0EBD23E0",
-			"type" : "prefab",
-			"prefab type" : "vehicle",
-			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
-			"transform" : 
-			{
-				"pos" : "3.964, 0.170, -1.955",
-				"rot" : "-0.294, 1.151, -0.359",
-				"scale" : "1.000, 1.000, 1.000"
-			}
-		},
-		{
 			"name" : "Road",
 			"id" : "868430323533558740C132FED8F0E1C0",
 			"type" : "road",
@@ -84,17 +71,18 @@
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
 			"type" : "terrain generator",
 			"visible" : true,
-			"casts shadow" : true,
+			"casts shadow" : false,
 			"chunk generator info" : 
 			{
 				"vert count per chunk axis" : 32,
 				"chunk size" : 52.299999,
-				"max height" : 500.000000,
+				"max height" : 442.720001,
 				"use manual seed" : true,
-				"manual seed" : 5,
-				"loaded chunk radius" : 400.000000,
+				"manual seed" : 6,
+				"isolate noise layer" : 0,
+				"loaded chunk radius" : 1000.000000,
 				"loaded chunk rigid body square radius" : 10000.000000,
-				"base table width" : 128,
+				"base table width" : 512,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
 				"high colour" : "0.65, 0.70, 0.43",
@@ -103,31 +91,30 @@
 				"noise functions" : 
 				[
 					{
-						"type" : 0,
-						"feature size" : 74.818001,
-						"num octaves" : 6,
-						"h" : 0.000000,
-						"height scale" : 2.246000,
-						"lacunarity" : 0.000000,
-						"frequency" : 0.000000
+						"type" : "FBM",
+						"feature size" : 150.000000,
+						"num octaves" : 8,
+						"h" : 0.867000,
+						"height scale" : 0.250000,
+						"lacunarity" : 0.571000,
+						"wavelength" : 90.542000
 					},
 					{
-						"type" : 0,
-						"feature size" : 1500.000000,
+						"type" : "Smooth Voronoi",
+						"feature size" : 150.000000,
 						"num octaves" : 6,
-						"h" : 0.000000,
-						"height scale" : 1.286000,
-						"lacunarity" : 0.000000,
-						"frequency" : 0.000000
+						"height scale" : 0.400000,
+						"lacunarity" : 1.000000,
+						"wavelength" : 67.236000,
+						"sharpness" : 0.000000
 					},
 					{
-						"type" : 0,
-						"feature size" : 20.684999,
+						"type" : "Perlin",
+						"feature size" : 3000.000000,
 						"num octaves" : 6,
-						"h" : 0.000000,
-						"height scale" : 0.358000,
+						"height scale" : 0.100000,
 						"lacunarity" : 0.000000,
-						"frequency" : 0.000000
+						"wavelength" : 0.000000
 					}
 				]
 			}
@@ -189,7 +176,7 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "6.893, 1.000, 9.292"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -237,7 +224,7 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "6.893, 1.000, 9.292"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -268,7 +255,7 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "6.893, 1.000, 9.292"
 			},
-			"visible" : true,
+			"visible" : false,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 

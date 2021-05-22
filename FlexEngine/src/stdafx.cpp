@@ -44,6 +44,8 @@ namespace flex
 	glm::vec4 VEC4_GAMMA = glm::vec4(2.2f);
 	glm::vec4 VEC4_GAMMA_INVERSE = glm::vec4(1.0f / 2.2f);
 	glm::quat QUAT_IDENTITY = glm::quat(VEC3_ZERO);
+	glm::mat2 MAT2_IDENTITY = glm::mat2(1.0f);
+	glm::mat3 MAT3_IDENTITY = glm::mat3(1.0f);
 	glm::mat4 MAT4_IDENTITY = glm::mat4(1.0f);
 	glm::mat4 MAT4_ZERO = glm::mat4(0.0f);
 	flex::u32 COLOUR32U_WHITE = 0xFFFFFFFF;

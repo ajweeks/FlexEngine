@@ -7935,7 +7935,7 @@ namespace flex
 	{
 		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
 		{
-			if (strcmp(str, NoiseFunctionTypeNames[i]))
+			if (strcmp(str, NoiseFunctionTypeNames[i]) == 0)
 			{
 				return (Type)i;
 			}
@@ -7944,11 +7944,17 @@ namespace flex
 		return Type::_NONE;
 	}
 
+	const char* NoiseFunction::TypeToString(Type type)
+	{
+		return NoiseFunctionTypeNames[(i32)type];
+	}
+
 	NoiseFunction NoiseFunction::GenerateDefault(Type type)
 	{
 		NoiseFunction result = {};
 		result.type = type;
 		result.heightScale = 1.0f;
+		result.isolateOctave = -1;
 
 		switch (type)
 		{
@@ -7964,8 +7970,7 @@ namespace flex
 			result.numOctaves = 6;
 			result.H = 0.8f;
 			result.lacunarity = 1.0f;
-			result.frequency = 50.0f;
-			result.isolateOctave = -1;
+			result.wavelength = 100.0f;
 		} break;
 		case Type::VORONOI:
 		{
@@ -7973,8 +7978,17 @@ namespace flex
 			result.numOctaves = 6;
 			result.H = 0.8f;
 			result.lacunarity = 1.0f;
-			result.frequency = 50.0f;
-			result.isolateOctave = -1;
+			result.wavelength = 100.0f;
+			result.sharpness = 1.0f;
+		} break;
+		case Type::SMOOTH_VORONOI:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.wavelength = 100.0f;
+			result.sharpness = 1.0f;
 		} break;
 		}
 
@@ -8006,6 +8020,8 @@ namespace flex
 
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
+
+		SetCastsShadow(false);
 
 		GenerateGradients();
 
@@ -8203,18 +8219,29 @@ namespace flex
 				bValueChanged = true;
 			}
 			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, 0.1f, 10.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -10.0f, 10.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Frequency", &noiseFunction.frequency, 1.0f, 250.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 250.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
 
 			if (ImGui::Button("Delete layer"))
 			{
 				bOutRemoved = true;
-				ImGui::TreePop();
-				return true;
+				bValueChanged = true;
 			}
 
 			ImGui::TreePop();
+		}
+
+		if (ImGui::BeginPopupContextWindow(""))
+		{
+			if (ImGui::Button("Delete layer"))
+			{
+				bOutRemoved = true;
+				bValueChanged = true;
+			}
+
+			ImGui::EndPopup();
 		}
 
 		return bValueChanged;
@@ -8414,12 +8441,14 @@ namespace flex
 
 		std::string typeName = noiseFunctionObj.GetString("type");
 		result.type = NoiseFunction::TypeFromString(typeName.c_str());
-		result.baseFeatureSize = noiseFunctionObj.GetFloat("feature size");
-		result.numOctaves = noiseFunctionObj.GetInt("num octaves");
-		result.H = noiseFunctionObj.GetFloat("h");
-		result.heightScale = noiseFunctionObj.GetFloat("height scale");
-		result.lacunarity = noiseFunctionObj.GetFloat("lacunarity");
-		result.frequency = noiseFunctionObj.GetFloat("frequency");
+
+		noiseFunctionObj.TryGetFloat("feature size", result.baseFeatureSize);
+		noiseFunctionObj.TryGetInt("num octaves", result.numOctaves);
+		noiseFunctionObj.TryGetFloat("h", result.H);
+		noiseFunctionObj.TryGetFloat("height scale", result.heightScale);
+		noiseFunctionObj.TryGetFloat("lacunarity", result.lacunarity);
+		noiseFunctionObj.TryGetFloat("wavelength", result.wavelength);
+		noiseFunctionObj.TryGetFloat("sharpness", result.sharpness);
 
 		return result;
 	}
@@ -8428,13 +8457,20 @@ namespace flex
 	{
 		JSONObject noiseFunctionObj = {};
 
-		noiseFunctionObj.fields.emplace_back("type", JSONValue((i32)noiseFunction.type));
+		noiseFunctionObj.fields.emplace_back("type", JSONValue(NoiseFunction::TypeToString(noiseFunction.type)));
 		noiseFunctionObj.fields.emplace_back("feature size", JSONValue(noiseFunction.baseFeatureSize));
 		noiseFunctionObj.fields.emplace_back("num octaves", JSONValue(noiseFunction.numOctaves));
-		noiseFunctionObj.fields.emplace_back("h", JSONValue(noiseFunction.H));
+		if (noiseFunction.type == NoiseFunction::Type::FBM)
+		{
+			noiseFunctionObj.fields.emplace_back("h", JSONValue(noiseFunction.H));
+		}
 		noiseFunctionObj.fields.emplace_back("height scale", JSONValue(noiseFunction.heightScale));
 		noiseFunctionObj.fields.emplace_back("lacunarity", JSONValue(noiseFunction.lacunarity));
-		noiseFunctionObj.fields.emplace_back("frequency", JSONValue((noiseFunction.frequency)));
+		noiseFunctionObj.fields.emplace_back("wavelength", JSONValue((noiseFunction.wavelength)));
+		if (noiseFunction.type == NoiseFunction::Type::VORONOI || noiseFunction.type == NoiseFunction::Type::SMOOTH_VORONOI)
+		{
+			noiseFunctionObj.fields.emplace_back("sharpness", JSONValue((noiseFunction.sharpness)));
+		}
 
 		return noiseFunctionObj;
 	}
@@ -8456,6 +8492,8 @@ namespace flex
 			chunkGenInfo.TryGetFloat("loaded chunk radius", m_LoadedChunkRadius);
 			chunkGenInfo.TryGetFloat("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
 			chunkGenInfo.TryGetUInt("base table width", m_BasePerlinTableWidth);
+
+			chunkGenInfo.TryGetInt("isolate noise layer", m_IsolateNoiseLayer);
 
 			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
 			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
@@ -8486,6 +8524,8 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
+
+		chunkGenInfo.fields.emplace_back("isolate noise layer", JSONValue(m_IsolateNoiseLayer));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
@@ -9216,6 +9256,335 @@ namespace flex
 
 	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
 
+	real Hash1(/* byvalue */ glm::vec2 p)
+	{
+		p = 50.0f * glm::fract(p * 0.3183099f);
+		return glm::fract(p.x * p.y * (p.x + p.y));
+	}
+
+	real Hash1(real n)
+	{
+		return glm::fract(n * 17.0f * glm::fract(n * 0.3183099f));
+	}
+
+	glm::vec2 Hash2(real n)
+	{
+		return glm::fract(glm::sin(glm::vec2(n, n + 1.0f)) * glm::vec2(43758.5453123f, 22578.1459123f));
+	}
+
+	glm::vec2 Hash2(/* byvalue */ glm::vec2 p)
+	{
+		const glm::vec2 k = glm::vec2(0.3183099f, 0.3678794f);
+		p = p * k + glm::vec2(k.y, k.x);
+		return glm::fract(16.0f * k * glm::fract(p.x * p.y * (p.x + p.y)));
+	}
+
+	// https://www.reedbeta.com/blog/hash-functions-for-gpu-rendering/
+	u32 HashPCG(u32 n)
+	{
+		u32 state = n * 747796405u + 2891336453u;
+		u32 word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+		return (word >> 22u) ^ word;
+	}
+
+	// Noise functions
+
+	// Value noise, and its analytical derivatives
+	glm::vec4 noised(const glm::vec3& x)
+	{
+		glm::vec3 p = glm::floor(x);
+		glm::vec3 w = glm::fract(x);
+		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+		glm::vec3 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
+
+		real n = p.x + 317.0f * p.y + 157.0f * p.z;
+
+		real a = Hash1(n + 0.0f);
+		real b = Hash1(n + 1.0f);
+		real c = Hash1(n + 317.0f);
+		real d = Hash1(n + 318.0f);
+		real e = Hash1(n + 157.0f);
+		real f = Hash1(n + 158.0f);
+		real g = Hash1(n + 474.0f);
+		real h = Hash1(n + 475.0f);
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k3 = e - a;
+		real k4 = a - b - c + d;
+		real k5 = a - c - e + g;
+		real k6 = a - b - e + f;
+		real k7 = -a + b + c - d + e - f - g + h;
+
+		return glm::vec4(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z),
+			2.0f * du * glm::vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z,
+				k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x,
+				k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
+	}
+
+	real noise(const glm::vec3& x)
+	{
+		glm::vec3 p = floor(x);
+		glm::vec3 w = glm::fract(x);
+
+		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+
+		real n = p.x + 317.0f * p.y + 157.0f * p.z;
+
+		real a = Hash1(n + 0.0f);
+		real b = Hash1(n + 1.0f);
+		real c = Hash1(n + 317.0f);
+		real d = Hash1(n + 318.0f);
+		real e = Hash1(n + 157.0f);
+		real f = Hash1(n + 158.0f);
+		real g = Hash1(n + 474.0f);
+		real h = Hash1(n + 475.0f);
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k3 = e - a;
+		real k4 = a - b - c + d;
+		real k5 = a - c - e + g;
+		real k6 = a - b - e + f;
+		real k7 = -a + b + c - d + e - f - g + h;
+
+		return -1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z);
+	}
+
+	glm::vec3 noised(const glm::vec2& x)
+	{
+		glm::vec2 p = floor(x);
+		glm::vec2 w = glm::fract(x);
+		glm::vec2 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+		glm::vec2 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
+
+		real a = Hash1(p + glm::vec2(0, 0));
+		real b = Hash1(p + glm::vec2(1, 0));
+		real c = Hash1(p + glm::vec2(0, 1));
+		real d = Hash1(p + glm::vec2(1, 1));
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k4 = a - b - c + d;
+
+		return glm::vec3(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k4 * u.x * u.y),
+			2.0f * du * glm::vec2(k1 + k4 * u.y,
+				k2 + k4 * u.x));
+	}
+
+	real noise(const glm::vec2& x)
+	{
+		glm::vec2 p = floor(x);
+		glm::vec2 w = glm::fract(x);
+		glm::vec2 u = w * w * (3.0f - 2.0f * w);
+
+		real a = Hash1(p + glm::vec2(0, 0));
+		real b = Hash1(p + glm::vec2(1, 0));
+		real c = Hash1(p + glm::vec2(0, 1));
+		real d = Hash1(p + glm::vec2(1, 1));
+
+		return -1.0f + 2.0f * (a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y);
+	}
+
+	// FBM
+
+	// Rotation matrices
+	const glm::mat3 m3 = glm::mat3(0.00f, 0.80f, 0.60f, -0.80f, 0.36f, -0.48f, -0.60f, -0.48f, 0.64f);
+	const glm::mat3 m3i = glm::mat3(0.00, -0.80, -0.60, 0.80f, 0.36f, -0.48f, 0.60f, -0.48f, 0.64f);
+	const glm::mat2 m2 = glm::mat2(0.80f, 0.60f, -0.60f, 0.80f);
+	const glm::mat2 m2i = glm::mat2(0.80f, -0.60f, 0.60f, 0.80f);
+
+	real fbm_4(/* byvalue */ glm::vec2 x)
+	{
+		real f = 1.9f;
+		real s = 0.55f;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (u32 i = 0; i < 4; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m2 * x;
+		}
+		return a;
+	}
+
+	real fbm_4(/* byvalue */ glm::vec3 x)
+	{
+		real f = 2.0f;
+		real s = 0.5f;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (i32 i = 0; i < 4; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m3 * x;
+		}
+		return a;
+	}
+
+	glm::vec4 fbmd_7(/* byvalue */ glm::vec3 x)
+	{
+		real f = 1.92f;
+		real s = 0.5f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec3 d = VEC3_ZERO;
+		glm::mat3 m = MAT3_IDENTITY;
+		for (i32 i = 0; i < 7; ++i)
+		{
+			glm::vec4 n = noised(x);
+			a += b * n.x; // accumulate values
+			d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
+			b *= s;
+			x = f * m3 * x;
+			m = f * m3i * m;
+		}
+		return glm::vec4(a, d);
+	}
+
+	glm::vec4 fbmd_8(/* byvalue */ glm::vec3 x)
+	{
+		real f = 2.0f;
+		real s = 0.65f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec3 d = VEC3_ZERO;
+		glm::mat3 m = MAT3_IDENTITY;
+		for (i32 i = 0; i < 8; ++i)
+		{
+			glm::vec4 n = noised(x);
+			a += b * n.x; // accumulate values
+			if (i < 4)
+			{
+				d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
+			}
+			b *= s;
+			x = f * m3 * x;
+			m = f * m3i * m;
+		}
+		return glm::vec4(a, d);
+	}
+
+	real fbm_9(/* byvalue */ glm::vec2 x, real dampen)
+	{
+		real f = 1.9f;
+		real s = dampen;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (i32 i = 0; i < 9; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m2 * x;
+		}
+		return a;
+	}
+
+	glm::vec3 fbmd_9(/* byvalue */ glm::vec2 x)
+	{
+		real f = 1.9f;
+		real s = 0.55f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec2 d = VEC2_ZERO;
+		glm::mat2 m = MAT2_IDENTITY;
+		for (i32 i = 0; i < 9; ++i)
+		{
+			glm::vec3 n = noised(x);
+
+			a += b * n.x; // accumulate values
+			d += b * m * glm::vec2(n.y, n.z); // accumulate derivatives
+			b *= s;
+			x = f * m2 * x;
+			m = f * m2i * m;
+		}
+		return glm::vec3(a, d);
+	}
+
+	real SmoothVoronoi(const glm::vec2& pos, real sharpness)
+	{
+		glm::vec2i p = glm::floor(pos);
+		glm::vec2  f = glm::fract(pos);
+
+		real res = 0.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2i b = glm::vec2i(i, j);
+				glm::vec2 r = glm::vec2(b) - f + Hash2(p + b);
+				real d = glm::length(r);
+
+				res += glm::exp(-sharpness * d);
+			}
+		}
+		return -1.0f / sharpness * glm::log(res);
+	}
+
+	real VoronoiDistance(const glm::vec2& pos)
+	{
+		glm::vec2 posCell = glm::floor(pos);
+		glm::vec2 posCellF = glm::fract(pos);
+
+		// Regular Voronoi: find cell of nearest point
+		glm::vec2 nearestCell;
+		glm::vec2 nearestCellPos;
+
+		real closestEdge = 8.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2 cellIndex = glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
+				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+				real distSq = glm::dot(delta, delta);
+
+				if (distSq < closestEdge)
+				{
+					closestEdge = distSq;
+					nearestCellPos = delta;
+					nearestCell = cellIndex;
+				}
+			}
+		}
+
+		// Find distance to nearest edge in any neighboring cell
+		closestEdge = 8.0f;
+		for (i32 j = -2; j <= 2; j++)
+		{
+			for (i32 i = -2; i <= 2; i++)
+			{
+				glm::vec2 cellIndex = nearestCell + glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
+				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+
+				glm::vec2 diff = delta - nearestCellPos;
+				real diffLenSq = glm::dot(diff, diff);
+				if (diffLenSq > 0.00001f)
+				{
+					closestEdge = glm::min(closestEdge, glm::dot(0.5f * (nearestCellPos + delta), diff / diffLenSq));
+				}
+			}
+		}
+
+		return closestEdge; // Square distance to the closest edge in the voronoi diagram
+	}
+
+	real VoronoiColumns(const glm::vec2& pos, real sharpness)
+	{
+		real dist = VoronoiDistance(pos);
+		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
+	}
+
 	// Returns value in range [-1, 1]
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos)
 	{
@@ -9235,7 +9604,7 @@ namespace flex
 			{
 				if (isolateOctave == -1 || i == (u32)isolateOctave)
 				{
-					result += SamplePerlinNoise(chunkData, pos, octave, octaveIdx) * octave * heightScale;
+					result += SamplePerlinNoise(*(*chunkData).randomTables, pos, octave) * octave * heightScale;
 				}
 				octave = octave / 2.0f;
 				--octaveIdx;
@@ -9247,9 +9616,27 @@ namespace flex
 		} break;
 		case NoiseFunction::Type::FBM:
 		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real n = noise(p); // octave 0 noise
+			real dampen = 0.45f + (n * 0.5f + 0.5f) * 0.2f;
+			real result = fbm_9(p, dampen);
+
+			// Separate high areas from low with a cliff edge
+			result += 0.25f * glm::smoothstep(-0.056f, -0.01f, result);
+			result *= noiseFunction.heightScale;
+			return result;
 		} break;
 		case NoiseFunction::Type::VORONOI:
 		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real result = noiseFunction.heightScale * VoronoiColumns(p, noiseFunction.sharpness);
+			return result;
+		} break;
+		case NoiseFunction::Type::SMOOTH_VORONOI:
+		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real result = noiseFunction.heightScale * SmoothVoronoi(p, noiseFunction.sharpness);
+			return result;
 		} break;
 		}
 
@@ -9280,7 +9667,7 @@ namespace flex
 	}
 
 	// Returns a value in [-1, 1]
-	real SamplePerlinNoise(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx)
+	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave)
 	{
 		const glm::vec2 scaledPos = pos / octave;
 		glm::vec2 posi = glm::vec2((real)(i32)scaledPos.x, (real)(i32)scaledPos.y);
@@ -9294,7 +9681,6 @@ namespace flex
 		}
 		glm::vec2 posf = scaledPos - posi;
 
-		const std::vector<glm::vec2>& randomTables = (*chunkData->randomTables)[octaveIdx];
 		const u32 tableEntryCount = (u32)randomTables.size();
 		const u32 tableWidth = (u32)std::sqrt(tableEntryCount);
 
@@ -11688,8 +12074,6 @@ namespace flex
 
 	void Road::GenerateMesh()
 	{
-		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
-
 		if (roadSegments.empty())
 		{
 			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
@@ -11701,13 +12085,13 @@ namespace flex
 
 			std::vector<glm::vec3> newPoints =
 			{
-				start,
+				glm::vec3(4.0f, 0.0f, 0.0f),
 				glm::vec3(9.0f, 0.0f, 64.0f),
-				glm::vec3(60.0f, 0.0, 84.0f),
-				glm::vec3(96.0f, 0.0, 72.0f),
-				glm::vec3(104.0f, 0.0, 32.0f),
-				glm::vec3(64.0f, 0.0, -24.0f),
-				start
+				glm::vec3(60.0f, 0.0f, 84.0f),
+				glm::vec3(96.0f, 0.0f, 72.0f),
+				glm::vec3(104.0f, 0.0f, 32.0f),
+				glm::vec3(64.0f, 0.0f, -24.0f),
+				glm::vec3(4.0f, 0.0f, 0.0f)
 			};
 
 			if (terrainGenerator != nullptr)
@@ -11716,7 +12100,7 @@ namespace flex
 
 				TerrainGenerator::TerrainChunkData chunkData = {};
 				terrainGenerator->FillInTerrainChunkData(chunkData);
-				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
+				for (u32 i = 0; i < (u32)newPoints.size(); ++i)
 				{
 					newPoints[i].y = terrainGenerator->Sample(chunkData, glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
 				}

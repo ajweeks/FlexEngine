@@ -279,7 +279,7 @@ void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
 	if (ENABLE_FOG == 1)
 	{
 		float dist = clamp(linearDepth * 0.075 - 0.01, 0.0, 1.0);
-		dist = smoothstep(0.0, 0.5, dist);
+		dist = smoothstep(0.0, 0.8, dist);
 
 		fragmentColour = mix(fragmentColour, colourFog, dist);
 	}
