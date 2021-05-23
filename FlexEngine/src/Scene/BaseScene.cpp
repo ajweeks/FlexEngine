@@ -1224,7 +1224,9 @@ namespace flex
 				ImGui::SetKeyboardFocusHere();
 			}
 
-			if (ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str()))
+			bool bShowCombo = ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str());
+
+			if (bShowCombo)
 			{
 				for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
 				{
@@ -1260,12 +1262,20 @@ namespace flex
 					bCreateType = true;
 				}
 
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
 				if (ImGui::Button("Cancel"))
 				{
 					ImGui::CloseCurrentPopup();
 				}
 
-				ImGui::SameLine();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+				ImGui::PopStyleColor();
+
+				ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
 
 				if (ImGui::Button("Create") || bCreateType)
 				{
@@ -1286,12 +1296,21 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
 			if (ImGui::Button("Cancel"))
 			{
 				ImGui::CloseCurrentPopup();
 			}
 
-			ImGui::SameLine();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
 
 			bCreate |= ImGui::Button("Create");
 
@@ -2358,7 +2377,7 @@ namespace flex
 
 	void BaseScene::ReadGameObjectTypesFile()
 	{
-		GameObjectTypeStringIDPairs = {};
+		GameObjectTypeStringIDPairs.clear();
 		std::string fileContents;
 		// TODO: Gather this info from reflection?
 		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))

@@ -544,6 +544,23 @@ namespace flex
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
+			ImGui::Spacing();
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
 			bCreate |= ImGui::Button("Create");
 
 			if (bCreate)
@@ -554,13 +571,6 @@ namespace flex
 				CreateNewScene(newSceneName, true);
 				g_CameraManager->SetCameraByName("debug", false);
 
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Cancel"))
-			{
 				ImGui::CloseCurrentPopup();
 			}
 
