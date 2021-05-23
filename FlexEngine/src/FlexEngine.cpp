@@ -84,28 +84,6 @@ namespace flex
 	std::string FlexEngine::s_ExecutablePath;
 	std::vector<AudioSourceID> FlexEngine::s_AudioSourceIDs;
 
-	// Globals declared in stdafx.hpp
-	class Window* g_Window = nullptr;
-	class CameraManager* g_CameraManager = nullptr;
-	class InputManager* g_InputManager = nullptr;
-	class Renderer* g_Renderer = nullptr;
-	System* g_Systems[(i32)SystemType::_NONE];
-	class FlexEngine* g_EngineInstance = nullptr;
-	class Editor* g_Editor = nullptr;
-	class SceneManager* g_SceneManager = nullptr;
-	struct Monitor* g_Monitor = nullptr;
-	class PhysicsManager* g_PhysicsManager = nullptr;
-	class ResourceManager* g_ResourceManager = nullptr;
-	class UIManager* g_UIManager = nullptr;
-
-	sec g_SecElapsedSinceProgramStart = 0;
-	sec g_DeltaTime = 0;
-	sec g_UnpausedDeltaTime = 0;
-
-	size_t g_TotalTrackedAllocatedMemory = 0;
-	size_t g_TrackedAllocationCount = 0;
-	size_t g_TrackedDeallocationCount = 0;
-
 	FlexEngine::FlexEngine() :
 		m_MouseButtonCallback(this, &FlexEngine::OnMouseButtonEvent),
 		m_KeyEventCallback(this, &FlexEngine::OnKeyEvent),

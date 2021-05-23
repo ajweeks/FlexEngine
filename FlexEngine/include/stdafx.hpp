@@ -235,6 +235,7 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 
 namespace flex
 {
+	// Constants
 	extern glm::vec3 VEC3_RIGHT;
 	extern glm::vec3 VEC3_UP;
 	extern glm::vec3 VEC3_FORWARD;
@@ -265,10 +266,9 @@ namespace flex
 
 	extern u32 MAX_TEXTURE_DIM;
 
-	// These fields are defined and initialized in FlexEngine.cpp
+	// Globals
 	extern class Window* g_Window;
 	extern class CameraManager* g_CameraManager;
-
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
 	extern class System* g_Systems[(i32)SystemType::_NONE];
@@ -279,6 +279,7 @@ namespace flex
 	extern class PhysicsManager* g_PhysicsManager;
 	extern class ResourceManager* g_ResourceManager;
 	extern class UIManager* g_UIManager;
+	extern bool g_bDebugBuild;
 
 	template<typename T>
 	T* GetSystem(SystemType systemType)
