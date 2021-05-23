@@ -1625,8 +1625,8 @@ namespace flex
 
 		btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
-		btDefaultVehicleRaycaster* m_VehicleRaycaster;
-		btRaycastVehicle* m_Vehicle;
+		btDefaultVehicleRaycaster* m_VehicleRaycaster = nullptr;
+		btRaycastVehicle* m_Vehicle = nullptr;
 
 		btRaycastVehicle::btVehicleTuning m_tuning;
 

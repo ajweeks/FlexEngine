@@ -1957,7 +1957,7 @@ namespace flex
 			{
 				if (bAddToScene)
 				{
-					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+					g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 				}
 			}
 		}
@@ -2195,6 +2195,8 @@ namespace flex
 		m_Children.push_back(child);
 
 		child->SetParent(this);
+
+		g_SceneManager->CurrentScene()->RegisterGameObject(child);
 
 		if (childPParent)
 		{
@@ -11102,18 +11104,24 @@ namespace flex
 			PrintError("Expected vehicle brake light objects to be spot lights\n");
 		}
 
-		m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
-		m_CarPaintMatID = GetMesh()->GetSubMesh(1)->GetMaterialID();
-		m_BrakeLightMatID = GetMesh()->GetSubMesh(2)->GetMaterialID();
-		m_ReverseLightMatID = GetMesh()->GetSubMesh(3)->GetMaterialID();
-		m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
-		m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+		if (m_Mesh != nullptr)
+		{
+			m_GlassMatID = m_Mesh->GetSubMesh(0)->GetMaterialID();
+			m_CarPaintMatID = m_Mesh->GetSubMesh(1)->GetMaterialID();
+			m_BrakeLightMatID = m_Mesh->GetSubMesh(2)->GetMaterialID();
+			m_ReverseLightMatID = m_Mesh->GetSubMesh(3)->GetMaterialID();
+			if (tireFL != nullptr)
+			{
+				m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
+				m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+			}
 
-		m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
-		m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
+			m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
+			m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
 
-		m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
-		m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+			m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
+			m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+		}
 
 		CreateRigidBody();
 	}
@@ -11196,6 +11204,11 @@ namespace flex
 	void Vehicle::Update()
 	{
 		GameObject::Update();
+
+		if (m_RigidBody == nullptr)
+		{
+			return;
+		}
 
 		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
 		const btVector3 linearVel = rb->getLinearVelocity();
@@ -11566,6 +11579,7 @@ namespace flex
 		}
 
 		// Tires
+		if (m_Vehicle != nullptr)
 		{
 			real tireWidth = 20.0f;
 			real tireHeight = 45.0f;

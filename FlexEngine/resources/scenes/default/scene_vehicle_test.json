@@ -275,6 +275,19 @@
 				"mask" : 1,
 				"group" : 1
 			}
+		},
+		{
+			"name" : "vehicle-1",
+			"id" : "15AAFA46948097954A47A3C5F3F65E34",
+			"type" : "prefab",
+			"prefab type" : "vehicle",
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
+			"transform" : 
+			{
+				"pos" : "0.063, 0.916, 0.005",
+				"rot" : "-0.007, 0.017, -0.004",
+				"scale" : "1.000, 1.000, 1.000"
+			}
 		}
 	]
 }
