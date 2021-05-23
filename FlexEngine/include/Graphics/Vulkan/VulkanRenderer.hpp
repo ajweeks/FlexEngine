@@ -443,17 +443,23 @@ namespace flex
 			{
 			};
 
-			const std::vector<const char*> m_OptionalInstanceExtensions =
+			struct VkExtensionPair
 			{
-				VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-				VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+				bool bDebugOnly;
+				const char* extensionName;
 			};
 
-			const std::vector<const char*> m_OptionalDeviceExtensions =
+			const std::vector<VkExtensionPair> m_OptionalInstanceExtensions =
 			{
-				VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-				VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME,
-				VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
+				{ true, VK_EXT_DEBUG_UTILS_EXTENSION_NAME },
+				{ false, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME },
+			};
+
+			const std::vector<VkExtensionPair> m_OptionalDeviceExtensions =
+			{
+				{ true, VK_EXT_DEBUG_MARKER_EXTENSION_NAME },
+				{ true, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME },
+				{ true, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME },
 			};
 
 			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;

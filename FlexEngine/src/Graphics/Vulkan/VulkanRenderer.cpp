@@ -115,7 +115,17 @@ namespace flex
 			deviceCreateInfo.physicalDevice = physicalDevice;
 			deviceCreateInfo.surface = m_Surface;
 			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
-			deviceCreateInfo.optionalExtensions = &m_OptionalDeviceExtensions;
+
+			std::vector<const char*> optionalDeviceExtensions;
+			for (const VkExtensionPair& extensionPair : m_OptionalDeviceExtensions)
+			{
+				if (g_bDebugBuild || !extensionPair.bDebugOnly)
+				{
+					optionalDeviceExtensions.push_back(extensionPair.extensionName);
+				}
+			}
+
+			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
 			// TODO: If device creation fails, try again without validation layers enabled
 			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
 			deviceCreateInfo.validationLayers = &m_ValidationLayers;
@@ -5024,13 +5034,16 @@ namespace flex
 				m_SupportedInstanceExtensions.resize(instanceExtensionCount);
 				vkEnumerateInstanceExtensionProperties(nullptr, &instanceExtensionCount, m_SupportedInstanceExtensions.data());
 
-				for (const char* optionalExtName : m_OptionalInstanceExtensions)
+				for (const VkExtensionPair& extensionPair : m_OptionalInstanceExtensions)
 				{
-					for (VkExtensionProperties& properties : m_SupportedInstanceExtensions)
+					if (g_bDebugBuild || !extensionPair.bDebugOnly)
 					{
-						if (strcmp(properties.extensionName, optionalExtName) == 0)
+						for (VkExtensionProperties& properties : m_SupportedInstanceExtensions)
 						{
-							extensions.push_back(optionalExtName);
+							if (strcmp(properties.extensionName, extensionPair.extensionName) == 0)
+							{
+								extensions.push_back(extensionPair.extensionName);
+							}
 						}
 					}
 				}
