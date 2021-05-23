@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-30.543, 13.123, -39.132",
-			"pitch" : -0.197461,
-			"yaw" : -24.318634
+			"position" : "69.918, 0.639, 35.751",
+			"pitch" : -1.383314,
+			"yaw" : -20.345552
 		}
 	},
 	"objects" : 
@@ -128,7 +128,7 @@
 				"pos" : "66.446, 52.293, 25.470",
 				"scale" : "16.010, 16.010, 16.010"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
@@ -145,7 +145,7 @@
 				"pos" : "35.889, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
@@ -174,9 +174,9 @@
 			{
 				"pos" : "-2.418, 0.000, -1.391",
 				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
+				"scale" : "14.004, 1.000, 15.247"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -206,7 +206,7 @@
 				"pos" : "107.559, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
@@ -224,7 +224,7 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "6.893, 1.000, 9.292"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -255,7 +255,7 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "6.893, 1.000, 9.292"
 			},
-			"visible" : false,
+			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
@@ -284,9 +284,27 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.063, 0.916, 0.005",
-				"rot" : "-0.007, 0.017, -0.004",
+				"pos" : "0.271, 0.916, 0.110",
+				"rot" : "-0.007, 0.043, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "PointLight_00",
+			"id" : "EE49CFAB7BE6A5B147A46D5E76307EA5",
+			"type" : "point light",
+			"transform" : 
+			{
+				"pos" : "70.629, -4.353, 33.354"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"point light info" : 
+			{
+				"pos" : "70.629, -4.353, 33.354",
+				"colour" : "0.97, 1.00, 0.42",
+				"enabled" : true,
+				"brightness" : 113.300003
 			}
 		}
 	]

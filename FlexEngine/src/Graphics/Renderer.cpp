@@ -1949,6 +1949,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);

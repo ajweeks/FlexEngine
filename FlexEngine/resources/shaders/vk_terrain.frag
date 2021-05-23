@@ -7,6 +7,9 @@ layout (binding = 0) uniform UBOConstant
 	mat4 view;
 	mat4 viewProjection;
 	DirectionalLight dirLight;
+	PointLight pointLights[NUM_POINT_LIGHTS];
+	SpotLight spotLights[NUM_SPOT_LIGHTS];
+	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
 	float zNear;
@@ -187,9 +190,9 @@ float fbm_4(vec2 x)
     for (int i = 0; i < 4; ++i)
     {
         float n = noise(x);
-        a += b*n;
+        a += b * n;
         b *= s;
-        x = f*m2*x;
+        x = f * m2 * x;
     }
 	return a;
 }
@@ -203,9 +206,9 @@ float fbm_4(vec3 x)
     for (int i = 0; i < 4; ++i)
     {
         float n = noise(x);
-        a += b*n;
+        a += b * n;
         b *= s;
-        x = f*m3*x;
+        x = f * m3 * x;
     }
 	return a;
 }
@@ -294,7 +297,7 @@ vec3 fbmd_9(vec2 x)
 	return vec3(a, d);
 }
 
-float VoronoiDistance(vec2 pos)
+vec3 VoronoiDistance(vec2 pos)
 {
 	vec2 posCell = floor(pos);
 	vec2 posCellF = fract(pos);
@@ -341,13 +344,14 @@ float VoronoiDistance(vec2 pos)
 		}
 	}
 
-	return closestEdge; // Square distance to the closest edge in the voronoi diagram
+	vec2 dirToEdge = normalize(nearestCellPos);
+	return vec3(closestEdge, dirToEdge); // Square distance to the closest edge in the voronoi diagram
 }
 
-float VoronoiColumns(vec2 pos, float sharpness)
+vec3 VoronoiColumns(vec2 pos, float sharpness)
 {
-	float dist = VoronoiDistance(pos);
-	return smoothstep(0.0, 1.0 - clamp(sharpness, 0.0, 1.0), dist);
+	vec3 dist = VoronoiDistance(pos);
+	return vec3(smoothstep(0.0, 1.0 - clamp(sharpness, 0.0, 1.0), dist.x), dist.yz);
 }
 
 void main()
@@ -392,13 +396,20 @@ void main()
 		if (ex_Colour.x < 0.51)
 		{
 			// Dried cracks pattern
-			float cracks = VoronoiColumns(ex_PositionWS.xz * 2.0, 0.92);
-			//fragmentColour = bump.xyzx; return;
-			bumpInfluence = 0.9 * abs(N.y)*abs(N.y);
-			bumpInfluence *= fbm_4(ex_PositionWS * 0.005) * 0.8 + 0.2;
-			// Blend in cracks bump map where surfaces *are* pointing up
-			N = normalize(N + bumpInfluence * vec3(0, cracks, 0));
+			bumpInfluence = 1.3 * abs(N.y)*abs(N.y);
+			bumpInfluence *= clamp((-fbm_4(ex_PositionWS * 0.009)), 0.0, 1.0) * 0.8 + 0.2;
+			vec2 nearestPoint;
+			// Dried cracks pattern
+			vec3 dist = 1.0-VoronoiColumns(ex_PositionWS.xz * 0.9, 0.965);
+			vec2 dirToEdge = dist.yz;
+			float theta = atan(dirToEdge.y, dirToEdge.x);
+			vec3 perterbedN = normalize(smoothstep(vec3(0, 1, 0), vec3(sin(theta), 0.0, cos(theta)), vec3(clamp(dist.x * 0.5, 0.0, 1.0))));
+			N = normalize(N + bumpInfluence * perterbedN);
 		}
+	}
+	else
+	{
+		// TODO: Darken/increase roughness of surface here to account for missing cracks
 	}
 
 	vec3 groundCol;
@@ -423,11 +434,65 @@ void main()
 		groundCol = mix(lowCol, highCol, clamp(alpha, 0.0, 1.0));
 	}
 
-	if (lodLevel <= 2)
+	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
-		// Dried cracks pattern
-		float cracks2 = VoronoiColumns(ex_PositionWS.xz * 0.9, 0.95);
-		groundCol = mix(groundCol, groundCol * (0.5 + 0.5 * cracks2), smoothstep(0.51, 0.512, ex_Colour.r));
+		if (uboConstant.pointLights[i].enabled == 0)
+		{
+			continue;
+		}
+
+		float distance = length(uboConstant.pointLights[i].position - ex_PositionWS);
+
+		if (distance > 125)
+		{
+			// TODO: Define radius on point lights individually
+			continue;
+		}
+
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		float attenuation = 1.0 / max((distance * distance), 0.001);
+		vec3 L = normalize(uboConstant.pointLights[i].position - ex_PositionWS);
+		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
+		float NoL = max(dot(N, L), 0.0);
+
+		groundCol += groundCol * radiance * NoL;
+	}
+
+	for (int i = 0; i < NUM_SPOT_LIGHTS; ++i)
+	{
+		if (uboConstant.spotLights[i].enabled == 0)
+		{
+			continue;
+		}
+
+		float distance = length(uboConstant.spotLights[i].position - ex_PositionWS);
+
+		if (distance > 125)
+		{
+			// TODO: Define radius on spot lights individually
+			continue;
+		}
+
+		// Pretend point lights have a radius of 1cm to avoid division by 0
+		vec3 pointToLight = normalize(uboConstant.spotLights[i].position - ex_PositionWS);
+		vec3 L = normalize(uboConstant.spotLights[i].direction);
+		float attenuation = 1.0 / max((distance * distance), 0.001);
+		//attenuation *= max(dot(L, pointToLight), 0.0);
+		vec3 radiance = uboConstant.spotLights[i].colour.rgb * attenuation * uboConstant.spotLights[i].brightness;
+		float NoL = max(dot(N, pointToLight), 0.0);
+		float LoPointToLight = max(dot(L, pointToLight), 0.0);
+		float inCone = LoPointToLight - uboConstant.spotLights[i].angle;
+		float blendThreshold = 0.1;
+		if (inCone < 0.0)
+		{
+			radiance = vec3(0.0);
+		}
+		else if (inCone < blendThreshold)
+		{
+			radiance *= clamp(inCone / blendThreshold, 0.001, 1.0);
+		}
+
+		groundCol += groundCol * radiance * NoL;
 	}
 
 	float dirLightShadowOpacity = 1.0;
@@ -440,6 +505,13 @@ void main()
 		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowMaps, NoL);
 		light *= (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= NoL * radiance;
+	}
+
+	if (lodLevel <= 2)
+	{
+		// Dried cracks pattern
+		float cracks2 = VoronoiColumns(ex_PositionWS.xz * 0.5, 0.95).x;
+		groundCol = mix(groundCol, groundCol * (0.5 + 0.5 * cracks2), smoothstep(0.51, 0.512, ex_Colour.r));
 	}
 
 	groundCol *= light;
