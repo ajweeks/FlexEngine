@@ -7,6 +7,8 @@ IGNORE_WARNINGS_POP
 
 #include "Histogram.hpp"
 
+#include <list>
+
 namespace flex
 {
 	class StringBuilder;
