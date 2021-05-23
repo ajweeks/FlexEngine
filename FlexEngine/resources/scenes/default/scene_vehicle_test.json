@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "69.918, 0.639, 35.751",
-			"pitch" : -1.383314,
-			"yaw" : -20.345552
+			"position" : "-181.369, 102.083, 48.126",
+			"pitch" : -0.340729,
+			"yaw" : -19.027855
 		}
 	},
 	"objects" : 
@@ -80,7 +80,7 @@
 				"use manual seed" : true,
 				"manual seed" : 6,
 				"isolate noise layer" : 0,
-				"loaded chunk radius" : 1000.000000,
+				"loaded chunk radius" : 700.000000,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 512,
 				"low colour" : "0.33, 0.41, 0.33",
@@ -88,35 +88,49 @@
 				"high colour" : "0.65, 0.70, 0.43",
 				"pin center" : true,
 				"pinned center" : "76.64, 157.87, 42.79",
-				"noise functions" : 
+				"biomes" : 
 				[
 					{
-						"type" : "FBM",
-						"feature size" : 150.000000,
-						"num octaves" : 8,
-						"h" : 0.867000,
-						"height scale" : 0.250000,
-						"lacunarity" : 0.571000,
-						"wavelength" : 90.542000
+						"name" : "Canyon",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 150.000000,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.100000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 100.000000
+							}
+						]
 					},
 					{
-						"type" : "Smooth Voronoi",
-						"feature size" : 150.000000,
-						"num octaves" : 6,
-						"height scale" : 0.400000,
-						"lacunarity" : 1.000000,
-						"wavelength" : 67.236000,
-						"sharpness" : 0.000000
-					},
-					{
-						"type" : "Perlin",
-						"feature size" : 3000.000000,
-						"num octaves" : 6,
-						"height scale" : 0.100000,
-						"lacunarity" : 0.000000,
-						"wavelength" : 0.000000
+						"name" : "Grassland",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 311.033997,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.200000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 261.822998
+							}
+						]
 					}
-				]
+				],
+				"biome noise" : 
+				{
+					"type" : "Voronoi",
+					"feature size" : 0.000000,
+					"num octaves" : 1,
+					"height scale" : 0.100000,
+					"lacunarity" : 1.000000,
+					"wavelength" : 600.000000,
+					"sharpness" : 1.000000
+				}
 			}
 		},
 		{
@@ -284,8 +298,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.271, 0.916, 0.110",
-				"rot" : "-0.007, 0.043, -0.004",
+				"pos" : "0.162, 0.916, 0.033",
+				"rot" : "-0.007, 0.051, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},

@@ -356,7 +356,9 @@ vec3 VoronoiColumns(vec2 pos, float sharpness)
 
 void main()
 {
-	vec3 albedo = ex_Colour.rgb * texture(albedoSampler, ex_TexCoord).rgb;
+	vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
+	float height = ex_Colour.x;
+	float matID = ex_Colour.y * 255.0 + 0.5; // Nudge up to account for float precision
 	vec3 N = normalize(ex_NormalWS);
 	float roughness = 1.0;
 	float metallic = 0.0;
@@ -393,7 +395,7 @@ void main()
 		// Blend in bump map where surfaces are not pointing up
 		N = normalize(N + bumpInfluence * bump);
 
-		if (ex_Colour.x < 0.51)
+		if (height < 0.51)
 		{
 			// Dried cracks pattern
 			bumpInfluence = 1.3 * abs(N.y)*abs(N.y);
@@ -416,21 +418,31 @@ void main()
 
 	float minHeight = 0.49;
 	float maxHeight = 0.52;
-	//vec3 lowCol = pow(vec3(0.065, 0.04, 0.02), vec3(2.2)); // Dirt
-	//vec3 highCol = pow(vec3(0.045, 0.06, 0.02), vec3(2.2)); // Grass
-	vec3 lowCol = pow(vec3(0.61, 0.19, 0.029), vec3(2.2)); // Orange
-	vec3 highCol = pow(vec3(0.82, 0.48, 0.20), vec3(2.2)); // Beige
-	if (ex_Colour.r > maxHeight)
+
+	vec3 lowCols[] = {
+		vec3(0.61, 0.19, 0.029), // Orange
+		vec3(0.065, 0.04, 0.02), // Dirt
+	};
+	vec3 highCols[] = {
+		vec3(0.82, 0.48, 0.20), // Beige
+		vec3(0.045, 0.06, 0.02), // Grass
+	};
+
+	int matIDInt = int(matID) % 2;
+
+	vec3 highCol = pow(highCols[matIDInt], vec3(2.2));
+	vec3 lowCol = pow(lowCols[matIDInt], vec3(2.2));
+	if (height > maxHeight)
 	{
 		groundCol = highCol;
 	}
-	else if (ex_Colour.r < minHeight)
+	else if (height < minHeight)
 	{
 		groundCol = lowCol;
 	}
 	else
 	{
-		float alpha = (ex_Colour.r - minHeight) / (maxHeight - minHeight);
+		float alpha = (height - minHeight) / (maxHeight - minHeight);
 		groundCol = mix(lowCol, highCol, clamp(alpha, 0.0, 1.0));
 	}
 
@@ -511,7 +523,7 @@ void main()
 	{
 		// Dried cracks pattern
 		float cracks2 = VoronoiColumns(ex_PositionWS.xz * 0.5, 0.95).x;
-		groundCol = mix(groundCol, groundCol * (0.5 + 0.5 * cracks2), smoothstep(0.51, 0.512, ex_Colour.r));
+		groundCol = mix(groundCol, groundCol * (0.5 + 0.5 * cracks2), smoothstep(0.51, 0.512, height));
 	}
 
 	groundCol *= light;

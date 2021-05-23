@@ -8223,7 +8223,7 @@ namespace flex
 			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -10.0f, 10.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 250.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 1000.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
 
 			if (ImGui::Button("Delete layer"))
@@ -8271,41 +8271,145 @@ namespace flex
 			}
 		}
 
+		ImGui::Separator();
 
 		{
-			i32 i = 0;
-			for (NoiseFunction& noiseFunction : m_NoiseFunctions)
+			ImGui::PushID(99);
+			ImGui::Text("Biome noise");
+
+			bool bRemoved = false;
+			bool bValueChanged = DrawNoiseFunctionImGui(m_BiomeNoise, bRemoved);
+			ImGui::PopID();
+
+			if (bValueChanged)
 			{
-				ImGui::PushID(i);
-				bool bRemoved = false;
-				bool bValueChanged = DrawNoiseFunctionImGui(noiseFunction, bRemoved);
-				ImGui::PopID();
-
-				if (bRemoved)
-				{
-					m_NoiseFunctions.erase(m_NoiseFunctions.begin() + i);
-					bValueChanged = true;
-					bRegen = true;
-					break;
-				}
-
-				if (bValueChanged)
-				{
-					bRegen = true;
-					break;
-				}
-
-				++i;
+				bRegen = true;
 			}
 		}
 
-		if (ImGui::Button("Add new noise layer"))
+		ImGui::Separator();
+
+		ImGui::Text("Biomes");
+		for (i32 biomeIndex = 0; biomeIndex < (i32)m_Biomes.size(); ++biomeIndex)
 		{
-			m_NoiseFunctions.push_back(NoiseFunction::GenerateDefault(NoiseFunction::Type::PERLIN));
-			bRegen = true;
+			Biome& biome = m_Biomes[biomeIndex];
+
+			ImGui::PushID(&biome);
+
+			if (ImGui::TreeNode(biome.name.c_str()))
+			{
+				if (ImGui::BeginPopupContextWindow())
+				{
+					static char buff[128];
+					if (ImGui::IsWindowAppearing())
+					{
+						memset(buff, 0, 128);
+					}
+
+					if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						biome.name = Trim(std::string(buff));
+					}
+
+					if (ImGui::Button("Remove biome"))
+					{
+						m_Biomes.erase(m_Biomes.begin() + biomeIndex);
+						bRegen = true;
+						ImGui::EndPopup();
+						ImGui::TreePop();
+						ImGui::PopID();
+						break;
+					}
+
+					ImGui::EndPopup();
+				}
+
+				for (i32 i = 0; i < (i32)biome.noiseFunctions.size(); ++i)
+				{
+					ImGui::PushID(i);
+					bool bRemoved = false;
+					bool bValueChanged = DrawNoiseFunctionImGui(biome.noiseFunctions[i], bRemoved);
+					ImGui::PopID();
+
+					if (bRemoved)
+					{
+						biome.noiseFunctions.erase(biome.noiseFunctions.begin() + i);
+						bRegen = true;
+						break;
+					}
+
+					if (bValueChanged)
+					{
+						bRegen = true;
+						break;
+					}
+				}
+
+				if (ImGui::Button("Add new noise layer"))
+				{
+					biome.noiseFunctions.push_back(NoiseFunction::GenerateDefault(NoiseFunction::Type::PERLIN));
+					bRegen = true;
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
 		}
 
-		bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, (i32)m_NoiseFunctions.size() - 1) || bRegen;
+		const char* newBiomePopupName = "New biome";
+		if (ImGui::Button("Add new biome"))
+		{
+			ImGui::OpenPopup(newBiomePopupName);
+		}
+
+		if (ImGui::BeginPopupModal(newBiomePopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			static char buff[128];
+			if (ImGui::IsWindowAppearing())
+			{
+				memset(buff, 0, 128);
+			}
+
+			bool bCreate = false;
+
+			if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				bCreate = true;
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
+			bCreate = ImGui::Button("Create") || bCreate;
+
+			if (bCreate)
+			{
+				std::string biomeName = Trim(std::string(buff));
+				Biome biome = {};
+				biome.name = biomeName;
+				m_Biomes.push_back(biome);
+				bRegen = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+		i32 maxNoiseLayer = 6; // TODO: find largest num layers in all biomes?
+		bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, maxNoiseLayer) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
 		bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
@@ -8504,15 +8608,38 @@ namespace flex
 			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
 			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
 
-			std::vector<JSONObject> noiseFunctionsArr;
-			if (chunkGenInfo.TryGetObjectArray("noise functions", noiseFunctionsArr))
+			std::vector<JSONObject> biomesArr;
+			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
 			{
-				m_NoiseFunctions.clear();
-				m_NoiseFunctions.reserve(noiseFunctionsArr.size());
-				for (const JSONObject& noiseFunctionObj : noiseFunctionsArr)
+				m_Biomes.reserve(biomesArr.size());
+				for (const JSONObject& biomeObj : biomesArr)
 				{
-					m_NoiseFunctions.emplace_back(ParseNoiseFunction(noiseFunctionObj));
+					std::vector<NoiseFunction> noiseFunctions;
+
+					std::vector<JSONObject> noiseFunctionsArr;
+					if (biomeObj.TryGetObjectArray("noise functions", noiseFunctionsArr))
+					{
+						noiseFunctions.reserve(noiseFunctionsArr.size());
+						for (const JSONObject& noiseFunctionObj : noiseFunctionsArr)
+						{
+							noiseFunctions.emplace_back(ParseNoiseFunction(noiseFunctionObj));
+						}
+					}
+					Biome biome;
+					biome.name = biomeObj.GetString("name");
+					biome.noiseFunctions = noiseFunctions;
+					m_Biomes.push_back(biome);
 				}
+			}
+
+			JSONObject biomeNoiseObj;
+			if (chunkGenInfo.TryGetObject("biome noise", biomeNoiseObj))
+			{
+				m_BiomeNoise = ParseNoiseFunction(biomeNoiseObj);
+			}
+			else
+			{
+				m_BiomeNoise = NoiseFunction::GenerateDefault(NoiseFunction::Type::VORONOI);
 			}
 		}
 	}
@@ -8541,13 +8668,25 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
 
-		std::vector<JSONObject> noiseFunctionsArr;
-		noiseFunctionsArr.reserve(m_NoiseFunctions.size());
-		for (const NoiseFunction& noiseFunction : m_NoiseFunctions)
+		std::vector<JSONObject> biomesArr;
+		for (const Biome& biome : m_Biomes)
 		{
-			noiseFunctionsArr.emplace_back(SerializeNoiseFunction(noiseFunction));
+			std::vector<JSONObject> noiseFunctionsArr;
+			noiseFunctionsArr.reserve(biome.noiseFunctions.size());
+			for (const NoiseFunction& noiseFunction : biome.noiseFunctions)
+			{
+				noiseFunctionsArr.emplace_back(SerializeNoiseFunction(noiseFunction));
+			}
+
+			JSONObject biomeObj = {};
+			biomeObj.fields.emplace_back("name", JSONValue(biome.name));
+			biomeObj.fields.emplace_back("noise functions", JSONValue(noiseFunctionsArr));
+
+			biomesArr.emplace_back(biomeObj);
 		}
-		chunkGenInfo.fields.emplace_back("noise functions", JSONValue(noiseFunctionsArr));
+		chunkGenInfo.fields.emplace_back("biomes", JSONValue(biomesArr));
+
+		chunkGenInfo.fields.emplace_back("biome noise", JSONValue(SerializeNoiseFunction(m_BiomeNoise)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
@@ -8563,12 +8702,13 @@ namespace flex
 
 		outChunkData.randomTables = &m_RandomTables;
 		outChunkData.roadSegments = &m_RoadSegments;
-		outChunkData.noiseFunctions = &m_NoiseFunctions;
+		outChunkData.biomeNoise = &m_BiomeNoise;
+		outChunkData.biomes = &m_Biomes;
 	}
 
 	real TerrainGenerator::Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos)
 	{
-		real sample = SampleTerrain(&chunkData, pos);
+		real sample = SampleTerrain(&chunkData, pos).y;
 		return (sample - 0.5f) * MaxHeight + m_Transform.GetWorldPosition().y;
 	}
 
@@ -9082,7 +9222,9 @@ namespace flex
 		std::vector<RoadSegment*>* overlappingRoadSegments,
 		const glm::vec2& sampleCenter, glm::vec4& outColour, bool bCilpPointsInsideRoad)
 	{
-		real height = SampleTerrain(chunkData, sampleCenter);
+		glm::vec4 terrainInfo = SampleTerrain(chunkData, sampleCenter);
+		real height = terrainInfo.x;
+		real matID = terrainInfo.y;
 
 		glm::vec3 vertPosWS(sampleCenter.x, (height - 0.5f) * chunkData->maxHeight, sampleCenter.y);
 
@@ -9124,7 +9266,7 @@ namespace flex
 		// that for some reason aren't picked up by other triangle
 		bool bInsideRoad = distToRoad <= 0.1f;
 
-		outColour = glm::vec4(height);
+		outColour = glm::vec4(height, matID, 0.0f, 0.0f);
 
 		// Distance calc must be slightly off, if this checks for 0.0
 		// we get some verts in the road on the edges
@@ -9267,6 +9409,13 @@ namespace flex
 	real Hash1(real n)
 	{
 		return glm::fract(n * 17.0f * glm::fract(n * 0.3183099f));
+	}
+
+	i32 BiomeIDToindex(const glm::vec2& biomeID, i32 biomeCount)
+	{
+		real result = Hash1(biomeID + glm::vec2(0.12f, 0.258f));
+
+		return (i32)(result * 31.4819f) % biomeCount;
 	}
 
 	glm::vec2 Hash2(real n)
@@ -9531,7 +9680,38 @@ namespace flex
 		return -1.0f / sharpness * glm::log(res);
 	}
 
-	real VoronoiDistance(const glm::vec2& pos)
+	glm::vec3 Voronoi(const glm::vec2& pos)
+	{
+		glm::vec2 posCell = glm::floor(pos);
+		glm::vec2 posCellF = glm::fract(pos);
+
+		// Regular Voronoi: find cell of nearest point
+		glm::vec2 nearestCell;
+		glm::vec2 nearestCellPos;
+
+		real closestEdge = 8.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2 cellIndex = glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
+				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+				real distSq = glm::dot(delta, delta);
+
+				if (distSq < closestEdge)
+				{
+					closestEdge = distSq;
+					nearestCellPos = delta;
+					nearestCell = cellIndex;
+				}
+			}
+		}
+
+		return glm::vec3(closestEdge, posCell + nearestCell);
+	}
+
+	glm::vec3 VoronoiDistance(const glm::vec2& pos)
 	{
 		glm::vec2 posCell = glm::floor(pos);
 		glm::vec2 posCellF = glm::fract(pos);
@@ -9573,22 +9753,27 @@ namespace flex
 				real diffLenSq = glm::dot(diff, diff);
 				if (diffLenSq > 0.00001f)
 				{
-					closestEdge = glm::min(closestEdge, glm::dot(0.5f * (nearestCellPos + delta), diff / diffLenSq));
+					real distSq = glm::dot(0.5f * (nearestCellPos + delta), diff / diffLenSq);
+					if (distSq < closestEdge)
+					{
+						closestEdge = distSq;
+						nearestCell = cellIndex;
+					}
 				}
 			}
 		}
 
-		return closestEdge; // Square distance to the closest edge in the voronoi diagram
+		return glm::vec3(closestEdge, nearestCell.x, nearestCell.y); // Square distance to the closest edge in the voronoi diagram
 	}
 
 	real VoronoiColumns(const glm::vec2& pos, real sharpness)
 	{
-		real dist = VoronoiDistance(pos);
+		real dist = VoronoiDistance(pos).x;
 		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
 	}
 
 	// Returns value in range [-1, 1]
-	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos)
+	real SampleNoiseFunction(std::vector<std::vector<glm::vec2>> const* randomTables, const NoiseFunction& noiseFunction, const glm::vec2& pos)
 	{
 		switch (noiseFunction.type)
 		{
@@ -9606,7 +9791,7 @@ namespace flex
 			{
 				if (isolateOctave == -1 || i == (u32)isolateOctave)
 				{
-					result += SamplePerlinNoise(*(*chunkData).randomTables, pos, octave) * octave * heightScale;
+					result += SamplePerlinNoise(*randomTables, pos, octave) * octave * heightScale;
 				}
 				octave = octave / 2.0f;
 				--octaveIdx;
@@ -9645,27 +9830,73 @@ namespace flex
 		return 0.0f;
 	}
 
-	// Returns a value in [0, 1]
-	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
+	real SampleBiomeTerrain(std::vector<std::vector<glm::vec2>> const* randomTables, const TerrainGenerator::Biome& biome, const glm::vec2& pos)
 	{
 		real result = 0.0f;
-		if (chunkData->noiseFunctions != nullptr)
-		{
-			i32 numLayers = (i32)(*chunkData->noiseFunctions).size();
-			for (i32 i = 0; i < numLayers; ++i)
-			{
-				if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
-				{
-					const NoiseFunction& noiseFunction = (*chunkData->noiseFunctions)[i];
-					result += SampleNoiseFunction(chunkData, noiseFunction, pos);
-				}
-			}
 
-			// Divide by 2 to transform range from [-1, 1] to [0, 1]
-			result = result / ((real)numLayers * 2.0f) + 0.5f;
+		i32 numLayers = (i32)biome.noiseFunctions.size();
+		for (i32 i = 0; i < numLayers; ++i)
+		{
+			//if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
+			{
+				result += SampleNoiseFunction(randomTables, biome.noiseFunctions[i], pos);
+			}
 		}
 
+		result /= (real)numLayers;
+
 		return result;
+	}
+
+	// X: height value in [0, 1], Y: mat ID, ZW: unused
+	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
+	{
+		real result = 0.0f;
+
+		i32 biome0Index = -1;
+		i32 biome1Index = -1;
+		real alpha = 0.0f;
+		if (chunkData->biomeNoise != nullptr)
+		{
+			glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
+			//real biomeInfo = SmoothVoronoi(p, chunkData->biomeNoise->sharpness);
+
+			glm::vec3 biomeInfo = Voronoi(p);
+			real sqDistToEdge = biomeInfo.x;
+			glm::vec2 biomeID(biomeInfo.y, biomeInfo.z);
+			biome0Index = BiomeIDToindex(biomeID, (i32)chunkData->biomes->size());
+			//alpha = glm::clamp(sqDistToEdge / 0.1f, 0.0f, 1.0f);
+
+			//real distToEdge = biomeInfo.x;
+			// Sharpen distance
+			//distToEdge = glm::smoothstep(0.0f, 1.0f - glm::clamp(chunkData->biomeNoise->sharpness / 10.0f, 0.0f, 1.0f), distToEdge);
+			//glm::vec2 nearestCell(biomeInfo.y, biomeInfo.z);
+
+			//result = glm::fract(glm::abs(nearestCell.x) * 0.265f + glm::abs(nearestCell.y) * 3.1f) * chunkData->biomeNoise->heightScale;
+			//result = distToEdge * chunkData->biomeNoise->heightScale;
+
+			//result = Hash2(glm::vec2(b.y, b.z)).x * chunkData->biomeNoise->heightScale;
+		}
+
+		if (chunkData->biomes != nullptr && biome0Index != -1)
+		{
+			real biome0Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
+
+			real biome1Height = 0.0f;
+			if (biome1Index != -1)
+			{
+				biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
+			}
+
+			result += biome0Height * (1.0f - alpha) + biome1Height * alpha;
+		}
+
+		// Divide by 2 to transform range from [-1, 1] to [0, 1]
+		result = result * 0.5f + 0.5f;
+
+		real matID = (real)biome0Index / 255.0f;
+
+		return glm::vec4(result, matID, 0.0f, 0.0f);
 	}
 
 	// Returns a value in [-1, 1]

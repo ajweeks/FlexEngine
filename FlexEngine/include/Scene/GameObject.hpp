@@ -1192,6 +1192,12 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
+		struct Biome
+		{
+			std::string name;
+			std::vector<NoiseFunction> noiseFunctions;
+		};
+
 		struct TerrainChunkData
 		{
 			// General info
@@ -1202,7 +1208,8 @@ namespace flex
 			u32 vertCountPerChunkAxis;
 			i32 isolateNoiseLayer = -1;
 
-			std::vector<NoiseFunction>* noiseFunctions = nullptr;
+			NoiseFunction* biomeNoise = nullptr;
+			std::vector<Biome>* biomes = nullptr;
 			std::vector<std::vector<glm::vec2>>* randomTables;
 			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
 
@@ -1293,7 +1300,8 @@ namespace flex
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;
 
-		std::vector<NoiseFunction> m_NoiseFunctions;
+		NoiseFunction m_BiomeNoise;
+		std::vector<Biome> m_Biomes;
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
 		u32 m_BasePerlinTableWidth = 128;
 
@@ -1320,7 +1328,8 @@ namespace flex
 
 	void* TerrainThreadUpdate(void* inData);
 
-	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
+	real SampleBiomeTerrain(const TerrainGenerator::Biome& biome, const glm::vec2& pos);
+	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
 	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);
 
