@@ -62,7 +62,7 @@ namespace flex
 		matCreateInfo.bSerializable = false;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		RigidBody* rigidBody = new RigidBody();
+		RigidBody* rigidBody = new RigidBody((i32)CollisionType::DEFAULT, (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT);
 		rigidBody->SetAngularDamping(2.0f);
 		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
