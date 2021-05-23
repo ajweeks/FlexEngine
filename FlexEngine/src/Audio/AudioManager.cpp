@@ -618,6 +618,7 @@ namespace flex
 		if (s_WaveData[sourceID] != nullptr)
 		{
 			delete s_WaveData[sourceID];
+			s_WaveData[sourceID] = nullptr;
 		}
 
 		// WAVE file
@@ -784,6 +785,7 @@ namespace flex
 
 		alDeleteSources(1, &s_Sources[sourceID].source);
 		delete s_WaveData[sourceID];
+		s_WaveData[sourceID] = nullptr;
 		s_Sources[sourceID].source = InvalidAudioSourceID;
 		return true;
 	}
