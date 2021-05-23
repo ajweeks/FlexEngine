@@ -4610,19 +4610,12 @@ namespace flex
 
 			MaterialID matID = mesh->GetMaterialID(0);
 			VulkanMaterial* uiMat = (VulkanMaterial*)m_Materials.at(matID);
-			//VulkanShader* uiShader = (VulkanShader*)m_Shaders[uiMat->shaderID];
 
 			VkDescriptorSet descSet = m_DescriptorPoolPersistent->descriptorSets[matID];
 
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicUIVertexIndexBufferPair;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
-
-			//if ((i32)batch.size() > uiShader->maxObjectCount)
-			//{
-			//	UpdateShaderMaxObjectCount(uiMat->shaderID, (i32)batch.size());
-			//	// TODO: Flush GPU queues here?
-			//}
 
 			for (u32 i = 0; i < submeshCount; ++i)
 			{
@@ -4633,27 +4626,7 @@ namespace flex
 
 				MeshComponent* meshComponent = mesh->GetSubMesh(i);
 
-				//glm::vec3 translation = VEC3_ZERO;
-				//glm::quat rotation = QUAT_IDENTITY;
-				//glm::vec3 scale = VEC3_ONE;
-
-				//if (!drawInfo.bRaw)
-				//{
-				//	if (drawInfo.bScreenSpace)
-				//	{
-				//		glm::vec2 normalizedTranslation;
-				//		glm::vec2 normalizedScale;
-				//		NormalizeSpritePos(translation, drawInfo.anchor, scale, normalizedTranslation, normalizedScale);
-				//
-				//		translation = glm::vec3(normalizedTranslation, 0.0f);
-				//		scale = glm::vec3(normalizedScale, 1.0f);
-				//	}
-				//}
-
 				glm::mat4 model = MAT4_IDENTITY;
-					//glm::translate(MAT4_IDENTITY, translation) *
-					//glm::mat4(rotation) *
-					//glm::scale(MAT4_IDENTITY, scale);
 
 				u32 dynamicUBOOffset = i * m_DynamicAlignment;
 
@@ -4663,33 +4636,6 @@ namespace flex
 				GraphicsPipeline* graphicsPipeline = GetGraphicsPipeline(renderObject->graphicsPipelineID)->pipeline;
 				VkPipeline pipeline = graphicsPipeline->pipeline;
 				VkPipelineLayout pipelineLayout = graphicsPipeline->layout;
-
-				//Material::PushConstantBlock* pushBlock = nullptr;
-				//if (drawInfo.bScreenSpace)
-				//{
-				//	if (spriteShader->bTextureArr)
-				//	{
-				//		real r = aspectRatio;
-				//		real t = 1.0f;
-				//		m_SpriteOrthoArrPushConstBlock->SetData(MAT4_IDENTITY, glm::ortho(-r, r, -t, t), drawInfo.textureLayer);
-				//
-				//		pushBlock = m_SpriteOrthoArrPushConstBlock;
-				//
-				//		graphicsPipeline = GetGraphicsPipeline(m_SpriteArrGraphicsPipelineID)->pipeline;
-				//		pipeline = graphicsPipeline->pipeline;
-				//		pipelineLayout = graphicsPipeline->layout;
-				//	}
-				//	else
-				//	{
-				//		pushBlock = m_SpriteOrthoPushConstBlock;
-				//	}
-				//}
-				//else
-				//{
-				//	pushBlock = m_SpritePerspPushConstBlock;
-				//}
-				//
-				//vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, pushBlock->size, pushBlock->data);
 
 				UniformOverrides overrides = {};
 				overrides.colourMultiplier = VEC4_ONE;
@@ -5155,43 +5101,6 @@ namespace flex
 			assert(m_Surface == VK_NULL_HANDLE);
 			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, &m_Surface));
 		}
-
-		//void VulkanRenderer::SetupImGuiWindowData(ImGui_ImplVulkanH_WindowData* data, VkSurfaceKHR surface, i32 width, i32 height)
-		//{
-		//	data->Surface = surface;
-
-		//	// Check for WSI support
-		//	VkBool32 res;
-		//	vkGetPhysicalDeviceSurfaceSupportKHR(g_PhysicalDevice, g_QueueFamily, data->Surface, &res);
-		//	if (res != VK_TRUE)
-		//	{
-		//		fprintf(stderr, "Error no WSI support on physical device 0\n");
-		//		exit(-1);
-		//	}
-
-		//	// Select Surface Format
-		//	const VkFormat requestSurfaceImageFormat[] = { VK_FORMAT_B8G8R8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, VK_FORMAT_B8G8R8_UNORM, VK_FORMAT_R8G8B8_UNORM };
-		//	const VkColorSpaceKHR requestSurfaceColorSpace = VK_COLORSPACE_SRGB_NONLINEAR_KHR;
-		//	data->SurfaceFormat = ImGui_ImplVulkanH_SelectSurfaceFormat(g_PhysicalDevice, data->Surface, requestSurfaceImageFormat, (size_t)IM_ARRAYSIZE(requestSurfaceImageFormat), requestSurfaceColorSpace);
-
-		//	// Select Present Mode
-		//	// TODO: Use same present mode as main app
-		//	std::vector<VkPresentModeKHR> present_modes;
-		//	if (m_bVSyncEnabled)
-		//	{
-		//		present_modes = { VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR, VK_PRESENT_MODE_FIFO_KHR };
-		//	}
-		//	else
-		//	{
-		//		present_modes = { VK_PRESENT_MODE_FIFO_KHR };
-		//	}
-
-		//	data->PresentMode = ImGui_ImplVulkanH_SelectPresentMode(g_PhysicalDevice, data->Surface, &present_modes[0], present_modes.size());
-
-		//	// Create SwapChain, RenderPass, Framebuffer, etc.
-		//	ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, data, g_Allocator);
-		//	ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, data, g_Allocator, width, height);
-		//}
 
 		VkPhysicalDevice VulkanRenderer::PickPhysicalDevice()
 		{
@@ -6096,14 +6005,7 @@ namespace flex
 
 			assert(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
 
-			//if (createInfo->pipelineCache != nullptr)
-			//{
-			//	vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, *createInfo->pipelineCache, nullptr);
-			//
-			//	VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
-			//	pipelineCacheCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-			//	VK_CHECK_RESULT(vkCreatePipelineCache(m_VulkanDevice->m_LogicalDevice, &pipelineCacheCreateInfo, nullptr, createInfo->pipelineCache));
-			//}
+			// TODO: Investigate using pipeline caches here
 
 			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, newPipeline->layout.replace()));
 
@@ -6483,92 +6385,6 @@ namespace flex
 			CreateAttachment(m_VulkanDevice, m_GBufferCubemapColourAttachment1, "GBuffer cubemap colour image 1", "GBuffer cubemap colour image view 1");
 
 			// TODO: Make PBR cubemap renderpass create this framebuffer
-
-			//// Depth attachment
-			//// Set up separate render pass with references to the colour and depth attachments
-			//std::vector<VkAttachmentDescription> attachmentDescs(frameBufferColorAttachmentCount + 1);
-			//attachmentDescs[0] = vks::attachmentDescription(m_GBufferCubemapColourAttachment0->format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			//attachmentDescs[1] = vks::attachmentDescription(m_GBufferCubemapColourAttachment1->format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			//attachmentDescs[frameBufferColorAttachmentCount] = vks::attachmentDescription(m_GBufferCubemapDepthAttachment->format, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-
-			//std::vector<VkAttachmentReference> colorReferences;
-			//for (u32 i = 0; i < frameBufferColorAttachmentCount; ++i)
-			//{
-			//	colorReferences.push_back({ i, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL });
-			//}
-
-			//VkAttachmentReference depthReference = {};
-			//depthReference.attachment = attachmentDescs.size() - 1;
-			//depthReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-			//std::array<VkSubpassDescription, 2> subpasses;
-			//// Deferred subpass
-			//subpasses[0] = {};
-			//subpasses[0].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			//subpasses[0].colorAttachmentCount = colorReferences.size();
-			//subpasses[0].pColorAttachments = colorReferences.data();
-			//subpasses[0].pDepthStencilAttachment = &depthReference;
-
-			//// Forward subpass
-			//subpasses[1] = {};
-			//subpasses[1].pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-			//subpasses[1].colorAttachmentCount = 1;
-			//subpasses[1].pColorAttachments = colorReferences.data();
-			//subpasses[1].pDepthStencilAttachment = &depthReference;
-
-			//std::array<VkSubpassDependency, 3> dependencies;
-			//// Deferred subpass
-			//dependencies[0] = {};
-			//dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-			//dependencies[0].dstSubpass = 0;
-			//dependencies[0].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			//dependencies[0].srcAccessMask = 0;
-			//dependencies[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			//dependencies[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			//// Forward subpass
-			//dependencies[1] = {};
-			//dependencies[1].srcSubpass = 0;
-			//dependencies[1].dstSubpass = 1;
-			//dependencies[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			//dependencies[1].srcAccessMask = 0;
-			//dependencies[1].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			//dependencies[1].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-			//// Final transition
-			//dependencies[2] = {};
-			//dependencies[2].srcSubpass = 1;
-			//dependencies[2].dstSubpass = VK_SUBPASS_EXTERNAL;
-			//dependencies[2].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-			//dependencies[2].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-			//dependencies[2].dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-			//dependencies[2].dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-			//VkRenderPassCreateInfo renderPassInfo = vks::renderPassCreateInfo();
-			//renderPassInfo.pAttachments = attachmentDescs.data();
-			//renderPassInfo.attachmentCount = static_cast<u32>(attachmentDescs.size());
-			//renderPassInfo.subpassCount = subpasses.size();
-			//renderPassInfo.pSubpasses = subpasses.data();
-			//renderPassInfo.dependencyCount = dependencies.size();
-			//renderPassInfo.pDependencies = dependencies.data();
-
-			//// m_GBufferCubemapFrameBuffer->ID
-			//m_DeferredCubemapRenderPass.Create("GBuffer Cubemap render pass", &renderPassInfo);
-
-			//std::vector<VkImageView> attachments(frameBufferColorAttachmentCount + 1);
-			//attachments.push_back(m_GBufferCubemapColourAttachment0->view);
-			//attachments.push_back(m_GBufferCubemapColourAttachment1->view);
-			//attachments.push_back(m_GBufferCubemapDepthAttachment->view);
-
-			//VkFramebufferCreateInfo fbufCreateInfo = vks::framebufferCreateInfo(m_DeferredCubemapRenderPass);
-			//fbufCreateInfo.pAttachments = attachments.data();
-			//fbufCreateInfo.attachmentCount = static_cast<u32>(attachments.size());
-			//fbufCreateInfo.width = m_GBufferCubemapColourAttachment0->width;
-			//fbufCreateInfo.height = m_GBufferCubemapColourAttachment0->height;
-			//fbufCreateInfo.layers = 6;
-
-			//VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &fbufCreateInfo, nullptr, frameBuffer.replace()));
-			//VulkanRenderer::SetFramebufferName(m_VulkanDevice, frameBuffer, "GBuffer Cubemap frame buffer");
 		}
 
 		void VulkanRenderer::FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec)
@@ -7168,7 +6984,15 @@ namespace flex
 			m_ShadowBatch.batches.push_back(shadowShaderBatch);
 
 			ms blockMS = Profiler::GetBlockDuration(blockName);
-			Print("Batched %u render objects into %u batches in %.2fms\n", (u32)m_RenderObjects.size(), renderObjBatchCount, blockMS);
+			if (blockMS != -1)
+			{
+				Print("Batched %u render objects into %u batches in %.2fms\n", (u32)m_RenderObjects.size(), renderObjBatchCount, blockMS);
+			}
+			else
+			{
+				// Profiler is disabled in release builds so all timings will be -1.0f
+				Print("Batched %u render objects into %u batches\n", (u32)m_RenderObjects.size(), renderObjBatchCount);
+			}
 		}
 
 		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo /* = nullptr */)
@@ -7442,7 +7266,7 @@ namespace flex
 				{
 					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
 
-					VkClearValue depthStencilClearValue = VkClearValue { 0.0f, 0 };
+					VkClearValue depthStencilClearValue = VkClearValue{ 0.0f, 0 };
 
 					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
 					{
