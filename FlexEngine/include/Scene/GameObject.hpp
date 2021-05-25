@@ -1313,12 +1313,6 @@ namespace flex
 		i32 m_IsolateNoiseLayer = -1;
 
 		TerrainThreadData threadUserData;
-
-		glm::vec3 m_TriA;
-		glm::vec3 m_TriB;
-		glm::vec3 m_TriC;
-		AABB m_TriSampleBounds;
-		std::vector<PointTest> m_PointTests;
 	};
 
 
