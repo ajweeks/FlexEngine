@@ -125,7 +125,7 @@ namespace flex
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
 		virtual void ClearShaderHash(const std::string& shaderName) = 0;
-		virtual void RecompileShaders(bool bForce) = 0;
+		virtual void RecompileShaders(bool bForceCompileAll) = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -283,6 +283,7 @@ namespace flex
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
+		void AddNotificationMessage(const std::string& message);
 
 		i32 GetMaterialCount();
 		Material* GetMaterial(MaterialID materialID);
@@ -499,6 +500,7 @@ namespace flex
 		sec m_EditorStrSecDuration = 1.5f;
 		real m_EditorStrFadeDurationPercent = 0.25f;
 		std::string m_EditorMessage;
+		std::vector<std::string> m_NotificationMessages; // Frame-long messages that are displayed in the top right of the screen
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 

@@ -527,6 +527,11 @@ namespace flex
 		return __sync_fetch_and_add(value, 1);
 	}
 
+	u32 Platform::AtomicDecrement(volatile u32* value)
+	{
+		return __sync_fetch_and_sub(value, 1);
+	}
+
 	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
 	{
 		return __sync_val_compare_and_swap(value, comparand, exchange);

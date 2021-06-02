@@ -274,16 +274,21 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile)
 	{
+		return ReadFile(filePath.c_str(), outFileContents, bBinaryFile);
+	}
+
+	bool ReadFile(const char* filePath, std::string& outFileContents, bool bBinaryFile)
+	{
 		std::ios::openmode fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
 		}
-		std::ifstream file(filePath.c_str(), fileMode);
+		std::ifstream file(filePath, fileMode);
 
 		if (!file)
 		{
-			PrintError("Unable to read file: ");
+			PrintError("Unable to read file: %s\n", filePath);
 			return false;
 		}
 
@@ -315,16 +320,21 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
+		return ReadFile(filePath.c_str(), vec, bBinaryFile);
+	}
+
+	bool ReadFile(const char* filePath, std::vector<char>& vec, bool bBinaryFile)
+	{
 		std::ios::openmode fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
 		}
-		std::ifstream file(filePath.c_str(), fileMode);
+		std::ifstream file(filePath, fileMode);
 
 		if (!file)
 		{
-			PrintError("Unable to read file: %s\n", filePath.c_str());
+			PrintError("Unable to read file: %s\n", filePath);
 			return false;
 		}
 

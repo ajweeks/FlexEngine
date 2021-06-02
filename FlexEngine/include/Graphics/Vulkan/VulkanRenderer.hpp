@@ -64,7 +64,7 @@ namespace flex
 			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 
 			virtual void ClearShaderHash(const std::string& shaderName) override;
-			virtual void RecompileShaders(bool bForce) override;
+			virtual void RecompileShaders(bool bForceCompileAll) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColour(real r, real g, real b) override;

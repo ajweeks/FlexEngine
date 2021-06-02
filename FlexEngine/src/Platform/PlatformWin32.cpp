@@ -510,6 +510,11 @@ namespace flex
 		return InterlockedIncrement(value);
 	}
 
+	u32 Platform::AtomicDecrement(volatile u32* value)
+	{
+		return InterlockedDecrement(value);
+	}
+
 	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
 	{
 		return InterlockedCompareExchange(value, exchange, comparand);

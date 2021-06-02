@@ -773,6 +773,11 @@ namespace flex
 		}
 	}
 
+	void Renderer::AddNotificationMessage(const std::string& message)
+	{
+		m_NotificationMessages.emplace_back(message);
+	}
+
 	Material* Renderer::GetMaterial(MaterialID materialID)
 	{
 		return m_Materials.at(materialID);
@@ -1098,6 +1103,8 @@ namespace flex
 		}
 
 		m_UIMesh->Draw();
+
+		m_NotificationMessages.clear();
 	}
 
 	static ImGuiTextFilter materialFilter;
@@ -2197,22 +2204,24 @@ namespace flex
 
 	void Renderer::EnqueueScreenSpaceText()
 	{
-		SetFont(SID("editor-02"));
-		static const glm::vec4 colour(0.95f);
-		DrawStringSS("FLEX ENGINE", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
+		real topRightX = -0.03f;
+		real topRightOffset = -0.055f;
+		real lineHeight = -2.0f * SetFont(SID("editor-02"))->GetMetric('W')->height / (real)g_Window->GetSize().y;
+
+		static const glm::vec4 offWhite(0.95f);
+		DrawStringSS("FLEX ENGINE", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
+		topRightOffset += lineHeight;
+
 		if (g_EngineInstance->IsSimulationPaused())
 		{
-			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
-			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
-			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
-			DrawStringSS("PAUSED", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("PAUSED", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 0.0f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 		if (AudioManager::IsMuted())
 		{
-			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
-			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
-			DrawStringSS("Muted", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("Muted", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 0.0f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 #if 0
@@ -2230,6 +2239,13 @@ namespace flex
 			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration * m_EditorStrFadeDurationPercent),
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
+		}
+
+		SetFont(SID("editor-02"));
+		for (u32 i = 0; i < (u32)m_NotificationMessages.size(); ++i)
+		{
+			DrawStringSS(m_NotificationMessages[i], offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 		if (previewedFont != InvalidStringID)

@@ -102,6 +102,7 @@ namespace flex
 		static std::string GetDateString_YMDHMS();
 
 		static u32 AtomicIncrement(volatile u32* value);
+		static u32 AtomicDecrement(volatile u32* value);
 		static u32 AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand);
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 

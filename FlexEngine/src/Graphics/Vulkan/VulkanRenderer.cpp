@@ -49,6 +49,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 #include "UIMesh.hpp"
 #include "volk/volk.h"
 #include "Window/GLFWWindowWrapper.hpp"
@@ -78,9 +79,8 @@ namespace flex
 			Renderer::Initialize();
 
 #if COMPILE_SHADER_COMPILER
-			m_ShaderCompiler = new VulkanShaderCompiler(false);
-			delete m_ShaderCompiler;
-			m_ShaderCompiler = nullptr;
+			m_ShaderCompiler = new VulkanShaderCompiler();
+			m_ShaderCompiler->StartCompilation();
 #endif
 
 			// TODO: Kick off texture load here (most importantly, environment maps)
@@ -625,8 +625,12 @@ namespace flex
 			Renderer::Destroy();
 
 #if COMPILE_SHADER_COMPILER
-			delete m_ShaderCompiler;
-			m_ShaderCompiler = nullptr;
+			if (m_ShaderCompiler != nullptr)
+			{
+				m_ShaderCompiler->JoinAllThreads();
+				delete m_ShaderCompiler;
+				m_ShaderCompiler = nullptr;
+			}
 #endif
 
 			vkQueueWaitIdle(m_GraphicsQueue);
@@ -1716,6 +1720,49 @@ namespace flex
 		{
 			Renderer::Update();
 
+#if COMPILE_SHADER_COMPILER
+			if (!m_ShaderCompiler->bComplete)
+			{
+				i32 shadersRemaining = m_ShaderCompiler->WorkItemsRemaining();
+				i32 threadCount = m_ShaderCompiler->ThreadCount();
+
+				static std::string dots = "...";
+				static std::string spaces = "   ";
+				StringBuilder stringBuilder;
+				stringBuilder.Append("Compiling ");
+				stringBuilder.Append(IntToString(shadersRemaining));
+				stringBuilder.Append(shadersRemaining == 1 ? " shader" : " shaders");
+				i32 numDots = glm::clamp((i32)(fmod(g_SecElapsedSinceProgramStart, 1.0f) * 3), 0, 3);
+				stringBuilder.Append(dots.substr(0, numDots));
+				stringBuilder.Append(spaces.substr(0, 3 - numDots));
+				AddNotificationMessage(stringBuilder.ToString());
+
+				stringBuilder.Clear();
+				stringBuilder.Append("(using ");
+				stringBuilder.Append(IntToString(threadCount));
+				stringBuilder.Append(threadCount == 1 ? " thread)" : " threads)");
+				AddNotificationMessage(stringBuilder.ToString());
+			}
+
+			if (m_ShaderCompiler->TickStatus())
+			{
+				m_bShaderErrorWindowShowing = true;
+
+				if (m_ShaderCompiler->bSuccess)
+				{
+					AddEditorString("Shader recompile completed successfully");
+					RecreateEverything();
+				}
+				else
+				{
+					PrintError("Shader recompile failed\n");
+					AddEditorString("Shader recompile failed");
+				}
+
+				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
+			}
+#endif
+
 			// NOTE: This doesn't respect TAA jitter!
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			m_SpritePerspPushConstBlock->SetData(cam->GetView(), cam->GetProjection());
@@ -2308,32 +2355,10 @@ namespace flex
 #endif
 		}
 
-		void VulkanRenderer::RecompileShaders(bool bForce)
+		void VulkanRenderer::RecompileShaders(bool bForceCompileAll)
 		{
 #if COMPILE_SHADER_COMPILER
-			if (m_ShaderCompiler == nullptr)
-			{
-				m_bShaderErrorWindowShowing = true;
-				m_ShaderCompiler = new VulkanShaderCompiler(bForce);
-
-				if (m_ShaderCompiler->bSuccess)
-				{
-					AddEditorString("Shader recompile completed successfully");
-					RecreateEverything();
-				}
-				else
-				{
-					PrintError("Shader recompile failed\n");
-					AddEditorString("Shader recompile failed");
-				}
-
-				m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
-
-				delete m_ShaderCompiler;
-				m_ShaderCompiler = nullptr;
-			}
-#else
-			FLEX_UNUSED(bForce);
+			m_ShaderCompiler->StartCompilation(bForceCompileAll);
 #endif
 		}
 

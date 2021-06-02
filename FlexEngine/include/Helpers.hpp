@@ -23,6 +23,8 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile);
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
+	bool ReadFile(const char* filePath, std::string& outFileContents, bool bBinaryFile);
+	bool ReadFile(const char* filePath, std::vector<char>& vec, bool bBinaryFile);
 
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
@@ -490,6 +492,13 @@ namespace flex
 		void* criticalSection = nullptr;
 		volatile bool running = true;
 
+	};
+
+	struct ShaderThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool bRunning = true;
+		bool bEnableAssemblyCompilation = false;
 	};
 
 	struct AABB2D

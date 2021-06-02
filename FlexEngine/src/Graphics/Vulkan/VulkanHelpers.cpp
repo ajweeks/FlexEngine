@@ -8,7 +8,6 @@ IGNORE_WARNINGS_PUSH
 
 #if COMPILE_SHADER_COMPILER
 #include "spvc/spvc.hpp"
-#include "shaderc/shaderc.hpp"
 #endif
 IGNORE_WARNINGS_POP
 
@@ -32,6 +31,13 @@ namespace flex
 		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
 
 		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
+
+		volatile u32 shaderWorkItemsCreated = 0;
+		volatile u32 shaderWorkItemsClaimed = 0;
+		volatile u32 shaderWorkItemsCompleted = 0;
+		VulkanShaderCompiler::ShaderCompilationResult** shaderCompilationResults;
+		u32 shaderCompilationResultsLength = 0;
+
 #endif //  COMPILE_SHADER_COMPILER
 
 		void VK_CHECK_RESULT(VkResult result)
@@ -2326,7 +2332,7 @@ namespace flex
 #if COMPILE_SHADER_COMPILER
 		std::vector<VulkanShaderCompiler::ShaderError> VulkanShaderCompiler::s_ShaderErrors;
 
-		VulkanShaderCompiler::VulkanShaderCompiler(bool bForceRecompile)
+		VulkanShaderCompiler::VulkanShaderCompiler()
 		{
 			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
 
@@ -2335,302 +2341,105 @@ namespace flex
 			{
 				Platform::CreateDirectoryRecursive(spvDirectoryAbs);
 			}
+		}
 
-			// Absolute file path => checksum
-			// Any file in the shaders directory not in this map still need to be compiled
-			std::map<std::string, u64> compiledShaders;
-
-			s_ShaderErrors.clear();
-
-			if (!bForceRecompile)
+		void LoadShaderAsync(ShaderThreadData* threadData)
+		{
+			while (threadData->bRunning)
 			{
-				const char* blockName = "Calculate shader contents checksum";
-				PROFILE_AUTO(blockName);
+				//, shaderAbsPath, shaderKind, m_ThreadData[threadID], bEnableAssemblyCompilation
+				VulkanShaderCompiler::ShaderCompilationResult* compilationResult = nullptr;
 
-				const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
-
-				if (FileExists(SHADER_CHECKSUM_LOCATION))
+				// Check for new unclaimed work items
+				if (shaderWorkItemsCreated != shaderWorkItemsClaimed)
 				{
-					std::string fileContents;
-					if (ReadFile(SHADER_CHECKSUM_LOCATION, fileContents, false))
+					Platform::EnterCriticalSection(threadData->criticalSection);
+					if (shaderWorkItemsCreated != shaderWorkItemsClaimed)
 					{
-						std::vector<std::string> lines = Split(fileContents, '\n');
+						compilationResult = shaderCompilationResults[shaderWorkItemsClaimed];
+						shaderWorkItemsClaimed += 1;
 
-						for (const std::string& line : lines)
-						{
-							size_t midPoint = line.find('=');
-							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
-							{
-								std::string filePath = Trim(line.substr(0, midPoint));
+						WRITE_BARRIER;
 
-								if (filePath.length() > 0)
-								{
-									std::string storedChecksumStr = Trim(line.substr(midPoint + 1));
-									u64 storedChecksum = std::stoull(storedChecksumStr);
-
-									u64 calculatedChecksum = CalculteChecksum(filePath);
-									if (calculatedChecksum == storedChecksum)
-									{
-										compiledShaders.emplace(filePath, calculatedChecksum);
-									}
-								}
-							}
-						}
 					}
+					Platform::LeaveCriticalSection(threadData->criticalSection);
 				}
-			}
 
-			shaderc::Compiler compiler;
-			if (compiler.IsValid())
-			{
-				bSuccess = true;
-
-				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(SHADER_SOURCE_DIRECTORY, filePaths, "*"))
+				// Complete work item if claimed
+				if (compilationResult != nullptr)
 				{
-					startTime = Time::CurrentMilliseconds();
-
-					u32 compiledShaderCount = 0;
-					u32 invalidShaderCount = 0;
-
-					class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
+					shaderc::Compiler compiler;
+					if (compiler.IsValid())
 					{
-						virtual shaderc_include_result* GetInclude(const char* requested_source,
-							shaderc_include_type type,
-							const char* requesting_source,
-							size_t include_depth) override
+						std::string shaderAbsPath = compilationResult->shaderAbsPath;
+						std::string fileContents;
+						if (ReadFile(shaderAbsPath, fileContents, false))
 						{
-							FLEX_UNUSED(type);
-							FLEX_UNUSED(requesting_source);
-							FLEX_UNUSED(include_depth);
+							shaderc::CompileOptions options = {};
+							options.SetOptimizationLevel(shaderc_optimization_level_performance);
+							// TODO: Remove for release builds
+							options.SetGenerateDebugInfo();
+							options.SetWarningsAsErrors();
 
-							shaderc_include_result* result = new shaderc_include_result();
+							options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
+							options.SetTargetSpirv(shaderc_spirv_version_1_5);
 
-							std::string requestedFilePath = SHADER_SOURCE_DIRECTORY + std::string(requested_source);
-							std::string fileContent;
-							if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, fileContent, false))
+							options.SetIncluder(std::make_unique<FlexShaderIncluder>());
+
+							compilationResult->bSuccess = true;
+
+							std::string fileType = ExtractFileType(shaderAbsPath);
+							shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType.c_str());
+
+							if (threadData->bEnableAssemblyCompilation)
 							{
-								u32 requestedFilePathLen = (u32)requestedFilePath.size();
-								result->source_name = (const char*)malloc(requestedFilePathLen + 1);
-								memset((void*)result->source_name, 0, requestedFilePathLen + 1);
-								strncpy((char*)result->source_name, requestedFilePath.c_str(), requestedFilePathLen);
-								result->source_name_length = requestedFilePathLen;
-
-								u32 fileContentLen = (u32)fileContent.size();
-								result->content = (const char*)malloc(fileContentLen + 1);
-								memset((void*)result->content, 0, fileContentLen + 1);
-								strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
-								result->content_length = strlen(result->content);
-							}
-							else
-							{
-								result->source_name = "";
-								result->source_name_length = 0;
-								result->content = "Failed to include shader";
-								result->content_length = strlen(result->content);
+								compilationResult->assemblyResult = compiler.CompileGlslToSpvAssembly(fileContents, shaderKind, shaderAbsPath.c_str(), options);
+								compilationResult->bSuccess = compilationResult->assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success;
 							}
 
-							return result;
-						}
-
-						virtual void ReleaseInclude(shaderc_include_result* data) override
-						{
-							// This causes heap corruption for some reason... but it's leaking without this.
-							//if (data->source_name_length != 0)
-							//{
-							//	free((void*)data->source_name);
-							//	free((void*)data->content);
-							//}
-							delete data;
-						}
-					};
-
-					std::string newChecksumFileContents;
-
-					for (const std::string& filePath : filePaths)
-					{
-						const std::string absoluteFilePath = RelativePathToAbsolute(filePath);
-						std::string fileType = ExtractFileType(filePath);
-
-						if (!Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileType.c_str()))
-						{
-							continue;
-						}
-
-						shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType);
-						if (shaderKind != (shaderc_shader_kind)-1)
-						{
-							const std::string fileName = StripLeadingDirectories(filePath);
-
-							if (!StartsWith(fileName, "vk_"))
+							if (compilationResult->bSuccess)
 							{
-								// TODO: EZ: Move vulkan shaders into their own directory
-								continue;
+								compilationResult->result = compiler.CompileGlslToSpv(fileContents, shaderKind, shaderAbsPath.c_str(), options);
+								compilationResult->bSuccess = compilationResult->result.GetCompilationStatus() == shaderc_compilation_status_success;
 							}
-
-							if (compiledShaders.find(absoluteFilePath) != compiledShaders.end())
-							{
-								// Already compiled
-								continue;
-							}
-
-							std::string fileContents;
-							if (ReadFile(filePath, fileContents, false))
-							{
-								shaderc::CompileOptions options = {};
-								options.SetOptimizationLevel(shaderc_optimization_level_performance);
-								// TODO: Remove for release builds
-								options.SetGenerateDebugInfo();
-								options.SetWarningsAsErrors();
-
-								options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-								options.SetTargetSpirv(shaderc_spirv_version_1_5);
-
-								options.SetIncluder(std::make_unique<FlexIncluder>());
-
-								if (bEnableAssemblyCompilation)
-								{
-									shaderc::AssemblyCompilationResult assemblyResult = compiler.CompileGlslToSpvAssembly(fileContents, shaderKind, fileName.c_str(), options);
-									if (assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success)
-									{
-										std::vector<char> spvBytes(assemblyResult.begin(), assemblyResult.end());
-										std::string strippedFileName = StripFileType(fileName);
-										std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".asm";
-										std::ofstream fileStream(spvFilePath, std::ios::out);
-										if (fileStream.is_open())
-										{
-											fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(char));
-											fileStream.close();
-										}
-									}
-									else
-									{
-										if (g_bEnableLogging_Shaders)
-										{
-											PrintWarn("%lu shader compilation errors, %lu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
-										}
-										std::string errorStr = assemblyResult.GetErrorMessage();
-										if (g_bEnableLogging_Shaders)
-										{
-											PrintWarn("%s\n", errorStr.c_str());
-										}
-									}
-								}
-
-								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str(), options);
-								if (result.GetCompilationStatus() == shaderc_compilation_status_success)
-								{
-									Print("Compiled %s\n", fileName.c_str());
-
-									++compiledShaderCount;
-
-									const u64 calculatedChecksum = CalculteChecksum(filePath);
-									compiledShaders.emplace(absoluteFilePath, calculatedChecksum);
-
-									std::vector<u32> spvBytes(result.begin(), result.end());
-									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".spv";
-									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
-									if (fileStream.is_open())
-									{
-										fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(u32));
-										fileStream.close();
-									}
-									else
-									{
-										PrintError("Failed to write compiled shader to %s\n", spvFilePath.c_str());
-										++invalidShaderCount;
-										bSuccess = false;
-									}
-								}
-								else
-								{
-									if (g_bEnableLogging_Shaders)
-									{
-										PrintWarn("%lu shader compilation errors, %lu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
-									}
-									std::string errorStr = result.GetErrorMessage();
-									if (g_bEnableLogging_Shaders)
-									{
-										PrintWarn("%s\n", errorStr.c_str());
-									}
-
-									size_t colon0 = errorStr.find_first_of(':');
-									size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
-
-									u32 lineNumber = 0;
-									if (colon0 != std::string::npos && colon1 != std::string::npos)
-									{
-										lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
-									}
-
-									s_ShaderErrors.push_back({ errorStr, absoluteFilePath, lineNumber });
-
-									++invalidShaderCount;
-									bSuccess = false;
-									auto iter = compiledShaders.find(absoluteFilePath);
-									if (iter != compiledShaders.end())
-									{
-										compiledShaders.erase(iter);
-									}
-								}
-							}
-							else
-							{
-								PrintError("Failed to read shader file %s\n", fileName.c_str());
-								++invalidShaderCount;
-								bSuccess = false;
-							}
-						}
-					}
-
-					for (auto iter = compiledShaders.begin(); iter != compiledShaders.end(); ++iter)
-					{
-						newChecksumFileContents.append(iter->first + " = " + std::to_string(iter->second) + "\n");
-					}
-
-					if ((compiledShaderCount > 0 || invalidShaderCount > 0) && newChecksumFileContents.length() > 0)
-					{
-						Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
-						std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
-						if (checksumFileStream.is_open())
-						{
-							checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
-							checksumFileStream.close();
 						}
 						else
 						{
-							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
+							compilationResult->errorStr = "Failed to read shader file from " + shaderAbsPath;
+							compilationResult->bSuccess = false;
 						}
 					}
-
-					lastCompileDuration = Time::CurrentMilliseconds() - startTime;
-					if (compiledShaderCount > 0)
+					else
 					{
-						Print("Compiled %u shader%s in %.1fms\n", compiledShaderCount, (compiledShaderCount > 1 ? "s" : ""), lastCompileDuration);
+						compilationResult->errorStr = "Unable to compile shaders, compiler is not valid!\n";
+						compilationResult->bSuccess = false;
 					}
 
-					if (invalidShaderCount > 0)
-					{
-						PrintError("%u shader%s had errors\n", invalidShaderCount, (invalidShaderCount > 1 ? "s" : ""));
-					}
+					WRITE_BARRIER;
 
-					bComplete = true;
+					Platform::AtomicIncrement(&shaderWorkItemsCompleted);
 				}
 				else
 				{
-					PrintError("Didn't find any shaders!\n");
-					bSuccess = false;
-					bComplete = true;
+					Platform::Sleep(1);
 				}
 			}
-			else
-			{
-				PrintError("Unable to compile shaders, compiler is not valid!\n");
-				bSuccess = false;
-				bComplete = true;
-			}
 		}
+
+		void VulkanShaderCompiler::QueueWorkItem(const std::string& shaderAbsPath)
+		{
+			assert(shaderWorkItemsCreated < shaderCompilationResultsLength);
+
+			shaderCompilationResults[shaderWorkItemsCreated] = new ShaderCompilationResult();
+			shaderCompilationResults[shaderWorkItemsCreated]->shaderAbsPath = shaderAbsPath;
+
+			Platform::AtomicIncrement(&shaderWorkItemsCreated);
+		}
+
+		//void VulkanShaderCompiler::bComplete()
+		//{
+		//	Print("Compiled %s\n", fileName.c_str());
+		//}
 
 		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
 		{
@@ -2719,12 +2528,181 @@ namespace flex
 			}
 		}
 
-		shaderc_shader_kind VulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
+		void VulkanShaderCompiler::StartCompilation(bool bForceCompileAll /* = false */)
 		{
-			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
-			if (fileSuffix.compare("frag") == 0) return shaderc_fragment_shader;
-			if (fileSuffix.compare("geom") == 0) return shaderc_geometry_shader;
-			if (fileSuffix.compare("comp") == 0) return shaderc_compute_shader;
+			for (std::thread& thread : m_Threads)
+			{
+				if (thread.joinable())
+				{
+					thread.join();
+				}
+			}
+
+			m_Threads.clear();
+			m_QueuedLoads.clear();
+
+			if (m_ThreadData.criticalSection != nullptr)
+			{
+				Platform::FreeCriticalSection(m_ThreadData.criticalSection);
+			}
+			m_ThreadData.bRunning = true;
+			m_ThreadData.criticalSection = Platform::InitCriticalSection();
+
+			bComplete = false;
+			shaderWorkItemsCreated = 0;
+			shaderWorkItemsClaimed = 0;
+			shaderWorkItemsCompleted = 0;
+
+			WRITE_BARRIER;
+
+			// Absolute file path => checksum
+			// Any file in the shaders directory not in this map still need to be compiled
+			std::map<std::string, u64> compiledShaders;
+
+			s_ShaderErrors.clear();
+
+			if (!bForceCompileAll)
+			{
+				const char* blockName = "Calculate shader contents checksum";
+				PROFILE_AUTO(blockName);
+
+				const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
+
+				if (FileExists(SHADER_CHECKSUM_LOCATION))
+				{
+					std::string fileContents;
+					if (ReadFile(SHADER_CHECKSUM_LOCATION, fileContents, false))
+					{
+						std::vector<std::string> lines = Split(fileContents, '\n');
+
+						for (const std::string& line : lines)
+						{
+							size_t midPoint = line.find('=');
+							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
+							{
+								std::string filePath = Trim(line.substr(0, midPoint));
+
+								if (filePath.length() > 0)
+								{
+									std::string storedChecksumStr = Trim(line.substr(midPoint + 1));
+									u64 storedChecksum = std::stoull(storedChecksumStr);
+
+									u64 calculatedChecksum = CalculteChecksum(filePath);
+									if (calculatedChecksum == storedChecksum)
+									{
+										compiledShaders.emplace(filePath, calculatedChecksum);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			bSuccess = true;
+
+			std::vector<std::string> filePaths;
+			if (Platform::FindFilesInDirectory(SHADER_SOURCE_DIRECTORY, filePaths, s_RecognizedShaderTypes, ARRAY_LENGTH(s_RecognizedShaderTypes)))
+			{
+				startTime = Time::CurrentMilliseconds();
+
+				for (const std::string& filePath : filePaths)
+				{
+					const std::string absoluteFilePath = RelativePathToAbsolute(filePath);
+					std::string fileType = ExtractFileType(filePath);
+
+					shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType.c_str());
+					if (shaderKind != (shaderc_shader_kind)-1)
+					{
+						const std::string shaderFileName = StripLeadingDirectories(filePath);
+
+						if (!StartsWith(shaderFileName, "vk_"))
+						{
+							// TODO: EZ: Move vulkan shaders into their own directory
+							continue;
+						}
+
+						if (compiledShaders.find(absoluteFilePath) != compiledShaders.end())
+						{
+							// Already compiled
+							continue;
+						}
+
+						m_QueuedLoads.emplace_back(absoluteFilePath);
+					}
+				}
+			}
+			else
+			{
+				PrintError("Didn't find any shaders in %s!\n", SHADER_SOURCE_DIRECTORY);
+				bSuccess = false;
+				bComplete = true;
+			}
+
+			if (m_QueuedLoads.empty())
+			{
+				bComplete = true;
+			}
+			else
+			{
+				WRITE_BARRIER;
+
+				if (shaderCompilationResults != nullptr)
+				{
+					for (u32 i = 0; i < shaderCompilationResultsLength; ++i)
+					{
+						delete shaderCompilationResults[i];
+					}
+
+					delete[] shaderCompilationResults;
+					shaderCompilationResults = nullptr;
+				}
+
+				shaderCompilationResultsLength = (u32)m_QueuedLoads.size();
+				shaderCompilationResults = new ShaderCompilationResult*[shaderCompilationResultsLength];
+				for (u32 i = 0; i < shaderCompilationResultsLength; ++i)
+				{
+					QueueWorkItem(m_QueuedLoads[i]);
+				}
+
+				u32 cpuCount = Platform::GetLogicalProcessorCount();
+				u32 threadCount = glm::min(cpuCount / 2, shaderCompilationResultsLength);
+				for (u32 i = 0; i < threadCount; ++i)
+				{
+					m_Threads.emplace_back(std::thread(LoadShaderAsync, &m_ThreadData));
+				}
+
+				// Write valid checksums back to disk, skipping invalidated/missing entries
+				std::string newChecksumFileContents;
+
+				for (const auto& compiledShaderPair : compiledShaders)
+				{
+					newChecksumFileContents.append(compiledShaderPair.first + " = " + std::to_string(compiledShaderPair.second) + "\n");
+				}
+
+				if (newChecksumFileContents.length() > 0)
+				{
+					Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
+					std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
+					if (checksumFileStream.is_open())
+					{
+						checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
+						checksumFileStream.close();
+					}
+					else
+					{
+						PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
+					}
+				}
+			}
+		}
+
+		shaderc_shader_kind FilePathToShaderKind(const char* fileSuffix)
+		{
+			if (strcmp(fileSuffix, "vert") == 0) return shaderc_vertex_shader;
+			if (strcmp(fileSuffix, "frag") == 0) return shaderc_fragment_shader;
+			if (strcmp(fileSuffix, "geom") == 0) return shaderc_geometry_shader;
+			if (strcmp(fileSuffix, "comp") == 0) return shaderc_compute_shader;
 
 			return (shaderc_shader_kind)-1;
 		}
@@ -2807,37 +2785,207 @@ namespace flex
 
 		bool VulkanShaderCompiler::TickStatus()
 		{
-			// TODO: Make async again
-			//sec now = Time::CurrentSeconds();
-			//secSinceStatusCheck += (now - lastTime);
-			//totalSecWaiting += (now - lastTime);
-			//lastTime = now;
-			//if (secSinceStatusCheck > secBetweenStatusChecks)
-			//{
-			//	secSinceStatusCheck -= secBetweenStatusChecks;
+			if (bComplete)
+			{
+				return false;
+			}
 
-			//	if (is_done)
-			//	{
-			//		bComplete = true;
-			//		if (taskThread.joinable())
-			//		{
-			//			Print("Vulkan async shader compilation completed after %.2fs\n", totalSecWaiting);
-			//			taskThread.join();
-			//		}
+			bool bAllCompleted = (shaderWorkItemsCreated == shaderWorkItemsCompleted);
 
-			//		if (bSuccess)
-			//		{
-			//			std::string fileContents = std::to_string(m_ShaderCodeChecksum);
-			//			if (!WriteFile(m_ChecksumFilePath, fileContents, false))
-			//			{
-			//				PrintError("Failed to write out shader checksum file to %s\n", m_ChecksumFilePath.c_str());
-			//			}
-			//		}
-			//	}
-			//}
-			//
-			//return bComplete;
+			if (!bAllCompleted)
+			{
+				return false;
+			}
+
+			bComplete = true;
+
+			OnAllCompilationsComplete();
+
 			return true;
+		}
+
+		void VulkanShaderCompiler::OnAllCompilationsComplete()
+		{
+			u32 compiledShaderCount = 0;
+			u32 invalidShaderCount = 0;
+
+			std::map<std::string, u64> compiledShaders;
+
+			const std::string spvDirectoryAbs = RelativePathToAbsolute(COMPILED_SHADERS_DIRECTORY);
+
+			m_ThreadData.bRunning = false;
+
+			for (u32 i = 0; i < (u32)m_Threads.size(); ++i)
+			{
+				if (m_Threads[i].joinable())
+				{
+					m_Threads[i].join();
+				}
+
+				ShaderCompilationResult* compilationResult = shaderCompilationResults[i];
+
+				if (!compilationResult->errorStr.empty())
+				{
+					PrintError("%s\n", compilationResult->errorStr.c_str());
+				}
+
+				const std::string shaderFileName = StripLeadingDirectories(compilationResult->shaderAbsPath);
+
+				std::string strippedFileName = StripFileType(shaderFileName);
+				std::string fileType = ExtractFileType(shaderFileName);
+				std::string newFileName = spvDirectoryAbs + strippedFileName + "_" + fileType;
+
+				if (bEnableAssemblyCompilation)
+				{
+					if (compilationResult->assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success)
+					{
+						std::vector<char> asmText(compilationResult->assemblyResult.begin(), compilationResult->assemblyResult.end());
+						std::string asmFilePath = newFileName + ".asm";
+						std::ofstream fileStream(asmFilePath, std::ios::out);
+						if (fileStream.is_open())
+						{
+							fileStream.write((char*)asmText.data(), asmText.size() * sizeof(char));
+							fileStream.close();
+						}
+					}
+					else
+					{
+						if (g_bEnableLogging_Shaders)
+						{
+							PrintWarn("%lu shader compilation errors, %lu warnings: \n", compilationResult->assemblyResult.GetNumErrors(), compilationResult->assemblyResult.GetNumWarnings());
+						}
+						std::string errorStr = compilationResult->assemblyResult.GetErrorMessage();
+						if (g_bEnableLogging_Shaders)
+						{
+							PrintWarn("%s\n", errorStr.c_str());
+						}
+					}
+				}
+
+				if (compilationResult->result.GetCompilationStatus() == shaderc_compilation_status_success)
+				{
+					++compiledShaderCount;
+
+					const u64 calculatedChecksum = CalculteChecksum(compilationResult->shaderAbsPath);
+					compiledShaders.emplace(compilationResult->shaderAbsPath, calculatedChecksum);
+
+					std::vector<u32> spvBytes(compilationResult->result.begin(), compilationResult->result.end());
+					std::string spvFilePath = newFileName + ".spv";
+					std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
+					if (fileStream.is_open())
+					{
+						fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(u32));
+						fileStream.close();
+					}
+					else
+					{
+						PrintError("Failed to write compiled shader to %s\n", spvFilePath.c_str());
+						++invalidShaderCount;
+						bSuccess = false;
+					}
+				}
+				else
+				{
+					if (g_bEnableLogging_Shaders)
+					{
+						PrintWarn("%lu shader compilation errors, %lu warnings: \n", compilationResult->result.GetNumErrors(), compilationResult->result.GetNumWarnings());
+					}
+					std::string errorStr = compilationResult->result.GetErrorMessage();
+					if (g_bEnableLogging_Shaders)
+					{
+						PrintWarn("%s\n", errorStr.c_str());
+					}
+
+					size_t colon0 = errorStr.find_first_of(':');
+					size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
+
+					u32 lineNumber = 0;
+					if (colon0 != std::string::npos && colon1 != std::string::npos)
+					{
+						lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
+					}
+
+					s_ShaderErrors.push_back({ errorStr, compilationResult->shaderAbsPath, lineNumber });
+
+					++invalidShaderCount;
+					bSuccess = false;
+				}
+
+				delete shaderCompilationResults[i];
+				shaderCompilationResults[i] = nullptr;
+			}
+
+			m_Threads.clear();
+			m_QueuedLoads.clear();
+
+			if (m_ThreadData.criticalSection != nullptr)
+			{
+				Platform::FreeCriticalSection(m_ThreadData.criticalSection);
+				m_ThreadData.criticalSection = nullptr;
+			}
+
+			shaderWorkItemsCreated = 0;
+			shaderWorkItemsClaimed = 0;
+			shaderWorkItemsCompleted = 0;
+
+			delete[] shaderCompilationResults;
+			shaderCompilationResults = nullptr;
+
+			// Append new checksums to file
+			std::string checksumFileContentsAppend;
+			for (const auto& compiledShaderPair : compiledShaders)
+			{
+				checksumFileContentsAppend.append(compiledShaderPair.first + " = " + std::to_string(compiledShaderPair.second) + "\n");
+			}
+
+			if ((compiledShaderCount > 0 || invalidShaderCount > 0) && checksumFileContentsAppend.length() > 0)
+			{
+				Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
+				std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out | std::ios::app);
+				if (checksumFileStream.is_open())
+				{
+					checksumFileStream.write(checksumFileContentsAppend.c_str(), checksumFileContentsAppend.size());
+					checksumFileStream.close();
+				}
+				else
+				{
+					PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
+				}
+			}
+
+			lastCompileDuration = Time::CurrentMilliseconds() - startTime;
+			if (compiledShaderCount > 0)
+			{
+				Print("Compiled %u shader%s in %.1fms\n", compiledShaderCount, (compiledShaderCount > 1 ? "s" : ""), lastCompileDuration);
+			}
+
+			if (invalidShaderCount > 0)
+			{
+				PrintError("%u shader%s had errors\n", invalidShaderCount, (invalidShaderCount > 1 ? "s" : ""));
+			}
+		}
+
+		void VulkanShaderCompiler::JoinAllThreads()
+		{
+			for (std::thread& thread : m_Threads)
+			{
+				if (thread.joinable())
+				{
+					thread.join();
+				}
+			}
+
+			OnAllCompilationsComplete();
+		}
+
+		i32 VulkanShaderCompiler::WorkItemsRemaining() const
+		{
+			return shaderWorkItemsCreated - shaderWorkItemsCompleted;
+		}
+
+		i32 VulkanShaderCompiler::ThreadCount() const
+		{
+			return (i32)m_Threads.size();
 		}
 #endif // COMPILE_SHADER_COMPILER
 
