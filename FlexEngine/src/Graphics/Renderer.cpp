@@ -725,11 +725,11 @@ namespace flex
 		m_NumAreaLightsEnabled = 0;
 	}
 
-	DirLightData* Renderer::GetDirectionalLight()
+	DirectionalLight* Renderer::GetDirectionalLight()
 	{
 		if (m_DirectionalLight)
 		{
-			return &m_DirectionalLight->data;
+			return m_DirectionalLight;
 		}
 		return nullptr;
 	}
@@ -1028,8 +1028,8 @@ namespace flex
 		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
-		if (dirLight)
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
 		{
 			// Flip near & far planes
 			glm::mat4 modifiedProj = cam->GetProjection();

@@ -47,21 +47,25 @@ namespace flex
 		m_SkyboxDatas[0].mid = glm::vec4(0.660f, 0.860f, 0.950f, 1.000f);
 		m_SkyboxDatas[0].btm = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
 		m_SkyboxDatas[0].fog = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
+		m_DirLightColours[0] = glm::vec3(0.994f, 1.000f, 0.925f);
 		// Evening
 		m_SkyboxDatas[1].top = glm::vec4(0.559f, 0.720f, 0.883f, 1.000f);
 		m_SkyboxDatas[1].mid = glm::vec4(0.519f, 0.663f, 0.825f, 1.000f);
 		m_SkyboxDatas[1].btm = glm::vec4(0.135f, 0.162f, 0.182f, 1.000f);
 		m_SkyboxDatas[1].fog = glm::vec4(0.405f, 0.467f, 0.550f, 1.000f);
+		m_DirLightColours[1] = glm::vec3(0.405f, 0.467f, 0.550f);
 		// Midnight
 		m_SkyboxDatas[2].top = glm::vec4(0.107f, 0.107f, 0.013f, 1.000f);
 		m_SkyboxDatas[2].mid = glm::vec4(0.098f, 0.098f, 0.137f, 1.000f);
 		m_SkyboxDatas[2].btm = glm::vec4(0.020f, 0.020f, 0.020f, 1.000f);
 		m_SkyboxDatas[2].fog = glm::vec4(0.029f, 0.029f, 0.032f, 1.000f);
+		m_DirLightColours[2] = glm::vec3(0.713f, 0.713f, 0.925f);
 		// Sunrise
 		m_SkyboxDatas[3].top = glm::vec4(0.917f, 0.733f, 0.458f, 1.000f);
 		m_SkyboxDatas[3].mid = glm::vec4(0.862f, 0.529f, 0.028f, 1.000f);
 		m_SkyboxDatas[3].btm = glm::vec4(0.896f, 0.504f, 0.373f, 1.000f);
 		m_SkyboxDatas[3].fog = glm::vec4(0.958f, 0.757f, 0.623f, 1.000f);
+		m_DirLightColours[3] = glm::vec3(0.987f, 0.816f, 0.773f);
 
 		m_SkyboxData = {};
 		m_SkyboxData.top = m_SkyboxDatas[0].top;
@@ -228,6 +232,17 @@ namespace flex
 		m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
 		m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
 		m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
+
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
+		{
+			real azimuth = 0.0f;
+			real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
+			glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
+			rot = glm::rotate(rot, elevation, VEC3_RIGHT);
+			dirLight->GetTransform()->SetWorldRotation(rot);
+			dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+		}
 	}
 
 	void BaseScene::LateUpdate()
@@ -350,24 +365,6 @@ namespace flex
 		{
 			m_PlayerGUIDs[1] = InvalidGameObjectID;
 		}
-
-		//JSONObject skyboxDataObj;
-		//if (sceneRootObject.TryGetObject("skybox data", skyboxDataObj))
-		//{
-		//	// TODO: Add SetGammaColourChecked
-		//	if (skyboxDataObj.TryGetVec4("top colour", m_SkyboxData.top))
-		//	{
-		//		m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
-		//	}
-		//	if (skyboxDataObj.TryGetVec4("mid colour", m_SkyboxData.mid))
-		//	{
-		//		m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
-		//	}
-		//	if (skyboxDataObj.TryGetVec4("btm colour", m_SkyboxData.btm))
-		//	{
-		//		m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
-		//	}
-		//}
 
 		JSONObject cameraObj;
 		if (sceneRootObject.TryGetObject("camera", cameraObj))
@@ -521,6 +518,12 @@ namespace flex
 		ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxData.mid.x);
 		ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxData.btm.x);
 		ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxData.fog.x);
+
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
+		{
+			ImGuiExt::ColorEdit3Gamma("Dir light", &dirLight->data.colour.x);
+		}
 		ImGui::PopID();
 		ImGui::PopStyleColor();
 
@@ -532,6 +535,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[0].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[0].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[0].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[0].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Evening");
@@ -540,6 +545,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[1].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[1].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[1].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[1].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Night");
@@ -548,6 +555,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[2].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[2].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[2].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[2].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Morning");
@@ -556,14 +565,22 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[3].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[3].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[3].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[3].x);
 			ImGui::PopID();
 
 			ImGui::TreePop();
 		}
 
 		ImGui::Checkbox("Pause time of day", &m_bPauseTimeOfDay);
-		ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.1f, 6000.0f);
-		ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f);
+		if (ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.001f, 6000.0f))
+		{
+			m_SecondsPerDay = glm::clamp(m_SecondsPerDay, 0.001f, 6000.0f);
+		}
+		if (ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f))
+		{
+			m_TimeOfDay = glm::clamp(m_TimeOfDay, 0.0f, 0.999f);
+		}
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();

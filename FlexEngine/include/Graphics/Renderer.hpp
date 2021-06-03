@@ -272,7 +272,7 @@ namespace flex
 		void RemoveAreaLight(AreaLightID ID);
 		void RemoveAllAreaLights();
 
-		DirLightData* GetDirectionalLight();
+		DirectionalLight* GetDirectionalLight();
 		i32 GetNumPointLights();
 		i32 GetNumSpotLights();
 		i32 GetNumAreaLights();

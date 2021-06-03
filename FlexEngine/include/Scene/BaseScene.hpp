@@ -190,6 +190,8 @@ namespace flex
 		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
 
+		glm::vec3 m_DirLightColours[4];
+
 		// Kill zone for player
 		real m_PlayerMinHeight = -500.0f;
 		glm::vec3 m_PlayerSpawnPoint;
