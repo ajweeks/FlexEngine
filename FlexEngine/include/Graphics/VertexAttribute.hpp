@@ -1,5 +1,7 @@
 #pragma once
 
+class type_info;
+
 namespace flex
 {
 	enum class VertexAttribute : u32
