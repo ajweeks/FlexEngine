@@ -8631,6 +8631,10 @@ namespace flex
 					m_Biomes.push_back(biome);
 				}
 			}
+			else
+			{
+				m_Biomes.push_back(Biome{ "default", { NoiseFunction::GenerateDefault(NoiseFunction::Type::FBM) } });
+			}
 
 			JSONObject biomeNoiseObj;
 			if (chunkGenInfo.TryGetObject("biome noise", biomeNoiseObj))
@@ -8708,7 +8712,7 @@ namespace flex
 
 	real TerrainGenerator::Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos)
 	{
-		real sample = SampleTerrain(&chunkData, pos).y;
+		real sample = SampleTerrain(&chunkData, pos).x;
 		return (sample - 0.5f) * MaxHeight + m_Transform.GetWorldPosition().y;
 	}
 
@@ -9266,7 +9270,7 @@ namespace flex
 		// that for some reason aren't picked up by other triangle
 		bool bInsideRoad = distToRoad <= 0.1f;
 
-		outColour = glm::vec4(height, matID, 0.0f, 0.0f);
+		outColour = glm::vec4(height, matID, terrainInfo.z, terrainInfo.w);
 
 		// Distance calc must be slightly off, if this checks for 0.0
 		// we get some verts in the road on the edges
@@ -9680,16 +9684,14 @@ namespace flex
 		return -1.0f / sharpness * glm::log(res);
 	}
 
-	glm::vec3 Voronoi(const glm::vec2& pos)
+	real Voronoi(const glm::vec2& pos, glm::vec2& outNearestCellID, glm::vec2& outNearestCellRandomPoint)
 	{
 		glm::vec2 posCell = glm::floor(pos);
 		glm::vec2 posCellF = glm::fract(pos);
 
 		// Regular Voronoi: find cell of nearest point
-		glm::vec2 nearestCell;
-		glm::vec2 nearestCellPos;
 
-		real closestEdge = 8.0f;
+		real sqrDistToClosestEdge = 8.0f;
 		for (i32 j = -1; j <= 1; j++)
 		{
 			for (i32 i = -1; i <= 1; i++)
@@ -9699,76 +9701,118 @@ namespace flex
 				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
 				real distSq = glm::dot(delta, delta);
 
-				if (distSq < closestEdge)
+				if (distSq < sqrDistToClosestEdge)
 				{
-					closestEdge = distSq;
-					nearestCellPos = delta;
-					nearestCell = cellIndex;
+					sqrDistToClosestEdge = distSq;
+					outNearestCellRandomPoint = cellIndex + cellRandomPoint;
+					outNearestCellID = posCell + cellIndex;
 				}
 			}
 		}
 
-		return glm::vec3(closestEdge, posCell + nearestCell);
+		return sqrDistToClosestEdge;
 	}
 
-	glm::vec3 VoronoiDistance(const glm::vec2& pos)
+	//glm::vec2& ourCellCenter, glm::vec2& neighborCellCenter,
+
+	// Returns the distances to the nearest cell neighbors
+	// of the distance between this cell and the edge (1 = pos is at cell center, 0 = pos is at cell edge)
+	glm::vec2 VoronoiDistance(const glm::vec2& pos, glm::vec2& cell0Coord, glm::vec2& cell1Coord, glm::vec2& cell2Coord)
 	{
 		glm::vec2 posCell = glm::floor(pos);
 		glm::vec2 posCellF = glm::fract(pos);
 
 		// Regular Voronoi: find cell of nearest point
-		glm::vec2 nearestCell;
-		glm::vec2 nearestCellPos;
 
-		real closestEdge = 8.0f;
+		glm::vec2 deltaPosRandomPoint;
+
+		real closestEdge1 = 8.0f;
 		for (i32 j = -1; j <= 1; j++)
 		{
 			for (i32 i = -1; i <= 1; i++)
 			{
-				glm::vec2 cellIndex = glm::vec2(i, j);
-				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
-				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+				glm::vec2 cellCoord = glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
+				// Vector between pos & this cell's random point
+				glm::vec2 delta = cellCoord + cellRandomPoint - posCellF;
 				real distSq = glm::dot(delta, delta);
 
-				if (distSq < closestEdge)
+				if (distSq < closestEdge1)
 				{
-					closestEdge = distSq;
-					nearestCellPos = delta;
-					nearestCell = cellIndex;
+					closestEdge1 = distSq;
+					deltaPosRandomPoint = delta;
+					cell0Coord = cellCoord;
 				}
 			}
 		}
 
-		// Find distance to nearest edge in any neighboring cell
-		closestEdge = 8.0f;
+		// Find distance to second closest cell
+		closestEdge1 = 8.0f;
 		for (i32 j = -2; j <= 2; j++)
 		{
 			for (i32 i = -2; i <= 2; i++)
 			{
-				glm::vec2 cellIndex = nearestCell + glm::vec2(i, j);
-				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
-				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+				glm::vec2 cellCoord = cell0Coord + glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
+				glm::vec2 neighborDeltaPosRandomPoint = cellCoord + cellRandomPoint - posCellF;
 
-				glm::vec2 diff = delta - nearestCellPos;
+				glm::vec2 diff = neighborDeltaPosRandomPoint - deltaPosRandomPoint;
 				real diffLenSq = glm::dot(diff, diff);
 				if (diffLenSq > 0.00001f)
 				{
-					real distSq = glm::dot(0.5f * (nearestCellPos + delta), diff / diffLenSq);
-					if (distSq < closestEdge)
+					glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
+					// Project diff vector onto line spanning between cells to get shortest distance to edge
+					real dist = glm::dot(halfwayPoint, diff / diffLenSq);
+					if (dist < closestEdge1)
 					{
-						closestEdge = distSq;
-						nearestCell = cellIndex;
+						closestEdge1 = dist;
+						cell1Coord = cellCoord;
 					}
 				}
 			}
 		}
 
-		return glm::vec3(closestEdge, nearestCell.x, nearestCell.y); // Square distance to the closest edge in the voronoi diagram
+		// Find distance to third closest cell
+		real closestEdge2 = 8.0f;
+		for (i32 j = -2; j <= 2; j++)
+		{
+			for (i32 i = -2; i <= 2; i++)
+			{
+				glm::vec2 cellCoord = cell0Coord + glm::vec2(i, j);
+				if (i != (i32)cell1Coord.x && (i32)j != cell1Coord.y)
+				{
+					glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
+					glm::vec2 neighborDeltaPosRandomPoint = cellCoord + cellRandomPoint - posCellF;
+
+					glm::vec2 diff = neighborDeltaPosRandomPoint - deltaPosRandomPoint;
+					real diffLenSq = glm::dot(diff, diff);
+					if (diffLenSq > 0.00001f)
+					{
+						glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
+						// Project diff vector onto line spanning between cells to get shortest distance to edge
+						real dist = glm::dot(halfwayPoint, diff / diffLenSq);
+						if (dist < closestEdge2)
+						{
+							closestEdge2 = dist;
+							cell2Coord = cellCoord;
+						}
+					}
+				}
+			}
+		}
+
+		// Translate into world-space
+		cell0Coord += posCell;
+		cell1Coord += posCell;
+		cell2Coord += posCell;
+
+		return glm::vec2(closestEdge1, closestEdge2);
 	}
 
 	real VoronoiColumns(const glm::vec2& pos, real sharpness)
 	{
-		real dist = VoronoiDistance(pos).x;
+		glm::vec2 _x;
+		real dist = VoronoiDistance(pos, _x, _x, _x).x;
 		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
 	}
 
@@ -9851,52 +9895,109 @@ namespace flex
 	// X: height value in [0, 1], Y: mat ID, ZW: unused
 	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
 	{
-		real result = 0.0f;
+		real height = 0.0f;
 
-		i32 biome0Index = -1;
-		i32 biome1Index = -1;
-		real alpha = 0.0f;
-		if (chunkData->biomeNoise != nullptr)
+		real chunkBlendWidth = 0.1f; // [0, 1]
+
+		i32 biome0Index = 0;
+		i32 biome1Index = 0;
+		i32 biome2Index = 0;
+		glm::vec2 biome0CellCoord;
+		glm::vec2 biome1CellCoord;
+		glm::vec2 biome2CellCoord;
+		//glm::vec2 biome0CellCenter;
+		//glm::vec2 biome1CellCenter;
+		//glm::vec2 biome1CellIndex;
+		real blendWeight1 = 0.0f;
+		real blendWeight2 = 0.0f;
+
+		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
 		{
-			glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
+			const glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
+			const i32 biomeCount = (i32)chunkData->biomes->size();
+
 			//real biomeInfo = SmoothVoronoi(p, chunkData->biomeNoise->sharpness);
 
-			glm::vec3 biomeInfo = Voronoi(p);
-			real sqDistToEdge = biomeInfo.x;
-			glm::vec2 biomeID(biomeInfo.y, biomeInfo.z);
-			biome0Index = BiomeIDToindex(biomeID, (i32)chunkData->biomes->size());
-			//alpha = glm::clamp(sqDistToEdge / 0.1f, 0.0f, 1.0f);
+			//glm::vec2 biome0SampleCellPos = glm::floor(p);
+			//glm::vec2 biome0SampleCellPosF = glm::fract(p);
+			glm::vec2 distToEdges = VoronoiDistance(p, biome0CellCoord, biome1CellCoord, biome2CellCoord);
+			biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
+			//real distToEdge1 = glm::sqrt(VoronoiDistance(p, biome1CellID, biome1RandomPoint));
+
+			// Remap to blend from 0.0 at chunkBlendWidth to 0.5 at cell edge
+			blendWeight1 = (1.0f - glm::smoothstep(0.0f, chunkBlendWidth, distToEdges.x)) * 0.5f;
+			blendWeight2 = (1.0f - glm::smoothstep(0.0f, chunkBlendWidth, distToEdges.y)) * 0.5f;
+
+			// Square to make transition
+			//blendWeight = glm::pow(blendWeight * 2.0f, 2.0f) * 0.5f;
+
+			//glm::vec2 nearestPointOnEdge = (biome1RandomPoint - biome0RandomPoint) * 0.5f;
 
 			//real distToEdge = biomeInfo.x;
 			// Sharpen distance
 			//distToEdge = glm::smoothstep(0.0f, 1.0f - glm::clamp(chunkData->biomeNoise->sharpness / 10.0f, 0.0f, 1.0f), distToEdge);
 			//glm::vec2 nearestCell(biomeInfo.y, biomeInfo.z);
 
-			//result = glm::fract(glm::abs(nearestCell.x) * 0.265f + glm::abs(nearestCell.y) * 3.1f) * chunkData->biomeNoise->heightScale;
-			//result = distToEdge * chunkData->biomeNoise->heightScale;
+			//height = glm::fract(glm::abs(nearestCell.x) * 0.265f + glm::abs(nearestCell.y) * 3.1f) * chunkData->biomeNoise->heightScale;
+			//height = distToEdge * chunkData->biomeNoise->heightScale;
 
-			//result = Hash2(glm::vec2(b.y, b.z)).x * chunkData->biomeNoise->heightScale;
-		}
+			//height = Hash2(glm::vec2(b.y, b.z)).x * chunkData->biomeNoise->heightScale;
 
-		if (chunkData->biomes != nullptr && biome0Index != -1)
-		{
 			real biome0Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
 
-			real biome1Height = 0.0f;
-			if (biome1Index != -1)
+			if (blendWeight1 > 0.0f)
 			{
-				biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
-			}
+				biome1Index = BiomeIDToindex(biome1CellCoord, biomeCount);
+				real biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
 
-			result += biome0Height * (1.0f - alpha) + biome1Height * alpha;
+				biome2Index = BiomeIDToindex(biome2CellCoord, biomeCount);
+				real biome2Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome2Index], pos);
+
+				//if (biome0Index != biome1Index)
+				//{
+				//	if (biome1Index != -1)
+				//	{
+				//		real biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
+				//		real alpha = glm::clamp((1.0f - distToEdge), 0.0f, 1.0f);
+				//		//height = biome0Height * (1.0f - alpha) + biome1Height * alpha;
+				//		height = biome0Height * glm::clamp(distToEdge - 0.5f, 0.0f, 1.0f);
+				//	}
+				//	else
+				//	{
+				//		height = biome0Height;
+				//	}
+				//}
+				//else
+				//{
+				//	height = biome0Height;
+				//}
+
+				//real invBlendWidth = 1.0f / 0.1f;
+				//real alpha = glm::clamp(distToEdge * invBlendWidth, 0.5f, 1.0f);
+				real blendWeight0 = 1.0f - blendWeight1 - blendWeight2;
+				height = biome0Height * blendWeight0 + biome1Height * blendWeight1 + biome2Height * blendWeight2;
+			}
+			else
+			{
+				height = biome0Height;
+				biome1Index = biome0Index;
+				biome2Index = biome0Index;
+			}
 		}
 
 		// Divide by 2 to transform range from [-1, 1] to [0, 1]
-		result = result * 0.5f + 0.5f;
+		height = height * 0.5f + 0.5f;
 
-		real matID = (real)biome0Index / 255.0f;
+		assert(biome0Index >= 0 && biome0Index < 65536);
+		assert(biome1Index >= 0 && biome1Index < 65536);
+		assert(biome2Index >= 0 && biome2Index < 65536);
 
-		return glm::vec4(result, matID, 0.0f, 0.0f);
+		real matID01 = (real)((((u32)biome0Index & 0xFFFF) << 16) | ((u32)biome1Index & 0xFFFF));
+		real matID2 = (real)((u32)biome2Index & 0xFFFF);
+
+		real packedBlendWeights = (real)(((u32)(blendWeight1 * 65536.0f) << 16) | ((u32)(blendWeight2 * 65536.0f)));
+
+		return glm::vec4(height, packedBlendWeights, matID01, matID2);
 	}
 
 	// Returns a value in [-1, 1]

@@ -17,7 +17,7 @@ layout (binding = 0) uniform UBOConstant
 } uboConstant;
 
 layout (location = 0) in vec2 ex_TexCoord;
-layout (location = 1) in vec4 ex_Colour;
+layout (location = 1) in flat vec4 ex_Colour; // Can't interpolate due to float packing
 layout (location = 2) in vec3 ex_NormalWS;
 layout (location = 3) in vec3 ex_PositionWS;
 layout (location = 4) in float ex_Depth;
@@ -297,7 +297,7 @@ vec3 fbmd_9(vec2 x)
 	return vec3(a, d);
 }
 
-vec3 VoronoiDistance(vec2 pos)
+float VoronoiDistance(vec2 pos, out vec2 outNearestCell, out vec2 outNearestCellPos)
 {
 	vec2 posCell = floor(pos);
 	vec2 posCellF = fract(pos);
@@ -344,21 +344,39 @@ vec3 VoronoiDistance(vec2 pos)
 		}
 	}
 
-	vec2 dirToEdge = normalize(nearestCellPos);
-	return vec3(closestEdge, dirToEdge); // Square distance to the closest edge in the voronoi diagram
+	outNearestCell = posCell + nearestCell;
+	outNearestCellPos = nearestCellPos;
+	
+	// Square distance to the closest edge in the voronoi diagram
+	return closestEdge;
 }
 
-vec3 VoronoiColumns(vec2 pos, float sharpness)
+float VoronoiColumns(vec2 pos, float sharpness, out vec2 outNearestCell, out vec2 outNearestCellPos)
 {
-	vec3 dist = VoronoiDistance(pos);
-	return vec3(smoothstep(0.0, 1.0 - clamp(sharpness, 0.0, 1.0), dist.x), dist.yz);
+	float dist = VoronoiDistance(pos, outNearestCell, outNearestCellPos);
+	return smoothstep(0.0, 1.0 - clamp(sharpness, 0.0, 1.0), dist);
+}
+
+vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d)
+{
+    return a + b * cos(6.28318 * (c * t + d));
+}
+
+vec3 palette(float v)
+{
+	
+	//return pal(v.x, vec3(0.8,0.5,0.4), vec3(0.2,0.4,0.2), vec3(2.0,1.0,1.0), vec3(0.0,0.25,0.25));
+	return pal(v.x, vec3(0.5,0.5,0.5), vec3(0.5,0.5,0.5), vec3(1.0,1.0,1.0), vec3(0.0,0.33,0.67));
 }
 
 void main()
 {
 	vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
 	float height = ex_Colour.x;
-	float matID = ex_Colour.y * 255.0 + 0.5; // Nudge up to account for float precision
+	// Nudge up to account for float precision
+	int matID0 = int((uint(ex_Colour.z) >> 16));
+	int matID1 = int((uint(ex_Colour.z) & 0xFFFF));
+	int matID2 = int((uint(ex_Colour.w) & 0xFFFF));
 	vec3 N = normalize(ex_NormalWS);
 	float roughness = 1.0;
 	float metallic = 0.0;
@@ -371,8 +389,6 @@ void main()
 
 	vec3 V = normalize(camPos.xyz - ex_PositionWS);
 
-	vec3 L = normalize(vec3(0.57, 0.57, 0.57));
-	float light = dot(N, L) * 0.5 + 0.5;
 	float fresnel = pow(1.0 - dot(N, V), 6.0);
 
 	uint cascadeIndex = 0;
@@ -386,6 +402,8 @@ void main()
 
 	int lodLevel = int(cascadeIndex);
 
+	float darkening = 1.0;
+
 	if (lodLevel <= 2)
 	{
 		// Rock-face/clif pattern
@@ -395,24 +413,46 @@ void main()
 		// Blend in bump map where surfaces are not pointing up
 		N = normalize(N + bumpInfluence * bump);
 
-		if (height < 0.51)
+		//float stretchedRock = 1.0-VoronoiColumns((10.0 - ex_PositionWS.x) + ex_PositionWS.xz * 0.9, 0.965, nearestCell, nearestCellPos);
+
+		// if (height < 0.51)
 		{
 			// Dried cracks pattern
-			bumpInfluence = 1.3 * abs(N.y)*abs(N.y);
+			bumpInfluence = 1.3 * (1.0 - pow(max(abs(N.y) - 1.0, 0.0), 10.0));
 			bumpInfluence *= clamp((-fbm_4(ex_PositionWS * 0.009)), 0.0, 1.0) * 0.8 + 0.2;
-			vec2 nearestPoint;
-			// Dried cracks pattern
-			vec3 dist = 1.0-VoronoiColumns(ex_PositionWS.xz * 0.9, 0.965);
-			vec2 dirToEdge = dist.yz;
-			float theta = atan(dirToEdge.y, dirToEdge.x);
-			vec3 perterbedN = normalize(smoothstep(vec3(0, 1, 0), vec3(sin(theta), 0.0, cos(theta)), vec3(clamp(dist.x * 0.5, 0.0, 1.0))));
-			N = normalize(N + bumpInfluence * perterbedN);
+			vec2 nearestCell, nearestCellPos;
+			float sharpness = 0.965;
+			float dist = VoronoiDistance(ex_PositionWS.xz * 0.9, nearestCell, nearestCellPos);
+
+			// float maxNormalDist = 0.05;
+			float maxNormalDist = 0.15;
+			if (linDepth < maxNormalDist)
+			{
+				float blendDist = linDepth / maxNormalDist;
+				bumpInfluence *= (1.0 - blendDist*blendDist);
+
+				vec2 dirToEdge = normalize(nearestCellPos);
+				float theta = atan(dirToEdge.y, dirToEdge.x);
+				// float crackWidth = 1.0-(1.0-blendDist)*(1.0-blendDist) + 0.5;
+				// Technically this should take into account FOV, since it's attempting
+				// to match reduction in detail as objects get further from camera.
+				float crackWidth = min(abs(dFdx(ex_TexCoord.x)), abs(dFdx(ex_TexCoord.y))) * 1000.0; // blendDist
+				float crackDepth = 1.0;
+
+				float crackMask = 1.0 - smoothstep(0.0, 1.0 - clamp(crackWidth, 0.96, 1.0), dist);
+				vec3 perterbedN = normalize(mix(vec3(0, 1, 0), -vec3(cos(theta), 0.0, sin(theta)), vec3(clamp(crackMask * crackDepth, 0.0, 1.0))));
+				N = normalize(N + bumpInfluence * perterbedN);
+			}
+			// abs(val) + abs(val + 1) prevents identical hashes along axes (where some value is 0)
+			darkening = 0.8 + 0.3 * (hash1(abs(nearestCell) + abs(nearestCell + 1)) - 0.5);
 		}
 	}
 	else
 	{
 		// TODO: Darken/increase roughness of surface here to account for missing cracks
 	}
+
+	//fragmentColour.xy = abs(dFdx(ex_TexCoord)) * 100.0; fragmentColour.zw = 0.0.xx; return;
 
 	vec3 groundCol;
 
@@ -422,29 +462,42 @@ void main()
 	vec3 lowCols[] = {
 		vec3(0.61, 0.19, 0.029), // Orange
 		vec3(0.065, 0.04, 0.02), // Dirt
+		vec3(0.09, 0.03, 0.02), // Red
+		vec3(0.07, 0.08, 0.1), // Blue
 	};
 	vec3 highCols[] = {
 		vec3(0.82, 0.48, 0.20), // Beige
 		vec3(0.045, 0.06, 0.02), // Grass
+		vec3(0.75, 0.76, 0.80), // White
+		vec3(0.08, 0.09, 0.21), // Dark blue
 	};
 
-	int matIDInt = int(matID) % 2;
 
-	vec3 highCol = pow(highCols[matIDInt], vec3(2.2));
-	vec3 lowCol = pow(lowCols[matIDInt], vec3(2.2));
-	if (height > maxHeight)
+	// Value going from 0 at the start of the blend range, to 0.5 at the edge of a cell
+	float blendWeight1 = float((uint(ex_Colour.y) >> 16)) / 65536.0;
+	float blendWeight2 = float((uint(ex_Colour.y) & 0xFFFF)) / 65536.0;
+	float blendWeight0 = clamp(1.0 - blendWeight1 - blendWeight2, 0.0, 1.0);
+
 	{
-		groundCol = highCol;
+		int m0 = matID0 % 4;
+		int m1 = matID1 % 4;
+		int m2 = matID2 % 4;
+
+		float alpha = clamp((height - minHeight) / (maxHeight - minHeight), 0.0, 1.0);
+		vec3 c0 = mix(lowCols[m0], highCols[m0], alpha);
+		vec3 c1 = mix(lowCols[m1], highCols[m1], alpha);
+		vec3 c2 = mix(lowCols[m2], highCols[m2], alpha);
+		groundCol = c0;// * blendWeight0 + c1 * blendWeight1 + c2 * blendWeight2;
+		groundCol = pow(groundCol, vec3(2.2));
+
+		// groundCol = vec3(float(m0) / 4.0, float(matID1) / 4.0, float(matID2) / 4.0);
 	}
-	else if (height < minHeight)
-	{
-		groundCol = lowCol;
-	}
-	else
-	{
-		float alpha = (height - minHeight) / (maxHeight - minHeight);
-		groundCol = mix(lowCol, highCol, clamp(alpha, 0.0, 1.0));
-	}
+
+	// groundCol = (float(matID2 + 0.5) / 4.0).xxx; fragmentColour.xyz = groundCol; fragmentColour.w = 1.0;
+	// fragmentColour.rgb *= 1.0-(pow(blendWeight1*2.0, 200.0));
+	// return;
+	// groundCol.rg = vec2(blendWeight1, blendWeight2);
+	// groundCol.b = 0.0;
 
 	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
@@ -507,6 +560,8 @@ void main()
 		groundCol += groundCol * radiance * NoL;
 	}
 
+	float light = 0.0;// = dot(N, L) * 0.5 + 0.5;
+
 	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
 	{
@@ -515,16 +570,11 @@ void main()
 		float NoL = pow(dot(N, L) * 0.5 + 0.5, 4.0); // Wrapped diffuse
 
 		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowMaps, NoL);
-		light *= (0.75 * dirLightShadowOpacity + 0.25);
+		light = (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= NoL * radiance;
 	}
 
-	if (lodLevel <= 2)
-	{
-		// Dried cracks pattern
-		float cracks2 = VoronoiColumns(ex_PositionWS.xz * 0.5, 0.95).x;
-		groundCol = mix(groundCol, groundCol * (0.5 + 0.5 * cracks2), smoothstep(0.51, 0.512, height));
-	}
+	groundCol *= darkening;
 
 	groundCol *= light;
 	vec3 diffuse = groundCol;
@@ -538,6 +588,12 @@ void main()
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0)); // Reinhard tone-mapping
 	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
+
+	// Colourize by chunk ID & neighbor chunk ID
+	// fragmentColour.rgb = (palette(ex_Colour.z + 0.5) + palette(ex_Colour.w)) * 0.5;
+
+	// Display chunk borders
+	fragmentColour.rgb *= 1.0-(pow(blendWeight1*2.0, 200.0));
 
     DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
      linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragmentColour);
