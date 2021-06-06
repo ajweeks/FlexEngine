@@ -39,8 +39,6 @@ namespace flex
 		// Returns bytes copied
 		u32 CopyInto(real* dst, VertexAttributes usingAttributes);
 
-		void DescribeShaderVariables(Renderer* renderer, RenderID renderID);
-
 		static void ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount);
 
 		bool bDynamic = false;

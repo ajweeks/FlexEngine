@@ -411,22 +411,6 @@ namespace flex
 		return bytesCopied;
 	}
 
-	void VertexBufferData::DescribeShaderVariables(Renderer* renderer, RenderID renderID)
-	{
-		const size_t vertexTypeCount = ARRAY_SIZE(s_VertexTypes);
-		real* currentLocation = (real*)0;
-		for (size_t i = 0; i < vertexTypeCount; ++i)
-		{
-			VertexAttribute vertexAttribute = VertexAttribute(1 << i);
-			if (Attributes & (i32)vertexAttribute)
-			{
-				renderer->DescribeShaderVariable(renderID, s_VertexTypes[i].name, s_VertexTypes[i].size, DataType::FLOAT, false,
-					(i32)VertexStride, currentLocation);
-				currentLocation += s_VertexTypes[i].size;
-			}
-		}
-	}
-
 	void VertexBufferData::ResizeForPresentAttributes(VertexBufferDataCreateInfo& createInfo, u32 vertCount)
 	{
 		if (createInfo.attributes & (u32)VertexAttribute::POSITION)

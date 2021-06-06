@@ -106,8 +106,9 @@ namespace flex
 		virtual void SetClearColour(real r, real g, real b) = 0;
 
 		virtual void Update();
+		virtual void EndOfFrame();
 		virtual void Draw() = 0;
-		virtual void DrawImGuiWindows() = 0;
+		virtual void DrawImGuiWindows();
 		virtual void DrawImGuiRendererInfo() = 0;
 
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
@@ -116,16 +117,8 @@ namespace flex
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
-		// Returns true if value changed
-		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader = nullptr) = 0;
-		virtual bool DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
-		virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) = 0;
-		virtual void DrawImGuiShaderErrors() = 0;
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
-
-		virtual void ClearShaderHash(const std::string& shaderName) = 0;
-		virtual void RecompileShaders(bool bForceCompileAll) = 0;
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -143,9 +136,6 @@ namespace flex
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;
 
-		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized,
-			i32 stride, void* pointer) = 0;
-
 		virtual void SetSkyboxMesh(Mesh* skyboxMesh) = 0;
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
@@ -156,7 +146,7 @@ namespace flex
 
 		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) = 0;
+		virtual void SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize) = 0;
 
 		virtual void NewFrame();
 
@@ -334,6 +324,15 @@ namespace flex
 
 		void ToggleFogEnabled();
 
+		// Returns true if value changed
+		bool DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader = nullptr);
+		bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex);
+		bool DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader = nullptr);
+		void DrawImGuiShaderErrors();
+
+		void ClearShaderHash(const std::string& shaderName);
+		void RecompileShaders(bool bForceCompileAll);
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -362,6 +361,16 @@ namespace flex
 		Texture* m_NoiseTexture = nullptr;
 
 	protected:
+		struct ShaderMetaData
+		{
+			std::vector<std::string> vertexAttributes;
+			std::vector<std::string> uboConstantFields;
+			std::vector<std::string> uboDynamicFields;
+			std::vector<std::string> sampledTextures;
+		};
+
+		void ParseShaderMetaData();
+		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);
 		void LoadShaders();
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
@@ -444,6 +453,7 @@ namespace flex
 
 		std::map<MaterialID, Material*> m_Materials;
 		std::vector<Shader*> m_Shaders;
+		std::map<std::string, ShaderMetaData> m_ShaderMetaData;
 
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;
@@ -595,8 +605,13 @@ namespace flex
 		// Editor-only cache of specialization constant names
 		std::map<StringID, std::string> m_SpecializationConstantNames;
 
+#if COMPILE_SHADER_COMPILER
+		struct ShaderCompiler* m_ShaderCompiler = nullptr;
+#endif
+
 		// Editor-only
 		bool m_bSpecializationConstantsDirty = false;
+		bool m_bShaderErrorWindowShowing = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

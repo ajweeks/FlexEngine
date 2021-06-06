@@ -56,15 +56,8 @@ namespace flex
 			virtual u32 GetDynamicVertexBufferSize(RenderID renderID) override;
 			virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) override;
 
-			virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr);
-			virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) override;
-			virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) override;
-			virtual void DrawImGuiShaderErrors() override;
 			virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
-
-			virtual void ClearShaderHash(const std::string& shaderName) override;
-			virtual void RecompileShaders(bool bForceCompileAll) override;
 
 			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
 			virtual void SetClearColour(real r, real g, real b) override;
@@ -81,8 +74,6 @@ namespace flex
 			virtual u32 GetRenderObjectCount() const override;
 			virtual u32 GetRenderObjectCapacity() const override;
 
-			virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized, i32 stride, void* pointer) override;
-
 			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
 
@@ -92,7 +83,7 @@ namespace flex
 
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
-			virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) override;
+			virtual void SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize) override;
 
 			virtual void NewFrame() override;
 
@@ -353,6 +344,8 @@ namespace flex
 
 			void UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax);
 
+			void CreateBRDFTexture();
+
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 
@@ -478,8 +471,6 @@ namespace flex
 			const bool m_bEnableBestPracticesValidationFeature = false;
 #endif
 
-			bool m_bShaderErrorWindowShowing = true;
-
 			VkInstance m_Instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
@@ -588,10 +579,6 @@ namespace flex
 			VkDescriptorSet m_WireframeDescSet = VK_NULL_HANDLE;
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
-
-#if COMPILE_SHADER_COMPILER
-			struct VulkanShaderCompiler* m_ShaderCompiler = nullptr;
-#endif
 
 			const FrameBufferAttachmentID SWAP_CHAIN_COLOUR_ATTACHMENT_ID = 11000;
 			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;

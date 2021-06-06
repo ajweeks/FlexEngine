@@ -1597,27 +1597,27 @@ namespace flex
 						bool bTextureIsBlankTex = (loadedTexID == g_Renderer->blankTextureID);
 						if (loadedTex != nullptr && !bTextureIsBlankTex)
 						{
-							if (material->textures.values[texIndex].uniformID == U_ALBEDO_SAMPLER.id)
+							if (material->textures.values[texIndex].uniform->id == U_ALBEDO_SAMPLER.id)
 							{
 								material->enableAlbedoSampler = true;
 								material->albedoTexturePath = loadedTex->relativeFilePath;
 							}
-							else if (material->textures.values[texIndex].uniformID == U_EMISSIVE_SAMPLER.id)
+							else if (material->textures.values[texIndex].uniform->id == U_EMISSIVE_SAMPLER.id)
 							{
 								material->enableEmissiveSampler = true;
 								material->emissiveTexturePath = loadedTex->relativeFilePath;
 							}
-							else if (material->textures.values[texIndex].uniformID == U_METALLIC_SAMPLER.id)
+							else if (material->textures.values[texIndex].uniform->id == U_METALLIC_SAMPLER.id)
 							{
 								material->enableMetallicSampler = true;
 								material->metallicTexturePath = loadedTex->relativeFilePath;
 							}
-							else if (material->textures.values[texIndex].uniformID == U_ROUGHNESS_SAMPLER.id)
+							else if (material->textures.values[texIndex].uniform->id == U_ROUGHNESS_SAMPLER.id)
 							{
 								material->enableRoughnessSampler = true;
 								material->roughnessTexturePath = loadedTex->relativeFilePath;
 							}
-							else if (material->textures.values[texIndex].uniformID == U_NORMAL_SAMPLER.id)
+							else if (material->textures.values[texIndex].uniform->id == U_NORMAL_SAMPLER.id)
 							{
 								material->enableNormalSampler = true;
 								material->normalTexturePath = loadedTex->relativeFilePath;
@@ -1719,7 +1719,7 @@ namespace flex
 					{
 						// TODO: Pass in reference to material->textures?
 						//Texture* texture = material->textures[texIndex];
-						std::string texFieldName = material->textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
+						std::string texFieldName = std::string(material->textures.values[texIndex].uniform->DBG_name) + "##" + std::to_string(texIndex);
 						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), discoveredTextures, &selectedTextureIndices[texIndex]);
 					}
 				}

@@ -238,6 +238,8 @@ void DrawDebugOverlay(vec3 albedo, vec3 N, float roughness, float metallic,
 {
     switch (DEBUG_OVERLAY_INDEX)
     {
+   	case 0:
+   		return;
     case 1: // Albedo
         fragColour = vec4(albedo.xyz, 1.0);
         break;

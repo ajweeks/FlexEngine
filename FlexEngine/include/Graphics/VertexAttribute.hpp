@@ -19,26 +19,33 @@ namespace flex
 		_NONE						= 0,
 	};
 
-	struct VertexType
+	struct VertexAttributeMetaData
 	{
 		std::string name;
 		i32 size;
+		const type_info& type;
 	};
 
-	static VertexType s_VertexTypes[] =
+	static VertexAttributeMetaData s_VertexAttributes[] =
 	{
-		{ "in_Position", 3 },
-		{ "in_Position2D", 2 },
-		{ "in_Position4", 4 },
-		{ "in_Velocity", 3 },
-		{ "in_TexCoord", 2 },
-		{ "in_Colour_32", 1 },
-		{ "in_Colour", 4 },
-		{ "in_Tangent", 3 },
-		{ "in_Normal", 3 },
-		{ "in_ExtraVec4", 4 },
-		{ "in_ExtraInt", 1 },
+		{ "in_Position", 3, typeid(glm::vec3) },
+		{ "in_Position2D", 2, typeid(glm::vec2) },
+		{ "in_Position4", 4, typeid(glm::vec4) },
+		{ "in_Velocity", 3, typeid(glm::vec3) },
+		{ "in_TexCoord", 2, typeid(glm::vec2) },
+		{ "in_Colour_32", 1, typeid(u32) },
+		{ "in_Colour", 4, typeid(glm::vec4) },
+		{ "in_Tangent", 3, typeid(glm::vec3) },
+		{ "in_Normal", 3, typeid(glm::vec3) },
+		{ "in_ExtraVec4", 4, typeid(glm::vec4) },
+		{ "in_ExtraInt", 1, typeid(i32) },
 	};
+
+	VertexAttribute VertexAttributeFromString(const char* attributeName);
+	// Returns true when attributeName maps to a known attribute and it matches
+	// the typeInfo passed in
+	// Returns true if attribute name does not match any known value
+	bool CompareVertexAttributeType(const char* attributeName, const type_info& typeInfo);
 
 	u32 CalculateVertexStride(VertexAttributes vertexAttributes);
 

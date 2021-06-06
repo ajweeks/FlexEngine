@@ -551,9 +551,9 @@ namespace flex
 
 		AudioManager::Destroy();
 
-		for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+		for (System* system : g_Systems)
 		{
-			g_Systems[i]->Destroy();
+			system->Destroy();
 		}
 
 		delete g_SceneManager;
@@ -843,9 +843,9 @@ namespace flex
 
 				if (bSimulateFrame)
 				{
-					for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+					for (System* system : g_Systems)
 					{
-						g_Systems[i]->Update();
+						system->Update();
 					}
 
 					GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->DrawDebug();
@@ -886,7 +886,7 @@ namespace flex
 
 					if (m_RenderDocUIPID == -1)
 					{
-						std::string cmdLineArgs = captureFilePath;
+						const std::string& cmdLineArgs = captureFilePath;
 						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
 					}
 				}
@@ -907,6 +907,8 @@ namespace flex
 				SaveCommonSettingsToDisk(false);
 				g_Window->SaveToConfig();
 			}
+
+			g_Renderer->EndOfFrame();
 
 			const bool bProfileFrame = (g_Renderer->GetFramesRenderedCount() > 3);
 			if (bProfileFrame)
@@ -1396,9 +1398,9 @@ namespace flex
 
 				ImGui::Text("Debugging");
 
-				for (u32 i = 0; i < (u32)SystemType::_NONE; ++i)
+				for (System* system : g_Systems)
 				{
-					g_Systems[i]->DrawImGui();
+					system->DrawImGui();
 				}
 
 				if (ImGui::TreeNode("Spring"))

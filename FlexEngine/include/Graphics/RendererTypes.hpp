@@ -169,85 +169,95 @@ namespace flex
 
 	struct Uniform
 	{
-		Uniform(StringID id, u64 size = 0) :
-			id(id),
-			size((u32)size)
-		{
-		}
+		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
+
+		Uniform(Uniform&) = delete;
+		Uniform(Uniform&&) = delete;
+		Uniform& operator=(Uniform&) = delete;
+		Uniform& operator=(Uniform&&) = delete;
 
 		StringID id;
 		u32 size;
+#if DEBUG
+		const char* DBG_name;
+#endif
 	};
 
-	const Uniform U_MODEL(SID("model"), sizeof(glm::mat4));
-	const Uniform U_VIEW(SID("view"), sizeof(glm::mat4));
-	const Uniform U_VIEW_INV(SID("invView"), sizeof(glm::mat4));
-	const Uniform U_VIEW_PROJECTION(SID("viewProjection"), sizeof(glm::mat4));
-	const Uniform U_PROJECTION(SID("projection"), sizeof(glm::mat4));
-	const Uniform U_PROJECTION_INV(SID("invProjection"), sizeof(glm::mat4));
-	const Uniform U_BLEND_SHARPNESS(SID("blendSharpness"), sizeof(real));
-	const Uniform U_COLOUR_MULTIPLIER(SID("colourMultiplier"), sizeof(glm::vec4));
-	const Uniform U_CAM_POS(SID("camPos"), sizeof(glm::vec4));
-	const Uniform U_LIGHTS(SID("lights"),
-			(sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT +
-			sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT +
-			sizeof(AreaLightData) * MAX_AREA_LIGHT_COUNT));
-	const Uniform U_DIR_LIGHT(SID("dirLight"), (u32)sizeof(DirLightData));
-	const Uniform U_ALBEDO_SAMPLER(SID("albedoSampler"));
-	const Uniform U_CONST_ALBEDO(SID("constAlbedo"), (u32)sizeof(glm::vec4));
-	const Uniform U_METALLIC_SAMPLER(SID("metallicSampler"));
-	const Uniform U_CONST_METALLIC(SID("constMetallic"), sizeof(real));
-	const Uniform U_ROUGHNESS_SAMPLER(SID("roughnessSampler"));
-	const Uniform U_CONST_ROUGHNESS(SID("constRoughness"), sizeof(real));
-	const Uniform U_CONST_EMISSIVE(SID("constEmissive"), sizeof(glm::vec4));
-	const Uniform U_NORMAL_SAMPLER(SID("normalSampler"));
-	const Uniform U_ENABLE_ALBEDO_SAMPLER(SID("enableAlbedoSampler"), sizeof(i32));
-	const Uniform U_ENABLE_METALLIC_SAMPLER(SID("enableMetallicSampler"), sizeof(i32));
-	const Uniform U_ENABLE_ROUGHNESS_SAMPLER(SID("enableRoughnessSampler"), sizeof(i32));
-	const Uniform U_ENABLE_NORMAL_SAMPLER(SID("enableNormalSampler"), sizeof(i32));
-	const Uniform U_EMISSIVE_SAMPLER(SID("emissiveSampler"));
-	const Uniform U_CUBEMAP_SAMPLER(SID("cubemapSampler"));
-	const Uniform U_IRRADIANCE_SAMPLER(SID("irradianceSampler"));
-	const Uniform U_FB_0_SAMPLER(SID("normalRoughnessTex"));
-	const Uniform U_FB_1_SAMPLER(SID("albedoMetallicTex"));
-	const Uniform U_ENABLE_EMISSIVE_SAMPLER(SID("enableEmissiveSampler"), sizeof(i32));
-	const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(SID("hdrEquirectangular"));
-	const Uniform U_BRDF_LUT_SAMPLER(SID("brdfLUT"));
-	const Uniform U_PREFILTER_MAP(SID("prefilterMap"));
-	const Uniform U_EXPOSURE(SID("exposure"), sizeof(real));
-	const Uniform U_FONT_CHAR_DATA(SID("fontCharData"), sizeof(glm::vec4));
-	const Uniform U_TEX_SIZE(SID("texSize"), sizeof(glm::vec2));
-	const Uniform U_TEXTURE_SCALE(SID("textureScale"), sizeof(real));
-	const Uniform U_TEX_CHANNEL(SID("texChannel"), sizeof(i32));
-	const Uniform U_UNIFORM_BUFFER_CONSTANT(SID("uniformBufferConstant"));
-	const Uniform U_UNIFORM_BUFFER_DYNAMIC(SID("uniformBufferDynamic"));
-	const Uniform U_TIME(SID("time"), sizeof(glm::vec4));
-	const Uniform U_SDF_DATA(SID("sdfData"), sizeof(glm::vec4));
-	const Uniform U_HIGH_RES_TEX(SID("highResTex"));
-	const Uniform U_DEPTH_SAMPLER(SID("depthSampler"));
-	const Uniform U_NOISE_SAMPLER(SID("noiseSampler"));
-	const Uniform U_SSAO_RAW_SAMPLER(SID("ssaoRawSampler"));
-	const Uniform U_SSAO_FINAL_SAMPLER(SID("ssaoFinalSampler"));
-	const Uniform U_SSAO_NORMAL_SAMPLER(SID("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
-	const Uniform U_SSAO_GEN_DATA(SID("ssaoGenData"), sizeof(SSAOGenData));
-	const Uniform U_SSAO_BLUR_DATA_DYNAMIC(SID("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
-	const Uniform U_SSAO_BLUR_DATA_CONSTANT(SID("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
-	const Uniform U_SSAO_SAMPLING_DATA(SID("ssaoSamplingData"), sizeof(SSAOSamplingData));
-	const Uniform U_LTC_SAMPLER_0(SID("ltcSampler0"));
-	const Uniform U_LTC_SAMPLER_1(SID("ltcSampler1"));
-	const Uniform U_SHADOW_SAMPLER(SID("shadowSampler")); // TODO: Rename to cascade
-	const Uniform U_SHADOW_SAMPLING_DATA(SID("shadowSamplingData"), sizeof(ShadowSamplingData));
-	const Uniform U_NEAR_FAR_PLANES(SID("nearFarPlanes"), sizeof(glm::vec2));
-	const Uniform U_POST_PROCESS_MAT(SID("postProcessMatrix"), sizeof(glm::mat4));
-	const Uniform U_SCENE_SAMPLER(SID("sceneSampler"));
-	const Uniform U_HISTORY_SAMPLER(SID("historySampler"));
-	const Uniform U_LAST_FRAME_VIEWPROJ(SID("lastFrameViewProj"), sizeof(glm::mat4));
-	const Uniform U_PARTICLE_BUFFER(SID("particleBuffer"), sizeof(ParticleBufferData));
-	const Uniform U_PARTICLE_SIM_DATA(SID("particleSimData"), sizeof(ParticleSimData));
-	const Uniform U_OCEAN_DATA(SID("oceanData"), sizeof(OceanData));
-	const Uniform U_SKYBOX_DATA(SID("skyboxData"), sizeof(SkyboxData));
-	const Uniform U_UV_BLEND_AMOUNT(SID("uvBlendAmount"), sizeof(glm::vec2));
-	const Uniform U_SCREEN_SIZE(SID("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);
+	Uniform* UniformFromStringID(StringID uniformNameSID);
+
+#define UNIFORM(val) val, SID(val)
+
+	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4));
+	static const Uniform U_VIEW(UNIFORM("view"), sizeof(glm::mat4));
+	static const Uniform U_VIEW_INV(UNIFORM("invView"), sizeof(glm::mat4));
+	static const Uniform U_VIEW_PROJECTION(UNIFORM("viewProjection"), sizeof(glm::mat4));
+	static const Uniform U_PROJECTION(UNIFORM("projection"), sizeof(glm::mat4));
+	static const Uniform U_PROJECTION_INV(UNIFORM("invProj"), sizeof(glm::mat4));
+	static const Uniform U_BLEND_SHARPNESS(UNIFORM("blendSharpness"), sizeof(real));
+	static const Uniform U_COLOUR_MULTIPLIER(UNIFORM("colourMultiplier"), sizeof(glm::vec4));
+	static const Uniform U_CAM_POS(UNIFORM("camPos"), sizeof(glm::vec4));
+	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT);
+	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT);
+	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData) * MAX_AREA_LIGHT_COUNT);
+	static const Uniform U_DIR_LIGHT(UNIFORM("dirLight"), (u32)sizeof(DirLightData));
+	static const Uniform U_ALBEDO_SAMPLER(UNIFORM("albedoSampler"));
+	static const Uniform U_CONST_ALBEDO(UNIFORM("constAlbedo"), (u32)sizeof(glm::vec4));
+	static const Uniform U_METALLIC_SAMPLER(UNIFORM("metallicSampler"));
+	static const Uniform U_CONST_METALLIC(UNIFORM("constMetallic"), sizeof(real));
+	static const Uniform U_ROUGHNESS_SAMPLER(UNIFORM("roughnessSampler"));
+	static const Uniform U_CONST_ROUGHNESS(UNIFORM("constRoughness"), sizeof(real));
+	static const Uniform U_CONST_EMISSIVE(UNIFORM("constEmissive"), sizeof(glm::vec4));
+	static const Uniform U_NORMAL_SAMPLER(UNIFORM("normalSampler"));
+	static const Uniform U_ENABLE_ALBEDO_SAMPLER(UNIFORM("enableAlbedoSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_METALLIC_SAMPLER(UNIFORM("enableMetallicSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_ROUGHNESS_SAMPLER(UNIFORM("enableRoughnessSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_NORMAL_SAMPLER(UNIFORM("enableNormalSampler"), sizeof(i32));
+	static const Uniform U_EMISSIVE_SAMPLER(UNIFORM("emissiveSampler"));
+	static const Uniform U_CUBEMAP_SAMPLER(UNIFORM("cubemapSampler"));
+	static const Uniform U_IRRADIANCE_SAMPLER(UNIFORM("irradianceSampler"));
+	static const Uniform U_FB_0_SAMPLER(UNIFORM("normalRoughnessSampler"));
+	static const Uniform U_FB_1_SAMPLER(UNIFORM("albedoMetallicSampler"));
+	static const Uniform U_ENABLE_EMISSIVE_SAMPLER(UNIFORM("enableEmissiveSampler"), sizeof(i32));
+	static const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(UNIFORM("hdrEquirectangular"));
+	static const Uniform U_BRDF_LUT_SAMPLER(UNIFORM("brdfLUT"));
+	static const Uniform U_PREFILTER_MAP(UNIFORM("prefilterMap"));
+	static const Uniform U_EXPOSURE(UNIFORM("exposure"), sizeof(real));
+	static const Uniform U_FONT_CHAR_DATA(UNIFORM("fontCharData"), sizeof(glm::vec4));
+	static const Uniform U_TEX_SIZE(UNIFORM("texSize"), sizeof(glm::vec2));
+	static const Uniform U_TEXTURE_SCALE(UNIFORM("textureScale"), sizeof(real));
+	static const Uniform U_TEX_CHANNEL(UNIFORM("texChannel"), sizeof(i32));
+	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant"));
+	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic"));
+	static const Uniform U_TIME(UNIFORM("time"), sizeof(glm::vec4));
+	static const Uniform U_SDF_DATA(UNIFORM("sdfData"), sizeof(glm::vec4));
+	static const Uniform U_HIGH_RES_TEX(UNIFORM("highResTex"));
+	static const Uniform U_DEPTH_SAMPLER(UNIFORM("depthSampler"));
+	static const Uniform U_NOISE_SAMPLER(UNIFORM("noiseSampler"));
+	static const Uniform U_SSAO_RAW_SAMPLER(UNIFORM("ssaoRawSampler"));
+	static const Uniform U_SSAO_FINAL_SAMPLER(UNIFORM("ssaoFinalSampler"));
+	static const Uniform U_SSAO_NORMAL_SAMPLER(UNIFORM("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
+	static const Uniform U_SSAO_GEN_DATA(UNIFORM("ssaoGenData"), sizeof(SSAOGenData));
+	static const Uniform U_SSAO_BLUR_DATA_DYNAMIC(UNIFORM("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
+	static const Uniform U_SSAO_BLUR_DATA_CONSTANT(UNIFORM("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
+	static const Uniform U_SSAO_SAMPLING_DATA(UNIFORM("ssaoData"), sizeof(SSAOSamplingData));
+	static const Uniform U_LTC_MATRICES_SAMPLER(UNIFORM("ltcMatricesSampler"));
+	static const Uniform U_LTC_AMPLITUDES_SAMPLER(UNIFORM("ltcAmplitudesSampler"));
+	static const Uniform U_SHADOW_CASCADES_SAMPLER(UNIFORM("shadowCascadeSampler"));
+	static const Uniform U_SHADOW_SAMPLING_DATA(UNIFORM("shadowSamplingData"), sizeof(ShadowSamplingData));
+	static const Uniform U_NEAR_FAR_PLANES(UNIFORM("nearFarPlanes"), sizeof(glm::vec2));
+	static const Uniform U_POST_PROCESS_MAT(UNIFORM("postProcessMatrix"), sizeof(glm::mat4));
+	static const Uniform U_SCENE_SAMPLER(UNIFORM("sceneSampler"));
+	static const Uniform U_HISTORY_SAMPLER(UNIFORM("historySampler"));
+	static const Uniform U_LAST_FRAME_VIEWPROJ(UNIFORM("lastFrameViewProj"), sizeof(glm::mat4));
+	static const Uniform U_PARTICLE_BUFFER(UNIFORM("particleBuffer"), sizeof(ParticleBufferData));
+	static const Uniform U_PARTICLE_SIM_DATA(UNIFORM("particleSimData"), sizeof(ParticleSimData));
+	static const Uniform U_OCEAN_DATA(UNIFORM("oceanData"), sizeof(OceanData));
+	static const Uniform U_SKYBOX_DATA(UNIFORM("skyboxData"), sizeof(SkyboxData));
+	static const Uniform U_UV_BLEND_AMOUNT(UNIFORM("uvBlendAmount"), sizeof(glm::vec2));
+	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+
+#undef UNIFORM
 
 	enum class ClearFlag
 	{
@@ -373,9 +383,6 @@ namespace flex
 		_NONE
 	};
 
-	CullFace StringToCullFace(const std::string& str);
-	std::string CullFaceToString(CullFace cullFace);
-
 	// TODO: Remove
 	enum RenderBatchDirtyFlag : u32
 	{
@@ -486,32 +493,30 @@ namespace flex
 	{
 		struct TexPair
 		{
-			TexPair(StringID uniformID, UniformType object) :
-				uniformID(uniformID),
+			TexPair(Uniform const* uniform, UniformType object) :
+				uniform(uniform),
 				object(object)
 			{}
 
-			StringID uniformID;
+			Uniform const* uniform;
 			UniformType object;
 		};
 
 		using iter = typename std::vector<TexPair>::iterator;
 		using const_iter = typename std::vector<TexPair>::const_iterator;
 
-		void SetUniform(const Uniform& uniform, const UniformType object, std::string slotName = "")
+		void SetUniform(Uniform const* uniform, const UniformType object)
 		{
-			for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
+			for (u32 i = 0; i < (u32)values.size(); ++i)
 			{
-				if (value_iter->uniformID == uniform.id)
+				if (values[i].uniform->id == uniform->id)
 				{
-					value_iter->object = object;
-					slotNames[value_iter - values.begin()] = slotName;
+					values[i].object = object;
 					return;
 				}
 			}
 
-			values.emplace_back(uniform.id, object);
-			slotNames.emplace_back(slotName);
+			values.emplace_back(uniform, object);
 		}
 
 		u32 Count()
@@ -539,11 +544,11 @@ namespace flex
 			return values.cend();
 		}
 
-		bool Contains(const Uniform& uniform) const
+		bool Contains(Uniform const* uniform) const
 		{
 			for (const auto& pair : values)
 			{
-				if (pair.uniformID == uniform.id)
+				if (pair.uniform->id == uniform->id)
 				{
 					return true;
 				}
@@ -551,11 +556,11 @@ namespace flex
 			return false;
 		}
 
-		UniformType operator[](const Uniform& uniform)
+		UniformType operator[](Uniform const* uniform)
 		{
 			for (const auto& pair : values)
 			{
-				if (pair.uniformID == uniform.id)
+				if (pair.uniform->id == uniform->id)
 				{
 					return pair.object;
 				}
@@ -564,7 +569,6 @@ namespace flex
 		}
 
 		std::vector<TexPair> values;
-		std::vector<std::string> slotNames;
 	};
 
 	struct Material
@@ -837,11 +841,12 @@ namespace flex
 
 	struct UniformList
 	{
-		bool HasUniform(const Uniform& uniform) const;
-		void AddUniform(const Uniform& uniform);
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(const StringID& uniformID) const;
+		void AddUniform(Uniform const* uniform);
 		u32 GetSizeInBytes() const;
 
-		std::set<StringID> uniforms;
+		std::set<Uniform const*> uniforms;
 		u32 totalSizeInBytes = 0;
 	};
 

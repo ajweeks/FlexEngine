@@ -18,8 +18,7 @@ layout (binding = 0) uniform UBOConstant
 	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
 	SSAOSamplingData ssaoData;
-	float zNear;
-	float zFar;
+	vec2 nearFarPlanes;
 } uboConstant;
 
 mat3 identity33()
@@ -314,33 +313,33 @@ float FrostbiteAnalyicAreaLight(AreaLight areaLight, vec3 posWS, vec3 normalWS)
 layout (binding = 1) uniform sampler2D brdfLUT;
 layout (binding = 2) uniform samplerCube irradianceSampler;
 layout (binding = 3) uniform samplerCube prefilterMap;
-layout (binding = 4) uniform sampler2D depthBuffer;
-layout (binding = 5) uniform sampler2D ssaoBuffer;
-layout (binding = 6) uniform sampler2DArray shadowMaps;
+layout (binding = 4) uniform sampler2D depthSampler;
+layout (binding = 5) uniform sampler2D ssaoFinalSampler;
+layout (binding = 6) uniform sampler2DArray shadowCascadeSampler;
 
-layout (binding = 7) uniform sampler2D normalRoughnessTex;
-layout (binding = 8) uniform sampler2D albedoMetallicTex;
-layout (binding = 9) uniform sampler2D ltcMatricesTex;
-layout (binding = 10) uniform sampler2D ltcAmplitudesTex;
+layout (binding = 7) uniform sampler2D normalRoughnessSampler;
+layout (binding = 8) uniform sampler2D albedoMetallicSampler;
+layout (binding = 9) uniform sampler2D ltcMatricesSampler;
+layout (binding = 10) uniform sampler2D ltcAmplitudesSampler;
 
 void main()
 {
-    vec3 N = texture(normalRoughnessTex, ex_TexCoord).rgb;
+    vec3 N = texture(normalRoughnessSampler, ex_TexCoord).rgb;
     N = mat3(uboConstant.invView) * N; // view space -> world space
     //  TODO: Compile out as variant
     if (!gl_FrontFacing) N *= -1.0;
-    float roughness = texture(normalRoughnessTex, ex_TexCoord).a;
+    float roughness = texture(normalRoughnessSampler, ex_TexCoord).a;
 
-    float depth = texture(depthBuffer, ex_TexCoord).r;
+    float depth = texture(depthSampler, ex_TexCoord).r;
     vec3 posVS = ReconstructVSPosFromDepth(uboConstant.invProj, ex_TexCoord, depth);
     vec3 posWS = ReconstructWSPosFromDepth(uboConstant.invProj, uboConstant.invView, ex_TexCoord, depth);
     
-	float linDepth = (posVS.z - uboConstant.zNear) / (uboConstant.zFar - uboConstant.zNear);
+	float linDepth = (posVS.z - uboConstant.nearFarPlanes.x) / (uboConstant.nearFarPlanes.y - uboConstant.nearFarPlanes.x);
 
-    vec3 albedo = texture(albedoMetallicTex, ex_TexCoord).rgb;	
-    float metallic = texture(albedoMetallicTex, ex_TexCoord).a;
+    vec3 albedo = texture(albedoMetallicSampler, ex_TexCoord).rgb;	
+    float metallic = texture(albedoMetallicSampler, ex_TexCoord).a;
 
-    float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoBuffer, ex_TexCoord).r : 1.0f);
+    float ssao = (uboConstant.ssaoData.enabled == 1 ? texture(ssaoFinalSampler, ex_TexCoord).r : 1.0f);
 	ssao = pow(ssao, uboConstant.ssaoData.powExp);
 
 	uint cascadeIndex = 0;
@@ -443,7 +442,7 @@ void main()
 		float angleOfIncidence = clamp(dot(N, V), 0.01, 0.99);
     	vec2 lookupUV = LTC_Coords(angleOfIncidence, roughness);
 
-		mat3 Minv = LTC_Matrix(ltcMatricesTex, lookupUV);
+		mat3 Minv = LTC_Matrix(ltcMatricesSampler, lookupUV);
     	
 		vec4 points[4];
 	    points[0] = areaLight.points[0];
@@ -457,7 +456,7 @@ void main()
 		Lo_i_diff *= albedo;
 
 		// Specular
-    	vec2 schlick = texture(ltcAmplitudesTex, lookupUV).xy;
+    	vec2 schlick = texture(ltcAmplitudesSampler, lookupUV).xy;
     	vec3 specColour = metallic * albedo;
 	    Lo_i_spec *= specColour * schlick.x + (1.0 - specColour) * schlick.y;
 
@@ -473,7 +472,7 @@ void main()
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, cascadeIndex, shadowMaps, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, cascadeIndex, shadowCascadeSampler, NoL);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}

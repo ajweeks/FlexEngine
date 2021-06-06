@@ -4880,7 +4880,7 @@ namespace flex
 			bobber->GetTransform()->SetWorldPosition(newPos);
 		}
 
-		g_Renderer->SetGlobalUniform(U_OCEAN_DATA, &oceanData, sizeof(oceanData));
+		g_Renderer->SetGlobalUniform(&U_OCEAN_DATA, &oceanData, sizeof(oceanData));
 
 		GameObject::Update();
 	}

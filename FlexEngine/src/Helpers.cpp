@@ -1561,23 +1561,33 @@ namespace flex
 
 	bool StartsWith(const std::string& str, const std::string& start)
 	{
-		if (str.length() < start.length())
+		return StartsWith(str.c_str(), start.c_str());
+	}
+
+	bool StartsWith(const char* str, const char* start)
+	{
+		if (strlen(str) < strlen(start))
 		{
 			return false;
 		}
 
-		bool result = (str.substr(0, start.length()).compare(start) == 0);
+		bool result = strncmp(str, start, strlen(start)) == 0;
 		return result;
 	}
 
 	bool EndsWith(const std::string& str, const std::string& end)
 	{
-		if (str.length() < end.length())
+		return EndsWith(str.c_str(), end.c_str());
+	}
+
+	bool EndsWith(const char* str, const char* end)
+	{
+		if (strlen(str) < strlen(end))
 		{
 			return false;
 		}
 
-		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
+		bool result = strcmp(str + (strlen(str) - strlen(end)), end) == 0;
 		return result;
 	}
 
@@ -2007,6 +2017,11 @@ namespace flex
 	}
 
 	bool Contains(const std::string& str, const std::string& pattern)
+	{
+		return str.find(pattern) != std::string::npos;
+	}
+
+	bool Contains(const std::string& str, const char* pattern)
 	{
 		return str.find(pattern) != std::string::npos;
 	}

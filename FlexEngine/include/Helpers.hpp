@@ -187,7 +187,9 @@ namespace flex
 	std::string& ToUpper(std::string& str);
 
 	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
+	FLEX_NO_DISCARD bool StartsWith(const char* str, const char* start);
 	FLEX_NO_DISCARD bool EndsWith(const std::string& str, const std::string& end);
+	FLEX_NO_DISCARD bool EndsWith(const char* str, const char* start);
 	FLEX_NO_DISCARD std::string RemoveEndIfPresent(const std::string& str, const std::string& end);
 
 	// Returns the number str ends with or -1 if last char isn't numeral
@@ -337,6 +339,7 @@ namespace flex
 	bool Contains(const std::vector<const char*>& vec, const char* val);
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 	bool Contains(const std::string& str, const std::string& pattern);
+	bool Contains(const std::string& str, const char* pattern);
 	bool Contains(const std::string& str, char pattern);
 
 	std::string Erase(const std::string& str, char c);
@@ -498,7 +501,7 @@ namespace flex
 	{
 		void* criticalSection = nullptr;
 		volatile bool bRunning = true;
-		bool bEnableAssemblyCompilation = false;
+		bool bGenerateAssembly = false;
 	};
 
 	struct AABB2D

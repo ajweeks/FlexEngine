@@ -436,8 +436,6 @@ namespace flex
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -516,8 +514,6 @@ namespace flex
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -1086,7 +1082,6 @@ namespace flex
 			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(renderID, topologyMode);
-			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 		}
 
 		m_bInitialized = true;
@@ -1118,8 +1113,6 @@ namespace flex
 		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 		g_Renderer->SetTopologyMode(renderID, topologyMode);
-
-		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_bInitialized = true;
 
