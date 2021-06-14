@@ -25,7 +25,7 @@ namespace flex
 	{
 		std::string name;
 		i32 size;
-		const type_info& type;
+		const std::type_info& type;
 	};
 
 	static VertexAttributeMetaData s_VertexAttributes[] =
@@ -47,7 +47,7 @@ namespace flex
 	// Returns true when attributeName maps to a known attribute and it matches
 	// the typeInfo passed in
 	// Returns true if attribute name does not match any known value
-	bool CompareVertexAttributeType(const char* attributeName, const type_info& typeInfo);
+	bool CompareVertexAttributeType(const char* attributeName, const std::type_info& typeInfo);
 
 	u32 CalculateVertexStride(VertexAttributes vertexAttributes);
 

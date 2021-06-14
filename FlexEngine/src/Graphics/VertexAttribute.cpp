@@ -18,7 +18,7 @@ namespace flex
 		return VertexAttribute::_NONE;
 	}
 
-	bool CompareVertexAttributeType(const char* attributeName, const type_info& typeInfo)
+	bool CompareVertexAttributeType(const char* attributeName, const std::type_info& typeInfo)
 	{
 		for (const VertexAttributeMetaData& attributeMetaData : s_VertexAttributes)
 		{
