@@ -11,6 +11,8 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/quaternion.hpp> // for rotate
 IGNORE_WARNINGS_POP
 
+#include <typeinfo>
+
 #include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
@@ -1541,7 +1543,7 @@ namespace flex
 		struct AttributeTypeMetaData
 		{
 			const char* spvSuffix;
-			const type_info& type;
+			const std::type_info& type;
 			const char* friendlyName;
 		};
 		static const AttributeTypeMetaData attributeMetaData[] =
