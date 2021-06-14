@@ -1,6 +1,6 @@
 #pragma once
 
-class type_info;
+#include <typeinfo>
 
 namespace flex
 {

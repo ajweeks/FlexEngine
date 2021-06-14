@@ -1,7 +1,5 @@
 #include "stdafx.hpp"
 
-#include <typeinfo>
-
 #include "Graphics/VertexAttribute.hpp"
 
 namespace flex
