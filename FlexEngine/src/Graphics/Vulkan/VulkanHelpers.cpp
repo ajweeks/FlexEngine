@@ -199,7 +199,8 @@ namespace flex
 			if (data.data)
 			{
 				if (type == UniformBufferType::DYNAMIC ||
-					type == UniformBufferType::PARTICLE_DATA)
+					type == UniformBufferType::PARTICLE_DATA ||
+					type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
 				{
 					flex_aligned_free(data.data);
 				}
@@ -243,25 +244,25 @@ namespace flex
 			indexCount = 0;
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue) :
 			Texture(),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
+			m_Queue(queue)
 		{
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name) :
 			Texture(name),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
+			m_Queue(queue)
 		{
 		}
 
@@ -313,7 +314,7 @@ namespace flex
 				TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
 
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
@@ -349,13 +350,13 @@ namespace flex
 			{
 				PrintWarn("Redundant image layout transition on %s, already in %u\n", name.c_str(), (u32)imageLayout);
 			}
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, imageFormat, imageLayout, newLayout, mipLevels, optCommandBuffer);
+			TransitionImageLayout(m_VulkanDevice, m_Queue, image, imageFormat, imageLayout, newLayout, mipLevels, optCommandBuffer);
 			imageLayout = newLayout;
 		}
 
 		void VulkanTexture::CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer /* = 0 */)
 		{
-			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, buffer, image, inWidth, inHeight, optCommandBuffer);
+			CopyBufferToImage(m_VulkanDevice, m_Queue, buffer, image, inWidth, inHeight, optCommandBuffer);
 			width = inWidth;
 			height = inHeight;
 		}
@@ -397,10 +398,8 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo)
+		VkDeviceSize VulkanTexture::CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo)
 		{
-			FLEX_UNUSED(graphicsQueue);
-
 			if (createInfo.width == 0 ||
 				createInfo.height == 0 ||
 				createInfo.channels == 0 ||
@@ -496,7 +495,7 @@ namespace flex
 			createInfo.mipLevels = inMipLevels;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
-			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
+			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
 			// Retrieve out variables
 			imageLayout = createInfo.imageLayoutOut;
@@ -596,7 +595,7 @@ namespace flex
 			createInfo.filePaths = filePaths;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
-			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
+			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
 			if (imageSize == 0)
 			{
@@ -663,7 +662,7 @@ namespace flex
 				imageLayout,
 				subresourceRange);
 
-			VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_GraphicsQueue, true);
+			VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 			return imageSize;
 		}
@@ -793,7 +792,7 @@ namespace flex
 
 			imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+			EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 		}
 
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
@@ -1007,7 +1006,7 @@ namespace flex
 				}
 
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
@@ -1204,7 +1203,7 @@ namespace flex
 
 				TransitionToLayout(previousLayout);
 
-				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_GraphicsQueue, true);
+				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 				// Get layout of the image (including row pitch)
 				VkImageSubresource subResource{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
@@ -1342,7 +1341,7 @@ namespace flex
 		}
 
 		// TODO: FIXME: This function needs to take the src & dst access masks as args, clearly we can't keep trying to handle all cases...
-		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
+		void TransitionImageLayout(VulkanDevice* device, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{
 			if (oldLayout == newLayout)
@@ -1536,11 +1535,11 @@ namespace flex
 
 			if (optCmdBuf == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
+		void CopyImage(VulkanDevice* device, VkQueue queue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, VkImageAspectFlags aspectMask /* = VK_IMAGE_ASPECT_COLOR_BIT */)
 		{
 			VkCommandBuffer commandBuffer = optCmdBuf;
@@ -1569,11 +1568,11 @@ namespace flex
 
 			if (optCmdBuf == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+		void CopyBufferToImage(VulkanDevice* device, VkQueue queue, VkBuffer buffer, VkImage image,
 			u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
 			VkCommandBuffer commandBuffer = optCommandBuffer;
@@ -1601,11 +1600,11 @@ namespace flex
 
 			if (optCommandBuffer == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+		void CopyBuffer(VulkanDevice* device, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
 
@@ -1615,7 +1614,7 @@ namespace flex
 			copyRegion.srcOffset = srcOffset;
 			vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			EndSingleTimeCommands(device, queue, commandBuffer);
 		}
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device)
@@ -2125,14 +2124,14 @@ namespace flex
 			return commandBuffer;
 		}
 
-		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graphicsQueue, VkCommandBuffer commandBuffer)
+		void EndSingleTimeCommands(VulkanDevice* device, VkQueue queue, VkCommandBuffer commandBuffer)
 		{
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
 			VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
 
-			VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-			VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
+			VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+			VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 
 			vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 		}
@@ -2171,9 +2170,9 @@ namespace flex
 			}
 		}
 
-		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
+		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue queue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
 		{
-			TransitionImageLayout(device, graphicsQueue, image, format, layout, newLayout, 1, optCmdBuf, bIsDepth);
+			TransitionImageLayout(device, queue, image, format, layout, newLayout, 1, optCmdBuf, bIsDepth);
 			layout = newLayout;
 		}
 
@@ -2553,6 +2552,7 @@ namespace flex
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
 				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_NUM_DESC_STORAGE_BUFFERS },
 			};
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxNumDescSets);
@@ -2585,6 +2585,11 @@ namespace flex
 
 			++allocatedSetCount;
 
+			if (createInfo->DBG_Name != nullptr)
+			{
+				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
+			}
+
 			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
 
 			UniformList constantBufferUniforms = shader->constantBufferUniforms;
@@ -2604,8 +2609,9 @@ namespace flex
 				const u64 uniformID = pair.uniform->id;
 				const BufferDescriptorInfo& bufferDescInfo = pair.object;
 				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
+					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
 				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
 
 				VkDescriptorType type;
@@ -2619,6 +2625,9 @@ namespace flex
 					break;
 				case UniformBufferType::PARTICLE_DATA:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::TERRAIN_VERTEX_BUFFER:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
 				default:
 					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -2673,11 +2682,6 @@ namespace flex
 				vkUpdateDescriptorSets(device->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
 			}
 
-			if (createInfo->DBG_Name != nullptr)
-			{
-				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
-			}
-
 			return descriptorSet;
 		}
 
@@ -2702,7 +2706,7 @@ namespace flex
 			createInfo.shaderID = material->shaderID;
 			createInfo.uniformBufferList = &material->uniformBufferList;
 
-			((VulkanRenderer*)g_Renderer)->FillOutImageDescriptorInfos(&createInfo.imageDescriptors, materialID);
+			((VulkanRenderer*)g_Renderer)->FillOutTextureDescriptorInfos(&createInfo.imageDescriptors, materialID);
 			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
 
 			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
@@ -2727,10 +2731,10 @@ namespace flex
 				VkShaderStageFlags shaderStageFlags;
 			};
 
-			// TODO: Specify stage flags per shader
+			// TODO: Specify stage flags per shader!
 			static DescriptorSetInfo descriptorSetInfos[] = {
 				{ &U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
 
 				{ &U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
@@ -2806,6 +2810,12 @@ namespace flex
 
 				{ &U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
 				VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_TERRAIN_VERTEX_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_RANDOM_TABLES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VK_SHADER_STAGE_COMPUTE_BIT },
 			};
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -2829,6 +2839,9 @@ namespace flex
 			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
 
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+
+			std::string descSetLayoutName = shader->name + " descriptor set layout";
+			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, *descriptorSetLayout, descSetLayoutName.c_str());
 		}
 
 		void VulkanDescriptorPool::Replace()

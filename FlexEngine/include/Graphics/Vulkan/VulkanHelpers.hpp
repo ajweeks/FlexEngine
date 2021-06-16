@@ -50,7 +50,7 @@ namespace flex
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
 
-			void TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE);
+			void TransitionToLayout(VkImageLayout newLayout, VkQueue queue, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE);
 
 			VulkanDevice* device = nullptr;
 
@@ -145,6 +145,7 @@ namespace flex
 			STATIC,
 			DYNAMIC,
 			PARTICLE_DATA,
+			TERRAIN_VERTEX_BUFFER,
 
 			_NONE
 		};
@@ -200,8 +201,8 @@ namespace flex
 
 		struct VulkanTexture final : Texture
 		{
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue);
-			VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name);
+			VulkanTexture(VulkanDevice* device, VkQueue queue);
+			VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name);
 
 			virtual ~VulkanTexture() {}
 
@@ -295,7 +296,7 @@ namespace flex
 			static void CreateSampler(VulkanDevice* device, SamplerCreateInfo& createInfo);
 
 			// Expects *texture == nullptr
-			static VkDeviceSize CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo);
+			static VkDeviceSize CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
 				VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
@@ -346,8 +347,9 @@ namespace flex
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
 
 		private:
+			// TODO: Make parameters to functions that need it?
 			VulkanDevice* m_VulkanDevice = nullptr;
-			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+			VkQueue m_Queue = VK_NULL_HANDLE;
 
 		};
 
@@ -424,18 +426,18 @@ namespace flex
 			VkFormatFeatureFlags features);
 		bool HasStencilComponent(VkFormat format);
 		u32 FindMemoryType(VulkanDevice* device, u32 typeFilter, VkMemoryPropertyFlags properties);
-		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
+		void TransitionImageLayout(VulkanDevice* device, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, bool bIsDepthTexture = false);
 
-		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
+		void CopyImage(VulkanDevice* device, VkQueue queue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf = VK_NULL_HANDLE, VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_COLOR_BIT);
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+		void CopyBufferToImage(VulkanDevice* device, VkQueue queue, VkBuffer buffer, VkImage image,
 			u32 width, u32 height, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
-		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
+		void CopyBuffer(VulkanDevice* device, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size,
 			VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
 
 		VkCommandBuffer BeginSingleTimeCommands(VulkanDevice* device);
-		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graphicsQueue, VkCommandBuffer commandBuffer);
+		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graqueuephicsQueue, VkCommandBuffer commandBuffer);
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
@@ -722,6 +724,7 @@ namespace flex
 			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1;
 			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
+			static const u32 MAX_NUM_DESC_STORAGE_BUFFERS = 1; // Terrain
 
 			VulkanDevice* device = nullptr;
 			VkDescriptorPool pool = VK_NULL_HANDLE;

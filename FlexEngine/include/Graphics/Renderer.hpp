@@ -96,6 +96,7 @@ namespace flex
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
 		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) = 0;
+		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkFilter inFilter) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
@@ -182,6 +183,12 @@ namespace flex
 		virtual void RecreateEverything() = 0;
 
 		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
+
+		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData) = 0;
+		virtual void RegenerateTerrain(const TerrainGenConstantData& constantData) = 0;
+		virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) = 0;
+		virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) = 0;
+
 
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true

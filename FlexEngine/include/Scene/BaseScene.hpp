@@ -93,6 +93,22 @@ namespace flex
 		std::vector<GameObjectID> GetAllObjectIDs();
 
 		template<class T>
+		T* GetObjectOfType(StringID typeID)
+		{
+			std::vector<GameObject*> gameObjects = GetAllObjects();
+
+			for (GameObject* gameObject : gameObjects)
+			{
+				if (gameObject->GetTypeID() == typeID)
+				{
+					return (T*)gameObject;
+				}
+			}
+
+			return nullptr;
+		}
+
+		template<class T>
 		std::vector<T*> GetObjectsOfType(StringID typeID)
 		{
 			std::vector<GameObject*> gameObjects = GetAllObjects();
@@ -142,6 +158,8 @@ namespace flex
 
 		real GetPlayerMinHeight() const;
 		glm::vec3 GetPlayerSpawnPoint() const;
+
+		void RegenerateTerrain();
 
 		static const char* GameObjectTypeIDToString(StringID typeID);
 

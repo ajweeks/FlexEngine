@@ -1874,6 +1874,15 @@ namespace flex
 		return m_PlayerSpawnPoint;
 	}
 
+	void BaseScene::RegenerateTerrain()
+	{
+		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(SID("terrain generator"));
+		if (terrainGenerator != nullptr)
+		{
+			terrainGenerator->Regenerate();
+		}
+	}
+
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
 		auto iter = GameObjectTypeStringIDPairs.find(typeID);

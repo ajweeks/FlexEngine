@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "195.644, 41.449, -28.704",
-			"pitch" : -0.121447,
-			"yaw" : -16.123869
+			"position" : "373.766, 108.582, -126.433",
+			"pitch" : -0.167207,
+			"yaw" : -16.198744
 		}
 	},
 	"objects" : 
@@ -44,13 +44,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.578, -0.000, 0.000"
+				"rot" : "1.595, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.710, 0.000, 0.000, 0.705",
+				"rotation" : "0.716, 0.000, 0.000, 0.699",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
@@ -75,12 +75,12 @@
 			"chunk generator info" : 
 			{
 				"vert count per chunk axis" : 32,
-				"chunk size" : 52.299999,
+				"chunk size" : 128.000000,
 				"max height" : 442.720001,
 				"use manual seed" : true,
 				"manual seed" : 6,
 				"isolate noise layer" : 0,
-				"loaded chunk radius" : 1000.000000,
+				"loaded chunk radius" : 1115.677002,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 256,
 				"low colour" : "0.33, 0.41, 0.33",
@@ -328,8 +328,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "1.094, 0.916, 0.153",
-				"rot" : "-0.008, 0.199, -0.004",
+				"pos" : "1.133, 0.916, 0.151",
+				"rot" : "-0.008, 0.211, -0.004",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},

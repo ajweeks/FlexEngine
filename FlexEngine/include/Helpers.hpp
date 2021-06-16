@@ -68,6 +68,8 @@ namespace flex
 
 	FLEX_NO_DISCARD i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares = u32_max);
 
+	FLEX_NO_DISCARD std::string RemovePrefix(const std::string& str, const char* prefix);
+
 	/*
 	 * Returns the index of the first character which isn't a number
 	 * of letter (or -1 if none exist) starting from offset
@@ -284,24 +286,40 @@ namespace flex
 		return result;
 	}
 
-	template<class T>
+	template<typename T>
 	inline i32 Find(const std::vector<T>& vec, const T& t)
 	{
-		T* vecData = (T*)vec.data();
-		i32 vecLen = (i32)vec.size();
-		for (i32 i = 0; i < vecLen; ++i)
+		T* data = (T*)vec.data();
+		i32 len = (i32)vec.size();
+		for (i32 i = 0; i < len; ++i)
 		{
-			if (*vecData == t)
+			if (*data == t)
 			{
 				return i;
 			}
-			++vecData;
+			++data;
 		}
 
 		return -1;
 	}
 
-	template<class T>
+	template<typename T, size_t Len>
+	inline i32 Find(const std::array<T, Len>& arr, const T& t)
+	{
+		T* data = (T*)arr.data();
+		for (i32 i = 0; i < Len; ++i)
+		{
+			if (*data == t)
+			{
+				return i;
+			}
+			++data;
+		}
+
+		return -1;
+	}
+
+	template<typename T>
 	inline typename std::vector<T>::const_iterator FindIter(const std::vector<T>& vec, const T& t)
 	{
 		auto vecEnd = vec.end();
@@ -316,20 +334,26 @@ namespace flex
 		return vec.end();
 	}
 
-	template<class T>
+	template<typename T>
 	inline bool Contains(const std::vector<T>& vec, const T& t)
 	{
 		return Find(vec, t) != -1;
 	}
 
-	template<class Key, class Value, class Comp>
+	template<typename T, size_t Len>
+	inline bool Contains(const std::array<T, Len>& arr, const T& t)
+	{
+		return Find(arr, t) != -1;
+	}
+
+	template<typename Key, typename Value, typename Comp>
 	inline bool Contains(const std::map<Key, Value, Comp>& map, const Key& key)
 	{
 		auto iter = map.find(key);
 		return iter != map.end();
 	}
 
-	template<class Value, class Comp>
+	template<typename Value, typename Comp>
 	inline bool Contains(const std::set<Value, Comp>& set, const Value& val)
 	{
 		auto iter = set.find(val);
@@ -356,7 +380,7 @@ namespace flex
 		return false;
 	}
 
-	template<typename T, class I>
+	template<typename T, typename I>
 	inline bool Erase(std::set<T, I>& set, const T& t)
 	{
 		auto iter = set.find(t);
@@ -380,7 +404,7 @@ namespace flex
 		return -1;
 	}
 
-	template<class T>
+	template<typename T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
 		return vec[RandomInt(0, (i32)vec.size())];
@@ -447,7 +471,7 @@ namespace flex
 	};
 
 	// TODO: Move to separate file
-	template<class T>
+	template<typename T>
 	struct ThreadSafeArray
 	{
 		ThreadSafeArray()
@@ -475,7 +499,7 @@ namespace flex
 			return t[index];
 		}
 
-		u32 Size()volatile const
+		u32 Size() volatile const
 		{
 			return size;
 		}
@@ -516,7 +540,7 @@ namespace flex
 
 		bool Contains(const glm::vec2& point)
 		{
-			return (point.x >= minX && point.x < maxX &&
+			return (point.x >= minX && point.x < maxX&&
 				point.y >= minZ && point.y < maxZ);
 		}
 
@@ -541,8 +565,8 @@ namespace flex
 
 		bool Contains(const glm::vec3& point)
 		{
-			return (point.x >= minX && point.x < maxX &&
-				point.z >= minZ && point.z < maxZ &&
+			return (point.x >= minX && point.x < maxX&&
+				point.z >= minZ && point.z < maxZ&&
 				point.y >= minY && point.y < maxY);
 		}
 

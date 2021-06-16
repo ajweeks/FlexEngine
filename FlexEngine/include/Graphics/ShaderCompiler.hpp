@@ -67,6 +67,7 @@ namespace flex
 	struct ShaderCompiler
 	{
 		ShaderCompiler();
+		~ShaderCompiler();
 
 		ShaderCompiler(const ShaderCompiler&) = delete;
 		ShaderCompiler(const ShaderCompiler&&) = delete;
@@ -85,6 +86,8 @@ namespace flex
 		i32 WorkItemsRemaining() const;
 		i32 ThreadCount() const;
 
+		bool WasShaderRecompiled(const char* shaderName) const;
+
 		// Whether a textual assembly version should also be generated (necessary for reflection - see Renderer::ParseShaderMetaData)
 		const bool bGenerateAssembly = true;
 
@@ -101,14 +104,12 @@ namespace flex
 			u32 lineNumber;
 		};
 
-		static std::vector<ShaderError> s_ShaderErrors;
-
 		struct ShaderCompilationResult
 		{
 			bool bSuccess = false;
 			std::string shaderAbsPath;
 			shaderc::AssemblyCompilationResult assemblyResult;
-			shaderc::SpvCompilationResult result;
+			shaderc::SpvCompilationResult spvResult;
 			std::string errorStr; // Used for additional errors besides those in result
 		};
 

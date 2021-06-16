@@ -1057,6 +1057,11 @@ namespace flex
 			{
 				AddEditorString("Shader recompile completed successfully");
 				RecreateEverything();
+
+				if (m_ShaderCompiler->WasShaderRecompiled("generate_terrain"))
+				{
+					g_SceneManager->CurrentScene()->RegenerateTerrain();
+				}
 			}
 			else
 			{
@@ -1739,6 +1744,7 @@ namespace flex
 			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv", "", "" },
 			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv", "", "" },
 			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv", "", "" },
+			// TODO: Rename to .geom or move to compute slot?
 			{ "particle_sim", "", "", "vk_simulate_particles_comp.spv", "" },
 			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
@@ -1746,6 +1752,7 @@ namespace flex
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
 			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
+			{ "generate_terrain", "", "", "", "vk_generate_terrain_comp.spv" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -2352,6 +2359,21 @@ namespace flex
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		++shaderID;
+
+		// Generate terrain
+		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_TERRAIN;
+		m_Shaders[shaderID]->bCompute = true;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_CONSTANT_DATA);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
+
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
 		++shaderID;
 
 		assert(shaderID == m_Shaders.size());
@@ -3588,24 +3610,24 @@ namespace flex
 
 	MaterialID Renderer::CreateParticleSystemSimulationMaterial(const std::string& name)
 	{
-		MaterialCreateInfo particleSimMatCreateInfo = {};
-		particleSimMatCreateInfo.name = name;
-		particleSimMatCreateInfo.shaderName = "particle_sim";
-		particleSimMatCreateInfo.persistent = true;
-		particleSimMatCreateInfo.visibleInEditor = false;
-		particleSimMatCreateInfo.bSerializable = false;
-		return InitializeMaterial(&particleSimMatCreateInfo);
+		MaterialCreateInfo createInfo = {};
+		createInfo.name = name;
+		createInfo.shaderName = "particle_sim";
+		createInfo.persistent = true;
+		createInfo.visibleInEditor = false;
+		createInfo.bSerializable = false;
+		return InitializeMaterial(&createInfo);
 	}
 
 	MaterialID Renderer::CreateParticleSystemRenderingMaterial(const std::string& name)
 	{
-		MaterialCreateInfo particleMatCreateInfo = {};
-		particleMatCreateInfo.name = name;
-		particleMatCreateInfo.shaderName = "particles";
-		particleMatCreateInfo.persistent = true;
-		particleMatCreateInfo.visibleInEditor = false;
-		particleMatCreateInfo.bSerializable = false;
-		return InitializeMaterial(&particleMatCreateInfo);
+		MaterialCreateInfo createInfo = {};
+		createInfo.name = name;
+		createInfo.shaderName = "particles";
+		createInfo.persistent = true;
+		createInfo.visibleInEditor = false;
+		createInfo.bSerializable = false;
+		return InitializeMaterial(&createInfo);
 	}
 
 	void Renderer::ParseSpecializationConstantInfo()

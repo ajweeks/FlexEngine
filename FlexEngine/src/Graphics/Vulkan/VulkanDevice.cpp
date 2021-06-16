@@ -10,8 +10,7 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanDevice::VulkanDevice(const CreateInfo& createInfo) :
-			m_CommandPool({ m_LogicalDevice, vkDestroyCommandPool })
+		VulkanDevice::VulkanDevice(const CreateInfo& createInfo)
 		{
 			assert(createInfo.physicalDevice);
 			m_PhysicalDevice = createInfo.physicalDevice;
@@ -33,7 +32,7 @@ namespace flex
 			VulkanQueueFamilyIndices indices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
 
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily };
+			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily, indices.computeFamily };
 
 			real queuePriority = 1.0f;
 			for (i32 queueFamily : uniqueQueueFamilies)
@@ -89,6 +88,8 @@ namespace flex
 			vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
 
 			volkLoadDevice(m_LogicalDevice);
+
+			m_CommandPool = { m_LogicalDevice, vkDestroyCommandPool };
 		}
 
 		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const

@@ -8006,7 +8006,10 @@ namespace flex
 		AddTag("terrain");
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
-		terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
+		if (!bUseAsyncCompute)
+		{
+			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
+		}
 	}
 
 	void TerrainGenerator::Initialize()
@@ -8020,73 +8023,129 @@ namespace flex
 		matCreateInfo.bSerializable = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
+		GenerateGradients();
+
+		TerrainGenConstantData constantData;
+		FillOutConstantData(constantData);
+
+		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData);
+
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
 		SetCastsShadow(false);
 
-		GenerateGradients();
-
-		criticalSection = Platform::InitCriticalSection();
-
-		for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+		if (!bUseAsyncCompute)
 		{
-			AllocWorkQueueEntry(i);
+			criticalSection = Platform::InitCriticalSection();
+
+			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			{
+				AllocWorkQueueEntry(i);
+			}
+
+			terrain_workQueueEntriesCompleted = 0;
+			terrain_workQueueEntriesCreated = 0;
+			WRITE_BARRIER;
+			terrain_workQueueEntriesClaimed = 0;
+			WRITE_BARRIER;
+
+			// Kick off threads to wait for work
+			{
+				u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
+
+				threadUserData = {};
+				threadUserData.running = true;
+				threadUserData.criticalSection = criticalSection;
+				Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
+			}
+
+			WRITE_BARRIER;
 		}
-
-		terrain_workQueueEntriesCompleted = 0;
-		terrain_workQueueEntriesCreated = 0;
-		WRITE_BARRIER;
-		terrain_workQueueEntriesClaimed = 0;
-		WRITE_BARRIER;
-
-		// Kick off threads to wait for work
-		{
-			u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
-
-			threadUserData = {};
-			threadUserData.running = true;
-			threadUserData.criticalSection = criticalSection;
-			Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
-		}
-
-		WRITE_BARRIER;
 
 		DiscoverChunks();
+
 		// Wait to generate chunks until road has been generated
 
 		GameObject::Initialize();
 	}
 
-	void TerrainGenerator::PostInitialize()
+	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData)
 	{
-		GameObject::PostInitialize();
+		constantData.chunkSize = ChunkSize;
+		constantData.maxHeight = MaxHeight;
+		constantData.roadBlendDist = m_RoadBlendDist;
+		constantData.roadBlendThreshold = m_RoadBlendThreshold;
+		constantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
+
+		// Copy road segments to GPU-friendly memory
+		{
+			i32 i = 0;
+			for (auto& iter : m_RoadSegments)
+			{
+				glm::vec2i chunkIndex = iter.first;
+
+				for (RoadSegment* roadSegment : iter.second)
+				{
+					RoadSegment_GPU roadSegmentGPU = {};
+					roadSegmentGPU.aabb = roadSegment->aabb;
+					roadSegmentGPU.curve = BezierCurve3D_GPU{ {
+							glm::vec4(roadSegment->curve.points[0], 1.0f),
+							glm::vec4(roadSegment->curve.points[1], 1.0f),
+							glm::vec4(roadSegment->curve.points[2], 1.0f),
+							glm::vec4(roadSegment->curve.points[3], 1.0f)
+						} };
+					roadSegmentGPU.widthStart = roadSegment->widthStart;
+					roadSegmentGPU.widthEnd = roadSegment->widthEnd;
+
+					if (!Contains(m_RoadSegmentsGPU, roadSegmentGPU))
+					{
+						m_RoadSegmentsGPU[i++] = roadSegmentGPU;
+					}
+				}
+			}
+
+			memset(m_RoadSegmentsGPU.data() + i, 0, (MAX_NUM_ROAD_SEGMENTS - i) * sizeof(RoadSegment_GPU));
+		}
+		memcpy(constantData.roadSegments, m_RoadSegmentsGPU.data(), MAX_NUM_ROAD_SEGMENTS * sizeof(RoadSegment_GPU));
+
+		// TODO:
+		memset(constantData.overlappingRoadSegmentIndices, 0, sizeof(i32) * MAX_NUM_ROAD_SEGMENTS * MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK);
+
+		memcpy(&constantData.biomeNoise, &m_BiomeNoise, sizeof(NoiseFunction_GPU));
+
+		// Copy noise functions
+		constantData.biomeCount = (u32)m_Biomes.size();
+		for (u32 i = 0; i < constantData.biomeCount; ++i)
+		{
+			Biome& biomeCPU = m_Biomes[i];
+			Biome_GPU& biomeGPU = constantData.biomes[i];
+
+			biomeGPU = {};
+			biomeGPU.noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
+			for (u32 j = 0; j < biomeGPU.noiseFunctionCount; ++j)
+			{
+				NoiseFunction& noiseFuncCPU = biomeCPU.noiseFunctions[j];
+				NoiseFunction_GPU& noiseFuncGPU = biomeGPU.noiseFunctions[j];
+				memcpy(&noiseFuncGPU, &noiseFuncCPU, sizeof(NoiseFunction_GPU));
+			}
+		}
+		memset(&constantData.biomes[constantData.biomeCount], 0, (MAX_BIOME_COUNT - constantData.biomeCount) * sizeof(Biome_GPU));
+
+		constantData.randomTablesSize = (u32)m_RandomTables.size();
 	}
 
 	void TerrainGenerator::Update()
 	{
-		//if (waveChunks.size() > terrain_workQueue->Size())
-		//{
-		//	for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-		//	{
-		//		// TODO: Reuse memory
-		//		FreeWorkQueueEntry(i);
-		//	}
-		//	delete terrain_workQueue;
-		//
-		//	u32 newSize = (u32)(waveChunks.size() * 1.2f);
-		//	terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
-		//	for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-		//	{
-		//		AllocWorkQueueEntry(i);
-		//	}
-		//}
-
-		terrain_workQueueEntriesCompleted = 0;
-		terrain_workQueueEntriesCreated = 0;
-		WRITE_BARRIER;
-		terrain_workQueueEntriesClaimed = 0;
-		WRITE_BARRIER;
+		if (!bUseAsyncCompute)
+		{
+			terrain_workQueueEntriesCompleted = 0;
+			terrain_workQueueEntriesCreated = 0;
+			WRITE_BARRIER;
+			terrain_workQueueEntriesClaimed = 0;
+			WRITE_BARRIER;
+		}
 
 		DiscoverChunks();
 		// Wait for road gen to call us back to fill out our road segments
@@ -8095,11 +8154,11 @@ namespace flex
 			GenerateChunks();
 		}
 
-		if (m_bDisplayTables)
+		if (m_bDisplayRandomTables)
 		{
 			real textureScale = 0.3f;
 			real textureY = -0.05f;
-			for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+			for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
 			{
 				SpriteQuadDrawInfo drawInfo = {};
 				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
@@ -8107,7 +8166,8 @@ namespace flex
 				drawInfo.bReadDepth = false;
 				drawInfo.scale = glm::vec3(textureScale);
 				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
-				drawInfo.textureID = m_TableTextureIDs[i];
+				drawInfo.textureID = m_RandomTableTextureID;
+				drawInfo.textureLayer = i;
 				g_Renderer->EnqueueSprite(drawInfo);
 
 				textureY -= (textureScale * 2.0f + 0.01f);
@@ -8115,32 +8175,36 @@ namespace flex
 			}
 		}
 
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
+		// TDOO: When using async compute trigger readback for nearby chunks
+		if (!bUseAsyncCompute)
 		{
-			glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
-			glm::vec2 playerPos2D(playerPos.x, playerPos.z);
-			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
 			{
-				glm::vec2i chunkIndex = iter->first;
-				glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
-				real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
+				glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+				glm::vec2 playerPos2D(playerPos.x, playerPos.z);
+				for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+				{
+					glm::vec2i chunkIndex = iter->first;
+					glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+					real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
 
-				bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
-				if (bShouldBeLoaded)
-				{
-					if (iter->second->rigidBody == nullptr)
+					bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
+					if (bShouldBeLoaded)
 					{
-						Chunk* chunk = m_Meshes[chunkIndex];
-						CreateChunkRigidBody(chunk);
+						if (iter->second->rigidBody == nullptr)
+						{
+							Chunk* chunk = m_Meshes[chunkIndex];
+							CreateChunkRigidBody(chunk);
+						}
 					}
-				}
-				else
-				{
-					if (iter->second->rigidBody != nullptr)
+					else
 					{
-						Chunk* chunk = m_Meshes[chunkIndex];
-						DestroyChunkRigidBody(chunk);
+						if (iter->second->rigidBody != nullptr)
+						{
+							Chunk* chunk = m_Meshes[chunkIndex];
+							DestroyChunkRigidBody(chunk);
+						}
 					}
 				}
 			}
@@ -8165,12 +8229,15 @@ namespace flex
 		m_ChunksToDestroy.clear();
 		m_ChunksToLoad.clear();
 
-		for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+		if (terrain_workQueue != nullptr)
 		{
-			FreeWorkQueueEntry(i);
+			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			{
+				FreeWorkQueueEntry(i);
+			}
+			delete terrain_workQueue;
+			terrain_workQueue = nullptr;
 		}
-		delete terrain_workQueue;
-		terrain_workQueue = nullptr;
 
 		Platform::FreeCriticalSection(criticalSection);
 		criticalSection = nullptr;
@@ -8256,12 +8323,13 @@ namespace flex
 		ImGui::Text("Loaded chunks: %u (loading: %u)", (u32)m_Meshes.size(), (u32)m_ChunksToLoad.size());
 
 		bool bRegen = false;
+		bool bRegenGradients = false;
 
 		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
 
 		ImGui::SameLine();
 
-		ImGui::Checkbox("Display tables", &m_bDisplayTables);
+		ImGui::Checkbox("Display tables", &m_bDisplayRandomTables);
 
 		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
 		{
@@ -8421,7 +8489,7 @@ namespace flex
 			if (m_BasePerlinTableWidth != oldtableWidth)
 			{
 				GenerateGradients();
-				bRegen = true;
+				bRegenGradients = true;
 			}
 		}
 
@@ -8429,11 +8497,15 @@ namespace flex
 
 		ImGui::SameLine();
 
-		bRegen = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegen;
+		bRegenGradients = ImGui::Button("Regen gradients") || bRegenGradients;
+
+		ImGui::SameLine();
+
+		bRegenGradients = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegenGradients;
 
 		if (m_UseManualSeed)
 		{
-			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
+			bRegenGradients = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegenGradients;
 		}
 
 		const u32 previousVertCountPerChunkAxis = VertCountPerChunkAxis;
@@ -8464,27 +8536,38 @@ namespace flex
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("high", &m_HighCol.x) || bRegen;
 
-		if (bRegen)
+		if (bRegen || bRegenGradients)
 		{
-			GenerateGradients();
+			if (bRegenGradients)
+			{
+				GenerateGradients();
+			}
+
 			DestroyAllChunks();
 
 			RoadManager* roadManager = GetSystem<RoadManager>(SystemType::ROAD_MANAGER);
 			roadManager->RegenerateAllRoads();
 
-			if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
+			if (bUseAsyncCompute)
 			{
-				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-				{
-					FreeWorkQueueEntry(i);
-					AllocWorkQueueEntry(i);
-				}
+				Regenerate();
 			}
 			else
 			{
-				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
 				{
-					FillInTerrainChunkData((*terrain_workQueue)[i]);
+					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+					{
+						FreeWorkQueueEntry(i);
+						AllocWorkQueueEntry(i);
+					}
+				}
+				else
+				{
+					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+					{
+						FillInTerrainChunkData((*terrain_workQueue)[i]);
+					}
 				}
 			}
 		}
@@ -8695,6 +8778,21 @@ namespace flex
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
+	void TerrainGenerator::Regenerate()
+	{
+		TerrainGenConstantData constantData;
+		FillOutConstantData(constantData);
+
+		g_Renderer->RegenerateTerrain(constantData);
+
+		m_Meshes.clear();
+		m_ChunksToDestroy.clear();
+		m_ChunksToLoad.clear();
+
+		DiscoverChunks();
+		GenerateChunks();
+	}
+
 	void TerrainGenerator::FillInTerrainChunkData(volatile TerrainGenerator::TerrainChunkData& outChunkData)
 	{
 		outChunkData.chunkSize = ChunkSize;
@@ -8727,7 +8825,7 @@ namespace flex
 
 		const u32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
 
-		m_RandomTables = std::vector<std::vector<glm::vec2>>(maxNumOctaves);
+		m_RandomTables.resize(maxNumOctaves);
 
 		std::mt19937 m_RandGenerator;
 		std::uniform_real_distribution<real> m_RandDistribution;
@@ -8739,24 +8837,38 @@ namespace flex
 			u32 tableWidth = m_BasePerlinTableWidth;
 			for (u32 octave = 0; octave < maxNumOctaves; ++octave)
 			{
-				m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
+				m_RandomTables[octave].resize(tableWidth * tableWidth);
 
-				for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+				for (glm::vec2& value : m_RandomTables[octave])
 				{
-					m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+					value = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
 				}
 
 				tableWidth /= 2;
 			}
 		}
 
-		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		if (m_RandomTableTextureID != InvalidTextureID)
 		{
-			g_ResourceManager->RemoveLoadedTexture(m_TableTextureIDs[i], true);
+			g_ResourceManager->RemoveLoadedTexture(m_RandomTableTextureID, true);
 		}
-		m_TableTextureIDs.resize(m_RandomTables.size());
 
-		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		m_RandomTableTextureLayerCount = (u32)m_RandomTables.size();
+
+		u32 requiredTexMem = 0;
+		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
+		{
+			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
+			if (tableWidth < 1)
+			{
+				break;
+			}
+			requiredTexMem += (u32)m_RandomTables[i].size();
+		}
+
+		std::vector<glm::vec4> textureMem(requiredTexMem);
+		u32 offset = 0;
+		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
 		{
 			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
 			if (tableWidth < 1)
@@ -8764,16 +8876,24 @@ namespace flex
 				break;
 			}
 
-			std::vector<glm::vec4> textureMem(m_RandomTables[i].size());
-			for (u32 j = 0; j < m_RandomTables[i].size(); ++j)
+			u32 layerSize = (u32)m_RandomTables[i].size();
+			for (u32 j = 0; j < layerSize; ++j)
 			{
-				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
+				textureMem[j + offset] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
 			}
-			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0],
-				(u32)(textureMem.size() * sizeof(u32) * 4),
-				VK_FORMAT_R32G32B32A32_SFLOAT,
-				"Perlin random table", tableWidth, tableWidth, 4, VK_FILTER_NEAREST);
+			offset += layerSize;
 		}
+
+		// TODO: Upload as two channel texture
+		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
+		m_RandomTableTextureID = g_Renderer->InitializeTextureArrayFromMemory(textureMem.data(),
+			(u32)(textureMem.size() * sizeof(u32) * 4),
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
+
+			VK_FILTER_NEAREST /* ? */
+
+		);
 	}
 
 	void TerrainGenerator::UpdateRoadSegments()
@@ -8886,238 +9006,263 @@ namespace flex
 
 	void TerrainGenerator::GenerateChunks()
 	{
-		// Resize work queue if not large enough
-		if ((m_Meshes.size() + m_ChunksToLoad.size()) > terrain_workQueue->Size())
+		if (bUseAsyncCompute)
 		{
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			if (!m_ChunksToLoad.empty())
 			{
-				// TODO: Reuse memory
-				FreeWorkQueueEntry(i);
-			}
-			delete terrain_workQueue;
-
-			u32 newSize = (u32)((m_Meshes.size() + m_ChunksToLoad.size()) * 1.2f);
-			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-			{
-				AllocWorkQueueEntry(i);
-			}
-
-			WRITE_BARRIER;
-		}
-
-		// Destroy far away chunks on the main thread
-		{
-			PROFILE_AUTO("Destroy terrain chunks");
-			ns start = Time::CurrentNanoseconds();
-			i32 iterationCount = 0;
-			while (!m_ChunksToDestroy.empty())
-			{
-				glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
-				m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
-
-				auto iter = m_Meshes.find(chunkIdx);
-				assert(iter != m_Meshes.end());
-				DestroyChunk(iter->second);
-				m_Meshes.erase(iter);
-
-				++iterationCount;
-
-				ns now = Time::CurrentNanoseconds();
-				if ((now - start) > m_DeletionBudgetPerFrame)
+				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
-					break;
+					glm::vec2i chunkIndex = *chunkToLoadIter;
+					assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
+
+					Chunk* chunk = new Chunk();
+					chunk->meshComponent = nullptr;
+					chunk->linearIndex = (u32)m_Meshes.size(); // ?
+
+					g_Renderer->RegisterTerrainChunk(chunkIndex, chunk->linearIndex);
+					// TODO: Reuse slots
+					m_Meshes.emplace(chunkIndex, chunk);
+				}
+
+				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				m_ChunksToLoad.clear();
+			}
+
+			// Destroy far away chunks on the main thread
+			{
+				PROFILE_AUTO("Destroy terrain chunks");
+				while (!m_ChunksToDestroy.empty())
+				{
+					glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
+
+					auto iter = m_Meshes.find(chunkIdx);
+					assert(iter != m_Meshes.end());
+					DestroyChunk(iter->second);
+					m_Meshes.erase(iter);
+
+					g_Renderer->RemoveTerrainChunk(chunkIdx);
 				}
 			}
-			if (iterationCount != 0)
+		}
+		else
+		{
+			// Resize work queue if not large enough
+			if ((m_Meshes.size() + m_ChunksToLoad.size()) > terrain_workQueue->Size())
 			{
-				Print("Destroyed %d chunks (total: %d)\n", iterationCount, (i32)m_Meshes.size());
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					// TODO: Reuse memory
+					FreeWorkQueueEntry(i);
+				}
+				delete terrain_workQueue;
+
+				u32 newSize = (u32)((m_Meshes.size() + m_ChunksToLoad.size()) * 1.2f);
+				terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					AllocWorkQueueEntry(i);
+				}
+
+				WRITE_BARRIER;
 			}
-		}
 
-		PROFILE_BEGIN("generate terrain");
+			// Destroy far away chunks on the main thread
+			{
+				PROFILE_AUTO("Destroy terrain chunks");
+				ns start = Time::CurrentNanoseconds();
+				i32 iterationCount = 0;
+				while (!m_ChunksToDestroy.empty())
+				{
+					glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
-		//glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		//glm::vec2* texCoords = m_VertexBufferCreateInfo.texCoords_UV.data();
-		//glm::vec4* colours = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
+					auto iter = m_Meshes.find(chunkIdx);
+					assert(iter != m_Meshes.end());
+					DestroyChunk(iter->second);
+					m_Meshes.erase(iter);
 
-		//{
-		//	auto existingChunkIter = m_Meshes.find(chunkIndex);
-		//	if (existingChunkIter != m_Meshes.end())
-		//	{
-		//		if (existingChunkIter->second->meshComponent != nullptr)
-		//		{
-		//			existingChunkIter->second->meshComponent->Destroy();
-		//			delete existingChunkIter->second;
-		//		}
-		//		m_Meshes.erase(existingChunkIter);
-		//	}
-		//}
+					++iterationCount;
 
-		// Fill out chunk data for threads to discover
-		for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
-		{
-			glm::vec2i chunkIndex = *chunkToLoadIter;
+					ns now = Time::CurrentNanoseconds();
+					if ((now - start) > m_DeletionBudgetPerFrame)
+					{
+						break;
+					}
+				}
+				if (iterationCount != 0)
+				{
+					Print("Destroyed %d chunks (total: %d)\n", iterationCount, (i32)m_Meshes.size());
+				}
+			}
 
-			assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
+			PROFILE_BEGIN("generate terrain");
 
-			Chunk* chunk = new Chunk();
-			chunk->meshComponent = nullptr;
-			chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
-			// TODO: Reuse slots
-			m_Meshes.emplace(chunkIndex, chunk);
-
-			volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
-			terrainChunkData->chunkIndex.x = chunkIndex.x;
-			terrainChunkData->chunkIndex.y = chunkIndex.y;
-
-			WRITE_BARRIER;
-
-			Platform::AtomicIncrement(&terrain_workQueueEntriesCreated);
-		}
-
-		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
-		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
-
-		if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
-		{
-			terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
-			g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
-		}
-
-		// Wait for all threads to complete
-		// TODO: Call later in frame
-		while (terrain_workQueueEntriesCompleted != terrain_workQueueEntriesCreated)
-		{
-			// TODO: Handle completed entries as they come in rather than waiting for all
-			Platform::YieldProcessor();
-		}
-
-		PROFILE_END("generate terrain");
-
-		if (!m_ChunksToLoad.empty())
-		{
-			Profiler::PrintBlockDuration("generate terrain");
-
-			const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
-			const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
-			const u32 indexCount = triCount * 3;
-
-			// TODO: Spread creation across multiple frames
-
-			static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
-			vertexBufferCreateInfo.positions_3D.clear();
-			vertexBufferCreateInfo.texCoords_UV.clear();
-			vertexBufferCreateInfo.colours_R32G32B32A32.clear();
-			vertexBufferCreateInfo.normals.clear();
-
-			vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
-			vertexBufferCreateInfo.positions_3D.resize(vertexCount);
-			vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
-			vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
-			vertexBufferCreateInfo.normals.resize(vertexCount);
-
-			static std::vector<u32> indices;
-			indices.resize(indexCount);
-
-			real quadSize = ChunkSize / (VertCountPerChunkAxis - 1);
-
-			// TODO: Generate all new vertex buffers first, then do post pass to compute normals
-			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
+			// Fill out chunk data for threads to discover
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
 				glm::vec2i chunkIndex = *chunkToLoadIter;
 
-				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+				assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
 
-				memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
-				memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
-				memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
-				memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
+				Chunk* chunk = new Chunk();
+				chunk->meshComponent = nullptr;
+				chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
+				// TODO: Reuse slots
+				m_Meshes.emplace(chunkIndex, chunk);
 
-				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
-				auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
-				if (roadSegmentIter != terrainChunkData->roadSegments->end())
+				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
+				terrainChunkData->chunkIndex.x = chunkIndex.x;
+				terrainChunkData->chunkIndex.y = chunkIndex.y;
+
+				WRITE_BARRIER;
+
+				Platform::AtomicIncrement(&terrain_workQueueEntriesCreated);
+			}
+
+			Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
+			Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
+
+			if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+			{
+				terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
+				g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
+			}
+
+			// Wait for all threads to complete
+			// TODO: Call later in frame
+			while (terrain_workQueueEntriesCompleted != terrain_workQueueEntriesCreated)
+			{
+				// TODO: Handle completed entries as they come in rather than waiting for all
+				Platform::YieldProcessor();
+			}
+
+			PROFILE_END("generate terrain");
+
+			if (!m_ChunksToLoad.empty())
+			{
+				Profiler::PrintBlockDuration("generate terrain");
+
+				const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
+				const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+				const u32 indexCount = triCount * 3;
+
+				// TODO: Spread creation across multiple frames
+
+				static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+				vertexBufferCreateInfo.positions_3D.clear();
+				vertexBufferCreateInfo.texCoords_UV.clear();
+				vertexBufferCreateInfo.colours_R32G32B32A32.clear();
+				vertexBufferCreateInfo.normals.clear();
+
+				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
+				vertexBufferCreateInfo.positions_3D.resize(vertexCount);
+				vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
+				vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
+				vertexBufferCreateInfo.normals.resize(vertexCount);
+
+				static std::vector<u32> indices;
+				indices.resize(indexCount);
+
+				real quadSize = ChunkSize / (VertCountPerChunkAxis - 1);
+
+				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
+				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
+				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
-					overlappingRoadSegments = &roadSegmentIter->second;
-				}
+					glm::vec2i chunkIndex = *chunkToLoadIter;
 
-				glm::vec4 colour; // Throwaway
-				u32 vertIndex = 0;
-				for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
-				{
-					for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+
+					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
+					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
+
+					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
+					auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
+					if (roadSegmentIter != terrainChunkData->roadSegments->end())
 					{
-						glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
+						overlappingRoadSegments = &roadSegmentIter->second;
+					}
 
-						glm::vec2 vertPosOS = glm::vec2(uv.x * ChunkSize, uv.y * ChunkSize);
-						glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+					glm::vec4 colour; // Throwaway
+					u32 vertIndex = 0;
+					for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+					{
+						for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+						{
+							glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
 
-						real left = 0.0f;
-						if (x > 0)
-						{
-							left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
-						}
-						else
-						{
-							left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-								glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
-						}
+							glm::vec2 vertPosOS = glm::vec2(uv.x * ChunkSize, uv.y * ChunkSize);
+							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
 
-						real right = 0.0f;
-						if (x < VertCountPerChunkAxis - 1)
-						{
-							right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
-						}
-						else
-						{
-							right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-								glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
-						}
+							real left = 0.0f;
+							if (x > 0)
+							{
+								left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
+							}
+							else
+							{
+								left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
+							}
 
-						real back = 0.0f;
-						if (z > 0)
-						{
-							back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
-						}
-						else
-						{
-							back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-								glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
-						}
+							real right = 0.0f;
+							if (x < VertCountPerChunkAxis - 1)
+							{
+								right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
+							}
+							else
+							{
+								right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
+							}
 
-						real forward = 0.0f;
-						if (z < VertCountPerChunkAxis - 1)
-						{
-							forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
-						}
-						else
-						{
-							forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-								glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
-						}
+							real back = 0.0f;
+							if (z > 0)
+							{
+								back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
+							}
+							else
+							{
+								back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
+							}
 
-						real dX = left - right;
-						real dZ = back - forward;
-						vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f, dZ));
-						//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
+							real forward = 0.0f;
+							if (z < VertCountPerChunkAxis - 1)
+							{
+								forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
+							}
+							else
+							{
+								forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
+							}
 
-						++vertIndex;
+							real dX = left - right;
+							real dZ = back - forward;
+							vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f, dZ));
+							//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
+
+							++vertIndex;
+						}
+					}
+
+					RenderObjectCreateInfo renderObjectCreateInfo = {};
+					i32 submeshIndex;
+					MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
+					if (meshComponent != nullptr)
+					{
+						m_Meshes[chunkIndex]->meshComponent = meshComponent;
+						m_Meshes[chunkIndex]->linearIndex = submeshIndex;
 					}
 				}
 
-				RenderObjectCreateInfo renderObjectCreateInfo = {};
-				i32 submeshIndex;
-				MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
-				if (meshComponent != nullptr)
-				{
-					m_Meshes[chunkIndex]->meshComponent = meshComponent;
-					m_Meshes[chunkIndex]->linearIndex = submeshIndex;
-				}
+				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				m_ChunksToLoad.clear();
 			}
-
-			Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
-			m_ChunksToLoad.clear();
 		}
 	}
 
@@ -9161,12 +9306,18 @@ namespace flex
 	// NOTE: This function assumes that the caller will remove the chunk from m_Meshes themselves
 	void TerrainGenerator::DestroyChunk(Chunk* chunk)
 	{
-		m_Mesh->RemoveSubmesh(chunk->linearIndex);
+		if (m_Mesh->GetSubmeshCount() != 0 && chunk->linearIndex != u32_max)
+		{
+			m_Mesh->RemoveSubmesh(chunk->linearIndex);
+		}
 
 		DestroyChunkRigidBody(chunk);
 
-		chunk->meshComponent->Destroy();
-		delete chunk->meshComponent;
+		if (chunk->meshComponent != nullptr)
+		{
+			chunk->meshComponent->Destroy();
+			delete chunk->meshComponent;
+		}
 
 		delete chunk;
 	}
@@ -9713,11 +9864,8 @@ namespace flex
 		return sqrDistToClosestEdge;
 	}
 
-	//glm::vec2& ourCellCenter, glm::vec2& neighborCellCenter,
-
-	// Returns the distances to the nearest cell neighbors
-	// of the distance between this cell and the edge (1 = pos is at cell center, 0 = pos is at cell edge)
-	glm::vec2 VoronoiDistance(const glm::vec2& pos, glm::vec2& cell0Coord, glm::vec2& cell1Coord, glm::vec2& cell2Coord)
+	// Returns the shortest distance to the nearest cell neighbor
+	real VoronoiDistance(const glm::vec2& pos, glm::vec2& cell0Coord)
 	{
 		glm::vec2 posCell = glm::floor(pos);
 		glm::vec2 posCellF = glm::fract(pos);
@@ -9726,7 +9874,7 @@ namespace flex
 
 		glm::vec2 deltaPosRandomPoint;
 
-		real closestEdge1 = 8.0f;
+		real closestEdge = 8.0f;
 		for (i32 j = -1; j <= 1; j++)
 		{
 			for (i32 i = -1; i <= 1; i++)
@@ -9737,9 +9885,9 @@ namespace flex
 				glm::vec2 delta = cellCoord + cellRandomPoint - posCellF;
 				real distSq = glm::dot(delta, delta);
 
-				if (distSq < closestEdge1)
+				if (distSq < closestEdge)
 				{
-					closestEdge1 = distSq;
+					closestEdge = distSq;
 					deltaPosRandomPoint = delta;
 					cell0Coord = cellCoord;
 				}
@@ -9747,7 +9895,7 @@ namespace flex
 		}
 
 		// Find distance to second closest cell
-		closestEdge1 = 8.0f;
+		closestEdge = 8.0f;
 		for (i32 j = -2; j <= 2; j++)
 		{
 			for (i32 i = -2; i <= 2; i++)
@@ -9763,39 +9911,10 @@ namespace flex
 					glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
 					// Project diff vector onto line spanning between cells to get shortest distance to edge
 					real dist = glm::dot(halfwayPoint, diff / diffLenSq);
-					if (dist < closestEdge1)
+					// TODO: use min
+					if (dist < closestEdge)
 					{
-						closestEdge1 = dist;
-						cell1Coord = cellCoord;
-					}
-				}
-			}
-		}
-
-		// Find distance to third closest cell
-		real closestEdge2 = 8.0f;
-		for (i32 j = -2; j <= 2; j++)
-		{
-			for (i32 i = -2; i <= 2; i++)
-			{
-				glm::vec2 cellCoord = cell0Coord + glm::vec2(i, j);
-				if (i != (i32)cell1Coord.x && (i32)j != cell1Coord.y)
-				{
-					glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
-					glm::vec2 neighborDeltaPosRandomPoint = cellCoord + cellRandomPoint - posCellF;
-
-					glm::vec2 diff = neighborDeltaPosRandomPoint - deltaPosRandomPoint;
-					real diffLenSq = glm::dot(diff, diff);
-					if (diffLenSq > 0.00001f)
-					{
-						glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
-						// Project diff vector onto line spanning between cells to get shortest distance to edge
-						real dist = glm::dot(halfwayPoint, diff / diffLenSq);
-						if (dist < closestEdge2)
-						{
-							closestEdge2 = dist;
-							cell2Coord = cellCoord;
-						}
+						closestEdge = dist;
 					}
 				}
 			}
@@ -9803,16 +9922,14 @@ namespace flex
 
 		// Translate into world-space
 		cell0Coord += posCell;
-		cell1Coord += posCell;
-		cell2Coord += posCell;
 
-		return glm::vec2(closestEdge1, closestEdge2);
+		return closestEdge;
 	}
 
 	real VoronoiColumns(const glm::vec2& pos, real sharpness)
 	{
 		glm::vec2 _x;
-		real dist = VoronoiDistance(pos, _x, _x, _x).x;
+		real dist = VoronoiDistance(pos, _x);
 		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
 	}
 
@@ -9897,107 +10014,26 @@ namespace flex
 	{
 		real height = 0.0f;
 
-		real chunkBlendWidth = 0.1f; // [0, 1]
-
 		i32 biome0Index = 0;
-		i32 biome1Index = 0;
-		i32 biome2Index = 0;
 		glm::vec2 biome0CellCoord;
-		glm::vec2 biome1CellCoord;
-		glm::vec2 biome2CellCoord;
-		//glm::vec2 biome0CellCenter;
-		//glm::vec2 biome1CellCenter;
-		//glm::vec2 biome1CellIndex;
-		real blendWeight1 = 0.0f;
-		real blendWeight2 = 0.0f;
 
 		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
 		{
 			const glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
 			const i32 biomeCount = (i32)chunkData->biomes->size();
 
-			//real biomeInfo = SmoothVoronoi(p, chunkData->biomeNoise->sharpness);
-
-			//glm::vec2 biome0SampleCellPos = glm::floor(p);
-			//glm::vec2 biome0SampleCellPosF = glm::fract(p);
-			glm::vec2 distToEdges = VoronoiDistance(p, biome0CellCoord, biome1CellCoord, biome2CellCoord);
+			VoronoiDistance(p, biome0CellCoord);
 			biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
-			//real distToEdge1 = glm::sqrt(VoronoiDistance(p, biome1CellID, biome1RandomPoint));
 
-			// Remap to blend from 0.0 at chunkBlendWidth to 0.5 at cell edge
-			blendWeight1 = (1.0f - glm::smoothstep(0.0f, chunkBlendWidth, distToEdges.x)) * 0.5f;
-			blendWeight2 = (1.0f - glm::smoothstep(0.0f, chunkBlendWidth, distToEdges.y)) * 0.5f;
-
-			// Square to make transition
-			//blendWeight = glm::pow(blendWeight * 2.0f, 2.0f) * 0.5f;
-
-			//glm::vec2 nearestPointOnEdge = (biome1RandomPoint - biome0RandomPoint) * 0.5f;
-
-			//real distToEdge = biomeInfo.x;
-			// Sharpen distance
-			//distToEdge = glm::smoothstep(0.0f, 1.0f - glm::clamp(chunkData->biomeNoise->sharpness / 10.0f, 0.0f, 1.0f), distToEdge);
-			//glm::vec2 nearestCell(biomeInfo.y, biomeInfo.z);
-
-			//height = glm::fract(glm::abs(nearestCell.x) * 0.265f + glm::abs(nearestCell.y) * 3.1f) * chunkData->biomeNoise->heightScale;
-			//height = distToEdge * chunkData->biomeNoise->heightScale;
-
-			//height = Hash2(glm::vec2(b.y, b.z)).x * chunkData->biomeNoise->heightScale;
-
-			real biome0Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
-
-			if (blendWeight1 > 0.0f)
-			{
-				biome1Index = BiomeIDToindex(biome1CellCoord, biomeCount);
-				real biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
-
-				biome2Index = BiomeIDToindex(biome2CellCoord, biomeCount);
-				real biome2Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome2Index], pos);
-
-				//if (biome0Index != biome1Index)
-				//{
-				//	if (biome1Index != -1)
-				//	{
-				//		real biome1Height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome1Index], pos);
-				//		real alpha = glm::clamp((1.0f - distToEdge), 0.0f, 1.0f);
-				//		//height = biome0Height * (1.0f - alpha) + biome1Height * alpha;
-				//		height = biome0Height * glm::clamp(distToEdge - 0.5f, 0.0f, 1.0f);
-				//	}
-				//	else
-				//	{
-				//		height = biome0Height;
-				//	}
-				//}
-				//else
-				//{
-				//	height = biome0Height;
-				//}
-
-				//real invBlendWidth = 1.0f / 0.1f;
-				//real alpha = glm::clamp(distToEdge * invBlendWidth, 0.5f, 1.0f);
-				real blendWeight0 = 1.0f - blendWeight1 - blendWeight2;
-				height = biome0Height * blendWeight0 + biome1Height * blendWeight1 + biome2Height * blendWeight2;
-			}
-			else
-			{
-				height = biome0Height;
-				biome1Index = biome0Index;
-				biome2Index = biome0Index;
-			}
+			height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
 		}
 
 		// Divide by 2 to transform range from [-1, 1] to [0, 1]
 		height = height * 0.5f + 0.5f;
 
 		assert(biome0Index >= 0 && biome0Index < 65536);
-		assert(biome1Index >= 0 && biome1Index < 65536);
-		assert(biome2Index >= 0 && biome2Index < 65536);
 
-		real matID01 = (real)((((u32)biome0Index & 0xFFFF) << 16) | ((u32)biome1Index & 0xFFFF));
-		real matID2 = (real)((u32)biome2Index & 0xFFFF);
-
-		real packedBlendWeights = (real)(((u32)(blendWeight1 * 65536.0f) << 16) | ((u32)(blendWeight2 * 65536.0f)));
-
-		return glm::vec4(height, packedBlendWeights, matID01, matID2);
+		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
 	}
 
 	// Returns a value in [-1, 1]

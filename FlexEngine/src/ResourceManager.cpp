@@ -922,6 +922,11 @@ namespace flex
 
 	bool ResourceManager::RemoveLoadedTexture(Texture* texture, bool bDestroy)
 	{
+		if (texture == nullptr)
+		{
+			return false;
+		}
+
 		for (auto iter = loadedTextures.begin(); iter != loadedTextures.end(); ++iter)
 		{
 			if (*iter == texture)

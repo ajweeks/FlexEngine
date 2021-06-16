@@ -18,9 +18,9 @@ namespace flex
 	volatile u32 shaderWorkItemsCreated = 0;
 	volatile u32 shaderWorkItemsClaimed = 0;
 	volatile u32 shaderWorkItemsCompleted = 0;
-	ShaderCompiler::ShaderCompilationResult** shaderCompilationResults;
-	u32 shaderCompilationResultsLength = 0;
-	std::vector<ShaderCompiler::ShaderError> ShaderCompiler::s_ShaderErrors;
+	ShaderCompiler::ShaderCompilationResult** s_ShaderCompilationResults;
+	u32 s_ShaderCompilationResultsLength = 0;
+	std::vector<ShaderCompiler::ShaderError> s_ShaderErrors;
 
 	ShaderCompiler::ShaderCompiler()
 	{
@@ -30,6 +30,22 @@ namespace flex
 		if (!Platform::DirectoryExists(spvDirectoryAbs))
 		{
 			Platform::CreateDirectoryRecursive(spvDirectoryAbs);
+		}
+	}
+
+	ShaderCompiler::~ShaderCompiler()
+	{
+		if (s_ShaderCompilationResults != nullptr)
+		{
+			for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
+			{
+				delete s_ShaderCompilationResults[i];
+			}
+
+			delete[] s_ShaderCompilationResults;
+			s_ShaderCompilationResults = nullptr;
+
+			s_ShaderCompilationResultsLength = 0;
 		}
 	}
 
@@ -45,7 +61,7 @@ namespace flex
 				Platform::EnterCriticalSection(threadData->criticalSection);
 				if (shaderWorkItemsCreated != shaderWorkItemsClaimed)
 				{
-					compilationResult = shaderCompilationResults[shaderWorkItemsClaimed];
+					compilationResult = s_ShaderCompilationResults[shaderWorkItemsClaimed];
 					shaderWorkItemsClaimed += 1;
 
 					WRITE_BARRIER;
@@ -88,8 +104,8 @@ namespace flex
 
 						if (compilationResult->bSuccess)
 						{
-							compilationResult->result = compiler.CompileGlslToSpv(fileContents, shaderKind, shaderAbsPath.c_str(), options);
-							compilationResult->bSuccess = compilationResult->result.GetCompilationStatus() == shaderc_compilation_status_success;
+							compilationResult->spvResult = compiler.CompileGlslToSpv(fileContents, shaderKind, shaderAbsPath.c_str(), options);
+							compilationResult->bSuccess = compilationResult->spvResult.GetCompilationStatus() == shaderc_compilation_status_success;
 						}
 					}
 					else
@@ -117,10 +133,10 @@ namespace flex
 
 	void ShaderCompiler::QueueWorkItem(const std::string& shaderAbsPath)
 	{
-		assert(shaderWorkItemsCreated < shaderCompilationResultsLength);
+		assert(shaderWorkItemsCreated < s_ShaderCompilationResultsLength);
 
-		shaderCompilationResults[shaderWorkItemsCreated] = new ShaderCompilationResult();
-		shaderCompilationResults[shaderWorkItemsCreated]->shaderAbsPath = shaderAbsPath;
+		s_ShaderCompilationResults[shaderWorkItemsCreated] = new ShaderCompilationResult();
+		s_ShaderCompilationResults[shaderWorkItemsCreated]->shaderAbsPath = shaderAbsPath;
 
 		Platform::AtomicIncrement(&shaderWorkItemsCreated);
 	}
@@ -219,6 +235,10 @@ namespace flex
 
 	void ShaderCompiler::StartCompilation(bool bForceCompileAll /* = false */)
 	{
+		m_ThreadData.bRunning = false;
+
+		WRITE_BARRIER;
+
 		for (std::thread& thread : m_Threads)
 		{
 			if (thread.joinable())
@@ -233,11 +253,9 @@ namespace flex
 		if (m_ThreadData.criticalSection != nullptr)
 		{
 			Platform::FreeCriticalSection(m_ThreadData.criticalSection);
+			m_ThreadData.criticalSection = nullptr;
 		}
-		m_ThreadData.bRunning = true;
-		m_ThreadData.criticalSection = Platform::InitCriticalSection();
-
-		bComplete = false;
+		bComplete = true;
 		shaderWorkItemsCreated = 0;
 		shaderWorkItemsClaimed = 0;
 		shaderWorkItemsCompleted = 0;
@@ -334,30 +352,33 @@ namespace flex
 		}
 		else
 		{
-			WRITE_BARRIER;
-
+			m_ThreadData.criticalSection = Platform::InitCriticalSection();
+			m_ThreadData.bRunning = true;
 			m_ThreadData.bGenerateAssembly = bGenerateAssembly;
+			bComplete = false;
 
-			if (shaderCompilationResults != nullptr)
+			if (s_ShaderCompilationResults != nullptr)
 			{
-				for (u32 i = 0; i < shaderCompilationResultsLength; ++i)
+				for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
 				{
-					delete shaderCompilationResults[i];
+					delete s_ShaderCompilationResults[i];
 				}
 
-				delete[] shaderCompilationResults;
-				shaderCompilationResults = nullptr;
+				delete[] s_ShaderCompilationResults;
+				s_ShaderCompilationResults = nullptr;
 			}
 
-			shaderCompilationResultsLength = (u32)m_QueuedLoads.size();
-			shaderCompilationResults = new ShaderCompilationResult * [shaderCompilationResultsLength];
-			for (u32 i = 0; i < shaderCompilationResultsLength; ++i)
+			WRITE_BARRIER;
+
+			s_ShaderCompilationResultsLength = (u32)m_QueuedLoads.size();
+			s_ShaderCompilationResults = new ShaderCompilationResult * [s_ShaderCompilationResultsLength];
+			for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
 			{
 				QueueWorkItem(m_QueuedLoads[i]);
 			}
 
 			u32 cpuCount = Platform::GetLogicalProcessorCount();
-			u32 threadCount = glm::min(cpuCount / 2, shaderCompilationResultsLength);
+			u32 threadCount = glm::min(cpuCount / 2, s_ShaderCompilationResultsLength);
 			for (u32 i = 0; i < threadCount; ++i)
 			{
 				m_Threads.emplace_back(std::thread(LoadShaderAsync, &m_ThreadData));
@@ -506,6 +527,8 @@ namespace flex
 
 		m_ThreadData.bRunning = false;
 
+		WRITE_BARRIER;
+
 		for (std::thread& thread : m_Threads)
 		{
 			if (thread.joinable())
@@ -514,9 +537,9 @@ namespace flex
 			}
 		}
 
-		for (u32 i = 0; i < shaderCompilationResultsLength; ++i)
+		for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
 		{
-			ShaderCompilationResult* compilationResult = shaderCompilationResults[i];
+			ShaderCompilationResult* compilationResult = s_ShaderCompilationResults[i];
 
 			if (!compilationResult->errorStr.empty())
 			{
@@ -528,6 +551,26 @@ namespace flex
 			std::string strippedFileName = StripFileType(shaderFileName);
 			std::string fileType = ExtractFileType(shaderFileName);
 			std::string newFileName = spvDirectoryAbs + strippedFileName + "_" + fileType;
+
+			auto ParseError = [](ShaderCompilationResult* compilationResult, size_t numErrors, size_t numWarnings, const std::string& errorStr)
+			{
+				if (g_bEnableLogging_Shaders)
+				{
+					PrintWarn("%lu shader compilation errors, %lu warnings: \n", numErrors, numWarnings);
+					PrintWarn("%s\n", errorStr.c_str());
+				}
+
+				size_t colon0 = errorStr.find_first_of(':');
+				size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
+
+				u32 lineNumber = 0;
+				if (colon0 != std::string::npos && colon1 != std::string::npos)
+				{
+					lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
+				}
+
+				s_ShaderErrors.push_back({ errorStr, compilationResult->shaderAbsPath, lineNumber });
+			};
 
 			if (bGenerateAssembly)
 			{
@@ -541,29 +584,29 @@ namespace flex
 						fileStream.write((char*)asmText.data(), asmText.size() * sizeof(char));
 						fileStream.close();
 					}
+					else
+					{
+						PrintError("Failed to write shader assembly to %s\n", asmFilePath.c_str());
+						bSuccess = false;
+					}
 				}
 				else
 				{
-					if (g_bEnableLogging_Shaders)
-					{
-						PrintWarn("%lu shader compilation errors, %lu warnings: \n", compilationResult->assemblyResult.GetNumErrors(), compilationResult->assemblyResult.GetNumWarnings());
-					}
-					std::string errorStr = compilationResult->assemblyResult.GetErrorMessage();
-					if (g_bEnableLogging_Shaders)
-					{
-						PrintWarn("%s\n", errorStr.c_str());
-					}
+					ParseError(compilationResult,
+						compilationResult->assemblyResult.GetNumErrors(),
+						compilationResult->assemblyResult.GetNumWarnings(),
+						compilationResult->assemblyResult.GetErrorMessage());
 				}
 			}
 
-			if (compilationResult->result.GetCompilationStatus() == shaderc_compilation_status_success)
+			if (compilationResult->spvResult.GetCompilationStatus() == shaderc_compilation_status_success)
 			{
 				++compiledShaderCount;
 
 				const u64 calculatedChecksum = CalculteChecksum(compilationResult->shaderAbsPath);
 				compiledShaders.emplace(compilationResult->shaderAbsPath, calculatedChecksum);
 
-				std::vector<u32> spvBytes(compilationResult->result.begin(), compilationResult->result.end());
+				std::vector<u32> spvBytes(compilationResult->spvResult.begin(), compilationResult->spvResult.end());
 				std::string spvFilePath = newFileName + ".spv";
 				std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
 				if (fileStream.is_open())
@@ -580,36 +623,15 @@ namespace flex
 			}
 			else
 			{
-				if (g_bEnableLogging_Shaders)
-				{
-					PrintWarn("%lu shader compilation errors, %lu warnings: \n", compilationResult->result.GetNumErrors(), compilationResult->result.GetNumWarnings());
-				}
-				std::string errorStr = compilationResult->result.GetErrorMessage();
-				if (g_bEnableLogging_Shaders)
-				{
-					PrintWarn("%s\n", errorStr.c_str());
-				}
-
-				size_t colon0 = errorStr.find_first_of(':');
-				size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
-
-				u32 lineNumber = 0;
-				if (colon0 != std::string::npos && colon1 != std::string::npos)
-				{
-					lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
-				}
-
-				s_ShaderErrors.push_back({ errorStr, compilationResult->shaderAbsPath, lineNumber });
+				ParseError(compilationResult,
+					compilationResult->spvResult.GetNumErrors(),
+					compilationResult->spvResult.GetNumWarnings(),
+					compilationResult->spvResult.GetErrorMessage());
 
 				++invalidShaderCount;
 				bSuccess = false;
 			}
-
-			delete shaderCompilationResults[i];
-			shaderCompilationResults[i] = nullptr;
 		}
-
-		shaderCompilationResultsLength = 0;
 
 		m_Threads.clear();
 		m_QueuedLoads.clear();
@@ -623,9 +645,6 @@ namespace flex
 		shaderWorkItemsCreated = 0;
 		shaderWorkItemsClaimed = 0;
 		shaderWorkItemsCompleted = 0;
-
-		delete[] shaderCompilationResults;
-		shaderCompilationResults = nullptr;
 
 		// Append new checksums to file
 		std::string checksumFileContentsAppend;
@@ -682,6 +701,27 @@ namespace flex
 	i32 ShaderCompiler::ThreadCount() const
 	{
 		return (i32)m_Threads.size();
+	}
+
+	bool ShaderCompiler::WasShaderRecompiled(const char* shaderName) const
+	{
+		if (s_ShaderCompilationResultsLength == 0)
+		{
+			return false;
+		}
+
+		for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
+		{
+			ShaderCompilationResult* result = s_ShaderCompilationResults[i];
+
+			std::string shaderFileName = RemovePrefix(StripFileType(StripLeadingDirectories(result->shaderAbsPath)), "vk_");
+			if (strcmp(shaderFileName.c_str(), shaderName) == 0)
+			{
+				return true;
+			}
+		}
+
+		return false;
 	}
 } // namespace flex
 #endif //  COMPILE_SHADER_COMPILER

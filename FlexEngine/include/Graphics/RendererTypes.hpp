@@ -23,6 +23,11 @@ namespace flex
 	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
 	static const i32 MAX_SSAO_KERNEL_SIZE = 64;
+	static const i32 MAX_NUM_ROAD_SEGMENTS = 64;
+	static const i32 MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK = 8;
+	static const i32 MAX_VERTS_PER_TERRAIN_CHUNK_AXIS = 32;
+	static const i32 MAX_BIOME_COUNT = 16;
+	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -69,20 +74,20 @@ namespace flex
 	// 1028 bytes
 	struct SSAOGenData
 	{
-		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE]; // 0
-		real radius;                             // 1024
+		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE];	// 0
+		real radius;								// 1024
 	};
 
 	// 4 bytes
 	struct SSAOBlurDataConstant
 	{
-		i32 radius; // 0
+		i32 radius;	// 0
 	};
 
 	// 8 bytes
 	struct SSAOBlurDataDynamic
 	{
-		glm::vec2 ssaoTexelOffset; // 0
+		glm::vec2 ssaoTexelOffset;	// 0
 	};
 
 	// 16 bytes
@@ -112,59 +117,134 @@ namespace flex
 		glm::vec4 cascadeDepthSplits;								// 256
 	};
 
+	// 112 bytes
 	struct SHCoeffs
 	{
-		glm::vec4 r0;
-		glm::vec4 g0;
-		glm::vec4 b0;
-		glm::vec4 r1;
-		glm::vec4 g1;
-		glm::vec4 b1;
-		glm::vec4 rgb2;
+		glm::vec4 r0;	// 0
+		glm::vec4 g0;	// 16
+		glm::vec4 b0;	// 32
+		glm::vec4 r1;	// 48
+		glm::vec4 g1;	// 64
+		glm::vec4 b1;	// 80
+		glm::vec4 rgb2;	// 96
 	};
 
 #pragma pack(push, 1)
-	// 54 bytes
+	// 56 bytes
 	struct ParticleBufferData
 	{
-		glm::vec3 pos;		// 12
-		glm::vec4 colour;	// 16
-		glm::vec3 vel;		// 12
-		glm::vec4 extraVec4;// 16
+		glm::vec3 pos;		// 0
+		glm::vec4 colour;	// 12
+		glm::vec3 vel;		// 28
+		glm::vec4 extraVec4;// 40
 	};
 #pragma pack(pop)
 
 	// 44 bytes
 	struct ParticleSimData
 	{
-		glm::vec4 colour0;	// 16
+		glm::vec4 colour0;	// 0
 		glm::vec4 colour1;	// 16
-		real dt;			// 4
-		real speed;			// 4
-		u32 particleCount;	// 4
+		real dt;			// 32
+		real speed;			// 36
+		u32 particleCount;	// 40
 	};
 
 	// 80 bytes
 	struct OceanData
 	{
-		glm::vec4 top;				// 16
+		glm::vec4 top;				// 0
 		glm::vec4 mid;				// 16
-		glm::vec4 btm;				// 16
-		real fresnelFactor;			// 4
-		real fresnelPower;			// 4
-		real skyReflectionFactor;	// 4
-		real fogFalloff;			// 4
-		real fogDensity;			// 4
-		real pad[3];				// 12
+		glm::vec4 btm;				// 32
+		real fresnelFactor;			// 48
+		real fresnelPower;			// 52
+		real skyReflectionFactor;	// 56
+		real fogFalloff;			// 60
+		real fogDensity;			// 64
+		real pad[3];				// 68
 	};
 
 	// 64 bytes
 	struct SkyboxData
 	{
-		glm::vec4 top; // 16
-		glm::vec4 mid; // 16
-		glm::vec4 btm; // 16
-		glm::vec4 fog; // 16
+		glm::vec4 top;	// 0
+		glm::vec4 mid;	// 16
+		glm::vec4 btm;	// 32
+		glm::vec4 fog;	// 48
+	};
+
+	// 64 bytes
+	struct BezierCurve3D_GPU
+	{
+		glm::vec4 points[4]; // 0
+	};
+
+	// 96 bytes
+	struct RoadSegment_GPU
+	{
+		BezierCurve3D_GPU curve;	// 0
+		real widthStart;			// 64
+		real widthEnd;				// 68
+		AABB aabb;					// 72 (AABB = 24 bytes)
+	};
+
+	bool operator==(const RoadSegment_GPU& lhs, const RoadSegment_GPU& rhs);
+
+	// 32 bytes
+	struct NoiseFunction_GPU
+	{
+		u32 type;					 // 0
+		real baseFeatureSize;		 // 4
+		i32 numOctaves;				 // 8
+		real H;						 // 12
+		real heightScale;			 // 16
+		real lacunarity;			 // 20
+		real wavelength;			 // 24
+		real sharpness;				 // 28
+		//i32 isolateOctave = -1;		 // 32
+		// TODO: Seed
+	};
+
+	// 160 bytes
+	struct Biome_GPU
+	{
+		NoiseFunction_GPU noiseFunctions[MAX_NUM_NOISE_FUNCTIONS_PER_BIOME];	// 0
+		u32 noiseFunctionCount;													// 128
+		real _pad[7];
+	};
+
+	//
+	struct TerrainGenConstantData
+	{
+		real chunkSize;											// 0
+		real maxHeight;											// 4
+		real roadBlendDist;										// 8
+		real roadBlendThreshold;								// 12
+		u32 vertCountPerChunkAxis;								// 16
+		i32 isolateNoiseLayer; // default: -1					// 20
+		u32 biomeCount;											// 24
+		u32 randomTablesSize;									// 28
+		NoiseFunction_GPU biomeNoise;							// 32
+		Biome_GPU biomes[MAX_BIOME_COUNT];						// (2,368 bytes)
+		RoadSegment_GPU roadSegments[MAX_NUM_ROAD_SEGMENTS];	// (6,144 bytes)
+		i32 overlappingRoadSegmentIndices[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK]; // (8,192 bytes)
+	};
+
+	// 48 bytes
+	struct TerrainVertex
+	{
+		// TODO: Pad/pack
+		glm::vec3 positionWS;	// 0
+		glm::vec2 uv;			// 12
+		glm::vec4 colour;		// 20
+		glm::vec3 normalWS;		// 36
+	};
+
+	// 12 bytes
+	struct TerrainGenDynamicData
+	{
+		glm::vec2 chunkIndex;	// 0
+		u32 linearIndex;		// 8
 	};
 
 	struct Uniform
@@ -227,8 +307,8 @@ namespace flex
 	static const Uniform U_TEX_SIZE(UNIFORM("texSize"), sizeof(glm::vec2));
 	static const Uniform U_TEXTURE_SCALE(UNIFORM("textureScale"), sizeof(real));
 	static const Uniform U_TEX_CHANNEL(UNIFORM("texChannel"), sizeof(i32));
-	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant"));
-	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic"));
+	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant")); // TODO: Infer this
+	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic")); // TODO: Infer this
 	static const Uniform U_TIME(UNIFORM("time"), sizeof(glm::vec4));
 	static const Uniform U_SDF_DATA(UNIFORM("sdfData"), sizeof(glm::vec4));
 	static const Uniform U_HIGH_RES_TEX(UNIFORM("highResTex"));
@@ -256,6 +336,10 @@ namespace flex
 	static const Uniform U_SKYBOX_DATA(UNIFORM("skyboxData"), sizeof(SkyboxData));
 	static const Uniform U_UV_BLEND_AMOUNT(UNIFORM("uvBlendAmount"), sizeof(glm::vec2));
 	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
+	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
+	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"), sizeof(TerrainVertex));
+	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
 
 #undef UNIFORM
 
@@ -814,6 +898,7 @@ namespace flex
 		UI,
 
 		COMPUTE_PARTICLES,
+		COMPUTE_TERRAIN,
 
 		_NONE
 	};
@@ -1014,6 +1099,7 @@ namespace flex
 		bool bSSAOVerticalPass;
 		ParticleSimData* particleSimData = nullptr;
 		glm::vec2 uvBlendAmount;
+		TerrainGenDynamicData terrainGenDynamicData;
 	};
 
 	struct DeviceDiagnosticCheckpoint

@@ -7,6 +7,11 @@
 
 namespace flex
 {
+	bool operator==(const RoadSegment_GPU& lhs, const RoadSegment_GPU& rhs)
+	{
+		return memcmp(&lhs, &rhs, sizeof(RoadSegment_GPU)) == 0;
+	}
+
 	Uniform::Uniform(const char* uniformName, StringID id, u64 size) :
 		id(id),
 		size((u32)size)

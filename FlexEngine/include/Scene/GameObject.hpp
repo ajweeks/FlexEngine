@@ -1135,7 +1135,7 @@ namespace flex
 
 	struct NoiseFunction
 	{
-		enum class Type
+		enum class Type : u32
 		{
 			PERLIN,
 			FBM, // https://www.iquilezles.org/www/articles/fbm/fbm.htm
@@ -1183,7 +1183,6 @@ namespace flex
 		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
@@ -1191,6 +1190,8 @@ namespace flex
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+		void Regenerate();
 
 		struct Biome
 		{
@@ -1230,6 +1231,8 @@ namespace flex
 		real ChunkSize = 16.0f;
 		real MaxHeight = 3.0f;
 
+		bool bUseAsyncCompute = true;
+
 	private:
 		struct Chunk;
 
@@ -1244,6 +1247,8 @@ namespace flex
 		void GenerateChunks();
 		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
+
+		void FillOutConstantData(TerrainGenConstantData& constantData);
 
 		void DestroyChunkRigidBody(Chunk* chunk);
 		void CreateChunkRigidBody(Chunk* chunk);
@@ -1266,7 +1271,6 @@ namespace flex
 			RigidBody* rigidBody = nullptr;
 			MeshComponent* meshComponent = nullptr;
 			btCollisionShape* collisionShape = nullptr;
-			//glm::vec2i chunkIndex;
 			u32 linearIndex = 0;
 		};
 
@@ -1291,7 +1295,7 @@ namespace flex
 		real m_RoadBlendThreshold = 10.0f;
 
 		bool m_bHighlightGrid = false;
-		bool m_bDisplayTables = false;
+		bool m_bDisplayRandomTables = false;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
@@ -1307,8 +1311,10 @@ namespace flex
 
 		// Map of chunk index to overlapping road segments
 		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
+		std::array<RoadSegment_GPU, MAX_NUM_ROAD_SEGMENTS> m_RoadSegmentsGPU;
 
-		std::vector<TextureID> m_TableTextureIDs;
+		u32 m_RandomTableTextureLayerCount = 0;
+		TextureID m_RandomTableTextureID = InvalidTextureID;
 
 		i32 m_IsolateNoiseLayer = -1;
 

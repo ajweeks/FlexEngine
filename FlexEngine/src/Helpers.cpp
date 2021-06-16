@@ -816,6 +816,16 @@ namespace flex
 		return ret_code;
 	}
 
+	FLEX_NO_DISCARD std::string RemovePrefix(const std::string& str, const char* prefix)
+	{
+		if (StartsWith(str, prefix))
+		{
+			return str.substr(strlen(prefix));
+		}
+
+		return str;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
 		while (offset < (i32)str.size())

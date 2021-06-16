@@ -31,6 +31,11 @@ namespace flex
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
 
+			VulkanRenderer(const VulkanRenderer&&) = delete;
+			VulkanRenderer(const VulkanRenderer&) = delete;
+			VulkanRenderer& operator=(const VulkanRenderer&&) = delete;
+			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;
 
@@ -39,6 +44,7 @@ namespace flex
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
 			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
 			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) override;
+			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkFilter inFilter) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 			virtual void OnTextureDestroyed(TextureID textureID) override;
@@ -119,6 +125,11 @@ namespace flex
 
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
+			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData) override;
+			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData) override;
+			virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) override;
+			virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) override;
+
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
 
@@ -129,6 +140,7 @@ namespace flex
 			static void SetCommandBufferName(VulkanDevice* device, VkCommandBuffer commandBuffer, const char* name);
 			static void SetSwapchainName(VulkanDevice* device, VkSwapchainKHR swapchain, const char* name);
 			static void SetDescriptorSetName(VulkanDevice* device, VkDescriptorSet descSet, const char* name);
+			static void SetDescriptorSetLayoutName(VulkanDevice* device, VkDescriptorSetLayout descSetLayout, const char* name);
 			static void SetPipelineName(VulkanDevice* device, VkPipeline pipeline, const char* name);
 			static void SetFramebufferName(VulkanDevice* device, VkFramebuffer framebuffer, const char* name);
 			static void SetRenderPassName(VulkanDevice* device, VkRenderPass renderPass, const char* name);
@@ -188,7 +200,7 @@ namespace flex
 
 			void CreateSpecialzationInfos();
 
-			void FillOutImageDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
+			void FillOutTextureDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
 			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
 
 			void CreateDescriptorSets();
@@ -209,13 +221,16 @@ namespace flex
 			void CreateUniformBuffers(VulkanMaterial* material);
 			void CreateStaticUniformBuffer(VulkanMaterial* material);
 			void CreateDynamicUniformBuffer(VulkanMaterial* material);
-			void CreateParticleUniformBuffer(VulkanMaterial* material);
+			void CreateParticleBuffer(VulkanMaterial* material);
+			void CreateTerrainVertexBuffer(VulkanMaterial* material);
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
 			VkSpecializationInfo* GenerateSpecializationInfo(const std::vector<SpecializationConstantCreateInfo>& entries);
 			void CreateComputeResources();
 			void CreateParticleSystemResources(VulkanParticleSystem* particleSystem);
+
+			void CreateTerrainSystemResources();
 
 			// Creates all static vertex buffers that are marked as dirty
 			void CreateStaticVertexBuffers();
@@ -266,10 +281,11 @@ namespace flex
 				bool bFlipViewport);
 
 			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
-
+			void KickoffParticleSimWorkloads(VkCommandBuffer commandBuffer);
+			void KickoffTerrainGenWorkloads(VkCommandBuffer commandBuffer);
 			void DrawFrame();
 
-			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet) const;
+			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& colour);
@@ -310,8 +326,8 @@ namespace flex
 			ms GetDurationBetweenTimeStamps(const std::string& name);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-				VkDebugUtilsMessageSeverityFlagBitsEXT           messageSeverity,
-				VkDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+				VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+				VkDebugUtilsMessageTypeFlagsEXT messageTypes,
 				const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 				void* pUserData);
 
@@ -328,6 +344,7 @@ namespace flex
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 			void DrawUIMesh(UIMesh* uiMesh, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
+			void DrawTerrain(VkCommandBuffer commandBuffer);
 
 			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
 
@@ -339,6 +356,8 @@ namespace flex
 			void InitializeAllParticleSystemBuffers();
 			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
+			void DestroyTerrain();
+
 			u32 GetStaticVertexIndexBufferIndex(u32 stride);
 			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
@@ -346,8 +365,70 @@ namespace flex
 
 			void CreateBRDFTexture();
 
-			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Not this?
+
+			static const bool ENABLE_ASYNC_TERRAIN_GEN = true;
+
+			static const FrameBufferAttachmentID SWAP_CHAIN_COLOUR_ATTACHMENT_ID = 11000;
+			static const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
+			static const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
+
+#ifdef RELEASE
+			const bool m_bEnableValidationLayers = false;
+			const bool m_bEnableGPUAssistanceValidationFeature = false;
+			const bool m_bEnableBestPracticesValidationFeature = false;
+#else
+			const bool m_bEnableValidationLayers = true;
+			const bool m_bEnableGPUAssistanceValidationFeature = true;
+			const bool m_bEnableBestPracticesValidationFeature = false;
+#endif
+
+			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
 			std::vector<VulkanRenderObject*> m_RenderObjects;
+
+			std::vector<const char*> m_ValidationLayers =
+			{
+				"VK_LAYER_KHRONOS_validation",
+				//"VK_LAYER_LUNARG_standard_validation",
+				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
+				//"VK_LAYER_LUNARG_api_dump", // Log content
+				//"VK_LAYER_LUNARG_screenshot",
+				//"VK_LAYER_RENDERDOC_Capture", // RenderDoc captures, in engine integration works better (see COMPILE_RENDERDOC_API)
+			};
+
+			const std::vector<const char*> m_RequiredDeviceExtensions =
+			{
+				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+			};
+
+			const std::vector<const char*> m_RequiredInstanceExtensions =
+			{
+			};
+
+			struct VkExtensionPair
+			{
+				bool bDebugOnly;
+				const char* extensionName;
+			};
+
+			const std::vector<VkExtensionPair> m_OptionalInstanceExtensions =
+			{
+				{ true, VK_EXT_DEBUG_UTILS_EXTENSION_NAME },
+				{ false, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME },
+			};
+
+			const std::vector<VkExtensionPair> m_OptionalDeviceExtensions =
+			{
+				{ true, VK_EXT_DEBUG_MARKER_EXTENSION_NAME },
+				{ true, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME },
+				{ true, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME },
+			};
+
+			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;
+			std::vector<const char*> m_EnabledInstanceExtensions;
+
+			bool m_bDiagnosticCheckpointsEnabled = false;
+			bool m_bMemoryBudgetExtensionEnabled = false;
 
 			glm::vec2i m_CubemapFramebufferSize;
 			glm::vec2i m_BRDFSize;
@@ -416,61 +497,6 @@ namespace flex
 			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.
 			std::map<std::string, i32> m_TimestampQueryNames;
 
-			std::vector<const char*> m_ValidationLayers =
-			{
-				"VK_LAYER_KHRONOS_validation",
-				//"VK_LAYER_LUNARG_standard_validation",
-				//"VK_LAYER_LUNARG_monitor", // FPS in title bar
-				//"VK_LAYER_LUNARG_api_dump", // Log content
-				//"VK_LAYER_LUNARG_screenshot",
-				//"VK_LAYER_RENDERDOC_Capture", // RenderDoc captures, in engine integration works better (see COMPILE_RENDERDOC_API)
-			};
-
-			const std::vector<const char*> m_RequiredDeviceExtensions =
-			{
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
-			};
-
-			const std::vector<const char*> m_RequiredInstanceExtensions =
-			{
-			};
-
-			struct VkExtensionPair
-			{
-				bool bDebugOnly;
-				const char* extensionName;
-			};
-
-			const std::vector<VkExtensionPair> m_OptionalInstanceExtensions =
-			{
-				{ true, VK_EXT_DEBUG_UTILS_EXTENSION_NAME },
-				{ false, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME },
-			};
-
-			const std::vector<VkExtensionPair> m_OptionalDeviceExtensions =
-			{
-				{ true, VK_EXT_DEBUG_MARKER_EXTENSION_NAME },
-				{ true, VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME },
-				{ true, VK_EXT_MEMORY_BUDGET_EXTENSION_NAME },
-			};
-
-			std::vector<VkExtensionProperties> m_SupportedInstanceExtensions;
-			std::vector<const char*> m_EnabledInstanceExtensions;
-
-			bool m_bDiagnosticCheckpointsEnabled = false;
-			bool m_bMemoryBudgetExtensionEnabled = false;
-
-#ifdef RELEASE
-			const bool m_bEnableValidationLayers = false;
-			const bool m_bEnableGPUAssistanceValidationFeature = false;
-			const bool m_bEnableBestPracticesValidationFeature = false;
-#else
-			const bool m_bEnableValidationLayers = true;
-			const bool m_bEnableGPUAssistanceValidationFeature = true;
-			const bool m_bEnableBestPracticesValidationFeature = false;
-#endif
-
 			VkInstance m_Instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
 			VkSurfaceKHR m_Surface = VK_NULL_HANDLE;
@@ -478,6 +504,7 @@ namespace flex
 			VulkanDevice* m_VulkanDevice = nullptr;
 
 			VkQueue m_GraphicsQueue = VK_NULL_HANDLE;
+			VkQueue m_AsyncComputeQueue = VK_NULL_HANDLE;
 			VkQueue m_PresentQueue = VK_NULL_HANDLE;
 
 			VDeleter<VkSwapchainKHR> m_SwapChain;
@@ -559,6 +586,7 @@ namespace flex
 
 			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;
+			VkCommandBuffer m_TerrainAsyncComputeCommandBuffer = VK_NULL_HANDLE;
 
 			VkClearColorValue m_ClearColour;
 
@@ -580,12 +608,28 @@ namespace flex
 
 			PoolAllocator<DeviceDiagnosticCheckpoint, 32> m_CheckPointAllocator;
 
-			const FrameBufferAttachmentID SWAP_CHAIN_COLOUR_ATTACHMENT_ID = 11000;
-			const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
-			const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
+			struct Terrain
+			{
+				bool bVisibile = true;
 
-			VulkanRenderer(const VulkanRenderer&) = delete;
-			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+				MaterialID simMaterialID = InvalidMaterialID;
+				MaterialID renderingMaterialID = InvalidMaterialID;
+				VDeleter<VkPipeline> computePipeline;
+				VDeleter<VkPipelineLayout> computePipelineLayout;
+				GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
+				VkDescriptorSet simulationDescriptorSet = VK_NULL_HANDLE;
+				VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
+				TerrainGenConstantData constantData;
+
+				TextureID randomTablesTextureID = InvalidTextureID;
+
+				VulkanBuffer* indexBuffer = nullptr;
+				std::vector<u32> indexBufferBackingMemory;
+			};
+			Terrain* m_Terrain = nullptr;
+
+			std::vector<Pair<glm::vec2i, u32>> m_TerrainGenWorkloads;
+			std::vector<Pair<glm::vec2i, u32>> m_TerrainChunksLoaded;
 		};
 	} // namespace vk
 } // namespace flex
