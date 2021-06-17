@@ -307,7 +307,7 @@ namespace flex
 	inline i32 Find(const std::array<T, Len>& arr, const T& t)
 	{
 		T* data = (T*)arr.data();
-		for (i32 i = 0; i < Len; ++i)
+		for (i32 i = 0; i < (i32)Len; ++i)
 		{
 			if (*data == t)
 			{
