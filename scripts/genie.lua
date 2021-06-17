@@ -186,7 +186,7 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess",
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess", "-Wno-unused-but-set-variable", "-Wno-unused-variable",
 			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {
