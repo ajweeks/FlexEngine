@@ -1,3 +1,7 @@
+// NOTE: These defines must be above the stdafx include
+#define PL_IMPLEMENTATION 1
+#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 25'000'000
+
 #include "stdafx.hpp"
 
 #include "FlexEngine.hpp"
@@ -37,7 +41,6 @@ IGNORE_WARNINGS_POP
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
-#include "Profiler.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -89,6 +92,8 @@ namespace flex
 		m_KeyEventCallback(this, &FlexEngine::OnKeyEvent),
 		m_ActionCallback(this, &FlexEngine::OnActionEvent)
 	{
+		plInitAndStart("Flex Engine"); // NOTE: USE_PL must be defined to 1 for profiling to be enabled
+
 		std::srand((u32)time(NULL));
 
 		Platform::RetrievePathToExecutable();
@@ -189,8 +194,8 @@ namespace flex
 
 	void FlexEngine::Initialize()
 	{
-		const char* engineInitBlockName = "Engine initialize";
-		PROFILE_BEGIN(engineInitBlockName);
+		PROFILE_BEGIN("FlexEngine Initialize");
+		sec startTime = Time::CurrentSeconds();
 
 #if COMPILE_RENDERDOC_API
 		SetupRenderDocAPI();
@@ -285,6 +290,8 @@ namespace flex
 
 		if (s_AudioSourceIDs.empty())
 		{
+			PROFILE_AUTO("Initialize audio sources");
+
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
 			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
@@ -322,9 +329,10 @@ namespace flex
 			m_TestSprings[i].UAF = 15.0f;
 		}
 
-		PROFILE_END(engineInitBlockName);
+		sec durationSec = Time::CurrentSeconds() - startTime;
+		PROFILE_END("FlexEngine Initialize");
 
-		ms blockDuration = Profiler::GetBlockDuration(engineInitBlockName);
+		ms blockDuration = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
 		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
 		{
 			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
@@ -577,6 +585,7 @@ namespace flex
 		delete g_InputManager;
 		g_InputManager = nullptr;
 
+		plStopAndUninit();
 
 		// Reset console colour to default
 		Print("\n");
@@ -584,6 +593,8 @@ namespace flex
 
 	void FlexEngine::CreateWindowAndRenderer()
 	{
+		PROFILE_AUTO("FlexEngine CreateWindowAndRenderer");
+
 		assert(g_Window == nullptr);
 		assert(g_Renderer == nullptr);
 
@@ -626,6 +637,8 @@ namespace flex
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
+		PROFILE_AUTO("FlexEngine InitializeWindowAndRenderer");
+
 		g_Window->SetUpdateWindowTitleFrequency(0.5f);
 		g_Window->PostInitialize();
 
@@ -711,8 +724,6 @@ namespace flex
 			const bool bSimulateFrame = (!m_bSimulationPaused || m_bSimulateNextFrame);
 			m_bSimulateNextFrame = false;
 
-			Profiler::StartFrame();
-
 			if (!m_bSimulationPaused)
 			{
 				for (i32 i = 1; i < (i32)m_FrameTimes.size(); ++i)
@@ -724,11 +735,12 @@ namespace flex
 
 			// Update
 			{
-				PROFILE_BEGIN("Update");
+				PROFILE_AUTO("Update");
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 				{
+					PROFILE_AUTO("InputManager ClearAllInputs");
 					g_InputManager->ClearAllInputs();
 				}
 
@@ -762,26 +774,24 @@ namespace flex
 
 				if (m_UIWindowCacheSaveTimer.Update())
 				{
+					PROFILE_AUTO("SerializeUIWindowCache");
 					m_UIWindowCacheSaveTimer.Restart();
 					SerializeUIWindowCache();
 				}
 
 				if (m_LogSaveTimer.Update())
 				{
+					PROFILE_AUTO("SaveLogBufferToFile");
 					m_LogSaveTimer.Restart();
 					SaveLogBufferToFile();
 				}
 
 				if (m_bRenderImGui)
 				{
-					PROFILE_BEGIN("DrawImGuiObjects");
 					DrawImGuiObjects();
-					PROFILE_END("DrawImGuiObjects");
 				}
 
 				g_Editor->EarlyUpdate();
-
-				Profiler::Update();
 
 				g_CameraManager->Update();
 
@@ -789,8 +799,9 @@ namespace flex
 				{
 					g_CameraManager->CurrentCamera()->Update();
 
-					g_SceneManager->CurrentScene()->Update();
-					Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+					BaseScene* currentScene = g_SceneManager->CurrentScene();
+					currentScene->Update();
+					Player* p0 = currentScene->GetPlayer(0);
 					if (p0)
 					{
 						glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
@@ -843,10 +854,12 @@ namespace flex
 
 				if (bSimulateFrame)
 				{
+					PROFILE_BEGIN("Update systems");
 					for (System* system : g_Systems)
 					{
 						system->Update();
 					}
+					PROFILE_END("Update systems");
 
 					GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->DrawDebug();
 
@@ -860,16 +873,15 @@ namespace flex
 				g_InputManager->Update();
 
 				g_InputManager->PostUpdate();
-				PROFILE_END("Update");
 			}
 
-			PROFILE_BEGIN("Render");
 			g_Renderer->Draw();
-			PROFILE_END("Render");
 
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
 			{
+				PROFILE_AUTO("Capture RenderDoc frame");
+
 				m_bRenderDocCapturingFrame = false;
 				Print("Capturing RenderDoc frame...\n");
 				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
@@ -903,26 +915,13 @@ namespace flex
 
 			if (m_CommonSettingsSaveTimer.Update())
 			{
+				PROFILE_AUTO("Save common settings to disk");
 				m_CommonSettingsSaveTimer.Restart();
 				SaveCommonSettingsToDisk(false);
 				g_Window->SaveToConfig();
 			}
 
 			g_Renderer->EndOfFrame();
-
-			const bool bProfileFrame = (g_Renderer->GetFramesRenderedCount() > 3);
-			if (bProfileFrame)
-			{
-				Profiler::EndFrame(m_bUpdateProfilerFrame);
-			}
-
-			m_bUpdateProfilerFrame = false;
-
-			if (m_bWriteProfilerResultsToFile)
-			{
-				m_bWriteProfilerResultsToFile = false;
-				Profiler::PrintResultsToFile();
-			}
 		}
 	}
 
@@ -994,6 +993,8 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
+		PROFILE_AUTO("DrawImGuiObjects");
+
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
 		{
@@ -1354,15 +1355,6 @@ namespace flex
 				if (ImGui::TreeNode("Misc settings"))
 				{
 					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-					ImGui::Checkbox("Show profiler", &Profiler::s_bDisplayingFrame);
-					ImGui::Checkbox("chrome://tracing recording", &Profiler::s_bRecordingTrace);
-
-					if (ImGui::Button("Display latest frame"))
-					{
-						m_bUpdateProfilerFrame = true;
-						Profiler::s_bDisplayingFrame = true;
-					}
-
 					ImGui::TreePop();
 				}
 
@@ -1923,6 +1915,8 @@ namespace flex
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()
 	{
+		PROFILE_AUTO("FlexEngine LoadCommonSettingsFromDisk");
+
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
 			PrintError("Failed to read common settings to disk: file path is not set!\n");

@@ -6,7 +6,6 @@
 
 #include "FlexEngine.hpp"
 #include "Platform/Platform.hpp"
-#include "Profiler.hpp"
 #include "Time.hpp"
 
 namespace flex
@@ -270,8 +269,7 @@ namespace flex
 
 		if (!bForceCompileAll)
 		{
-			const char* blockName = "Calculate shader contents checksum";
-			PROFILE_AUTO(blockName);
+			PROFILE_AUTO("Calculate shader contents checksum");
 
 			const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
 

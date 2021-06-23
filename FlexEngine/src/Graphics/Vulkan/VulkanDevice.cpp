@@ -12,6 +12,9 @@ namespace flex
 	{
 		VulkanDevice::VulkanDevice(const CreateInfo& createInfo)
 		{
+			PROFILE_AUTO("VulkanDevice::VulkanDevice");
+
+			// TODO: Move work to Initialize
 			assert(createInfo.physicalDevice);
 			m_PhysicalDevice = createInfo.physicalDevice;
 
@@ -29,10 +32,12 @@ namespace flex
 
 			m_SupportedExtensions = GetSupportedExtensionsForDevice(m_PhysicalDevice);
 
-			VulkanQueueFamilyIndices indices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
-
 			std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-			std::set<i32> uniqueQueueFamilies = { indices.graphicsFamily, indices.presentFamily, indices.computeFamily };
+			std::set<i32> uniqueQueueFamilies = {
+				m_QueueFamilyIndices.graphicsFamily,
+				m_QueueFamilyIndices.presentFamily,
+				m_QueueFamilyIndices.computeFamily
+			};
 
 			real queuePriority = 1.0f;
 			for (i32 queueFamily : uniqueQueueFamilies)
@@ -83,11 +88,18 @@ namespace flex
 				deviceCreateInfo.enabledLayerCount = 0;
 			}
 
+			{
+				// TODO: Call on separate thread? Takes 500ms!
+				PROFILE_AUTO("vkCreateDevice");
 			VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, m_LogicalDevice.replace()));
+			}
 
 			vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
 
+			{
+				PROFILE_AUTO("volkLoadDevice");
 			volkLoadDevice(m_LogicalDevice);
+			}
 
 			m_CommandPool = { m_LogicalDevice, vkDestroyCommandPool };
 		}
@@ -124,6 +136,8 @@ namespace flex
 
 		VkPhysicalDeviceFeatures VulkanDevice::GetEnabledFeatures()
 		{
+			PROFILE_AUTO("GetEnabledFeatures");
+
 			VkPhysicalDeviceFeatures enabledFeatures = {};
 
 			VkPhysicalDeviceFeatures supportedFeatures;

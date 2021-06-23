@@ -325,6 +325,8 @@ namespace flex
 
 	bool ReadFile(const char* filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
+		PROFILE_AUTO("ReadFile");
+
 		std::ios::openmode fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
@@ -357,6 +359,8 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
+		PROFILE_AUTO("WriteFile");
+
 		std::ios::openmode fileMode = std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
@@ -383,6 +387,8 @@ namespace flex
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr)
 	{
+		PROFILE_AUTO("ParseWAVFile");
+
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{

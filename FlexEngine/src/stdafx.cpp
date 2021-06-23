@@ -1,7 +1,9 @@
 #include "stdafx.hpp"
 
+IGNORE_WARNINGS_PUSH
 #define VOLK_IMPLEMENTATION
 #include "volk/volk.h"
+IGNORE_WARNINGS_POP
 
 namespace flex
 {

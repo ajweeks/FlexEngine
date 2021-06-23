@@ -130,6 +130,8 @@ IGNORE_WARNINGS_PUSH
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
+
+#include "palanteer/palanteer.h"
 IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
@@ -191,9 +193,9 @@ IGNORE_WARNINGS_POP
 #define TOKEN_PASTE(x, y) TOKEN_PASTE2(x, y)
 
 #if ENABLE_PROFILING
-#define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
-#define PROFILE_END(blockName) Profiler::End(blockName);
-#define PROFILE_AUTO(blockName) AutoProfilerBlock TOKEN_PASTE(autoProfileBlock_, __LINE__)(blockName);
+#define PROFILE_BEGIN(blockName) plBegin(blockName);
+#define PROFILE_END(blockName) plEnd(blockName);
+#define PROFILE_AUTO(blockName) plScope(blockName);
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)

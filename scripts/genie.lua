@@ -153,7 +153,7 @@ startproject "Flex"
 
 project "Flex"
 	kind "ConsoleApp"
-	defines { "_CONSOLE" }
+	defines { "_CONSOLE", "USE_PL=1" } -- TODO: don't include palanteer in release
 	location "../build"
 	outputDirectories("FlexEngine")
 
@@ -234,6 +234,7 @@ files {
 	path.join(DEPENDENCIES_DIR, "imgui/**.h"),
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(DEPENDENCIES_DIR, "volk/volk.h"),
+	path.join(DEPENDENCIES_DIR, "palanteer/palanteer.h"),
 	path.join(PROJECT_DIR, "AdditionalFiles/**.natvis"),
 	path.join(PROJECT_DIR, "AdditionalFiles/flex.rc")
 }

@@ -461,9 +461,9 @@ namespace flex
 			FrameBufferAttachment* m_SSAOBlurHFBColourAttachment0 = nullptr;
 			FrameBufferAttachment* m_SSAOBlurVFBColourAttachment0 = nullptr;
 
-			FrameBufferAttachment* m_GBufferCubemapColourAttachment0 = nullptr;
-			FrameBufferAttachment* m_GBufferCubemapColourAttachment1 = nullptr;
-			FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
+			//FrameBufferAttachment* m_GBufferCubemapColourAttachment0 = nullptr;
+			//FrameBufferAttachment* m_GBufferCubemapColourAttachment1 = nullptr;
+			//FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
 
 			VDeleter<VkImage> m_ShadowImage;
 			VDeleter<VkDeviceMemory> m_ShadowImageMemory;

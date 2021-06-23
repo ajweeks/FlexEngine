@@ -24,7 +24,6 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
@@ -52,6 +51,8 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
+		PROFILE_AUTO("Renderer Initialize");
+
 		std::string hdriPath = TEXTURE_DIRECTORY "hdri/";
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
@@ -59,8 +60,11 @@ namespace flex
 		}
 
 #if COMPILE_SHADER_COMPILER
-		m_ShaderCompiler = new ShaderCompiler();
-		m_ShaderCompiler->StartCompilation();
+		{
+			PROFILE_AUTO("Start shader compilation");
+			m_ShaderCompiler = new ShaderCompiler();
+			m_ShaderCompiler->StartCompilation();
+		}
 #endif
 
 		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData) + MAX_AREA_LIGHT_COUNT * sizeof(AreaLightData));
@@ -110,6 +114,8 @@ namespace flex
 
 	void Renderer::PostInitialize()
 	{
+		PROFILE_AUTO("Renderer PostInitialize");
+
 		// TODO: Use MeshComponent for these objects?
 		m_UIMesh->Initialize();
 
@@ -337,6 +343,8 @@ namespace flex
 
 	void Renderer::LoadSettingsFromDisk()
 	{
+		PROFILE_AUTO("Renderer LoadSettingsFromDisk");
+
 		JSONObject rootObject;
 		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
 		{
@@ -1025,6 +1033,8 @@ namespace flex
 
 	void Renderer::Update()
 	{
+		PROFILE_AUTO("Renderer Update");
+
 #if COMPILE_SHADER_COMPILER
 		if (!m_ShaderCompiler->bComplete)
 		{
@@ -1673,6 +1683,8 @@ namespace flex
 
 	void Renderer::LoadShaders()
 	{
+		PROFILE_AUTO("Renderer LoadShaders");
+
 #define USE_SHADER_REFLECTION 0
 #if USE_SHADER_REFLECTION
 		ParseShaderMetaData();
@@ -2431,6 +2443,8 @@ namespace flex
 
 	void Renderer::GenerateGBuffer()
 	{
+		PROFILE_AUTO("GenerateGBuffer");
+
 		assert(m_SkyBoxMesh != nullptr);
 		assert(m_SkyboxShaderID != InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
@@ -3632,6 +3646,8 @@ namespace flex
 
 	void Renderer::ParseSpecializationConstantInfo()
 	{
+		PROFILE_AUTO("ParseSpecializationConstantInfo");
+
 		JSONObject rootObj;
 		std::string fileContents;
 		if (!ReadFile(SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
@@ -3694,6 +3710,8 @@ namespace flex
 
 	void Renderer::ParseShaderSpecializationConstants()
 	{
+		PROFILE_AUTO("ParseShaderSpecializationConstants");
+
 		JSONObject rootObj;
 		std::string fileContents;
 		if (!ReadFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))

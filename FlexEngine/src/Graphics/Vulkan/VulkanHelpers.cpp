@@ -16,7 +16,6 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp"
-#include "Profiler.hpp"
 #include "Time.hpp"
 
 namespace flex
@@ -363,6 +362,8 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
+			PROFILE_AUTO("VulkanTexture CreateEmpty");
+
 			assert(inWidth > 0);
 			assert(inHeight > 0);
 
@@ -474,6 +475,8 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
+			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
+
 			assert(inWidth > 0);
 			assert(inHeight > 0);
 			assert(inChannelCount > 0);
@@ -506,6 +509,8 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
 		{
+			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
+
 			struct Image
 			{
 				unsigned char* pixels;
@@ -669,6 +674,8 @@ namespace flex
 
 		void VulkanTexture::GenerateMipmaps()
 		{
+			PROFILE_AUTO("VulkanTexture GenerateMipmaps");
+
 			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -859,6 +866,8 @@ namespace flex
 			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
 			bool bGenerateFullMipChain /* = false */)
 		{
+			PROFILE_AUTO("VulkanTexture CreateFromFile");
+
 			relativeFilePath = inRelativeFilePath;
 			fileName = StripLeadingDirectories(inRelativeFilePath);
 
@@ -1619,6 +1628,8 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device)
 		{
+			PROFILE_AUTO("FindQueueFamilies");
+
 			VulkanQueueFamilyIndices indices;
 
 			u32 queueFamilyCount;
@@ -2719,6 +2730,8 @@ namespace flex
 
 		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
 		{
+			PROFILE_AUTO("CreateDescriptorSetLayout");
+
 			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
 

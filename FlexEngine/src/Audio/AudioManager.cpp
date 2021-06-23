@@ -466,6 +466,8 @@ namespace flex
 
 	void AudioManager::Initialize()
 	{
+		PROFILE_AUTO("AudioManager Initialize");
+
 		// Retrieve preferred device
 		s_Device = alcOpenDevice(NULL);
 
@@ -523,6 +525,8 @@ namespace flex
 
 	void AudioManager::Update()
 	{
+		PROFILE_AUTO("AudioManager Update");
+
 		auto iter = s_TemporarySources.begin();
 		while (iter != s_TemporarySources.end())
 		{

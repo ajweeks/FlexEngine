@@ -937,6 +937,8 @@ namespace flex
 	{
 		if (g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
+			PROFILE_AUTO("UIManager Update");
+
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 
 			if (player != nullptr)

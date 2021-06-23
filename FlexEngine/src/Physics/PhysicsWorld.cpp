@@ -16,7 +16,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Window/Window.hpp"
 

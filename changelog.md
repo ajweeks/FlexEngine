@@ -2,7 +2,13 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_June_
+- Replace home-brewed profiler with [palanteer](https://github.com/dfeneyrou/palanteer/)
+- Port terrain generation to GPU (async compute)
+- Make shader compilation async again
+
 _May_
+- Begin adding support for terrain biomes & blending between
 - Add support for calling functions with arguments & non-void return types from in-game command line
 - Add support for calling C++ functions from script
 - Add support for binding function pointers

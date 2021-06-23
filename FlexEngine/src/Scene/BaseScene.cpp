@@ -24,7 +24,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
-#include "Profiler.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
@@ -190,7 +189,7 @@ namespace flex
 	void BaseScene::Update()
 	{
 		PROFILE_AUTO("Update Scene");
-
+		
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(g_DeltaTime);
@@ -206,7 +205,7 @@ namespace flex
 		}
 
 		{
-			PROFILE_AUTO("Tick scene objects");
+			PROFILE_AUTO("Update scene objects");
 			for (GameObject* rootObject : m_RootObjects)
 			{
 				if (rootObject)
@@ -247,6 +246,8 @@ namespace flex
 
 	void BaseScene::LateUpdate()
 	{
+		PROFILE_AUTO("Scene late update");
+
 		if (!m_PendingRemoveObjects.empty())
 		{
 			for (const GameObjectID& objectID : m_PendingRemoveObjects)

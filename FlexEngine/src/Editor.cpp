@@ -59,6 +59,8 @@ namespace flex
 
 	void Editor::Initialize()
 	{
+		PROFILE_AUTO("Editor Initialize(");
+
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
@@ -121,6 +123,8 @@ namespace flex
 
 	void Editor::EarlyUpdate()
 	{
+		PROFILE_AUTO("Editor EarlyUpdate");
+
 		if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
 		{
 			if (!m_bDraggingGizmo)

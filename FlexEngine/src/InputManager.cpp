@@ -15,6 +15,8 @@ namespace flex
 
 	void InputManager::Initialize()
 	{
+		PROFILE_AUTO("InputManager Initialize");
+
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeyMap[ImGuiKey_Tab] = (i32)KeyCode::KEY_TAB;
 		io.KeyMap[ImGuiKey_LeftArrow] = (i32)KeyCode::KEY_LEFT;
@@ -52,6 +54,8 @@ namespace flex
 
 	void InputManager::Update()
 	{
+		PROFILE_AUTO("InputManager Update");
+
 		if (!g_Window->HasFocus())
 		{
 			ClearAllInputs();

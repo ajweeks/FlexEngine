@@ -10,7 +10,6 @@ IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
-#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -131,11 +130,16 @@ namespace flex
 
 	void CartManager::Update()
 	{
-		PROFILE_BEGIN("Cart manager update");
+		if (m_Carts.empty())
+		{
+			return;
+		}
+
+		PROFILE_AUTO("CartManager update");
 
 		// Update cart chains
 		{
-			PROFILE_AUTO("Cart manager update - find chains");
+			PROFILE_AUTO("Find chains");
 
 			for (i32 i = 0; i < (i32)m_Carts.size(); ++i)
 			{
@@ -282,7 +286,7 @@ namespace flex
 		}
 
 		{
-			PROFILE_AUTO("Cart manager update - update positions in chains");
+			PROFILE_AUTO("Update positions in chains");
 
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
@@ -296,7 +300,7 @@ namespace flex
 		}
 
 		{
-			PROFILE_AUTO("Cart manager update - update positions out of chains");
+			PROFILE_AUTO("Update positions out of chains");
 
 			for (Cart* cart : m_Carts)
 			{
@@ -308,7 +312,7 @@ namespace flex
 		}
 
 		{
-			PROFILE_AUTO("Cart manager update - draw spheres");
+			PROFILE_AUTO("Draw spheres");
 
 			PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 			const bool bRenderBoundingSpheres =
@@ -333,8 +337,6 @@ namespace flex
 				}
 			}
 		}
-
-		PROFILE_END("Cart manager update");
 	}
 
 	Cart* CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */, bool bPrefabTemplate /* = false */)

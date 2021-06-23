@@ -31,86 +31,89 @@ namespace flex
 
 	void PluggablesSystem::Update()
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
-		btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
-		static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
-		static const real defaultWireLength = 2.0f;
-		for (Wire* wire : wires)
+		if (!wires.empty())
 		{
-			Socket* socket0 = nullptr;
-			Socket* socket1 = nullptr;
+			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
+			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
+			static const real defaultWireLength = 2.0f;
+			for (Wire* wire : wires)
+			{
+				Socket* socket0 = nullptr;
+				Socket* socket1 = nullptr;
 
-			if (wire->socket0ID.IsValid())
-			{
-				socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
-			}
+				if (wire->socket0ID.IsValid())
+				{
+					socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
+				}
 
-			if (wire->socket1ID.IsValid())
-			{
-				socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
-			}
+				if (wire->socket1ID.IsValid())
+				{
+					socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
+				}
 
-			if (wire->GetObjectInteractingWith() != nullptr)
-			{
-				GameObject* interacting = wire->GetObjectInteractingWith();
-				Transform* interactingTransform = interacting->GetTransform();
-				glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
-				glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
-				if (socket0 != nullptr && socket1 != nullptr)
+				if (wire->GetObjectInteractingWith() != nullptr)
 				{
-					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
-				}
-				else if (socket0 != nullptr)
-				{
-					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-					wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
-				}
-				else if (socket1 != nullptr)
-				{
-					wire->startPoint = interactingWorldPos + wireHoldingOffset;
-					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
-				}
-				else
-				{
-					wire->startPoint = interactingWorldPos + wireHoldingOffset;
-					wire->endPoint = wire->startPoint + interactingTransform->GetRight() * defaultWireLength;
-				}
-			}
-			else
-			{
-				if (socket0 != nullptr)
-				{
-					wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-				}
-				else
-				{
-					if (socket1 != nullptr)
+					GameObject* interacting = wire->GetObjectInteractingWith();
+					Transform* interactingTransform = interacting->GetTransform();
+					glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
+					glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
+					if (socket0 != nullptr && socket1 != nullptr)
 					{
+						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
 						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
 					}
-				}
-				if (socket1 != nullptr)
-				{
-					wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+					else if (socket0 != nullptr)
+					{
+						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
+						wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
+					}
+					else if (socket1 != nullptr)
+					{
+						wire->startPoint = interactingWorldPos + wireHoldingOffset;
+						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+					}
+					else
+					{
+						wire->startPoint = interactingWorldPos + wireHoldingOffset;
+						wire->endPoint = wire->startPoint + interactingTransform->GetRight() * defaultWireLength;
+					}
 				}
 				else
 				{
 					if (socket0 != nullptr)
 					{
-						wire->endPoint = wire->startPoint + defaultWireLength;
+						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
+					}
+					else
+					{
+						if (socket1 != nullptr)
+						{
+							wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+						}
+					}
+					if (socket1 != nullptr)
+					{
+						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+					}
+					else
+					{
+						if (socket0 != nullptr)
+						{
+							wire->endPoint = wire->startPoint + defaultWireLength;
+						}
 					}
 				}
+
+				wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
+
+				bool bWireOn0 = socket0 != nullptr && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
+				bool bWireOn1 = socket1 != nullptr && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
+				btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
+				debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
+				debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
+				debugDrawer->drawSphere(ToBtVec3(wire->endPoint), 0.2f, wireColOff);
 			}
-
-			wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
-
-			bool bWireOn0 = socket0 != nullptr && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
-			bool bWireOn1 = socket1 != nullptr && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
-			btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
-			debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
-			debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
-			debugDrawer->drawSphere(ToBtVec3(wire->endPoint), 0.2f, wireColOff);
 		}
 	}
 

@@ -941,8 +941,6 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		RollingAverage<ms> avgWaveUpdateTime;
-
 		u32 DEBUG_lastUsedVertCount = 0;
 
 		WaveThreadData threadUserData;
@@ -960,8 +958,6 @@ namespace flex
 	{
 	public:
 		explicit Blocks(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-
-		virtual void Update() override;
 
 	protected:
 

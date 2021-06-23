@@ -49,7 +49,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
-#include "Profiler.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -421,6 +420,8 @@ namespace flex
 
 	void GameObject::Update()
 	{
+		PROFILE_AUTO("GameObject Update");
+
 		if (m_NearbyInteractable != nullptr)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -2796,6 +2797,8 @@ namespace flex
 
 	void Valve::Update()
 	{
+		PROFILE_AUTO("Valve Update");
+
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
 		real currentAbsAvgRotationSpeed = 0.0f;
@@ -3017,6 +3020,8 @@ namespace flex
 
 	void RisingBlock::Update()
 	{
+		PROFILE_AUTO("RisingBlock Update");
+
 		real minDist = valve->minRotation;
 		real maxDist = valve->maxRotation;
 		//real totalDist = (maxDist - minDist);
@@ -3349,6 +3354,8 @@ namespace flex
 
 	void DirectionalLight::Update()
 	{
+		PROFILE_AUTO("DirectionalLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -3595,6 +3602,8 @@ namespace flex
 
 	void PointLight::Update()
 	{
+		PROFILE_AUTO("PointLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -3807,6 +3816,8 @@ namespace flex
 
 	void SpotLight::Update()
 	{
+		PROFILE_AUTO("SpotLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -4025,6 +4036,8 @@ namespace flex
 
 	void AreaLight::Update()
 	{
+		PROFILE_AUTO("AreaLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -4514,6 +4527,8 @@ namespace flex
 
 	void EngineCart::Update()
 	{
+		PROFILE_AUTO("EngineCart Update");
+
 		powerRemaining -= powerDrainMultiplier * g_DeltaTime;
 		powerRemaining = glm::max(powerRemaining, 0.0f);
 
@@ -4798,8 +4813,6 @@ namespace flex
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID)->shaderID)->vertexAttributes;
 
-		avgWaveUpdateTime = RollingAverage<ms>(256, SamplingType::CONSTANT);
-
 		criticalSection = Platform::InitCriticalSection();
 
 		for (u32 i = 0; i < wave_workQueue->Size(); ++i)
@@ -4838,6 +4851,7 @@ namespace flex
 		}
 
 		PROFILE_AUTO("Gerstner update");
+		PROFILE_AUTO("GerstnerWave Update");
 
 		for (WaveInfo& waveInfo : waveContributions)
 		{
@@ -5106,15 +5120,6 @@ namespace flex
 #else
 			UpdateWavesLinear();
 #endif
-		}
-		ms waveTime = Profiler::GetBlockDuration("Update waves");
-		if (avgWaveUpdateTime.currentAverage == 0.0f)
-		{
-			avgWaveUpdateTime.Reset(waveTime);
-		}
-		else
-		{
-			avgWaveUpdateTime.AddValue(waveTime);
 		}
 	}
 
@@ -5727,22 +5732,8 @@ namespace flex
 
 		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
 
+
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
-
-		{
-			ImVec2 p = ImGui::GetCursorScreenPos();
-
-			real width = 300.0f;
-			real height = 100.0f;
-			real minMS = 0.0f;
-			real maxMS = 40.0f;
-			p.y += glm::clamp((1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)), 0.0f, 1.0f) * height;
-			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(240, 220, 20, 255), 1.0f);
-
-			ImGui::PlotLines("", avgWaveUpdateTime.prevValues.data(), (u32)avgWaveUpdateTime.prevValues.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
-
-			ImGui::Text("%.2fms", avgWaveUpdateTime.currentAverage);
-		}
 
 		ImGui::DragFloat("Loaded distance", &loadRadius, 0.01f);
 		if (ImGui::DragFloat("Update speed", &updateSpeed, 0.1f))
@@ -6303,11 +6294,6 @@ namespace flex
 		}
 	}
 
-	void Blocks::Update()
-	{
-		GameObject::Update();
-	}
-
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("wire"), gameObjectID)
 	{
@@ -6574,6 +6560,8 @@ namespace flex
 
 	void Terminal::Update()
 	{
+		PROFILE_AUTO("Terminal Update");
+
 		if (m_DisplayReloadTimeRemaining != -1.0f)
 		{
 			m_DisplayReloadTimeRemaining -= g_DeltaTime;
@@ -7928,6 +7916,8 @@ namespace flex
 
 	void ParticleSystem::UpdateModelMatrix()
 	{
+		PROFILE_AUTO("ParticleSystem Update");
+
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
 
 		GameObject::Update();
@@ -8138,6 +8128,8 @@ namespace flex
 
 	void TerrainGenerator::Update()
 	{
+		PROFILE_AUTO("TerrainGenerator Update");
+
 		if (!bUseAsyncCompute)
 		{
 			terrain_workQueueEntriesCompleted = 0;
@@ -9030,7 +9022,7 @@ namespace flex
 
 			// Destroy far away chunks on the main thread
 			{
-				PROFILE_AUTO("Destroy terrain chunks");
+				PROFILE_AUTO("TerrainGenerator destroy chunks");
 				while (!m_ChunksToDestroy.empty())
 				{
 					glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
@@ -9141,8 +9133,6 @@ namespace flex
 
 			if (!m_ChunksToLoad.empty())
 			{
-				Profiler::PrintBlockDuration("generate terrain");
-
 				const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
 				const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
 				const u32 indexCount = triCount * 3;
@@ -10221,6 +10211,8 @@ namespace flex
 
 	void SpringObject::Update()
 	{
+		PROFILE_AUTO("SpringObject Update");
+
 		Transform* originTransform = m_OriginTransform->GetTransform();
 		glm::vec3 rootPos = originTransform->GetWorldPosition();
 		glm::vec3 targetPos;
@@ -10514,6 +10506,8 @@ namespace flex
 
 	void SoftBody::Update()
 	{
+		PROFILE_AUTO("SoftBody Update");
+
 		GameObject::Update();
 
 		//PROFILE_BEGIN("SoftBody Update");
@@ -10759,9 +10753,6 @@ namespace flex
 
 			m_MeshComponent->UpdateDynamicVertexData(m_MeshVertexBufferCreateInfo, indices);
 		}
-
-		//PROFILE_END("SoftBody Update");
-		//m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
 
 		m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
 
@@ -11571,6 +11562,8 @@ namespace flex
 
 	void Vehicle::Update()
 	{
+		PROFILE_AUTO("Vehicle Update");
+
 		GameObject::Update();
 
 		if (m_RigidBody == nullptr)
@@ -12228,6 +12221,8 @@ namespace flex
 
 	void Road::Update()
 	{
+		PROFILE_AUTO("Road Update");
+
 		GameObject::Update();
 
 		const PhysicsDebuggingSettings& debuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();

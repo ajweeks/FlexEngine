@@ -23,7 +23,6 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
-#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
@@ -50,6 +49,8 @@ namespace flex
 
 	void ResourceManager::Initialize()
 	{
+		PROFILE_AUTO("ResourceManager Initialize");
+
 		m_AudioDirectoryWatcher = new DirectoryWatcher(SFX_DIRECTORY, false);
 
 		DiscoverTextures();
@@ -59,6 +60,8 @@ namespace flex
 
 	void ResourceManager::Update()
 	{
+		PROFILE_AUTO("ResourceManager Update");
+
 		if (m_AudioRefreshFrameCountdown != -1)
 		{
 			--m_AudioRefreshFrameCountdown;
@@ -387,6 +390,8 @@ namespace flex
 
 	void ResourceManager::ParseFontFile()
 	{
+		PROFILE_AUTO("ResourceManager ParseFontFile");
+
 		if (!FileExists(m_FontsFilePathAbs))
 		{
 			PrintError("Fonts file missing!\n");
@@ -476,6 +481,8 @@ namespace flex
 
 	void ResourceManager::ParseMaterialsFile()
 	{
+		PROFILE_AUTO("ResourceManager ParseMaterialsFile");
+
 		parsedMaterialInfos.clear();
 
 		if (FileExists(MATERIALS_FILE_LOCATION))
