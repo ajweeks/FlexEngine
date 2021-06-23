@@ -2226,6 +2226,62 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(TestPrettifyNumbers0)
+		{
+			std::string result = PrettifyLargeNumber(15'690, 1);
+
+			EXPECT(result.c_str(), "15.7k");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers1)
+		{
+			std::string result = PrettifyLargeNumber(965'840'305, 2);
+
+			EXPECT(result.c_str(), "965.84M");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers2)
+		{
+			std::string result = PrettifyLargeNumber(999'999'999'999, 1);
+
+			EXPECT(result.c_str(), "1000.0T");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers3)
+		{
+			std::string result = PrettifyLargeNumber(999'999'999'999'999, 1);
+
+			EXPECT(result.c_str(), "1000.0Q");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers4)
+		{
+			std::string result = PrettifyLargeNumber(100'000'015, 2);
+
+			EXPECT(result.c_str(), "100.0M");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers5)
+		{
+			std::string result = PrettifyLargeNumber(10'845, 3);
+
+			EXPECT(result.c_str(), "10.845k");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers6)
+		{
+			std::string result = PrettifyLargeNumber(560, 1);
+
+			EXPECT(result.c_str(), "560");
+		}
+		UNIT_TEST_END;
+
 	public:
 		static i32 Run()
 		{
@@ -2274,6 +2330,7 @@ namespace flex
 				HashesDeterministic, HashEmpty, HashCompare0,
 				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
 
+				TestPrettifyNumbers0, TestPrettifyNumbers1, TestPrettifyNumbers2, TestPrettifyNumbers3, TestPrettifyNumbers4, TestPrettifyNumbers5, TestPrettifyNumbers6,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
