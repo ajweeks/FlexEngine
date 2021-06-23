@@ -1068,7 +1068,8 @@ namespace flex
 				AddEditorString("Shader recompile completed successfully");
 				RecreateEverything();
 
-				if (m_ShaderCompiler->WasShaderRecompiled("generate_terrain"))
+				if (m_ShaderCompiler->WasShaderRecompiled("generate_terrain") ||
+					m_ShaderCompiler->WasShaderRecompiled("terrain_post_process"))
 				{
 					g_SceneManager->CurrentScene()->RegenerateTerrain();
 				}
@@ -1765,6 +1766,7 @@ namespace flex
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
 			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
 			{ "generate_terrain", "", "", "", "vk_generate_terrain_comp.spv" },
+			{ "terrain_post_process", "", "", "", "vk_terrain_post_process_comp.spv" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -2388,6 +2390,20 @@ namespace flex
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
 		++shaderID;
 
+		// Terrain post process
+		m_Shaders[shaderID]->renderPassType = RenderPassType::TERRAIN_POST_PROCESS;
+		m_Shaders[shaderID]->bCompute = true;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_POST_PROCESS_CONSTANT_DATA);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_POST_PROCESS_DYNAMIC_DATA);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
+
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
+		++shaderID;
+
 		assert(shaderID == m_Shaders.size());
 #endif // USE_SHADER_REFLECTION
 
@@ -2605,8 +2621,10 @@ namespace flex
 #endif
 	}
 
-	void Renderer::InitializeMaterials()
+	void Renderer::InitializeEngineMaterials()
 	{
+		PROFILE_AUTO("Renderer InitializeEngineMaterials");
+
 		MaterialCreateInfo spriteMatSSCreateInfo = {};
 		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";

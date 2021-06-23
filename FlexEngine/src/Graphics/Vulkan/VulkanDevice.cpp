@@ -91,14 +91,14 @@ namespace flex
 			{
 				// TODO: Call on separate thread? Takes 500ms!
 				PROFILE_AUTO("vkCreateDevice");
-			VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, m_LogicalDevice.replace()));
+				VK_CHECK_RESULT(vkCreateDevice(m_PhysicalDevice, &deviceCreateInfo, nullptr, m_LogicalDevice.replace()));
 			}
 
 			vkGetPhysicalDeviceProperties(m_PhysicalDevice, &m_PhysicalDeviceProperties);
 
 			{
 				PROFILE_AUTO("volkLoadDevice");
-			volkLoadDevice(m_LogicalDevice);
+				volkLoadDevice(m_LogicalDevice);
 			}
 
 			m_CommandPool = { m_LogicalDevice, vkDestroyCommandPool };
@@ -155,6 +155,11 @@ namespace flex
 			if (supportedFeatures.wideLines)
 			{
 				enabledFeatures.wideLines = VK_TRUE;
+			}
+
+			if (supportedFeatures.multiDrawIndirect)
+			{
+				enabledFeatures.multiDrawIndirect = VK_TRUE;
 			}
 
 			return enabledFeatures;

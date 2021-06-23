@@ -247,6 +247,23 @@ namespace flex
 		u32 linearIndex;		// 8
 	};
 
+	//
+	struct TerrainGenPostProcessConstantData
+	{
+		real chunkSize;				// 0
+		real blendRadius;			// 4
+		u32 vertCountPerChunkAxis;	// 8
+	};
+
+	// 16 bytes
+	struct TerrainGenPostProcessDynamicData
+	{
+		u32 linearIndexN;	// 0
+		u32 linearIndexE;	// 4
+		u32 linearIndexS;	// 8
+		u32 linearIndexW;	// 12
+	};
+
 	struct Uniform
 	{
 		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
@@ -338,6 +355,8 @@ namespace flex
 	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
 	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
 	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
+	static const Uniform U_TERRAIN_GEN_POST_PROCESS_CONSTANT_DATA(UNIFORM("terrainGenPostProcessConstantData"), sizeof(TerrainGenPostProcessConstantData));
+	static const Uniform U_TERRAIN_GEN_POST_PROCESS_DYNAMIC_DATA(UNIFORM("terrainGenPostProcessDynamicData"), sizeof(TerrainGenPostProcessDynamicData));
 	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"), sizeof(TerrainVertex));
 	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
 
@@ -899,6 +918,7 @@ namespace flex
 
 		COMPUTE_PARTICLES,
 		COMPUTE_TERRAIN,
+		TERRAIN_POST_PROCESS,
 
 		_NONE
 	};
@@ -1100,6 +1120,7 @@ namespace flex
 		ParticleSimData* particleSimData = nullptr;
 		glm::vec2 uvBlendAmount;
 		TerrainGenDynamicData terrainGenDynamicData;
+		TerrainGenPostProcessDynamicData terrainGenPostProcessDynamicData;
 	};
 
 	struct DeviceDiagnosticCheckpoint

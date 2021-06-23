@@ -125,8 +125,8 @@ namespace flex
 
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
-			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData) override;
-			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData) override;
+			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) override;
+			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) override;
 			virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) override;
 			virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) override;
 
@@ -215,7 +215,6 @@ namespace flex
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
-			void PrepareCubemapFrameBuffer();
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
@@ -280,10 +279,12 @@ namespace flex
 				VkDescriptorSet descriptorSet,
 				bool bFlipViewport);
 
-			void BuildCommandBuffers(const DrawCallInfo& drawCallInfo);
-			void KickoffParticleSimWorkloads(VkCommandBuffer commandBuffer);
-			void KickoffTerrainGenWorkloads(VkCommandBuffer commandBuffer);
-			void DrawFrame();
+			void FillOutOffscreenCommandBuffer();
+			void FillOutForwardCommandBuffer(const DrawCallInfo& drawCallInfo);
+			void DispatchParticleSimWorkloads(VkCommandBuffer commandBuffer);
+			void DispatchTerrainGenWorkloads(VkCommandBuffer commandBuffer);
+			u32 SubmitOffscreenWork();
+			void SubmitSceneRenderingWork(u32 nextImageIndex);
 
 			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
 			void RecreateSwapChain();
@@ -293,7 +294,7 @@ namespace flex
 
 			void SetCheckPoint(VkCommandBuffer cmdBuf, const char* checkPointName);
 
-			bool CreateShaderModule(const std::vector<char>& code, VkShaderModule* shaderModule) const;
+			bool CreateShaderModule(const std::string& shaderName, const char* shaderType, const std::vector<char>& code, VkShaderModule* shaderModule) const;
 			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
 			VkPresentModeKHR ChooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
 			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities) const;
@@ -461,10 +462,6 @@ namespace flex
 			FrameBufferAttachment* m_SSAOBlurHFBColourAttachment0 = nullptr;
 			FrameBufferAttachment* m_SSAOBlurVFBColourAttachment0 = nullptr;
 
-			//FrameBufferAttachment* m_GBufferCubemapColourAttachment0 = nullptr;
-			//FrameBufferAttachment* m_GBufferCubemapColourAttachment1 = nullptr;
-			//FrameBufferAttachment* m_GBufferCubemapDepthAttachment = nullptr;
-
 			VDeleter<VkImage> m_ShadowImage;
 			VDeleter<VkDeviceMemory> m_ShadowImageMemory;
 			VDeleter<VkImageView> m_ShadowImageView;
@@ -612,19 +609,26 @@ namespace flex
 			{
 				bool bVisibile = true;
 
-				MaterialID simMaterialID = InvalidMaterialID;
+				MaterialID genMaterialID = InvalidMaterialID;
+				MaterialID postProcessMaterialID = InvalidMaterialID;
 				MaterialID renderingMaterialID = InvalidMaterialID;
 				VDeleter<VkPipeline> computePipeline;
 				VDeleter<VkPipelineLayout> computePipelineLayout;
+				VDeleter<VkPipeline> postProcessComputePipeline;
+				VDeleter<VkPipelineLayout> postProcessComputePipelineLayout;
 				GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
-				VkDescriptorSet simulationDescriptorSet = VK_NULL_HANDLE;
+				VkDescriptorSet genDescriptorSet = VK_NULL_HANDLE;
+				VkDescriptorSet postProcessDescriptorSet = VK_NULL_HANDLE;
 				VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
 				TerrainGenConstantData constantData;
+				TerrainGenPostProcessConstantData postProcessConstantData;
 
 				TextureID randomTablesTextureID = InvalidTextureID;
 
 				VulkanBuffer* indexBuffer = nullptr;
 				std::vector<u32> indexBufferBackingMemory;
+				VkDrawIndexedIndirectCommand* indirectBufferCPU = nullptr;
+				VulkanBuffer* indirectBuffer = nullptr;
 			};
 			Terrain* m_Terrain = nullptr;
 

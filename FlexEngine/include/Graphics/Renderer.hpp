@@ -184,8 +184,8 @@ namespace flex
 
 		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
 
-		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData) = 0;
-		virtual void RegenerateTerrain(const TerrainGenConstantData& constantData) = 0;
+		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) = 0;
+		virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) = 0;
 		virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) = 0;
 		virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) = 0;
 
@@ -392,7 +392,7 @@ namespace flex
 		void EnqueueScreenSpaceText();
 		void EnqueueWorldSpaceText();
 
-		void InitializeMaterials();
+		void InitializeEngineMaterials();
 
 		std::string PickRandomSkyboxTexture();
 

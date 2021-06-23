@@ -8016,9 +8016,13 @@ namespace flex
 		GenerateGradients();
 
 		TerrainGenConstantData constantData;
-		FillOutConstantData(constantData);
+		TerrainGenPostProcessConstantData postProcessConstantData;
+		FillOutConstantData(constantData, postProcessConstantData);
 
-		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData);
+		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		m_PreviousCenterPoint = glm::vec2(centerPoint.x, centerPoint.z);
+
+		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, postProcessConstantData);
 
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
@@ -8060,7 +8064,7 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData)
+	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData, TerrainGenPostProcessConstantData& postProcessConstantData)
 	{
 		constantData.chunkSize = ChunkSize;
 		constantData.maxHeight = MaxHeight;
@@ -8124,6 +8128,12 @@ namespace flex
 		memset(&constantData.biomes[constantData.biomeCount], 0, (MAX_BIOME_COUNT - constantData.biomeCount) * sizeof(Biome_GPU));
 
 		constantData.randomTablesSize = (u32)m_RandomTables.size();
+
+		// Post Process
+
+		postProcessConstantData.blendRadius = 5.0f;
+		postProcessConstantData.chunkSize = ChunkSize;
+		postProcessConstantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
 	}
 
 	void TerrainGenerator::Update()
@@ -8312,7 +8322,13 @@ namespace flex
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Loaded chunks: %u (loading: %u)", (u32)m_Meshes.size(), (u32)m_ChunksToLoad.size());
+		u32 loadedChunkCount = (u32)m_Meshes.size();
+		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
+
+		u32 vertsPerChunk = (u32)MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS;
+		ImGui::Text("Verts per chunk: %u", vertsPerChunk);
+		std::string vertCount = PrettifyLargeNumber(loadedChunkCount * vertsPerChunk, 2);
+		ImGui::Text("Total verts: %s", vertCount.c_str());
 
 		bool bRegen = false;
 		bool bRegenGradients = false;
@@ -8773,9 +8789,10 @@ namespace flex
 	void TerrainGenerator::Regenerate()
 	{
 		TerrainGenConstantData constantData;
-		FillOutConstantData(constantData);
+		TerrainGenPostProcessConstantData postProcessConstantData;
+		FillOutConstantData(constantData, postProcessConstantData);
 
-		g_Renderer->RegenerateTerrain(constantData);
+		g_Renderer->RegenerateTerrain(constantData, postProcessConstantData);
 
 		m_Meshes.clear();
 		m_ChunksToDestroy.clear();
@@ -8936,64 +8953,38 @@ namespace flex
 
 	void TerrainGenerator::DiscoverChunks()
 	{
-		static std::set<glm::vec2i, Vec2iCompare> chunksInRadius;
-		chunksInRadius.clear();
+		PROFILE_AUTO("Terrain :: DiscoverChunks");
 
 		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		const glm::vec2 centerXZ(center.x, center.z);
-		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
+		const glm::vec2 centerPointXZ(center.x, center.z);
+		const glm::vec2i centerChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
 		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
-		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		const real pRadiusSqr = m_PreviousLoadedChunkRadius * m_PreviousLoadedChunkRadius;
+		for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
 		{
-			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			real xi = (x + 0.5f) * ChunkSize;
+			for (i32 z = centerChunkIdx.y - maxChunkIdxDiff; z < centerChunkIdx.y + maxChunkIdxDiff; ++z)
 			{
-				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
-				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
+				glm::vec2 chunkCenter(xi, (z + 0.5f) * ChunkSize);
+				bool bInRange = glm::distance2(chunkCenter, centerPointXZ) < radiusSqr;
+				bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
+
+				if (bInRange && !bPrevInRange)
 				{
-					chunksInRadius.emplace(glm::vec2i(x, z));
+					glm::vec2i chunkIndex = glm::vec2i(x, z);
+					m_ChunksToLoad.emplace(chunkIndex);
+				}
+				else if (!bInRange && bPrevInRange)
+				{
+					glm::vec2i chunkIndex = glm::vec2i(x, z);
+					m_ChunksToDestroy.emplace(chunkIndex);
 				}
 			}
 		}
 
-		// Discover newly unloaded chunks
-		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); ++chunkIter)
-		{
-			const glm::vec2i& chunkIdx = chunkIter->first;
-
-			if (!Contains(chunksInRadius, chunkIdx) &&
-				!Contains(m_ChunksToDestroy, chunkIdx))
-			{
-				m_ChunksToDestroy.emplace(chunkIdx);
-
-				Erase(m_ChunksToLoad, chunkIdx);
-			}
-		}
-
-		//if (m_Meshes.size() < 512)
-		{
-			// Discover newly loaded chunks
-			u32 newChunksToLoadCount = 0;
-			for (const glm::vec2i& chunkIdx : chunksInRadius)
-			{
-				// TODO: Tell renderer to resize terrain dynamic UBO to accommodate all chunks to prevent many resizes
-
-				if (!Contains(m_Meshes, chunkIdx) &&
-					!Contains(m_ChunksToLoad, chunkIdx))
-				{
-					++newChunksToLoadCount;
-					m_ChunksToLoad.emplace(chunkIdx);
-
-					Erase(m_ChunksToDestroy, chunkIdx);
-
-					// Never queue more than this many in one frame
-					if (newChunksToLoadCount >= 256)
-					{
-						break;
-					}
-				}
-			}
-		}
+		m_PreviousCenterPoint = centerPointXZ;
+		m_PreviousLoadedChunkRadius = m_LoadedChunkRadius;
 	}
 
 	void TerrainGenerator::GenerateChunks()
@@ -9002,10 +8993,16 @@ namespace flex
 		{
 			if (!m_ChunksToLoad.empty())
 			{
+				PROFILE_AUTO("TerrainGenerator register chunks");
+
 				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
 					glm::vec2i chunkIndex = *chunkToLoadIter;
-					assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
+					// This shouldn't happen but it does for some reason
+					if (m_Meshes.find((glm::vec2i)chunkIndex) != m_Meshes.end())
+					{
+						continue;
+					}
 
 					Chunk* chunk = new Chunk();
 					chunk->meshComponent = nullptr;

@@ -28,7 +28,7 @@ struct TerrainVertex
 	//vec3 normalWS;
 };
 
-layout (binding = 2) buffer VertexBuffer
+layout (binding = 2) buffer TerrainVertexBuffer
 {
 	TerrainVertex vertices[];
 };
@@ -43,16 +43,19 @@ void main()
 	
 	vec2 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
 	uint vertCountPerChunkAxis = uboConstant.terrainGenConstantData.vertCountPerChunkAxis;
+	uint vertCountPerChunkAxisSq = vertCountPerChunkAxis * vertCountPerChunkAxis;
 	uint vertexIndex_x = gl_GlobalInvocationID.x;
 	uint vertexIndex_y = gl_GlobalInvocationID.y;
 	uint linearChunkIndex = uboDynamic.terrainGenDynamicData.linearIndex;
-	uint vertIndex = linearChunkIndex * (vertCountPerChunkAxis * vertCountPerChunkAxis) + vertexIndex_x + vertexIndex_y * vertCountPerChunkAxis;
+	uint vertIndex = linearChunkIndex * vertCountPerChunkAxisSq + vertexIndex_x + vertexIndex_y * vertCountPerChunkAxis;
 	float chunkSize = uboConstant.terrainGenConstantData.chunkSize;
 	vec2 uv = clamp(vec2(vertexIndex_x / float(vertCountPerChunkAxis - 1), vertexIndex_y / float(vertCountPerChunkAxis - 1)), vec2(0.0), vec2(1.0));
 
 	vec2 pos = vec2((chunkIndex.x + uv.x) * chunkSize, (chunkIndex.y + uv.y) * chunkSize);
-	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables, uboConstant.terrainGenConstantData.randomTableSize, pos);
-	float height = terrainSample.x;
+	vec3 normal;
+	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables, uboConstant.terrainGenConstantData.randomTableSize, pos, normal);
+    float normalizedHeight = terrainSample.x;
+    float height = (normalizedHeight * 0.5) * uboConstant.terrainGenConstantData.maxHeight;
 	float blendWeight = terrainSample.y;
 	float matID0 = terrainSample.z;
 	float matID1 = terrainSample.w;
@@ -64,12 +67,12 @@ void main()
 	vertices[vertIndex].data[3] = uv.x;
 	vertices[vertIndex].data[4] = uv.y;
 	
-	vertices[vertIndex].data[5] = height;
+	vertices[vertIndex].data[5] = normalizedHeight;
 	vertices[vertIndex].data[6] = blendWeight;
 	vertices[vertIndex].data[7] = matID0;
 	vertices[vertIndex].data[8] = matID1;
 
-	vertices[vertIndex].data[9] = 0.0;
-	vertices[vertIndex].data[10] = 1.0;
-	vertices[vertIndex].data[11] = 0.0;
+	vertices[vertIndex].data[9] = normal.x;
+	vertices[vertIndex].data[10] = normal.y;
+	vertices[vertIndex].data[11] = normal.z;
 }

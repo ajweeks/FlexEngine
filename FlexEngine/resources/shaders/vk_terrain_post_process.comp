@@ -1,0 +1,89 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout : enable
+
+#include "vk_noises.glsl"
+
+#define MAX_VERTS_PER_TERRAIN_CHUNK_AXIS		32
+
+struct TerrainGenPostProcessConstantData
+{
+	float chunkSize;
+	float blendRadius;
+	uint vertCountPerChunkAxis;
+	// NoiseFunction biomeNoise;
+};
+
+struct TerrainVertex
+{
+	float data[3 + 2 + 4 + 3];
+	//vec3 positionWS;
+	//vec2 uv;
+	//vec4 colour;
+	//vec3 normalWS;
+};
+
+struct TerrainGenPostProcessDynamicData
+{
+	uint neighborLinearIndexN;
+	uint neighborLinearIndexE;
+	uint neighborLinearIndexS;
+	uint neighborLinearIndexW;
+};
+
+layout (std430, binding = 0) uniform UBOConstant
+{
+	TerrainGenPostProcessConstantData terrainGenPostProcessData;
+} uboConstant;
+
+layout (std430, binding = 1) uniform UBODynamic
+{
+	TerrainGenPostProcessDynamicData terrainGenPostProcessDynamicData;
+	TerrainGenDynamicData terrainGenDynamicData;
+} uboDynamic;
+
+layout (binding = 2) buffer TerrainVertexBuffer
+{
+	TerrainVertex vertices[];
+};
+
+layout (local_size_x = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS, local_size_y = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS) in;
+
+void main()
+{
+	vec2 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
+	uint vertCountPerChunkAxis = uboConstant.terrainGenPostProcessData.vertCountPerChunkAxis;
+	uint vertCountPerChunkAxisSq = vertCountPerChunkAxis * vertCountPerChunkAxis;
+	uint vertexIndex_x = gl_GlobalInvocationID.x;
+	uint vertexIndex_y = gl_GlobalInvocationID.y;
+	uint linearChunkIndex = uboDynamic.terrainGenDynamicData.linearIndex;
+	uint vertIndex = linearChunkIndex * vertCountPerChunkAxisSq + vertexIndex_x + vertexIndex_y * vertCountPerChunkAxis;
+	float chunkSize = uboConstant.terrainGenPostProcessData.chunkSize;
+	vec2 uv = clamp(vec2(vertexIndex_x / float(vertCountPerChunkAxis - 1), vertexIndex_y / float(vertCountPerChunkAxis - 1)), vec2(0.0), vec2(1.0));
+
+	//float avgHeight = 0.5;
+
+	//int sampledNeighbors = 0;
+	// float blendRadius = uboConstant.terrainGenPostProcessData.blendRadius;
+	// int blendRadiusI = int(blendRadius);
+	// for (int x = -blendRadiusI; x < blendRadius; ++x)
+	// {
+	// 	for (int z = -blendRadiusI; z < blendRadius; ++z)
+	// 	{
+	// 		vertIndexN = linearChunkIndex * vertCountPerChunkAxisSq + vertexIndex_x + x + (vertexIndex_y + z) * vertCountPerChunkAxis;
+	// 		avgHeight += vertices[vertIndexN].data
+	// 	}
+	// }
+
+	// avgHeight /= sampledNeighbors;
+
+	//float normalizedHeight = vertices[vertIndex].data[5];
+	//float blendWeight = vertices[vertIndex].data[6];
+
+
+	//vertices[vertIndex].data[0] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	vertices[vertIndex].data[1] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	//vertices[vertIndex].data[2] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	vertices[vertIndex].data[3] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	vertices[vertIndex].data[4] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+}

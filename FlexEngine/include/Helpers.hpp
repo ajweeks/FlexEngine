@@ -37,6 +37,10 @@ namespace flex
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr);
 
+	// Returns string containing precision decimal places and a suffix if the number is larger than 999
+	// (e.g. (15690, 1) => "15.7k", (965840305, 2 => "965.84M"
+	FLEX_NO_DISCARD std::string PrettifyLargeNumber(u64 num, u32 precision);
+
 	// Removes all content before final '/' or '\'
 	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);
 

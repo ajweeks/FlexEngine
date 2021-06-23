@@ -531,6 +531,36 @@ namespace flex
 		return true;
 	}
 
+	std::string PrettifyLargeNumber(u64 num, u32 precision)
+	{
+		if (num < 1000)
+		{
+			return std::to_string(num);
+		}
+
+		static const char suffixes[] = { 'k', 'M', 'B', 'T', 'Q' };
+
+		for (u32 i = 1; i < ARRAY_LENGTH(suffixes) + 1; ++i)
+		{
+			if (num < (u64)glm::pow(1000, i + 1))
+			{
+				real shortenedNum = (real)num / (real)glm::pow(1000, i);
+				bool bRoundedToNextCategory = (shortenedNum == 1000.0f);
+				std::string result = std::to_string((u32)shortenedNum);
+				if (precision > 0)
+				{
+					result += ".";
+					u32 precisionValues = (u32)((shortenedNum - (u32)shortenedNum) * (real)glm::pow(10, precision) + 0.5f);
+					result += std::to_string(precisionValues);
+				}
+				result += suffixes[i - 1 + (bRoundedToNextCategory ? 1 : 0)];
+				return result;
+			}
+		}
+
+		return std::to_string(num);
+	}
+
 	std::string StripLeadingDirectories(const std::string& filePath)
 	{
 		size_t finalSlash = filePath.rfind('/');

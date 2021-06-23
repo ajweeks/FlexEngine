@@ -164,7 +164,7 @@ void main()
 	// 	// groundCol = vec3(float(m0) / 4.0, float(matID1) / 4.0, float(matID2) / 4.0);
 	// }
 
-	groundCol = mix(c0, c1, blendWeight);
+	groundCol = c0;// mix(c0, c1, blendWeight);
 	groundCol = pow(groundCol, vec3(2.2));
 
 	// groundCol = (float(matID2 + 0.5) / 4.0).xxx; fragmentColour.xyz = groundCol; fragmentColour.w = 1.0;
@@ -269,7 +269,7 @@ void main()
 	// Display chunk borders
 	// fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
 
-	// fragmentColour.rgb = vec3(ex_TexCoord.xy, 0.0);
+	// fragmentColour.rgb = ex_NormalWS;
 
     DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
      linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragmentColour);

@@ -572,28 +572,33 @@ float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in B
     return result;
 }
 
-vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize, vec2 pos)
+vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize, vec2 pos, out vec3 outNormal)
 {
-    float height = 0.0;
-
     vec2 biome0CellCoord;
-    vec2 outNearestCellPos;
-    vec2 outSecondNearestCellCoord;
+    vec2 biome0CellPos;
+    vec2 biome1CellCoord;
 
     vec2 p = pos / constantData.biomeNoise.wavelength;
-    float d = VoronoiDistance(p, biome0CellCoord, outNearestCellPos, outSecondNearestCellCoord);
+    float d = VoronoiDistance(p, biome0CellCoord, biome0CellPos, biome1CellCoord);
     int biome0Index = BiomeIDToindex(biome0CellCoord, constantData.biomeCount);
-    int biome1Index = BiomeIDToindex(outSecondNearestCellCoord, constantData.biomeCount);
+    int biome1Index = BiomeIDToindex(biome1CellCoord, constantData.biomeCount);
 
-    height = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos);
+    float normalizedHeight = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos);
 
-    // Divide by 2 to transform range from [-1, 1] to [0, 1]
-    height = height * 0.5 + 0.5;
+    // Divide by 2 to transform range from [-1, 1] to [0, maxHeight]
+    float height = (normalizedHeight * 0.5) * constantData.maxHeight;
 
     float blendWeight = clamp(d * 20.0 + 0.5, 0.0, 1.0);
 
     float matID0 = float(biome0Index);
     float matID1 = float(biome1Index);
 
-    return vec4(height, blendWeight, matID0, matID1);
+    float epsilon = 0.5;
+    float normalizedHeightX = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos + vec2(epsilon, 0.0));
+    float normalizedHeightZ = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos + vec2(0.0, epsilon));
+
+    // TODO: Use proper method for calculating this
+    outNormal = normalize(vec3(normalizedHeightX - normalizedHeight, 0.01 * epsilon, normalizedHeightZ - normalizedHeight));
+
+    return vec4(normalizedHeight, blendWeight, matID0, matID1);
 }

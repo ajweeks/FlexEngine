@@ -1244,7 +1244,7 @@ namespace flex
 		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
 
-		void FillOutConstantData(TerrainGenConstantData& constantData);
+		void FillOutConstantData(TerrainGenConstantData& constantData, TerrainGenPostProcessConstantData& postProcessConstantData);
 
 		void DestroyChunkRigidBody(Chunk* chunk);
 		void CreateChunkRigidBody(Chunk* chunk);
@@ -1280,6 +1280,8 @@ namespace flex
 
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
 		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
+		glm::vec2 m_PreviousCenterPoint;
+		real m_PreviousLoadedChunkRadius = 0.0f; // Probably only needed in editor when m_LoadedChunkRadius can change
 
 		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(4.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
 		const ns m_DeletionBudgetPerFrame = Time::ConvertFormatsConstexpr(0.5f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
