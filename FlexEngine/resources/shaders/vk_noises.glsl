@@ -557,7 +557,7 @@ float SampleNoiseFunction(sampler2DArray randomTables, uint randomTableSize, in 
 
 float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in Biome biome, vec2 pos)
 {
-    float result = 10.0;
+    float result = 0.0;
 
     for (int i = 0; i < biome.noiseFunctionCount; ++i)
     {

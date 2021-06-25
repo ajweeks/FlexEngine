@@ -78,12 +78,12 @@ void main()
 	// avgHeight /= sampledNeighbors;
 
 	//float normalizedHeight = vertices[vertIndex].data[5];
-	//float blendWeight = vertices[vertIndex].data[6];
+	float blendWeight = vertices[vertIndex].data[6];
 
 
 	//vertices[vertIndex].data[0] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
-	vertices[vertIndex].data[1] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	vertices[vertIndex].data[1] *= blendWeight;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
 	//vertices[vertIndex].data[2] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
-	vertices[vertIndex].data[3] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
-	vertices[vertIndex].data[4] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	//vertices[vertIndex].data[3] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
+	//vertices[vertIndex].data[4] = 0.0;// mix(vertices[vertIndex].data[1], avgHeight, blendWeight);
 }
