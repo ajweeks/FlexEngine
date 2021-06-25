@@ -2378,6 +2378,7 @@ namespace flex
 
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
+			assert(type != UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
 			for (UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)

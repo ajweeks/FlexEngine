@@ -519,7 +519,18 @@ namespace flex
 				CreateGraphicsPipeline(i);
 			}
 
+
+			if (m_Terrain != nullptr)
+			{
+				CreateTerrainVertexBuffer();
+			}
+
 			CreateDescriptorSets();
+
+			if (m_Terrain != nullptr)
+			{
+				CreateTerrainSystemResources();
+			}
 
 			GenerateBRDFLUT();
 
@@ -1334,7 +1345,6 @@ namespace flex
 				CreateStaticUniformBuffer(material);
 				CreateDynamicUniformBuffer(material);
 				CreateParticleBuffer(material);
-				CreateTerrainVertexBuffer(material);
 			}
 		}
 
@@ -1422,31 +1432,31 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateTerrainVertexBuffer(VulkanMaterial* material)
+		void VulkanRenderer::CreateTerrainVertexBuffer()
 		{
-			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
+			PROFILE_AUTO("CreateTerrainVertexBuffer");
 
-			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_VERTEX_BUFFER))
+			if (m_Terrain->vertexBufferGPU != nullptr)
 			{
-				PROFILE_AUTO("CreateTerrainVertexBuffer");
-
-				UniformBuffer* terrainVertexBufferBuffer = material->uniformBufferList.Get(UniformBufferType::TERRAIN_VERTEX_BUFFER);
-				flex_aligned_free(terrainVertexBufferBuffer->data.data);
-				terrainVertexBufferBuffer->data.data = nullptr;
-
-				//Material* terrainRenderingMat = GetMaterial(m_Terrain->renderingMaterialID);
-				//Shader* terrainRenderingShader = GetShader(terrainRenderingMat->shaderID);
-				//u32 vertexStride = CalculateVertexStride(terrainRenderingShader->vertexAttributes);
-				u32 bytesPerChunk = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * sizeof(TerrainVertex);
-				u32 maxInitialChunkCount = 2048;
-				terrainVertexBufferBuffer->data.unitSize = GetAlignedUBOSize(maxInitialChunkCount * bytesPerChunk);
-
-				terrainVertexBufferBuffer->data.data = static_cast<u8*>(flex_aligned_malloc(terrainVertexBufferBuffer->data.unitSize, m_DynamicAlignment));
-				PrepareUniformBuffer(&terrainVertexBufferBuffer->buffer, terrainVertexBufferBuffer->data.unitSize,
-					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false);
-				SetBufferName(m_VulkanDevice, terrainVertexBufferBuffer->buffer.m_Buffer, "Terrain vertex buffer");
+				flex_aligned_free(m_Terrain->vertexBufferGPU->data.data);
+				delete m_Terrain->vertexBufferGPU;
 			}
+
+			m_Terrain->vertexBufferGPU = new UniformBuffer(m_VulkanDevice, UniformBufferType::TERRAIN_VERTEX_BUFFER);
+
+			//Material* terrainRenderingMat = GetMaterial(m_Terrain->renderingMaterialID);
+			//Shader* terrainRenderingShader = GetShader(terrainRenderingMat->shaderID);
+			//u32 vertexStride = CalculateVertexStride(terrainRenderingShader->vertexAttributes);
+			u32 bytesPerChunk = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * sizeof(TerrainVertex);
+			u32 maxInitialChunkCount = 2048;
+			u32 unitSize = GetAlignedUBOSize(maxInitialChunkCount * bytesPerChunk);
+			m_Terrain->vertexBufferGPU->data.unitSize = unitSize;
+
+			m_Terrain->vertexBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(unitSize, m_DynamicAlignment));
+			PrepareUniformBuffer(&m_Terrain->vertexBufferGPU->buffer, unitSize,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false);
+			SetBufferName(m_VulkanDevice, m_Terrain->vertexBufferGPU->buffer.m_Buffer, "Terrain vertex buffer");
 		}
 
 		void VulkanRenderer::CreatePostProcessingResources()
@@ -1685,11 +1695,6 @@ namespace flex
 				}
 
 				CreateParticleSystemResources(particleSystem);
-			}
-
-			if (m_Terrain != nullptr)
-			{
-				CreateTerrainSystemResources();
 			}
 		}
 
@@ -4196,6 +4201,8 @@ namespace flex
 
 			if (m_bPostInitialized)
 			{
+				CreateTerrainVertexBuffer();
+
 				CreateTerrainSystemResources();
 			}
 		}
@@ -4874,7 +4881,7 @@ namespace flex
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(m_Terrain->graphicsPipelineID)->pipeline;
 
 			VkDeviceSize offsets[1] = { 0 };
-			const VkBuffer* terrainVertexBuffer = &terrainGenMat->uniformBufferList.Get(UniformBufferType::TERRAIN_VERTEX_BUFFER)->buffer.m_Buffer;
+			const VkBuffer* terrainVertexBuffer = &m_Terrain->vertexBufferGPU->buffer.m_Buffer;
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, terrainVertexBuffer, offsets);
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
@@ -6049,9 +6056,9 @@ namespace flex
 				descriptors->SetUniform(&U_PARTICLE_BUFFER, BufferDescriptorInfo{ particleBuffer->buffer.m_Buffer, particleBuffer->data.unitSize, UniformBufferType::PARTICLE_DATA });
 			}
 
-			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_VERTEX_BUFFER))
+			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_VERTEX_BUFFER) && m_Terrain != nullptr)
 			{
-				UniformBuffer const* terrainVertexBuffer = uniformBufferList->Get(UniformBufferType::TERRAIN_VERTEX_BUFFER);
+				UniformBuffer const* terrainVertexBuffer = m_Terrain->vertexBufferGPU;
 				descriptors->SetUniform(&U_TERRAIN_VERTEX_BUFFER, BufferDescriptorInfo{ terrainVertexBuffer->buffer.m_Buffer, terrainVertexBuffer->data.unitSize, UniformBufferType::TERRAIN_VERTEX_BUFFER });
 			}
 		}
@@ -7672,7 +7679,7 @@ namespace flex
 				m_DeferredRenderPass->End();
 
 				// NOTE: Only needed on the first frame
-				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
+				//m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
 
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 				PROFILE_END("");

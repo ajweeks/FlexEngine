@@ -221,7 +221,8 @@ namespace flex
 			void CreateStaticUniformBuffer(VulkanMaterial* material);
 			void CreateDynamicUniformBuffer(VulkanMaterial* material);
 			void CreateParticleBuffer(VulkanMaterial* material);
-			void CreateTerrainVertexBuffer(VulkanMaterial* material);
+
+			void CreateTerrainVertexBuffer();
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
@@ -629,6 +630,8 @@ namespace flex
 				std::vector<u32> indexBufferBackingMemory;
 				VkDrawIndexedIndirectCommand* indirectBufferCPU = nullptr;
 				VulkanBuffer* indirectBuffer = nullptr;
+
+				UniformBuffer* vertexBufferGPU = nullptr;
 			};
 			Terrain* m_Terrain = nullptr;
 
