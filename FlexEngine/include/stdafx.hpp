@@ -11,18 +11,22 @@
 #define FLEX_OVERRIDE_NEW_DELETE 0
 #define FLEX_OVERRIDE_MALLOC 0
 
-#ifdef DEBUG
-#define THOROUGH_CHECKS 1
-#define ENABLE_PROFILING 1
-#ifdef _WINDOWS
+
+#if defined(DEBUG) && defined(_WINDOWS)
 // RenderDoc API only supported on windows
-#define COMPILE_RENDERDOC_API 1
-#endif //  _WINDOWS
+#define COMPILE_RENDERDOC_API 0
+#else
+// Disable render doc integration in non-debug builds
+#define COMPILE_RENDERDOC_API 0
+#endif
+
+#ifdef DEBUG
+#define THOROUGH_CHECKS			1
+#define ENABLE_PROFILING		1
 #define COMPILE_SHADER_COMPILER 1
 #else
-#define THOROUGH_CHECKS 0
-#define ENABLE_PROFILING 0
-#define COMPILE_RENDERDOC_API 0
+#define THOROUGH_CHECKS			0
+#define ENABLE_PROFILING		0
 #define COMPILE_SHADER_COMPILER 0
 #endif
 
