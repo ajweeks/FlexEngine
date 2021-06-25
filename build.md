@@ -6,6 +6,10 @@
 
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
+First ensure you've pulled all the dependencies, either passing `--recurse-submodules` when cloning, or using `git submodule update` after the fact.
+
+Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-built-binaries) for steps.
+
 ## Windows
 #### Requirements:
 - Python 3
@@ -23,7 +27,7 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 #### Requirements:
 - [GENie](https://github.com/bkaradzic/GENie)
 - Python 3
-- cmake 3.13+
+- cmake 3.13+ (must be installed via https://cmake.org/download/, apt doesn't have latest versions)
 
 ### Ubuntu 18.04
 #### Steps
@@ -66,9 +70,18 @@ If you want to build Flex Engine on your own system, follow these steps. You an 
 7. `./Flex`
 
 
-**Troubleshooting:**
+## Pre-built binaries (linux-only)
+To download prebuilt dependencies (not the full engine) follow the following steps:
 
-If some libraries can't be found but are installed (eg. "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
+1. `wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip`
+2. `unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/`
+
+This is mostly provided for continuous integration reasons, and so is less well tested by humans.
+
+
+## Troubleshooting
+
+If some libraries can't be found but are installed (e.g., "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
 
 `ln -s /usr/lib64/libopenal.so.1 /usr/lib64/libopenal.so`
 
