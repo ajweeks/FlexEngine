@@ -1478,18 +1478,18 @@ namespace flex
 						if (ImGui::Button("View SDF"))
 						{
 							std::string absDir = RelativePathToAbsolute(metaData.renderedTextureFilePath);
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						if (ImGui::Button("Open SDF in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(metaData.renderedTextureFilePath));
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						ImGui::SameLine();
 						if (ImGui::Button("Open font in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(metaData.filePath));
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						bool bPreviewing = g_Renderer->previewedFont == fontPair.first;
 						if (ImGui::Checkbox("Preview", &bPreviewing))

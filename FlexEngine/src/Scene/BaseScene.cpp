@@ -845,7 +845,7 @@ namespace flex
 			if (ImGui::Button("Open in explorer"))
 			{
 				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(GetRelativeFilePath()));
-				Platform::OpenExplorer(directory);
+				Platform::OpenFileExplorer(directory.c_str());
 			}
 
 			ImGui::SameLine();

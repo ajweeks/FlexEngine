@@ -53,6 +53,11 @@ if len(sys.argv) < 4 or len(sys.argv) > 5:
 	print_usage()
 	exit(1)
 
+
+if sys.version_info[0] < 3:
+	print('Script must be ran with python 3 (current version: ' + sys.version.split(' ')[0] + ')')
+	exit(1)
+
 platform = sys.argv[1]
 genie_target = sys.argv[2]
 in_config = sys.argv[3]

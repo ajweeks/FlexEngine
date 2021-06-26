@@ -174,6 +174,7 @@ namespace flex
 
 		FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(fileNameBuff));
 
+		// Change current directory so relative paths work
 		std::string exeDir = ExtractDirectoryString(FlexEngine::s_ExecutablePath);
 		SetCurrentDirectory(exeDir.c_str());
 	}
@@ -204,7 +205,7 @@ namespace flex
 		return true;
 	}
 
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	void Platform::OpenFileExplorer(const std::string& absoluteDirectory)
 	{
 		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
 	}
@@ -220,19 +221,6 @@ namespace flex
 		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
 
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
-	}
-
-	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
 	}
 
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)

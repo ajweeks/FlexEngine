@@ -80,9 +80,27 @@ namespace flex
 		static void RetrieveCurrentWorkingDirectory();
 		static void RetrievePathToExecutable();
 		static bool CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
-		static void OpenExplorer(const std::string& absoluteDirectory);
+		static void OpenFileExplorer(const char* absoluteDirectory);
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);
-		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
+		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+		{
+			std::ifstream src(filePathFrom);
+			std::ofstream dst(filePathTo);
+
+			if (src.is_open() && dst.is_open())
+			{
+				dst << src.rdbuf();
+				src.close();
+				dst.close();
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+				return false;
+			}
+		}
+
 		static bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
 
 		static bool GetFileModifcationTime(const char* filePath, Date& outModificationDate);

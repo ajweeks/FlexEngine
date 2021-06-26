@@ -189,7 +189,7 @@ namespace flex
 			void InsertNewRenderObject(VulkanRenderObject* renderObject);
 			void InsertNewParticleSystem(VulkanParticleSystem* particleSystem);
 
-			void CreateInstance();
+			bool CreateInstance();
 			void SetupDebugCallback();
 			void CreateSurface();
 			VkPhysicalDevice PickPhysicalDevice();
@@ -302,7 +302,7 @@ namespace flex
 			VulkanSwapChainSupportDetails QuerySwapChainSupport(VkPhysicalDevice device) const;
 			bool IsDeviceSuitable(VkPhysicalDevice device);
 			std::vector<const char*> GetRequiredInstanceExtensions() const;
-			bool CheckValidationLayerSupport() const;
+			void DisableUnsupportedValidationLayers();
 
 			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
 			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* overridenUniforms = nullptr,
@@ -375,13 +375,13 @@ namespace flex
 			static const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
 
 #ifdef RELEASE
-			const bool m_bEnableValidationLayers = false;
-			const bool m_bEnableGPUAssistanceValidationFeature = false;
-			const bool m_bEnableBestPracticesValidationFeature = false;
+			bool m_bEnableValidationLayers = false;
+			bool m_bEnableGPUAssistanceValidationFeature = false;
+			bool m_bEnableBestPracticesValidationFeature = false;
 #else
-			const bool m_bEnableValidationLayers = true;
-			const bool m_bEnableGPUAssistanceValidationFeature = true;
-			const bool m_bEnableBestPracticesValidationFeature = false;
+			bool m_bEnableValidationLayers = true;
+			bool m_bEnableGPUAssistanceValidationFeature = true;
+			bool m_bEnableBestPracticesValidationFeature = false;
 #endif
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing

@@ -104,7 +104,13 @@ namespace flex
 			}
 #endif
 
-			CreateInstance();
+			if (!CreateInstance())
+			{
+				// TODO: Try disabling more layers/extensions
+				PrintError("Failed to create Vulkan instance. All hope is lost.\n");
+				exit(-1);
+				return;
+			}
 
 			SetupDebugCallback();
 			CreateSurface();
@@ -5277,7 +5283,7 @@ namespace flex
 			assert(m_ParticleSystems[particleSystem->ID] == particleSystem);
 		}
 
-		void VulkanRenderer::CreateInstance()
+		bool VulkanRenderer::CreateInstance()
 		{
 			PROFILE_AUTO("CreateInstance");
 
@@ -5330,6 +5336,15 @@ namespace flex
 
 			if (m_bEnableValidationLayers)
 			{
+				DisableUnsupportedValidationLayers();
+				if (m_ValidationLayers.empty())
+				{
+					m_bEnableValidationLayers = false;
+				}
+			}
+
+			if (m_bEnableValidationLayers)
+			{
 				createInfo.enabledLayerCount = (u32)m_ValidationLayers.size();
 				createInfo.ppEnabledLayerNames = m_ValidationLayers.data();
 			}
@@ -5355,14 +5370,15 @@ namespace flex
 			createInfo.pNext = &features;
 
 			// TODO: PERFORMANCE: Call on separate thread? (taking 10% of bootup time!)
-			VK_CHECK_RESULT(vkCreateInstance(&createInfo, nullptr, &m_Instance));
+			VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Instance);
+			if (result != VK_SUCCESS)
+			{
+				return false;
+			}
 
 			volkLoadInstance(m_Instance);
 
-			if (m_bEnableValidationLayers && !CheckValidationLayerSupport())
-			{
-				PrintError("Validation layers requested, but not available!");
-			}
+			return true;
 		}
 
 		void VulkanRenderer::SetupDebugCallback()
@@ -5423,7 +5439,7 @@ namespace flex
 
 			if (physicalDevice == VK_NULL_HANDLE)
 			{
-				PrintError("Failed to find a suitable GPU which supports all required extensions\n");
+				PrintError("Failed to find a suitable device which supports all required extensions\n");
 				return VK_NULL_HANDLE;
 			}
 
@@ -9019,7 +9035,7 @@ namespace flex
 			return extensions;
 		}
 
-		bool VulkanRenderer::CheckValidationLayerSupport() const
+		void VulkanRenderer::DisableUnsupportedValidationLayers()
 		{
 			u32 layerCount;
 			vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -9027,26 +9043,30 @@ namespace flex
 			std::vector<VkLayerProperties> availableLayers(layerCount);
 			vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-			for (const char* layerName : m_ValidationLayers)
+			u32 i = 0;
+			while (i < (u32)m_ValidationLayers.size())
 			{
 				bool layerFound = false;
 
 				for (const VkLayerProperties& layerProperties : availableLayers)
 				{
-					if (strcmp(layerName, layerProperties.layerName) == 0)
+					if (strcmp(m_ValidationLayers[i], layerProperties.layerName) == 0)
 					{
 						layerFound = true;
 						break;
 					}
 				}
 
-				if (!layerFound)
+				if (layerFound)
 				{
-					return false;
+					++i;
+				}
+				else
+				{
+					Print("Disabled validation layer %s because it is not supported on this device\n", m_ValidationLayers[i]);
+					m_ValidationLayers.erase(m_ValidationLayers.begin() + i);
 				}
 			}
-
-			return true;
 		}
 
 		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
