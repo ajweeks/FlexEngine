@@ -690,23 +690,20 @@ namespace flex
 		m_Directory(directory),
 		m_bWatchSubtree(bWatchSubtree)
 	{
+		m_ChangeHandle = FindFirstChangeNotification(
+			directory.c_str(),
+			m_bWatchSubtree ? TRUE : FALSE,
+			FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
+
+		if (m_ChangeHandle == INVALID_HANDLE_VALUE)
 		{
-			m_ChangeHandle = FindFirstChangeNotification(
-				directory.c_str(),
-				m_bWatchSubtree ? TRUE : FALSE,
-				FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
-
-			if (m_ChangeHandle == INVALID_HANDLE_VALUE)
-			{
-				PrintError("FindFirstChangeNotification failed! Directory watch not installed for %s\n", directory.c_str());
-				m_bInstalled = false;
-			}
-			else
-			{
-				m_bInstalled = true;
-			}
+			PrintError("FindFirstChangeNotification failed! Directory watch not installed for %s\n", directory.c_str());
+			m_bInstalled = false;
 		}
-
+		else
+		{
+			m_bInstalled = true;
+		}
 	}
 
 	DirectoryWatcher::~DirectoryWatcher()
