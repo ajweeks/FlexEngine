@@ -78,11 +78,24 @@ To download prebuilt dependencies (not the full engine) follow the following ste
 
 This is mostly provided for continuous integration reasons, and so is less well tested by humans.
 
-
 ## Troubleshooting
+
+---
 
 If some libraries can't be found but are installed (e.g., "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
 
 `ln -s /usr/lib64/libopenal.so.1 /usr/lib64/libopenal.so`
 
 If you get an error while building a dependency on linux which is similar to "Syntax error near unexpected token 'elif'"", a script likely has incorrect line endings. For example, freetype/autogen.sh may have to be converted using `dos2unix autogen.sh autogen.sh`
+
+---
+
+If you get the following error on startup:
+
+`INTEL-MESA: warning: Haswell Vulkan support is incomplete`
+
+Add the following line to `~/.profile`:
+
+`export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json`
+
+Then run `source ~/.profile`

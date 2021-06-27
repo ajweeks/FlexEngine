@@ -1705,6 +1705,18 @@ namespace flex
 		}
 #endif
 
+#if COMPILE_SHADER_COMPILER
+		while (m_ShaderCompiler != nullptr && !m_ShaderCompiler->bComplete)
+		{
+			// Wait for shader compilation to complete
+			// TODO: Only wait for engine shaders
+			if (m_ShaderCompiler->TickStatus())
+			{
+				break;
+			}
+			Platform::Sleep(1);
+		}
+#endif
 		std::vector<ShaderInfo> shaderInfos;
 		SUPPRESS_WARN_BEGIN;
 #if COMPILE_OPEN_GL
