@@ -225,7 +225,7 @@ namespace flex
 		// Linux doesn't quite have the same guaranteed idea of a "file explorer" as Windows
 		char buf[256];
 		// This works on Ubuntu at least (TODO: Support more distros)
-		snprintf(buf, 256, "nautilus --broswer %s", absoluteDirectory);
+		snprintf(buf, 256, "nautilus --browser %s", absoluteDirectory);
 		system(buf);
 	}
 
