@@ -647,6 +647,8 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
+			Print("Children: %u\n", (u32)children.size());
+
 			if (!children.empty())
 			{
 				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
@@ -691,12 +693,12 @@ namespace flex
 					}
 				}
 			}
-		}
 
-		if ((i32)itemSlotContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
-		{
-			PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
-				Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemSlotContainers.size());
+			if ((i32)itemSlotContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
+					Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemSlotContainers.size());
+			}
 		}
 	}
 
@@ -796,6 +798,8 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
+			Print("Inventory children: %u\n", (u32)children.size());
+
 			if (!children.empty())
 			{
 				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
@@ -847,12 +851,12 @@ namespace flex
 					}
 				}
 			}
-		}
 
-		if ((i32)itemContainers.size() != Player::INVENTORY_ITEM_COUNT)
-		{
-			PrintWarn("Failed to find %i items in InventoryUIContainer::OnLayoutChanged (found %i)\n",
-				Player::INVENTORY_ITEM_COUNT, (i32)itemContainers.size());
+			if ((i32)itemContainers.size() != Player::INVENTORY_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in InventoryUIContainer::OnLayoutChanged (found %i)\n",
+					Player::INVENTORY_ITEM_COUNT, (i32)itemContainers.size());
+			}
 		}
 	}
 
@@ -1094,6 +1098,10 @@ namespace flex
 			}
 
 			return uiContainer;
+		}
+		else
+		{
+			Print("Failed to read UI config file at %s\n", filePath);
 		}
 
 		return nullptr;
