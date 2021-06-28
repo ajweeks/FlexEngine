@@ -212,7 +212,11 @@ namespace flex
 				ImGui::PopStyleColor();
 
 				std::string fileName = StripLeadingDirectories(shaderError.filePath);
-				std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
+				std::string openStr = "Open " + fileName;
+				if (shaderError.lineNumber != -1)
+				{
+					openStr += ":" + std::to_string(shaderError.lineNumber);
+				}
 				if (ImGui::Button(openStr.c_str()))
 				{
 					std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
@@ -222,7 +226,11 @@ namespace flex
 					}
 					else
 					{
-						std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
+						std::string param0 = shaderError.filePath;
+						if (shaderError.lineNumber != -1)
+						{
+							param0 += ":" + std::to_string(shaderError.lineNumber);
+						}
 						Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
 					}
 				}
@@ -550,23 +558,64 @@ namespace flex
 			std::string fileType = ExtractFileType(shaderFileName);
 			std::string newFileName = spvDirectoryAbs + strippedFileName + "_" + fileType;
 
-			auto ParseError = [](ShaderCompilationResult* compilationResult, size_t numErrors, size_t numWarnings, const std::string& errorStr)
+			auto ParseLineNumber = [](const std::string& errorStr)
+			{
+				if (errorStr.empty())
+				{
+					return -1;
+				}
+
+				i32 lastColon = -1;
+				i32 lineNumber = -1;
+				const char* cStart = errorStr.data();
+				const char* cCur = cStart;
+				while (cCur != '\0')
+				{
+					if (*cCur == ':')
+					{
+						i32 i = (i32)(cCur - cStart);
+						if (lastColon == -1)
+						{
+							lastColon = i;
+						}
+						else
+						{
+							std::string sub = errorStr.substr(lastColon + 1, i - lastColon - 1);
+							bool bValidSubStr = true;
+							for (char c : sub)
+							{
+								if (c < '0' || c > '9')
+								{
+									bValidSubStr = false;
+									break;
+								}
+							}
+
+							if (bValidSubStr)
+							{
+								lineNumber = ParseInt(sub);
+								break;
+							}
+
+							lastColon = i;
+						}
+					}
+
+					++cCur;
+				}
+
+				return lineNumber;
+			};
+
+			auto ParseError = [&ParseLineNumber](ShaderCompilationResult* compilationResult, size_t numErrors, size_t numWarnings, const std::string& errorStr)
 			{
 				if (g_bEnableLogging_Shaders)
 				{
-					PrintWarn("%lu shader compilation errors, %lu warnings: \n", numErrors, numWarnings);
-					PrintWarn("%s\n", errorStr.c_str());
+					PrintError("%lu shader compilation errors, %lu warnings: \n", numErrors, numWarnings);
+					PrintError("%s\n", errorStr.c_str());
 				}
 
-				size_t colon0 = errorStr.find_first_of(':');
-				size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
-
-				u32 lineNumber = 0;
-				if (colon0 != std::string::npos && colon1 != std::string::npos)
-				{
-					lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
-				}
-
+				u32 lineNumber = ParseLineNumber(errorStr);
 				s_ShaderErrors.push_back({ errorStr, compilationResult->shaderAbsPath, lineNumber });
 			};
 
