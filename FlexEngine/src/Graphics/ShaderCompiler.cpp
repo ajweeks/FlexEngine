@@ -569,7 +569,7 @@ namespace flex
 				i32 lineNumber = -1;
 				const char* cStart = errorStr.data();
 				const char* cCur = cStart;
-				while (cCur != '\0')
+				while (*cCur != '\0')
 				{
 					if (*cCur == ':')
 					{
