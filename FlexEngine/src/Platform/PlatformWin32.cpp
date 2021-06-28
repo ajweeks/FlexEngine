@@ -205,9 +205,9 @@ namespace flex
 		return true;
 	}
 
-	void Platform::OpenFileExplorer(const std::string& absoluteDirectory)
+	void Platform::OpenFileExplorer(const char* absoluteDirectory)
 	{
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+		ShellExecute(NULL, "open", absoluteDirectory, NULL, NULL, SW_SHOWDEFAULT);
 	}
 
 	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
