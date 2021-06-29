@@ -9685,6 +9685,28 @@ namespace flex
 
 			std::string msgStr = Replace(pCallbackData->pMessage, " | ", "\n\t");
 
+			// Place links on separate lines
+			size_t linkBegin = msgStr.find("(http");
+			if (linkBegin != std::string::npos)
+			{
+				do
+				{
+					size_t linkEnd = msgStr.find(')', linkBegin);
+					if (linkEnd != std::string::npos)
+					{
+						msgStr =
+							msgStr.substr(0, linkBegin) + "\n" +
+							"  > " + msgStr.substr(linkBegin + 1, linkEnd - linkBegin - 2) + "\n" +
+							msgStr.substr(linkEnd + 1);
+					}
+
+					linkBegin = msgStr.find("(http");
+				} while (linkBegin != std::string::npos);
+			}
+
+			// Place each sentence on a new line
+			msgStr = Replace(msgStr, ". ", ".\n");
+
 			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
 			{
 				PrintErrorLong(msgStr.c_str());
