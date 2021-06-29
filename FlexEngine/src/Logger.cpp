@@ -19,7 +19,10 @@ namespace flex
 
 		ClearLogFile();
 
-		g_LogBuffer << '[' << Platform::GetDateString_YMDHMS() << ']' << '\n';
+		if (g_bEnableLogToConsole)
+		{
+			g_LogBuffer << '[' << Platform::GetDateString_YMDHMS() << ']' << '\n';
+		}
 	}
 
 	void ClearLogFile()
@@ -47,7 +50,7 @@ namespace flex
 		}
 	}
 
-	void Print(const char* str, ...)
+	void Print(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -64,7 +67,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintWarn(const char* str, ...)
+	void PrintWarn(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -81,7 +84,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintError(const char* str, ...)
+	void PrintError(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -100,16 +103,6 @@ namespace flex
 
 	void PrintLong(const char* str)
 	{
-		u32 len = (u32)strlen(str);
-		for (u32 i = 0; i < len; i += MAX_CHARS)
-		{
-			PrintSimple(str + i);
-		}
-		PrintSimple(str + len - len % MAX_CHARS);
-	}
-
-	void PrintSimple(const char* str)
-	{
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -117,18 +110,36 @@ namespace flex
 
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::DEFAULT);
 
-		if (strlen(str) == 0)
-		{
-			std::cout << "\n";
-			Platform::PrintStringToDebuggerConsole("\n");
-		}
-		else
-		{
-			std::cout << str;
-
-			Platform::PrintStringToDebuggerConsole(str);
-		}
+		PrintSimple(str);
 	}
+
+	void PrintWarnLong(const char* str)
+	{
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::WARNING);
+
+		PrintSimple(str);
+	}
+
+	void PrintErrorLong(const char* str)
+	{
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
+
+		PrintSimple(str);
+	}
+
+	//
+	// Private functions
+	//
 
 	void Print(const char* str, va_list argList)
 	{
@@ -151,6 +162,20 @@ namespace flex
 			std::cout << buffer;
 
 			Platform::PrintStringToDebuggerConsole(s.c_str());
+		}
+	}
+
+	void PrintSimple(const char* str)
+	{
+		if (strlen(str) == 0)
+		{
+			std::cout << "\n";
+			Platform::PrintStringToDebuggerConsole("\n");
+		}
+		else
+		{
+			std::cout << str;
+			Platform::PrintStringToDebuggerConsole(str);
 		}
 	}
 } // namespace flex
