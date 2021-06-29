@@ -1123,12 +1123,11 @@ namespace flex
 
 	u32 CountSetBits(u32 bits)
 	{
-		u32 LSHIFT = sizeof(u32*) * 8 - 1;
-		u32 bitSetCount = 0;
-		u32 bitTest = (u32)1 << LSHIFT;
-		u32 i;
+		const u64 LSHIFT = sizeof(u32*) * 8 - 1;
+		u64 bitTest = (u64)1ul << LSHIFT;
 
-		for (i = 0; i <= LSHIFT; ++i)
+		u32 bitSetCount = 0;
+		for (u64 i = 0; i <= LSHIFT; ++i)
 		{
 			bitSetCount += ((bits & bitTest) ? 1 : 0);
 			bitTest /= 2;
