@@ -50,7 +50,7 @@ namespace flex
 		}
 	}
 
-	void Print(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
+	void Print(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -67,7 +67,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintWarn(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
+	void PrintWarn(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
@@ -84,7 +84,7 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintError(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST
+	void PrintError(const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
 		{
