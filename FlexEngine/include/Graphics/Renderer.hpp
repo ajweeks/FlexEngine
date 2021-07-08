@@ -184,10 +184,11 @@ namespace flex
 
 		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
 
-		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) = 0;
+		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData, u32 initialMaxChunkCount) = 0;
 		virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) = 0;
 		virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) = 0;
 		virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) = 0;
+		virtual u32 GetCurrentTerrainChunkCapacity() const = 0;
 
 
 		// Will attempt to find pre-rendered font at specified path, and

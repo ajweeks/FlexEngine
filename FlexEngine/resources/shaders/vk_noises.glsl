@@ -2,6 +2,7 @@
 const uint MAX_NUM_ROAD_SEGMENTS = 64;
 const uint MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK = 8;
 const uint MAX_BIOME_COUNT = 16;
+const uint BIOME_NOISE_FUNCTION_INT4_COUNT = 1; // (`Ceil(MAX_BIOME_COUNT / 16)`)
 const uint MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 
 struct AABB2D
@@ -37,22 +38,23 @@ struct NoiseFunction
 struct Biome
 {
     NoiseFunction noiseFunctions[MAX_NUM_NOISE_FUNCTIONS_PER_BIOME];
-    uint noiseFunctionCount;
-    float _pad[7];
 };
 
 struct BezierCurve3D
 {
     // TODO: Pack into 12 floats?
-    vec4[4] points;
+    vec4 point0;
+    vec4 point1;
+    vec4 point2;
+    vec4 point3;
 };
 
 struct RoadSegment
 {
     BezierCurve3D curve;
+    AABB aabb;
     float widthStart;
     float widthEnd;
-    AABB aabb;
 };
 
 struct TerrainGenConstantData
@@ -65,10 +67,11 @@ struct TerrainGenConstantData
     int isolateNoiseLayer; // default: -1
     uint biomeCount;
     uint randomTableSize;
-    NoiseFunction biomeNoise;
     Biome biomes[MAX_BIOME_COUNT];
-    RoadSegment[MAX_NUM_ROAD_SEGMENTS] roadSegments;
-    int[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK] overlappingRoadSegmentIndices;
+    NoiseFunction biomeNoise;
+    uvec4 biomeNoiseFunctionCounts[BIOME_NOISE_FUNCTION_INT4_COUNT]; // 1 byte per biome func count
+    //RoadSegment[MAX_NUM_ROAD_SEGMENTS] roadSegments;
+    //int[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK] overlappingRoadSegmentIndices;
 };
 
 struct TerrainGenDynamicData
@@ -375,10 +378,10 @@ float VoronoiDistance(vec2 pos, out vec2 outNearestCell, out vec2 outNearestCell
 	vec2 posCellF = fract(pos);
 
 	// Regular Voronoi: find cell of nearest point
-	vec2 nearestCell;
-	vec2 nearestCellPos;
+	vec2 nearestCell = vec2(0.0);
+	vec2 nearestCellPos = vec2(0.0);
 
-    vec2 secondNearestCell;
+    vec2 secondNearestCell = vec2(0.0);
 
 	float closestEdge = 8.0;
 	for (int j = -1; j <= 1; j++)
@@ -555,11 +558,11 @@ float SampleNoiseFunction(sampler2DArray randomTables, uint randomTableSize, in 
     return 0.0;
 }
 
-float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in Biome biome, vec2 pos)
+float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in Biome biome, uint biomeNoiseFunctionCount, vec2 pos)
 {
     float result = 0.0;
 
-    for (int i = 0; i < biome.noiseFunctionCount; ++i)
+    for (int i = 0; i < biomeNoiseFunctionCount; ++i)
     {
         //if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
         {
@@ -567,9 +570,22 @@ float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in B
         }
     }
 
-    result /= float(biome.noiseFunctionCount);
+    result /= float(biomeNoiseFunctionCount);
 
     return result;
+}
+
+uint GetByteFromUInt(uint num, int byteIndex)
+{
+    return (num >> byteIndex * 8) & 0xFF;
+}
+
+uint GetBiomeNoiseFunctionCount(in TerrainGenConstantData constantData, int biomeIndex)
+{
+    int index0 = biomeIndex / 16;
+    int index1 = (biomeIndex % 16) / 4;
+    int index2 = (biomeIndex % 16) % 4;
+    return GetByteFromUInt(constantData.biomeNoiseFunctionCounts[index0][index1], index2);
 }
 
 vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize, vec2 pos, out vec3 outNormal)
@@ -583,19 +599,23 @@ vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray random
     int biome0Index = BiomeIDToindex(biome0CellCoord, constantData.biomeCount);
     int biome1Index = BiomeIDToindex(biome1CellCoord, constantData.biomeCount);
 
-    float normalizedHeight = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos);
+    uint biome0NoiseFuncCount = GetBiomeNoiseFunctionCount(constantData, biome0Index);
+    float normalizedHeight = SampleBiomeTerrain(randomTables, randomTableSize,
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos);
 
     // Divide by 2 to transform range from [-1, 1] to [0, maxHeight]
     float height = (normalizedHeight * 0.5) * constantData.maxHeight;
 
-    float blendWeight = clamp(d * 20.0 + 0.5, 0.0, 1.0);
+    float blendWeight = 1.0 - clamp(d * 5.0 + 0.5, 0.0, 1.0);
 
     float matID0 = float(biome0Index);
     float matID1 = float(biome1Index);
 
     float epsilon = 0.5;
-    float normalizedHeightX = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos + vec2(epsilon, 0.0));
-    float normalizedHeightZ = SampleBiomeTerrain(randomTables, randomTableSize, constantData.biomes[biome0Index], pos + vec2(0.0, epsilon));
+    float normalizedHeightX = SampleBiomeTerrain(randomTables, randomTableSize, 
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos + vec2(epsilon, 0.0));
+    float normalizedHeightZ = SampleBiomeTerrain(randomTables, randomTableSize, 
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos + vec2(0.0, epsilon));
 
     // TODO: Use proper method for calculating this
     outNormal = normalize(vec3(normalizedHeightX - normalizedHeight, 0.01 * epsilon, normalizedHeightZ - normalizedHeight));

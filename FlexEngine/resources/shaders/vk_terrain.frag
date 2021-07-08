@@ -261,13 +261,14 @@ void main()
 	ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0)); // Reinhard tone-mapping
-	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
+	// fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
 
 	// Colourize by chunk ID & neighbor chunk ID
-	// fragmentColour.rgb = (palette(ex_Colour.z + 0.5) + palette(ex_Colour.w)) * 0.5;
+	fragmentColour.rgb = (palette(matID0 * 0.3 + 0.5) + palette(matID1 * 0.3)) * 0.5;
 
 	// Display chunk borders
-	// fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
+	//fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
+	fragmentColour.rgb = blendWeight.xxx;
 
 	// fragmentColour.rgb = ex_NormalWS;
 

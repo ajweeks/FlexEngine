@@ -125,10 +125,11 @@ namespace flex
 
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
-			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) override;
+			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData, u32 initialMaxChunkCount) override;
 			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) override;
 			virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) override;
 			virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) override;
+			virtual u32 GetCurrentTerrainChunkCapacity() const;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -632,6 +633,7 @@ namespace flex
 				VulkanBuffer* indirectBuffer = nullptr;
 
 				UniformBuffer* vertexBufferGPU = nullptr;
+				u32 maxChunkCount;
 			};
 			Terrain* m_Terrain = nullptr;
 

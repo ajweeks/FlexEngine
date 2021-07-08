@@ -9,7 +9,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/vec4.hpp>
 IGNORE_WARNINGS_POP
 
-#include "Helpers.hpp" // For Hash
+#include "Helpers.hpp"
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
 
@@ -26,7 +26,8 @@ namespace flex
 	static const i32 MAX_NUM_ROAD_SEGMENTS = 64;
 	static const i32 MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK = 8;
 	static const i32 MAX_VERTS_PER_TERRAIN_CHUNK_AXIS = 32;
-	static const i32 MAX_BIOME_COUNT = 16;
+	static const i32 MAX_BIOME_COUNT = 16; // Must be multiple of 16
+	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 
 	// 48 bytes
@@ -183,9 +184,9 @@ namespace flex
 	struct RoadSegment_GPU
 	{
 		BezierCurve3D_GPU curve;	// 0
-		real widthStart;			// 64
-		real widthEnd;				// 68
-		AABB aabb;					// 72 (AABB = 24 bytes)
+		AABB aabb;					//
+		real widthStart;			//
+		real widthEnd;				//
 	};
 
 	bool operator==(const RoadSegment_GPU& lhs, const RoadSegment_GPU& rhs);
@@ -205,15 +206,12 @@ namespace flex
 		// TODO: Seed
 	};
 
-	// 160 bytes
+	// 128 bytes
 	struct Biome_GPU
 	{
 		NoiseFunction_GPU noiseFunctions[MAX_NUM_NOISE_FUNCTIONS_PER_BIOME];	// 0
-		u32 noiseFunctionCount;													// 128
-		real _pad[7];
 	};
 
-	//
 	struct TerrainGenConstantData
 	{
 		real chunkSize;											// 0
@@ -224,10 +222,11 @@ namespace flex
 		i32 isolateNoiseLayer; // default: -1					// 20
 		u32 biomeCount;											// 24
 		u32 randomTablesSize;									// 28
-		NoiseFunction_GPU biomeNoise;							// 32
-		Biome_GPU biomes[MAX_BIOME_COUNT];						// (2,368 bytes)
-		RoadSegment_GPU roadSegments[MAX_NUM_ROAD_SEGMENTS];	// (6,144 bytes)
-		i32 overlappingRoadSegmentIndices[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK]; // (8,192 bytes)
+		Biome_GPU biomes[MAX_BIOME_COUNT];						// (2,048 bytes)
+		NoiseFunction_GPU biomeNoise;							//
+		glm::uvec4 biomeNoiseFunctionCounts[BIOME_NOISE_FUNCTION_INT4_COUNT]; // Each element stores 16 values (one per byte)
+		//RoadSegment_GPU roadSegments[MAX_NUM_ROAD_SEGMENTS];	// (6,144 bytes)
+		//i32 overlappingRoadSegmentIndices[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK]; // (8,192 bytes)
 	};
 
 	// 48 bytes
@@ -247,12 +246,13 @@ namespace flex
 		u32 linearIndex;		// 8
 	};
 
-	//
+	// 16 bytes
 	struct TerrainGenPostProcessConstantData
 	{
 		real chunkSize;				// 0
 		real blendRadius;			// 4
 		u32 vertCountPerChunkAxis;	// 8
+		u32 vertexBufferSize;		// 12
 	};
 
 	// 16 bytes

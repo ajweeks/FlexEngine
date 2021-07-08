@@ -150,6 +150,7 @@ namespace flex
 			_NONE
 		};
 
+		// TODO: Rename to just GPUBuffer?
 		struct UniformBuffer final
 		{
 			UniformBuffer(VulkanDevice* device, UniformBufferType type);

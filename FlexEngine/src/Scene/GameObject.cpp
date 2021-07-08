@@ -8022,7 +8022,7 @@ namespace flex
 		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
 		m_PreviousCenterPoint = glm::vec2(centerPoint.x, centerPoint.z);
 
-		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, postProcessConstantData);
+		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, postProcessConstantData, m_InitialMaxChunkCount);
 
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
@@ -8073,43 +8073,43 @@ namespace flex
 		constantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
 		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
 
-		// Copy road segments to GPU-friendly memory
-		{
-			i32 i = 0;
-			for (auto& iter : m_RoadSegments)
-			{
-				glm::vec2i chunkIndex = iter.first;
-
-				for (RoadSegment* roadSegment : iter.second)
-				{
-					RoadSegment_GPU roadSegmentGPU = {};
-					roadSegmentGPU.aabb = roadSegment->aabb;
-					roadSegmentGPU.curve = BezierCurve3D_GPU{ {
-							glm::vec4(roadSegment->curve.points[0], 1.0f),
-							glm::vec4(roadSegment->curve.points[1], 1.0f),
-							glm::vec4(roadSegment->curve.points[2], 1.0f),
-							glm::vec4(roadSegment->curve.points[3], 1.0f)
-						} };
-					roadSegmentGPU.widthStart = roadSegment->widthStart;
-					roadSegmentGPU.widthEnd = roadSegment->widthEnd;
-
-					if (!Contains(m_RoadSegmentsGPU, roadSegmentGPU))
-					{
-						m_RoadSegmentsGPU[i++] = roadSegmentGPU;
-					}
-				}
-			}
-
-			memset(m_RoadSegmentsGPU.data() + i, 0, (MAX_NUM_ROAD_SEGMENTS - i) * sizeof(RoadSegment_GPU));
-		}
-		memcpy(constantData.roadSegments, m_RoadSegmentsGPU.data(), MAX_NUM_ROAD_SEGMENTS * sizeof(RoadSegment_GPU));
+		//// Copy road segments to GPU-friendly memory
+		//{
+		//	i32 i = 0;
+		//	for (auto& iter : m_RoadSegments)
+		//	{
+		//		glm::vec2i chunkIndex = iter.first;
+		//
+		//		for (RoadSegment* roadSegment : iter.second)
+		//		{
+		//			RoadSegment_GPU roadSegmentGPU = {};
+		//			roadSegmentGPU.aabb = roadSegment->aabb;
+		//			roadSegmentGPU.curve = BezierCurve3D_GPU{ {
+		//					glm::vec4(roadSegment->curve.points[0], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[1], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[2], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[3], 1.0f)
+		//				} };
+		//			roadSegmentGPU.widthStart = roadSegment->widthStart;
+		//			roadSegmentGPU.widthEnd = roadSegment->widthEnd;
+		//
+		//			if (!Contains(m_RoadSegmentsGPU, roadSegmentGPU))
+		//			{
+		//				m_RoadSegmentsGPU[i++] = roadSegmentGPU;
+		//			}
+		//		}
+		//	}
+		//
+		//	memset(m_RoadSegmentsGPU.data() + i, 0, (MAX_NUM_ROAD_SEGMENTS - i) * sizeof(RoadSegment_GPU));
+		//}
+		//memcpy(constantData.roadSegments, m_RoadSegmentsGPU.data(), MAX_NUM_ROAD_SEGMENTS * sizeof(RoadSegment_GPU));
 
 		// TODO:
-		memset(constantData.overlappingRoadSegmentIndices, 0, sizeof(i32) * MAX_NUM_ROAD_SEGMENTS * MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK);
+		//memset(constantData.overlappingRoadSegmentIndices, 0, sizeof(i32) * MAX_NUM_ROAD_SEGMENTS * MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK);
 
 		memcpy(&constantData.biomeNoise, &m_BiomeNoise, sizeof(NoiseFunction_GPU));
 
-		// Copy noise functions
+		// Copy biomes
 		constantData.biomeCount = (u32)m_Biomes.size();
 		for (u32 i = 0; i < constantData.biomeCount; ++i)
 		{
@@ -8117,8 +8117,8 @@ namespace flex
 			Biome_GPU& biomeGPU = constantData.biomes[i];
 
 			biomeGPU = {};
-			biomeGPU.noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
-			for (u32 j = 0; j < biomeGPU.noiseFunctionCount; ++j)
+			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
+			for (u32 j = 0; j < noiseFunctionCount; ++j)
 			{
 				NoiseFunction& noiseFuncCPU = biomeCPU.noiseFunctions[j];
 				NoiseFunction_GPU& noiseFuncGPU = biomeGPU.noiseFunctions[j];
@@ -8127,13 +8127,57 @@ namespace flex
 		}
 		memset(&constantData.biomes[constantData.biomeCount], 0, (MAX_BIOME_COUNT - constantData.biomeCount) * sizeof(Biome_GPU));
 
+		auto PackByte = [](u32 num, i32 byteIndex)
+		{
+			return (num & 0xFF) << byteIndex * 8;
+		};
+
+		// Pack biome noise function counts
+		glm::uvec4 curr(0);
+		i32 currOffset = 0;
+		i32 index0 = 0; // Array index
+		i32 index1 = 0; // Index into uvec4
+		i32 index2 = 0; // Index into bytes of uvec4 component
+		for (u32 i = 0; i < constantData.biomeCount; ++i)
+		{
+			Biome& biomeCPU = m_Biomes[i];
+
+			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
+
+			curr[index1] = curr[index1] | PackByte(noiseFunctionCount, index2);
+
+			++index2;
+			if (index2 >= 4)
+			{
+				index2 = 0;
+
+				++index1;
+				if (index1 >= 4)
+				{
+					index1 = 0;
+
+					constantData.biomeNoiseFunctionCounts[index0] = curr;
+					++index0;
+					curr = glm::uvec4(0);
+				}
+			}
+		}
+		if (index2 != 0 || index1 != 0)
+		{
+			constantData.biomeNoiseFunctionCounts[index0] = curr;
+		}
+		u32 uvec4sInUse = (u32)glm::ceil(constantData.biomeCount / 16.0f);
+		memset(&constantData.biomeNoiseFunctionCounts[uvec4sInUse], 0, (BIOME_NOISE_FUNCTION_INT4_COUNT - uvec4sInUse) * sizeof(glm::uvec4));
+
 		constantData.randomTablesSize = (u32)m_RandomTables.size();
 
 		// Post Process
 
-		postProcessConstantData.blendRadius = 5.0f;
+		postProcessConstantData.blendRadius = 7.0f;
 		postProcessConstantData.chunkSize = ChunkSize;
 		postProcessConstantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		// TODO: Update when capacity changes
+		postProcessConstantData.vertexBufferSize = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * m_InitialMaxChunkCount;
 	}
 
 	void TerrainGenerator::Update()

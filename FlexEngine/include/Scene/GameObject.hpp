@@ -1317,6 +1317,8 @@ namespace flex
 		i32 m_IsolateNoiseLayer = -1;
 
 		TerrainThreadData threadUserData;
+
+		u32 m_InitialMaxChunkCount = 2048;
 	};
 
 

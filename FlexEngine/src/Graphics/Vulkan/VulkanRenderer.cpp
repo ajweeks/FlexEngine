@@ -1454,8 +1454,7 @@ namespace flex
 			//Shader* terrainRenderingShader = GetShader(terrainRenderingMat->shaderID);
 			//u32 vertexStride = CalculateVertexStride(terrainRenderingShader->vertexAttributes);
 			u32 bytesPerChunk = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * sizeof(TerrainVertex);
-			u32 maxInitialChunkCount = 2048;
-			u32 unitSize = GetAlignedUBOSize(maxInitialChunkCount * bytesPerChunk);
+			u32 unitSize = GetAlignedUBOSize(m_Terrain->maxChunkCount * bytesPerChunk);
 			m_Terrain->vertexBufferGPU->data.unitSize = unitSize;
 
 			m_Terrain->vertexBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(unitSize, m_DynamicAlignment));
@@ -2410,12 +2409,14 @@ namespace flex
 				m_DescriptorPool->CreateDescriptorSetLayout(i);
 			}
 
-			// TODO: CreateDescriptorSets here?
-
 			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
 				pair.second->Clear();
 			}
+
+			DestroyTerrain();
+
+			CreateDescriptorSets();
 		}
 
 		void VulkanRenderer::OnPostSceneChange()
@@ -4130,7 +4131,7 @@ namespace flex
 			return true;
 		}
 
-		void VulkanRenderer::InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData)
+		void VulkanRenderer::InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData, u32 initialMaxChunkCount)
 		{
 			PROFILE_AUTO("VulkanRenderer InitializeTerrain");
 
@@ -4148,6 +4149,7 @@ namespace flex
 
 			m_Terrain = new Terrain();
 			m_Terrain->renderingMaterialID = terrainMaterialID;
+			m_Terrain->maxChunkCount = initialMaxChunkCount;
 
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "Generate Terrain Material";
@@ -4246,6 +4248,11 @@ namespace flex
 					return;
 				}
 			}
+		}
+
+		u32 VulkanRenderer::GetCurrentTerrainChunkCapacity() const
+		{
+			return m_Terrain->maxChunkCount;
 		}
 
 		void VulkanRenderer::RecreateShadowFrameBuffers()
@@ -4881,7 +4888,6 @@ namespace flex
 			PROFILE_AUTO("Terrain rendering");
 			BeginDebugMarkerRegion(commandBuffer, "Terrain rendering");
 
-			VulkanMaterial* terrainGenMat = (VulkanMaterial*)m_Materials.at(m_Terrain->genMaterialID);
 			VulkanMaterial* terrainRenderingMat = (VulkanMaterial*)m_Materials.at(m_Terrain->renderingMaterialID);
 
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(m_Terrain->graphicsPipelineID)->pipeline;
@@ -5116,6 +5122,7 @@ namespace flex
 			{
 				DestroyGraphicsPipeline(m_Terrain->graphicsPipelineID);
 				RemoveMaterial(m_Terrain->genMaterialID);
+				RemoveMaterial(m_Terrain->postProcessMaterialID);
 				// Leave rendering mat ID since user passes it in
 
 				m_Terrain->computePipeline.replace();
@@ -7695,7 +7702,7 @@ namespace flex
 				m_DeferredRenderPass->End();
 
 				// NOTE: Only needed on the first frame
-				//m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
+				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
 
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 				PROFILE_END("");
@@ -8155,7 +8162,7 @@ namespace flex
 			}
 
 			// TODO: Make RenderPass set attachment layout values automatically
-			m_OffscreenFB0DepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//			m_OffscreenFB0DepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			if (m_bEnableTAA)
 			{
@@ -8448,6 +8455,26 @@ namespace flex
 				uniformOverrides.overridenUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
 				uniformOverrides.overridenUniforms.AddUniform(&U_TERRAIN_GEN_POST_PROCESS_DYNAMIC_DATA);
 
+				auto FindNeighbor = [this](i32 chunkIndexX, i32 chunkIndexY)
+				{
+					for (const auto& pair : m_TerrainGenWorkloads)
+					{
+						if (pair.first.x == chunkIndexX && pair.first.y == chunkIndexY)
+						{
+							return pair.second;
+						}
+					}
+					for (const auto& pair : m_TerrainChunksLoaded)
+					{
+						if (pair.first.x == chunkIndexX && pair.first.y == chunkIndexY)
+						{
+							return pair.second;
+						}
+					}
+
+					return u32_max;
+				};
+
 				u32 dynamicUBOOffset = 0;
 				for (const Pair<glm::vec2i, u32>& indexPair : m_TerrainGenWorkloads)
 				{
@@ -8458,10 +8485,10 @@ namespace flex
 
 					uniformOverrides.terrainGenDynamicData.chunkIndex = glm::vec2(chunkIndex);
 					uniformOverrides.terrainGenDynamicData.linearIndex = chunkLinearIndex;
-					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexN = 1; // TODO:
-					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexE = 2;
-					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexS = 3;
-					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexW = 4;
+					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexN = FindNeighbor(chunkIndex.x, chunkIndex.y - 1);
+					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexE = FindNeighbor(chunkIndex.x + 1, chunkIndex.y);
+					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexS = FindNeighbor(chunkIndex.x, chunkIndex.y + 1);
+					uniformOverrides.terrainGenPostProcessDynamicData.linearIndexW = FindNeighbor(chunkIndex.x - 1, chunkIndex.y);
 					UpdateDynamicUniformBuffer(m_Terrain->postProcessMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &uniformOverrides);
 
 					// TODO: Dispatch all workloads at once
