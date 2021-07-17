@@ -17,11 +17,11 @@ layout (binding = 0) uniform UBOConstant
 	float zFar;
 } uboConstant;
 
-layout (location = 0) in vec2 ex_TexCoord;
-layout (location = 1) in vec4 ex_Colour;
-layout (location = 2) in vec3 ex_NormalWS;
-layout (location = 3) in vec3 ex_PositionWS;
-layout (location = 4) in float ex_Depth;
+layout (location = 0) in vec3 ex_NormalWS;
+//layout (location = 0) in vec2 ex_TexCoord;
+//layout (location = 1) in vec4 ex_Colour;
+//layout (location = 3) in vec3 ex_PositionWS;
+//layout (location = 4) in float ex_Depth;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2DArray shadowCascadeSampler;
@@ -42,6 +42,10 @@ vec3 palette(float v)
 
 void main()
 {
+	vec3 N = normalize(ex_NormalWS);
+	fragmentColour = vec4(N * 0.5, 1);
+
+#if 0
 	vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
 	float height = ex_Colour.x;
 	// Nudge up to account for float precision
@@ -274,4 +278,5 @@ void main()
 
     DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
      linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragmentColour);
+#endif
 }

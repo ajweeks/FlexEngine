@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-345.750, -68.533, -341.921",
-			"pitch" : -0.229795,
-			"yaw" : -12.123089
+			"position" : "-241.483, 39.160, -270.051",
+			"pitch" : -0.187060,
+			"yaw" : 0.703369
 		}
 	},
 	"objects" : 
@@ -44,13 +44,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.578, -0.000, 0.000"
+				"rot" : "1.709, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.710, 0.000, 0.000, 0.704",
+				"rotation" : "0.754, 0.000, 0.000, 0.656",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
@@ -74,20 +74,20 @@
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 32,
-				"chunk size" : 35.409000,
+				"vert count per chunk axis" : 16,
+				"chunk size" : 100.000000,
 				"max height" : 206.955002,
 				"use manual seed" : true,
 				"manual seed" : 6,
 				"isolate noise layer" : 0,
-				"loaded chunk radius" : 775.911011,
+				"loaded chunk radius" : 110.000000,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 256,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
 				"high colour" : "0.65, 0.70, 0.43",
 				"pin center" : true,
-				"pinned center" : "76.64, 157.87, 42.79",
+				"pinned center" : "0.00, 0.00, 0.00",
 				"biomes" : 
 				[
 					{
@@ -328,8 +328,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "1.548, 0.916, 0.075",
-				"rot" : "-0.009, 0.343, -0.004",
+				"pos" : "2.043, 0.916, -0.028",
+				"rot" : "-0.009, 0.499, -0.005",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},

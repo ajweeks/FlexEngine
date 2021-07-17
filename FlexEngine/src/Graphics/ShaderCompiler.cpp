@@ -377,6 +377,7 @@ namespace flex
 			WRITE_BARRIER;
 
 			s_ShaderCompilationResultsLength = (u32)m_QueuedLoads.size();
+			Print("Compiling %u shader%s\n", s_ShaderCompilationResultsLength, (s_ShaderCompilationResultsLength == 1) ? "" : "s");
 			s_ShaderCompilationResults = new ShaderCompilationResult * [s_ShaderCompilationResultsLength];
 			for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
 			{

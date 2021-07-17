@@ -1205,13 +1205,15 @@ namespace flex
 			u32 vertCountPerChunkAxis;
 			i32 isolateNoiseLayer = -1;
 
+			u32 numPointsPerAxis;
+
 			NoiseFunction* biomeNoise = nullptr;
 			std::vector<Biome>* biomes = nullptr;
 			std::vector<std::vector<glm::vec2>>* randomTables;
-			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
+			std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments;
 
 			// Per chunk inputs
-			volatile glm::vec2i chunkIndex;
+			volatile glm::ivec3 chunkIndex;
 
 			// Per chunk outputs
 			volatile glm::vec3* positions;
@@ -1222,12 +1224,6 @@ namespace flex
 
 		void FillInTerrainChunkData(volatile TerrainChunkData& outChunkData);
 		real Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos);
-
-		u32 VertCountPerChunkAxis = 8;
-		real ChunkSize = 16.0f;
-		real MaxHeight = 3.0f;
-
-		bool bUseAsyncCompute = true;
 
 	private:
 		struct Chunk;
@@ -1244,7 +1240,7 @@ namespace flex
 		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
 
-		void FillOutConstantData(TerrainGenConstantData& constantData, TerrainGenPostProcessConstantData& postProcessConstantData);
+		void FillOutConstantData(TerrainGenConstantData& constantData);
 
 		void DestroyChunkRigidBody(Chunk* chunk);
 		void CreateChunkRigidBody(Chunk* chunk);
@@ -1271,16 +1267,16 @@ namespace flex
 		};
 
 		// TODO: Merge somehow while maintaining unique indices for work queue
-		std::map<glm::vec2i, Chunk*, Vec2iCompare> m_Meshes; // Chunk index to mesh
+		std::map<glm::ivec3, Chunk*, iVec3Compare> m_Meshes; // Chunk index to mesh
 
 		void* criticalSection = nullptr;
 
 		real m_LoadedChunkRadius = 100.0f;
 		real m_LoadedChunkRigidBodyRadius2 = 100.0f * 100.0f;
 
-		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
-		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
-		glm::vec2 m_PreviousCenterPoint;
+		std::set<glm::ivec3, iVec3Compare> m_ChunksToLoad;
+		std::set<glm::ivec3, iVec3Compare> m_ChunksToDestroy;
+		glm::vec3 m_PreviousCenterPoint;
 		real m_PreviousLoadedChunkRadius = 0.0f; // Probably only needed in editor when m_LoadedChunkRadius can change
 
 		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(4.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
@@ -1295,6 +1291,8 @@ namespace flex
 		bool m_bHighlightGrid = false;
 		bool m_bDisplayRandomTables = false;
 
+		bool m_bUseAsyncCompute = true;
+
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
 
@@ -1308,7 +1306,7 @@ namespace flex
 		u32 m_BasePerlinTableWidth = 128;
 
 		// Map of chunk index to overlapping road segments
-		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
+		std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare> m_RoadSegments;
 		std::array<RoadSegment_GPU, MAX_NUM_ROAD_SEGMENTS> m_RoadSegmentsGPU;
 
 		u32 m_RandomTableTextureLayerCount = 0;
@@ -1316,9 +1314,16 @@ namespace flex
 
 		i32 m_IsolateNoiseLayer = -1;
 
+		u32 m_VertCountPerChunkAxis = 8;
+		real m_ChunkSize = 16.0f;
+		real m_MaxHeight = 3.0f;
+
+		u32 m_NumPointsPerAxis = 8;
+		real m_IsoLevel = 0.0f;
+
 		TerrainThreadData threadUserData;
 
-		u32 m_InitialMaxChunkCount = 2048;
+		u32 m_MaxChunkCount = 16;
 	};
 
 

@@ -67,6 +67,9 @@ struct TerrainGenConstantData
     int isolateNoiseLayer; // default: -1
     uint biomeCount;
     uint randomTableSize;
+    uint numPointsPerAxis;
+    float isoLevel;
+    float _pad0, _pad1;
     Biome biomes[MAX_BIOME_COUNT];
     NoiseFunction biomeNoise;
     uvec4 biomeNoiseFunctionCounts[BIOME_NOISE_FUNCTION_INT4_COUNT]; // 1 byte per biome func count
@@ -76,9 +79,14 @@ struct TerrainGenConstantData
 
 struct TerrainGenDynamicData
 {
-    vec2 chunkIndex;
+    ivec3 chunkIndex;
     uint linearIndex;
 };
+
+uint coordToIndex(uint x, uint y, uint z, uint numPointsPerAxis)
+{
+    return z * numPointsPerAxis * numPointsPerAxis + y * numPointsPerAxis + x;
+}
 
 float hash1(vec2 p)
 {

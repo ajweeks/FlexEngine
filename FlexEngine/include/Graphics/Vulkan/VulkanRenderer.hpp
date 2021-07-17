@@ -125,10 +125,10 @@ namespace flex
 
 			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
-			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData, u32 initialMaxChunkCount) override;
-			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, const TerrainGenPostProcessConstantData& postProcessConstantData) override;
-			virtual void RegisterTerrainChunk(const glm::vec2i& chunkIndex, u32 linearIndex) override;
-			virtual void RemoveTerrainChunk(const glm::vec2i& chunkIndex) override;
+			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount) override;
+			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, u32 maxChunkCount) override;
+			virtual void RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex) override;
+			virtual void RemoveTerrainChunk(const glm::ivec3& chunkIndex) override;
 			virtual u32 GetCurrentTerrainChunkCapacity() const;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
@@ -223,7 +223,7 @@ namespace flex
 			void CreateDynamicUniformBuffer(VulkanMaterial* material);
 			void CreateParticleBuffer(VulkanMaterial* material);
 
-			void CreateTerrainVertexBuffer();
+			void CreateTerrainBuffers();
 
 			void CreatePostProcessingResources();
 			void CreateFullscreenBlitResources();
@@ -611,34 +611,41 @@ namespace flex
 			{
 				bool bVisibile = true;
 
-				MaterialID genMaterialID = InvalidMaterialID;
-				MaterialID postProcessMaterialID = InvalidMaterialID;
+				MaterialID genPointsMaterialID = InvalidMaterialID;
+				MaterialID genMeshMaterialID = InvalidMaterialID;
 				MaterialID renderingMaterialID = InvalidMaterialID;
-				VDeleter<VkPipeline> computePipeline;
-				VDeleter<VkPipelineLayout> computePipelineLayout;
-				VDeleter<VkPipeline> postProcessComputePipeline;
-				VDeleter<VkPipelineLayout> postProcessComputePipelineLayout;
+				VDeleter<VkPipeline> genPointsPipeline;
+				VDeleter<VkPipelineLayout> genPointsPipelineLayout;
+				VDeleter<VkPipeline> genMeshComputePipeline;
+				VDeleter<VkPipelineLayout> genMeshComputePipelineLayout;
 				GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
-				VkDescriptorSet genDescriptorSet = VK_NULL_HANDLE;
-				VkDescriptorSet postProcessDescriptorSet = VK_NULL_HANDLE;
+				VkDescriptorSet genPointsDescriptorSet = VK_NULL_HANDLE;
+				VkDescriptorSet genMeshDescriptorSet = VK_NULL_HANDLE;
 				VkDescriptorSet renderingDescriptorSet = VK_NULL_HANDLE;
 				TerrainGenConstantData constantData;
-				TerrainGenPostProcessConstantData postProcessConstantData;
 
 				TextureID randomTablesTextureID = InvalidTextureID;
 
-				VulkanBuffer* indexBuffer = nullptr;
-				std::vector<u32> indexBufferBackingMemory;
-				VkDrawIndexedIndirectCommand* indirectBufferCPU = nullptr;
+				//VulkanBuffer* indexBuffer = nullptr;
+				//std::vector<u32> indexBufferBackingMemory;
+				VkDrawIndirectCommand* indirectBufferCPU = nullptr;
 				VulkanBuffer* indirectBuffer = nullptr;
 
+				UniformBuffer* pointBufferGPU = nullptr;
 				UniformBuffer* vertexBufferGPU = nullptr;
 				u32 maxChunkCount;
+
+				VkFence fence = VK_NULL_HANDLE;
+				i32 lastTriCount = 0;
+				glm::ivec3 loadingChunkIndex;
+				u32 loadingChunkLinearIndex = u32_max;
+
+				const u32 maxNumRenderedChunks = 4;
 			};
 			Terrain* m_Terrain = nullptr;
 
-			std::vector<Pair<glm::vec2i, u32>> m_TerrainGenWorkloads;
-			std::vector<Pair<glm::vec2i, u32>> m_TerrainChunksLoaded;
+			std::vector<Pair<glm::ivec3, u32>> m_TerrainGenWorkloads;
+			std::vector<Pair<glm::ivec3, u32>> m_TerrainChunksLoaded;
 		};
 	} // namespace vk
 } // namespace flex

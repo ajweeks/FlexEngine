@@ -7996,7 +7996,7 @@ namespace flex
 		AddTag("terrain");
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
-		if (!bUseAsyncCompute)
+		if (!m_bUseAsyncCompute)
 		{
 			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
 		}
@@ -8016,20 +8016,19 @@ namespace flex
 		GenerateGradients();
 
 		TerrainGenConstantData constantData;
-		TerrainGenPostProcessConstantData postProcessConstantData;
-		FillOutConstantData(constantData, postProcessConstantData);
+		FillOutConstantData(constantData);
 
 		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		m_PreviousCenterPoint = glm::vec2(centerPoint.x, centerPoint.z);
+		m_PreviousCenterPoint = centerPoint;
 
-		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, postProcessConstantData, m_InitialMaxChunkCount);
+		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, m_MaxChunkCount);
 
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
 		SetCastsShadow(false);
 
-		if (!bUseAsyncCompute)
+		if (!m_bUseAsyncCompute)
 		{
 			criticalSection = Platform::InitCriticalSection();
 
@@ -8064,14 +8063,17 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData, TerrainGenPostProcessConstantData& postProcessConstantData)
+	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData)
 	{
-		constantData.chunkSize = ChunkSize;
-		constantData.maxHeight = MaxHeight;
+		constantData.chunkSize = m_ChunkSize;
+		constantData.maxHeight = m_MaxHeight;
 		constantData.roadBlendDist = m_RoadBlendDist;
 		constantData.roadBlendThreshold = m_RoadBlendThreshold;
-		constantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		constantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
 		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
+		constantData.numPointsPerAxis = m_NumPointsPerAxis;
+		constantData.isoLevel = m_IsoLevel;
+
 
 		//// Copy road segments to GPU-friendly memory
 		//{
@@ -8134,7 +8136,7 @@ namespace flex
 
 		// Pack biome noise function counts
 		glm::uvec4 curr(0);
-		i32 currOffset = 0;
+		//i32 currOffset = 0;
 		i32 index0 = 0; // Array index
 		i32 index1 = 0; // Index into uvec4
 		i32 index2 = 0; // Index into bytes of uvec4 component
@@ -8173,18 +8175,18 @@ namespace flex
 
 		// Post Process
 
-		postProcessConstantData.blendRadius = 7.0f;
-		postProcessConstantData.chunkSize = ChunkSize;
-		postProcessConstantData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		//postProcessConstantData.blendRadius = 7.0f;
+		//postProcessConstantData.chunkSize = m_ChunkSize;
+		//postProcessConstantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
 		// TODO: Update when capacity changes
-		postProcessConstantData.vertexBufferSize = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * m_InitialMaxChunkCount;
+		//postProcessConstantData.vertexBufferSize = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * m_MaxChunkCount;
 	}
 
 	void TerrainGenerator::Update()
 	{
 		PROFILE_AUTO("TerrainGenerator Update");
 
-		if (!bUseAsyncCompute)
+		if (!m_bUseAsyncCompute)
 		{
 			terrain_workQueueEntriesCompleted = 0;
 			terrain_workQueueEntriesCreated = 0;
@@ -8222,18 +8224,17 @@ namespace flex
 		}
 
 		// TDOO: When using async compute trigger readback for nearby chunks
-		if (!bUseAsyncCompute)
+		if (!m_bUseAsyncCompute)
 		{
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
 				glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
-				glm::vec2 playerPos2D(playerPos.x, playerPos.z);
 				for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
 				{
-					glm::vec2i chunkIndex = iter->first;
-					glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
-					real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
+					const glm::ivec3& chunkIndex = iter->first;
+					glm::vec3 chunkPos = glm::vec3(chunkIndex) * m_ChunkSize;
+					real distToPlayer2 = glm::distance2(chunkPos, playerPos);
 
 					bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
 					if (bShouldBeLoaded)
@@ -8528,11 +8529,12 @@ namespace flex
 			ImGui::EndPopup();
 		}
 
-		i32 maxNoiseLayer = 6; // TODO: find largest num layers in all biomes?
-		bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, maxNoiseLayer) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
-		bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
+		//i32 maxNoiseLayer = 6; // TODO: find largest num layers in all biomes?
+		//bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, maxNoiseLayer) || bRegen;
+
+		//bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
+		//bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
 
 		u32 oldtableWidth = m_BasePerlinTableWidth;
 		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 1, 512))
@@ -8560,29 +8562,46 @@ namespace flex
 			bRegenGradients = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegenGradients;
 		}
 
-		const u32 previousVertCountPerChunkAxis = VertCountPerChunkAxis;
-		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
+		u32 minPointsPerAxis = 2;
+		u32 maxPointsPerAxis = 32;
+		const u32 previousPointsPerAxis = m_NumPointsPerAxis;
+		if (ImGuiExt::InputUInt("Points per axis", &m_NumPointsPerAxis))
+		{
+			m_NumPointsPerAxis = glm::clamp(m_NumPointsPerAxis, minPointsPerAxis, maxPointsPerAxis);
+			if (previousPointsPerAxis != m_NumPointsPerAxis)
+			{
+				bRegen = true;
+			}
+		}
 
-		if (VertCountPerChunkAxis > 2)
+		if (m_NumPointsPerAxis > minPointsPerAxis)
 		{
 			if (ImGui::Button("/2"))
 			{
 				bRegen = true;
-				VertCountPerChunkAxis /= 2;
+				m_NumPointsPerAxis /= 2;
 			}
 
-			ImGui::SameLine();
+			if (m_NumPointsPerAxis < maxPointsPerAxis)
+			{
+				ImGui::SameLine();
+			}
 		}
 
-		if (ImGui::Button("x2"))
+		if (m_NumPointsPerAxis < maxPointsPerAxis)
 		{
-			bRegen = true;
-			VertCountPerChunkAxis *= 2;
+			if (ImGui::Button("x2"))
+			{
+				bRegen = true;
+				m_NumPointsPerAxis *= 2;
+			}
 		}
 
-		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 1.0f, 128.0f) || bRegen;
+		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 32) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 500.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 128.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("Max height", &m_MaxHeight, 0.1f, 500.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
@@ -8600,13 +8619,13 @@ namespace flex
 			RoadManager* roadManager = GetSystem<RoadManager>(SystemType::ROAD_MANAGER);
 			roadManager->RegenerateAllRoads();
 
-			if (bUseAsyncCompute)
+			if (m_bUseAsyncCompute)
 			{
 				Regenerate();
 			}
 			else
 			{
-				if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
+				if (m_NumPointsPerAxis != previousPointsPerAxis)
 				{
 					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
 					{
@@ -8724,9 +8743,9 @@ namespace flex
 		if (parentObject.HasField("chunk generator info"))
 		{
 			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
-			VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
-			ChunkSize = chunkGenInfo.GetFloat("chunk size");
-			MaxHeight = chunkGenInfo.GetFloat("max height");
+			m_VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
+			m_ChunkSize = chunkGenInfo.GetFloat("chunk size");
+			m_MaxHeight = chunkGenInfo.GetFloat("max height");
 			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
@@ -8787,9 +8806,9 @@ namespace flex
 	{
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(VertCountPerChunkAxis));
-		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
-		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(m_VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(m_ChunkSize));
+		chunkGenInfo.fields.emplace_back("max height", JSONValue(m_MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
 
@@ -8833,14 +8852,15 @@ namespace flex
 	void TerrainGenerator::Regenerate()
 	{
 		TerrainGenConstantData constantData;
-		TerrainGenPostProcessConstantData postProcessConstantData;
-		FillOutConstantData(constantData, postProcessConstantData);
+		FillOutConstantData(constantData);
 
-		g_Renderer->RegenerateTerrain(constantData, postProcessConstantData);
+		g_Renderer->RegenerateTerrain(constantData, m_MaxChunkCount);
 
 		m_Meshes.clear();
 		m_ChunksToDestroy.clear();
 		m_ChunksToLoad.clear();
+
+		m_PreviousLoadedChunkRadius = 0.0f;
 
 		DiscoverChunks();
 		GenerateChunks();
@@ -8848,12 +8868,13 @@ namespace flex
 
 	void TerrainGenerator::FillInTerrainChunkData(volatile TerrainGenerator::TerrainChunkData& outChunkData)
 	{
-		outChunkData.chunkSize = ChunkSize;
-		outChunkData.maxHeight = MaxHeight;
+		outChunkData.chunkSize = m_ChunkSize;
+		outChunkData.maxHeight = m_MaxHeight;
 		outChunkData.roadBlendDist = m_RoadBlendDist;
 		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		outChunkData.vertCountPerChunkAxis = VertCountPerChunkAxis;
+		outChunkData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
 		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
+		outChunkData.numPointsPerAxis = m_NumPointsPerAxis;
 
 		outChunkData.randomTables = &m_RandomTables;
 		outChunkData.roadSegments = &m_RoadSegments;
@@ -8864,7 +8885,7 @@ namespace flex
 	real TerrainGenerator::Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos)
 	{
 		real sample = SampleTerrain(&chunkData, pos).x;
-		return (sample - 0.5f) * MaxHeight + m_Transform.GetWorldPosition().y;
+		return (sample - 0.5f) * m_MaxHeight + m_Transform.GetWorldPosition().y;
 	}
 
 	real TerrainGenerator::SmoothBlend(real t)
@@ -8972,23 +8993,28 @@ namespace flex
 		for (const RoadSegment& roadSegment : road->roadSegments)
 		{
 			// TODO:  + 0.5f?
-			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / ChunkSize);
-			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / ChunkSize);
-			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / ChunkSize);
-			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / ChunkSize);
+			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / m_ChunkSize);
+			i32 minChunkIndexY = (i32)glm::floor((roadSegment.aabb.minY + pos.y - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexY = (i32)glm::ceil((roadSegment.aabb.maxY + pos.y + blendRadiusBoost) / m_ChunkSize);
+			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / m_ChunkSize);
 			for (i32 x = minChunkIndexX; x < maxChunkIndexX; ++x)
 			{
-				for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
+				for (i32 y = minChunkIndexY; y < maxChunkIndexY; ++y)
 				{
-					glm::vec2i chunkIndex = glm::vec2i(x, z);
-					auto iter = m_RoadSegments.find(chunkIndex);
-					if (iter == m_RoadSegments.end())
+					for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
 					{
-						m_RoadSegments.emplace(chunkIndex, std::vector<RoadSegment*>{ (RoadSegment*)&roadSegment });
-					}
-					else
-					{
-						iter->second.emplace_back((RoadSegment*)&roadSegment);
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						auto iter = m_RoadSegments.find(chunkIndex);
+						if (iter == m_RoadSegments.end())
+						{
+							m_RoadSegments.emplace(chunkIndex, std::vector<RoadSegment*>{ (RoadSegment*)&roadSegment });
+						}
+						else
+						{
+							iter->second.emplace_back((RoadSegment*)&roadSegment);
+						}
 					}
 				}
 			}
@@ -9000,40 +9026,44 @@ namespace flex
 		PROFILE_AUTO("Terrain :: DiscoverChunks");
 
 		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		const glm::vec2 centerPointXZ(center.x, center.z);
-		const glm::vec2i centerChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
-		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
+		const glm::ivec3 centerChunkIdx = (glm::ivec3)(center / m_ChunkSize);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)m_ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
 		const real pRadiusSqr = m_PreviousLoadedChunkRadius * m_PreviousLoadedChunkRadius;
-		for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
+		for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
 		{
-			real xi = (x + 0.5f) * ChunkSize;
-			for (i32 z = centerChunkIdx.y - maxChunkIdxDiff; z < centerChunkIdx.y + maxChunkIdxDiff; ++z)
+			real yi = (y + 0.5f) * m_ChunkSize;
+			for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
 			{
-				glm::vec2 chunkCenter(xi, (z + 0.5f) * ChunkSize);
-				bool bInRange = glm::distance2(chunkCenter, centerPointXZ) < radiusSqr;
-				bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
+				real xi = (x + 0.5f) * m_ChunkSize;
+				for (i32 z = centerChunkIdx.z - maxChunkIdxDiff; z < centerChunkIdx.z + maxChunkIdxDiff; ++z)
+				{
+					real zi = (z + 0.5f) * m_ChunkSize;
+					glm::vec3 chunkCenter(xi, yi, zi);
+					bool bInRange = glm::distance2(chunkCenter, center) < radiusSqr;
+					bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
 
-				if (bInRange && !bPrevInRange)
-				{
-					glm::vec2i chunkIndex = glm::vec2i(x, z);
-					m_ChunksToLoad.emplace(chunkIndex);
-				}
-				else if (!bInRange && bPrevInRange)
-				{
-					glm::vec2i chunkIndex = glm::vec2i(x, z);
-					m_ChunksToDestroy.emplace(chunkIndex);
+					if (bInRange && !bPrevInRange)
+					{
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						m_ChunksToLoad.emplace(chunkIndex);
+					}
+					else if (!bInRange && bPrevInRange)
+					{
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						m_ChunksToDestroy.emplace(chunkIndex);
+					}
 				}
 			}
 		}
 
-		m_PreviousCenterPoint = centerPointXZ;
+		m_PreviousCenterPoint = center;
 		m_PreviousLoadedChunkRadius = m_LoadedChunkRadius;
 	}
 
 	void TerrainGenerator::GenerateChunks()
 	{
-		if (bUseAsyncCompute)
+		if (m_bUseAsyncCompute)
 		{
 			if (!m_ChunksToLoad.empty())
 			{
@@ -9041,9 +9071,9 @@ namespace flex
 
 				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
-					glm::vec2i chunkIndex = *chunkToLoadIter;
+					const glm::ivec3& chunkIndex = *chunkToLoadIter;
 					// This shouldn't happen but it does for some reason
-					if (m_Meshes.find((glm::vec2i)chunkIndex) != m_Meshes.end())
+					if (m_Meshes.find(chunkIndex) != m_Meshes.end())
 					{
 						continue;
 					}
@@ -9066,7 +9096,7 @@ namespace flex
 				PROFILE_AUTO("TerrainGenerator destroy chunks");
 				while (!m_ChunksToDestroy.empty())
 				{
-					glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
 					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
 					auto iter = m_Meshes.find(chunkIdx);
@@ -9107,7 +9137,7 @@ namespace flex
 				i32 iterationCount = 0;
 				while (!m_ChunksToDestroy.empty())
 				{
-					glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
+					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
 					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
 					auto iter = m_Meshes.find(chunkIdx);
@@ -9134,9 +9164,9 @@ namespace flex
 			// Fill out chunk data for threads to discover
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
-				glm::vec2i chunkIndex = *chunkToLoadIter;
+				const glm::ivec3& chunkIndex = *chunkToLoadIter;
 
-				assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
+				assert(m_Meshes.find(chunkIndex) == m_Meshes.end());
 
 				Chunk* chunk = new Chunk();
 				chunk->meshComponent = nullptr;
@@ -9147,6 +9177,7 @@ namespace flex
 				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
 				terrainChunkData->chunkIndex.x = chunkIndex.x;
 				terrainChunkData->chunkIndex.y = chunkIndex.y;
+				terrainChunkData->chunkIndex.z = chunkIndex.z;
 
 				WRITE_BARRIER;
 
@@ -9174,8 +9205,8 @@ namespace flex
 
 			if (!m_ChunksToLoad.empty())
 			{
-				const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
-				const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+				const u32 vertexCount = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
+				const u32 triCount = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
 				const u32 indexCount = triCount * 3;
 
 				// TODO: Spread creation across multiple frames
@@ -9195,13 +9226,13 @@ namespace flex
 				static std::vector<u32> indices;
 				indices.resize(indexCount);
 
-				real quadSize = ChunkSize / (VertCountPerChunkAxis - 1);
+				real quadSize = m_ChunkSize / (m_VertCountPerChunkAxis - 1);
 
 				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
 				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
 				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
-					glm::vec2i chunkIndex = *chunkToLoadIter;
+					const glm::ivec3& chunkIndex = *chunkToLoadIter;
 
 					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
 
@@ -9219,14 +9250,14 @@ namespace flex
 
 					glm::vec4 colour; // Throwaway
 					u32 vertIndex = 0;
-					for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
+					for (u32 z = 0; z < m_VertCountPerChunkAxis; ++z)
 					{
-						for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
+						for (u32 x = 0; x < m_VertCountPerChunkAxis; ++x)
 						{
-							glm::vec2 uv(x / (real)(VertCountPerChunkAxis - 1), z / (real)(VertCountPerChunkAxis - 1));
+							glm::vec2 uv(x / (real)(m_VertCountPerChunkAxis - 1), z / (real)(m_VertCountPerChunkAxis - 1));
 
-							glm::vec2 vertPosOS = glm::vec2(uv.x * ChunkSize, uv.y * ChunkSize);
-							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
+							glm::vec2 vertPosOS = glm::vec2(uv.x * m_ChunkSize, uv.y * m_ChunkSize);
+							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * m_ChunkSize, chunkIndex.y * m_ChunkSize);
 
 							real left = 0.0f;
 							if (x > 0)
@@ -9240,7 +9271,7 @@ namespace flex
 							}
 
 							real right = 0.0f;
-							if (x < VertCountPerChunkAxis - 1)
+							if (x < m_VertCountPerChunkAxis - 1)
 							{
 								right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
 							}
@@ -9253,7 +9284,7 @@ namespace flex
 							real back = 0.0f;
 							if (z > 0)
 							{
-								back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
+								back = vertexBufferCreateInfo.positions_3D[vertIndex - m_VertCountPerChunkAxis].y;
 							}
 							else
 							{
@@ -9262,9 +9293,9 @@ namespace flex
 							}
 
 							real forward = 0.0f;
-							if (z < VertCountPerChunkAxis - 1)
+							if (z < m_VertCountPerChunkAxis - 1)
 							{
-								forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
+								forward = vertexBufferCreateInfo.positions_3D[vertIndex + m_VertCountPerChunkAxis].y;
 							}
 							else
 							{
@@ -9364,8 +9395,8 @@ namespace flex
 
 	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
 	{
-		const u32 vertCountPerChunk = VertCountPerChunkAxis * VertCountPerChunkAxis;
-		const u32 triCountPerChunk = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+		const u32 vertCountPerChunk = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
+		const u32 triCountPerChunk = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCountPerChunk = triCountPerChunk * 3;
 
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
@@ -9516,10 +9547,10 @@ namespace flex
 			if (work != nullptr)
 			{
 				// Inputs
-				glm::vec2i chunkIndex = glm::vec2i(work->chunkIndex.x, work->chunkIndex.y);
+				glm::ivec3 chunkIndex = glm::ivec3(work->chunkIndex.x, work->chunkIndex.y, work->chunkIndex.z);
 				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
-				std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments = work->roadSegments;
+				std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
 
 				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
 				auto roadSegmentIter = roadSegments->find(chunkIndex);

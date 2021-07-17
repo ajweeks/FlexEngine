@@ -29,6 +29,7 @@ namespace flex
 	static const i32 MAX_BIOME_COUNT = 16; // Must be multiple of 16
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
+	static const u32 TERRAIN_THREAD_GROUP_SIZE = 8;
 
 	// 48 bytes
 	struct DirLightData
@@ -222,6 +223,9 @@ namespace flex
 		i32 isolateNoiseLayer; // default: -1					// 20
 		u32 biomeCount;											// 24
 		u32 randomTablesSize;									// 28
+		u32 numPointsPerAxis;
+		real isoLevel;
+		real _pad0, _pad1;
 		Biome_GPU biomes[MAX_BIOME_COUNT];						// (2,048 bytes)
 		NoiseFunction_GPU biomeNoise;							//
 		glm::uvec4 biomeNoiseFunctionCounts[BIOME_NOISE_FUNCTION_INT4_COUNT]; // Each element stores 16 values (one per byte)
@@ -229,31 +233,34 @@ namespace flex
 		//i32 overlappingRoadSegmentIndices[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK]; // (8,192 bytes)
 	};
 
-	// 48 bytes
 	struct TerrainVertex
 	{
-		// TODO: Pad/pack
-		glm::vec3 positionWS;	// 0
-		glm::vec2 uv;			// 12
-		glm::vec4 colour;		// 20
-		glm::vec3 normalWS;		// 36
-	};
-
-	// 12 bytes
-	struct TerrainGenDynamicData
-	{
-		glm::vec2 chunkIndex;	// 0
-		u32 linearIndex;		// 8
+		glm::vec3 posA;
+		glm::vec3 normA;
+		glm::vec3 posB;
+		glm::vec3 normB;
+		glm::vec3 posC;
+		glm::vec3 normC;
+		//glm::vec2 uv;			// 12
+		//glm::vec4 colour;		// 20
+		//glm::vec3 normalWS;		// 36
 	};
 
 	// 16 bytes
-	struct TerrainGenPostProcessConstantData
+	struct TerrainGenDynamicData
 	{
-		real chunkSize;				// 0
-		real blendRadius;			// 4
-		u32 vertCountPerChunkAxis;	// 8
-		u32 vertexBufferSize;		// 12
+		glm::ivec3 chunkIndex;
+		u32 linearIndex;
 	};
+
+	// 16 bytes
+	//struct TerrainGenPostProcessConstantData
+	//{
+	//	real chunkSize;				// 0
+	//	real blendRadius;			// 4
+	//	u32 vertCountPerChunkAxis;	// 8
+	//	u32 vertexBufferSize;		// 12
+	//};
 
 	// 16 bytes
 	struct TerrainGenPostProcessDynamicData
@@ -355,9 +362,8 @@ namespace flex
 	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
 	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
 	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
-	static const Uniform U_TERRAIN_GEN_POST_PROCESS_CONSTANT_DATA(UNIFORM("terrainGenPostProcessConstantData"), sizeof(TerrainGenPostProcessConstantData));
-	static const Uniform U_TERRAIN_GEN_POST_PROCESS_DYNAMIC_DATA(UNIFORM("terrainGenPostProcessDynamicData"), sizeof(TerrainGenPostProcessDynamicData));
-	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"), sizeof(TerrainVertex));
+	static const Uniform U_TERRAIN_POINT_BUFFER(UNIFORM("terrainPointBuffer"));
+	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"));
 	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
 
 #undef UNIFORM
@@ -918,7 +924,6 @@ namespace flex
 
 		COMPUTE_PARTICLES,
 		COMPUTE_TERRAIN,
-		TERRAIN_POST_PROCESS,
 
 		_NONE
 	};
@@ -1120,7 +1125,6 @@ namespace flex
 		ParticleSimData* particleSimData = nullptr;
 		glm::vec2 uvBlendAmount;
 		TerrainGenDynamicData terrainGenDynamicData;
-		TerrainGenPostProcessDynamicData terrainGenPostProcessDynamicData;
 	};
 
 	struct DeviceDiagnosticCheckpoint

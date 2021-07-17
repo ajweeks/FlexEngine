@@ -469,9 +469,15 @@ namespace flex
 
 	};
 
+	// TODO: Rename to iVec2
 	struct Vec2iCompare
 	{
 		bool operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const;
+	};
+
+	struct iVec3Compare
+	{
+		bool operator()(const glm::ivec3& lhs, const glm::ivec3& rhs) const;
 	};
 
 	// TODO: Move to separate file

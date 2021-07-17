@@ -195,10 +195,11 @@ namespace flex
 
 		UniformBuffer::~UniformBuffer()
 		{
-			if (data.data)
+			if (data.data != nullptr)
 			{
 				if (type == UniformBufferType::DYNAMIC ||
 					type == UniformBufferType::PARTICLE_DATA ||
+					type == UniformBufferType::TERRAIN_POINT_BUFFER ||
 					type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
 				{
 					flex_aligned_free(data.data);
@@ -2623,6 +2624,7 @@ namespace flex
 				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
 				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
 
@@ -2637,6 +2639,9 @@ namespace flex
 					break;
 				case UniformBufferType::PARTICLE_DATA:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::TERRAIN_POINT_BUFFER:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
 				case UniformBufferType::TERRAIN_VERTEX_BUFFER:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -2823,6 +2828,9 @@ namespace flex
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
 				{ &U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_TERRAIN_POINT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 				VK_SHADER_STAGE_COMPUTE_BIT },
 
 				{ &U_TERRAIN_VERTEX_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,

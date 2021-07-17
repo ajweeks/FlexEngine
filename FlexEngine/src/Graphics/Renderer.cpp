@@ -1068,8 +1068,8 @@ namespace flex
 				AddEditorString("Shader recompile completed successfully");
 				RecreateEverything();
 
-				if (m_ShaderCompiler->WasShaderRecompiled("generate_terrain") ||
-					m_ShaderCompiler->WasShaderRecompiled("terrain_post_process"))
+				if (m_ShaderCompiler->WasShaderRecompiled("terrain_generate_points") ||
+					m_ShaderCompiler->WasShaderRecompiled("terrain_generate_mesh"))
 				{
 					g_SceneManager->CurrentScene()->RegenerateTerrain();
 				}
@@ -1777,8 +1777,8 @@ namespace flex
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
 			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
-			{ "generate_terrain", "", "", "", "vk_generate_terrain_comp.spv" },
-			{ "terrain_post_process", "", "", "", "vk_terrain_post_process_comp.spv" },
+			{ "terrain_generate_points", "", "", "", "vk_terrain_generate_points_comp.spv" },
+			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -2255,7 +2255,6 @@ namespace flex
 		// Particles
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::VELOCITY3 |
@@ -2275,13 +2274,12 @@ namespace flex
 		// Terrain
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
-		m_Shaders[shaderID]->maxObjectCount = 4096 * 8;
+		m_Shaders[shaderID]->maxObjectCount = 4096 * 8; // TODO: -1
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
-			(u32)VertexAttribute::UV |
-			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 			(u32)VertexAttribute::NORMAL;
+			//(u32)VertexAttribute::UV |
+			//(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
@@ -2294,9 +2292,6 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
-
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
 		++shaderID;
@@ -2304,7 +2299,6 @@ namespace flex
 		// Water
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -2387,7 +2381,7 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
 		++shaderID;
 
-		// Generate terrain
+		// Terrain generate points
 		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_TERRAIN;
 		m_Shaders[shaderID]->bCompute = true;
 
@@ -2397,23 +2391,24 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
-
-		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
 		++shaderID;
 
-		// Terrain post process
-		m_Shaders[shaderID]->renderPassType = RenderPassType::TERRAIN_POST_PROCESS;
+		// Terrain generate mesh
+		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_TERRAIN;
 		m_Shaders[shaderID]->bCompute = true;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_POST_PROCESS_CONSTANT_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_CONSTANT_DATA);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_POST_PROCESS_DYNAMIC_DATA);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
 
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
+
 		++shaderID;
 
 		assert(shaderID == m_Shaders.size());

@@ -259,6 +259,11 @@ namespace flex
 		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
 	}
 
+	bool iVec3Compare::operator()(const glm::ivec3& lhs, const glm::ivec3& rhs) const
+	{
+		return (lhs.z < rhs.z ? true : lhs.z > rhs.z ? false : lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+	}
+
 	bool FileExists(const std::string& filePath)
 	{
 		FILE* file = fopen(filePath.c_str(), "r");

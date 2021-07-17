@@ -1,0 +1,203 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout : enable
+
+#include "vk_noises.glsl"
+#include "vk_marching_cubes_const_data.glsl"
+
+#define MAX_NUM_ROAD_SEGMENTS					256
+#define MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK	8
+
+#define DISPATCH_COUNT							8
+
+struct Tri
+{
+	float data[6 * 3];
+	// vec3 positionWS_A; vec3 normalWS_A;
+	// vec3 positionWS_C; vec3 normalWS_B;
+	// vec3 positionWS_B; vec3 normalWS_C;
+};
+
+layout (std430, binding = 0) uniform UBOConstant
+{
+	TerrainGenConstantData terrainGenConstantData;
+} uboConstant;
+
+layout (std430, binding = 1) uniform UBODynamic
+{
+	TerrainGenDynamicData terrainGenDynamicData;
+} uboDynamic;
+
+layout (std430, binding = 2) buffer TerrainPointBuffer
+{
+	vec4 points[];
+};
+
+layout (std430, binding = 3) buffer TerrainTriangleBuffer
+{
+	int triangleCount;
+	Tri triangles[];
+};
+
+layout (binding = 4) uniform sampler2DArray randomTables;
+
+layout (local_size_x = DISPATCH_COUNT, local_size_y = DISPATCH_COUNT, local_size_z = DISPATCH_COUNT) in;
+
+vec3 interpolateVerts(vec4 v0, vec4 v1, float isoLevel)
+{
+	float t = (isoLevel - v0.w) / (v1.w - v0.w);
+	return v0.xyz + t * (v1.xyz - v0.xyz);
+}
+
+void fillOutTri(int index, vec3 posA, vec3 normA, vec3 posB, vec3 normB, vec3 posC, vec3 normC)
+{
+	triangles[index].data[0] = posA.x;
+	triangles[index].data[1] = posA.y;
+	triangles[index].data[2] = posA.z;
+
+	triangles[index].data[3] = normA.x;
+	triangles[index].data[4] = normA.y;
+	triangles[index].data[5] = normA.z;
+
+	triangles[index].data[6] = posB.x;
+	triangles[index].data[7] = posB.y;
+	triangles[index].data[8] = posB.z;
+
+	triangles[index].data[9] = normB.x;
+	triangles[index].data[10] = normB.y;
+	triangles[index].data[11] = normB.z;
+
+	triangles[index].data[12] = posC.x;
+	triangles[index].data[13] = posC.y;
+	triangles[index].data[14] = posC.z;
+
+	triangles[index].data[15] = normC.x;
+	triangles[index].data[16] = normC.y;
+	triangles[index].data[17] = normC.z;
+}
+
+void main()
+{
+	uvec3 localID = gl_GlobalInvocationID;
+
+	uint numPointsPerAxis = uboConstant.terrainGenConstantData.numPointsPerAxis;
+	float isoLevel = uboConstant.terrainGenConstantData.isoLevel;
+
+	// Skip edge voxels since they are missing neighbors
+    if (localID.x >= numPointsPerAxis - 1 || localID.y >= numPointsPerAxis - 1 || localID.z >= numPointsPerAxis - 1)
+    {
+        return;
+    }
+
+	ivec3 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
+	vec3 chunkPos = chunkIndex * uboConstant.terrainGenConstantData.chunkSize;
+	uvec3 id = localID;// + chunkIndex * numPointsPerAxis;
+
+	// uint vertCountPerChunkAxis = uboConstant.terrainGenConstantData.vertCountPerChunkAxis;
+	// uint vertCountPerChunkAxisSq = vertCountPerChunkAxis * vertCountPerChunkAxis;
+	// uint vertexIndex_x = gl_GlobalInvocationID.x;
+	// uint vertexIndex_z = gl_GlobalInvocationID.z;
+	// uint linearChunkIndex = uboDynamic.terrainGenDynamicData.linearIndex;
+	// uint vertIndex = linearChunkIndex * vertCountPerChunkAxisSq + vertexIndex_x + vertexIndex_z * vertCountPerChunkAxis;
+	// float chunkSize = uboConstant.terrainGenConstantData.chunkSize;
+	// vec2 uv = clamp(vec2(vertexIndex_x / float(vertCountPerChunkAxis - 1), vertexIndex_z / float(vertCountPerChunkAxis - 1)), vec2(0.0), vec2(1.0));
+	
+    // 8 corners of the current cube (in chunk-local-space)
+    vec4 cubeCorners[8] =
+    {
+        points[coordToIndex(id.x, id.y, id.z, numPointsPerAxis)],
+        points[coordToIndex(id.x + 1, id.y, id.z, numPointsPerAxis)],
+        points[coordToIndex(id.x + 1, id.y, id.z + 1, numPointsPerAxis)],
+        points[coordToIndex(id.x, id.y, id.z + 1, numPointsPerAxis)],
+        points[coordToIndex(id.x, id.y + 1, id.z, numPointsPerAxis)],
+        points[coordToIndex(id.x + 1, id.y + 1, id.z, numPointsPerAxis)],
+        points[coordToIndex(id.x + 1, id.y + 1, id.z + 1, numPointsPerAxis)],
+        points[coordToIndex(id.x, id.y + 1, id.z + 1, numPointsPerAxis)]
+    };
+
+    // Calculate unique index for each cube configuration.
+    // There are 256 possible values
+    // If cubeIndex = 0, the cube is entirely inside surface, 255 = entirely outside
+    // The value is used to look up the edge table, which indicates which edges of the cube are cut by the isosurface.
+    int cubeIndex = 0;
+    if (cubeCorners[0].w < isoLevel) cubeIndex |= 1;
+    if (cubeCorners[1].w < isoLevel) cubeIndex |= 2;
+    if (cubeCorners[2].w < isoLevel) cubeIndex |= 4;
+    if (cubeCorners[3].w < isoLevel) cubeIndex |= 8;
+    if (cubeCorners[4].w < isoLevel) cubeIndex |= 16;
+    if (cubeCorners[5].w < isoLevel) cubeIndex |= 32;
+    if (cubeCorners[6].w < isoLevel) cubeIndex |= 64;
+    if (cubeCorners[7].w < isoLevel) cubeIndex |= 128;
+
+	//uint numVoxelsPerAxis = numPointsPerAxis - 1;
+	//uint numVoxels = numVoxelsPerAxis * numVoxelsPerAxis * numVoxelsPerAxis;
+	//uint maxNumTriangles = numVoxels * 5; // Each voxel can contain at most five triangles
+
+    // Create triangles for current cube configuration
+    for (int i = 0; triangulation[cubeIndex][i] != -1; i += 3)
+    {
+        // Get indices of corner points A and B for each of the three edges
+        // of the cube that need to be joined to form the triangle.
+        int a0 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 0]];
+        int b0 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 0]];
+
+        int a1 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 1]];
+        int b1 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 1]];
+
+        int a2 = cornerIndexAFromEdge[triangulation[cubeIndex][i + 2]];
+        int b2 = cornerIndexBFromEdge[triangulation[cubeIndex][i + 2]];
+
+        int index = atomicAdd(triangleCount, 1);
+        //if (index < maxNumTriangles)
+        {
+	        vec3 posA = interpolateVerts(cubeCorners[a0], cubeCorners[b0], isoLevel);
+	        vec3 posB = interpolateVerts(cubeCorners[a1], cubeCorners[b1], isoLevel);
+	        vec3 posC = interpolateVerts(cubeCorners[a2], cubeCorners[b2], isoLevel);
+	        vec3 normA = normalize(cross(posB - posA, posC - posA));
+	        vec3 normB = normA;
+	        vec3 normC = normA;
+	        fillOutTri(index,
+	        	posA + chunkPos, normA,
+	        	posB + chunkPos, normB,
+	        	posC + chunkPos, normC);
+	    }
+    }
+
+	// vec2 pos = vec2((chunkIndex.x + uv.x) * chunkSize, (chunkIndex.y + uv.y) * chunkSize);
+	// vec3 normal;
+	// vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables, uboConstant.terrainGenConstantData.randomTableSize, pos, normal);
+ 	// float normalizedHeight = terrainSample.x;
+ 	// float height = (normalizedHeight - 0.5) * uboConstant.terrainGenConstantData.maxHeight;
+	// float blendWeight = terrainSample.y;
+	// float matID0 = terrainSample.z;
+	// float matID1 = terrainSample.w;
+}
+
+
+
+// float noise_musgrave_hetero_terrain_2d(vec2 co, float H, float lacunarity, float octaves, float offset)
+// {
+// 	vec2 p = co;
+// 	float pwHL = pow(lacunarity, -H);
+// 	float pwr = pwHL;
+// 	/* first unscaled octave of function; later octaves are scaled */
+// 	float value = offset + safe_snoise(p);
+// 	p *= lacunarity;
+
+// 	for (int i = 1; i < (int)octaves; i++)
+// 	{
+// 		float increment = (safe_snoise(p) + offset) * pwr * value;
+// 		value += increment;
+// 		pwr *= pwHL;
+// 		p *= lacunarity;
+// 	}
+
+// 	float rmd = octaves - floor(octaves);
+// 	if (rmd != 0.0)
+// 	{
+// 		float increment = (safe_snoise(p) + offset) * pwr * value;
+// 		value += rmd * increment;
+// 	}
+
+// 	return value;
+// }
