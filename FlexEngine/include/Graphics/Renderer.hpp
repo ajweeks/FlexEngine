@@ -189,6 +189,8 @@ namespace flex
 		virtual void RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex) = 0;
 		virtual void RemoveTerrainChunk(const glm::ivec3& chunkIndex) = 0;
 		virtual u32 GetCurrentTerrainChunkCapacity() const = 0;
+		virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const = 0;
+		virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) = 0;
 
 
 		// Will attempt to find pre-rendered font at specified path, and

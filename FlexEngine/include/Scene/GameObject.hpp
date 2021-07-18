@@ -1276,7 +1276,7 @@ namespace flex
 
 		std::set<glm::ivec3, iVec3Compare> m_ChunksToLoad;
 		std::set<glm::ivec3, iVec3Compare> m_ChunksToDestroy;
-		glm::vec3 m_PreviousCenterPoint;
+		glm::vec2 m_PreviousCenterPoint;
 		real m_PreviousLoadedChunkRadius = 0.0f; // Probably only needed in editor when m_LoadedChunkRadius can change
 
 		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(4.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
@@ -1321,9 +1321,10 @@ namespace flex
 		u32 m_NumPointsPerAxis = 8;
 		real m_IsoLevel = 0.0f;
 
+		u32 m_MaxChunkCount = 16;
+
 		TerrainThreadData threadUserData;
 
-		u32 m_MaxChunkCount = 16;
 	};
 
 

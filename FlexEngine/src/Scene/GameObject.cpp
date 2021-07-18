@@ -8019,6 +8019,7 @@ namespace flex
 		FillOutConstantData(constantData);
 
 		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		glm::vec2 center2D(centerPoint.x, centerPoint.z);
 		m_PreviousCenterPoint = centerPoint;
 
 		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, m_MaxChunkCount);
@@ -8370,10 +8371,56 @@ namespace flex
 		u32 loadedChunkCount = (u32)m_Meshes.size();
 		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
 
-		u32 vertsPerChunk = (u32)MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS;
-		ImGui::Text("Verts per chunk: %u", vertsPerChunk);
-		std::string vertCount = PrettifyLargeNumber(loadedChunkCount * vertsPerChunk, 2);
-		ImGui::Text("Total verts: %s", vertCount.c_str());
+		u32 totalVertCount = 0;
+
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		{
+			totalVertCount += g_Renderer->GetChunkVertCount(iter->second->linearIndex);
+		}
+
+		if (ImGui::TreeNode("Loaded Chunks"))
+		{
+			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			{
+				ImGui::PushID(iter->second->linearIndex);
+
+				u32 vertCount = g_Renderer->GetChunkVertCount(iter->second->linearIndex);
+				if (vertCount == 0)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+
+				if (ImGui::Button("x"))
+				{
+					g_Renderer->SetChunkVertCount(iter->second->linearIndex, 0);
+				}
+
+				ImGui::SameLine();
+
+				ImGui::Text("[%i] %i,%i,%i - %i verts %s",
+					iter->second->linearIndex,
+					iter->first.x, iter->first.y, iter->first.z,
+					vertCount,
+					iter->second->triangleIndexVertexArray != nullptr ? "(collision)" : "");
+
+				if (vertCount == 0)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::TreePop();
+		}
+
+		u32 pointsPerVoxel = (m_NumPointsPerAxis - 1);
+		u32 maxVertsPerChunk = pointsPerVoxel * pointsPerVoxel * pointsPerVoxel * 5 * 3;
+		ImGui::Text("Max verts per chunk: %u", maxVertsPerChunk);
+		std::string vertMemoryStr = PrettifyLargeNumber((u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
+		ImGui::Text("Total vert memory: %sB", vertMemoryStr.c_str());
+		std::string totalVertCountStr = PrettifyLargeNumber((u64)totalVertCount, 2);
+		ImGui::Text("Total verts: %s", totalVertCountStr.c_str());
 
 		bool bRegen = false;
 		bool bRegenGradients = false;
@@ -8597,11 +8644,13 @@ namespace flex
 			}
 		}
 
-		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 32) || bRegen;
+		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 512) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 128.0f) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Max height", &m_MaxHeight, 0.1f, 500.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("Iso level", &m_IsoLevel, -1.0f, 1.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
@@ -8755,6 +8804,9 @@ namespace flex
 
 			chunkGenInfo.TryGetInt("isolate noise layer", m_IsolateNoiseLayer);
 
+			chunkGenInfo.TryGetUInt("num points per axis", m_NumPointsPerAxis);
+			chunkGenInfo.TryGetUInt("max chunk count", m_MaxChunkCount);
+
 			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
 			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
 			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
@@ -8813,6 +8865,9 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
 
 		chunkGenInfo.fields.emplace_back("isolate noise layer", JSONValue(m_IsolateNoiseLayer));
+
+		chunkGenInfo.fields.emplace_back("num points per axis", JSONValue(m_NumPointsPerAxis));
+		chunkGenInfo.fields.emplace_back("max chunk count", JSONValue(m_MaxChunkCount));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
@@ -9026,29 +9081,34 @@ namespace flex
 		PROFILE_AUTO("Terrain :: DiscoverChunks");
 
 		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		glm::vec2 center2D(center.x, center.z);
 		const glm::ivec3 centerChunkIdx = (glm::ivec3)(center / m_ChunkSize);
 		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)m_ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
 		const real pRadiusSqr = m_PreviousLoadedChunkRadius * m_PreviousLoadedChunkRadius;
-		for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
+		for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
 		{
-			real yi = (y + 0.5f) * m_ChunkSize;
-			for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
+			real xi = (x + 0.5f) * m_ChunkSize;
+			for (i32 z = centerChunkIdx.z - maxChunkIdxDiff; z < centerChunkIdx.z + maxChunkIdxDiff; ++z)
 			{
-				real xi = (x + 0.5f) * m_ChunkSize;
-				for (i32 z = centerChunkIdx.z - maxChunkIdxDiff; z < centerChunkIdx.z + maxChunkIdxDiff; ++z)
-				{
-					real zi = (z + 0.5f) * m_ChunkSize;
-					glm::vec3 chunkCenter(xi, yi, zi);
-					bool bInRange = glm::distance2(chunkCenter, center) < radiusSqr;
-					bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
+				real zi = (z + 0.5f) * m_ChunkSize;
+				glm::vec2 chunkCenter(xi, zi);
+				bool bInRange = glm::distance2(chunkCenter, center2D) < radiusSqr;
+				bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
 
-					if (bInRange && !bPrevInRange)
+				if (bInRange && !bPrevInRange)
+				{
+					// Load entire vertical column
+					for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
 					{
 						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
 						m_ChunksToLoad.emplace(chunkIndex);
 					}
-					else if (!bInRange && bPrevInRange)
+				}
+				else if (!bInRange && bPrevInRange)
+				{
+					// Load entire vertical column
+					for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
 					{
 						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
 						m_ChunksToDestroy.emplace(chunkIndex);
@@ -9057,7 +9117,7 @@ namespace flex
 			}
 		}
 
-		m_PreviousCenterPoint = center;
+		m_PreviousCenterPoint = center2D;
 		m_PreviousLoadedChunkRadius = m_LoadedChunkRadius;
 	}
 
@@ -9100,9 +9160,11 @@ namespace flex
 					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
 					auto iter = m_Meshes.find(chunkIdx);
-					assert(iter != m_Meshes.end());
-					DestroyChunk(iter->second);
-					m_Meshes.erase(iter);
+					if (iter != m_Meshes.end())
+					{
+						DestroyChunk(iter->second);
+						m_Meshes.erase(iter);
+					}
 
 					g_Renderer->RemoveTerrainChunk(chunkIdx);
 				}

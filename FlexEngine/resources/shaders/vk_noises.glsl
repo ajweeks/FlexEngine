@@ -508,65 +508,67 @@ float SamplePerlinNoise(sampler2DArray randomTables, uint randomTableSize, vec2 
 }
 
 // Returns value in range [-1, 1]
-float SampleNoiseFunction(sampler2DArray randomTables, uint randomTableSize, in NoiseFunction noiseFunction, vec2 pos)
+float SampleNoiseFunction(sampler2DArray randomTables, uint randomTableSize,
+    in NoiseFunction noiseFunction, vec3 pos)
 {
-    switch (noiseFunction.type)
-    {
-    case NOISE_TYPE_PERLIN:
-    {
-        float result = 0.0;
+    // switch (noiseFunction.type)
+    // {
+    // case NOISE_TYPE_PERLIN:
+    // {
+    //     float result = 0.0;
 
-        int numOctaves = noiseFunction.numOctaves;
-        float octave = noiseFunction.baseFeatureSize;
-        uint octaveIdx = numOctaves - 1;
-        //int isolateOctave = noiseFunction.isolateOctave;
-        float heightScale = noiseFunction.heightScale * 0.005; // Normalize value so edited values are reasonable
+    //     int numOctaves = noiseFunction.numOctaves;
+    //     float octave = noiseFunction.baseFeatureSize;
+    //     uint octaveIdx = numOctaves - 1;
+    //     //int isolateOctave = noiseFunction.isolateOctave;
+    //     float heightScale = noiseFunction.heightScale * 0.005; // Normalize value so edited values are reasonable
 
-        for (uint i = 0; i < uint(numOctaves); ++i)
-        {
-            //if (isolateOctave == -1 || i == uint(isolateOctave))
-            {
-                result += SamplePerlinNoise(randomTables, randomTableSize, pos, octave) * octave * heightScale;
-            }
-            octave = octave / 2.0;
-            --octaveIdx;
-        }
+    //     for (uint i = 0; i < uint(numOctaves); ++i)
+    //     {
+    //         //if (isolateOctave == -1 || i == uint(isolateOctave))
+    //         {
+    //             result += SamplePerlinNoise(randomTables, randomTableSize, pos, octave) * octave * heightScale;
+    //         }
+    //         octave = octave / 2.0;
+    //         --octaveIdx;
+    //     }
 
-        result /= float(numOctaves);
+    //     result /= float(numOctaves);
 
-        return clamp(result, -1.0, 1.0);
-    } break;
-    case NOISE_TYPE_FBM:
-    {
-        vec2 p = pos / noiseFunction.wavelength;
-        float n = noise(p); // octave 0 noise
+    //     return clamp(result, -1.0, 1.0);
+    // } break;
+    // case NOISE_TYPE_FBM:
+    // {
+        vec3 p = pos / noiseFunction.wavelength;
+        float n = noise(p.xz); // octave 0 noise
         float dampen = 0.45 + (n * 0.5 + 0.5) * 0.2;
-        float result = fbm_9(p, dampen);
+        float result = fbm_9(p.xz, dampen);
 
         // Separate high areas from low with a cliff edge
         result += 0.25 * smoothstep(-0.056, -0.01, result);
         result *= noiseFunction.heightScale;
         return result;
-    } break;
-    case NOISE_TYPE_VORONOI:
-    {
-        vec2 p = pos / noiseFunction.wavelength;
-        vec2 _x;
-        float result = noiseFunction.heightScale * VoronoiColumns(p, noiseFunction.sharpness, _x, _x, _x);
-        return result;
-    } break;
-    case NOISE_TYPE_SMOOTH_VORONOI:
-    {
-        vec2 p = pos / noiseFunction.wavelength;
-        float result = noiseFunction.heightScale * SmoothVoronoi(p, noiseFunction.sharpness);
-        return result;
-    } break;
-    }
+    // } break;
+    // case NOISE_TYPE_VORONOI:
+    // {
+    //     vec2 p = pos / noiseFunction.wavelength;
+    //     vec2 _x;
+    //     float result = noiseFunction.heightScale * VoronoiColumns(p, noiseFunction.sharpness, _x, _x, _x);
+    //     return result;
+    // } break;
+    // case NOISE_TYPE_SMOOTH_VORONOI:
+    // {
+    //     vec2 p = pos / noiseFunction.wavelength;
+    //     float result = noiseFunction.heightScale * SmoothVoronoi(p, noiseFunction.sharpness);
+    //     return result;
+    // } break;
+    // }
 
     return 0.0;
 }
 
-float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in Biome biome, uint biomeNoiseFunctionCount, vec2 pos)
+float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in Biome biome,
+    uint biomeNoiseFunctionCount, vec3 posWS)
 {
     float result = 0.0;
 
@@ -574,7 +576,7 @@ float SampleBiomeTerrain(sampler2DArray randomTables, uint randomTableSize, in B
     {
         //if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
         {
-            result += SampleNoiseFunction(randomTables, randomTableSize, biome.noiseFunctions[i], pos);
+            result += SampleNoiseFunction(randomTables, randomTableSize, biome.noiseFunctions[i], posWS);
         }
     }
 
@@ -596,23 +598,24 @@ uint GetBiomeNoiseFunctionCount(in TerrainGenConstantData constantData, int biom
     return GetByteFromUInt(constantData.biomeNoiseFunctionCounts[index0][index1], index2);
 }
 
-vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize, vec2 pos, out vec3 outNormal)
+vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize,
+    vec3 posWS, out vec3 outNormal)
 {
     vec2 biome0CellCoord;
     vec2 biome0CellPos;
     vec2 biome1CellCoord;
 
-    vec2 p = pos / constantData.biomeNoise.wavelength;
-    float d = VoronoiDistance(p, biome0CellCoord, biome0CellPos, biome1CellCoord);
+    vec2 p2D = posWS.xz / constantData.biomeNoise.wavelength;
+    float d = VoronoiDistance(p2D, biome0CellCoord, biome0CellPos, biome1CellCoord);
     int biome0Index = BiomeIDToindex(biome0CellCoord, constantData.biomeCount);
     int biome1Index = BiomeIDToindex(biome1CellCoord, constantData.biomeCount);
 
     uint biome0NoiseFuncCount = GetBiomeNoiseFunctionCount(constantData, biome0Index);
     float normalizedHeight = SampleBiomeTerrain(randomTables, randomTableSize,
-        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos);
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, posWS);
 
     // Divide by 2 to transform range from [-1, 1] to [0, maxHeight]
-    float height = (normalizedHeight * 0.5) * constantData.maxHeight;
+    float height = (normalizedHeight * 0.5 + 0.5) * constantData.maxHeight;
 
     float blendWeight = 1.0 - clamp(d * 5.0 + 0.5, 0.0, 1.0);
 
@@ -621,9 +624,9 @@ vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray random
 
     float epsilon = 0.5;
     float normalizedHeightX = SampleBiomeTerrain(randomTables, randomTableSize, 
-        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos + vec2(epsilon, 0.0));
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, posWS + vec3(epsilon, 0.0, 0.0));
     float normalizedHeightZ = SampleBiomeTerrain(randomTables, randomTableSize, 
-        constantData.biomes[biome0Index], biome0NoiseFuncCount, pos + vec2(0.0, epsilon));
+        constantData.biomes[biome0Index], biome0NoiseFuncCount, posWS + vec3(0.0, 0.0, epsilon));
 
     // TODO: Use proper method for calculating this
     outNormal = normalize(vec3(normalizedHeightX - normalizedHeight, 0.01 * epsilon, normalizedHeightZ - normalizedHeight));

@@ -2392,6 +2392,8 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
 
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
 		++shaderID;
 
 		// Terrain generate mesh
@@ -2406,8 +2408,6 @@ namespace flex
 
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
-
-		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
 
 		++shaderID;
 

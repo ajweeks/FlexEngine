@@ -130,6 +130,8 @@ namespace flex
 			virtual void RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex) override;
 			virtual void RemoveTerrainChunk(const glm::ivec3& chunkIndex) override;
 			virtual u32 GetCurrentTerrainChunkCapacity() const;
+			virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const override;
+			virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) override;
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -379,10 +381,12 @@ namespace flex
 			bool m_bEnableValidationLayers = false;
 			bool m_bEnableGPUAssistanceValidationFeature = false;
 			bool m_bEnableBestPracticesValidationFeature = false;
+			bool m_bEnableDebugPrintf = false;
 #else
 			bool m_bEnableValidationLayers = true;
-			bool m_bEnableGPUAssistanceValidationFeature = true;
+			bool m_bEnableGPUAssistanceValidationFeature = false;
 			bool m_bEnableBestPracticesValidationFeature = false;
+			bool m_bEnableDebugPrintf = true;
 #endif
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
@@ -640,7 +644,7 @@ namespace flex
 				glm::ivec3 loadingChunkIndex;
 				u32 loadingChunkLinearIndex = u32_max;
 
-				const u32 maxNumRenderedChunks = 4;
+				const u32 maxNumRenderedChunks = 32;
 			};
 			Terrain* m_Terrain = nullptr;
 

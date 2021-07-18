@@ -2082,24 +2082,30 @@ namespace flex
 						i32 newTotalTriCount = *(i32*)m_Terrain->vertexBufferGPU->buffer.m_Mapped;
 						m_Terrain->vertexBufferGPU->buffer.Unmap();
 
+						u32 chunkIndex = (u32)m_TerrainChunksLoaded.size();
+
 						u32 chunkFirstVertex = m_Terrain->lastTriCount * 3;
-						m_Terrain->indirectBufferCPU[m_Terrain->loadingChunkLinearIndex].firstVertex = chunkFirstVertex;
+						m_Terrain->indirectBufferCPU[chunkIndex].firstVertex = chunkFirstVertex;
 
 						i32 chunkTriCount = newTotalTriCount % maxNumTrianglesPerChunk;
 						u32 chunkVertCount = chunkTriCount * 3;
-						m_Terrain->indirectBufferCPU[m_Terrain->loadingChunkLinearIndex].vertexCount = chunkVertCount;
+						m_Terrain->indirectBufferCPU[chunkIndex].vertexCount = chunkVertCount;
 
 						m_Terrain->lastTriCount = newTotalTriCount;
 
 						Pair<glm::ivec3, u32> terrainPair = *m_TerrainGenWorkloads.begin();
-						m_TerrainChunksLoaded.emplace_back(terrainPair);
+						if (chunkVertCount > 0)
+						{
+							m_TerrainChunksLoaded.emplace_back(terrainPair);
+						}
 						m_TerrainGenWorkloads.erase(m_TerrainGenWorkloads.begin());
 
-						Print("Terrain (%i) first vert: %u, vert count: %u, newTotalTriCount: %i\n",
+						Print("Terrain (%i) first vert: %u, vert count: %u, newTotalTriCount: %i, total loaded: %u\n",
 							m_Terrain->loadingChunkLinearIndex,
 							chunkFirstVertex,
 							chunkVertCount,
-							newTotalTriCount);
+							newTotalTriCount,
+							(u32)m_TerrainChunksLoaded.size());
 					}
 
 					m_Terrain->fence = VK_NULL_HANDLE;
@@ -4330,15 +4336,16 @@ namespace flex
 			{
 				m_Terrain->constantData = constantData;
 				m_Terrain->maxChunkCount = maxChunkCount;
+
+				// TODO: Wait for in-flight workloads to complete?
+				m_Terrain->fence = VK_NULL_HANDLE;
+				m_Terrain->lastTriCount = 0;
+				m_Terrain->loadingChunkIndex = glm::ivec3(u32_max);
+				m_Terrain->loadingChunkLinearIndex = u32_max;
 			}
 
 			m_TerrainChunksLoaded.clear();
 			m_TerrainGenWorkloads.clear();
-			// TODO: Wait for in-flight workloads to complete?
-			m_Terrain->fence = VK_NULL_HANDLE;
-			m_Terrain->lastTriCount = 0;
-			m_Terrain->loadingChunkIndex = glm::ivec3(u32_max);
-			m_Terrain->loadingChunkLinearIndex = u32_max;
 
 			CreateTerrainBuffers();
 			CreateTerrainSystemResources();
@@ -4376,6 +4383,23 @@ namespace flex
 		u32 VulkanRenderer::GetCurrentTerrainChunkCapacity() const
 		{
 			return m_Terrain->maxChunkCount;
+		}
+
+		u32 VulkanRenderer::GetChunkVertCount(u32 chunkLinearIndex) const
+		{
+			if (m_Terrain->indirectBufferCPU != nullptr && chunkLinearIndex < m_Terrain->maxChunkCount)
+			{
+				return m_Terrain->indirectBufferCPU[chunkLinearIndex].vertexCount;
+			}
+			return 0;
+		}
+
+		void VulkanRenderer::SetChunkVertCount(u32 chunkLinearIndex, u32 count)
+		{
+			if (m_Terrain->indirectBufferCPU != nullptr && chunkLinearIndex < m_Terrain->maxChunkCount)
+			{
+				m_Terrain->indirectBufferCPU[chunkLinearIndex].vertexCount = count;
+			}
 		}
 
 		void VulkanRenderer::RecreateShadowFrameBuffers()
@@ -5484,6 +5508,15 @@ namespace flex
 			{
 				validationFeatureEnables.push_back(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
 			}
+			if (m_bEnableDebugPrintf)
+			{
+				if (m_bEnableGPUAssistanceValidationFeature)
+				{
+					PrintWarn("DebugPrintf validation feature can't be enabled at same time as GPU assisted validation.\n");
+				}
+				validationFeatureEnables.push_back(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
+			}
+
 			VkValidationFeaturesEXT features = {};
 			features.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
 			features.enabledValidationFeatureCount = (u32)validationFeatureEnables.size();

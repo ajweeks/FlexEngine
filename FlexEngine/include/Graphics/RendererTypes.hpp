@@ -25,7 +25,6 @@ namespace flex
 	static const i32 MAX_SSAO_KERNEL_SIZE = 64;
 	static const i32 MAX_NUM_ROAD_SEGMENTS = 64;
 	static const i32 MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK = 8;
-	static const i32 MAX_VERTS_PER_TERRAIN_CHUNK_AXIS = 32;
 	static const i32 MAX_BIOME_COUNT = 16; // Must be multiple of 16
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
