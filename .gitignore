@@ -14,7 +14,6 @@ FlexEngine/resources/textures/hdri/**
 
 FlexEngine/dependencies/**/objs/**
 FlexEngine/dependencies/**/build/**
-FlexEngine/dependencies/**/builds/**
 FlexEngine/dependencies/**/bin/**
 
 FlexEngine/dependencies/shaderc**
