@@ -8609,8 +8609,8 @@ namespace flex
 			bRegenGradients = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegenGradients;
 		}
 
-		u32 minPointsPerAxis = 2;
-		u32 maxPointsPerAxis = 32;
+		u32 minPointsPerAxis = 2 + 1;
+		u32 maxPointsPerAxis = 32 + 1;
 		const u32 previousPointsPerAxis = m_NumPointsPerAxis;
 		if (ImGuiExt::InputUInt("Points per axis", &m_NumPointsPerAxis))
 		{
@@ -8626,7 +8626,7 @@ namespace flex
 			if (ImGui::Button("/2"))
 			{
 				bRegen = true;
-				m_NumPointsPerAxis /= 2;
+				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) / 2 + 1;
 			}
 
 			if (m_NumPointsPerAxis < maxPointsPerAxis)
@@ -8640,13 +8640,13 @@ namespace flex
 			if (ImGui::Button("x2"))
 			{
 				bRegen = true;
-				m_NumPointsPerAxis *= 2;
+				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) * 2 + 1;
 			}
 		}
 
 		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 512) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 128.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 1024.0f) || bRegen;
 
 		bRegen = ImGui::SliderFloat("Max height", &m_MaxHeight, 0.1f, 500.0f) || bRegen;
 

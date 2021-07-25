@@ -2277,17 +2277,16 @@ namespace flex
 		m_Shaders[shaderID]->maxObjectCount = 4096 * 8; // TODO: -1
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
-			(u32)VertexAttribute::NORMAL;
-			//(u32)VertexAttribute::UV |
-			//(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);

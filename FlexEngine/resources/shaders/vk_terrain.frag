@@ -18,13 +18,12 @@ layout (binding = 0) uniform UBOConstant
 } uboConstant;
 
 layout (location = 0) in vec3 ex_NormalWS;
-//layout (location = 0) in vec2 ex_TexCoord;
-//layout (location = 1) in vec4 ex_Colour;
-//layout (location = 3) in vec3 ex_PositionWS;
-//layout (location = 4) in float ex_Depth;
+layout (location = 1) in vec4 ex_Colour;
+layout (location = 2) in float ex_Depth;
+layout (location = 3) in vec3 ex_PositionWS;
 
-layout (binding = 2) uniform sampler2D albedoSampler;
-layout (binding = 3) uniform sampler2DArray shadowCascadeSampler;
+layout (binding = 1) uniform sampler2D albedoSampler;
+layout (binding = 2) uniform sampler2DArray shadowCascadeSampler;
 
 layout (location = 0) out vec4 fragmentColour;
 
@@ -42,11 +41,8 @@ vec3 palette(float v)
 
 void main()
 {
-	vec3 N = normalize(ex_NormalWS);
-	fragmentColour = vec4(N * 0.5, 1);
-
-#if 0
-	vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
+	// vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
+	vec3 albedo = vec3(1.0);
 	float height = ex_Colour.x;
 	// Nudge up to account for float precision
 	float blendWeight = ex_Colour.y;
@@ -79,6 +75,7 @@ void main()
 
 	float darkening = 1.0;
 
+#if 0
 	if (lodLevel <= 2)
 	{
 		// Rock-face/clif pattern
@@ -127,6 +124,7 @@ void main()
 	{
 		// TODO: Darken/increase roughness of surface here to account for missing cracks
 	}
+#endif
 
 	//fragmentColour.xy = abs(dFdx(ex_TexCoord)) * 100.0; fragmentColour.zw = 0.0.xx; return;
 
@@ -265,18 +263,17 @@ void main()
 	ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0)); // Reinhard tone-mapping
-	// fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
+	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
 
 	// Colourize by chunk ID & neighbor chunk ID
-	fragmentColour.rgb = (palette(matID0 * 0.3 + 0.5) + palette(matID1 * 0.3)) * 0.5;
+	// fragmentColour.rgb = (palette(matID0 * 0.3 + 0.5) + palette(matID1 * 0.3)) * 0.5;
 
 	// Display chunk borders
 	//fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
-	fragmentColour.rgb = blendWeight.xxx;
+	// fragmentColour.rgb = blendWeight.xxx;
 
 	// fragmentColour.rgb = ex_NormalWS;
 
-    DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, ex_TexCoord,
+    DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, vec2(0),
      linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragmentColour);
-#endif
 }

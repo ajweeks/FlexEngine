@@ -1479,7 +1479,10 @@ namespace flex
 
 			m_Terrain->vertexBufferGPU = new UniformBuffer(m_VulkanDevice, UniformBufferType::TERRAIN_VERTEX_BUFFER);
 
-			u32 vertBufferSize = GetAlignedUBOSize((u32)sizeof(i32) + m_Terrain->maxChunkCount * maxNumTrianglesPerChunk * (u32)sizeof(TerrainVertex));
+			// Many chunks will be empty, so only allocate room for 40% of max for now
+			// TODO: Support resizing when needed
+			i32 softMaxChunkCount = (i32)(m_Terrain->maxChunkCount * 0.4f);
+			u32 vertBufferSize = GetAlignedUBOSize((u32)sizeof(i32) + softMaxChunkCount * maxNumTrianglesPerChunk * (u32)sizeof(TerrainVertex));
 			m_Terrain->vertexBufferGPU->data.unitSize = vertBufferSize;
 
 			m_Terrain->vertexBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(vertBufferSize, m_DynamicAlignment));
@@ -5025,6 +5028,7 @@ namespace flex
 				EndDebugMarkerRegion(commandBuffer, "End Particle rendering");
 			}
 		}
+
 		void VulkanRenderer::DrawTerrain(VkCommandBuffer commandBuffer)
 		{
 			if (m_Terrain == nullptr || !m_Terrain->bVisibile || m_TerrainChunksLoaded.empty())
@@ -8536,8 +8540,6 @@ namespace flex
 			*(i32*)m_Terrain->vertexBufferGPU->buffer.m_Mapped = nextChunkTriOffset;
 			m_Terrain->vertexBufferGPU->buffer.Unmap();
 
-			u32 numThreadsPerAxis = (u32)glm::ceil(m_Terrain->constantData.numPointsPerAxis / (real)TERRAIN_THREAD_GROUP_SIZE);
-
 			{
 				// Host write -> shader read barrier
 				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
@@ -8580,6 +8582,8 @@ namespace flex
 			uniformOverrides.terrainGenDynamicData.chunkIndex = chunkIndex;
 			uniformOverrides.terrainGenDynamicData.linearIndex = chunkLinearIndex;
 
+			u32 numThreadsPerAxis = (u32)glm::ceil(numPointsPerAxis / (real)TERRAIN_THREAD_GROUP_SIZE);
+
 			{
 				PROFILE_AUTO("Terrain Point Gen");
 
@@ -8606,6 +8610,8 @@ namespace flex
 					0, nullptr,
 					0, nullptr);
 			}
+
+			numThreadsPerAxis = (u32)glm::ceil(numVoxelsPerAxis / (real)TERRAIN_THREAD_GROUP_SIZE);
 
 			{
 				PROFILE_AUTO("Terrain Mesh Gen");

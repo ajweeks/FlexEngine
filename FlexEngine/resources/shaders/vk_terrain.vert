@@ -5,14 +5,12 @@
 
 layout (location = 0) in vec3 in_Position;
 layout (location = 1) in vec3 in_Normal;
-//layout (location = 1) in vec2 in_TexCoord;
-//layout (location = 2) in vec4 in_Colour;
+layout (location = 2) in vec4 in_Colour;
 
 layout (location = 0) out vec3 ex_NormalWS;
-//layout (location = 0) out vec2 ex_TexCoord;
-//layout (location = 1) out vec4 ex_Colour;
-//layout (location = 3) out vec3 ex_PositionWS;
-//layout (location = 4) out float ex_Depth;
+layout (location = 1) out vec4 ex_Colour;
+layout (location = 2) out float ex_Depth;
+layout (location = 3) out vec3 ex_PositionWS;
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -22,13 +20,11 @@ layout (binding = 0) uniform UBOConstant
 
 void main()
 {
-	//ex_TexCoord = in_TexCoord;
-	//ex_Colour = in_Colour;
-
+	ex_Colour = in_Colour;
 	ex_NormalWS = in_Normal;
 
-    vec4 worldPos = vec4(in_Position, 1.0);
-	//ex_PositionWS = worldPos.xyz;
-	//ex_Depth = (uboConstant.view * worldPos).z;
-    gl_Position = uboConstant.viewProjection * worldPos;
+    vec4 posWS = vec4(in_Position, 1.0);
+    ex_PositionWS = posWS.xyz;
+	ex_Depth = (uboConstant.view * posWS).z;
+    gl_Position = uboConstant.viewProjection * posWS;
 }

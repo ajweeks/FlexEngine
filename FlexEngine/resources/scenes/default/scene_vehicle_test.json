@@ -13,12 +13,12 @@
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
 		"exposure" : 1.200000,
-		"move speed" : 18.000000,
+		"move speed" : 78.362000,
 		"transform" : 
 		{
-			"position" : "934.723, -54.535, -766.227",
-			"pitch" : -0.290129,
-			"yaw" : -15.593230
+			"position" : "-50.158, 164.022, 114.917",
+			"pitch" : -0.309969,
+			"yaw" : -26.446108
 		}
 	},
 	"objects" : 
@@ -44,15 +44,15 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "2.540, -0.000, 0.000"
+				"rot" : "1.778, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.955, 0.000, 0.000, 0.296",
+				"rotation" : "0.776, 0.000, 0.000, 0.630",
 				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.15, 0.20, 0.28",
+				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
 				"brightness" : 0.887000,
 				"cast shadows" : true,
@@ -75,14 +75,14 @@
 			"chunk generator info" : 
 			{
 				"vert count per chunk axis" : 16,
-				"chunk size" : 122.375000,
-				"max height" : 302.122986,
+				"chunk size" : 922.375000,
+				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 6,
 				"isolate noise layer" : 0,
-				"num points per axis" : 8,
+				"num points per axis" : 17,
 				"max chunk count" : 142,
-				"loaded chunk radius" : 337.031006,
+				"loaded chunk radius" : 2408.229004,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 256,
 				"low colour" : "0.33, 0.41, 0.33",
@@ -101,9 +101,9 @@
 								"feature size" : 375.625000,
 								"num octaves" : 6,
 								"h" : 0.800000,
-								"height scale" : 0.233000,
+								"height scale" : 0.400000,
 								"lacunarity" : 1.000000,
-								"wavelength" : 100.000000
+								"wavelength" : 209.125000
 							}
 						]
 					},
@@ -330,8 +330,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "2.704, 0.916, -0.446",
-				"rot" : "-0.011, 0.742, -0.006",
+				"pos" : "2.813, 0.916, -0.500",
+				"rot" : "-0.011, 0.780, -0.006",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},

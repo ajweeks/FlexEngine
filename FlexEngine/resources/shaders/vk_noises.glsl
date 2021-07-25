@@ -598,26 +598,33 @@ uint GetBiomeNoiseFunctionCount(in TerrainGenConstantData constantData, int biom
     return GetByteFromUInt(constantData.biomeNoiseFunctionCounts[index0][index1], index2);
 }
 
-vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize,
-    vec3 posWS, out vec3 outNormal)
+void GetBiomeIndices(vec3 posWS, in TerrainGenConstantData constantData, out float dist, out int biome0Index, out int biome1Index)
 {
     vec2 biome0CellCoord;
     vec2 biome0CellPos;
     vec2 biome1CellCoord;
 
     vec2 p2D = posWS.xz / constantData.biomeNoise.wavelength;
-    float d = VoronoiDistance(p2D, biome0CellCoord, biome0CellPos, biome1CellCoord);
-    int biome0Index = BiomeIDToindex(biome0CellCoord, constantData.biomeCount);
-    int biome1Index = BiomeIDToindex(biome1CellCoord, constantData.biomeCount);
+    dist = VoronoiDistance(p2D, /*out*/ biome0CellCoord, /*out*/ biome0CellPos, /*out*/ biome1CellCoord);
+    biome0Index = BiomeIDToindex(biome0CellCoord, constantData.biomeCount);
+    biome1Index = BiomeIDToindex(biome1CellCoord, constantData.biomeCount);
+}
+
+vec4 SampleTerrain(in TerrainGenConstantData constantData, sampler2DArray randomTables, uint randomTableSize,
+    vec3 posWS, out vec3 outNormal)
+{
+    float dist;
+    int biome0Index, biome1Index;
+    GetBiomeIndices(posWS, constantData, /*out*/ dist, /*out*/ biome0Index, /*out*/ biome1Index);
 
     uint biome0NoiseFuncCount = GetBiomeNoiseFunctionCount(constantData, biome0Index);
     float normalizedHeight = SampleBiomeTerrain(randomTables, randomTableSize,
         constantData.biomes[biome0Index], biome0NoiseFuncCount, posWS);
 
-    // Divide by 2 to transform range from [-1, 1] to [0, maxHeight]
+    // Transform range from [-1, 1] to [0, maxHeight]
     float height = (normalizedHeight * 0.5 + 0.5) * constantData.maxHeight;
 
-    float blendWeight = 1.0 - clamp(d * 5.0 + 0.5, 0.0, 1.0);
+    float blendWeight = 1.0 - clamp(dist * 5.0 + 0.5, 0.0, 1.0);
 
     float matID0 = float(biome0Index);
     float matID1 = float(biome1Index);

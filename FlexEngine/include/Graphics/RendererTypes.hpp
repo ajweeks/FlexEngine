@@ -28,7 +28,7 @@ namespace flex
 	static const i32 MAX_BIOME_COUNT = 16; // Must be multiple of 16
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
-	static const u32 TERRAIN_THREAD_GROUP_SIZE = 8;
+	static const u32 TERRAIN_THREAD_GROUP_SIZE = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -236,13 +236,13 @@ namespace flex
 	{
 		glm::vec3 posA;
 		glm::vec3 normA;
+		glm::vec4 colourA;
 		glm::vec3 posB;
 		glm::vec3 normB;
+		glm::vec4 colourB;
 		glm::vec3 posC;
 		glm::vec3 normC;
-		//glm::vec2 uv;			// 12
-		//glm::vec4 colour;		// 20
-		//glm::vec3 normalWS;		// 36
+		glm::vec4 colourC;
 	};
 
 	// 16 bytes

@@ -8,11 +8,11 @@
 #define MAX_NUM_ROAD_SEGMENTS					256
 #define MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK	8
 
-#define DISPATCH_COUNT							8
+#define DISPATCH_COUNT							4
 
 struct Tri
 {
-	float data[6 * 3];
+	float data[(3 + 3 + 4) * 3];
 	// vec3 positionWS_A; vec3 normalWS_A;
 	// vec3 positionWS_C; vec3 normalWS_B;
 	// vec3 positionWS_B; vec3 normalWS_C;
@@ -47,7 +47,10 @@ vec3 interpolateVerts(vec4 v0, vec4 v1, float isoLevel)
 	return v0.xyz + t * (v1.xyz - v0.xyz);
 }
 
-void fillOutTri(int index, vec3 posA, vec3 normA, vec3 posB, vec3 normB, vec3 posC, vec3 normC)
+void fillOutTri(int index,
+	vec3 posA, vec3 normA, vec4 colA, 
+	vec3 posB, vec3 normB, vec4 colB,
+	vec3 posC, vec3 normC, vec4 colC)
 {
 	triangles[index].data[0] = posA.x;
 	triangles[index].data[1] = posA.y;
@@ -57,39 +60,51 @@ void fillOutTri(int index, vec3 posA, vec3 normA, vec3 posB, vec3 normB, vec3 po
 	triangles[index].data[4] = normA.y;
 	triangles[index].data[5] = normA.z;
 
-	triangles[index].data[6] = posB.x;
-	triangles[index].data[7] = posB.y;
-	triangles[index].data[8] = posB.z;
+	triangles[index].data[6] = colA.x;
+	triangles[index].data[7] = colA.y;
+	triangles[index].data[8] = colA.z;
+	triangles[index].data[9] = colA.w;
 
-	triangles[index].data[9] = normB.x;
-	triangles[index].data[10] = normB.y;
-	triangles[index].data[11] = normB.z;
+	triangles[index].data[10] = posB.x;
+	triangles[index].data[11] = posB.y;
+	triangles[index].data[12] = posB.z;
 
-	triangles[index].data[12] = posC.x;
-	triangles[index].data[13] = posC.y;
-	triangles[index].data[14] = posC.z;
+	triangles[index].data[13] = normB.x;
+	triangles[index].data[14] = normB.y;
+	triangles[index].data[15] = normB.z;
 
-	triangles[index].data[15] = normC.x;
-	triangles[index].data[16] = normC.y;
-	triangles[index].data[17] = normC.z;
+	triangles[index].data[16] = colB.x;
+	triangles[index].data[17] = colB.y;
+	triangles[index].data[18] = colB.z;
+	triangles[index].data[19] = colB.w;
+
+	triangles[index].data[20] = posC.x;
+	triangles[index].data[21] = posC.y;
+	triangles[index].data[22] = posC.z;
+
+	triangles[index].data[23] = normC.x;
+	triangles[index].data[24] = normC.y;
+	triangles[index].data[25] = normC.z;
+
+	triangles[index].data[26] = colC.x;
+	triangles[index].data[27] = colC.y;
+	triangles[index].data[28] = colC.z;
+	triangles[index].data[29] = colC.w;
 }
 
 void main()
 {
-	uvec3 localID = gl_GlobalInvocationID;
+	uvec3 id = gl_GlobalInvocationID;
 
 	uint numPointsPerAxis = uboConstant.terrainGenConstantData.numPointsPerAxis;
-	float isoLevel = uboConstant.terrainGenConstantData.isoLevel;
 
-	// Skip edge voxels since they are missing neighbors
-    if (localID.x >= numPointsPerAxis - 1 || localID.y >= numPointsPerAxis - 1 || localID.z >= numPointsPerAxis - 1)
+    if (id.x >= numPointsPerAxis - 1 || id.y >= numPointsPerAxis - 1 || id.z >= numPointsPerAxis - 1)
     {
         return;
     }
 
+	float isoLevel = uboConstant.terrainGenConstantData.isoLevel;
 	ivec3 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
-	vec3 chunkPos = chunkIndex * uboConstant.terrainGenConstantData.chunkSize;
-	uvec3 id = localID;// + chunkIndex * numPointsPerAxis;
 
 	// uint vertCountPerChunkAxis = uboConstant.terrainGenConstantData.vertCountPerChunkAxis;
 	// uint vertCountPerChunkAxisSq = vertCountPerChunkAxis * vertCountPerChunkAxis;
@@ -154,10 +169,21 @@ void main()
 	        vec3 normA = normalize(cross(posB - posA, posC - posA));
 	        vec3 normB = normA;
 	        vec3 normC = normA;
+
+		    float dist;
+		    int biome0Index, biome1Index;
+		    GetBiomeIndices(posA, uboConstant.terrainGenConstantData, /*out*/ dist, /*out*/ biome0Index, /*out*/ biome1Index);
+
+    		float blendWeight = 1.0;//clamp(abs(dist) * 1000.0 + 0.95, 0.0, 1.0);
+			float matID0 = 0.0;// terrainSample.z;
+			float matID1 = 1.0;//terrainSample.w;
+	        vec4 colA = vec4(/*temp*/ dist, blendWeight, matID0, matID1);
+	        vec4 colB = vec4(/*temp*/ dist, blendWeight, matID0, matID1);
+	        vec4 colC = vec4(/*temp*/ dist, blendWeight, matID0, matID1);
 	        fillOutTri(index,
-	        	posA + chunkPos, normA,
-	        	posB + chunkPos, normB,
-	        	posC + chunkPos, normC);
+	        	posA, normA, colA,
+	        	posB, normB, colB,
+	        	posC, normC, colC);
 	    }
     }
 

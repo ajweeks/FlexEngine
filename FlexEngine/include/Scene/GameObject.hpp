@@ -1318,7 +1318,7 @@ namespace flex
 		real m_ChunkSize = 16.0f;
 		real m_MaxHeight = 3.0f;
 
-		u32 m_NumPointsPerAxis = 8;
+		u32 m_NumPointsPerAxis = 8 + 1;
 		real m_IsoLevel = 0.0f;
 
 		u32 m_MaxChunkCount = 16;

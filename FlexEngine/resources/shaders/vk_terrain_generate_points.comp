@@ -5,7 +5,7 @@
 
 #include "vk_noises.glsl"
 
-#define DISPATCH_COUNT							8
+#define DISPATCH_COUNT							4
 
 layout (std430, binding = 0) uniform UBOConstant
 {
@@ -28,13 +28,20 @@ layout (local_size_x = DISPATCH_COUNT, local_size_y = DISPATCH_COUNT, local_size
 
 void main()
 {
-	ivec3 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
 	uint numPointsPerAxis = uboConstant.terrainGenConstantData.numPointsPerAxis;
-	float chunkSize = uboConstant.terrainGenConstantData.chunkSize;
 
 	uvec3 id = gl_GlobalInvocationID;
 
-	vec3 posOS = (vec3(gl_GlobalInvocationID)) / float(numPointsPerAxis - 2);
+	// Kill threads with invalid ids (there will always be some due to numPointsPerAxis always being odd)
+	if (any(greaterThan(id, uvec3(numPointsPerAxis - 1))))
+	{
+		return;
+	}
+
+	ivec3 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
+	float chunkSize = uboConstant.terrainGenConstantData.chunkSize;
+
+	vec3 posOS = vec3(id) / float(numPointsPerAxis - 1);
 	vec3 posWS = (vec3(chunkIndex) + posOS) * chunkSize;
 
 	//if (chunkIndex == ivec3(-1,-1,-1))
@@ -50,15 +57,15 @@ void main()
 	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,
 		uboConstant.terrainGenConstantData.randomTableSize, posWS, normal);
  	float normalizedHeight = terrainSample.x;
- 	float height = (normalizedHeight * 0.5 ) * uboConstant.terrainGenConstantData.maxHeight;
-	float blendWeight = terrainSample.y;
-	float matID0 = terrainSample.z;
-	float matID1 = terrainSample.w;
+ 	float height = (normalizedHeight * 0.5) * uboConstant.terrainGenConstantData.maxHeight;
+	//float blendWeight = terrainSample.y;
+	//float matID0 = terrainSample.z;
+	//float matID1 = terrainSample.w;
 
 	float surface = posWS.y - height;
 
 	uint index = coordToIndex(id.x, id.y, id.z, numPointsPerAxis);
-	points[index] = vec4(posWS * float(numPointsPerAxis - 2), surface);
+	points[index] = vec4(posWS, surface);
 }
 
 
