@@ -121,6 +121,9 @@ namespace flex
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
+		void QueueHologramMesh(PrefabID prefabID, const Transform& transform);
+		void QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS);
+
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
 		virtual void OnPreSceneChange() = 0;
@@ -365,6 +368,15 @@ namespace flex
 		MaterialID m_SpriteMatSSID = InvalidMaterialID;
 		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;
+
+		MaterialID m_HologramMatID = InvalidMaterialID;
+		//RenderID m_HologramProxyRenderID = InvalidRenderID;
+		GameObject* m_HologramProxyObject = nullptr;
+
+		PrefabID m_QueuedHologramPrefabID;
+		glm::vec3 m_QueuedHologramPosWS;
+		glm::quat m_QueuedHologramRotWS;
+		glm::vec3 m_QueuedHologramScaleWS;
 
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;

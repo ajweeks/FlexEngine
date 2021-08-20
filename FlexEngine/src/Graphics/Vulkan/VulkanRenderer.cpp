@@ -935,11 +935,11 @@ namespace flex
 			material->generateCubemapSampler = createInfo->generateCubemapSampler;
 			material->cubemapSamplerSize = createInfo->generatedCubemapSize;
 
-			material->constAlbedo = glm::vec4(createInfo->constAlbedo, 1.0f);
+			material->constAlbedo = createInfo->constAlbedo;
 			material->albedoTexturePath = createInfo->albedoTexturePath;
 			material->enableAlbedoSampler = createInfo->enableAlbedoSampler;
 
-			material->constEmissive = glm::vec4(createInfo->constEmissive, 1.0f);
+			material->constEmissive = createInfo->constEmissive;
 			material->emissiveTexturePath = createInfo->emissiveTexturePath;
 			material->enableEmissiveSampler = createInfo->enableEmissiveSampler;
 

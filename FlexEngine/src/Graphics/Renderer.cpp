@@ -219,6 +219,12 @@ namespace flex
 			quad3DCreateInfo.materialID = m_SpriteMatSSID;
 			quad3DCreateInfo.renderPassOverride = RenderPassType::UI;
 			m_Quad3DSSRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+			// Hologram
+			m_HologramMatID = g_Renderer->GetMaterialID("Selection Hologram");
+			m_HologramProxyObject = new GameObject("Proxy hologram object", InvalidStringID);
+			// Initialize with empty mesh
+			m_HologramProxyObject->SetMesh(new Mesh(m_HologramProxyObject));
 		}
 	}
 
@@ -248,6 +254,10 @@ namespace flex
 		m_PointLightData = nullptr;
 		m_SpotLightData = nullptr;
 
+		m_HologramProxyObject->Destroy();
+		delete m_HologramProxyObject;
+		m_HologramProxyObject = nullptr;
+
 		delete m_ShaderDirectoryWatcher;
 
 		m_Quad3DVertexBufferData.Destroy();
@@ -273,6 +283,8 @@ namespace flex
 	void Renderer::NewFrame()
 	{
 		m_UIMesh->EndFrame();
+
+		m_HologramProxyObject->SetVisible(false);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -1176,6 +1188,56 @@ namespace flex
 		}
 
 		m_UIMesh->Draw();
+
+		if (m_QueuedHologramPrefabID.IsValid())
+		{
+			Mesh* mesh = m_HologramProxyObject->GetMesh();
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QueuedHologramPrefabID);
+			const std::string meshFilePath = prefabTemplate->GetMesh()->GetRelativeFilePath();
+
+			bool bValid = false;
+			if (mesh->GetSubmeshCount() != 0)
+			{
+				if (mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+				{
+					// Same prefab is being drawn as last frame
+					bValid = true;
+				}
+				else
+				{
+					mesh->Destroy();
+					// Restore game object reference
+					mesh->SetOwner(m_HologramProxyObject);
+				}
+			}
+
+			if (!bValid)
+			{
+				bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
+				m_HologramProxyObject->PostInitialize();
+			}
+
+			if (bValid)
+			{
+				m_HologramProxyObject->SetVisible(true);
+
+				Transform* transform = m_HologramProxyObject->GetTransform();
+				transform->SetWorldPosition(m_QueuedHologramPosWS, false);
+				transform->SetWorldRotation(m_QueuedHologramRotWS, false);
+				transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+			}
+			else
+			{
+				std::string prefabIDStr = m_QueuedHologramPrefabID.ToString();
+				std::string prefabName = prefabTemplate->GetName();
+				PrintError("Failed to load mesh for selection hologram proxy (prefab ID: %s, prefab name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
+				// Restore game object reference
+				mesh->SetOwner(m_HologramProxyObject);
+				mesh->Destroy();
+			}
+
+			m_QueuedHologramPrefabID = InvalidPrefabID;
+		}
 	}
 
 	void Renderer::EndOfFrame()
@@ -1513,6 +1575,19 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform)
+	{
+		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale());
+	}
+
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS)
+	{
+		m_QueuedHologramPrefabID = prefabID;
+		m_QueuedHologramPosWS = posWS;
+		m_QueuedHologramRotWS = rotWS;
+		m_QueuedHologramScaleWS = scaleWS;
+	}
+
 	void Renderer::OnPostSceneChange()
 	{
 		m_UIMesh->OnPostSceneChange();
@@ -1779,6 +1854,7 @@ namespace flex
 			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
 			{ "terrain_generate_points", "", "", "", "vk_terrain_generate_points_comp.spv" },
 			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
+			{ "hologram", "vk_hologram_vert.spv", "vk_hologram_frag.spv", "", "" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -2407,7 +2483,23 @@ namespace flex
 
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
 		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
+		++shaderID;
 
+		// Hologram
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::NORMAL;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
 		++shaderID;
 
 		assert(shaderID == m_Shaders.size());
@@ -2784,7 +2876,7 @@ namespace flex
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
 		placeholderMatCreateInfo.visibleInEditor = false;
-		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		placeholderMatCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 		placeholderMatCreateInfo.bSerializable = false;
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}

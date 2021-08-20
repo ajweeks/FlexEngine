@@ -242,8 +242,8 @@ namespace flex
 		material.TryGetVec2("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
 		material.TryGetVec2("generated cubemap size", createInfoOut.generatedCubemapSize);
 		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
-		material.TryGetVec3("const albedo", createInfoOut.constAlbedo);
-		material.TryGetVec3("const emissive", createInfoOut.constEmissive);
+		material.TryGetVec4("const albedo", createInfoOut.constAlbedo);
+		material.TryGetVec4("const emissive", createInfoOut.constEmissive);
 		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
 		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 

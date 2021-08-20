@@ -65,7 +65,7 @@ namespace flex
 		{
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.shaderName = "colour";
-			matCreateInfo.constAlbedo = VEC3_ONE;
+			matCreateInfo.constAlbedo = VEC4_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
 			matCreateInfo.bSerializable = false;

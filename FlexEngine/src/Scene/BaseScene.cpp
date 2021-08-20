@@ -189,7 +189,7 @@ namespace flex
 	void BaseScene::Update()
 	{
 		PROFILE_AUTO("Update Scene");
-		
+
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->Update(g_DeltaTime);

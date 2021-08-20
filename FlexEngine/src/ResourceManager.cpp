@@ -1677,9 +1677,9 @@ namespace flex
 
 				ImGui::ColorEdit3("Colour multiplier", &material->colourMultiplier.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
-				ImGui::ColorEdit3("Albedo", &material->constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+				ImGui::ColorEdit4("Albedo", &material->constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
-				ImGui::ColorEdit3("Emissive", &material->constEmissive.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+				ImGui::ColorEdit4("Emissive", &material->constEmissive.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
 				if (material->enableMetallicSampler)
 				{

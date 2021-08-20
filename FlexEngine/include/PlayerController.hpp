@@ -2,6 +2,7 @@
 
 #include "Helpers.hpp" // For TurningDir
 #include "Callbacks/InputCallbacks.hpp"
+#include "Transform.hpp"
 
 namespace flex
 {
@@ -62,9 +63,14 @@ namespace flex
 		TurningDir m_DirTurning = TurningDir::NONE;
 
 		bool m_bAttemptCompleteTrack = false;
+		bool m_bPreviewPlaceItemFromInventory = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
 		bool m_bAttemptInteract = false;
 		bool m_bAttemptPickup = false;
+
+		//Transform m_TargetItemPlacementTransform;
+		glm::vec3 m_TargetItemPlacementPos;
+		glm::quat m_TargetItemPlacementRot;
 
 		enum class Mode
 		{

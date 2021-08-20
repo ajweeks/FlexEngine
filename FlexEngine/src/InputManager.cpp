@@ -889,7 +889,7 @@ namespace flex
 			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 
 			// TODO: Allow modifiers to be down once supported properly
-			if (keyAction == KeyAction::KEY_PRESS && !bModiferDown)
+			if ((keyAction == KeyAction::KEY_PRESS || keyAction == KeyAction::KEY_RELEASE) && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)

@@ -56,7 +56,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
+		matCreateInfo.constAlbedo = glm::vec4(0.89f, 0.93f, 0.98f, 1.0f);
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
 		matCreateInfo.bSerializable = false;
@@ -85,7 +85,7 @@ namespace flex
 			MaterialCreateInfo mapTabletMatCreateInfo = {};
 			mapTabletMatCreateInfo.name = "Map tablet material";
 			mapTabletMatCreateInfo.shaderName = "pbr";
-			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
+			mapTabletMatCreateInfo.constAlbedo = glm::vec4(0.34f, 0.38f, 0.39f, 1.0f);
 			mapTabletMatCreateInfo.constMetallic = 1.0f;
 			mapTabletMatCreateInfo.constRoughness = 0.24f;
 			mapTabletMatCreateInfo.bSerializable = false;

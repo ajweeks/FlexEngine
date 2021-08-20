@@ -402,7 +402,38 @@ namespace flex
 			}
 		}
 
-		// Place item from inventory
+		if (m_bPreviewPlaceItemFromInventory)
+		{
+			if (m_Player->heldItemSlot == -1)
+			{
+				m_Player->heldItemSlot = 0;
+			}
+
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+
+			if (gameObjectStack.count >= 1)
+			{
+				if (gameObjectStack.prefabID.IsValid())
+				{
+					// TODO: LERP
+					Transform* playerTransform = m_Player->GetTransform();
+					m_TargetItemPlacementPos = playerTransform->GetWorldPosition() +
+						playerTransform->GetForward() * 4.0f;
+					m_TargetItemPlacementRot = playerTransform->GetWorldRotation();
+
+					g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
+						m_TargetItemPlacementPos,
+						m_TargetItemPlacementRot,
+						VEC3_ONE);
+				}
+				else
+				{
+					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
+				}
+			}
+		}
+
 		if (m_bAttemptPlaceItemFromInventory)
 		{
 			m_bAttemptPlaceItemFromInventory = false;
@@ -418,11 +449,11 @@ namespace flex
 			{
 				if (gameObjectStack.prefabID.IsValid())
 				{
-					glm::vec3 newObjectPos = m_Player->m_Transform.GetWorldPosition() +
-						m_Player->m_Transform.GetForward() * 3.0f;
-					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, newObjectPos);
+					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot);
 					if (gameObject != nullptr)
 					{
+						// Add non-immediate
+						g_SceneManager->CurrentScene()->AddRootObject(gameObject);
 						gameObjectStack.count--;
 
 						if (gameObjectStack.count == 0)
@@ -439,7 +470,7 @@ namespace flex
 				else
 				{
 					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID\n");
+					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
 				}
 			}
 		}
@@ -715,6 +746,21 @@ namespace flex
 	{
 		if (m_Player->m_bPossessed)
 		{
+			if (action == Action::PLACE_ITEM)
+			{
+				if (actionEvent == ActionEvent::ACTION_TRIGGER)
+				{
+					m_bPreviewPlaceItemFromInventory = true;
+					return EventReply::CONSUMED;
+				}
+				else if (actionEvent == ActionEvent::ACTION_RELEASE)
+				{
+					m_bPreviewPlaceItemFromInventory = false;
+					m_bAttemptPlaceItemFromInventory = true;
+					return EventReply::CONSUMED;
+				}
+			}
+
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
 				if (action == Action::SHOW_INVENTORY)
@@ -787,12 +833,6 @@ namespace flex
 				if (action == Action::TOGGLE_TABLET)
 				{
 					m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-					return EventReply::CONSUMED;
-				}
-
-				if (action == Action::PLACE_ITEM)
-				{
-					m_bAttemptPlaceItemFromInventory = true;
 					return EventReply::CONSUMED;
 				}
 

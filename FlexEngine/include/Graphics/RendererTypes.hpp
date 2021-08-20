@@ -529,8 +529,8 @@ namespace flex
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		// PBR Constant values
-		glm::vec3 constAlbedo = VEC3_ONE;
-		glm::vec3 constEmissive = VEC3_ONE;
+		glm::vec4 constAlbedo = VEC4_ONE;
+		glm::vec4 constEmissive = VEC4_ONE;
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
 

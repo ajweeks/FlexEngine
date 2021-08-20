@@ -277,7 +277,7 @@ namespace flex
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
 		PrefabID Itemize();
-		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS);
+		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS);
 
 		bool IsItemizable() const;
 

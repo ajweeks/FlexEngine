@@ -5,7 +5,8 @@
 		{
 			"name" : "pbr chrome",
 			"shader" : "pbr",
-			"const albedo" : "0.782, 0.782, 0.782, 1.000",
+			"const albedo" : "1.000, 0.791, 0.791, 1.000",
+			"const emissive" : "0.650, 0.418, 0.418, 1.000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.130000
 		},
@@ -489,6 +490,11 @@
 		{
 			"name" : "cloud",
 			"shader" : "cloud"
+		},
+		{
+			"name" : "Selection Hologram",
+			"shader" : "hologram",
+			"const emissive" : "2.000, 5.000, 2.750, 0.173"
 		}
 	]
 }

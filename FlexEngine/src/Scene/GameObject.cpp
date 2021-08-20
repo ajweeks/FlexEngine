@@ -1841,11 +1841,13 @@ namespace flex
 		return prefabID;
 	}
 
-	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS)
+	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS)
 	{
-		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID);
+		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, nullptr, nullptr, nullptr,
+			(CopyFlags)((u32)CopyFlags::ALL & ~(u32)CopyFlags::ADD_TO_SCENE));
 
-		newObject->m_Transform.SetWorldPosition(positionWS);
+		newObject->m_Transform.SetWorldPosition(positionWS, false);
+		newObject->m_Transform.SetWorldRotation(rotWS, true);
 
 		newObject->Initialize();
 		newObject->PostInitialize();
@@ -4775,7 +4777,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
 		matCreateInfo.shaderName = "water";
-		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
+		matCreateInfo.constAlbedo = glm::vec4(0.4f, 0.5f, 0.8f, 1.0f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
@@ -6270,7 +6272,7 @@ namespace flex
 		for (i32 i = 0; i < 10; ++i)
 		{
 			matCreateInfo.name = "block " + IntToString(i, 2);
-			matCreateInfo.constAlbedo = glm::vec3(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f));
+			matCreateInfo.constAlbedo = glm::vec4(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f), 1.0f);
 			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
 			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
 		}
@@ -8007,7 +8009,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
 		matCreateInfo.shaderName = "terrain";
-		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+		matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.bSerializable = false;
@@ -10477,7 +10479,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Spring";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
+		matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.bDynamic = true;
@@ -10487,7 +10489,7 @@ namespace flex
 		matCreateInfo = {};
 		matCreateInfo.name = "Bobber";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
+		matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
 		matCreateInfo.constRoughness = 0.0f;
 		matCreateInfo.constMetallic = 1.0f;
 		matCreateInfo.bSerializable = false;
@@ -12643,7 +12645,7 @@ namespace flex
 			matCreateInfo.bDynamic = false;
 			matCreateInfo.constRoughness = 0.95f;
 			matCreateInfo.constMetallic = 0.0f;
-			matCreateInfo.constAlbedo = glm::vec3(0.25f, 0.25f, 0.28f);
+			matCreateInfo.constAlbedo = glm::vec4(0.25f, 0.25f, 0.28f, 1.0f);
 			matCreateInfo.albedoTexturePath = TEXTURE_DIRECTORY "road-albedo.png";
 			matCreateInfo.enableAlbedoSampler = true;
 			matCreateInfo.bSerializable = false;
