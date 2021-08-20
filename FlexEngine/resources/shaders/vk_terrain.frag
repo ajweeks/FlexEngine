@@ -17,8 +17,8 @@ layout (binding = 0) uniform UBOConstant
 	float zFar;
 } uboConstant;
 
-layout (location = 0) in vec3 ex_NormalWS;
-layout (location = 1) in vec4 ex_Colour;
+layout (location = 0) in vec4 ex_Colour;
+layout (location = 1) in vec3 ex_NormalWS;
 layout (location = 2) in float ex_Depth;
 layout (location = 3) in vec3 ex_PositionWS;
 
@@ -270,7 +270,7 @@ void main()
 
 	// Display chunk borders
 	//fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
-	// fragmentColour.rgb = blendWeight.xxx;
+	// fragmentColour.rgb *= 1.0 - pow(blendWeight, 15.0);
 
 	// fragmentColour.rgb = ex_NormalWS;
 

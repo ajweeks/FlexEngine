@@ -9080,6 +9080,8 @@ namespace flex
 	{
 		PROFILE_AUTO("Terrain :: DiscoverChunks");
 
+		const i32 verticalChunkLoadRange = 6;
+
 		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
 		glm::vec2 center2D(center.x, center.z);
 		const glm::ivec3 centerChunkIdx = (glm::ivec3)(center / m_ChunkSize);
@@ -9099,7 +9101,7 @@ namespace flex
 				if (bInRange && !bPrevInRange)
 				{
 					// Load entire vertical column
-					for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
+					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
 					{
 						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
 						m_ChunksToLoad.emplace(chunkIndex);
@@ -9108,7 +9110,7 @@ namespace flex
 				else if (!bInRange && bPrevInRange)
 				{
 					// Load entire vertical column
-					for (i32 y = centerChunkIdx.y - maxChunkIdxDiff; y < centerChunkIdx.y + maxChunkIdxDiff; ++y)
+					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
 					{
 						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
 						m_ChunksToDestroy.emplace(chunkIndex);

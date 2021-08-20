@@ -235,14 +235,14 @@ namespace flex
 	struct TerrainVertex
 	{
 		glm::vec3 posA;
-		glm::vec3 normA;
 		glm::vec4 colourA;
+		glm::vec3 normA;
 		glm::vec3 posB;
-		glm::vec3 normB;
 		glm::vec4 colourB;
+		glm::vec3 normB;
 		glm::vec3 posC;
-		glm::vec3 normC;
 		glm::vec4 colourC;
+		glm::vec3 normC;
 	};
 
 	// 16 bytes

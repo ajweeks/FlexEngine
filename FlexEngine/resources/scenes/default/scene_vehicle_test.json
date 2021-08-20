@@ -16,9 +16,9 @@
 		"move speed" : 78.362000,
 		"transform" : 
 		{
-			"position" : "-50.158, 164.022, 114.917",
-			"pitch" : -0.309969,
-			"yaw" : -26.446108
+			"position" : "-168.602, 876.351, 142.816",
+			"pitch" : -0.549132,
+			"yaw" : -0.572664
 		}
 	},
 	"objects" : 
@@ -44,13 +44,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.778, -0.000, 0.000"
+				"rot" : "1.589, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.776, 0.000, 0.000, 0.630",
+				"rotation" : "0.714, 0.000, 0.000, 0.701",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
@@ -207,7 +207,7 @@
 			"prefab id" : "A1C03DF3CCA893B2427F6A4A5EB79F51",
 			"transform" : 
 			{
-				"pos" : "6.411, 1.513, -0.490",
+				"pos" : "-4.127, 6.391, -4.983",
 				"rot" : "0.000, 0.747, 0.000",
 				"scale" : "0.526, 0.526, 0.526"
 			}
@@ -218,9 +218,9 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "-2.418, 0.000, -1.391",
+				"pos" : "1.067, 0.000, 0.614",
 				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "14.004, 1.000, 15.247"
+				"scale" : "16.801, 1.000, 20.780"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -261,68 +261,6 @@
 			]
 		},
 		{
-			"name" : "starting_cube-1",
-			"id" : "FCDD2EF95923519D4423F21B9F812F9D",
-			"type" : "object",
-			"transform" : 
-			{
-				"pos" : "0.431, 9.213, 32.166",
-				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"mesh" : "cube.glb",
-			"materials" : 
-			[
-				"pbr red"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
-			"name" : "starting_cube-2",
-			"id" : "7E18CB2A71D3539740BA8F5C2EF63875",
-			"type" : "object",
-			"transform" : 
-			{
-				"pos" : "3.580, 9.213, 52.601",
-				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"mesh" : "cube.glb",
-			"materials" : 
-			[
-				"pbr red"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
 			"name" : "vehicle-1",
 			"id" : "15AAFA46948097954A47A3C5F3F65E34",
 			"type" : "prefab",
@@ -330,45 +268,9 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "2.813, 0.916, -0.500",
-				"rot" : "-0.011, 0.780, -0.006",
+				"pos" : "2.876, 0.916, -0.545",
+				"rot" : "-0.012, 0.804, -0.006",
 				"scale" : "1.000, 1.000, 1.000"
-			}
-		},
-		{
-			"name" : "PointLight_00",
-			"id" : "EE49CFAB7BE6A5B147A46D5E76307EA5",
-			"type" : "point light",
-			"transform" : 
-			{
-				"pos" : "70.629, -4.353, 33.354"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"point light info" : 
-			{
-				"pos" : "70.629, -4.353, 33.354",
-				"colour" : "0.97, 1.00, 0.42",
-				"enabled" : true,
-				"brightness" : 113.300003
-			}
-		},
-		{
-			"name" : "PointLight_01",
-			"id" : "FC5F83706404A69941E94F5854967327",
-			"type" : "point light",
-			"transform" : 
-			{
-				"pos" : "54.048, -33.278, 35.838"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"point light info" : 
-			{
-				"pos" : "54.048, -33.278, 35.838",
-				"colour" : "1.00, 1.00, 1.00",
-				"enabled" : true,
-				"brightness" : 72.917000
 			}
 		}
 	]

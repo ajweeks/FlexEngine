@@ -57,7 +57,7 @@ void main()
 	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,
 		uboConstant.terrainGenConstantData.randomTableSize, posWS, normal);
  	float normalizedHeight = terrainSample.x;
- 	float height = (normalizedHeight * 0.5) * uboConstant.terrainGenConstantData.maxHeight;
+ 	float height = (normalizedHeight * 0.5 + 0.5) * uboConstant.terrainGenConstantData.maxHeight;
 	//float blendWeight = terrainSample.y;
 	//float matID0 = terrainSample.z;
 	//float matID1 = terrainSample.w;

@@ -56,40 +56,40 @@ void fillOutTri(int index,
 	triangles[index].data[1] = posA.y;
 	triangles[index].data[2] = posA.z;
 
-	triangles[index].data[3] = normA.x;
-	triangles[index].data[4] = normA.y;
-	triangles[index].data[5] = normA.z;
+	triangles[index].data[3] = colA.x;
+	triangles[index].data[4] = colA.y;
+	triangles[index].data[5] = colA.z;
+	triangles[index].data[6] = colA.w;
 
-	triangles[index].data[6] = colA.x;
-	triangles[index].data[7] = colA.y;
-	triangles[index].data[8] = colA.z;
-	triangles[index].data[9] = colA.w;
+	triangles[index].data[7] = normA.x;
+	triangles[index].data[8] = normA.y;
+	triangles[index].data[9] = normA.z;
 
 	triangles[index].data[10] = posB.x;
 	triangles[index].data[11] = posB.y;
 	triangles[index].data[12] = posB.z;
 
-	triangles[index].data[13] = normB.x;
-	triangles[index].data[14] = normB.y;
-	triangles[index].data[15] = normB.z;
+	triangles[index].data[13] = colB.x;
+	triangles[index].data[14] = colB.y;
+	triangles[index].data[15] = colB.z;
+	triangles[index].data[16] = colB.w;
 
-	triangles[index].data[16] = colB.x;
-	triangles[index].data[17] = colB.y;
-	triangles[index].data[18] = colB.z;
-	triangles[index].data[19] = colB.w;
+	triangles[index].data[17] = normB.x;
+	triangles[index].data[18] = normB.y;
+	triangles[index].data[19] = normB.z;
 
 	triangles[index].data[20] = posC.x;
 	triangles[index].data[21] = posC.y;
 	triangles[index].data[22] = posC.z;
 
-	triangles[index].data[23] = normC.x;
-	triangles[index].data[24] = normC.y;
-	triangles[index].data[25] = normC.z;
+	triangles[index].data[23] = colC.x;
+	triangles[index].data[24] = colC.y;
+	triangles[index].data[25] = colC.z;
+	triangles[index].data[26] = colC.w;
 
-	triangles[index].data[26] = colC.x;
-	triangles[index].data[27] = colC.y;
-	triangles[index].data[28] = colC.z;
-	triangles[index].data[29] = colC.w;
+	triangles[index].data[27] = normC.x;
+	triangles[index].data[28] = normC.y;
+	triangles[index].data[29] = normC.z;
 }
 
 void main()
@@ -174,7 +174,10 @@ void main()
 		    int biome0Index, biome1Index;
 		    GetBiomeIndices(posA, uboConstant.terrainGenConstantData, /*out*/ dist, /*out*/ biome0Index, /*out*/ biome1Index);
 
-    		float blendWeight = 1.0;//clamp(abs(dist) * 1000.0 + 0.95, 0.0, 1.0);
+    		// float blendWeight = clamp(abs(dist) * 10.0, 0.0, 1.0);
+    		float maxp = numPointsPerAxis - 2;
+    		// Visualize chunks:
+    		float blendWeight = 1.0 - float(min(id.x, min(id.z, min(maxp - id.x, maxp - id.z)))) / ((numPointsPerAxis - 2) / 2);
 			float matID0 = 0.0;// terrainSample.z;
 			float matID1 = 1.0;//terrainSample.w;
 	        vec4 colA = vec4(/*temp*/ dist, blendWeight, matID0, matID1);

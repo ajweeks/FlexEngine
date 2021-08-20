@@ -2100,6 +2100,12 @@ namespace flex
 						if (chunkVertCount > 0)
 						{
 							m_TerrainChunksLoaded.emplace_back(terrainPair);
+
+							if (m_TerrainChunksLoaded.size() >= m_Terrain->maxChunkCount)
+							{
+								// Reached capacity, ignore new workloads
+								m_TerrainGenWorkloads.clear();
+							}
 						}
 						m_TerrainGenWorkloads.erase(m_TerrainGenWorkloads.begin());
 
@@ -4356,7 +4362,7 @@ namespace flex
 
 		void VulkanRenderer::RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex)
 		{
-			if (m_TerrainGenWorkloads.size() + m_TerrainChunksLoaded.size() < m_Terrain->maxChunkCount)
+			if (m_TerrainChunksLoaded.size() < m_Terrain->maxChunkCount)
 			{
 				m_TerrainGenWorkloads.emplace_back(chunkIndex, linearIndex);
 			}

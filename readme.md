@@ -21,26 +21,34 @@ Flex Engine is a personal game engine I began work on in February 2017. I use it
 	- Temporal anti-aliasing
 	- Signed-distance field font generation & rendering
 	- GPU particles
+	- Terrain, ocean, and sky rendering
 
-![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
+![](FlexEngine/screenshots/2021-05-22_21-05-20.jpg)
+**Procedural terrain generated on the GPU**
+
+![](FlexEngine/screenshots/2020-06-13_water_04.jpg)
+**Gerstner wave ocean simulation**
 
 ![](FlexEngine/screenshots/2019-06-23_11-21-10.jpg)
-**Basic implementation of Cascaded Shadow Mapping**
+**Cascaded Shadow Mapping**
 
 ![](FlexEngine/screenshots/2019-11-17-gpu-particles-07.jpg)
-**Two million particles updated and rendered entirely on the GPU, utilizing the compute stage**
+**Two million particles simulated and rendered entirely on the GPU**
 
 ![](FlexEngine/screenshots/2018-07-10_profiling-visualization-06.jpg)
 **Profiler overlay showing a breakdown the CPU-time of a single frame**
 
 ![](FlexEngine/screenshots/2019-04-21_imgui.jpg)
-**Some of the editor windows**
+**Some editor windows**
 
 ![](FlexEngine/screenshots/2019-05-26_21-05-27.png)
 **Screen-Space Ambient Occlusion (SSAO)**
 
 ![](FlexEngine/screenshots/2017-10-19_16-17-00-G-Buffer.jpg)
 **GBuffer (top-left to bottom-right):** position, albedo, normal, final image, depth, metallic, AO, roughness
+
+![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
+**View into editor**
 
 ![](FlexEngine/screenshots/2017-10-08_11-38-06-combined.jpg)
 
