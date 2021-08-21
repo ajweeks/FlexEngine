@@ -71,6 +71,10 @@ namespace flex
 		//Transform m_TargetItemPlacementTransform;
 		glm::vec3 m_TargetItemPlacementPos;
 		glm::quat m_TargetItemPlacementRot;
+		bool m_bItemPlacementValid = false;
+
+		AudioSourceID m_PlaceItemAudioID = InvalidAudioSourceID;
+		AudioSourceID m_PlaceItemFailureAudioID = InvalidAudioSourceID;
 
 		enum class Mode
 		{

@@ -1221,6 +1221,8 @@ namespace flex
 			{
 				m_HologramProxyObject->SetVisible(true);
 
+				GetMaterial(m_HologramMatID)->constEmissive = m_QueuedHologramColour;
+
 				Transform* transform = m_HologramProxyObject->GetTransform();
 				transform->SetWorldPosition(m_QueuedHologramPosWS, false);
 				transform->SetWorldRotation(m_QueuedHologramRotWS, false);
@@ -1575,17 +1577,18 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
-	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform)
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour)
 	{
-		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale());
+		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale(), colour);
 	}
 
-	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS)
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour)
 	{
 		m_QueuedHologramPrefabID = prefabID;
 		m_QueuedHologramPosWS = posWS;
 		m_QueuedHologramRotWS = rotWS;
 		m_QueuedHologramScaleWS = scaleWS;
+		m_QueuedHologramColour = colour;
 	}
 
 	void Renderer::OnPostSceneChange()
@@ -2496,6 +2499,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);

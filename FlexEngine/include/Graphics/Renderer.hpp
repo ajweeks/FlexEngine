@@ -121,8 +121,8 @@ namespace flex
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
-		void QueueHologramMesh(PrefabID prefabID, const Transform& transform);
-		void QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS);
+		void QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour);
+		void QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour);
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -377,6 +377,7 @@ namespace flex
 		glm::vec3 m_QueuedHologramPosWS;
 		glm::quat m_QueuedHologramRotWS;
 		glm::vec3 m_QueuedHologramScaleWS;
+		glm::vec4 m_QueuedHologramColour;
 
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;

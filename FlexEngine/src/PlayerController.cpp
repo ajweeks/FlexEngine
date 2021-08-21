@@ -4,6 +4,8 @@
 
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletCollision/CollisionDispatch/btGhostObject.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
@@ -26,8 +28,10 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Mesh.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "UIMesh.hpp"
@@ -57,6 +61,9 @@ namespace flex
 
 		g_InputManager->BindActionCallback(&m_ActionCallback, 15);
 		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 15);
+
+		m_PlaceItemAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "drip-01.wav");
+		m_PlaceItemFailureAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "spook-01.wav");
 	}
 
 	void PlayerController::Destroy()
@@ -415,16 +422,48 @@ namespace flex
 			{
 				if (gameObjectStack.prefabID.IsValid())
 				{
-					// TODO: LERP
+					// TODO: Interpolate towards target point
 					Transform* playerTransform = m_Player->GetTransform();
 					m_TargetItemPlacementPos = playerTransform->GetWorldPosition() +
-						playerTransform->GetForward() * 4.0f;
+						playerTransform->GetForward() * 4.0f +
+						playerTransform->GetUp() * 1.0f;
 					m_TargetItemPlacementRot = playerTransform->GetWorldRotation();
 
+					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+					Mesh* mesh = templateObject->GetMesh();
+
+					btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
+					btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
+					PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+					btBoxShape* shape = new btBoxShape(boxHalfExtents);
+
+					btPairCachingGhostObject pairCache;
+
+					pairCache.setCollisionShape(shape);
+					pairCache.setWorldTransform(bbTransform);
+
+					i32 mask = (i32)CollisionType::EVERYTHING;
+					pairCache.setCollisionFlags(mask);// btCollisionObject::CF_NO_CONTACT_RESPONSE);
+
+					CustomContactResultCallback resultCallback;
+					resultCallback.m_collisionFilterGroup = mask;
+					resultCallback.m_collisionFilterMask = mask;
+					physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
+
+					m_bItemPlacementValid = !resultCallback.bHit;
+
+					//bool bValidPlacement = !physicsWorld->ConvexShapeSweepTest(shape, bbTransform, bbTransform, (i32)CollisionType::EVERYTHING);
+
+					static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
+					static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
 					g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
 						m_TargetItemPlacementPos,
 						m_TargetItemPlacementRot,
-						VEC3_ONE);
+						VEC3_ONE,
+						m_bItemPlacementValid ? validColour : invalidColour);
+
+					delete shape;
 				}
 				else
 				{
@@ -443,35 +482,44 @@ namespace flex
 				m_Player->heldItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
-
-			if (gameObjectStack.count >= 1)
+			if (m_bItemPlacementValid)
 			{
-				if (gameObjectStack.prefabID.IsValid())
-				{
-					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot);
-					if (gameObject != nullptr)
-					{
-						// Add non-immediate
-						g_SceneManager->CurrentScene()->AddRootObject(gameObject);
-						gameObjectStack.count--;
+				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
 
-						if (gameObjectStack.count == 0)
+				if (gameObjectStack.count >= 1)
+				{
+					if (gameObjectStack.prefabID.IsValid())
+					{
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot);
+						if (gameObject != nullptr)
 						{
-							gameObjectStack.prefabID = InvalidPrefabID;
+							// Add non-immediate
+							g_SceneManager->CurrentScene()->AddRootObject(gameObject);
+							gameObjectStack.count--;
+
+							if (gameObjectStack.count == 0)
+							{
+								gameObjectStack.prefabID = InvalidPrefabID;
+							}
+
+							AudioManager::PlaySource(m_PlaceItemAudioID);
+						}
+						else
+						{
+							std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+							PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
 						}
 					}
 					else
 					{
 						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-						PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
+						PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
 					}
 				}
-				else
-				{
-					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
-				}
+			}
+			else
+			{
+				AudioManager::PlaySource(m_PlaceItemFailureAudioID);
 			}
 		}
 
@@ -750,6 +798,7 @@ namespace flex
 			{
 				if (actionEvent == ActionEvent::ACTION_TRIGGER)
 				{
+					m_bItemPlacementValid = false;
 					m_bPreviewPlaceItemFromInventory = true;
 					return EventReply::CONSUMED;
 				}
@@ -895,5 +944,4 @@ namespace flex
 
 		return EventReply::UNCONSUMED;
 	}
-
 } // namespace flex
