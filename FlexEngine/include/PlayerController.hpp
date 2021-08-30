@@ -4,6 +4,8 @@
 #include "Callbacks/InputCallbacks.hpp"
 #include "Transform.hpp"
 
+class btBoxShape;
+
 namespace flex
 {
 	class Player;
@@ -75,6 +77,8 @@ namespace flex
 
 		AudioSourceID m_PlaceItemAudioID = InvalidAudioSourceID;
 		AudioSourceID m_PlaceItemFailureAudioID = InvalidAudioSourceID;
+
+		btBoxShape* m_ItemPlacementBoundingBoxShape = nullptr;
 
 		enum class Mode
 		{

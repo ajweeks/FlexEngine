@@ -70,6 +70,9 @@ namespace flex
 	{
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
 		g_InputManager->UnbindMouseMovedCallback(&m_MouseMovedCallback);
+
+		delete m_ItemPlacementBoundingBoxShape;
+		m_ItemPlacementBoundingBoxShape = nullptr;
 	}
 
 	void PlayerController::Update()
@@ -432,38 +435,40 @@ namespace flex
 					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 					Mesh* mesh = templateObject->GetMesh();
 
-					btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
-					btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
-					PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+					if (mesh != nullptr)
+					{
+						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
+						btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
+						PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
-					btBoxShape* shape = new btBoxShape(boxHalfExtents);
+						if (m_ItemPlacementBoundingBoxShape == nullptr)
+						{
+						m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
+						}
 
-					btPairCachingGhostObject pairCache;
+						btPairCachingGhostObject pairCache;
 
-					pairCache.setCollisionShape(shape);
-					pairCache.setWorldTransform(bbTransform);
+						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
+						pairCache.setWorldTransform(bbTransform);
 
-					i32 mask = (i32)CollisionType::EVERYTHING;
-					pairCache.setCollisionFlags(mask);// btCollisionObject::CF_NO_CONTACT_RESPONSE);
+						i32 mask = (i32)CollisionType::NOTHING;
+						pairCache.setCollisionFlags(mask);
 
-					CustomContactResultCallback resultCallback;
-					resultCallback.m_collisionFilterGroup = mask;
-					resultCallback.m_collisionFilterMask = mask;
-					physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
+						CustomContactResultCallback resultCallback;
+						resultCallback.m_collisionFilterGroup = mask;
+						resultCallback.m_collisionFilterMask = mask;
+						physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
 
-					m_bItemPlacementValid = !resultCallback.bHit;
+						m_bItemPlacementValid = !resultCallback.bHit;
 
-					//bool bValidPlacement = !physicsWorld->ConvexShapeSweepTest(shape, bbTransform, bbTransform, (i32)CollisionType::EVERYTHING);
-
-					static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
-					static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
-					g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
-						m_TargetItemPlacementPos,
-						m_TargetItemPlacementRot,
-						VEC3_ONE,
-						m_bItemPlacementValid ? validColour : invalidColour);
-
-					delete shape;
+						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
+						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
+						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
+							m_TargetItemPlacementPos,
+							m_TargetItemPlacementRot,
+							VEC3_ONE,
+							m_bItemPlacementValid ? validColour : invalidColour);
+					}
 				}
 				else
 				{
