@@ -145,6 +145,9 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
+		bool DoNewGameObjectTypeList();
+		bool DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr);
+
 		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
@@ -239,7 +242,11 @@ namespace flex
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 
+		const size_t m_MaxObjectNameLen = 256;
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
+		bool m_bTriggerNewObjectTypePopup = false;
+		const char* m_NewObjectTypePopupStr = "New Object Type";
+		std::string m_NewObjectTypeStrBuffer;
 
 	};
 } // namespace flex

@@ -1147,6 +1147,20 @@ namespace flex
 		return prefabTemplate != nullptr;
 	}
 
+	void ResourceManager::RemovePrefabTemplate(const PrefabID& prefabID)
+	{
+		for (auto iter = prefabTemplates.begin(); iter != prefabTemplates.end(); ++iter)
+		{
+			if (iter->prefabID == prefabID)
+			{
+				iter->templateObject->Destroy();
+				delete iter->templateObject;
+				prefabTemplates.erase(iter);
+				break;
+			}
+		}
+	}
+
 	bool ResourceManager::PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const
 	{
 		GameObject* prefabTemplate = GetPrefabTemplate(prefabID);
@@ -2179,6 +2193,8 @@ namespace flex
 								selectedPrefabIndex = i;
 							}
 
+							// TODO: Support renaming in context menu here
+
 							if (ImGui::IsItemActive())
 							{
 								if (ImGui::BeginDragDropSource())
@@ -2198,6 +2214,22 @@ namespace flex
 				}
 
 				ImGui::EndChild();
+
+				PrefabTemplatePair& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
+				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
+				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "");
+				ImGui::Text("%s", prefabNameStr.c_str());
+
+				if (ImGui::Button("Delete"))
+				{
+					RemovePrefabTemplate(selectedPrefabTemplate.prefabID);
+				}
+
+				if (ImGui::Button("Duplicate"))
+				{
+					// TODO: Implement
+					PrintError("Unimplemented!\n");
+				}
 			}
 
 			ImGui::End();

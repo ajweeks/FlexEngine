@@ -585,6 +585,59 @@ namespace flex
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();
+
+		if (m_bTriggerNewObjectTypePopup)
+		{
+			m_bTriggerNewObjectTypePopup = false;
+			ImGui::OpenPopup(m_NewObjectTypePopupStr);
+			m_NewObjectTypeStrBuffer.clear();
+			m_NewObjectTypeStrBuffer.resize(m_MaxObjectNameLen);
+		}
+
+		if (ImGui::BeginPopupModal(m_NewObjectTypePopupStr, NULL,
+			ImGuiWindowFlags_AlwaysAutoResize |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoNavInputs))
+		{
+			bool bCreateType = false;
+			if (ImGui::InputText("Type", (char*)m_NewObjectTypeStrBuffer.data(), m_MaxObjectNameLen, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				bCreateType = true;
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
+			if (ImGui::Button("Create") || bCreateType)
+			{
+				// Remove excess trailing \0 chars
+				m_NewObjectTypeStrBuffer = std::string(m_NewObjectTypeStrBuffer.c_str());
+
+				if (!m_NewObjectTypeStrBuffer.empty())
+				{
+					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
+					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
+
+					WriteGameObjectTypesFile();
+
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
 	}
 
 	void BaseScene::DoSceneContextMenu()
@@ -1192,6 +1245,40 @@ namespace flex
 		}
 	}
 
+	bool BaseScene::DoNewGameObjectTypeList()
+	{
+		return DoGameObjectTypeList(m_NewObjectTypeIDPair.second.c_str(), m_NewObjectTypeIDPair.first, m_NewObjectTypeIDPair.second);
+	}
+
+	bool BaseScene::DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr)
+	{
+		bool bChanged = false;
+		bool bShowCombo = ImGui::BeginCombo("Type", currentlySelectedTypeCStr);
+
+		if (bShowCombo)
+		{
+			for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
+			{
+				bool bSelected = (typeIDPair.first == selectedTypeStringID);
+				if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
+				{
+					selectedTypeStringID = typeIDPair.first;
+					selectedTypeStr = typeIDPair.second;
+					bChanged = true;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::Button("New Type"))
+		{
+			m_bTriggerNewObjectTypePopup = true;
+		}
+
+		return bChanged;
+	}
+
 	void BaseScene::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 	{
 		static const char* defaultNewNameBase = "New_Object_";
@@ -1228,12 +1315,11 @@ namespace flex
 			ImGuiWindowFlags_AlwaysAutoResize |
 			ImGuiWindowFlags_NoSavedSettings))
 		{
-			const size_t maxStrLen = 256;
-			newObjectName.resize(maxStrLen);
+			newObjectName.resize(m_MaxObjectNameLen);
 
 			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
-				maxStrLen,
+				m_MaxObjectNameLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
 			// SetItemDefaultFocus doesn't work here for some reason
@@ -1242,78 +1328,7 @@ namespace flex
 				ImGui::SetKeyboardFocusHere();
 			}
 
-			bool bShowCombo = ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str());
-
-			if (bShowCombo)
-			{
-				for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
-				{
-					bool bSelected = (typeIDPair.first == m_NewObjectTypeIDPair.first);
-					if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
-					{
-						m_NewObjectTypeIDPair.first = typeIDPair.first;
-						m_NewObjectTypeIDPair.second = typeIDPair.second;
-					}
-				}
-
-				ImGui::EndCombo();
-			}
-
-			static std::string newObjectType;
-
-			const char* newTypePopupStr = "New Object Type";
-			if (ImGui::Button("New Type"))
-			{
-				ImGui::OpenPopup(newTypePopupStr);
-				newObjectType.clear();
-				newObjectType.resize(maxStrLen);
-			}
-
-			if (ImGui::BeginPopupModal(newTypePopupStr, NULL,
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoNavInputs))
-			{
-				bool bCreateType = false;
-				if (ImGui::InputText("Type", (char*)newObjectType.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
-				{
-					bCreateType = true;
-				}
-
-				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-				ImGui::PopStyleColor();
-
-				ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
-
-				if (ImGui::Button("Create") || bCreateType)
-				{
-					// Remove excess trailing \0 chars
-					newObjectType = std::string(newObjectType.c_str());
-
-					if (!newObjectType.empty())
-					{
-						StringID newTypeID = Hash(newObjectType.c_str());
-						GameObjectTypeStringIDPairs.emplace(newTypeID, newObjectType);
-
-						WriteGameObjectTypesFile();
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::EndPopup();
-			}
-
+			DoNewGameObjectTypeList();
 
 			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);

@@ -1885,7 +1885,8 @@ namespace flex
 				//FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				//m_DescriptorPool->CreateDescriptorSet(GetRenderObject(m_GBufferQuadRenderID)->materialID);
 
-				if (m_DescriptorPool->descriptorSets[m_Terrain->renderingMaterialID] == nullptr)
+				if (m_Terrain->renderingMaterialID >= (u32)m_DescriptorPool->descriptorSets.size() ||
+					m_DescriptorPool->descriptorSets[m_Terrain->renderingMaterialID] == nullptr)
 				{
 					m_DescriptorPool->CreateDescriptorSet(m_Terrain->renderingMaterialID);
 				}

@@ -1088,6 +1088,37 @@ namespace flex
 				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
 			}
 
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+			const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+			StringID newTypeID;
+			std::string newTypeStr;
+			if (currentScene->DoGameObjectTypeList(typeStr, newTypeID, newTypeStr))
+			{
+				std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+
+				std::string name = m_Name;
+				GameObject* parent = m_Parent;
+				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID);
+				CopyGenericFields(newObject, parent, (CopyFlags)((i32)CopyFlags::ALL & ~(i32)CopyFlags::ADD_TO_SCENE));
+				newObject->m_TypeID = newTypeID; // Overwrite type ID again
+				currentScene->RemoveObjectImmediate(this, true);
+				if (parent != nullptr)
+				{
+					parent->AddChildImmediate(newObject);
+				}
+				else
+				{
+					currentScene->AddRootObjectImmediate(newObject);
+				}
+				newObject->Initialize();
+				newObject->PostInitialize();
+
+				g_Editor->SetSelectedObjects(selectedObjectIDs);
+
+				bDeletedOrDuplicated = true;
+			}
+
 			if (DrawImGuiDuplicateGameObjectButton())
 			{
 				ImGui::CloseCurrentPopup();
@@ -1107,6 +1138,7 @@ namespace flex
 			if (ImGui::Button("Save as prefab"))
 			{
 				SaveAsPrefab();
+				bDeletedOrDuplicated = true;
 
 				ImGui::CloseCurrentPopup();
 			}
@@ -1124,13 +1156,15 @@ namespace flex
 	{
 		if (m_PrefabIDLoadedFrom.IsValid())
 		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
-			g_SceneManager->CurrentScene()->UnregisterGameObject(previousPrefabTemplate->ID);
+			currentScene->UnregisterGameObject(previousPrefabTemplate->ID);
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
 			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
