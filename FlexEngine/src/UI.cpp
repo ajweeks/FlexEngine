@@ -429,10 +429,11 @@ namespace flex
 							StringID stackTypeID = prefabTemplate->GetTypeID();
 							textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
 						}
-						else
+
+						if (textureID == InvalidTextureID)
 						{
 							// No icon exists for type, use placeholder
-							textureID = g_Renderer->alphaBGTextureID;
+							textureID = g_ResourceManager->tofuIconID;
 						}
 					}
 
@@ -478,10 +479,11 @@ namespace flex
 									lastImageUpdatedStackTypeID = stackTypeID;
 								}
 							}
-							else
+
+							if (imageElement->textureID == InvalidTextureID)
 							{
 								// No icon exists for type, use placeholder
-								imageElement->textureID = g_Renderer->alphaBGTextureID;
+								imageElement->textureID = g_ResourceManager->tofuIconID;
 							}
 						}
 					}

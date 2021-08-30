@@ -32,6 +32,7 @@ namespace flex
 		~ResourceManager();
 
 		void Initialize();
+		void PostInitialize();
 		void Update();
 		void Destroy();
 		void DestroyAllLoadedMeshes();
@@ -123,6 +124,7 @@ namespace flex
 		// Pair of (GameObjectTypeID, (Relative file path, texture ID))
 		// texture ID will be invalid until texture is loaded
 		std::vector<Pair<StringID, Pair<std::string, TextureID>>> icons;
+		TextureID tofuIconID = InvalidTextureID;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 

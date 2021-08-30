@@ -58,6 +58,11 @@ namespace flex
 		ParseDebugOverlayNamesFile();
 	}
 
+	void ResourceManager::PostInitialize()
+	{
+		tofuIconID = GetOrLoadTexture(ICON_DIRECTORY "tofu-icon-256.png");
+	}
+
 	void ResourceManager::Update()
 	{
 		PROFILE_AUTO("ResourceManager Update");

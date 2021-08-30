@@ -70,6 +70,7 @@ namespace flex
 	// Identical to Split, except anything within quotes is kept together
 	FLEX_NO_DISCARD std::vector<std::string> SplitHandleStrings(const std::string& str, char delim);
 
+	// Compares two strings, ignoring case
 	FLEX_NO_DISCARD i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares = u32_max);
 
 	FLEX_NO_DISCARD std::string RemovePrefix(const std::string& str, const char* prefix);
