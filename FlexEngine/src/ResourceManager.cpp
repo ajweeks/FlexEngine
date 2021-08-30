@@ -1012,7 +1012,7 @@ namespace flex
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
 			{
 				return prefabTemplatePair.templateObject;
 			}
@@ -1025,7 +1025,7 @@ namespace flex
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
 			{
 				return prefabTemplatePair.prefabID;
 			}
