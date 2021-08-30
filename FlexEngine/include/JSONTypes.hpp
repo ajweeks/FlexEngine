@@ -51,6 +51,9 @@ namespace flex
 		GameObjectID GetGameObjectID(const std::string& label) const;
 		bool TryGetGameObjectID(const std::string& label, GameObjectID& value) const;
 
+		PrefabID GetPrefabID(const std::string& label) const;
+		bool TryGetPrefabID(const std::string& label, PrefabID& value) const;
+
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
 		bool TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const;
 

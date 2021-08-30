@@ -1136,6 +1136,12 @@ namespace flex
 		return newID;
 	}
 
+	bool ResourceManager::IsPrefabIDValid(const PrefabID& prefabID)
+	{
+		GameObject* prefabTemplate = GetPrefabTemplate(prefabID);
+		return prefabTemplate != nullptr;
+	}
+
 	bool ResourceManager::PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const
 	{
 		GameObject* prefabTemplate = GetPrefabTemplate(prefabID);

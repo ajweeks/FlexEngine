@@ -595,6 +595,17 @@ namespace flex
 		return TryGetGUID(label, *(GUID*)&value);
 	}
 
+	PrefabID JSONObject::GetPrefabID(const std::string& label) const
+	{
+		GUID guid = GetGUID(label);
+		return *(PrefabID*)&guid;
+	}
+
+	bool JSONObject::TryGetPrefabID(const std::string& label, PrefabID& value) const
+	{
+		return TryGetGUID(label, *(GUID*)&value);
+	}
+
 	const std::vector<JSONField>& JSONObject::GetFieldArray(const std::string& label) const
 	{
 		for (const JSONField& field : fields)

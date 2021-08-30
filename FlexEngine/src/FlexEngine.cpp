@@ -1087,15 +1087,6 @@ namespace flex
 #endif
 			if (ImGui::BeginMenu("Edit"))
 			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				Player* player = scene->GetPlayer(0);
-				if (player != nullptr && ImGui::BeginMenu("Add to inventory"))
-				{
-					g_ResourceManager->DrawImGuiMenuItemizableItems();
-
-					ImGui::EndMenu();
-				}
-
 				if (ImGui::MenuItem("Shader editor path"))
 				{
 					bOpenShaderEditorPathPopup = true;
@@ -1111,6 +1102,48 @@ namespace flex
 					strncpy(renderDocDLLBuf, renderDocDLLPath.c_str(), buffSize);
 				}
 #endif
+
+				ImGui::Separator();
+
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				Player* player = scene->GetPlayer(0);
+				if (player != nullptr)
+				{
+					if (ImGui::BeginMenu("Player inventory"))
+					{
+						if (ImGui::BeginMenu("Add to inventory"))
+						{
+							g_ResourceManager->DrawImGuiMenuItemizableItems();
+
+							ImGui::EndMenu();
+						}
+
+						ImGui::Separator();
+
+						if (ImGui::MenuItem("Parse from file"))
+						{
+							player->ParseInventoryFile();
+						}
+
+						if (ImGui::MenuItem("Save to file"))
+						{
+							player->SerializeInventoryToFile();
+						}
+
+						ImGui::Separator();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+
+						if (ImGui::MenuItem("Clear"))
+						{
+							player->ClearInventory();
+						}
+
+						ImGui::PopStyleColor();
+
+						ImGui::EndMenu();
+					}
+				}
 
 				ImGui::EndMenu();
 			}

@@ -1922,10 +1922,12 @@ namespace flex
 		if (m_Player0 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 0 guid", JSONValue(m_Player0->ID));
+			m_Player0->SerializeInventoryToFile();
 		}
 		if (m_Player1 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 1 guid", JSONValue(m_Player1->ID));
+			m_Player1->SerializeInventoryToFile();
 		}
 
 		//JSONObject skyboxDataObj = {};

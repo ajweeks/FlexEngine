@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
@@ -113,6 +114,8 @@ namespace flex
 		}
 
 		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", false, false, false);
+
+		ParseInventoryFile();
 
 		GameObject::Initialize();
 	}
@@ -596,89 +599,6 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
-	{
-		i32 initialCount = count;
-
-		auto printResults = [initialCount, &prefabID, &count]()
-		{
-			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
-			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
-		};
-
-		// Fill up any existing slots in quick access
-		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
-		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
-			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
-				count -= deposit;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill up any existing slots in main inventory
-		for (GameObjectStack& gameObjectStack : m_Inventory)
-		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
-			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
-				count -= deposit;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill empty slots in quick access
-		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
-		{
-			if (gameObjectStack.count == 0)
-			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
-				count -= deposit;
-				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill empty slots in main inventory
-		for (GameObjectStack& gameObjectStack : m_Inventory)
-		{
-			if (gameObjectStack.count == 0)
-			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
-				count -= deposit;
-				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		printResults();
-	}
-
 	i32 Player::GetNextFreeQuickAccessInventorySlot()
 	{
 		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
@@ -764,6 +684,89 @@ namespace flex
 		return InvalidID;
 	}
 
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
+	{
+		i32 initialCount = count;
+
+		auto printResults = [initialCount, &prefabID, &count]()
+		{
+			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
+			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
+		};
+
+		// Fill up any existing slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill up any existing slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		printResults();
+	}
+
 	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
 	{
 		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
@@ -771,5 +774,137 @@ namespace flex
 			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
 		}
 		return InvalidID;
+	}
+
+	void Player::ClearInventory()
+	{
+		m_Inventory.fill({});
+		m_QuickAccessInventory.fill({});
+	}
+
+	void Player::ParseInventoryFile()
+	{
+		if (FileExists(USER_INVENTORY_LOCATION))
+		{
+			std::string fileContents;
+			if (ReadFile(USER_INVENTORY_LOCATION, fileContents, false))
+			{
+				JSONObject inventoryObj;
+				if (JSONParser::Parse(fileContents, inventoryObj))
+				{
+					std::vector<JSONObject> slotLists[2];
+
+					inventoryObj.TryGetObjectArray("slots", slotLists[0]);
+					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
+
+					for (i32 slotListIndex = 0; slotListIndex < 2; ++slotListIndex)
+					{
+						for (JSONObject& slot : slotLists[slotListIndex])
+						{
+							i32 index = slot.GetInt("index");
+							i32 count = slot.GetInt("count");
+							PrefabID prefabID = slot.GetPrefabID("prefab id");
+
+							bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
+							bool bCountValid = count >= 0 && count <= MAX_STACK_SIZE;
+							bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
+
+							if (bIndexValid && bCountValid && bPrefabIDValid)
+							{
+								if (slotListIndex == 0)
+								{
+									m_Inventory[index] = GameObjectStack{ prefabID, count };
+								}
+								else
+								{
+									m_QuickAccessInventory[index] = GameObjectStack{ prefabID, count };
+								}
+							}
+							else
+							{
+								if (!bIndexValid)
+								{
+									PrintError("Invalid user inventory index: %i\n", index);
+								}
+								if (!bCountValid)
+								{
+									PrintError("Invalid user inventory count: %i\n", count);
+								}
+								if (!bPrefabIDValid)
+								{
+									std::string prefabIDStr = prefabID.ToString();
+									PrintError("Invalid user inventory prefabID: %s\n", prefabIDStr.c_str());
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					PrintError("Failed to parse user inventory file, error: %s\n", JSONParser::GetErrorString());
+				}
+
+			}
+			else
+			{
+				PrintError("Failed to read use inventory file at %s\n", USER_INVENTORY_LOCATION);
+			}
+		}
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+	}
+
+	void Player::SerializeInventoryToFile()
+	{
+		JSONObject inventoryObj = {};
+
+		auto SerializeSlot = [](i32 slotIdx, GameObjectStack& stack)
+		{
+			JSONObject slot = {};
+			slot.fields.emplace_back("index", JSONValue(slotIdx));
+			slot.fields.emplace_back("count", JSONValue(stack.count));
+			slot.fields.emplace_back("prefab id", JSONValue(stack.prefabID));
+
+			return slot;
+		};
+
+		std::vector<JSONObject> slots;
+		slots.reserve(m_Inventory.size());
+		for (i32 slotIdx = 0; slotIdx < (i32)m_Inventory.size(); ++slotIdx)
+		{
+			GameObjectStack& stack = m_Inventory[slotIdx];
+			if (stack.count > 0)
+			{
+				JSONObject slot = SerializeSlot(slotIdx, stack);
+				slots.emplace_back(slot);
+			}
+		}
+
+		std::vector<JSONObject> quickAccessSlots;
+		quickAccessSlots.reserve(m_QuickAccessInventory.size());
+		for (i32 slotIdx = 0; slotIdx < (i32)m_QuickAccessInventory.size(); ++slotIdx)
+		{
+			GameObjectStack& stack = m_QuickAccessInventory[slotIdx];
+			if (stack.count > 0)
+			{
+				JSONObject slot = SerializeSlot(slotIdx, stack);
+				quickAccessSlots.emplace_back(slot);
+			}
+		}
+
+		inventoryObj.fields.emplace_back("slots", JSONValue(slots));
+		inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
+
+		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
+
+		std::string fileContents = inventoryObj.ToString();
+		if (WriteFile(USER_INVENTORY_LOCATION, fileContents, false))
+		{
+			Print("Saved user inventory to disk.\n");
+		}
+		else
+		{
+			PrintError("Failed to write user inventory to file at %s\n", USER_INVENTORY_LOCATION);
+		}
 	}
 } // namespace flex

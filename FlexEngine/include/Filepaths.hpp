@@ -21,6 +21,7 @@
 #define FONT_SDF_DIRECTORY							SAVED_DIRECTORY "fonts/"
 #define SCREENSHOT_DIRECTORY						SAVED_DIRECTORY "screenshots/"
 #define COMPILED_SHADERS_DIRECTORY					SAVED_DIRECTORY "spv/"
+#define SAVE_FILE_DIRECTORY							SAVED_DIRECTORY "save_files/"
 
 #define DEBUG_OVERLAY_NAMES_LOCATION				CONFIG_DIRECTORY "debug_overlay_names.json"
 #define FONT_DEFINITION_LOCATION					CONFIG_DIRECTORY "fonts.json"
@@ -42,3 +43,4 @@
 #define UI_WINDOW_CACHE_LOCATION					SAVED_DIRECTORY "ui_window_cache.json"
 #define SHADER_CHECKSUM_LOCATION					SAVED_DIRECTORY "vk_shader_checksum.dat"
 #define WINDOW_CONFIG_LOCATION						SAVED_DIRECTORY "window_settings.json"
+#define USER_INVENTORY_LOCATION						SAVE_FILE_DIRECTORY "user_inventory.json"

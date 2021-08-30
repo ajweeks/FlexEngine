@@ -51,8 +51,6 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		void AddToInventory(const PrefabID& prefabID, i32 count);
-
 		i32 GetNextFreeQuickAccessInventorySlot();
 		i32 GetNextFreeInventorySlot();
 
@@ -63,6 +61,11 @@ namespace flex
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
 
+		void AddToInventory(const PrefabID& prefabID, i32 count);
+
+		void ClearInventory();
+		void ParseInventoryFile();
+		void SerializeInventoryToFile();
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
