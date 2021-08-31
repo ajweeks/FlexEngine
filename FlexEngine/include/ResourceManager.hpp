@@ -106,6 +106,8 @@ namespace flex
 		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
 		bool IsPrefabIDValid(const PrefabID& prefabID);
 
+		void RemovePrefabTemplate(const PrefabID& prefabID);
+
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
 		AudioSourceID GetAudioID(StringID audioFileSID);
