@@ -56,7 +56,6 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/CartManager.hpp"
-#include "Systems/Systems.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
@@ -81,6 +80,10 @@ namespace flex
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
 	ChildIndex InvalidChildIndex = ChildIndex({});
+
+	const real WirePlug::nearbyThreshold = 3.0f;
+
+	const real Wire::DEFAULT_LENGTH = 2.0f;
 
 #define SIMD_WAVES 0
 
@@ -308,6 +311,7 @@ namespace flex
 		case SID("soft body"): return new SoftBody(objectName, gameObjectID);
 		case SID("vehicle"): return new Vehicle(objectName, gameObjectID);
 		case SID("road"): return new Road(objectName, gameObjectID);
+		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -1164,7 +1168,10 @@ namespace flex
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
-			currentScene->UnregisterGameObject(previousPrefabTemplate->ID);
+
+			currentScene->UnregisterGameObjectRecursive(previousPrefabTemplate->ID);
+			currentScene->UnregisterGameObjectRecursive(ID);
+
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
 			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
@@ -1805,6 +1812,11 @@ namespace flex
 		return m_bIsTemplate;
 	}
 
+	void GameObject::OnCharge(real chargeAmount)
+	{
+		FLEX_UNUSED(chargeAmount);
+	}
+
 	ChildIndex GameObject::ComputeChildIndex() const
 	{
 		// NOTE: Sibling indices must have been calculated before calling this!
@@ -2235,7 +2247,7 @@ namespace flex
 
 		g_SceneManager->CurrentScene()->RegisterGameObject(child);
 
-		if (childPParent)
+		if (childPParent != nullptr)
 		{
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
@@ -4755,6 +4767,11 @@ namespace flex
 		m_bItemizable = true;
 	}
 
+	void Battery::OnCharge(real amount)
+	{
+		chargeAmount = glm::clamp(chargeAmount + amount, 0.0f, chargeCapacity);
+	}
+
 	GameObject* Battery::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
 	{
 		std::string newObjectName;
@@ -6333,9 +6350,6 @@ namespace flex
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("wire"), gameObjectID)
 	{
-		m_bInteractable = true;
-		startPoint = glm::vec3(-1.0f, 1.0f, 0.0f);
-		endPoint = glm::vec3(1.0f, 1.0f, 0.0f);
 	}
 
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
@@ -6350,30 +6364,91 @@ namespace flex
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("wire");
-		obj.TryGetVec3("startPoint", startPoint);
-		obj.TryGetVec3("endPoint", endPoint);
+		JSONObject wireInfo;
+		if (parentObject.TryGetObject("wire", wireInfo))
+		{
+			wireInfo.TryGetGameObjectID("plug 0 id", plug0ID);
+			wireInfo.TryGetGameObjectID("plug 1 id", plug1ID);
+		}
+		else
+		{
+			// Plugs were not found, create new ones
+			WirePlug* plug0 = new WirePlug("wire plug 0", InvalidGameObjectID);
+			WirePlug* plug1 = new WirePlug("wire plug 1", InvalidGameObjectID);
+
+			AddChild(plug0);
+			AddChild(plug1);
+
+			plug0ID = plug0->ID;
+			plug1ID = plug1->ID;
+		}
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
-		JSONObject obj = {};
+		JSONObject wireInfo = {};
 
-		obj.fields.emplace_back("startPoint", JSONValue(VecToString(startPoint)));
-		obj.fields.emplace_back("endPoint", JSONValue(VecToString(endPoint)));
+		wireInfo.fields.emplace_back("plug 0 id", JSONValue(plug0ID));
+		wireInfo.fields.emplace_back("plug 1 id", JSONValue(plug1ID));
 
-		parentObject.fields.emplace_back("wire", JSONValue(obj));
+		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
 	}
 
-	void Wire::PlugIn(Socket* socket)
+	bool Wire::AllowInteractionWith(GameObject* gameObject)
 	{
-		if (!socket0ID.IsValid())
+		FLEX_UNUSED(gameObject);
+		return false;
+	}
+
+	GameObjectID Wire::GetOtherPlug(WirePlug* plug)
+	{
+		if (plug->ID == plug0ID)
 		{
-			socket0ID = socket->ID;
+			return plug1ID;
 		}
-		else if (!socket1ID.IsValid())
+		else if (plug->ID == plug1ID)
 		{
-			socket1ID = socket->ID;
+			return plug0ID;
+		}
+
+		return InvalidGameObjectID;
+	}
+
+	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("wire plug"), gameObjectID)
+	{
+		m_bInteractable = true;
+		posOffset = VEC3_ZERO;
+		// The owning wire handles serializing us
+		m_bSerializable = false;
+	}
+
+	void WirePlug::Destroy(bool bDetachFromParent /* = true */)
+	{
+		//GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWirePlug(this);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	bool WirePlug::PlugInToNearby()
+	{
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		real dist;
+		Socket* nearbySocket = pluggablesSystem->GetNearbySocket(m_Transform.GetWorldPosition(), nearbyThreshold, true, dist);
+		if (nearbySocket != nullptr)
+		{
+			PlugIn(nearbySocket);
+			return true;
+		}
+
+		return false;
+	}
+
+	void WirePlug::PlugIn(Socket* socket)
+	{
+		if (!socketID.IsValid())
+		{
+			socketID = socket->ID;
 		}
 		else
 		{
@@ -6381,38 +6456,36 @@ namespace flex
 		}
 	}
 
-	void Wire::Unplug(Socket* socket)
+	void WirePlug::Unplug(Socket* socket)
 	{
-		if (socket0ID == socket->ID)
+		if (socketID == socket->ID)
 		{
-			socket0ID = InvalidGameObjectID;
-		}
-		else if (socket1ID == socket->ID)
-		{
-			socket1ID = InvalidGameObjectID;
+			socketID = InvalidGameObjectID;
 		}
 		else
 		{
-			PrintError("Attempted to unplug socket that wasn't connected to wire\n");
+			PrintError("Attempted to unplug socket that wasn't connected to wire plug\n");
 		}
 	}
 
-	bool Wire::AllowInteractionWith(GameObject* gameObject)
+	bool WirePlug::AllowInteractionWith(GameObject* gameObject)
 	{
-		switch (gameObject->GetTypeID())
-		{
-		case SID("socket"):
-		{
-			return true;
-		} break;
-		}
+		FLEX_UNUSED(gameObject);
+		//switch (gameObject->GetTypeID())
+		//{
+		//case SID("socket"):
+		//{
+		//	return true;
+		//} break;
+		//}
 
-		return (!socket0ID.IsValid() && !socket1ID.IsValid());
+		//return (!socket0ID.IsValid() && !socket1ID.IsValid());
+		return true;
 	}
 
-	void Wire::SetInteractingWith(GameObject* gameObject)
+	void WirePlug::SetInteractingWith(GameObject* gameObject)
 	{
-		GameObject::SetInteractingWith(gameObject);
+		wireID.Get()->SetInteractingWith(gameObject);
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -6453,76 +6526,23 @@ namespace flex
 
 	bool Socket::AllowInteractionWith(GameObject* gameObject)
 	{
-		switch (gameObject->GetTypeID())
-		{
-		case SID("player"):
-		{
-			//Player* player = (Player*)gameObject;
-			//if (player->m_HeldItem != nullptr)
-			//{
-			//	return (player->m_HeldItem->GetTypeID() == SID("wire"));
-			//}
-			//else
-			{
-				return (connectedWire != nullptr);
-			}
-		} break;
-		}
-
-		return true;
+		return !connectedPlugID.IsValid();
 	}
 
 	void Socket::SetInteractingWith(GameObject* gameObject)
 	{
 		if (gameObject == nullptr)
 		{
-			if (connectedWire != nullptr)
+			WirePlug* plug = (WirePlug*)connectedPlugID.Get();
+			if (plug != nullptr)
 			{
-				connectedWire->Unplug(this);
-				connectedWire = nullptr;
+				plug->Unplug(this);
+				connectedPlugID = InvalidGameObjectID;
 			}
 			return;
 		}
 
-		switch (gameObject->GetTypeID())
-		{
-		case SID("player"):
-		{
-			//Player* player = (Player*)gameObject;
-			//if (player->m_HeldItem != nullptr)
-			//{
-			//	if (player->m_HeldItem->GetTypeID() == SID("wire"))
-			//	{
-			//		Wire* wire = (Wire*)player->m_HeldItem;
-			//		if (connectedWire == nullptr)
-			//		{
-			//			connectedWire = wire;
-			//			wire->PlugIn(this);
-			//		}
-			//		else
-			//		{
-			//			wire->Unplug(this);
-			//			connectedWire = nullptr;
-			//		}
-			//	}
-			//
-			//}
-			//else
-			//{
-			//	if (connectedWire != nullptr)
-			//	{
-			//		connectedWire->Unplug(this);
-			//		connectedWire->SetInteractingWith(player);
-			//		player->m_HeldItem = connectedWire;
-			//		connectedWire = nullptr;
-			//	}
-			//}
-		} break;
-		default:
-		{
-			GameObject::SetInteractingWith(gameObject);
-		} break;
-		}
+		GameObject::SetInteractingWith(gameObject);
 	}
 
 	Terminal::Terminal() :
@@ -12719,4 +12739,44 @@ namespace flex
 		rigidBody->Initialize(shape, &m_Transform);
 		m_RigidBodies[meshIndex] = rigidBody;
 	}
+
+	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("solar panel"), gameObjectID)
+	{
+		m_bItemizable = true;
+	}
+
+	void SolarPanel::Initialize()
+	{
+		GameObject::Initialize();
+	}
+
+	void SolarPanel::PostInitialize()
+	{
+		GameObject::PostInitialize();
+	}
+
+	void SolarPanel::Destroy(bool bDetachFromParent)
+	{
+		GameObject::Destroy();
+	}
+
+	void SolarPanel::Update()
+	{
+		PROFILE_AUTO("SolarPanel Update");
+
+		if (sockets.size() >= 1)
+		{
+			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+			Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(sockets[0]);
+			if (otherSocket != nullptr)
+			{
+				real chargeAmount = m_ChargeRate * m_Efficiency;
+				otherSocket->parent->OnCharge(chargeAmount);
+			}
+		}
+
+		GameObject::Update();
+	}
+
 } // namespace flex

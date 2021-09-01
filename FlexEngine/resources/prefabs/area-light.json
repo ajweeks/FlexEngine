@@ -4,7 +4,7 @@
 	"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 	"root" : 
 	{
-		"name" : "AreaLight",
+		"name" : "area-light",
 		"id" : "97EEC0DDDDE3C0B34FFC98B66497219A",
 		"type" : "area light",
 		"visible" : true,

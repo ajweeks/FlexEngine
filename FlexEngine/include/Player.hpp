@@ -116,6 +116,9 @@ namespace flex
 		bool bInventoryShowing = false;
 		i32 heldItemSlot = 0;
 
+		GameObjectID heldItemLeftHand = InvalidGameObjectID;
+		GameObjectID heldItemRightHand = InvalidGameObjectID;
+
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;
 

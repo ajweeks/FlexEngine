@@ -48,8 +48,6 @@
 
 #include "memory.hpp"
 
-#include "GUID.hpp"
-
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 
 #if defined(_WINDOWS)
@@ -121,10 +119,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Logger.hpp"
-#include "Types.hpp"
-#include "Systems/Systems.hpp"
-
 IGNORE_WARNINGS_PUSH
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -153,7 +147,6 @@ IGNORE_WARNINGS_PUSH
 #include <cgltf/cgltf.h>
 IGNORE_WARNINGS_POP
 
-
 #if COMPILE_IMGUI
 IGNORE_WARNINGS_PUSH
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -167,6 +160,8 @@ namespace flex
 	extern ImVec4 g_WarningButtonActiveColour;
 }
 
+#include "Types.hpp"
+
 #include "ImGuiBezier.hpp"
 #include "imgui_plot.h"
 IGNORE_WARNINGS_POP
@@ -174,6 +169,9 @@ IGNORE_WARNINGS_POP
 
 #include <mikktspace.h>
 
+#include "GUID.hpp"
+#include "Logger.hpp"
+#include "Systems/Systems.hpp"
 #include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 

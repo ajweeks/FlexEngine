@@ -29,6 +29,7 @@ namespace flex
 	class Socket;
 	class TerminalCamera;
 	class Wire;
+	class WirePlug;
 	class SoftBody;
 	struct RoadSegment;
 
@@ -271,6 +272,8 @@ namespace flex
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
 		bool IsTemplate() const;
+
+		virtual void OnCharge(real chargeAmount);
 
 		ChildIndex ComputeChildIndex() const;
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
@@ -764,6 +767,8 @@ namespace flex
 		Battery();
 		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void OnCharge(real amount) override;
+
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
@@ -771,6 +776,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		real chargeAmount = 0.0f;
+		real chargeCapacity = 100.0f;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -963,7 +969,7 @@ namespace flex
 
 	};
 
-	// Connects terminals to other things to transmit information
+	// Connects together devices to transmit information & power
 	class Wire final : public GameObject
 	{
 	public:
@@ -974,17 +980,39 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		void PlugIn(Socket* socket);
-		void Unplug(Socket* socket);
+		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+
+		GameObjectID GetOtherPlug(WirePlug* plug);
+
+		static const real DEFAULT_LENGTH;
+
+		GameObjectID plug0ID = InvalidGameObjectID;
+		GameObjectID plug1ID = InvalidGameObjectID;
+	};
+
+	// End of wire - the part you actually interact with
+	class WirePlug final : public GameObject
+	{
+	public:
+		WirePlug(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Destroy(bool bDetachFromParent = true) override;
 
 		virtual bool AllowInteractionWith(GameObject* gameObject) override;
 		virtual void SetInteractingWith(GameObject* gameObject) override;
 
-		GameObjectID socket0ID = InvalidGameObjectID;
-		GameObjectID socket1ID = InvalidGameObjectID;
+		bool PlugInToNearby();
+		void PlugIn(Socket* socket);
+		void Unplug(Socket* socket);
 
-		glm::vec3 startPoint;
-		glm::vec3 endPoint;
+		GameObjectID wireID = InvalidGameObjectID;
+		GameObjectID socketID = InvalidGameObjectID;
+
+		glm::vec3 posOffset;
+
+		static const real nearbyThreshold;
+
+		//Socket* nearbySocket = nullptr;
 	};
 
 	// Connect wires to objects
@@ -1002,7 +1030,7 @@ namespace flex
 		virtual void SetInteractingWith(GameObject* gameObject) override;
 
 		GameObject* parent = nullptr;
-		Wire* connectedWire = nullptr;
+		GameObjectID connectedPlugID = InvalidGameObjectID;
 		i32 slotIdx = 0;
 	};
 
@@ -1315,7 +1343,7 @@ namespace flex
 		i32 m_IsolateNoiseLayer = -1;
 
 		u32 m_VertCountPerChunkAxis = 8;
-		real m_ChunkSize = 16.0f;
+		real m_ChunkSize = 512.0f;
 		real m_MaxHeight = 3.0f;
 
 		u32 m_NumPointsPerAxis = 8 + 1;
@@ -1724,6 +1752,28 @@ namespace flex
 
 		// Non-serialized fields
 		GameObjectID m_TerrainGameObjectID = InvalidGameObjectID;
+
+	};
+
+	class SolarPanel : public GameObject
+	{
+	public:
+		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+
+		//virtual GameObject* CopySelf(
+		//	GameObject* parent = nullptr,
+		//	CopyFlags copyFlags = CopyFlags::ALL,
+		//	std::string* optionalName = nullptr,
+		//	const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	private:
+		real m_ChargeRate = 10.0f;
+		real m_Efficiency = 1.0f;
 
 	};
 } // namespace flex

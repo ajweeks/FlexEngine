@@ -137,10 +137,8 @@ namespace flex
 				{
 					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(1.0f);
 
-					if (m_bAttemptInteract)
+					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 					{
-						m_bAttemptInteract = false;
-
 						// Place new node
 						m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = reticlePos;
 						if (m_Player->m_CurveNodesPlaced == 4)
@@ -169,6 +167,9 @@ namespace flex
 						{
 							m_Player->m_CurvePlacing.points[i] = reticlePos;
 						}
+
+						m_bAttemptInteractLeftHand = false;
+						m_bAttemptInteractRightHand = false;
 					}
 
 					if (m_bAttemptCompleteTrack)
@@ -207,10 +208,8 @@ namespace flex
 				{
 					// TODO: Snap to points other than the one we are editing
 					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(m_Player->m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
-					if (m_bAttemptInteract)
+					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 					{
-						m_bAttemptInteract = false;
-
 						if (m_Player->m_TrackEditingCurveIdx == -1)
 						{
 							// Select node
@@ -231,6 +230,9 @@ namespace flex
 							m_Player->m_TrackEditingCurveIdx = -1;
 							m_Player->m_TrackEditingPointIdx = -1;
 						}
+
+						m_bAttemptInteractLeftHand = false;
+						m_bAttemptInteractRightHand = false;
 					}
 
 					if (m_Player->m_TrackEditingID != InvalidTrackID)
@@ -382,14 +384,60 @@ namespace flex
 				}
 			}
 
-			if (m_bAttemptInteract)
+			if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 			{
-				if (m_Player->m_ObjectInteractingWith)
+				bool bPlaceItemLeft = m_bAttemptInteractLeftHand && m_Player->heldItemLeftHand.IsValid();
+				bool bPlaceItemRight = m_bAttemptInteractRightHand && m_Player->heldItemRightHand.IsValid();
+
+				if (bPlaceItemLeft || bPlaceItemRight)
 				{
 					// Toggle interaction when already interacting
-					m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-					m_Player->SetInteractingWith(nullptr);
-					m_bAttemptInteract = false;
+					GameObject* heldItemLeftHand = m_Player->heldItemLeftHand.Get();
+					GameObject* heldItemRightHand = m_Player->heldItemRightHand.Get();
+					bool bPlaceWireLeft = bPlaceItemLeft && heldItemLeftHand->GetTypeID() == SID("wire plug");
+					bool bPlaceWireRight = bPlaceItemRight && heldItemRightHand->GetTypeID() == SID("wire plug");
+					if (bPlaceWireLeft || bPlaceWireRight)
+					{
+						WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? heldItemLeftHand : heldItemRightHand);
+						// Plug in wire!
+						if (wirePlug->PlugInToNearby())
+						{
+							if (bPlaceWireLeft)
+							{
+								m_Player->heldItemLeftHand = InvalidGameObjectID;
+							}
+							else
+							{
+								m_Player->heldItemRightHand = InvalidGameObjectID;
+							}
+						}
+					}
+
+					if (m_Player->m_ObjectInteractingWith->GetTypeID() == SID("wire"))
+					{
+						Wire* wire = (Wire*)m_Player->m_ObjectInteractingWith;
+						if (((WirePlug*)wire->plug0ID.Get())->socketID.IsValid() &&
+							((WirePlug*)wire->plug1ID.Get())->socketID.IsValid())
+						{
+							// Both ends of the wire are plugged in, stop interacting
+							m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
+							m_Player->SetInteractingWith(nullptr);
+						}
+					}
+					else
+					{
+						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
+						m_Player->SetInteractingWith(nullptr);
+					}
+
+					if (bPlaceItemLeft)
+					{
+						m_bAttemptInteractLeftHand = false;
+					}
+					if (bPlaceItemRight)
+					{
+						m_bAttemptInteractRightHand = false;
+					}
 				}
 				else
 				{
@@ -397,19 +445,18 @@ namespace flex
 					{
 						nearestInteractable->SetInteractingWith(m_Player);
 						m_Player->SetInteractingWith(nearestInteractable);
-						m_bAttemptInteract = false;
+						m_bAttemptInteractLeftHand = false;
+						m_bAttemptInteractRightHand = false;
+
+
 					}
-					//else if (m_Player->m_HeldItem != nullptr)
-					//{
-					//	if (m_Player->m_HeldItem->GetTypeID() == SID("wire"))
-					//	{
-					//		Wire* wire = (Wire*)m_Player->m_HeldItem;
-					//		wire->SetInteractingWith(nullptr);
-					//	}
-					//	m_Player->m_HeldItem = nullptr;
-					//}
 				}
 			}
+		}
+
+		if (m_bCancelPlaceItemFromInventory)
+		{
+			m_bPreviewPlaceItemFromInventory = false;
 		}
 
 		if (m_bPreviewPlaceItemFromInventory)
@@ -443,7 +490,7 @@ namespace flex
 
 						if (m_ItemPlacementBoundingBoxShape == nullptr)
 						{
-						m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
+							m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
 						}
 
 						btPairCachingGhostObject pairCache;
@@ -528,6 +575,41 @@ namespace flex
 			}
 		}
 
+		if (m_bSpawnWire)
+		{
+			m_bSpawnWire = false;
+
+			if (m_PlacingWire == nullptr)
+			{
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+				PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+				m_PlacingWire = pluggablesSystem->AddWire();
+
+				Transform* playerTransform = m_Player->GetTransform();
+				Transform* wireTransform = m_PlacingWire->GetTransform();
+
+				glm::vec3 targetPos = playerTransform->GetWorldPosition() + playerTransform->GetForward() * 2.0f;
+				glm::quat targetRot = playerTransform->GetWorldRotation();
+
+				wireTransform->SetWorldPosition(targetPos, false);
+				wireTransform->SetWorldRotation(targetRot, true);
+
+				currentScene->AddRootObjectImmediate(m_PlacingWire);
+
+				m_PlacingWire->Initialize();
+				m_PlacingWire->PostInitialize();
+
+				m_Player->SetInteractingWith(m_PlacingWire);
+				m_PlacingWire->SetInteractingWith(m_Player);
+
+				assert(!m_Player->heldItemLeftHand.IsValid());
+				assert(!m_Player->heldItemRightHand.IsValid());
+
+				m_Player->heldItemLeftHand = m_PlacingWire->plug0ID;
+				m_Player->heldItemRightHand = m_PlacingWire->plug1ID;
+			}
+		}
+
 		m_Player->GetRigidBody()->UpdateParentTransform();
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
@@ -549,7 +631,7 @@ namespace flex
 				return;
 			}
 
-			if (m_bAttemptInteract)
+			if (m_bAttemptInteractLeftHand)
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
@@ -557,7 +639,7 @@ namespace flex
 					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
 					if (trackInRangeIndex != InvalidTrackID)
 					{
-						m_bAttemptInteract = false;
+						m_bAttemptInteractLeftHand = false;
 
 						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
@@ -566,7 +648,7 @@ namespace flex
 				}
 				else
 				{
-					m_bAttemptInteract = false;
+					m_bAttemptInteractLeftHand = false;
 					m_Player->DetachFromTrack();
 				}
 			}
@@ -688,7 +770,7 @@ namespace flex
 
 		m_bAttemptCompleteTrack = false;
 		m_bAttemptPlaceItemFromInventory = false;
-		m_bAttemptInteract = false;
+		m_bAttemptInteractLeftHand = false;
 		m_bAttemptPickup = false;
 	}
 
@@ -799,19 +881,46 @@ namespace flex
 	{
 		if (m_Player->m_bPossessed)
 		{
+			if (action == Action::PAUSE)
+			{
+				if (m_bPreviewPlaceItemFromInventory)
+				{
+					m_bCancelPlaceItemFromInventory = true;
+				}
+				if (m_PlacingWire != nullptr)
+				{
+					m_bCancelPlaceWire = true;
+				}
+			}
+
 			if (action == Action::PLACE_ITEM)
 			{
-				if (actionEvent == ActionEvent::ACTION_TRIGGER)
+				if (!m_bSpawnWire)
 				{
-					m_bItemPlacementValid = false;
-					m_bPreviewPlaceItemFromInventory = true;
-					return EventReply::CONSUMED;
+					if (actionEvent == ActionEvent::ACTION_TRIGGER)
+					{
+						m_bItemPlacementValid = false;
+						m_bPreviewPlaceItemFromInventory = true;
+						return EventReply::CONSUMED;
+					}
+					else if (actionEvent == ActionEvent::ACTION_RELEASE)
+					{
+						m_bPreviewPlaceItemFromInventory = false;
+						m_bAttemptPlaceItemFromInventory = true;
+						return EventReply::CONSUMED;
+					}
 				}
-				else if (actionEvent == ActionEvent::ACTION_RELEASE)
+			}
+
+			if (action == Action::PLACE_WIRE)
+			{
+				if (!m_bPreviewPlaceItemFromInventory && !m_Player->heldItemLeftHand.IsValid() && !m_Player->heldItemRightHand.IsValid())
 				{
-					m_bPreviewPlaceItemFromInventory = false;
-					m_bAttemptPlaceItemFromInventory = true;
-					return EventReply::CONSUMED;
+					if (actionEvent == ActionEvent::ACTION_TRIGGER)
+					{
+						m_bSpawnWire = true;
+						return EventReply::CONSUMED;
+					}
 				}
 			}
 
@@ -890,9 +999,16 @@ namespace flex
 					return EventReply::CONSUMED;
 				}
 
-				if (action == Action::INTERACT)
+				if (action == Action::INTERACT_LEFT_HAND)
 				{
-					m_bAttemptInteract = true;
+					m_bAttemptInteractLeftHand = true;
+					// TODO: Determine if we can interact with anything here to allow
+					// others to consume this event in the case we don't want it
+					return EventReply::CONSUMED;
+				}
+				if (action == Action::INTERACT_RIGHT_HAND)
+				{
+					m_bAttemptInteractRightHand = true;
 					// TODO: Determine if we can interact with anything here to allow
 					// others to consume this event in the case we don't want it
 					return EventReply::CONSUMED;

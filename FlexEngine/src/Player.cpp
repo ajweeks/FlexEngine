@@ -430,32 +430,24 @@ namespace flex
 			}
 			terminalCam->SetTerminal(terminal);
 		} break;
-		case SID("wire"):
-		{
-			//Wire* wire = static_cast<Wire*>(gameObject);
-
-			//m_HeldItem = wire;
-		} break;
 		case SID("socket"):
 		{
-			//Socket* socket = static_cast<Socket*>(gameObject);
+			Socket* socket = static_cast<Socket*>(gameObject);
 
-			//if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
-			//{
-			//	Wire* wire = (Wire*)m_HeldItem;
-			//	if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
-			//	{
-			//		wire->SetInteractingWith(nullptr);
-			//		m_HeldItem = nullptr;
-			//	}
-			//}
-			//else
-			//{
-			//	if (socket->connectedWire != nullptr)
-			//	{
-			//		m_HeldItem = socket->connectedWire;
-			//	}
-			//}
+			WirePlug* wirePlug = (WirePlug*)socket->connectedPlugID.Get();
+			if (wirePlug != nullptr)
+			{
+				// Unplug wire and grab it!
+				wirePlug->Unplug(socket);
+				Wire* wire = (Wire*)wirePlug->wireID.Get();
+				SetInteractingWith(wire);
+				wire->SetInteractingWith(this);
+			}
+			else
+			{
+				// Empty sockets shouldn't be interactable
+				ENSURE_NO_ENTRY();
+			}
 		} break;
 		case SID("vehicle"):
 		{

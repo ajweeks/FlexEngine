@@ -24,3 +24,4 @@ cart
 particle system
 terrain generator
 vehicle
+solar panel

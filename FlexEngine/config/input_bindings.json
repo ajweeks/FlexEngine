@@ -79,12 +79,22 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
-	"Interact" : 
+	"Interact Left Hand" : 
+	{
+		"key code" : 34,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Interact Right Hand" : 
 	{
 		"key code" : 22,
 		"mouse button" : -1,
 		"mouse axis" : -1,
-		"gamepad button" : 2,
+		"gamepad button" : -1,
 		"gamepad axis" : -1,
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
@@ -96,6 +106,16 @@
 		"mouse axis" : -1,
 		"gamepad button" : -1,
 		"gamepad axis" : 5,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
+	"Place wire" : 
+	{
+		"key code" : 24,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},

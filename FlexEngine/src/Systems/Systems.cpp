@@ -2,6 +2,10 @@
 
 #include "Systems/Systems.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/norm.hpp> // For distance2
+IGNORE_WARNINGS_POP
+
 #include "Graphics/Renderer.hpp" // For PhysicsDebugDrawBase
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp" // For DirectoryWatcher
@@ -36,83 +40,121 @@ namespace flex
 			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
 			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
-			static const real defaultWireLength = 2.0f;
 			for (Wire* wire : wires)
 			{
-				Socket* socket0 = nullptr;
-				Socket* socket1 = nullptr;
+				Transform* wireTransform = wire->GetTransform();
 
-				if (wire->socket0ID.IsValid())
-				{
-					socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
-				}
+				WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
+				Transform* plug0Transform = plug0->GetTransform();
+				WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+				Transform* plug1Transform = plug1->GetTransform();
 
-				if (wire->socket1ID.IsValid())
-				{
-					socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
-				}
+				Socket* socket0 = (Socket*)plug0->socketID.Get();
+				Socket* socket1 = (Socket*)plug1->socketID.Get();
 
-				if (wire->GetObjectInteractingWith() != nullptr)
+				GameObject* objectInteractingWith = wire->GetObjectInteractingWith();
+
+				if (objectInteractingWith != nullptr)
 				{
-					GameObject* interacting = wire->GetObjectInteractingWith();
-					Transform* interactingTransform = interacting->GetTransform();
-					glm::vec3 interactingWorldPos = interactingTransform->GetWorldPosition();
-					glm::vec3 wireHoldingOffset = interactingTransform->GetForward() * 5.0f + interactingTransform->GetUp() * -0.75f;
-					if (socket0 != nullptr && socket1 != nullptr)
+					// Wire is being carried
+					Transform* playerTransform = objectInteractingWith->GetTransform();
+
+					glm::vec3 playerWorldPos = playerTransform->GetWorldPosition();
+					glm::vec3 playerForward = playerTransform->GetForward();
+					glm::vec3 playerUp = playerTransform->GetUp();
+					glm::vec3 playerRight = playerTransform->GetRight();
+					glm::vec3 wireHoldingOffset = playerForward * 5.0f + playerUp * -0.75f;
+
+					glm::vec3 plug0DefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
+					glm::vec3 plug1DefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
+
+					real dist0 = 0.0f;
+					real dist1 = 0.0f;
+					Socket* nearbySocket0 = nullptr;
+					Socket* nearbySocket1 = nullptr;
+
+					if (socket0 == nullptr)
 					{
-						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+						nearbySocket0 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true, dist0);
 					}
-					else if (socket0 != nullptr)
+
+					if (socket1 == nullptr)
 					{
-						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-						wire->endPoint = interactingWorldPos + wireHoldingOffset + interactingTransform->GetRight() * defaultWireLength;
+						nearbySocket1 = GetNearbySocket(plug1DefaultPos, WirePlug::nearbyThreshold, true, dist1);
 					}
-					else if (socket1 != nullptr)
+
+					if (nearbySocket1 != nullptr && nearbySocket0 == nearbySocket1)
 					{
-						wire->startPoint = interactingWorldPos + wireHoldingOffset;
-						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
+						glm::vec3 socketPos = nearbySocket0->GetTransform()->GetWorldPosition();
+						if (dist0 < dist1)
+						{
+							plug0Transform->SetWorldPosition(socketPos + plug0->posOffset);
+							plug1Transform->SetWorldPosition(plug1DefaultPos);
+						}
+						else
+						{
+							plug0Transform->SetWorldPosition(plug0DefaultPos);
+							plug1Transform->SetWorldPosition(socketPos + plug1->posOffset);
+						}
 					}
 					else
 					{
-						wire->startPoint = interactingWorldPos + wireHoldingOffset;
-						wire->endPoint = wire->startPoint + interactingTransform->GetRight() * defaultWireLength;
+						if (socket0 != nullptr)
+						{
+							plug0Transform->SetWorldPosition(socket0->GetTransform()->GetWorldPosition() + plug0->posOffset);
+						}
+						else if (nearbySocket0 != nullptr)
+						{
+							plug0Transform->SetWorldPosition(nearbySocket0->GetTransform()->GetWorldPosition() + plug0->posOffset);
+						}
+
+						if (socket1 != nullptr)
+						{
+							plug1Transform->SetWorldPosition(socket1->GetTransform()->GetWorldPosition() + plug0->posOffset);
+						}
+						else if (nearbySocket1 != nullptr)
+						{
+							plug1Transform->SetWorldPosition(nearbySocket1->GetTransform()->GetWorldPosition() + plug0->posOffset);
+						}
+					}
+
+					// Not plugged in, and not nearby any sockets - follow player.
+					if (socket0 == nullptr && nearbySocket0 == nullptr)
+					{
+						plug0Transform->SetWorldPosition(plug0DefaultPos);
+					}
+
+					if (socket1 == nullptr && nearbySocket1 == nullptr)
+					{
+						plug1Transform->SetWorldPosition(plug1DefaultPos);
 					}
 				}
 				else
 				{
 					if (socket0 != nullptr)
 					{
-						wire->startPoint = socket0->GetTransform()->GetWorldPosition();
-					}
-					else
-					{
-						if (socket1 != nullptr)
-						{
-							wire->endPoint = socket1->GetTransform()->GetWorldPosition();
-						}
+						plug0Transform->SetWorldPosition(socket0->GetTransform()->GetWorldPosition() + plug0->posOffset);
 					}
 					if (socket1 != nullptr)
 					{
-						wire->endPoint = socket1->GetTransform()->GetWorldPosition();
-					}
-					else
-					{
-						if (socket0 != nullptr)
-						{
-							wire->endPoint = wire->startPoint + defaultWireLength;
-						}
+						plug1Transform->SetWorldPosition(socket1->GetTransform()->GetWorldPosition() + plug0->posOffset);
 					}
 				}
 
-				wire->GetTransform()->SetWorldPosition(wire->startPoint + (wire->endPoint - wire->startPoint) / 2.0f);
+				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
+				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+
+				wireTransform->SetWorldPosition(plug0Pos + (plug1Pos - plug0Pos) * 0.5f);
+
+				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
+				btVector3 plug1PosBt = ToBtVec3(plug1Pos);
 
 				bool bWireOn0 = socket0 != nullptr && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
 				bool bWireOn1 = socket1 != nullptr && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
 				btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
-				debugDrawer->drawLine(ToBtVec3(wire->startPoint), ToBtVec3(wire->endPoint), wireCol, wireCol);
-				debugDrawer->drawSphere(ToBtVec3(wire->startPoint), 0.2f, wireColOff);
-				debugDrawer->drawSphere(ToBtVec3(wire->endPoint), 0.2f, wireColOff);
+				debugDrawer->drawLine(plug0PosBt, plug1PosBt, wireCol, wireCol);
+				debugDrawer->drawSphere(plug0PosBt, 0.2f, wireColOff);
+				debugDrawer->drawSphere(plug1PosBt, 0.2f, wireColOff);
 			}
 		}
 	}
@@ -122,20 +164,23 @@ namespace flex
 		i32 result = -1;
 		for (Wire* wire : wires)
 		{
-			if (wire->socket0ID == socket->ID)
+			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
+			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+
+			if (plug0->socketID == socket->ID)
 			{
-				if (wire->socket1ID.IsValid())
+				if (plug1->socketID.IsValid())
 				{
-					Socket* socket1 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket1ID);
+					Socket* socket1 = (Socket*)plug1->socketID.Get();
 					i32 sendSignal = socket1->parent->outputSignals[socket1->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
-			else if (wire->socket1ID == socket->ID)
+			else if (plug1->socketID == socket->ID)
 			{
-				if (wire->socket0ID.IsValid())
+				if (plug1->socketID.IsValid())
 				{
-					Socket* socket0 = (Socket*)g_SceneManager->CurrentScene()->GetGameObject(wire->socket0ID);
+					Socket* socket0 = (Socket*)plug0->socketID.Get();
 					i32 sendSignal = socket0->parent->outputSignals[socket0->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
@@ -144,52 +189,46 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(const GameObjectID& gameObjectID, Socket* socket0 /* = nullptr */, Socket* socket1 /* = nullptr */)
+	Wire* PluggablesSystem::AddWire(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
 	{
 		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
-		newWire->socket0ID = (socket0 == nullptr ? InvalidGameObjectID : socket0->ID);
-		newWire->socket1ID = (socket1 == nullptr ? InvalidGameObjectID : socket1->ID);
+
+		// Plugs were not found, create new ones
+		WirePlug* plug0 = new WirePlug("wire plug 0", InvalidGameObjectID);
+		WirePlug* plug1 = new WirePlug("wire plug 1", InvalidGameObjectID);
+
+		newWire->AddChildImmediate(plug0);
+		newWire->AddChildImmediate(plug1);
+
+		newWire->plug0ID = plug0->ID;
+		newWire->plug1ID = plug1->ID;
+
 		wires.push_back(newWire);
-		if (socket0)
-		{
-			//socket0->OnConnectionMade(newWire);
-		}
-		if (socket1)
-		{
-			//socket1->OnConnectionMade(newWire);
-		}
 
 		return newWire;
 	}
 
 	bool PluggablesSystem::DestroySocket(Socket* socket)
 	{
-		// Try to find wire that owns this socket
+		// Unplug any wire plugs plugged into this socket before removing it
 		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
 		{
 			Wire* wire = *iter;
-			if (wire->socket0ID == socket->ID)
+			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
+			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+
+			if (plug0->socketID == socket->ID)
 			{
-				//wire->socket0->OnConnectionBroke(wire);
-				RemoveSocket(wire->socket0ID);
-				wire->socket0ID = InvalidGameObjectID;
-				if (!wire->socket1ID.IsValid())
-				{
-					g_SceneManager->CurrentScene()->RemoveObject(wire, true);
-					wires.erase(iter);
-				}
+				plug0->Unplug(socket);
+
+				RemoveSocket(plug0->socketID);
 				return true;
 			}
-			if (wire->socket1ID == socket->ID)
+			if (plug1->socketID == socket->ID)
 			{
-				//wire->socket1->OnConnectionBroke(wire);
-				RemoveSocket(wire->socket1ID);
-				wire->socket1ID = InvalidGameObjectID;
-				if (!wire->socket0ID.IsValid())
-				{
-					g_SceneManager->CurrentScene()->RemoveObject(wire, true);
-					wires.erase(iter);
-				}
+				plug1->Unplug(socket);
+
+				RemoveSocket(plug1->socketID);
 				return true;
 			}
 		}
@@ -212,21 +251,29 @@ namespace flex
 
 	bool PluggablesSystem::DestroyWire(Wire* wire)
 	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+
+		WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
+		WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+
 		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
 		{
 			if ((*iter)->ID == wire->ID)
 			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				if (wire->socket0ID.IsValid())
+				if (plug0->socketID.IsValid())
 				{
-					RemoveSocket(wire->socket0ID);
-					scene->RemoveObject(wire->socket0ID, true);
+					plug0->Unplug((Socket*)plug0->socketID.Get());
+					RemoveSocket(plug0->socketID);
+					scene->RemoveObject(plug0->socketID, true);
 				}
-				if (wire->socket1ID.IsValid())
+				if (plug1->socketID.IsValid())
 				{
-					RemoveSocket(wire->socket1ID);
-					scene->RemoveObject(wire->socket1ID, true);
+					plug1->Unplug((Socket*)plug1->socketID.Get());
+					RemoveSocket(plug1->socketID);
+					scene->RemoveObject(plug1->socketID, true);
 				}
+				scene->RemoveObject(plug0, true);
+				scene->RemoveObject(plug1, true);
 				scene->RemoveObject(wire, true);
 
 				wires.erase(iter);
@@ -237,24 +284,61 @@ namespace flex
 		return false;
 	}
 
-
-	Socket* PluggablesSystem::AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
+	Socket* PluggablesSystem::AddSocket(const std::string& name, const GameObjectID& gameObjectID)
 	{
 		Socket* newSocket = new Socket(name, gameObjectID);
-		newSocket->slotIdx = slotIdx;
-		newSocket->connectedWire = connectedWire;
 		sockets.push_back(newSocket);
 
 		return newSocket;
 	}
 
-	Socket* PluggablesSystem::AddSocket(Socket* socket, i32 slotIdx /* = 0 */, Wire* connectedWire /* = nullptr */)
+	Socket* PluggablesSystem::AddSocket(Socket* socket, i32 slotIdx /* = 0 */)
 	{
 		socket->slotIdx = slotIdx;
-		socket->connectedWire = connectedWire;
 		sockets.push_back(socket);
 
 		return socket;
+	}
+
+	Socket* PluggablesSystem::GetSocketAtOtherEnd(Socket* socket)
+	{
+		WirePlug* plug = (WirePlug*)socket->connectedPlugID.Get();
+		if (plug != nullptr)
+		{
+			Wire* wire = (Wire*)plug->wireID.Get();
+			WirePlug* otherPlug = (WirePlug*)wire->GetOtherPlug(plug).Get();
+			return (Socket*)otherPlug->socketID.Get();
+		}
+
+		return nullptr;
+	}
+
+	Socket* PluggablesSystem::GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled, real& outDist2)
+	{
+		real threshold2 = threshold * threshold;
+		real closestDist2 = threshold2;
+		Socket* closestSocket = nullptr;
+		for (Socket* socket : sockets)
+		{
+			if (!bExcludeFilled || !socket->connectedPlugID.IsValid())
+			{
+				real dist2 = glm::distance2(socket->GetTransform()->GetWorldPosition(), posWS);
+				if (dist2 < closestDist2)
+				{
+					closestSocket = socket;
+					closestDist2 = dist2;
+				}
+			}
+		}
+
+		if (closestSocket != nullptr)
+		{
+			outDist2 = closestDist2;
+			return closestSocket;
+		}
+
+		outDist2 = FLT_MAX;
+		return nullptr;
 	}
 
 	RoadManager::RoadManager()

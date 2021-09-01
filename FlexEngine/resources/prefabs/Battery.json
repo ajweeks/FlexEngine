@@ -4,7 +4,7 @@
 	"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 	"root" : 
 	{
-		"name" : "Battery",
+		"name" : "battery",
 		"id" : "49BA1A00D02473914B4C060DFA113653",
 		"type" : "battery",
 		"visible" : true,

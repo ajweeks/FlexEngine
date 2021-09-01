@@ -49,7 +49,6 @@ IGNORE_WARNINGS_POP
 #include "Scene/SceneManager.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
-#include "Systems/Systems.hpp"
 #include "Time.hpp"
 #include "UI.hpp"
 #include "Window/GLFWWindowWrapper.hpp"

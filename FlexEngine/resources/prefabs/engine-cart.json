@@ -4,7 +4,7 @@
 	"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 	"root" : 
 	{
-		"name" : "EngineCart",
+		"name" : "engine-cart",
 		"id" : "A634A8D0DBD204BA4B0D9A3121D067E4",
 		"type" : "engine cart",
 		"visible" : true,

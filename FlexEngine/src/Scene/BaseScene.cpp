@@ -2136,6 +2136,20 @@ namespace flex
 		}
 	}
 
+	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID)
+	{
+		GameObject* gameObject = GetGameObject(gameObjectID);
+		UnregisterGameObject(gameObjectID);
+
+		if (gameObject != nullptr)
+		{
+			for (GameObject* child : gameObject->m_Children)
+			{
+				UnregisterGameObject(child->ID);
+			}
+		}
+	}
+
 	GameObject* BaseScene::AddChildObject(GameObject* parent, GameObject* child)
 	{
 		if (parent == nullptr || child == nullptr)
@@ -2169,7 +2183,6 @@ namespace flex
 
 
 		parent->AddChildImmediate(child);
-		RegisterGameObject(child);
 
 		return child;
 	}

@@ -5,6 +5,7 @@
 namespace flex
 {
 	class Wire;
+	class WirePlug;
 	class Socket;
 	class Road;
 	class Terminal;
@@ -22,12 +23,16 @@ namespace flex
 
 		i32 GetReceivedSignal(Socket* socket);
 
-		Wire* AddWire(const GameObjectID& gameObjectID, Socket* socket0 = nullptr, Socket* socket1 = nullptr);
-		bool DestroySocket(Socket* socket);
+		Wire* AddWire(const GameObjectID& gameObjectID = InvalidGameObjectID);
 		bool DestroyWire(Wire* wire);
 
-		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx = 0, Wire* connectedWire = nullptr);
-		Socket* AddSocket(Socket* socket, i32 slotIdx = 0, Wire* connectedWire = nullptr);
+		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID);
+		Socket* AddSocket(Socket* socket, i32 slotIdx = 0);
+		bool DestroySocket(Socket* socket);
+
+		Socket* GetSocketAtOtherEnd(Socket* socket);
+
+		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled, real& outDist2);
 
 		std::vector<Wire*> wires;
 		std::vector<Socket*> sockets;

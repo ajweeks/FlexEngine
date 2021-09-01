@@ -5,7 +5,7 @@
 	"player 0 guid" : "CF3662C3C76189B743E1086CF0BFD574",
 	"camera" : 
 	{
-		"type" : "overhead",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "13.517, 20.500, -25.553",
-			"pitch" : -0.785398,
-			"yaw" : 1.570821
+			"position" : "-7.532, 0.754, 4.798",
+			"pitch" : -0.181673,
+			"yaw" : -2.700244
 		}
 	},
 	"objects" : 
@@ -44,13 +44,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.590, -0.000, 0.000"
+				"rot" : "1.609, -0.000, 0.000"
 			},
 			"visible" : false,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.714, 0.000, 0.000, 0.700",
+				"rotation" : "0.720, 0.000, 0.000, 0.694",
 				"pos" : "0.000, 15.000, 0.000",
 				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : false,
@@ -222,6 +222,31 @@
 			[
 				"Selection Hologram"
 			]
+		},
+		{
+			"name" : "Cart",
+			"id" : "3A2B203EE1BA23B142007EDF9878812F",
+			"type" : "prefab",
+			"prefab type" : "cart",
+			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
+			"transform" : 
+			{
+				"pos" : "12.594, 3.500, 17.073",
+				"rot" : "-3.141, -1.511, -3.141"
+			}
+		},
+		{
+			"name" : "solar panel",
+			"id" : "E3538BC7D008838D4BE19F3121B62878",
+			"type" : "prefab",
+			"prefab type" : "solar-panel",
+			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
+			"transform" : 
+			{
+				"pos" : "-9.495, 1.500, 4.637",
+				"rot" : "-0.000, 0.889, 0.000",
+				"scale" : "1.000, 1.000, 1.000"
+			}
 		}
 	]
 }

@@ -182,6 +182,7 @@ namespace flex
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
 		void UnregisterGameObject(const GameObjectID& gameObjectID);
+		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID);
 
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
 
