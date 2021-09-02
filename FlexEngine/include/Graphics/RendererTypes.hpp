@@ -364,6 +364,7 @@ namespace flex
 	static const Uniform U_TERRAIN_POINT_BUFFER(UNIFORM("terrainPointBuffer"));
 	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"));
 	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
+	static const Uniform U_CHARGE_AMOUNT(UNIFORM("chargeAmount"), sizeof(real));
 
 #undef UNIFORM
 
@@ -679,6 +680,75 @@ namespace flex
 		std::vector<TexPair> values;
 	};
 
+	struct MaterialPropertyOverride
+	{
+		MaterialPropertyOverride() : i32Value(0) {}
+		MaterialPropertyOverride(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		MaterialPropertyOverride(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		void operator=(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		void operator=(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		MaterialPropertyOverride(real realValue) : realValue(realValue) {}
+		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value) {}
+		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value) {}
+		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue) {}
+		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value) {}
+		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value) {}
+		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value) {}
+		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value) {}
+		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue) {}
+
+		union {
+			real realValue;
+			u32 u32Value;
+			i32 i32Value;
+			bool boolValue;
+			glm::vec2 vec2Value;
+			glm::vec3 vec3Value;
+			glm::vec4 vec4Value;
+			glm::mat4 mat4Value;
+			void* pointerValue;
+		};
+	};
+
+	struct UniformOverrides
+	{
+		using UniformPair = Pair<Uniform const*, MaterialPropertyOverride>;
+
+		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
+		{
+			overrides[uniform->id] = UniformPair(uniform, propertyOverride);
+		}
+
+		bool HasUniform(Uniform const* uniform) const
+		{
+			for (const auto& pair : overrides)
+			{
+				if (pair.second.first->id == uniform->id)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
+		{
+			for (const auto& pair : overrides)
+			{
+				if (pair.second.first->id == uniform->id)
+				{
+					outPropertyOverride = pair.second.second;
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		std::map<StringID, UniformPair> overrides;
+	};
+
 	struct Material
 	{
 		struct PushConstantBlock;
@@ -777,6 +847,9 @@ namespace flex
 
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
+
+		// TODO: Replace all above fields using overrides
+		UniformOverrides uniformOverrides;
 
 		// TODO: Store TextureIDs here
 		ShaderUniformContainer<Texture*> textures;
@@ -1099,31 +1172,6 @@ namespace flex
 	{
 		// One per shader
 		std::vector<ShaderBatchPair> batches;
-	};
-
-	struct UniformOverrides
-	{
-		UniformList overridenUniforms;
-
-		glm::mat4 projection;
-		glm::mat4 view;
-		glm::mat4 viewProjection;
-		glm::vec4 camPos;
-		glm::mat4 model;
-		glm::mat4 modelInvTranspose;
-		u32 enableAlbedoSampler;
-		u32 enableMetallicSampler;
-		u32 enableRoughnessSampler;
-		u32 enableNormalSampler;
-		i32 texChannel;
-		glm::vec4 sdfData;
-		glm::vec4 fontCharData;
-		glm::vec2 texSize;
-		glm::vec4 colourMultiplier;
-		bool bSSAOVerticalPass;
-		ParticleSimData* particleSimData = nullptr;
-		glm::vec2 uvBlendAmount;
-		TerrainGenDynamicData terrainGenDynamicData;
 	};
 
 	struct DeviceDiagnosticCheckpoint

@@ -759,6 +759,7 @@ namespace flex
 		Battery();
 		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void Update() override;
 		virtual void OnCharge(real amount) override;
 
 		virtual GameObject* CopySelf(
@@ -1755,12 +1756,6 @@ namespace flex
 		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-
-		//virtual GameObject* CopySelf(
-		//	GameObject* parent = nullptr,
-		//	CopyFlags copyFlags = CopyFlags::ALL,
-		//	std::string* optionalName = nullptr,
-		//	const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 	private:
 		real m_ChargeRate = 10.0f;

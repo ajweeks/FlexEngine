@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "1.621, 3.745, -10.464",
-			"pitch" : -0.576166,
-			"yaw" : 1.999993
+			"position" : "-20.639, 4.492, -13.386",
+			"pitch" : -0.288232,
+			"yaw" : 1.835035
 		}
 	},
 	"objects" : 
@@ -94,15 +94,15 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "-2.885, 0.889, 2.208"
+						"rot" : "1.841, -0.000, 0.000"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.452, 0.775, -0.295, 0.329",
+						"rotation" : "0.796, 0.000, 0.000, 0.605",
 						"pos" : "0.000, 15.000, 0.000",
-						"colour" : "1.00, 1.00, 1.00",
+						"colour" : "0.99, 1.00, 0.84",
 						"enabled" : true,
 						"brightness" : 0.703000,
 						"cast shadows" : true,
@@ -483,7 +483,7 @@
 			"name" : "Cart_00",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
-			"prefab type" : "Cart_00",
+			"prefab type" : "cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
@@ -495,33 +495,31 @@
 			"name" : "Battery",
 			"id" : "49BA1A00D02473914B4C060DFA113653",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.877, 1.347, -1.906",
-				"rot" : "0.000, -0.677, -3.142",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-20.880, 1.348, -1.907",
+				"rot" : "0.000, -0.676, 3.141"
 			}
 		},
 		{
 			"name" : "Battery-1",
 			"id" : "FC8A67B3179CE4944867BD17D12BD28E",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.458, 1.347, -1.203",
-				"rot" : "-0.000, -0.006, -0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-25.458, 1.348, -1.198",
+				"rot" : "0.000, -0.006, 0.000"
 			}
 		},
 		{
 			"name" : "EngineCart-1",
 			"id" : "C54A90F938F82C944622007A9EDCFB70",
 			"type" : "prefab",
-			"prefab type" : "EngineCart",
+			"prefab type" : "engine-cart",
 			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 			"transform" : 
 			{
@@ -532,13 +530,12 @@
 			"name" : "Battery-2",
 			"id" : "86598C04552820B64784628C42EE1632",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "-28.614, 0.347, -1.555",
-				"rot" : "0.192, 0.000, 1.571",
-				"scale" : "1.000, 1.000, 1.000"
+				"rot" : "0.192, 0.000, 1.571"
 			}
 		},
 		{
@@ -596,13 +593,13 @@
 			"name" : "solar_panel",
 			"id" : "2D243FB411A1C1A947E0CE3315BB487D",
 			"type" : "prefab",
-			"prefab type" : "solar_panel",
+			"prefab type" : "solar-panel",
 			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
 			"transform" : 
 			{
-				"pos" : "0.000, -0.533, -7.196",
-				"rot" : "-1.571, 0.000, 0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "0.000, -0.533, -7.224",
+				"rot" : "-1.571, -0.000, 0.000",
+				"scale" : "1.000, 0.998, 0.998"
 			}
 		}
 	]

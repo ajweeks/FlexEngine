@@ -2005,12 +2005,6 @@ namespace flex
 
 				m_bRebatchRenderObjects = false;
 				BatchRenderObjects();
-
-				// ?
-				for (u32 i = 0; i < m_RenderObjects.size(); ++i)
-				{
-					UpdateDynamicUniformBuffer(i);
-				}
 			}
 
 			FillOutOffscreenCommandBuffer();
@@ -2741,6 +2735,11 @@ namespace flex
 			auto& pair = m_GlobalUserUniforms[uniform->id];
 			pair.first = data;
 			pair.second = dataSize;
+		}
+
+		void VulkanRenderer::AddRenderObjectUniformOverride(RenderID renderID, Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
+		{
+			GetRenderObject(renderID)->uniformOverrides.AddUniform(uniform, propertyOverride);
 		}
 
 		void VulkanRenderer::NewFrame()
@@ -4203,10 +4202,8 @@ namespace flex
 					BindDescriptorSet(computeSDFMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, pipeline->layout, descriptorSet);
 
 					UniformOverrides overrides = {};
-					overrides.texChannel = metric->channel;
-					overrides.overridenUniforms.AddUniform(&U_TEX_CHANNEL);
-					overrides.sdfData = glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity);
-					overrides.overridenUniforms.AddUniform(&U_SDF_DATA);
+					overrides.AddUniform(&U_TEX_CHANNEL, (i32)metric->channel);
+					overrides.AddUniform(&U_SDF_DATA, glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity));
 					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 					vkCmdDraw(commandBuffer, m_Quad3DVertexBufferData.VertexCount, 1, 0, 0);
@@ -4782,10 +4779,6 @@ namespace flex
 			//real scale = ((real)font->GetFontSize()) / 12.0f + sin(g_SecElapsedSinceProgramStart) * 2.0f;
 			glm::vec3 scaleVec(1.0f);
 
-			UniformOverrides overrides = {};
-			overrides.overridenUniforms.AddUniform(&U_TEX_SIZE);
-			overrides.overridenUniforms.AddUniform(&U_FONT_CHAR_DATA);
-
 			VkDeviceSize offsets[1] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fontVertexBuffer->m_Buffer, offsets);
 
@@ -4812,15 +4805,15 @@ namespace flex
 					u32 dynamicOffsetIndex = 0; // TODO: Remove
 					BindDescriptorSet(fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, graphicsPipeline->pipeline->layout, (VkDescriptorSet)font->userData);
 
-
+					UniformOverrides overrides = {};
 					u32 packedSoftnessOpacity = Pack2FloatToU32(font->metaData.soften, font->metaData.shadowOpacity);
 
-					overrides.texSize = glm::vec2(fontTex->width, fontTex->height);
-					overrides.fontCharData = glm::vec4(
+					overrides.AddUniform(&U_TEX_SIZE, glm::vec2(fontTex->width, fontTex->height));
+					overrides.AddUniform(&U_FONT_CHAR_DATA, glm::vec4(
 						font->metaData.threshold,
 						font->metaData.shadowOffset.x,
 						font->metaData.shadowOffset.y,
-						static_cast<real>(packedSoftnessOpacity));
+						static_cast<real>(packedSoftnessOpacity)));
 					UpdateDynamicUniformBuffer(matID, dynamicOffsetIndex * m_DynamicAlignment, transformMat, &overrides);
 
 					vkCmdDraw(commandBuffer, font->bufferSize, 1, font->bufferStart, 0);
@@ -4860,9 +4853,6 @@ namespace flex
 
 
 			GraphicsPipeline* defaultGraphicsPipeline = GetGraphicsPipeline(spriteRenderObject->graphicsPipelineID)->pipeline;
-
-			UniformOverrides overrides = {};
-			overrides.overridenUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
 
 			u32 i = 0;
 			for (const SpriteQuadDrawInfo& drawInfo : batch)
@@ -4922,7 +4912,8 @@ namespace flex
 
 				vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, pushBlock->size, pushBlock->data);
 
-				overrides.colourMultiplier = drawInfo.colour;
+				UniformOverrides overrides = {};
+				overrides.AddUniform(&U_COLOUR_MULTIPLIER, drawInfo.colour);
 				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer->m_Buffer, offsets);
@@ -4982,10 +4973,8 @@ namespace flex
 				VkPipelineLayout pipelineLayout = graphicsPipeline->layout;
 
 				UniformOverrides overrides = {};
-				overrides.colourMultiplier = VEC4_ONE;
-				overrides.overridenUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
-				overrides.uvBlendAmount = uiMesh->GetUVBlendAmount(i);
-				overrides.overridenUniforms.AddUniform(&U_UV_BLEND_AMOUNT);
+				overrides.AddUniform(&U_COLOUR_MULTIPLIER, VEC4_ONE);
+				overrides.AddUniform(&U_UV_BLEND_AMOUNT, uiMesh->GetUVBlendAmount(i));
 				UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &overrides);
 
 				vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer->m_Buffer, offsets);
@@ -7793,7 +7782,7 @@ namespace flex
 						for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
 						{
 							VulkanRenderObject* renderObject = GetRenderObject(renderID);
-							UpdateDynamicUniformBuffer(renderID, nullptr, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
+							UpdateDynamicUniformBuffer(renderID, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
 						}
 					}
 					PROFILE_END("");
@@ -7934,8 +7923,7 @@ namespace flex
 						vkCmdBindVertexBuffers(m_OffScreenCmdBuffer, 0, 1, &m_FullScreenTriVertexBuffer->m_Buffer, offsets);
 
 						UniformOverrides overrides = {};
-						overrides.overridenUniforms.AddUniform(&U_SSAO_BLUR_DATA_DYNAMIC);
-						overrides.bSSAOVerticalPass = false;
+						overrides.AddUniform(&U_SSAO_BLUR_DATA_DYNAMIC, glm::vec2(0.0f, (real)m_SSAOBlurSamplePixelOffset / m_GBufferColourAttachment0->height));
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 0 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 						vkCmdDraw(m_OffScreenCmdBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
@@ -7950,7 +7938,8 @@ namespace flex
 
 						BindDescriptorSet(ssaoBlurMat, 0, m_OffScreenCmdBuffer, blurVPipeline->layout, m_SSAOBlurVDescSet);
 
-						overrides.bSSAOVerticalPass = true;
+						overrides = {};
+						overrides.AddUniform(&U_SSAO_BLUR_DATA_DYNAMIC, glm::vec2((real)m_SSAOBlurSamplePixelOffset / m_GBufferColourAttachment0->width, 0.0f));
 						UpdateDynamicUniformBuffer(m_SSAOBlurMatID, 1 * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
 
 						vkCmdDraw(m_OffScreenCmdBuffer, m_FullScreenTriVertexBufferData.VertexCount, 1, 0, 0);
@@ -8112,7 +8101,7 @@ namespace flex
 									{
 										for (RenderID renderID : matBatch.batch.objects)
 										{
-											UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+											UpdateDynamicUniformBuffer(renderID, m_WireframeMatID, dynamicUBOOffset);
 											dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 										}
 									}
@@ -8233,7 +8222,7 @@ namespace flex
 								{
 									for (RenderID renderID : matBatchPair.batch.objects)
 									{
-										UpdateDynamicUniformBuffer(renderID, nullptr, m_WireframeMatID, dynamicUBOOffset);
+										UpdateDynamicUniformBuffer(renderID, m_WireframeMatID, dynamicUBOOffset);
 										dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 									}
 								}
@@ -8484,10 +8473,10 @@ namespace flex
 
 					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
 
-					UniformOverrides overrides = {};
-					overrides.overridenUniforms.AddUniform(&U_PARTICLE_SIM_DATA);
 					particleSystem->system->data.dt = g_DeltaTime;
-					overrides.particleSimData = &particleSystem->system->data;
+
+					UniformOverrides overrides = {};
+					overrides.AddUniform(&U_PARTICLE_SIM_DATA, (void*)&particleSystem->system->data);
 					// TODO: Only do once/on edit
 					UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
 
@@ -8584,10 +8573,12 @@ namespace flex
 			m_Terrain->loadingChunkIndex = chunkIndex;
 			m_Terrain->loadingChunkLinearIndex = chunkLinearIndex;
 
+			TerrainGenDynamicData terrainGenDynamicData = {};
+			terrainGenDynamicData.chunkIndex = chunkIndex;
+			terrainGenDynamicData.linearIndex = chunkLinearIndex;
+
 			UniformOverrides uniformOverrides = {};
-			uniformOverrides.overridenUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
-			uniformOverrides.terrainGenDynamicData.chunkIndex = chunkIndex;
-			uniformOverrides.terrainGenDynamicData.linearIndex = chunkLinearIndex;
+			uniformOverrides.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA, (void*)&terrainGenDynamicData);
 
 			u32 numThreadsPerAxis = (u32)glm::ceil(numPointsPerAxis / (real)TERRAIN_THREAD_GROUP_SIZE);
 
@@ -8854,7 +8845,7 @@ namespace flex
 			CreateFullscreenBlitResources();
 			CreateComputeResources(); // TODO: Try removing
 
-			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY, nullptr);
+			UpdateDynamicUniformBuffer(m_PostProcessMatID, 0, MAT4_IDENTITY);
 
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
@@ -9247,7 +9238,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms)
+		void VulkanRenderer::UpdateConstantUniformBuffers()
 		{
 			PROFILE_AUTO("UpdateConstantUniformBuffers");
 
@@ -9288,26 +9279,7 @@ namespace flex
 				void* dataStart = nullptr;
 			};
 
-			if (overridenUniforms)
-			{
-				if (overridenUniforms->overridenUniforms.HasUniform(&U_VIEW))
-				{
-					view = overridenUniforms->view;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(&U_VIEW_PROJECTION))
-				{
-					viewProjection = overridenUniforms->viewProjection;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(&U_PROJECTION))
-				{
-					projection = overridenUniforms->projection;
-				}
-				if (overridenUniforms->overridenUniforms.HasUniform(&U_CAM_POS))
-				{
-					camPos = overridenUniforms->camPos;
-				}
-			}
-
+			// NOTE: These must be overridden manually if the non-inverse counterparts are being overriden by the material
 			viewInv = glm::inverse(view);
 			projectionInv = glm::inverse(projection);
 
@@ -9365,9 +9337,17 @@ namespace flex
 					{
 						if (constantUniforms.HasUniform(uniformInfo.uniform))
 						{
+							void* dataStart = uniformInfo.dataStart;
+
+							MaterialPropertyOverride uniformOverride;
+							if (material->uniformOverrides.HasUniform(uniformInfo.uniform, uniformOverride))
+							{
+								dataStart = &uniformOverride;
+							}
+
 							assert(uniformInfo.uniform->size != 0);
 
-							memcpy(constantBuffer->data.data + index, uniformInfo.dataStart, uniformInfo.uniform->size);
+							memcpy(constantBuffer->data.data + index, dataStart, uniformInfo.uniform->size);
 							index += uniformInfo.uniform->size;
 						}
 					}
@@ -9384,8 +9364,9 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* uniformOverrides /* = nullptr */,
-			MaterialID materialIDOverride /* = InvalidMaterialID */, u32 dynamicUBOOffsetOverride /* = InvalidID */)
+		void VulkanRenderer::UpdateDynamicUniformBuffer(RenderID renderID,
+			MaterialID materialIDOverride /* = InvalidMaterialID */,
+			u32 dynamicUBOOffsetOverride /* = InvalidID */)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 			if (renderObject == nullptr)
@@ -9396,10 +9377,13 @@ namespace flex
 			MaterialID matID = materialIDOverride == InvalidMaterialID ? renderObject->materialID : materialIDOverride;
 			u32 dynamicUBOOffset = dynamicUBOOffsetOverride == InvalidID ? renderObject->dynamicUBOOffset : dynamicUBOOffsetOverride;
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
-			UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, uniformOverrides);
+			UpdateDynamicUniformBuffer(matID, dynamicUBOOffset, model, &renderObject->uniformOverrides);
 		}
 
-		void VulkanRenderer::UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffset, const glm::mat4& model,
+		void VulkanRenderer::UpdateDynamicUniformBuffer(
+			MaterialID materialID,
+			u32 dynamicOffset,
+			const glm::mat4& model,
 			UniformOverrides const* uniformOverrides /* = nullptr */)
 		{
 			PROFILE_AUTO("UpdateDynamicUniformBuffer");
@@ -9431,68 +9415,72 @@ namespace flex
 			glm::mat4 postProcessMatrix = GetPostProcessingMatrix();
 			ParticleSimData particleSimData = {};
 			TerrainGenDynamicData terrainGenDynamicData = {};
+			real chargeAmount = 0.0f;
+
+			auto ApplyOverrides = [&](UniformOverrides const* overrides)
+			{
+				MaterialPropertyOverride propertyOverride;
+				if (overrides->HasUniform(&U_ENABLE_ALBEDO_SAMPLER, propertyOverride))
+				{
+					enableAlbedoSampler = propertyOverride.boolValue;
+				}
+				if (overrides->HasUniform(&U_ENABLE_METALLIC_SAMPLER, propertyOverride))
+				{
+					enableMetallicSampler = propertyOverride.boolValue;
+				}
+				if (overrides->HasUniform(&U_ENABLE_ROUGHNESS_SAMPLER, propertyOverride))
+				{
+					enableRoughnessSampler = propertyOverride.boolValue;
+				}
+				if (overrides->HasUniform(&U_ENABLE_NORMAL_SAMPLER, propertyOverride))
+				{
+					enableNormalSampler = propertyOverride.boolValue;
+				}
+				if (overrides->HasUniform(&U_SDF_DATA, propertyOverride))
+				{
+					sdfData = propertyOverride.vec4Value;
+				}
+				if (overrides->HasUniform(&U_TEX_SIZE, propertyOverride))
+				{
+					texSize = propertyOverride.vec2Value;
+				}
+				if (overrides->HasUniform(&U_FONT_CHAR_DATA, propertyOverride))
+				{
+					fontCharData = propertyOverride.vec4Value;
+				}
+				if (overrides->HasUniform(&U_TEX_CHANNEL, propertyOverride))
+				{
+					texChannel = propertyOverride.i32Value;
+				}
+				if (overrides->HasUniform(&U_SSAO_BLUR_DATA_DYNAMIC, propertyOverride))
+				{
+					m_SSAOBlurDataDynamic.ssaoTexelOffset = propertyOverride.vec2Value;
+				}
+				if (overrides->HasUniform(&U_COLOUR_MULTIPLIER, propertyOverride))
+				{
+					colourMultiplier = propertyOverride.vec4Value;
+				}
+				if (overrides->HasUniform(&U_PARTICLE_SIM_DATA, propertyOverride))
+				{
+					particleSimData = *(ParticleSimData*)propertyOverride.pointerValue;
+				}
+				if (overrides->HasUniform(&U_UV_BLEND_AMOUNT, propertyOverride))
+				{
+					uvBlendAmount = propertyOverride.vec2Value;
+				}
+				if (overrides->HasUniform(&U_TERRAIN_GEN_DYNAMIC_DATA, propertyOverride))
+				{
+					terrainGenDynamicData = *(TerrainGenDynamicData*)propertyOverride.pointerValue;
+				}
+				if (overrides->HasUniform(&U_CHARGE_AMOUNT, propertyOverride))
+				{
+					chargeAmount = propertyOverride.realValue;
+				}
+			};
 
 			if (uniformOverrides != nullptr)
 			{
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_ENABLE_ALBEDO_SAMPLER))
-				{
-					enableAlbedoSampler = uniformOverrides->enableAlbedoSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_ENABLE_METALLIC_SAMPLER))
-				{
-					enableMetallicSampler = uniformOverrides->enableMetallicSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_ENABLE_ROUGHNESS_SAMPLER))
-				{
-					enableRoughnessSampler = uniformOverrides->enableRoughnessSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_ENABLE_NORMAL_SAMPLER))
-				{
-					enableNormalSampler = uniformOverrides->enableNormalSampler;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_SDF_DATA))
-				{
-					sdfData = uniformOverrides->sdfData;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_TEX_SIZE))
-				{
-					texSize = uniformOverrides->texSize;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_FONT_CHAR_DATA))
-				{
-					fontCharData = uniformOverrides->fontCharData;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_TEX_CHANNEL))
-				{
-					texChannel = uniformOverrides->texChannel;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_SSAO_BLUR_DATA_DYNAMIC))
-				{
-					if (uniformOverrides->bSSAOVerticalPass)
-					{
-						m_SSAOBlurDataDynamic.ssaoTexelOffset = glm::vec2(0.0f, (real)m_SSAOBlurSamplePixelOffset / m_GBufferColourAttachment0->height);
-					}
-					else
-					{
-						m_SSAOBlurDataDynamic.ssaoTexelOffset = glm::vec2((real)m_SSAOBlurSamplePixelOffset / m_GBufferColourAttachment0->width, 0.0f);
-					}
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_COLOUR_MULTIPLIER))
-				{
-					colourMultiplier = uniformOverrides->colourMultiplier;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_PARTICLE_SIM_DATA))
-				{
-					particleSimData = *uniformOverrides->particleSimData;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_UV_BLEND_AMOUNT))
-				{
-					uvBlendAmount = uniformOverrides->uvBlendAmount;
-				}
-				if (uniformOverrides->overridenUniforms.HasUniform(&U_TERRAIN_GEN_DYNAMIC_DATA))
-				{
-					terrainGenDynamicData = uniformOverrides->terrainGenDynamicData;
-				}
+				ApplyOverrides(uniformOverrides);
 			}
 
 			struct UniformInfo
@@ -9523,6 +9511,7 @@ namespace flex
 				{ &U_PARTICLE_SIM_DATA, (void*)&particleSimData },
 				{ &U_UV_BLEND_AMOUNT, (void*)&uvBlendAmount },
 				{ &U_TERRAIN_GEN_DYNAMIC_DATA, (void*)&terrainGenDynamicData },
+				{ &U_CHARGE_AMOUNT, (void*)&chargeAmount },
 			};
 
 			u32 index = 0;
@@ -9544,6 +9533,17 @@ namespace flex
 						u32 newUsedSize = (u32)(glm::max(dynamicBuffer->fullDynamicBufferSize, 2u) * growthRate);
 						i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment);
 						UpdateShaderMaxObjectCount(material->shaderID, newMax);
+					}
+
+					void* dataStart = uniformInfo.dataStart;
+
+					MaterialPropertyOverride uniformOverride;
+					if (material->uniformOverrides.HasUniform(uniformInfo.uniform, uniformOverride) &&
+						uniformOverrides != nullptr &&
+						!uniformOverrides->HasUniform(uniformInfo.uniform))
+					{
+						// Material overrides only apply when not overridden explicitly by caller
+						dataStart = &uniformOverride;
 					}
 
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.uniform->size);

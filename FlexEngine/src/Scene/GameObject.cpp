@@ -4714,6 +4714,19 @@ namespace flex
 		m_bItemizable = true;
 	}
 
+	void Battery::Update()
+	{
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() >= 1)
+		{
+			MeshComponent* submesh0 = m_Mesh->GetSubMesh(0);
+			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
+				&U_CHARGE_AMOUNT,
+				{ chargeAmount / chargeCapacity });
+		}
+
+		GameObject::Update();
+	}
+
 	void Battery::OnCharge(real amount)
 	{
 		chargeAmount = glm::clamp(chargeAmount + amount, 0.0f, chargeCapacity);
@@ -6411,8 +6424,15 @@ namespace flex
 	{
 		JSONObject obj = {};
 
-		obj.fields.emplace_back("wire id", JSONValue(wireID));
-		obj.fields.emplace_back("socket id", JSONValue(socketID));
+		if (wireID.IsValid())
+		{
+			obj.fields.emplace_back("wire id", JSONValue(wireID));
+		}
+
+		if (socketID.IsValid())
+		{
+			obj.fields.emplace_back("socket id", JSONValue(socketID));
+		}
 
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
@@ -6475,7 +6495,10 @@ namespace flex
 		JSONObject obj = {};
 
 		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
-		obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
+		if (connectedPlugID.IsValid())
+		{
+			obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
+		}
 
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
@@ -12685,11 +12708,14 @@ namespace flex
 		if (sockets.size() >= 1)
 		{
 			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-			Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(sockets[0]);
-			if (otherSocket != nullptr)
+			for (Socket* socket : sockets)
 			{
-				real chargeAmount = m_ChargeRate * m_Efficiency;
-				otherSocket->parent->OnCharge(chargeAmount);
+				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
+				if (otherSocket != nullptr)
+				{
+					real chargeAmount = m_ChargeRate * m_Efficiency * g_DeltaTime;
+					otherSocket->parent->OnCharge(chargeAmount);
+				}
 			}
 		}
 

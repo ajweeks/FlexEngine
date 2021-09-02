@@ -90,6 +90,7 @@ namespace flex
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
 			virtual void SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize) override;
+			virtual void AddRenderObjectUniformOverride(RenderID renderID, Uniform const* uniform, const MaterialPropertyOverride& propertyOverride) override;
 
 			virtual void NewFrame() override;
 
@@ -307,10 +308,12 @@ namespace flex
 			std::vector<const char*> GetRequiredInstanceExtensions() const;
 			void DisableUnsupportedValidationLayers();
 
-			void UpdateConstantUniformBuffers(UniformOverrides const* overridenUniforms = nullptr);
-			void UpdateDynamicUniformBuffer(RenderID renderID, UniformOverrides const* overridenUniforms = nullptr,
-				MaterialID materialIDOverride = InvalidMaterialID, u32 dynamicUBOOffsetOverride = InvalidID);
-			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex, const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
+			void UpdateConstantUniformBuffers();
+			void UpdateDynamicUniformBuffer(RenderID renderID,
+				MaterialID materialIDOverride = InvalidMaterialID,
+				u32 dynamicUBOOffsetOverride = InvalidID);
+			void UpdateDynamicUniformBuffer(MaterialID materialID, u32 dynamicOffsetIndex,
+				const glm::mat4& model, UniformOverrides const* uniformOverrides = nullptr);
 
 			void CreateFontGraphicsPipelines();
 

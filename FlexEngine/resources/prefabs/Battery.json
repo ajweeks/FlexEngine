@@ -9,17 +9,17 @@
 		"type" : "battery",
 		"visible" : true,
 		"casts shadow" : true,
-		"mesh" : "battery_cell.glb",
+		"mesh" : "battery_cell_2.glb",
 		"materials" : 
 		[
-			"pbr cyan",
+			"BatteryCharge",
 			"pbr chrome",
 			"rubber"
 		],
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.000, 2.000, 1.000"
+			"half extents" : "1.000, 2.001, 1.000"
 		},
 		"rigid body" : 
 		{
@@ -32,6 +32,39 @@
 		"battery info" : 
 		{
 			"charge amount" : 0.000000
-		}
+		},
+		"children" : 
+		[
+			{
+				"name" : "socket_00",
+				"id" : "4CAC47CC4CED1AB44CA46A05140FF836",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "-0.485, 1.996, -0.458"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"socket" : 
+				{
+					"slotIdx" : 0
+				}
+			},
+			{
+				"name" : "socket_01",
+				"id" : "680D9279586F2D9649EEF2E1A3A0014D",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "-0.484, 1.996, 0.464"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"socket" : 
+				{
+					"slotIdx" : 1
+				}
+			}
+		]
 	}
 }

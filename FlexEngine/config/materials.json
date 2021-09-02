@@ -495,6 +495,12 @@
 			"name" : "Selection Hologram",
 			"shader" : "hologram",
 			"const emissive" : "2.000, 5.000, 2.750, 0.173"
+		},
+		{
+			"name" : "BatteryCharge",
+			"shader" : "battery_charge",
+			"const albedo" : "0.004, 0.004, 0.004, 1.000",
+			"const emissive" : "0.000, 1.000, 0.125, 1.000"
 		}
 	]
 }

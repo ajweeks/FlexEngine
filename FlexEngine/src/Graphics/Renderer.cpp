@@ -1854,6 +1854,7 @@ namespace flex
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
+			{ "battery_charge", "vk_battery_charge_vert.spv", "vk_battery_charge_frag.spv", "", "" },
 			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
 			{ "terrain_generate_points", "", "", "", "vk_terrain_generate_points_comp.spv" },
 			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
@@ -2440,6 +2441,29 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_EMISSIVE_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_NORMAL_SAMPLER);
+		++shaderID;
+
+		// Battery Charge
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CHARGE_AMOUNT);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_EMISSIVE_SAMPLER);
 		++shaderID;
 
 		// Cloud

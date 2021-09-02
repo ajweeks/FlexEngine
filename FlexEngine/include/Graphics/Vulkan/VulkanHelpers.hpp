@@ -590,6 +590,8 @@ namespace flex
 			GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 
 			RenderPassType renderPassOverride = RenderPassType::_NONE;
+
+			UniformOverrides uniformOverrides;
 		};
 
 		struct GraphicsPipelineCreateInfo
