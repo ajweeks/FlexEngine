@@ -184,28 +184,19 @@ namespace flex
 		}
 		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
-		if (m_ObjectInteractingWith != nullptr)
+		if (terminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
 		{
-			StringID interactingWithTypeID = m_ObjectInteractingWith->GetTypeID();
-			switch (interactingWithTypeID)
-			{
-			case SID("terminal"):
-			{
-				if (g_EngineInstance->IsRenderingImGui())
-				{
-					Terminal* terminal = static_cast<Terminal*>(m_ObjectInteractingWith);
-					terminal->DrawImGuiWindow();
-				}
-			} break;
-			case SID("vehicle"):
-			{
-				Vehicle* vehicle = static_cast<Vehicle*>(m_ObjectInteractingWith);
+			Terminal* terminal = (Terminal*)terminalInteractingWithID.Get();
+			terminal->DrawImGuiWindow();
+		}
 
-				const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+		if (ridingVehicleID.IsValid())
+		{
+			Vehicle* vehicle = (Vehicle*)ridingVehicleID.Get();
 
-				m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
-			} break;
-			}
+			const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+
+			m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
 		}
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
@@ -279,16 +270,6 @@ namespace flex
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
 		{
-			if (m_ObjectInteractingWith != nullptr)
-			{
-				std::string name = m_ObjectInteractingWith->GetName();
-				ImGui::Text("Object interacting with:");
-				if (ImGui::Button(name.c_str()))
-				{
-					g_Editor->SetSelectedObject(m_ObjectInteractingWith->ID);
-				}
-			}
-
 			ImGui::Text("Pitch: %.2f", GetPitch());
 			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
 			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
@@ -359,116 +340,6 @@ namespace flex
 			ImGui::Unindent();
 
 			ImGui::TreePop();
-		}
-	}
-
-	bool Player::AllowInteractionWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			return true;
-		}
-
-		StringID objTypeID = gameObject->GetTypeID();
-		switch (objTypeID)
-		{
-		case SID("terminal"): return true;
-		case SID("vehicle"): return true;
-		}
-
-		return false;
-	}
-
-	void Player::SetInteractingWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			StringID previousObjectInteractingWithID = m_ObjectInteractingWith->GetTypeID();
-			switch (previousObjectInteractingWithID)
-			{
-			case SID("terminal"):
-			{
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				assert(cam->type == CameraType::TERMINAL);
-				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
-				terminalCam->SetTerminal(nullptr);
-			} break;
-			case SID("vehicle"):
-			{
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				if (cam->type == CameraType::VEHICLE)
-				{
-					g_CameraManager->PopCamera();
-				}
-
-				SetVisible(true);
-			} break;
-			}
-
-			GameObject::SetInteractingWith(nullptr);
-			return;
-		}
-
-		StringID newObjectInteractingWithID = gameObject->GetTypeID();
-		switch (newObjectInteractingWithID)
-		{
-		case SID("terminal"):
-		{
-			Terminal* terminal = static_cast<Terminal*>(gameObject);
-			GameObject::SetInteractingWith(terminal);
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			TerminalCamera* terminalCam = nullptr;
-			if (cam->type == CameraType::TERMINAL)
-			{
-				terminalCam = static_cast<TerminalCamera*>(cam);
-			}
-			else
-			{
-				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
-				g_CameraManager->PushCamera(terminalCam, true, true);
-			}
-			terminalCam->SetTerminal(terminal);
-		} break;
-		case SID("socket"):
-		{
-			Socket* socket = static_cast<Socket*>(gameObject);
-
-			WirePlug* wirePlug = (WirePlug*)socket->connectedPlugID.Get();
-			if (wirePlug != nullptr)
-			{
-				// Unplug wire and grab it!
-				wirePlug->Unplug(socket);
-				Wire* wire = (Wire*)wirePlug->wireID.Get();
-				SetInteractingWith(wire);
-				wire->SetInteractingWith(this);
-			}
-			else
-			{
-				// Empty sockets shouldn't be interactable
-				ENSURE_NO_ENTRY();
-			}
-		} break;
-		case SID("vehicle"):
-		{
-			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
-			GameObject::SetInteractingWith(vehicle);
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			VehicleCamera* vehicleCamera = nullptr;
-			// Switch to vehicle cam
-			if (cam->type != CameraType::VEHICLE)
-			{
-				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
-				g_CameraManager->PushCamera(vehicleCamera, false, true);
-			}
-
-			SetVisible(false);
-		} break;
-		default:
-		{
-			GameObject::SetInteractingWith(gameObject);
-		} break;
 		}
 	}
 
@@ -898,5 +769,85 @@ namespace flex
 		{
 			PrintError("Failed to write user inventory to file at %s\n", USER_INVENTORY_LOCATION);
 		}
+	}
+
+	void Player::SetInteractingWithTerminal(Terminal* terminal)
+	{
+		if (terminal != nullptr)
+		{
+			assert(!terminalInteractingWithID.IsValid());
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			TerminalCamera* terminalCam = nullptr;
+			if (cam->type == CameraType::TERMINAL)
+			{
+				terminalCam = static_cast<TerminalCamera*>(cam);
+			}
+			else
+			{
+				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
+				g_CameraManager->PushCamera(terminalCam, true, true);
+			}
+			terminalCam->SetTerminal(terminal);
+
+			terminalInteractingWithID = terminal->ID;
+			terminal->SetBeingInteractedWith(this);
+		}
+		else
+		{
+			assert(terminalInteractingWithID.IsValid());
+			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			assert(cam->type == CameraType::TERMINAL);
+			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
+			terminalCam->SetTerminal(nullptr);
+
+			terminalInteractingWith->SetBeingInteractedWith(nullptr);
+			terminalInteractingWithID = InvalidGameObjectID;
+		}
+	}
+
+	void Player::SetRidingVehicle(Vehicle* vehicle)
+	{
+		if (vehicle != nullptr)
+		{
+			assert(!ridingVehicleID.IsValid());
+
+			vehicle->OnPlayerEnter();
+
+			ridingVehicleID = vehicle->ID;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			VehicleCamera* vehicleCamera = nullptr;
+			// Switch to vehicle cam
+			if (cam->type != CameraType::VEHICLE)
+			{
+				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
+				g_CameraManager->PushCamera(vehicleCamera, false, true);
+			}
+
+			SetVisible(false);
+		}
+		else
+		{
+			Vehicle* ridingVehicle = (Vehicle*)ridingVehicleID.Get();
+			ridingVehicle->OnPlayerExit();
+
+			ridingVehicleID = InvalidGameObjectID;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			if (cam->type == CameraType::VEHICLE)
+			{
+				g_CameraManager->PopCamera();
+			}
+
+			SetVisible(true);
+		}
+	}
+
+	bool Player::IsHolding(GameObject* object)
+	{
+		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
 	}
 } // namespace flex

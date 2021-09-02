@@ -480,38 +480,6 @@
 			]
 		},
 		{
-			"name" : "wire_000",
-			"id" : "00A9E8171F66588340AE41238924C246",
-			"type" : "wire",
-			"transform" : 
-			{
-				"pos" : "1.785, 0.600, 8.670"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"wire" : 
-			{
-				"startPoint" : "1.06, 0.60, 7.98",
-				"endPoint" : "2.51, 0.60, 9.36"
-			}
-		},
-		{
-			"name" : "wire_001",
-			"id" : "6C4EE368841B3F9B478C3823B8666D93",
-			"type" : "wire",
-			"transform" : 
-			{
-				"pos" : "-8.395, 0.600, 6.915"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"wire" : 
-			{
-				"startPoint" : "-9.23, 0.60, 6.36",
-				"endPoint" : "-7.56, 0.60, 7.47"
-			}
-		},
-		{
 			"name" : "Cart_00",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",

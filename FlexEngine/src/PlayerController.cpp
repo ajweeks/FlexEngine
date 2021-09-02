@@ -326,10 +326,11 @@ namespace flex
 			g_Renderer->GetUIMesh()->DrawRect(rectPos - halfRectSize, rectPos + halfRectSize, VEC4_ONE, 0.0f);
 #endif
 
-			// TODO: Allow player to (dis)connect pluggables together
+			std::list<Pair<GameObject*, real>> nearbyInteractables;
 
 			GameObject* nearestInteractable = nullptr;
-			if (m_Player->m_ObjectInteractingWith == nullptr)
+			if (!m_Player->ridingVehicleID.IsValid() &&
+				!m_Player->terminalInteractingWithID.IsValid())
 			{
 				std::vector<GameObject*> allInteractableObjects;
 				g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
@@ -337,7 +338,6 @@ namespace flex
 				if (!allInteractableObjects.empty())
 				{
 					// List of objects sorted by sqr dist (closest to farthest)
-					std::list<Pair<GameObject*, real>> nearbyInteractables;
 
 					// TODO: Move to All.variables
 					real maxDistSqr = 7.0f * 7.0f;
@@ -346,40 +346,24 @@ namespace flex
 					{
 						if (obj != m_Player)
 						{
+							// TODO: Also check player is facing towards this object
 							real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
 							if (dist2 <= maxDistSqr)
 							{
-								// Insert into sorted list
-								bool bInserted = false;
-								for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
-								{
-									if (iter->second > dist2)
-									{
-										nearbyInteractables.insert(iter, { obj, dist2 });
-										bInserted = true;
-										break;
-									}
-								}
-								if (!bInserted)
-								{
-									nearbyInteractables.emplace_back(obj, dist2);
-								}
+								nearbyInteractables.emplace_back(obj, dist2);
 							}
 						}
 					}
 
-					for (auto iter = nearbyInteractables.begin(); iter != nearbyInteractables.end(); ++iter)
+					if (!nearbyInteractables.empty())
 					{
-						GameObject* nearbyInteractable = iter->first;
-						if (!nearbyInteractable->IsBeingInteractedWith())
+						nearbyInteractables.sort([](const Pair<GameObject*, real>& a, const Pair<GameObject*, real>& b)
 						{
-							if (nearbyInteractable->AllowInteractionWith(m_Player))
-							{
-								nearestInteractable = nearbyInteractable;
-								nearestInteractable->SetNearbyInteractable(m_Player);
-								break;
-							}
-						}
+							return a.second < b.second;
+						});
+
+						nearestInteractable = nearbyInteractables.front().first;
+						nearestInteractable->SetNearbyInteractable(m_Player);
 					}
 				}
 			}
@@ -388,6 +372,9 @@ namespace flex
 			{
 				bool bPlaceItemLeft = m_bAttemptInteractLeftHand && m_Player->heldItemLeftHand.IsValid();
 				bool bPlaceItemRight = m_bAttemptInteractRightHand && m_Player->heldItemRightHand.IsValid();
+
+				bool bPickupItemLeft = m_bAttemptInteractLeftHand && !m_Player->heldItemLeftHand.IsValid();
+				bool bPickupItemRight = m_bAttemptInteractRightHand && !m_Player->heldItemRightHand.IsValid();
 
 				if (bPlaceItemLeft || bPlaceItemRight)
 				{
@@ -400,7 +387,8 @@ namespace flex
 					{
 						WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? heldItemLeftHand : heldItemRightHand);
 						// Plug in wire!
-						if (wirePlug->PlugInToNearby())
+						PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+						if (pluggablesSystem->PlugInToNearbySocket(wirePlug, WirePlug::nearbyThreshold))
 						{
 							if (bPlaceWireLeft)
 							{
@@ -412,45 +400,93 @@ namespace flex
 							}
 						}
 					}
-
-					if (m_Player->m_ObjectInteractingWith->GetTypeID() == SID("wire"))
-					{
-						Wire* wire = (Wire*)m_Player->m_ObjectInteractingWith;
-						if (((WirePlug*)wire->plug0ID.Get())->socketID.IsValid() &&
-							((WirePlug*)wire->plug1ID.Get())->socketID.IsValid())
-						{
-							// Both ends of the wire are plugged in, stop interacting
-							m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-							m_Player->SetInteractingWith(nullptr);
-						}
-					}
-					else
-					{
-						m_Player->m_ObjectInteractingWith->SetInteractingWith(nullptr);
-						m_Player->SetInteractingWith(nullptr);
-					}
-
-					if (bPlaceItemLeft)
-					{
-						m_bAttemptInteractLeftHand = false;
-					}
-					if (bPlaceItemRight)
-					{
-						m_bAttemptInteractRightHand = false;
-					}
 				}
-				else
+				else if (bPickupItemLeft || bPickupItemRight)
 				{
-					if (nearestInteractable != nullptr)
+					auto nearbyInteractableIter = nearbyInteractables.begin();
+					bool bInteracted = false;
+					// TODO: Run this loop every frame to indicate to player what each hand will interact with
+					while (!bInteracted && nearbyInteractableIter != nearbyInteractables.end())
 					{
-						nearestInteractable->SetInteractingWith(m_Player);
-						m_Player->SetInteractingWith(nearestInteractable);
-						m_bAttemptInteractLeftHand = false;
-						m_bAttemptInteractRightHand = false;
+						GameObject* nearbyInteractable = nearbyInteractableIter->first;
 
+						switch (nearbyInteractable->GetTypeID())
+						{
+						case SID("socket"):
+						case SID("wire plug"):
+						{
+							WirePlug* wirePlugInteractingWith = nullptr;
 
+							if (nearbyInteractable->GetTypeID() == SID("socket"))
+							{
+								// Interacting with full socket, unplug wire
+								Socket* socket = (Socket*)nearbyInteractable;
+								wirePlugInteractingWith = (WirePlug*)socket->connectedPlugID.Get();
+
+								if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
+								{
+									// Can't interact with plug player is already holding
+									// TODO: Call generic `IsInteractable` on plug
+									break;
+								}
+							}
+							else
+							{
+								wirePlugInteractingWith = (WirePlug*)nearbyInteractable;
+								if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
+								{
+
+									// Can't interact with plug player is already holding
+									break;
+								}
+							}
+
+							if (wirePlugInteractingWith != nullptr)
+							{
+								PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+
+								if (wirePlugInteractingWith->socketID.IsValid())
+								{
+									// Plug is plugged in, try unplugging
+									pluggablesSystem->UnplugFromSocket(wirePlugInteractingWith);
+									bInteracted = true;
+									if (bPickupItemLeft)
+									{
+										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
+									}
+									else if (bPickupItemRight)
+									{
+										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
+									}
+								}
+								else
+								{
+									// Plug is not plugged in, grab plug
+									bInteracted = true;
+									if (bPickupItemLeft)
+									{
+										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
+									}
+									else if (bPickupItemRight)
+									{
+										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
+									}
+								}
+							}
+						} break;
+						case SID("terminal"):
+						{
+							Terminal* terminal = (Terminal*)nearestInteractable;
+							m_Player->SetInteractingWithTerminal(terminal);
+						} break;
+						}
+
+						++nearbyInteractableIter;
 					}
 				}
+
+				m_bAttemptInteractLeftHand = false;
+				m_bAttemptInteractRightHand = false;
 			}
 		}
 
@@ -599,14 +635,23 @@ namespace flex
 				m_PlacingWire->Initialize();
 				m_PlacingWire->PostInitialize();
 
-				m_Player->SetInteractingWith(m_PlacingWire);
-				m_PlacingWire->SetInteractingWith(m_Player);
-
 				assert(!m_Player->heldItemLeftHand.IsValid());
 				assert(!m_Player->heldItemRightHand.IsValid());
 
 				m_Player->heldItemLeftHand = m_PlacingWire->plug0ID;
 				m_Player->heldItemRightHand = m_PlacingWire->plug1ID;
+			}
+		}
+
+		if (m_Player->objectInteractingWithID.IsValid())
+		{
+			GameObject* objectInteractingWith = m_Player->objectInteractingWithID.Get();
+			if (objectInteractingWith->GetTypeID() == SID("valve"))
+			{
+				Valve* valve = (Valve*)objectInteractingWith;
+
+				const GamepadState& gamepadState = g_InputManager->GetGamepadState(m_PlayerIndex);
+				valve->rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * valve->rotationSpeedScale;
 			}
 		}
 
@@ -658,19 +703,10 @@ namespace flex
 
 		m_Player->UpdateIsGrounded();
 
-		bool bInteractingWithTerminal = false;
-		bool bInteractingWithVehicle = false;
-		{
-			GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
-			bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
-			bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
-		}
-
 		if (m_Player->m_bPossessed)
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
-
 				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
 
@@ -700,7 +736,7 @@ namespace flex
 			}
 			else
 			{
-				if (!bInteractingWithTerminal && !bInteractingWithVehicle)
+				if (!m_Player->terminalInteractingWithID.IsValid() && !m_Player->ridingVehicleID.IsValid())
 				{
 					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
 					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
@@ -744,16 +780,11 @@ namespace flex
 		}
 
 		if (m_Player->m_bPossessed &&
-			!bInteractingWithTerminal &&
-			!bInteractingWithVehicle &&
+			!m_Player->terminalInteractingWithID.IsValid() &&
+			!m_Player->ridingVehicleID.IsValid() &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = lookLR;
-			// TODO: Remove: will never be hit
-			if (m_Player->IsRidingTrack())
-			{
-				lookH += -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-			}
 			real lookV = 0.0f;
 			if (m_Mode == Mode::FIRST_PERSON)
 			{
@@ -1034,17 +1065,9 @@ namespace flex
 	{
 		if (m_Player != nullptr && !m_Player->bInventoryShowing && g_Window->HasFocus())
 		{
-			bool bInteractingWithTerminal = false;
-			bool bInteractingWithVehicle = false;
-			{
-				GameObject* objInteractingWith = m_Player->GetObjectInteractingWith();
-				bInteractingWithTerminal = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("terminal"));
-				bInteractingWithVehicle = (objInteractingWith != nullptr) && (objInteractingWith->GetTypeID() == SID("vehicle"));
-			}
-
 			if (m_Player->m_bPossessed &&
-				!bInteractingWithTerminal &&
-				!bInteractingWithVehicle &&
+				!m_Player->terminalInteractingWithID.IsValid() &&
+				!m_Player->ridingVehicleID.IsValid() &&
 				m_Player->m_TrackRidingID == InvalidTrackID)
 			{
 				real lookH = dMousePos.x;

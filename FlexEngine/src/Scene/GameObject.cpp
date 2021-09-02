@@ -435,14 +435,6 @@ namespace flex
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
 		}
-		else if (m_ObjectInteractingWith != nullptr)
-		{
-			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
-			//btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			//btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
-			//debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
-			//debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
-		}
 		else if (m_bInteractable)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -971,13 +963,6 @@ namespace flex
 
 		ImGui::Text("Trigger: %s", m_bTrigger ? "true" : "false"); // TODO: Make checkbox
 
-		std::string objectInteractingWithName;
-		if (m_ObjectInteractingWith != nullptr)
-		{
-			objectInteractingWithName = m_ObjectInteractingWith->GetName();
-		}
-		ImGui::Text("ObjectInteractingWith: %s", objectInteractingWithName.c_str());
-
 		std::string nearbyInteractibleName;
 		if (m_NearbyInteractable != nullptr)
 		{
@@ -1235,31 +1220,9 @@ namespace flex
 		}
 	}
 
-	bool GameObject::AllowInteractionWith(GameObject* gameObject)
-	{
-		FLEX_UNUSED(gameObject);
-
-		return true;
-	}
-
-	void GameObject::SetInteractingWith(GameObject* gameObject)
-	{
-		m_ObjectInteractingWith = gameObject;
-	}
-
 	void GameObject::FixupPrefabTemplateIDs(GameObject* newGameObject)
 	{
 		FLEX_UNUSED(newGameObject);
-	}
-
-	bool GameObject::IsBeingInteractedWith() const
-	{
-		return m_ObjectInteractingWith != nullptr;
-	}
-
-	GameObject* GameObject::GetObjectInteractingWith()
-	{
-		return m_ObjectInteractingWith;
 	}
 
 	void GameObject::ParseJSON(
@@ -2850,15 +2813,7 @@ namespace flex
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
 		real currentAbsAvgRotationSpeed = 0.0f;
-		if (m_ObjectInteractingWith != nullptr)
-		{
-			i32 playerIndex = static_cast<Player*>(m_ObjectInteractingWith)->GetIndex();
-
-			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
-			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
-			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
-		}
-		else
+		if (!m_bBeingInteractedWith)
 		{
 			rotationSpeed = (rotation - pRotation) / g_DeltaTime;
 			// Not entirely true but needed to trigger sound
@@ -3075,22 +3030,14 @@ namespace flex
 		//real totalDist = (maxDist - minDist);
 		real dist = valve->rotation;
 
-		real playerControlledValveRotationSpeed = 0.0f;
-		if (valve->GetObjectInteractingWith())
-		{
-			i32 playerIndex = static_cast<Player*>(valve->GetObjectInteractingWith())->GetIndex();
-			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
-			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
-				valve->rotationSpeedScale;
-		}
+		//real playerControlledValveRotationSpeed = 0.0f;
 
 		if (bAffectedByGravity &&
-			valve->rotation >=
-			valve->minRotation + 0.1f)
+			valve->rotation >= valve->minRotation + 0.1f)
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
-			real distMult = 1.0f - Saturate(playerControlledValveRotationSpeed / 2.0f);
+			real distMult = 1.0f;// -Saturate(playerControlledValveRotationSpeed / 2.0f);
 			real dDist = (fallSpeed * g_DeltaTime * distMult);
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
@@ -6373,8 +6320,8 @@ namespace flex
 		else
 		{
 			// Plugs were not found, create new ones
-			WirePlug* plug0 = new WirePlug("wire plug 0", InvalidGameObjectID);
-			WirePlug* plug1 = new WirePlug("wire plug 1", InvalidGameObjectID);
+			WirePlug* plug0 = new WirePlug("wire plug 0", this);
+			WirePlug* plug1 = new WirePlug("wire plug 1", this);
 
 			AddChild(plug0);
 			AddChild(plug1);
@@ -6394,12 +6341,6 @@ namespace flex
 		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
 	}
 
-	bool Wire::AllowInteractionWith(GameObject* gameObject)
-	{
-		FLEX_UNUSED(gameObject);
-		return false;
-	}
-
 	GameObjectID Wire::GetOtherPlug(WirePlug* plug)
 	{
 		if (plug->ID == plug0ID)
@@ -6414,13 +6355,14 @@ namespace flex
 		return InvalidGameObjectID;
 	}
 
-	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("wire plug"), gameObjectID)
+	WirePlug::WirePlug(const std::string& name, Wire* owningWire) :
+		GameObject(name, SID("wire plug"), InvalidGameObjectID)
 	{
 		m_bInteractable = true;
+
 		posOffset = VEC3_ZERO;
-		// The owning wire handles serializing us
-		m_bSerializable = false;
+
+		wireID = owningWire->ID;
 	}
 
 	void WirePlug::Destroy(bool bDetachFromParent /* = true */)
@@ -6428,20 +6370,6 @@ namespace flex
 		//GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWirePlug(this);
 
 		GameObject::Destroy(bDetachFromParent);
-	}
-
-	bool WirePlug::PlugInToNearby()
-	{
-		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-		real dist;
-		Socket* nearbySocket = pluggablesSystem->GetNearbySocket(m_Transform.GetWorldPosition(), nearbyThreshold, true, dist);
-		if (nearbySocket != nullptr)
-		{
-			PlugIn(nearbySocket);
-			return true;
-		}
-
-		return false;
 	}
 
 	void WirePlug::PlugIn(Socket* socket)
@@ -6456,36 +6384,63 @@ namespace flex
 		}
 	}
 
-	void WirePlug::Unplug(Socket* socket)
+	void WirePlug::Unplug()
 	{
-		if (socketID == socket->ID)
+		if (socketID.IsValid())
 		{
 			socketID = InvalidGameObjectID;
 		}
 		else
 		{
-			PrintError("Attempted to unplug socket that wasn't connected to wire plug\n");
+			PrintError("Attempted to unplug socket that wasn't plugged in\n");
 		}
 	}
 
-	bool WirePlug::AllowInteractionWith(GameObject* gameObject)
+	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(gameObject);
-		//switch (gameObject->GetTypeID())
-		//{
-		//case SID("socket"):
-		//{
-		//	return true;
-		//} break;
-		//}
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
-		//return (!socket0ID.IsValid() && !socket1ID.IsValid());
-		return true;
+		JSONObject obj = parentObject.GetObject("wire plug");
+
+		obj.TryGetGameObjectID("wire id", wireID);
+		obj.TryGetGameObjectID("socket id", socketID);
 	}
 
-	void WirePlug::SetInteractingWith(GameObject* gameObject)
+	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
-		wireID.Get()->SetInteractingWith(gameObject);
+		JSONObject obj = {};
+
+		obj.fields.emplace_back("wire id", JSONValue(wireID));
+		obj.fields.emplace_back("socket id", JSONValue(socketID));
+
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+		parentObject.fields.emplace_back("wire plug", JSONValue(obj));
+	}
+
+	void Socket::OnPlugIn(WirePlug* plug)
+	{
+		if (!connectedPlugID.IsValid())
+		{
+			connectedPlugID = plug->ID;
+		}
+		else
+		{
+			PrintError("Attempted to plug socket in when already full\n");
+		}
+	}
+
+	void Socket::OnUnPlug()
+	{
+		if (connectedPlugID.IsValid())
+		{
+			connectedPlugID = InvalidGameObjectID;
+		}
+		else
+		{
+			PrintError("Attempted to unplug from socket which had nothing plugged in\n");
+		}
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -6509,6 +6464,8 @@ namespace flex
 		JSONObject obj = parentObject.GetObject("socket");
 		obj.TryGetInt("slotIdx", slotIdx);
 
+		obj.TryGetGameObjectID("connected plug id", connectedPlugID);
+
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
 	}
@@ -6518,31 +6475,11 @@ namespace flex
 		JSONObject obj = {};
 
 		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
+		obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
 
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
 		parentObject.fields.emplace_back("socket", JSONValue(obj));
-	}
-
-	bool Socket::AllowInteractionWith(GameObject* gameObject)
-	{
-		return !connectedPlugID.IsValid();
-	}
-
-	void Socket::SetInteractingWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			WirePlug* plug = (WirePlug*)connectedPlugID.Get();
-			if (plug != nullptr)
-			{
-				plug->Unplug(this);
-				connectedPlugID = InvalidGameObjectID;
-			}
-			return;
-		}
-
-		GameObject::SetInteractingWith(gameObject);
 	}
 
 	Terminal::Terminal() :
@@ -6628,7 +6565,7 @@ namespace flex
 		}
 
 		m_CursorBlinkTimer += g_DeltaTime;
-		bool bRenderCursor = (m_ObjectInteractingWith != nullptr);
+		bool bRenderCursor = m_bBeingInteractedWith;
 		if (fmod(m_CursorBlinkTimer, m_CursorBlinkRate) > m_CursorBlinkRate / 2.0f)
 		{
 			bRenderCursor = false;
@@ -7079,31 +7016,24 @@ namespace flex
 		}
 	}
 
-	bool Terminal::AllowInteractionWith(GameObject* gameObject)
+	bool Terminal::IsInteractable(Player* player)
 	{
-		if (gameObject == nullptr)
+		Transform* playerTransform = player->GetTransform();
+		glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
+		real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
+		real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
+		// Ensure player is looking our direction and in front of us
+		if (FoF < -0.15f && FoP < -0.35f)
 		{
 			return true;
 		}
 
-		if (gameObject->GetTypeID() == SID("player"))
-		{
-			Player* player = static_cast<Player*>(gameObject);
-			//if (player->m_HeldItem == nullptr)
-			{
-				Transform* playerTransform = player->GetTransform();
-				glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
-				real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
-				real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
-				// Ensure player is looking our direction and in front of us
-				if (FoF < -0.15f && FoP < -0.35f)
-				{
-					return true;
-				}
-			}
-		}
-
 		return false;
+	}
+
+	void Terminal::SetBeingInteractedWith(Player* player)
+	{
+		m_bBeingInteractedWith = player != nullptr;
 	}
 
 	void Terminal::OnScriptChanged()
@@ -11779,12 +11709,7 @@ namespace flex
 		real maxSteerVel = 30.0f;
 		real steeringScale = Lerp(0.45f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
 
-		bool bOccupied =
-			(m_ObjectInteractingWith != nullptr) &&
-			(m_ObjectInteractingWith->GetTypeID() == SID("player")) &&
-			g_CameraManager->CurrentCamera()->bIsGameplayCam;
-
-		if (bOccupied)
+		if (m_bOccupied && g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
 			// The faster we get, the slower we accelerate
 			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / m_MaxEngineForce, 0.0f, 1.0f), 5.0f);
@@ -12214,26 +12139,17 @@ namespace flex
 		ImGui::EndChild();
 	}
 
-	bool Vehicle::AllowInteractionWith(GameObject* gameObject)
+	void Vehicle::OnPlayerEnter()
 	{
-		return gameObject->GetTypeID() == SID("player");
+		m_bOccupied = true;
 	}
 
-	void Vehicle::SetInteractingWith(GameObject* gameObject)
+	void Vehicle::OnPlayerExit()
 	{
-		//if (gameObject != nullptr && gameObject->GetTypeID() == SID("player"))
-		//{
-		//	Player* player = static_cast<Player*>(gameObject);
-		//}
-
-		if (gameObject == nullptr)
-		{
-			// Player has left the vehicle, stop accelerating & braking
-			m_EngineForce = 0.0f;
-			m_BrakeForce = 0.0f;
-		}
-
-		GameObject::SetInteractingWith(gameObject);
+		// Player has left the vehicle, stop accelerating & braking
+		m_EngineForce = 0.0f;
+		m_BrakeForce = 0.0f;
+		m_bOccupied = false;
 	}
 
 	void Vehicle::MatchCorrespondingID(const GameObjectID& existingID, GameObject* newGameObject, const char* objectName, GameObjectID& outCorrespondingID)
@@ -12758,6 +12674,7 @@ namespace flex
 
 	void SolarPanel::Destroy(bool bDetachFromParent)
 	{
+		FLEX_UNUSED(bDetachFromParent);
 		GameObject::Destroy();
 	}
 
@@ -12778,5 +12695,4 @@ namespace flex
 
 		GameObject::Update();
 	}
-
 } // namespace flex

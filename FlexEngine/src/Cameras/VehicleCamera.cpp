@@ -201,15 +201,8 @@ namespace flex
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player0 != nullptr)
 		{
-			GameObject* interactingWith = player0->GetObjectInteractingWith();
-			if (interactingWith != nullptr && interactingWith->GetTypeID() == SID("vehicle"))
-			{
-				m_TrackedVehicle = (Vehicle*)interactingWith;
-				return;
-			}
+			m_TrackedVehicle = (Vehicle*)player0->ridingVehicleID.Get();
 		}
-
-		PrintError("Vehicle camera failed to find active vehicle\n");
 	}
 
 	void VehicleCamera::ResetValues()

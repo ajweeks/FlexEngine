@@ -32,6 +32,7 @@ namespace flex
 	class WirePlug;
 	class SoftBody;
 	struct RoadSegment;
+	class Player;
 
 	namespace VM
 	{
@@ -141,12 +142,7 @@ namespace flex
 			bool bIsPrefabTemplate = false,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
-		virtual bool AllowInteractionWith(GameObject* gameObject);
-		virtual void SetInteractingWith(GameObject* gameObject);
-
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
-
-		bool IsBeingInteractedWith() const;
 
 		// Returns true if this object was deleted or duplicated
 		bool DoImGuiContextMenu(bool bActive);
@@ -159,8 +155,6 @@ namespace flex
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);
-
-		GameObject* GetObjectInteractingWith();
 
 		JSONObject Serialize(const BaseScene* scene,
 			bool bIsRoot = false,
@@ -380,11 +374,7 @@ namespace flex
 
 		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
 
-		/*
-		* Will point at the player we're interacting with, or the object if we're the player
-		*/
-		GameObject* m_ObjectInteractingWith = nullptr;
-
+		// TODO: Remove?
 		GameObject* m_NearbyInteractable = nullptr;
 
 		i32 m_SiblingIndex = 0;
@@ -550,6 +540,8 @@ namespace flex
 
 		real rotation = 0.0f;
 		real pRotation = 0.0f;
+
+		bool m_bBeingInteractedWith = false;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -980,8 +972,6 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-
 		GameObjectID GetOtherPlug(WirePlug* plug);
 
 		static const real DEFAULT_LENGTH;
@@ -994,25 +984,22 @@ namespace flex
 	class WirePlug final : public GameObject
 	{
 	public:
-		WirePlug(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		WirePlug(const std::string& name, Wire* owningWire);
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
-
-		bool PlugInToNearby();
 		void PlugIn(Socket* socket);
-		void Unplug(Socket* socket);
+		void Unplug();
+
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+		static const real nearbyThreshold;
 
 		GameObjectID wireID = InvalidGameObjectID;
 		GameObjectID socketID = InvalidGameObjectID;
 
 		glm::vec3 posOffset;
-
-		static const real nearbyThreshold;
-
-		//Socket* nearbySocket = nullptr;
 	};
 
 	// Connect wires to objects
@@ -1026,10 +1013,11 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
+		void OnPlugIn(WirePlug* plug);
+		void OnUnPlug();
 
 		GameObject* parent = nullptr;
+
 		GameObjectID connectedPlugID = InvalidGameObjectID;
 		i32 slotIdx = 0;
 	};
@@ -1045,12 +1033,11 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		bool IsInteractable(Player* player);
+		void SetBeingInteractedWith(Player* player);
 
 		void OnScriptChanged();
-
 		void SetCamera(TerminalCamera* camera);
-
 		void DrawImGuiWindow();
 
 		static const i32 MAX_OUTPUT_COUNT = 4;
@@ -1118,6 +1105,8 @@ namespace flex
 
 		TerminalCamera* m_Camera = nullptr;
 		//const i32 m_Columns = 45;
+
+		bool m_bBeingInteractedWith = false;
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
@@ -1594,10 +1583,10 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
-
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject) override;
+
+		void OnPlayerEnter();
+		void OnPlayerExit();
 
 		enum class SoundEffect
 		{
@@ -1679,6 +1668,8 @@ namespace flex
 
 		sec m_SecUpsideDown = 0.0f;
 		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;
+
+		bool m_bOccupied = false;
 
 		bool m_bFlippingRightSideUp = false;
 		sec m_SecFlipppingRightSideUp = 0.0f;

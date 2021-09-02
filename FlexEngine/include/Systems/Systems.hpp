@@ -32,7 +32,11 @@ namespace flex
 
 		Socket* GetSocketAtOtherEnd(Socket* socket);
 
-		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled, real& outDist2);
+		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled, Socket* excludeSocket);
+		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled);
+
+		bool PlugInToNearbySocket(WirePlug* plug, real nearbyThreshold);
+		void UnplugFromSocket(WirePlug* plug);
 
 		std::vector<Wire*> wires;
 		std::vector<Socket*> sockets;

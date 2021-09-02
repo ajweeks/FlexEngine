@@ -34,13 +34,13 @@ namespace flex
 			// Handle game startup in terminal cam
 			if (m_Terminal == nullptr)
 			{
-				Player* p0 = g_SceneManager->CurrentScene()->GetPlayer(0);
-				if (p0 != nullptr)
+				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (player != nullptr)
 				{
 					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>(SID("terminal"));
 					if (!terminals.empty())
 					{
-						Transform* playerTransform = p0->GetTransform();
+						Transform* playerTransform = player->GetTransform();
 						glm::vec3 playerPos = playerTransform->GetWorldPosition();
 						real shortestSqDist = FLT_MAX;
 						Terminal* closestTerminal = nullptr;
@@ -71,8 +71,7 @@ namespace flex
 							m_TargetPlayerRot = glm::quat(glm::vec3(0, atan2(forward.x, forward.z), 0));
 
 							// Will call SetTerminal on us
-							p0->SetInteractingWith(closestTerminal);
-							closestTerminal->SetInteractingWith(p0);
+							player->SetInteractingWithTerminal(closestTerminal);
 						}
 					}
 				}
@@ -111,8 +110,7 @@ namespace flex
 				if (m_bTransitioningOut)
 				{
 					m_bTransitioningOut = false;
-					m_Terminal->SetInteractingWith(nullptr);
-					g_SceneManager->CurrentScene()->GetPlayer(0)->SetInteractingWith(nullptr);
+					g_SceneManager->CurrentScene()->GetPlayer(0)->SetInteractingWithTerminal(nullptr);
 					g_CameraManager->PopCamera();
 				}
 			}

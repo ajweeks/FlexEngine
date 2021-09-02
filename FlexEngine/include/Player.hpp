@@ -22,8 +22,6 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
 
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);
@@ -66,6 +64,11 @@ namespace flex
 		void ClearInventory();
 		void ParseInventoryFile();
 		void SerializeInventoryToFile();
+
+		void SetInteractingWithTerminal(Terminal* terminal);
+		void SetRidingVehicle(Vehicle* vehicle);
+
+		bool IsHolding(GameObject* object);
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -118,6 +121,11 @@ namespace flex
 
 		GameObjectID heldItemLeftHand = InvalidGameObjectID;
 		GameObjectID heldItemRightHand = InvalidGameObjectID;
+
+		GameObjectID ridingVehicleID = InvalidGameObjectID;
+		// TODO: Merge these two?
+		GameObjectID terminalInteractingWithID = InvalidGameObjectID;
+		GameObjectID objectInteractingWithID = InvalidGameObjectID;
 
 		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
 		const real m_FlipTrackDirInvSpeed = 45.0f;

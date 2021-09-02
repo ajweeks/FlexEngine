@@ -154,7 +154,7 @@ namespace flex
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (rootObject)
+			if (rootObject != nullptr)
 			{
 				rootObject->Destroy(false);
 				delete rootObject;
@@ -208,7 +208,7 @@ namespace flex
 			PROFILE_AUTO("Update scene objects");
 			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (rootObject)
+				if (rootObject != nullptr)
 				{
 					rootObject->Update();
 				}
@@ -1116,7 +1116,7 @@ namespace flex
 		{
 			// TODO: Draw common fields for all selected objects?
 			GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
-			if (selectedObject)
+			if (selectedObject != nullptr)
 			{
 				selectedObject->DrawImGuiObjects();
 			}
