@@ -10652,12 +10652,6 @@ namespace flex
 		newSoftBody->constraints.resize(constraints.size());
 		newSoftBody->initialPositions.resize(initialPositions.size());
 
-		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[m_DragPointIndex];
-		for (u32 i = 0; i < (u32)initialPositions.size(); ++i)
-		{
-			newSoftBody->initialPositions[i] = initialPositions[i] + deltaPos;
-		}
-
 		for (u32 i = 0; i < (u32)points.size(); ++i)
 		{
 			newSoftBody->points[i] = new Point(initialPositions[i], VEC3_ZERO, points[i]->invMass);
@@ -10702,8 +10696,6 @@ namespace flex
 			newSoftBody->m_SelectedMeshIndex = m_SelectedMeshIndex;
 			newSoftBody->LoadFromMesh();
 		}
-
-		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[m_DragPointIndex]->pos);
 
 		return newSoftBody;
 	}
@@ -10763,8 +10755,6 @@ namespace flex
 			}
 
 			m_bSingleStep = false;
-
-			points[m_DragPointIndex]->pos = m_Transform.GetWorldPosition();
 
 			u32 fixedUpdateCount = glm::min((u32)(m_MSToSim / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
@@ -10993,8 +10983,6 @@ namespace flex
 			m_MeshComponent->UpdateDynamicVertexData(m_MeshVertexBufferCreateInfo, indices);
 		}
 
-		m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
-
 		if (m_bRenderWireframe)
 		{
 			Draw();
@@ -11200,14 +11188,12 @@ namespace flex
 
 				points.resize(vertexBufferData->VertexCount);
 				initialPositions.resize(vertexBufferData->VertexCount);
-				m_DragPointIndex = 0;
 				glm::vec3 smallestPos(99999.0f);
 				for (u32 i = 0; i < (u32)posData.size(); ++i)
 				{
 					glm::vec3 pos = posData[i];
 					if (pos.x < smallestPos.x || (pos.x == smallestPos.x && pos.z < smallestPos.z))
 					{
-						m_DragPointIndex = i;
 						smallestPos = pos;
 					}
 					initialPositions[i] = pos;
@@ -11263,7 +11249,6 @@ namespace flex
 				}
 
 
-				points[m_DragPointIndex]->invMass = 0.0f;
 				g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::DYNAMIC_DATA);
 			}
 		}
@@ -11347,7 +11332,6 @@ namespace flex
 				{
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
-					constraintObj.TryGetUInt("dragging point index", m_DragPointIndex);
 
 					switch (type)
 					{
@@ -11444,7 +11428,6 @@ namespace flex
 				constraintsArr[i] = JSONObject();
 				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
 				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
-				constraintsArr[i].fields.emplace_back("dragging point index", JSONValue(m_DragPointIndex));
 
 				switch (constraint->type)
 				{
@@ -11514,8 +11497,6 @@ namespace flex
 				point->pos = initialPositions[i++];
 				point->vel = VEC3_ZERO;
 			}
-
-			m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
 		}
 
 		if (ImGui::Button("Single Step"))

@@ -1559,8 +1559,6 @@ namespace flex
 		real m_Stiffness = 0.8f;
 		real m_BendingStiffness = 0.1f;
 
-		u32 m_DragPointIndex = 0;
-
 		i32 m_ShownBendingIndex = 0;
 		i32 m_FirstBendingConstraintIndex = 0;
 
