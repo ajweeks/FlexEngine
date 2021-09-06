@@ -110,7 +110,7 @@ namespace flex
 		m_RenderDocSettingsAbsFilePath = RelativePathToAbsolute(RENDERDOC_LOCATION);
 
 		{
-			// Default, can be overriden in common.json
+			// Default, can be overridden in common.json
 			m_ShaderEditorPath = "C:/Program Files/Sublime Text 3/sublime_text.exe";
 		}
 
@@ -746,7 +746,6 @@ namespace flex
 				m_FrameTimes[m_FrameTimes.size() - 1] = g_UnpausedDeltaTime * 1000.0f;
 			}
 
-			// Update
 			{
 				PROFILE_AUTO("Update");
 
@@ -808,16 +807,19 @@ namespace flex
 
 				g_CameraManager->Update();
 
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+				BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+
 				if (bSimulateFrame)
 				{
-					g_CameraManager->CurrentCamera()->Update();
+					currentCamera->Update();
 
-					BaseScene* currentScene = g_SceneManager->CurrentScene();
 					currentScene->Update();
-					Player* p0 = currentScene->GetPlayer(0);
-					if (p0)
+					Player* player = currentScene->GetPlayer(0);
+					if (player)
 					{
-						glm::vec3 targetPos = p0->GetTransform()->GetWorldPosition() + p0->GetTransform()->GetForward() * -2.0f;
+						Transform* playerTransform = player->GetTransform();
+						glm::vec3 targetPos = playerTransform->GetWorldPosition() + playerTransform->GetForward() * -2.0f;
 						m_SpringTimer += g_DeltaTime;
 						real amplitude = 1.5f;
 						real period = 5.0f;
@@ -826,7 +828,7 @@ namespace flex
 							m_SpringTimer -= period;
 						}
 						targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
-						glm::vec3 targetVel = ToVec3(p0->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+						glm::vec3 targetVel = ToVec3(player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
 
 						for (Spring<glm::vec3>& spring : m_TestSprings)
 						{
@@ -843,9 +845,9 @@ namespace flex
 				else
 				{
 					// Simulation is paused
-					if (!g_CameraManager->CurrentCamera()->bIsGameplayCam)
+					if (!currentCamera->bIsGameplayCam)
 					{
-						g_CameraManager->CurrentCamera()->Update();
+						currentCamera->Update();
 					}
 				}
 
@@ -876,7 +878,7 @@ namespace flex
 
 					GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->DrawDebug();
 
-					g_SceneManager->CurrentScene()->LateUpdate();
+					currentScene->LateUpdate();
 				}
 
 				g_UIManager->Update();
@@ -2506,9 +2508,7 @@ namespace flex
 			}
 			if (recalculateOffset) // Mouse was clicked or wrapped
 			{
-				//real oldOffset = glm::dot(inOutPrevIntersectionPoint - startPos, axis);
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
-				//Print("(%.2f) => (%.2f)\n", oldOffset, inOutOffset);
 			}
 			inOutPrevIntersectionPoint = intersectionPoint;
 

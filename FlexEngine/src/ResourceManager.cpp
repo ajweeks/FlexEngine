@@ -1756,7 +1756,11 @@ namespace flex
 					{
 						// TODO: Pass in reference to material->textures?
 						//Texture* texture = material->textures[texIndex];
+#if DEBUG
 						std::string texFieldName = std::string(material->textures.values[texIndex].uniform->DBG_name) + "##" + std::to_string(texIndex);
+#else
+						std::string texFieldName = std::to_string(material->textures.values[texIndex].uniform->id) + "##" + std::to_string(texIndex);
+#endif
 						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), discoveredTextures, &selectedTextureIndices[texIndex]);
 					}
 				}

@@ -4108,6 +4108,8 @@ namespace flex
 	{
 #if COMPILE_SHADER_COMPILER
 		m_ShaderCompiler->StartCompilation(bForceCompileAll);
+#else
+		FLEX_UNUSED(bForceCompileAll);
 #endif
 	}
 } // namespace flex

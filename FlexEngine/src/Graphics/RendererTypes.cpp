@@ -72,21 +72,14 @@ namespace flex
 
 	bool UniformList::HasUniform(const StringID& uniformID) const
 	{
-		for (const auto& iter : uniforms)
-		{
-			if (iter->id == uniformID)
-			{
-				return true;
-			}
-		}
-		return false;
+		return Contains(uniforms, uniformID);
 	}
 
 	void UniformList::AddUniform(Uniform const* uniform)
 	{
 		if (!HasUniform(uniform))
 		{
-			uniforms.emplace(uniform);
+			uniforms[uniform->id] = uniform;
 			totalSizeInBytes += (u32)uniform->size;
 		}
 	}
@@ -140,6 +133,23 @@ namespace flex
 			computeShaderFilePath = COMPILED_SHADERS_DIRECTORY + inComputeShaderFilePath;
 		}
 #endif
+	}
+
+	Material::~Material()
+	{
+		if (pushConstantBlock != nullptr)
+		{
+			delete pushConstantBlock;
+			pushConstantBlock = nullptr;
+		}
+	}
+
+	Material::Material(const Material& rhs)
+	{
+		if (rhs.pushConstantBlock != nullptr)
+		{
+			pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
+		}
 	}
 
 	bool Material::Equals(const Material& other)
@@ -319,6 +329,130 @@ namespace flex
 		return matIDs;
 	}
 
+	Material::PushConstantBlock::PushConstantBlock(i32 initialSize) :
+		size(initialSize)
+	{
+		assert(initialSize != 0);
+	}
+
+	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock& rhs)
+	{
+		data = rhs.data;
+		size = rhs.size;
+	}
+
+	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock&& rhs)
+	{
+		data = rhs.data;
+		size = rhs.size;
+	}
+
+	Material::PushConstantBlock& Material::PushConstantBlock::operator=(const PushConstantBlock& rhs)
+	{
+		data = rhs.data;
+		size = rhs.size;
+		return *this;
+	}
+
+	Material::PushConstantBlock& Material::PushConstantBlock::operator=(const PushConstantBlock&& rhs)
+	{
+		data = rhs.data;
+		size = rhs.size;
+		return *this;
+	}
+
+	Material::PushConstantBlock::~PushConstantBlock()
+	{
+		if (data)
+		{
+			free(data);
+			data = nullptr;
+			size = 0;
+		}
+	}
+
+	void Material::PushConstantBlock::InitWithSize(u32 dataSize)
+	{
+		if (data == nullptr)
+		{
+			assert(size == dataSize || size == 0);
+
+			size = dataSize;
+			if (dataSize != 0)
+			{
+				data = malloc(dataSize);
+			}
+		}
+		else
+		{
+			assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
+		}
+	}
+
+	void Material::PushConstantBlock::SetData(real* newData, u32 dataSize)
+	{
+		InitWithSize(dataSize);
+		memcpy(data, newData, size);
+	}
+
+	void Material::PushConstantBlock::SetData(const std::vector<Pair<void*, u32>>& dataList)
+	{
+		i32 dataSize = 0;
+		for (const auto& pair : dataList)
+		{
+			dataSize += pair.second;
+		}
+		InitWithSize(dataSize);
+
+		real* dst = (real*)data;
+
+		for (auto& pair : dataList)
+		{
+			memcpy(dst, pair.first, pair.second);
+			dst += pair.second / sizeof(real);
+		}
+	}
+
+	void Material::PushConstantBlock::SetData(const glm::mat4& viewProj)
+	{
+		const i32 dataSize = sizeof(glm::mat4) * 1;
+		InitWithSize(dataSize);
+
+		real* dst = (real*)data;
+		memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+	}
+
+	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj)
+	{
+		const i32 dataSize = sizeof(glm::mat4) * 2;
+		InitWithSize(dataSize);
+
+		real* dst = (real*)data;
+		memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+		memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+	}
+
+	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
+	{
+		const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
+		if (data == nullptr)
+		{
+			assert(size == dataSize || size == 0);
+
+			size = dataSize;
+			data = malloc(dataSize);
+			assert(data != nullptr);
+		}
+		else
+		{
+			assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+		}
+		real* dst = (real*)data;
+		memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+		memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
+		memcpy(dst, &textureIndex, sizeof(i32)); dst += sizeof(i32) / sizeof(real);
+	}
+
 	JSONObject Material::Serialize() const
 	{
 		JSONObject materialObject = {};
@@ -468,5 +602,27 @@ namespace flex
 	Texture::Texture(const std::string& name) :
 		name(name)
 	{
+	}
+
+	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
+	{
+		overrides[uniform->id] = UniformPair(uniform, propertyOverride);
+	}
+
+	bool UniformOverrides::HasUniform(Uniform const* uniform) const
+	{
+		return Contains(overrides, uniform->id);
+	}
+
+	bool UniformOverrides::HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
+	{
+		auto iter = overrides.find(uniform->id);
+		if (iter != overrides.end())
+		{
+			outPropertyOverride = iter->second.second;
+			return true;
+		}
+
+		return false;
 	}
 } // namespace flex

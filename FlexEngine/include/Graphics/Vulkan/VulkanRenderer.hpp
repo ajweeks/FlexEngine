@@ -380,7 +380,7 @@ namespace flex
 			static const FrameBufferAttachmentID SWAP_CHAIN_DEPTH_ATTACHMENT_ID = 11001;
 			static const FrameBufferAttachmentID SHADOW_CASCADE_DEPTH_ATTACHMENT_ID = 22001;
 
-#ifdef RELEASE
+#if defined(RELEASE) || defined(PROFILE)
 			bool m_bEnableValidationLayers = false;
 			bool m_bEnableGPUAssistanceValidationFeature = false;
 			bool m_bEnableBestPracticesValidationFeature = false;

@@ -300,9 +300,9 @@ namespace flex
 	static const Uniform U_BLEND_SHARPNESS(UNIFORM("blendSharpness"), sizeof(real));
 	static const Uniform U_COLOUR_MULTIPLIER(UNIFORM("colourMultiplier"), sizeof(glm::vec4));
 	static const Uniform U_CAM_POS(UNIFORM("camPos"), sizeof(glm::vec4));
-	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT);
-	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT);
-	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData) * MAX_AREA_LIGHT_COUNT);
+	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
+	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
+	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
 	static const Uniform U_DIR_LIGHT(UNIFORM("dirLight"), (u32)sizeof(DirLightData));
 	static const Uniform U_ALBEDO_SAMPLER(UNIFORM("albedoSampler"));
 	static const Uniform U_CONST_ALBEDO(UNIFORM("constAlbedo"), (u32)sizeof(glm::vec4));
@@ -714,37 +714,9 @@ namespace flex
 	{
 		using UniformPair = Pair<Uniform const*, MaterialPropertyOverride>;
 
-		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
-		{
-			overrides[uniform->id] = UniformPair(uniform, propertyOverride);
-		}
-
-		bool HasUniform(Uniform const* uniform) const
-		{
-			for (const auto& pair : overrides)
-			{
-				if (pair.second.first->id == uniform->id)
-				{
-					return true;
-				}
-			}
-
-			return false;
-		}
-
-		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
-		{
-			for (const auto& pair : overrides)
-			{
-				if (pair.second.first->id == uniform->id)
-				{
-					outPropertyOverride = pair.second.second;
-					return true;
-				}
-			}
-
-			return false;
-		}
+		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride);
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const;
 
 		std::map<StringID, UniformPair> overrides;
 	};
@@ -754,23 +726,8 @@ namespace flex
 		struct PushConstantBlock;
 
 		Material() = default;
-
-		virtual ~Material()
-		{
-			if (pushConstantBlock)
-			{
-				delete pushConstantBlock;
-				pushConstantBlock = nullptr;
-			}
-		}
-
-		explicit Material(const Material& rhs)
-		{
-			if (rhs.pushConstantBlock)
-			{
-				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
-			}
-		}
+		virtual ~Material();
+		explicit Material(const Material& rhs);
 
 		Material(const Material&&) = delete;
 		Material& operator=(const Material&) = delete;
@@ -854,125 +811,24 @@ namespace flex
 		// TODO: Store TextureIDs here
 		ShaderUniformContainer<Texture*> textures;
 
-		struct PushConstantBlock
+		struct PushConstantBlock final
 		{
-			PushConstantBlock(i32 initialSize) : size(initialSize) { assert(initialSize != 0); }
-			PushConstantBlock() {}
+			PushConstantBlock() = default;
+			PushConstantBlock(i32 initialSize);
 
-			PushConstantBlock(const PushConstantBlock& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-			}
-			PushConstantBlock(const PushConstantBlock&& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-			}
-			PushConstantBlock& operator=(const PushConstantBlock& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-				return *this;
-			}
-			PushConstantBlock& operator=(const PushConstantBlock&& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-				return *this;
-			}
+			PushConstantBlock(const PushConstantBlock& rhs);
+			PushConstantBlock(const PushConstantBlock&& rhs);
+			PushConstantBlock& operator=(const PushConstantBlock& rhs);
+			PushConstantBlock& operator=(const PushConstantBlock&& rhs);
 
-			~PushConstantBlock()
-			{
-				if (data)
-				{
-					free(data);
-					data = nullptr;
-					size = 0;
-				}
-			}
+			~PushConstantBlock();
 
-			void InitWithSize(u32 dataSize)
-			{
-				if (data == nullptr)
-				{
-					assert(size == dataSize || size == 0);
-
-					size = dataSize;
-					if (dataSize != 0)
-					{
-						data = malloc(dataSize);
-					}
-				}
-				else
-				{
-					assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
-				}
-			}
-
-			void SetData(real* newData, u32 dataSize)
-			{
-				InitWithSize(dataSize);
-				memcpy(data, newData, size);
-			}
-
-			void SetData(const std::vector<Pair<void*, u32>>& dataList)
-			{
-				i32 dataSize = 0;
-				for (const auto& pair : dataList)
-				{
-					dataSize += pair.second;
-				}
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-
-				for (auto& pair : dataList)
-				{
-					memcpy(dst, pair.first, pair.second);
-					dst += pair.second / sizeof(real);
-				}
-			}
-
-			void SetData(const glm::mat4& viewProj)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 1;
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-				memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-			}
-
-			void SetData(const glm::mat4& view, const glm::mat4& proj)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 2;
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-			}
-
-			void SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
-				if (data == nullptr)
-				{
-					assert(size == dataSize || size == 0);
-
-					size = dataSize;
-					data = malloc(dataSize);
-					assert(data != nullptr);
-				}
-				else
-				{
-					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
-				}
-				real* dst = (real*)data;
-				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &textureIndex, sizeof(i32)); dst += sizeof(i32) / sizeof(real);
-			}
+			void InitWithSize(u32 dataSize);
+			void SetData(real* newData, u32 dataSize);
+			void SetData(const std::vector<Pair<void*, u32>>& dataList);
+			void SetData(const glm::mat4& viewProj);
+			void SetData(const glm::mat4& view, const glm::mat4& proj);
+			void SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex);
 
 			void* data = nullptr;
 			u32 size = 0;
@@ -1028,7 +884,7 @@ namespace flex
 		void AddUniform(Uniform const* uniform);
 		u32 GetSizeInBytes() const;
 
-		std::set<Uniform const*> uniforms;
+		std::map<StringID, Uniform const*> uniforms;
 		u32 totalSizeInBytes = 0;
 	};
 
@@ -1050,7 +906,7 @@ namespace flex
 			const std::string& inGeometryShaderFilePath = "",
 			const std::string& inComputeShaderFilePath = "");
 
-		virtual ~Shader() {};
+		virtual ~Shader() = default;
 
 		Shader(const Shader&) = delete;
 		Shader(const Shader&&) = delete;

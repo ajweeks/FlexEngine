@@ -1349,11 +1349,7 @@ namespace flex
 
 			if (action == Action::PAUSE)
 			{
-				if (m_CurrentlySelectedObjectIDs.empty())
-				{
-					//m_bSimulationPaused = !m_bSimulationPaused;
-				}
-				else
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
 					SelectNone();
 				}

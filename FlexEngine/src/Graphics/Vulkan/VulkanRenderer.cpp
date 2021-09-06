@@ -847,7 +847,7 @@ namespace flex
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
-			if (m_DebugUtilsMessengerCallback)
+			if (m_DebugUtilsMessengerCallback != VK_NULL_HANDLE)
 			{
 				vkDestroyDebugUtilsMessengerEXT(m_Instance, m_DebugUtilsMessengerCallback, nullptr);
 				m_DebugUtilsMessengerCallback = VK_NULL_HANDLE;
