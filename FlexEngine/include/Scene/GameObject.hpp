@@ -968,17 +968,33 @@ namespace flex
 	public:
 		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void DrawImGuiObjects() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 		GameObjectID GetOtherPlug(WirePlug* plug);
 
+		void StepSimulation();
+
 		static const real DEFAULT_LENGTH;
 
 		GameObjectID plug0ID = InvalidGameObjectID;
 		GameObjectID plug1ID = InvalidGameObjectID;
+
+		i32 numPoints = 6;
+		real stiffness = 0.8f;
+		real pointInvMass = 1.0f / 15.0f;
+		real damping = 0.999f;
+
+		SoftBody* m_SoftBody = nullptr;
+
+	private:
+		void DestroyPoints();
+		void GeneratePoints();
+
 	};
 
 	// End of wire - the part you actually interact with

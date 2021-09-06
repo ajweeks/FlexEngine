@@ -59,8 +59,8 @@ namespace flex
 
 		m_Player->UpdateIsPossessed();
 
-		g_InputManager->BindActionCallback(&m_ActionCallback, 15);
-		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 15);
+		g_InputManager->BindActionCallback(&m_ActionCallback, 14);
+		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 14);
 
 		m_PlaceItemAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "drip-01.wav");
 		m_PlaceItemFailureAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "spook-01.wav");
@@ -398,6 +398,14 @@ namespace flex
 							{
 								m_Player->heldItemRightHand = InvalidGameObjectID;
 							}
+
+							heldItemLeftHand = m_Player->heldItemLeftHand.Get();
+							heldItemRightHand = m_Player->heldItemRightHand.Get();
+							if ((heldItemLeftHand == nullptr || heldItemLeftHand->GetTypeID() != SID("wire plug")) &&
+								(heldItemRightHand == nullptr || heldItemRightHand->GetTypeID() != SID("wire plug")))
+							{
+								m_PlacingWire = nullptr;
+							}
 						}
 					}
 				}
@@ -608,6 +616,19 @@ namespace flex
 			else
 			{
 				AudioManager::PlaySource(m_PlaceItemFailureAudioID);
+			}
+		}
+
+		if (m_bCancelPlaceWire)
+		{
+			m_bCancelPlaceWire = false;
+
+			if (m_PlacingWire != nullptr)
+			{
+				PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+
+				pluggablesSystem->DestroyWire(m_PlacingWire);
+				m_PlacingWire = nullptr;
 			}
 		}
 
@@ -917,10 +938,12 @@ namespace flex
 				if (m_bPreviewPlaceItemFromInventory)
 				{
 					m_bCancelPlaceItemFromInventory = true;
+					return EventReply::CONSUMED;
 				}
 				if (m_PlacingWire != nullptr)
 				{
 					m_bCancelPlaceWire = true;
+					return EventReply::CONSUMED;
 				}
 			}
 

@@ -850,4 +850,16 @@ namespace flex
 	{
 		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
 	}
+
+	void Player::DropIfHolding(GameObject* object)
+	{
+		if (heldItemLeftHand == object->ID)
+		{
+			heldItemLeftHand = InvalidGameObjectID;
+		}
+		if (heldItemRightHand == object->ID)
+		{
+			heldItemRightHand = InvalidGameObjectID;
+		}
+	}
 } // namespace flex

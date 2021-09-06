@@ -42,6 +42,7 @@ namespace flex
 			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 
 			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
+			static const btVector3 wireColPluggedIn(0.05f, 0.6f, 0.1f);
 			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
 
 			Player* player = scene->GetPlayer(0);
@@ -124,6 +125,8 @@ namespace flex
 					// Plug isn't being held, and isn't plugged in. Rest.
 				}
 
+				wire->StepSimulation();
+
 				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
 
@@ -132,12 +135,12 @@ namespace flex
 				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
 				btVector3 plug1PosBt = ToBtVec3(plug1Pos);
 
-				bool bWireOn0 = socket0 != nullptr && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
-				bool bWireOn1 = socket1 != nullptr && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
-				btVector3 wireCol = (bWireOn0 || bWireOn1) ? wireColOn : wireColOff;
-				debugDrawer->drawLine(plug0PosBt, plug1PosBt, wireCol, wireCol);
-				debugDrawer->drawSphere(plug0PosBt, 0.2f, wireColOff);
-				debugDrawer->drawSphere(plug1PosBt, 0.2f, wireColOff);
+				bool bWire0PluggedIn = socket0 != nullptr;
+				bool bWire1PluggedIn = socket1 != nullptr;
+				bool bWire0On = bWire0PluggedIn && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
+				bool bWire1On = bWire1PluggedIn && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
+				debugDrawer->drawSphere(plug0PosBt, 0.2f, bWire0PluggedIn ? wireColPluggedIn : (bWire0On ? wireColOn : wireColOff));
+				debugDrawer->drawSphere(plug1PosBt, 0.2f, bWire1PluggedIn ? wireColPluggedIn : (bWire1On ? wireColOn : wireColOff));
 			}
 		}
 	}
@@ -182,6 +185,9 @@ namespace flex
 
 		newWire->AddChildImmediate(plug0);
 		newWire->AddChildImmediate(plug1);
+
+		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
+		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
 
 		newWire->plug0ID = plug0->ID;
 		newWire->plug1ID = plug1->ID;
@@ -234,6 +240,7 @@ namespace flex
 	bool PluggablesSystem::DestroyWire(Wire* wire)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
+		Player* player = scene->GetPlayer(0);
 
 		WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 		WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
@@ -242,17 +249,16 @@ namespace flex
 		{
 			if ((*iter)->ID == wire->ID)
 			{
+				player->DropIfHolding(plug0);
+				player->DropIfHolding(plug1);
+
 				if (plug0->socketID.IsValid())
 				{
 					UnplugFromSocket(plug0);
-					RemoveSocket(plug0->socketID);
-					scene->RemoveObject(plug0->socketID, true);
 				}
 				if (plug1->socketID.IsValid())
 				{
 					UnplugFromSocket(plug1);
-					RemoveSocket(plug1->socketID);
-					scene->RemoveObject(plug1->socketID, true);
 				}
 				scene->RemoveObject(plug0, true);
 				scene->RemoveObject(plug1, true);

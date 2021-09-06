@@ -69,6 +69,7 @@ namespace flex
 		void SetRidingVehicle(Vehicle* vehicle);
 
 		bool IsHolding(GameObject* object);
+		void DropIfHolding(GameObject* object);
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;

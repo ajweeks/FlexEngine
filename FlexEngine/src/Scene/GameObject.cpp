@@ -6312,11 +6312,46 @@ namespace flex
 	{
 	}
 
+	void Wire::Initialize()
+	{
+		GeneratePoints();
+
+		GameObject::Initialize();
+	}
+
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
 	{
 		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWire(this);
 
+		DestroyPoints();
+
 		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void Wire::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		bool bRegenPoints = false;
+
+		bRegenPoints = ImGui::SliderInt("num points", &numPoints, 0, 24) || bRegenPoints;
+		bRegenPoints = ImGui::SliderFloat("point inv mass", &pointInvMass, 0.0f, 0.1f) || bRegenPoints;
+
+		if (ImGui::SliderFloat("stiffness", &stiffness, 0.0f, 1.0f))
+		{
+			m_SoftBody->SetStiffness(stiffness);
+		}
+
+		if (ImGui::SliderFloat("damping", &damping, 0.0f, 1.0f))
+		{
+			m_SoftBody->SetDamping(damping);
+		}
+
+		if (ImGui::Button("Reset points") || bRegenPoints)
+		{
+			DestroyPoints();
+			GeneratePoints();
+		}
 	}
 
 	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -6366,6 +6401,65 @@ namespace flex
 		}
 
 		return InvalidGameObjectID;
+	}
+
+	void Wire::StepSimulation()
+	{
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+
+		m_SoftBody->points[0]->pos = plug0Transform->GetWorldPosition();
+		m_SoftBody->points[m_SoftBody->points.size() - 1]->pos = plug1Transform->GetWorldPosition();
+
+		m_SoftBody->Update();
+	}
+
+	void Wire::DestroyPoints()
+	{
+		if (m_SoftBody != nullptr)
+		{
+			m_SoftBody->Destroy(true);
+			delete m_SoftBody;
+			m_SoftBody = nullptr;
+		}
+	}
+
+	void Wire::GeneratePoints()
+	{
+		assert(m_SoftBody == nullptr);
+
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+
+		Point* startPoint = new Point(plug0Transform->GetWorldPosition(), VEC3_ZERO, 0.0f);
+		Point* endPoint = new Point(plug1Transform->GetWorldPosition(), VEC3_ZERO, 0.0f);
+
+		m_SoftBody = new SoftBody("Wire simulation");
+
+		m_SoftBody->points.reserve(numPoints);
+		for (i32 i = 0; i < numPoints; ++i)
+		{
+			real invMass = (i == 0 || i == (numPoints - 1)) ? 0.0f : pointInvMass;
+			real t = (real)i / (numPoints - 1);
+			glm::vec3 pos = startPoint->pos + (endPoint->pos - startPoint->pos) * t;
+			m_SoftBody->points.push_back(new Point(pos, VEC3_ZERO, invMass));
+		}
+
+		for (i32 i = 0; i < numPoints - 1; ++i)
+		{
+			m_SoftBody->AddUniqueDistanceConstraint(i, i + 1, i, stiffness);
+		}
+
+		m_SoftBody->SetSerializable(false);
+		m_SoftBody->SetVisibleInSceneExplorer(false);
+		m_SoftBody->SetStiffness(stiffness);
+		m_SoftBody->SetDamping(damping);
+		m_SoftBody->Initialize();
+		m_SoftBody->PostInitialize();
 	}
 
 	WirePlug::WirePlug(const std::string& name, Wire* owningWire) :
@@ -10923,9 +11017,11 @@ namespace flex
 			{
 			case Constraint::Type::DISTANCE:
 			{
-				//DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
-				//debugDrawer->drawLine(ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos), ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
-				//	btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
+				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+				debugDrawer->drawLine(
+					ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos),
+					ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
+					btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
 			} break;
 			case Constraint::Type::BENDING:
 			{
