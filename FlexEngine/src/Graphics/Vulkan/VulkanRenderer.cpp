@@ -7167,7 +7167,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, char* DEBUG_name /* = nullptr */)
+		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name /* = nullptr */)
 		{
 			PROFILE_AUTO("CreateDynamicVertexBuffer");
 
@@ -7176,7 +7176,7 @@ namespace flex
 				DEBUG_name);
 		}
 
-		void VulkanRenderer::CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, char* DEBUG_name /* = nullptr */)
+		void VulkanRenderer::CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name /* = nullptr */)
 		{
 			PROFILE_AUTO("CreateDynamicIndexBuffer");
 

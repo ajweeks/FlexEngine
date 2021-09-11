@@ -252,8 +252,8 @@ namespace flex
 
 			void CreateShadowVertexBuffer();
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize, const char* DEBUG_name = nullptr);
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, char* DEBUG_name = nullptr);
-			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, char* DEBUG_name = nullptr);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name = nullptr);
+			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name = nullptr);
 
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, char* DEBUG_name = nullptr);
