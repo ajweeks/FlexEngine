@@ -11,11 +11,9 @@ namespace flex
 	class Terminal;
 	class DirectoryWatcher;
 
-	class PluggablesSystem : public System
+	class PluggablesSystem final : public System
 	{
 	public:
-		virtual ~PluggablesSystem() {};
-
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 
@@ -49,12 +47,9 @@ namespace flex
 
 	};
 
-	class RoadManager : public System
+	class RoadManager final : public System
 	{
 	public:
-		RoadManager();
-		virtual ~RoadManager();
-
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
@@ -73,11 +68,11 @@ namespace flex
 
 	};
 
-	class TerminalManager : public System
+	class TerminalManager final : public System
 	{
 	public:
 		TerminalManager();
-		virtual ~TerminalManager();
+		~TerminalManager();
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;

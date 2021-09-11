@@ -87,14 +87,14 @@ namespace flex
 			}
 		}
 
-		void Block::AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<IR::Value*>& arguments)
+		void Block::AddCall(State* state, FunctionCallValue* callValue)
 		{
 			if (!Filled())
 			{
 				// Empty variable name signals call to void function. Calls to
 				// functions with return values go through AddAssignment path.
 				std::string variable = "";
-				assignments.push_back(new Assignment(state, callOrigin, variable, new FunctionCallValue(state, callOrigin, target, arguments)));
+				assignments.push_back(new Assignment(state, callValue->origin, variable, callValue));
 			}
 		}
 
@@ -345,6 +345,7 @@ namespace flex
 
 		void Assignment::Destroy()
 		{
+			value->Destroy();
 			delete value;
 			value = nullptr;
 		}
@@ -387,6 +388,7 @@ namespace flex
 
 		void Return::Destroy()
 		{
+			returnValue->Destroy();
 			delete returnValue;
 			returnValue = nullptr;
 		}
@@ -406,6 +408,7 @@ namespace flex
 
 		void YieldReturn::Destroy()
 		{
+			yieldValue->Destroy();
 			delete yieldValue;
 			yieldValue = nullptr;
 		}
@@ -447,6 +450,7 @@ namespace flex
 
 		void ConditionalBranch::Destroy()
 		{
+			condition->Destroy();
 			delete condition;
 			condition = nullptr;
 
@@ -477,6 +481,7 @@ namespace flex
 
 		void UnaryValue::Destroy()
 		{
+			operand->Destroy();
 			delete operand;
 			operand = nullptr;
 		}
@@ -493,8 +498,10 @@ namespace flex
 
 		void BinaryValue::Destroy()
 		{
+			left->Destroy();
 			delete left;
 			left = nullptr;
+			right->Destroy();
 			delete right;
 			right = nullptr;
 		}
@@ -514,10 +521,13 @@ namespace flex
 
 		void TernaryValue::Destroy()
 		{
+			condition->Destroy();
 			delete condition;
 			condition = nullptr;
+			ifTrue->Destroy();
 			delete ifTrue;
 			ifTrue = nullptr;
+			ifFalse->Destroy();
 			delete ifFalse;
 			ifFalse = nullptr;
 		}
@@ -539,6 +549,7 @@ namespace flex
 		{
 			for (u32 i = 0; i < (u32)arguments.size(); ++i)
 			{
+				arguments[i]->Destroy();
 				delete arguments[i];
 			}
 			arguments.clear();
@@ -568,6 +579,7 @@ namespace flex
 
 		void CastValue::Destroy()
 		{
+			target->Destroy();
 			delete target;
 		}
 
@@ -688,7 +700,11 @@ namespace flex
 				state = new State();
 			}
 
-			delete g_EmptyIRValue;
+			if (g_EmptyIRValue != nullptr)
+			{
+				g_EmptyIRValue->Destroy();
+				delete g_EmptyIRValue;
+			}
 			g_EmptyIRValue = new Value(Span(0, 0), state, Value::Type::_NONE);
 
 			//std::vector<Statement*> emptyList;
@@ -761,6 +777,7 @@ namespace flex
 			}
 			blocks.clear();
 
+			g_EmptyIRValue->Destroy();
 			delete g_EmptyIRValue;
 			g_EmptyIRValue = nullptr;
 		}
@@ -923,7 +940,7 @@ namespace flex
 					{
 						if (iter->second.returnType == Value::Type::VOID)
 						{
-							state->InsertionBlock()->AddCall(state, call->origin, call->target, call->arguments);
+							state->InsertionBlock()->AddCall(state, call);
 							return;
 						}
 						else
@@ -962,8 +979,11 @@ namespace flex
 					IR::Value* conditionExpr = LowerExpression(ifStatement->condition);
 					if (conditionExpr == nullptr)
 					{
+						ifTrueBlock->Destroy();
 						delete ifTrueBlock;
+						mergeBlock->Destroy();
 						delete mergeBlock;
+						ifFalseBlock->Destroy();
 						delete ifFalseBlock;
 						return;
 					}
@@ -986,7 +1006,7 @@ namespace flex
 						}
 					}
 					else if (conditionExpr->type == IR::Value::Type::STRING ||
-							conditionExpr->type == IR::Value::Type::CHAR)
+						conditionExpr->type == IR::Value::Type::CHAR)
 					{
 						state->diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid conditional expression");
 						return;
@@ -994,8 +1014,10 @@ namespace flex
 
 					if (bAlwaysTakeTrue)
 					{
+						conditionExpr->Destroy();
 						delete conditionExpr;
 						conditionExpr = nullptr;
+						ifFalseBlock->Destroy();
 						delete ifFalseBlock;
 						ifFalseBlock = nullptr;
 
@@ -1010,8 +1032,10 @@ namespace flex
 
 					if (bAlwaysTakeFalse)
 					{
+						conditionExpr->Destroy();
 						delete conditionExpr;
 						conditionExpr = nullptr;
+						ifTrueBlock->Destroy();
 						delete ifTrueBlock;
 						ifTrueBlock = nullptr;
 
@@ -1026,6 +1050,7 @@ namespace flex
 						}
 						else
 						{
+							ifFalseBlock->Destroy();
 							delete ifFalseBlock;
 							ifFalseBlock = nullptr;
 						}
@@ -1053,6 +1078,7 @@ namespace flex
 					}
 					else
 					{
+						newTemp->Destroy();
 						delete newTemp;
 						std::string ifString = ifStatement->condition->ToString();
 						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
@@ -1627,6 +1653,7 @@ namespace flex
 					IR::Value* loweredVal = LowerExpression(returnStatement->returnValue);
 					if (loweredVal == nullptr)
 					{
+						nextBlock->Destroy();
 						delete nextBlock;
 						return nullptr;
 					}

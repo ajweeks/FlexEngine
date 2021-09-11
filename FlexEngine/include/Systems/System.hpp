@@ -16,6 +16,8 @@ namespace flex
 	class System
 	{
 	public:
+		virtual ~System() = default;
+
 		virtual void Initialize() = 0;
 		virtual void Destroy() = 0;
 		virtual void Update() = 0;

@@ -345,14 +345,6 @@ namespace flex
 		plug->Unplug();
 	}
 
-	RoadManager::RoadManager()
-	{
-	}
-
-	RoadManager::~RoadManager()
-	{
-	}
-
 	void RoadManager::Initialize()
 	{
 	}

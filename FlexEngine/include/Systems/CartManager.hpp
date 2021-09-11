@@ -39,7 +39,6 @@ namespace flex
 	{
 	public:
 		CartManager();
-		virtual ~CartManager() = default;
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;

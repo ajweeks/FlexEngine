@@ -575,7 +575,14 @@ namespace flex
 		for (System* system : g_Systems)
 		{
 			system->Destroy();
+			delete system;
 		}
+
+		for (IFunction* func : m_ConsoleCommands)
+		{
+			delete func;
+		}
+		m_ConsoleCommands.clear();
 
 		delete g_SceneManager;
 		g_SceneManager = nullptr;
