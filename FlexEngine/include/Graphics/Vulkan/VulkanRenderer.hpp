@@ -167,6 +167,9 @@ namespace flex
 			virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) override;
 			virtual void RecreateShadowFrameBuffers() override;
 
+			virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) override;
+			virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) override;
+
 		private:
 			friend VulkanPhysicsDebugDraw;
 			friend VulkanRenderPass;
@@ -248,12 +251,12 @@ namespace flex
 			void CreateStaticIndexBuffer();
 
 			void CreateShadowVertexBuffer();
-			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize);
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size);
-			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size);
+			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize, const char* DEBUG_name = nullptr);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, char* DEBUG_name = nullptr);
+			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, char* DEBUG_name = nullptr);
 
 			void CreateShadowIndexBuffer();
-			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices);
+			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, char* DEBUG_name = nullptr);
 
 			u32 AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount = -1);
 			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
@@ -365,9 +368,6 @@ namespace flex
 			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
 
 			void DestroyTerrain();
-
-			u32 GetStaticVertexIndexBufferIndex(u32 stride);
-			u32 GetDynamicVertexIndexBufferIndex(u32 stride);
 
 			void UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax);
 

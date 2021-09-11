@@ -797,7 +797,6 @@ namespace flex
 		bool bSerializable = true;
 
 		bool bDynamic = false;
-		u32 dynamicVertexIndexBufferIndex = 0;
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;
@@ -929,6 +928,8 @@ namespace flex
 		UniformList dynamicBufferUniforms = {};
 		UniformList additionalBufferUniforms = {};
 		UniformList textureUniforms = {};
+
+		u32 dynamicVertexIndexBufferIndex = 0;
 
 		VertexAttributes vertexAttributes = 0;
 		i32 numAttachments = 1;

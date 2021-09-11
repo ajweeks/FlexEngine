@@ -396,10 +396,14 @@ namespace flex
 		void ParseShaderMetaData();
 		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);
 		void LoadShaders();
+
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 		virtual void RecreateShadowFrameBuffers() = 0;
+
+		virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) = 0;
+		virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) = 0;
 
 		void EnqueueScreenSpaceSprites();
 		void EnqueueWorldSpaceSprites();

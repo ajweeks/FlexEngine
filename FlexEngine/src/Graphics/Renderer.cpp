@@ -2537,6 +2537,8 @@ namespace flex
 		{
 			Shader* shader = m_Shaders[shaderID];
 
+			shader->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes));
+
 			// Sanity checks
 			{
 				assert(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
