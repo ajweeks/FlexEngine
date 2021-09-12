@@ -7212,7 +7212,7 @@ namespace flex
 			m_ShadowVertexIndexBufferPair->indexCount = (u32)indices.size();
 		}
 
-		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, char* DEBUG_name /* = nullptr */)
+		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name /* = nullptr */)
 		{
 			PROFILE_AUTO("CreateAndUploadToStaticIndexBuffer");
 
