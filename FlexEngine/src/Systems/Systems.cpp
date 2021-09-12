@@ -66,6 +66,20 @@ namespace flex
 				WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
 				Transform* plug1Transform = plug1->GetTransform();
 
+				{
+					glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
+					glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+					if (!NearlyEquals(plug0Pos, plug1Pos, 0.001f))
+					{
+						// Keep wire position in between plug ends
+						wireTransform->SetWorldPosition(plug0Pos + (plug1Pos - plug0Pos) * 0.5f);
+					}
+					else
+					{
+						wireTransform->SetWorldPosition(plug0Pos);
+					}
+				}
+
 				Socket* socket0 = (Socket*)plug0->socketID.Get();
 				Socket* socket1 = (Socket*)plug1->socketID.Get();
 
@@ -75,7 +89,7 @@ namespace flex
 				{
 					// Plugged in, stick to socket
 					glm::vec3 socketPos = socket0->GetTransform()->GetWorldPosition();
-					plug0Transform->SetWorldPosition(socketPos + plug0->posOffset);
+					plug0Transform->SetWorldPosition(socketPos);
 				}
 				else if (player->IsHolding(plug0))
 				{
@@ -85,7 +99,7 @@ namespace flex
 					{
 						// Found nearby socket
 						glm::vec3 nearbySocketPos = nearbySocket0->GetTransform()->GetWorldPosition();
-						plug0Transform->SetWorldPosition(nearbySocketPos + plug0->posOffset);
+						plug0Transform->SetWorldPosition(nearbySocketPos);
 					}
 					else
 					{
@@ -102,7 +116,7 @@ namespace flex
 				{
 					// Plugged in, stick to socket
 					glm::vec3 socketPos = socket1->GetTransform()->GetWorldPosition();
-					plug1Transform->SetWorldPosition(socketPos + plug1->posOffset);
+					plug1Transform->SetWorldPosition(socketPos);
 				}
 				else if (player->IsHolding(plug1))
 				{
@@ -112,7 +126,7 @@ namespace flex
 					{
 						// Found nearby socket
 						glm::vec3 nearbySocketPos = nearbySocket1->GetTransform()->GetWorldPosition();
-						plug1Transform->SetWorldPosition(nearbySocketPos + plug1->posOffset);
+						plug1Transform->SetWorldPosition(nearbySocketPos);
 					}
 					else
 					{
@@ -129,8 +143,6 @@ namespace flex
 
 				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
-
-				wireTransform->SetWorldPosition(plug0Pos + (plug1Pos - plug0Pos) * 0.5f);
 
 				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
 				btVector3 plug1PosBt = ToBtVec3(plug1Pos);

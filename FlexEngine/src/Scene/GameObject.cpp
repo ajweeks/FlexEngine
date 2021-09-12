@@ -6330,7 +6330,36 @@ namespace flex
 	{
 		GeneratePoints();
 
+		MaterialID wireMatID = g_Renderer->GetMaterialID("wire");
+		if (wireMatID == InvalidMaterialID)
+		{
+			wireMatID = g_Renderer->GetPlaceholderMaterialID();
+		}
+		m_VertexBufferCreateInfo = {};
+		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(wireMatID)->shaderID)->vertexAttributes;
+
+		UpdateIndices();
+
+		SetMesh(new Mesh(this));
+		u32 maxInitialVertCount = numRadialPoints * numPoints;
+		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, wireMatID, maxInitialVertCount);
+
+		UpdateMesh();
+
 		GameObject::Initialize();
+	}
+
+	void Wire::Update()
+	{
+		UpdateIndices();
+		UpdateMesh();
+
+		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+		if (!m_Indices.empty())
+		{
+			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
+		}
 	}
 
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
@@ -6348,7 +6377,11 @@ namespace flex
 
 		bool bRegenPoints = false;
 
-		bRegenPoints = ImGui::SliderInt("num points", &numPoints, 0, 24) || bRegenPoints;
+		if (ImGui::SliderInt("num points", &numPoints, 2, 24))
+		{
+			bRegenPoints = true;
+			numPoints = glm::clamp(numPoints, 2, 24);
+		}
 		bRegenPoints = ImGui::SliderFloat("point inv mass", &pointInvMass, 0.0f, 0.1f) || bRegenPoints;
 
 		if (ImGui::SliderFloat("stiffness", &stiffness, 0.0f, 1.0f))
@@ -6365,6 +6398,8 @@ namespace flex
 		{
 			DestroyPoints();
 			GeneratePoints();
+			UpdateIndices();
+			UpdateMesh();
 		}
 	}
 
@@ -6445,6 +6480,25 @@ namespace flex
 		m_SoftBody->Update();
 	}
 
+	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
+	{
+		assert(t >= 0.0f && t <= 1.0f);
+		if (t == 1.0f)
+		{
+			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+		}
+		else
+		{
+			u32 i0 = (u32)(t * numPoints);
+			u32 i1 = (u32)(t * numPoints + 1.0f);
+			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+		}
+		// TODO: Take tangent with VEC3_RIGHT when UP is similar to tangent
+		outBitangent = glm::normalize(glm::cross(VEC3_UP, outTangent));
+		outNormal = glm::normalize(glm::cross(outTangent, outBitangent));
+		outBitangent = glm::normalize(glm::cross(outNormal, outTangent));
+	}
+
 	void Wire::DestroyPoints()
 	{
 		if (m_SoftBody != nullptr)
@@ -6468,6 +6522,7 @@ namespace flex
 		Point* endPoint = new Point(plug1Transform->GetWorldPosition(), VEC3_ZERO, 0.0f);
 
 		m_SoftBody = new SoftBody("Wire simulation");
+		m_SoftBody->SetRenderWireframe(false);
 
 		m_SoftBody->points.reserve(numPoints);
 		for (i32 i = 0; i < numPoints; ++i)
@@ -6491,12 +6546,102 @@ namespace flex
 		m_SoftBody->PostInitialize();
 	}
 
+	void Wire::UpdateMesh()
+	{
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
+
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+		glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+
+		glm::vec3 startToEnd = plug1Pos - plug0Pos;
+
+		//glm::vec3 right = m_Transform.GetRight();
+		//glm::vec3 right = m_Transform.GetRight();
+
+		u32 numVerts = numPoints * numRadialPoints;
+
+		m_VertexBufferCreateInfo.positions_3D.clear();
+		m_VertexBufferCreateInfo.texCoords_UV.clear();
+		m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
+		m_VertexBufferCreateInfo.normals.clear();
+		m_VertexBufferCreateInfo.tangents.clear();
+
+		m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+		m_VertexBufferCreateInfo.texCoords_UV.resize(numVerts);
+		m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
+		m_VertexBufferCreateInfo.normals.resize(numVerts);
+		m_VertexBufferCreateInfo.tangents.resize(numVerts);
+
+		glm::vec3 wirePosWS = m_Transform.GetWorldPosition();
+
+		u32 vertIndex = 0;
+		real radius = 0.05f;
+		glm::vec4 color(0.3f, 0.3f, 0.35f, 1.0f);
+		for (i32 i = 0; i < numPoints; ++i)
+		{
+			real t = i / (real)(numPoints - 1);
+			glm::vec3 centerPos = m_SoftBody->points[i]->pos - wirePosWS;
+			glm::vec3 wireNormalWS, wireTangentWS, wireBitangentWS;
+			CalculateBasisAtPoint(t, wireNormalWS, wireTangentWS, wireBitangentWS);
+			for (i32 j = 0; j < numRadialPoints; ++j)
+			{
+				real theta = j / (real)numRadialPoints;
+				real cosTheta = cos(theta * TWO_PI);
+				real sinTheta = sin(theta * TWO_PI);
+				glm::vec3 pos = centerPos +
+					(cosTheta * radius) * wireBitangentWS  +
+					(sinTheta * radius) * wireNormalWS ;
+
+				glm::vec3 normal = glm::normalize(cosTheta * wireBitangentWS + sinTheta * wireNormalWS);
+				// TODO: Take cross product with VEC3_UP when normal is similar to VEC3_RIGHT
+				glm::vec3 tangent = glm::normalize(glm::cross(normal, VEC3_RIGHT));
+
+				m_VertexBufferCreateInfo.positions_3D[vertIndex] = pos;
+				m_VertexBufferCreateInfo.texCoords_UV[vertIndex] = glm::vec2(theta, t);
+				m_VertexBufferCreateInfo.colours_R32G32B32A32[vertIndex] = color;
+				m_VertexBufferCreateInfo.normals[vertIndex] = normal;
+				m_VertexBufferCreateInfo.tangents[vertIndex] = tangent;
+
+				++vertIndex;
+			}
+		}
+
+		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+		meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+		g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
+	}
+
+	void Wire::UpdateIndices()
+	{
+		u32 numIndices = (numPoints - 1) * numRadialPoints * 6;
+
+		m_Indices.clear();
+		m_Indices.resize(numIndices);
+
+		i32 indexIndex = 0;
+		for (i32 i = 0; i < numPoints - 1; ++i)
+		{
+			for (i32 j = 0; j < numRadialPoints; ++j)
+			{
+				m_Indices[indexIndex++] = i * numRadialPoints + j;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + (j + 1) % numRadialPoints;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + j;
+
+				m_Indices[indexIndex++] = i * numRadialPoints + j;
+				m_Indices[indexIndex++] = i * numRadialPoints + (j + 1) % numRadialPoints;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + (j + 1) % numRadialPoints;
+			}
+		}
+	}
+
 	WirePlug::WirePlug(const std::string& name, Wire* owningWire) :
 		GameObject(name, SID("wire plug"), InvalidGameObjectID)
 	{
 		m_bInteractable = true;
-
-		posOffset = VEC3_ZERO;
+		m_bSerializable = false;
 
 		wireID = owningWire->ID;
 	}
@@ -11629,6 +11774,11 @@ namespace flex
 	void SoftBody::SetDamping(real damping)
 	{
 		m_Damping = damping;
+	}
+
+	void SoftBody::SetRenderWireframe(bool bRenderWireframe)
+	{
+		m_bRenderWireframe = bRenderWireframe;
 	}
 
 	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :

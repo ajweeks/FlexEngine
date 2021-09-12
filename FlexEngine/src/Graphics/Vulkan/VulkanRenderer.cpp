@@ -1296,12 +1296,11 @@ namespace flex
 				Shader* gameObjectShader = GetShader(gameObjectMat->shaderID);
 				if (renderObject->vertexBufferData != nullptr && renderObject->vertexBufferData->bDynamic)
 				{
-					u32 dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(gameObjectShader->vertexAttributes));
-					SetDynamicGeometryBufferDirty(dynamicVertexIndexBufferIndex);
+					SetDynamicGeometryBufferDirty(gameObjectShader->dynamicVertexIndexBufferIndex);
 				}
 				else
 				{
-					SetStaticGeometryBufferDirty(m_Shaders[gameObjectMat->shaderID]->staticVertexBufferIndex);
+					SetStaticGeometryBufferDirty(gameObjectShader->staticVertexBufferIndex);
 				}
 			}
 

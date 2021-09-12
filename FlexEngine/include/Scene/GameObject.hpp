@@ -971,6 +971,7 @@ namespace flex
 		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
+		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
 		virtual bool ShouldSerialize() override;
@@ -982,21 +983,29 @@ namespace flex
 
 		void StepSimulation();
 
+		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);
+
 		static const real DEFAULT_LENGTH;
 
 		GameObjectID plug0ID = InvalidGameObjectID;
 		GameObjectID plug1ID = InvalidGameObjectID;
 
-		i32 numPoints = 6;
+		i32 numPoints = 12;
+		i32 numRadialPoints = 10;
 		real stiffness = 0.8f;
 		real pointInvMass = 1.0f / 15.0f;
-		real damping = 0.999f;
+		real damping = 0.9f;
 
 		SoftBody* m_SoftBody = nullptr;
 
 	private:
 		void DestroyPoints();
 		void GeneratePoints();
+		void UpdateMesh();
+		void UpdateIndices();
+
+		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
 
 	};
 
@@ -1018,8 +1027,6 @@ namespace flex
 
 		GameObjectID wireID = InvalidGameObjectID;
 		GameObjectID socketID = InvalidGameObjectID;
-
-		glm::vec3 posOffset;
 	};
 
 	// Connect wires to objects
@@ -1529,6 +1536,8 @@ namespace flex
 		void SetStiffness(real stiffness);
 		void SetDamping(real damping);
 
+		void SetRenderWireframe(bool bRenderWireframe);
+
 		// Add new constraint between index0 & index1 if one doesn't already exist.
 		// Returns new constraint count
 		u32 AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness);
@@ -1544,7 +1553,6 @@ namespace flex
 
 	private:
 		void Draw();
-
 
 		void LoadFromMesh();
 

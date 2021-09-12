@@ -501,6 +501,12 @@
 			"shader" : "battery_charge",
 			"const albedo" : "0.004, 0.004, 0.004, 1.000",
 			"const emissive" : "0.000, 1.000, 0.125, 1.000"
+		},
+		{
+			"name" : "wire",
+			"shader" : "pbr",
+			"const albedo" : "0.085, 0.085, 0.085, 1.000",
+			"dynamic" : true
 		}
 	]
 }
