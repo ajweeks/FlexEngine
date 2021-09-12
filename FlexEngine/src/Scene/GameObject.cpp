@@ -1225,6 +1225,11 @@ namespace flex
 		FLEX_UNUSED(newGameObject);
 	}
 
+	bool GameObject::ShouldSerialize()
+	{
+		return true;
+	}
+
 	void GameObject::ParseJSON(
 		const JSONObject& obj,
 		BaseScene* scene,
@@ -1411,6 +1416,11 @@ namespace flex
 		if (!m_bSerializable)
 		{
 			PrintError("Attempted to serialize non-serializable object with name \"%s\"\n", m_Name.c_str());
+			return object;
+		}
+
+		if (!ShouldSerialize())
+		{
 			return object;
 		}
 
@@ -1653,7 +1663,11 @@ namespace flex
 						}
 					}
 
-					childrenToSerialize.push_back(child->Serialize(scene, false, bSerializePrefabData));
+					JSONObject childObject = child->Serialize(scene, false, bSerializePrefabData);
+					if (!childObject.fields.empty())
+					{
+						childrenToSerialize.push_back(childObject);
+					}
 				}
 			}
 
@@ -6352,6 +6366,21 @@ namespace flex
 			DestroyPoints();
 			GeneratePoints();
 		}
+	}
+
+	bool Wire::ShouldSerialize()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			if (player->IsHolding(plug0ID.Get()) || player->IsHolding(plug1ID.Get()))
+			{
+				// Don't serialize wires being held
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)

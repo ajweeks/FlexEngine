@@ -144,6 +144,8 @@ namespace flex
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
 
+		virtual bool ShouldSerialize();
+
 		// Returns true if this object was deleted or duplicated
 		bool DoImGuiContextMenu(bool bActive);
 
@@ -971,6 +973,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
+		virtual bool ShouldSerialize() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;

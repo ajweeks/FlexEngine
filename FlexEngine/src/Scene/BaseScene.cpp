@@ -1986,7 +1986,11 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				objectsArray.push_back(rootObject->Serialize(this, true));
+				JSONObject rootObj = rootObject->Serialize(this, true);
+				if (!rootObj.fields.empty())
+				{
+					objectsArray.push_back(rootObj);
+				}
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
