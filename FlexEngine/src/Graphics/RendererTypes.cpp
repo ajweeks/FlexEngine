@@ -258,6 +258,8 @@ namespace flex
 		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 
 		material.TryGetFloat("texture scale", createInfoOut.textureScale);
+
+		material.TryGetBool("dynamic", createInfoOut.bDynamic);
 	}
 
 	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
@@ -455,6 +457,10 @@ namespace flex
 
 	JSONObject Material::Serialize() const
 	{
+		// TODO: Make more generic key-value system
+
+		assert(bSerializable);
+
 		JSONObject materialObject = {};
 
 		materialObject.fields.emplace_back("name", JSONValue(name));
@@ -596,6 +602,17 @@ namespace flex
 			std::string colourMultiplierStr = VecToString(colourMultiplier, 3);
 			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplierStr));
 		}
+
+		if (generateReflectionProbeMaps)
+		{
+			materialObject.fields.emplace_back("generate reflection probe maps", JSONValue(generateReflectionProbeMaps));
+		}
+
+		if (bDynamic)
+		{
+			materialObject.fields.emplace_back("dynamic", JSONValue(bDynamic));
+		}
+
 		return materialObject;
 	}
 
