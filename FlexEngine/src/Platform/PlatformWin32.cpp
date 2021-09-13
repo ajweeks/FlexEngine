@@ -687,13 +687,13 @@ namespace flex
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
-		m_Directory(directory),
+		directory(directory),
 		m_bWatchSubtree(bWatchSubtree)
 	{
 		m_ChangeHandle = FindFirstChangeNotification(
 			directory.c_str(),
 			m_bWatchSubtree ? TRUE : FALSE,
-			FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
+			FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE);
 
 		if (m_ChangeHandle == INVALID_HANDLE_VALUE)
 		{
@@ -727,7 +727,7 @@ namespace flex
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)
 			{
-				PrintError("Something bad happened with the directory watch on %s\n", m_Directory.c_str());
+				PrintError("Something bad happened with the directory watch on %s\n", directory.c_str());
 			}
 
 			return true;
@@ -740,6 +740,5 @@ namespace flex
 	{
 		return m_bInstalled;
 	}
-
 } // namespace flex
 #endif // _WINDOWS

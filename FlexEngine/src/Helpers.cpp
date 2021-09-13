@@ -1006,40 +1006,75 @@ namespace flex
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
 
+	u8 ParseByte(const char* ptr)
+	{
+		return u8(ptr[0]);
+	}
+
 	bool ParseBool(const std::string& intStr)
 	{
-		return (intStr.compare("true") == 0);
+		return ParseBool(intStr.c_str());
+	}
+
+	bool ParseBool(const char* intStr)
+	{
+		return strcmp(intStr, "true") == 0;
+	}
+
+	i32 ParseInt(const char* intStr)
+	{
+		return (i32)strtol(intStr, NULL, 10);
 	}
 
 	i32 ParseInt(const std::string& intStr)
 	{
-		return (i64)atoi(intStr.c_str());
+		return ParseInt(intStr.c_str());
+	}
+
+	u32 ParseUInt(const char* intStr)
+	{
+		return (u32)strtoul(intStr, NULL, 10);
 	}
 
 	u32 ParseUInt(const std::string& intStr)
 	{
-		return (u32)strtoul(intStr.c_str(), NULL, 10);
+		return ParseUInt(intStr.c_str());
+	}
+
+	i64 ParseLong(const char* intStr)
+	{
+		return (i64)strtoll(intStr, NULL, 10);
 	}
 
 	i64 ParseLong(const std::string& intStr)
 	{
-		return (i64)atoll(intStr.c_str());
+		return ParseLong(intStr.c_str());
+	}
+
+	u64 ParseULong(const char* intStr)
+	{
+		return (u64)strtoull(intStr, NULL, 10);
 	}
 
 	u64 ParseULong(const std::string& intStr)
 	{
-		return (u64)strtoull(intStr.c_str(), NULL, 10);
+		return ParseULong(intStr.c_str());
 	}
 
-	real ParseFloat(const std::string& floatStr)
+	real ParseFloat(const char* floatStr)
 	{
-		if (floatStr.empty())
+		if (strlen(floatStr) == 0)
 		{
 			PrintError("Invalid float string (empty)\n");
 			return -1.0f;
 		}
 
-		return (real)std::atof(floatStr.c_str());
+		return strtof(floatStr, NULL);
+	}
+
+	real ParseFloat(const std::string& floatStr)
+	{
+		return ParseFloat(floatStr.c_str());
 	}
 
 	glm::vec2 ParseVec2(const std::string& vecStr)
@@ -1054,8 +1089,8 @@ namespace flex
 		else
 		{
 			glm::vec2 result(
-				std::atof(parts[0].c_str()),
-				std::atof(parts[1].c_str()));
+				strtof(parts[0].c_str(), NULL),
+				strtof(parts[1].c_str(), NULL));
 
 			return result;
 		}
@@ -1073,9 +1108,9 @@ namespace flex
 		else
 		{
 			glm::vec3 result(
-				std::atof(parts[0].c_str()),
-				std::atof(parts[1].c_str()),
-				std::atof(parts[2].c_str()));
+				strtof(parts[0].c_str(), NULL),
+				strtof(parts[1].c_str(), NULL),
+				strtof(parts[2].c_str(), NULL));
 
 			return result;
 		}
@@ -1097,17 +1132,17 @@ namespace flex
 			if (parts.size() == 4)
 			{
 				result = glm::vec4(
-					std::atof(parts[0].c_str()),
-					std::atof(parts[1].c_str()),
-					std::atof(parts[2].c_str()),
-					std::atof(parts[3].c_str()));
+					strtof(parts[0].c_str(), NULL),
+					strtof(parts[1].c_str(), NULL),
+					strtof(parts[2].c_str(), NULL),
+					strtof(parts[3].c_str(), NULL));
 			}
 			else
 			{
 				result = glm::vec4(
-					std::atof(parts[0].c_str()),
-					std::atof(parts[1].c_str()),
-					std::atof(parts[2].c_str()),
+					strtof(parts[0].c_str(), NULL),
+					strtof(parts[1].c_str(), NULL),
+					strtof(parts[2].c_str(), NULL),
 					defaultW);
 			}
 
@@ -1119,10 +1154,10 @@ namespace flex
 	{
 		std::vector<std::string> parts = Split(quatStr, ',');
 		glm::quat result;
-		result.x = (real)std::atof(parts[0].c_str());
-		result.y = (real)std::atof(parts[1].c_str());
-		result.z = (real)std::atof(parts[2].c_str());
-		result.w = (real)std::atof(parts[3].c_str());
+		result.x = strtof(parts[0].c_str(), NULL);
+		result.y = strtof(parts[1].c_str(), NULL);
+		result.z = strtof(parts[2].c_str(), NULL);
+		result.w = strtof(parts[3].c_str(), NULL);
 		return result;
 	}
 
@@ -1680,7 +1715,7 @@ namespace flex
 		}
 		firstDigit++;
 
-		i32 num = (i32)atoi(str.substr(firstDigit).c_str());
+		i32 num = (i32)strtol(str.substr(firstDigit).c_str(), NULL, 10);
 		outNumNumericalChars = (strLen - firstDigit);
 
 		return num;

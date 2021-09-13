@@ -130,6 +130,10 @@ namespace flex
 		bool IsZero() const;
 		bool IsPositive() const;
 
+		// Updates this variant's value (does not allow changing value type)
+		// Returns true when successful
+		bool SetValueFromString(const char* str);
+
 		Variant& operator=(const Variant& other);
 		Variant& operator=(const Variant&& other);
 		bool operator<(const Variant& other);

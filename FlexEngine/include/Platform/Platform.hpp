@@ -145,21 +145,68 @@ namespace flex
 
 	};
 
-	class DirectoryWatcher
+	class DirectoryWatcher final
 	{
 	public:
 		DirectoryWatcher(const std::string& directory, bool bWatchSubtree);
 		~DirectoryWatcher();
+
+		DirectoryWatcher(const DirectoryWatcher& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
+		DirectoryWatcher(const DirectoryWatcher&& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
+		DirectoryWatcher& operator=(const DirectoryWatcher& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
+		DirectoryWatcher& operator=(const DirectoryWatcher&& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
 
 		// Returns true when directory has changed
 		bool Update();
 
 		bool Installed() const;
 
+		void* userData = nullptr;
+		std::string directory;
+
 	private:
 		bool m_bInstalled = false;
 		bool m_bWatchSubtree = false;
-		std::string m_Directory;
 		void* m_ChangeHandle = nullptr;
 
 	};

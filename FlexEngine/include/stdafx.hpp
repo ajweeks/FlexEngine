@@ -172,6 +172,7 @@ IGNORE_WARNINGS_POP
 #include "Systems/Systems.hpp"
 #include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
+#include "Tweakable.hpp"
 
 #ifndef btAssert
 #define btAssert(e) assert(e)

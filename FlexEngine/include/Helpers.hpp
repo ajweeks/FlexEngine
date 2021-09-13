@@ -100,19 +100,27 @@ namespace flex
 	FLEX_NO_DISCARD u32 Pack2FloatToU32(real f1, real f2);
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
 
-	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
+	// Interpret 4 bytes starting at ptr as an unsigned 32-bit int
 	FLEX_NO_DISCARD u32 Parse32u(const char* ptr);
-	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
+	// Interpret 2 bytes starting at ptr as an unsigned 16-bit int
 	FLEX_NO_DISCARD u16 Parse16u(const char* ptr);
+	// Interpret 1 byte starting at ptr as an unsigned 8-bit int
+	FLEX_NO_DISCARD u8 ParseByte(const char* ptr);
 
 	FLEX_NO_DISCARD bool ParseBool(const std::string& intStr);
+	FLEX_NO_DISCARD bool ParseBool(const char* intStr);
 
+	FLEX_NO_DISCARD i32 ParseInt(const char* intStr);
 	FLEX_NO_DISCARD i32 ParseInt(const std::string& intStr);
+	FLEX_NO_DISCARD u32 ParseUInt(const char* intStr);
 	FLEX_NO_DISCARD u32 ParseUInt(const std::string& intStr);
+	FLEX_NO_DISCARD i64 ParseLong(const char* intStr);
 	FLEX_NO_DISCARD i64 ParseLong(const std::string& intStr);
+	FLEX_NO_DISCARD u64 ParseULong(const char* intStr);
 	FLEX_NO_DISCARD u64 ParseULong(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
+	FLEX_NO_DISCARD real ParseFloat(const char* floatStr);
 	FLEX_NO_DISCARD real ParseFloat(const std::string& floatStr);
 
 	/* Parses a comma separated list of 2 floats */

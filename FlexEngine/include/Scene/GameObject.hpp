@@ -1015,8 +1015,6 @@ namespace flex
 	public:
 		WirePlug(const std::string& name, Wire* owningWire);
 
-		virtual void Destroy(bool bDetachFromParent = true) override;
-
 		void PlugIn(Socket* socket);
 		void Unplug();
 

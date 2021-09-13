@@ -274,6 +274,96 @@ namespace flex
 		}
 	}
 
+	bool Variant::SetValueFromString(const char* str)
+	{
+		switch (type)
+		{
+		case Type::INT:
+		{
+			i32 newVal = ParseInt(str);
+			if (newVal == 0)
+			{
+				if (strcmp(str, "0") != 0)
+				{
+					return false;
+				}
+			}
+			valInt = newVal;
+			return true;
+		}
+		case Type::UINT:
+		{
+			u32 newVal = ParseUInt(str);
+			if (newVal == 0)
+			{
+				if (strcmp(str, "0") != 0)
+				{
+					return false;
+				}
+			}
+			valUInt = newVal;
+			return true;
+		}
+		case Type::LONG:
+		{
+			i64 newVal = ParseLong(str);
+			if (newVal == 0)
+			{
+				if (strcmp(str, "0") != 0)
+				{
+					return false;
+				}
+			}
+			valLong = newVal;
+			return true;
+		}
+		case Type::ULONG:
+		{
+			u64 newVal = ParseULong(str);
+			if (newVal == 0)
+			{
+				if (strcmp(str, "0") != 0)
+				{
+					return false;
+				}
+			}
+			valULong = newVal;
+			return true;
+		}
+		case Type::FLOAT:
+		{
+			real newVal = ParseFloat(str);
+			if (newVal == 0.0f)
+			{
+				if (strcmp(str, "0.0f") != 0 || strcmp(str, "0.f") != 0 || strcmp(str, "0f") != 0)
+				{
+					return false;
+				}
+			}
+			valFloat = newVal;
+			return true;
+		}
+		case Type::CHAR:
+		{
+			char newVal = ParseByte(str);
+			if (newVal == 0)
+			{
+				if (strcmp(str, "0") != 0)
+				{
+					return false;
+				}
+			}
+			valChar = newVal;
+			return true;
+		}
+		default:
+		{
+			PrintError("Unhandled variant type\n");
+			return false;
+		}
+		}
+	}
+
 	Variant& Variant::operator=(const Variant& other)
 	{
 		CheckAssignmentType(other.type);

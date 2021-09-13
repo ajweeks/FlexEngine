@@ -627,7 +627,7 @@ namespace flex
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
-		m_Directory(directory),
+		directory(directory),
 		m_bWatchSubtree(bWatchSubtree)
 	{
 		// TODO: Add support for directory watching on linux
