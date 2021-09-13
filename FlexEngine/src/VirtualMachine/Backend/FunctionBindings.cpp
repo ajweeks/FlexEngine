@@ -58,7 +58,7 @@ namespace flex
 	{
 		Register(Bind("Quintuple", &Quintuple, Variant::Type::INT, Variant::Type::INT));
 		Register(Bind("DoMathSmall", &DoMathSmall, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT));
-		Register(Bind("Print", &PrintHelper, Variant::Type::VOID, Variant::Type::VOID));
+		Register(Bind("Print", &PrintHelper, Variant::Type::VOID_, Variant::Type::VOID_));
 	}
 
 	void FunctionBindings::ClearBindings()

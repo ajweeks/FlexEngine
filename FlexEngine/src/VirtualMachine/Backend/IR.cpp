@@ -938,7 +938,7 @@ namespace flex
 					auto iter = state->functionTypes.find(call->target);
 					if (iter != state->functionTypes.end())
 					{
-						if (iter->second.returnType == Value::Type::VOID)
+						if (iter->second.returnType == Value::Type::VOID_)
 						{
 							state->InsertionBlock()->AddCall(state, call);
 							return;
@@ -1535,7 +1535,7 @@ namespace flex
 					{
 						for (u32 i = 0; i < (u32)functionCall->arguments.size(); ++i)
 						{
-							if (funcSig.argumentTypes[i] != IR::Value::Type::VOID &&
+							if (funcSig.argumentTypes[i] != IR::Value::Type::VOID_ &&
 								state->GetValueType(arguments[i]) != funcSig.argumentTypes[i])
 							{
 								bSigMatches = false;

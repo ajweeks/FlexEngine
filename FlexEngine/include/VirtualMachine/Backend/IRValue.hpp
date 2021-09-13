@@ -4,7 +4,6 @@
 #include "Variant.hpp"
 
 #undef VOID
-
 namespace flex
 {
 	namespace AST
@@ -25,7 +24,7 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
-				VOID,
+				VOID_, // Avoid Windows' define of VOID
 				IDENTIFIER,
 				UNARY,
 				BINARY,

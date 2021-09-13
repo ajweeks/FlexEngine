@@ -25,7 +25,7 @@ namespace flex
 		case IR::Value::Type::BOOL: type = Type::BOOL; break;
 		case IR::Value::Type::STRING: type = Type::STRING; break;
 		case IR::Value::Type::CHAR: type = Type::CHAR; break;
-		case IR::Value::Type::VOID: type = Type::VOID; break;
+		case IR::Value::Type::VOID_: type = Type::VOID_; break;
 		default: type = Type::_NONE; break;
 		}
 		_largestField = other._largestField;

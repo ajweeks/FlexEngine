@@ -361,7 +361,7 @@ namespace flex
 						IR::CastValue* castValue = (IR::CastValue*)arg;
 						argVal = GetValueWrapperFromIRValue(irState, castValue);
 					} break;
-					case IR::Value::Type::VOID:
+					case IR::Value::Type::VOID_:
 					{
 						ENSURE_NO_ENTRY();
 					} break;
@@ -389,7 +389,7 @@ namespace flex
 
 			// TODO: Choose register intelligently
 			i32 returnValueRegister = 0;
-			if (funcReturnType != IR::Value::Type::VOID)
+			if (funcReturnType != IR::Value::Type::VOID_)
 			{
 				Instruction popReturnVal(OpCode::POP, VariantWrapper(VariantWrapper::Type::REGISTER, Variant(returnValueRegister)));
 				currentInstBlock.PushBack(popReturnVal, funcCallValue->origin, state);
@@ -1356,7 +1356,7 @@ namespace flex
 
 				Variant returnVal = funcPtr->Execute(args);
 
-				if (funcPtr->returnType != Variant::Type::VOID)
+				if (funcPtr->returnType != Variant::Type::VOID_)
 				{
 					stack.push(returnVal);
 				}

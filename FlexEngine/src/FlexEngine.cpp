@@ -53,7 +53,6 @@ IGNORE_WARNINGS_POP
 #include "UI.hpp"
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
-#include "Variant.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
 
 #if COMPILE_OPEN_GL
@@ -409,7 +408,7 @@ namespace flex
 					g_Renderer->SetTAAEnabled(enabled == 1);
 				}
 			}
-		}, Variant::Type::VOID));
+		}, Variant::Type::VOID_));
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.aa.taa",
 			[]() { g_Renderer->SetTAAEnabled(true); }));
 		m_ConsoleCommands.emplace_back(FunctionBindings::Bind("rendering.aa.get_enabled",
@@ -438,7 +437,7 @@ namespace flex
 				i32 newModeID = mode.AsInt();
 				g_Renderer->SetDebugOverlayID(newModeID);
 			}
-		}, Variant::Type::VOID /* either int or string */));
+		}, Variant::Type::VOID_ /* either int or string */));
 
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("rendering.fog.toggle",
 			[]() {g_Renderer->ToggleFogEnabled(); }));
@@ -1959,7 +1958,7 @@ namespace flex
 			Print(")");
 
 			if (command->returnType != Variant::Type::_NONE &&
-				command->returnType != Variant::Type::VOID)
+				command->returnType != Variant::Type::VOID_)
 			{
 				Print(" -> %s", Variant::TypeToString(command->returnType));
 			}

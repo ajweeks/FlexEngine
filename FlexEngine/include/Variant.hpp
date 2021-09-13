@@ -1,7 +1,5 @@
 #pragma once
 
-#undef VOID
-
 namespace flex
 {
 	namespace IR
@@ -38,7 +36,7 @@ namespace flex
 			BOOL,
 			STRING,
 			CHAR,
-			VOID,
+			VOID_, // Avoid Windows' define of VOID
 
 			_NONE
 		};

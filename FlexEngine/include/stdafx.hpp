@@ -94,8 +94,6 @@
 #define FORMAT_STRING_PRE
 #endif
 
-#define FT_EXPORT(Type) Type
-
 #include <algorithm>
 #include <functional>
 #include <future>

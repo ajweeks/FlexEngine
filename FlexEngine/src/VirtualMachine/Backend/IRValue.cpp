@@ -5,7 +5,6 @@
 #include "Helpers.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
-#include "Variant.hpp"
 
 namespace flex
 {
@@ -42,7 +41,7 @@ namespace flex
 			case AST::TypeName::BOOL:	return Value::Type::BOOL;
 			case AST::TypeName::STRING: return Value::Type::STRING;
 			case AST::TypeName::CHAR:	return Value::Type::CHAR;
-			case AST::TypeName::VOID:	return Value::Type::VOID;
+			case AST::TypeName::VOID:	return Value::Type::VOID_;
 			default:					return Value::Type::_NONE;
 			}
 		}
@@ -78,7 +77,7 @@ namespace flex
 			case Variant::Type::BOOL: return Type::BOOL;
 			case Variant::Type::STRING: return Type::STRING;
 			case Variant::Type::CHAR: return Type::CHAR;
-			case Variant::Type::VOID: return  Type::VOID;
+			case Variant::Type::VOID_: return  Type::VOID_;
 			default: return Type::_NONE;
 			}
 		}
