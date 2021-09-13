@@ -275,6 +275,8 @@ namespace flex
 			for (GameObject* object : m_PendingAddObjects)
 			{
 				AddRootObjectImmediate(object);
+				object->Initialize();
+				object->PostInitialize();
 			}
 			m_PendingAddObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -2189,6 +2191,32 @@ namespace flex
 		parent->AddChildImmediate(child);
 
 		return child;
+	}
+
+	GameObject* BaseScene::AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling)
+	{
+		if (gameObject == nullptr || newSibling == nullptr)
+		{
+			return newSibling;
+		}
+
+		if (gameObject->ID == newSibling->ID)
+		{
+			PrintError("Attempted to add self as sibling on %s\n", newSibling->GetName().c_str());
+			return newSibling;
+		}
+
+		GameObject* parent = gameObject->GetParent();
+		if (parent != nullptr)
+		{
+			parent->AddChildImmediate(newSibling);
+		}
+		else
+		{
+			AddRootObjectImmediate(newSibling);
+		}
+
+		return newSibling;
 	}
 
 	void BaseScene::RemoveAllObjects()

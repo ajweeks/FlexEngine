@@ -916,6 +916,18 @@ namespace flex
 			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
 	}
 
+	glm::quat SafeQuatLookAt(const glm::vec3& direction)
+	{
+		if (glm::abs(glm::dot(direction, VEC3_UP)) < 0.99f)
+		{
+			return glm::quatLookAt(direction, VEC3_UP);
+		}
+		else
+		{
+			return glm::quatLookAt(direction, VEC3_RIGHT);
+		}
+	}
+
 	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta)
 	{
 		delta = glm::clamp(delta, 0.00001f, 1.0f);

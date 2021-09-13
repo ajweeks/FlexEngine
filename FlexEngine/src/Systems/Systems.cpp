@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp" // For DirectoryWatcher
 #include "Player.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -39,7 +40,6 @@ namespace flex
 		if (!wires.empty())
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
-			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 
 			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
 			static const btVector3 wireColPluggedIn(0.05f, 0.6f, 0.1f);
@@ -57,18 +57,29 @@ namespace flex
 			glm::vec3 plug0DefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
 			glm::vec3 plug1DefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
 
+			const real hoverAmount = TWEAKABLE(0.1f);
+
 			for (Wire* wire : wires)
 			{
 				Transform* wireTransform = wire->GetTransform();
 
 				WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
-				Transform* plug0Transform = plug0->GetTransform();
 				WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+				if (plug0 == nullptr || plug1 == nullptr)
+				{
+					// If wire was added this frame its plug won't have been registered yet
+					continue;
+				}
+				Transform* plug0Transform = plug0->GetTransform();
 				Transform* plug1Transform = plug1->GetTransform();
 
 				{
 					glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 					glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+					if (IsNanOrInf(plug0Pos) || IsNanOrInf(plug1Pos))
+					{
+						DEBUG_BREAK();
+					}
 					if (!NearlyEquals(plug0Pos, plug1Pos, 0.001f))
 					{
 						// Keep wire position in between plug ends
@@ -84,12 +95,17 @@ namespace flex
 				Socket* socket1 = (Socket*)plug1->socketID.Get();
 
 				Socket* nearbySocket0 = nullptr;
+				Socket* nearbySocket1 = nullptr;
 
 				if (socket0 != nullptr)
 				{
 					// Plugged in, stick to socket
 					glm::vec3 socketPos = socket0->GetTransform()->GetWorldPosition();
 					plug0Transform->SetWorldPosition(socketPos);
+
+					glm::quat plug0Rot = socket0->GetTransform()->GetWorldRotation();
+					plug0Transform->SetWorldRotation(plug0Rot);
+					wire->SetStartTangent(-(plug0Rot * VEC3_FORWARD));
 				}
 				else if (player->IsHolding(plug0))
 				{
@@ -99,7 +115,12 @@ namespace flex
 					{
 						// Found nearby socket
 						glm::vec3 nearbySocketPos = nearbySocket0->GetTransform()->GetWorldPosition();
-						plug0Transform->SetWorldPosition(nearbySocketPos);
+						glm::quat nearbySocketRot = nearbySocket0->GetTransform()->GetWorldRotation();
+						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
+						plug0Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
+
+						plug0Transform->SetWorldRotation(nearbySocketRot);
+						wire->SetStartTangent(tangent);
 					}
 					else
 					{
@@ -116,17 +137,26 @@ namespace flex
 				{
 					// Plugged in, stick to socket
 					glm::vec3 socketPos = socket1->GetTransform()->GetWorldPosition();
-					plug1Transform->SetWorldPosition(socketPos);
+					plug1Transform->SetWorldPosition(socketPos, false);
+
+					glm::quat plug1Rot = socket1->GetTransform()->GetWorldRotation();
+					plug1Transform->SetWorldRotation(plug1Rot);
+					wire->SetEndTangent(-(plug1Rot * VEC3_FORWARD));
 				}
 				else if (player->IsHolding(plug1))
 				{
 					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					Socket* nearbySocket1 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
+					nearbySocket1 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
 					if (nearbySocket1 != nullptr)
 					{
 						// Found nearby socket
 						glm::vec3 nearbySocketPos = nearbySocket1->GetTransform()->GetWorldPosition();
-						plug1Transform->SetWorldPosition(nearbySocketPos);
+						glm::quat nearbySocketRot = nearbySocket1->GetTransform()->GetWorldRotation();
+						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
+						plug1Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
+
+						plug1Transform->SetWorldRotation(nearbySocketRot);
+						wire->SetStartTangent(tangent);
 					}
 					else
 					{
@@ -139,11 +169,73 @@ namespace flex
 					// Plug isn't being held, and isn't plugged in. Rest.
 				}
 
+				if (socket0 == nullptr && nearbySocket0 == nullptr)
+				{
+					// Update socket based on wire tangent
+					glm::vec3 wireStartTangent;
+					wire->CalculateTangentAtPoint(0.0f, wireStartTangent);
+					plug0Transform->SetWorldRotation(SafeQuatLookAt(-wireStartTangent));
+					wire->ClearStartTangent();
+				}
+
+				if (socket1 == nullptr && nearbySocket1 == nullptr)
+				{
+					// Update socket based on wire tangent
+					glm::vec3 wireEndTangent;
+					wire->CalculateTangentAtPoint(1.0f, wireEndTangent);
+					plug1Transform->SetWorldRotation(SafeQuatLookAt(wireEndTangent));
+					wire->ClearEndTangent();
+				}
+
 				wire->StepSimulation();
 
 				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
 
+				if (IsNanOrInf(plug0Pos) || IsNanOrInf(plug1Pos))
+				{
+					DEBUG_BREAK();
+				}
+
+				if (glm::distance2(plug0Pos, plug1Pos) > maxDistBeforeSnapSq)
+				{
+					bool plug0PluggedIn = plug0->socketID.IsValid();
+					bool plug1PluggedIn = plug1->socketID.IsValid();
+
+					bool plug0Held = player->IsHolding(plug0);
+					bool plug1Held = player->IsHolding(plug1);
+
+					if (!plug0PluggedIn && !plug0Held && plug1Held && player->HasFreeHand())
+					{
+						// Pick up loose end 0
+						player->PickupWithFreeHand(plug0);
+					}
+					else if (!plug1PluggedIn && !plug1Held && plug0Held && player->HasFreeHand())
+					{
+						// Pick up loose end 1
+						player->PickupWithFreeHand(plug1);
+					}
+					else if (plug0PluggedIn)
+					{
+						// Unplug and pickup 0
+						UnplugFromSocket(plug0);
+						if (plug1Held && player->HasFreeHand())
+						{
+							player->PickupWithFreeHand(plug0);
+						}
+					}
+					else if (plug1PluggedIn)
+					{
+						// Unplug and pickup 1
+						UnplugFromSocket(plug1);
+						if (plug0Held && player->HasFreeHand())
+						{
+							player->PickupWithFreeHand(plug1);
+						}
+					}
+				}
+
+#if 0
 				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
 				btVector3 plug1PosBt = ToBtVec3(plug1Pos);
 
@@ -153,6 +245,7 @@ namespace flex
 				bool bWire1On = bWire1PluggedIn && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
 				debugDrawer->drawSphere(plug0PosBt, 0.2f, bWire0PluggedIn ? wireColPluggedIn : (bWire0On ? wireColOn : wireColOff));
 				debugDrawer->drawSphere(plug1PosBt, 0.2f, bWire1PluggedIn ? wireColPluggedIn : (bWire1On ? wireColOn : wireColOff));
+#endif
 			}
 		}
 	}
@@ -192,17 +285,23 @@ namespace flex
 		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
 
 		// Plugs were not found, create new ones
-		WirePlug* plug0 = new WirePlug("wire plug 0", newWire);
-		WirePlug* plug1 = new WirePlug("wire plug 1", newWire);
+		PrefabID wirePlugID = g_ResourceManager->GetPrefabID("wire plug");
+		GameObject* wirePlugTemplate = g_ResourceManager->GetPrefabTemplate(wirePlugID);
+		GameObject::CopyFlags copyFlags = (GameObject::CopyFlags)((u32)GameObject::CopyFlags::ALL & ~(u32)GameObject::CopyFlags::ADD_TO_SCENE);
+		WirePlug* plug0 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
+		WirePlug* plug1 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
 
-		newWire->AddChildImmediate(plug0);
-		newWire->AddChildImmediate(plug1);
-
-		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
-		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
+		plug0->wireID = newWire->ID;
+		plug1->wireID = newWire->ID;
 
 		newWire->plug0ID = plug0->ID;
 		newWire->plug1ID = plug1->ID;
+
+		newWire->AddSibling(plug0);
+		newWire->AddSibling(plug1);
+
+		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
+		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
 
 		wires.push_back(newWire);
 
@@ -264,20 +363,47 @@ namespace flex
 				player->DropIfHolding(plug0);
 				player->DropIfHolding(plug1);
 
-				if (plug0->socketID.IsValid())
+				if (plug0 != nullptr)
 				{
-					UnplugFromSocket(plug0);
+					if (plug0->socketID.IsValid())
+					{
+						UnplugFromSocket(plug0);
+					}
+					scene->RemoveObject(plug0, true);
 				}
-				if (plug1->socketID.IsValid())
+				if (plug1 != nullptr)
 				{
-					UnplugFromSocket(plug1);
+					if (plug1->socketID.IsValid())
+					{
+						UnplugFromSocket(plug1);
+					}
+					scene->RemoveObject(plug1, true);
 				}
-				scene->RemoveObject(plug0, true);
-				scene->RemoveObject(plug1, true);
 				scene->RemoveObject(wire, true);
 
 				wires.erase(iter);
 
+				return true;
+			}
+		}
+		return false;
+	}
+
+	WirePlug* PluggablesSystem::AddWirePlug(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	{
+		WirePlug* plug = new WirePlug("wire plug", gameObjectID);
+		wirePlugs.push_back(plug);
+		return plug;
+	}
+
+	bool PluggablesSystem::DestroyWirePlug(WirePlug* wirePlug)
+	{
+		for (auto iter = wirePlugs.begin(); iter != wirePlugs.end(); ++iter)
+		{
+			if ((*iter)->ID == wirePlug->ID)
+			{
+				// TODO: Check for wires/sockets interacting with plug
+				wirePlugs.erase(iter);
 				return true;
 			}
 		}

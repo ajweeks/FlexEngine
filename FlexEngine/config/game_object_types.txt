@@ -20,6 +20,7 @@ mobile liquid box
 object
 road
 wire
+wire plug
 cart
 particle system
 terrain generator

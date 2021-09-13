@@ -68,8 +68,10 @@ namespace flex
 		void SetInteractingWithTerminal(Terminal* terminal);
 		void SetRidingVehicle(Vehicle* vehicle);
 
+		bool PickupWithFreeHand(GameObject* object);
 		bool IsHolding(GameObject* object);
 		void DropIfHolding(GameObject* object);
+		bool HasFreeHand() const;
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;

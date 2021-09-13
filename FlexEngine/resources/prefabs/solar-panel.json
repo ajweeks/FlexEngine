@@ -37,7 +37,8 @@
 				"type" : "socket",
 				"transform" : 
 				{
-					"pos" : "0.711, 1.046, 0.000"
+					"pos" : "0.711, 1.170, -0.000",
+					"rot" : "1.571, -0.000, 0.000"
 				},
 				"visible" : true,
 				"casts shadow" : true,
@@ -52,8 +53,8 @@
 				"type" : "socket",
 				"transform" : 
 				{
-					"pos" : "0.711, -1.053, -0.000",
-					"rot" : "-0.000, -0.000, 3.142"
+					"pos" : "0.711, -1.199, 0.000",
+					"rot" : "1.571, 0.017, 3.142"
 				},
 				"visible" : true,
 				"casts shadow" : true,

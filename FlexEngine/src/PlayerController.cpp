@@ -651,10 +651,7 @@ namespace flex
 				wireTransform->SetWorldPosition(targetPos, false);
 				wireTransform->SetWorldRotation(targetRot, true);
 
-				currentScene->AddRootObjectImmediate(m_PlacingWire);
-
-				m_PlacingWire->Initialize();
-				m_PlacingWire->PostInitialize();
+				currentScene->AddRootObject(m_PlacingWire);
 
 				assert(!m_Player->heldItemLeftHand.IsValid());
 				assert(!m_Player->heldItemRightHand.IsValid());

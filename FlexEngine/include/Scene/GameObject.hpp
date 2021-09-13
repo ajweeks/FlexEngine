@@ -981,8 +981,14 @@ namespace flex
 
 		GameObjectID GetOtherPlug(WirePlug* plug);
 
+		void SetStartTangent(const glm::vec3& tangent);
+		void ClearStartTangent();
+		void SetEndTangent(const glm::vec3& tangent);
+		void ClearEndTangent();
+
 		void StepSimulation();
 
+		void CalculateTangentAtPoint(real t, glm::vec3& outTangent);
 		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);
 
 		static const real DEFAULT_LENGTH;
@@ -1013,18 +1019,20 @@ namespace flex
 	class WirePlug final : public GameObject
 	{
 	public:
-		WirePlug(const std::string& name, Wire* owningWire);
-
-		void PlugIn(Socket* socket);
-		void Unplug();
+		WirePlug(const std::string& name, const GameObjectID& gameObjectID);
+		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID);
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+		void PlugIn(Socket* socket);
+		void Unplug();
 
 		static const real nearbyThreshold;
 
 		GameObjectID wireID = InvalidGameObjectID;
 		GameObjectID socketID = InvalidGameObjectID;
+
 	};
 
 	// Connect wires to objects

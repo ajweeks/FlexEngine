@@ -306,6 +306,7 @@ namespace flex
 		case SID("particle system"): return new ParticleSystem(objectName, gameObjectID);
 		case SID("terrain generator"): return new TerrainGenerator(objectName, gameObjectID);
 		case SID("wire"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWire(gameObjectID);
+		case SID("wire plug"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWirePlug(gameObjectID);
 		case SID("socket"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket(objectName, gameObjectID);
 		case SID("spring"): return new SpringObject(objectName, gameObjectID);
 		case SID("soft body"): return new SoftBody(objectName, gameObjectID);
@@ -333,7 +334,7 @@ namespace flex
 
 	void GameObject::Initialize()
 	{
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			if (!m_CollisionShape)
 			{
@@ -1977,7 +1978,7 @@ namespace flex
 		{
 			if (m_Parent != nullptr)
 			{
-				g_SceneManager->CurrentScene()->AddChildObject(m_Parent, newGameObject);
+				g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
 			}
 			else
 			{
@@ -2334,11 +2335,11 @@ namespace flex
 	{
 		if (m_Parent != nullptr)
 		{
-			return m_Parent->AddChild(child);
+			return m_Parent->AddChildImmediate(child);
 		}
 		else
 		{
-			return g_SceneManager->CurrentScene()->AddRootObject(child);
+			return g_SceneManager->CurrentScene()->AddRootObjectImmediate(child);
 		}
 	}
 
@@ -6377,10 +6378,10 @@ namespace flex
 
 		bool bRegenPoints = false;
 
-		if (ImGui::SliderInt("num points", &numPoints, 2, 24))
+		if (ImGui::SliderInt("num points", &numPoints, 4, 24))
 		{
 			bRegenPoints = true;
-			numPoints = glm::clamp(numPoints, 2, 24);
+			numPoints = glm::clamp(numPoints, 4, 24);
 		}
 		bRegenPoints = ImGui::SliderFloat("point inv mass", &pointInvMass, 0.0f, 0.1f) || bRegenPoints;
 
@@ -6429,18 +6430,6 @@ namespace flex
 			wireInfo.TryGetGameObjectID("plug 0 id", plug0ID);
 			wireInfo.TryGetGameObjectID("plug 1 id", plug1ID);
 		}
-		else
-		{
-			// Plugs were not found, create new ones
-			WirePlug* plug0 = new WirePlug("wire plug 0", this);
-			WirePlug* plug1 = new WirePlug("wire plug 1", this);
-
-			AddChild(plug0);
-			AddChild(plug1);
-
-			plug0ID = plug0->ID;
-			plug1ID = plug1->ID;
-		}
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
@@ -6467,6 +6456,30 @@ namespace flex
 		return InvalidGameObjectID;
 	}
 
+	void Wire::SetStartTangent(const glm::vec3& tangent)
+	{
+		real dist = 2.0f / numPoints;
+		m_SoftBody->points[1]->pos = m_SoftBody->points[0]->pos + tangent * dist;
+		m_SoftBody->points[1]->invMass = 0.0f;
+	}
+
+	void Wire::ClearStartTangent()
+	{
+		m_SoftBody->points[1]->invMass = m_SoftBody->points[2]->invMass;
+	}
+
+	void Wire::SetEndTangent(const glm::vec3& tangent)
+	{
+		real dist = 2.0f / numPoints;
+		m_SoftBody->points[numPoints - 2]->pos = m_SoftBody->points[numPoints - 1]->pos + tangent * dist;
+		m_SoftBody->points[numPoints - 2]->invMass = 0.0f;
+	}
+
+	void Wire::ClearEndTangent()
+	{
+		m_SoftBody->points[numPoints - 2]->invMass = m_SoftBody->points[numPoints - 3]->invMass;
+	}
+
 	void Wire::StepSimulation()
 	{
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
@@ -6478,6 +6491,21 @@ namespace flex
 		m_SoftBody->points[m_SoftBody->points.size() - 1]->pos = plug1Transform->GetWorldPosition();
 
 		m_SoftBody->Update();
+	}
+
+	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
+	{
+		assert(t >= 0.0f && t <= 1.0f);
+		if (t == 1.0f)
+		{
+			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+		}
+		else
+		{
+			u32 i0 = (u32)(t * numPoints);
+			u32 i1 = (u32)(t * numPoints + 1.0f);
+			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+		}
 	}
 
 	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
@@ -6558,9 +6586,6 @@ namespace flex
 
 		glm::vec3 startToEnd = plug1Pos - plug0Pos;
 
-		//glm::vec3 right = m_Transform.GetRight();
-		//glm::vec3 right = m_Transform.GetRight();
-
 		u32 numVerts = numPoints * numRadialPoints;
 
 		m_VertexBufferCreateInfo.positions_3D.clear();
@@ -6637,20 +6662,16 @@ namespace flex
 		}
 	}
 
-	WirePlug::WirePlug(const std::string& name, Wire* owningWire) :
-		GameObject(name, SID("wire plug"), InvalidGameObjectID)
+	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("wire plug"), gameObjectID)
 	{
 		m_bInteractable = true;
-		m_bSerializable = false;
-
-		wireID = owningWire->ID;
 	}
 
-	void WirePlug::Destroy(bool bDetachFromParent /* = true */)
+	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID) :
+		WirePlug(name, gameObjectID)
 	{
-		//GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWirePlug(this);
-
-		GameObject::Destroy(bDetachFromParent);
+		wireID = owningWire->ID;
 	}
 
 	void WirePlug::PlugIn(Socket* socket)

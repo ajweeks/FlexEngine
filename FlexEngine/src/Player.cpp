@@ -846,6 +846,21 @@ namespace flex
 		}
 	}
 
+	bool Player::PickupWithFreeHand(GameObject* object)
+	{
+		if (!heldItemLeftHand.IsValid())
+		{
+			heldItemLeftHand = object->ID;
+			return true;
+		}
+		if (!heldItemRightHand.IsValid())
+		{
+			heldItemRightHand = object->ID;
+			return true;
+		}
+		return false;
+	}
+
 	bool Player::IsHolding(GameObject* object)
 	{
 		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
@@ -853,13 +868,21 @@ namespace flex
 
 	void Player::DropIfHolding(GameObject* object)
 	{
-		if (heldItemLeftHand == object->ID)
+		if (object != nullptr)
 		{
-			heldItemLeftHand = InvalidGameObjectID;
+			if (heldItemLeftHand == object->ID)
+			{
+				heldItemLeftHand = InvalidGameObjectID;
+			}
+			if (heldItemRightHand == object->ID)
+			{
+				heldItemRightHand = InvalidGameObjectID;
+			}
 		}
-		if (heldItemRightHand == object->ID)
-		{
-			heldItemRightHand = InvalidGameObjectID;
-		}
+	}
+
+	bool Player::HasFreeHand() const
+	{
+		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
 	}
 } // namespace flex

@@ -69,6 +69,7 @@ namespace flex
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
 		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
+		GameObject* AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling);
 		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
 		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
 		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);

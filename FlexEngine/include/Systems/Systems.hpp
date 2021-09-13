@@ -24,6 +24,9 @@ namespace flex
 		Wire* AddWire(const GameObjectID& gameObjectID = InvalidGameObjectID);
 		bool DestroyWire(Wire* wire);
 
+		WirePlug* AddWirePlug(const GameObjectID& gameObjectID = InvalidGameObjectID);
+		bool DestroyWirePlug(WirePlug* wirePlug);
+
 		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID);
 		Socket* AddSocket(Socket* socket, i32 slotIdx = 0);
 		bool DestroySocket(Socket* socket);
@@ -37,7 +40,10 @@ namespace flex
 		void UnplugFromSocket(WirePlug* plug);
 
 		std::vector<Wire*> wires;
+		std::vector<WirePlug*> wirePlugs;
 		std::vector<Socket*> sockets;
+
+		real maxDistBeforeSnapSq = 25.0f * 25.0f;
 
 	private:
 		bool RemoveSocket(const GameObjectID& socketID);
