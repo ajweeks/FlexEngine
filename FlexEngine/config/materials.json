@@ -508,6 +508,27 @@
 			"shader" : "pbr",
 			"const albedo" : "0.085, 0.085, 0.085, 1.000",
 			"dynamic" : true
+		},
+		{
+			"name" : "vantablack",
+			"shader" : "colour",
+			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const emissive" : "0.000, 0.000, 0.000, 1.000",
+			"colour multiplier" : "0.000, 0.000, 0.000, 1.000"
+		},
+		{
+			"name" : "blue",
+			"shader" : "pbr",
+			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.920000
+		},
+		{
+			"name" : "floor",
+			"shader" : "pbr",
+			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const metallic" : 1.000000,
+			"const roughness" : 0.030000
 		}
 	]
 }
