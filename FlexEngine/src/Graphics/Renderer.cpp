@@ -11,17 +11,19 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/quaternion.hpp> // for rotate
 IGNORE_WARNINGS_POP
 
+#include <typeinfo>
+
 #include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
+#include "Graphics/ShaderCompiler.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
@@ -29,6 +31,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 #include "UIMesh.hpp"
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
@@ -48,11 +51,21 @@ namespace flex
 
 	void Renderer::Initialize()
 	{
+		PROFILE_AUTO("Renderer Initialize");
+
 		std::string hdriPath = TEXTURE_DIRECTORY "hdri/";
 		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
 		{
 			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
 		}
+
+#if COMPILE_SHADER_COMPILER
+		{
+			PROFILE_AUTO("Start shader compilation");
+			m_ShaderCompiler = new ShaderCompiler();
+			m_ShaderCompiler->StartCompilation();
+		}
+#endif
 
 		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData) + MAX_AREA_LIGHT_COUNT * sizeof(AreaLightData));
 		assert(m_LightData != nullptr);
@@ -101,6 +114,8 @@ namespace flex
 
 	void Renderer::PostInitialize()
 	{
+		PROFILE_AUTO("Renderer PostInitialize");
+
 		// TODO: Use MeshComponent for these objects?
 		m_UIMesh->Initialize();
 
@@ -151,8 +166,6 @@ namespace flex
 			fullScreenTriCreateInfo.visibleInSceneExplorer = false;
 			fullScreenTriCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 			m_FullScreenTriRenderID = InitializeRenderObject(&fullScreenTriCreateInfo);
-
-			m_FullScreenTriVertexBufferData.DescribeShaderVariables(this, m_FullScreenTriRenderID);
 		}
 
 		// 3D Quad
@@ -202,12 +215,16 @@ namespace flex
 			quad3DCreateInfo.renderPassOverride = RenderPassType::FORWARD;
 			m_Quad3DRenderID = InitializeRenderObject(&quad3DCreateInfo);
 
-			m_Quad3DVertexBufferData.DescribeShaderVariables(this, m_Quad3DRenderID);
-
 			quad3DCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 			quad3DCreateInfo.materialID = m_SpriteMatSSID;
 			quad3DCreateInfo.renderPassOverride = RenderPassType::UI;
 			m_Quad3DSSRenderID = InitializeRenderObject(&quad3DCreateInfo);
+
+			// Hologram
+			m_HologramMatID = g_Renderer->GetMaterialID("Selection Hologram");
+			m_HologramProxyObject = new GameObject("Proxy hologram object", InvalidStringID);
+			// Initialize with empty mesh
+			m_HologramProxyObject->SetMesh(new Mesh(m_HologramProxyObject));
 		}
 	}
 
@@ -223,10 +240,23 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
+#if COMPILE_SHADER_COMPILER
+		if (m_ShaderCompiler != nullptr)
+		{
+			m_ShaderCompiler->JoinAllThreads();
+			delete m_ShaderCompiler;
+			m_ShaderCompiler = nullptr;
+		}
+#endif
+
 		free(m_LightData);
 		m_LightData = nullptr;
 		m_PointLightData = nullptr;
 		m_SpotLightData = nullptr;
+
+		m_HologramProxyObject->Destroy();
+		delete m_HologramProxyObject;
+		m_HologramProxyObject = nullptr;
 
 		delete m_ShaderDirectoryWatcher;
 
@@ -253,6 +283,8 @@ namespace flex
 	void Renderer::NewFrame()
 	{
 		m_UIMesh->EndFrame();
+
+		m_HologramProxyObject->SetVisible(false);
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -323,6 +355,8 @@ namespace flex
 
 	void Renderer::LoadSettingsFromDisk()
 	{
+		PROFILE_AUTO("Renderer LoadSettingsFromDisk");
+
 		JSONObject rootObject;
 		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
 		{
@@ -346,6 +380,17 @@ namespace flex
 		else
 		{
 			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
+		}
+	}
+
+	void Renderer::SetShaderQualityLevel(i32 newQualityLevel)
+	{
+		newQualityLevel = glm::clamp(newQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL);
+		SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
+		if (newQualityLevel != specializationConstantMetaData.value)
+		{
+			specializationConstantMetaData.value = newQualityLevel;
+			RecreateEverything();
 		}
 	}
 
@@ -714,11 +759,11 @@ namespace flex
 		m_NumAreaLightsEnabled = 0;
 	}
 
-	DirLightData* Renderer::GetDirectionalLight()
+	DirectionalLight* Renderer::GetDirectionalLight()
 	{
 		if (m_DirectionalLight)
 		{
-			return &m_DirectionalLight->data;
+			return m_DirectionalLight;
 		}
 		return nullptr;
 	}
@@ -762,6 +807,11 @@ namespace flex
 		}
 	}
 
+	void Renderer::AddNotificationMessage(const std::string& message)
+	{
+		m_NotificationMessages.emplace_back(message);
+	}
+
 	Material* Renderer::GetMaterial(MaterialID materialID)
 	{
 		return m_Materials.at(materialID);
@@ -779,7 +829,11 @@ namespace flex
 
 	Shader* Renderer::GetShader(ShaderID shaderID)
 	{
-		return m_Shaders[shaderID];
+		if (shaderID != InvalidShaderID)
+		{
+			return m_Shaders[shaderID];
+		}
+		return nullptr;
 	}
 
 	i32 Renderer::GetMaterialCount()
@@ -947,6 +1001,23 @@ namespace flex
 		return m_UIMesh;
 	}
 
+	void Renderer::SetDebugOverlayID(i32 newID)
+	{
+		newID = glm::clamp(newID, 0, (i32)g_ResourceManager->debugOverlayNames.size());
+		SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
+		if (newID != debugOverlayConstant.value)
+		{
+			debugOverlayConstant.value = newID;
+			RecreateEverything();
+		}
+	}
+
+	void Renderer::ToggleFogEnabled()
+	{
+		m_SpecializationConstants[SID("enable_fog")].value = 1 - m_SpecializationConstants[SID("enable_fog")].value;
+		RecreateEverything();
+	}
+
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
 		if (m_bDisplayShadowCascadePreview)
@@ -974,6 +1045,57 @@ namespace flex
 
 	void Renderer::Update()
 	{
+		PROFILE_AUTO("Renderer Update");
+
+#if COMPILE_SHADER_COMPILER
+		if (!m_ShaderCompiler->bComplete)
+		{
+			i32 shadersRemaining = m_ShaderCompiler->WorkItemsRemaining();
+			i32 threadCount = m_ShaderCompiler->ThreadCount();
+
+			static std::string dots = "...";
+			static std::string spaces = "   ";
+			StringBuilder stringBuilder;
+			stringBuilder.Append("Compiling ");
+			stringBuilder.Append(IntToString(shadersRemaining));
+			stringBuilder.Append(shadersRemaining == 1 ? " shader" : " shaders");
+			i32 numDots = glm::clamp((i32)(fmod(g_SecElapsedSinceProgramStart, 1.0f) * 3), 0, 3);
+			stringBuilder.Append(dots.substr(0, numDots));
+			stringBuilder.Append(spaces.substr(0, 3 - numDots));
+			AddNotificationMessage(stringBuilder.ToString());
+
+			stringBuilder.Clear();
+			stringBuilder.Append("(using ");
+			stringBuilder.Append(IntToString(threadCount));
+			stringBuilder.Append(threadCount == 1 ? " thread)" : " threads)");
+			AddNotificationMessage(stringBuilder.ToString());
+		}
+
+		if (m_ShaderCompiler->TickStatus())
+		{
+			m_bShaderErrorWindowShowing = true;
+
+			if (m_ShaderCompiler->bSuccess)
+			{
+				AddEditorString("Shader recompile completed successfully");
+				RecreateEverything();
+
+				if (m_ShaderCompiler->WasShaderRecompiled("terrain_generate_points") ||
+					m_ShaderCompiler->WasShaderRecompiled("terrain_generate_mesh"))
+				{
+					g_SceneManager->CurrentScene()->RegenerateTerrain();
+				}
+			}
+			else
+			{
+				PrintError("Shader recompile failed\n");
+				AddEditorString("Shader recompile failed");
+			}
+
+			m_bSwapChainNeedsRebuilding = true; // This is needed to recreate some resources for SSAO, etc.
+		}
+#endif
+
 		if (m_EditorStrSecRemaining > 0.0f)
 		{
 			m_EditorStrSecRemaining -= g_DeltaTime;
@@ -983,7 +1105,7 @@ namespace flex
 			}
 		}
 
-		if (m_ShaderDirectoryWatcher && m_ShaderDirectoryWatcher->Update())
+		if (m_ShaderDirectoryWatcher != nullptr && m_ShaderDirectoryWatcher->Update())
 		{
 			RecompileShaders(false);
 		}
@@ -991,8 +1113,8 @@ namespace flex
 		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
 
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		DirLightData* dirLight = g_Renderer->GetDirectionalLight();
-		if (dirLight)
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
 		{
 			// Flip near & far planes
 			glm::mat4 modifiedProj = cam->GetProjection();
@@ -1053,9 +1175,10 @@ namespace flex
 
 				glm::vec3 maxExtents = glm::vec3(radius);
 				glm::vec3 minExtents = -maxExtents;
+				real zFar = g_CameraManager->CurrentCamera()->zFar;
 
 				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - m_DirectionalLight->data.dir * minExtents.z, frustumCenter, VEC3_UP);
-				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, maxExtents.z - minExtents.z, 0.0f);
+				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, zFar * 2.0f, -zFar);
 
 				m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
 				m_ShadowSamplingData.cascadeDepthSplits[c] = depthSplits[c];
@@ -1065,6 +1188,70 @@ namespace flex
 		}
 
 		m_UIMesh->Draw();
+
+		if (m_QueuedHologramPrefabID.IsValid())
+		{
+			Mesh* mesh = m_HologramProxyObject->GetMesh();
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QueuedHologramPrefabID);
+			const std::string meshFilePath = prefabTemplate->GetMesh()->GetRelativeFilePath();
+
+			bool bValid = false;
+			if (mesh->GetSubmeshCount() != 0)
+			{
+				if (mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+				{
+					// Same prefab is being drawn as last frame
+					bValid = true;
+				}
+				else
+				{
+					mesh->Destroy();
+					// Restore game object reference
+					mesh->SetOwner(m_HologramProxyObject);
+				}
+			}
+
+			if (!bValid)
+			{
+				bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
+				m_HologramProxyObject->PostInitialize();
+			}
+
+			if (bValid)
+			{
+				m_HologramProxyObject->SetVisible(true);
+
+				GetMaterial(m_HologramMatID)->constEmissive = m_QueuedHologramColour;
+
+				Transform* transform = m_HologramProxyObject->GetTransform();
+				transform->SetWorldPosition(m_QueuedHologramPosWS, false);
+				transform->SetWorldRotation(m_QueuedHologramRotWS, false);
+				transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+			}
+			else
+			{
+				std::string prefabIDStr = m_QueuedHologramPrefabID.ToString();
+				std::string prefabName = prefabTemplate->GetName();
+				PrintError("Failed to load mesh for selection hologram proxy (prefab ID: %s, prefab name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
+				// Restore game object reference
+				mesh->SetOwner(m_HologramProxyObject);
+				mesh->Destroy();
+			}
+
+			m_QueuedHologramPrefabID = InvalidPrefabID;
+		}
+	}
+
+	void Renderer::EndOfFrame()
+	{
+		m_NotificationMessages.clear();
+	}
+
+	void Renderer::DrawImGuiWindows()
+	{
+#if COMPILE_SHADER_COMPILER
+		ShaderCompiler::DrawImGuiShaderErrorsWindow(&m_bShaderErrorWindowShowing);
+#endif
 	}
 
 	static ImGuiTextFilter materialFilter;
@@ -1295,7 +1482,7 @@ namespace flex
 		{
 			ImGui::Text("Materials");
 
-			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshes();
+			std::vector<MeshComponent*> subMeshes = mesh->GetSubMeshesCopy();
 
 			real windowWidth = ImGui::GetContentRegionAvailWidth();
 			real maxWindowHeight = 170.0f;
@@ -1390,6 +1577,20 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour)
+	{
+		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale(), colour);
+	}
+
+	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour)
+	{
+		m_QueuedHologramPrefabID = prefabID;
+		m_QueuedHologramPosWS = posWS;
+		m_QueuedHologramRotWS = rotWS;
+		m_QueuedHologramScaleWS = scaleWS;
+		m_QueuedHologramColour = colour;
+	}
+
 	void Renderer::OnPostSceneChange()
 	{
 		m_UIMesh->OnPostSceneChange();
@@ -1400,8 +1601,200 @@ namespace flex
 		}
 	}
 
+	u32 Renderer::ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields)
+	{
+		u32 lineCount = (u32)fileLines.size();
+
+		while (j < lineCount)
+		{
+			std::string subFileLine = Trim(fileLines[j]);
+			if (!StartsWith(subFileLine, "OpMemberName"))
+			{
+				break;
+			}
+
+			size_t firstQuote = subFileLine.find('\"');
+			size_t secondQuote = subFileLine.rfind('\"');
+			if (firstQuote != std::string::npos && secondQuote != std::string::npos && firstQuote != secondQuote)
+			{
+				std::string fieldName = subFileLine.substr(firstQuote + 1, secondQuote - firstQuote - 1);
+				if (!Contains(outFields, fieldName))
+				{
+					outFields.push_back(fieldName);
+				}
+			}
+
+			++j;
+		}
+
+		return j - 1;
+	}
+
+	void Renderer::ParseShaderMetaData()
+	{
+		m_ShaderMetaData = {};
+
+		struct AttributeTypeMetaData
+		{
+			const char* spvSuffix;
+			const std::type_info& type;
+			const char* friendlyName;
+		};
+		static const AttributeTypeMetaData attributeMetaData[] =
+		{
+			{ "int", typeid(i32), "int" },
+			{ "float", typeid(real), "float" },
+			{ "v2float", typeid(glm::vec2), "vec2" },
+			{ "v3float", typeid(glm::vec3), "vec3" },
+			{ "v4float", typeid(glm::vec4), "vec4" },
+		};
+
+		std::vector<std::string> shaderFilePaths;
+		if (Platform::FindFilesInDirectory(COMPILED_SHADERS_DIRECTORY, shaderFilePaths, "asm"))
+		{
+			for (const std::string& shaderFilePath : shaderFilePaths)
+			{
+				std::string fileContents;
+				if (ReadFile(shaderFilePath, fileContents, false))
+				{
+					ShaderMetaData shaderMetaData = {};
+
+					const std::string shaderFileNameOrig = StripFileType(StripLeadingDirectories(shaderFilePath));
+					std::string shaderFileName = shaderFileNameOrig;
+					std::string shaderType;
+
+					// Remove "vk_" prefix
+					if (StartsWith(shaderFileName, "vk_"))
+					{
+						shaderFileName = shaderFileName.substr(3);
+					}
+
+					// Remove shader type from name (e.g. "_frag")
+					size_t finalUnderscore = shaderFileName.rfind('_');
+					if (finalUnderscore != std::string::npos)
+					{
+						shaderType = shaderFileName.substr(finalUnderscore + 1);
+						shaderFileName = shaderFileName.substr(0, finalUnderscore);
+					}
+
+					auto iter = m_ShaderMetaData.find(shaderFileName);
+					if (iter != m_ShaderMetaData.end())
+					{
+						// Another stage of this shader has already been parsed, append any new results from this one
+						shaderMetaData = iter->second;
+					}
+
+					std::vector<std::string> fileLines = Split(fileContents, '\n');
+					u32 lineCount = (u32)fileLines.size();
+					for (u32 i = 0; i < lineCount; ++i)
+					{
+						std::string fileLine = Trim(fileLines[i]);
+						if (StartsWith(fileLine, "OpName %UBOConstant \"UBOConstant\""))
+						{
+							i = ParseShaderBufferFields(fileLines, i + 1, shaderMetaData.uboConstantFields);
+						}
+						else if (StartsWith(fileLine, "OpName %UBODynamic \"UBODynamic\""))
+						{
+							i = ParseShaderBufferFields(fileLines, i + 1, shaderMetaData.uboDynamicFields);
+						}
+						else if (Contains(fileLine, " OpVariable ") && Contains(fileLine, " Input") && shaderType.compare("vert") == 0)
+						{
+							// Vertex attributes
+							size_t percent = fileLine.find('%');
+							size_t equals = fileLine.find('=');
+							if (percent != std::string::npos && equals != std::string::npos && percent != equals)
+							{
+								std::string attributeName = Trim(fileLine.substr(percent + 1, equals - percent - 1));
+								if (!StartsWith(attributeName, "gl_") && !Contains(shaderMetaData.vertexAttributes, attributeName))
+								{
+									shaderMetaData.vertexAttributes.push_back(attributeName);
+
+									const char* prefixStr = "_ptr_Input_";
+									size_t attributeSizePrefix = fileLine.find(prefixStr);
+									if (attributeSizePrefix != std::string::npos)
+									{
+										size_t attributeSizeSuffix = fileLine.rfind(' ');
+										if (attributeSizeSuffix != std::string::npos && attributeSizePrefix != attributeSizeSuffix)
+										{
+											size_t attrStart = attributeSizePrefix + strlen(prefixStr);
+											std::string attributeSizeStr = fileLine.substr(attrStart, attributeSizeSuffix - attrStart);
+
+											// Ensure that attribute has correct size
+											for (const AttributeTypeMetaData& metaData : attributeMetaData)
+											{
+												if (attributeSizeStr.compare(metaData.spvSuffix) == 0)
+												{
+													if (!CompareVertexAttributeType(attributeName.c_str(), metaData.type))
+													{
+														PrintError("Mismatched vertex attribute type in shader %s for attribute %s (expected %s)\n", shaderFileNameOrig.c_str(), attributeName.c_str(), metaData.friendlyName);
+													}
+
+													break;
+												}
+											}
+										}
+
+									}
+								}
+							}
+						}
+						else if (Contains(fileLine, " OpVariable ") && Contains(fileLine, " UniformConstant"))
+						{
+							// Texture samplers
+							size_t percent = fileLine.find('%');
+							size_t equals = fileLine.find('=');
+							if (percent != std::string::npos && equals != std::string::npos && percent != equals)
+							{
+								std::string attributeName = Trim(fileLine.substr(percent + 1, equals - percent - 1));
+								if (!Contains(shaderMetaData.sampledTextures, attributeName))
+								{
+									shaderMetaData.sampledTextures.push_back(attributeName);
+								}
+							}
+						}
+					}
+
+					m_ShaderMetaData[shaderFileName] = shaderMetaData;
+				}
+			}
+		}
+	}
+
 	void Renderer::LoadShaders()
 	{
+		PROFILE_AUTO("Renderer LoadShaders");
+
+#define USE_SHADER_REFLECTION 0
+#if USE_SHADER_REFLECTION
+		ParseShaderMetaData();
+
+		if (m_ShaderMetaData.empty())
+		{
+			// Block to wait for shader compile to complete
+			while (!m_ShaderCompiler->bComplete)
+			{
+				if (!m_ShaderCompiler->TickStatus())
+				{
+					Platform::Sleep(1);
+				}
+			}
+
+			ParseShaderMetaData();
+		}
+#endif
+
+#if COMPILE_SHADER_COMPILER
+		while (m_ShaderCompiler != nullptr && !m_ShaderCompiler->bComplete)
+		{
+			// Wait for shader compilation to complete
+			// TODO: Only wait for engine shaders
+			if (m_ShaderCompiler->TickStatus())
+			{
+				break;
+			}
+			Platform::Sleep(1);
+		}
+#endif
 		std::vector<ShaderInfo> shaderInfos;
 		SUPPRESS_WARN_BEGIN;
 #if COMPILE_OPEN_GL
@@ -1454,13 +1847,18 @@ namespace flex
 			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv", "", "" },
 			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv", "", "" },
 			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv", "", "" },
+			// TODO: Rename to .geom or move to compute slot?
 			{ "particle_sim", "", "", "vk_simulate_particles_comp.spv", "" },
 			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
-			{ "raymarched", "vk_raymarched_vert.spv", "vk_raymarched_frag.spv", "", "" },
+			{ "battery_charge", "vk_battery_charge_vert.spv", "vk_battery_charge_frag.spv", "", "" },
+			{ "cloud", "vk_cloud_vert.spv", "vk_cloud_frag.spv", "", "" },
+			{ "terrain_generate_points", "", "", "", "vk_terrain_generate_points_comp.spv" },
+			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
+			{ "hologram", "vk_hologram_vert.spv", "vk_hologram_frag.spv", "", "" },
 		};
 #endif
 		SUPPRESS_WARN_END;
@@ -1469,6 +1867,57 @@ namespace flex
 
 		ShaderID shaderID = 0;
 
+#if USE_SHADER_REFLECTION
+		for (u32 shaderID = 0; shaderID < (u32)m_Shaders.size(); ++shaderID)
+		{
+			ShaderMetaData& shaderMetaData = m_ShaderMetaData[m_Shaders[shaderID]->name];
+			Shader* shader = m_Shaders[shaderID];
+
+			for (const std::string& attributeName : shaderMetaData.vertexAttributes)
+			{
+				shader->vertexAttributes |= (u32)VertexAttributeFromString(attributeName.c_str());
+			}
+
+			for (const std::string& field : shaderMetaData.uboConstantFields)
+			{
+				Uniform const* uniform = UniformFromStringID(Hash(field.c_str()));
+				if (uniform != nullptr)
+				{
+					shader->constantBufferUniforms.AddUniform(uniform);
+				}
+				else
+				{
+					PrintError("Unknown uniform %s in constant uniform buffer in shader %s\n", field.c_str(), shader->name.c_str());
+				}
+			}
+
+			for (const std::string& field : shaderMetaData.uboDynamicFields)
+			{
+				Uniform const* uniform = UniformFromStringID(Hash(field.c_str()));
+				if (uniform != nullptr)
+				{
+					shader->dynamicBufferUniforms.AddUniform(UniformFromStringID(Hash(field.c_str())));
+				}
+				else
+				{
+					PrintError("Unknown uniform %s in dynamic uniform buffer in shader %s\n", field.c_str(), shader->name.c_str());
+				}
+			}
+
+			for (const std::string& textureName : shaderMetaData.sampledTextures)
+			{
+				Uniform const* uniform = UniformFromStringID(Hash(textureName.c_str()));
+				if (uniform != nullptr)
+				{
+					shader->textureUniforms.AddUniform(UniformFromStringID(Hash(textureName.c_str())));
+				}
+				else
+				{
+					PrintError("Unknown texture uniform %s in shader %s\n", textureName.c_str(), shader->name.c_str());
+				}
+			}
+		}
+#else // USE_SHADER_REFLECTION
 		// Deferred combine
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED_COMBINE;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
@@ -1477,27 +1926,29 @@ namespace flex
 			(u32)VertexAttribute::UV;
 
 		// TODO: Specify that this buffer is only used in the frag shader here
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CAM_POS);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_LIGHTS);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_SAMPLING_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_NEAR_FAR_PLANES);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SSAO_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_BRDF_LUT_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_IRRADIANCE_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_PREFILTER_MAP);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_DEPTH_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SSAO_FINAL_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_0_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_FB_1_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLER_0);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_LTC_SAMPLER_1);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_BRDF_LUT_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_IRRADIANCE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_PREFILTER_MAP);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_DEPTH_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SSAO_FINAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_FB_0_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_FB_1_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_LTC_MATRICES_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_LTC_AMPLITUDES_SAMPLER);
 		++shaderID;
 
 		// Colour
@@ -1510,11 +1961,11 @@ namespace flex
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
 		++shaderID;
 
 		// UI
@@ -1528,10 +1979,10 @@ namespace flex
 			(u32)VertexAttribute::UV |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UV_BLEND_AMOUNT);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UV_BLEND_AMOUNT);
 		++shaderID;
 
 		// PBR
@@ -1546,24 +1997,24 @@ namespace flex
 			(u32)VertexAttribute::NORMAL |
 			(u32)VertexAttribute::TANGENT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_METALLIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_METALLIC_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ROUGHNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ROUGHNESS_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_NORMAL_SAMPLER);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_METALLIC_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_METALLIC_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ROUGHNESS_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_NORMAL_SAMPLER);
 		++shaderID;
 
 		// PBR - WORLD SPACE
@@ -1576,26 +2027,26 @@ namespace flex
 			(u32)VertexAttribute::NORMAL |
 			(u32)VertexAttribute::TANGENT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_METALLIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_METALLIC_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ROUGHNESS_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_TEXTURE_SCALE);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_BLEND_SHARPNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_METALLIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_METALLIC_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ROUGHNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ROUGHNESS_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TEXTURE_SCALE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_BLEND_SHARPNESS);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_METALLIC_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ROUGHNESS_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_METALLIC_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ROUGHNESS_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_NORMAL_SAMPLER);
 		++shaderID;
 
 		// Skybox
@@ -1605,12 +2056,12 @@ namespace flex
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_CUBEMAP_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Equirectangular to Cube
@@ -1620,7 +2071,7 @@ namespace flex
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_HDR_EQUIRECTANGULAR_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_HDR_EQUIRECTANGULAR_SAMPLER);
 		++shaderID;
 
 		// Irradiance
@@ -1630,7 +2081,7 @@ namespace flex
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_CUBEMAP_SAMPLER);
 		++shaderID;
 
 		// Prefilter
@@ -1641,10 +2092,10 @@ namespace flex
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ROUGHNESS);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_CUBEMAP_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_CUBEMAP_SAMPLER);
 		++shaderID;
 
 		// BRDF
@@ -1663,12 +2114,12 @@ namespace flex
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Sprite - Texture Array
@@ -1678,17 +2129,17 @@ namespace flex
 		m_Shaders[shaderID]->bTextureArr = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 16;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Post processing
@@ -1698,12 +2149,12 @@ namespace flex
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_POST_PROCESS_MAT);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_POST_PROCESS_MAT);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);
 		++shaderID;
 
 		// Post FXAA
@@ -1712,9 +2163,9 @@ namespace flex
 		//	(u32)VertexAttribute::POSITION2 |
 		//	(u32)VertexAttribute::UV;
 
-		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
+		//m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 
-		//m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
+		//m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);
 		//++shaderID;
 
 		// Compute SDF
@@ -1724,18 +2175,18 @@ namespace flex
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_SDF_DATA);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CHAR_RESOLUTION);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_SPREAD);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_HIGH_RES_TEX);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_TEX_CHANNEL);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_SDF_RESOLUTION);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_HIGH_RES);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_SDF_DATA);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TEX_CHANNEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_HIGH_RES_TEX);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CHAR_RESOLUTION);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_SPREAD);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_HIGH_RES_TEX);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TEX_CHANNEL);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_SDF_RESOLUTION);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_HIGH_RES);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Font SS
@@ -1749,13 +2200,12 @@ namespace flex
 			(u32)VertexAttribute::EXTRA_VEC4 |
 			(u32)VertexAttribute::EXTRA_INT;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_FONT_CHAR_DATA);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TEX_SIZE);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Font WS
@@ -1770,15 +2220,14 @@ namespace flex
 			(u32)VertexAttribute::EXTRA_VEC4 |
 			(u32)VertexAttribute::EXTRA_INT;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_FONT_CHAR_DATA);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_TEX_SIZE);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_THRESHOLD);
-		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_SHADOW);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_FONT_CHAR_DATA);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TEX_SIZE);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_THRESHOLD);
+		//m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_SHADOW);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Shadow
@@ -1792,8 +2241,8 @@ namespace flex
 
 		m_Shaders[shaderID]->constantBufferUniforms = {};
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
 		++shaderID;
 
 		// SSAO
@@ -1803,14 +2252,14 @@ namespace flex
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_GEN_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SSAO_GEN_DATA);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_DEPTH_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NOISE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_DEPTH_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SSAO_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_NOISE_SAMPLER);
 		++shaderID;
 
 		// SSAO Blur
@@ -1821,15 +2270,15 @@ namespace flex
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SSAO_BLUR_DATA_CONSTANT);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_SSAO_BLUR_DATA_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_SSAO_BLUR_DATA_DYNAMIC);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SSAO_RAW_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SSAO_NORMAL_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_DEPTH_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SSAO_RAW_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SSAO_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_DEPTH_SAMPLER);
 		++shaderID;
 
 		// TAA Resolve
@@ -1841,14 +2290,14 @@ namespace flex
 			(u32)VertexAttribute::POSITION | // TODO: POS2
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_INV);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION_INV);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_LAST_FRAME_VIEWPROJ);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_LAST_FRAME_VIEWPROJ);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_HISTORY_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_DEPTH_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_HISTORY_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_DEPTH_SAMPLER);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms = {};
 		++shaderID;
@@ -1860,7 +2309,7 @@ namespace flex
 			(u32)VertexAttribute::POSITION | // TODO: POS2
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SCENE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);
 		++shaderID;
 
 		// Blit
@@ -1870,68 +2319,65 @@ namespace flex
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Simulate particles
 		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_PARTICLES;
 		m_Shaders[shaderID]->bCompute = true;
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_PARTICLE_SIM_DATA);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_PARTICLE_SIM_DATA);
 
-		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(U_PARTICLE_BUFFER);
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_PARTICLE_BUFFER);
 		++shaderID;
 
 		// Particles
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::VELOCITY3 |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 			(u32)VertexAttribute::EXTRA_VEC4;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CAM_POS);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Terrain
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
-		m_Shaders[shaderID]->maxObjectCount = 1024;
+		m_Shaders[shaderID]->maxObjectCount = 4096 * 8; // TODO: -1
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
-			(u32)VertexAttribute::UV |
-			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
-			(u32)VertexAttribute::NORMAL;
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_SHADOW_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
 		++shaderID;
 
 		// Water
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->bTranslucent = false;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -1939,19 +2385,19 @@ namespace flex
 			(u32)VertexAttribute::TANGENT |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_CAM_POS);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_PROJECTION);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_DIR_LIGHT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_OCEAN_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_SKYBOX_DATA);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_OCEAN_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		++shaderID;
 
 		// Wireframe
@@ -1962,12 +2408,12 @@ namespace flex
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_COLOUR_MULTIPLIER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
 		++shaderID;
 
 		// Emissive
@@ -1979,57 +2425,132 @@ namespace flex
 			(u32)VertexAttribute::NORMAL |
 			(u32)VertexAttribute::TANGENT;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ALBEDO);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_EMISSIVE);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_EMISSIVE_SAMPLER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_CONST_ROUGHNESS);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_ENABLE_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ROUGHNESS);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_NORMAL_SAMPLER);
 
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_ALBEDO_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_EMISSIVE_SAMPLER);
-		m_Shaders[shaderID]->textureUniforms.AddUniform(U_NORMAL_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_NORMAL_SAMPLER);
 		++shaderID;
 
-		// Raymarched
+		// Battery Charge
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::UV;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_ALBEDO);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_EMISSIVE_SAMPLER);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CHARGE_AMOUNT);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_EMISSIVE_SAMPLER);
+		++shaderID;
+
+		// Cloud
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->vertexAttributes = (u32)VertexAttribute::POSITION;
 
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_UNIFORM_BUFFER_CONSTANT);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_VIEW_PROJECTION);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_INV);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SCREEN_SIZE);
 
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_UNIFORM_BUFFER_DYNAMIC);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		++shaderID;
+
+		// Terrain generate points
+		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_TERRAIN;
+		m_Shaders[shaderID]->bCompute = true;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_CONSTANT_DATA);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
+
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_RANDOM_TABLES);
+		++shaderID;
+
+		// Terrain generate mesh
+		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_TERRAIN;
+		m_Shaders[shaderID]->bCompute = true;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TERRAIN_GEN_CONSTANT_DATA);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_TERRAIN_GEN_DYNAMIC_DATA);
+
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_POINT_BUFFER);
+		m_Shaders[shaderID]->additionalBufferUniforms.AddUniform(&U_TERRAIN_VERTEX_BUFFER);
+		++shaderID;
+
+		// Hologram
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::NORMAL;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
 		++shaderID;
 
 		assert(shaderID == m_Shaders.size());
+#endif // USE_SHADER_REFLECTION
 
 		for (shaderID = 0; shaderID < (ShaderID)m_Shaders.size(); ++shaderID)
 		{
 			Shader* shader = m_Shaders[shaderID];
 
+			shader->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes));
+
 			// Sanity checks
 			{
-				assert(!shader->constantBufferUniforms.HasUniform(U_UNIFORM_BUFFER_DYNAMIC));
-				assert(!shader->dynamicBufferUniforms.HasUniform(U_UNIFORM_BUFFER_CONSTANT));
+				assert(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
+				assert(!shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT));
 
 				assert((shader->bNeedPushConstantBlock && shader->pushConstantBlockSize != 0) ||
 					(!shader->bNeedPushConstantBlock && shader->pushConstantBlockSize == 0));
 
 
-				if (shader->textureUniforms.HasUniform(U_HIGH_RES_TEX))
+				if (shader->textureUniforms.HasUniform(&U_HIGH_RES_TEX))
 				{
-					assert(!shader->textureUniforms.HasUniform(U_ALBEDO_SAMPLER));
+					assert(!shader->textureUniforms.HasUniform(&U_ALBEDO_SAMPLER));
 				}
 
 				// -1 means allocate max, anything else must be > 0
@@ -2066,6 +2587,8 @@ namespace flex
 
 	void Renderer::GenerateGBuffer()
 	{
+		PROFILE_AUTO("GenerateGBuffer");
+
 		assert(m_SkyBoxMesh != nullptr);
 		assert(m_SkyboxShaderID != InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
@@ -2160,22 +2683,24 @@ namespace flex
 
 	void Renderer::EnqueueScreenSpaceText()
 	{
-		SetFont(SID("editor-02"));
-		static const glm::vec4 colour(0.95f);
-		DrawStringSS("FLEX ENGINE", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -0.055f), 1.5f, 0.6f);
+		real topRightX = -0.03f;
+		real topRightOffset = -0.055f;
+		real lineHeight = -2.0f * SetFont(SID("editor-02"))->GetMetric('W')->height / (real)g_Window->GetSize().y;
+
+		static const glm::vec4 offWhite(0.95f);
+		DrawStringSS("FLEX ENGINE", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
+		topRightOffset += lineHeight;
+
 		if (g_EngineInstance->IsSimulationPaused())
 		{
-			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
-			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
-			// TODO: Allow specifying text pos in different units (absolute, relative, ...)
-			DrawStringSS("PAUSED", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("PAUSED", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 0.0f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 		if (AudioManager::IsMuted())
 		{
-			const std::vector<TextCache>& textCaches = m_CurrentFont->GetTextCaches();
-			real height = GetStringHeight(textCaches[textCaches.size() - 1], m_CurrentFont) / (real)g_Window->GetSize().y;
-			DrawStringSS("Muted", colour, AnchorPoint::TOP_RIGHT, glm::vec2(-0.03f, -(height + 0.09f)), 0.0f, 0.6f);
+			DrawStringSS("Muted", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 0.0f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 #if 0
@@ -2193,6 +2718,13 @@ namespace flex
 			real alpha = glm::clamp(m_EditorStrSecRemaining / (m_EditorStrSecDuration * m_EditorStrFadeDurationPercent),
 				0.0f, 1.0f);
 			DrawStringSS(m_EditorMessage, glm::vec4(1.0f, 1.0f, 1.0f, alpha), AnchorPoint::CENTER, VEC2_ZERO, 3);
+		}
+
+		SetFont(SID("editor-02"));
+		for (u32 i = 0; i < (u32)m_NotificationMessages.size(); ++i)
+		{
+			DrawStringSS(m_NotificationMessages[i], offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
+			topRightOffset += lineHeight;
 		}
 
 		if (previewedFont != InvalidStringID)
@@ -2217,8 +2749,10 @@ namespace flex
 #endif
 	}
 
-	void Renderer::InitializeMaterials()
+	void Renderer::InitializeEngineMaterials()
 	{
+		PROFILE_AUTO("Renderer InitializeEngineMaterials");
+
 		MaterialCreateInfo spriteMatSSCreateInfo = {};
 		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";
@@ -2372,7 +2906,7 @@ namespace flex
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
 		placeholderMatCreateInfo.visibleInEditor = false;
-		placeholderMatCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 1.0f);
+		placeholderMatCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 		placeholderMatCreateInfo.bSerializable = false;
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
 	}
@@ -2394,6 +2928,209 @@ namespace flex
 		}
 
 		return m_AvailableHDRIs[matIdx];
+	}
+
+	void Renderer::AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			// Add to existing list
+			iter->second.push_back(specializationConstant);
+		}
+		else
+		{
+			// Add first entry
+			m_ShaderSpecializationConstants[shaderID] = { specializationConstant };
+		}
+	}
+
+	void Renderer::RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			Erase(iter->second, specializationConstant);
+		}
+	}
+
+	std::vector<StringID>* Renderer::GetShaderSpecializationConstants(ShaderID shaderID)
+	{
+		auto iter = m_ShaderSpecializationConstants.find(shaderID);
+		if (iter != m_ShaderSpecializationConstants.end())
+		{
+			return &iter->second;
+		}
+
+		return nullptr;
+	}
+
+	void Renderer::DrawSpecializationConstantInfoImGui()
+	{
+		if (ImGui::Button(m_bSpecializationConstantsDirty ? "Save*" : "Save"))
+		{
+			SerializeShaderSpecializationConstants();
+			SerializeSpecializationConstantInfo();
+			m_bSpecializationConstantsDirty = false;
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Reload"))
+		{
+			ParseSpecializationConstantInfo();
+			ParseShaderSpecializationConstants();
+			m_bSpecializationConstantsDirty = false;
+		}
+
+		bool bOpenNewConstantPopup = false;
+
+		if (ImGui::TreeNode("Specialization constants##list-view"))
+		{
+			for (auto& pair : m_SpecializationConstants)
+			{
+				ImGui::PushID((i32)pair.first);
+
+				if (ImGui::Button("-##remove-constant"))
+				{
+					auto iter = m_SpecializationConstants.find(pair.first);
+					m_SpecializationConstants.erase(iter);
+					m_bSpecializationConstantsDirty = true;
+					ImGui::PopID();
+					break;
+				}
+
+				ImGui::SameLine();
+
+				const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
+				ImGui::Text("%s (ID: %u)", specializationConstantName.c_str(), pair.second.id);
+				ImGui::SameLine();
+				ImGui::PushItemWidth(80.0f);
+				if (ImGui::InputInt("", &pair.second.value, 1, 10, ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					RecreateEverything();
+				}
+				ImGui::PopItemWidth();
+
+				ImGui::PopID();
+			}
+
+			bOpenNewConstantPopup = ImGui::Button("Add new");
+
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Shader specialization constants"))
+		{
+			for (const auto& shaderSpecializationConstantPair : m_ShaderSpecializationConstants)
+			{
+				ShaderID shaderID = shaderSpecializationConstantPair.first;
+				ImGui::PushID(shaderID);
+
+				Shader* shader = GetShader(shaderID);
+				if (ImGui::TreeNode(shader->name.c_str()))
+				{
+					if (DrawShaderSpecializationConstantImGui(shaderID))
+					{
+						m_bSpecializationConstantsDirty = true;
+					}
+
+					ImGui::TreePop();
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::TreePop();
+		}
+
+		const char* newConstantPopupName = "New specialization constant";
+		static char nameBuff[256];
+		static u32 id = 0;
+		static i32 value = 0;
+		static i32 min = 0;
+		static i32 max = 0;
+
+		if (bOpenNewConstantPopup)
+		{
+			ImGui::OpenPopup(newConstantPopupName);
+			memset(nameBuff, 0, 256);
+			id = 0;
+			value = 0;
+			min = 0;
+			max = 0;
+		}
+
+		if (ImGui::BeginPopupModal(newConstantPopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::InputText("Name", nameBuff, 256);
+
+			ImGuiExt::InputUInt("ID", &id);
+
+			ImGui::InputInt("Value", &value);
+
+			ImGui::InputInt("Min", &min);
+			ImGui::InputInt("Max", &max);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::SameLine();
+
+			if (strlen(nameBuff) > 0 && id > 0 && max > min &&
+				ImGui::Button("Create"))
+			{
+				std::string name(nameBuff);
+				name = Trim(name);
+
+				StringID specializationConstantSID = Hash(name.c_str());
+				m_SpecializationConstants[specializationConstantSID] =
+					SpecializationConstantMetaData{ (SpecializationConstantID)id, value, min, max };
+				m_SpecializationConstantNames[specializationConstantSID] = name;
+
+				m_bSpecializationConstantsDirty = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+	}
+
+	bool Renderer::DrawShaderSpecializationConstantImGui(ShaderID shaderID)
+	{
+		bool bChanged = false;
+
+		std::vector<StringID>* specializationConstants = GetShaderSpecializationConstants(shaderID);
+		// TODO: Display ordered by ID
+		for (const auto& pair : m_SpecializationConstants)
+		{
+			const std::string& specializationConstantName = m_SpecializationConstantNames[pair.first];
+			bool bTicked = specializationConstants != nullptr && Contains(*specializationConstants, pair.first);
+			if (ImGui::Checkbox(specializationConstantName.c_str(), &bTicked))
+			{
+				if (bTicked)
+				{
+					AddShaderSpecialziationConstant(shaderID, pair.first);
+				}
+				else
+				{
+					RemoveShaderSpecialziationConstant(shaderID, pair.first);
+				}
+
+				// NOTE: This is a brute force approach, ideally we'd just reload things which need reloading
+				RecreateEverything();
+
+				bChanged = true;
+			}
+		}
+
+		return bChanged;
+	}
+
+	void Renderer::SetSpecializationConstantDirty()
+	{
+		m_bSpecializationConstantsDirty = true;
 	}
 
 	void Renderer::DrawImGuiSettings()
@@ -2474,9 +3211,45 @@ namespace flex
 				RecreateShadowFrameBuffers();
 			}
 
-			if (ImGui::SliderInt("Shader quality level", &m_ShaderQualityLevel, 0, 3))
+			SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
+			if (ImGui::SliderInt("Shader quality level", &specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL))
 			{
-				m_ShaderQualityLevel = glm::clamp(m_ShaderQualityLevel, 0, 3);
+				i32 newShaderQualityLevel = glm::clamp(specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL);
+				if (newShaderQualityLevel != specializationConstantMetaData.value)
+				{
+					RecreateEverything();
+				}
+			}
+
+			SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];
+			const char* previewValue = "";
+			if (debugOverlayConstant.value >= 0 && debugOverlayConstant.value < (i32)g_ResourceManager->debugOverlayNames.size())
+			{
+				previewValue = g_ResourceManager->debugOverlayNames[debugOverlayConstant.value].c_str();
+			}
+			if (ImGui::BeginCombo("Debug overlay", previewValue))
+			{
+				for (i32 i = 0; i < (i32)g_ResourceManager->debugOverlayNames.size(); ++i)
+				{
+					bool bSelected = (i == debugOverlayConstant.value);
+					if (ImGui::Selectable(g_ResourceManager->debugOverlayNames[i].c_str(), &bSelected))
+					{
+						if (debugOverlayConstant.value != i)
+						{
+							debugOverlayConstant.value = i;
+							RecreateEverything();
+						}
+					}
+				}
+
+				ImGui::EndCombo();
+			}
+
+			SpecializationConstantMetaData& enableFogConstant = m_SpecializationConstants[SID("enable_fog")];
+			bool bFogEnabled = enableFogConstant.value != 0;
+			if (ImGui::Checkbox("Enable fog", &bFogEnabled))
+			{
+				enableFogConstant.value = bFogEnabled ? 1 : 0;
 				RecreateEverything();
 			}
 
@@ -2585,7 +3358,8 @@ namespace flex
 				}
 			}
 
-			if (ImGui::SliderInt("Kernel Size", &m_SSAOKernelSize, 1, 64))
+			SpecializationConstantMetaData& ssaoKernelSizeConstant = m_SpecializationConstants[SID("ssao_kernel_size")];
+			if (ImGui::SliderInt("Kernel Size", &ssaoKernelSizeConstant.value, 1, 64))
 			{
 				m_bSSAOStateChanged = true;
 			}
@@ -2996,24 +3770,157 @@ namespace flex
 
 	MaterialID Renderer::CreateParticleSystemSimulationMaterial(const std::string& name)
 	{
-		MaterialCreateInfo particleSimMatCreateInfo = {};
-		particleSimMatCreateInfo.name = name;
-		particleSimMatCreateInfo.shaderName = "particle_sim";
-		particleSimMatCreateInfo.persistent = true;
-		particleSimMatCreateInfo.visibleInEditor = false;
-		particleSimMatCreateInfo.bSerializable = false;
-		return InitializeMaterial(&particleSimMatCreateInfo);
+		MaterialCreateInfo createInfo = {};
+		createInfo.name = name;
+		createInfo.shaderName = "particle_sim";
+		createInfo.persistent = true;
+		createInfo.visibleInEditor = false;
+		createInfo.bSerializable = false;
+		return InitializeMaterial(&createInfo);
 	}
 
 	MaterialID Renderer::CreateParticleSystemRenderingMaterial(const std::string& name)
 	{
-		MaterialCreateInfo particleMatCreateInfo = {};
-		particleMatCreateInfo.name = name;
-		particleMatCreateInfo.shaderName = "particles";
-		particleMatCreateInfo.persistent = true;
-		particleMatCreateInfo.visibleInEditor = false;
-		particleMatCreateInfo.bSerializable = false;
-		return InitializeMaterial(&particleMatCreateInfo);
+		MaterialCreateInfo createInfo = {};
+		createInfo.name = name;
+		createInfo.shaderName = "particles";
+		createInfo.persistent = true;
+		createInfo.visibleInEditor = false;
+		createInfo.bSerializable = false;
+		return InitializeMaterial(&createInfo);
+	}
+
+	void Renderer::ParseSpecializationConstantInfo()
+	{
+		PROFILE_AUTO("ParseSpecializationConstantInfo");
+
+		JSONObject rootObj;
+		std::string fileContents;
+		if (!ReadFile(SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read specialization constants!\n");
+			return;
+		}
+
+		if (!JSONParser::Parse(fileContents, rootObj))
+		{
+			const char* errorStr = JSONParser::GetErrorString();
+			PrintError("Failed to parse specialization constants file! Error: %s\n", errorStr);
+			return;
+		}
+
+		m_SpecializationConstants.clear();
+
+		for (const JSONField& field : rootObj.fields)
+		{
+			u64 specializationConstantSID = Hash(field.label.c_str());
+			SpecializationConstantID id = field.value.objectValue.GetUInt("id");
+			i32 defaultValue = field.value.objectValue.GetInt("default_value");
+			std::vector<JSONField> range;
+			i32 min = -1;
+			i32 max = -1;
+			if (field.value.objectValue.TryGetFieldArray("range", range) && range.size() == 2)
+			{
+				min = range[0].value.AsInt();
+				max = range[1].value.AsInt();
+			}
+
+			m_SpecializationConstants[specializationConstantSID] = SpecializationConstantMetaData{ id, defaultValue, min, max };
+
+			m_SpecializationConstantNames[specializationConstantSID] = field.label;
+		}
+	}
+
+	void Renderer::SerializeSpecializationConstantInfo()
+	{
+		JSONObject rootObj = {};
+
+		rootObj.fields.reserve(m_SpecializationConstants.size());
+		for (const auto& pair : m_SpecializationConstants)
+		{
+			std::string specializationConstantName = m_SpecializationConstantNames[pair.first];
+			JSONObject specializationConstantObj = {};
+			specializationConstantObj.fields.emplace_back("id", JSONValue(pair.second.id));
+			specializationConstantObj.fields.emplace_back("default_value", JSONValue(pair.second.value));
+			std::vector<JSONField> rangeFields = { JSONField("", JSONValue(pair.second.min)), JSONField("", JSONValue(pair.second.max)) };
+			specializationConstantObj.fields.emplace_back("range", JSONValue(rangeFields));
+			rootObj.fields.emplace_back(specializationConstantName, JSONValue(specializationConstantObj));
+		}
+
+		std::string fileContents = rootObj.ToString();
+		if (!WriteFile(SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to write shader specialization constants\n");
+		}
+	}
+
+	void Renderer::ParseShaderSpecializationConstants()
+	{
+		PROFILE_AUTO("ParseShaderSpecializationConstants");
+
+		JSONObject rootObj;
+		std::string fileContents;
+		if (!ReadFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read shader specialization constants!\n");
+			return;
+		}
+
+		if (!JSONParser::Parse(fileContents, rootObj))
+		{
+			const char* errorStr = JSONParser::GetErrorString();
+			PrintError("Failed to parse shader specialization constants file! Error: %s\n", errorStr);
+			return;
+		}
+
+		m_ShaderSpecializationConstants.clear();
+
+		for (const JSONField& field : rootObj.fields)
+		{
+			const std::string& shaderName = field.label;
+			ShaderID shaderID = InvalidShaderID;
+			if (GetShaderID(shaderName, shaderID))
+			{
+				std::vector<StringID>& shaderConstants = m_ShaderSpecializationConstants[shaderID];
+				std::vector<JSONField> fields = field.value.fieldArrayValue;
+				shaderConstants.reserve(fields.size());
+				for (const JSONField& specializationConstantNameField : fields)
+				{
+					if (specializationConstantNameField.value.strValue.empty())
+					{
+						PrintWarn("Found empty specialization constant field for shader: %s\n", shaderName.c_str());
+						continue;
+					}
+					StringID specializationConstantID = Hash(specializationConstantNameField.value.strValue.c_str());
+					shaderConstants.push_back(specializationConstantID);
+				}
+			}
+		}
+	}
+
+	void Renderer::SerializeShaderSpecializationConstants()
+	{
+		JSONObject rootObj = {};
+
+		rootObj.fields.reserve(m_ShaderSpecializationConstants.size());
+		for (const auto& pair : m_ShaderSpecializationConstants)
+		{
+			Shader* shader = GetShader(pair.first);
+			std::vector<JSONField> specializationConstantFields;
+			specializationConstantFields.reserve(pair.second.size());
+			for (const auto& pair2 : pair.second)
+			{
+				std::string specializationConstantName = m_SpecializationConstantNames[pair2];
+				specializationConstantFields.emplace_back(JSONField("", JSONValue(specializationConstantName)));
+			}
+			rootObj.fields.emplace_back(shader->name, JSONValue(specializationConstantFields));
+		}
+
+		std::string fileContents = rootObj.ToString();
+		if (!WriteFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to write shader specialization constants\n");
+		}
 	}
 
 	void PhysicsDebugDrawBase::flushLines()
@@ -3055,5 +3962,156 @@ namespace flex
 	void PhysicsDebugDrawBase::ClearLines()
 	{
 		m_LineSegmentIndex = 0;
+	}
+
+	bool Renderer::DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader /* = nullptr */)
+	{
+		bool bValueChanged = false;
+
+		ImGui::PushItemWidth(240.0f);
+		if (ImGui::BeginCombo("Shaders", m_Shaders[*selectedShaderID]->name.c_str()))
+		{
+			for (i32 i = 0; i < (i32)m_Shaders.size(); ++i)
+			{
+				ImGui::PushID(i);
+
+				bool bSelected = (i == *selectedShaderID);
+				if (ImGui::Selectable(m_Shaders[i]->name.c_str(), &bSelected))
+				{
+					*selectedShaderID = i;
+					bValueChanged = true;
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (outSelectedShader != nullptr)
+		{
+			*outSelectedShader = m_Shaders[*selectedShaderID];
+		}
+
+		return bValueChanged;
+	}
+
+	bool Renderer::DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureFilePaths, i32* selectedIndex)
+	{
+		bool bValueChanged = false;
+
+		std::string currentTexName = (*selectedIndex == 0 ? "NONE" : StripLeadingDirectories(textureFilePaths[*selectedIndex]));
+		if (ImGui::BeginCombo(label, currentTexName.c_str()))
+		{
+			for (i32 i = 0; i < (i32)textureFilePaths.size(); i++)
+			{
+				bool bTextureSelected = (*selectedIndex == i);
+
+				if (i == 0)
+				{
+					if (ImGui::Selectable("NONE", bTextureSelected))
+					{
+						*selectedIndex = 0;
+						bValueChanged = true;
+					}
+				}
+				else
+				{
+					std::string texName = StripLeadingDirectories(textureFilePaths[i]);
+
+					if (ImGui::Selectable(texName.c_str(), bTextureSelected))
+					{
+						*selectedIndex = i;
+						bValueChanged = true;
+					}
+
+					if (ImGui::IsItemHovered())
+					{
+						Texture* texture = g_ResourceManager->FindLoadedTextureWithName(texName);
+						if (texture != nullptr)
+						{
+							DrawImGuiTexturePreviewTooltip(texture);
+						}
+					}
+				}
+				if (bTextureSelected)
+				{
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+
+		return bValueChanged;
+	}
+
+	bool Renderer::DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader /* = nullptr */)
+	{
+		bool bValueChanged = false;
+
+		static ImGuiTextFilter shaderFilter;
+		if (bShowFilter)
+		{
+			shaderFilter.Draw("##shader-filter");
+
+			ImGui::SameLine();
+			if (ImGui::Button("x"))
+			{
+				shaderFilter.Clear();
+			}
+		}
+
+		if (ImGui::BeginChild("Shader list", ImVec2(0, 120), true))
+		{
+			// TODO: Add option to generate & view shader dissasembly here
+
+			for (i32 i = 0; i < (i32)m_Shaders.size(); ++i)
+			{
+				Shader* shader = m_Shaders[i];
+				if (!bShowFilter || shaderFilter.PassFilter(shader->name.c_str()))
+				{
+					bool bSelected = (i == *selectedShaderID);
+					if (ImGui::Selectable(shader->name.c_str(), &bSelected))
+					{
+						if (bSelected)
+						{
+							*selectedShaderID = i;
+							bValueChanged = true;
+						}
+					}
+				}
+			}
+		}
+		ImGui::EndChild(); // Shader list
+
+		if (outSelectedShader != nullptr)
+		{
+			*outSelectedShader = m_Shaders[*selectedShaderID];
+		}
+
+		return bValueChanged;
+	}
+
+	void Renderer::DrawImGuiShaderErrors()
+	{
+#if COMPILE_SHADER_COMPILER
+		ShaderCompiler::DrawImGuiShaderErrors();
+#endif
+	}
+	void Renderer::ClearShaderHash(const std::string& shaderName)
+	{
+#if COMPILE_SHADER_COMPILER
+		ShaderCompiler::ClearShaderHash(shaderName);
+#else
+		FLEX_UNUSED(shaderName);
+#endif
+	}
+	void Renderer::RecompileShaders(bool bForceCompileAll)
+	{
+#if COMPILE_SHADER_COMPILER
+		m_ShaderCompiler->StartCompilation(bForceCompileAll);
+#else
+		FLEX_UNUSED(bForceCompileAll);
+#endif
 	}
 } // namespace flex

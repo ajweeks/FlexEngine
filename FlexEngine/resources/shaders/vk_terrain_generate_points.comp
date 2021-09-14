@@ -1,0 +1,80 @@
+#version 450
+
+#extension GL_EXT_scalar_block_layout : enable
+// #extension GL_EXT_debug_printf : enable
+
+#include "vk_noises.glsl"
+
+#define DISPATCH_COUNT							4
+
+layout (std430, binding = 0) uniform UBOConstant
+{
+	TerrainGenConstantData terrainGenConstantData;
+} uboConstant;
+
+layout (std430, binding = 1) uniform UBODynamic
+{
+	TerrainGenDynamicData terrainGenDynamicData;
+} uboDynamic;
+
+layout (std430, binding = 2) buffer TerrainPointBuffer
+{
+	vec4 points[];
+};
+
+layout (binding = 3) uniform sampler2DArray randomTables;
+
+layout (local_size_x = DISPATCH_COUNT, local_size_y = DISPATCH_COUNT, local_size_z = DISPATCH_COUNT) in;
+
+void main()
+{
+	uint numPointsPerAxis = uboConstant.terrainGenConstantData.numPointsPerAxis;
+
+	uvec3 id = gl_GlobalInvocationID;
+
+	// Kill threads with invalid ids (there will always be some due to numPointsPerAxis always being odd)
+	if (any(greaterThan(id, uvec3(numPointsPerAxis - 1))))
+	{
+		return;
+	}
+
+	ivec3 chunkIndex = uboDynamic.terrainGenDynamicData.chunkIndex;
+	float chunkSize = uboConstant.terrainGenConstantData.chunkSize;
+
+	vec3 posOS = vec3(id) / float(numPointsPerAxis - 1);
+	vec3 posWS = (vec3(chunkIndex) + posOS) * chunkSize;
+
+	//if (chunkIndex == ivec3(-1,-1,-1))
+	//{
+	//	debugPrintfEXT("posWS: %1.2f - %1.2f - %1.2f", posWS.x, posWS.y, posWS.z);//, posWS.y posWS.z);
+	//}
+
+	// float sphereRadius = 0.75; // + noise(posWS) * 0.45
+	// float surface = length(mod(posOS, chunkSize) - vec3(0.5)) - sphereRadius;
+	// float surface = abs(posWS.y) - 0.1;
+
+	vec3 normal;
+	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,
+		uboConstant.terrainGenConstantData.randomTableSize, posWS, normal);
+ 	float normalizedHeight = terrainSample.x;
+ 	float height = (normalizedHeight * 0.5 + 0.5) * uboConstant.terrainGenConstantData.maxHeight;
+	//float blendWeight = terrainSample.y;
+	//float matID0 = terrainSample.z;
+	//float matID1 = terrainSample.w;
+
+	float surface = posWS.y - height;
+
+	uint index = coordToIndex(id.x, id.y, id.z, numPointsPerAxis);
+	points[index] = vec4(posWS, surface);
+}
+
+
+/*
+
+chunkSize = 121.125
+points per axis = 8
+
+0 (-1,-1,-1) - offset: 0        - count:  140 tri ([-242, -121], [-231, -205], [-242, -121])
+1 ( 0,-1,-1) - offset: 1715 tri - count: 1857 tri ([0.00,  121], [-234, -208], [-242, -121])
+
+*/

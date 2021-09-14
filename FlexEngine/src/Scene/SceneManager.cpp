@@ -164,10 +164,16 @@ namespace flex
 
 	bool SceneManager::SetCurrentScene(const std::string& sceneFileName, bool bPrintErrorOnFailure /* = true */)
 	{
+		std::string sceneNameClean = sceneFileName;
+		size_t dotPos = sceneNameClean.rfind('.');
+		if (dotPos == std::string::npos)
+		{
+			sceneNameClean = sceneNameClean + ".json";
+		}
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			// TODO: Give scenes GUIDs to prevent name clashes
-			if (m_Scenes[i]->GetFileName().compare(sceneFileName) == 0)
+			if (m_Scenes[i]->GetFileName().compare(sceneNameClean) == 0)
 			{
 				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
@@ -538,6 +544,23 @@ namespace flex
 				maxStrLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
+			ImGui::Spacing();
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
 			bCreate |= ImGui::Button("Create");
 
 			if (bCreate)
@@ -548,13 +571,6 @@ namespace flex
 				CreateNewScene(newSceneName, true);
 				g_CameraManager->SetCameraByName("debug", false);
 
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Cancel"))
-			{
 				ImGui::CloseCurrentPopup();
 			}
 

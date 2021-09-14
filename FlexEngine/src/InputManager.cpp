@@ -15,6 +15,8 @@ namespace flex
 
 	void InputManager::Initialize()
 	{
+		PROFILE_AUTO("InputManager Initialize");
+
 		ImGuiIO& io = ImGui::GetIO();
 		io.KeyMap[ImGuiKey_Tab] = (i32)KeyCode::KEY_TAB;
 		io.KeyMap[ImGuiKey_LeftArrow] = (i32)KeyCode::KEY_LEFT;
@@ -52,6 +54,8 @@ namespace flex
 
 	void InputManager::Update()
 	{
+		PROFILE_AUTO("InputManager Update");
+
 		if (!g_Window->HasFocus())
 		{
 			ClearAllInputs();
@@ -245,7 +249,7 @@ namespace flex
 			bool bPress = IsGamepadButtonPressed(gamepadIndex, (GamepadButton)i);
 
 			Action gamepadButtonAction = GetActionFromGamepadButton((GamepadButton)i);
-			ActionEvent actionEvent = bPress ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = bPress ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 			if (gamepadButtonAction != Action::_NONE)
 			{
 				for (auto iter = m_ActionCallbacks.begin(); iter != m_ActionCallbacks.end(); ++iter)
@@ -776,7 +780,7 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto mouseButtonIter = m_MouseButtonCallbacks.begin();
 			Action mouseButtonAction = Action::_NONE;
-			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = (keyAction == KeyAction::KEY_PRESS) ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 
 			mouseButtonAction = GetActionFromMouseButton(mouseButton);
 			if (mouseButtonAction != Action::_NONE)
@@ -882,10 +886,10 @@ namespace flex
 			auto actionIter = m_ActionCallbacks.end();
 			auto keyEventIter = m_KeyEventCallbacks.begin();
 			Action keyPressAction = Action::_NONE;
-			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::TRIGGER : ActionEvent::RELEASE;
+			ActionEvent actionEvent = keyAction == KeyAction::KEY_PRESS ? ActionEvent::ACTION_TRIGGER : ActionEvent::ACTION_RELEASE;
 
 			// TODO: Allow modifiers to be down once supported properly
-			if (keyAction == KeyAction::KEY_PRESS && !bModiferDown)
+			if ((keyAction == KeyAction::KEY_PRESS || keyAction == KeyAction::KEY_RELEASE) && !bModiferDown)
 			{
 				keyPressAction = GetActionFromKeyCode(keyCode);
 				if (keyPressAction != Action::_NONE)
@@ -1351,7 +1355,7 @@ namespace flex
 		m_ActionCallbacks.erase(found);
 	}
 
-	void InputManager::DrawImGuiKeyMapper(bool* bOpen)
+	void InputManager::DrawImGuiBindings(bool* bOpen)
 	{
 		if (ImGui::Begin("Key Mapper", bOpen))
 		{

@@ -96,6 +96,7 @@ namespace flex
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
 		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
 		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) = 0;
+		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkFilter inFilter) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
@@ -106,8 +107,9 @@ namespace flex
 		virtual void SetClearColour(real r, real g, real b) = 0;
 
 		virtual void Update();
+		virtual void EndOfFrame();
 		virtual void Draw() = 0;
-		virtual void DrawImGuiWindows() = 0;
+		virtual void DrawImGuiWindows();
 		virtual void DrawImGuiRendererInfo() = 0;
 
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
@@ -116,16 +118,11 @@ namespace flex
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
-		// Returns true if value changed
-		virtual bool DrawImGuiShadersDropdown(i32* selectedShaderIndex, Shader** outSelectedShader = nullptr) = 0;
-		virtual bool DrawImGuiShadersList(i32* selectedShaderIndex, bool bShowFilter, Shader** outSelectedShader = nullptr) = 0;
-		virtual bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex) = 0;
-		virtual void DrawImGuiShaderErrors() = 0;
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
-		virtual void ClearShaderHash(const std::string& shaderName) = 0;
-		virtual void RecompileShaders(bool bForce) = 0;
+		void QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour);
+		void QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour);
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
@@ -143,9 +140,6 @@ namespace flex
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;
 
-		virtual void DescribeShaderVariable(RenderID renderID, const std::string& variableName, i32 size, DataType dataType, bool normalized,
-			i32 stride, void* pointer) = 0;
-
 		virtual void SetSkyboxMesh(Mesh* skyboxMesh) = 0;
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
@@ -156,7 +150,8 @@ namespace flex
 
 		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
-		virtual void SetGlobalUniform(const Uniform& uniform, void* data, u32 dataSize) = 0;
+		virtual void SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize) = 0;
+		virtual void AddRenderObjectUniformOverride(RenderID renderID, Uniform const* uniform, const MaterialPropertyOverride& propertyOverride) = 0;
 
 		virtual void NewFrame();
 
@@ -193,6 +188,15 @@ namespace flex
 
 		virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) = 0;
 
+		virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount) = 0;
+		virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, u32 maxChunkCount) = 0;
+		virtual void RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex) = 0;
+		virtual void RemoveTerrainChunk(const glm::ivec3& chunkIndex) = 0;
+		virtual u32 GetCurrentTerrainChunkCapacity() const = 0;
+		virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const = 0;
+		virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) = 0;
+
+
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
@@ -207,7 +211,14 @@ namespace flex
 		// Returns true if any property changed
 		bool DrawImGuiForGameObject(GameObject* gameObject);
 
+		void DrawSpecializationConstantInfoImGui();
 		void DrawImGuiSettings();
+
+		void AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
+		void RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
+		std::vector<StringID>* GetShaderSpecializationConstants(ShaderID shaderID);
+		bool DrawShaderSpecializationConstantImGui(ShaderID shaderID);
+		void SetSpecializationConstantDirty();
 
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
 		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;
@@ -217,6 +228,8 @@ namespace flex
 
 		void SaveSettingsToDisk(bool bAddEditorStr = true);
 		void LoadSettingsFromDisk();
+
+		void SetShaderQualityLevel(i32 newQualityLevel);
 
 		MaterialID GetMaterialID(const std::string& materialName);
 
@@ -263,7 +276,7 @@ namespace flex
 		void RemoveAreaLight(AreaLightID ID);
 		void RemoveAllAreaLights();
 
-		DirLightData* GetDirectionalLight();
+		DirectionalLight* GetDirectionalLight();
 		i32 GetNumPointLights();
 		i32 GetNumSpotLights();
 		i32 GetNumAreaLights();
@@ -274,6 +287,7 @@ namespace flex
 		// Draws the given string in the center of the screen for a short period of time
 		// Passing an empty string will immediately clear the current string
 		void AddEditorString(const std::string& str);
+		void AddNotificationMessage(const std::string& message);
 
 		i32 GetMaterialCount();
 		Material* GetMaterial(MaterialID materialID);
@@ -320,6 +334,19 @@ namespace flex
 
 		UIMesh* GetUIMesh();
 
+		void SetDebugOverlayID(i32 newID);
+
+		void ToggleFogEnabled();
+
+		// Returns true if value changed
+		bool DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader = nullptr);
+		bool DrawImGuiTextureSelector(const char* label, const std::vector<std::string>& textureNames, i32* selectedIndex);
+		bool DrawImGuiShadersList(i32* selectedShaderID, bool bShowFilter, Shader** outSelectedShader = nullptr);
+		void DrawImGuiShaderErrors();
+
+		void ClearShaderHash(const std::string& shaderName);
+		void RecompileShaders(bool bForceCompileAll);
+
 		bool bUniformBufferWindowShowing = false;
 		bool bGPUTimingsWindowShowing = false;
 
@@ -343,16 +370,40 @@ namespace flex
 		MaterialID m_SpriteMatWSID = InvalidMaterialID;
 		MaterialID m_SpriteArrMatID = InvalidMaterialID;
 
+		MaterialID m_HologramMatID = InvalidMaterialID;
+		//RenderID m_HologramProxyRenderID = InvalidRenderID;
+		GameObject* m_HologramProxyObject = nullptr;
+
+		PrefabID m_QueuedHologramPrefabID;
+		glm::vec3 m_QueuedHologramPosWS;
+		glm::quat m_QueuedHologramRotWS;
+		glm::vec3 m_QueuedHologramScaleWS;
+		glm::vec4 m_QueuedHologramColour;
+
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;
 		Texture* m_NoiseTexture = nullptr;
 
 	protected:
+		struct ShaderMetaData
+		{
+			std::vector<std::string> vertexAttributes;
+			std::vector<std::string> uboConstantFields;
+			std::vector<std::string> uboDynamicFields;
+			std::vector<std::string> sampledTextures;
+		};
+
+		void ParseShaderMetaData();
+		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);
 		void LoadShaders();
+
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
 		virtual void RecreateShadowFrameBuffers() = 0;
+
+		virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) = 0;
+		virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) = 0;
 
 		void EnqueueScreenSpaceSprites();
 		void EnqueueWorldSpaceSprites();
@@ -362,7 +413,7 @@ namespace flex
 		void EnqueueScreenSpaceText();
 		void EnqueueWorldSpaceText();
 
-		void InitializeMaterials();
+		void InitializeEngineMaterials();
 
 		std::string PickRandomSkyboxTexture();
 
@@ -376,6 +427,11 @@ namespace flex
 
 		MaterialID CreateParticleSystemSimulationMaterial(const std::string& name);
 		MaterialID CreateParticleSystemRenderingMaterial(const std::string& name);
+
+		void ParseSpecializationConstantInfo();
+		void ParseShaderSpecializationConstants();
+		void SerializeSpecializationConstantInfo();
+		void SerializeShaderSpecializationConstants();
 
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
@@ -425,6 +481,7 @@ namespace flex
 
 		std::map<MaterialID, Material*> m_Materials;
 		std::vector<Shader*> m_Shaders;
+		std::map<std::string, ShaderMetaData> m_ShaderMetaData;
 
 		// TODO: Use a mesh prefab here
 		VertexBufferData m_Quad3DVertexBufferData;
@@ -470,6 +527,7 @@ namespace flex
 		bool m_bTAAStateChanged = false;
 
 		i32 m_ShaderQualityLevel = 1;
+		const i32 MAX_SHADER_QUALITY_LEVEL = 3;
 
 		GameObject* m_Grid = nullptr;
 		GameObject* m_WorldOrigin = nullptr;
@@ -480,6 +538,7 @@ namespace flex
 		sec m_EditorStrSecDuration = 1.5f;
 		real m_EditorStrFadeDurationPercent = 0.25f;
 		std::string m_EditorMessage;
+		std::vector<std::string> m_NotificationMessages; // Frame-long messages that are displayed in the top right of the screen
 
 		MaterialID m_ReflectionProbeMaterialID = InvalidMaterialID; // Set by the user via SetReflecionProbeMaterial
 
@@ -505,11 +564,6 @@ namespace flex
 		MaterialID m_SSAOBlurMatID = InvalidMaterialID;
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
-
-		static const SpecializationConstantID m_SSAOKernelSizeSpecializationID = 0;
-		static const SpecializationConstantID m_TAASampleCountSpecializationID = 1;
-		static const SpecializationConstantID m_ShaderQualityLevelSpecializationID = 2;
-		static const SpecializationConstantID m_ShadowCascadeCountSpecializationID = 3;
 
 		std::string m_RendererSettingsFilePathAbs;
 
@@ -547,7 +601,6 @@ namespace flex
 		SSAOGenData m_SSAOGenData;
 		SSAOBlurDataConstant m_SSAOBlurDataConstant;
 		SSAOBlurDataDynamic m_SSAOBlurDataDynamic;
-		i32 m_SSAOKernelSize = MAX_SSAO_KERNEL_SIZE;
 		i32 m_SSAOBlurSamplePixelOffset;
 		SSAOSamplingData m_SSAOSamplingData;
 		glm::vec2u m_SSAORes;
@@ -572,6 +625,21 @@ namespace flex
 
 		std::vector<u32> m_DirtyStaticVertexBufferIndices;
 		std::vector<u32> m_DirtyDynamicVertexAndIndexBufferIndices;
+
+		// Maps specialization constant SID to pair of specialization constant ID & value
+		std::map<StringID, SpecializationConstantMetaData> m_SpecializationConstants;
+		// Maps shader ID to the list of specialization constant SIDs that shader uses
+		std::map<ShaderID, std::vector<StringID>> m_ShaderSpecializationConstants;
+		// Editor-only cache of specialization constant names
+		std::map<StringID, std::string> m_SpecializationConstantNames;
+
+#if COMPILE_SHADER_COMPILER
+		struct ShaderCompiler* m_ShaderCompiler = nullptr;
+#endif
+
+		// Editor-only
+		bool m_bSpecializationConstantsDirty = false;
+		bool m_bShaderErrorWindowShowing = true;
 
 	private:
 		Renderer& operator=(const Renderer&) = delete;

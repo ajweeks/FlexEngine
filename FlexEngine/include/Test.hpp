@@ -19,93 +19,116 @@ namespace flex
 	class FlexTest
 	{
 	private:
-		using TestFunc = void(*)();
-
-#define JSON_UNIT_TEST(FuncName) static void FuncName() \
+#define JSON_UNIT_TEST(FuncName) static bool FuncName() \
 	{ \
 		const char* FunctionName = #FuncName;
 
-#define JSON_UNIT_TEST_END JSONParser::ClearErrors(); }
+#define JSON_UNIT_TEST_END JSONParser::ClearErrors(); return true; }
 
-#define UNIT_TEST(FuncName) static void FuncName() \
+#define UNIT_TEST(FuncName) static bool FuncName() \
 	{ \
 		const char* FunctionName = #FuncName;
 
-#define UNIT_TEST_END }
+#define UNIT_TEST_END return true; }
 
-		static void Expect(const char* funcName, int lineNumber, bool val, bool exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, bool val, bool exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + (exp ? "true" : "false") + ", got " + (val ? "true" : "false") + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, glm::vec3 val, glm::vec3 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, glm::vec3 val, glm::vec3 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + VecToString(exp) + ", got " + VecToString(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, u32 val, u32 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, u32 val, u32 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, u64 val, u64 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, i32 val, i32 exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, i64 val, i64 exp, const char* msg)
 		{
 			if (val != exp)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, const char* val, const char* exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, real val, real exp, const char* msg)
+		{
+			if (val != exp)
+			{
+				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::to_string(exp) + ", got " + std::to_string(val) + ", error message:\n\t" + msg;
+				PrintError("%s\n", msgStr.c_str());
+				return false;
+			}
+			return true;
+		}
+
+		static bool Expect(const char* funcName, int lineNumber, const char* val, const char* exp, const char* msg)
 		{
 			if (strcmp(val, exp) != 0)
 			{
 				std::string msgStr = std::string(funcName) + " L" + std::to_string(lineNumber) + " - Expected " + std::string(exp) + ", got " + std::string(val) + ", error message:\n\t" + std::string(msg);
 				PrintError("%s\n", msgStr.c_str());
+				return false;
 			}
+			return true;
 		}
 
-		static void Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
 		{
-			Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
+			return Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
 		}
 
 		//
 		// JSON tests
 		//
 
-#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, JSONParser::GetErrorString());
+#define EXPECT(val, exp) if (!Expect(FunctionName, __LINE__, val, exp, JSONParser::GetErrorString())) { return false; }
 
 		JSON_UNIT_TEST(EmptyFileIsParsed)
 		{
@@ -174,28 +197,6 @@ namespace flex
 		}
 		JSON_UNIT_TEST_END;
 
-		JSON_UNIT_TEST(FieldArrayParsedCorrectly)
-		{
-			std::string jsonStr = R"(
-			{
-				"label" :
-				[
-					"array elem 0"
-				]
-			})";
-			JSONObject jsonObj;
-			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
-
-			EXPECT(bSuccess, true);
-			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
-			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
-			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)1u);
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].label.c_str(), "array elem 0");
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, JSONValue::Type::FIELD_ENTRY);
-		}
-		JSON_UNIT_TEST_END;
-
 		JSON_UNIT_TEST(MissingSquareBracketFailsToParse)
 		{
 			std::string jsonStr = R"(
@@ -260,41 +261,129 @@ namespace flex
 		}
 		JSON_UNIT_TEST_END;
 
-		// TODO: Fix error detection and re-enable
-		//JSON_UNIT_TEST(MissingCommaFailsParse)
-		//{
-		//	std::string jsonStr = R"(
-		//	{
-		//		"label 0" : "value 0"
-		//		"label 1" : "value 1"
-		//	})";
-		//	JSONObject jsonObj;
-		//	bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
+		JSON_UNIT_TEST(JSONArray0)
+		{
+			std::string jsonStr = R"(
+			{
+				"fields" : [ "pristine", "pumpernickel", "packaging", "pasta" ]
+			})";
+			JSONObject jsonObj;
+			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
-		//	EXPECT(bSuccess, false);
-		//}
-		//JSON_UNIT_TEST_END;
+			EXPECT(bSuccess, true);
+			const JSONField& arrayField = jsonObj.fields[0];
+			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
+			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT((u64)fields.size(), (u64)4u);
+			EXPECT(fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(fields[0].value.strValue.c_str(), "pristine");
+		}
+		JSON_UNIT_TEST_END;
 
-		JSON_UNIT_TEST(ArrayParsesCorrectly)
+		JSON_UNIT_TEST(JSONArray1)
 		{
 			std::string jsonStr = R"(
 			{
 				"fields" :
 				[
-					"label 0" : "value 0",
-					"label 1" : "value 1"
+					12345,
+					6789,
+					9999,
+					-10,
+					0
 				]
 			})";
 			JSONObject jsonObj;
 			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
 
 			EXPECT(bSuccess, true);
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
-			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)2u);
+			const JSONField& arrayField = jsonObj.fields[0];
+			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
+			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT((u64)fields.size(), (u64)5u);
+			// Smallest possible integer type that can store all values
+			EXPECT(fields[0].value.type, JSONValue::Type::INT);
+			EXPECT(fields[0].value.AsInt(), 12345);
+			EXPECT(fields[1].value.AsInt(), 6789);
+			EXPECT(fields[2].value.AsInt(), 9999);
+			EXPECT(fields[3].value.AsInt(), -10);
+			EXPECT(fields[4].value.AsInt(), 0);
 		}
 		JSON_UNIT_TEST_END;
 
-		JSON_UNIT_TEST(MissingCommaInArrayFailsParse)
+		JSON_UNIT_TEST(JSONArray2)
+		{
+			std::string jsonStr = R"(
+			{
+				"fields" :
+				[
+					2147483649, // Larger than INT_MAX - must be stored in 64 int
+					6789,
+					9999,
+					-10,
+					0
+				]
+			})";
+			JSONObject jsonObj;
+			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
+
+			EXPECT(bSuccess, true);
+			const JSONField& arrayField = jsonObj.fields[0];
+			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
+			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT((u64)fields.size(), (u64)5u);
+			// Smallest possible integer type that can store all values
+			EXPECT(fields[0].value.type, JSONValue::Type::LONG);
+			EXPECT(fields[0].value.AsLong(), (i64)2147483649);
+			EXPECT(fields[1].value.AsLong(), (i64)6789);
+			EXPECT(fields[2].value.AsLong(), (i64)9999);
+			EXPECT(fields[3].value.AsLong(), (i64)-10);
+			EXPECT(fields[4].value.AsLong(), (i64)0);
+		}
+		JSON_UNIT_TEST_END;
+
+		JSON_UNIT_TEST(JSONArray3)
+		{
+			std::string jsonStr = R"(
+			{
+				"fields" :
+				[
+					-9223372036854775808, // i64 min
+					18446744073709551615  // u64 max
+				]
+			})";
+			JSONObject jsonObj;
+			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
+
+			// Failure due to no possible integer type that can store both fields
+			EXPECT(bSuccess, false);
+		}
+		JSON_UNIT_TEST_END;
+
+		JSON_UNIT_TEST(ArrayParsedCorrectly)
+		{
+			std::string jsonStr = R"(
+			{
+				"label" :
+				[
+					"array elem 0"
+				]
+			})";
+			JSONObject jsonObj;
+			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
+
+			EXPECT(bSuccess, true);
+			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
+			EXPECT(jsonObj.fields[0].label.c_str(), "label");
+			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)1u);
+			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].label.c_str(), "");
+			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.strValue.c_str(), "array elem 0");
+			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, JSONValue::Type::STRING);
+		}
+		JSON_UNIT_TEST_END;
+
+		JSON_UNIT_TEST(ArrayMissingCommaInArrayFailsParse)
 		{
 			std::string jsonStr = R"(
 			{
@@ -362,16 +451,25 @@ namespace flex
 
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)4u);
-			EXPECT(jsonObj.fields[2].value.type, JSONValue::Type::BOOL); // Spawn player
-			EXPECT(jsonObj.fields[2].value.boolValue, false); // Spawn player is false
-			EXPECT(jsonObj.fields[3].value.type, JSONValue::Type::OBJECT_ARRAY);
-			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue.size(), (u64)2u); // 2 objects
-			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue[0].fields.size(), (u64)6u); // 6 fields in skybox object
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[0].fields[4].value.type, JSONValue::Type::FIELD_ARRAY); // skybox materials array
-			EXPECT((u64)jsonObj.fields[3].value.objectArrayValue[0].fields[4].value.fieldArrayValue.size(), (u64)1u); // 1 material in materials array
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].label.c_str(), "directional light info"); // Directional light info label
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].value.objectValue.fields[4].value.type, JSONValue::Type::FLOAT); // Directional light brightness type
-			EXPECT(jsonObj.fields[3].value.objectArrayValue[1].fields[4].value.objectValue.fields[4].value.floatValue, 3.047f); // Directional light brightness value
+			JSONField spawnPlayerField = jsonObj.fields[2];
+			EXPECT(spawnPlayerField.value.type, JSONValue::Type::BOOL);
+			EXPECT(spawnPlayerField.value.boolValue, false);
+			JSONField objectArrayField = jsonObj.fields[3];
+			EXPECT(objectArrayField.value.type, JSONValue::Type::OBJECT_ARRAY);
+			EXPECT((u64)objectArrayField.value.objectArrayValue.size(), (u64)2u); // 2 objects
+
+			const JSONObject& skyboxObj = objectArrayField.value.objectArrayValue[0];
+			EXPECT((u64)skyboxObj.fields.size(), (u64)6u);
+			const JSONField& materialsField = skyboxObj.fields[4];
+			EXPECT(materialsField.value.type, JSONValue::Type::FIELD_ARRAY); // skybox materials array
+			EXPECT((u64)materialsField.value.fieldArrayValue.size(), (u64)1u); // 1 material in materials array
+
+			const JSONObject& directionalLightObj = objectArrayField.value.objectArrayValue[1];
+			const JSONField& directionalLightInfoField = directionalLightObj.fields[4];
+			EXPECT(directionalLightInfoField.label.c_str(), "directional light info");
+			const JSONField& brightnessField = directionalLightInfoField.value.objectValue.fields[4];
+			EXPECT(brightnessField.value.type, JSONValue::Type::FLOAT);
+			EXPECT(brightnessField.value.floatValue, 3.047f);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -381,7 +479,7 @@ namespace flex
 		// Math tests
 		//
 
-#define EXPECT(val, exp) Expect(FunctionName, __LINE__, val, exp, "");
+#define EXPECT(val, exp) if (!Expect(FunctionName, __LINE__, val, exp, "")) { return false; }
 
 		UNIT_TEST(RayPlaneIntersectionOriginValid)
 		{
@@ -2128,14 +2226,72 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
-	public:
-		static void Run()
+		UNIT_TEST(TestPrettifyNumbers0)
 		{
+			std::string result = PrettifyLargeNumber(15'690, 1);
+
+			EXPECT(result.c_str(), "15.7k");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers1)
+		{
+			std::string result = PrettifyLargeNumber(965'840'305, 2);
+
+			EXPECT(result.c_str(), "965.84M");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers2)
+		{
+			std::string result = PrettifyLargeNumber(999'999'999'999, 1);
+
+			EXPECT(result.c_str(), "1000.0T");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers3)
+		{
+			std::string result = PrettifyLargeNumber(999'999'999'999'999, 1);
+
+			EXPECT(result.c_str(), "1000.0Q");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers4)
+		{
+			std::string result = PrettifyLargeNumber(100'000'015, 2);
+
+			EXPECT(result.c_str(), "100.0M");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers5)
+		{
+			std::string result = PrettifyLargeNumber(10'845, 3);
+
+			EXPECT(result.c_str(), "10.845k");
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestPrettifyNumbers6)
+		{
+			std::string result = PrettifyLargeNumber(560, 1);
+
+			EXPECT(result.c_str(), "560");
+		}
+		UNIT_TEST_END;
+
+	public:
+		static i32 Run()
+		{
+			using TestFunc = bool(*)();
+
 			TestFunc funcs[] = {
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
-				FieldArrayParsedCorrectly, MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
-				ArrayParsesCorrectly, MissingCommaInArrayFailsParse, ComplexFileIsValid,
+				MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
+				JSONArray0, JSONArray1, JSONArray2, JSONArray3, ArrayParsedCorrectly, ArrayMissingCommaInArrayFailsParse, ComplexFileIsValid,
 				// Math tests
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
@@ -2174,31 +2330,38 @@ namespace flex
 				HashesDeterministic, HashEmpty, HashCompare0,
 				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
 
+				TestPrettifyNumbers0, TestPrettifyNumbers1, TestPrettifyNumbers2, TestPrettifyNumbers3, TestPrettifyNumbers4, TestPrettifyNumbers5, TestPrettifyNumbers6,
 			};
+
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
-			u32 failedTestCount = 0;
-			for (auto func : funcs)
+			i32 failedTestCount = 0;
+			for (const TestFunc& func : funcs)
 			{
 				try
 				{
-					func();
+					if (!func())
+					{
+						++failedTestCount;
+					}
 				}
 				catch (std::exception& e)
 				{
 					PrintError("%s\n", e.what());
-					failedTestCount += 1;
+					++failedTestCount;
 				}
 			}
 
 			if (failedTestCount > 0)
 			{
-				PrintError("%u test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
+				PrintError("%i test%s failed!\n", failedTestCount, failedTestCount > 1 ? "s" : "");
 			}
 			else
 			{
 				Print("%u/%u tests passed\n", (u32)ARRAY_LENGTH(funcs), (u32)ARRAY_LENGTH(funcs));
 			}
 			Print("\n");
+
+			return failedTestCount;
 		}
 	};
 }

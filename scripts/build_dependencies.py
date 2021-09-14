@@ -53,6 +53,11 @@ if len(sys.argv) < 4 or len(sys.argv) > 5:
 	print_usage()
 	exit(1)
 
+
+if sys.version_info[0] < 3:
+	print('Script must be ran with python 3 (current version: ' + sys.version.split(' ')[0] + ')')
+	exit(1)
+
 platform = sys.argv[1]
 genie_target = sys.argv[2]
 in_config = sys.argv[3]
@@ -126,13 +131,14 @@ def build_project(config):
 		glfw_msbuild_args = ['/property:Configuration=' + external_config]
 		glfw_lib_path = glfw_build_path + 'src/' + config + '/'
 		run_msbuild(glfw_build_path + 'glfw.sln', glfw_msbuild_args)
-		shutil.copyfile(glfw_lib_path + 'glfw3.lib', libs_target + 'glfw3.lib')
+		shutil.copy(glfw_lib_path + 'glfw3.lib', libs_target)
 	else:
 		run_make(glfw_build_path, False)
 		glfw_lib_path = glfw_build_path + 'src/'
-		shutil.copyfile(glfw_lib_path + 'libglfw3.a', libs_target + 'libglfw3.a')
+		shutil.copy(glfw_lib_path + 'libglfw3.a', libs_target)
 
 	# OpenAL
+	# (On linux we just use the prebuilt libopenal-dev package)
 	if platform == 'windows':
 		print("\n------------------------------------------\n\nBuilding OpenAL...\n\n------------------------------------------\n")
 		openAL_path = project_root + 'dependencies/openAL/'
@@ -143,9 +149,10 @@ def build_project(config):
 		openal_msbuild_args = ['/property:Configuration=' + external_config] # TODO: Investigate MinSizeRel
 		run_msbuild(openAL_build_path + 'openAL.sln', openal_msbuild_args)
 		openal_lib_path = openAL_build_path + config
-		shutil.copyfile(openal_lib_path + '/common.lib', libs_target + 'common.lib')
-		shutil.copyfile(openal_lib_path + '/OpenAL32.dll', libs_target + 'OpenAL32.dll')
-		shutil.copyfile(openal_lib_path + '/OpenAL32.lib', libs_target + 'OpenAL32.lib')
+		shutil.copy(openal_lib_path + '/common.lib', libs_target)
+		shutil.copy(openal_lib_path + '/OpenAL32.dll', libs_target)
+		shutil.copy(openal_lib_path + '/OpenAL32.lib', libs_target)
+
 
 	print("\n------------------------------------------\n\nBuilding Bullet...\n\n------------------------------------------\n")
 
@@ -168,18 +175,18 @@ def build_project(config):
 		bullet_msbuild_args = ['/property:Configuration=' + external_config] # TODO: Investigate MinSizeRel
 		run_msbuild(bullet_build_path + 'BULLET_PHYSICS.sln', bullet_msbuild_args)
 		if external_config == 'Debug':
-			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletCollision_Debug.lib', libs_target + 'BulletCollision_Debug.lib')
-			shutil.copyfile(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target + 'BulletDynamics_Debug.lib')
-			shutil.copyfile(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target + 'LinearMath_Debug.lib')
+			shutil.copy(bullet_build_path + 'lib/Debug/BulletCollision_Debug.lib', libs_target)
+			shutil.copy(bullet_build_path + 'lib/Debug/BulletDynamics_Debug.lib', libs_target)
+			shutil.copy(bullet_build_path + 'lib/Debug/LinearMath_Debug.lib', libs_target)
 		else:
-			shutil.copyfile(bullet_build_path + 'lib/Release/BulletCollision.lib', libs_target + 'BulletCollision.lib')
-			shutil.copyfile(bullet_build_path + 'lib/Release/BulletDynamics.lib', libs_target + 'BulletDynamics.lib')
-			shutil.copyfile(bullet_build_path + 'lib/Release/LinearMath.lib', libs_target + 'LinearMath.lib')
+			shutil.copy(bullet_build_path + 'lib/Release/BulletCollision.lib', libs_target)
+			shutil.copy(bullet_build_path + 'lib/Release/BulletDynamics.lib', libs_target)
+			shutil.copy(bullet_build_path + 'lib/Release/LinearMath.lib', libs_target)
 	else:
 		run_make(bullet_build_path, False)
-		shutil.copyfile(bullet_build_path + 'src/BulletCollision/libBulletCollision.a', libs_target + 'libBulletCollision.a')
-		shutil.copyfile(bullet_build_path + 'src/BulletDynamics/libBulletDynamics.a', libs_target + 'libBulletDynamics.a')
-		shutil.copyfile(bullet_build_path + 'src/LinearMath/libLinearMath.a', libs_target + 'libLinearMath.a')
+		shutil.copy(bullet_build_path + 'src/BulletCollision/libBulletCollision.a', libs_target)
+		shutil.copy(bullet_build_path + 'src/BulletDynamics/libBulletDynamics.a', libs_target)
+		shutil.copy(bullet_build_path + 'src/LinearMath/libLinearMath.a', libs_target)
 
 	if build_extras:
 		print("\n------------------------------------------\n\nBuilding Bullet Full...\n\n------------------------------------------\n")
@@ -208,15 +215,15 @@ def build_project(config):
 	if platform == 'windows':
 		freetype_msbuid_args = ['/property:Configuration=' + external_config, '/property:Platform=x64']
 		run_msbuild(free_type_path + 'builds/windows/vc2010/freetype.sln', freetype_msbuid_args)
-		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target + 'freetype.lib')
-		shutil.copyfile(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target + 'freetype.pdb')
+		shutil.copy(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target)
+		shutil.copy(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target)
 	else:
-		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; sh autogen.sh', stderr=subprocess.STDOUT, shell=True)
+		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; ./autogen.sh', stderr=subprocess.STDOUT, shell=True)
 		run_cmake(free_type_path, free_type_build_path, [
 			'-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON',
 			'-Wno-dev'])
 		run_make(free_type_build_path, False)
-		shutil.copyfile(free_type_build_path + 'libfreetype.a', libs_target + 'libfreetype.a')
+		shutil.copy(free_type_build_path + 'libfreetype.a', libs_target)
 
 	print("\n------------------------------------------\n\nBuilding Shaderc...\n\n------------------------------------------\n")
 
@@ -290,10 +297,10 @@ def build_project(config):
 
 	if platform == 'windows':
 		shader_c_lib_path = shader_c_build_path + 'libshaderc/' + config + '/'
-		shutil.copyfile(shader_c_lib_path + 'shaderc_combined.lib', libs_target + 'shaderc_combined.lib')
+		shutil.copy(shader_c_lib_path + 'shaderc_combined.lib', libs_target)
 	else:
 		shader_c_lib_path = shader_c_build_path + 'libshaderc/'
-		shutil.copyfile(shader_c_lib_path + 'libshaderc_combined.a', libs_target + 'libshaderc_combined.a')
+		shutil.copy(shader_c_lib_path + 'libshaderc_combined.a', libs_target)
 
 
 print("\nBuilding Flex Engine..." + ("(with extras)" if build_extras else "") +  "\n");

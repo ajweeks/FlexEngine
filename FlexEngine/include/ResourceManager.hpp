@@ -32,6 +32,7 @@ namespace flex
 		~ResourceManager();
 
 		void Initialize();
+		void PostInitialize();
 		void Update();
 		void Destroy();
 		void DestroyAllLoadedMeshes();
@@ -57,6 +58,8 @@ namespace flex
 
 		void ParseMaterialsFile();
 		bool SerializeMaterialFile() const;
+
+		void ParseDebugOverlayNamesFile();
 
 		JSONField SerializeMesh(Mesh* mesh);
 
@@ -101,21 +104,15 @@ namespace flex
 		void SetAllPrefabsDirty(bool bDirty);
 		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
 		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
+		bool IsPrefabIDValid(const PrefabID& prefabID);
+
+		void RemovePrefabTemplate(const PrefabID& prefabID);
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
 		AudioSourceID GetAudioID(StringID audioFileSID);
 		AudioSourceID GetOrLoadAudioID(StringID audioFileSID);
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
-
-		// ImGui window flags
-		bool bFontWindowShowing = false;
-		bool bMaterialWindowShowing = false;
-		bool bShaderWindowShowing = false;
-		bool bTextureWindowShowing = false;
-		bool bMeshWindowShowing = false;
-		bool bPrefabsWindowShowing = false;
-		bool bSoundsWindowShowing = false;
 
 		bool bShowEditorMaterials = false;
 
@@ -129,6 +126,7 @@ namespace flex
 		// Pair of (GameObjectTypeID, (Relative file path, texture ID))
 		// texture ID will be invalid until texture is loaded
 		std::vector<Pair<StringID, Pair<std::string, TextureID>>> icons;
+		TextureID tofuIconID = InvalidTextureID;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 
@@ -174,6 +172,8 @@ namespace flex
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
+
+		std::vector<std::string> debugOverlayNames;
 
 	private:
 		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);

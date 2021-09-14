@@ -14,6 +14,8 @@ namespace flex
 {
 	void PhysicsManager::Initialize()
 	{
+		PROFILE_AUTO("PhysicsManager Initialize");
+
 		if (!m_bInitialized)
 		{
 			m_CollisionConfiguration = new btDefaultCollisionConfiguration();

@@ -1,18 +1,11 @@
 #pragma once
 
 #include "VirtualMachine/Frontend/Span.hpp"
+#include "Variant.hpp"
 
 #undef VOID
-
 namespace flex
 {
-	struct Variant;
-
-	namespace VM
-	{
-		struct Value;
-	}
-
 	namespace AST
 	{
 		enum class TypeName;
@@ -31,7 +24,7 @@ namespace flex
 				BOOL,
 				STRING,
 				CHAR,
-				VOID,
+				VOID_, // Avoid Windows' define of VOID
 				IDENTIFIER,
 				UNARY,
 				BINARY,
@@ -74,6 +67,8 @@ namespace flex
 			static bool IsNumeric(Type type);
 
 			static bool IsSimple(Type type);
+
+			static Type IRTypeFromVariantType(Variant::Type variantType);
 
 			Value(Span origin, State* irState) :
 				origin(origin),
@@ -125,8 +120,7 @@ namespace flex
 				irState(irState)
 			{}
 
-			virtual ~Value()
-			{}
+			virtual ~Value() = default;
 
 			Value(const Value& other);
 			Value(const Value&& other);
@@ -147,9 +141,7 @@ namespace flex
 			bool operator==(const Value& other);
 			bool operator!=(const Value& other);
 
-			virtual void Destroy()
-			{}
-
+			virtual void Destroy() {}
 			bool IsZero() const;
 			bool IsPositive() const;
 
@@ -162,6 +154,8 @@ namespace flex
 				i32 valBool;
 				char* valStr;
 				char valChar;
+
+				u64 _largestField;
 			};
 
 			static Type CheckAssignmentType(State* irState, Value const* lhs, Value const* rhs);
@@ -177,7 +171,6 @@ namespace flex
 
 		private:
 			void CheckAssignmentType(Value const * other);
-
 
 		};
 

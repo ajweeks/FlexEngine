@@ -9,11 +9,9 @@
  *
  * Supports the following:
  * + single line comments like in C - denoted as "//"
- * + lists of objects (e.g. [ { "A" : "ay", "B" : "bee" }, { "C" : "see", "D" : "dee" } ] )
- * + lists of fields (e.g. [ "A" : "ay", "B" : "bee", "C" : "see", "D" : "dee" ] )
- *
- * Does not currently support:
- * - lists of values (e.g. [ "A", "B", "C" ] )
+ * + lists of objects (e.g. `[ { "A" : "ay", "B" : "bee" }, { "C" : "see", "D" : "dee" } ]` )
+ * + lists of fields (e.g. `[ "A" : "ay", "B" : "bee", "C" : "see", "D" : "dee" ]` )
+ * + lists of simple values (e.g. `[ "A", "B", "C" ]`, or `[ 1, 2, 3 ]` )
  *
  */
 namespace flex
@@ -53,11 +51,22 @@ namespace flex
 		static bool ParseField(const std::string& fileContents, i32* offset, JSONField& field);
 
 		/*
+		* Parses an array of fields
+		* Returns true if parse was successful
+		* Fails when array type is
+		*/
+		static bool ParseArray(const std::string& fileContents, size_t quoteEnd, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields);
+
+		static bool ParseValue(JSONValue::Type fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue);
+
+		/*
 		 * Expects offset to point at the opening bracket
 		 * Returns the index of the closing bracket for the given opening bracket - (, [, and { are allowed
 		 * Returns -1 if no matching bracket is found
 		*/
 		static i32 MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset);
+
+		static bool ReadNumericField(const std::string& fileContents, std::string& outValueStr, i32* offset);
 
 		static std::string s_ErrorStr;
 	};

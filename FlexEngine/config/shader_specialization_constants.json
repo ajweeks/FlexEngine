@@ -1,0 +1,26 @@
+{
+	"deferred_combine" : 
+	[
+		"shader_quality_level",
+		"shadow_cascade_count",
+		"debug_overlay_index",
+		"enable_fog"
+	],
+	"ssao" : 
+	[
+		"ssao_kernel_size"
+	],
+	"taa_resolve" : 
+	[
+		"taa_sample_count"
+	],
+	"terrain" : 
+	[
+		"debug_overlay_index",
+		"enable_fog"
+	],
+	"cloud" : 
+	[
+		"enable_fog"
+	]
+}

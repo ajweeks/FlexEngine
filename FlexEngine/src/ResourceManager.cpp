@@ -18,11 +18,11 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
+#include "FlexEngine.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
-#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
@@ -49,14 +49,24 @@ namespace flex
 
 	void ResourceManager::Initialize()
 	{
+		PROFILE_AUTO("ResourceManager Initialize");
+
 		m_AudioDirectoryWatcher = new DirectoryWatcher(SFX_DIRECTORY, false);
 
 		DiscoverTextures();
 		DiscoverAudioFiles();
+		ParseDebugOverlayNamesFile();
+	}
+
+	void ResourceManager::PostInitialize()
+	{
+		tofuIconID = GetOrLoadTexture(ICON_DIRECTORY "tofu-icon-256.png");
 	}
 
 	void ResourceManager::Update()
 	{
+		PROFILE_AUTO("ResourceManager Update");
+
 		if (m_AudioRefreshFrameCountdown != -1)
 		{
 			--m_AudioRefreshFrameCountdown;
@@ -385,6 +395,8 @@ namespace flex
 
 	void ResourceManager::ParseFontFile()
 	{
+		PROFILE_AUTO("ResourceManager ParseFontFile");
+
 		if (!FileExists(m_FontsFilePathAbs))
 		{
 			PrintError("Fonts file missing!\n");
@@ -474,6 +486,8 @@ namespace flex
 
 	void ResourceManager::ParseMaterialsFile()
 	{
+		PROFILE_AUTO("ResourceManager ParseMaterialsFile");
+
 		parsedMaterialInfos.clear();
 
 		if (FileExists(MATERIALS_FILE_LOCATION))
@@ -541,6 +555,33 @@ namespace flex
 		}
 
 		return true;
+	}
+
+	void ResourceManager::ParseDebugOverlayNamesFile()
+	{
+		debugOverlayNames.clear();
+
+		std::string fileContents;
+		if (!ReadFile(DEBUG_OVERLAY_NAMES_LOCATION, fileContents, false))
+		{
+			PrintError("Failed to read debug overlay names definition file\n");
+			return;
+		}
+
+		JSONObject rootObject;
+		if (!JSONParser::Parse(fileContents, rootObject))
+		{
+			PrintError("Failed to parse debug overlay names definition file\n");
+			return;
+		}
+
+		std::vector<JSONField> nameFields = rootObject.GetFieldArray("debug overlay names");
+
+		debugOverlayNames.reserve(nameFields.size());
+		for (JSONField& field : nameFields)
+		{
+			debugOverlayNames.emplace_back(field.value.strValue);
+		}
 	}
 
 	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
@@ -893,6 +934,11 @@ namespace flex
 
 	bool ResourceManager::RemoveLoadedTexture(Texture* texture, bool bDestroy)
 	{
+		if (texture == nullptr)
+		{
+			return false;
+		}
+
 		for (auto iter = loadedTextures.begin(); iter != loadedTextures.end(); ++iter)
 		{
 			if (*iter == texture)
@@ -966,7 +1012,7 @@ namespace flex
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
 			{
 				return prefabTemplatePair.templateObject;
 			}
@@ -979,7 +1025,7 @@ namespace flex
 	{
 		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
 		{
-			if (prefabTemplatePair.templateObject->GetName().compare(prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
 			{
 				return prefabTemplatePair.prefabID;
 			}
@@ -1093,6 +1139,26 @@ namespace flex
 		WritePrefabToDisk(prefabTemplatePair, newID);
 
 		return newID;
+	}
+
+	bool ResourceManager::IsPrefabIDValid(const PrefabID& prefabID)
+	{
+		GameObject* prefabTemplate = GetPrefabTemplate(prefabID);
+		return prefabTemplate != nullptr;
+	}
+
+	void ResourceManager::RemovePrefabTemplate(const PrefabID& prefabID)
+	{
+		for (auto iter = prefabTemplates.begin(); iter != prefabTemplates.end(); ++iter)
+		{
+			if (iter->prefabID == prefabID)
+			{
+				iter->templateObject->Destroy();
+				delete iter->templateObject;
+				prefabTemplates.erase(iter);
+				break;
+			}
+		}
 	}
 
 	bool ResourceManager::PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const
@@ -1363,9 +1429,10 @@ namespace flex
 
 	void ResourceManager::DrawImGuiWindows()
 	{
-		if (bFontWindowShowing)
+		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("fonts"));
+		if (*bFontsWindowOpen)
 		{
-			if (ImGui::Begin("Fonts", &bFontWindowShowing))
+			if (ImGui::Begin("Fonts", bFontsWindowOpen))
 			{
 				for (auto& fontPair : fontMetaData)
 				{
@@ -1436,18 +1503,18 @@ namespace flex
 						if (ImGui::Button("View SDF"))
 						{
 							std::string absDir = RelativePathToAbsolute(metaData.renderedTextureFilePath);
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						if (ImGui::Button("Open SDF in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(metaData.renderedTextureFilePath));
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						ImGui::SameLine();
 						if (ImGui::Button("Open font in explorer"))
 						{
 							const std::string absDir = ExtractDirectoryString(RelativePathToAbsolute(metaData.filePath));
-							Platform::OpenExplorer(absDir);
+							Platform::OpenFileExplorer(absDir.c_str());
 						}
 						bool bPreviewing = g_Renderer->previewedFont == fontPair.first;
 						if (ImGui::Checkbox("Preview", &bPreviewing))
@@ -1491,9 +1558,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bMaterialWindowShowing)
+		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("materials"));
+		if (*bMaterialsWindowOpen)
 		{
-			if (ImGui::Begin("Materials", &bMaterialWindowShowing))
+			if (ImGui::Begin("Materials", bMaterialsWindowOpen))
 			{
 				static bool bUpdateFields = true;
 				static bool bMaterialSelectionChanged = true;
@@ -1516,7 +1584,7 @@ namespace flex
 				Material* material = g_Renderer->GetMaterial(selectedMaterialID);
 
 				static std::string matName = "";
-				static i32 selectedShaderIndex = 0;
+				static i32 selectedShaderID = 0;
 				// One for each of the current material's texture slots, index into discoveredTextures
 				static std::vector<i32> selectedTextureIndices;
 
@@ -1562,6 +1630,36 @@ namespace flex
 							loadedTex = GetLoadedTexture(g_Renderer->blankTextureID);
 						}
 						material->textures.values[texIndex].object = loadedTex;
+
+						bool bTextureIsBlankTex = (loadedTexID == g_Renderer->blankTextureID);
+						if (loadedTex != nullptr && !bTextureIsBlankTex)
+						{
+							if (material->textures.values[texIndex].uniform->id == U_ALBEDO_SAMPLER.id)
+							{
+								material->enableAlbedoSampler = true;
+								material->albedoTexturePath = loadedTex->relativeFilePath;
+							}
+							else if (material->textures.values[texIndex].uniform->id == U_EMISSIVE_SAMPLER.id)
+							{
+								material->enableEmissiveSampler = true;
+								material->emissiveTexturePath = loadedTex->relativeFilePath;
+							}
+							else if (material->textures.values[texIndex].uniform->id == U_METALLIC_SAMPLER.id)
+							{
+								material->enableMetallicSampler = true;
+								material->metallicTexturePath = loadedTex->relativeFilePath;
+							}
+							else if (material->textures.values[texIndex].uniform->id == U_ROUGHNESS_SAMPLER.id)
+							{
+								material->enableRoughnessSampler = true;
+								material->roughnessTexturePath = loadedTex->relativeFilePath;
+							}
+							else if (material->textures.values[texIndex].uniform->id == U_NORMAL_SAMPLER.id)
+							{
+								material->enableNormalSampler = true;
+								material->normalTexturePath = loadedTex->relativeFilePath;
+							}
+						}
 					}
 
 					i32 i = 0;
@@ -1573,7 +1671,7 @@ namespace flex
 						++i;
 					}
 
-					selectedShaderIndex = material->shaderID;
+					selectedShaderID = material->shaderID;
 
 					g_Renderer->RenderObjectMaterialChanged(selectedMaterialID);
 				}
@@ -1590,9 +1688,9 @@ namespace flex
 				ImGui::SameLine();
 
 				ImGui::PushItemWidth(240.0f);
-				if (g_Renderer->DrawImGuiShadersDropdown(&selectedShaderIndex))
+				if (g_Renderer->DrawImGuiShadersDropdown(&selectedShaderID))
 				{
-					material->shaderID = selectedShaderIndex;
+					material->shaderID = selectedShaderID;
 					bUpdateFields = true;
 				}
 				ImGui::PopItemWidth();
@@ -1604,9 +1702,9 @@ namespace flex
 
 				ImGui::ColorEdit3("Colour multiplier", &material->colourMultiplier.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
-				ImGui::ColorEdit3("Albedo", &material->constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+				ImGui::ColorEdit4("Albedo", &material->constAlbedo.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
-				ImGui::ColorEdit3("Emissive", &material->constEmissive.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
+				ImGui::ColorEdit4("Emissive", &material->constEmissive.x, ImGuiColorEditFlags_Float | ImGuiColorEditFlags_PickerHueWheel);
 
 				if (material->enableMetallicSampler)
 				{
@@ -1658,7 +1756,11 @@ namespace flex
 					{
 						// TODO: Pass in reference to material->textures?
 						//Texture* texture = material->textures[texIndex];
-						std::string texFieldName = material->textures.slotNames[texIndex] + "##" + std::to_string(texIndex);
+#if DEBUG
+						std::string texFieldName = std::string(material->textures.values[texIndex].uniform->DBG_name) + "##" + std::to_string(texIndex);
+#else
+						std::string texFieldName = std::to_string(material->textures.values[texIndex].uniform->id) + "##" + std::to_string(texIndex);
+#endif
 						bUpdateFields |= g_Renderer->DrawImGuiTextureSelector(texFieldName.c_str(), discoveredTextures, &selectedTextureIndices[texIndex]);
 					}
 				}
@@ -1759,13 +1861,14 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bShaderWindowShowing)
+		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("shaders"));
+		if (*bShadersWindowOpen)
 		{
-			if (ImGui::Begin("Shaders", &bShaderWindowShowing))
+			if (ImGui::Begin("Shaders", bShadersWindowOpen))
 			{
-				static i32 selectedShaderIndex = 0;
+				static i32 selectedShaderID = 0;
 				Shader* selectedShader = nullptr;
-				g_Renderer->DrawImGuiShadersList(&selectedShaderIndex, true, &selectedShader);
+				g_Renderer->DrawImGuiShadersList(&selectedShaderID, true, &selectedShader);
 
 #if COMPILE_SHADER_COMPILER
 				g_Renderer->DrawImGuiShaderErrors();
@@ -1791,14 +1894,29 @@ namespace flex
 					g_Renderer->RecompileShaders(false);
 				}
 #endif
+
+				if (ImGui::TreeNode("Specialization constants##shader-view"))
+				{
+					if (g_Renderer->DrawShaderSpecializationConstantImGui((ShaderID)selectedShaderID))
+					{
+						g_Renderer->SetSpecializationConstantDirty();
+					}
+
+					ImGui::TreePop();
+				}
+
+				ImGui::Separator();
+
+				g_Renderer->DrawSpecializationConstantInfoImGui();
 			}
 
 			ImGui::End();
 		}
 
-		if (bTextureWindowShowing)
+		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("textures"));
+		if (*bTexturesWindowOpen)
 		{
-			if (ImGui::Begin("Textures", &bTextureWindowShowing))
+			if (ImGui::Begin("Textures", bTexturesWindowOpen))
 			{
 				static ImGuiTextFilter textureFilter;
 				textureFilter.Draw("##texture-filter");
@@ -1910,9 +2028,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bMeshWindowShowing)
+		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("meshes"));
+		if (*bMeshesWindowOpen)
 		{
-			if (ImGui::Begin("Meshes", &bMeshWindowShowing))
+			if (ImGui::Begin("Meshes", bMeshesWindowOpen))
 			{
 				static i32 selectedMeshIndex = 0;
 
@@ -2009,6 +2128,7 @@ namespace flex
 								else
 								{
 									Mesh::LoadMesh(selectedRelativeFilePath);
+									DiscoverMeshes();
 								}
 							}
 
@@ -2039,9 +2159,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		if (bPrefabsWindowShowing)
+		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("prefabs"));
+		if (*bPrefabsWindowOpen)
 		{
-			if (ImGui::Begin("Prefabs", &bPrefabsWindowShowing))
+			if (ImGui::Begin("Prefabs", bPrefabsWindowOpen))
 			{
 				static ImGuiTextFilter prefabFilter;
 				prefabFilter.Draw("##prefab-filter");
@@ -2076,6 +2197,8 @@ namespace flex
 								selectedPrefabIndex = i;
 							}
 
+							// TODO: Support renaming in context menu here
+
 							if (ImGui::IsItemActive())
 							{
 								if (ImGui::BeginDragDropSource())
@@ -2095,14 +2218,31 @@ namespace flex
 				}
 
 				ImGui::EndChild();
+
+				PrefabTemplatePair& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
+				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
+				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "");
+				ImGui::Text("%s", prefabNameStr.c_str());
+
+				if (ImGui::Button("Delete"))
+				{
+					RemovePrefabTemplate(selectedPrefabTemplate.prefabID);
+				}
+
+				if (ImGui::Button("Duplicate"))
+				{
+					// TODO: Implement
+					PrintError("Unimplemented!\n");
+				}
 			}
 
 			ImGui::End();
 		}
 
-		if (bSoundsWindowShowing)
+		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("sounds"));
+		if (*bSoundsWindowOpen)
 		{
-			if (ImGui::Begin("Sound clips", &bSoundsWindowShowing))
+			if (ImGui::Begin("Sound clips", bSoundsWindowOpen))
 			{
 				// TODO: Add tickbox/env var somewhere to disable this
 				static bool bAutoPlay = true;

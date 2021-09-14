@@ -39,7 +39,10 @@ namespace flex
 			VulkanBuffer& operator=(const VulkanBuffer& other) = delete;
 			VulkanBuffer& operator=(const VulkanBuffer&& other) = delete;
 
-			VkResult Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+			VkResult Create(VkDeviceSize size,
+				VkBufferUsageFlags usage,
+				VkMemoryPropertyFlags properties,
+				const char* DEBUG_name = nullptr);
 			void Destroy();
 
 			VkResult Bind();
@@ -49,11 +52,11 @@ namespace flex
 
 			void Reset();
 
-			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if bCanResize is false and allocation won't fit, or if resize failed
+			// Reserves size bytes in buffer and returns offset to that range, returns (VkDeviceSize)-1 if resize failed
 			// TODO: Add tests
-			FLEX_NO_DISCARD VkDeviceSize Alloc(VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Alloc(VkDeviceSize size);
 			// TODO: Add tests
-			FLEX_NO_DISCARD VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize);
+			FLEX_NO_DISCARD VkDeviceSize Realloc(VkDeviceSize offset, VkDeviceSize size);
 			// TODO: Add tests
 			void Free(VkDeviceSize offset);
 			// TODO: Add tests
@@ -70,6 +73,7 @@ namespace flex
 			VkDeviceSize m_Alignment = 0;
 			void* m_Mapped = nullptr;
 			std::vector<Allocation> allocations;
+			std::string m_DEBUG_Name;
 
 			VkBufferUsageFlags m_UsageFlags = 0;
 			VkMemoryPropertyFlags m_MemoryPropertyFlags = 0;

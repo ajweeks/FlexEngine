@@ -223,6 +223,11 @@ namespace flex
 		return result;
 	}
 
+	FLEX_NO_DISCARD const char* BoolToString(bool bValue)
+	{
+		return bValue ? "true" : "false";
+	}
+
 	// Screen-space constructor
 	TextCache::TextCache(const std::string& str, AnchorPoint anchor, const glm::vec2& pos,
 		const glm::vec4& colour, real xSpacing, real scale) :
@@ -254,6 +259,11 @@ namespace flex
 		return (lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
 	}
 
+	bool iVec3Compare::operator()(const glm::ivec3& lhs, const glm::ivec3& rhs) const
+	{
+		return (lhs.z < rhs.z ? true : lhs.z > rhs.z ? false : lhs.y < rhs.y ? true : lhs.y > rhs.y ? false : lhs.x < rhs.x);
+	}
+
 	bool FileExists(const std::string& filePath)
 	{
 		FILE* file = fopen(filePath.c_str(), "r");
@@ -269,16 +279,21 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile)
 	{
+		return ReadFile(filePath.c_str(), outFileContents, bBinaryFile);
+	}
+
+	bool ReadFile(const char* filePath, std::string& outFileContents, bool bBinaryFile)
+	{
 		std::ios::openmode fileMode = std::ios::in;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
 		}
-		std::ifstream file(filePath.c_str(), fileMode);
+		std::ifstream file(filePath, fileMode);
 
 		if (!file)
 		{
-			PrintError("Unable to read file: ");
+			PrintError("Unable to read file: %s\n", filePath);
 			return false;
 		}
 
@@ -310,16 +325,23 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile)
 	{
+		return ReadFile(filePath.c_str(), vec, bBinaryFile);
+	}
+
+	bool ReadFile(const char* filePath, std::vector<char>& vec, bool bBinaryFile)
+	{
+		PROFILE_AUTO("ReadFile");
+
 		std::ios::openmode fileMode = std::ios::in | std::ios::ate;
 		if (bBinaryFile)
 		{
 			fileMode |= std::ios::binary;
 		}
-		std::ifstream file(filePath.c_str(), fileMode);
+		std::ifstream file(filePath, fileMode);
 
 		if (!file)
 		{
-			PrintError("Unable to read file: %s\n", filePath.c_str());
+			PrintError("Unable to read file: %s\n", filePath);
 			return false;
 		}
 
@@ -342,6 +364,8 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
+		PROFILE_AUTO("WriteFile");
+
 		std::ios::openmode fileMode = std::ios::out | std::ios::trunc;
 		if (bBinaryFile)
 		{
@@ -368,6 +392,8 @@ namespace flex
 
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr)
 	{
+		PROFILE_AUTO("ParseWAVFile");
+
 		std::vector<char> dataArray;
 		if (!ReadFile(filePath, dataArray, true))
 		{
@@ -508,6 +534,36 @@ namespace flex
 		*freq = samplesPerSec;
 
 		return true;
+	}
+
+	std::string PrettifyLargeNumber(u64 num, u32 precision)
+	{
+		if (num < 1000)
+		{
+			return std::to_string(num);
+		}
+
+		static const char suffixes[] = { 'k', 'M', 'B', 'T', 'Q' };
+
+		for (u32 i = 1; i < ARRAY_LENGTH(suffixes) + 1; ++i)
+		{
+			if (num < (u64)glm::pow(1000, i + 1))
+			{
+				real shortenedNum = (real)num / (real)glm::pow(1000, i);
+				bool bRoundedToNextCategory = (shortenedNum == 1000.0f);
+				std::string result = std::to_string((u32)shortenedNum);
+				if (precision > 0)
+				{
+					result += ".";
+					u32 precisionValues = (u32)((shortenedNum - (u32)shortenedNum) * (real)glm::pow(10, precision) + 0.5f);
+					result += std::to_string(precisionValues);
+				}
+				result += suffixes[i - 1 + (bRoundedToNextCategory ? 1 : 0)];
+				return result;
+			}
+		}
+
+		return std::to_string(num);
 	}
 
 	std::string StripLeadingDirectories(const std::string& filePath)
@@ -728,6 +784,89 @@ namespace flex
 		return result;
 	}
 
+	std::vector<std::string> SplitHandleStrings(const std::string& str, char delim)
+	{
+		std::vector<std::string> result;
+		size_t i = 0;
+
+		bool bInSingleQuotes = false;
+		bool bInDoubleQuotes = false;
+		size_t strLen = str.size();
+		while (i < strLen)
+		{
+			while (i != strLen && (bInSingleQuotes || bInDoubleQuotes || str[i] == delim))
+			{
+				if (str[i] == '\'')
+				{
+					bInSingleQuotes = !bInSingleQuotes;
+				}
+				if (str[i] == '"')
+				{
+					bInDoubleQuotes = !bInDoubleQuotes;
+				}
+				++i;
+			}
+
+			size_t j = i;
+			while (j != strLen && (bInSingleQuotes || bInDoubleQuotes || str[j] != delim))
+			{
+				if (str[j] == '\'')
+				{
+					bInSingleQuotes = !bInSingleQuotes;
+				}
+				if (str[j] == '"')
+				{
+					bInDoubleQuotes = !bInDoubleQuotes;
+				}
+				++j;
+			}
+
+			if (i != j)
+			{
+				result.push_back(str.substr(i, j - i));
+				i = j;
+			}
+		}
+
+		return result;
+	}
+
+	i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares /* = u32_max */)
+	{
+		i32 ret_code = 0;
+		u32 chars_compared = 0;
+
+		if (str1 == nullptr || str2 == nullptr)
+		{
+			ret_code = INT_MIN;
+			return ret_code;
+		}
+
+		while ((chars_compared < maxNumCompares) && (*str1 || *str2))
+		{
+			ret_code = tolower((int)(*str1)) - tolower((int)(*str2));
+			if (ret_code != 0)
+			{
+				break;
+			}
+			chars_compared++;
+			str1++;
+			str2++;
+		}
+
+		return ret_code;
+	}
+
+	FLEX_NO_DISCARD std::string RemovePrefix(const std::string& str, const char* prefix)
+	{
+		if (StartsWith(str, prefix))
+		{
+			return str.substr(strlen(prefix));
+		}
+
+		return str;
+	}
+
 	i32 NextNonAlphaNumeric(const std::string& str, i32 offset)
 	{
 		while (offset < (i32)str.size())
@@ -775,6 +914,18 @@ namespace flex
 			(abs(a.y - b.y) < threshold) && (abs(b.y - a.y) < threshold) &&
 			(abs(a.z - b.z) < threshold) && (abs(b.z - a.z) < threshold) &&
 			(abs(a.w - b.w) < threshold) && (abs(b.w - a.w) < threshold);
+	}
+
+	glm::quat SafeQuatLookAt(const glm::vec3& direction)
+	{
+		if (glm::abs(glm::dot(direction, VEC3_UP)) < 0.99f)
+		{
+			return glm::quatLookAt(direction, VEC3_UP);
+		}
+		else
+		{
+			return glm::quatLookAt(direction, VEC3_RIGHT);
+		}
 	}
 
 	glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta)
@@ -867,40 +1018,75 @@ namespace flex
 		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
 	}
 
+	u8 ParseByte(const char* ptr)
+	{
+		return u8(ptr[0]);
+	}
+
 	bool ParseBool(const std::string& intStr)
 	{
-		return (intStr.compare("true") == 0);
+		return ParseBool(intStr.c_str());
+	}
+
+	bool ParseBool(const char* intStr)
+	{
+		return strcmp(intStr, "true") == 0;
+	}
+
+	i32 ParseInt(const char* intStr)
+	{
+		return (i32)strtol(intStr, NULL, 10);
 	}
 
 	i32 ParseInt(const std::string& intStr)
 	{
-		return (i64)atoi(intStr.c_str());
+		return ParseInt(intStr.c_str());
+	}
+
+	u32 ParseUInt(const char* intStr)
+	{
+		return (u32)strtoul(intStr, NULL, 10);
 	}
 
 	u32 ParseUInt(const std::string& intStr)
 	{
-		return (u32)strtoul(intStr.c_str(), NULL, 10);
+		return ParseUInt(intStr.c_str());
+	}
+
+	i64 ParseLong(const char* intStr)
+	{
+		return (i64)strtoll(intStr, NULL, 10);
 	}
 
 	i64 ParseLong(const std::string& intStr)
 	{
-		return (i64)atoll(intStr.c_str());
+		return ParseLong(intStr.c_str());
+	}
+
+	u64 ParseULong(const char* intStr)
+	{
+		return (u64)strtoull(intStr, NULL, 10);
 	}
 
 	u64 ParseULong(const std::string& intStr)
 	{
-		return (u64)strtoull(intStr.c_str(), NULL, 10);
+		return ParseULong(intStr.c_str());
 	}
 
-	real ParseFloat(const std::string& floatStr)
+	real ParseFloat(const char* floatStr)
 	{
-		if (floatStr.empty())
+		if (strlen(floatStr) == 0)
 		{
 			PrintError("Invalid float string (empty)\n");
 			return -1.0f;
 		}
 
-		return (real)std::atof(floatStr.c_str());
+		return strtof(floatStr, NULL);
+	}
+
+	real ParseFloat(const std::string& floatStr)
+	{
+		return ParseFloat(floatStr.c_str());
 	}
 
 	glm::vec2 ParseVec2(const std::string& vecStr)
@@ -915,8 +1101,8 @@ namespace flex
 		else
 		{
 			glm::vec2 result(
-				std::atof(parts[0].c_str()),
-				std::atof(parts[1].c_str()));
+				strtof(parts[0].c_str(), NULL),
+				strtof(parts[1].c_str(), NULL));
 
 			return result;
 		}
@@ -934,9 +1120,9 @@ namespace flex
 		else
 		{
 			glm::vec3 result(
-				std::atof(parts[0].c_str()),
-				std::atof(parts[1].c_str()),
-				std::atof(parts[2].c_str()));
+				strtof(parts[0].c_str(), NULL),
+				strtof(parts[1].c_str(), NULL),
+				strtof(parts[2].c_str(), NULL));
 
 			return result;
 		}
@@ -958,17 +1144,17 @@ namespace flex
 			if (parts.size() == 4)
 			{
 				result = glm::vec4(
-					std::atof(parts[0].c_str()),
-					std::atof(parts[1].c_str()),
-					std::atof(parts[2].c_str()),
-					std::atof(parts[3].c_str()));
+					strtof(parts[0].c_str(), NULL),
+					strtof(parts[1].c_str(), NULL),
+					strtof(parts[2].c_str(), NULL),
+					strtof(parts[3].c_str(), NULL));
 			}
 			else
 			{
 				result = glm::vec4(
-					std::atof(parts[0].c_str()),
-					std::atof(parts[1].c_str()),
-					std::atof(parts[2].c_str()),
+					strtof(parts[0].c_str(), NULL),
+					strtof(parts[1].c_str(), NULL),
+					strtof(parts[2].c_str(), NULL),
 					defaultW);
 			}
 
@@ -980,21 +1166,20 @@ namespace flex
 	{
 		std::vector<std::string> parts = Split(quatStr, ',');
 		glm::quat result;
-		result.x = (real)std::atof(parts[0].c_str());
-		result.y = (real)std::atof(parts[1].c_str());
-		result.z = (real)std::atof(parts[2].c_str());
-		result.w = (real)std::atof(parts[3].c_str());
+		result.x = strtof(parts[0].c_str(), NULL);
+		result.y = strtof(parts[1].c_str(), NULL);
+		result.z = strtof(parts[2].c_str(), NULL);
+		result.w = strtof(parts[3].c_str(), NULL);
 		return result;
 	}
 
 	u32 CountSetBits(u32 bits)
 	{
-		u32 LSHIFT = sizeof(u32*) * 8 - 1;
-		u32 bitSetCount = 0;
-		u32 bitTest = (u32)1 << LSHIFT;
-		u32 i;
+		const u64 LSHIFT = sizeof(u32*) * 8 - 1;
+		u64 bitTest = (u64)1ul << LSHIFT;
 
-		for (i = 0; i <= LSHIFT; ++i)
+		u32 bitSetCount = 0;
+		for (u64 i = 0; i <= LSHIFT; ++i)
 		{
 			bitSetCount += ((bits & bitTest) ? 1 : 0);
 			bitTest /= 2;
@@ -1473,23 +1658,33 @@ namespace flex
 
 	bool StartsWith(const std::string& str, const std::string& start)
 	{
-		if (str.length() < start.length())
+		return StartsWith(str.c_str(), start.c_str());
+	}
+
+	bool StartsWith(const char* str, const char* start)
+	{
+		if (strlen(str) < strlen(start))
 		{
 			return false;
 		}
 
-		bool result = (str.substr(0, start.length()).compare(start) == 0);
+		bool result = strncmp(str, start, strlen(start)) == 0;
 		return result;
 	}
 
 	bool EndsWith(const std::string& str, const std::string& end)
 	{
-		if (str.length() < end.length())
+		return EndsWith(str.c_str(), end.c_str());
+	}
+
+	bool EndsWith(const char* str, const char* end)
+	{
+		if (strlen(str) < strlen(end))
 		{
 			return false;
 		}
 
-		bool result = (str.substr(str.length() - end.length()).compare(end) == 0);
+		bool result = strcmp(str + (strlen(str) - strlen(end)), end) == 0;
 		return result;
 	}
 
@@ -1532,7 +1727,7 @@ namespace flex
 		}
 		firstDigit++;
 
-		i32 num = (i32)atoi(str.substr(firstDigit).c_str());
+		i32 num = (i32)strtol(str.substr(firstDigit).c_str(), NULL, 10);
 		outNumNumericalChars = (strLen - firstDigit);
 
 		return num;
@@ -1923,6 +2118,11 @@ namespace flex
 		return str.find(pattern) != std::string::npos;
 	}
 
+	bool Contains(const std::string& str, const char* pattern)
+	{
+		return str.find(pattern) != std::string::npos;
+	}
+
 	bool Contains(const std::string& str, char pattern)
 	{
 		for (char c : str)
@@ -1933,6 +2133,21 @@ namespace flex
 			}
 		}
 		return false;
+	}
+
+	std::string Erase(const std::string& str, char c)
+	{
+		std::string result;
+
+		for (char ch : str)
+		{
+			if (ch != c)
+			{
+				result.push_back(ch);
+			}
+		}
+
+		return result;
 	}
 
 	i32 RoundUp(i32 val, i32 alignment)

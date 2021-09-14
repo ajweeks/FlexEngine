@@ -49,7 +49,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
-#include "Profiler.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -81,6 +80,10 @@ namespace flex
 	MaterialID SpringObject::s_BobberMatID = InvalidMaterialID;
 
 	ChildIndex InvalidChildIndex = ChildIndex({});
+
+	const real WirePlug::nearbyThreshold = 3.0f;
+
+	const real Wire::DEFAULT_LENGTH = 2.0f;
 
 #define SIMD_WAVES 0
 
@@ -303,11 +306,13 @@ namespace flex
 		case SID("particle system"): return new ParticleSystem(objectName, gameObjectID);
 		case SID("terrain generator"): return new TerrainGenerator(objectName, gameObjectID);
 		case SID("wire"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWire(gameObjectID);
+		case SID("wire plug"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWirePlug(gameObjectID);
 		case SID("socket"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket(objectName, gameObjectID);
 		case SID("spring"): return new SpringObject(objectName, gameObjectID);
 		case SID("soft body"): return new SoftBody(objectName, gameObjectID);
 		case SID("vehicle"): return new Vehicle(objectName, gameObjectID);
 		case SID("road"): return new Road(objectName, gameObjectID);
+		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -329,7 +334,7 @@ namespace flex
 
 	void GameObject::Initialize()
 	{
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			if (!m_CollisionShape)
 			{
@@ -420,6 +425,8 @@ namespace flex
 
 	void GameObject::Update()
 	{
+		PROFILE_AUTO("GameObject Update");
+
 		if (m_NearbyInteractable != nullptr)
 		{
 			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
@@ -428,14 +435,6 @@ namespace flex
 			//debugDrawer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
-		}
-		else if (m_ObjectInteractingWith != nullptr)
-		{
-			// TODO: Write real fancy-lookin outline shader instead of drawing a lil cross
-			//btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			//btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
-			//debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.1f, 0.1f));
-			//debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.1f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
@@ -965,13 +964,6 @@ namespace flex
 
 		ImGui::Text("Trigger: %s", m_bTrigger ? "true" : "false"); // TODO: Make checkbox
 
-		std::string objectInteractingWithName;
-		if (m_ObjectInteractingWith != nullptr)
-		{
-			objectInteractingWithName = m_ObjectInteractingWith->GetName();
-		}
-		ImGui::Text("ObjectInteractingWith: %s", objectInteractingWithName.c_str());
-
 		std::string nearbyInteractibleName;
 		if (m_NearbyInteractable != nullptr)
 		{
@@ -1086,6 +1078,37 @@ namespace flex
 				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
 			}
 
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+			const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+			StringID newTypeID;
+			std::string newTypeStr;
+			if (currentScene->DoGameObjectTypeList(typeStr, newTypeID, newTypeStr))
+			{
+				std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+
+				std::string name = m_Name;
+				GameObject* parent = m_Parent;
+				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID);
+				CopyGenericFields(newObject, parent, (CopyFlags)((i32)CopyFlags::ALL & ~(i32)CopyFlags::ADD_TO_SCENE));
+				newObject->m_TypeID = newTypeID; // Overwrite type ID again
+				currentScene->RemoveObjectImmediate(this, true);
+				if (parent != nullptr)
+				{
+					parent->AddChildImmediate(newObject);
+				}
+				else
+				{
+					currentScene->AddRootObjectImmediate(newObject);
+				}
+				newObject->Initialize();
+				newObject->PostInitialize();
+
+				g_Editor->SetSelectedObjects(selectedObjectIDs);
+
+				bDeletedOrDuplicated = true;
+			}
+
 			if (DrawImGuiDuplicateGameObjectButton())
 			{
 				ImGui::CloseCurrentPopup();
@@ -1105,6 +1128,7 @@ namespace flex
 			if (ImGui::Button("Save as prefab"))
 			{
 				SaveAsPrefab();
+				bDeletedOrDuplicated = true;
 
 				ImGui::CloseCurrentPopup();
 			}
@@ -1122,13 +1146,18 @@ namespace flex
 	{
 		if (m_PrefabIDLoadedFrom.IsValid())
 		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
-			g_SceneManager->CurrentScene()->UnregisterGameObject(previousPrefabTemplate->ID);
+
+			currentScene->UnregisterGameObjectRecursive(previousPrefabTemplate->ID);
+			currentScene->UnregisterGameObjectRecursive(ID);
+
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
 			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
@@ -1192,31 +1221,14 @@ namespace flex
 		}
 	}
 
-	bool GameObject::AllowInteractionWith(GameObject* gameObject)
-	{
-		FLEX_UNUSED(gameObject);
-
-		return true;
-	}
-
-	void GameObject::SetInteractingWith(GameObject* gameObject)
-	{
-		m_ObjectInteractingWith = gameObject;
-	}
-
 	void GameObject::FixupPrefabTemplateIDs(GameObject* newGameObject)
 	{
 		FLEX_UNUSED(newGameObject);
 	}
 
-	bool GameObject::IsBeingInteractedWith() const
+	bool GameObject::ShouldSerialize()
 	{
-		return m_ObjectInteractingWith != nullptr;
-	}
-
-	GameObject* GameObject::GetObjectInteractingWith()
-	{
-		return m_ObjectInteractingWith;
+		return true;
 	}
 
 	void GameObject::ParseJSON(
@@ -1408,6 +1420,11 @@ namespace flex
 			return object;
 		}
 
+		if (!ShouldSerialize())
+		{
+			return object;
+		}
+
 		object.fields.emplace_back("name", JSONValue(m_Name));
 
 		// Added in scene v5
@@ -1496,7 +1513,7 @@ namespace flex
 								std::string materialName = material->name;
 								if (!materialName.empty())
 								{
-									materialFields.emplace_back(materialName, JSONValue(""));
+									materialFields.emplace_back("", JSONValue(materialName));
 								}
 								else
 								{
@@ -1647,7 +1664,11 @@ namespace flex
 						}
 					}
 
-					childrenToSerialize.push_back(child->Serialize(scene, false, bSerializePrefabData));
+					JSONObject childObject = child->Serialize(scene, false, bSerializePrefabData);
+					if (!childObject.fields.empty())
+					{
+						childrenToSerialize.push_back(childObject);
+					}
 				}
 			}
 
@@ -1769,6 +1790,11 @@ namespace flex
 		return m_bIsTemplate;
 	}
 
+	void GameObject::OnCharge(real chargeAmount)
+	{
+		FLEX_UNUSED(chargeAmount);
+	}
+
 	ChildIndex GameObject::ComputeChildIndex() const
 	{
 		// NOTE: Sibling indices must have been calculated before calling this!
@@ -1839,11 +1865,13 @@ namespace flex
 		return prefabID;
 	}
 
-	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS)
+	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS)
 	{
-		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID);
+		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, nullptr, nullptr, nullptr,
+			(CopyFlags)((u32)CopyFlags::ALL & ~(u32)CopyFlags::ADD_TO_SCENE));
 
-		newObject->m_Transform.SetWorldPosition(positionWS);
+		newObject->m_Transform.SetWorldPosition(positionWS, false);
+		newObject->m_Transform.SetWorldRotation(rotWS, true);
 
 		newObject->Initialize();
 		newObject->PostInitialize();
@@ -1950,13 +1978,13 @@ namespace flex
 		{
 			if (m_Parent != nullptr)
 			{
-				g_SceneManager->CurrentScene()->AddChildObject(m_Parent, newGameObject);
+				g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
 			}
 			else
 			{
 				if (bAddToScene)
 				{
-					g_SceneManager->CurrentScene()->AddRootObject(newGameObject);
+					g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 				}
 			}
 		}
@@ -2195,7 +2223,9 @@ namespace flex
 
 		child->SetParent(this);
 
-		if (childPParent)
+		g_SceneManager->CurrentScene()->RegisterGameObject(child);
+
+		if (childPParent != nullptr)
 		{
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
@@ -2305,11 +2335,11 @@ namespace flex
 	{
 		if (m_Parent != nullptr)
 		{
-			return m_Parent->AddChild(child);
+			return m_Parent->AddChildImmediate(child);
 		}
 		else
 		{
-			return g_SceneManager->CurrentScene()->AddRootObject(child);
+			return g_SceneManager->CurrentScene()->AddRootObjectImmediate(child);
 		}
 	}
 
@@ -2793,18 +2823,12 @@ namespace flex
 
 	void Valve::Update()
 	{
+		PROFILE_AUTO("Valve Update");
+
 		// True when our rotation is changed by another object (rising block)
 		bool bRotatedByOtherObject = false;
 		real currentAbsAvgRotationSpeed = 0.0f;
-		if (m_ObjectInteractingWith != nullptr)
-		{
-			i32 playerIndex = static_cast<Player*>(m_ObjectInteractingWith)->GetIndex();
-
-			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
-			rotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) * rotationSpeedScale;
-			currentAbsAvgRotationSpeed = glm::abs(gamepadState.averageRotationSpeeds.currentAverage);
-		}
-		else
+		if (!m_bBeingInteractedWith)
 		{
 			rotationSpeed = (rotation - pRotation) / g_DeltaTime;
 			// Not entirely true but needed to trigger sound
@@ -3014,27 +3038,21 @@ namespace flex
 
 	void RisingBlock::Update()
 	{
+		PROFILE_AUTO("RisingBlock Update");
+
 		real minDist = valve->minRotation;
 		real maxDist = valve->maxRotation;
 		//real totalDist = (maxDist - minDist);
 		real dist = valve->rotation;
 
-		real playerControlledValveRotationSpeed = 0.0f;
-		if (valve->GetObjectInteractingWith())
-		{
-			i32 playerIndex = static_cast<Player*>(valve->GetObjectInteractingWith())->GetIndex();
-			const GamepadState& gamepadState = g_InputManager->GetGamepadState(playerIndex);
-			playerControlledValveRotationSpeed = (-gamepadState.averageRotationSpeeds.currentAverage) *
-				valve->rotationSpeedScale;
-		}
+		//real playerControlledValveRotationSpeed = 0.0f;
 
 		if (bAffectedByGravity &&
-			valve->rotation >=
-			valve->minRotation + 0.1f)
+			valve->rotation >= valve->minRotation + 0.1f)
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
-			real distMult = 1.0f - Saturate(playerControlledValveRotationSpeed / 2.0f);
+			real distMult = 1.0f;// -Saturate(playerControlledValveRotationSpeed / 2.0f);
 			real dDist = (fallSpeed * g_DeltaTime * distMult);
 			dist -= Lerp(pdDistBlockMoved, dDist, 0.1f);
 			pdDistBlockMoved = dDist;
@@ -3346,6 +3364,8 @@ namespace flex
 
 	void DirectionalLight::Update()
 	{
+		PROFILE_AUTO("DirectionalLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -3592,6 +3612,8 @@ namespace flex
 
 	void PointLight::Update()
 	{
+		PROFILE_AUTO("PointLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -3804,6 +3826,8 @@ namespace flex
 
 	void SpotLight::Update()
 	{
+		PROFILE_AUTO("SpotLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -4022,6 +4046,8 @@ namespace flex
 
 	void AreaLight::Update()
 	{
+		PROFILE_AUTO("AreaLight Update");
+
 		if (sockets.size() >= 1)
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
@@ -4511,6 +4537,8 @@ namespace flex
 
 	void EngineCart::Update()
 	{
+		PROFILE_AUTO("EngineCart Update");
+
 		powerRemaining -= powerDrainMultiplier * g_DeltaTime;
 		powerRemaining = glm::max(powerRemaining, 0.0f);
 
@@ -4701,6 +4729,24 @@ namespace flex
 		m_bItemizable = true;
 	}
 
+	void Battery::Update()
+	{
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() >= 1)
+		{
+			MeshComponent* submesh0 = m_Mesh->GetSubMesh(0);
+			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
+				&U_CHARGE_AMOUNT,
+				{ chargeAmount / chargeCapacity });
+		}
+
+		GameObject::Update();
+	}
+
+	void Battery::OnCharge(real amount)
+	{
+		chargeAmount = glm::clamp(chargeAmount + amount, 0.0f, chargeCapacity);
+	}
+
 	GameObject* Battery::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
 	{
 		std::string newObjectName;
@@ -4757,7 +4803,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "gerstner";
 		matCreateInfo.shaderName = "water";
-		matCreateInfo.constAlbedo = glm::vec3(0.4f, 0.5f, 0.8f);
+		matCreateInfo.constAlbedo = glm::vec4(0.4f, 0.5f, 0.8f, 1.0f);
 		matCreateInfo.constMetallic = 0.8f;
 		matCreateInfo.constRoughness = 0.01f;
 		matCreateInfo.bDynamic = true;
@@ -4794,8 +4840,6 @@ namespace flex
 	{
 		m_VertexBufferCreateInfo = {};
 		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(m_WaveMaterialID)->shaderID)->vertexAttributes;
-
-		avgWaveUpdateTime = RollingAverage<ms>(256, SamplingType::CONSTANT);
 
 		criticalSection = Platform::InitCriticalSection();
 
@@ -4835,6 +4879,7 @@ namespace flex
 		}
 
 		PROFILE_AUTO("Gerstner update");
+		PROFILE_AUTO("GerstnerWave Update");
 
 		for (WaveInfo& waveInfo : waveContributions)
 		{
@@ -4877,7 +4922,7 @@ namespace flex
 			bobber->GetTransform()->SetWorldPosition(newPos);
 		}
 
-		g_Renderer->SetGlobalUniform(U_OCEAN_DATA, &oceanData, sizeof(oceanData));
+		g_Renderer->SetGlobalUniform(&U_OCEAN_DATA, &oceanData, sizeof(oceanData));
 
 		GameObject::Update();
 	}
@@ -5103,15 +5148,6 @@ namespace flex
 #else
 			UpdateWavesLinear();
 #endif
-		}
-		ms waveTime = Profiler::GetBlockDuration("Update waves");
-		if (avgWaveUpdateTime.currentAverage == 0.0f)
-		{
-			avgWaveUpdateTime.Reset(waveTime);
-		}
-		else
-		{
-			avgWaveUpdateTime.AddValue(waveTime);
 		}
 	}
 
@@ -5646,7 +5682,6 @@ namespace flex
 		WaveTessellationLOD const* LODBack = chunkBack ? GetTessellationLOD(chunkBack->tessellationLODLevel) : nullptr;
 		WaveTessellationLOD const* LODFor = chunkFor ? GetTessellationLOD(chunkFor->tessellationLODLevel) : nullptr;
 
-		const real quadSize = size / chunkVertCountPerAxis;
 		for (u32 z = 0; z < chunkVertCountPerAxis; ++z)
 		{
 			for (u32 x = 0; x < chunkVertCountPerAxis; ++x)
@@ -5702,7 +5737,7 @@ namespace flex
 
 				real dX = left - right;
 				real dZ = back - forward;
-				normals[vertIdx] = glm::vec3(dX, 2.0f * quadSize, dZ);
+				normals[vertIdx] = glm::vec3(dX, 2.0f, dZ);
 				tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
 			}
 		}
@@ -5725,22 +5760,8 @@ namespace flex
 
 		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
 
+
 		ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.95f, 1.0f), "Gerstner");
-
-		{
-			ImVec2 p = ImGui::GetCursorScreenPos();
-
-			real width = 300.0f;
-			real height = 100.0f;
-			real minMS = 0.0f;
-			real maxMS = 40.0f;
-			p.y += glm::clamp((1.0f - avgWaveUpdateTime.currentAverage / (maxMS - minMS)), 0.0f, 1.0f) * height;
-			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(240, 220, 20, 255), 1.0f);
-
-			ImGui::PlotLines("", avgWaveUpdateTime.prevValues.data(), (u32)avgWaveUpdateTime.prevValues.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
-
-			ImGui::Text("%.2fms", avgWaveUpdateTime.currentAverage);
-		}
 
 		ImGui::DragFloat("Loaded distance", &loadRadius, 0.01f);
 		if (ImGui::DragFloat("Update speed", &updateSpeed, 0.1f))
@@ -6056,7 +6077,7 @@ namespace flex
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
 				{
-					std::string samplingPropertyList = waveSamplingLODsArrObj[i].label;
+					std::string samplingPropertyList = waveSamplingLODsArrObj[i].value.AsString();
 					std::vector<std::string> strParts = Split(samplingPropertyList, ',');
 					if (strParts.size() != 2)
 					{
@@ -6080,7 +6101,7 @@ namespace flex
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
 				{
-					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].label;
+					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].value.AsString();
 					std::vector<std::string> strParts = Split(tessellationPropertyList, ',');
 					if (strParts.size() != 2)
 					{
@@ -6277,7 +6298,7 @@ namespace flex
 		for (i32 i = 0; i < 10; ++i)
 		{
 			matCreateInfo.name = "block " + IntToString(i, 2);
-			matCreateInfo.constAlbedo = glm::vec3(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f));
+			matCreateInfo.constAlbedo = glm::vec4(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f), 1.0f);
 			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
 			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
 		}
@@ -6301,24 +6322,101 @@ namespace flex
 		}
 	}
 
-	void Blocks::Update()
-	{
-		GameObject::Update();
-	}
-
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("wire"), gameObjectID)
 	{
-		m_bInteractable = true;
-		startPoint = glm::vec3(-1.0f, 1.0f, 0.0f);
-		endPoint = glm::vec3(1.0f, 1.0f, 0.0f);
+	}
+
+	void Wire::Initialize()
+	{
+		GeneratePoints();
+
+		MaterialID wireMatID = g_Renderer->GetMaterialID("wire");
+		if (wireMatID == InvalidMaterialID)
+		{
+			wireMatID = g_Renderer->GetPlaceholderMaterialID();
+		}
+		m_VertexBufferCreateInfo = {};
+		m_VertexBufferCreateInfo.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(wireMatID)->shaderID)->vertexAttributes;
+
+		UpdateIndices();
+
+		SetMesh(new Mesh(this));
+		u32 maxInitialVertCount = numRadialPoints * numPoints;
+		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, wireMatID, maxInitialVertCount);
+
+		UpdateMesh();
+
+		GameObject::Initialize();
+	}
+
+	void Wire::Update()
+	{
+		UpdateIndices();
+		UpdateMesh();
+
+		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+		if (!m_Indices.empty())
+		{
+			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
+		}
 	}
 
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
 	{
 		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWire(this);
 
+		DestroyPoints();
+
 		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void Wire::DrawImGuiObjects()
+	{
+		GameObject::DrawImGuiObjects();
+
+		bool bRegenPoints = false;
+
+		if (ImGui::SliderInt("num points", &numPoints, 4, 24))
+		{
+			bRegenPoints = true;
+			numPoints = glm::clamp(numPoints, 4, 24);
+		}
+		bRegenPoints = ImGui::SliderFloat("point inv mass", &pointInvMass, 0.0f, 0.1f) || bRegenPoints;
+
+		if (ImGui::SliderFloat("stiffness", &stiffness, 0.0f, 1.0f))
+		{
+			m_SoftBody->SetStiffness(stiffness);
+		}
+
+		if (ImGui::SliderFloat("damping", &damping, 0.0f, 1.0f))
+		{
+			m_SoftBody->SetDamping(damping);
+		}
+
+		if (ImGui::Button("Reset points") || bRegenPoints)
+		{
+			DestroyPoints();
+			GeneratePoints();
+			UpdateIndices();
+			UpdateMesh();
+		}
+	}
+
+	bool Wire::ShouldSerialize()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			if (player->IsHolding(plug0ID.Get()) || player->IsHolding(plug1ID.Get()))
+			{
+				// Don't serialize wires being held
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -6326,30 +6424,261 @@ namespace flex
 		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("wire");
-		obj.TryGetVec3("startPoint", startPoint);
-		obj.TryGetVec3("endPoint", endPoint);
+		JSONObject wireInfo;
+		if (parentObject.TryGetObject("wire", wireInfo))
+		{
+			wireInfo.TryGetGameObjectID("plug 0 id", plug0ID);
+			wireInfo.TryGetGameObjectID("plug 1 id", plug1ID);
+		}
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
-		JSONObject obj = {};
+		JSONObject wireInfo = {};
 
-		obj.fields.emplace_back("startPoint", JSONValue(VecToString(startPoint)));
-		obj.fields.emplace_back("endPoint", JSONValue(VecToString(endPoint)));
+		wireInfo.fields.emplace_back("plug 0 id", JSONValue(plug0ID));
+		wireInfo.fields.emplace_back("plug 1 id", JSONValue(plug1ID));
 
-		parentObject.fields.emplace_back("wire", JSONValue(obj));
+		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
 	}
 
-	void Wire::PlugIn(Socket* socket)
+	GameObjectID Wire::GetOtherPlug(WirePlug* plug)
 	{
-		if (!socket0ID.IsValid())
+		if (plug->ID == plug0ID)
 		{
-			socket0ID = socket->ID;
+			return plug1ID;
 		}
-		else if (!socket1ID.IsValid())
+		else if (plug->ID == plug1ID)
 		{
-			socket1ID = socket->ID;
+			return plug0ID;
+		}
+
+		return InvalidGameObjectID;
+	}
+
+	void Wire::SetStartTangent(const glm::vec3& tangent)
+	{
+		real dist = 2.0f / numPoints;
+		m_SoftBody->points[1]->pos = m_SoftBody->points[0]->pos + tangent * dist;
+		m_SoftBody->points[1]->invMass = 0.0f;
+	}
+
+	void Wire::ClearStartTangent()
+	{
+		m_SoftBody->points[1]->invMass = m_SoftBody->points[2]->invMass;
+	}
+
+	void Wire::SetEndTangent(const glm::vec3& tangent)
+	{
+		real dist = 2.0f / numPoints;
+		m_SoftBody->points[numPoints - 2]->pos = m_SoftBody->points[numPoints - 1]->pos + tangent * dist;
+		m_SoftBody->points[numPoints - 2]->invMass = 0.0f;
+	}
+
+	void Wire::ClearEndTangent()
+	{
+		m_SoftBody->points[numPoints - 2]->invMass = m_SoftBody->points[numPoints - 3]->invMass;
+	}
+
+	void Wire::StepSimulation()
+	{
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+
+		m_SoftBody->points[0]->pos = plug0Transform->GetWorldPosition();
+		m_SoftBody->points[m_SoftBody->points.size() - 1]->pos = plug1Transform->GetWorldPosition();
+
+		m_SoftBody->Update();
+	}
+
+	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
+	{
+		assert(t >= 0.0f && t <= 1.0f);
+		if (t == 1.0f)
+		{
+			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+		}
+		else
+		{
+			u32 i0 = (u32)(t * numPoints);
+			u32 i1 = (u32)(t * numPoints + 1.0f);
+			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+		}
+	}
+
+	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
+	{
+		assert(t >= 0.0f && t <= 1.0f);
+		if (t == 1.0f)
+		{
+			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+		}
+		else
+		{
+			u32 i0 = (u32)(t * numPoints);
+			u32 i1 = (u32)(t * numPoints + 1.0f);
+			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+		}
+		// TODO: Take tangent with VEC3_RIGHT when UP is similar to tangent
+		outBitangent = glm::normalize(glm::cross(VEC3_UP, outTangent));
+		outNormal = glm::normalize(glm::cross(outTangent, outBitangent));
+		outBitangent = glm::normalize(glm::cross(outNormal, outTangent));
+	}
+
+	void Wire::DestroyPoints()
+	{
+		if (m_SoftBody != nullptr)
+		{
+			m_SoftBody->Destroy(true);
+			delete m_SoftBody;
+			m_SoftBody = nullptr;
+		}
+	}
+
+	void Wire::GeneratePoints()
+	{
+		assert(m_SoftBody == nullptr);
+
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+
+		Point* startPoint = new Point(plug0Transform->GetWorldPosition(), VEC3_ZERO, 0.0f);
+		Point* endPoint = new Point(plug1Transform->GetWorldPosition(), VEC3_ZERO, 0.0f);
+
+		m_SoftBody = new SoftBody("Wire simulation");
+		m_SoftBody->SetRenderWireframe(false);
+
+		m_SoftBody->points.reserve(numPoints);
+		for (i32 i = 0; i < numPoints; ++i)
+		{
+			real invMass = (i == 0 || i == (numPoints - 1)) ? 0.0f : pointInvMass;
+			real t = (real)i / (numPoints - 1);
+			glm::vec3 pos = startPoint->pos + (endPoint->pos - startPoint->pos) * t;
+			m_SoftBody->points.push_back(new Point(pos, VEC3_ZERO, invMass));
+		}
+
+		for (i32 i = 0; i < numPoints - 1; ++i)
+		{
+			m_SoftBody->AddUniqueDistanceConstraint(i, i + 1, i, stiffness);
+		}
+
+		m_SoftBody->SetSerializable(false);
+		m_SoftBody->SetVisibleInSceneExplorer(false);
+		m_SoftBody->SetStiffness(stiffness);
+		m_SoftBody->SetDamping(damping);
+		m_SoftBody->Initialize();
+		m_SoftBody->PostInitialize();
+	}
+
+	void Wire::UpdateMesh()
+	{
+		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+		Transform* plug0Transform = plug0->GetTransform();
+		glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
+
+		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+		Transform* plug1Transform = plug1->GetTransform();
+		glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+
+		glm::vec3 startToEnd = plug1Pos - plug0Pos;
+
+		u32 numVerts = numPoints * numRadialPoints;
+
+		m_VertexBufferCreateInfo.positions_3D.clear();
+		m_VertexBufferCreateInfo.texCoords_UV.clear();
+		m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
+		m_VertexBufferCreateInfo.normals.clear();
+		m_VertexBufferCreateInfo.tangents.clear();
+
+		m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
+		m_VertexBufferCreateInfo.texCoords_UV.resize(numVerts);
+		m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
+		m_VertexBufferCreateInfo.normals.resize(numVerts);
+		m_VertexBufferCreateInfo.tangents.resize(numVerts);
+
+		glm::vec3 wirePosWS = m_Transform.GetWorldPosition();
+
+		u32 vertIndex = 0;
+		real radius = 0.05f;
+		glm::vec4 color(0.3f, 0.3f, 0.35f, 1.0f);
+		for (i32 i = 0; i < numPoints; ++i)
+		{
+			real t = i / (real)(numPoints - 1);
+			glm::vec3 centerPos = m_SoftBody->points[i]->pos - wirePosWS;
+			glm::vec3 wireNormalWS, wireTangentWS, wireBitangentWS;
+			CalculateBasisAtPoint(t, wireNormalWS, wireTangentWS, wireBitangentWS);
+			for (i32 j = 0; j < numRadialPoints; ++j)
+			{
+				real theta = j / (real)numRadialPoints;
+				real cosTheta = cos(theta * TWO_PI);
+				real sinTheta = sin(theta * TWO_PI);
+				glm::vec3 pos = centerPos +
+					(cosTheta * radius) * wireBitangentWS  +
+					(sinTheta * radius) * wireNormalWS ;
+
+				glm::vec3 normal = glm::normalize(cosTheta * wireBitangentWS + sinTheta * wireNormalWS);
+				// TODO: Take cross product with VEC3_UP when normal is similar to VEC3_RIGHT
+				glm::vec3 tangent = glm::normalize(glm::cross(normal, VEC3_RIGHT));
+
+				m_VertexBufferCreateInfo.positions_3D[vertIndex] = pos;
+				m_VertexBufferCreateInfo.texCoords_UV[vertIndex] = glm::vec2(theta, t);
+				m_VertexBufferCreateInfo.colours_R32G32B32A32[vertIndex] = color;
+				m_VertexBufferCreateInfo.normals[vertIndex] = normal;
+				m_VertexBufferCreateInfo.tangents[vertIndex] = tangent;
+
+				++vertIndex;
+			}
+		}
+
+		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+		meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
+		g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
+	}
+
+	void Wire::UpdateIndices()
+	{
+		u32 numIndices = (numPoints - 1) * numRadialPoints * 6;
+
+		m_Indices.clear();
+		m_Indices.resize(numIndices);
+
+		i32 indexIndex = 0;
+		for (i32 i = 0; i < numPoints - 1; ++i)
+		{
+			for (i32 j = 0; j < numRadialPoints; ++j)
+			{
+				m_Indices[indexIndex++] = i * numRadialPoints + j;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + (j + 1) % numRadialPoints;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + j;
+
+				m_Indices[indexIndex++] = i * numRadialPoints + j;
+				m_Indices[indexIndex++] = i * numRadialPoints + (j + 1) % numRadialPoints;
+				m_Indices[indexIndex++] = (i + 1) * numRadialPoints + (j + 1) % numRadialPoints;
+			}
+		}
+	}
+
+	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("wire plug"), gameObjectID)
+	{
+		m_bInteractable = true;
+	}
+
+	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID) :
+		WirePlug(name, gameObjectID)
+	{
+		wireID = owningWire->ID;
+	}
+
+	void WirePlug::PlugIn(Socket* socket)
+	{
+		if (!socketID.IsValid())
+		{
+			socketID = socket->ID;
 		}
 		else
 		{
@@ -6357,38 +6686,70 @@ namespace flex
 		}
 	}
 
-	void Wire::Unplug(Socket* socket)
+	void WirePlug::Unplug()
 	{
-		if (socket0ID == socket->ID)
+		if (socketID.IsValid())
 		{
-			socket0ID = InvalidGameObjectID;
-		}
-		else if (socket1ID == socket->ID)
-		{
-			socket1ID = InvalidGameObjectID;
+			socketID = InvalidGameObjectID;
 		}
 		else
 		{
-			PrintError("Attempted to unplug socket that wasn't connected to wire\n");
+			PrintError("Attempted to unplug socket that wasn't plugged in\n");
 		}
 	}
 
-	bool Wire::AllowInteractionWith(GameObject* gameObject)
+	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
-		switch (gameObject->GetTypeID())
-		{
-		case SID("socket"):
-		{
-			return true;
-		} break;
-		}
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
 
-		return (!socket0ID.IsValid() && !socket1ID.IsValid());
+		JSONObject obj = parentObject.GetObject("wire plug");
+
+		obj.TryGetGameObjectID("wire id", wireID);
+		obj.TryGetGameObjectID("socket id", socketID);
 	}
 
-	void Wire::SetInteractingWith(GameObject* gameObject)
+	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject)
 	{
-		GameObject::SetInteractingWith(gameObject);
+		JSONObject obj = {};
+
+		if (wireID.IsValid())
+		{
+			obj.fields.emplace_back("wire id", JSONValue(wireID));
+		}
+
+		if (socketID.IsValid())
+		{
+			obj.fields.emplace_back("socket id", JSONValue(socketID));
+		}
+
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+		parentObject.fields.emplace_back("wire plug", JSONValue(obj));
+	}
+
+	void Socket::OnPlugIn(WirePlug* plug)
+	{
+		if (!connectedPlugID.IsValid())
+		{
+			connectedPlugID = plug->ID;
+		}
+		else
+		{
+			PrintError("Attempted to plug socket in when already full\n");
+		}
+	}
+
+	void Socket::OnUnPlug()
+	{
+		if (connectedPlugID.IsValid())
+		{
+			connectedPlugID = InvalidGameObjectID;
+		}
+		else
+		{
+			PrintError("Attempted to unplug from socket which had nothing plugged in\n");
+		}
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -6412,6 +6773,8 @@ namespace flex
 		JSONObject obj = parentObject.GetObject("socket");
 		obj.TryGetInt("slotIdx", slotIdx);
 
+		obj.TryGetGameObjectID("connected plug id", connectedPlugID);
+
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
 	}
@@ -6421,84 +6784,14 @@ namespace flex
 		JSONObject obj = {};
 
 		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
+		if (connectedPlugID.IsValid())
+		{
+			obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
+		}
 
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
 		parentObject.fields.emplace_back("socket", JSONValue(obj));
-	}
-
-	bool Socket::AllowInteractionWith(GameObject* gameObject)
-	{
-		switch (gameObject->GetTypeID())
-		{
-		case SID("player"):
-		{
-			//Player* player = (Player*)gameObject;
-			//if (player->m_HeldItem != nullptr)
-			//{
-			//	return (player->m_HeldItem->GetTypeID() == SID("wire"));
-			//}
-			//else
-			{
-				return (connectedWire != nullptr);
-			}
-		} break;
-		}
-
-		return true;
-	}
-
-	void Socket::SetInteractingWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			if (connectedWire != nullptr)
-			{
-				connectedWire->Unplug(this);
-				connectedWire = nullptr;
-			}
-			return;
-		}
-
-		switch (gameObject->GetTypeID())
-		{
-		case SID("player"):
-		{
-			//Player* player = (Player*)gameObject;
-			//if (player->m_HeldItem != nullptr)
-			//{
-			//	if (player->m_HeldItem->GetTypeID() == SID("wire"))
-			//	{
-			//		Wire* wire = (Wire*)player->m_HeldItem;
-			//		if (connectedWire == nullptr)
-			//		{
-			//			connectedWire = wire;
-			//			wire->PlugIn(this);
-			//		}
-			//		else
-			//		{
-			//			wire->Unplug(this);
-			//			connectedWire = nullptr;
-			//		}
-			//	}
-			//
-			//}
-			//else
-			//{
-			//	if (connectedWire != nullptr)
-			//	{
-			//		connectedWire->Unplug(this);
-			//		connectedWire->SetInteractingWith(player);
-			//		player->m_HeldItem = connectedWire;
-			//		connectedWire = nullptr;
-			//	}
-			//}
-		} break;
-		default:
-		{
-			GameObject::SetInteractingWith(gameObject);
-		} break;
-		}
 	}
 
 	Terminal::Terminal() :
@@ -6572,6 +6865,8 @@ namespace flex
 
 	void Terminal::Update()
 	{
+		PROFILE_AUTO("Terminal Update");
+
 		if (m_DisplayReloadTimeRemaining != -1.0f)
 		{
 			m_DisplayReloadTimeRemaining -= g_DeltaTime;
@@ -6582,7 +6877,7 @@ namespace flex
 		}
 
 		m_CursorBlinkTimer += g_DeltaTime;
-		bool bRenderCursor = (m_ObjectInteractingWith != nullptr);
+		bool bRenderCursor = m_bBeingInteractedWith;
 		if (fmod(m_CursorBlinkTimer, m_CursorBlinkRate) > m_CursorBlinkRate / 2.0f)
 		{
 			bRenderCursor = false;
@@ -7033,31 +7328,24 @@ namespace flex
 		}
 	}
 
-	bool Terminal::AllowInteractionWith(GameObject* gameObject)
+	bool Terminal::IsInteractable(Player* player)
 	{
-		if (gameObject == nullptr)
+		Transform* playerTransform = player->GetTransform();
+		glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
+		real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
+		real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
+		// Ensure player is looking our direction and in front of us
+		if (FoF < -0.15f && FoP < -0.35f)
 		{
 			return true;
 		}
 
-		if (gameObject->GetTypeID() == SID("player"))
-		{
-			Player* player = static_cast<Player*>(gameObject);
-			//if (player->m_HeldItem == nullptr)
-			{
-				Transform* playerTransform = player->GetTransform();
-				glm::vec3 dPos = m_Transform.GetWorldPosition() - playerTransform->GetWorldPosition();
-				real FoP = glm::dot(m_Transform.GetForward(), glm::normalize(dPos));
-				real FoF = glm::dot(m_Transform.GetForward(), playerTransform->GetForward());
-				// Ensure player is looking our direction and in front of us
-				if (FoF < -0.15f && FoP < -0.35f)
-				{
-					return true;
-				}
-			}
-		}
-
 		return false;
+	}
+
+	void Terminal::SetBeingInteractedWith(Player* player)
+	{
+		m_bBeingInteractedWith = player != nullptr;
 	}
 
 	void Terminal::OnScriptChanged()
@@ -7926,9 +8214,75 @@ namespace flex
 
 	void ParticleSystem::UpdateModelMatrix()
 	{
+		PROFILE_AUTO("ParticleSystem Update");
+
 		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
 
 		GameObject::Update();
+	}
+
+	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
+	{
+		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
+		{
+			if (strcmp(str, NoiseFunctionTypeNames[i]) == 0)
+			{
+				return (Type)i;
+			}
+		}
+
+		return Type::_NONE;
+	}
+
+	const char* NoiseFunction::TypeToString(Type type)
+	{
+		return NoiseFunctionTypeNames[(i32)type];
+	}
+
+	NoiseFunction NoiseFunction::GenerateDefault(Type type)
+	{
+		NoiseFunction result = {};
+		result.type = type;
+		result.heightScale = 1.0f;
+		result.isolateOctave = -1;
+
+		switch (type)
+		{
+		case Type::PERLIN:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.isolateOctave = -1;
+		} break;
+		case Type::FBM:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.wavelength = 100.0f;
+		} break;
+		case Type::VORONOI:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.wavelength = 100.0f;
+			result.sharpness = 1.0f;
+		} break;
+		case Type::SMOOTH_VORONOI:
+		{
+			result.baseFeatureSize = 150.0f;
+			result.numOctaves = 6;
+			result.H = 0.8f;
+			result.lacunarity = 1.0f;
+			result.wavelength = 100.0f;
+			result.sharpness = 1.0f;
+		} break;
+		}
+
+		return result;
 	}
 
 	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -7940,7 +8294,10 @@ namespace flex
 		AddTag("terrain");
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
-		terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
+		if (!m_bUseAsyncCompute)
+		{
+			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
+		}
 	}
 
 	void TerrainGenerator::Initialize()
@@ -7948,77 +8305,194 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Terrain";
 		matCreateInfo.shaderName = "terrain";
-		matCreateInfo.constAlbedo = glm::vec3(1.0f, 0.0f, 0.0f);
+		matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.bSerializable = false;
 		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
+		GenerateGradients();
+
+		TerrainGenConstantData constantData;
+		FillOutConstantData(constantData);
+
+		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+		glm::vec2 center2D(centerPoint.x, centerPoint.z);
+		m_PreviousCenterPoint = centerPoint;
+
+		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, m_MaxChunkCount);
+
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
-		GenerateGradients();
+		SetCastsShadow(false);
 
-		criticalSection = Platform::InitCriticalSection();
-
-		for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+		if (!m_bUseAsyncCompute)
 		{
-			AllocWorkQueueEntry(i);
+			criticalSection = Platform::InitCriticalSection();
+
+			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			{
+				AllocWorkQueueEntry(i);
+			}
+
+			terrain_workQueueEntriesCompleted = 0;
+			terrain_workQueueEntriesCreated = 0;
+			WRITE_BARRIER;
+			terrain_workQueueEntriesClaimed = 0;
+			WRITE_BARRIER;
+
+			// Kick off threads to wait for work
+			{
+				u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
+
+				threadUserData = {};
+				threadUserData.running = true;
+				threadUserData.criticalSection = criticalSection;
+				Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
+			}
+
+			WRITE_BARRIER;
 		}
-
-		terrain_workQueueEntriesCompleted = 0;
-		terrain_workQueueEntriesCreated = 0;
-		WRITE_BARRIER;
-		terrain_workQueueEntriesClaimed = 0;
-		WRITE_BARRIER;
-
-		// Kick off threads to wait for work
-		{
-			u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
-
-			threadUserData = {};
-			threadUserData.running = true;
-			threadUserData.criticalSection = criticalSection;
-			Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
-		}
-
-		WRITE_BARRIER;
 
 		DiscoverChunks();
+
 		// Wait to generate chunks until road has been generated
 
 		GameObject::Initialize();
 	}
 
-	void TerrainGenerator::PostInitialize()
+	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData)
 	{
-		GameObject::PostInitialize();
+		constantData.chunkSize = m_ChunkSize;
+		constantData.maxHeight = m_MaxHeight;
+		constantData.roadBlendDist = m_RoadBlendDist;
+		constantData.roadBlendThreshold = m_RoadBlendThreshold;
+		constantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
+		constantData.numPointsPerAxis = m_NumPointsPerAxis;
+		constantData.isoLevel = m_IsoLevel;
+
+
+		//// Copy road segments to GPU-friendly memory
+		//{
+		//	i32 i = 0;
+		//	for (auto& iter : m_RoadSegments)
+		//	{
+		//		glm::vec2i chunkIndex = iter.first;
+		//
+		//		for (RoadSegment* roadSegment : iter.second)
+		//		{
+		//			RoadSegment_GPU roadSegmentGPU = {};
+		//			roadSegmentGPU.aabb = roadSegment->aabb;
+		//			roadSegmentGPU.curve = BezierCurve3D_GPU{ {
+		//					glm::vec4(roadSegment->curve.points[0], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[1], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[2], 1.0f),
+		//					glm::vec4(roadSegment->curve.points[3], 1.0f)
+		//				} };
+		//			roadSegmentGPU.widthStart = roadSegment->widthStart;
+		//			roadSegmentGPU.widthEnd = roadSegment->widthEnd;
+		//
+		//			if (!Contains(m_RoadSegmentsGPU, roadSegmentGPU))
+		//			{
+		//				m_RoadSegmentsGPU[i++] = roadSegmentGPU;
+		//			}
+		//		}
+		//	}
+		//
+		//	memset(m_RoadSegmentsGPU.data() + i, 0, (MAX_NUM_ROAD_SEGMENTS - i) * sizeof(RoadSegment_GPU));
+		//}
+		//memcpy(constantData.roadSegments, m_RoadSegmentsGPU.data(), MAX_NUM_ROAD_SEGMENTS * sizeof(RoadSegment_GPU));
+
+		// TODO:
+		//memset(constantData.overlappingRoadSegmentIndices, 0, sizeof(i32) * MAX_NUM_ROAD_SEGMENTS * MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK);
+
+		memcpy(&constantData.biomeNoise, &m_BiomeNoise, sizeof(NoiseFunction_GPU));
+
+		// Copy biomes
+		constantData.biomeCount = (u32)m_Biomes.size();
+		for (u32 i = 0; i < constantData.biomeCount; ++i)
+		{
+			Biome& biomeCPU = m_Biomes[i];
+			Biome_GPU& biomeGPU = constantData.biomes[i];
+
+			biomeGPU = {};
+			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
+			for (u32 j = 0; j < noiseFunctionCount; ++j)
+			{
+				NoiseFunction& noiseFuncCPU = biomeCPU.noiseFunctions[j];
+				NoiseFunction_GPU& noiseFuncGPU = biomeGPU.noiseFunctions[j];
+				memcpy(&noiseFuncGPU, &noiseFuncCPU, sizeof(NoiseFunction_GPU));
+			}
+		}
+		memset(&constantData.biomes[constantData.biomeCount], 0, (MAX_BIOME_COUNT - constantData.biomeCount) * sizeof(Biome_GPU));
+
+		auto PackByte = [](u32 num, i32 byteIndex)
+		{
+			return (num & 0xFF) << byteIndex * 8;
+		};
+
+		// Pack biome noise function counts
+		glm::uvec4 curr(0);
+		//i32 currOffset = 0;
+		i32 index0 = 0; // Array index
+		i32 index1 = 0; // Index into uvec4
+		i32 index2 = 0; // Index into bytes of uvec4 component
+		for (u32 i = 0; i < constantData.biomeCount; ++i)
+		{
+			Biome& biomeCPU = m_Biomes[i];
+
+			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
+
+			curr[index1] = curr[index1] | PackByte(noiseFunctionCount, index2);
+
+			++index2;
+			if (index2 >= 4)
+			{
+				index2 = 0;
+
+				++index1;
+				if (index1 >= 4)
+				{
+					index1 = 0;
+
+					constantData.biomeNoiseFunctionCounts[index0] = curr;
+					++index0;
+					curr = glm::uvec4(0);
+				}
+			}
+		}
+		if (index2 != 0 || index1 != 0)
+		{
+			constantData.biomeNoiseFunctionCounts[index0] = curr;
+		}
+		u32 uvec4sInUse = (u32)glm::ceil(constantData.biomeCount / 16.0f);
+		memset(&constantData.biomeNoiseFunctionCounts[uvec4sInUse], 0, (BIOME_NOISE_FUNCTION_INT4_COUNT - uvec4sInUse) * sizeof(glm::uvec4));
+
+		constantData.randomTablesSize = (u32)m_RandomTables.size();
+
+		// Post Process
+
+		//postProcessConstantData.blendRadius = 7.0f;
+		//postProcessConstantData.chunkSize = m_ChunkSize;
+		//postProcessConstantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		// TODO: Update when capacity changes
+		//postProcessConstantData.vertexBufferSize = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * m_MaxChunkCount;
 	}
 
 	void TerrainGenerator::Update()
 	{
-		//if (waveChunks.size() > terrain_workQueue->Size())
-		//{
-		//	for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-		//	{
-		//		// TODO: Reuse memory
-		//		FreeWorkQueueEntry(i);
-		//	}
-		//	delete terrain_workQueue;
-		//
-		//	u32 newSize = (u32)(waveChunks.size() * 1.2f);
-		//	terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
-		//	for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-		//	{
-		//		AllocWorkQueueEntry(i);
-		//	}
-		//}
+		PROFILE_AUTO("TerrainGenerator Update");
 
-		terrain_workQueueEntriesCompleted = 0;
-		terrain_workQueueEntriesCreated = 0;
-		WRITE_BARRIER;
-		terrain_workQueueEntriesClaimed = 0;
-		WRITE_BARRIER;
+		if (!m_bUseAsyncCompute)
+		{
+			terrain_workQueueEntriesCompleted = 0;
+			terrain_workQueueEntriesCreated = 0;
+			WRITE_BARRIER;
+			terrain_workQueueEntriesClaimed = 0;
+			WRITE_BARRIER;
+		}
 
 		DiscoverChunks();
 		// Wait for road gen to call us back to fill out our road segments
@@ -8027,11 +8501,11 @@ namespace flex
 			GenerateChunks();
 		}
 
-		if (m_bDisplayTables)
+		if (m_bDisplayRandomTables)
 		{
 			real textureScale = 0.3f;
 			real textureY = -0.05f;
-			for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+			for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
 			{
 				SpriteQuadDrawInfo drawInfo = {};
 				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
@@ -8039,7 +8513,8 @@ namespace flex
 				drawInfo.bReadDepth = false;
 				drawInfo.scale = glm::vec3(textureScale);
 				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
-				drawInfo.textureID = m_TableTextureIDs[i];
+				drawInfo.textureID = m_RandomTableTextureID;
+				drawInfo.textureLayer = i;
 				g_Renderer->EnqueueSprite(drawInfo);
 
 				textureY -= (textureScale * 2.0f + 0.01f);
@@ -8047,30 +8522,35 @@ namespace flex
 			}
 		}
 
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
+		// TDOO: When using async compute trigger readback for nearby chunks
+		if (!m_bUseAsyncCompute)
 		{
-			glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
-			glm::vec2 playerPos2D(playerPos.x, playerPos.z);
-			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
 			{
-				glm::vec2i chunkIndex = iter->first;
-				glm::vec2 chunkPos = glm::vec2(chunkIndex.x * ChunkSize, chunkIndex.y * ChunkSize);
-				real distToPlayer2 = glm::distance2(chunkPos, playerPos2D);
+				glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+				for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+				{
+					const glm::ivec3& chunkIndex = iter->first;
+					glm::vec3 chunkPos = glm::vec3(chunkIndex) * m_ChunkSize;
+					real distToPlayer2 = glm::distance2(chunkPos, playerPos);
 
-				bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
-				if (bShouldBeLoaded)
-				{
-					if (iter->second->rigidBody == nullptr)
+					bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
+					if (bShouldBeLoaded)
 					{
-						CreateChunkRigidBody(chunkIndex);
+						if (iter->second->rigidBody == nullptr)
+						{
+							Chunk* chunk = m_Meshes[chunkIndex];
+							CreateChunkRigidBody(chunk);
+						}
 					}
-				}
-				else
-				{
-					if (iter->second->rigidBody != nullptr)
+					else
 					{
-						DestroyChunkRigidBody(chunkIndex);
+						if (iter->second->rigidBody != nullptr)
+						{
+							Chunk* chunk = m_Meshes[chunkIndex];
+							DestroyChunkRigidBody(chunk);
+						}
 					}
 				}
 			}
@@ -8086,29 +8566,24 @@ namespace flex
 		// TODO: Only join our threads!
 		Platform::JoinThreads();
 
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		for (auto& pair : m_Meshes)
 		{
-			// Mesh components will be destroyed by Mesh::Destroy
-			if (iter->second->rigidBody != nullptr)
-			{
-				iter->second->rigidBody->Destroy();
-				delete iter->second->rigidBody;
-			}
-			delete iter->second->triangleIndexVertexArray;
-
-			delete iter->second;
+			DestroyChunk(pair.second);
 		}
 		m_Meshes.clear();
 
 		m_ChunksToDestroy.clear();
 		m_ChunksToLoad.clear();
 
-		for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+		if (terrain_workQueue != nullptr)
 		{
-			FreeWorkQueueEntry(i);
+			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			{
+				FreeWorkQueueEntry(i);
+			}
+			delete terrain_workQueue;
+			terrain_workQueue = nullptr;
 		}
-		delete terrain_workQueue;
-		terrain_workQueue = nullptr;
 
 		Platform::FreeCriticalSection(criticalSection);
 		criticalSection = nullptr;
@@ -8118,19 +8593,141 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
+	bool TerrainGenerator::DrawNoiseFunctionImGui(NoiseFunction& noiseFunction, bool& bOutRemoved)
+	{
+		bool bValueChanged = false;
+
+		static auto typeNameGetter = [](void* value, i32 index, const char** outName) -> bool
+		{
+			FLEX_UNUSED(value);
+
+			if (index >= 0 && index < (i32)NoiseFunction::Type::_NONE)
+			{
+				*outName = NoiseFunctionTypeNames[index];
+				return true;
+			}
+
+			*outName = "None";
+			return false;
+		};
+
+		const char* typeName = "None";
+		if ((i32)noiseFunction.type >= 0 && (i32)noiseFunction.type < (i32)NoiseFunction::Type::_NONE)
+		{
+			typeName = NoiseFunctionTypeNames[(i32)noiseFunction.type];
+		}
+		// Assumes this function was called within an ImGui::PushID/PopID pair so this doesn't cause conflicts
+		if (ImGui::TreeNode(typeName))
+		{
+			if (ImGui::Combo("Type", (i32*)&noiseFunction.type, typeNameGetter, nullptr, (i32)NoiseFunction::Type::_NONE))
+			{
+				bValueChanged = true;
+				noiseFunction = NoiseFunction::GenerateDefault(noiseFunction.type);
+			}
+
+			bValueChanged = ImGui::SliderFloat("H", &noiseFunction.H, 0.0f, 2.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Feature size", &noiseFunction.baseFeatureSize, 1.0f, 1000.0f) || bValueChanged;
+			const i32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
+			if (ImGui::SliderInt("Num octaves", &noiseFunction.numOctaves, 1, maxNumOctaves))
+			{
+				noiseFunction.numOctaves = glm::clamp(noiseFunction.numOctaves, 1, maxNumOctaves);
+				bValueChanged = true;
+			}
+			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -10.0f, 10.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 1000.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
+
+			if (ImGui::Button("Delete layer"))
+			{
+				bOutRemoved = true;
+				bValueChanged = true;
+			}
+
+			ImGui::TreePop();
+		}
+
+		if (ImGui::BeginPopupContextWindow(""))
+		{
+			if (ImGui::Button("Delete layer"))
+			{
+				bOutRemoved = true;
+				bValueChanged = true;
+			}
+
+			ImGui::EndPopup();
+		}
+
+		return bValueChanged;
+	}
+
 	void TerrainGenerator::DrawImGuiObjects()
 	{
 		GameObject::DrawImGuiObjects();
 
-		ImGui::Text("Loaded chunks: %u (loading: %u)", (u32)m_Meshes.size(), (u32)m_ChunksToLoad.size());
+		u32 loadedChunkCount = (u32)m_Meshes.size();
+		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
+
+		u32 totalVertCount = 0;
+
+		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		{
+			totalVertCount += g_Renderer->GetChunkVertCount(iter->second->linearIndex);
+		}
+
+		if (ImGui::TreeNode("Loaded Chunks"))
+		{
+			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			{
+				ImGui::PushID(iter->second->linearIndex);
+
+				u32 vertCount = g_Renderer->GetChunkVertCount(iter->second->linearIndex);
+				if (vertCount == 0)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				}
+
+				if (ImGui::Button("x"))
+				{
+					g_Renderer->SetChunkVertCount(iter->second->linearIndex, 0);
+				}
+
+				ImGui::SameLine();
+
+				ImGui::Text("[%i] %i,%i,%i - %i verts %s",
+					iter->second->linearIndex,
+					iter->first.x, iter->first.y, iter->first.z,
+					vertCount,
+					iter->second->triangleIndexVertexArray != nullptr ? "(collision)" : "");
+
+				if (vertCount == 0)
+				{
+					ImGui::PopStyleColor();
+				}
+
+				ImGui::PopID();
+			}
+
+			ImGui::TreePop();
+		}
+
+		u32 pointsPerVoxel = (m_NumPointsPerAxis - 1);
+		u32 maxVertsPerChunk = pointsPerVoxel * pointsPerVoxel * pointsPerVoxel * 5 * 3;
+		ImGui::Text("Max verts per chunk: %u", maxVertsPerChunk);
+		std::string vertMemoryStr = PrettifyLargeNumber((u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
+		ImGui::Text("Total vert memory: %sB", vertMemoryStr.c_str());
+		std::string totalVertCountStr = PrettifyLargeNumber((u64)totalVertCount, 2);
+		ImGui::Text("Total verts: %s", totalVertCountStr.c_str());
 
 		bool bRegen = false;
+		bool bRegenGradients = false;
 
 		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
 
 		ImGui::SameLine();
 
-		ImGui::Checkbox("Display tables", &m_bDisplayTables);
+		ImGui::Checkbox("Display tables", &m_bDisplayRandomTables);
 
 		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
 		{
@@ -8140,16 +8737,149 @@ namespace flex
 			}
 		}
 
-		bRegen = ImGui::SliderFloat("Base octave scale", &m_BaseOctave, 1.0f, 400.0f) || bRegen;
+		ImGui::Separator();
 
-		bRegen = ImGui::SliderFloat("Octave scale", &m_OctaveScale, 1.0f, 250.0f) || bRegen;
-		const u32 maxOctaveCount = (u32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
-		bRegen = ImGuiExt::SliderUInt("Octave count", &m_NumOctaves, 1, maxOctaveCount) || bRegen;
+		{
+			ImGui::PushID(99);
+			ImGui::Text("Biome noise");
 
-		bRegen = ImGui::SliderInt("Isolate octave", &m_IsolateOctave, -1, m_NumOctaves - 1) || bRegen;
+			bool bRemoved = false;
+			bool bValueChanged = DrawNoiseFunctionImGui(m_BiomeNoise, bRemoved);
+			ImGui::PopID();
 
-		bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
-		bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
+			if (bValueChanged)
+			{
+				bRegen = true;
+			}
+		}
+
+		ImGui::Separator();
+
+		ImGui::Text("Biomes");
+		for (i32 biomeIndex = 0; biomeIndex < (i32)m_Biomes.size(); ++biomeIndex)
+		{
+			Biome& biome = m_Biomes[biomeIndex];
+
+			ImGui::PushID(&biome);
+
+			if (ImGui::TreeNode(biome.name.c_str()))
+			{
+				if (ImGui::BeginPopupContextWindow())
+				{
+					static char buff[128];
+					if (ImGui::IsWindowAppearing())
+					{
+						memset(buff, 0, 128);
+					}
+
+					if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						biome.name = Trim(std::string(buff));
+					}
+
+					if (ImGui::Button("Remove biome"))
+					{
+						m_Biomes.erase(m_Biomes.begin() + biomeIndex);
+						bRegen = true;
+						ImGui::EndPopup();
+						ImGui::TreePop();
+						ImGui::PopID();
+						break;
+					}
+
+					ImGui::EndPopup();
+				}
+
+				for (i32 i = 0; i < (i32)biome.noiseFunctions.size(); ++i)
+				{
+					ImGui::PushID(i);
+					bool bRemoved = false;
+					bool bValueChanged = DrawNoiseFunctionImGui(biome.noiseFunctions[i], bRemoved);
+					ImGui::PopID();
+
+					if (bRemoved)
+					{
+						biome.noiseFunctions.erase(biome.noiseFunctions.begin() + i);
+						bRegen = true;
+						break;
+					}
+
+					if (bValueChanged)
+					{
+						bRegen = true;
+						break;
+					}
+				}
+
+				if (ImGui::Button("Add new noise layer"))
+				{
+					biome.noiseFunctions.push_back(NoiseFunction::GenerateDefault(NoiseFunction::Type::PERLIN));
+					bRegen = true;
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::PopID();
+		}
+
+		const char* newBiomePopupName = "New biome";
+		if (ImGui::Button("Add new biome"))
+		{
+			ImGui::OpenPopup(newBiomePopupName);
+		}
+
+		if (ImGui::BeginPopupModal(newBiomePopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			static char buff[128];
+			if (ImGui::IsWindowAppearing())
+			{
+				memset(buff, 0, 128);
+			}
+
+			bool bCreate = false;
+
+			if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				bCreate = true;
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
+			bCreate = ImGui::Button("Create") || bCreate;
+
+			if (bCreate)
+			{
+				std::string biomeName = Trim(std::string(buff));
+				Biome biome = {};
+				biome.name = biomeName;
+				m_Biomes.push_back(biome);
+				bRegen = true;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+
+
+		//i32 maxNoiseLayer = 6; // TODO: find largest num layers in all biomes?
+		//bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, maxNoiseLayer) || bRegen;
+
+		//bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
+		//bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
 
 		u32 oldtableWidth = m_BasePerlinTableWidth;
 		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 1, 512))
@@ -8158,7 +8888,7 @@ namespace flex
 			if (m_BasePerlinTableWidth != oldtableWidth)
 			{
 				GenerateGradients();
-				bRegen = true;
+				bRegenGradients = true;
 			}
 		}
 
@@ -8166,63 +8896,96 @@ namespace flex
 
 		ImGui::SameLine();
 
-		bRegen = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegen;
+		bRegenGradients = ImGui::Button("Regen gradients") || bRegenGradients;
+
+		ImGui::SameLine();
+
+		bRegenGradients = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegenGradients;
 
 		if (m_UseManualSeed)
 		{
-			bRegen = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegen;
+			bRegenGradients = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegenGradients;
 		}
 
-		const u32 previousVertCountPerChunkAxis = VertCountPerChunkAxis;
-		bRegen = ImGuiExt::InputUInt("Verts per chunk", &VertCountPerChunkAxis) || bRegen;
+		u32 minPointsPerAxis = 2 + 1;
+		u32 maxPointsPerAxis = 32 + 1;
+		const u32 previousPointsPerAxis = m_NumPointsPerAxis;
+		if (ImGuiExt::InputUInt("Points per axis", &m_NumPointsPerAxis))
+		{
+			m_NumPointsPerAxis = glm::clamp(m_NumPointsPerAxis, minPointsPerAxis, maxPointsPerAxis);
+			if (previousPointsPerAxis != m_NumPointsPerAxis)
+			{
+				bRegen = true;
+			}
+		}
 
-		if (VertCountPerChunkAxis > 2)
+		if (m_NumPointsPerAxis > minPointsPerAxis)
 		{
 			if (ImGui::Button("/2"))
 			{
 				bRegen = true;
-				VertCountPerChunkAxis /= 2;
+				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) / 2 + 1;
 			}
 
-			ImGui::SameLine();
+			if (m_NumPointsPerAxis < maxPointsPerAxis)
+			{
+				ImGui::SameLine();
+			}
 		}
 
-		if (ImGui::Button("x2"))
+		if (m_NumPointsPerAxis < maxPointsPerAxis)
 		{
-			bRegen = true;
-			VertCountPerChunkAxis *= 2;
+			if (ImGui::Button("x2"))
+			{
+				bRegen = true;
+				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) * 2 + 1;
+			}
 		}
 
-		bRegen = ImGui::SliderFloat("Chunk size", &ChunkSize, 1.0f, 128.0f) || bRegen;
+		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 512) || bRegen;
 
-		bRegen = ImGui::SliderFloat("Max height", &MaxHeight, 0.1f, 500.0f) || bRegen;
+		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 1024.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("Max height", &m_MaxHeight, 0.1f, 500.0f) || bRegen;
+
+		bRegen = ImGui::SliderFloat("Iso level", &m_IsoLevel, -1.0f, 1.0f) || bRegen;
 
 		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
 		bRegen = ImGui::ColorEdit3("high", &m_HighCol.x) || bRegen;
 
-		if (bRegen)
+		if (bRegen || bRegenGradients)
 		{
-			GenerateGradients();
-			DestroyAllChunks();
-
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			if (bRegenGradients)
 			{
-				(*terrain_workQueue)[i].baseOctave = m_BaseOctave;
-				(*terrain_workQueue)[i].chunkSize = ChunkSize;
-				(*terrain_workQueue)[i].maxHeight = MaxHeight;
-				(*terrain_workQueue)[i].octaveScale = m_OctaveScale;
-				(*terrain_workQueue)[i].numOctaves = m_NumOctaves;
-				(*terrain_workQueue)[i].vertCountPerChunkAxis = VertCountPerChunkAxis;
-				(*terrain_workQueue)[i].isolateOctave = m_IsolateOctave;
+				GenerateGradients();
 			}
 
-			if (VertCountPerChunkAxis != previousVertCountPerChunkAxis)
+			DestroyAllChunks();
+
+			RoadManager* roadManager = GetSystem<RoadManager>(SystemType::ROAD_MANAGER);
+			roadManager->RegenerateAllRoads();
+
+			if (m_bUseAsyncCompute)
 			{
-				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				Regenerate();
+			}
+			else
+			{
+				if (m_NumPointsPerAxis != previousPointsPerAxis)
 				{
-					FreeWorkQueueEntry(i);
-					AllocWorkQueueEntry(i);
+					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+					{
+						FreeWorkQueueEntry(i);
+						AllocWorkQueueEntry(i);
+					}
+				}
+				else
+				{
+					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+					{
+						FillInTerrainChunkData((*terrain_workQueue)[i]);
+					}
 				}
 			}
 		}
@@ -8279,6 +9042,46 @@ namespace flex
 		}
 	}
 
+	NoiseFunction TerrainGenerator::ParseNoiseFunction(const JSONObject& noiseFunctionObj)
+	{
+		NoiseFunction result = {};
+
+		std::string typeName = noiseFunctionObj.GetString("type");
+		result.type = NoiseFunction::TypeFromString(typeName.c_str());
+
+		noiseFunctionObj.TryGetFloat("feature size", result.baseFeatureSize);
+		noiseFunctionObj.TryGetInt("num octaves", result.numOctaves);
+		noiseFunctionObj.TryGetFloat("h", result.H);
+		noiseFunctionObj.TryGetFloat("height scale", result.heightScale);
+		noiseFunctionObj.TryGetFloat("lacunarity", result.lacunarity);
+		noiseFunctionObj.TryGetFloat("wavelength", result.wavelength);
+		noiseFunctionObj.TryGetFloat("sharpness", result.sharpness);
+
+		return result;
+	}
+
+	JSONObject TerrainGenerator::SerializeNoiseFunction(const NoiseFunction& noiseFunction)
+	{
+		JSONObject noiseFunctionObj = {};
+
+		noiseFunctionObj.fields.emplace_back("type", JSONValue(NoiseFunction::TypeToString(noiseFunction.type)));
+		noiseFunctionObj.fields.emplace_back("feature size", JSONValue(noiseFunction.baseFeatureSize));
+		noiseFunctionObj.fields.emplace_back("num octaves", JSONValue(noiseFunction.numOctaves));
+		if (noiseFunction.type == NoiseFunction::Type::FBM)
+		{
+			noiseFunctionObj.fields.emplace_back("h", JSONValue(noiseFunction.H));
+		}
+		noiseFunctionObj.fields.emplace_back("height scale", JSONValue(noiseFunction.heightScale));
+		noiseFunctionObj.fields.emplace_back("lacunarity", JSONValue(noiseFunction.lacunarity));
+		noiseFunctionObj.fields.emplace_back("wavelength", JSONValue((noiseFunction.wavelength)));
+		if (noiseFunction.type == NoiseFunction::Type::VORONOI || noiseFunction.type == NoiseFunction::Type::SMOOTH_VORONOI)
+		{
+			noiseFunctionObj.fields.emplace_back("sharpness", JSONValue((noiseFunction.sharpness)));
+		}
+
+		return noiseFunctionObj;
+	}
+
 	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
@@ -8287,9 +9090,9 @@ namespace flex
 		if (parentObject.HasField("chunk generator info"))
 		{
 			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
-			VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
-			ChunkSize = chunkGenInfo.GetFloat("chunk size");
-			MaxHeight = chunkGenInfo.GetFloat("max height");
+			m_VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
+			m_ChunkSize = chunkGenInfo.GetFloat("chunk size");
+			m_MaxHeight = chunkGenInfo.GetFloat("max height");
 			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
 			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
 
@@ -8297,16 +9100,55 @@ namespace flex
 			chunkGenInfo.TryGetFloat("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
 			chunkGenInfo.TryGetUInt("base table width", m_BasePerlinTableWidth);
 
+			chunkGenInfo.TryGetInt("isolate noise layer", m_IsolateNoiseLayer);
+
+			chunkGenInfo.TryGetUInt("num points per axis", m_NumPointsPerAxis);
+			chunkGenInfo.TryGetUInt("max chunk count", m_MaxChunkCount);
+
 			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
 			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
 			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
 
-			chunkGenInfo.TryGetFloat("base octave", m_BaseOctave);
-			chunkGenInfo.TryGetFloat("octave scale", m_OctaveScale);
-			chunkGenInfo.TryGetUInt("num octaves", m_NumOctaves);
-
 			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
 			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
+
+			std::vector<JSONObject> biomesArr;
+			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
+			{
+				m_Biomes.reserve(biomesArr.size());
+				for (const JSONObject& biomeObj : biomesArr)
+				{
+					std::vector<NoiseFunction> noiseFunctions;
+
+					std::vector<JSONObject> noiseFunctionsArr;
+					if (biomeObj.TryGetObjectArray("noise functions", noiseFunctionsArr))
+					{
+						noiseFunctions.reserve(noiseFunctionsArr.size());
+						for (const JSONObject& noiseFunctionObj : noiseFunctionsArr)
+						{
+							noiseFunctions.emplace_back(ParseNoiseFunction(noiseFunctionObj));
+						}
+					}
+					Biome biome;
+					biome.name = biomeObj.GetString("name");
+					biome.noiseFunctions = noiseFunctions;
+					m_Biomes.push_back(biome);
+				}
+			}
+			else
+			{
+				m_Biomes.push_back(Biome{ "default", { NoiseFunction::GenerateDefault(NoiseFunction::Type::FBM) } });
+			}
+
+			JSONObject biomeNoiseObj;
+			if (chunkGenInfo.TryGetObject("biome noise", biomeNoiseObj))
+			{
+				m_BiomeNoise = ParseNoiseFunction(biomeNoiseObj);
+			}
+			else
+			{
+				m_BiomeNoise = NoiseFunction::GenerateDefault(NoiseFunction::Type::VORONOI);
+			}
 		}
 	}
 
@@ -8314,11 +9156,16 @@ namespace flex
 	{
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(VertCountPerChunkAxis));
-		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(ChunkSize));
-		chunkGenInfo.fields.emplace_back("max height", JSONValue(MaxHeight));
+		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(m_VertCountPerChunkAxis));
+		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(m_ChunkSize));
+		chunkGenInfo.fields.emplace_back("max height", JSONValue(m_MaxHeight));
 		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
 		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
+
+		chunkGenInfo.fields.emplace_back("isolate noise layer", JSONValue(m_IsolateNoiseLayer));
+
+		chunkGenInfo.fields.emplace_back("num points per axis", JSONValue(m_NumPointsPerAxis));
+		chunkGenInfo.fields.emplace_back("max chunk count", JSONValue(m_MaxChunkCount));
 
 		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
 		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
@@ -8329,26 +9176,69 @@ namespace flex
 		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
 		chunkGenInfo.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
 
-		chunkGenInfo.fields.emplace_back("base octave", JSONValue(m_BaseOctave));
-		chunkGenInfo.fields.emplace_back("octave scale", JSONValue(m_OctaveScale));
-		chunkGenInfo.fields.emplace_back("num octaves", JSONValue(m_NumOctaves));
-
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
 		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
+
+		std::vector<JSONObject> biomesArr;
+		for (const Biome& biome : m_Biomes)
+		{
+			std::vector<JSONObject> noiseFunctionsArr;
+			noiseFunctionsArr.reserve(biome.noiseFunctions.size());
+			for (const NoiseFunction& noiseFunction : biome.noiseFunctions)
+			{
+				noiseFunctionsArr.emplace_back(SerializeNoiseFunction(noiseFunction));
+			}
+
+			JSONObject biomeObj = {};
+			biomeObj.fields.emplace_back("name", JSONValue(biome.name));
+			biomeObj.fields.emplace_back("noise functions", JSONValue(noiseFunctionsArr));
+
+			biomesArr.emplace_back(biomeObj);
+		}
+		chunkGenInfo.fields.emplace_back("biomes", JSONValue(biomesArr));
+
+		chunkGenInfo.fields.emplace_back("biome noise", JSONValue(SerializeNoiseFunction(m_BiomeNoise)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
-	real TerrainGenerator::Sample(const glm::vec2& pos)
+	void TerrainGenerator::Regenerate()
 	{
-		TerrainGenerator::TerrainChunkData chunkData = {};
-		chunkData.baseOctave = m_BaseOctave;
-		chunkData.numOctaves = m_NumOctaves;
-		chunkData.isolateOctave = m_IsolateOctave;
-		chunkData.octaveScale = m_OctaveScale;
-		chunkData.randomTables = &m_RandomTables;
-		real sample = SampleTerrain(&chunkData, pos);
-		return (sample - 0.5f) * MaxHeight + m_Transform.GetWorldPosition().y;
+		TerrainGenConstantData constantData;
+		FillOutConstantData(constantData);
+
+		g_Renderer->RegenerateTerrain(constantData, m_MaxChunkCount);
+
+		m_Meshes.clear();
+		m_ChunksToDestroy.clear();
+		m_ChunksToLoad.clear();
+
+		m_PreviousLoadedChunkRadius = 0.0f;
+
+		DiscoverChunks();
+		GenerateChunks();
+	}
+
+	void TerrainGenerator::FillInTerrainChunkData(volatile TerrainGenerator::TerrainChunkData& outChunkData)
+	{
+		outChunkData.chunkSize = m_ChunkSize;
+		outChunkData.maxHeight = m_MaxHeight;
+		outChunkData.roadBlendDist = m_RoadBlendDist;
+		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
+		outChunkData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
+		outChunkData.numPointsPerAxis = m_NumPointsPerAxis;
+
+		outChunkData.randomTables = &m_RandomTables;
+		outChunkData.roadSegments = &m_RoadSegments;
+		outChunkData.biomeNoise = &m_BiomeNoise;
+		outChunkData.biomes = &m_Biomes;
+	}
+
+	real TerrainGenerator::Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos)
+	{
+		real sample = SampleTerrain(&chunkData, pos).x;
+		return (sample - 0.5f) * m_MaxHeight + m_Transform.GetWorldPosition().y;
 	}
 
 	real TerrainGenerator::SmoothBlend(real t)
@@ -8360,7 +9250,9 @@ namespace flex
 	{
 		PROFILE_AUTO("Generate terrain chunk gradient tables");
 
-		m_RandomTables = std::vector<std::vector<glm::vec2>>(m_NumOctaves);
+		const u32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
+
+		m_RandomTables.resize(maxNumOctaves);
 
 		std::mt19937 m_RandGenerator;
 		std::uniform_real_distribution<real> m_RandDistribution;
@@ -8370,26 +9262,40 @@ namespace flex
 
 		{
 			u32 tableWidth = m_BasePerlinTableWidth;
-			for (u32 octave = 0; octave < m_NumOctaves; ++octave)
+			for (u32 octave = 0; octave < maxNumOctaves; ++octave)
 			{
-				m_RandomTables[octave] = std::vector<glm::vec2>(tableWidth * tableWidth);
+				m_RandomTables[octave].resize(tableWidth * tableWidth);
 
-				for (u32 i = 0; i < m_RandomTables[octave].size(); ++i)
+				for (glm::vec2& value : m_RandomTables[octave])
 				{
-					m_RandomTables[octave][i] = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
+					value = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
 				}
 
 				tableWidth /= 2;
 			}
 		}
 
-		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		if (m_RandomTableTextureID != InvalidTextureID)
 		{
-			g_ResourceManager->RemoveLoadedTexture(m_TableTextureIDs[i], true);
+			g_ResourceManager->RemoveLoadedTexture(m_RandomTableTextureID, true);
 		}
-		m_TableTextureIDs.resize(m_RandomTables.size());
 
-		for (u32 i = 0; i < m_TableTextureIDs.size(); ++i)
+		m_RandomTableTextureLayerCount = (u32)m_RandomTables.size();
+
+		u32 requiredTexMem = 0;
+		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
+		{
+			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
+			if (tableWidth < 1)
+			{
+				break;
+			}
+			requiredTexMem += (u32)m_RandomTables[i].size();
+		}
+
+		std::vector<glm::vec4> textureMem(requiredTexMem);
+		u32 offset = 0;
+		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
 		{
 			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
 			if (tableWidth < 1)
@@ -8397,16 +9303,24 @@ namespace flex
 				break;
 			}
 
-			std::vector<glm::vec4> textureMem(m_RandomTables[i].size());
-			for (u32 j = 0; j < m_RandomTables[i].size(); ++j)
+			u32 layerSize = (u32)m_RandomTables[i].size();
+			for (u32 j = 0; j < layerSize; ++j)
 			{
-				textureMem[j] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
+				textureMem[j + offset] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
 			}
-			m_TableTextureIDs[i] = g_Renderer->InitializeTextureFromMemory(&textureMem[0],
-				(u32)(textureMem.size() * sizeof(u32) * 4),
-				VK_FORMAT_R32G32B32A32_SFLOAT,
-				"Perlin random table", tableWidth, tableWidth, 4, VK_FILTER_NEAREST);
+			offset += layerSize;
 		}
+
+		// TODO: Upload as two channel texture
+		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
+		m_RandomTableTextureID = g_Renderer->InitializeTextureArrayFromMemory(textureMem.data(),
+			(u32)(textureMem.size() * sizeof(u32) * 4),
+			VK_FORMAT_R32G32B32A32_SFLOAT,
+			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
+
+			VK_FILTER_NEAREST /* ? */
+
+		);
 	}
 
 	void TerrainGenerator::UpdateRoadSegments()
@@ -8432,23 +9346,28 @@ namespace flex
 		for (const RoadSegment& roadSegment : road->roadSegments)
 		{
 			// TODO:  + 0.5f?
-			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / ChunkSize);
-			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / ChunkSize);
-			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / ChunkSize);
-			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / ChunkSize);
+			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / m_ChunkSize);
+			i32 minChunkIndexY = (i32)glm::floor((roadSegment.aabb.minY + pos.y - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexY = (i32)glm::ceil((roadSegment.aabb.maxY + pos.y + blendRadiusBoost) / m_ChunkSize);
+			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / m_ChunkSize);
+			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / m_ChunkSize);
 			for (i32 x = minChunkIndexX; x < maxChunkIndexX; ++x)
 			{
-				for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
+				for (i32 y = minChunkIndexY; y < maxChunkIndexY; ++y)
 				{
-					glm::vec2i chunkIndex = glm::vec2i(x, z);
-					auto iter = m_RoadSegments.find(chunkIndex);
-					if (iter == m_RoadSegments.end())
+					for (i32 z = minChunkIndexZ; z < maxChunkIndexZ; ++z)
 					{
-						m_RoadSegments.emplace(chunkIndex, std::vector<RoadSegment*>{ (RoadSegment*)&roadSegment });
-					}
-					else
-					{
-						iter->second.emplace_back((RoadSegment*)&roadSegment);
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						auto iter = m_RoadSegments.find(chunkIndex);
+						if (iter == m_RoadSegments.end())
+						{
+							m_RoadSegments.emplace(chunkIndex, std::vector<RoadSegment*>{ (RoadSegment*)&roadSegment });
+						}
+						else
+						{
+							iter->second.emplace_back((RoadSegment*)&roadSegment);
+						}
 					}
 				}
 			}
@@ -8457,391 +9376,389 @@ namespace flex
 
 	void TerrainGenerator::DiscoverChunks()
 	{
-		static std::set<glm::vec2i, Vec2iCompare> chunksInRadius;
-		chunksInRadius.clear();
+		PROFILE_AUTO("Terrain :: DiscoverChunks");
+
+		const i32 verticalChunkLoadRange = 6;
 
 		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		const glm::vec2 centerXZ(center.x, center.z);
-		const glm::vec2i camChunkIdx = (glm::vec2i)(glm::vec2(center.x, center.z) / ChunkSize);
-		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)ChunkSize);
+		glm::vec2 center2D(center.x, center.z);
+		const glm::ivec3 centerChunkIdx = (glm::ivec3)(center / m_ChunkSize);
+		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)m_ChunkSize);
 		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
-		for (i32 x = camChunkIdx.x - maxChunkIdxDiff; x < camChunkIdx.x + maxChunkIdxDiff; ++x)
+		const real pRadiusSqr = m_PreviousLoadedChunkRadius * m_PreviousLoadedChunkRadius;
+		for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
 		{
-			for (i32 z = camChunkIdx.y - maxChunkIdxDiff; z < camChunkIdx.y + maxChunkIdxDiff; ++z)
+			real xi = (x + 0.5f) * m_ChunkSize;
+			for (i32 z = centerChunkIdx.z - maxChunkIdxDiff; z < centerChunkIdx.z + maxChunkIdxDiff; ++z)
 			{
-				glm::vec2 chunkCenter((x + 0.5f) * ChunkSize, (z + 0.5f) * ChunkSize);
-				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
+				real zi = (z + 0.5f) * m_ChunkSize;
+				glm::vec2 chunkCenter(xi, zi);
+				bool bInRange = glm::distance2(chunkCenter, center2D) < radiusSqr;
+				bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
+
+				if (bInRange && !bPrevInRange)
 				{
-					chunksInRadius.emplace(glm::vec2i(x, z));
-				}
-			}
-		}
-
-		// Discover newly unloaded chunks
-		for (auto chunkIter = m_Meshes.begin(); chunkIter != m_Meshes.end(); ++chunkIter)
-		{
-			const glm::vec2i& chunkIdx = chunkIter->first;
-
-			if (!Contains(chunksInRadius, chunkIdx) &&
-				!Contains(m_ChunksToDestroy, chunkIdx))
-			{
-				m_ChunksToDestroy.emplace(chunkIdx);
-
-				Erase(m_ChunksToLoad, chunkIdx);
-			}
-		}
-
-		//if (m_Meshes.size() < 512)
-		{
-			// Discover newly loaded chunks
-			u32 newChunksToLoadCount = 0;
-			for (const glm::vec2i& chunkIdx : chunksInRadius)
-			{
-				// TODO: Tell renderer to resize terrain dynamic UBO to accommodate all chunks to prevent many resizes
-
-				if (!Contains(m_Meshes, chunkIdx) &&
-					!Contains(m_ChunksToLoad, chunkIdx))
-				{
-					++newChunksToLoadCount;
-					m_ChunksToLoad.emplace(chunkIdx);
-
-					Erase(m_ChunksToDestroy, chunkIdx);
-
-					// Never queue more than this many in one frame
-					if (newChunksToLoadCount >= 256)
+					// Load entire vertical column
+					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
 					{
-						break;
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						m_ChunksToLoad.emplace(chunkIndex);
+					}
+				}
+				else if (!bInRange && bPrevInRange)
+				{
+					// Load entire vertical column
+					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
+					{
+						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
+						m_ChunksToDestroy.emplace(chunkIndex);
 					}
 				}
 			}
 		}
+
+		m_PreviousCenterPoint = center2D;
+		m_PreviousLoadedChunkRadius = m_LoadedChunkRadius;
 	}
 
 	void TerrainGenerator::GenerateChunks()
 	{
-		// Resize work queue if not large enough
-		if ((m_Meshes.size() + m_ChunksToLoad.size()) > terrain_workQueue->Size())
+		if (m_bUseAsyncCompute)
 		{
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			if (!m_ChunksToLoad.empty())
 			{
-				// TODO: Reuse memory
-				FreeWorkQueueEntry(i);
-			}
-			delete terrain_workQueue;
+				PROFILE_AUTO("TerrainGenerator register chunks");
 
-			u32 newSize = (u32)((m_Meshes.size() + m_ChunksToLoad.size()) * 1.2f);
-			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-			{
-				AllocWorkQueueEntry(i);
-			}
-
-			WRITE_BARRIER;
-		}
-
-		// Destroy far away chunks on the main thread
-		{
-			PROFILE_AUTO("Destroy terrain chunks");
-			ns start = Time::CurrentNanoseconds();
-			i32 iterationCount = 0;
-			while (m_ChunksToDestroy.size() > 0)
-			{
-				glm::vec2i chunkIdx = *m_ChunksToDestroy.begin();
-				m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
-
-				auto iter = m_Meshes.find(chunkIdx);
-				assert(iter != m_Meshes.end());
-				MeshComponent* mesh = iter->second->meshComponent;
-				u32 submeshIndex = iter->second->linearIndex;
-				m_Mesh->RemoveSubmesh(submeshIndex);
-				m_Meshes.erase(iter);
-				// TODO:
-				/*
-					if (iter->second->rigidBody != nullptr)
-					{
-						iter->second->rigidBody->Destroy();
-						delete iter->second->rigidBody;
-					}
-					delete iter->second->triangleIndexVertexArray;
-
-					delete iter->second;
-				*/
-				mesh->Destroy();
-				delete mesh;
-
-				++iterationCount;
-
-				ns now = Time::CurrentNanoseconds();
-				if ((now - start) > m_DeletionBudgetPerFrame)
+				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 				{
-					break;
+					const glm::ivec3& chunkIndex = *chunkToLoadIter;
+					// This shouldn't happen but it does for some reason
+					if (m_Meshes.find(chunkIndex) != m_Meshes.end())
+					{
+						continue;
+					}
+
+					Chunk* chunk = new Chunk();
+					chunk->meshComponent = nullptr;
+					chunk->linearIndex = (u32)m_Meshes.size(); // ?
+
+					g_Renderer->RegisterTerrainChunk(chunkIndex, chunk->linearIndex);
+					// TODO: Reuse slots
+					m_Meshes.emplace(chunkIndex, chunk);
+				}
+
+				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				m_ChunksToLoad.clear();
+			}
+
+			// Destroy far away chunks on the main thread
+			{
+				PROFILE_AUTO("TerrainGenerator destroy chunks");
+				while (!m_ChunksToDestroy.empty())
+				{
+					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
+					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
+
+					auto iter = m_Meshes.find(chunkIdx);
+					if (iter != m_Meshes.end())
+					{
+						DestroyChunk(iter->second);
+						m_Meshes.erase(iter);
+					}
+
+					g_Renderer->RemoveTerrainChunk(chunkIdx);
 				}
 			}
-			if (iterationCount != 0)
+		}
+		else
+		{
+			// Resize work queue if not large enough
+			if ((m_Meshes.size() + m_ChunksToLoad.size()) > terrain_workQueue->Size())
 			{
-				Print("Destroyed %d chunks (total: %d)\n", iterationCount, (i32)m_Meshes.size());
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					// TODO: Reuse memory
+					FreeWorkQueueEntry(i);
+				}
+				delete terrain_workQueue;
+
+				u32 newSize = (u32)((m_Meshes.size() + m_ChunksToLoad.size()) * 1.2f);
+				terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
+				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+				{
+					AllocWorkQueueEntry(i);
+				}
+
+				WRITE_BARRIER;
 			}
-		}
 
-		PROFILE_BEGIN("generate terrain");
+			// Destroy far away chunks on the main thread
+			{
+				PROFILE_AUTO("Destroy terrain chunks");
+				ns start = Time::CurrentNanoseconds();
+				i32 iterationCount = 0;
+				while (!m_ChunksToDestroy.empty())
+				{
+					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
+					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
-		//glm::vec3* positions = m_VertexBufferCreateInfo.positions_3D.data();
-		//glm::vec2* texCoords = m_VertexBufferCreateInfo.texCoords_UV.data();
-		//glm::vec4* colours = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
+					auto iter = m_Meshes.find(chunkIdx);
+					assert(iter != m_Meshes.end());
+					DestroyChunk(iter->second);
+					m_Meshes.erase(iter);
 
-		//{
-		//	auto existingChunkIter = m_Meshes.find(chunkIndex);
-		//	if (existingChunkIter != m_Meshes.end())
-		//	{
-		//		if (existingChunkIter->second->meshComponent != nullptr)
-		//		{
-		//			existingChunkIter->second->meshComponent->Destroy();
-		//			delete existingChunkIter->second;
-		//		}
-		//		m_Meshes.erase(existingChunkIter);
-		//	}
-		//}
+					++iterationCount;
 
-		// Fill out chunk data for threads to discover
-		for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
-		{
-			glm::vec2i chunkIndex = *chunkToLoadIter;
+					ns now = Time::CurrentNanoseconds();
+					if ((now - start) > m_DeletionBudgetPerFrame)
+					{
+						break;
+					}
+				}
+				if (iterationCount != 0)
+				{
+					Print("Destroyed %d chunks (total: %d)\n", iterationCount, (i32)m_Meshes.size());
+				}
+			}
 
-			assert(m_Meshes.find((glm::vec2i)chunkIndex) == m_Meshes.end());
+			PROFILE_BEGIN("generate terrain");
 
-			Chunk* chunk = new Chunk();
-			chunk->meshComponent = nullptr;
-			chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
-			// TODO: Reuse slots
-			m_Meshes.emplace(chunkIndex, chunk);
-
-			volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
-			terrainChunkData->chunkIndex.x = chunkIndex.x;
-			terrainChunkData->chunkIndex.y = chunkIndex.y;
-
-			WRITE_BARRIER;
-
-			Platform::AtomicIncrement(&terrain_workQueueEntriesCreated);
-		}
-
-		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
-		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
-
-		if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
-		{
-			terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
-			g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
-		}
-
-		// Wait for all threads to complete
-		// TODO: Call later in frame
-		while (terrain_workQueueEntriesCompleted != terrain_workQueueEntriesCreated)
-		{
-			// TODO: Handle completed entries as they come in rather than waiting for all
-			Platform::YieldProcessor();
-		}
-
-		PROFILE_END("generate terrain");
-
-		if (!m_ChunksToLoad.empty())
-		{
-			Profiler::PrintBlockDuration("generate terrain");
-
-			const u32 vertexCount = VertCountPerChunkAxis * VertCountPerChunkAxis;
-			const u32 triCount = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
-			const u32 indexCount = triCount * 3;
-
-			// TODO: Spread creation across multiple frames
-
-			static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
-			vertexBufferCreateInfo.positions_3D.clear();
-			vertexBufferCreateInfo.texCoords_UV.clear();
-			vertexBufferCreateInfo.colours_R32G32B32A32.clear();
-			vertexBufferCreateInfo.normals.clear();
-
-			vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
-			vertexBufferCreateInfo.positions_3D.resize(vertexCount);
-			vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
-			vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
-			vertexBufferCreateInfo.normals.resize(vertexCount);
-
-			static std::vector<u32> indices;
-			indices.resize(indexCount);
-
-			// TODO: Generate all new vertex buffers first, then do post pass to compute normals
-			u32 vertexBufferStride = CalculateVertexStride(vertexBufferCreateInfo.attributes);
-			i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
+			// Fill out chunk data for threads to discover
 			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
 			{
-				glm::vec2i chunkIndex = *chunkToLoadIter;
+				const glm::ivec3& chunkIndex = *chunkToLoadIter;
 
-				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+				assert(m_Meshes.find(chunkIndex) == m_Meshes.end());
 
-				memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
-				memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
-				memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
-				memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
+				Chunk* chunk = new Chunk();
+				chunk->meshComponent = nullptr;
+				chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
+				// TODO: Reuse slots
+				m_Meshes.emplace(chunkIndex, chunk);
 
-				auto chunkLeftIter = m_Meshes.find(chunkIndex - glm::vec2i(1, 0));
-				auto chunkRightIter = m_Meshes.find(chunkIndex + glm::vec2i(0, 1));
-				auto chunkBackIter = m_Meshes.find(chunkIndex - glm::vec2i(0, 1));
-				auto chunkForwardIter = m_Meshes.find(chunkIndex + glm::vec2i(1, 0));
-				u8* chunkLeftVertBuf = nullptr;
-				u8* chunkRightVertBuf = nullptr;
-				u8* chunkBackVertBuf = nullptr;
-				u8* chunkForwardVertBuf = nullptr;
-				if (chunkLeftIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkLeftIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkLeftVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkRightIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkRightIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkRightVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkBackIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkBackIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkBackVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
-				if (chunkForwardIter != m_Meshes.end())
-				{
-					MeshComponent* meshComponent = chunkForwardIter->second->meshComponent;
-					if (meshComponent != nullptr)
-					{
-						chunkForwardVertBuf = (u8*)meshComponent->GetVertexBufferData()->vertexData;
-					}
-				}
+				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
+				terrainChunkData->chunkIndex.x = chunkIndex.x;
+				terrainChunkData->chunkIndex.y = chunkIndex.y;
+				terrainChunkData->chunkIndex.z = chunkIndex.z;
 
-				real quadSize = ChunkSize / VertCountPerChunkAxis;
-				u32 vertIndex = 0;
-				for (u32 z = 0; z < VertCountPerChunkAxis; ++z)
-				{
-					for (u32 x = 0; x < VertCountPerChunkAxis; ++x)
-					{
-						real left = 0.0f;
-						if (x > 0)
-						{
-							left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
-						}
-						else if (chunkLeftVertBuf != nullptr)
-						{
-							glm::vec3* pos = (glm::vec3*)&chunkLeftVertBuf[(vertIndex + (VertCountPerChunkAxis - 1)) * vertexBufferStride];
-							left = pos->y;
-						}
+				WRITE_BARRIER;
 
-						real right = 0.0f;
-						if (x < VertCountPerChunkAxis - 1)
-						{
-							right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
-						}
-						else if (chunkRightVertBuf != nullptr)
-						{
-							glm::vec3* pos = (glm::vec3*)&chunkRightVertBuf[(vertIndex - (VertCountPerChunkAxis - 1)) * vertexBufferStride];
-							right = pos->y;
-						}
-
-						real back = 0.0f;
-						if (z > 0)
-						{
-							back = vertexBufferCreateInfo.positions_3D[vertIndex - VertCountPerChunkAxis].y;
-						}
-						else if (chunkBackVertBuf != nullptr)
-						{
-							glm::vec3* pos = (glm::vec3*)&chunkBackVertBuf[(x + (VertCountPerChunkAxis - 1) * VertCountPerChunkAxis) * vertexBufferStride];
-							back = pos->y;
-						}
-
-						real forward = 0.0f;
-						if (z < VertCountPerChunkAxis - 1)
-						{
-							forward = vertexBufferCreateInfo.positions_3D[vertIndex + VertCountPerChunkAxis].y;
-						}
-						else if (chunkForwardVertBuf != nullptr)
-						{
-							glm::vec3* pos = (glm::vec3*)&chunkForwardVertBuf[x * vertexBufferStride];
-							forward = pos->y;
-						}
-
-						real dX = left - right;
-						real dZ = back - forward;
-						vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f * quadSize, dZ));
-						//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
-
-						++vertIndex;
-					}
-				}
-
-				RenderObjectCreateInfo renderObjectCreateInfo = {};
-				i32 submeshIndex;
-				MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
-				if (meshComponent != nullptr)
-				{
-					m_Meshes[chunkIndex]->meshComponent = meshComponent;
-					m_Meshes[chunkIndex]->linearIndex = submeshIndex;
-				}
+				Platform::AtomicIncrement(&terrain_workQueueEntriesCreated);
 			}
 
-			Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
-			m_ChunksToLoad.clear();
+			Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
+			Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
+
+			if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
+			{
+				terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
+				g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
+			}
+
+			// Wait for all threads to complete
+			// TODO: Call later in frame
+			while (terrain_workQueueEntriesCompleted != terrain_workQueueEntriesCreated)
+			{
+				// TODO: Handle completed entries as they come in rather than waiting for all
+				Platform::YieldProcessor();
+			}
+
+			PROFILE_END("generate terrain");
+
+			if (!m_ChunksToLoad.empty())
+			{
+				const u32 vertexCount = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
+				const u32 triCount = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
+				const u32 indexCount = triCount * 3;
+
+				// TODO: Spread creation across multiple frames
+
+				static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+				vertexBufferCreateInfo.positions_3D.clear();
+				vertexBufferCreateInfo.texCoords_UV.clear();
+				vertexBufferCreateInfo.colours_R32G32B32A32.clear();
+				vertexBufferCreateInfo.normals.clear();
+
+				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
+				vertexBufferCreateInfo.positions_3D.resize(vertexCount);
+				vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
+				vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
+				vertexBufferCreateInfo.normals.resize(vertexCount);
+
+				static std::vector<u32> indices;
+				indices.resize(indexCount);
+
+				real quadSize = m_ChunkSize / (m_VertCountPerChunkAxis - 1);
+
+				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
+				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
+				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
+				{
+					const glm::ivec3& chunkIndex = *chunkToLoadIter;
+
+					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+
+					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
+					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
+
+					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
+					auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
+					if (roadSegmentIter != terrainChunkData->roadSegments->end())
+					{
+						overlappingRoadSegments = &roadSegmentIter->second;
+					}
+
+					glm::vec4 colour; // Throwaway
+					u32 vertIndex = 0;
+					for (u32 z = 0; z < m_VertCountPerChunkAxis; ++z)
+					{
+						for (u32 x = 0; x < m_VertCountPerChunkAxis; ++x)
+						{
+							glm::vec2 uv(x / (real)(m_VertCountPerChunkAxis - 1), z / (real)(m_VertCountPerChunkAxis - 1));
+
+							glm::vec2 vertPosOS = glm::vec2(uv.x * m_ChunkSize, uv.y * m_ChunkSize);
+							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * m_ChunkSize, chunkIndex.y * m_ChunkSize);
+
+							real left = 0.0f;
+							if (x > 0)
+							{
+								left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
+							}
+							else
+							{
+								left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
+							}
+
+							real right = 0.0f;
+							if (x < m_VertCountPerChunkAxis - 1)
+							{
+								right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
+							}
+							else
+							{
+								right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
+							}
+
+							real back = 0.0f;
+							if (z > 0)
+							{
+								back = vertexBufferCreateInfo.positions_3D[vertIndex - m_VertCountPerChunkAxis].y;
+							}
+							else
+							{
+								back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
+							}
+
+							real forward = 0.0f;
+							if (z < m_VertCountPerChunkAxis - 1)
+							{
+								forward = vertexBufferCreateInfo.positions_3D[vertIndex + m_VertCountPerChunkAxis].y;
+							}
+							else
+							{
+								forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
+									glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
+							}
+
+							real dX = left - right;
+							real dZ = back - forward;
+							vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f, dZ));
+							//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
+
+							++vertIndex;
+						}
+					}
+
+					RenderObjectCreateInfo renderObjectCreateInfo = {};
+					i32 submeshIndex;
+					MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
+					if (meshComponent != nullptr)
+					{
+						m_Meshes[chunkIndex]->meshComponent = meshComponent;
+						m_Meshes[chunkIndex]->linearIndex = submeshIndex;
+					}
+				}
+
+				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				m_ChunksToLoad.clear();
+			}
 		}
 	}
 
-	void TerrainGenerator::DestroyChunkRigidBody(const glm::vec2i& chunkIndex)
+	void TerrainGenerator::DestroyChunkRigidBody(Chunk* chunk)
 	{
-		m_Meshes[chunkIndex]->rigidBody->Destroy();
-		delete m_Meshes[chunkIndex]->rigidBody;
-		m_Meshes[chunkIndex]->rigidBody = nullptr;
-		delete m_Meshes[chunkIndex]->triangleIndexVertexArray;
-		m_Meshes[chunkIndex]->triangleIndexVertexArray = nullptr;
+		if (chunk->rigidBody != nullptr)
+		{
+			chunk->rigidBody->Destroy();
+			delete chunk->rigidBody;
+			chunk->rigidBody = nullptr;
+
+			delete chunk->collisionShape;
+			chunk->collisionShape = nullptr;
+		}
+		delete chunk->triangleIndexVertexArray;
+		chunk->triangleIndexVertexArray = nullptr;
 	}
 
-	void TerrainGenerator::CreateChunkRigidBody(const glm::vec2i& chunkIndex)
+	void TerrainGenerator::CreateChunkRigidBody(Chunk* chunk)
 	{
-		if (m_Meshes[chunkIndex]->rigidBody != nullptr)
+		if (chunk->rigidBody != nullptr)
 		{
 			// Already exists
 			return;
 		}
 
-		MeshComponent* submesh = m_Meshes[chunkIndex]->meshComponent;
+		MeshComponent* submesh = chunk->meshComponent;
 
-		btBvhTriangleMeshShape* shape;
-		submesh->CreateCollisionMesh(&m_Meshes[chunkIndex]->triangleIndexVertexArray, &shape);
+		assert(chunk->collisionShape == nullptr);
+
+		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
 
 		// TODO: Don't even create rb?
 		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
-		rigidBody->Initialize(shape, &m_Transform);
-		m_Meshes[chunkIndex]->rigidBody = rigidBody;
-		m_Meshes[chunkIndex]->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+		rigidBody->Initialize(chunk->collisionShape, &m_Transform);
+		chunk->rigidBody = rigidBody;
+		chunk->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+	}
+
+	// NOTE: This function assumes that the caller will remove the chunk from m_Meshes themselves
+	void TerrainGenerator::DestroyChunk(Chunk* chunk)
+	{
+		if (m_Mesh->GetSubmeshCount() != 0 && chunk->linearIndex != u32_max)
+		{
+			m_Mesh->RemoveSubmesh(chunk->linearIndex);
+		}
+
+		DestroyChunkRigidBody(chunk);
+
+		if (chunk->meshComponent != nullptr)
+		{
+			chunk->meshComponent->Destroy();
+			delete chunk->meshComponent;
+		}
+
+		delete chunk;
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
 	{
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		for (auto& pair : m_Meshes)
 		{
-			m_Mesh->RemoveSubmesh(iter->second->linearIndex);
-			iter->second->meshComponent->Destroy();
-			delete iter->second;
+			DestroyChunk(pair.second);
 		}
 		m_Meshes.clear();
 	}
 
 	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
 	{
-		const u32 vertCountPerChunk = VertCountPerChunkAxis * VertCountPerChunkAxis;
-		const u32 triCountPerChunk = ((VertCountPerChunkAxis - 1) * (VertCountPerChunkAxis - 1)) * 2;
+		const u32 vertCountPerChunk = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
+		const u32 triCountPerChunk = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
 		const u32 indexCountPerChunk = triCountPerChunk * 3;
 
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
@@ -8856,18 +9773,7 @@ namespace flex
 		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
 		assert(chunkData.indices != nullptr);
 
-		chunkData.baseOctave = m_BaseOctave;
-		chunkData.chunkSize = ChunkSize;
-		chunkData.maxHeight = MaxHeight;
-		chunkData.octaveScale = m_OctaveScale;
-		chunkData.roadBlendDist = m_RoadBlendDist;
-		chunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		chunkData.numOctaves = m_NumOctaves;
-		chunkData.vertCountPerChunkAxis = VertCountPerChunkAxis;
-		chunkData.isolateOctave = m_IsolateOctave;
-
-		chunkData.randomTables = &m_RandomTables;
-		chunkData.roadSegments = &m_RoadSegments;
+		FillInTerrainChunkData(chunkData);
 	}
 
 	void TerrainGenerator::FreeWorkQueueEntry(u32 workQueueIndex)
@@ -8891,6 +9797,86 @@ namespace flex
 		chunkData.indices = nullptr;
 	}
 
+	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
+		std::vector<RoadSegment*>* overlappingRoadSegments,
+		const glm::vec2& sampleCenter, glm::vec4& outColour, bool bCilpPointsInsideRoad)
+	{
+		glm::vec4 terrainInfo = SampleTerrain(chunkData, sampleCenter);
+		real height = terrainInfo.x;
+		real matID = terrainInfo.y;
+
+		glm::vec3 vertPosWS(sampleCenter.x, (height - 0.5f) * chunkData->maxHeight, sampleCenter.y);
+
+		real distToRoad = 99999.0f;
+		glm::vec3 roadTangentAtClosestPoint;
+		glm::vec3 roadCurvePosAtClosestPoint;
+		glm::vec3 closestPointToRoad;
+		if (overlappingRoadSegments != nullptr)
+		{
+			glm::vec3 outClosestPoint(VEC3_ZERO);
+			for (RoadSegment* overlappingRoadSegment : *overlappingRoadSegments)
+			{
+				real d = overlappingRoadSegment->SignedDistanceTo(vertPosWS, outClosestPoint);
+				if (d < distToRoad)
+				{
+					distToRoad = d;
+					closestPointToRoad = outClosestPoint;
+
+					real distAlongCurve = overlappingRoadSegment->curve.FindDistanceAlong(outClosestPoint);
+
+					roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distAlongCurve);
+					if (distToRoad - chunkData->roadBlendThreshold < chunkData->roadBlendDist)
+					{
+						glm::vec3 curveForward = glm::normalize(overlappingRoadSegment->curve.GetFirstDerivativeOnCurve(distAlongCurve));
+						roadTangentAtClosestPoint = glm::cross(curveForward, VEC3_UP);
+						if (glm::dot(roadTangentAtClosestPoint, closestPointToRoad - roadCurvePosAtClosestPoint) < 0.0f)
+						{
+							// Negate when point is on left side of road
+							roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
+						}
+					}
+				}
+			}
+		}
+
+		real vergeLen = chunkData->roadBlendDist * 0.35f;
+
+		// Epsilon value accounts for verts that are _just_ outside of triangle edge
+		// that for some reason aren't picked up by other triangle
+		bool bInsideRoad = distToRoad <= 0.1f;
+
+		outColour = glm::vec4(height, matID, terrainInfo.z, terrainInfo.w);
+
+		// Distance calc must be slightly off, if this checks for 0.0
+		// we get some verts in the road on the edges
+		if (bInsideRoad && bCilpPointsInsideRoad)
+		{
+			// Clip point by setting to NaN
+			vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
+		}
+		else
+		{
+			real roadBlendWeight = 1.0f - glm::clamp((distToRoad - chunkData->roadBlendThreshold) / chunkData->roadBlendDist, 0.0f, 1.0f);
+
+			if (roadBlendWeight > 0.0f)
+			{
+				// [0, 1] from inner verge to outer verge and beyond (zero inside road)
+				real distanceAlongVerge = glm::clamp((distToRoad - chunkData->roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
+
+				real lerpToRoadPosAlpha = roadBlendWeight;
+				lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
+
+				vertPosWS = vertPosWS + (closestPointToRoad - vertPosWS) * lerpToRoadPosAlpha;
+
+				// Move points near road closer to "verge" position to give road shoulders
+				// and a smoother falloff on hills
+				glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * (distanceAlongVerge * vergeLen);
+				vertPosWS = Lerp(vertPosWS, projectedPoint, glm::pow(1.0f - distanceAlongVerge, 0.5f));
+			}
+		}
+
+		return vertPosWS;
+	}
 
 	void* TerrainThreadUpdate(void* inData)
 	{
@@ -8923,13 +9909,10 @@ namespace flex
 			if (work != nullptr)
 			{
 				// Inputs
-				glm::vec2i chunkIndex = glm::vec2i(work->chunkIndex.x, work->chunkIndex.y);
+				glm::ivec3 chunkIndex = glm::ivec3(work->chunkIndex.x, work->chunkIndex.y, work->chunkIndex.z);
 				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
-				real maxHeight = work->maxHeight;
-				real roadBlendDist = work->roadBlendDist;
-				real roadBlendThreshold = work->roadBlendThreshold;
-				std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments = work->roadSegments;
+				std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
 
 				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
 				auto roadSegmentIter = roadSegments->find(chunkIndex);
@@ -8944,10 +9927,6 @@ namespace flex
 				volatile glm::vec2* uvs = work->uvs;
 				volatile u32* indices = work->indices;
 
-				//const u32 vertexCount = vertCountPerChunkAxis * vertCountPerChunkAxis;
-				//const u32 triCount = ((vertCountPerChunkAxis - 1) * (vertCountPerChunkAxis - 1)) * 2;
-				//const u32 indexCount = triCount * 3;
-
 				u32 posIndex = 0;
 				for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
 				{
@@ -8955,100 +9934,15 @@ namespace flex
 					{
 						glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
 
-						glm::vec3 vertPosOS = glm::vec3(uv.x * chunkSize, 0.0f, uv.y * chunkSize);
-						glm::vec3 vertPosWS = vertPosOS + glm::vec3(chunkIndex.x * chunkSize, 0.0f, chunkIndex.y * chunkSize);
+						glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
+						glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
 
-						glm::vec2 sampleCenter(vertPosWS.x, vertPosWS.z);
-						real height = SampleTerrain(work, sampleCenter);
-
-						vertPosWS.y = (height - 0.5f) * maxHeight;
-
-						glm::vec4 colour(height);
-
-						//real roadWidth = 0.0f;
-						real distToRoad = 99999.0f;
-						glm::vec3 roadTangentAtClosestPoint;
-						glm::vec3 roadCurvePosAtClosestPoint;
-						glm::vec3 closestPointToRoad;
-						if (overlappingRoadSegments != nullptr)
-						{
-							glm::vec3 outClosestPoint(VEC3_ZERO);
-							for (RoadSegment* overlappingRoadSegment : *overlappingRoadSegments)
-							{
-								real d = overlappingRoadSegment->SignedDistanceTo(vertPosWS, outClosestPoint);
-								if (d < distToRoad)
-								{
-									distToRoad = d;
-									closestPointToRoad = outClosestPoint;
-
-									real distAlongCurve = overlappingRoadSegment->curve.FindDistanceAlong(outClosestPoint);
-
-									roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distAlongCurve);
-									if (distToRoad - roadBlendThreshold < roadBlendDist)
-									{
-										glm::vec3 curveForward = glm::normalize(overlappingRoadSegment->curve.GetFirstDerivativeOnCurve(distAlongCurve));
-										roadTangentAtClosestPoint = glm::cross(curveForward, VEC3_UP);
-										if (glm::dot(roadTangentAtClosestPoint, closestPointToRoad - roadCurvePosAtClosestPoint) < 0.0f)
-										{
-											// Negate when point is on left side of road
-											roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
-										}
-										//roadWidth = overlappingRoadSegment->widthStart;
-									}
-								}
-							}
-						}
-
-						real vergeLen = roadBlendDist * 0.35f;
-
-						// Epsilon value accounts for verts that are _just_ outside of triangle edge
-						// that for some reason aren't picked up by other triangle
-						bool bInsideRoad = distToRoad <= 0.1f;
-						// zero at edge, grows further out from road (zero inside road)
-						//real distanceOutsideRoad = glm::max(distToRoad, 0.0f);
-						// [0, 1] from inner verge to outer verge and beyond (zero inside road)
-						real distanceAlongVerge = glm::clamp((distToRoad - roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
-						//real vergeBlendWeight = 1.0f - glm::abs(distanceAlongVerge * 2.0f - 1.0f);
-						//real vergeBlendWeight = glm::pow(glm::sin(distanceAlongVerge * PI), 4.0f);
-
-						// [0, 1] one at road edge, zero at blend dist (zero inside road)
-						//real roadBlendWeight = 1.0f - glm::min(distanceOutsideRoad / roadBlendDist, 1.0f);
-						real roadBlendWeight = 1.0f - glm::clamp((distToRoad - roadBlendThreshold) / roadBlendDist, 0.0f, 1.0f);
-
-						colour = glm::vec4(height);
-
-						// Distance calc must be slightly off, if this checks for 0.0
-						// we get some verts in the road on the edges
-						if (bInsideRoad)
-						{
-							// Clip point by setting to NaN
-							vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
-						}
-						else
-						{
-							if (roadBlendWeight > 0.0f)
-							{
-								real lerpToRoadPosAlpha = roadBlendWeight;
-								lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
-
-								vertPosWS = vertPosWS + (closestPointToRoad - vertPosWS) * lerpToRoadPosAlpha;
-
-								// Move points near road closer to "verge" position to give road shoulders
-								// and a smoother falloff on hills
-								glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * (distanceAlongVerge * vergeLen);
-								vertPosWS = Lerp(vertPosWS, projectedPoint, glm::pow(1.0f - distanceAlongVerge, 0.5f));
-							}
-						}
+						glm::vec4 colour;
+						glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
 
 						memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
 						memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
 						memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
-
-						//vertexBufferCreateInfo.texCoords_UV.emplace_back(uv);
-						//bool bShowEdge = (m_bHighlightGrid && (x == 0 || x == (vertCountPerChunkAxis - 1) || z == 0 || z == (vertCountPerChunkAxis - 1)));
-						//glm::vec3 vertCol = (bShowEdge ? glm::vec3(0.75f) : (height <= 0.5f ? Lerp(m_LowCol, m_MidCol, glm::pow(height * 2.0f, 4.0f)) : Lerp(m_MidCol, m_HighCol, glm::pow((height - 0.5f) * 2.0f, 1.0f / 5.0f))));
-						//vertexBufferCreateInfo.colours_R32G32B32A32.emplace_back(glm::vec4(vertCol.x, vertCol.y, vertCol.z, 1.0f));
-						//vertexBufferCreateInfo.colors_R32G32B32A32.emplace_back(glm::vec4(height, height, height, 1.0f));
 
 						++posIndex;
 					}
@@ -9085,30 +9979,489 @@ namespace flex
 
 	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
 
-	// Returns a value in [0, 1]
-	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos)
+	real Hash1(/* byvalue */ glm::vec2 p)
+	{
+		p = 50.0f * glm::fract(p * 0.3183099f);
+		return glm::fract(p.x * p.y * (p.x + p.y));
+	}
+
+	real Hash1(real n)
+	{
+		return glm::fract(n * 17.0f * glm::fract(n * 0.3183099f));
+	}
+
+	i32 BiomeIDToindex(const glm::vec2& biomeID, i32 biomeCount)
+	{
+		real result = Hash1(biomeID + glm::vec2(0.12f, 0.258f));
+
+		return (i32)(result * 31.4819f) % biomeCount;
+	}
+
+	glm::vec2 Hash2(real n)
+	{
+		return glm::fract(glm::sin(glm::vec2(n, n + 1.0f)) * glm::vec2(43758.5453123f, 22578.1459123f));
+	}
+
+	glm::vec2 Hash2(/* byvalue */ glm::vec2 p)
+	{
+		const glm::vec2 k = glm::vec2(0.3183099f, 0.3678794f);
+		p = p * k + glm::vec2(k.y, k.x);
+		return glm::fract(16.0f * k * glm::fract(p.x * p.y * (p.x + p.y)));
+	}
+
+	// https://www.reedbeta.com/blog/hash-functions-for-gpu-rendering/
+	u32 HashPCG(u32 n)
+	{
+		u32 state = n * 747796405u + 2891336453u;
+		u32 word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
+		return (word >> 22u) ^ word;
+	}
+
+	// Noise functions
+
+	// Value noise, and its analytical derivatives
+	glm::vec4 noised(const glm::vec3& x)
+	{
+		glm::vec3 p = glm::floor(x);
+		glm::vec3 w = glm::fract(x);
+		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+		glm::vec3 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
+
+		real n = p.x + 317.0f * p.y + 157.0f * p.z;
+
+		real a = Hash1(n + 0.0f);
+		real b = Hash1(n + 1.0f);
+		real c = Hash1(n + 317.0f);
+		real d = Hash1(n + 318.0f);
+		real e = Hash1(n + 157.0f);
+		real f = Hash1(n + 158.0f);
+		real g = Hash1(n + 474.0f);
+		real h = Hash1(n + 475.0f);
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k3 = e - a;
+		real k4 = a - b - c + d;
+		real k5 = a - c - e + g;
+		real k6 = a - b - e + f;
+		real k7 = -a + b + c - d + e - f - g + h;
+
+		return glm::vec4(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z),
+			2.0f * du * glm::vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z,
+				k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x,
+				k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
+	}
+
+	real noise(const glm::vec3& x)
+	{
+		glm::vec3 p = floor(x);
+		glm::vec3 w = glm::fract(x);
+
+		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+
+		real n = p.x + 317.0f * p.y + 157.0f * p.z;
+
+		real a = Hash1(n + 0.0f);
+		real b = Hash1(n + 1.0f);
+		real c = Hash1(n + 317.0f);
+		real d = Hash1(n + 318.0f);
+		real e = Hash1(n + 157.0f);
+		real f = Hash1(n + 158.0f);
+		real g = Hash1(n + 474.0f);
+		real h = Hash1(n + 475.0f);
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k3 = e - a;
+		real k4 = a - b - c + d;
+		real k5 = a - c - e + g;
+		real k6 = a - b - e + f;
+		real k7 = -a + b + c - d + e - f - g + h;
+
+		return -1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z);
+	}
+
+	glm::vec3 noised(const glm::vec2& x)
+	{
+		glm::vec2 p = floor(x);
+		glm::vec2 w = glm::fract(x);
+		glm::vec2 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
+		glm::vec2 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
+
+		real a = Hash1(p + glm::vec2(0, 0));
+		real b = Hash1(p + glm::vec2(1, 0));
+		real c = Hash1(p + glm::vec2(0, 1));
+		real d = Hash1(p + glm::vec2(1, 1));
+
+		real k0 = a;
+		real k1 = b - a;
+		real k2 = c - a;
+		real k4 = a - b - c + d;
+
+		return glm::vec3(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k4 * u.x * u.y),
+			2.0f * du * glm::vec2(k1 + k4 * u.y,
+				k2 + k4 * u.x));
+	}
+
+	real noise(const glm::vec2& x)
+	{
+		glm::vec2 p = floor(x);
+		glm::vec2 w = glm::fract(x);
+		glm::vec2 u = w * w * (3.0f - 2.0f * w);
+
+		real a = Hash1(p + glm::vec2(0, 0));
+		real b = Hash1(p + glm::vec2(1, 0));
+		real c = Hash1(p + glm::vec2(0, 1));
+		real d = Hash1(p + glm::vec2(1, 1));
+
+		return -1.0f + 2.0f * (a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y);
+	}
+
+	// FBM
+
+	// Rotation matrices
+	const glm::mat3 m3 = glm::mat3(0.00f, 0.80f, 0.60f, -0.80f, 0.36f, -0.48f, -0.60f, -0.48f, 0.64f);
+	const glm::mat3 m3i = glm::mat3(0.00, -0.80, -0.60, 0.80f, 0.36f, -0.48f, 0.60f, -0.48f, 0.64f);
+	const glm::mat2 m2 = glm::mat2(0.80f, 0.60f, -0.60f, 0.80f);
+	const glm::mat2 m2i = glm::mat2(0.80f, -0.60f, 0.60f, 0.80f);
+
+	real fbm_4(/* byvalue */ glm::vec2 x)
+	{
+		real f = 1.9f;
+		real s = 0.55f;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (u32 i = 0; i < 4; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m2 * x;
+		}
+		return a;
+	}
+
+	real fbm_4(/* byvalue */ glm::vec3 x)
+	{
+		real f = 2.0f;
+		real s = 0.5f;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (i32 i = 0; i < 4; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m3 * x;
+		}
+		return a;
+	}
+
+	glm::vec4 fbmd_7(/* byvalue */ glm::vec3 x)
+	{
+		real f = 1.92f;
+		real s = 0.5f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec3 d = VEC3_ZERO;
+		glm::mat3 m = MAT3_IDENTITY;
+		for (i32 i = 0; i < 7; ++i)
+		{
+			glm::vec4 n = noised(x);
+			a += b * n.x; // accumulate values
+			d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
+			b *= s;
+			x = f * m3 * x;
+			m = f * m3i * m;
+		}
+		return glm::vec4(a, d);
+	}
+
+	glm::vec4 fbmd_8(/* byvalue */ glm::vec3 x)
+	{
+		real f = 2.0f;
+		real s = 0.65f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec3 d = VEC3_ZERO;
+		glm::mat3 m = MAT3_IDENTITY;
+		for (i32 i = 0; i < 8; ++i)
+		{
+			glm::vec4 n = noised(x);
+			a += b * n.x; // accumulate values
+			if (i < 4)
+			{
+				d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
+			}
+			b *= s;
+			x = f * m3 * x;
+			m = f * m3i * m;
+		}
+		return glm::vec4(a, d);
+	}
+
+	real fbm_9(/* byvalue */ glm::vec2 x, real dampen)
+	{
+		real f = 1.9f;
+		real s = dampen;
+		real a = 0.0f;
+		real b = 0.5f;
+		for (i32 i = 0; i < 9; ++i)
+		{
+			real n = noise(x);
+			a += b * n;
+			b *= s;
+			x = f * m2 * x;
+		}
+		return a;
+	}
+
+	glm::vec3 fbmd_9(/* byvalue */ glm::vec2 x)
+	{
+		real f = 1.9f;
+		real s = 0.55f;
+		real a = 0.0f;
+		real b = 0.5f;
+		glm::vec2 d = VEC2_ZERO;
+		glm::mat2 m = MAT2_IDENTITY;
+		for (i32 i = 0; i < 9; ++i)
+		{
+			glm::vec3 n = noised(x);
+
+			a += b * n.x; // accumulate values
+			d += b * m * glm::vec2(n.y, n.z); // accumulate derivatives
+			b *= s;
+			x = f * m2 * x;
+			m = f * m2i * m;
+		}
+		return glm::vec3(a, d);
+	}
+
+	real SmoothVoronoi(const glm::vec2& pos, real sharpness)
+	{
+		glm::vec2i p = glm::floor(pos);
+		glm::vec2  f = glm::fract(pos);
+
+		real res = 0.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2i b = glm::vec2i(i, j);
+				glm::vec2 r = glm::vec2(b) - f + Hash2(p + b);
+				real d = glm::length(r);
+
+				res += glm::exp(-sharpness * d);
+			}
+		}
+		return -1.0f / sharpness * glm::log(res);
+	}
+
+	real Voronoi(const glm::vec2& pos, glm::vec2& outNearestCellID, glm::vec2& outNearestCellRandomPoint)
+	{
+		glm::vec2 posCell = glm::floor(pos);
+		glm::vec2 posCellF = glm::fract(pos);
+
+		// Regular Voronoi: find cell of nearest point
+
+		real sqrDistToClosestEdge = 8.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2 cellIndex = glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
+				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
+				real distSq = glm::dot(delta, delta);
+
+				if (distSq < sqrDistToClosestEdge)
+				{
+					sqrDistToClosestEdge = distSq;
+					outNearestCellRandomPoint = cellIndex + cellRandomPoint;
+					outNearestCellID = posCell + cellIndex;
+				}
+			}
+		}
+
+		return sqrDistToClosestEdge;
+	}
+
+	// Returns the shortest distance to the nearest cell neighbor
+	real VoronoiDistance(const glm::vec2& pos, glm::vec2& cell0Coord)
+	{
+		glm::vec2 posCell = glm::floor(pos);
+		glm::vec2 posCellF = glm::fract(pos);
+
+		// Regular Voronoi: find cell of nearest point
+
+		glm::vec2 deltaPosRandomPoint;
+
+		real closestEdge = 8.0f;
+		for (i32 j = -1; j <= 1; j++)
+		{
+			for (i32 i = -1; i <= 1; i++)
+			{
+				glm::vec2 cellCoord = glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
+				// Vector between pos & this cell's random point
+				glm::vec2 delta = cellCoord + cellRandomPoint - posCellF;
+				real distSq = glm::dot(delta, delta);
+
+				if (distSq < closestEdge)
+				{
+					closestEdge = distSq;
+					deltaPosRandomPoint = delta;
+					cell0Coord = cellCoord;
+				}
+			}
+		}
+
+		// Find distance to second closest cell
+		closestEdge = 8.0f;
+		for (i32 j = -2; j <= 2; j++)
+		{
+			for (i32 i = -2; i <= 2; i++)
+			{
+				glm::vec2 cellCoord = cell0Coord + glm::vec2(i, j);
+				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
+				glm::vec2 neighborDeltaPosRandomPoint = cellCoord + cellRandomPoint - posCellF;
+
+				glm::vec2 diff = neighborDeltaPosRandomPoint - deltaPosRandomPoint;
+				real diffLenSq = glm::dot(diff, diff);
+				if (diffLenSq > 0.00001f)
+				{
+					glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
+					// Project diff vector onto line spanning between cells to get shortest distance to edge
+					real dist = glm::dot(halfwayPoint, diff / diffLenSq);
+					// TODO: use min
+					if (dist < closestEdge)
+					{
+						closestEdge = dist;
+					}
+				}
+			}
+		}
+
+		// Translate into world-space
+		cell0Coord += posCell;
+
+		return closestEdge;
+	}
+
+	real VoronoiColumns(const glm::vec2& pos, real sharpness)
+	{
+		glm::vec2 _x;
+		real dist = VoronoiDistance(pos, _x);
+		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
+	}
+
+	// Returns value in range [-1, 1]
+	real SampleNoiseFunction(std::vector<std::vector<glm::vec2>> const* randomTables, const NoiseFunction& noiseFunction, const glm::vec2& pos)
+	{
+		switch (noiseFunction.type)
+		{
+		case NoiseFunction::Type::PERLIN:
+		{
+			real result = 0.0f;
+
+			i32 numOctaves = noiseFunction.numOctaves;
+			real octave = noiseFunction.baseFeatureSize;
+			u32 octaveIdx = numOctaves - 1;
+			i32 isolateOctave = noiseFunction.isolateOctave;
+			real heightScale = noiseFunction.heightScale * 0.005f; // Normalize value so edited values are reasonable
+
+			for (u32 i = 0; i < (u32)numOctaves; ++i)
+			{
+				if (isolateOctave == -1 || i == (u32)isolateOctave)
+				{
+					result += SamplePerlinNoise(*randomTables, pos, octave) * octave * heightScale;
+				}
+				octave = octave / 2.0f;
+				--octaveIdx;
+			}
+
+			result /= (real)numOctaves;
+
+			return glm::clamp(result, -1.0f, 1.0f);
+		} break;
+		case NoiseFunction::Type::FBM:
+		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real n = noise(p); // octave 0 noise
+			real dampen = 0.45f + (n * 0.5f + 0.5f) * 0.2f;
+			real result = fbm_9(p, dampen);
+
+			// Separate high areas from low with a cliff edge
+			result += 0.25f * glm::smoothstep(-0.056f, -0.01f, result);
+			result *= noiseFunction.heightScale;
+			return result;
+		} break;
+		case NoiseFunction::Type::VORONOI:
+		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real result = noiseFunction.heightScale * VoronoiColumns(p, noiseFunction.sharpness);
+			return result;
+		} break;
+		case NoiseFunction::Type::SMOOTH_VORONOI:
+		{
+			glm::vec2 p = pos / noiseFunction.wavelength;
+			real result = noiseFunction.heightScale * SmoothVoronoi(p, noiseFunction.sharpness);
+			return result;
+		} break;
+		}
+
+		return 0.0f;
+	}
+
+	real SampleBiomeTerrain(std::vector<std::vector<glm::vec2>> const* randomTables, const TerrainGenerator::Biome& biome, const glm::vec2& pos)
 	{
 		real result = 0.0f;
-		real octave = chunkData->baseOctave;
-		i32 numOctaves = chunkData->numOctaves;
-		u32 octaveIdx = (i32)chunkData->numOctaves - 1;
-		i32 isolateOctave = chunkData->isolateOctave;
-		real octaveScale = chunkData->octaveScale;
 
-		for (u32 i = 0; i < (u32)numOctaves; ++i)
+		i32 numLayers = (i32)biome.noiseFunctions.size();
+		for (i32 i = 0; i < numLayers; ++i)
 		{
-			if (isolateOctave == -1 || i == (u32)isolateOctave)
+			//if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
 			{
-				result += SampleNoise(chunkData, pos, octave, octaveIdx) * (octave / octaveScale);
+				result += SampleNoiseFunction(randomTables, biome.noiseFunctions[i], pos);
 			}
-			octave = octave / 2.0f;
-			--octaveIdx;
 		}
-		return glm::clamp((result / (real)(numOctaves * 2.0f)) + 0.5f, 0.0f, 1.0f);
+
+		result /= (real)numLayers;
+
+		return result;
+	}
+
+	// X: height value in [0, 1], Y: mat ID, ZW: unused
+	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
+	{
+		real height = 0.0f;
+
+		i32 biome0Index = 0;
+		glm::vec2 biome0CellCoord;
+
+		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
+		{
+			const glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
+			const i32 biomeCount = (i32)chunkData->biomes->size();
+
+			VoronoiDistance(p, biome0CellCoord);
+			biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
+
+			height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
+		}
+
+		// Divide by 2 to transform range from [-1, 1] to [0, 1]
+		height = height * 0.5f + 0.5f;
+
+		assert(biome0Index >= 0 && biome0Index < 65536);
+
+		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
 	}
 
 	// Returns a value in [-1, 1]
-	real SampleNoise(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx)
+	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave)
 	{
 		const glm::vec2 scaledPos = pos / octave;
 		glm::vec2 posi = glm::vec2((real)(i32)scaledPos.x, (real)(i32)scaledPos.y);
@@ -9122,7 +10475,6 @@ namespace flex
 		}
 		glm::vec2 posf = scaledPos - posi;
 
-		const std::vector<glm::vec2>& randomTables = (*chunkData->randomTables)[octaveIdx];
 		const u32 tableEntryCount = (u32)randomTables.size();
 		const u32 tableWidth = (u32)std::sqrt(tableEntryCount);
 
@@ -9293,6 +10645,8 @@ namespace flex
 
 	void SpringObject::Update()
 	{
+		PROFILE_AUTO("SpringObject Update");
+
 		Transform* originTransform = m_OriginTransform->GetTransform();
 		glm::vec3 rootPos = originTransform->GetWorldPosition();
 		glm::vec3 targetPos;
@@ -9421,7 +10775,7 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Spring";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.8f, 0.05f, 0.04f);
+		matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
 		matCreateInfo.constRoughness = 1.0f;
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.bDynamic = true;
@@ -9431,7 +10785,7 @@ namespace flex
 		matCreateInfo = {};
 		matCreateInfo.name = "Bobber";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.2f, 0.2f, 0.24f);
+		matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
 		matCreateInfo.constRoughness = 0.0f;
 		matCreateInfo.constMetallic = 1.0f;
 		matCreateInfo.bSerializable = false;
@@ -9493,12 +10847,6 @@ namespace flex
 		newSoftBody->constraints.resize(constraints.size());
 		newSoftBody->initialPositions.resize(initialPositions.size());
 
-		glm::vec3 deltaPos = m_Transform.GetWorldPosition() - initialPositions[m_DragPointIndex];
-		for (u32 i = 0; i < (u32)initialPositions.size(); ++i)
-		{
-			newSoftBody->initialPositions[i] = initialPositions[i] + deltaPos;
-		}
-
 		for (u32 i = 0; i < (u32)points.size(); ++i)
 		{
 			newSoftBody->points[i] = new Point(initialPositions[i], VEC3_ZERO, points[i]->invMass);
@@ -9544,8 +10892,6 @@ namespace flex
 			newSoftBody->LoadFromMesh();
 		}
 
-		newSoftBody->GetTransform()->SetWorldPosition(newSoftBody->points[m_DragPointIndex]->pos);
-
 		return newSoftBody;
 	}
 
@@ -9586,6 +10932,8 @@ namespace flex
 
 	void SoftBody::Update()
 	{
+		PROFILE_AUTO("SoftBody Update");
+
 		GameObject::Update();
 
 		//PROFILE_BEGIN("SoftBody Update");
@@ -9602,8 +10950,6 @@ namespace flex
 			}
 
 			m_bSingleStep = false;
-
-			points[m_DragPointIndex]->pos = m_Transform.GetWorldPosition();
 
 			u32 fixedUpdateCount = glm::min((u32)(m_MSToSim / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
@@ -9832,11 +11178,6 @@ namespace flex
 			m_MeshComponent->UpdateDynamicVertexData(m_MeshVertexBufferCreateInfo, indices);
 		}
 
-		//PROFILE_END("SoftBody Update");
-		//m_UpdateDuration = Profiler::GetBlockDuration("SoftBody Update");
-
-		m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
-
 		if (m_bRenderWireframe)
 		{
 			Draw();
@@ -9859,9 +11200,11 @@ namespace flex
 			{
 			case Constraint::Type::DISTANCE:
 			{
-				//DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
-				//debugDrawer->drawLine(ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos), ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
-				//	btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
+				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
+				debugDrawer->drawLine(
+					ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos),
+					ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
+					btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
 			} break;
 			case Constraint::Type::BENDING:
 			{
@@ -10040,14 +11383,12 @@ namespace flex
 
 				points.resize(vertexBufferData->VertexCount);
 				initialPositions.resize(vertexBufferData->VertexCount);
-				m_DragPointIndex = 0;
 				glm::vec3 smallestPos(99999.0f);
 				for (u32 i = 0; i < (u32)posData.size(); ++i)
 				{
 					glm::vec3 pos = posData[i];
 					if (pos.x < smallestPos.x || (pos.x == smallestPos.x && pos.z < smallestPos.z))
 					{
-						m_DragPointIndex = i;
 						smallestPos = pos;
 					}
 					initialPositions[i] = pos;
@@ -10103,7 +11444,6 @@ namespace flex
 				}
 
 
-				points[m_DragPointIndex]->invMass = 0.0f;
 				g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::DYNAMIC_DATA);
 			}
 		}
@@ -10187,7 +11527,6 @@ namespace flex
 				{
 					real stiffness = constraintObj.GetFloat("stiffness");
 					Constraint::Type type = (Constraint::Type)constraintObj.GetInt("type");
-					constraintObj.TryGetUInt("dragging point index", m_DragPointIndex);
 
 					switch (type)
 					{
@@ -10284,7 +11623,6 @@ namespace flex
 				constraintsArr[i] = JSONObject();
 				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
 				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
-				constraintsArr[i].fields.emplace_back("dragging point index", JSONValue(m_DragPointIndex));
 
 				switch (constraint->type)
 				{
@@ -10354,8 +11692,6 @@ namespace flex
 				point->pos = initialPositions[i++];
 				point->vel = VEC3_ZERO;
 			}
-
-			m_Transform.SetWorldPosition(points[m_DragPointIndex]->pos);
 		}
 
 		if (ImGui::Button("Single Step"))
@@ -10461,6 +11797,11 @@ namespace flex
 		m_Damping = damping;
 	}
 
+	void SoftBody::SetRenderWireframe(bool bRenderWireframe)
+	{
+		m_bRenderWireframe = bRenderWireframe;
+	}
+
 	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("vehicle"), gameObjectID),
 		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
@@ -10544,18 +11885,24 @@ namespace flex
 			PrintError("Expected vehicle brake light objects to be spot lights\n");
 		}
 
-		m_GlassMatID = GetMesh()->GetSubMesh(0)->GetMaterialID();
-		m_CarPaintMatID = GetMesh()->GetSubMesh(1)->GetMaterialID();
-		m_BrakeLightMatID = GetMesh()->GetSubMesh(2)->GetMaterialID();
-		m_ReverseLightMatID = GetMesh()->GetSubMesh(3)->GetMaterialID();
-		m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
-		m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+		if (m_Mesh != nullptr)
+		{
+			m_GlassMatID = m_Mesh->GetSubMesh(0)->GetMaterialID();
+			m_CarPaintMatID = m_Mesh->GetSubMesh(1)->GetMaterialID();
+			m_BrakeLightMatID = m_Mesh->GetSubMesh(2)->GetMaterialID();
+			m_ReverseLightMatID = m_Mesh->GetSubMesh(3)->GetMaterialID();
+			if (tireFL != nullptr)
+			{
+				m_TireMatID = tireFL->GetMesh()->GetSubMesh(0)->GetMaterialID();
+				m_SpokeMatID = tireFL->GetMesh()->GetSubMesh(1)->GetMaterialID();
+			}
 
-		m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
-		m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
+			m_InitialBrakeLightMatEmissive = g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive;
+			m_InitialReverseLightMatEmissive = g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive;
 
-		m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
-		m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+			m_ActiveBrakeLightMatEmissive = glm::min(m_InitialBrakeLightMatEmissive + glm::vec4(0.2f, 0.0f, 0.0f, 0.0f), VEC4_ONE);
+			m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
+		}
 
 		CreateRigidBody();
 	}
@@ -10637,7 +11984,14 @@ namespace flex
 
 	void Vehicle::Update()
 	{
+		PROFILE_AUTO("Vehicle Update");
+
 		GameObject::Update();
+
+		if (m_RigidBody == nullptr)
+		{
+			return;
+		}
 
 		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
 		const btVector3 linearVel = rb->getLinearVelocity();
@@ -10655,12 +12009,7 @@ namespace flex
 		real maxSteerVel = 30.0f;
 		real steeringScale = Lerp(0.45f, 1.0f, 1.0f - glm::clamp(forwardVel / maxSteerVel, 0.0f, 1.0f));
 
-		bool bOccupied =
-			(m_ObjectInteractingWith != nullptr) &&
-			(m_ObjectInteractingWith->GetTypeID() == SID("player")) &&
-			g_CameraManager->CurrentCamera()->bIsGameplayCam;
-
-		if (bOccupied)
+		if (m_bOccupied && g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
 			// The faster we get, the slower we accelerate
 			real accelFactor = 1.0f - glm::pow(glm::clamp(m_EngineForce / m_MaxEngineForce, 0.0f, 1.0f), 5.0f);
@@ -10886,7 +12235,7 @@ namespace flex
 				assert(m_TireCount == (i32)tireIDs.size());
 				for (i32 i = 0; i < m_TireCount; ++i)
 				{
-					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].label);
+					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
 				}
 			}
 
@@ -10896,7 +12245,7 @@ namespace flex
 				assert((i32)brakeLightIDs.size() == 2);
 				for (i32 i = 0; i < 2; ++i)
 				{
-					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].label);
+					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
 				}
 			}
 
@@ -10906,7 +12255,8 @@ namespace flex
 				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
 				for (i32 i = 0; i < count; ++i)
 				{
-					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].label);
+					// TODO: Store as ints now that that's supported
+					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].value.AsString());
 				}
 			}
 		}
@@ -11007,6 +12357,7 @@ namespace flex
 		}
 
 		// Tires
+		if (m_Vehicle != nullptr)
 		{
 			real tireWidth = 20.0f;
 			real tireHeight = 45.0f;
@@ -11088,26 +12439,17 @@ namespace flex
 		ImGui::EndChild();
 	}
 
-	bool Vehicle::AllowInteractionWith(GameObject* gameObject)
+	void Vehicle::OnPlayerEnter()
 	{
-		return gameObject->GetTypeID() == SID("player");
+		m_bOccupied = true;
 	}
 
-	void Vehicle::SetInteractingWith(GameObject* gameObject)
+	void Vehicle::OnPlayerExit()
 	{
-		//if (gameObject != nullptr && gameObject->GetTypeID() == SID("player"))
-		//{
-		//	Player* player = static_cast<Player*>(gameObject);
-		//}
-
-		if (gameObject == nullptr)
-		{
-			// Player has left the vehicle, stop accelerating & braking
-			m_EngineForce = 0.0f;
-			m_BrakeForce = 0.0f;
-		}
-
-		GameObject::SetInteractingWith(gameObject);
+		// Player has left the vehicle, stop accelerating & braking
+		m_EngineForce = 0.0f;
+		m_BrakeForce = 0.0f;
+		m_bOccupied = false;
 	}
 
 	void Vehicle::MatchCorrespondingID(const GameObjectID& existingID, GameObject* newGameObject, const char* objectName, GameObjectID& outCorrespondingID)
@@ -11263,49 +12605,7 @@ namespace flex
 
 	void Road::PostInitialize()
 	{
-		glm::vec3 start = glm::vec3(4.0f, 0.0f, 0.0f);
-
-		if (roadSegments.empty())
-		{
-			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
-			if (terrainGenerator == nullptr)
-			{
-				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
-				terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
-			}
-
-			std::vector<glm::vec3> newPoints =
-			{
-				start,
-				glm::vec3(9.0f, 0.0f, 64.0f),
-				glm::vec3(60.0f, 0.0, 84.0f),
-				glm::vec3(96.0f, 0.0, 72.0f),
-				glm::vec3(104.0f, 0.0, 32.0f),
-				glm::vec3(64.0f, 0.0, -24.0f),
-				start
-			};
-
-			if (terrainGenerator != nullptr)
-			{
-				real offset = 0.5f;
-
-				for (u32 i = 1; i < (u32)newPoints.size() - 1; ++i)
-				{
-					newPoints[i].y = terrainGenerator->Sample(glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
-				}
-			}
-
-			GenerateSegmentsThroughPoints(newPoints);
-
-			terrainGenerator->UpdateRoadSegments();
-		}
-		else
-		{
-			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
-			{
-				GenerateSegment(i);
-			}
-		}
+		GenerateMesh();
 	}
 
 	void Road::Destroy(bool bDetachFromParent /* = true */)
@@ -11329,6 +12629,8 @@ namespace flex
 
 	void Road::Update()
 	{
+		PROFILE_AUTO("Road Update");
+
 		GameObject::Update();
 
 		const PhysicsDebuggingSettings& debuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
@@ -11481,16 +12783,18 @@ namespace flex
 			real t = (real)z / m_QuadCountPerSegment;
 			real width = Lerp(segment.widthStart, segment.widthEnd, t);
 			glm::vec3 pos = curve.GetPointOnCurve(t);
-			//pos.y += 0.1f;
-			glm::vec3 up = VEC3_UP;
+
+			glm::vec3 posF = curve.GetPointOnCurveUnclamped(t + 0.01f);
+			glm::vec3 posB = curve.GetPointOnCurveUnclamped(t - 0.01f);
+			glm::vec3 normal = glm::normalize(glm::vec3(posF.x - posB.x, 2.0f, posF.z - posB.z));
+
 			glm::vec3 forward = glm::normalize(curve.GetFirstDerivativeOnCurve(t));
-			glm::vec3 tangent = glm::cross(forward, up);
+			glm::vec3 tangent = glm::cross(forward, normal);
 
 			real xScales[] = { -width, width };
 			for (u32 x = 0; x < 2; ++x)
 			{
 				glm::vec3 vertPosWS = pos + xScales[x] * tangent;
-				glm::vec3 normal = up;// glm::normalize(glm::vec3(heightDX, 2.0f * e, heightDZ));
 				glm::vec2 uv((real)x, t);
 
 				vertexBufferCreateInfo.positions_3D.emplace_back(vertPosWS);
@@ -11545,6 +12849,61 @@ namespace flex
 		return newGameObject;
 	}
 
+	void Road::RegenerateMesh()
+	{
+		m_Mesh->DestroyAllSubmeshes();
+
+		roadSegments.clear();
+		GenerateMesh();
+	}
+
+	void Road::GenerateMesh()
+	{
+		if (roadSegments.empty())
+		{
+			TerrainGenerator* terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
+			if (terrainGenerator == nullptr)
+			{
+				m_TerrainGameObjectID = g_SceneManager->CurrentScene()->FirstObjectWithTag("terrain");
+				terrainGenerator = (TerrainGenerator*)m_TerrainGameObjectID.Get();
+			}
+
+			std::vector<glm::vec3> newPoints =
+			{
+				glm::vec3(4.0f, 0.0f, 0.0f),
+				glm::vec3(9.0f, 0.0f, 64.0f),
+				glm::vec3(60.0f, 0.0f, 84.0f),
+				glm::vec3(96.0f, 0.0f, 72.0f),
+				glm::vec3(104.0f, 0.0f, 32.0f),
+				glm::vec3(64.0f, 0.0f, -24.0f),
+				glm::vec3(4.0f, 0.0f, 0.0f)
+			};
+
+			if (terrainGenerator != nullptr)
+			{
+				real offset = 0.5f;
+
+				TerrainGenerator::TerrainChunkData chunkData = {};
+				terrainGenerator->FillInTerrainChunkData(chunkData);
+				for (u32 i = 0; i < (u32)newPoints.size(); ++i)
+				{
+					newPoints[i].y = terrainGenerator->Sample(chunkData, glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
+				}
+			}
+
+			GenerateSegmentsThroughPoints(newPoints);
+
+			terrainGenerator->UpdateRoadSegments();
+		}
+		else
+		{
+			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
+			{
+				GenerateSegment(i);
+			}
+		}
+	}
+
 	void Road::GenerateMaterial()
 	{
 		if (m_RoadMaterialID == InvalidMaterialID)
@@ -11556,7 +12915,7 @@ namespace flex
 			matCreateInfo.bDynamic = false;
 			matCreateInfo.constRoughness = 0.95f;
 			matCreateInfo.constMetallic = 0.0f;
-			matCreateInfo.constAlbedo = glm::vec3(0.25f, 0.25f, 0.28f);
+			matCreateInfo.constAlbedo = glm::vec4(0.25f, 0.25f, 0.28f, 1.0f);
 			matCreateInfo.albedoTexturePath = TEXTURE_DIRECTORY "road-albedo.png";
 			matCreateInfo.enableAlbedoSampler = true;
 			matCreateInfo.bSerializable = false;
@@ -11595,5 +12954,48 @@ namespace flex
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(shape, &m_Transform);
 		m_RigidBodies[meshIndex] = rigidBody;
+	}
+
+	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("solar panel"), gameObjectID)
+	{
+		m_bItemizable = true;
+	}
+
+	void SolarPanel::Initialize()
+	{
+		GameObject::Initialize();
+	}
+
+	void SolarPanel::PostInitialize()
+	{
+		GameObject::PostInitialize();
+	}
+
+	void SolarPanel::Destroy(bool bDetachFromParent)
+	{
+		FLEX_UNUSED(bDetachFromParent);
+		GameObject::Destroy();
+	}
+
+	void SolarPanel::Update()
+	{
+		PROFILE_AUTO("SolarPanel Update");
+
+		if (sockets.size() >= 1)
+		{
+			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+			for (Socket* socket : sockets)
+			{
+				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
+				if (otherSocket != nullptr)
+				{
+					real chargeAmount = m_ChargeRate * m_Efficiency * g_DeltaTime;
+					otherSocket->parent->OnCharge(chargeAmount);
+				}
+			}
+		}
+
+		GameObject::Update();
 	}
 } // namespace flex

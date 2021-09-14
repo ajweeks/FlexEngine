@@ -4,6 +4,34 @@
 
 namespace flex
 {
+	VertexAttribute VertexAttributeFromString(const char* attributeName)
+	{
+		for (u32 i = 0; i < ARRAY_LENGTH(s_VertexAttributes); ++i)
+		{
+			const char* attribute = s_VertexAttributes[i].name.c_str();
+			if (strlen(attribute) == strlen(attributeName) && strcmp(attribute, attributeName) == 0)
+			{
+				return (VertexAttribute)(1 << i);
+			}
+		}
+
+		return VertexAttribute::_NONE;
+	}
+
+	bool CompareVertexAttributeType(const char* attributeName, const std::type_info& typeInfo)
+	{
+		for (const VertexAttributeMetaData& attributeMetaData : s_VertexAttributes)
+		{
+			const char* attribute = attributeMetaData.name.c_str();
+			if (strlen(attribute) == strlen(attributeName) && strcmp(attribute, attributeName) == 0)
+			{
+				return attributeMetaData.type == typeInfo;
+			}
+		}
+
+		return true;
+	}
+
 	u32 CalculateVertexStride(VertexAttributes vertexAttributes)
 	{
 		u32 stride = 0;

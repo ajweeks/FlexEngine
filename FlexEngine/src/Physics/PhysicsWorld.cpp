@@ -16,7 +16,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
-#include "Profiler.hpp"
 #include "Scene/GameObject.hpp"
 #include "Window/Window.hpp"
 
@@ -117,7 +116,7 @@ namespace flex
 		rayCallback.m_collisionFilterGroup = mask;
 		rayCallback.m_collisionFilterMask = mask;
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
-		real closestGizmoDist2 = FLT_MAX;
+		real closestDist2 = FLT_MAX;
 		if (rayCallback.hasHit())
 		{
 			for (i32 i = 0; i < rayCallback.m_hitPointWorld.size(); ++i)
@@ -131,9 +130,9 @@ namespace flex
 					if (gameObject && gameObject->HasTag(tag))
 					{
 						real dist2 = (pickPos - rayStart).length2();
-						if (dist2 < closestGizmoDist2)
+						if (dist2 < closestDist2)
 						{
-							closestGizmoDist2 = dist2;
+							closestDist2 = dist2;
 							pickedGameObject = gameObject;
 						}
 					}
@@ -218,7 +217,7 @@ namespace flex
 				if (bObATrigger ^ bObBTrigger)
 				{
 					const btCollisionObject* triggerCollisionObject = (bObATrigger ? obA : obB);
-					const btCollisionObject* otherCollisionObject = (bObATrigger ? obB: obA);
+					const btCollisionObject* otherCollisionObject = (bObATrigger ? obB : obA);
 					GameObject* trigger = (bObATrigger ? obAGameObject : obBGameObject);
 					GameObject* other = (bObATrigger ? obBGameObject : obAGameObject);
 
@@ -269,5 +268,22 @@ namespace flex
 			physWorld->m_CollisionPairs.insert(pair);
 		}
 	}
+
+
+	btScalar CustomContactResultCallback::addSingleResult(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap,
+			int partId0, int index0, const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1)
+		{
+			FLEX_UNUSED(cp);
+			FLEX_UNUSED(colObj0Wrap);
+			FLEX_UNUSED(partId0);
+			FLEX_UNUSED(index0);
+			FLEX_UNUSED(colObj1Wrap);
+			FLEX_UNUSED(partId1);
+			FLEX_UNUSED(index1);
+
+			bHit = true;
+
+			return 0.0f;
+		}
 } // namespace flex
 

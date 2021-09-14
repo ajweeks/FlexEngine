@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
@@ -56,13 +57,13 @@ namespace flex
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
 		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec3(0.89f, 0.93f, 0.98f);
+		matCreateInfo.constAlbedo = glm::vec4(0.89f, 0.93f, 0.98f, 1.0f);
 		matCreateInfo.constMetallic = 0.0f;
 		matCreateInfo.constRoughness = 0.98f;
 		matCreateInfo.bSerializable = false;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		RigidBody* rigidBody = new RigidBody();
+		RigidBody* rigidBody = new RigidBody((i32)CollisionType::DEFAULT, (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT);
 		rigidBody->SetAngularDamping(2.0f);
 		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
@@ -85,7 +86,7 @@ namespace flex
 			MaterialCreateInfo mapTabletMatCreateInfo = {};
 			mapTabletMatCreateInfo.name = "Map tablet material";
 			mapTabletMatCreateInfo.shaderName = "pbr";
-			mapTabletMatCreateInfo.constAlbedo = glm::vec3(0.34f, 0.38f, 0.39f);
+			mapTabletMatCreateInfo.constAlbedo = glm::vec4(0.34f, 0.38f, 0.39f, 1.0f);
 			mapTabletMatCreateInfo.constMetallic = 1.0f;
 			mapTabletMatCreateInfo.constRoughness = 0.24f;
 			mapTabletMatCreateInfo.bSerializable = false;
@@ -113,6 +114,8 @@ namespace flex
 		}
 
 		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", false, false, false);
+
+		ParseInventoryFile();
 
 		GameObject::Initialize();
 	}
@@ -181,28 +184,19 @@ namespace flex
 		}
 		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
-		if (m_ObjectInteractingWith != nullptr)
+		if (terminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
 		{
-			StringID interactingWithTypeID = m_ObjectInteractingWith->GetTypeID();
-			switch (interactingWithTypeID)
-			{
-			case SID("terminal"):
-			{
-				if (g_EngineInstance->IsRenderingImGui())
-				{
-					Terminal* terminal = static_cast<Terminal*>(m_ObjectInteractingWith);
-					terminal->DrawImGuiWindow();
-				}
-			} break;
-			case SID("vehicle"):
-			{
-				Vehicle* vehicle = static_cast<Vehicle*>(m_ObjectInteractingWith);
+			Terminal* terminal = (Terminal*)terminalInteractingWithID.Get();
+			terminal->DrawImGuiWindow();
+		}
 
-				const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+		if (ridingVehicleID.IsValid())
+		{
+			Vehicle* vehicle = (Vehicle*)ridingVehicleID.Get();
 
-				m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
-			} break;
-			}
+			const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+
+			m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
 		}
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
@@ -276,16 +270,6 @@ namespace flex
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
 		{
-			if (m_ObjectInteractingWith != nullptr)
-			{
-				std::string name = m_ObjectInteractingWith->GetName();
-				ImGui::Text("Object interacting with:");
-				if (ImGui::Button(name.c_str()))
-				{
-					g_Editor->SetSelectedObject(m_ObjectInteractingWith->ID);
-				}
-			}
-
 			ImGui::Text("Pitch: %.2f", GetPitch());
 			glm::vec3 euler = glm::eulerAngles(GetTransform()->GetWorldRotation());
 			ImGui::Text("World rot: %.2f, %.2f, %.2f", euler.x, euler.y, euler.z);
@@ -356,124 +340,6 @@ namespace flex
 			ImGui::Unindent();
 
 			ImGui::TreePop();
-		}
-	}
-
-	bool Player::AllowInteractionWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			return true;
-		}
-
-		StringID objTypeID = gameObject->GetTypeID();
-		switch (objTypeID)
-		{
-		case SID("terminal"): return true;
-		case SID("vehicle"): return true;
-		}
-
-		return false;
-	}
-
-	void Player::SetInteractingWith(GameObject* gameObject)
-	{
-		if (gameObject == nullptr)
-		{
-			StringID previousObjectInteractingWithID = m_ObjectInteractingWith->GetTypeID();
-			switch (previousObjectInteractingWithID)
-			{
-			case SID("terminal"):
-			{
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				assert(cam->type == CameraType::TERMINAL);
-				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
-				terminalCam->SetTerminal(nullptr);
-			} break;
-			case SID("vehicle"):
-			{
-				BaseCamera* cam = g_CameraManager->CurrentCamera();
-				if (cam->type == CameraType::VEHICLE)
-				{
-					g_CameraManager->PopCamera();
-				}
-
-				SetVisible(true);
-			} break;
-			}
-
-			GameObject::SetInteractingWith(nullptr);
-			return;
-		}
-
-		StringID newObjectInteractingWithID = gameObject->GetTypeID();
-		switch (newObjectInteractingWithID)
-		{
-		case SID("terminal"):
-		{
-			Terminal* terminal = static_cast<Terminal*>(gameObject);
-			GameObject::SetInteractingWith(terminal);
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			TerminalCamera* terminalCam = nullptr;
-			if (cam->type == CameraType::TERMINAL)
-			{
-				terminalCam = static_cast<TerminalCamera*>(cam);
-			}
-			else
-			{
-				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
-				g_CameraManager->PushCamera(terminalCam, true, true);
-			}
-			terminalCam->SetTerminal(terminal);
-		} break;
-		case SID("wire"):
-		{
-			//Wire* wire = static_cast<Wire*>(gameObject);
-
-			//m_HeldItem = wire;
-		} break;
-		case SID("socket"):
-		{
-			//Socket* socket = static_cast<Socket*>(gameObject);
-
-			//if (m_HeldItem != nullptr && m_HeldItem->GetTypeID() == SID("wire"))
-			//{
-			//	Wire* wire = (Wire*)m_HeldItem;
-			//	if (wire->socket0ID.IsValid() && wire->socket1ID.IsValid())
-			//	{
-			//		wire->SetInteractingWith(nullptr);
-			//		m_HeldItem = nullptr;
-			//	}
-			//}
-			//else
-			//{
-			//	if (socket->connectedWire != nullptr)
-			//	{
-			//		m_HeldItem = socket->connectedWire;
-			//	}
-			//}
-		} break;
-		case SID("vehicle"):
-		{
-			Vehicle* vehicle = static_cast<Vehicle*>(gameObject);
-			GameObject::SetInteractingWith(vehicle);
-
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			VehicleCamera* vehicleCamera = nullptr;
-			// Switch to vehicle cam
-			if (cam->type != CameraType::VEHICLE)
-			{
-				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
-				g_CameraManager->PushCamera(vehicleCamera, false, true);
-			}
-
-			SetVisible(false);
-		} break;
-		default:
-		{
-			GameObject::SetInteractingWith(gameObject);
-		} break;
 		}
 	}
 
@@ -596,89 +462,6 @@ namespace flex
 		}
 	}
 
-	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
-	{
-		i32 initialCount = count;
-
-		auto printResults = [initialCount, &prefabID, &count]()
-		{
-			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
-			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
-		};
-
-		// Fill up any existing slots in quick access
-		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
-		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
-			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
-				count -= deposit;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill up any existing slots in main inventory
-		for (GameObjectStack& gameObjectStack : m_Inventory)
-		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
-			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
-				count -= deposit;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill empty slots in quick access
-		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
-		{
-			if (gameObjectStack.count == 0)
-			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
-				count -= deposit;
-				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		// Fill empty slots in main inventory
-		for (GameObjectStack& gameObjectStack : m_Inventory)
-		{
-			if (gameObjectStack.count == 0)
-			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
-				count -= deposit;
-				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
-			}
-
-			if (count == 0)
-			{
-				printResults();
-				return;
-			}
-		}
-
-		printResults();
-	}
-
 	i32 Player::GetNextFreeQuickAccessInventorySlot()
 	{
 		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
@@ -764,6 +547,89 @@ namespace flex
 		return InvalidID;
 	}
 
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
+	{
+		i32 initialCount = count;
+
+		auto printResults = [initialCount, &prefabID, &count]()
+		{
+			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
+			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
+		};
+
+		// Fill up any existing slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill up any existing slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			{
+				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				count -= deposit;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in quick access
+		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		// Fill empty slots in main inventory
+		for (GameObjectStack& gameObjectStack : m_Inventory)
+		{
+			if (gameObjectStack.count == 0)
+			{
+				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				count -= deposit;
+				gameObjectStack.prefabID = prefabID;
+				gameObjectStack.count += deposit;
+			}
+
+			if (count == 0)
+			{
+				printResults();
+				return;
+			}
+		}
+
+		printResults();
+	}
+
 	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
 	{
 		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
@@ -771,5 +637,252 @@ namespace flex
 			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
 		}
 		return InvalidID;
+	}
+
+	void Player::ClearInventory()
+	{
+		m_Inventory.fill({});
+		m_QuickAccessInventory.fill({});
+	}
+
+	void Player::ParseInventoryFile()
+	{
+		if (FileExists(USER_INVENTORY_LOCATION))
+		{
+			std::string fileContents;
+			if (ReadFile(USER_INVENTORY_LOCATION, fileContents, false))
+			{
+				JSONObject inventoryObj;
+				if (JSONParser::Parse(fileContents, inventoryObj))
+				{
+					std::vector<JSONObject> slotLists[2];
+
+					inventoryObj.TryGetObjectArray("slots", slotLists[0]);
+					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
+
+					for (i32 slotListIndex = 0; slotListIndex < 2; ++slotListIndex)
+					{
+						for (JSONObject& slot : slotLists[slotListIndex])
+						{
+							i32 index = slot.GetInt("index");
+							i32 count = slot.GetInt("count");
+							PrefabID prefabID = slot.GetPrefabID("prefab id");
+
+							bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
+							bool bCountValid = count >= 0 && count <= MAX_STACK_SIZE;
+							bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
+
+							if (bIndexValid && bCountValid && bPrefabIDValid)
+							{
+								if (slotListIndex == 0)
+								{
+									m_Inventory[index] = GameObjectStack{ prefabID, count };
+								}
+								else
+								{
+									m_QuickAccessInventory[index] = GameObjectStack{ prefabID, count };
+								}
+							}
+							else
+							{
+								if (!bIndexValid)
+								{
+									PrintError("Invalid user inventory index: %i\n", index);
+								}
+								if (!bCountValid)
+								{
+									PrintError("Invalid user inventory count: %i\n", count);
+								}
+								if (!bPrefabIDValid)
+								{
+									std::string prefabIDStr = prefabID.ToString();
+									PrintError("Invalid user inventory prefabID: %s\n", prefabIDStr.c_str());
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					PrintError("Failed to parse user inventory file, error: %s\n", JSONParser::GetErrorString());
+				}
+
+			}
+			else
+			{
+				PrintError("Failed to read use inventory file at %s\n", USER_INVENTORY_LOCATION);
+			}
+		}
+		// TODO: Serialize parent & wire reference once ObjectIDs are in
+
+	}
+
+	void Player::SerializeInventoryToFile()
+	{
+		JSONObject inventoryObj = {};
+
+		auto SerializeSlot = [](i32 slotIdx, GameObjectStack& stack)
+		{
+			JSONObject slot = {};
+			slot.fields.emplace_back("index", JSONValue(slotIdx));
+			slot.fields.emplace_back("count", JSONValue(stack.count));
+			slot.fields.emplace_back("prefab id", JSONValue(stack.prefabID));
+
+			return slot;
+		};
+
+		std::vector<JSONObject> slots;
+		slots.reserve(m_Inventory.size());
+		for (i32 slotIdx = 0; slotIdx < (i32)m_Inventory.size(); ++slotIdx)
+		{
+			GameObjectStack& stack = m_Inventory[slotIdx];
+			if (stack.count > 0)
+			{
+				JSONObject slot = SerializeSlot(slotIdx, stack);
+				slots.emplace_back(slot);
+			}
+		}
+
+		std::vector<JSONObject> quickAccessSlots;
+		quickAccessSlots.reserve(m_QuickAccessInventory.size());
+		for (i32 slotIdx = 0; slotIdx < (i32)m_QuickAccessInventory.size(); ++slotIdx)
+		{
+			GameObjectStack& stack = m_QuickAccessInventory[slotIdx];
+			if (stack.count > 0)
+			{
+				JSONObject slot = SerializeSlot(slotIdx, stack);
+				quickAccessSlots.emplace_back(slot);
+			}
+		}
+
+		inventoryObj.fields.emplace_back("slots", JSONValue(slots));
+		inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
+
+		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
+
+		std::string fileContents = inventoryObj.ToString();
+		if (WriteFile(USER_INVENTORY_LOCATION, fileContents, false))
+		{
+			Print("Saved user inventory to disk.\n");
+		}
+		else
+		{
+			PrintError("Failed to write user inventory to file at %s\n", USER_INVENTORY_LOCATION);
+		}
+	}
+
+	void Player::SetInteractingWithTerminal(Terminal* terminal)
+	{
+		if (terminal != nullptr)
+		{
+			assert(!terminalInteractingWithID.IsValid());
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			TerminalCamera* terminalCam = nullptr;
+			if (cam->type == CameraType::TERMINAL)
+			{
+				terminalCam = static_cast<TerminalCamera*>(cam);
+			}
+			else
+			{
+				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
+				g_CameraManager->PushCamera(terminalCam, true, true);
+			}
+			terminalCam->SetTerminal(terminal);
+
+			terminalInteractingWithID = terminal->ID;
+			terminal->SetBeingInteractedWith(this);
+		}
+		else
+		{
+			assert(terminalInteractingWithID.IsValid());
+			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			assert(cam->type == CameraType::TERMINAL);
+			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
+			terminalCam->SetTerminal(nullptr);
+
+			terminalInteractingWith->SetBeingInteractedWith(nullptr);
+			terminalInteractingWithID = InvalidGameObjectID;
+		}
+	}
+
+	void Player::SetRidingVehicle(Vehicle* vehicle)
+	{
+		if (vehicle != nullptr)
+		{
+			assert(!ridingVehicleID.IsValid());
+
+			vehicle->OnPlayerEnter();
+
+			ridingVehicleID = vehicle->ID;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			VehicleCamera* vehicleCamera = nullptr;
+			// Switch to vehicle cam
+			if (cam->type != CameraType::VEHICLE)
+			{
+				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
+				g_CameraManager->PushCamera(vehicleCamera, false, true);
+			}
+
+			SetVisible(false);
+		}
+		else
+		{
+			Vehicle* ridingVehicle = (Vehicle*)ridingVehicleID.Get();
+			ridingVehicle->OnPlayerExit();
+
+			ridingVehicleID = InvalidGameObjectID;
+
+			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			if (cam->type == CameraType::VEHICLE)
+			{
+				g_CameraManager->PopCamera();
+			}
+
+			SetVisible(true);
+		}
+	}
+
+	bool Player::PickupWithFreeHand(GameObject* object)
+	{
+		if (!heldItemLeftHand.IsValid())
+		{
+			heldItemLeftHand = object->ID;
+			return true;
+		}
+		if (!heldItemRightHand.IsValid())
+		{
+			heldItemRightHand = object->ID;
+			return true;
+		}
+		return false;
+	}
+
+	bool Player::IsHolding(GameObject* object)
+	{
+		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
+	}
+
+	void Player::DropIfHolding(GameObject* object)
+	{
+		if (object != nullptr)
+		{
+			if (heldItemLeftHand == object->ID)
+			{
+				heldItemLeftHand = InvalidGameObjectID;
+			}
+			if (heldItemRightHand == object->ID)
+			{
+				heldItemRightHand = InvalidGameObjectID;
+			}
+		}
+	}
+
+	bool Player::HasFreeHand() const
+	{
+		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
 	}
 } // namespace flex

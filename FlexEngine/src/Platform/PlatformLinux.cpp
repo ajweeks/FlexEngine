@@ -14,13 +14,12 @@ IGNORE_WARNINGS_PUSH
 #include <sys/stat.h> // For stat
 #include <sys/time.h> // fortimeofday
 #include <signal.h> // For kill
-#include <unistd.h> // For getcwd, unlink, getpid, sysconf
+#include <unistd.h> // For getcwd, unlink, getpid, sysconf, readlink, chdir
 #include <errno.h> // For errno
 #include <dirent.h> // For readdir
 #include <sched.h> // For sched_yield
 #include <pthread.h>
 #include <libgen.h> // for dirname
-#include <unistd.h> // for readlink
 #include <linux/limits.h> // for PATH_MAX
 #include <uuid/uuid.h>
 
@@ -176,9 +175,14 @@ namespace flex
 		if (count != -1)
 		{
 			const char* path = dirname(result);
-			FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(path));
+			FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(std::string(path) + "/"));
 
-			// TODO: Set directory to FlexEngine::s_ExecutablePath like on windows?
+			// Change current directory so relative paths work
+			std::string appDir = ExtractDirectoryString(FlexEngine::s_ExecutablePath);
+			if (chdir(appDir.c_str()) != 0)
+			{
+				PrintError("Failed to change directory to %s (errorno: %u)\n", appDir.c_str(), errno);
+			}
 		}
 	}
 
@@ -215,11 +219,14 @@ namespace flex
 		return status != -1;
 	}
 
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	void Platform::OpenFileExplorer(const char* absoluteDirectory)
 	{
+		// TODO: Strip from release builds
 		// Linux doesn't quite have the same guaranteed idea of a "file explorer" as Windows
-		// TODO: Look into alternatives
-		FLEX_UNUSED(absoluteDirectory);
+		char buf[256];
+		// This works on Ubuntu at least (TODO: Support more distros)
+		snprintf(buf, 256, "nautilus --browser %s", absoluteDirectory);
+		system(buf);
 	}
 
 	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
@@ -237,26 +244,6 @@ namespace flex
 		}
 
 		return false;
-	}
-
-	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		// TODO: Move into common file
-		std::ifstream src(filePathFrom);
-		std::ofstream dst(filePathTo);
-
-		if (src.is_open() && dst.is_open())
-		{
-			dst << src.rdbuf();
-			src.close();
-			dst.close();
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
 	}
 
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
@@ -279,7 +266,16 @@ namespace flex
 	bool Platform::GetFileModifcationTime(const char* filePath, Date& outModificationDate)
 	{
 		struct stat st;
-		if (stat(filePath, &st) != 0)
+		int result = -1;
+		// For some reason it sometimes takes a few attempts to stat a file
+		int i = 0;
+		while (i < 3 && result != 0)
+		{
+			result = stat(filePath, &st);
+			++i;
+		}
+
+		if (result == 0)
 		{
 			tm* timeUTC = gmtime(&st.st_mtime);
 
@@ -293,6 +289,8 @@ namespace flex
 
 			return true;
 		}
+
+		PrintError("Failed to stat %s, result: %i, errorno: %u\n", filePath, result, errno);
 
 		return false;
 	}
@@ -452,6 +450,7 @@ namespace flex
 
 	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
 	{
+		// TODO: Strip out of release builds!
 		std::string s = "./" + applicationName + " " + param0.c_str();
 		system(s.c_str());
 	}
@@ -525,6 +524,11 @@ namespace flex
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return __sync_fetch_and_add(value, 1);
+	}
+
+	u32 Platform::AtomicDecrement(volatile u32* value)
+	{
+		return __sync_fetch_and_sub(value, 1);
 	}
 
 	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
@@ -623,7 +627,7 @@ namespace flex
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
-		m_Directory(directory),
+		directory(directory),
 		m_bWatchSubtree(bWatchSubtree)
 	{
 		// TODO: Add support for directory watching on linux

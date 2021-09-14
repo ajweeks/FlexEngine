@@ -132,7 +132,7 @@ namespace flex
 			func(f)
 		{
 			this->name = name;
-			returnType = Variant::Type::VOID;
+			returnType = Variant::Type::VOID_;
 		}
 
 		virtual Variant Execute(const std::vector<Variant>& args) override
@@ -168,7 +168,7 @@ namespace flex
 			func(f)
 		{
 			this->name = name;
-			returnType = Variant::Type::VOID;
+			returnType = Variant::Type::VOID_;
 		}
 
 		virtual Variant Execute(const std::vector<Variant>& args) override
@@ -239,7 +239,7 @@ namespace flex
 			func(f)
 		{
 			this->name = name;
-			this->returnType = Variant::Type::VOID;
+			this->returnType = Variant::Type::VOID_;
 			argTypes.reserve(argCount);
 			for (u32 i = 0; i < (u32)argCount; ++i)
 			{

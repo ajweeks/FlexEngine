@@ -9,8 +9,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/vec4.hpp>
 IGNORE_WARNINGS_POP
 
-#include "Functors.hpp"
-#include "Helpers.hpp" // For Hash
+#include "Helpers.hpp"
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
 
@@ -23,6 +22,13 @@ namespace flex
 	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
 	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
+	static const i32 MAX_SSAO_KERNEL_SIZE = 64;
+	static const i32 MAX_NUM_ROAD_SEGMENTS = 64;
+	static const i32 MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK = 8;
+	static const i32 MAX_BIOME_COUNT = 16; // Must be multiple of 16
+	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
+	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
+	static const u32 TERRAIN_THREAD_GROUP_SIZE = 4;
 
 	// 48 bytes
 	struct DirLightData
@@ -66,24 +72,23 @@ namespace flex
 		glm::vec4 points[4];	// 32
 	};
 
-	const i32 MAX_SSAO_KERNEL_SIZE = 64;
 	// 1028 bytes
 	struct SSAOGenData
 	{
-		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE]; // 0
-		real radius;                             // 1024
+		glm::vec4 samples[MAX_SSAO_KERNEL_SIZE];	// 0
+		real radius;								// 1024
 	};
 
 	// 4 bytes
 	struct SSAOBlurDataConstant
 	{
-		i32 radius; // 0
+		i32 radius;	// 0
 	};
 
 	// 8 bytes
 	struct SSAOBlurDataDynamic
 	{
-		glm::vec2 ssaoTexelOffset; // 0
+		glm::vec2 ssaoTexelOffset;	// 0
 	};
 
 	// 16 bytes
@@ -113,141 +118,255 @@ namespace flex
 		glm::vec4 cascadeDepthSplits;								// 256
 	};
 
+	// 112 bytes
 	struct SHCoeffs
 	{
-		glm::vec4 r0;
-		glm::vec4 g0;
-		glm::vec4 b0;
-		glm::vec4 r1;
-		glm::vec4 g1;
-		glm::vec4 b1;
-		glm::vec4 rgb2;
+		glm::vec4 r0;	// 0
+		glm::vec4 g0;	// 16
+		glm::vec4 b0;	// 32
+		glm::vec4 r1;	// 48
+		glm::vec4 g1;	// 64
+		glm::vec4 b1;	// 80
+		glm::vec4 rgb2;	// 96
 	};
 
 #pragma pack(push, 1)
-	// 54 bytes
+	// 56 bytes
 	struct ParticleBufferData
 	{
-		glm::vec3 pos;		// 12
-		glm::vec4 colour;	// 16
-		glm::vec3 vel;		// 12
-		glm::vec4 extraVec4;// 16
+		glm::vec3 pos;		// 0
+		glm::vec4 colour;	// 12
+		glm::vec3 vel;		// 28
+		glm::vec4 extraVec4;// 40
 	};
 #pragma pack(pop)
 
 	// 44 bytes
 	struct ParticleSimData
 	{
-		glm::vec4 colour0;	// 16
+		glm::vec4 colour0;	// 0
 		glm::vec4 colour1;	// 16
-		real dt;			// 4
-		real speed;			// 4
-		u32 particleCount;	// 4
+		real dt;			// 32
+		real speed;			// 36
+		u32 particleCount;	// 40
 	};
 
 	// 80 bytes
 	struct OceanData
 	{
-		glm::vec4 top;				// 16
+		glm::vec4 top;				// 0
 		glm::vec4 mid;				// 16
-		glm::vec4 btm;				// 16
-		real fresnelFactor;			// 4
-		real fresnelPower;			// 4
-		real skyReflectionFactor;	// 4
-		real fogFalloff;			// 4
-		real fogDensity;			// 4
-		real pad[3];				// 12
+		glm::vec4 btm;				// 32
+		real fresnelFactor;			// 48
+		real fresnelPower;			// 52
+		real skyReflectionFactor;	// 56
+		real fogFalloff;			// 60
+		real fogDensity;			// 64
+		real pad[3];				// 68
 	};
 
 	// 64 bytes
 	struct SkyboxData
 	{
-		glm::vec4 top; // 16
-		glm::vec4 mid; // 16
-		glm::vec4 btm; // 16
-		glm::vec4 fog; // 16
+		glm::vec4 top;	// 0
+		glm::vec4 mid;	// 16
+		glm::vec4 btm;	// 32
+		glm::vec4 fog;	// 48
+	};
+
+	// 64 bytes
+	struct BezierCurve3D_GPU
+	{
+		glm::vec4 points[4]; // 0
+	};
+
+	// 96 bytes
+	struct RoadSegment_GPU
+	{
+		BezierCurve3D_GPU curve;	// 0
+		AABB aabb;					//
+		real widthStart;			//
+		real widthEnd;				//
+	};
+
+	bool operator==(const RoadSegment_GPU& lhs, const RoadSegment_GPU& rhs);
+
+	// 32 bytes
+	struct NoiseFunction_GPU
+	{
+		u32 type;					 // 0
+		real baseFeatureSize;		 // 4
+		i32 numOctaves;				 // 8
+		real H;						 // 12
+		real heightScale;			 // 16
+		real lacunarity;			 // 20
+		real wavelength;			 // 24
+		real sharpness;				 // 28
+		//i32 isolateOctave = -1;		 // 32
+		// TODO: Seed
+	};
+
+	// 128 bytes
+	struct Biome_GPU
+	{
+		NoiseFunction_GPU noiseFunctions[MAX_NUM_NOISE_FUNCTIONS_PER_BIOME];	// 0
+	};
+
+	struct TerrainGenConstantData
+	{
+		real chunkSize;											// 0
+		real maxHeight;											// 4
+		real roadBlendDist;										// 8
+		real roadBlendThreshold;								// 12
+		u32 vertCountPerChunkAxis;								// 16
+		i32 isolateNoiseLayer; // default: -1					// 20
+		u32 biomeCount;											// 24
+		u32 randomTablesSize;									// 28
+		u32 numPointsPerAxis;
+		real isoLevel;
+		real _pad0, _pad1;
+		Biome_GPU biomes[MAX_BIOME_COUNT];						// (2,048 bytes)
+		NoiseFunction_GPU biomeNoise;							//
+		glm::uvec4 biomeNoiseFunctionCounts[BIOME_NOISE_FUNCTION_INT4_COUNT]; // Each element stores 16 values (one per byte)
+		//RoadSegment_GPU roadSegments[MAX_NUM_ROAD_SEGMENTS];	// (6,144 bytes)
+		//i32 overlappingRoadSegmentIndices[MAX_NUM_ROAD_SEGMENTS][MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK]; // (8,192 bytes)
+	};
+
+	struct TerrainVertex
+	{
+		glm::vec3 posA;
+		glm::vec4 colourA;
+		glm::vec3 normA;
+		glm::vec3 posB;
+		glm::vec4 colourB;
+		glm::vec3 normB;
+		glm::vec3 posC;
+		glm::vec4 colourC;
+		glm::vec3 normC;
+	};
+
+	// 16 bytes
+	struct TerrainGenDynamicData
+	{
+		glm::ivec3 chunkIndex;
+		u32 linearIndex;
+	};
+
+	// 16 bytes
+	//struct TerrainGenPostProcessConstantData
+	//{
+	//	real chunkSize;				// 0
+	//	real blendRadius;			// 4
+	//	u32 vertCountPerChunkAxis;	// 8
+	//	u32 vertexBufferSize;		// 12
+	//};
+
+	// 16 bytes
+	struct TerrainGenPostProcessDynamicData
+	{
+		u32 linearIndexN;	// 0
+		u32 linearIndexE;	// 4
+		u32 linearIndexS;	// 8
+		u32 linearIndexW;	// 12
 	};
 
 	struct Uniform
 	{
-		Uniform(StringID id, u64 size = 0) :
-			id(id),
-			size((u32)size)
-		{
-		}
+		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
+
+		Uniform(Uniform&) = delete;
+		Uniform(Uniform&&) = delete;
+		Uniform& operator=(Uniform&) = delete;
+		Uniform& operator=(Uniform&&) = delete;
 
 		StringID id;
 		u32 size;
+#if DEBUG
+		const char* DBG_name;
+#endif
 	};
 
-	const Uniform U_MODEL(SID("model"), sizeof(glm::mat4));
-	const Uniform U_VIEW(SID("view"), sizeof(glm::mat4));
-	const Uniform U_VIEW_INV(SID("invView"), sizeof(glm::mat4));
-	const Uniform U_VIEW_PROJECTION(SID("viewProjection"), sizeof(glm::mat4));
-	const Uniform U_PROJECTION(SID("projection"), sizeof(glm::mat4));
-	const Uniform U_PROJECTION_INV(SID("invProjection"), sizeof(glm::mat4));
-	const Uniform U_BLEND_SHARPNESS(SID("blendSharpness"), sizeof(real));
-	const Uniform U_COLOUR_MULTIPLIER(SID("colourMultiplier"), sizeof(glm::vec4));
-	const Uniform U_CAM_POS(SID("camPos"), sizeof(glm::vec4));
-	const Uniform U_LIGHTS(SID("lights"),
-			(sizeof(PointLightData) * MAX_POINT_LIGHT_COUNT +
-			sizeof(SpotLightData) * MAX_SPOT_LIGHT_COUNT +
-			sizeof(AreaLightData) * MAX_AREA_LIGHT_COUNT));
-	const Uniform U_DIR_LIGHT(SID("dirLight"), (u32)sizeof(DirLightData));
-	const Uniform U_ALBEDO_SAMPLER(SID("albedoSampler"));
-	const Uniform U_CONST_ALBEDO(SID("constAlbedo"), (u32)sizeof(glm::vec4));
-	const Uniform U_METALLIC_SAMPLER(SID("metallicSampler"));
-	const Uniform U_CONST_METALLIC(SID("constMetallic"), sizeof(real));
-	const Uniform U_ROUGHNESS_SAMPLER(SID("roughnessSampler"));
-	const Uniform U_CONST_ROUGHNESS(SID("constRoughness"), sizeof(real));
-	const Uniform U_CONST_EMISSIVE(SID("constEmissive"), sizeof(glm::vec4));
-	const Uniform U_NORMAL_SAMPLER(SID("normalSampler"));
-	const Uniform U_ENABLE_ALBEDO_SAMPLER(SID("enableAlbedoSampler"), sizeof(i32));
-	const Uniform U_ENABLE_METALLIC_SAMPLER(SID("enableMetallicSampler"), sizeof(i32));
-	const Uniform U_ENABLE_ROUGHNESS_SAMPLER(SID("enableRoughnessSampler"), sizeof(i32));
-	const Uniform U_ENABLE_NORMAL_SAMPLER(SID("enableNormalSampler"), sizeof(i32));
-	const Uniform U_EMISSIVE_SAMPLER(SID("emissiveSampler"));
-	const Uniform U_CUBEMAP_SAMPLER(SID("cubemapSampler"));
-	const Uniform U_IRRADIANCE_SAMPLER(SID("irradianceSampler"));
-	const Uniform U_FB_0_SAMPLER(SID("normalRoughnessTex"));
-	const Uniform U_FB_1_SAMPLER(SID("albedoMetallicTex"));
-	const Uniform U_ENABLE_EMISSIVE_SAMPLER(SID("enableEmissiveSampler"), sizeof(i32));
-	const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(SID("hdrEquirectangular"));
-	const Uniform U_BRDF_LUT_SAMPLER(SID("brdfLUT"));
-	const Uniform U_PREFILTER_MAP(SID("prefilterMap"));
-	const Uniform U_EXPOSURE(SID("exposure"), sizeof(real));
-	const Uniform U_FONT_CHAR_DATA(SID("fontCharData"), sizeof(glm::vec4));
-	const Uniform U_TEX_SIZE(SID("texSize"), sizeof(glm::vec2));
-	const Uniform U_TEXTURE_SCALE(SID("textureScale"), sizeof(real));
-	const Uniform U_TEX_CHANNEL(SID("texChannel"), sizeof(i32));
-	const Uniform U_UNIFORM_BUFFER_CONSTANT(SID("uniformBufferConstant"));
-	const Uniform U_UNIFORM_BUFFER_DYNAMIC(SID("uniformBufferDynamic"));
-	const Uniform U_TIME(SID("time"), sizeof(glm::vec4));
-	const Uniform U_SDF_DATA(SID("sdfData"), sizeof(glm::vec4));
-	const Uniform U_HIGH_RES_TEX(SID("highResTex"));
-	const Uniform U_DEPTH_SAMPLER(SID("depthSampler"));
-	const Uniform U_NOISE_SAMPLER(SID("noiseSampler"));
-	const Uniform U_SSAO_RAW_SAMPLER(SID("ssaoRawSampler"));
-	const Uniform U_SSAO_FINAL_SAMPLER(SID("ssaoFinalSampler"));
-	const Uniform U_SSAO_NORMAL_SAMPLER(SID("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
-	const Uniform U_SSAO_GEN_DATA(SID("ssaoGenData"), sizeof(SSAOGenData));
-	const Uniform U_SSAO_BLUR_DATA_DYNAMIC(SID("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
-	const Uniform U_SSAO_BLUR_DATA_CONSTANT(SID("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
-	const Uniform U_SSAO_SAMPLING_DATA(SID("ssaoSamplingData"), sizeof(SSAOSamplingData));
-	const Uniform U_LTC_SAMPLER_0(SID("ltcSampler0"));
-	const Uniform U_LTC_SAMPLER_1(SID("ltcSampler1"));
-	const Uniform U_SHADOW_SAMPLER(SID("shadowSampler")); // TODO: Rename to cascade
-	const Uniform U_SHADOW_SAMPLING_DATA(SID("shadowSamplingData"), sizeof(ShadowSamplingData));
-	const Uniform U_NEAR_FAR_PLANES(SID("nearFarPlanes"), sizeof(glm::vec2));
-	const Uniform U_POST_PROCESS_MAT(SID("postProcessMatrix"), sizeof(glm::mat4));
-	const Uniform U_SCENE_SAMPLER(SID("sceneSampler"));
-	const Uniform U_HISTORY_SAMPLER(SID("historySampler"));
-	const Uniform U_LAST_FRAME_VIEWPROJ(SID("lastFrameViewProj"), sizeof(glm::mat4));
-	const Uniform U_PARTICLE_BUFFER(SID("particleBuffer"), sizeof(ParticleBufferData));
-	const Uniform U_PARTICLE_SIM_DATA(SID("particleSimData"), sizeof(ParticleSimData));
-	const Uniform U_OCEAN_DATA(SID("oceanData"), sizeof(OceanData));
-	const Uniform U_SKYBOX_DATA(SID("skyboxData"), sizeof(SkyboxData));
-	const Uniform U_UV_BLEND_AMOUNT(SID("uvBlendAmount"), sizeof(glm::vec2));
+	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);
+	Uniform* UniformFromStringID(StringID uniformNameSID);
+
+#define UNIFORM(val) val, SID(val)
+
+	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4));
+	static const Uniform U_VIEW(UNIFORM("view"), sizeof(glm::mat4));
+	static const Uniform U_VIEW_INV(UNIFORM("invView"), sizeof(glm::mat4));
+	static const Uniform U_VIEW_PROJECTION(UNIFORM("viewProjection"), sizeof(glm::mat4));
+	static const Uniform U_PROJECTION(UNIFORM("projection"), sizeof(glm::mat4));
+	static const Uniform U_PROJECTION_INV(UNIFORM("invProj"), sizeof(glm::mat4));
+	static const Uniform U_BLEND_SHARPNESS(UNIFORM("blendSharpness"), sizeof(real));
+	static const Uniform U_COLOUR_MULTIPLIER(UNIFORM("colourMultiplier"), sizeof(glm::vec4));
+	static const Uniform U_CAM_POS(UNIFORM("camPos"), sizeof(glm::vec4));
+	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
+	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
+	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
+	static const Uniform U_DIR_LIGHT(UNIFORM("dirLight"), (u32)sizeof(DirLightData));
+	static const Uniform U_ALBEDO_SAMPLER(UNIFORM("albedoSampler"));
+	static const Uniform U_CONST_ALBEDO(UNIFORM("constAlbedo"), (u32)sizeof(glm::vec4));
+	static const Uniform U_METALLIC_SAMPLER(UNIFORM("metallicSampler"));
+	static const Uniform U_CONST_METALLIC(UNIFORM("constMetallic"), sizeof(real));
+	static const Uniform U_ROUGHNESS_SAMPLER(UNIFORM("roughnessSampler"));
+	static const Uniform U_CONST_ROUGHNESS(UNIFORM("constRoughness"), sizeof(real));
+	static const Uniform U_CONST_EMISSIVE(UNIFORM("constEmissive"), sizeof(glm::vec4));
+	static const Uniform U_NORMAL_SAMPLER(UNIFORM("normalSampler"));
+	static const Uniform U_ENABLE_ALBEDO_SAMPLER(UNIFORM("enableAlbedoSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_METALLIC_SAMPLER(UNIFORM("enableMetallicSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_ROUGHNESS_SAMPLER(UNIFORM("enableRoughnessSampler"), sizeof(i32));
+	static const Uniform U_ENABLE_NORMAL_SAMPLER(UNIFORM("enableNormalSampler"), sizeof(i32));
+	static const Uniform U_EMISSIVE_SAMPLER(UNIFORM("emissiveSampler"));
+	static const Uniform U_CUBEMAP_SAMPLER(UNIFORM("cubemapSampler"));
+	static const Uniform U_IRRADIANCE_SAMPLER(UNIFORM("irradianceSampler"));
+	static const Uniform U_FB_0_SAMPLER(UNIFORM("normalRoughnessSampler"));
+	static const Uniform U_FB_1_SAMPLER(UNIFORM("albedoMetallicSampler"));
+	static const Uniform U_ENABLE_EMISSIVE_SAMPLER(UNIFORM("enableEmissiveSampler"), sizeof(i32));
+	static const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(UNIFORM("hdrEquirectangular"));
+	static const Uniform U_BRDF_LUT_SAMPLER(UNIFORM("brdfLUT"));
+	static const Uniform U_PREFILTER_MAP(UNIFORM("prefilterMap"));
+	static const Uniform U_EXPOSURE(UNIFORM("exposure"), sizeof(real));
+	static const Uniform U_FONT_CHAR_DATA(UNIFORM("fontCharData"), sizeof(glm::vec4));
+	static const Uniform U_TEX_SIZE(UNIFORM("texSize"), sizeof(glm::vec2));
+	static const Uniform U_TEXTURE_SCALE(UNIFORM("textureScale"), sizeof(real));
+	static const Uniform U_TEX_CHANNEL(UNIFORM("texChannel"), sizeof(i32));
+	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant")); // TODO: Infer this
+	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic")); // TODO: Infer this
+	static const Uniform U_TIME(UNIFORM("time"), sizeof(glm::vec4));
+	static const Uniform U_SDF_DATA(UNIFORM("sdfData"), sizeof(glm::vec4));
+	static const Uniform U_HIGH_RES_TEX(UNIFORM("highResTex"));
+	static const Uniform U_DEPTH_SAMPLER(UNIFORM("depthSampler"));
+	static const Uniform U_NOISE_SAMPLER(UNIFORM("noiseSampler"));
+	static const Uniform U_SSAO_RAW_SAMPLER(UNIFORM("ssaoRawSampler"));
+	static const Uniform U_SSAO_FINAL_SAMPLER(UNIFORM("ssaoFinalSampler"));
+	static const Uniform U_SSAO_NORMAL_SAMPLER(UNIFORM("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
+	static const Uniform U_SSAO_GEN_DATA(UNIFORM("ssaoGenData"), sizeof(SSAOGenData));
+	static const Uniform U_SSAO_BLUR_DATA_DYNAMIC(UNIFORM("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
+	static const Uniform U_SSAO_BLUR_DATA_CONSTANT(UNIFORM("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
+	static const Uniform U_SSAO_SAMPLING_DATA(UNIFORM("ssaoData"), sizeof(SSAOSamplingData));
+	static const Uniform U_LTC_MATRICES_SAMPLER(UNIFORM("ltcMatricesSampler"));
+	static const Uniform U_LTC_AMPLITUDES_SAMPLER(UNIFORM("ltcAmplitudesSampler"));
+	static const Uniform U_SHADOW_CASCADES_SAMPLER(UNIFORM("shadowCascadeSampler"));
+	static const Uniform U_SHADOW_SAMPLING_DATA(UNIFORM("shadowSamplingData"), sizeof(ShadowSamplingData));
+	static const Uniform U_NEAR_FAR_PLANES(UNIFORM("nearFarPlanes"), sizeof(glm::vec2));
+	static const Uniform U_POST_PROCESS_MAT(UNIFORM("postProcessMatrix"), sizeof(glm::mat4));
+	static const Uniform U_SCENE_SAMPLER(UNIFORM("sceneSampler"));
+	static const Uniform U_HISTORY_SAMPLER(UNIFORM("historySampler"));
+	static const Uniform U_LAST_FRAME_VIEWPROJ(UNIFORM("lastFrameViewProj"), sizeof(glm::mat4));
+	static const Uniform U_PARTICLE_BUFFER(UNIFORM("particleBuffer"), sizeof(ParticleBufferData));
+	static const Uniform U_PARTICLE_SIM_DATA(UNIFORM("particleSimData"), sizeof(ParticleSimData));
+	static const Uniform U_OCEAN_DATA(UNIFORM("oceanData"), sizeof(OceanData));
+	static const Uniform U_SKYBOX_DATA(UNIFORM("skyboxData"), sizeof(SkyboxData));
+	static const Uniform U_UV_BLEND_AMOUNT(UNIFORM("uvBlendAmount"), sizeof(glm::vec2));
+	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
+	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
+	static const Uniform U_TERRAIN_POINT_BUFFER(UNIFORM("terrainPointBuffer"));
+	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"));
+	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
+	static const Uniform U_CHARGE_AMOUNT(UNIFORM("chargeAmount"), sizeof(real));
+
+#undef UNIFORM
 
 	enum class ClearFlag
 	{
@@ -373,9 +492,6 @@ namespace flex
 		_NONE
 	};
 
-	CullFace StringToCullFace(const std::string& str);
-	std::string CullFaceToString(CullFace cullFace);
-
 	// TODO: Remove
 	enum RenderBatchDirtyFlag : u32
 	{
@@ -414,8 +530,8 @@ namespace flex
 		MaterialID prefilterMapSamplerMatID = InvalidMaterialID;
 
 		// PBR Constant values
-		glm::vec3 constAlbedo = VEC3_ONE;
-		glm::vec3 constEmissive = VEC3_ONE;
+		glm::vec4 constAlbedo = VEC4_ONE;
+		glm::vec4 constEmissive = VEC4_ONE;
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
 
@@ -486,32 +602,30 @@ namespace flex
 	{
 		struct TexPair
 		{
-			TexPair(StringID uniformID, UniformType object) :
-				uniformID(uniformID),
+			TexPair(Uniform const* uniform, UniformType object) :
+				uniform(uniform),
 				object(object)
 			{}
 
-			StringID uniformID;
+			Uniform const* uniform;
 			UniformType object;
 		};
 
 		using iter = typename std::vector<TexPair>::iterator;
 		using const_iter = typename std::vector<TexPair>::const_iterator;
 
-		void SetUniform(const Uniform& uniform, const UniformType object, std::string slotName = "")
+		void SetUniform(Uniform const* uniform, const UniformType object)
 		{
-			for (auto value_iter = values.begin(); value_iter != values.end(); ++value_iter)
+			for (u32 i = 0; i < (u32)values.size(); ++i)
 			{
-				if (value_iter->uniformID == uniform.id)
+				if (values[i].uniform->id == uniform->id)
 				{
-					value_iter->object = object;
-					slotNames[value_iter - values.begin()] = slotName;
+					values[i].object = object;
 					return;
 				}
 			}
 
-			values.emplace_back(uniform.id, object);
-			slotNames.emplace_back(slotName);
+			values.emplace_back(uniform, object);
 		}
 
 		u32 Count()
@@ -539,11 +653,11 @@ namespace flex
 			return values.cend();
 		}
 
-		bool Contains(const Uniform& uniform) const
+		bool Contains(Uniform const* uniform) const
 		{
 			for (const auto& pair : values)
 			{
-				if (pair.uniformID == uniform.id)
+				if (pair.uniform->id == uniform->id)
 				{
 					return true;
 				}
@@ -551,11 +665,11 @@ namespace flex
 			return false;
 		}
 
-		UniformType operator[](const Uniform& uniform)
+		UniformType operator[](Uniform const* uniform)
 		{
 			for (const auto& pair : values)
 			{
-				if (pair.uniformID == uniform.id)
+				if (pair.uniform->id == uniform->id)
 				{
 					return pair.object;
 				}
@@ -564,7 +678,47 @@ namespace flex
 		}
 
 		std::vector<TexPair> values;
-		std::vector<std::string> slotNames;
+	};
+
+	struct MaterialPropertyOverride
+	{
+		MaterialPropertyOverride() : i32Value(0) {}
+		MaterialPropertyOverride(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		MaterialPropertyOverride(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		void operator=(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		void operator=(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		MaterialPropertyOverride(real realValue) : realValue(realValue) {}
+		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value) {}
+		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value) {}
+		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue) {}
+		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value) {}
+		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value) {}
+		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value) {}
+		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value) {}
+		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue) {}
+
+		union {
+			real realValue;
+			u32 u32Value;
+			i32 i32Value;
+			bool boolValue;
+			glm::vec2 vec2Value;
+			glm::vec3 vec3Value;
+			glm::vec4 vec4Value;
+			glm::mat4 mat4Value;
+			void* pointerValue;
+		};
+	};
+
+	struct UniformOverrides
+	{
+		using UniformPair = Pair<Uniform const*, MaterialPropertyOverride>;
+
+		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride);
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const;
+
+		std::map<StringID, UniformPair> overrides;
 	};
 
 	struct Material
@@ -572,23 +726,8 @@ namespace flex
 		struct PushConstantBlock;
 
 		Material() = default;
-
-		virtual ~Material()
-		{
-			if (pushConstantBlock)
-			{
-				delete pushConstantBlock;
-				pushConstantBlock = nullptr;
-			}
-		}
-
-		explicit Material(const Material& rhs)
-		{
-			if (rhs.pushConstantBlock)
-			{
-				pushConstantBlock = new PushConstantBlock(*rhs.pushConstantBlock);
-			}
-		}
+		virtual ~Material();
+		explicit Material(const Material& rhs);
 
 		Material(const Material&&) = delete;
 		Material& operator=(const Material&) = delete;
@@ -648,7 +787,7 @@ namespace flex
 		bool generatePrefilteredMap = false;
 
 		bool enableBRDFLUT = false;
-		bool renderToCubemap = false; // NOTE: This flag is currently ignored by GL renderer!
+		bool renderToCubemap = false;
 
 		bool generateReflectionProbeMaps = false;
 
@@ -658,7 +797,6 @@ namespace flex
 		bool bSerializable = true;
 
 		bool bDynamic = false;
-		u32 dynamicVertexIndexBufferIndex = 0;
 
 		real textureScale = 1.0f;
 		real blendSharpness = 1.0f;
@@ -666,128 +804,30 @@ namespace flex
 		glm::vec4 fontCharData;
 		glm::vec2 texSize;
 
+		// TODO: Replace all above fields using overrides
+		UniformOverrides uniformOverrides;
+
 		// TODO: Store TextureIDs here
 		ShaderUniformContainer<Texture*> textures;
 
-		struct PushConstantBlock
+		struct PushConstantBlock final
 		{
-			PushConstantBlock(i32 initialSize) : size(initialSize) { assert(initialSize != 0); }
-			PushConstantBlock() {}
+			PushConstantBlock() = default;
+			PushConstantBlock(i32 initialSize);
 
-			PushConstantBlock(const PushConstantBlock& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-			}
-			PushConstantBlock(const PushConstantBlock&& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-			}
-			PushConstantBlock& operator=(const PushConstantBlock& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-				return *this;
-			}
-			PushConstantBlock& operator=(const PushConstantBlock&& rhs)
-			{
-				data = rhs.data;
-				size = rhs.size;
-				return *this;
-			}
+			PushConstantBlock(const PushConstantBlock& rhs);
+			PushConstantBlock(const PushConstantBlock&& rhs);
+			PushConstantBlock& operator=(const PushConstantBlock& rhs);
+			PushConstantBlock& operator=(const PushConstantBlock&& rhs);
 
-			~PushConstantBlock()
-			{
-				if (data)
-				{
-					free(data);
-					data = nullptr;
-					size = 0;
-				}
-			}
+			~PushConstantBlock();
 
-			void InitWithSize(u32 dataSize)
-			{
-				if (data == nullptr)
-				{
-					assert(size == dataSize || size == 0);
-
-					size = dataSize;
-					if (dataSize != 0)
-					{
-						data = malloc(dataSize);
-					}
-				}
-				else
-				{
-					assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
-				}
-			}
-
-			void SetData(real* newData, u32 dataSize)
-			{
-				InitWithSize(dataSize);
-				memcpy(data, newData, size);
-			}
-
-			void SetData(const std::vector<Pair<void*, u32>>& dataList)
-			{
-				i32 dataSize = 0;
-				for (const auto& pair : dataList)
-				{
-					dataSize += pair.second;
-				}
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-
-				for (auto& pair : dataList)
-				{
-					memcpy(dst, pair.first, pair.second);
-					dst += pair.second / sizeof(real);
-				}
-			}
-
-			void SetData(const glm::mat4& viewProj)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 1;
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-				memcpy(dst, &viewProj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-			}
-
-			void SetData(const glm::mat4& view, const glm::mat4& proj)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 2;
-				InitWithSize(dataSize);
-
-				real* dst = (real*)data;
-				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-			}
-
-			void SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
-			{
-				const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
-				if (data == nullptr)
-				{
-					assert(size == dataSize || size == 0);
-
-					size = dataSize;
-					data = malloc(dataSize);
-					assert(data != nullptr);
-				}
-				else
-				{
-					assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
-				}
-				real* dst = (real*)data;
-				memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &proj, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
-				memcpy(dst, &textureIndex, sizeof(i32)); dst += sizeof(i32) / sizeof(real);
-			}
+			void InitWithSize(u32 dataSize);
+			void SetData(real* newData, u32 dataSize);
+			void SetData(const std::vector<Pair<void*, u32>>& dataList);
+			void SetData(const glm::mat4& viewProj);
+			void SetData(const glm::mat4& view, const glm::mat4& proj);
+			void SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex);
 
 			void* data = nullptr;
 			u32 size = 0;
@@ -810,6 +850,7 @@ namespace flex
 		UI,
 
 		COMPUTE_PARTICLES,
+		COMPUTE_TERRAIN,
 
 		_NONE
 	};
@@ -837,11 +878,12 @@ namespace flex
 
 	struct UniformList
 	{
-		bool HasUniform(const Uniform& uniform) const;
-		void AddUniform(const Uniform& uniform);
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(const StringID& uniformID) const;
+		void AddUniform(Uniform const* uniform);
 		u32 GetSizeInBytes() const;
 
-		std::set<StringID> uniforms;
+		std::map<StringID, Uniform const*> uniforms;
 		u32 totalSizeInBytes = 0;
 	};
 
@@ -863,7 +905,7 @@ namespace flex
 			const std::string& inGeometryShaderFilePath = "",
 			const std::string& inComputeShaderFilePath = "");
 
-		virtual ~Shader() {};
+		virtual ~Shader() = default;
 
 		Shader(const Shader&) = delete;
 		Shader(const Shader&&) = delete;
@@ -886,6 +928,8 @@ namespace flex
 		UniformList dynamicBufferUniforms = {};
 		UniformList additionalBufferUniforms = {};
 		UniformList textureUniforms = {};
+
+		u32 dynamicVertexIndexBufferIndex = 0;
 
 		VertexAttributes vertexAttributes = 0;
 		i32 numAttachments = 1;
@@ -987,32 +1031,19 @@ namespace flex
 		std::vector<ShaderBatchPair> batches;
 	};
 
-	struct UniformOverrides
-	{
-		UniformList overridenUniforms;
-
-		glm::mat4 projection;
-		glm::mat4 view;
-		glm::mat4 viewProjection;
-		glm::vec4 camPos;
-		glm::mat4 model;
-		glm::mat4 modelInvTranspose;
-		u32 enableAlbedoSampler;
-		u32 enableMetallicSampler;
-		u32 enableRoughnessSampler;
-		u32 enableNormalSampler;
-		i32 texChannel;
-		glm::vec4 sdfData;
-		glm::vec4 fontCharData;
-		glm::vec2 texSize;
-		glm::vec4 colourMultiplier;
-		bool bSSAOVerticalPass;
-		ParticleSimData* particleSimData = nullptr;
-		glm::vec2 uvBlendAmount;
-	};
-
 	struct DeviceDiagnosticCheckpoint
 	{
 		char name[48];
 	};
+
+	struct SpecializationConstantMetaData
+	{
+		SpecializationConstantID id;
+		i32 value;
+		// Editor-only:
+		i32 min;
+		i32 max;
+	};
+
+	i32 DebugOverlayNameToID(const char* DebugOverlayName);
 } // namespace flex

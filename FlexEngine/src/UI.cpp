@@ -429,10 +429,11 @@ namespace flex
 							StringID stackTypeID = prefabTemplate->GetTypeID();
 							textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
 						}
-						else
+
+						if (textureID == InvalidTextureID)
 						{
 							// No icon exists for type, use placeholder
-							textureID = g_Renderer->alphaBGTextureID;
+							textureID = g_ResourceManager->tofuIconID;
 						}
 					}
 
@@ -478,10 +479,11 @@ namespace flex
 									lastImageUpdatedStackTypeID = stackTypeID;
 								}
 							}
-							else
+
+							if (imageElement->textureID == InvalidTextureID)
 							{
 								// No icon exists for type, use placeholder
-								imageElement->textureID = g_Renderer->alphaBGTextureID;
+								imageElement->textureID = g_ResourceManager->tofuIconID;
 							}
 						}
 					}
@@ -647,6 +649,8 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
+			Print("Children: %u\n", (u32)children.size());
+
 			if (!children.empty())
 			{
 				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
@@ -691,12 +695,12 @@ namespace flex
 					}
 				}
 			}
-		}
 
-		if ((i32)itemSlotContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
-		{
-			PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
-				Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemSlotContainers.size());
+			if ((i32)itemSlotContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
+					Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemSlotContainers.size());
+			}
 		}
 	}
 
@@ -796,6 +800,8 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
+			Print("Inventory children: %u\n", (u32)children.size());
+
 			if (!children.empty())
 			{
 				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
@@ -847,12 +853,12 @@ namespace flex
 					}
 				}
 			}
-		}
 
-		if ((i32)itemContainers.size() != Player::INVENTORY_ITEM_COUNT)
-		{
-			PrintWarn("Failed to find %i items in InventoryUIContainer::OnLayoutChanged (found %i)\n",
-				Player::INVENTORY_ITEM_COUNT, (i32)itemContainers.size());
+			if ((i32)itemContainers.size() != Player::INVENTORY_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in InventoryUIContainer::OnLayoutChanged (found %i)\n",
+					Player::INVENTORY_ITEM_COUNT, (i32)itemContainers.size());
+			}
 		}
 	}
 
@@ -937,19 +943,26 @@ namespace flex
 	{
 		if (g_CameraManager->CurrentCamera()->bIsGameplayCam)
 		{
+			PROFILE_AUTO("UIManager Update");
+
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 
 			if (player != nullptr)
 			{
+				real aspectRatio = g_Window->GetAspectRatio();
+				const real targetAspectRatio = 16.0f / 9.0f;
+				real x = aspectRatio > targetAspectRatio ? (aspectRatio / targetAspectRatio) : 1.0f;
+				real y = aspectRatio > targetAspectRatio ? 1.0f : (aspectRatio / targetAspectRatio);
+
 				{
-					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
+					Rect rect{ -x, -y, x, y, VEC4_ONE };
 					playerQuickAccessUI->Update(rect);
 					playerQuickAccessUI->Draw();
 				}
 
 				if (player->bInventoryShowing)
 				{
-					Rect rect{ -1.0f, -1.0f, 1.0f, 1.0f, VEC4_ONE };
+					Rect rect{ -x, -y, x, y, VEC4_ONE };
 					playerInventoryUI->Update(rect);
 					playerInventoryUI->Draw();
 				}
@@ -1087,6 +1100,10 @@ namespace flex
 			}
 
 			return uiContainer;
+		}
+		else
+		{
+			Print("Failed to read UI config file at %s\n", filePath);
 		}
 
 		return nullptr;

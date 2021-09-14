@@ -51,6 +51,9 @@ namespace flex
 		GameObjectID GetGameObjectID(const std::string& label) const;
 		bool TryGetGameObjectID(const std::string& label, GameObjectID& value) const;
 
+		PrefabID GetPrefabID(const std::string& label) const;
+		bool TryGetPrefabID(const std::string& label, PrefabID& value) const;
+
 		const std::vector<JSONField>& GetFieldArray(const std::string& label) const;
 		bool TryGetFieldArray(const std::string& label, std::vector<JSONField>& value) const;
 
@@ -105,6 +108,14 @@ namespace flex
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
 		explicit JSONValue(const GUID& inGUIDValue);
+
+		i32 AsInt() const;
+		u32 AsUInt() const;
+		i64 AsLong() const;
+		u64 AsULong() const;
+		real AsFloat() const;
+		bool AsBool() const;
+		std::string AsString() const;
 
 		Type type = Type::UNINITIALIZED;
 		union

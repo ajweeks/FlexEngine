@@ -1,7 +1,5 @@
 #pragma once
 
-#undef VOID
-
 namespace flex
 {
 	namespace IR
@@ -10,6 +8,21 @@ namespace flex
 	}
 
 	class VirtualMachine;
+
+	static const char* VariantTypeNames[] =
+	{
+		"int",
+		"uint",
+		"long",
+		"ulong",
+		"float",
+		"bool",
+		"string",
+		"char",
+		"void",
+
+		"NONE"
+	};
 
 	struct Variant
 	{
@@ -23,10 +36,14 @@ namespace flex
 			BOOL,
 			STRING,
 			CHAR,
-			VOID,
+			VOID_, // Avoid Windows' define of VOID
 
 			_NONE
 		};
+
+		static_assert((u32)Type::_NONE == ((u32)ARRAY_LENGTH(VariantTypeNames) - 1), "Variant::VariantTypeNames doesn't contain a matching number of elements to Variant::Type enum");
+
+		static const char* TypeToString(Type type);
 
 		Variant() :
 			type(Type::_NONE),
@@ -99,6 +116,8 @@ namespace flex
 
 		std::string ToString() const;
 
+		static bool IsIntegral(Type type);
+
 		i32 AsInt() const;
 		u32 AsUInt() const;
 		i64 AsLong() const;
@@ -110,6 +129,10 @@ namespace flex
 
 		bool IsZero() const;
 		bool IsPositive() const;
+
+		// Updates this variant's value (does not allow changing value type)
+		// Returns true when successful
+		bool SetValueFromString(const char* str);
 
 		Variant& operator=(const Variant& other);
 		Variant& operator=(const Variant&& other);
@@ -131,6 +154,8 @@ namespace flex
 			i32 valBool;
 			const char* valStr;
 			char valChar;
+
+			u64 _largestField;
 		};
 
 		static Type CheckAssignmentType(Type lhsType, Type rhsType);

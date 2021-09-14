@@ -1,0 +1,208 @@
+{
+	"version" : 6,
+	"name" : "scene_blue",
+	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 10000.000000,
+		"fov" : 0.524471,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-27.251, 10.877, -92.438",
+			"pitch" : 0.069934,
+			"yaw" : -4.891901
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "9F64B20A972CA4A444BC5A37778FA788",
+			"type" : "skybox",
+			"visible" : false,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional light",
+			"id" : "A13E353F9540309344937DEEF09D554A",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "2.415, -0.000, 0.000"
+			},
+			"visible" : false,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "0.935, 0.000, 0.000, 0.355",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "0.28, 0.34, 0.39",
+				"enabled" : false,
+				"brightness" : 15.000000,
+				"cast shadows" : false,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "floor",
+			"id" : "A276CC71B31195B943A6697C504C378E",
+			"type" : "object",
+			"transform" : 
+			{
+				"scale" : "812.400, 1.000, 12000.000"
+			},
+			"visible" : true,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"floor"
+			]
+		},
+		{
+			"name" : "ceiling",
+			"id" : "7EA0FC07AE37C8B94363453B64A933BB",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, 184.957, 0.000",
+				"scale" : "861.200, 1.000, 12000.000"
+			},
+			"visible" : true,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"vantablack"
+			]
+		},
+		{
+			"name" : "wall-L",
+			"id" : "CDB5776C0ECE63894BDFAFFBD794F035",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-375.000, 91.957, 0.000",
+				"rot" : "0.000, -0.000, 1.571",
+				"scale" : "200.000, 1.000, 12000.000"
+			},
+			"visible" : true,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"floor"
+			]
+		},
+		{
+			"name" : "wall-R",
+			"id" : "869DAE4C50ACF2A3499637C079DECD86",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "375.000, 89.557, 0.000",
+				"rot" : "0.000, -0.000, 1.571",
+				"scale" : "200.000, 1.000, 12000.000"
+			},
+			"visible" : true,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"floor"
+			]
+		},
+		{
+			"name" : "AreaLight_00",
+			"id" : "49A354AFF3F9C1BD41A4966901DD1151",
+			"type" : "area light",
+			"transform" : 
+			{
+				"pos" : "-64.993, 95.833, -18.228",
+				"rot" : "1.948, 1.040, -1.811",
+				"scale" : "10.153, 10.153, 10.153"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"area light info" : 
+			{
+				"colour" : "0.03, 0.07, 1.00",
+				"enabled" : true,
+				"brightness" : 479.166992
+			}
+		},
+		{
+			"name" : "wall-rear",
+			"id" : "2A7A3030ABFA41A447D3B558E5BBBAAE",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-9.576, 91.957, 5000.000",
+				"rot" : "1.571, -0.000, 0.000",
+				"scale" : "699.500, 1.000, 200.000"
+			},
+			"visible" : true,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"vantablack"
+			]
+		},
+		{
+			"name" : "sphere",
+			"id" : "E2654E9C95A011904948908734F387A7",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, 24.554, 62.150",
+				"scale" : "10.000, 10.000, 10.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "sphere.glb",
+			"materials" : 
+			[
+				"blue"
+			]
+		},
+		{
+			"name" : "floor-grey",
+			"id" : "FA494B028F3E13AC4B6560FC43110435",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.187, 0.000",
+				"scale" : "500.000, 1.000, 2000.000"
+			},
+			"visible" : false,
+			"static" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"rubber"
+			]
+		}
+	]
+}

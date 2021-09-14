@@ -1,5 +1,4 @@
 #pragma once
-#pragma once
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Vehicle/btRaycastVehicle.h>
@@ -30,8 +29,10 @@ namespace flex
 	class Socket;
 	class TerminalCamera;
 	class Wire;
+	class WirePlug;
 	class SoftBody;
 	struct RoadSegment;
+	class Player;
 
 	namespace VM
 	{
@@ -141,12 +142,9 @@ namespace flex
 			bool bIsPrefabTemplate = false,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
-		virtual bool AllowInteractionWith(GameObject* gameObject);
-		virtual void SetInteractingWith(GameObject* gameObject);
-
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
 
-		bool IsBeingInteractedWith() const;
+		virtual bool ShouldSerialize();
 
 		// Returns true if this object was deleted or duplicated
 		bool DoImGuiContextMenu(bool bActive);
@@ -159,8 +157,6 @@ namespace flex
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);
-
-		GameObject* GetObjectInteractingWith();
 
 		JSONObject Serialize(const BaseScene* scene,
 			bool bIsRoot = false,
@@ -273,12 +269,14 @@ namespace flex
 
 		bool IsTemplate() const;
 
+		virtual void OnCharge(real chargeAmount);
+
 		ChildIndex ComputeChildIndex() const;
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
 		PrefabID Itemize();
-		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS);
+		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS);
 
 		bool IsItemizable() const;
 
@@ -378,11 +376,7 @@ namespace flex
 
 		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
 
-		/*
-		* Will point at the player we're interacting with, or the object if we're the player
-		*/
-		GameObject* m_ObjectInteractingWith = nullptr;
-
+		// TODO: Remove?
 		GameObject* m_NearbyInteractable = nullptr;
 
 		i32 m_SiblingIndex = 0;
@@ -548,6 +542,8 @@ namespace flex
 
 		real rotation = 0.0f;
 		real pRotation = 0.0f;
+
+		bool m_bBeingInteractedWith = false;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -765,6 +761,9 @@ namespace flex
 		Battery();
 		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void Update() override;
+		virtual void OnCharge(real amount) override;
+
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
 			CopyFlags copyFlags = CopyFlags::ALL,
@@ -772,6 +771,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		real chargeAmount = 0.0f;
+		real chargeCapacity = 100.0f;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -942,8 +942,6 @@ namespace flex
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
 
-		RollingAverage<ms> avgWaveUpdateTime;
-
 		u32 DEBUG_lastUsedVertCount = 0;
 
 		WaveThreadData threadUserData;
@@ -962,34 +960,79 @@ namespace flex
 	public:
 		explicit Blocks(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual void Update() override;
-
 	protected:
 
 	};
 
-	// Connects terminals to other things to transmit information
+	// Connects together devices to transmit information & power
 	class Wire final : public GameObject
 	{
 	public:
 		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void Initialize() override;
+		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void DrawImGuiObjects() override;
+		virtual bool ShouldSerialize() override;
+
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+		GameObjectID GetOtherPlug(WirePlug* plug);
+
+		void SetStartTangent(const glm::vec3& tangent);
+		void ClearStartTangent();
+		void SetEndTangent(const glm::vec3& tangent);
+		void ClearEndTangent();
+
+		void StepSimulation();
+
+		void CalculateTangentAtPoint(real t, glm::vec3& outTangent);
+		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);
+
+		static const real DEFAULT_LENGTH;
+
+		GameObjectID plug0ID = InvalidGameObjectID;
+		GameObjectID plug1ID = InvalidGameObjectID;
+
+		i32 numPoints = 12;
+		i32 numRadialPoints = 10;
+		real stiffness = 0.8f;
+		real pointInvMass = 1.0f / 15.0f;
+		real damping = 0.9f;
+
+		SoftBody* m_SoftBody = nullptr;
+
+	private:
+		void DestroyPoints();
+		void GeneratePoints();
+		void UpdateMesh();
+		void UpdateIndices();
+
+		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
+		std::vector<u32> m_Indices;
+
+	};
+
+	// End of wire - the part you actually interact with
+	class WirePlug final : public GameObject
+	{
+	public:
+		WirePlug(const std::string& name, const GameObjectID& gameObjectID);
+		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID);
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 		void PlugIn(Socket* socket);
-		void Unplug(Socket* socket);
+		void Unplug();
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
+		static const real nearbyThreshold;
 
-		GameObjectID socket0ID = InvalidGameObjectID;
-		GameObjectID socket1ID = InvalidGameObjectID;
+		GameObjectID wireID = InvalidGameObjectID;
+		GameObjectID socketID = InvalidGameObjectID;
 
-		glm::vec3 startPoint;
-		glm::vec3 endPoint;
 	};
 
 	// Connect wires to objects
@@ -1003,11 +1046,12 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
+		void OnPlugIn(WirePlug* plug);
+		void OnUnPlug();
 
 		GameObject* parent = nullptr;
-		Wire* connectedWire = nullptr;
+
+		GameObjectID connectedPlugID = InvalidGameObjectID;
 		i32 slotIdx = 0;
 	};
 
@@ -1022,12 +1066,11 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
+		bool IsInteractable(Player* player);
+		void SetBeingInteractedWith(Player* player);
 
 		void OnScriptChanged();
-
 		void SetCamera(TerminalCamera* camera);
-
 		void DrawImGuiWindow();
 
 		static const i32 MAX_OUTPUT_COUNT = 4;
@@ -1096,6 +1139,8 @@ namespace flex
 		TerminalCamera* m_Camera = nullptr;
 		//const i32 m_Columns = 45;
 
+		bool m_bBeingInteractedWith = false;
+
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
 
@@ -1134,13 +1179,56 @@ namespace flex
 
 	};
 
+	struct NoiseFunction
+	{
+		enum class Type : u32
+		{
+			PERLIN,
+			FBM, // https://www.iquilezles.org/www/articles/fbm/fbm.htm
+			VORONOI, // https://www.iquilezles.org/www/articles/voronoise/voronoise.htm
+			SMOOTH_VORONOI, // https://www.iquilezles.org/www/articles/smoothvoronoi/smoothvoronoi.htm
+
+			// NOTE: New entries should also be added to NoiseFunctionTypeNames & NoiseFunction::GenerateDefault
+
+			_NONE
+		};
+
+		static Type TypeFromString(const char* str);
+		static const char* TypeToString(Type type);
+
+		static NoiseFunction GenerateDefault(Type type);
+
+		Type type;
+		real baseFeatureSize;
+		i32 numOctaves;
+		real H; // controls self-similarity [0, 1]
+		real heightScale;
+		real lacunarity;
+		real wavelength;
+		real sharpness;
+		i32 isolateOctave = -1;
+
+		// TODO: Seed
+	};
+
+	static const char* NoiseFunctionTypeNames[] =
+	{
+		"Perlin",
+		"FBM",
+		"Voronoi",
+		"Smooth Voronoi",
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(NoiseFunctionTypeNames) == (u32)NoiseFunction::Type::_NONE + 1, "NoiseFunctionTypeNames length must match NoiseFunction::Type enum");
+
 	class TerrainGenerator final : public GameObject
 	{
 	public:
 		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
@@ -1149,26 +1237,33 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		real Sample(const glm::vec2& pos);
+		void Regenerate();
+
+		struct Biome
+		{
+			std::string name;
+			std::vector<NoiseFunction> noiseFunctions;
+		};
 
 		struct TerrainChunkData
 		{
 			// General info
-			real baseOctave;
 			real chunkSize;
 			real maxHeight;
-			real octaveScale;
 			real roadBlendDist;
 			real roadBlendThreshold;
-			u32 numOctaves;
 			u32 vertCountPerChunkAxis;
-			i32 isolateOctave;
+			i32 isolateNoiseLayer = -1;
 
+			u32 numPointsPerAxis;
+
+			NoiseFunction* biomeNoise = nullptr;
+			std::vector<Biome>* biomes = nullptr;
 			std::vector<std::vector<glm::vec2>>* randomTables;
-			std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare>* roadSegments;
+			std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments;
 
 			// Per chunk inputs
-			volatile glm::vec2i chunkIndex;
+			volatile glm::ivec3 chunkIndex;
 
 			// Per chunk outputs
 			volatile glm::vec3* positions;
@@ -1177,11 +1272,12 @@ namespace flex
 			volatile u32* indices;
 		};
 
-		u32 VertCountPerChunkAxis = 8;
-		real ChunkSize = 16.0f;
-		real MaxHeight = 3.0f;
+		void FillInTerrainChunkData(volatile TerrainChunkData& outChunkData);
+		real Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos);
 
 	private:
+		struct Chunk;
+
 		friend Road;
 
 		static real SmoothBlend(real t);
@@ -1191,13 +1287,21 @@ namespace flex
 
 		void DiscoverChunks();
 		void GenerateChunks();
+		void DestroyChunk(Chunk* chunk);
 		void DestroyAllChunks();
 
-		void DestroyChunkRigidBody(const glm::vec2i& chunkIndex);
-		void CreateChunkRigidBody(const glm::vec2i& chunkIndex);
+		void FillOutConstantData(TerrainGenConstantData& constantData);
+
+		void DestroyChunkRigidBody(Chunk* chunk);
+		void CreateChunkRigidBody(Chunk* chunk);
 
 		void AllocWorkQueueEntry(u32 workQueueIndex);
 		void FreeWorkQueueEntry(u32 workQueueIndex);
+
+		bool DrawNoiseFunctionImGui(NoiseFunction& noiseFunction, bool& bOutRemoved);
+
+		NoiseFunction ParseNoiseFunction(const JSONObject& noiseFunctionObj);
+		JSONObject SerializeNoiseFunction(const NoiseFunction& noiseFunction);
 
 		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 
@@ -1208,20 +1312,22 @@ namespace flex
 			btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
 			RigidBody* rigidBody = nullptr;
 			MeshComponent* meshComponent = nullptr;
-			//glm::vec2i chunkIndex;
+			btCollisionShape* collisionShape = nullptr;
 			u32 linearIndex = 0;
 		};
 
 		// TODO: Merge somehow while maintaining unique indices for work queue
-		std::map<glm::vec2i, Chunk*, Vec2iCompare> m_Meshes; // Chunk index to mesh
+		std::map<glm::ivec3, Chunk*, iVec3Compare> m_Meshes; // Chunk index to mesh
 
 		void* criticalSection = nullptr;
 
 		real m_LoadedChunkRadius = 100.0f;
 		real m_LoadedChunkRigidBodyRadius2 = 100.0f * 100.0f;
 
-		std::set<glm::vec2i, Vec2iCompare> m_ChunksToLoad;
-		std::set<glm::vec2i, Vec2iCompare> m_ChunksToDestroy;
+		std::set<glm::ivec3, iVec3Compare> m_ChunksToLoad;
+		std::set<glm::ivec3, iVec3Compare> m_ChunksToDestroy;
+		glm::vec2 m_PreviousCenterPoint;
+		real m_PreviousLoadedChunkRadius = 0.0f; // Probably only needed in editor when m_LoadedChunkRadius can change
 
 		const ns m_CreationBudgetPerFrame = Time::ConvertFormatsConstexpr(4.0f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
 		const ns m_DeletionBudgetPerFrame = Time::ConvertFormatsConstexpr(0.5f, Time::Format::MILLISECOND, Time::Format::NANOSECOND);
@@ -1229,15 +1335,13 @@ namespace flex
 		bool m_UseManualSeed = true;
 		i32 m_ManualSeed = 0;
 
-		real m_OctaveScale = 1.0f;
-		real m_BaseOctave = 1.0f;
-		u32 m_NumOctaves = 1;
-
 		real m_RoadBlendDist = 10.0f;
 		real m_RoadBlendThreshold = 10.0f;
 
 		bool m_bHighlightGrid = false;
-		bool m_bDisplayTables = false;
+		bool m_bDisplayRandomTables = false;
+
+		bool m_bUseAsyncCompute = true;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
@@ -1246,29 +1350,44 @@ namespace flex
 		glm::vec3 m_MidCol;
 		glm::vec3 m_HighCol;
 
+		NoiseFunction m_BiomeNoise;
+		std::vector<Biome> m_Biomes;
 		std::vector<std::vector<glm::vec2>> m_RandomTables;
-		u32 m_BasePerlinTableWidth = 16;
+		u32 m_BasePerlinTableWidth = 128;
 
 		// Map of chunk index to overlapping road segments
-		std::map<glm::vec2i, std::vector<RoadSegment*>, Vec2iCompare> m_RoadSegments;
+		std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare> m_RoadSegments;
+		std::array<RoadSegment_GPU, MAX_NUM_ROAD_SEGMENTS> m_RoadSegmentsGPU;
 
-		std::vector<TextureID> m_TableTextureIDs;
+		u32 m_RandomTableTextureLayerCount = 0;
+		TextureID m_RandomTableTextureID = InvalidTextureID;
 
-		i32 m_IsolateOctave = -1;
+		i32 m_IsolateNoiseLayer = -1;
+
+		u32 m_VertCountPerChunkAxis = 8;
+		real m_ChunkSize = 512.0f;
+		real m_MaxHeight = 3.0f;
+
+		u32 m_NumPointsPerAxis = 8 + 1;
+		real m_IsoLevel = 0.0f;
+
+		u32 m_MaxChunkCount = 16;
 
 		TerrainThreadData threadUserData;
 
-		glm::vec3 m_TriA;
-		glm::vec3 m_TriB;
-		glm::vec3 m_TriC;
-		AABB m_TriSampleBounds;
-		std::vector<PointTest> m_PointTests;
 	};
+
+
+	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
+		std::vector<RoadSegment*>* overlappingRoadSegments,
+		const glm::vec2& sampleCenter, glm::vec4& outColour, bool bCilpPointsInsideRoad);
 
 	void* TerrainThreadUpdate(void* inData);
 
-	real SampleTerrain(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos);
-	real SampleNoise(volatile TerrainGenerator::TerrainChunkData* chunkData, const glm::vec2& pos, real octave, u32 octaveIdx);
+	real SampleBiomeTerrain(const TerrainGenerator::Biome& biome, const glm::vec2& pos);
+	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
+	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
+	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);
 
 	class SpringObject final : public GameObject
 	{
@@ -1423,6 +1542,8 @@ namespace flex
 		void SetStiffness(real stiffness);
 		void SetDamping(real damping);
 
+		void SetRenderWireframe(bool bRenderWireframe);
+
 		// Add new constraint between index0 & index1 if one doesn't already exist.
 		// Returns new constraint count
 		u32 AddUniqueDistanceConstraint(i32 index0, i32 index1, u32 atIndex, real stiffness);
@@ -1439,7 +1560,6 @@ namespace flex
 	private:
 		void Draw();
 
-
 		void LoadFromMesh();
 
 		// Outside vert is vert not on shared edge
@@ -1455,8 +1575,6 @@ namespace flex
 		real m_Damping = 0.99f;
 		real m_Stiffness = 0.8f;
 		real m_BendingStiffness = 0.1f;
-
-		u32 m_DragPointIndex = 0;
 
 		i32 m_ShownBendingIndex = 0;
 		i32 m_FirstBendingConstraintIndex = 0;
@@ -1497,10 +1615,10 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
-		virtual bool AllowInteractionWith(GameObject* gameObject) override;
-		virtual void SetInteractingWith(GameObject* gameObject) override;
-
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject) override;
+
+		void OnPlayerEnter();
+		void OnPlayerExit();
 
 		enum class SoundEffect
 		{
@@ -1571,8 +1689,8 @@ namespace flex
 
 		btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
-		btDefaultVehicleRaycaster* m_VehicleRaycaster;
-		btRaycastVehicle* m_Vehicle;
+		btDefaultVehicleRaycaster* m_VehicleRaycaster = nullptr;
+		btRaycastVehicle* m_Vehicle = nullptr;
 
 		btRaycastVehicle::btVehicleTuning m_tuning;
 
@@ -1582,6 +1700,8 @@ namespace flex
 
 		sec m_SecUpsideDown = 0.0f;
 		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;
+
+		bool m_bOccupied = false;
 
 		bool m_bFlippingRightSideUp = false;
 		sec m_SecFlipppingRightSideUp = 0.0f;
@@ -1632,9 +1752,12 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		void RegenerateMesh();
+
 		std::vector<RoadSegment> roadSegments;
 
 	private:
+		void GenerateMesh();
 		void GenerateSegment(i32 index);
 		void GenerateMaterial();
 		void GenerateSegmentsThroughPoints(const std::vector<glm::vec3>& points);
@@ -1652,6 +1775,22 @@ namespace flex
 
 		// Non-serialized fields
 		GameObjectID m_TerrainGameObjectID = InvalidGameObjectID;
+
+	};
+
+	class SolarPanel : public GameObject
+	{
+	public:
+		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+
+	private:
+		real m_ChargeRate = 10.0f;
+		real m_Efficiency = 1.0f;
 
 	};
 } // namespace flex

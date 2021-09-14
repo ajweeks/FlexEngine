@@ -5,6 +5,7 @@
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
+#include "Graphics/Vulkan/VulkanRenderer.hpp"
 
 namespace flex
 {
@@ -17,7 +18,10 @@ namespace flex
 		{
 		}
 
-		VkResult VulkanBuffer::Create(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+		VkResult VulkanBuffer::Create(VkDeviceSize size,
+			VkBufferUsageFlags usage,
+			VkMemoryPropertyFlags properties,
+			const char* DEBUG_name /* = nullptr */)
 		{
 			assert(size != 0);
 
@@ -29,6 +33,14 @@ namespace flex
 			VkMemoryRequirements memRequirements;
 			vkGetBufferMemoryRequirements(m_Device->m_LogicalDevice, m_Buffer, &memRequirements);
 
+			if (memRequirements.size > size)
+			{
+				// Create the buffer again with the full size needed so we can potentially use it without reallocating
+				// Other option is to set m_Size to requested size, since we know we have at least that much
+				bufferInfo.size = memRequirements.size;
+				VK_CHECK_RESULT(vkCreateBuffer(m_Device->m_LogicalDevice, &bufferInfo, nullptr, m_Buffer.replace()));
+			}
+
 			VkMemoryAllocateInfo allocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			allocInfo.memoryTypeIndex = FindMemoryType(m_Device, memRequirements.memoryTypeBits, properties);
 
@@ -39,6 +51,12 @@ namespace flex
 			m_Size = allocInfo.allocationSize;
 			m_UsageFlags = usage;
 			m_MemoryPropertyFlags = properties;
+
+			if (DEBUG_name != nullptr)
+			{
+				m_DEBUG_Name = std::string(DEBUG_name);
+				((VulkanRenderer*)g_Renderer)->SetBufferName(m_Device, m_Buffer, m_DEBUG_Name.c_str());
+			}
 
 			return Bind();
 		}
@@ -78,32 +96,25 @@ namespace flex
 			allocations.clear();
 		}
 
-		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size, bool bCanResize)
+		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size)
 		{
 			Unmap();
 
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
 
-			if (size > m_Size && !bCanResize)
-			{
-				return errorCode;
-			}
-
 			VkDeviceSize offset = 0;
-			for (u32 i = 0; i < (u32)allocations.size(); /**/)
+			u32 i = 0;
+			while (i < (u32)allocations.size())
 			{
-				if (allocations[i].offset >= offset && allocations[i].offset < (offset + size))
+				VkDeviceSize allocStart = allocations[i].offset;
+				if (allocStart >= offset && allocStart < (offset + size))
 				{
 					// Overlaps current guess
-					offset = allocations[i].offset + allocations[i].size;
+					offset = allocStart + allocations[i].size;
 					if (offset + size > m_Size)
 					{
-						if (!bCanResize)
-						{
-							return errorCode;
-						}
 						VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
-						VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+						VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
 						if (result == VK_SUCCESS)
 						{
 							// TODO: Copy previous contents in to new buffer?
@@ -131,7 +142,7 @@ namespace flex
 			else
 			{
 				VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
-				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
 				if (result == VK_SUCCESS)
 				{
 					// TODO: Copy previous contents in to new buffer?
@@ -146,51 +157,49 @@ namespace flex
 			}
 		}
 
-		VkDeviceSize VulkanBuffer::Realloc(VkDeviceSize offset, VkDeviceSize size, bool bCanResize)
+		VkDeviceSize VulkanBuffer::Realloc(VkDeviceSize offset, VkDeviceSize size)
 		{
 			Unmap();
 
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
 
-			bool bCanResizeInPlace = true;
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			bool bCanResizeInPlace = (offset + size) < m_Size;
+			if (bCanResizeInPlace)
 			{
-				if (allocations[i].offset != offset &&
-					((allocations[i].offset < offset && (allocations[i].offset + allocations[i].size) > offset) ||
-					(allocations[i].offset < (offset + size))))
+				// Check for collisions with other allocations
+				for (u32 i = 0; i < (u32)allocations.size(); ++i)
 				{
-					bCanResizeInPlace = false;
+					VkDeviceSize allocStart = allocations[i].offset;
+					if (allocStart != offset && (allocStart > offset && (offset + size) >= allocStart))
+					{
+						bCanResizeInPlace = false;
+					}
 				}
 			}
 
 			if (bCanResizeInPlace)
 			{
-				if ((offset + size) <= m_Size)
-				{
-					UpdateAllocationSize(offset, size);
-					return offset;
-				}
-				else if (bCanResize)
-				{
-					// TODO: Use smarter growth algorithm?
-					VkDeviceSize newSize = offset + size;
-					VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+				UpdateAllocationSize(offset, size);
+				return offset;
 
-					if (result == VK_SUCCESS)
-					{
-						// TODO: Copy previous contents in to new buffer?
-						UpdateAllocationSize(offset, m_Size);
-						return offset;
-					}
-					else
-					{
-						VK_CHECK_RESULT(result);
-						return errorCode;
-					}
-				}
+				//VkDeviceSize newBufferSize = offset + size;
+				//VkResult result = Create(newBufferSize, m_UsageFlags, m_MemoryPropertyFlags);
+
+				//if (result == VK_SUCCESS)
+				//{
+				//	// TODO: Copy previous contents in to new buffer?
+				//	UpdateAllocationSize(offset, size);
+				//	return offset;
+				//}
+				//else
+				//{
+				//	VK_CHECK_RESULT(result);
+				//	return errorCode;
+				//}
 			}
 
-			return Alloc(size, bCanResize);
+			Free(offset);
+			return Alloc(size);
 		}
 
 		void VulkanBuffer::Free(VkDeviceSize offset)
@@ -210,6 +219,7 @@ namespace flex
 		void VulkanBuffer::Shrink(real minUnused /* = 0.0f */)
 		{
 			VkDeviceSize usedSize = 0;
+			// Find last allocated byte
 			for (u32 i = 0; i < (u32)allocations.size(); ++i)
 			{
 				usedSize = glm::max(allocations[i].offset + allocations[i].size, usedSize);
@@ -220,7 +230,7 @@ namespace flex
 			if (unused >= minUnused)
 			{
 				VkDeviceSize newSize = glm::max(usedSize, (VkDeviceSize)1); // Size must be greater than zero
-				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags);
+				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
 
 				VK_CHECK_RESULT(result);
 			}

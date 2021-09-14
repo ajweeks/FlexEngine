@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="flex::Uniform">
+    <DisplayString>{DBG_name,na}, id: {id} (size: {size})</DisplayString>
+  </Type>
+
   <Type Name="flex::BaseScene">
     <DisplayString>{m_FileName}</DisplayString>
   </Type>

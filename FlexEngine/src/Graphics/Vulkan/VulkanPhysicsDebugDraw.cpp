@@ -8,7 +8,6 @@
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
-#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
@@ -30,6 +29,8 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::Initialize()
 		{
+			PROFILE_AUTO("VulkanPhysicsDebugDraw Initialize");
+
 			m_Renderer = (VulkanRenderer*)(g_Renderer);
 			const std::string debugMatName = "Debug";
 			if (!m_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
@@ -189,6 +190,8 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::CreateDebugObject()
 		{
+			PROFILE_AUTO("CreateDebugObject");
+
 			if (m_Object != nullptr)
 			{
 				// Object will have been destroyed by scene?

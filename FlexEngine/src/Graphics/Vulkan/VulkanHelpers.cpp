@@ -5,11 +5,6 @@
 
 IGNORE_WARNINGS_PUSH
 #include "stb_image.h"
-
-#if COMPILE_SHADER_COMPILER
-#include "spvc/spvc.hpp"
-#include "shaderc/shaderc.hpp"
-#endif
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -21,19 +16,12 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp"
-#include "Profiler.hpp"
 #include "Time.hpp"
 
 namespace flex
 {
 	namespace vk
 	{
-#if COMPILE_SHADER_COMPILER
-		std::string VulkanShaderCompiler::s_ChecksumFilePathAbs;
-
-		const char* VulkanShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
-#endif //  COMPILE_SHADER_COMPILER
-
 		void VK_CHECK_RESULT(VkResult result)
 		{
 			if (result != VK_SUCCESS)
@@ -207,10 +195,12 @@ namespace flex
 
 		UniformBuffer::~UniformBuffer()
 		{
-			if (data.data)
+			if (data.data != nullptr)
 			{
 				if (type == UniformBufferType::DYNAMIC ||
-					type == UniformBufferType::PARTICLE_DATA)
+					type == UniformBufferType::PARTICLE_DATA ||
+					type == UniformBufferType::TERRAIN_POINT_BUFFER ||
+					type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
 				{
 					flex_aligned_free(data.data);
 				}
@@ -254,25 +244,25 @@ namespace flex
 			indexCount = 0;
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue) :
 			Texture(),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
+			m_Queue(queue)
 		{
 		}
 
-		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue graphicsQueue, const std::string& name) :
+		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name) :
 			Texture(name),
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, vkFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
-			m_GraphicsQueue(graphicsQueue)
+			m_Queue(queue)
 		{
 		}
 
@@ -324,7 +314,7 @@ namespace flex
 				TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, cmdBuffer);
 
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
@@ -360,19 +350,21 @@ namespace flex
 			{
 				PrintWarn("Redundant image layout transition on %s, already in %u\n", name.c_str(), (u32)imageLayout);
 			}
-			TransitionImageLayout(m_VulkanDevice, m_GraphicsQueue, image, imageFormat, imageLayout, newLayout, mipLevels, optCommandBuffer);
+			TransitionImageLayout(m_VulkanDevice, m_Queue, image, imageFormat, imageLayout, newLayout, mipLevels, optCommandBuffer);
 			imageLayout = newLayout;
 		}
 
 		void VulkanTexture::CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer /* = 0 */)
 		{
-			CopyBufferToImage(m_VulkanDevice, m_GraphicsQueue, buffer, image, inWidth, inHeight, optCommandBuffer);
+			CopyBufferToImage(m_VulkanDevice, m_Queue, buffer, image, inWidth, inHeight, optCommandBuffer);
 			width = inWidth;
 			height = inHeight;
 		}
 
 		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
+			PROFILE_AUTO("VulkanTexture CreateEmpty");
+
 			assert(inWidth > 0);
 			assert(inHeight > 0);
 
@@ -408,10 +400,8 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemap(VulkanDevice* device, VkQueue graphicsQueue, CubemapCreateInfo& createInfo)
+		VkDeviceSize VulkanTexture::CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo)
 		{
-			FLEX_UNUSED(graphicsQueue);
-
 			if (createInfo.width == 0 ||
 				createInfo.height == 0 ||
 				createInfo.channels == 0 ||
@@ -486,6 +476,8 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
+			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
+
 			assert(inWidth > 0);
 			assert(inHeight > 0);
 			assert(inChannelCount > 0);
@@ -507,7 +499,7 @@ namespace flex
 			createInfo.mipLevels = inMipLevels;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
-			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
+			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
 			// Retrieve out variables
 			imageLayout = createInfo.imageLayoutOut;
@@ -518,6 +510,8 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
 		{
+			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
+
 			struct Image
 			{
 				unsigned char* pixels;
@@ -607,7 +601,7 @@ namespace flex
 			createInfo.filePaths = filePaths;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 
-			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, m_GraphicsQueue, createInfo);
+			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
 			if (imageSize == 0)
 			{
@@ -674,13 +668,15 @@ namespace flex
 				imageLayout,
 				subresourceRange);
 
-			VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_GraphicsQueue, true);
+			VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 			return imageSize;
 		}
 
 		void VulkanTexture::GenerateMipmaps()
 		{
+			PROFILE_AUTO("VulkanTexture GenerateMipmaps");
+
 			VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
 
 			VkImageSubresourceRange subresourceRange = {};
@@ -804,7 +800,7 @@ namespace flex
 
 			imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+			EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 		}
 
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
@@ -871,6 +867,8 @@ namespace flex
 			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
 			bool bGenerateFullMipChain /* = false */)
 		{
+			PROFILE_AUTO("VulkanTexture CreateFromFile");
+
 			relativeFilePath = inRelativeFilePath;
 			fileName = StripLeadingDirectories(inRelativeFilePath);
 
@@ -1018,7 +1016,7 @@ namespace flex
 				}
 
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
-				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, cmdBuffer);
+				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
 
 			ImageViewCreateInfo viewCreateInfo = {};
@@ -1215,7 +1213,7 @@ namespace flex
 
 				TransitionToLayout(previousLayout);
 
-				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_GraphicsQueue, true);
+				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 				// Get layout of the image (including row pitch)
 				VkImageSubresource subResource{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 0 };
@@ -1353,7 +1351,7 @@ namespace flex
 		}
 
 		// TODO: FIXME: This function needs to take the src & dst access masks as args, clearly we can't keep trying to handle all cases...
-		void TransitionImageLayout(VulkanDevice* device, VkQueue graphicsQueue, VkImage image, VkFormat format, VkImageLayout oldLayout,
+		void TransitionImageLayout(VulkanDevice* device, VkQueue queue, VkImage image, VkFormat format, VkImageLayout oldLayout,
 			VkImageLayout newLayout, u32 mipLevels, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, bool bIsDepthTexture /* = false */)
 		{
 			if (oldLayout == newLayout)
@@ -1547,11 +1545,11 @@ namespace flex
 
 			if (optCmdBuf == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyImage(VulkanDevice* device, VkQueue graphicsQueue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
+		void CopyImage(VulkanDevice* device, VkQueue queue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, VkImageAspectFlags aspectMask /* = VK_IMAGE_ASPECT_COLOR_BIT */)
 		{
 			VkCommandBuffer commandBuffer = optCmdBuf;
@@ -1580,11 +1578,11 @@ namespace flex
 
 			if (optCmdBuf == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyBufferToImage(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer buffer, VkImage image,
+		void CopyBufferToImage(VulkanDevice* device, VkQueue queue, VkBuffer buffer, VkImage image,
 			u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
 			VkCommandBuffer commandBuffer = optCommandBuffer;
@@ -1612,11 +1610,11 @@ namespace flex
 
 			if (optCommandBuffer == VK_NULL_HANDLE)
 			{
-				EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+				EndSingleTimeCommands(device, queue, commandBuffer);
 			}
 		}
 
-		void CopyBuffer(VulkanDevice* device, VkQueue graphicsQueue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
+		void CopyBuffer(VulkanDevice* device, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 		{
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
 
@@ -1626,11 +1624,13 @@ namespace flex
 			copyRegion.srcOffset = srcOffset;
 			vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 
-			EndSingleTimeCommands(device, graphicsQueue, commandBuffer);
+			EndSingleTimeCommands(device, queue, commandBuffer);
 		}
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device)
 		{
+			PROFILE_AUTO("FindQueueFamilies");
+
 			VulkanQueueFamilyIndices indices;
 
 			u32 queueFamilyCount;
@@ -2136,14 +2136,14 @@ namespace flex
 			return commandBuffer;
 		}
 
-		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graphicsQueue, VkCommandBuffer commandBuffer)
+		void EndSingleTimeCommands(VulkanDevice* device, VkQueue queue, VkCommandBuffer commandBuffer)
 		{
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 
 			VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
 
-			VK_CHECK_RESULT(vkQueueSubmit(graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-			VK_CHECK_RESULT(vkQueueWaitIdle(graphicsQueue));
+			VK_CHECK_RESULT(vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE));
+			VK_CHECK_RESULT(vkQueueWaitIdle(queue));
 
 			vkFreeCommandBuffers(device->m_LogicalDevice, device->m_CommandPool, 1, &commandBuffer);
 		}
@@ -2182,9 +2182,9 @@ namespace flex
 			}
 		}
 
-		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue graphicsQueue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
+		void FrameBufferAttachment::TransitionToLayout(VkImageLayout newLayout, VkQueue queue, VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */)
 		{
-			TransitionImageLayout(device, graphicsQueue, image, format, layout, newLayout, 1, optCmdBuf, bIsDepth);
+			TransitionImageLayout(device, queue, image, format, layout, newLayout, 1, optCmdBuf, bIsDepth);
 			layout = newLayout;
 		}
 
@@ -2323,524 +2323,6 @@ namespace flex
 			}
 		}
 
-#if COMPILE_SHADER_COMPILER
-		std::vector<VulkanShaderCompiler::ShaderError> VulkanShaderCompiler::s_ShaderErrors;
-
-		VulkanShaderCompiler::VulkanShaderCompiler(bool bForceRecompile)
-		{
-			s_ChecksumFilePathAbs = RelativePathToAbsolute(SHADER_CHECKSUM_LOCATION);
-
-			const std::string spvDirectoryAbs = RelativePathToAbsolute(COMPILED_SHADERS_DIRECTORY);
-			if (!Platform::DirectoryExists(spvDirectoryAbs))
-			{
-				Platform::CreateDirectoryRecursive(spvDirectoryAbs);
-			}
-
-			// Absolute file path => checksum
-			// Any file in the shaders directory not in this map still need to be compiled
-			std::map<std::string, u64> compiledShaders;
-
-			s_ShaderErrors.clear();
-
-			if (!bForceRecompile)
-			{
-				const char* blockName = "Calculate shader contents checksum";
-				PROFILE_AUTO(blockName);
-
-				const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
-
-				if (FileExists(SHADER_CHECKSUM_LOCATION))
-				{
-					std::string fileContents;
-					if (ReadFile(SHADER_CHECKSUM_LOCATION, fileContents, false))
-					{
-						std::vector<std::string> lines = Split(fileContents, '\n');
-
-						for (const std::string& line : lines)
-						{
-							size_t midPoint = line.find('=');
-							if (midPoint != std::string::npos && line.length() > 7) // Ignore degenerate lines
-							{
-								std::string filePath = Trim(line.substr(0, midPoint));
-
-								if (filePath.length() > 0)
-								{
-									std::string storedChecksumStr = Trim(line.substr(midPoint + 1));
-									u64 storedChecksum = std::stoull(storedChecksumStr);
-
-									u64 calculatedChecksum = CalculteChecksum(filePath);
-									if (calculatedChecksum == storedChecksum)
-									{
-										compiledShaders.emplace(filePath, calculatedChecksum);
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-
-			shaderc::Compiler compiler;
-			if (compiler.IsValid())
-			{
-				bSuccess = true;
-
-				std::vector<std::string> filePaths;
-				if (Platform::FindFilesInDirectory(SHADER_SOURCE_DIRECTORY, filePaths, "*"))
-				{
-					startTime = Time::CurrentMilliseconds();
-
-					u32 compiledShaderCount = 0;
-					u32 invalidShaderCount = 0;
-
-					class FlexIncluder : public shaderc::CompileOptions::IncluderInterface
-					{
-						virtual shaderc_include_result* GetInclude(const char* requested_source,
-							shaderc_include_type type,
-							const char* requesting_source,
-							size_t include_depth) override
-						{
-							FLEX_UNUSED(type);
-							FLEX_UNUSED(requesting_source);
-							FLEX_UNUSED(include_depth);
-
-							shaderc_include_result* result = new shaderc_include_result();
-
-							std::string requestedFilePath = SHADER_SOURCE_DIRECTORY + std::string(requested_source);
-							std::string fileContent;
-							if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, fileContent, false))
-							{
-								u32 requestedFilePathLen = (u32)requestedFilePath.size();
-								result->source_name = (const char*)malloc(requestedFilePathLen + 1);
-								memset((void*)result->source_name, 0, requestedFilePathLen + 1);
-								strncpy((char*)result->source_name, requestedFilePath.c_str(), requestedFilePathLen);
-								result->source_name_length = requestedFilePathLen;
-
-								u32 fileContentLen = (u32)fileContent.size();
-								result->content = (const char*)malloc(fileContentLen + 1);
-								memset((void*)result->content, 0, fileContentLen + 1);
-								strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
-								result->content_length = strlen(result->content);
-							}
-							else
-							{
-								result->source_name = "";
-								result->source_name_length = 0;
-								result->content = "Failed to include shader";
-								result->content_length = strlen(result->content);
-							}
-
-							return result;
-						}
-
-						virtual void ReleaseInclude(shaderc_include_result* data) override
-						{
-							// This causes heap corruption for some reason... but it's leaking without this.
-							//if (data->source_name_length != 0)
-							//{
-							//	free((void*)data->source_name);
-							//	free((void*)data->content);
-							//}
-							delete data;
-						}
-					};
-
-					std::string newChecksumFileContents;
-
-					for (const std::string& filePath : filePaths)
-					{
-						const std::string absoluteFilePath = RelativePathToAbsolute(filePath);
-						std::string fileType = ExtractFileType(filePath);
-
-						if (!Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileType.c_str()))
-						{
-							continue;
-						}
-
-						shaderc_shader_kind shaderKind = FilePathToShaderKind(fileType);
-						if (shaderKind != (shaderc_shader_kind)-1)
-						{
-							const std::string fileName = StripLeadingDirectories(filePath);
-
-							if (!StartsWith(fileName, "vk_"))
-							{
-								// TODO: EZ: Move vulkan shaders into their own directory
-								continue;
-							}
-
-							if (compiledShaders.find(absoluteFilePath) != compiledShaders.end())
-							{
-								// Already compiled
-								continue;
-							}
-
-							std::string fileContents;
-							if (ReadFile(filePath, fileContents, false))
-							{
-								shaderc::CompileOptions options = {};
-								options.SetOptimizationLevel(shaderc_optimization_level_performance);
-								// TODO: Remove for release builds
-								options.SetGenerateDebugInfo();
-								options.SetWarningsAsErrors();
-
-								options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-								options.SetTargetSpirv(shaderc_spirv_version_1_5);
-
-								options.SetIncluder(std::make_unique<FlexIncluder>());
-
-								if (bEnableAssemblyCompilation)
-								{
-									shaderc::AssemblyCompilationResult assemblyResult = compiler.CompileGlslToSpvAssembly(fileContents, shaderKind, fileName.c_str(), options);
-									if (assemblyResult.GetCompilationStatus() == shaderc_compilation_status_success)
-									{
-										std::vector<char> spvBytes(assemblyResult.begin(), assemblyResult.end());
-										std::string strippedFileName = StripFileType(fileName);
-										std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".asm";
-										std::ofstream fileStream(spvFilePath, std::ios::out);
-										if (fileStream.is_open())
-										{
-											fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(char));
-											fileStream.close();
-										}
-									}
-									else
-									{
-										if (g_bEnableLogging_Shaders)
-										{
-											PrintWarn("%lu shader compilation errors, %lu warnings: \n", assemblyResult.GetNumErrors(), assemblyResult.GetNumWarnings());
-										}
-										std::string errorStr = assemblyResult.GetErrorMessage();
-										if (g_bEnableLogging_Shaders)
-										{
-											PrintWarn("%s\n", errorStr.c_str());
-										}
-									}
-								}
-
-								shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(fileContents, shaderKind, fileName.c_str(), options);
-								if (result.GetCompilationStatus() == shaderc_compilation_status_success)
-								{
-									Print("Compiled %s\n", fileName.c_str());
-
-									++compiledShaderCount;
-
-									const u64 calculatedChecksum = CalculteChecksum(filePath);
-									compiledShaders.emplace(absoluteFilePath, calculatedChecksum);
-
-									std::vector<u32> spvBytes(result.begin(), result.end());
-									std::string strippedFileName = StripFileType(fileName);
-									std::string spvFilePath = spvDirectoryAbs + strippedFileName + "_" + fileType + ".spv";
-									std::ofstream fileStream(spvFilePath, std::ios::out | std::ios::binary);
-									if (fileStream.is_open())
-									{
-										fileStream.write((char*)spvBytes.data(), spvBytes.size() * sizeof(u32));
-										fileStream.close();
-									}
-									else
-									{
-										PrintError("Failed to write compiled shader to %s\n", spvFilePath.c_str());
-										++invalidShaderCount;
-										bSuccess = false;
-									}
-								}
-								else
-								{
-									if (g_bEnableLogging_Shaders)
-									{
-										PrintWarn("%lu shader compilation errors, %lu warnings: \n", result.GetNumErrors(), result.GetNumWarnings());
-									}
-									std::string errorStr = result.GetErrorMessage();
-									if (g_bEnableLogging_Shaders)
-									{
-										PrintWarn("%s\n", errorStr.c_str());
-									}
-
-									size_t colon0 = errorStr.find_first_of(':');
-									size_t colon1 = errorStr.find_first_of(':', colon0 + 1);
-
-									u32 lineNumber = 0;
-									if (colon0 != std::string::npos && colon1 != std::string::npos)
-									{
-										lineNumber = ParseInt(errorStr.substr(colon0 + 1, colon1 - colon0 - 1));
-									}
-
-									s_ShaderErrors.push_back({ errorStr, absoluteFilePath, lineNumber });
-
-									++invalidShaderCount;
-									bSuccess = false;
-									auto iter = compiledShaders.find(absoluteFilePath);
-									if (iter != compiledShaders.end())
-									{
-										compiledShaders.erase(iter);
-									}
-								}
-							}
-							else
-							{
-								PrintError("Failed to read shader file %s\n", fileName.c_str());
-								++invalidShaderCount;
-								bSuccess = false;
-							}
-						}
-					}
-
-					for (auto iter = compiledShaders.begin(); iter != compiledShaders.end(); ++iter)
-					{
-						newChecksumFileContents.append(iter->first + " = " + std::to_string(iter->second) + "\n");
-					}
-
-					if ((compiledShaderCount > 0 || invalidShaderCount > 0) && newChecksumFileContents.length() > 0)
-					{
-						Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
-						std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
-						if (checksumFileStream.is_open())
-						{
-							checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
-							checksumFileStream.close();
-						}
-						else
-						{
-							PrintWarn("Failed to write shader checksum file to %s\n", SHADER_SOURCE_DIRECTORY);
-						}
-					}
-
-					lastCompileDuration = Time::CurrentMilliseconds() - startTime;
-					if (compiledShaderCount > 0)
-					{
-						Print("Compiled %u shader%s in %.1fms\n", compiledShaderCount, (compiledShaderCount > 1 ? "s" : ""), lastCompileDuration);
-					}
-
-					if (invalidShaderCount > 0)
-					{
-						PrintError("%u shader%s had errors\n", invalidShaderCount, (invalidShaderCount > 1 ? "s" : ""));
-					}
-
-					bComplete = true;
-				}
-				else
-				{
-					PrintError("Didn't find any shaders!\n");
-					bSuccess = false;
-					bComplete = true;
-				}
-			}
-			else
-			{
-				PrintError("Unable to compile shaders, compiler is not valid!\n");
-				bSuccess = false;
-				bComplete = true;
-			}
-		}
-
-		void VulkanShaderCompiler::ClearShaderHash(const std::string& shaderName)
-		{
-			if (FileExists(SHADER_SOURCE_DIRECTORY))
-			{
-				std::string fileContents;
-				if (ReadFile(SHADER_SOURCE_DIRECTORY, fileContents, false))
-				{
-					std::string searchStr = "vk_" + shaderName + '.';
-					size_t index = 0;
-					do
-					{
-						index = fileContents.find(searchStr, index);
-						if (index != std::string::npos)
-						{
-							size_t prevNewLine = fileContents.rfind('\n', index);
-							size_t nextNewLine = fileContents.find('\n', index);
-							if (prevNewLine == std::string::npos)
-							{
-								prevNewLine = 0;
-							}
-							if (nextNewLine == std::string::npos)
-							{
-								nextNewLine = fileContents.size() - 1;
-							}
-							fileContents = fileContents.substr(0, prevNewLine + 1) + fileContents.substr(nextNewLine + 1);
-						}
-					} while (index != std::string::npos);
-
-					WriteFile(s_ChecksumFilePathAbs, fileContents, false);
-				}
-			}
-		}
-
-		void VulkanShaderCompiler::DrawImGuiShaderErrorsWindow(bool* bWindowShowing)
-		{
-			if (!s_ShaderErrors.empty())
-			{
-				if (bWindowShowing == nullptr || *bWindowShowing)
-				{
-					ImGui::SetNextWindowSize(ImVec2(800.0f, 150.0f), ImGuiCond_Appearing);
-					if (ImGui::Begin("Shader errors", bWindowShowing))
-					{
-						DrawImGuiShaderErrors();
-					}
-
-					ImGui::End();
-				}
-			}
-		}
-
-		void VulkanShaderCompiler::DrawImGuiShaderErrors()
-		{
-			if (!s_ShaderErrors.empty())
-			{
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-				ImGui::Text(s_ShaderErrors.size() > 1 ? "%u errors" : "%u error", (u32)s_ShaderErrors.size());
-				ImGui::PopStyleColor();
-
-				ImGui::Separator();
-
-				for (const ShaderError& shaderError : s_ShaderErrors)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
-					ImGui::TextWrapped("%s", shaderError.errorStr.c_str());
-					ImGui::PopStyleColor();
-
-					std::string fileName = StripLeadingDirectories(shaderError.filePath);
-					std::string openStr = "Open " + fileName + ":" + std::to_string(shaderError.lineNumber);
-					if (ImGui::Button(openStr.c_str()))
-					{
-						std::string shaderEditorPath = g_EngineInstance->GetShaderEditorPath();
-						if (shaderEditorPath.empty())
-						{
-							Platform::OpenFileWithDefaultApplication(shaderError.filePath);
-						}
-						else
-						{
-							std::string param0 = shaderError.filePath + ":" + std::to_string(shaderError.lineNumber);
-							Platform::LaunchApplication(shaderEditorPath.c_str(), param0);
-						}
-					}
-
-					ImGui::Separator();
-				}
-			}
-		}
-
-		shaderc_shader_kind VulkanShaderCompiler::FilePathToShaderKind(const std::string& fileSuffix)
-		{
-			if (fileSuffix.compare("vert") == 0) return shaderc_vertex_shader;
-			if (fileSuffix.compare("frag") == 0) return shaderc_fragment_shader;
-			if (fileSuffix.compare("geom") == 0) return shaderc_geometry_shader;
-			if (fileSuffix.compare("comp") == 0) return shaderc_compute_shader;
-
-			return (shaderc_shader_kind)-1;
-		}
-
-		u64 VulkanShaderCompiler::CalculteChecksum(const std::string& filePath)
-		{
-			u64 checksum = 0;
-
-			const std::string fileName = StripLeadingDirectories(filePath);
-			const std::string fileSuffix = ExtractFileType(filePath);
-			bool bGoodStart = StartsWith(fileName, "vk_");
-			bool bGoodEnd = Contains(s_RecognizedShaderTypes, ARRAY_SIZE(s_RecognizedShaderTypes), fileSuffix.c_str());
-			if (bGoodStart && bGoodEnd)
-			{
-				std::string fileContents;
-				if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
-				{
-					const char* includeString = "include ";
-
-					u32 i = 1;
-					u32 fileContentsLen = (u32)fileContents.size();
-					for (char c : fileContents)
-					{
-						if (c == '#' && i < (fileContentsLen + strlen(includeString)))
-						{
-							if (memcmp((void*)&fileContents[i], (void*)includeString, strlen(includeString)) == 0)
-							{
-								// Handle include
-								bool bFoundInclude = false;
-
-								size_t newLine = fileContents.find('\n', i);
-								if (newLine != std::string::npos)
-								{
-									u32 includePathStart = i + (u32)strlen(includeString);
-									std::string includePathRaw = fileContents.substr(includePathStart, newLine - includePathStart);
-									includePathRaw = Trim(includePathRaw);
-
-									if (includePathRaw.size() >= 3)
-									{
-										std::string includedPath;
-										if (includePathRaw[0] == '"')
-										{
-											size_t endQuote = includePathRaw.find('"', 1);
-											if (endQuote != std::string::npos)
-											{
-												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endQuote - 1);
-											}
-										}
-										else if (includePathRaw[0] == '<')
-										{
-											size_t endBracket = includePathRaw.find('>', 1);
-											if (endBracket != std::string::npos)
-											{
-												includedPath = SHADER_SOURCE_DIRECTORY + includePathRaw.substr(1, endBracket - 1);
-											}
-										}
-
-										if (!includedPath.empty() && FileExists(includedPath))
-										{
-											bFoundInclude = true;
-											checksum += CalculteChecksum(includedPath);
-										}
-									}
-								}
-
-								if (!bFoundInclude)
-								{
-									PrintWarn("Invalid include directive in shader, ignoring.\n");
-								}
-							}
-						}
-
-						checksum += (u64)i * (u64)c;
-						++i;
-					}
-				}
-			}
-			return checksum;
-		}
-
-		bool VulkanShaderCompiler::TickStatus()
-		{
-			// TODO: Make async again
-			//sec now = Time::CurrentSeconds();
-			//secSinceStatusCheck += (now - lastTime);
-			//totalSecWaiting += (now - lastTime);
-			//lastTime = now;
-			//if (secSinceStatusCheck > secBetweenStatusChecks)
-			//{
-			//	secSinceStatusCheck -= secBetweenStatusChecks;
-
-			//	if (is_done)
-			//	{
-			//		bComplete = true;
-			//		if (taskThread.joinable())
-			//		{
-			//			Print("Vulkan async shader compilation completed after %.2fs\n", totalSecWaiting);
-			//			taskThread.join();
-			//		}
-
-			//		if (bSuccess)
-			//		{
-			//			std::string fileContents = std::to_string(m_ShaderCodeChecksum);
-			//			if (!WriteFile(m_ChecksumFilePath, fileContents, false))
-			//			{
-			//				PrintError("Failed to write out shader checksum file to %s\n", m_ChecksumFilePath.c_str());
-			//			}
-			//		}
-			//	}
-			//}
-			//
-			//return bComplete;
-			return true;
-		}
-#endif // COMPILE_SHADER_COMPILER
-
 		Cascade::Cascade(VulkanDevice* device) :
 			frameBuffer(device),
 			imageView(device->m_LogicalDevice, vkDestroyImageView)
@@ -2897,6 +2379,7 @@ namespace flex
 
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
+			assert(type != UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
 			for (UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)
@@ -3082,6 +2565,7 @@ namespace flex
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
 				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_NUM_DESC_STORAGE_BUFFERS },
 			};
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxNumDescSets);
@@ -3114,6 +2598,11 @@ namespace flex
 
 			++allocatedSetCount;
 
+			if (createInfo->DBG_Name != nullptr)
+			{
+				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
+			}
+
 			Shader* shader = g_Renderer->GetShader(createInfo->shaderID);
 
 			UniformList constantBufferUniforms = shader->constantBufferUniforms;
@@ -3130,11 +2619,13 @@ namespace flex
 			u32 i = 0;
 			for (auto& pair : createInfo->bufferDescriptors)
 			{
-				const u64 uniformID = pair.uniformID;
+				const u64 uniformID = pair.uniform->id;
 				const BufferDescriptorInfo& bufferDescInfo = pair.object;
 				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)));
+					(bufferDescInfo.type == UniformBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
 				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
 
 				VkDescriptorType type;
@@ -3148,6 +2639,12 @@ namespace flex
 					break;
 				case UniformBufferType::PARTICLE_DATA:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+					break;
+				case UniformBufferType::TERRAIN_POINT_BUFFER:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+					break;
+				case UniformBufferType::TERRAIN_VERTEX_BUFFER:
+					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
 				default:
 					type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
@@ -3166,10 +2663,9 @@ namespace flex
 
 			std::vector<VkDescriptorImageInfo> imageInfos(createInfo->imageDescriptors.Count());
 			i = 0;
-			for (auto& pair : createInfo->imageDescriptors)
+			for (const auto& pair : createInfo->imageDescriptors)
 			{
-				const u64 uniformID = pair.uniformID;
-				assert(textureUniforms.HasUniform(uniformID));
+				assert(textureUniforms.HasUniform(pair.uniform));
 				const ImageDescriptorInfo& imageDescInfo = pair.object;
 
 				VkDescriptorImageInfo& imageInfo = imageInfos[i];
@@ -3203,11 +2699,6 @@ namespace flex
 				vkUpdateDescriptorSets(device->m_LogicalDevice, (u32)writeDescriptorSets.size(), writeDescriptorSets.data(), 0u, nullptr);
 			}
 
-			if (createInfo->DBG_Name != nullptr)
-			{
-				((VulkanRenderer*)g_Renderer)->SetDescriptorSetName(device, descriptorSet, createInfo->DBG_Name);
-			}
-
 			return descriptorSet;
 		}
 
@@ -3232,7 +2723,7 @@ namespace flex
 			createInfo.shaderID = material->shaderID;
 			createInfo.uniformBufferList = &material->uniformBufferList;
 
-			((VulkanRenderer*)g_Renderer)->FillOutImageDescriptorInfos(&createInfo.imageDescriptors, materialID);
+			((VulkanRenderer*)g_Renderer)->FillOutTextureDescriptorInfos(&createInfo.imageDescriptors, materialID);
 			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
 
 			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
@@ -3245,6 +2736,8 @@ namespace flex
 
 		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
 		{
+			PROFILE_AUTO("CreateDescriptorSetLayout");
+
 			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
 
@@ -3252,89 +2745,98 @@ namespace flex
 
 			struct DescriptorSetInfo
 			{
-				const Uniform& uniform;
+				Uniform const* uniform;
 				VkDescriptorType descriptorType;
 				VkShaderStageFlags shaderStageFlags;
 			};
 
-			// TODO: Specify stage flags per shader
+			// TODO: Specify stage flags per shader!
 			static DescriptorSetInfo descriptorSetInfos[] = {
-				{ U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT },
-
-				{ U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				{ &U_UNIFORM_BUFFER_CONSTANT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
 
-				{ U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_UNIFORM_BUFFER_DYNAMIC, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_GEOMETRY_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_ALBEDO_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_EMISSIVE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_METALLIC_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_ROUGHNESS_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_HDR_EQUIRECTANGULAR_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_CUBEMAP_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_BRDF_LUT_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_IRRADIANCE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_PREFILTER_MAP, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_FB_0_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_FB_0_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_FB_1_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_LTC_SAMPLER_0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_LTC_MATRICES_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_LTC_SAMPLER_1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_LTC_AMPLITUDES_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_HIGH_RES_TEX, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_DEPTH_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_SSAO_NORMAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_NOISE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_SSAO_RAW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_SSAO_FINAL_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_SHADOW_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_SHADOW_CASCADES_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_SCENE_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				{ &U_HISTORY_SAMPLER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_FRAGMENT_BIT },
 
-				{ U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				{ &U_PARTICLE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+				VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_TERRAIN_POINT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_TERRAIN_VERTEX_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT },
+
+				{ &U_RANDOM_TABLES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				VK_SHADER_STAGE_COMPUTE_BIT },
 			};
 
@@ -3359,6 +2861,9 @@ namespace flex
 			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
 
 			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+
+			std::string descSetLayoutName = shader->name + " descriptor set layout";
+			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, *descriptorSetLayout, descSetLayoutName.c_str());
 		}
 
 		void VulkanDescriptorPool::Replace()

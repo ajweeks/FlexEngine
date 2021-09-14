@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "first-person",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "4.804, 17.370, -7.257",
-			"pitch" : -0.618052,
-			"yaw" : 2.688168
+			"position" : "0.000, 1.347, 0.000",
+			"pitch" : 0.000000,
+			"yaw" : 1.570796
 		}
 	},
 	"objects" : 
@@ -94,15 +94,15 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "-2.885, 0.889, 2.208"
+						"rot" : "1.591, -0.000, 0.000"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.452, 0.775, -0.295, 0.329",
+						"rotation" : "0.714, 0.000, 0.000, 0.700",
 						"pos" : "0.000, 15.000, 0.000",
-						"colour" : "1.00, 1.00, 1.00",
+						"colour" : "0.99, 1.00, 0.84",
 						"enabled" : true,
 						"brightness" : 0.703000,
 						"cast shadows" : true,
@@ -115,16 +115,16 @@
 					"type" : "point light",
 					"transform" : 
 					{
-						"pos" : "-13.187, 0.708, 8.244"
+						"pos" : "-20.950, 3.565, 5.352"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-13.187, 0.708, 8.244",
+						"pos" : "-20.950, 3.565, 5.352",
 						"colour" : "0.49, 0.78, 0.91",
 						"enabled" : true,
-						"brightness" : 140.625000
+						"brightness" : 31.250000
 					},
 					"children" : 
 					[
@@ -273,6 +273,38 @@
 							[
 								"pbr white"
 							]
+						}
+					]
+				},
+				{
+					"name" : "PointLight_04",
+					"id" : "21ABBE5DCE4780B3476680BC4DA4742F",
+					"type" : "point light",
+					"transform" : 
+					{
+						"pos" : "-32.370, 2.848, 21.634"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"point light info" : 
+					{
+						"pos" : "-32.370, 2.848, 21.634",
+						"colour" : "0.95, 0.96, 0.84",
+						"enabled" : true,
+						"brightness" : 31.250000
+					},
+					"children" : 
+					[
+						{
+							"name" : "socket_008",
+							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
+							"type" : "socket",
+							"visible" : true,
+							"casts shadow" : true,
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				}
@@ -448,42 +480,10 @@
 			]
 		},
 		{
-			"name" : "wire_000",
-			"id" : "00A9E8171F66588340AE41238924C246",
-			"type" : "wire",
-			"transform" : 
-			{
-				"pos" : "1.785, 0.600, 8.670"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"wire" : 
-			{
-				"startPoint" : "1.06, 0.60, 7.98",
-				"endPoint" : "2.51, 0.60, 9.36"
-			}
-		},
-		{
-			"name" : "wire_001",
-			"id" : "6C4EE368841B3F9B478C3823B8666D93",
-			"type" : "wire",
-			"transform" : 
-			{
-				"pos" : "-8.395, 0.600, 6.915"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"wire" : 
-			{
-				"startPoint" : "-9.23, 0.60, 6.36",
-				"endPoint" : "-7.56, 0.60, 7.47"
-			}
-		},
-		{
 			"name" : "Cart_00",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
-			"prefab type" : "Cart_00",
+			"prefab type" : "cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
@@ -495,12 +495,12 @@
 			"name" : "Battery",
 			"id" : "49BA1A00D02473914B4C060DFA113653",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-19.363, 0.347, 1.945",
-				"rot" : "0.000, -0.685, -3.142",
+				"pos" : "-20.898, 1.348, -1.925",
+				"rot" : "0.000, -0.676, -3.142",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -508,12 +508,12 @@
 			"name" : "Battery-1",
 			"id" : "FC8A67B3179CE4944867BD17D12BD28E",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.728, 0.347, -1.190",
-				"rot" : "-0.000, -0.008, 0.000",
+				"pos" : "-25.457, 1.348, -1.190",
+				"rot" : "-0.000, -0.006, -0.000",
 				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
@@ -521,7 +521,7 @@
 			"name" : "EngineCart-1",
 			"id" : "C54A90F938F82C944622007A9EDCFB70",
 			"type" : "prefab",
-			"prefab type" : "EngineCart",
+			"prefab type" : "engine-cart",
 			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 			"transform" : 
 			{
@@ -532,13 +532,77 @@
 			"name" : "Battery-2",
 			"id" : "86598C04552820B64784628C42EE1632",
 			"type" : "prefab",
-			"prefab type" : "Battery",
+			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.743, 2.347, -1.199",
-				"rot" : "-0.000, -0.588, 0.000",
+				"pos" : "-28.614, 0.347, -1.554",
+				"rot" : "0.192, 0.000, 1.571",
 				"scale" : "1.000, 1.000, 1.000"
+			}
+		},
+		{
+			"name" : "rock-cube",
+			"id" : "3F3242989496499C4660836CE36D7484",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-26.777, 3.115, 15.404",
+				"rot" : "-0.712, 0.037, 0.780"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
+		},
+		{
+			"name" : "rock-cube-1",
+			"id" : "EA678D7D8CF2F8A74A71FD59452C90EE",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-26.921, 3.353, 11.325",
+				"rot" : "0.629, 0.332, -1.486"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
+		},
+		{
+			"name" : "rock-cube-2",
+			"id" : "9567554FE8FB42B64717CD3ECD7F2595",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-27.303, 3.335, 6.916",
+				"rot" : "-1.893, 0.460, 1.137"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "rock-cube-01.glb",
+			"materials" : 
+			[
+				"Rock"
+			]
+		},
+		{
+			"name" : "solar_panel",
+			"id" : "2D243FB411A1C1A947E0CE3315BB487D",
+			"type" : "prefab",
+			"prefab type" : "solar-panel",
+			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
+			"transform" : 
+			{
+				"pos" : "0.000, -0.533, -7.224",
+				"rot" : "-1.571, -0.000, -0.000",
+				"scale" : "1.000, 0.998, 0.998"
 			}
 		}
 	]

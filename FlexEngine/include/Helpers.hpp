@@ -23,6 +23,8 @@ namespace flex
 
 	bool ReadFile(const std::string& filePath, std::string& outFileContents, bool bBinaryFile);
 	bool ReadFile(const std::string& filePath, std::vector<char>& vec, bool bBinaryFile);
+	bool ReadFile(const char* filePath, std::string& outFileContents, bool bBinaryFile);
+	bool ReadFile(const char* filePath, std::vector<char>& vec, bool bBinaryFile);
 
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
@@ -34,6 +36,10 @@ namespace flex
 	* Returns true if reading and parsing succeeded
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr);
+
+	// Returns string containing precision decimal places and a suffix if the number is larger than 999
+	// (e.g. (15690, 1) => "15.7k", (965840305, 2 => "965.84M"
+	FLEX_NO_DISCARD std::string PrettifyLargeNumber(u64 num, u32 precision);
 
 	// Removes all content before final '/' or '\'
 	FLEX_NO_DISCARD std::string StripLeadingDirectories(const std::string& filePath);
@@ -61,6 +67,13 @@ namespace flex
 	// (e.g. "\n\n\n" will return a vector of length 3, while Strip will return an empty vector)
 	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, char delim);
 	FLEX_NO_DISCARD std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim);
+	// Identical to Split, except anything within quotes is kept together
+	FLEX_NO_DISCARD std::vector<std::string> SplitHandleStrings(const std::string& str, char delim);
+
+	// Compares two strings, ignoring case
+	FLEX_NO_DISCARD i32 StrCmpCaseInsensitive(const char* str1, const char* str2, u32 maxNumCompares = u32_max);
+
+	FLEX_NO_DISCARD std::string RemovePrefix(const std::string& str, const char* prefix);
 
 	/*
 	 * Returns the index of the first character which isn't a number
@@ -73,6 +86,8 @@ namespace flex
 	FLEX_NO_DISCARD bool NearlyEquals(const glm::vec3& a, const glm::vec3& b, real threshold);
 	FLEX_NO_DISCARD bool NearlyEquals(const glm::vec4& a, const glm::vec4& b, real threshold);
 	FLEX_NO_DISCARD bool NearlyEquals(const glm::quat& a, const glm::quat& b, real threshold);
+
+	FLEX_NO_DISCARD glm::quat SafeQuatLookAt(const glm::vec3& direction);
 
 	FLEX_NO_DISCARD glm::quat MoveTowards(const glm::quat& a, const glm::quat& b, real delta);
 	FLEX_NO_DISCARD glm::vec2 MoveTowards(const glm::vec2& a, const glm::vec2& b, real delta);
@@ -87,19 +102,27 @@ namespace flex
 	FLEX_NO_DISCARD u32 Pack2FloatToU32(real f1, real f2);
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
 
-	/* Interpret 4 bytes starting at ptr as an unsigned 32-bit int */
+	// Interpret 4 bytes starting at ptr as an unsigned 32-bit int
 	FLEX_NO_DISCARD u32 Parse32u(const char* ptr);
-	/* Interpret 2 bytes starting at ptr as an unsigned 16-bit int */
+	// Interpret 2 bytes starting at ptr as an unsigned 16-bit int
 	FLEX_NO_DISCARD u16 Parse16u(const char* ptr);
+	// Interpret 1 byte starting at ptr as an unsigned 8-bit int
+	FLEX_NO_DISCARD u8 ParseByte(const char* ptr);
 
 	FLEX_NO_DISCARD bool ParseBool(const std::string& intStr);
+	FLEX_NO_DISCARD bool ParseBool(const char* intStr);
 
+	FLEX_NO_DISCARD i32 ParseInt(const char* intStr);
 	FLEX_NO_DISCARD i32 ParseInt(const std::string& intStr);
+	FLEX_NO_DISCARD u32 ParseUInt(const char* intStr);
 	FLEX_NO_DISCARD u32 ParseUInt(const std::string& intStr);
+	FLEX_NO_DISCARD i64 ParseLong(const char* intStr);
 	FLEX_NO_DISCARD i64 ParseLong(const std::string& intStr);
+	FLEX_NO_DISCARD u64 ParseULong(const char* intStr);
 	FLEX_NO_DISCARD u64 ParseULong(const std::string& intStr);
 
 	/* Parses a single float, returns -1.0f if incorrectly formatted */
+	FLEX_NO_DISCARD real ParseFloat(const char* floatStr);
 	FLEX_NO_DISCARD real ParseFloat(const std::string& floatStr);
 
 	/* Parses a comma separated list of 2 floats */
@@ -139,6 +162,7 @@ namespace flex
 	FLEX_NO_DISCARD std::string UIntToString(u32 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string LongToString(i64 i, u16 minChars = 0, char pad = '0');
 	FLEX_NO_DISCARD std::string ULongToString(u64 i, u16 minChars = 0, char pad = '0');
+	FLEX_NO_DISCARD const char* BoolToString(bool bValue);
 
 	FLEX_NO_DISCARD std::string FloatToString(real f, i32 precision = DEFAULT_FLOAT_PRECISION);
 
@@ -180,7 +204,9 @@ namespace flex
 	std::string& ToUpper(std::string& str);
 
 	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
+	FLEX_NO_DISCARD bool StartsWith(const char* str, const char* start);
 	FLEX_NO_DISCARD bool EndsWith(const std::string& str, const std::string& end);
+	FLEX_NO_DISCARD bool EndsWith(const char* str, const char* start);
 	FLEX_NO_DISCARD std::string RemoveEndIfPresent(const std::string& str, const std::string& end);
 
 	// Returns the number str ends with or -1 if last char isn't numeral
@@ -275,24 +301,40 @@ namespace flex
 		return result;
 	}
 
-	template<class T>
+	template<typename T>
 	inline i32 Find(const std::vector<T>& vec, const T& t)
 	{
-		T* vecData = (T*)vec.data();
-		i32 vecLen = (i32)vec.size();
-		for (i32 i = 0; i < vecLen; ++i)
+		T* data = (T*)vec.data();
+		i32 len = (i32)vec.size();
+		for (i32 i = 0; i < len; ++i)
 		{
-			if (*vecData == t)
+			if (*data == t)
 			{
 				return i;
 			}
-			++vecData;
+			++data;
 		}
 
 		return -1;
 	}
 
-	template<class T>
+	template<typename T, size_t Len>
+	inline i32 Find(const std::array<T, Len>& arr, const T& t)
+	{
+		T* data = (T*)arr.data();
+		for (i32 i = 0; i < (i32)Len; ++i)
+		{
+			if (*data == t)
+			{
+				return i;
+			}
+			++data;
+		}
+
+		return -1;
+	}
+
+	template<typename T>
 	inline typename std::vector<T>::const_iterator FindIter(const std::vector<T>& vec, const T& t)
 	{
 		auto vecEnd = vec.end();
@@ -307,20 +349,26 @@ namespace flex
 		return vec.end();
 	}
 
-	template<class T>
+	template<typename T>
 	inline bool Contains(const std::vector<T>& vec, const T& t)
 	{
 		return Find(vec, t) != -1;
 	}
 
-	template<class Key, class Value, class Comp>
+	template<typename T, size_t Len>
+	inline bool Contains(const std::array<T, Len>& arr, const T& t)
+	{
+		return Find(arr, t) != -1;
+	}
+
+	template<typename Key, typename Value, typename Comp>
 	inline bool Contains(const std::map<Key, Value, Comp>& map, const Key& key)
 	{
 		auto iter = map.find(key);
 		return iter != map.end();
 	}
 
-	template<class Value, class Comp>
+	template<typename Value, typename Comp>
 	inline bool Contains(const std::set<Value, Comp>& set, const Value& val)
 	{
 		auto iter = set.find(val);
@@ -330,7 +378,10 @@ namespace flex
 	bool Contains(const std::vector<const char*>& vec, const char* val);
 	bool Contains(const char* arr[], u32 arrLen, const char* val);
 	bool Contains(const std::string& str, const std::string& pattern);
+	bool Contains(const std::string& str, const char* pattern);
 	bool Contains(const std::string& str, char pattern);
+
+	std::string Erase(const std::string& str, char c);
 
 	template<typename T>
 	inline bool Erase(std::vector<T>& vec, const T& t)
@@ -338,13 +389,13 @@ namespace flex
 		i32 index = Find(vec, t);
 		if (index != -1)
 		{
-			vec.erase(index);
+			vec.erase(vec.begin() + index);
 			return true;
 		}
 		return false;
 	}
 
-	template<typename T, class I>
+	template<typename T, typename I>
 	inline bool Erase(std::set<T, I>& set, const T& t)
 	{
 		auto iter = set.find(t);
@@ -368,7 +419,7 @@ namespace flex
 		return -1;
 	}
 
-	template<class T>
+	template<typename T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
 		return vec[RandomInt(0, (i32)vec.size())];
@@ -429,13 +480,19 @@ namespace flex
 
 	};
 
+	// TODO: Rename to iVec2
 	struct Vec2iCompare
 	{
 		bool operator()(const glm::vec2i& lhs, const glm::vec2i& rhs) const;
 	};
 
+	struct iVec3Compare
+	{
+		bool operator()(const glm::ivec3& lhs, const glm::ivec3& rhs) const;
+	};
+
 	// TODO: Move to separate file
-	template<class T>
+	template<typename T>
 	struct ThreadSafeArray
 	{
 		ThreadSafeArray()
@@ -463,7 +520,7 @@ namespace flex
 			return t[index];
 		}
 
-		u32 Size()volatile const
+		u32 Size() volatile const
 		{
 			return size;
 		}
@@ -485,6 +542,13 @@ namespace flex
 
 	};
 
+	struct ShaderThreadData
+	{
+		void* criticalSection = nullptr;
+		volatile bool bRunning = true;
+		bool bGenerateAssembly = false;
+	};
+
 	struct AABB2D
 	{
 		real minX, maxX, minZ, maxZ;
@@ -497,7 +561,7 @@ namespace flex
 
 		bool Contains(const glm::vec2& point)
 		{
-			return (point.x >= minX && point.x < maxX &&
+			return (point.x >= minX && point.x < maxX&&
 				point.y >= minZ && point.y < maxZ);
 		}
 
@@ -522,8 +586,8 @@ namespace flex
 
 		bool Contains(const glm::vec3& point)
 		{
-			return (point.x >= minX && point.x < maxX &&
-				point.z >= minZ && point.z < maxZ &&
+			return (point.x >= minX && point.x < maxX&&
+				point.z >= minZ && point.z < maxZ&&
 				point.y >= minY && point.y < maxY);
 		}
 

@@ -174,6 +174,7 @@ namespace flex
 
 		FlexEngine::s_ExecutablePath = RelativePathToAbsolute(ReplaceBackSlashesWithForward(fileNameBuff));
 
+		// Change current directory so relative paths work
 		std::string exeDir = ExtractDirectoryString(FlexEngine::s_ExecutablePath);
 		SetCurrentDirectory(exeDir.c_str());
 	}
@@ -204,9 +205,9 @@ namespace flex
 		return true;
 	}
 
-	void Platform::OpenExplorer(const std::string& absoluteDirectory)
+	void Platform::OpenFileExplorer(const char* absoluteDirectory)
 	{
-		ShellExecute(NULL, "open", absoluteDirectory.c_str(), NULL, NULL, SW_SHOWDEFAULT);
+		ShellExecute(NULL, "open", absoluteDirectory, NULL, NULL, SW_SHOWDEFAULT);
 	}
 
 	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
@@ -220,19 +221,6 @@ namespace flex
 		DWORD dwAttrib = GetFileAttributes(absoluteDirectoryPath.c_str());
 
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
-	}
-
-	bool Platform::CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
-	{
-		if (::CopyFile(filePathFrom.c_str(), filePathTo.c_str(), 0))
-		{
-			return true;
-		}
-		else
-		{
-			PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
-			return false;
-		}
 	}
 
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
@@ -510,6 +498,11 @@ namespace flex
 		return InterlockedIncrement(value);
 	}
 
+	u32 Platform::AtomicDecrement(volatile u32* value)
+	{
+		return InterlockedDecrement(value);
+	}
+
 	u32 Platform::AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand)
 	{
 		return InterlockedCompareExchange(value, exchange, comparand);
@@ -694,26 +687,23 @@ namespace flex
 	}
 
 	DirectoryWatcher::DirectoryWatcher(const std::string& directory, bool bWatchSubtree) :
-		m_Directory(directory),
+		directory(directory),
 		m_bWatchSubtree(bWatchSubtree)
 	{
+		m_ChangeHandle = FindFirstChangeNotification(
+			directory.c_str(),
+			m_bWatchSubtree ? TRUE : FALSE,
+			FILE_NOTIFY_CHANGE_FILE_NAME | FILE_NOTIFY_CHANGE_DIR_NAME | FILE_NOTIFY_CHANGE_LAST_WRITE);
+
+		if (m_ChangeHandle == INVALID_HANDLE_VALUE)
 		{
-			m_ChangeHandle = FindFirstChangeNotification(
-				directory.c_str(),
-				m_bWatchSubtree ? TRUE : FALSE,
-				FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_ACTION_ADDED | FILE_ACTION_REMOVED | FILE_ACTION_MODIFIED);
-
-			if (m_ChangeHandle == INVALID_HANDLE_VALUE)
-			{
-				PrintError("FindFirstChangeNotification failed! Directory watch not installed for %s\n", directory.c_str());
-				m_bInstalled = false;
-			}
-			else
-			{
-				m_bInstalled = true;
-			}
+			PrintError("FindFirstChangeNotification failed! Directory watch not installed for %s\n", directory.c_str());
+			m_bInstalled = false;
 		}
-
+		else
+		{
+			m_bInstalled = true;
+		}
 	}
 
 	DirectoryWatcher::~DirectoryWatcher()
@@ -737,7 +727,7 @@ namespace flex
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)
 			{
-				PrintError("Something bad happened with the directory watch on %s\n", m_Directory.c_str());
+				PrintError("Something bad happened with the directory watch on %s\n", directory.c_str());
 			}
 
 			return true;
@@ -750,6 +740,5 @@ namespace flex
 	{
 		return m_bInstalled;
 	}
-
 } // namespace flex
 #endif // _WINDOWS

@@ -69,6 +69,7 @@ namespace flex
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
 		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
+		GameObject* AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling);
 		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
 		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
 		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
@@ -91,6 +92,22 @@ namespace flex
 
 		std::vector<GameObject*> GetAllObjects();
 		std::vector<GameObjectID> GetAllObjectIDs();
+
+		template<class T>
+		T* GetObjectOfType(StringID typeID)
+		{
+			std::vector<GameObject*> gameObjects = GetAllObjects();
+
+			for (GameObject* gameObject : gameObjects)
+			{
+				if (gameObject->GetTypeID() == typeID)
+				{
+					return (T*)gameObject;
+				}
+			}
+
+			return nullptr;
+		}
 
 		template<class T>
 		std::vector<T*> GetObjectsOfType(StringID typeID)
@@ -129,15 +146,24 @@ namespace flex
 		// Returns true if the parent-child tree changed during this call
 		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
 
+		bool DoNewGameObjectTypeList();
+		bool DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr);
+
 		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
 
 		void SetTimeOfDay(real time);
 		real GetTimeOfDay() const;
+		void SetSecondsPerDay(real secPerDay);
+		real GetSecondsPerDay() const;
+		void SetTimeOfDayPaused(bool bPaused);
+		bool GetTimeOfDayPaused() const;
 
 		real GetPlayerMinHeight() const;
 		glm::vec3 GetPlayerSpawnPoint() const;
+
+		void RegenerateTerrain();
 
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
@@ -157,6 +183,7 @@ namespace flex
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
 		void UnregisterGameObject(const GameObjectID& gameObjectID);
+		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID);
 
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
 
@@ -180,11 +207,13 @@ namespace flex
 		ReflectionProbe* m_ReflectionProbe = nullptr;
 
 		bool m_bPauseTimeOfDay = false;
-		real m_TimeOfDay; // [0, 1) - 0 = noon, 0.5 = midnight
+		real m_TimeOfDay = 0.0f; // [0, 1) - 0 = noon, 0.5 = midnight
 		real m_SecondsPerDay = 6000.0f;
 
 		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
+
+		glm::vec3 m_DirLightColours[4];
 
 		// Kill zone for player
 		real m_PlayerMinHeight = -500.0f;
@@ -215,7 +244,11 @@ namespace flex
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 
+		const size_t m_MaxObjectNameLen = 256;
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
+		bool m_bTriggerNewObjectTypePopup = false;
+		const char* m_NewObjectTypePopupStr = "New Object Type";
+		std::string m_NewObjectTypeStrBuffer;
 
 	};
 } // namespace flex

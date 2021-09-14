@@ -14,7 +14,6 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
-#include "Profiler.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/SceneManager.hpp"
 

@@ -49,7 +49,7 @@ namespace flex
 		* requirements. Any attribute not set here will be ignored. Any attribute set here will
 		* be enforced (filled with default value if not present in mesh)
 		*/
-		void SetRequiredAttributesFromMaterialID(MaterialID matID);
+		bool SetRequiredAttributesFromMaterialID(MaterialID matID);
 
 		static MeshComponent* LoadFromCGLTF(Mesh* owningMesh,
 			cgltf_primitive* primitive,

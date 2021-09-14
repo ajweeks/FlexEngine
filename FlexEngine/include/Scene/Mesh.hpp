@@ -29,6 +29,7 @@ namespace flex
 		void PostInitialize();
 
 		void Destroy();
+		void DestroyAllSubmeshes();
 		void Reload();
 
 		void RemoveSubmesh(u32 index);
@@ -96,7 +97,7 @@ namespace flex
 		std::string GetFileName() const;
 
 		MeshComponent* GetSubMeshWithRenderID(RenderID renderID) const;
-		std::vector<MeshComponent*> GetSubMeshes() const;
+		std::vector<MeshComponent*> GetSubMeshesCopy() const;
 		MeshComponent* GetSubMesh(u32 index) const;
 
 		GameObject* GetOwningGameObject() const;

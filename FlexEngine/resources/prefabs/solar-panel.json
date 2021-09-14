@@ -1,0 +1,68 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
+	"root" : 
+	{
+		"name" : "solar-panel",
+		"id" : "2D243FB411A1C1A947E0CE3315BB487D",
+		"type" : "solar panel",
+		"visible" : true,
+		"casts shadow" : true,
+		"mesh" : "solar-panel.glb",
+		"materials" : 
+		[
+			"solar-panel-trim",
+			"solar-panel-blue",
+			"pbr chrome"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.000, 1.000, 0.120"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
+		"children" : 
+		[
+			{
+				"name" : "socket_00",
+				"id" : "CC8CDC96EF3D3289462912EE667B477C",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "0.711, 1.170, -0.000",
+					"rot" : "1.571, -0.000, 0.000"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"socket" : 
+				{
+					"slotIdx" : 0
+				}
+			},
+			{
+				"name" : "socket_01",
+				"id" : "EEE2CACB0D3116B0494DA44D63F14A57",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "0.711, -1.199, 0.000",
+					"rot" : "1.571, 0.017, 3.142"
+				},
+				"visible" : true,
+				"casts shadow" : true,
+				"socket" : 
+				{
+					"slotIdx" : 1
+				}
+			}
+		]
+	}
+}

@@ -35,6 +35,7 @@ namespace flex
 		struct Assignment;
 		struct Terminator;
 		struct Return;
+		struct FunctionCallValue;
 
 		enum class OperatorType
 		{
@@ -81,7 +82,7 @@ namespace flex
 			void AddReturn(Span returnOrigin, Value* returnVal);
 			void AddYield(Span yieldOrigin, Value* yieldVal);
 			void AddBranch(Span branchOrigin, Block* target);
-			void AddCall(State* state, Span callOrigin, const std::string& target, const std::vector<Value*>& arguments);
+			void AddCall(State* state, FunctionCallValue* callValue);
 			void AddHalt();
 			void SealBlock();
 			void AddConditionalBranch(State* state, Span branchOrigin, Value* condition, Block* then, Block* otherwise);

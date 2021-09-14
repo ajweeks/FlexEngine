@@ -7,6 +7,8 @@ IGNORE_WARNINGS_POP
 
 #include "Histogram.hpp"
 
+#include <list>
+
 namespace flex
 {
 	class StringBuilder;
@@ -156,6 +158,9 @@ namespace flex
 		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
+		static void PlayNote(real frequency, sec length, real gain);
+
+		static void MarkSourceTemporary(AudioSourceID sourceID);
 
 		static void FadeSourceIn(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
 		static void FadeSourceOut(AudioSourceID sourceID, real fadeDuration, real fadeMaxDuration);
@@ -220,6 +225,7 @@ namespace flex
 		// > End Editor-only
 
 		static std::array<Source, NUM_BUFFERS> s_Sources;
+		static std::list<AudioSourceID> s_TemporarySources;
 
 		static ALCdevice* s_Device;
 		static ALCcontext* s_Context;

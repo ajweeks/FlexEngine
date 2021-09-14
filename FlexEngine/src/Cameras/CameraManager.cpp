@@ -311,7 +311,7 @@ namespace flex
 
 	EventReply CameraManager::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (actionEvent == ActionEvent::TRIGGER)
+		if (actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
 			if (action == Action::DBG_SWITCH_TO_PREV_CAM)
 			{

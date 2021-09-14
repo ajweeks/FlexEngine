@@ -80,9 +80,27 @@ namespace flex
 		static void RetrieveCurrentWorkingDirectory();
 		static void RetrievePathToExecutable();
 		static bool CreateDirectoryRecursive(const std::string& absoluteDirectoryPath);
-		static void OpenExplorer(const std::string& absoluteDirectory);
+		static void OpenFileExplorer(const char* absoluteDirectory);
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);
-		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo);
+		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
+		{
+			std::ifstream src(filePathFrom);
+			std::ofstream dst(filePathTo);
+
+			if (src.is_open() && dst.is_open())
+			{
+				dst << src.rdbuf();
+				src.close();
+				dst.close();
+				return true;
+			}
+			else
+			{
+				PrintError("Failed to copy file from \"%s\" to \"%s\"\n", filePathFrom.c_str(), filePathTo.c_str());
+				return false;
+			}
+		}
+
 		static bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
 
 		static bool GetFileModifcationTime(const char* filePath, Date& outModificationDate);
@@ -102,6 +120,7 @@ namespace flex
 		static std::string GetDateString_YMDHMS();
 
 		static u32 AtomicIncrement(volatile u32* value);
+		static u32 AtomicDecrement(volatile u32* value);
 		static u32 AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand);
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 
@@ -126,21 +145,70 @@ namespace flex
 
 	};
 
-	class DirectoryWatcher
+	class DirectoryWatcher final
 	{
 	public:
 		DirectoryWatcher(const std::string& directory, bool bWatchSubtree);
 		~DirectoryWatcher();
+
+		DirectoryWatcher(const DirectoryWatcher& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
+		DirectoryWatcher(const DirectoryWatcher&& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+		}
+		DirectoryWatcher& operator=(const DirectoryWatcher& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+			return *this;
+		}
+		DirectoryWatcher& operator=(const DirectoryWatcher&& other)
+		{
+			if (this != &other)
+			{
+				userData = other.userData;
+				directory = other.directory;
+				m_bInstalled = other.m_bInstalled;
+				m_bWatchSubtree = other.m_bWatchSubtree;
+				m_ChangeHandle = other.m_ChangeHandle;
+			}
+			return *this;
+		}
 
 		// Returns true when directory has changed
 		bool Update();
 
 		bool Installed() const;
 
+		void* userData = nullptr;
+		std::string directory;
+
 	private:
 		bool m_bInstalled = false;
 		bool m_bWatchSubtree = false;
-		std::string m_Directory;
 		void* m_ChangeHandle = nullptr;
 
 	};

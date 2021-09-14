@@ -5,16 +5,15 @@
 namespace flex
 {
 	class Wire;
+	class WirePlug;
 	class Socket;
 	class Road;
 	class Terminal;
 	class DirectoryWatcher;
 
-	class PluggablesSystem : public System
+	class PluggablesSystem final : public System
 	{
 	public:
-		virtual ~PluggablesSystem() {};
-
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 
@@ -22,15 +21,29 @@ namespace flex
 
 		i32 GetReceivedSignal(Socket* socket);
 
-		Wire* AddWire(const GameObjectID& gameObjectID, Socket* socket0 = nullptr, Socket* socket1 = nullptr);
-		bool DestroySocket(Socket* socket);
+		Wire* AddWire(const GameObjectID& gameObjectID = InvalidGameObjectID);
 		bool DestroyWire(Wire* wire);
 
-		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID, i32 slotIdx = 0, Wire* connectedWire = nullptr);
-		Socket* AddSocket(Socket* socket, i32 slotIdx = 0, Wire* connectedWire = nullptr);
+		WirePlug* AddWirePlug(const GameObjectID& gameObjectID = InvalidGameObjectID);
+		bool DestroyWirePlug(WirePlug* wirePlug);
+
+		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID);
+		Socket* AddSocket(Socket* socket, i32 slotIdx = 0);
+		bool DestroySocket(Socket* socket);
+
+		Socket* GetSocketAtOtherEnd(Socket* socket);
+
+		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled, Socket* excludeSocket);
+		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled);
+
+		bool PlugInToNearbySocket(WirePlug* plug, real nearbyThreshold);
+		void UnplugFromSocket(WirePlug* plug);
 
 		std::vector<Wire*> wires;
+		std::vector<WirePlug*> wirePlugs;
 		std::vector<Socket*> sockets;
+
+		real maxDistBeforeSnapSq = 25.0f * 25.0f;
 
 	private:
 		bool RemoveSocket(const GameObjectID& socketID);
@@ -40,12 +53,9 @@ namespace flex
 
 	};
 
-	class RoadManager : public System
+	class RoadManager final : public System
 	{
 	public:
-		RoadManager();
-		virtual ~RoadManager();
-
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
@@ -55,6 +65,8 @@ namespace flex
 		void RegisterRoad(Road* road);
 		void DeregisterRoad(Road* road);
 
+		void RegenerateAllRoads();
+
 	private:
 		// TODO: Four proxy objects which the user can manipulate when a road segment is selected
 
@@ -62,11 +74,11 @@ namespace flex
 
 	};
 
-	class TerminalManager : public System
+	class TerminalManager final : public System
 	{
 	public:
 		TerminalManager();
-		virtual ~TerminalManager();
+		~TerminalManager();
 
 		virtual void Initialize() override;
 		virtual void Destroy() override;

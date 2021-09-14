@@ -13,6 +13,8 @@ layout (constant_id = 0) const int SSAO_KERNEL_SIZE = 64;
 layout (constant_id = 1) const int TAA_SAMPLE_COUNT = 2;
 layout (constant_id = 2) const int QUALITY_LEVEL = 1;
 layout (constant_id = 3) const int NUM_CASCADES = 4;
+layout (constant_id = 4) const int DEBUG_OVERLAY_INDEX = 0;
+layout (constant_id = 5) const int ENABLE_FOG = 1;
 
 const float PI = 3.14159265359;
 
@@ -227,5 +229,60 @@ vec3 ColourByShadowCascade(uint cascadeIndex)
 		case 2:  return vec3(1.0f, 1.0f, 0.2f);
 		case 3:  return vec3(0.4f, 0.8f, 0.2f);
 		default: return vec3(1.0f, 0.0f, 1.0f);
+	}
+}
+
+void DrawDebugOverlay(vec3 albedo, vec3 N, float roughness, float metallic,
+    vec3 diffuse, vec3 specular, vec2 texCoord, float linDepth,
+    float shadow, uint cascadeIndex, float ssao, inout vec4 fragColour)
+{
+    switch (DEBUG_OVERLAY_INDEX)
+    {
+   	case 0:
+   		return;
+    case 1: // Albedo
+        fragColour = vec4(albedo.xyz, 1.0);
+        break;
+    case 2: // Normal
+        fragColour = vec4(N.xyz * 0.5 + 0.5, 1.0);
+        break;
+    case 3: // Roughness
+        fragColour = vec4(roughness.xxx, 1.0);
+        break;
+    case 4: // Metallic
+        fragColour = vec4(metallic.xxx, 1.0);
+        break;
+    case 5: // Diffuse lighting
+        fragColour = vec4(diffuse.xyz, 1.0);
+        break;
+    case 6: // Specular lighting
+        fragColour = vec4(specular.xyz, 1.0);
+        break;
+    case 7: // Tex coords
+        fragColour = vec4(texCoord.xy, 0.0, 1.0);
+        break;
+    case 8: // Linear depth
+        fragColour = vec4(linDepth.xxx, 1.0);
+        break;
+    case 9: // Shadow
+        fragColour = vec4(shadow.xxx, 1.0);
+        break;
+    case 10: // Shadow cascade
+        fragColour.xyz = ColourByShadowCascade(cascadeIndex) * fragColour.xyz;
+        break;
+    case 11: // SSAO
+        fragColour = vec4(ssao.xxx, 1.0);
+        break;
+    }
+}
+
+void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
+{
+	if (ENABLE_FOG == 1)
+	{
+		float dist = clamp(linearDepth * 0.075 - 0.01, 0.0, 1.0);
+		dist = smoothstep(0.0, 0.8, dist);
+
+		fragmentColour = mix(fragmentColour, colourFog, dist);
 	}
 }

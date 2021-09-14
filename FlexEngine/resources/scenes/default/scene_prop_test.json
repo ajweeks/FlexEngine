@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "scene_prop_test",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -21,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-43.601, 18.011, 16.597",
-			"pitch" : -0.266966,
-			"yaw" : -0.394842
+			"position" : "0.129, 10.747, 21.407",
+			"pitch" : -0.479945,
+			"yaw" : -1.550721
 		}
 	},
 	"objects" : 
@@ -34,9 +28,6 @@
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,29 +40,29 @@
 			"name" : "Reflection Probe 01",
 			"id" : "41F49358ACEB81834267F6075AA25618",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
-			}
+			},
+			"visible" : true,
+			"casts shadow" : true
 		},
 		{
 			"name" : "Directional Light",
 			"id" : "C40F8F826876F9A44211DFC1EC87F1DC",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.949, 0.366, 0.823"
+				"rot" : "1.589, -0.000, 0.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.347, 0.328, 0.274, 0.835",
+				"rotation" : "0.714, 0.000, 0.000, 0.701",
 				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
 				"brightness" : 3.047000,
 				"cast shadows" : true,
@@ -82,13 +73,13 @@
 			"name" : "ground plane",
 			"id" : "0C78995C913BB09D4A73DBE17D551FEB",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 0.000, 0.178",
 				"scale" : "100.000, 0.100, 100.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -112,13 +103,13 @@
 			"name" : "case",
 			"id" : "8810D65B6A52478643940089A1994603",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-5.900, 0.641, 4.600",
 				"rot" : "0.000, -0.555, 0.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"mesh" : "case-01.glb",
 			"materials" : 
 			[
@@ -130,294 +121,123 @@
 		{
 			"name" : "battery cell",
 			"id" : "C9F01C5986A90DA84A0FB9EE2F677464",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "-2.305, 1.100, 2.115",
-				"rot" : "0.525, 0.000, 1.571",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.525, -0.000, 1.571"
 			}
 		},
 		{
 			"name" : "battery cell2",
 			"id" : "FE88C01211AF55A04620FFF1ED7C7CC6",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "1.307, 2.100, 6.617",
-				"rot" : "-1.571, -0.472, 3.142",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "-1.571, -0.472, -3.141"
 			}
 		},
 		{
 			"name" : "battery cell3",
 			"id" : "09C12026631301A04757C6A0E8A5D9F8",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "1.698, 1.100, 2.881",
-				"rot" : "-0.000, 0.592, 3.142",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.000, 0.592, -3.141"
 			}
 		},
 		{
 			"name" : "battery cell4",
 			"id" : "D1D4E69694A7AAA04C7C6FF5CE84A459",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "6.120, 1.100, 0.228",
-				"rot" : "0.007, -0.000, -1.571",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.007, 0.000, -1.571"
 			}
 		},
 		{
 			"name" : "battery cell5",
 			"id" : "FECDB85FB60D8BA14A481D3322BD045D",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "6.440, 2.529, -2.905",
-				"rot" : "-1.598, 0.008, -0.993",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "-1.598, 0.008, -0.993"
 			}
 		},
 		{
 			"name" : "battery cell2",
 			"id" : "A086C0C58254CA924819BD50D6D8C0BE",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "-1.905, 1.100, -3.022",
-				"rot" : "3.142, 0.791, 3.142",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "-3.141, 0.791, -3.141"
 			}
 		},
 		{
 			"name" : "battery cell3",
 			"id" : "93B964CAB64F2EBF4DB9EE19F44D9A0E",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "1.223, 1.100, -1.834",
-				"rot" : "0.004, 0.000, -1.571",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.004, -0.000, -1.571"
 			}
 		},
 		{
 			"name" : "battery cell4",
 			"id" : "4AD2F2D9FD5A94BD4E96F88D2277F7F9",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "3.374, 1.100, -1.597",
-				"rot" : "-0.000, 0.032, 0.000",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.000, 0.032, 0.000"
 			}
 		},
 		{
 			"name" : "battery cell5",
 			"id" : "39208163D06ED69942DA303EA1B03BC9",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "battery",
+			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "8.621, 1.100, -2.343",
-				"rot" : "-0.000, 0.015, -0.000",
-				"scale" : "1.000, 1.000, 1.000"
-			},
-			"mesh" : "battery_cell.glb",
-			"materials" : 
-			[
-				"pbr light grey"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 2.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 1.000000,
-				"kinematic" : false,
-				"static" : false,
-				"mask" : 1,
-				"group" : 1
+				"rot" : "0.000, 0.015, 0.000"
 			}
 		},
 		{
 			"name" : "greenhouse",
 			"id" : "092F821D779FFAA8401DBA49A9CDA64C",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "14.800, 0.000, -20.844",
 				"rot" : "3.141, 0.159, 3.141",
 				"scale" : "3.000, 3.000, 3.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"mesh" : "greenhouse.glb",
 			"materials" : 
 			[

@@ -27,10 +27,10 @@ namespace flex
 			Print("UInt: %d\n", val0.AsUInt());
 			break;
 		case Variant::Type::LONG:
-			Print("Long: %dll\n", val0.AsLong());
+			Print("Long: %ld\n", val0.AsLong());
 			break;
 		case Variant::Type::ULONG:
-			Print("ULong: %ull\n", val0.AsULong());
+			Print("ULong: %lu\n", val0.AsULong());
 			break;
 		case Variant::Type::FLOAT:
 			Print("Float: %.3f\n", val0.AsFloat());
@@ -58,7 +58,7 @@ namespace flex
 	{
 		Register(Bind("Quintuple", &Quintuple, Variant::Type::INT, Variant::Type::INT));
 		Register(Bind("DoMathSmall", &DoMathSmall, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT, Variant::Type::INT));
-		Register(Bind("Print", &PrintHelper, Variant::Type::VOID, Variant::Type::VOID));
+		Register(Bind("Print", &PrintHelper, Variant::Type::VOID_, Variant::Type::VOID_));
 	}
 
 	void FunctionBindings::ClearBindings()

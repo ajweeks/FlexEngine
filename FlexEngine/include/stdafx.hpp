@@ -6,25 +6,27 @@
 
 #define COMPILE_IMGUI 1
 
-#define RUN_UNIT_TESTS 0
-
 #define ENABLE_CONSOLE_COLOURS 1
 
 #define FLEX_OVERRIDE_NEW_DELETE 0
 #define FLEX_OVERRIDE_MALLOC 0
 
-#ifdef DEBUG
-#define THOROUGH_CHECKS 1
-#define ENABLE_PROFILING 1
-#ifdef _WINDOWS
+
+#if defined(DEBUG) && defined(_WINDOWS)
 // RenderDoc API only supported on windows
-#define COMPILE_RENDERDOC_API 1
-#endif //  _WINDOWS
+#define COMPILE_RENDERDOC_API 0
+#else
+// Disable render doc integration in non-debug builds
+#define COMPILE_RENDERDOC_API 0
+#endif
+
+#ifdef DEBUG
+#define THOROUGH_CHECKS			1
+#define ENABLE_PROFILING		1
 #define COMPILE_SHADER_COMPILER 1
 #else
-#define THOROUGH_CHECKS 0
-#define ENABLE_PROFILING 0
-#define COMPILE_RENDERDOC_API 0
+#define THOROUGH_CHECKS			0
+#define ENABLE_PROFILING		0
 #define COMPILE_SHADER_COMPILER 0
 #endif
 
@@ -45,8 +47,6 @@
 #include <cstddef>
 
 #include "memory.hpp"
-
-#include "GUID.hpp"
 
 #define BT_NO_SIMD_OPERATOR_OVERLOADS
 
@@ -94,8 +94,6 @@
 #define FORMAT_STRING_PRE
 #endif
 
-#define FT_EXPORT(Type) Type
-
 #include <algorithm>
 #include <functional>
 #include <future>
@@ -119,10 +117,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Logger.hpp"
-#include "Types.hpp"
-#include "Systems/Systems.hpp"
-
 IGNORE_WARNINGS_PUSH
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -132,6 +126,8 @@ IGNORE_WARNINGS_PUSH
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
+
+#include "palanteer/palanteer.h"
 IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
@@ -149,7 +145,6 @@ IGNORE_WARNINGS_PUSH
 #include <cgltf/cgltf.h>
 IGNORE_WARNINGS_POP
 
-
 #if COMPILE_IMGUI
 IGNORE_WARNINGS_PUSH
 #define IMGUI_DEFINE_MATH_OPERATORS
@@ -163,6 +158,8 @@ namespace flex
 	extern ImVec4 g_WarningButtonActiveColour;
 }
 
+#include "Types.hpp"
+
 #include "ImGuiBezier.hpp"
 #include "imgui_plot.h"
 IGNORE_WARNINGS_POP
@@ -170,8 +167,12 @@ IGNORE_WARNINGS_POP
 
 #include <mikktspace.h>
 
+#include "GUID.hpp"
+#include "Logger.hpp"
+#include "Systems/Systems.hpp"
 #include "Filepaths.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
+#include "Tweakable.hpp"
 
 #ifndef btAssert
 #define btAssert(e) assert(e)
@@ -193,9 +194,9 @@ IGNORE_WARNINGS_POP
 #define TOKEN_PASTE(x, y) TOKEN_PASTE2(x, y)
 
 #if ENABLE_PROFILING
-#define PROFILE_BEGIN(blockName) Profiler::Begin(blockName);
-#define PROFILE_END(blockName) Profiler::End(blockName);
-#define PROFILE_AUTO(blockName) AutoProfilerBlock TOKEN_PASTE(autoProfileBlock_, __LINE__)(blockName);
+#define PROFILE_BEGIN(blockName) plBegin(blockName);
+#define PROFILE_END(blockName) plEnd(blockName);
+#define PROFILE_AUTO(blockName) plScope(blockName);
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)
@@ -237,6 +238,7 @@ if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
 
 namespace flex
 {
+	// Constants
 	extern glm::vec3 VEC3_RIGHT;
 	extern glm::vec3 VEC3_UP;
 	extern glm::vec3 VEC3_FORWARD;
@@ -254,6 +256,8 @@ namespace flex
 	extern glm::vec4 VEC4_GAMMA;
 	extern glm::vec4 VEC4_GAMMA_INVERSE;
 	extern glm::quat QUAT_IDENTITY;
+	extern glm::mat2 MAT2_IDENTITY;
+	extern glm::mat3 MAT3_IDENTITY;
 	extern glm::mat4 MAT4_IDENTITY;
 	extern glm::mat4 MAT4_ZERO;
 	extern u32 COLOUR32U_WHITE;
@@ -265,10 +269,9 @@ namespace flex
 
 	extern u32 MAX_TEXTURE_DIM;
 
-	// These fields are defined and initialized in FlexEngine.cpp
+	// Globals
 	extern class Window* g_Window;
 	extern class CameraManager* g_CameraManager;
-
 	extern class InputManager* g_InputManager;
 	extern class Renderer* g_Renderer;
 	extern class System* g_Systems[(i32)SystemType::_NONE];
@@ -279,6 +282,7 @@ namespace flex
 	extern class PhysicsManager* g_PhysicsManager;
 	extern class ResourceManager* g_ResourceManager;
 	extern class UIManager* g_UIManager;
+	extern bool g_bDebugBuild;
 
 	template<typename T>
 	T* GetSystem(SystemType systemType)

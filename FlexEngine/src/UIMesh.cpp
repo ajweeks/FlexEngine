@@ -3,7 +3,6 @@
 #include "UIMesh.hpp"
 
 #include "Graphics/Renderer.hpp"
-#include "Profiler.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "InputManager.hpp"
@@ -275,7 +274,7 @@ namespace flex
 
 	void UIMesh::Draw()
 	{
-		PROFILE_AUTO("UIMesh > Draw");
+		PROFILE_AUTO("UIMesh Draw");
 
 		Mesh* mesh = m_Object->GetMesh();
 

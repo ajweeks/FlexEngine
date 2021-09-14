@@ -5,20 +5,20 @@
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
 	"camera" : 
 	{
-		"type" : "vehicle",
+		"type" : "debug",
 		"near plane" : 0.500000,
-		"far plane" : 5000.000000,
-		"fov" : 0.785398,
+		"far plane" : 800051.500000,
+		"fov" : 0.923279,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
 		"exposure" : 1.200000,
-		"move speed" : 18.000000,
+		"move speed" : 78.362000,
 		"transform" : 
 		{
-			"position" : "260.061, 3.634, 86.842",
-			"pitch" : -0.334211,
-			"yaw" : 0.914044
+			"position" : "-168.602, 876.351, 142.816",
+			"pitch" : -0.549132,
+			"yaw" : -0.572664
 		}
 	},
 	"objects" : 
@@ -44,32 +44,19 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.207, 0.095, 1.317"
+				"rot" : "1.589, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.425, 0.378, 0.482, 0.667",
+				"rotation" : "0.714, 0.000, 0.000, 0.701",
 				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 0.98, 0.86",
+				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
-				"brightness" : 0.859000,
+				"brightness" : 0.887000,
 				"cast shadows" : true,
 				"shadow darkness" : 1.000000
-			}
-		},
-		{
-			"name" : "vehicle0",
-			"id" : "0F8DA5B02CE493BA4741D38E0EBD23E0",
-			"type" : "prefab",
-			"prefab type" : "vehicle",
-			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
-			"transform" : 
-			{
-				"pos" : "265.978, 0.368, 94.514",
-				"rot" : "-0.334, 0.629, -0.107",
-				"scale" : "1.000, 1.000, 1.000"
 			}
 		},
 		{
@@ -84,46 +71,119 @@
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
 			"type" : "terrain generator",
 			"visible" : true,
-			"casts shadow" : true,
+			"casts shadow" : false,
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 32,
-				"chunk size" : 52.299999,
+				"vert count per chunk axis" : 16,
+				"chunk size" : 922.375000,
 				"max height" : 500.000000,
 				"use manual seed" : true,
-				"manual seed" : 5,
-				"loaded chunk radius" : 384.244995,
+				"manual seed" : 6,
+				"isolate noise layer" : 0,
+				"num points per axis" : 17,
+				"max chunk count" : 142,
+				"loaded chunk radius" : 2408.229004,
 				"loaded chunk rigid body square radius" : 10000.000000,
-				"base table width" : 128,
+				"base table width" : 256,
 				"low colour" : "0.33, 0.41, 0.33",
 				"mid colour" : "0.51, 0.58, 0.37",
 				"high colour" : "0.65, 0.70, 0.43",
-				"base octave" : 158.938004,
-				"octave scale" : 198.125000,
-				"num octaves" : 6,
 				"pin center" : true,
-				"pinned center" : "76.64, 157.87, 42.79"
+				"pinned center" : "0.03, 10.43, -0.00",
+				"biomes" : 
+				[
+					{
+						"name" : "Canyon",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 375.625000,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.400000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 209.125000
+							}
+						]
+					},
+					{
+						"name" : "Grassland",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 311.033997,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.200000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 111.022003
+							}
+						]
+					},
+					{
+						"name" : "Mountains",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 311.033997,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.325000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 261.822998
+							}
+						]
+					},
+					{
+						"name" : "Lake",
+						"noise functions" : 
+						[
+							{
+								"type" : "FBM",
+								"feature size" : 311.033997,
+								"num octaves" : 6,
+								"h" : 0.800000,
+								"height scale" : 0.100000,
+								"lacunarity" : 1.000000,
+								"wavelength" : 370.421997
+							}
+						]
+					}
+				],
+				"biome noise" : 
+				{
+					"type" : "Voronoi",
+					"feature size" : 0.000000,
+					"num octaves" : 1,
+					"height scale" : 0.100000,
+					"lacunarity" : 1.000000,
+					"wavelength" : 600.000000,
+					"sharpness" : 1.000000
+				}
 			}
 		},
 		{
-			"name" : "blob",
+			"name" : "cloud",
 			"id" : "38CB844333BA598B46F8147A4C4E407A",
 			"type" : "object",
 			"transform" : 
 			{
 				"pos" : "66.446, 52.293, 25.470",
-				"scale" : "13.181, 13.181, 13.181"
+				"scale" : "16.010, 16.010, 16.010"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{
-			"name" : "blob0",
+			"name" : "cloud2",
 			"id" : "58C43E44B1F5DBBF415611823E71DA98",
 			"type" : "object",
 			"transform" : 
@@ -136,7 +196,7 @@
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{
@@ -147,7 +207,7 @@
 			"prefab id" : "A1C03DF3CCA893B2427F6A4A5EB79F51",
 			"transform" : 
 			{
-				"pos" : "6.411, 1.513, -0.490",
+				"pos" : "-4.127, 6.391, -4.983",
 				"rot" : "0.000, 0.747, 0.000",
 				"scale" : "0.526, 0.526, 0.526"
 			}
@@ -158,9 +218,9 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "-2.418, 0.000, -1.391",
+				"pos" : "1.067, 0.000, 0.614",
 				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
+				"scale" : "16.801, 1.000, 20.780"
 			},
 			"visible" : true,
 			"casts shadow" : true,
@@ -184,7 +244,7 @@
 			}
 		},
 		{
-			"name" : "blob1",
+			"name" : "cloud3",
 			"id" : "09800A82CFBA60A6487E3E202B121031",
 			"type" : "object",
 			"transform" : 
@@ -197,69 +257,20 @@
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		},
 		{
-			"name" : "starting_cube-1",
-			"id" : "FCDD2EF95923519D4423F21B9F812F9D",
-			"type" : "object",
+			"name" : "vehicle-1",
+			"id" : "15AAFA46948097954A47A3C5F3F65E34",
+			"type" : "prefab",
+			"prefab type" : "vehicle",
+			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.431, 9.213, 32.166",
-				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"mesh" : "cube.glb",
-			"materials" : 
-			[
-				"pbr red"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
-			"name" : "starting_cube-2",
-			"id" : "7E18CB2A71D3539740BA8F5C2EF63875",
-			"type" : "object",
-			"transform" : 
-			{
-				"pos" : "3.580, 9.213, 52.601",
-				"rot" : "0.000, -0.522, 0.000",
-				"scale" : "6.893, 1.000, 9.292"
-			},
-			"visible" : true,
-			"casts shadow" : true,
-			"mesh" : "cube.glb",
-			"materials" : 
-			[
-				"pbr red"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
+				"pos" : "2.876, 0.916, -0.545",
+				"rot" : "-0.012, 0.804, -0.006",
+				"scale" : "1.000, 1.000, 1.000"
 			}
 		}
 	]

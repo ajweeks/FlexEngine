@@ -5,7 +5,6 @@
 #include "Helpers.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
-#include "Variant.hpp"
 
 namespace flex
 {
@@ -42,7 +41,7 @@ namespace flex
 			case AST::TypeName::BOOL:	return Value::Type::BOOL;
 			case AST::TypeName::STRING: return Value::Type::STRING;
 			case AST::TypeName::CHAR:	return Value::Type::CHAR;
-			case AST::TypeName::VOID:	return Value::Type::VOID;
+			case AST::TypeName::VOID:	return Value::Type::VOID_;
 			default:					return Value::Type::_NONE;
 			}
 		}
@@ -67,6 +66,20 @@ namespace flex
 			return IsLiteral(type) ||
 				type == Type::IDENTIFIER ||
 				type == Type::ARGUMENT;
+		}
+
+		Value::Type Value::IRTypeFromVariantType(Variant::Type variantType)
+		{
+			switch (variantType)
+			{
+			case Variant::Type::INT: return Type::INT;
+			case Variant::Type::FLOAT: return Type::FLOAT;
+			case Variant::Type::BOOL: return Type::BOOL;
+			case Variant::Type::STRING: return Type::STRING;
+			case Variant::Type::CHAR: return Type::CHAR;
+			case Variant::Type::VOID_: return  Type::VOID_;
+			default: return Type::_NONE;
+			}
 		}
 
 		bool Value::IsZero() const
@@ -110,29 +123,22 @@ namespace flex
 				assert(type == other.type);
 			}
 
-			memcpy(&valInt, &other.valInt, sizeof(void*));
+			memcpy(&_largestField, &other._largestField, sizeof(_largestField));
 		}
 
 		Value::Value(const Value&& other) :
 			type(other.type),
 			origin(other.origin)
 		{
-			memcpy(&valInt, &other.valInt, sizeof(void*));
+			memcpy(&_largestField, &other._largestField, sizeof(_largestField));
 		}
 
 		Value::Value(const Variant& other) :
 			origin(Span(Span::Source::GENERATED))
 		{
-			if (other.type == Variant::Type::_NONE)
-			{
-				type = IR::Value::Type::_NONE;
-			}
-			else
-			{
-				type = (IR::Value::Type)other.type;
-			}
+			type = IRTypeFromVariantType(other.type);
 
-			memcpy(&valInt, &other.valInt, sizeof(void*));
+			memcpy(&_largestField, &other._largestField, sizeof(_largestField));
 		}
 
 		i32 Value::AsInt() const
@@ -219,7 +225,7 @@ namespace flex
 		{
 			CheckAssignmentType(&other);
 
-			valInt = other.valInt;
+			_largestField = other._largestField;
 
 			return *this;
 		}
@@ -230,7 +236,7 @@ namespace flex
 			{
 				CheckAssignmentType(&other);
 
-				valInt = other.valInt;
+				_largestField = other._largestField;
 			}
 
 			return *this;
@@ -593,7 +599,7 @@ namespace flex
 			return false;
 		}
 
-		bool Value::TypesAreCoercible(State* irState, Value const * lhs, Value const * rhs, Type& outResultType)
+		bool Value::TypesAreCoercible(State* irState, Value const* lhs, Value const* rhs, Type& outResultType)
 		{
 			Type lhsType = irState->GetValueType(lhs);
 			Type rhsType = irState->GetValueType(rhs);
@@ -670,7 +676,7 @@ namespace flex
 			}
 		}
 
-		bool Value::ConvertableTo(Value const * other) const
+		bool Value::ConvertableTo(Value const* other) const
 		{
 			Type otherType = irState->GetValueType(other);
 			return ConvertableTo(otherType);
@@ -701,7 +707,7 @@ namespace flex
 			}
 		}
 
-		void Value::CheckAssignmentType(Value const * other)
+		void Value::CheckAssignmentType(Value const* other)
 		{
 			Type otherType = irState->GetValueType(other);
 

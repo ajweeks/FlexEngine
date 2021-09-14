@@ -67,6 +67,8 @@ namespace flex
 
 	void GLFWWindowWrapper::PostInitialize()
 	{
+		PROFILE_AUTO("GLFWWindowWrapper PostInitialize");
+
 		// TODO: Set window location/size based on previous session (load from disk)
 		glfwGetWindowSize(m_Window, &m_LastWindowedSize.x, &m_LastWindowedSize.y);
 		glfwGetWindowPos(m_Window, &m_LastWindowedPos.x, &m_LastWindowedPos.y);

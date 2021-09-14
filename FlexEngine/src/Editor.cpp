@@ -59,11 +59,13 @@ namespace flex
 
 	void Editor::Initialize()
 	{
+		PROFILE_AUTO("Editor Initialize(");
+
 		// Transform gizmo materials
 		{
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.shaderName = "colour";
-			matCreateInfo.constAlbedo = VEC3_ONE;
+			matCreateInfo.constAlbedo = VEC4_ONE;
 			matCreateInfo.persistent = true;
 			matCreateInfo.visibleInEditor = false;
 			matCreateInfo.bSerializable = false;
@@ -121,6 +123,8 @@ namespace flex
 
 	void Editor::EarlyUpdate()
 	{
+		PROFILE_AUTO("Editor EarlyUpdate");
+
 		if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
 		{
 			if (!m_bDraggingGizmo)
@@ -1318,7 +1322,7 @@ namespace flex
 			return EventReply::UNCONSUMED;
 		}
 
-		if (actionEvent == ActionEvent::TRIGGER)
+		if (actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
 			if (action == Action::EDITOR_RENAME_SELECTED)
 			{
@@ -1345,11 +1349,7 @@ namespace flex
 
 			if (action == Action::PAUSE)
 			{
-				if (m_CurrentlySelectedObjectIDs.empty())
-				{
-					//m_bSimulationPaused = !m_bSimulationPaused;
-				}
-				else
+				if (!m_CurrentlySelectedObjectIDs.empty())
 				{
 					SelectNone();
 				}

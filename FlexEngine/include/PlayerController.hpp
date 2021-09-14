@@ -2,6 +2,9 @@
 
 #include "Helpers.hpp" // For TurningDir
 #include "Callbacks/InputCallbacks.hpp"
+#include "Transform.hpp"
+
+class btBoxShape;
 
 namespace flex
 {
@@ -62,9 +65,27 @@ namespace flex
 		TurningDir m_DirTurning = TurningDir::NONE;
 
 		bool m_bAttemptCompleteTrack = false;
+		bool m_bPreviewPlaceItemFromInventory = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
-		bool m_bAttemptInteract = false;
+		bool m_bCancelPlaceItemFromInventory = false;
+		bool m_bAttemptInteractLeftHand = false;
+		bool m_bAttemptInteractRightHand = false;
 		bool m_bAttemptPickup = false;
+
+		bool m_bCancelPlaceWire = false;
+		bool m_bSpawnWire = false;
+
+		//Transform m_TargetItemPlacementTransform;
+		glm::vec3 m_TargetItemPlacementPos;
+		glm::quat m_TargetItemPlacementRot;
+		bool m_bItemPlacementValid = false;
+
+		Wire* m_PlacingWire = nullptr;
+
+		AudioSourceID m_PlaceItemAudioID = InvalidAudioSourceID;
+		AudioSourceID m_PlaceItemFailureAudioID = InvalidAudioSourceID;
+
+		btBoxShape* m_ItemPlacementBoundingBoxShape = nullptr;
 
 		enum class Mode
 		{

@@ -48,7 +48,11 @@ namespace flex
 
 		if (bSetRequiredAttributesFromMat)
 		{
-			SetRequiredAttributesFromMaterialID(m_MaterialID);
+			if (!SetRequiredAttributesFromMaterialID(m_MaterialID))
+			{
+				m_MaterialID = g_Renderer->GetPlaceholderMaterialID();
+				SetRequiredAttributesFromMaterialID(m_MaterialID);
+			}
 		}
 	}
 
@@ -129,13 +133,20 @@ namespace flex
 		*outbvhTriangleMeshShape = new btBvhTriangleMeshShape(*outTriangleIndexVertexArray, useQuantizedAabbCompression);
 	}
 
-	void MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
+	bool MeshComponent::SetRequiredAttributesFromMaterialID(MaterialID matID)
 	{
-		assert(matID != InvalidMaterialID);
+		if (matID != InvalidMaterialID)
+		{
+			Material* mat = g_Renderer->GetMaterial(matID);
+			Shader* shader = g_Renderer->GetShader(mat->shaderID);
+			if (shader != nullptr)
+			{
+				m_RequiredAttributes = shader->vertexAttributes;
+				return true;
+			}
+		}
 
-		Material* mat = g_Renderer->GetMaterial(matID);
-		Shader* shader = g_Renderer->GetShader(mat->shaderID);
-		m_RequiredAttributes = shader->vertexAttributes;
+		return false;
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTF(
@@ -175,6 +186,12 @@ namespace flex
 		}
 
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
+
+		if (newMeshComponent->m_RequiredAttributes == 0)
+		{
+			PrintError("Attempted to load mesh without anyrequired attributes!\n");
+			return nullptr;
+		}
 
 		newMeshComponent->m_MinPoint = glm::vec3(FLT_MAX);
 		newMeshComponent->m_MaxPoint = glm::vec3(-FLT_MAX);
@@ -323,7 +340,6 @@ namespace flex
 				{
 					cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
 					assert(primitive->attributes[colAttribIndex].type == cgltf_attribute_type_color);
-					assert(colAccessor->component_type == cgltf_component_type_r_32f);
 					assert(colAccessor->type == cgltf_type_vec4);
 
 					glm::vec4 col;
@@ -420,8 +436,6 @@ namespace flex
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -500,8 +514,6 @@ namespace flex
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
-
-			newMeshComponent->m_VertexBufferData.DescribeShaderVariables(g_Renderer, newMeshComponent->renderID);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -1070,7 +1082,6 @@ namespace flex
 			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 			g_Renderer->SetTopologyMode(renderID, topologyMode);
-			m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 		}
 
 		m_bInitialized = true;
@@ -1102,8 +1113,6 @@ namespace flex
 		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
 		g_Renderer->SetTopologyMode(renderID, topologyMode);
-
-		m_VertexBufferData.DescribeShaderVariables(g_Renderer, renderID);
 
 		m_bInitialized = true;
 

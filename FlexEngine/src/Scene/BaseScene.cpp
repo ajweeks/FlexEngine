@@ -24,7 +24,6 @@ IGNORE_WARNINGS_POP
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
-#include "Profiler.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
@@ -47,21 +46,25 @@ namespace flex
 		m_SkyboxDatas[0].mid = glm::vec4(0.660f, 0.860f, 0.950f, 1.000f);
 		m_SkyboxDatas[0].btm = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
 		m_SkyboxDatas[0].fog = glm::vec4(0.750f, 0.910f, 0.990f, 1.000f);
+		m_DirLightColours[0] = glm::vec3(0.994f, 1.000f, 0.925f);
 		// Evening
 		m_SkyboxDatas[1].top = glm::vec4(0.559f, 0.720f, 0.883f, 1.000f);
 		m_SkyboxDatas[1].mid = glm::vec4(0.519f, 0.663f, 0.825f, 1.000f);
 		m_SkyboxDatas[1].btm = glm::vec4(0.135f, 0.162f, 0.182f, 1.000f);
 		m_SkyboxDatas[1].fog = glm::vec4(0.405f, 0.467f, 0.550f, 1.000f);
+		m_DirLightColours[1] = glm::vec3(0.405f, 0.467f, 0.550f);
 		// Midnight
 		m_SkyboxDatas[2].top = glm::vec4(0.107f, 0.107f, 0.013f, 1.000f);
 		m_SkyboxDatas[2].mid = glm::vec4(0.098f, 0.098f, 0.137f, 1.000f);
 		m_SkyboxDatas[2].btm = glm::vec4(0.020f, 0.020f, 0.020f, 1.000f);
 		m_SkyboxDatas[2].fog = glm::vec4(0.029f, 0.029f, 0.032f, 1.000f);
+		m_DirLightColours[2] = glm::vec3(0.713f, 0.713f, 0.925f);
 		// Sunrise
 		m_SkyboxDatas[3].top = glm::vec4(0.917f, 0.733f, 0.458f, 1.000f);
 		m_SkyboxDatas[3].mid = glm::vec4(0.862f, 0.529f, 0.028f, 1.000f);
 		m_SkyboxDatas[3].btm = glm::vec4(0.896f, 0.504f, 0.373f, 1.000f);
 		m_SkyboxDatas[3].fog = glm::vec4(0.958f, 0.757f, 0.623f, 1.000f);
+		m_DirLightColours[3] = glm::vec3(0.987f, 0.816f, 0.773f);
 
 		m_SkyboxData = {};
 		m_SkyboxData.top = m_SkyboxDatas[0].top;
@@ -151,7 +154,7 @@ namespace flex
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (rootObject)
+			if (rootObject != nullptr)
 			{
 				rootObject->Destroy(false);
 				delete rootObject;
@@ -202,10 +205,10 @@ namespace flex
 		}
 
 		{
-			PROFILE_AUTO("Tick scene objects");
+			PROFILE_AUTO("Update scene objects");
 			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (rootObject)
+				if (rootObject != nullptr)
 				{
 					rootObject->Update();
 				}
@@ -228,10 +231,23 @@ namespace flex
 		m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
 		m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
 		m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
+
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
+		{
+			real azimuth = 0.0f;
+			real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
+			glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
+			rot = glm::rotate(rot, elevation, VEC3_RIGHT);
+			dirLight->GetTransform()->SetWorldRotation(rot);
+			dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+		}
 	}
 
 	void BaseScene::LateUpdate()
 	{
+		PROFILE_AUTO("Scene late update");
+
 		if (!m_PendingRemoveObjects.empty())
 		{
 			for (const GameObjectID& objectID : m_PendingRemoveObjects)
@@ -259,6 +275,8 @@ namespace flex
 			for (GameObject* object : m_PendingAddObjects)
 			{
 				AddRootObjectImmediate(object);
+				object->Initialize();
+				object->PostInitialize();
 			}
 			m_PendingAddObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -350,24 +368,6 @@ namespace flex
 		{
 			m_PlayerGUIDs[1] = InvalidGameObjectID;
 		}
-
-		//JSONObject skyboxDataObj;
-		//if (sceneRootObject.TryGetObject("skybox data", skyboxDataObj))
-		//{
-		//	// TODO: Add SetGammaColourChecked
-		//	if (skyboxDataObj.TryGetVec4("top colour", m_SkyboxData.top))
-		//	{
-		//		m_SkyboxData.top = glm::pow(m_SkyboxData.top, glm::vec4(2.2f));
-		//	}
-		//	if (skyboxDataObj.TryGetVec4("mid colour", m_SkyboxData.mid))
-		//	{
-		//		m_SkyboxData.mid = glm::pow(m_SkyboxData.mid, glm::vec4(2.2f));
-		//	}
-		//	if (skyboxDataObj.TryGetVec4("btm colour", m_SkyboxData.btm))
-		//	{
-		//		m_SkyboxData.btm = glm::pow(m_SkyboxData.btm, glm::vec4(2.2f));
-		//	}
-		//}
 
 		JSONObject cameraObj;
 		if (sceneRootObject.TryGetObject("camera", cameraObj))
@@ -521,6 +521,12 @@ namespace flex
 		ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxData.mid.x);
 		ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxData.btm.x);
 		ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxData.fog.x);
+
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
+		{
+			ImGuiExt::ColorEdit3Gamma("Dir light", &dirLight->data.colour.x);
+		}
 		ImGui::PopID();
 		ImGui::PopStyleColor();
 
@@ -532,6 +538,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[0].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[0].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[0].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[0].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Evening");
@@ -540,6 +548,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[1].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[1].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[1].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[1].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Night");
@@ -548,6 +558,8 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[2].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[2].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[2].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[2].x);
 			ImGui::PopID();
 
 			ImGui::PushID("Morning");
@@ -556,17 +568,78 @@ namespace flex
 			ImGuiExt::ColorEdit3Gamma("Mid", &m_SkyboxDatas[3].mid.x);
 			ImGuiExt::ColorEdit3Gamma("Bottom", &m_SkyboxDatas[3].btm.x);
 			ImGuiExt::ColorEdit3Gamma("Fog", &m_SkyboxDatas[3].fog.x);
+
+			ImGuiExt::ColorEdit3Gamma("Dir light", &m_DirLightColours[3].x);
 			ImGui::PopID();
 
 			ImGui::TreePop();
 		}
 
 		ImGui::Checkbox("Pause time of day", &m_bPauseTimeOfDay);
-		ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.1f, 6000.0f);
-		ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f);
+		if (ImGui::SliderFloat("Sec/day", &m_SecondsPerDay, 0.001f, 6000.0f))
+		{
+			m_SecondsPerDay = glm::clamp(m_SecondsPerDay, 0.001f, 6000.0f);
+		}
+		if (ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f))
+		{
+			m_TimeOfDay = glm::clamp(m_TimeOfDay, 0.0f, 0.999f);
+		}
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();
+
+		if (m_bTriggerNewObjectTypePopup)
+		{
+			m_bTriggerNewObjectTypePopup = false;
+			ImGui::OpenPopup(m_NewObjectTypePopupStr);
+			m_NewObjectTypeStrBuffer.clear();
+			m_NewObjectTypeStrBuffer.resize(m_MaxObjectNameLen);
+		}
+
+		if (ImGui::BeginPopupModal(m_NewObjectTypePopupStr, NULL,
+			ImGuiWindowFlags_AlwaysAutoResize |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoNavInputs))
+		{
+			bool bCreateType = false;
+			if (ImGui::InputText("Type", (char*)m_NewObjectTypeStrBuffer.data(), m_MaxObjectNameLen, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				bCreateType = true;
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
+			if (ImGui::Button("Create") || bCreateType)
+			{
+				// Remove excess trailing \0 chars
+				m_NewObjectTypeStrBuffer = std::string(m_NewObjectTypeStrBuffer.c_str());
+
+				if (!m_NewObjectTypeStrBuffer.empty())
+				{
+					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
+					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
+
+					WriteGameObjectTypesFile();
+
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
 	}
 
 	void BaseScene::DoSceneContextMenu()
@@ -827,7 +900,7 @@ namespace flex
 			if (ImGui::Button("Open in explorer"))
 			{
 				const std::string directory = RelativePathToAbsolute(ExtractDirectoryString(GetRelativeFilePath()));
-				Platform::OpenExplorer(directory);
+				Platform::OpenFileExplorer(directory.c_str());
 			}
 
 			ImGui::SameLine();
@@ -1045,7 +1118,7 @@ namespace flex
 		{
 			// TODO: Draw common fields for all selected objects?
 			GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
-			if (selectedObject)
+			if (selectedObject != nullptr)
 			{
 				selectedObject->DrawImGuiObjects();
 			}
@@ -1174,6 +1247,40 @@ namespace flex
 		}
 	}
 
+	bool BaseScene::DoNewGameObjectTypeList()
+	{
+		return DoGameObjectTypeList(m_NewObjectTypeIDPair.second.c_str(), m_NewObjectTypeIDPair.first, m_NewObjectTypeIDPair.second);
+	}
+
+	bool BaseScene::DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr)
+	{
+		bool bChanged = false;
+		bool bShowCombo = ImGui::BeginCombo("Type", currentlySelectedTypeCStr);
+
+		if (bShowCombo)
+		{
+			for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
+			{
+				bool bSelected = (typeIDPair.first == selectedTypeStringID);
+				if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
+				{
+					selectedTypeStringID = typeIDPair.first;
+					selectedTypeStr = typeIDPair.second;
+					bChanged = true;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::Button("New Type"))
+		{
+			m_bTriggerNewObjectTypePopup = true;
+		}
+
+		return bChanged;
+	}
+
 	void BaseScene::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 	{
 		static const char* defaultNewNameBase = "New_Object_";
@@ -1210,12 +1317,11 @@ namespace flex
 			ImGuiWindowFlags_AlwaysAutoResize |
 			ImGuiWindowFlags_NoSavedSettings))
 		{
-			const size_t maxStrLen = 256;
-			newObjectName.resize(maxStrLen);
+			newObjectName.resize(m_MaxObjectNameLen);
 
 			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
-				maxStrLen,
+				m_MaxObjectNameLen,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
 			// SetItemDefaultFocus doesn't work here for some reason
@@ -1224,74 +1330,22 @@ namespace flex
 				ImGui::SetKeyboardFocusHere();
 			}
 
-			if (ImGui::BeginCombo("Type", m_NewObjectTypeIDPair.second.c_str()))
-			{
-				for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
-				{
-					bool bSelected = (typeIDPair.first == m_NewObjectTypeIDPair.first);
-					if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
-					{
-						m_NewObjectTypeIDPair.first = typeIDPair.first;
-						m_NewObjectTypeIDPair.second = typeIDPair.second;
-					}
-				}
+			DoNewGameObjectTypeList();
 
-				ImGui::EndCombo();
-			}
-
-			static std::string newObjectType;
-
-			const char* newTypePopupStr = "New Object Type";
-			if (ImGui::Button("New Type"))
-			{
-				ImGui::OpenPopup(newTypePopupStr);
-				newObjectType.clear();
-				newObjectType.resize(maxStrLen);
-			}
-
-			if (ImGui::BeginPopupModal(newTypePopupStr, NULL,
-				ImGuiWindowFlags_AlwaysAutoResize |
-				ImGuiWindowFlags_NoSavedSettings |
-				ImGuiWindowFlags_NoNavInputs))
-			{
-				bool bCreateType = false;
-				if (ImGui::InputText("Type", (char*)newObjectType.data(), maxStrLen, ImGuiInputTextFlags_EnterReturnsTrue))
-				{
-					bCreateType = true;
-				}
-
-				if (ImGui::Button("Cancel"))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Create") || bCreateType)
-				{
-					// Remove excess trailing \0 chars
-					newObjectType = std::string(newObjectType.c_str());
-
-					if (!newObjectType.empty())
-					{
-						StringID newTypeID = Hash(newObjectType.c_str());
-						GameObjectTypeStringIDPairs.emplace(newTypeID, newObjectType);
-
-						WriteGameObjectTypesFile();
-
-						ImGui::CloseCurrentPopup();
-					}
-				}
-
-				ImGui::EndPopup();
-			}
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
 
 			if (ImGui::Button("Cancel"))
 			{
 				ImGui::CloseCurrentPopup();
 			}
 
-			ImGui::SameLine();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
 
 			bCreate |= ImGui::Button("Create");
 
@@ -1808,6 +1862,26 @@ namespace flex
 		return m_TimeOfDay;
 	}
 
+	void BaseScene::SetSecondsPerDay(real secPerDay)
+	{
+		m_SecondsPerDay = glm::clamp(secPerDay, 0.001f, 6000.0f);
+	}
+
+	real BaseScene::GetSecondsPerDay() const
+	{
+		return m_SecondsPerDay;
+	}
+
+	void BaseScene::SetTimeOfDayPaused(bool bPaused)
+	{
+		m_bPauseTimeOfDay = bPaused;
+	}
+
+	bool BaseScene::GetTimeOfDayPaused() const
+	{
+		return m_bPauseTimeOfDay;
+	}
+
 	real BaseScene::GetPlayerMinHeight() const
 	{
 		return m_PlayerMinHeight;
@@ -1816,6 +1890,15 @@ namespace flex
 	glm::vec3 BaseScene::GetPlayerSpawnPoint() const
 	{
 		return m_PlayerSpawnPoint;
+	}
+
+	void BaseScene::RegenerateTerrain()
+	{
+		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(SID("terrain generator"));
+		if (terrainGenerator != nullptr)
+		{
+			terrainGenerator->Regenerate();
+		}
 	}
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
@@ -1856,10 +1939,12 @@ namespace flex
 		if (m_Player0 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 0 guid", JSONValue(m_Player0->ID));
+			m_Player0->SerializeInventoryToFile();
 		}
 		if (m_Player1 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 1 guid", JSONValue(m_Player1->ID));
+			m_Player1->SerializeInventoryToFile();
 		}
 
 		//JSONObject skyboxDataObj = {};
@@ -1903,7 +1988,11 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				objectsArray.push_back(rootObject->Serialize(this, true));
+				JSONObject rootObj = rootObject->Serialize(this, true);
+				if (!rootObj.fields.empty())
+				{
+					objectsArray.push_back(rootObj);
+				}
 			}
 		}
 		rootSceneObject.fields.emplace_back("objects", JSONValue(objectsArray));
@@ -2053,6 +2142,20 @@ namespace flex
 		}
 	}
 
+	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID)
+	{
+		GameObject* gameObject = GetGameObject(gameObjectID);
+		UnregisterGameObject(gameObjectID);
+
+		if (gameObject != nullptr)
+		{
+			for (GameObject* child : gameObject->m_Children)
+			{
+				UnregisterGameObject(child->ID);
+			}
+		}
+	}
+
 	GameObject* BaseScene::AddChildObject(GameObject* parent, GameObject* child)
 	{
 		if (parent == nullptr || child == nullptr)
@@ -2086,9 +2189,34 @@ namespace flex
 
 
 		parent->AddChildImmediate(child);
-		RegisterGameObject(child);
 
 		return child;
+	}
+
+	GameObject* BaseScene::AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling)
+	{
+		if (gameObject == nullptr || newSibling == nullptr)
+		{
+			return newSibling;
+		}
+
+		if (gameObject->ID == newSibling->ID)
+		{
+			PrintError("Attempted to add self as sibling on %s\n", newSibling->GetName().c_str());
+			return newSibling;
+		}
+
+		GameObject* parent = gameObject->GetParent();
+		if (parent != nullptr)
+		{
+			parent->AddChildImmediate(newSibling);
+		}
+		else
+		{
+			AddRootObjectImmediate(newSibling);
+		}
+
+		return newSibling;
 	}
 
 	void BaseScene::RemoveAllObjects()
@@ -2338,7 +2466,7 @@ namespace flex
 
 	void BaseScene::ReadGameObjectTypesFile()
 	{
-		GameObjectTypeStringIDPairs = {};
+		GameObjectTypeStringIDPairs.clear();
 		std::string fileContents;
 		// TODO: Gather this info from reflection?
 		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
