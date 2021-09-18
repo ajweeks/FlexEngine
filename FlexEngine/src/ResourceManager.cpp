@@ -1348,7 +1348,7 @@ namespace flex
 				static bool bMaxStackSizeBuffInitialized = false;
 				if (!bMaxStackSizeBuffInitialized)
 				{
-					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%d", maxStackSizeBuff);
+					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%u", maxStackSize);
 					bMaxStackSizeBuffInitialized = true;
 				}
 
