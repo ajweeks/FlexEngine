@@ -148,7 +148,7 @@ namespace flex
 
 		void AppendToBootupTimesFile(const std::string& entry);
 
-		void ToggleUIWindow(const std::string& windowName);
+		bool ToggleUIWindow(const std::string& windowName);
 
 		bool m_bRunning = false;
 

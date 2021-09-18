@@ -516,7 +516,10 @@ namespace flex
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("open",
 			[](const Variant& windowName)
 		{
-			g_EngineInstance->ToggleUIWindow(windowName.AsString());
+			if (!g_EngineInstance->ToggleUIWindow(windowName.AsString()))
+			{
+				PrintError("Failed to find UI window with name %s\n", windowName.AsString());
+			}
 		}, Variant::Type::STRING));
 
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("audio.toggle_muted",
@@ -1730,7 +1733,7 @@ namespace flex
 		}
 	}
 
-	void FlexEngine::ToggleUIWindow(const std::string& windowName)
+	bool FlexEngine::ToggleUIWindow(const std::string& windowName)
 	{
 		std::string nameLower = windowName;
 		ToLower(nameLower);
@@ -1739,7 +1742,9 @@ namespace flex
 		if (iter != m_UIWindows.end())
 		{
 			iter->second.bOpen = !iter->second.bOpen;
+			return true;
 		}
+		return false;
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
