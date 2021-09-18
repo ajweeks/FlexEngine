@@ -37,6 +37,7 @@ namespace flex
 		Socket* GetNearbySocket(const glm::vec3& posWS, real threshold, bool bExcludeFilled);
 
 		bool PlugInToNearbySocket(WirePlug* plug, real nearbyThreshold);
+		void PlugInToSocket(WirePlug* plug, Socket* socket);
 		void UnplugFromSocket(WirePlug* plug);
 
 		std::vector<Wire*> wires;
@@ -47,6 +48,9 @@ namespace flex
 
 	private:
 		bool RemoveSocket(const GameObjectID& socketID);
+
+		AudioSourceID m_PlugInAudioSourceID = InvalidAudioSourceID;
+		AudioSourceID m_UnplugAudioSourceID = InvalidAudioSourceID;
 
 		// TODO: Serialization (requires ObjectIDs)
 		// TODO: Use WirePool

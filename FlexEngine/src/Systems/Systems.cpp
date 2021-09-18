@@ -28,6 +28,8 @@ namespace flex
 
 	void PluggablesSystem::Initialize()
 	{
+		m_PlugInAudioSourceID = AudioManager::AddAudioSource(SFX_DIRECTORY "latch-open-19.wav");
+		m_UnplugAudioSourceID = AudioManager::AddAudioSource(SFX_DIRECTORY "latch-closing-09.wav");
 	}
 
 	void PluggablesSystem::Destroy()
@@ -470,17 +472,26 @@ namespace flex
 		Socket* nearbySocket = GetNearbySocket(plug->GetTransform()->GetWorldPosition(), nearbyThreshold, true);
 		if (nearbySocket != nullptr)
 		{
-			plug->PlugIn(nearbySocket);
-			nearbySocket->OnPlugIn(plug);
+			PlugInToSocket(plug, nearbySocket);
 			return true;
 		}
 		return false;
+	}
+
+	void PluggablesSystem::PlugInToSocket(WirePlug* plug, Socket* socket)
+	{
+		plug->PlugIn(socket);
+		socket->OnPlugIn(plug);
+
+		AudioManager::PlaySource(m_PlugInAudioSourceID);
 	}
 
 	void PluggablesSystem::UnplugFromSocket(WirePlug* plug)
 	{
 		((Socket*)plug->socketID.Get())->OnUnPlug();
 		plug->Unplug();
+
+		AudioManager::PlaySource(m_UnplugAudioSourceID);
 	}
 
 	void RoadManager::Initialize()
