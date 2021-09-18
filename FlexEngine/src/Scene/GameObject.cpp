@@ -1873,9 +1873,6 @@ namespace flex
 		newObject->m_Transform.SetWorldPosition(positionWS, false);
 		newObject->m_Transform.SetWorldRotation(rotWS, true);
 
-		newObject->Initialize();
-		newObject->PostInitialize();
-
 		return newObject;
 	}
 
