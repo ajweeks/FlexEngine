@@ -55,11 +55,12 @@ namespace flex
 		bool IsRidingTrack();
 
 		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID);
-		bool MoveItem(GameObjectStackID fromID, GameObjectStackID toID);
+		bool MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID);
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
 
 		void AddToInventory(const PrefabID& prefabID, i32 count);
+		void AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
 
 		void ClearInventory();
 		void ParseInventoryFile();
@@ -115,7 +116,6 @@ namespace flex
 		static const i32 INVENTORY_ITEM_ROW_COUNT = 5;
 		static const i32 INVENTORY_ITEM_COL_COUNT = 7;
 		static const i32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
-		static const i32 MAX_STACK_SIZE = 32;
 
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;

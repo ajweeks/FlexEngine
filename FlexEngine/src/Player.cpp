@@ -296,7 +296,7 @@ namespace flex
 					if (prefabTemplate != nullptr)
 					{
 						std::string prefabTemplateName = prefabTemplate->GetName();
-						ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
+						ImGui::Text("%s (%i - %.3f)", prefabTemplateName.c_str(), gameObjectStack.count, gameObjectStack.userData);
 					}
 					else
 					{
@@ -508,7 +508,7 @@ namespace flex
 		return nullptr;
 	}
 
-	bool Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
+	bool Player::MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID)
 	{
 		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
 		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
@@ -519,19 +519,17 @@ namespace flex
 			{
 				toStack->prefabID = fromStack->prefabID;
 				toStack->count = fromStack->count;
-				fromStack->prefabID = InvalidPrefabID;
-				fromStack->count = 0;
+				toStack->userData = fromStack->userData;
+				fromStack->Clear();
 				return true;
 			}
-			else if ((toStack->count + fromStack->count) <= MAX_STACK_SIZE)
+			else if (toStack->prefabID == fromStack->prefabID &&
+				(u32)(toStack->count + fromStack->count) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
 			{
-				if (toStack->prefabID == fromStack->prefabID)
-				{
-					toStack->count = toStack->count + fromStack->count;
-					fromStack->prefabID = InvalidPrefabID;
-					fromStack->count = 0;
-					return true;
-				}
+				toStack->count = toStack->count + fromStack->count;
+				// TODO: Merge user data's here somehow?
+				fromStack->Clear();
+				return true;
 			}
 		}
 
@@ -549,7 +547,14 @@ namespace flex
 
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
+		AddToInventory(prefabID, count, {});
+	}
+
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+	{
 		i32 initialCount = count;
+
+		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 
 		auto printResults = [initialCount, &prefabID, &count]()
 		{
@@ -560,11 +565,12 @@ namespace flex
 		// Fill up any existing slots in quick access
 		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
 			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				i32 deposit = glm::min(((i32)maxStackSize - gameObjectStack.count), count);
 				count -= deposit;
 				gameObjectStack.count += deposit;
+				// TODO: Merge user data here
 			}
 
 			if (count == 0)
@@ -577,11 +583,12 @@ namespace flex
 		// Fill up any existing slots in main inventory
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
 			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				i32 deposit = glm::min(((i32)maxStackSize - gameObjectStack.count), count);
 				count -= deposit;
 				gameObjectStack.count += deposit;
+				// TODO: Merge user data here
 			}
 
 			if (count == 0)
@@ -596,10 +603,11 @@ namespace flex
 		{
 			if (gameObjectStack.count == 0)
 			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				i32 deposit = glm::min((i32)maxStackSize, count);
 				count -= deposit;
 				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
+				gameObjectStack.count = deposit;
+				gameObjectStack.userData = userData;
 			}
 
 			if (count == 0)
@@ -614,10 +622,11 @@ namespace flex
 		{
 			if (gameObjectStack.count == 0)
 			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				i32 deposit = glm::min((i32)maxStackSize, count);
 				count -= deposit;
 				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
+				gameObjectStack.count = deposit;
+				gameObjectStack.userData = userData;
 			}
 
 			if (count == 0)
@@ -667,9 +676,10 @@ namespace flex
 							i32 index = slot.GetInt("index");
 							i32 count = slot.GetInt("count");
 							PrefabID prefabID = slot.GetPrefabID("prefab id");
+							i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
 
 							bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
-							bool bCountValid = count >= 0 && count <= MAX_STACK_SIZE;
+							bool bCountValid = count >= 0 && count <= maxStackSize;
 							bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
 
 							if (bIndexValid && bCountValid && bPrefabIDValid)

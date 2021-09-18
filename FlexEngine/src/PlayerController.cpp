@@ -281,7 +281,9 @@ namespace flex
 				{
 					m_ItemPickingTimer = -1.0f;
 
-					m_Player->AddToInventory(m_ItemPickingUp->Itemize(), 1);
+					GameObjectStack::UserData itemUserData = {};
+					PrefabID itemID = m_ItemPickingUp->Itemize(itemUserData);
+					m_Player->AddToInventory(itemID, 1, itemUserData);
 				}
 				else
 				{
@@ -586,7 +588,7 @@ namespace flex
 				{
 					if (gameObjectStack.prefabID.IsValid())
 					{
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot);
+						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot, gameObjectStack.userData);
 						if (gameObject != nullptr)
 						{
 							// Add non-immediate
@@ -595,7 +597,7 @@ namespace flex
 
 							if (gameObjectStack.count == 0)
 							{
-								gameObjectStack.prefabID = InvalidPrefabID;
+								gameObjectStack.Clear();
 							}
 
 							AudioManager::PlaySource(m_PlaceItemAudioID);

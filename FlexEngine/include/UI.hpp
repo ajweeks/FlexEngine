@@ -273,7 +273,7 @@ namespace flex
 		void Deserialize();
 		void Serialize();
 
-		bool MoveItem(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveItemStack(ItemUIContainer* from, ItemUIContainer* to);
 
 		void BeginItemDrag(ItemUIContainer* draggedItem);
 		void EndItemDrag();

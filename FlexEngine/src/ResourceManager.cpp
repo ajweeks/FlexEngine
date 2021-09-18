@@ -56,6 +56,8 @@ namespace flex
 		DiscoverTextures();
 		DiscoverAudioFiles();
 		ParseDebugOverlayNamesFile();
+
+		m_NonDefaultStackSizes[SID("battery")] = 1;
 	}
 
 	void ResourceManager::PostInitialize()
@@ -1190,6 +1192,17 @@ namespace flex
 		discoveredAudioFiles[audioFileSID].bInvalid = (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID);
 	}
 
+	u32 ResourceManager::GetMaxStackSize(const PrefabID& prefabID)
+	{
+		GameObject* templateObject = GetPrefabTemplate(prefabID);
+		auto iter = m_NonDefaultStackSizes.find(templateObject->GetTypeID());
+		if (iter != m_NonDefaultStackSizes.end())
+		{
+			return iter->second;
+		}
+		return DEFAULT_MAX_STACK_SIZE;
+	}
+
 	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const
 	{
 		std::string childName = child->GetName();
@@ -1329,17 +1342,19 @@ namespace flex
 
 				ImGui::SameLine();
 
+				u32 maxStackSize = g_ResourceManager->GetMaxStackSize(pair.prefabID);
+
 				static char maxStackSizeBuff[6];
 				static bool bMaxStackSizeBuffInitialized = false;
 				if (!bMaxStackSizeBuffInitialized)
 				{
-					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%d", Player::MAX_STACK_SIZE);
+					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%d", maxStackSizeBuff);
 					bMaxStackSizeBuffInitialized = true;
 				}
 
 				if (ImGui::Button(maxStackSizeBuff))
 				{
-					player->AddToInventory(pair.prefabID, Player::MAX_STACK_SIZE);
+					player->AddToInventory(pair.prefabID, maxStackSize);
 				}
 
 				ImGui::PopID();

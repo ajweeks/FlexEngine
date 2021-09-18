@@ -114,6 +114,10 @@ namespace flex
 		AudioSourceID GetOrLoadAudioID(StringID audioFileSID);
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
 
+		u32 GetMaxStackSize(const PrefabID& prefabID);
+
+		static const i32 DEFAULT_MAX_STACK_SIZE = 32;
+
 		bool bShowEditorMaterials = false;
 
 		std::map<StringID, FontMetaData> fontMetaData;
@@ -187,6 +191,8 @@ namespace flex
 
 		DirectoryWatcher* m_AudioDirectoryWatcher = nullptr;
 		i32 m_AudioRefreshFrameCountdown = -1; // When non-negative, counts down each frame until refresh is applied
+
+		std::map<StringID, u32> m_NonDefaultStackSizes;
 
 	};
 } // namespace flex

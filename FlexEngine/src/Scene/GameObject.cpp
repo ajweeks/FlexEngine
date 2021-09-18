@@ -1231,6 +1231,16 @@ namespace flex
 		return true;
 	}
 
+	void GameObject::OnItemize(GameObjectStack::UserData& outUserData)
+	{
+		FLEX_UNUSED(outUserData);
+	}
+
+	void GameObject::OnDeItemize(const GameObjectStack::UserData& userData)
+	{
+		FLEX_UNUSED(userData);
+	}
+
 	void GameObject::ParseJSON(
 		const JSONObject& obj,
 		BaseScene* scene,
@@ -1850,7 +1860,7 @@ namespace flex
 		return result;
 	}
 
-	PrefabID GameObject::Itemize()
+	PrefabID GameObject::Itemize(GameObjectStack::UserData& outUserData)
 	{
 		PrefabID prefabID = m_PrefabIDLoadedFrom;
 
@@ -1860,18 +1870,22 @@ namespace flex
 			return prefabID;
 		}
 
+		OnItemize(outUserData);
+
 		g_SceneManager->CurrentScene()->RemoveObject(this, true);
 
 		return prefabID;
 	}
 
-	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS)
+	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData)
 	{
 		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, nullptr, nullptr, nullptr,
 			(CopyFlags)((u32)CopyFlags::ALL & ~(u32)CopyFlags::ADD_TO_SCENE));
 
 		newObject->m_Transform.SetWorldPosition(positionWS, false);
 		newObject->m_Transform.SetWorldRotation(rotWS, true);
+
+		newObject->OnDeItemize(userData);
 
 		return newObject;
 	}
@@ -4756,6 +4770,16 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		return newGameObject;
+	}
+
+	void Battery::OnItemize(GameObjectStack::UserData& outUserData)
+	{
+		outUserData.floatVal = chargeAmount;
+	}
+
+	void Battery::OnDeItemize(const GameObjectStack::UserData& userData)
+	{
+		chargeAmount = glm::clamp(userData.floatVal, 0.0f, chargeCapacity);
 	}
 
 	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)

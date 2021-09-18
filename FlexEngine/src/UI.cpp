@@ -747,7 +747,7 @@ namespace flex
 							{
 								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
 								{
-									if (g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer))
+									if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
 									{
 										g_UIManager->EndItemDrag();
 									}
@@ -907,7 +907,7 @@ namespace flex
 								{
 									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
 									{
-										if (g_UIManager->MoveItem(g_UIManager->draggedUIContainer, itemContainer))
+										if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
 										{
 											g_UIManager->EndItemDrag();
 										}
@@ -1233,14 +1233,14 @@ namespace flex
 		SerializeUISettings();
 	}
 
-	bool UIManager::MoveItem(ItemUIContainer* from, ItemUIContainer* to)
+	bool UIManager::MoveItemStack(ItemUIContainer* from, ItemUIContainer* to)
 	{
 		if (from != to)
 		{
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				return player->MoveItem(from->stackID, to->stackID);
+				return player->MoveItemStack(from->stackID, to->stackID);
 			}
 		}
 

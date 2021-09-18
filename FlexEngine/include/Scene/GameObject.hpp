@@ -71,8 +71,20 @@ namespace flex
 
 	struct GameObjectStack
 	{
+		void Clear()
+		{
+			prefabID = InvalidPrefabID;
+			count = 0;
+			userData.floatVal = 0.0f;
+		}
+
 		PrefabID prefabID = InvalidPrefabID;
 		i32 count = 0;
+
+		union UserData
+		{
+			real floatVal;
+		} userData;
 	};
 
 	class GameObject
@@ -145,6 +157,9 @@ namespace flex
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
 
 		virtual bool ShouldSerialize();
+
+		virtual void OnItemize(GameObjectStack::UserData& outUserData);
+		virtual void OnDeItemize(const GameObjectStack::UserData& userData);
 
 		// Returns true if this object was deleted or duplicated
 		bool DoImGuiContextMenu(bool bActive);
@@ -275,8 +290,8 @@ namespace flex
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
-		PrefabID Itemize();
-		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS);
+		PrefabID Itemize(GameObjectStack::UserData& outUserData);
+		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData);
 
 		bool IsItemizable() const;
 
@@ -769,6 +784,9 @@ namespace flex
 			CopyFlags copyFlags = CopyFlags::ALL,
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		virtual void OnItemize(GameObjectStack::UserData& outUserData) override;
+		virtual void OnDeItemize(const GameObjectStack::UserData& userData) override;
 
 		real chargeAmount = 0.0f;
 		real chargeCapacity = 100.0f;

@@ -489,9 +489,7 @@ namespace flex
 					const char* itemName = item.AsString();
 					PrefabID prefabID = g_ResourceManager->GetPrefabID(itemName);
 
-					bool bCountValid = countInt > 0 && countInt < (Player::MAX_STACK_SIZE * Player::INVENTORY_ITEM_COUNT);
-
-					if (prefabID.IsValid() && bCountValid)
+					if (prefabID.IsValid())
 					{
 						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 						if (player != nullptr)
@@ -501,14 +499,7 @@ namespace flex
 					}
 					else
 					{
-						if (!prefabID.IsValid())
-						{
-							PrintError("Invalid prefab name \"%s\"\n", itemName);
-						}
-						if (!bCountValid)
-						{
-							PrintError("Invalid count %i\n", countInt);
-						}
+						PrintError("Invalid prefab name \"%s\"\n", itemName);
 					}
 				}
 		}, Variant::Type::STRING, Variant::Type::INT));
