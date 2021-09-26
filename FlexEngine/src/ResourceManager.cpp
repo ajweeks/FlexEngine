@@ -1444,7 +1444,7 @@ namespace flex
 
 	void ResourceManager::DrawImGuiWindows()
 	{
-		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("fonts"));
+		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("fonts"));
 		if (*bFontsWindowOpen)
 		{
 			if (ImGui::Begin("Fonts", bFontsWindowOpen))
@@ -1573,7 +1573,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("materials"));
+		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("materials"));
 		if (*bMaterialsWindowOpen)
 		{
 			if (ImGui::Begin("Materials", bMaterialsWindowOpen))
@@ -1876,7 +1876,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("shaders"));
+		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("shaders"));
 		if (*bShadersWindowOpen)
 		{
 			if (ImGui::Begin("Shaders", bShadersWindowOpen))
@@ -1928,7 +1928,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("textures"));
+		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("textures"));
 		if (*bTexturesWindowOpen)
 		{
 			if (ImGui::Begin("Textures", bTexturesWindowOpen))
@@ -2043,7 +2043,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("meshes"));
+		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("meshes"));
 		if (*bMeshesWindowOpen)
 		{
 			if (ImGui::Begin("Meshes", bMeshesWindowOpen))
@@ -2174,7 +2174,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("prefabs"));
+		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("prefabs"));
 		if (*bPrefabsWindowOpen)
 		{
 			if (ImGui::Begin("Prefabs", bPrefabsWindowOpen))
@@ -2254,7 +2254,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("sounds"));
+		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("sounds"));
 		if (*bSoundsWindowOpen)
 		{
 			if (ImGui::Begin("Sound clips", bSoundsWindowOpen))

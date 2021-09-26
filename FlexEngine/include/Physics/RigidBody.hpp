@@ -18,7 +18,7 @@ namespace flex
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
 
-		void Initialize(btCollisionShape* collisionShape, Transform* parentTransform);
+		void Initialize(btCollisionShape* collisionShape, Transform* transform);
 		void Destroy();
 
 		void AddConstraint(btTypedConstraint* constraint);
@@ -41,11 +41,8 @@ namespace flex
 		// Vector passed in defines the axis (or axes) this body can move along
 		void SetPositionalConstraint(const btVector3& axis);
 
-		// Set local transform (relative to parent transform)
-		void SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
-		void SetLocalPosition(const glm::vec3& pos);
-		void SetLocalRotation(const glm::quat& rot);
-		void SetLocalScale(const glm::vec3& scale);
+		void SetWorldPosition(const glm::vec3& worldPos);
+		void SetWorldRotation(const glm::quat& worldRot);
 
 		i32 GetGroup() const;
 		// NOTE: This function removes, then re-adds this object to the world!
@@ -55,15 +52,11 @@ namespace flex
 		// NOTE: This function removes, then re-adds this object to the world!
 		void SetMask(i32 mask);
 
-		glm::vec3 GetLocalPosition() const;
-		glm::quat GetLocalRotation() const;
-		glm::vec3 GetLocalScale() const;
+		// Applies rigid body transform to our transform (taking into account local transform)
+		//void UpdateTransform();
 
-		// Applies physics-driven transform to parent transform (taking into account local transform)
-		void UpdateParentTransform();
-
-		// Sets physics-driven transform to parent transform (taking into account local transform)
-		void MatchParentTransform();
+		// Sets rigid body transform to our transform (taking into account local transform)
+		//void MatchTransform();
 
 		void GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward);
 
@@ -73,15 +66,10 @@ namespace flex
 		u32 GetPhysicsFlags();
 
 	private:
-		btRigidBody* m_RigidBody = nullptr;
-		btMotionState* m_MotionState = nullptr;
+		btRigidBody* m_btRigidBody = nullptr;
+		btMotionState* m_btMotionState = nullptr;
 
 		std::vector<btTypedConstraint*> m_Constraints;
-
-		Transform* m_ParentTransform = nullptr;
-		glm::vec3 m_LocalPosition;
-		glm::quat m_LocalRotation;
-		glm::vec3 m_LocalScale;
 
 		// Must be 0 if static, non-zero otherwise
 		real m_Mass = 1.0f;

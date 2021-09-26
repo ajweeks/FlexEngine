@@ -21,7 +21,9 @@ namespace flex
 		virtual ~BaseCamera();
 
 		virtual void Initialize();
+		virtual void FixedUpdate();
 		virtual void Update();
+		virtual void LateUpdate();
 		virtual void Destroy();
 
 		virtual void OnSceneChanged();

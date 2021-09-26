@@ -65,9 +65,17 @@ namespace flex
 		m_bInitialized = true;
 	}
 
+	void BaseCamera::FixedUpdate()
+	{
+	}
+
 	void BaseCamera::Update()
 	{
 		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_DeltaTime);
+	}
+
+	void BaseCamera::LateUpdate()
+	{
 	}
 
 	void BaseCamera::Destroy()
@@ -87,12 +95,12 @@ namespace flex
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		Player* player1 = g_SceneManager->CurrentScene()->GetPlayer(1);
 
-		if (player0)
+		if (player0 != nullptr)
 		{
 			player0->UpdateIsPossessed();
 		}
 
-		if (player1)
+		if (player1 != nullptr)
 		{
 			player1->UpdateIsPossessed();
 		}
@@ -166,7 +174,6 @@ namespace flex
 
 	void BaseCamera::CalculateAxisVectorsFromPitchAndYaw()
 	{
-		forward = {};
 		forward.x = cos(pitch) * cos(yaw);
 		forward.y = sin(pitch);
 		forward.z = cos(pitch) * sin(yaw);
@@ -314,5 +321,4 @@ namespace flex
 		real EV100 = CalculateEV100(aperture, shutterSpeed, lightSensitivity);
 		exposure = ComputeExposureNormFactor(EV100);
 	}
-
 } // namespace flex

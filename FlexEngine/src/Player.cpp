@@ -130,7 +130,7 @@ namespace flex
 
 	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
-		if (m_Controller)
+		if (m_Controller != nullptr)
 		{
 			m_Controller->Destroy();
 			delete m_Controller;
@@ -208,6 +208,13 @@ namespace flex
 		GameObject::Update();
 	}
 
+	void Player::FixedUpdate()
+	{
+		GameObject::FixedUpdate();
+
+		m_Controller->FixedUpdate();
+	}
+
 	void Player::SetPitch(real pitch)
 	{
 		m_Pitch = pitch;
@@ -239,7 +246,7 @@ namespace flex
 		m_Pitch = 0.0f;
 	}
 
-	glm::vec3 Player::GetLookDirection() const
+	glm::vec3 Player::GetLookDirection()
 	{
 		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
 		glm::vec3 lookDir = rotMat[2];
@@ -381,7 +388,7 @@ namespace flex
 		}
 	}
 
-	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */, bool bSnapToHandles /* = false */) const
+	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */, bool bSnapToHandles /* = false */)
 	{
 		glm::vec3 offsetWS = m_TrackPlacementReticlePos;
 		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());

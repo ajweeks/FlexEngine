@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Histogram.hpp"
 #include "InputTypes.hpp"
 #include "Callbacks/InputCallbacks.hpp"
 
@@ -17,8 +18,10 @@ namespace flex
 		void Destroy();
 		void EarlyUpdate();
 		void LateUpdate();
+		void FixedUpdate();
 		void PreSceneChange();
 		void OnSceneChanged();
+		void DrawImGuiObjects();
 
 		std::vector<GameObjectID> GetSelectedObjectIDs(bool bForceIncludeChildren = false) const;
 		GameObjectID GetFirstSelectedObjectID() const;
@@ -89,8 +92,6 @@ namespace flex
 		GameObject* m_RotationGizmo = nullptr;
 		GameObject* m_ScaleGizmo = nullptr;
 
-		GameObject* m_TestShape = nullptr;
-
 		GameObject* m_GridObject = nullptr;
 
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
@@ -142,5 +143,25 @@ namespace flex
 
 		bool m_bWantRenameActiveElement = false;
 
+		struct JitterDetector
+		{
+			JitterDetector();
+
+			void FixedUpdate();
+			void DrawImGuiObjects();
+
+			u32 m_HistoLength = 128;
+			Histogram m_PositionXHisto;
+			Histogram m_PositionZHisto;
+			Histogram m_VelocityXHisto;
+			Histogram m_VelocityZHisto;
+			Histogram m_CamXHisto;
+			Histogram m_CamZHisto;
+			Histogram m_CamPosDiffXHisto;
+			Histogram m_CamPosDiffZHisto;
+
+		};
+
+		JitterDetector m_JitterDetector;
 	};
 } // namespace flex

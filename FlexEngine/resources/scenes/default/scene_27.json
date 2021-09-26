@@ -1,0 +1,126 @@
+{
+	"version" : 6,
+	"name" : "scene_27",
+	"spawn player" : true,
+	"player 0 guid" : "2F76C68D4D38DEA84D89921E2F995F91",
+	"camera" : 
+	{
+		"type" : "first-person",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "-6.275, 3.000, -8.869",
+			"pitch" : -0.027774,
+			"yaw" : 0.210649
+		}
+	},
+	"objects" : 
+	[
+		{
+			"name" : "Skybox",
+			"id" : "F4C0DE9056DC45A74172C62CC9A7E227",
+			"type" : "skybox",
+			"visible" : true,
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			],
+			"skybox info" : 
+			{
+			}
+		},
+		{
+			"name" : "Directional light",
+			"id" : "7A0F9013C64D24844C0BF0B3AF9BE178",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.601, -0.000, 0.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"directional light info" : 
+			{
+				"rotation" : "0.718, 0.000, 0.000, 0.696",
+				"pos" : "0.000, 15.000, 0.000",
+				"colour" : "0.99, 1.00, 0.84",
+				"enabled" : true,
+				"brightness" : 3.000000,
+				"cast shadows" : false,
+				"shadow darkness" : 1.000000
+			}
+		},
+		{
+			"name" : "New_Object_00",
+			"id" : "8321E42A1F1A5A914C5DC6458D232456",
+			"type" : "object",
+			"transform" : 
+			{
+				"scale" : "200.000, 1.000, 200.000"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr grey"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "1.000, 1.000, 1.000"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"name" : "New_Object_01",
+			"id" : "4C9C78A00C232CA5489AC7AA32FEF1D4",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-32.080, 0.598, 0.000",
+				"scale" : "12.089, 12.089, 12.089"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		},
+		{
+			"name" : "New_Object_02",
+			"id" : "1621FAD36034C4B040D58EA9A8570C6F",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "40.542, 0.598, 0.000",
+				"scale" : "12.089, 12.089, 12.089"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		}
+	]
+}

@@ -25,6 +25,7 @@ namespace flex
 		void Initialize();
 		void PostInitialize();
 		void Destroy();
+		void FixedUpdate();
 		void Update();
 		void LateUpdate();
 

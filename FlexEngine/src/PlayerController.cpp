@@ -54,8 +54,7 @@ namespace flex
 		m_Player = player;
 		m_PlayerIndex = m_Player->GetIndex();
 
-		assert(m_PlayerIndex == 0 ||
-			m_PlayerIndex == 1);
+		assert(m_PlayerIndex == 0 || m_PlayerIndex == 1);
 
 		m_Player->UpdateIsPossessed();
 
@@ -87,10 +86,6 @@ namespace flex
 		// TODO: Make frame-rate-independent!
 
 		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-
-		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
-		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 
 		auto GetObjectPointedAt = [this]() -> GameObject*
 		{
@@ -530,30 +525,6 @@ namespace flex
 
 					if (mesh != nullptr)
 					{
-						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
-						btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
-						PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-						if (m_ItemPlacementBoundingBoxShape == nullptr)
-						{
-							m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
-						}
-
-						btPairCachingGhostObject pairCache;
-
-						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
-						pairCache.setWorldTransform(bbTransform);
-
-						i32 mask = (i32)CollisionType::NOTHING;
-						pairCache.setCollisionFlags(mask);
-
-						CustomContactResultCallback resultCallback;
-						resultCallback.m_collisionFilterGroup = mask;
-						resultCallback.m_collisionFilterMask = mask;
-						physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
-
-						m_bItemPlacementValid = !resultCallback.bHit;
-
 						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
 						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
 						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
@@ -675,18 +646,17 @@ namespace flex
 			}
 		}
 
-		m_Player->GetRigidBody()->UpdateParentTransform();
+		// ?
+		//m_Player->GetRigidBody()->UpdateTransform();
 
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		btVector3 rbPos = rb->getInterpolationWorldTransform().getOrigin();
 
-		Transform* transform = m_Player->GetTransform();
-		glm::vec3 up = transform->GetUp();
-		glm::vec3 right = transform->GetRight();
-		glm::vec3 forward = transform->GetForward();
+		Transform* playerTransform = m_Player->GetTransform();
+		glm::vec3 up = playerTransform->GetUp();
+		glm::vec3 right = playerTransform->GetRight();
+		glm::vec3 forward = playerTransform->GetForward();
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
-		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
 		if (m_Player->m_bPossessed)
 		{
@@ -701,7 +671,7 @@ namespace flex
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
 					real distAlongTrack = -1.0f;
-					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(transform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
+					TrackID trackInRangeIndex = trackManager->GetTrackInRangeID(playerTransform->GetWorldPosition(), m_Player->m_TrackAttachMinDist, &distAlongTrack);
 					if (trackInRangeIndex != InvalidTrackID)
 					{
 						m_bAttemptInteractLeftHand = false;
@@ -719,14 +689,129 @@ namespace flex
 			}
 		}
 
+		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON) && m_Player->IsVisible();
+		if (bDrawLocalAxes)
+		{
+			const real lineLength = 4.0f;
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
+			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
+		}
+
+		m_bAttemptCompleteTrack = false;
+		m_bAttemptPlaceItemFromInventory = false;
+		m_bAttemptInteractLeftHand = false;
+		m_bAttemptPickup = false;
+	}
+
+	void PlayerController::FixedUpdate()
+	{
 		btVector3 force(0.0f, 0.0f, 0.0f);
 
+		Transform* playerTransform = m_Player->GetTransform();
+		glm::vec3 playerUp = playerTransform->GetUp();
+		glm::vec3 playerRight = playerTransform->GetRight();
+		glm::vec3 playerForward = playerTransform->GetForward();
+		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
+
+		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
+
+		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
+		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
+
+		const btVector3& vel = rb->getLinearVelocity();
+		btVector3 xzVel(vel.getX(), 0, vel.getZ());
+		real xzVelMagnitude = xzVel.length();
+		if (xzVelMagnitude > m_MaxMoveSpeed)
+		{
+			// Limit maximum velocity
+			btVector3 xzVelNorm = xzVel.normalized();
+			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
+			rb->setLinearVelocity(newVel);
+		}
+
 		m_Player->UpdateIsGrounded();
+
+		if (m_bPreviewPlaceItemFromInventory)
+		{
+			if (m_Player->heldItemSlot == -1)
+			{
+				m_Player->heldItemSlot = 0;
+			}
+
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+
+			if (gameObjectStack.count >= 1)
+			{
+				if (gameObjectStack.prefabID.IsValid())
+				{
+					// TODO: Interpolate towards target point
+					m_TargetItemPlacementPos = playerTransform->GetWorldPosition() +
+						playerForward * 4.0f +
+						playerUp * 1.0f;
+					m_TargetItemPlacementRot = playerTransform->GetWorldRotation();
+
+					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+					Mesh* mesh = templateObject->GetMesh();
+
+					if (mesh != nullptr)
+					{
+						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
+						btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
+						PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+						if (m_ItemPlacementBoundingBoxShape == nullptr)
+						{
+							m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
+						}
+
+						btPairCachingGhostObject pairCache;
+
+						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
+						pairCache.setWorldTransform(bbTransform);
+
+						i32 mask = (i32)CollisionType::NOTHING;
+						pairCache.setCollisionFlags(mask);
+
+						CustomContactResultCallback resultCallback;
+						resultCallback.m_collisionFilterGroup = mask;
+						resultCallback.m_collisionFilterMask = mask;
+						physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
+
+						m_bItemPlacementValid = !resultCallback.bHit;
+					}
+				}
+			}
+		}
+
+		if (m_Player->m_bPossessed &&
+			!m_Player->terminalInteractingWithID.IsValid() &&
+			!m_Player->ridingVehicleID.IsValid() &&
+			m_Player->m_TrackRidingID == InvalidTrackID)
+		{
+			real lookH = lookLR;
+			real lookV = 0.0f;
+			if (m_Mode == Mode::FIRST_PERSON)
+			{
+				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
+			}
+
+			glm::quat rot = playerTransform->GetLocalRotation();
+			real angle = lookH * (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson) * g_FixedDeltaTime;
+			rot = glm::rotate(rot, angle, playerUp);
+			playerTransform->SetWorldRotation(rot);
+
+			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_FixedDeltaTime);
+		}
 
 		if (m_Player->m_bPossessed)
 		{
 			if (m_Player->m_TrackRidingID != InvalidTrackID)
 			{
+				TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
 				glm::vec3 newCurveDir = trackManager->GetTrack(m_Player->m_TrackRidingID)->GetCurveDirectionAt(m_Player->m_DistAlongTrack);
 				static glm::vec3 pCurveDir = newCurveDir;
 
@@ -739,7 +824,7 @@ namespace flex
 					move = -move;
 				}
 
-				real targetDDist = move * m_Player->m_TrackMoveSpeed * g_DeltaTime;
+				real targetDDist = move * m_Player->m_TrackMoveSpeed * g_FixedDeltaTime;
 				real pDist = m_Player->m_DistAlongTrack;
 				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRidingID,
 					targetDDist, m_Player->m_DistAlongTrack);
@@ -758,71 +843,15 @@ namespace flex
 			{
 				if (!m_Player->terminalInteractingWithID.IsValid() && !m_Player->ridingVehicleID.IsValid())
 				{
-					force += ToBtVec3(transform->GetRight()) * m_MoveAcceleration * moveLR;
-					force += ToBtVec3(transform->GetForward()) * m_MoveAcceleration * moveFB;
+					real moveAcceleration = TWEAKABLE(80000.0f);
+
+					force += ToBtVec3(playerRight) * moveAcceleration * moveLR * g_FixedDeltaTime;
+					force += ToBtVec3(playerForward) * moveAcceleration * moveFB * g_FixedDeltaTime;
 				}
 			}
 		}
 
-		bool bDrawLocalAxes = (m_Mode != Mode::FIRST_PERSON) && m_Player->IsVisible();
-		if (bDrawLocalAxes)
-		{
-			const real lineLength = 4.0f;
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
-		}
-
 		rb->applyCentralForce(force);
-
-		const btVector3& vel = rb->getLinearVelocity();
-		btVector3 xzVel(vel.getX(), 0, vel.getZ());
-		real xzVelMagnitude = xzVel.length();
-		bool bMaxVel = false;
-		if (xzVelMagnitude > m_MaxMoveSpeed)
-		{
-			btVector3 xzVelNorm = xzVel.normalized();
-			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
-			rb->setLinearVelocity(newVel);
-			bMaxVel = true;
-		}
-
-		// Jitter tester:
-		//m_Player->GetTransform()->SetWorldPosition(m_Player->GetTransform()->GetWorldPosition() + glm::vec3(g_DeltaTime * 1.0f, 0.0f, 0.0f));
-
-		constexpr bool bDrawVelocity = false;
-		if (bDrawVelocity)
-		{
-			real scale = 1.0f;
-			btVector3 start = rbPos + btVector3(0.0f, -0.5f, 0.0f);
-			btVector3 end = start + rb->getLinearVelocity() * scale;
-			debugDrawer->drawLine(start, end, bMaxVel ? btVector3(0.9f, 0.3f, 0.4f) : btVector3(0.1f, 0.85f, 0.98f));
-		}
-
-		if (m_Player->m_bPossessed &&
-			!m_Player->terminalInteractingWithID.IsValid() &&
-			!m_Player->ridingVehicleID.IsValid() &&
-			m_Player->m_TrackRidingID == InvalidTrackID)
-		{
-			real lookH = lookLR;
-			real lookV = 0.0f;
-			if (m_Mode == Mode::FIRST_PERSON)
-			{
-				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
-			}
-
-			glm::quat rot = transform->GetLocalRotation();
-			real angle = lookH * (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson) * g_DeltaTime;
-			rot = glm::rotate(rot, angle, up);
-			transform->SetWorldRotation(rot);
-
-			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_DeltaTime);
-		}
-
-		m_bAttemptCompleteTrack = false;
-		m_bAttemptPlaceItemFromInventory = false;
-		m_bAttemptInteractLeftHand = false;
-		m_bAttemptPickup = false;
 	}
 
 	void PlayerController::ResetTransformAndVelocities()
@@ -1098,11 +1127,11 @@ namespace flex
 				Transform* transform = m_Player->GetTransform();
 				glm::vec3 up = transform->GetUp();
 				glm::quat rot = transform->GetLocalRotation();
-				real angle = lookH * m_MouseRotateHSpeed * g_DeltaTime;
+				real angle = lookH * m_MouseRotateHSpeed;
 				rot = glm::rotate(rot, angle, up);
 				transform->SetWorldRotation(rot);
 
-				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * g_DeltaTime * (m_bInvertMouseV ? -1.0f : 1.0f));
+				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f));
 
 				return EventReply::CONSUMED;
 			}

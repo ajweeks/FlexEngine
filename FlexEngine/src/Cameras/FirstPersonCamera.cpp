@@ -49,19 +49,22 @@ namespace flex
 		BaseCamera::OnSceneChanged();
 
 		FindPlayer();
-		Update();
+		TrackPlayer();
 
-		if (m_Player)
+		if (m_Player != nullptr)
 		{
 			m_Player->UpdateIsPossessed();
 		}
 	}
 
-	void FirstPersonCamera::Update()
+	void FirstPersonCamera::FixedUpdate()
 	{
-		BaseCamera::Update();
+		TrackPlayer();
+	}
 
-		if (!m_Player)
+	void FirstPersonCamera::TrackPlayer()
+	{
+		if (m_Player == nullptr)
 		{
 			return;
 		}
@@ -71,6 +74,10 @@ namespace flex
 		forward = m_Player->GetLookDirection();
 		right = playerTransform->GetRight();
 		up = cross(forward, right);
+
+		//btTransform t;
+		//m_Player->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(t);
+		//position = ToVec3(t.getOrigin());
 
 		position = playerTransform->GetWorldPosition();
 

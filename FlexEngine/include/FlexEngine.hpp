@@ -50,7 +50,8 @@ namespace flex
 		void SetSimulationSpeed(real speed);
 		void StepSimulationFrame();
 
-		bool* GetUIWindowOpen(StringID windowNameSID);
+		// Use SID_PAIR macro to pass one string in to both params
+		bool* GetUIWindowOpen(StringID windowNameSID, const char* windowName);
 
 		void ParseUIWindowCache();
 		void SerializeUIWindowCache();

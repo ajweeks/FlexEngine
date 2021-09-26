@@ -1577,7 +1577,7 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
-	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour)
+	void Renderer::QueueHologramMesh(PrefabID prefabID, Transform& transform, const glm::vec4& colour)
 	{
 		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale(), colour);
 	}

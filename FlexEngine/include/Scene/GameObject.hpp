@@ -141,6 +141,7 @@ namespace flex
 		virtual void PostInitialize();
 		virtual void Destroy(bool bDetachFromParent = true);
 		virtual void Update();
+		virtual void FixedUpdate();
 
 		virtual void DrawImGuiObjects();
 

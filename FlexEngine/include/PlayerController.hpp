@@ -20,6 +20,7 @@ namespace flex
 
 		void Initialize(Player* player);
 		void Update();
+		void FixedUpdate();
 		void Destroy();
 
 		void ResetTransformAndVelocities();
@@ -37,13 +38,12 @@ namespace flex
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
 		MouseMovedCallback<PlayerController> m_MouseMovedCallback;
 
-		real m_MoveAcceleration = 200.0f;
 		real m_MaxMoveSpeed = 20.0f;
 		real m_RotateHSpeedFirstPerson = 1.5f;
 		real m_RotateHSpeedThirdPerson = 4.0f;
 		real m_RotateVSpeed = 1.0f;
-		real m_MouseRotateHSpeed = 0.1f;
-		real m_MouseRotateVSpeed = 0.1f;
+		real m_MouseRotateHSpeed = 0.0013f;
+		real m_MouseRotateVSpeed = 0.0013f;
 		bool m_bInvertMouseV = false;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0

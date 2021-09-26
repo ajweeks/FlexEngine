@@ -219,6 +219,9 @@ IGNORE_WARNINGS_POP
 #define ENSURE(condition)
 #endif
 
+// Turns a const char* into a StringID and const char* pair of params
+#define SID_PAIR(window) SID(window), window
+
 #if COMPILE_OPEN_GL
 #ifdef DEBUG
 #define GL_PUSH_DEBUG_GROUP(str) \
@@ -292,6 +295,7 @@ namespace flex
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;
+	extern const sec g_FixedDeltaTime;
 	extern sec g_UnpausedDeltaTime; // Unpaused and unscaled
 
 	extern std::size_t g_TotalTrackedAllocatedMemory;

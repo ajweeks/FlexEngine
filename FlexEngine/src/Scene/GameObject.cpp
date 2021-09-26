@@ -371,7 +371,7 @@ namespace flex
 			child->PostInitialize();
 		}
 
-		m_Transform.UpdateParentTransform();
+		m_Transform.ComputeValues();
 
 		GetChildrenOfType(SID("socket"), false, sockets);
 		outputSignals.resize((u32)sockets.size());
@@ -452,23 +452,14 @@ namespace flex
 		// Clear every frame
 		m_NearbyInteractable = nullptr;
 
-		if (m_RigidBody)
-		{
-			if (m_RigidBody->IsKinematic())
-			{
-				m_RigidBody->MatchParentTransform();
-			}
-			else
-			{
-				// Rigid body will take these changes into account
-				m_RigidBody->UpdateParentTransform();
-			}
-		}
-
 		for (GameObject* child : m_Children)
 		{
 			child->Update();
 		}
+	}
+
+	void GameObject::FixedUpdate()
+	{
 	}
 
 	void GameObject::DrawImGuiObjects()
@@ -616,10 +607,10 @@ namespace flex
 				m_Transform.SetLocalScale(scale, true);
 				SetUseUniformScale(m_bUniformScale, false);
 
-				if (m_RigidBody)
-				{
-					m_RigidBody->MatchParentTransform();
-				}
+				//if (m_RigidBody != nullptr)
+				//{
+				//	m_RigidBody->MatchTransform();
+				//}
 
 				if (g_Editor->IsObjectSelected(ID))
 				{
@@ -642,7 +633,7 @@ namespace flex
 			}
 		}
 
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			ImGui::Spacing();
 
@@ -873,25 +864,25 @@ namespace flex
 					} break;
 					}
 
-					glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
-					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalPosition(localOffsetPos);
-					}
-					if (ImGui::IsItemClicked(1))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalPosition(VEC3_ZERO);
-					}
+					//glm::vec3 localOffsetPos = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+					//if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalPosition(localOffsetPos);
+					//}
+					//if (ImGui::IsItemClicked(1))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalPosition(VEC3_ZERO);
+					//}
 
-					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
-					glm::vec3 cleanedRot;
-					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-					}
+					//glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
+					//glm::vec3 cleanedRot;
+					//if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+					//}
 
 					ImGui::Spacing();
 
@@ -1159,7 +1150,6 @@ namespace flex
 			currentScene->UnregisterGameObjectRecursive(ID);
 
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
-			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
 			newPrefabTemplate->m_bIsTemplate = true;
 			newPrefabTemplate->m_PrefabIDLoadedFrom = InvalidPrefabID;
@@ -1207,7 +1197,7 @@ namespace flex
 
 	void GameObject::RemoveRigidBody()
 	{
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->removeRigidBody(m_RigidBody->GetRigidBodyInternal());
@@ -1277,12 +1267,6 @@ namespace flex
 
 		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs);
 
-		bool bColliderContainsOffset = false;
-
-		glm::vec3 localPos(0.0f);
-		glm::quat localRot(VEC3_ZERO);
-		glm::vec3 localScale(1.0f);
-
 		JSONObject colliderObj;
 		if (obj.TryGetObject("collider", colliderObj))
 		{
@@ -1337,27 +1321,6 @@ namespace flex
 				PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
 			} break;
 			}
-
-			if (colliderObj.TryGetVec3("offset pos", localPos))
-			{
-				bColliderContainsOffset = true;
-			}
-
-			glm::vec3 localRotEuler;
-			if (colliderObj.TryGetVec3("offset rot", localRotEuler))
-			{
-				localRot = glm::quat(localRotEuler);
-				bColliderContainsOffset = true;
-			}
-
-			//
-			//if (colliderObj.TryGetVec3("offset scale", localScale))
-			//{
-			//	bColliderContainsOffset = true;
-			//}
-
-			//bool bIsTrigger = colliderObj.GetBool("trigger");
-			// TODO: Create btGhostObject to use for trigger
 		}
 
 		JSONObject rigidBodyObj;
@@ -1381,12 +1344,6 @@ namespace flex
 				// TODO: Use IsStatic() ?
 				rigidBody->SetStatic(bStatic);
 			}
-		}
-
-		// Must happen after rigid body has been created
-		if (bColliderContainsOffset)
-		{
-			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
 		}
 
 		ParseTypeUniqueFields(obj, scene, matIDs);
@@ -1598,26 +1555,6 @@ namespace flex
 						shapeType, m_Name.c_str(), scene->GetName().c_str());
 				} break;
 				}
-
-				if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
-				{
-					colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
-				}
-
-				if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
-				{
-					glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
-					colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
-				}
-
-				if (m_RigidBody->GetLocalScale() != VEC3_ONE)
-				{
-					colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
-				}
-
-				//bool bTrigger = false;
-				//colliderObj.fields.emplace_back("trigger", JSONValue(bTrigger)));
-				// TODO: Handle triggers
 
 				object.fields.emplace_back("collider", JSONValue(colliderObj));
 			}
@@ -2628,7 +2565,7 @@ namespace flex
 
 		m_CollisionShape = collisionShape;
 
-		if (m_RigidBody && m_RigidBody->GetRigidBodyInternal())
+		if (m_RigidBody != nullptr && m_RigidBody->GetRigidBodyInternal())
 		{
 			m_RigidBody->GetRigidBodyInternal()->setCollisionShape(collisionShape);
 		}
@@ -2911,7 +2848,6 @@ namespace flex
 
 		m_RigidBody->GetRigidBodyInternal()->activate(true);
 		m_Transform.SetLocalRotation(glm::quat(glm::vec3(0, rotation, 0)));
-		m_RigidBody->UpdateParentTransform();
 
 		if (glm::abs(rotationSpeed) > 0.2f)
 		{
@@ -3077,7 +3013,7 @@ namespace flex
 
 		glm::vec3 newPos = startingPos + dist * moveAxis;
 
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
@@ -6842,7 +6778,7 @@ namespace flex
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
 
-		m_Transform.UpdateParentTransform();
+		m_Transform.ComputeValues();
 
 		m_VM = new VM::VirtualMachine();
 	}

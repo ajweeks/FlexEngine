@@ -20,6 +20,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;
+		virtual void FixedUpdate() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void DrawImGuiObjects() override;
 
@@ -29,7 +30,7 @@ namespace flex
 
 		void Reset();
 
-		glm::vec3 GetLookDirection() const;
+		glm::vec3 GetLookDirection();
 
 		i32 GetIndex() const;
 		real GetHeight() const;
@@ -42,7 +43,7 @@ namespace flex
 		void ClampPitch();
 		void UpdateIsGrounded();
 
-		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
+		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false);
 
 		void AttachToTrack(TrackID trackID, real distAlongTrack);
 		void DetachFromTrack();

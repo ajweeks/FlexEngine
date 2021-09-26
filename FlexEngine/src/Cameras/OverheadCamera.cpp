@@ -60,10 +60,13 @@ namespace flex
 		ResetValues();
 	}
 
-	void OverheadCamera::Update()
+	void OverheadCamera::FixedUpdate()
 	{
-		BaseCamera::Update();
+		TrackPlayer();
+	}
 
+	void OverheadCamera::TrackPlayer()
+	{
 		if (m_Player0 == nullptr)
 		{
 			return;

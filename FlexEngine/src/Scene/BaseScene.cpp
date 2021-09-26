@@ -192,7 +192,7 @@ namespace flex
 
 		if (m_PhysicsWorld)
 		{
-			m_PhysicsWorld->Update(g_DeltaTime);
+			m_PhysicsWorld->StepSimulation(g_DeltaTime);
 		}
 
 		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
@@ -242,6 +242,23 @@ namespace flex
 			dirLight->GetTransform()->SetWorldRotation(rot);
 			dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
 		}
+	}
+
+	void BaseScene::FixedUpdate()
+	{
+		PROFILE_AUTO("Scene fixed update");
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			if (rootObject != nullptr)
+			{
+				rootObject->FixedUpdate();
+			}
+		}
+
+		g_CameraManager->CurrentCamera()->FixedUpdate();
+
+		g_Editor->FixedUpdate();
 	}
 
 	void BaseScene::LateUpdate()
@@ -446,7 +463,7 @@ namespace flex
 			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, false, copyFlags);
 			if (rootObj != nullptr)
 			{
-				rootObj->GetTransform()->UpdateParentTransform();
+				rootObj->GetTransform()->ComputeValues();
 				AddRootObjectImmediate(rootObj);
 			}
 			else

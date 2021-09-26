@@ -65,6 +65,7 @@ namespace flex
 
 	sec g_SecElapsedSinceProgramStart = 0;
 	sec g_DeltaTime = 0;
+	const sec g_FixedDeltaTime = 1.0f / 60.0f;
 	sec g_UnpausedDeltaTime = 0;
 
 	size_t g_TotalTrackedAllocatedMemory = 0;

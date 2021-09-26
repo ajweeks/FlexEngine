@@ -817,6 +817,9 @@ namespace flex
 					currentCamera->Update();
 
 					currentScene->Update();
+
+					currentCamera->LateUpdate();
+
 					Player* player = currentScene->GetPlayer(0);
 					if (player)
 					{
@@ -1018,7 +1021,7 @@ namespace flex
 			return;
 		}
 
-		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID("imgui demo"));
+		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID_PAIR("imgui demo"));
 		if (*bImGuiDemoWindowShowing)
 		{
 			ImGui::ShowDemoWindow(bImGuiDemoWindowShowing);
@@ -1281,6 +1284,7 @@ namespace flex
 				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")].bOpen);
 				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
 				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
+				ImGui::MenuItem("Jitter Detector", nullptr, &m_UIWindows[SID("jitter detector")].bOpen);
 				ImGui::Separator();
 				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")].bOpen);
 				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")].bOpen);
@@ -1327,7 +1331,7 @@ namespace flex
 		bool bIsMainWindowCollapsed = true;
 
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		bool* bShowMainWindow = GetUIWindowOpen(SID("main"));
+		bool* bShowMainWindow = GetUIWindowOpen(SID_PAIR("main"));
 		if (*bShowMainWindow)
 		{
 			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
@@ -1413,6 +1417,7 @@ namespace flex
 				g_CameraManager->DrawImGuiObjects();
 				g_SceneManager->DrawImGuiObjects();
 				AudioManager::DrawImGuiObjects();
+				g_Editor->DrawImGuiObjects();
 
 				if (ImGui::RadioButton("Translate", g_Editor->GetTransformState() == TransformState::TRANSLATE))
 				{
@@ -1471,7 +1476,7 @@ namespace flex
 
 		g_ResourceManager->DrawImGuiWindows();
 
-		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID("input bindings"));
+		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID_PAIR("input bindings"));
 		if (*bShowInputBindingsWindow)
 		{
 			g_InputManager->DrawImGuiBindings(bShowInputBindingsWindow);
@@ -1644,7 +1649,7 @@ namespace flex
 		}
 
 #if COMPILE_RENDERDOC_API
-		bool* bShowRenderDocWindow = GetUIWindowOpen(SID("render doc"));
+		bool* bShowRenderDocWindow = GetUIWindowOpen(SID_PAIR("render doc"));
 		if (*bShowRenderDocWindow)
 		{
 			if (ImGui::Begin("RenderDoc", bShowRenderDocWindow))
@@ -1691,7 +1696,7 @@ namespace flex
 		}
 #endif
 
-		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID("memory stats"));
+		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID_PAIR("memory stats"));
 		if (*bShowMemoryStatsWindow)
 		{
 			if (ImGui::Begin("Memory", bShowMemoryStatsWindow))
@@ -1702,7 +1707,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID("cpu stats"));
+		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID_PAIR("cpu stats"));
 		if (*bShowCPUStatsWindow)
 		{
 			if (ImGui::Begin("CPU Stats", bShowCPUStatsWindow))
@@ -1717,7 +1722,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShowUIEditorWindow = GetUIWindowOpen(SID("ui editor"));
+		bool* bShowUIEditorWindow = GetUIWindowOpen(SID_PAIR("ui editor"));
 		if (*bShowUIEditorWindow)
 		{
 			g_UIManager->DrawImGui(bShowUIEditorWindow);
@@ -2111,9 +2116,15 @@ namespace flex
 		m_bSimulateNextFrame = true;
 	}
 
-	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID)
+	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID, const char* windowName)
 	{
-		return &m_UIWindows[windowNameSID].bOpen;
+		auto iter = m_UIWindows.find(windowNameSID);
+		if (iter == m_UIWindows.end())
+		{
+			m_UIWindows[windowNameSID] = UIWindow{ true, std::string(windowName) };
+			return &m_UIWindows[windowNameSID].bOpen;
+		}
+		return &iter->second.bOpen;
 	}
 
 	void FlexEngine::ParseUIWindowCache()

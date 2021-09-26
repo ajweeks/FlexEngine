@@ -17,7 +17,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void OnSceneChanged() override;
-		virtual void Update() override;
+		virtual void FixedUpdate() override;
 
 		virtual void DrawImGuiObjects() override;
 
@@ -26,6 +26,7 @@ namespace flex
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindPlayer();
+		void TrackPlayer();
 
 		void ResetValues();
 

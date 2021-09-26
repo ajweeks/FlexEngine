@@ -32,24 +32,27 @@ namespace flex
 
 		void SetAsIdentity();
 
+		bool IsIdentity() const;
+		static Transform Identity();
+
 		glm::vec3 GetLocalPosition() const;
-		glm::vec3 GetWorldPosition() const;
+		glm::vec3 GetWorldPosition();
 
 		glm::quat GetLocalRotation() const;
-		glm::quat GetWorldRotation() const;
+		glm::quat GetWorldRotation();
 
 		glm::vec3 GetLocalScale() const;
-		glm::vec3 GetWorldScale() const;
+		glm::vec3 GetWorldScale();
 
-		glm::vec3 GetRight() const;
-		glm::vec3 GetUp() const;
-		glm::vec3 GetForward() const;
+		glm::vec3 GetRight();
+		glm::vec3 GetUp();
+		glm::vec3 GetForward();
 
 		void SetLocalPosition(const glm::vec3& position, bool bUpdateChain = true);
 		void SetWorldPosition(const glm::vec3& position, bool bUpdateChain = true);
 
-		void SetLocalRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
-		void SetWorldRotation(const glm::quat& quatRotation, bool bUpdateChain = true);
+		void SetLocalRotation(const glm::quat& rotation, bool bUpdateChain = true);
+		void SetWorldRotation(const glm::quat& rotation, bool bUpdateChain = true);
 
 		void SetLocalScale(const glm::vec3& scale, bool bUpdateChain = true);
 		void SetWorldScale(const glm::vec3& scale, bool bUpdateChain = true);
@@ -59,29 +62,34 @@ namespace flex
 		void Translate(const glm::vec3& deltaPosition);
 		void Translate(real deltaX, real deltaY, real deltaZ);
 
-		void Rotate(const glm::quat& deltaQuatRotation);
+		void Rotate(const glm::quat& deltaRotation);
 
 		void Scale(const glm::vec3& deltaScale);
 		void Scale(real deltaScale);
 		void Scale(real deltaX, real deltaY, real deltaZ);
 
 		void SetWorldTransform(const glm::mat4& desiredWorldTransform);
-
-		bool IsIdentity() const;
-		static Transform Identity();
+		void SetFromBtTransform(const btTransform& transform);
 
 		void SetGameObject(GameObject* gameObject);
 		GameObject* GetGameObject() const;
 
-		const glm::mat4& GetWorldTransform() const;
 		const glm::mat4& GetLocalTransform() const;
+		const glm::mat4& GetWorldTransform();
 
-		void UpdateParentTransform(); // Climbs up the parent-child tree up to the root
+		void ComputeValues(); // Climbs up the parent-child tree up to the root
 
 		bool updateParentOnStateChange = false;
 
 	private:
-		void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
+		//void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
+
+		// Callback from physics system
+		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
+
+		void MarkDirty();
+
+		bool bDirty = false;
 
 		glm::vec3 localPosition;
 		glm::quat localRotation;

@@ -12,15 +12,20 @@ IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "FlexEngine.hpp"
 #include "Helpers.hpp"
 #include "Physics/PhysicsHelpers.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
+	const u32 PhysicsWorld::MAX_SUBSTEPS = 32;
+
 	PhysicsWorld::PhysicsWorld()
 	{
 	}
@@ -38,9 +43,6 @@ namespace flex
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
 
 			m_World->getSolverInfo().m_globalCfm = 0.00001f;
-
-			//m_World->getPairCache()->setInternalGhostPairCallback()
-			//m_World->getDebugDrawer()->setDebugMode(btIDebugDraw::DBG_DrawAabb);
 		}
 	}
 
@@ -65,12 +67,30 @@ namespace flex
 		}
 	}
 
-	void PhysicsWorld::Update(sec deltaSeconds)
+	void PhysicsWorld::StepSimulation(sec deltaSeconds)
 	{
 		if (m_World != nullptr)
 		{
-			PROFILE_AUTO("Physics tick");
-			m_World->stepSimulation(deltaSeconds, MAX_SUBSTEPS);
+			PROFILE_AUTO("Step physics simulation");
+
+			if (!g_EngineInstance->IsSimulationPaused())
+			{
+				m_AccumulatedTime += deltaSeconds;
+			}
+
+			BaseScene* scene = g_SceneManager->CurrentScene();
+
+			u32 numSubsteps = glm::min((u32)(m_AccumulatedTime / g_FixedDeltaTime), MAX_SUBSTEPS);
+			Print("numSubsteps: %u\n", numSubsteps);
+
+			for (u32 step = 0; step < numSubsteps; ++step)
+			{
+				m_World->stepSimulation(g_FixedDeltaTime, 1, g_FixedDeltaTime);
+				scene->FixedUpdate();
+				m_AccumulatedTime -= g_FixedDeltaTime;
+			}
+
+			// TODO: Tell bullet what remaining time is so it can interpolate?
 		}
 	}
 

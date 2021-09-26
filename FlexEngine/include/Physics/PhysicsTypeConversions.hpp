@@ -22,6 +22,7 @@ btQuaternion ToBtQuaternion(const glm::quat& rhs);
 glm::vec3 ToVec3(const btVector3& rhs);
 glm::vec4 ToVec4(const btVector4& rhs);
 glm::quat ToQuaternion(const btQuaternion& rhs);
+glm::mat4 BtMat3ToMat4(const btMatrix3x3& mat3);
 
-btTransform ToBtTransform(const flex::Transform& transform);
+btTransform ToBtTransform(flex::Transform /* copy */ transform);
 flex::Transform ToTransform(const btTransform& transform);

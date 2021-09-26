@@ -27,7 +27,7 @@ namespace flex
 		void Initialize();
 		void Destroy();
 
-		void Update(sec deltaSeconds);
+		void StepSimulation(sec deltaSeconds);
 
 		btDiscreteDynamicsWorld* GetWorld();
 
@@ -39,12 +39,14 @@ namespace flex
 		// Returns the first body hit along the given ray with the given tag
 		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, i32 mask = (i32)CollisionType::DEFAULT);
 
+		static const u32 MAX_SUBSTEPS;
+
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);
 
 		btDiscreteDynamicsWorld* m_World = nullptr;
 
-		static const u32 MAX_SUBSTEPS = 32;
+		real m_AccumulatedTime = 0.0f;
 
 		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> m_CollisionPairs;
 	};
