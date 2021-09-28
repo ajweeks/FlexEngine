@@ -81,7 +81,6 @@ namespace flex
 			BaseScene* scene = g_SceneManager->CurrentScene();
 
 			u32 numSubsteps = glm::min((u32)(m_AccumulatedTime / g_FixedDeltaTime), MAX_SUBSTEPS);
-			Print("numSubsteps: %u\n", numSubsteps);
 
 			for (u32 step = 0; step < numSubsteps; ++step)
 			{

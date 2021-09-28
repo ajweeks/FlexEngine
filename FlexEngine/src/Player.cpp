@@ -303,7 +303,7 @@ namespace flex
 					if (prefabTemplate != nullptr)
 					{
 						std::string prefabTemplateName = prefabTemplate->GetName();
-						ImGui::Text("%s (%i - %.3f)", prefabTemplateName.c_str(), gameObjectStack.count, gameObjectStack.userData);
+						ImGui::Text("%s (%i), User data: %.3f", prefabTemplateName.c_str(), gameObjectStack.count, gameObjectStack.userData.floatVal);
 					}
 					else
 					{
