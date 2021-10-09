@@ -595,11 +595,7 @@ namespace flex
 
 	void Transform::Translate(const glm::vec3& deltaPosition)
 	{
-		localPosition += deltaPosition;
-
-		MarkDirty();
-
-		ComputeValues();
+		Translate(deltaPosition.x, deltaPosition.y, deltaPosition.z);
 	}
 
 	void Transform::Translate(real deltaX, real deltaY, real deltaZ)
@@ -611,6 +607,20 @@ namespace flex
 		MarkDirty();
 
 		ComputeValues();
+
+		RigidBody* rigidBody = m_GameObject->GetRigidBody();
+		if (rigidBody != nullptr)
+		{
+			// Force rigid body to update to new position
+			rigidBody->SetWorldPosition(worldPosition);
+		}
+
+		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+		for (GameObject* child : children)
+		{
+			Transform* childTransform = child->GetTransform();
+			childTransform->SetLocalPosition(childTransform->GetLocalPosition());
+		}
 	}
 
 	void Transform::Rotate(const glm::quat& deltaRotation)
@@ -620,6 +630,20 @@ namespace flex
 		MarkDirty();
 
 		ComputeValues();
+
+		RigidBody* rigidBody = m_GameObject->GetRigidBody();
+		if (rigidBody != nullptr)
+		{
+			// Force rigid body to update to new rotation
+			rigidBody->SetWorldRotation(worldRotation);
+		}
+
+		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+		for (GameObject* child : children)
+		{
+			Transform* childTransform = child->GetTransform();
+			childTransform->SetLocalRotation(childTransform->GetLocalRotation());
+		}
 	}
 
 	void Transform::Scale(const glm::vec3& deltaScale)
@@ -735,42 +759,6 @@ namespace flex
 		}
 	}
 
-	//void Transform::UpdateChildTransforms()
-	//{
-	//	// Our local matrix should already have been updated at this point (in ComputeValues)
-
-	//	GameObject* parent = m_GameObject->GetParent();
-	//	if (parent != nullptr)
-	//	{
-	//		Transform* parentTransform = parent->GetTransform();
-
-	//		worldTransform = parentTransform->GetWorldTransform() * localTransform;
-
-	//		glm::vec3 worldSkew;
-	//		glm::vec4 worldPerspective;
-	//		glm::decompose(worldTransform, worldScale, worldRotation, worldPosition, worldSkew, worldPerspective);
-	//	}
-	//	else
-	//	{
-	//		worldTransform = localTransform;
-	//		worldPosition = localPosition;
-	//		worldRotation = localRotation;
-	//		worldScale = localScale;
-	//	}
-
-	//	//RigidBody* rigidBody = m_GameObject->GetRigidBody();
-	//	//if (rigidBody != nullptr)
-	//	//{
-	//	//	rigidBody->MatchTransform();
-	//	//}
-
-	//	const std::vector<GameObject*>& children = m_GameObject->GetChildren();
-	//	for (GameObject* child : children)
-	//	{
-	//		child->GetTransform()->UpdateChildTransforms();
-	//	}
-	//}
-
 	void Transform::OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation)
 	{
 		GameObject* parent = m_GameObject->GetParent();
@@ -784,6 +772,8 @@ namespace flex
 			localPosition = position;
 			localRotation = rotation;
 		}
+
+		MarkDirty();
 
 		ComputeValues();
 	}
