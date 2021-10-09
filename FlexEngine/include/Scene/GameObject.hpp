@@ -806,6 +806,8 @@ namespace flex
 
 		real chargeAmount = 0.0f;
 		real chargeCapacity = 100.0f;
+		real flashTimer = 0.0f;
+		static const real flashDuration;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;

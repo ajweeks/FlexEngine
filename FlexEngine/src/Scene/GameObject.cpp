@@ -85,6 +85,8 @@ namespace flex
 
 	const real Wire::DEFAULT_LENGTH = 2.0f;
 
+	const real Battery::flashDuration = 0.5f;
+
 #define SIMD_WAVES 0
 
 	// Wave generation globals accessed from threads
@@ -4711,12 +4713,30 @@ namespace flex
 
 	void Battery::Update()
 	{
+		if (flashTimer > 0.0f)
+		{
+			flashTimer = glm::max(flashTimer - g_DeltaTime, 0.0f);
+		}
+
 		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() >= 1)
 		{
 			MeshComponent* submesh0 = m_Mesh->GetSubMesh(0);
+			Material* submesh0Mat = g_Renderer->GetMaterial(submesh0->GetMaterialID());
+
+			real normalizedChargeAmount = chargeAmount / chargeCapacity;
 			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
 				&U_CHARGE_AMOUNT,
-				{ chargeAmount / chargeCapacity });
+				{ normalizedChargeAmount });
+			glm::vec3 constEmissive = submesh0Mat->constEmissive;
+			real constEmissiveMultiplier = 1.0f;
+			if (flashTimer > 0.0f)
+			{
+				const real flashIntensity = 1.0f;
+				constEmissiveMultiplier += sin(flashTimer / flashDuration * TWO_PI * 2.0f) * (0.5f * flashIntensity);
+			}
+			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
+				&U_CONST_EMISSIVE,
+				{ constEmissive * constEmissiveMultiplier });
 		}
 
 		GameObject::Update();
@@ -4724,7 +4744,13 @@ namespace flex
 
 	void Battery::OnCharge(real amount)
 	{
+		real prevChargeAmount = chargeAmount;
 		chargeAmount = glm::clamp(chargeAmount + amount, 0.0f, chargeCapacity);
+		if (chargeAmount >= chargeCapacity && prevChargeAmount < chargeCapacity)
+		{
+			// Flash when fully charged
+			flashTimer = flashDuration;
+		}
 	}
 
 	GameObject* Battery::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)

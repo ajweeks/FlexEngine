@@ -33,7 +33,12 @@ layout (location = 0) out vec4 outColour;
 void main() 
 {
 	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : uboDynamic.constAlbedo.xyz;
-	vec3 emissive = uboDynamic.enableEmissiveSampler ? texture(emissiveSampler, ex_TexCoord).rgb : uboDynamic.constEmissive.xyz;
+	
+	vec3 emissive = uboDynamic.constEmissive.xyz;
+	if (uboDynamic.enableEmissiveSampler)
+	{
+		emissive *= texture(emissiveSampler, ex_TexCoord).rgb;
+	}
 
 	float blend = 0.0005;
 	float dist = clamp(uboDynamic.chargeAmount - ex_TexCoord.y, 0.0, 1.0);
