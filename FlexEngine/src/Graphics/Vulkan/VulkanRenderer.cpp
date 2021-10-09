@@ -494,7 +494,7 @@ namespace flex
 					ssaoMatCreateInfo.name = "ssao";
 					ssaoMatCreateInfo.shaderName = "ssao";
 					ssaoMatCreateInfo.persistent = true;
-					ssaoMatCreateInfo.visibleInEditor = false;
+					ssaoMatCreateInfo.bEditorMaterial = true;
 					ssaoMatCreateInfo.bSerializable = false;
 					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
 				}
@@ -507,7 +507,7 @@ namespace flex
 					ssaoBlurMatCreateInfo.name = "ssao blur";
 					ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
 					ssaoBlurMatCreateInfo.persistent = true;
-					ssaoBlurMatCreateInfo.visibleInEditor = false;
+					ssaoBlurMatCreateInfo.bEditorMaterial = true;
 					ssaoBlurMatCreateInfo.bSerializable = false;
 					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
 				}
@@ -998,7 +998,7 @@ namespace flex
 			material->renderToCubemap = createInfo->renderToCubemap;
 
 			material->persistent = createInfo->persistent;
-			material->visibleInEditor = createInfo->visibleInEditor;
+			material->bEditorMaterial = createInfo->bEditorMaterial;
 
 			material->descriptorSetLayoutIndex = material->shaderID;
 
@@ -2947,7 +2947,7 @@ namespace flex
 			matCreateInfo.generateHDREquirectangularSampler = true;
 			matCreateInfo.hdrEquirectangularTexturePath = environmentMapPath;
 			matCreateInfo.persistent = true;
-			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bEditorMaterial = true;
 			matCreateInfo.bSerializable = false;
 
 			bool bRandomizeSkybox = true;
@@ -4287,14 +4287,14 @@ namespace flex
 			matCreateInfo.name = "Terrain Generate Points Material";
 			matCreateInfo.shaderName = "terrain_generate_points";
 			matCreateInfo.persistent = true;
-			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bEditorMaterial = true;
 			matCreateInfo.bSerializable = false;
 			m_Terrain->genPointsMaterialID = InitializeMaterial(&matCreateInfo);
 
 			matCreateInfo.name = "Terrain Generate Mesh Material";
 			matCreateInfo.shaderName = "terrain_generate_mesh";
 			matCreateInfo.persistent = true;
-			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bEditorMaterial = true;
 			matCreateInfo.bSerializable = false;
 			m_Terrain->genMeshMaterialID = InitializeMaterial(&matCreateInfo);
 
@@ -6121,13 +6121,14 @@ namespace flex
 			return InvalidMaterialID;
 		}
 
-		std::vector<Pair<std::string, MaterialID>> VulkanRenderer::GetValidMaterialNames() const
+		std::vector<Pair<std::string, MaterialID>> VulkanRenderer::GetValidMaterialNames(bool bEditorMaterials) const
 		{
 			std::vector<Pair<std::string, MaterialID>> result;
 
 			for (auto& matPair : m_Materials)
 			{
-				if (matPair.second->visibleInEditor)
+				if ((bEditorMaterials && matPair.second->bEditorMaterial) ||
+					(!bEditorMaterials && !matPair.second->bEditorMaterial))
 				{
 					result.emplace_back(matPair.second->name, matPair.first);
 				}
@@ -9442,6 +9443,10 @@ namespace flex
 			u32 enableMetallicSampler = material->enableMetallicSampler;
 			u32 enableRoughnessSampler = material->enableRoughnessSampler;
 			u32 enableNormalSampler = material->enableNormalSampler;
+			glm::vec4 constAlbedo = material->constAlbedo;
+			glm::vec4 constEmissive = material->constEmissive;
+			real constMetallic = material->constMetallic;
+			real constRoughness = material->constRoughness;
 			real textureScale = material->textureScale;
 			real blendSharpness = material->blendSharpness;
 			glm::vec2 texSize = material->texSize;
@@ -9472,6 +9477,22 @@ namespace flex
 				if (overrides->HasUniform(&U_ENABLE_NORMAL_SAMPLER, propertyOverride))
 				{
 					enableNormalSampler = propertyOverride.boolValue;
+				}
+				if (overrides->HasUniform(&U_CONST_ALBEDO, propertyOverride))
+				{
+					constAlbedo = propertyOverride.vec4Value;
+				}
+				if (overrides->HasUniform(&U_CONST_EMISSIVE, propertyOverride))
+				{
+					constEmissive = propertyOverride.vec4Value;
+				}
+				if (overrides->HasUniform(&U_CONST_METALLIC, propertyOverride))
+				{
+					constMetallic = propertyOverride.realValue;
+				}
+				if (overrides->HasUniform(&U_CONST_ROUGHNESS, propertyOverride))
+				{
+					constRoughness = propertyOverride.realValue;
 				}
 				if (overrides->HasUniform(&U_SDF_DATA, propertyOverride))
 				{
@@ -9528,10 +9549,10 @@ namespace flex
 			UniformInfo uniformInfos[] = {
 				{ &U_MODEL, (void*)&model },
 				{ &U_COLOUR_MULTIPLIER, (void*)&colourMultiplier },
-				{ &U_CONST_ALBEDO, (void*)&material->constAlbedo },
-				{ &U_CONST_EMISSIVE, (void*)&material->constEmissive },
-				{ &U_CONST_METALLIC, (void*)&material->constMetallic },
-				{ &U_CONST_ROUGHNESS, (void*)&material->constRoughness },
+				{ &U_CONST_ALBEDO, (void*)&constAlbedo },
+				{ &U_CONST_EMISSIVE, (void*)&constEmissive },
+				{ &U_CONST_METALLIC, (void*)&constMetallic },
+				{ &U_CONST_ROUGHNESS, (void*)&constRoughness },
 				{ &U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler },
 				{ &U_ENABLE_EMISSIVE_SAMPLER, (void*)&enableEmissiveSampler },
 				{ &U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler },

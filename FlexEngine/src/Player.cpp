@@ -270,9 +270,9 @@ namespace flex
 		return m_Controller;
 	}
 
-	void Player::DrawImGuiObjects()
+	void Player::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
@@ -693,11 +693,11 @@ namespace flex
 							{
 								if (slotListIndex == 0)
 								{
-									m_Inventory[index] = GameObjectStack{ prefabID, count };
+									m_Inventory[index] = GameObjectStack(prefabID, count);
 								}
 								else
 								{
-									m_QuickAccessInventory[index] = GameObjectStack{ prefabID, count };
+									m_QuickAccessInventory[index] = GameObjectStack(prefabID, count);
 								}
 							}
 							else

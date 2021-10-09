@@ -146,7 +146,7 @@ namespace flex
 
 		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 
-		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
+		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames(bool bEditorMaterials) const = 0;
 
 		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
@@ -209,7 +209,7 @@ namespace flex
 		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
 		void DrawImGuiTexturePreviewTooltip(Texture* texture);
 		// Returns true if any property changed
-		bool DrawImGuiForGameObject(GameObject* gameObject);
+		bool DrawImGuiForGameObject(GameObject* gameObject, bool bDrawingEditorObjects);
 
 		void DrawSpecializationConstantInfoImGui();
 		void DrawImGuiSettings();

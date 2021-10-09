@@ -71,6 +71,20 @@ namespace flex
 
 	struct GameObjectStack
 	{
+		GameObjectStack() :
+			prefabID(InvalidPrefabID),
+			count(0),
+			userData({})
+		{
+		}
+
+		GameObjectStack(const PrefabID& prefabID, i32 count) :
+			prefabID(prefabID),
+			count(count),
+			userData({})
+		{
+		}
+
 		void Clear()
 		{
 			prefabID = InvalidPrefabID;
@@ -78,8 +92,8 @@ namespace flex
 			userData.floatVal = 0.0f;
 		}
 
-		PrefabID prefabID = InvalidPrefabID;
-		i32 count = 0;
+		PrefabID prefabID;
+		i32 count;
 
 		union UserData
 		{
@@ -143,7 +157,7 @@ namespace flex
 		virtual void Update();
 		virtual void FixedUpdate();
 
-		virtual void DrawImGuiObjects();
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
 		virtual void OnTransformChanged();
 
@@ -253,6 +267,7 @@ namespace flex
 
 		bool HasUniformScale() const;
 		void SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately);
+		void EnforceUniformScale();
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;
@@ -406,7 +421,7 @@ namespace flex
 		Mesh* m_Mesh = nullptr;
 
 	private:
-		void DrawImGuiForSelfInternal();
+		void DrawImGuiForSelfInternal(bool bDrawingEditorObjects);
 
 	};
 
@@ -422,7 +437,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 		virtual void OnTransformChanged() override;
 
@@ -453,7 +468,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 		virtual void OnTransformChanged() override;
 
@@ -482,7 +497,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 		virtual void OnTransformChanged() override;
 
@@ -511,7 +526,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
 		virtual void OnTransformChanged() override;
 
@@ -674,7 +689,7 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const;
 
 		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
@@ -728,7 +743,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const override;
 
 
@@ -760,7 +775,7 @@ namespace flex
 
 		virtual void Initialize() override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		bool bInCart = false;
 		real liquidAmount = 0.0f;
@@ -809,7 +824,7 @@ namespace flex
 		void AddWave();
 		void RemoveWave(i32 index);
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		struct WaveInfo
 		{
@@ -992,7 +1007,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual bool ShouldSerialize() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -1178,7 +1193,7 @@ namespace flex
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void OnTransformChanged() override;
 
@@ -1251,7 +1266,7 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
@@ -1423,7 +1438,7 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
@@ -1556,7 +1571,7 @@ namespace flex
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		void SetStiffness(real stiffness);
 		void SetDamping(real damping);
@@ -1632,7 +1647,7 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject) override;
 
@@ -1763,7 +1778,7 @@ namespace flex
 		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,

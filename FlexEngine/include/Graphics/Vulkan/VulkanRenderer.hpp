@@ -85,7 +85,7 @@ namespace flex
 
 			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
-			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
+			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames(bool bEditorMaterials) const override;
 
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 

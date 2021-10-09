@@ -42,9 +42,21 @@ namespace flex
 
 		static GameObjectID FromString(const std::string& str);
 	};
+
+	struct EditorObjectID : public GUID
+	{
+		EditorObjectID();
+		EditorObjectID(u64 data1, u64 data2);
+
+		GameObject* Get();
+
+		static EditorObjectID FromString(const std::string& str);
+	};
+
 	using PrefabID = GUID;
 
 	extern const GUID InvalidGUID;
 	extern const GameObjectID InvalidGameObjectID;
+	extern const EditorObjectID InvalidEditorObjectID;
 	extern const GUID InvalidPrefabID;
 } // namespace flex

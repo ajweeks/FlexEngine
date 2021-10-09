@@ -28,6 +28,7 @@ namespace flex
 		void SetSelectedObject(const GameObjectID& gameObjectID, bool bSelectChildren = false);
 		void SetSelectedObjects(const std::vector<GameObjectID>& selectedObjects);
 		bool HasSelectedObject() const;
+		bool HasSelectedEditorObject() const;
 		void ToggleSelectedObject(const GameObjectID& gameObjectID);
 		void AddSelectedObject(const GameObjectID& gameObjectID);
 		void SelectAll();
@@ -36,11 +37,9 @@ namespace flex
 		glm::vec3 GetSelectedObjectsCenter();
 		void SelectNone();
 
-		real CalculateDeltaRotationFromGizmoDrag(
-			const glm::vec3& axis,
-			const glm::vec3& rayOrigin,
-			const glm::vec3& rayEnd,
-			glm::vec3* outIntersectionPoint);
+		void SetSelectedEditorObject(EditorObjectID* editorObjectID);
+		bool IsEditorObjectSelected(EditorObjectID* editorObjectID);
+		EditorObjectID GetSelectedEditorObject() const;
 
 		void UpdateGizmoVisibility();
 		void SetTransformState(TransformState state);
@@ -105,24 +104,22 @@ namespace flex
 		const std::string m_RotationGizmoTag = "rotation-gizmo";
 		const std::string m_ScaleGizmoTag = "scale-gizmo";
 
-		// True for one frame after the mouse has been released after being pressed at the same location
 		glm::vec2i m_LMBDownPos;
 
 		glm::vec3 m_SelectedObjectDragStartPos;
-		glm::quat m_SelectedObjectDragStartRot;
-		glm::vec3 m_DraggingGizmoScaleLast;
+		glm::vec3 m_DraggingGizmoScaleLast1;
+		glm::vec3 m_DraggingGizmoScaleLast2;
 		real m_DraggingGizmoOffset = 0.0f; // How far along the axis the cursor was when pressed
 		glm::vec3 m_PreviousIntersectionPoint;
 		bool m_DraggingGizmoOffsetNeedsRecalculation = true;
 		bool m_bFirstFrameDraggingRotationGizmo = false;
 		glm::vec3 m_AxisProjectedOnto;
 		glm::vec3 m_StartPointOnPlane;
-		glm::vec3 m_LatestRayPlaneIntersection;
 		i32 m_RotationGizmoWrapCount = 0;
 		real m_LastAngle = -1.0f;
-		glm::vec3 m_PlaneN;
 		glm::vec3 m_AxisOfRotation;
 		bool m_bLastDotPos = false;
+		real m_AngleSnap;
 
 		bool m_bShowGrid = false;
 
@@ -137,6 +134,7 @@ namespace flex
 		i32 m_HoveringAxisIndex = -1;
 
 		std::vector<GameObjectID> m_CurrentlySelectedObjectIDs;
+		EditorObjectID m_CurrentlySelectedEditorObjectID = InvalidEditorObjectID;
 
 		glm::vec3 m_SelectedObjectsCenterPos;
 		glm::quat m_SelectedObjectRotation;

@@ -9,6 +9,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/mat4x4.hpp>
 #include <glm/vec3.hpp>
 
+#include "BulletCollision/CollisionShapes/btCollisionShape.h"
 #include "BulletDynamics/Dynamics/btRigidBody.h"
 IGNORE_WARNINGS_POP
 
@@ -399,7 +400,15 @@ namespace flex
 			RigidBody* rigidBody = m_GameObject->GetRigidBody();
 			if (rigidBody != nullptr)
 			{
+				// Force rigid body to update to new position
 				rigidBody->SetWorldPosition(worldPosition);
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetLocalPosition(childTransform->GetLocalPosition());
 			}
 		}
 	}
@@ -426,7 +435,15 @@ namespace flex
 			RigidBody* rigidBody = m_GameObject->GetRigidBody();
 			if (rigidBody != nullptr)
 			{
+				// Force rigid body to update to new position
 				rigidBody->SetWorldPosition(worldPosition);
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetWorldPosition(worldPosition + childTransform->GetLocalPosition());
 			}
 		}
 	}
@@ -444,7 +461,15 @@ namespace flex
 			RigidBody* rigidBody = m_GameObject->GetRigidBody();
 			if (rigidBody != nullptr)
 			{
+				// Force rigid body to update to new rotation
 				rigidBody->SetWorldRotation(worldRotation);
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetLocalRotation(childTransform->GetLocalRotation());
 			}
 		}
 	}
@@ -471,7 +496,15 @@ namespace flex
 			RigidBody* rigidBody = m_GameObject->GetRigidBody();
 			if (rigidBody != nullptr)
 			{
+				// Force rigid body to update to new rotation
 				rigidBody->SetWorldRotation(worldRotation);
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetWorldRotation(worldRotation * childTransform->GetLocalRotation());
 			}
 		}
 	}
@@ -485,6 +518,20 @@ namespace flex
 		if (bUpdateChain)
 		{
 			ComputeValues();
+
+			RigidBody* rigidBody = m_GameObject->GetRigidBody();
+			if (rigidBody != nullptr)
+			{
+				// Force collision shape to update to new scale
+				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetLocalScale(childTransform->GetLocalScale());
+			}
 		}
 	}
 
@@ -506,6 +553,20 @@ namespace flex
 		if (bUpdateChain)
 		{
 			ComputeValues();
+
+			RigidBody* rigidBody = m_GameObject->GetRigidBody();
+			if (rigidBody != nullptr)
+			{
+				// Force collision shape to update to new scale
+				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
+			}
+
+			const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+			for (GameObject* child : children)
+			{
+				Transform* childTransform = child->GetTransform();
+				childTransform->SetWorldScale(worldScale * childTransform->GetLocalScale());
+			}
 		}
 	}
 
@@ -729,6 +790,11 @@ namespace flex
 
 	void Transform::MarkDirty()
 	{
+		if (bDirty)
+		{
+			return;
+		}
+
 		bDirty = true;
 
 		const std::vector<GameObject*>& children = m_GameObject->GetChildren();

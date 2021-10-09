@@ -1125,142 +1125,178 @@ namespace flex
 		return m_SkyboxData;
 	}
 
-	void BaseScene::DrawImGuiForSelectedObjects()
+	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
 	{
+		static bool bGameObjectTabActive = true;
+
 		ImGui::NewLine();
 
-		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
+		ImGui::BeginChild("Selected Object", ImVec2(0.0f, 500.0f), true);
 
-		if (g_Editor->HasSelectedObject())
+		if (bGameObjectTabActive)
 		{
-			// TODO: Draw common fields for all selected objects?
-			GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
-			if (selectedObject != nullptr)
+			if (g_Editor->HasSelectedObject())
 			{
-				selectedObject->DrawImGuiObjects();
+				// TODO: Draw common fields for all selected objects?
+				GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
+				if (selectedObject != nullptr)
+				{
+					selectedObject->DrawImGuiObjects(false);
+				}
+			}
+		}
+		else
+		{
+			if (g_Editor->HasSelectedEditorObject())
+			{
+				GameObject* selectedObject = GetEditorObject(g_Editor->GetSelectedEditorObject());
+				if (selectedObject != nullptr)
+				{
+					selectedObject->DrawImGuiObjects(true);
+				}
 			}
 		}
 
 		ImGui::EndChild();
-	}
 
-	void BaseScene::DrawImGuiForRenderObjectsList()
-	{
 		ImGui::NewLine();
 
-		ImGui::Text("Game Objects");
-
-		// Dropping objects onto this text makes them root objects
-		if (ImGui::BeginDragDropTarget())
+		if (ImGui::BeginTabBar("Hierarchy"))
 		{
-			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+			if (ImGui::BeginTabItem("Game Objects"))
 			{
-				i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+				bGameObjectTabActive = true;
 
-				std::vector<GameObjectID> draggedGameObjectsIDs;
-				draggedGameObjectsIDs.reserve(draggedObjectCount);
-				for (i32 i = 0; i < draggedObjectCount; ++i)
+				// Dropping objects onto this text makes them root objects
+				if (ImGui::BeginDragDropTarget())
 				{
-					draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
-				}
-
-				if (!draggedGameObjectsIDs.empty())
-				{
-					for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
+					const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+					if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
 					{
-						GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
-						GameObject* parent = draggedGameObject->GetParent();
-						GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
-						bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
-						// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
-						if (!bParentInSelection && parent)
+						i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+
+						std::vector<GameObjectID> draggedGameObjectsIDs;
+						draggedGameObjectsIDs.reserve(draggedObjectCount);
+						for (i32 i = 0; i < draggedObjectCount; ++i)
 						{
-							parent->RemoveChildImmediate(draggedGameObject->ID, false);
-							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+							draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
+						}
+
+						if (!draggedGameObjectsIDs.empty())
+						{
+							for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
+							{
+								GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+								GameObject* parent = draggedGameObject->GetParent();
+								GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
+								bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
+								// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
+								if (!bParentInSelection && parent)
+								{
+									parent->RemoveChildImmediate(draggedGameObject->ID, false);
+									g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+								}
+							}
 						}
 					}
+
+					const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+					if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+					{
+						PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+						InstantiatePrefab(prefabID);
+					}
+
+					ImGui::EndDragDropTarget();
 				}
-			}
 
-			const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
-			if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+				for (GameObject* rootObject : m_RootObjects)
+				{
+					if (DrawImGuiGameObjectNameAndChildren(rootObject, false))
+					{
+						break;
+					}
+				}
+
+				DoCreateGameObjectButton("Add object...", "Add object");
+
+				const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
+				if (bShowAddPointLightBtn)
+				{
+					if (ImGui::Button("Add point light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						PointLight* newPointLight = new PointLight(scene);
+						scene->AddRootObject(newPointLight);
+						newPointLight->Initialize();
+						newPointLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newPointLight->ID);
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Add spot light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						SpotLight* newSpotLight = new SpotLight(scene);
+						scene->AddRootObject(newSpotLight);
+						newSpotLight->Initialize();
+						newSpotLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newSpotLight->ID);
+					}
+
+					if (ImGui::Button("Add area light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						AreaLight* newAreaLight = new AreaLight(scene);
+						scene->AddRootObject(newAreaLight);
+						newAreaLight->Initialize();
+						newAreaLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newAreaLight->ID);
+					}
+				}
+
+				const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
+				if (bShowAddDirLightBtn)
+				{
+					if (bShowAddPointLightBtn)
+					{
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Add directional light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						DirectionalLight* newDiright = new DirectionalLight();
+						scene->AddRootObject(newDiright);
+						newDiright->Initialize();
+						newDiright->PostInitialize();
+
+						g_Editor->SetSelectedObject(newDiright->ID);
+					}
+				}
+
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem("Editor Objects"))
 			{
-				PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
-				InstantiatePrefab(prefabID);
+				bGameObjectTabActive = false;
+
+				for (GameObject* editorObject : m_EditorObjects)
+				{
+					if (DrawImGuiGameObjectNameAndChildren(editorObject, true))
+					{
+						break;
+					}
+				}
+
+				ImGui::EndTabItem();
 			}
 
-			ImGui::EndDragDropTarget();
-		}
-
-		std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-		for (GameObject* rootObject : rootObjects)
-		{
-			if (DrawImGuiGameObjectNameAndChildren(rootObject))
-			{
-				break;
-			}
-		}
-
-		DoCreateGameObjectButton("Add object...", "Add object");
-
-		const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
-		if (bShowAddPointLightBtn)
-		{
-			if (ImGui::Button("Add point light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				PointLight* newPointLight = new PointLight(scene);
-				scene->AddRootObject(newPointLight);
-				newPointLight->Initialize();
-				newPointLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newPointLight->ID);
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Add spot light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				SpotLight* newSpotLight = new SpotLight(scene);
-				scene->AddRootObject(newSpotLight);
-				newSpotLight->Initialize();
-				newSpotLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newSpotLight->ID);
-			}
-
-			if (ImGui::Button("Add area light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				AreaLight* newAreaLight = new AreaLight(scene);
-				scene->AddRootObject(newAreaLight);
-				newAreaLight->Initialize();
-				newAreaLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newAreaLight->ID);
-			}
-		}
-
-		const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
-		if (bShowAddDirLightBtn)
-		{
-			if (bShowAddPointLightBtn)
-			{
-				ImGui::SameLine();
-			}
-
-			if (ImGui::Button("Add directional light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				DirectionalLight* newDiright = new DirectionalLight();
-				scene->AddRootObject(newDiright);
-				newDiright->Initialize();
-				newDiright->PostInitialize();
-
-				g_Editor->SetSelectedObject(newDiright->ID);
-			}
+			ImGui::EndTabBar();
 		}
 	}
 
@@ -1438,7 +1474,7 @@ namespace flex
 		g_Editor->SetSelectedObject(newGameObject->ID);
 	}
 
-	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject)
+	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject, bool bDrawingEditorObjects)
 	{
 		if (!gameObject->IsVisibleInSceneExplorer())
 		{
@@ -1447,14 +1483,14 @@ namespace flex
 
 		ImGui::PushID(gameObject);
 
-		bool result = DrawImGuiGameObjectNameAndChildrenInternal(gameObject);
+		bool result = DrawImGuiGameObjectNameAndChildrenInternal(gameObject, bDrawingEditorObjects);
 
 		ImGui::PopID();
 
 		return result;
 	}
 
-	bool BaseScene::DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject)
+	bool BaseScene::DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject, bool bDrawingEditorObjects)
 	{
 		// ImGui::PushID will have been called so ImGui calls in this function don't need to be qualified to be unique
 
@@ -1462,7 +1498,7 @@ namespace flex
 
 		std::string objectName = gameObject->GetName();
 
-		bool bSelected = g_Editor->IsObjectSelected(gameObject->ID);
+		bool bSelected = bDrawingEditorObjects ? g_Editor->IsEditorObjectSelected((EditorObjectID*)&gameObject->ID) : g_Editor->IsObjectSelected(gameObject->ID);
 
 		bool bForceTreeNodeOpen = false;
 
@@ -1536,55 +1572,62 @@ namespace flex
 		{
 			if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 			{
-				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
+				if (bDrawingEditorObjects)
 				{
-					g_Editor->ToggleSelectedObject(gameObject->ID);
-				}
-				else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
-				{
-					const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
-					if (selectedObjectIDs.empty() ||
-						(selectedObjectIDs.size() == 1 && selectedObjectIDs[0] == gameObject->ID))
-					{
-						g_Editor->ToggleSelectedObject(gameObject->ID);
-					}
-					else
-					{
-						std::vector<GameObject*> objectsToSelect;
-
-						GameObject* objectA = GetGameObject(selectedObjectIDs[selectedObjectIDs.size() - 1]);
-						GameObject* objectB = gameObject;
-
-						objectA->AddSelfAndChildrenToVec(objectsToSelect);
-						objectB->AddSelfAndChildrenToVec(objectsToSelect);
-
-						if (objectA->GetParent() == objectB->GetParent() &&
-							objectA != objectB)
-						{
-							// Ensure A comes before B
-							if (objectA->GetSiblingIndex() > objectB->GetSiblingIndex())
-							{
-								std::swap(objectA, objectB);
-							}
-
-							const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
-							auto objectBIter = FindIter(objectALaterSiblings, objectB);
-							assert(objectBIter != objectALaterSiblings.end());
-							for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
-							{
-								(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
-							}
-						}
-
-						for (GameObject* objectToSelect : objectsToSelect)
-						{
-							g_Editor->AddSelectedObject(objectToSelect->ID);
-						}
-					}
+					g_Editor->SetSelectedEditorObject((EditorObjectID*)&gameObject->ID);
 				}
 				else
 				{
-					g_Editor->SetSelectedObject(gameObject->ID);
+					if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
+					{
+						g_Editor->ToggleSelectedObject(gameObject->ID);
+					}
+					else if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT))
+					{
+						const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+						if (selectedObjectIDs.empty() ||
+							(selectedObjectIDs.size() == 1 && selectedObjectIDs[0] == gameObject->ID))
+						{
+							g_Editor->ToggleSelectedObject(gameObject->ID);
+						}
+						else
+						{
+							std::vector<GameObject*> objectsToSelect;
+
+							GameObject* objectA = GetGameObject(selectedObjectIDs[selectedObjectIDs.size() - 1]);
+							GameObject* objectB = gameObject;
+
+							objectA->AddSelfAndChildrenToVec(objectsToSelect);
+							objectB->AddSelfAndChildrenToVec(objectsToSelect);
+
+							if (objectA->GetParent() == objectB->GetParent() &&
+								objectA != objectB)
+							{
+								// Ensure A comes before B
+								if (objectA->GetSiblingIndex() > objectB->GetSiblingIndex())
+								{
+									std::swap(objectA, objectB);
+								}
+
+								const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
+								auto objectBIter = FindIter(objectALaterSiblings, objectB);
+								assert(objectBIter != objectALaterSiblings.end());
+								for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
+								{
+									(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
+								}
+							}
+
+							for (GameObject* objectToSelect : objectsToSelect)
+							{
+								g_Editor->AddSelectedObject(objectToSelect->ID);
+							}
+						}
+					}
+					else
+					{
+						g_Editor->SetSelectedObject(gameObject->ID);
+					}
 				}
 			}
 
@@ -1718,7 +1761,7 @@ namespace flex
 				// Don't cache results since children can change during this recursive call
 				for (GameObject* child : gameObject->GetChildren())
 				{
-					if (DrawImGuiGameObjectNameAndChildren(child))
+					if (DrawImGuiGameObjectNameAndChildren(child, bDrawingEditorObjects))
 					{
 						// If parent-child tree changed then early out
 
@@ -1796,11 +1839,21 @@ namespace flex
 	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID) const
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
-		if (iter == m_GameObjectLUT.end())
+		if (iter != m_GameObjectLUT.end())
 		{
-			return nullptr;
+			return iter->second;
 		}
-		return iter->second;
+		return nullptr;
+	}
+
+	GameObject* BaseScene::GetEditorObject(const EditorObjectID& editorObjectID) const
+	{
+		auto iter = m_EditorGameObjectLUT.find(editorObjectID);
+		if (iter != m_EditorGameObjectLUT.end())
+		{
+			return iter->second;
+		}
+		return nullptr;
 	}
 
 	bool BaseScene::DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly /* = false */)
@@ -2173,6 +2226,45 @@ namespace flex
 		}
 	}
 
+	void BaseScene::RegisterEditorGameObject(GameObject* gameObject)
+	{
+		EditorObjectID* editorObjectID = (EditorObjectID*)&gameObject->ID;
+		auto iter = m_EditorGameObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorGameObjectLUT.end())
+		{
+			assert(iter->second == gameObject);
+		}
+		m_EditorGameObjectLUT[*editorObjectID] = gameObject;
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			RegisterEditorGameObject(child);
+		}
+	}
+
+	void BaseScene::UnregisterEditorGameObject(EditorObjectID* editorObjectID)
+	{
+		auto iter = m_EditorGameObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorGameObjectLUT.end())
+		{
+			m_EditorGameObjectLUT.erase(iter);
+		}
+	}
+
+	void BaseScene::UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID)
+	{
+		GameObject* gameObject = GetEditorObject(*editorObjectID);
+		UnregisterEditorGameObject(editorObjectID);
+
+		if (gameObject != nullptr)
+		{
+			for (GameObject* child : gameObject->m_Children)
+			{
+				UnregisterEditorGameObject((EditorObjectID*)&child->ID);
+			}
+		}
+	}
+
 	GameObject* BaseScene::AddChildObject(GameObject* parent, GameObject* child)
 	{
 		if (parent == nullptr || child == nullptr)
@@ -2236,6 +2328,35 @@ namespace flex
 		return newSibling;
 	}
 
+	GameObject* BaseScene::AddEditorObjectImmediate(GameObject* editorObject)
+	{
+		m_EditorObjects.push_back(editorObject);
+
+		RegisterEditorGameObject(editorObject);
+
+		return editorObject;
+	}
+
+	void BaseScene::RemoveEditorObjectImmediate(GameObject* editorObject)
+	{
+		for (auto iter = m_EditorObjects.begin(); iter != m_EditorObjects.end(); ++iter)
+		{
+			if ((*iter)->ID == editorObject->ID)
+			{
+				GameObject* gameObject = *iter;
+
+				UnregisterEditorGameObject((EditorObjectID*)&gameObject->ID);
+
+				gameObject->Destroy();
+				delete gameObject;
+
+				m_EditorObjects.erase(iter);
+
+				break;
+			}
+		}
+	}
+
 	void BaseScene::RemoveAllObjects()
 	{
 		for (GameObject* rootObject : m_RootObjects)
@@ -2259,9 +2380,25 @@ namespace flex
 		}
 
 		m_GameObjectLUT.clear();
-		m_RootObjects.clear();
 
 		g_Renderer->RenderObjectStateChanged();
+	}
+
+	void BaseScene::RemoveAllEditorObjectsImmediate()
+	{
+		auto iter = m_EditorObjects.begin();
+		while (iter != m_EditorObjects.end())
+		{
+			GameObject* gameObject = *iter;
+
+			UnregisterEditorGameObject((EditorObjectID*)&gameObject->ID);
+
+			// Recurses down child hierarchy
+			gameObject->Destroy();
+			delete gameObject;
+
+			iter = m_EditorObjects.erase(iter);
+		}
 	}
 
 	void BaseScene::RemoveObject(const GameObjectID& gameObjectID, bool bDestroy)
@@ -2527,6 +2664,11 @@ namespace flex
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
 		return m_RootObjects;
+	}
+
+	std::vector<GameObject*>& BaseScene::GetEditorObjects()
+	{
+		return m_EditorObjects;
 	}
 
 	void BaseScene::GetInteractableObjects(std::vector<GameObject*>& interactableObjects)

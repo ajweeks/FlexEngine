@@ -39,7 +39,7 @@ namespace flex
 				debugMatCreateInfo.shaderName = "colour";
 				debugMatCreateInfo.name = debugMatName;
 				debugMatCreateInfo.persistent = true;
-				debugMatCreateInfo.visibleInEditor = true;
+				debugMatCreateInfo.bEditorMaterial = true;
 				debugMatCreateInfo.bDynamic = true;
 				debugMatCreateInfo.bSerializable = false;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);

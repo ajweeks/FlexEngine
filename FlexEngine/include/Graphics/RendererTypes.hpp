@@ -565,7 +565,7 @@ namespace flex
 		bool bSerializable = true;
 
 		bool persistent = false;
-		bool visibleInEditor = true;
+		bool bEditorMaterial = false;
 	};
 
 	struct Texture
@@ -792,7 +792,7 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		bool persistent = false;
-		bool visibleInEditor = false;
+		bool bEditorMaterial = false;
 
 		bool bSerializable = true;
 

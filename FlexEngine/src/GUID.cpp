@@ -10,6 +10,7 @@ namespace flex
 {
 	const GUID InvalidGUID = {};
 	const GameObjectID InvalidGameObjectID = {};
+	const EditorObjectID InvalidEditorObjectID = {};
 	const GUID InvalidPrefabID = InvalidGUID;
 
 	GUID::GUID()
@@ -192,8 +193,37 @@ namespace flex
 
 	GameObjectID GameObjectID::FromString(const std::string& str)
 	{
-		// TODO: Avoid copy
 		GUID guid = GUID::FromString(str);
 		return *(GameObjectID*)&guid;
+	}
+
+	EditorObjectID::EditorObjectID() :
+		GUID()
+	{
+	}
+
+	EditorObjectID::EditorObjectID(u64 data1, u64 data2) :
+		GUID(data1, data2)
+	{
+	}
+
+	GameObject* EditorObjectID::Get()
+	{
+		if (!IsValid())
+		{
+			return nullptr;
+		}
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (scene != nullptr)
+		{
+			return scene->GetEditorObject(*this);
+		}
+		return nullptr;
+	}
+
+	EditorObjectID EditorObjectID::FromString(const std::string& str)
+	{
+		GUID guid = GUID::FromString(str);
+		return *(EditorObjectID*)&guid;
 	}
 } // namespace flex

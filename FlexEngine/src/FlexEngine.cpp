@@ -1436,8 +1436,7 @@ namespace flex
 
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
 
-				currentScene->DrawImGuiForSelectedObjects();
-				currentScene->DrawImGuiForRenderObjectsList();
+				currentScene->DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -2503,9 +2502,8 @@ namespace flex
 		const glm::vec3& startPos,
 		const glm::vec3& cameraForward,
 		real& inOutOffset,
-		bool recalculateOffset,
-		glm::vec3& inOutPrevIntersectionPoint,
-		glm::vec3* outTrueIntersectionPoint)
+		bool bRecalculateOffset,
+		glm::vec3& inOutPrevIntersectionPoint)
 	{
 		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
 		glm::vec3 planeN = planeNorm;
@@ -2517,11 +2515,8 @@ namespace flex
 		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
 		{
 			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (outTrueIntersectionPoint)
-			{
-				*outTrueIntersectionPoint = intersectionPoint;
-			}
-			if (recalculateOffset) // Mouse was clicked or wrapped
+
+			if (bRecalculateOffset) // Mouse was clicked or wrapped
 			{
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
 			}

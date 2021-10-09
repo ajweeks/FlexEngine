@@ -64,6 +64,7 @@ namespace flex
 		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
+		std::vector<GameObject*>& GetEditorObjects();
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
@@ -71,8 +72,14 @@ namespace flex
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
 		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
 		GameObject* AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling);
+
+		// Editor objects are objects not normally shown in the scene hierarchy, or searched by standard functions
+		GameObject* AddEditorObjectImmediate(GameObject* editorObject);
+		void RemoveEditorObjectImmediate(GameObject* editorObject);
+
 		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
 		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
+		void RemoveAllEditorObjectsImmediate();
 		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
 		void RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
@@ -138,19 +145,19 @@ namespace flex
 
 		const SkyboxData& GetSkyboxData() const;
 
-		void DrawImGuiForSelectedObjects();
-		void DrawImGuiForRenderObjectsList();
+		void DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
-		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject, bool bDrawingEditorObjects);
 		// Returns true if the parent-child tree changed during this call
-		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
+		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject, bool bDrawingEditorObjects);
 
 		bool DoNewGameObjectTypeList();
 		bool DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr);
 
 		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
+		GameObject* GetEditorObject(const EditorObjectID& editorObjectID) const;
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
 
@@ -186,6 +193,10 @@ namespace flex
 		void UnregisterGameObject(const GameObjectID& gameObjectID);
 		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID);
 
+		void RegisterEditorGameObject(GameObject* gameObject);
+		void UnregisterEditorGameObject(EditorObjectID* editorObjectID);
+		void UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID);
+
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
 
 		i32 m_SceneFileVersion = 1;
@@ -199,6 +210,8 @@ namespace flex
 
 		std::map<GameObjectID, GameObject*> m_GameObjectLUT;
 		std::vector<GameObject*> m_RootObjects;
+		std::map<EditorObjectID, GameObject*> m_EditorGameObjectLUT;
+		std::vector<GameObject*> m_EditorObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;

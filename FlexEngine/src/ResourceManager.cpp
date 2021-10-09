@@ -1590,7 +1590,7 @@ namespace flex
 				{
 					i32 matCount = g_Renderer->GetMaterialCount();
 					while (!g_Renderer->MaterialExists(selectedMaterialID) ||
-						(!g_Renderer->GetMaterial(selectedMaterialID)->visibleInEditor && selectedMaterialID < (u32)(matCount - 1)))
+						(!g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial && selectedMaterialID < (u32)(matCount - 1)))
 					{
 						++selectedMaterialID;
 					}
@@ -1745,7 +1745,7 @@ namespace flex
 
 				ImGui::Checkbox("Dynamic", &material->bDynamic);
 				ImGui::Checkbox("Persistent", &material->persistent);
-				ImGui::Checkbox("Visible in editor", &material->visibleInEditor);
+				ImGui::Checkbox("Visible in editor", &material->bEditorMaterial);
 
 				ImGui::NextColumn();
 
@@ -1848,7 +1848,7 @@ namespace flex
 				}
 
 				// Only non-editor materials can be deleted
-				if (material->visibleInEditor)
+				if (material->bEditorMaterial)
 				{
 					ImGui::SameLine();
 

@@ -22,7 +22,7 @@ namespace flex
 		virtual void Update() override;
 		virtual void FixedUpdate() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);

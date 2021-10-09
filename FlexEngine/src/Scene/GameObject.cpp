@@ -462,7 +462,7 @@ namespace flex
 	{
 	}
 
-	void GameObject::DrawImGuiObjects()
+	void GameObject::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		if (!IsVisibleInSceneExplorer())
 		{
@@ -471,12 +471,12 @@ namespace flex
 
 		ImGui::PushID(this);
 
-		DrawImGuiForSelfInternal();
+		DrawImGuiForSelfInternal(bDrawingEditorObjects);
 
 		ImGui::PopID();
 	}
 
-	void GameObject::DrawImGuiForSelfInternal()
+	void GameObject::DrawImGuiForSelfInternal(bool bDrawingEditorObjects)
 	{
 		// ImGui::PushID will have already been called, making names not need to be quailfied for uniqueness
 
@@ -550,9 +550,12 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
-			glm::vec3 translation = m_Transform.GetLocalPosition();
-			glm::vec3 rotation = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-			glm::vec3 pScale = m_Transform.GetLocalScale();
+			static bool bWorldSpace = false;
+			ImGui::Checkbox("World Space", &bWorldSpace);
+
+			glm::vec3 translation = bWorldSpace ? m_Transform.GetWorldPosition() : m_Transform.GetLocalPosition();
+			glm::vec3 rotation = glm::degrees((glm::eulerAngles(bWorldSpace ? m_Transform.GetWorldRotation() : m_Transform.GetLocalRotation())));
+			glm::vec3 pScale = bWorldSpace ? m_Transform.GetWorldScale() : m_Transform.GetLocalScale();
 			glm::vec3 scale = pScale;
 
 			bool bValueChanged = false;
@@ -599,12 +602,22 @@ namespace flex
 			if (bValueChanged)
 			{
 				bAnyPropertyChanged = true;
-				m_Transform.SetLocalPosition(translation, false);
 
 				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
 
-				m_Transform.SetLocalRotation(rotQuat, false);
-				m_Transform.SetLocalScale(scale, true);
+				if (bWorldSpace)
+				{
+					m_Transform.SetWorldPosition(translation, false);
+					m_Transform.SetWorldRotation(rotQuat, false);
+					m_Transform.SetWorldScale(scale, true);
+				}
+				else
+				{
+					m_Transform.SetLocalPosition(translation, false);
+					m_Transform.SetLocalRotation(rotQuat, false);
+					m_Transform.SetLocalScale(scale, true);
+				}
+
 				SetUseUniformScale(m_bUniformScale, false);
 
 				//if (m_RigidBody != nullptr)
@@ -621,7 +634,7 @@ namespace flex
 
 		if (m_Mesh != nullptr)
 		{
-			bAnyPropertyChanged = g_Renderer->DrawImGuiForGameObject(this) || bAnyPropertyChanged;
+			bAnyPropertyChanged = g_Renderer->DrawImGuiForGameObject(this, bDrawingEditorObjects) || bAnyPropertyChanged;
 		}
 		else
 		{
@@ -2551,8 +2564,28 @@ namespace flex
 		m_bUniformScale = bUseUniformScale;
 		if (m_bUniformScale && bEnforceImmediately)
 		{
-			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
+			EnforceUniformScale();
 		}
+	}
+
+	void GameObject::EnforceUniformScale()
+	{
+		glm::vec3 localScale = m_Transform.GetLocalScale();
+		real scale;
+		if (localScale.x == localScale.y && localScale.x != localScale.z)
+		{
+			scale = localScale.z;
+		}
+		else if (localScale.y == localScale.z && localScale.y != localScale.x)
+		{
+			scale = localScale.x;
+		}
+		else
+		{
+			scale = localScale.y;
+		}
+
+		m_Transform.SetLocalScale(glm::vec3(scale));
 	}
 
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
@@ -3156,7 +3189,7 @@ namespace flex
 		//probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
 		//probeCaptureMatCreateInfo.enableBRDFLUT = true;
 		//probeCaptureMatCreateInfo.persistent = true;
-		//probeCaptureMatCreateInfo.visibleInEditor = false;
+		//probeCaptureMatCreateInfo.bEditorMaterial = false;
 		//probeCaptureMatCreateInfo.sampledFrameBuffers = {
 		//	{ "positionMetallicFrameBufferSampler", nullptr },
 		//	{ "normalRoughnessFrameBufferSampler", nullptr },
@@ -3379,9 +3412,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void DirectionalLight::DrawImGuiObjects()
+	void DirectionalLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		static const ImGuiColorEditFlags colorEditFlags =
 			ImGuiColorEditFlags_NoInputs |
@@ -3612,9 +3645,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void PointLight::DrawImGuiObjects()
+	void PointLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (pointLightID != InvalidPointLightID)
 		{
@@ -3827,9 +3860,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void SpotLight::DrawImGuiObjects()
+	void SpotLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (spotLightID != InvalidSpotLightID)
 		{
@@ -4064,9 +4097,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void AreaLight::DrawImGuiObjects()
+	void AreaLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (areaLightID != InvalidAreaLightID)
 		{
@@ -4226,9 +4259,9 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Cart::DrawImGuiObjects()
+	void Cart::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGui::TreeNode("Cart"))
 		{
@@ -4522,9 +4555,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void EngineCart::DrawImGuiObjects()
+	void EngineCart::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGui::TreeNode("Engine Cart"))
 		{
@@ -4640,9 +4673,9 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::DrawImGuiObjects()
+	void MobileLiquidBox::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGui::TreeNode("Mobile liquid box"))
 		{
@@ -5711,9 +5744,9 @@ namespace flex
 		return result;
 	}
 
-	void GerstnerWave::DrawImGuiObjects()
+	void GerstnerWave::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
 
@@ -6329,9 +6362,9 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void Wire::DrawImGuiObjects()
+	void Wire::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		bool bRegenPoints = false;
 
@@ -8137,9 +8170,9 @@ namespace flex
 		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
 	}
 
-	void ParticleSystem::DrawImGuiObjects()
+	void ParticleSystem::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		static const ImGuiColorEditFlags colorEditFlags =
 			ImGuiColorEditFlags_NoInputs |
@@ -8619,9 +8652,9 @@ namespace flex
 		return bValueChanged;
 	}
 
-	void TerrainGenerator::DrawImGuiObjects()
+	void TerrainGenerator::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		u32 loadedChunkCount = (u32)m_Meshes.size();
 		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
@@ -10672,21 +10705,21 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void SpringObject::DrawImGuiObjects()
+	void SpringObject::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Spring");
-		m_SpringSim->DrawImGuiObjects();
+		m_SpringSim->DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Bobber");
-		m_Bobber->DrawImGuiObjects();
+		m_Bobber->DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Origin");
-		m_Bobber->DrawImGuiObjects();
+		m_Bobber->DrawImGuiObjects(bDrawingEditorObjects);
 
 	}
 
@@ -11633,9 +11666,9 @@ namespace flex
 		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
 
-	void SoftBody::DrawImGuiObjects()
+	void SoftBody::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGuiExt::SliderUInt("Solver iteration count", &m_SolverIterationCount, 1, 60);
 
@@ -12268,9 +12301,9 @@ namespace flex
 		FLEX_UNUSED(parentObject);
 	}
 
-	void Vehicle::DrawImGuiObjects()
+	void Vehicle::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
 
@@ -12609,9 +12642,9 @@ namespace flex
 		}
 	}
 
-	void Road::DrawImGuiObjects()
+	void Road::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGuiExt::DragUInt("Quad count per segment", &m_QuadCountPerSegment, 0.1f, 1u, 32u))
 		{
