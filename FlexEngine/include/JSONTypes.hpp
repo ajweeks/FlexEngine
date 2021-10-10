@@ -79,6 +79,8 @@ namespace flex
 		const JSONObject& GetObject(const std::string& label) const;
 		bool TryGetObject(const std::string& label, JSONObject& value) const;
 
+		bool TryGetValueOfType(const char* label, void* valuePtr, ValueType type);
+
 		std::string ToString(i32 tabCount = 0) const;
 
 		static JSONObject s_EmptyObject;
@@ -108,6 +110,8 @@ namespace flex
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
 		explicit JSONValue(const GUID& inGUIDValue);
+
+		static JSONValue FromRawPtr(void* valuePtr, ValueType type);
 
 		i32 AsInt() const;
 		u32 AsUInt() const;

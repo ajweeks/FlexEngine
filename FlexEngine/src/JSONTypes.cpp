@@ -156,6 +156,30 @@ namespace flex
 	{
 	}
 
+	JSONValue JSONValue::FromRawPtr(void* valuePtr, ValueType type)
+	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return JSONValue((const char*)valuePtr);
+		case ValueType::INT:
+			return JSONValue(*(i32*)valuePtr);
+		case ValueType::UINT:
+			return JSONValue(*(u32*)valuePtr);
+		case ValueType::LONG:
+			return JSONValue(*(i64*)valuePtr);
+		case ValueType::ULONG:
+			return JSONValue(*(u64*)valuePtr);
+		case ValueType::FLOAT:
+			return JSONValue(*(real*)valuePtr);
+		case ValueType::BOOL:
+			return JSONValue(*(bool*)valuePtr);
+		default:
+			PrintError("FromRawPtr was called with invalid type\n");
+			return JSONValue();
+		}
+	}
+
 	i32 JSONValue::AsInt() const
 	{
 		switch (type)
@@ -670,6 +694,30 @@ namespace flex
 			return true;
 		}
 		return false;
+	}
+
+	bool JSONObject::TryGetValueOfType(const char* label, void* valuePtr, ValueType type)
+	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return TryGetString(label, *(std::string*)valuePtr);
+		case ValueType::INT:
+			return TryGetInt(label, *(i32*)valuePtr);
+		case ValueType::UINT:
+			return TryGetUInt(label, *(u32*)valuePtr);
+		case ValueType::LONG:
+			return TryGetLong(label, *(i64*)valuePtr);
+		case ValueType::ULONG:
+			return TryGetULong(label, *(u64*)valuePtr);
+		case ValueType::FLOAT:
+			return TryGetFloat(label, *(real*)valuePtr);
+		case ValueType::BOOL:
+			return TryGetBool(label, *(bool*)valuePtr);
+		default:
+			PrintError("Unhandled type passed to JSONObject::TryGetValueOfType\n");
+			return false;
+		}
 	}
 
 
