@@ -43,4 +43,6 @@
 #define UI_WINDOW_CACHE_LOCATION					SAVED_DIRECTORY "ui_window_cache.json"
 #define SHADER_CHECKSUM_LOCATION					SAVED_DIRECTORY "vk_shader_checksum.dat"
 #define WINDOW_CONFIG_LOCATION						SAVED_DIRECTORY "window_settings.json"
+#define PLAYER_CONFIG_LOCATION						SAVED_DIRECTORY "player_settings.json"
+
 #define USER_INVENTORY_LOCATION						SAVE_FILE_DIRECTORY "user_inventory.json"

@@ -41,8 +41,16 @@ namespace flex
 {
 	PlayerController::PlayerController() :
 		m_ActionCallback(this, &PlayerController::OnActionEvent),
-		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent)
+		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent),
+		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION)
 	{
+		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed);
+		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
+		m_ConfigFile.RegisterProperty("rotate h speed third person", &m_RotateHSpeedThirdPerson);
+		m_ConfigFile.RegisterProperty("rotate v speed", &m_RotateVSpeed);
+		m_ConfigFile.RegisterProperty("mouse rotate h speed", &m_MouseRotateHSpeed, 0.01f, 10.0f);
+		m_ConfigFile.RegisterProperty("mouse rotate v speed", &m_MouseRotateVSpeed, 0.01f, 10.0f);
+		m_ConfigFile.RegisterProperty("invert move v", &m_bInvertMouseV);
 	}
 
 	PlayerController::~PlayerController()
@@ -63,6 +71,8 @@ namespace flex
 
 		m_PlaceItemAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "drip-01.wav");
 		m_PlaceItemFailureAudioID = AudioManager::AddAudioSource(SFX_DIRECTORY "spook-01.wav");
+
+		LoadConfigFile();
 	}
 
 	void PlayerController::Destroy()
@@ -874,6 +884,17 @@ namespace flex
 			ImGui::Text("Seconds attempting to turn: %.5f", m_SecondsAttemptingToTurn);
 			ImGui::Text("Turning dir: %s", m_DirTurning == TurningDir::LEFT ? "left" : m_DirTurning == TurningDir::RIGHT ? "right" : "none");
 
+			ConfigFile::Request request = m_ConfigFile.DrawImGuiObjects();
+			switch (request)
+			{
+			case ConfigFile::Request::SERIALIZE:
+				SerializeConfigFile();
+				break;
+			case ConfigFile::Request::RELOAD:
+				LoadConfigFile();
+				break;
+			}
+
 			ImGui::TreePop();
 		}
 	}
@@ -949,6 +970,16 @@ namespace flex
 			m_DirTurning = TurningDir::NONE;
 			m_Player->BeginTurnTransition();
 		}
+	}
+
+	void PlayerController::LoadConfigFile()
+	{
+		m_ConfigFile.Deserialize();
+	}
+
+	void PlayerController::SerializeConfigFile()
+	{
+		m_ConfigFile.Serialize();
 	}
 
 	void PlayerController::UpdateMode()
@@ -1127,11 +1158,11 @@ namespace flex
 				Transform* transform = m_Player->GetTransform();
 				glm::vec3 up = transform->GetUp();
 				glm::quat rot = transform->GetLocalRotation();
-				real angle = lookH * m_MouseRotateHSpeed;
+				real angle = lookH * m_MouseRotateHSpeed * 0.001f;
 				rot = glm::rotate(rot, angle, up);
 				transform->SetWorldRotation(rot);
 
-				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f));
+				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * 0.001f * (m_bInvertMouseV ? -1.0f : 1.0f));
 
 				return EventReply::CONSUMED;
 			}

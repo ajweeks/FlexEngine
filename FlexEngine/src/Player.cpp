@@ -346,6 +346,8 @@ namespace flex
 			}
 			ImGui::Unindent();
 
+			m_Controller->DrawImGuiObjects();
+
 			ImGui::TreePop();
 		}
 	}

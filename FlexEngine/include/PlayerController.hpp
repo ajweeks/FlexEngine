@@ -2,6 +2,7 @@
 
 #include "Helpers.hpp" // For TurningDir
 #include "Callbacks/InputCallbacks.hpp"
+#include "ConfigFile.hpp"
 #include "Transform.hpp"
 
 class btBoxShape;
@@ -31,6 +32,9 @@ namespace flex
 
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
+
+		void LoadConfigFile();
+		void SerializeConfigFile();
 
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<PlayerController> m_ActionCallback;
@@ -86,6 +90,8 @@ namespace flex
 		AudioSourceID m_PlaceItemFailureAudioID = InvalidAudioSourceID;
 
 		btBoxShape* m_ItemPlacementBoundingBoxShape = nullptr;
+
+		ConfigFile m_ConfigFile;
 
 		enum class Mode
 		{
