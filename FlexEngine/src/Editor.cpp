@@ -876,7 +876,7 @@ namespace flex
 				angle = glm::round(angle / m_AngleSnap) * m_AngleSnap;
 				angle += currentAngleExtra;
 
-				real dAngle = (angle - m_LastAngle);
+				//real dAngle = (angle - m_LastAngle);
 				//Print("   cur: %.2f, extra: %.2f, angle: %.2f, dAngle: %.2f\n", glm::degrees(objAngle), glm::degrees(currentAngleExtra), glm::degrees(angle), glm::degrees(dAngle));
 			}
 			else
