@@ -1561,28 +1561,28 @@ namespace flex
 										}
 
 										// TODO: Do some type checking using func->argTypes
-										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
+										ValueType argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
 										switch (argType)
 										{
-										case JSONValue::Type::INT:
+										case ValueType::INT:
 											args.emplace_back(Variant(ParseInt(argStr)));
 											break;
-										case JSONValue::Type::UINT:
+										case ValueType::UINT:
 											args.emplace_back(Variant(ParseUInt(argStr)));
 											break;
-										case JSONValue::Type::LONG:
+										case ValueType::LONG:
 											args.emplace_back(Variant(ParseLong(argStr)));
 											break;
-										case JSONValue::Type::ULONG:
+										case ValueType::ULONG:
 											args.emplace_back(Variant(ParseULong(argStr)));
 											break;
-										case JSONValue::Type::FLOAT:
+										case ValueType::FLOAT:
 											args.emplace_back(Variant(ParseFloat(argStr)));
 											break;
-										case JSONValue::Type::BOOL:
+										case ValueType::BOOL:
 											args.emplace_back(Variant(ParseBool(argStr)));
 											break;
-										case JSONValue::Type::STRING:
+										case ValueType::STRING:
 											argStr = Erase(argStr, '\"');
 											if (argStr.empty())
 											{

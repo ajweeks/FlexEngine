@@ -119,7 +119,7 @@ namespace flex
 			return true;
 		}
 
-		static bool Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, ValueType val, ValueType exp, const char* msg)
 		{
 			return Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
 		}
@@ -159,7 +159,7 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::STRING);
 			EXPECT(jsonObj.fields[0].value.strValue.c_str(), "strValue");
 		}
 		JSON_UNIT_TEST_END;
@@ -189,10 +189,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::OBJECT);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::OBJECT);
 			EXPECT((u64)jsonObj.fields[0].value.objectValue.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].label.c_str(), "sublabel");
-			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.type, ValueType::STRING);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.strValue.c_str(), "childValue1");
 		}
 		JSON_UNIT_TEST_END;
@@ -273,9 +273,9 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)4u);
-			EXPECT(fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(fields[0].value.type, ValueType::STRING);
 			EXPECT(fields[0].value.strValue.c_str(), "pristine");
 		}
 		JSON_UNIT_TEST_END;
@@ -299,10 +299,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)5u);
 			// Smallest possible integer type that can store all values
-			EXPECT(fields[0].value.type, JSONValue::Type::INT);
+			EXPECT(fields[0].value.type, ValueType::INT);
 			EXPECT(fields[0].value.AsInt(), 12345);
 			EXPECT(fields[1].value.AsInt(), 6789);
 			EXPECT(fields[2].value.AsInt(), 9999);
@@ -330,10 +330,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)5u);
 			// Smallest possible integer type that can store all values
-			EXPECT(fields[0].value.type, JSONValue::Type::LONG);
+			EXPECT(fields[0].value.type, ValueType::LONG);
 			EXPECT(fields[0].value.AsLong(), (i64)2147483649);
 			EXPECT(fields[1].value.AsLong(), (i64)6789);
 			EXPECT(fields[2].value.AsLong(), (i64)9999);
@@ -375,11 +375,11 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].label.c_str(), "");
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.strValue.c_str(), "array elem 0");
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, ValueType::STRING);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -452,23 +452,23 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)4u);
 			JSONField spawnPlayerField = jsonObj.fields[2];
-			EXPECT(spawnPlayerField.value.type, JSONValue::Type::BOOL);
+			EXPECT(spawnPlayerField.value.type, ValueType::BOOL);
 			EXPECT(spawnPlayerField.value.boolValue, false);
 			JSONField objectArrayField = jsonObj.fields[3];
-			EXPECT(objectArrayField.value.type, JSONValue::Type::OBJECT_ARRAY);
+			EXPECT(objectArrayField.value.type, ValueType::OBJECT_ARRAY);
 			EXPECT((u64)objectArrayField.value.objectArrayValue.size(), (u64)2u); // 2 objects
 
 			const JSONObject& skyboxObj = objectArrayField.value.objectArrayValue[0];
 			EXPECT((u64)skyboxObj.fields.size(), (u64)6u);
 			const JSONField& materialsField = skyboxObj.fields[4];
-			EXPECT(materialsField.value.type, JSONValue::Type::FIELD_ARRAY); // skybox materials array
+			EXPECT(materialsField.value.type, ValueType::FIELD_ARRAY); // skybox materials array
 			EXPECT((u64)materialsField.value.fieldArrayValue.size(), (u64)1u); // 1 material in materials array
 
 			const JSONObject& directionalLightObj = objectArrayField.value.objectArrayValue[1];
 			const JSONField& directionalLightInfoField = directionalLightObj.fields[4];
 			EXPECT(directionalLightInfoField.label.c_str(), "directional light info");
 			const JSONField& brightnessField = directionalLightInfoField.value.objectValue.fields[4];
-			EXPECT(brightnessField.value.type, JSONValue::Type::FLOAT);
+			EXPECT(brightnessField.value.type, ValueType::FLOAT);
 			EXPECT(brightnessField.value.floatValue, 3.047f);
 		}
 		JSON_UNIT_TEST_END;

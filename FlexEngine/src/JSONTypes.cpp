@@ -10,30 +10,30 @@ namespace flex
 	std::vector<JSONObject> JSONObject::s_EmptyObjectArray;
 	std::vector<JSONField> JSONObject::s_EmptyFieldArray;
 
-	JSONValue::Type JSONValue::TypeFromChar(char c, const std::string& stringAfter)
+	ValueType JSONValue::TypeFromChar(char c, const std::string& stringAfter)
 	{
 		switch (c)
 		{
 		case '{':
-			return Type::OBJECT;
+			return ValueType::OBJECT;
 		case '[':
 			if (stringAfter[0] == '{')
 			{
-				return Type::OBJECT_ARRAY;
+				return ValueType::OBJECT_ARRAY;
 			}
 			else
 			{
 				// Arrays of strings are not supported
-				return Type::FIELD_ARRAY;
+				return ValueType::FIELD_ARRAY;
 			}
 		case '\"':
-			return Type::STRING;
+			return ValueType::STRING;
 		case 't':
 		case 'f':
 			if (c == 't' && stringAfter.size() >= 3 && stringAfter.substr(0, 3).compare("rue") == 0)
-				return Type::BOOL;
+				return ValueType::BOOL;
 			if (c == 'f' && stringAfter.size() >= 4 && stringAfter.substr(0, 4).compare("alse") == 0)
-				return Type::BOOL;
+				return ValueType::BOOL;
 			// Fall through
 		default:
 		{
@@ -47,7 +47,7 @@ namespace flex
 				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
 				if (isDecimal || (nextNonAlphaNumeric != -1 && !stringAfter.empty() && stringAfter[nextNonAlphaNumeric] == '.'))
 				{
-					return Type::FLOAT;
+					return ValueType::FLOAT;
 				}
 				else
 				{
@@ -57,58 +57,58 @@ namespace flex
 					{
 						i64 result = strtoll(numberStr.c_str(), nullptr, 10);
 
-						return (result < -INT_MAX || result > INT_MAX) ? Type::LONG : Type::INT;
+						return (result < -INT_MAX || result > INT_MAX) ? ValueType::LONG : ValueType::INT;
 					}
 					else
 					{
 						u64 result = strtoull(numberStr.c_str(), nullptr, 10);
 
-						return (result > INT_MAX) ? Type::ULONG : Type::UINT;
+						return (result > INT_MAX) ? ValueType::ULONG : ValueType::UINT;
 					}
 				}
 			}
-		} return Type::STRING;
+		} return ValueType::STRING;
 		}
 	}
 
 	JSONValue::JSONValue() :
-		type(Type::UNINITIALIZED)
+		type(ValueType::UNINITIALIZED)
 	{
 	}
 
 	JSONValue::JSONValue(const std::string& inStrValue) :
-		type(Type::STRING),
+		type(ValueType::STRING),
 		strValue(inStrValue)
 	{
 	}
 
 	JSONValue::JSONValue(const char* inStrValue) :
-		type(Type::STRING),
+		type(ValueType::STRING),
 		strValue(inStrValue)
 	{
 	}
 
 	JSONValue::JSONValue(i32 inIntValue) :
-		type(Type::INT),
+		type(ValueType::INT),
 		intValue(inIntValue)
 	{
 		ENSURE(!IsNanOrInf((real)inIntValue));
 	}
 
 	JSONValue::JSONValue(u32 inUIntValue) :
-		type(Type::UINT),
+		type(ValueType::UINT),
 		uintValue(inUIntValue)
 	{
 	}
 
 	JSONValue::JSONValue(i64 inLongValue) :
-		type(Type::LONG),
+		type(ValueType::LONG),
 		longValue(inLongValue)
 	{
 	}
 
 	JSONValue::JSONValue(u64 inULongValue) :
-		type(Type::ULONG),
+		type(ValueType::ULONG),
 		ulongValue(inULongValue)
 	{
 	}
@@ -119,7 +119,7 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(real inFloatValue, u32 inFloatPrecision) :
-		type(Type::FLOAT),
+		type(ValueType::FLOAT),
 		floatValue(inFloatValue),
 		floatPrecision(inFloatPrecision)
 	{
@@ -127,31 +127,31 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(bool inBoolValue) :
-		type(Type::BOOL),
+		type(ValueType::BOOL),
 		boolValue(inBoolValue)
 	{
 	}
 
 	JSONValue::JSONValue(const JSONObject& inObjectValue) :
-		type(Type::OBJECT),
+		type(ValueType::OBJECT),
 		objectValue(inObjectValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONObject>& inObjectArrayValue) :
-		type(Type::OBJECT_ARRAY),
+		type(ValueType::OBJECT_ARRAY),
 		objectArrayValue(inObjectArrayValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONField>& inFieldArrayValue) :
-		type(Type::FIELD_ARRAY),
+		type(ValueType::FIELD_ARRAY),
 		fieldArrayValue(inFieldArrayValue)
 	{
 	}
 
 	JSONValue::JSONValue(const GUID& inGUIDValue) :
-		type(Type::STRING),
+		type(ValueType::STRING),
 		strValue(inGUIDValue.ToString())
 	{
 	}
@@ -160,20 +160,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (i32)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (i32)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (i32)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (i32)floatValue;
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return boolValue ? 1 : 0;
 		default:
-			PrintError("AsInt was called on non-integer value\\n");
+			PrintError("AsInt was called on non-integer value\n");
 			return i32_max;
 		}
 	}
@@ -182,20 +182,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (u32)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (u32)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (u32)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (u32)floatValue;
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return boolValue;
 		default:
-			PrintError("AsUInt was called on non-integer value\\n");
+			PrintError("AsUInt was called on non-integer value\n");
 			return u32_max;
 		}
 	}
@@ -204,20 +204,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (i64)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (i64)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (i64)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (i64)floatValue;
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return boolValue;
 		default:
-			PrintError("AsLong was called on non-integer value\\n");
+			PrintError("AsLong was called on non-integer value\n");
 			return -1;
 		}
 	}
@@ -226,20 +226,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (u64)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (u64)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (u64)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (u64)floatValue;
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return boolValue;
 		default:
-			PrintError("AsULong was called on non-integer value\\n");
+			PrintError("AsULong was called on non-integer value\n");
 			return u64_max;
 		}
 	}
@@ -248,17 +248,17 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (real)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (real)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (real)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (real)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return floatValue;
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return (boolValue != 0) ? 1.0f : 0.0f;
 		default:
 			PrintError("AsFloat was called on non-floating point value\n");
@@ -270,20 +270,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (intValue != 0) ? 1 : 0;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (uintValue != 0) ? 1 : 0;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (longValue != 0) ? 1 : 0;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (ulongValue != 0) ? 1 : 0;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (floatValue != 0.0f ? 1 : 0);
-		case Type::BOOL:
+		case ValueType::BOOL:
 			return (boolValue != 0 ? 1 : 0);
 		default:
-			PrintError("AsBool was called on non-bool value\\n");
+			PrintError("AsBool was called on non-bool value\n");
 			return false;
 		}
 	}
@@ -292,10 +292,10 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::STRING:
+		case ValueType::STRING:
 			return strValue;
 		default:
-			PrintError("AsFloat was called on non-string value\\n");
+			PrintError("AsFloat was called on non-string value\n");
 			return "";
 		}
 	}
@@ -695,28 +695,28 @@ namespace flex
 
 		switch (value.type)
 		{
-		case JSONValue::Type::STRING:
+		case ValueType::STRING:
 			result += '\"' + value.strValue + '\"';
 			break;
-		case JSONValue::Type::INT:
+		case ValueType::INT:
 			result += IntToString(value.intValue);
 			break;
-		case JSONValue::Type::UINT:
+		case ValueType::UINT:
 			result += UIntToString(value.uintValue);
 			break;
-		case JSONValue::Type::LONG:
+		case ValueType::LONG:
 			result += LongToString(value.longValue);
 			break;
-		case JSONValue::Type::ULONG:
+		case ValueType::ULONG:
 			result += ULongToString(value.ulongValue);
 			break;
-		case JSONValue::Type::FLOAT:
+		case ValueType::FLOAT:
 			result += FloatToString(value.floatValue, value.floatPrecision);
 			break;
-		case JSONValue::Type::BOOL:
+		case ValueType::BOOL:
 			result += (value.boolValue ? "true" : "false");
 			break;
-		case JSONValue::Type::OBJECT:
+		case ValueType::OBJECT:
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
@@ -732,7 +732,7 @@ namespace flex
 			}
 			result += tabs + "}";
 			break;
-		case JSONValue::Type::OBJECT_ARRAY:
+		case ValueType::OBJECT_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
@@ -748,7 +748,7 @@ namespace flex
 			}
 			result += tabs + "]";
 			break;
-		case JSONValue::Type::FIELD_ARRAY:
+		case ValueType::FIELD_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
@@ -765,7 +765,7 @@ namespace flex
 			}
 			result += tabs + "]";
 			break;
-		case JSONValue::Type::UNINITIALIZED:
+		case ValueType::UNINITIALIZED:
 			result += "UNINITIALIZED TYPE\n";
 			break;
 		default:

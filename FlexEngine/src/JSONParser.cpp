@@ -171,11 +171,11 @@ namespace flex
 		return true;
 	}
 
-	bool JSONParser::ParseValue(JSONValue::Type fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue)
+	bool JSONParser::ParseValue(ValueType fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue)
 	{
 		switch (fieldType)
 		{
-		case JSONValue::Type::STRING:
+		case ValueType::STRING:
 		{
 			size_t strQuoteStart = fileContents.find('\"', *offset);
 
@@ -203,7 +203,7 @@ namespace flex
 
 			*offset = (i32)strQuoteEnd + 1;
 		} break;
-		case JSONValue::Type::INT:
+		case ValueType::INT:
 		{
 			std::string valueStr;
 			if (!ReadNumericField(fileContents, valueStr, offset))
@@ -214,7 +214,7 @@ namespace flex
 			i32 value = stoi(valueStr);
 			outValue = JSONValue(value);
 		} break;
-		case JSONValue::Type::UINT:
+		case ValueType::UINT:
 		{
 			std::string valueStr;
 			if (!ReadNumericField(fileContents, valueStr, offset))
@@ -225,7 +225,7 @@ namespace flex
 			u32 value = (u32)stoul(valueStr);
 			outValue = JSONValue(value);
 		} break;
-		case JSONValue::Type::LONG:
+		case ValueType::LONG:
 		{
 			std::string valueStr;
 			if (!ReadNumericField(fileContents, valueStr, offset))
@@ -236,7 +236,7 @@ namespace flex
 			i64 value = stoll(valueStr);
 			outValue = JSONValue(value);
 		} break;
-		case JSONValue::Type::ULONG:
+		case ValueType::ULONG:
 		{
 			std::string valueStr;
 			if (!ReadNumericField(fileContents, valueStr, offset))
@@ -247,7 +247,7 @@ namespace flex
 			u64 value = stoull(valueStr);
 			outValue = JSONValue(value);
 		} break;
-		case JSONValue::Type::FLOAT:
+		case ValueType::FLOAT:
 		{
 			size_t floatStart = quoteEnd + 2;
 			size_t decimalIndex = fileContents.find('.', floatStart);
@@ -271,7 +271,7 @@ namespace flex
 
 			*offset = (i32)floatEnd;
 		} break;
-		case JSONValue::Type::BOOL:
+		case ValueType::BOOL:
 		{
 			// TODO: Be more strict here? (Require "true" or "false")
 			char valueFirstChar = fileContents[quoteEnd + 2];
@@ -280,14 +280,14 @@ namespace flex
 
 			*offset = NextNonAlphaNumeric(fileContents, (i32)quoteEnd + 3);
 		} break;
-		case JSONValue::Type::OBJECT:
+		case ValueType::OBJECT:
 		{
 			JSONObject object;
 			ParseObject(fileContents, offset, object);
 
 			outValue = JSONValue(object);
 		} break;
-		case JSONValue::Type::OBJECT_ARRAY:
+		case ValueType::OBJECT_ARRAY:
 		{
 			std::vector<JSONObject> objects;
 
@@ -314,7 +314,7 @@ namespace flex
 
 			outValue = JSONValue(objects);
 		} break;
-		case JSONValue::Type::FIELD_ARRAY:
+		case ValueType::FIELD_ARRAY:
 		{
 			std::vector<JSONField> fields;
 
@@ -329,7 +329,7 @@ namespace flex
 				return false;
 			}
 		} break;
-		case JSONValue::Type::UNINITIALIZED:
+		case ValueType::UNINITIALIZED:
 		default:
 		{
 			size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, *offset);
@@ -367,7 +367,7 @@ namespace flex
 			*offset += 1; // Advance past colon
 
 			char valueFirstChar = fileContents[*offset];
-			JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
+			ValueType fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
 
 			JSONValue newValue;
 			if (ParseValue(fieldType, field.label, fileContents, quoteEnd, offset, newValue))
@@ -400,11 +400,11 @@ namespace flex
 		*offset += 1; // Advance past opening bracket
 
 		char valueFirstChar = fileContents[*offset];
-		JSONValue::Type fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
+		ValueType fieldType = JSONValue::TypeFromChar(valueFirstChar, fileContents.substr(*offset + 1));
 
 		// Check what type of int the data requires
-		if (fieldType == JSONValue::Type::INT || fieldType == JSONValue::Type::UINT ||
-			fieldType == JSONValue::Type::LONG || fieldType == JSONValue::Type::ULONG)
+		if (fieldType == ValueType::INT || fieldType == ValueType::UINT ||
+			fieldType == ValueType::LONG || fieldType == ValueType::ULONG)
 		{
 			bool bRequireSigned = false;
 			bool bRequireLong = false;
@@ -413,7 +413,7 @@ namespace flex
 
 			while (offsetCopy < arrayClosingBracket)
 			{
-				JSONValue::Type fieldType1 = JSONValue::TypeFromChar(fileContents[offsetCopy], fileContents.substr(offsetCopy + 1));
+				ValueType fieldType1 = JSONValue::TypeFromChar(fileContents[offsetCopy], fileContents.substr(offsetCopy + 1));
 
 				JSONValue newValue;
 				if (!ParseValue(fieldType1, fieldName, fileContents, quoteEnd, &offsetCopy, newValue))
@@ -421,17 +421,17 @@ namespace flex
 					return false;
 				}
 
-				if (fieldType1 == JSONValue::Type::LONG || fieldType1 == JSONValue::Type::ULONG)
+				if (fieldType1 == ValueType::LONG || fieldType1 == ValueType::ULONG)
 				{
 					bRequireLong = true;
 				}
 
-				if (fieldType1 == JSONValue::Type::INT || fieldType1 == JSONValue::Type::LONG)
+				if (fieldType1 == ValueType::INT || fieldType1 == ValueType::LONG)
 				{
 					bRequireSigned = true;
 				}
 
-				if (fieldType1 == JSONValue::Type::ULONG && bRequireSigned)
+				if (fieldType1 == ValueType::ULONG && bRequireSigned)
 				{
 					s_ErrorStr = "Mismatched integer types found in array";
 					return false;
@@ -459,11 +459,11 @@ namespace flex
 
 			if (bRequireLong)
 			{
-				fieldType = bRequireSigned ? JSONValue::Type::LONG : JSONValue::Type::ULONG;
+				fieldType = bRequireSigned ? ValueType::LONG : ValueType::ULONG;
 			}
 			else
 			{
-				fieldType = bRequireSigned ? JSONValue::Type::INT : JSONValue::Type::UINT;
+				fieldType = bRequireSigned ? ValueType::INT : ValueType::UINT;
 			}
 		}
 

@@ -11,6 +11,22 @@ namespace flex
 	struct JSONObject;		// Holds fields
 	struct ParsedJSONFile;	// Holds a root object
 
+	enum class ValueType
+	{
+		STRING,
+		INT,
+		UINT,
+		LONG,
+		ULONG,
+		FLOAT,
+		BOOL,
+		OBJECT,
+		OBJECT_ARRAY,
+		FIELD_ARRAY,
+		FIELD_ENTRY,
+		UNINITIALIZED
+	};
+
 	struct JSONObject
 	{
 		bool HasField(const std::string& label) const;
@@ -74,25 +90,9 @@ namespace flex
 
 	struct JSONValue
 	{
-		enum class Type
-		{
-			STRING,
-			INT,
-			UINT,
-			LONG,
-			ULONG,
-			FLOAT,
-			BOOL,
-			OBJECT,
-			OBJECT_ARRAY,
-			FIELD_ARRAY,
-			FIELD_ENTRY,
-			UNINITIALIZED
-		};
-
 		static const u32 DEFAULT_FLOAT_PRECISION = 6;
 
-		static Type TypeFromChar(char c, const std::string& stringAfter);
+		static ValueType TypeFromChar(char c, const std::string& stringAfter);
 
 		explicit JSONValue();
 		explicit JSONValue(const std::string& inStrValue);
@@ -117,7 +117,7 @@ namespace flex
 		bool AsBool() const;
 		std::string AsString() const;
 
-		Type type = Type::UNINITIALIZED;
+		ValueType type = ValueType::UNINITIALIZED;
 		union
 		{
 			i32 intValue = 0;

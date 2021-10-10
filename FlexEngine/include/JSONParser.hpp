@@ -57,7 +57,7 @@ namespace flex
 		*/
 		static bool ParseArray(const std::string& fileContents, size_t quoteEnd, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields);
 
-		static bool ParseValue(JSONValue::Type fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue);
+		static bool ParseValue(ValueType fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue);
 
 		/*
 		 * Expects offset to point at the opening bracket
