@@ -52,6 +52,14 @@ namespace flex
 
 		void OpenNewSceneWindow();
 
+		void ReadGameObjectTypesFile();
+		void WriteGameObjectTypesFile();
+
+		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
+
+		bool bOpenNewSceneWindow = false;
+		bool bOpenNewObjectTypePopup = false;
+
 	private:
 		std::string MakeSceneNameUnique(const std::string& originalName);
 		bool SceneFileExists(const std::string& fileName) const;
@@ -63,7 +71,8 @@ namespace flex
 		std::string m_SavedDirStr;
 		std::string m_DefaultDirStr;
 
-		bool m_bOpenNewSceneWindow = false;
+		const char* m_NewObjectTypePopupStr = "New Object Type";
+		std::string m_NewObjectTypeStrBuffer;
 
 		static const char* s_newSceneModalWindowID;
 

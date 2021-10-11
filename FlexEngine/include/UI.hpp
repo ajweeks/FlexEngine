@@ -127,6 +127,7 @@ namespace flex
 		ITEM,
 		INVENTORY,
 		QUICK_ACCESS,
+		WEARABLES,
 
 		_NONE
 	};
@@ -137,6 +138,7 @@ namespace flex
 		"Item",
 		"Inventory",
 		"Quick Access",
+		"Wearables",
 
 		"NONE"
 	};
@@ -170,6 +172,8 @@ namespace flex
 
 		Rect Cut(Rect* rect);
 		glm::vec4 GetColour() const;
+
+		void ClearDirty();
 
 		static const glm::vec4 baseColour;
 		static const glm::vec4 hoveredColour;
@@ -229,14 +233,11 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
 
 		std::vector<ItemUIContainer*> itemContainers;
 
 	private:
-		virtual void Serialize(JSONObject& rootObject) override;
-		virtual void Deserialize(const JSONObject& rootObject) override;
 		void OnLayoutChanged();
 
 	};
@@ -248,14 +249,27 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
 		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
 
-		std::vector<ItemUIContainer*> itemSlotContainers;
+		std::vector<ItemUIContainer*> itemContainers;
 
 	private:
-		virtual void Serialize(JSONObject& rootObject) override;
-		virtual void Deserialize(const JSONObject& rootObject) override;
+		void OnLayoutChanged();
+
+	};
+
+	class WearablesItemUIContainer : public UIContainer
+	{
+	public:
+		WearablesItemUIContainer();
+
+		virtual void Initialize() override;
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
+		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+
+		std::vector<ItemUIContainer*> itemContainers;
+
+	private:
 		void OnLayoutChanged();
 
 	};
@@ -280,6 +294,7 @@ namespace flex
 
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;
+		WearablesItemUIContainer* wearablesInventoryUI = nullptr;
 
 		ItemUIContainer* draggedUIContainer = nullptr;
 

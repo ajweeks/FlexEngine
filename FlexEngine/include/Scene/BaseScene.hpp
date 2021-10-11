@@ -175,8 +175,6 @@ namespace flex
 
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
-		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
-
 		static const i32 LATEST_SCENE_FILE_VERSION = 6;
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
@@ -252,17 +250,10 @@ namespace flex
 
 		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
 
-		void ReadGameObjectTypesFile();
-		void WriteGameObjectTypesFile();
-
 		BaseScene(const BaseScene&) = delete;
 		BaseScene& operator=(const BaseScene&) = delete;
 
-		const size_t m_MaxObjectNameLen = 256;
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
-		bool m_bTriggerNewObjectTypePopup = false;
-		const char* m_NewObjectTypePopupStr = "New Object Type";
-		std::string m_NewObjectTypeStrBuffer;
 
 	};
 } // namespace flex

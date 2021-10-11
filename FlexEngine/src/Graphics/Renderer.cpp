@@ -585,6 +585,11 @@ namespace flex
 		return true;
 	}
 
+	void Renderer::RemoveDirectionalLight()
+	{
+		m_DirectionalLight = nullptr;
+	}
+
 	PointLightID Renderer::RegisterPointLight(PointLightData* pointLightData)
 	{
 		if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
@@ -600,21 +605,64 @@ namespace flex
 					break;
 				}
 			}
-			assert(newPointLightID != InvalidPointLightID);
 
-			memcpy(m_PointLightData + newPointLightID, pointLightData, sizeof(PointLightData));
+			if (newPointLightID == InvalidPointLightID)
+			{
+				return InvalidPointLightID;
+			}
+
+			UpdatePointLightData(newPointLightID, pointLightData);
+
 			m_NumPointLightsEnabled++;
 			return newPointLightID;
 		}
 		return InvalidPointLightID;
 	}
 
+	void Renderer::RemovePointLight(PointLightID ID)
+	{
+		if (ID != InvalidPointLightID)
+		{
+			if (m_PointLightData[ID].colour.x != -1.0f)
+			{
+				m_PointLightData[ID].colour = VEC4_NEG_ONE;
+				m_PointLightData[ID].enabled = 0;
+				m_NumPointLightsEnabled--;
+				assert(m_NumPointLightsEnabled >= 0);
+				UpdatePointLightData(ID, nullptr);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllPointLights()
+	{
+		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+		{
+			m_PointLightData[i].colour = VEC4_NEG_ONE;
+			m_PointLightData[i].enabled = 0;
+			UpdatePointLightData(i, nullptr);
+		}
+		m_NumPointLightsEnabled = 0;
+	}
+
 	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
 	{
-		assert(ID < MAX_POINT_LIGHT_COUNT);
-		assert(data != nullptr);
+		if (ID < MAX_POINT_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_PointLightData + ID, data, sizeof(PointLightData));
+			}
+			else
+			{
+				memset(m_PointLightData + ID, 0, sizeof(PointLightData));
+			}
+		}
+	}
 
-		memcpy(m_PointLightData + ID, data, sizeof(PointLightData));
+	i32 Renderer::GetNumPointLights()
+	{
+		return m_NumPointLightsEnabled;
 	}
 
 	SpotLightID Renderer::RegisterSpotLight(SpotLightData* spotLightData)
@@ -632,21 +680,64 @@ namespace flex
 					break;
 				}
 			}
-			assert(newSpotLightID != InvalidSpotLightID);
 
-			memcpy(m_SpotLightData + newSpotLightID, spotLightData, sizeof(SpotLightData));
+			if (newSpotLightID == InvalidSpotLightID)
+			{
+				return InvalidSpotLightID;
+			}
+
+			UpdateSpotLightData(newSpotLightID, spotLightData);
+
 			m_NumSpotLightsEnabled++;
 			return newSpotLightID;
 		}
 		return InvalidSpotLightID;
 	}
 
+	void Renderer::RemoveSpotLight(SpotLightID ID)
+	{
+		if (ID != InvalidSpotLightID)
+		{
+			if (m_SpotLightData[ID].colour.x != -1.0f)
+			{
+				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
+				m_SpotLightData[ID].enabled = 0;
+				m_NumSpotLightsEnabled--;
+				assert(m_NumSpotLightsEnabled >= 0);
+				UpdateSpotLightData(ID, nullptr);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllSpotLights()
+	{
+		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
+		{
+			m_SpotLightData[i].colour = VEC4_NEG_ONE;
+			m_SpotLightData[i].enabled = 0;
+			UpdateSpotLightData(i, nullptr);
+		}
+		m_NumSpotLightsEnabled = 0;
+	}
+
 	void Renderer::UpdateSpotLightData(SpotLightID ID, SpotLightData* data)
 	{
-		assert(ID < MAX_SPOT_LIGHT_COUNT);
-		assert(data != nullptr);
+		if (ID < MAX_SPOT_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
+			}
+			else
+			{
+				memset(m_SpotLightData + ID, 0, sizeof(SpotLightData));
+			}
+		}
+	}
 
-		memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
+	i32 Renderer::GetNumSpotLights()
+	{
+		return m_NumSpotLightsEnabled;
 	}
 
 	AreaLightID Renderer::RegisterAreaLight(AreaLightData* areaLightData)
@@ -664,75 +755,18 @@ namespace flex
 					break;
 				}
 			}
-			assert(newAreaLightID != InvalidAreaLightID);
 
-			memcpy(m_AreaLightData + newAreaLightID, areaLightData, sizeof(AreaLightData));
+			if (newAreaLightID == InvalidAreaLightID)
+			{
+				return InvalidAreaLightID;
+			}
+
+			UpdateAreaLightData(newAreaLightID, areaLightData);
+
 			m_NumAreaLightsEnabled++;
 			return newAreaLightID;
 		}
 		return InvalidAreaLightID;
-	}
-
-	void Renderer::UpdateAreaLightData(AreaLightID ID, AreaLightData* data)
-	{
-		assert(ID < MAX_AREA_LIGHT_COUNT);
-		assert(data != nullptr);
-
-		memcpy(m_AreaLightData + ID, data, sizeof(AreaLightData));
-
-	}
-
-	void Renderer::RemoveDirectionalLight()
-	{
-		m_DirectionalLight = nullptr;
-	}
-
-	void Renderer::RemovePointLight(PointLightID ID)
-	{
-		if (ID != InvalidPointLightID)
-		{
-			if (m_PointLightData[ID].colour.x != -1.0f)
-			{
-				m_PointLightData[ID].colour = VEC4_NEG_ONE;
-				m_PointLightData[ID].enabled = 0;
-				m_NumPointLightsEnabled--;
-				assert(m_NumPointLightsEnabled >= 0);
-			}
-		}
-	}
-
-	void Renderer::RemoveAllPointLights()
-	{
-		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
-		{
-			m_PointLightData[i].colour = VEC4_NEG_ONE;
-			m_PointLightData[i].enabled = 0;
-		}
-		m_NumPointLightsEnabled = 0;
-	}
-
-	void Renderer::RemoveSpotLight(SpotLightID ID)
-	{
-		if (ID != InvalidSpotLightID)
-		{
-			if (m_SpotLightData[ID].colour.x != -1.0f)
-			{
-				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
-				m_SpotLightData[ID].enabled = 0;
-				m_NumSpotLightsEnabled--;
-				assert(m_NumSpotLightsEnabled >= 0);
-			}
-		}
-	}
-
-	void Renderer::RemoveAllSpotLights()
-	{
-		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
-		{
-			m_SpotLightData[i].colour = VEC4_NEG_ONE;
-			m_SpotLightData[i].enabled = 0;
-		}
-		m_NumSpotLightsEnabled = 0;
 	}
 
 	void Renderer::RemoveAreaLight(AreaLightID ID)
@@ -745,6 +779,7 @@ namespace flex
 				m_AreaLightData[ID].enabled = 0;
 				m_NumAreaLightsEnabled--;
 				assert(m_NumAreaLightsEnabled >= 0);
+				UpdateAreaLightData(ID, nullptr);
 			}
 		}
 	}
@@ -755,8 +790,24 @@ namespace flex
 		{
 			m_AreaLightData[i].colour = VEC4_NEG_ONE;
 			m_AreaLightData[i].enabled = 0;
+			UpdateAreaLightData(i, nullptr);
 		}
 		m_NumAreaLightsEnabled = 0;
+	}
+
+	void Renderer::UpdateAreaLightData(AreaLightID ID, AreaLightData* data)
+	{
+		if (ID < MAX_AREA_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_AreaLightData + ID, data, sizeof(AreaLightData));
+			}
+			else
+			{
+				memset(m_AreaLightData + ID, 0, sizeof(AreaLightData));
+			}
+		}
 	}
 
 	DirectionalLight* Renderer::GetDirectionalLight()
@@ -766,16 +817,6 @@ namespace flex
 			return m_DirectionalLight;
 		}
 		return nullptr;
-	}
-
-	i32 Renderer::GetNumPointLights()
-	{
-		return m_NumPointLightsEnabled;
-	}
-
-	i32 Renderer::GetNumSpotLights()
-	{
-		return m_NumSpotLightsEnabled;
 	}
 
 	i32 Renderer::GetNumAreaLights()

@@ -26,6 +26,8 @@ namespace flex
 		type(type)
 	{
 		lastCutRect = {};
+		cutType = RectCutType::TOP;
+		amount = 1.0f;
 	}
 
 	UIContainer::~UIContainer()
@@ -154,6 +156,14 @@ namespace flex
 
 			bDirty = ImGui::SliderFloat("##amount", &amount, 0.0f, 1.0f) || bDirty;
 
+			tagSourceStr.resize(256);
+			if (ImGui::InputText("Tag", (char*)tagSourceStr.c_str(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				tagSourceStr = std::string(tagSourceStr.c_str());
+				tag = Hash(tagSourceStr.c_str());
+				bDirty = true;
+			}
+
 			bDirty = ImGui::Checkbox("Visible", &bVisible) || bDirty;
 
 			ImGui::SameLine();
@@ -172,14 +182,6 @@ namespace flex
 			if (ImGui::Button("+"))
 			{
 				children.emplace_back(new UIContainer());
-				bDirty = true;
-			}
-
-			tagSourceStr.resize(256);
-			if (ImGui::InputText("Tag", (char*)tagSourceStr.c_str(), 256, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				tagSourceStr = std::string(tagSourceStr.c_str());
-				tag = Hash(tagSourceStr.c_str());
 				bDirty = true;
 			}
 
@@ -205,7 +207,7 @@ namespace flex
 					UIContainer* oldUIContainer = children[i];
 
 					// type will have already been changed to new value
-					UIContainer* newUIContainer = CreateContainer(type);
+					UIContainer* newUIContainer = CreateContainer(oldUIContainer->type);
 					newUIContainer->children = oldUIContainer->children;
 					newUIContainer->bVisible = oldUIContainer->bVisible;
 					newUIContainer->cutType = oldUIContainer->cutType;
@@ -215,6 +217,12 @@ namespace flex
 
 					children[i] = newUIContainer;
 					delete oldUIContainer;
+					bDirty = true;
+				}
+
+				if (children[i]->bDirty)
+				{
+					bDirty = true;
 				}
 			}
 
@@ -261,6 +269,16 @@ namespace flex
 			colour.a = bHighlighted ? 0.2f : 0.0f;
 		}
 		return colour;
+	}
+
+	void UIContainer::ClearDirty()
+	{
+		bDirty = false;
+
+		for (u32 i = 0; i < (u32)children.size(); ++i)
+		{
+			children[i]->ClearDirty();
+		}
 	}
 
 	void UIContainer::SerializeCommon(JSONObject& rootObject)
@@ -318,6 +336,10 @@ namespace flex
 		case UIContainerType::QUICK_ACCESS:
 		{
 			uiContainer = new QuickAccessItemUIContainer();
+		} break;
+		case UIContainerType::WEARABLES:
+		{
+			uiContainer = new WearablesItemUIContainer();
 		} break;
 		default:
 		{
@@ -415,7 +437,8 @@ namespace flex
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID);
+				InventoryType inventoryType;
+				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID, inventoryType);
 
 				if (imageElement == nullptr)
 				{
@@ -559,7 +582,8 @@ namespace flex
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID);
+				InventoryType inventoryType;
+				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID, inventoryType);
 				ImGui::Text("Stack count: %d", (stack->count > 0 ? stack->count : 0));
 				std::string stackTypeString = stack->prefabID.ToString();
 				ImGui::Text("Stack type: %s", stackTypeString.c_str());
@@ -609,172 +633,14 @@ namespace flex
 		return result;
 	}
 
-	QuickAccessItemUIContainer::QuickAccessItemUIContainer() :
-		UIContainer(UIContainerType::QUICK_ACCESS)
-	{
-		cutType = RectCutType::TOP;
-		amount = 1.0f;
-	}
-
-	void QuickAccessItemUIContainer::Initialize()
-	{
-		OnLayoutChanged();
-	}
-
-	void QuickAccessItemUIContainer::Draw()
-	{
-		UIContainer::Draw();
-	}
-
-	RectCutResult QuickAccessItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
-	{
-		FLEX_UNUSED(optionalTreeNodeName);
-
-		RectCutResult result = UIContainer::DrawImGui("Quick access");
-		return result;
-	}
-
-	void QuickAccessItemUIContainer::Serialize(JSONObject& rootObject)
-	{
-		FLEX_UNUSED(rootObject);
-	}
-
-	void QuickAccessItemUIContainer::Deserialize(const JSONObject& rootObject)
-	{
-		FLEX_UNUSED(rootObject);
-	}
-
-	void QuickAccessItemUIContainer::OnLayoutChanged()
-	{
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
-		{
-			Print("Children: %u\n", (u32)children.size());
-
-			if (!children.empty())
-			{
-				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
-				std::vector<UIContainer*> uiContainers;
-				std::vector<UIContainer*> uiContainersToPush;
-
-				uiContainers.push_back(children[0]);
-				uiContainersToPush.push_back(children[0]);
-
-				while (!uiContainersToPush.empty())
-				{
-					UIContainer* uiContainer = uiContainersToPush[0];
-					for (UIContainer* child : uiContainer->children)
-					{
-						uiContainers.push_back(child);
-						if (!child->children.empty())
-						{
-							uiContainersToPush.push_back(child);
-						}
-					}
-					uiContainersToPush.erase(uiContainersToPush.begin());
-				}
-
-				for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
-				{
-					UIContainer* uiContainer = uiContainers[i];
-					if (uiContainer->tag == SID("slot0"))
-					{
-						if (((i32)uiContainers.size() - i) >= Player::QUICK_ACCESS_ITEM_COUNT)
-						{
-							itemSlotContainers.clear();
-							itemSlotContainers.reserve(Player::QUICK_ACCESS_ITEM_COUNT);
-							for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
-							{
-								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
-								itemContainer->stackID = Player::GetGameObjectStackIDForQuickAccessInventory(n);
-								itemContainer->index = n;
-
-								itemSlotContainers.emplace_back(itemContainer);
-							}
-						}
-					}
-				}
-			}
-
-			if ((i32)itemSlotContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
-			{
-				PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
-					Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemSlotContainers.size());
-			}
-		}
-	}
-
-	void QuickAccessItemUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
-	{
-		UIContainer::Update(parentRect, bIgnoreCut);
-
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
-		{
-			if ((i32)itemSlotContainers.size() == Player::QUICK_ACCESS_ITEM_COUNT)
-			{
-				for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
-				{
-					itemSlotContainers[n]->bHighlighted = (n == player->heldItemSlot);
-				}
-
-				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
-				{
-					glm::vec2i windowSize = g_Window->GetSize();
-					glm::vec2 mousePos = g_InputManager->GetMousePosition();
-					glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
-
-					for (ItemUIContainer* itemContainer : itemSlotContainers)
-					{
-						bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
-						itemContainer->bHovered = bOverlaps;
-
-						if (bOverlaps)
-						{
-							itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
-
-							if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
-							{
-								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID);
-								if (stack != nullptr && stack->count > 0)
-								{
-									g_UIManager->BeginItemDrag(itemContainer);
-								}
-							}
-
-							if (g_UIManager->draggedUIContainer != nullptr &&
-								itemContainer != g_UIManager->draggedUIContainer)
-							{
-								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
-								{
-									if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
-									{
-										g_UIManager->EndItemDrag();
-									}
-								}
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
 	InventoryUIContainer::InventoryUIContainer() :
 		UIContainer(UIContainerType::INVENTORY)
 	{
-		cutType = RectCutType::TOP;
-		amount = 1.0f;
 	}
 
 	void InventoryUIContainer::Initialize()
 	{
 		OnLayoutChanged();
-	}
-
-	void InventoryUIContainer::Draw()
-	{
-		UIContainer::Draw();
 	}
 
 	RectCutResult flex::InventoryUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
@@ -783,16 +649,6 @@ namespace flex
 
 		RectCutResult result = UIContainer::DrawImGui("Inventory");
 		return result;
-	}
-
-	void InventoryUIContainer::Serialize(JSONObject& rootObject)
-	{
-		FLEX_UNUSED(rootObject);
-	}
-
-	void InventoryUIContainer::Deserialize(const JSONObject& rootObject)
-	{
-		FLEX_UNUSED(rootObject);
 	}
 
 	void InventoryUIContainer::OnLayoutChanged()
@@ -844,8 +700,15 @@ namespace flex
 									itemContainer->index = (c * Player::INVENTORY_ITEM_ROW_COUNT) + r;
 									itemContainer->stackID = Player::GetGameObjectStackIDForInventory(itemContainer->index);
 
-									itemContainers.emplace_back(itemContainer);
+									if (itemContainer->stackID != InvalidID)
+									{
+										itemContainers.emplace_back(itemContainer);
+									}
 								}
+							}
+							else
+							{
+								PrintError("Invalid inventory config, expected %d UI containers immediately after container with tag %s\n", Player::INVENTORY_ITEM_ROW_COUNT, tagString.c_str());
 							}
 
 							break;
@@ -894,7 +757,307 @@ namespace flex
 							{
 								itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
 
-								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID);
+								InventoryType inventoryType;
+								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
+								assert(inventoryType == InventoryType::INVENTORY);
+
+								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
+									stack != nullptr && stack->count > 0)
+								{
+									g_UIManager->BeginItemDrag(itemContainer);
+								}
+
+								if (g_UIManager->draggedUIContainer != nullptr &&
+									itemContainer != g_UIManager->draggedUIContainer)
+								{
+									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+									{
+										if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
+										{
+											g_UIManager->EndItemDrag();
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	QuickAccessItemUIContainer::QuickAccessItemUIContainer() :
+		UIContainer(UIContainerType::QUICK_ACCESS)
+	{
+	}
+
+	void QuickAccessItemUIContainer::Initialize()
+	{
+		OnLayoutChanged();
+	}
+
+	RectCutResult QuickAccessItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	{
+		FLEX_UNUSED(optionalTreeNodeName);
+
+		RectCutResult result = UIContainer::DrawImGui("Quick access");
+		return result;
+	}
+
+	void QuickAccessItemUIContainer::OnLayoutChanged()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			Print("Quick access children: %u\n", (u32)children.size());
+
+			if (!children.empty())
+			{
+				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
+				std::vector<UIContainer*> uiContainers;
+				std::vector<UIContainer*> uiContainersToPush;
+
+				uiContainers.push_back(children[0]);
+				uiContainersToPush.push_back(children[0]);
+
+				while (!uiContainersToPush.empty())
+				{
+					UIContainer* uiContainer = uiContainersToPush[0];
+					for (UIContainer* child : uiContainer->children)
+					{
+						uiContainers.push_back(child);
+						if (!child->children.empty())
+						{
+							uiContainersToPush.push_back(child);
+						}
+					}
+					uiContainersToPush.erase(uiContainersToPush.begin());
+				}
+
+				const char* tagStr = "slot0";
+				for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
+				{
+					UIContainer* uiContainer = uiContainers[i];
+					if (uiContainer->tag == SID(tagStr))
+					{
+						if (((i32)uiContainers.size() - i) >= Player::QUICK_ACCESS_ITEM_COUNT)
+						{
+							itemContainers.clear();
+							itemContainers.reserve(Player::QUICK_ACCESS_ITEM_COUNT);
+							for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
+							{
+								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
+								itemContainer->index = n;
+								itemContainer->stackID = Player::GetGameObjectStackIDForQuickAccessInventory(n);
+
+								if (itemContainer->stackID != InvalidID)
+								{
+									itemContainers.emplace_back(itemContainer);
+								}
+							}
+						}
+						else
+						{
+							PrintError("Invalid quick access inventory config, expected %d UI containers immediately after container with tag %s\n", Player::QUICK_ACCESS_ITEM_COUNT, tagStr);
+						}
+
+						break;
+					}
+				}
+			}
+
+			if ((i32)itemContainers.size() != Player::QUICK_ACCESS_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in QuickAccessItemUIContainer::OnLayoutChanged (found %i)\n",
+					Player::QUICK_ACCESS_ITEM_COUNT, (i32)itemContainers.size());
+			}
+		}
+	}
+
+	void QuickAccessItemUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
+	{
+		UIContainer::Update(parentRect, bIgnoreCut);
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			if ((i32)itemContainers.size() == Player::QUICK_ACCESS_ITEM_COUNT)
+			{
+				for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
+				{
+					itemContainers[n]->bHighlighted = (n == player->heldItemSlot);
+				}
+
+				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
+				{
+					glm::vec2i windowSize = g_Window->GetSize();
+					glm::vec2 mousePos = g_InputManager->GetMousePosition();
+					glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+
+					for (ItemUIContainer* itemContainer : itemContainers)
+					{
+						bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
+						itemContainer->bHovered = bOverlaps;
+
+						if (bOverlaps)
+						{
+							itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+							if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
+							{
+								InventoryType inventoryType;
+								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
+								assert(inventoryType == InventoryType::QUICK_ACCESS);
+
+								if (stack != nullptr && stack->count > 0)
+								{
+									g_UIManager->BeginItemDrag(itemContainer);
+								}
+							}
+
+							if (g_UIManager->draggedUIContainer != nullptr &&
+								itemContainer != g_UIManager->draggedUIContainer)
+							{
+								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								{
+									if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
+									{
+										g_UIManager->EndItemDrag();
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	WearablesItemUIContainer::WearablesItemUIContainer() :
+		UIContainer(UIContainerType::WEARABLES)
+	{
+	}
+
+	void WearablesItemUIContainer::Initialize()
+	{
+		OnLayoutChanged();
+	}
+
+	RectCutResult WearablesItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	{
+		FLEX_UNUSED(optionalTreeNodeName);
+
+		RectCutResult result = UIContainer::DrawImGui("Wearables");
+		return result;
+	}
+
+	void WearablesItemUIContainer::OnLayoutChanged()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			Print("Wearables inventory children: %u\n", (u32)children.size());
+
+			if (!children.empty())
+			{
+				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
+				std::vector<UIContainer*> uiContainers;
+				std::vector<UIContainer*> uiContainersToPush;
+
+				uiContainers.push_back(this);
+				uiContainersToPush.push_back(this);
+
+				while (!uiContainersToPush.empty())
+				{
+					UIContainer* uiContainer = uiContainersToPush[0];
+					for (UIContainer* child : uiContainer->children)
+					{
+						uiContainers.push_back(child);
+						if (!child->children.empty())
+						{
+							uiContainersToPush.push_back(child);
+						}
+					}
+					uiContainersToPush.erase(uiContainersToPush.begin());
+				}
+
+				itemContainers.clear();
+				itemContainers.reserve(Player::WEARABLES_ITEM_COUNT);
+				// Fill out item containers by finding tags pointing to start of each column of tiles
+
+				const char* tagStr = "slot0";
+				for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
+				{
+					UIContainer* uiContainer = uiContainers[i];
+					if (uiContainer->tag == SID(tagStr))
+					{
+						if (((i32)uiContainers.size() - i) >= Player::WEARABLES_ITEM_COUNT)
+						{
+							for (i32 n = 0; n < Player::WEARABLES_ITEM_COUNT; ++n)
+							{
+								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
+								itemContainer->index = n;
+								itemContainer->stackID = Player::GetGameObjectStackIDForWearablesInventory(n);
+
+								if (itemContainer->stackID != InvalidID)
+								{
+									itemContainers.emplace_back(itemContainer);
+								}
+							}
+						}
+						else
+						{
+							PrintError("Invalid wearables config, expected %d UI containers immediately after container with tag %s\n", Player::WEARABLES_ITEM_COUNT, tagStr);
+						}
+
+						break;
+					}
+				}
+			}
+
+			if ((i32)itemContainers.size() != Player::WEARABLES_ITEM_COUNT)
+			{
+				PrintWarn("Failed to find %i items in WearablesItemUIContainer::OnLayoutChanged (found %i)\n",
+					Player::WEARABLES_ITEM_COUNT, (i32)itemContainers.size());
+			}
+		}
+	}
+
+	void WearablesItemUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
+	{
+		UIContainer::Update(parentRect, bIgnoreCut);
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			if ((i32)itemContainers.size() == Player::WEARABLES_ITEM_COUNT)
+			{
+				for (i32 n = 0; n < Player::WEARABLES_ITEM_COUNT; ++n)
+				{
+					itemContainers[n]->bHighlighted = false;
+				}
+
+				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
+				{
+					if ((i32)itemContainers.size() == Player::WEARABLES_ITEM_COUNT)
+					{
+						glm::vec2i windowSize = g_Window->GetSize();
+						glm::vec2 mousePos = g_InputManager->GetMousePosition();
+						glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+
+						for (ItemUIContainer* itemContainer : itemContainers)
+						{
+							bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
+							itemContainer->bHovered = bOverlaps;
+							itemContainer->bHighlighted = bOverlaps;
+
+							if (bOverlaps)
+							{
+								itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+								InventoryType inventoryType;
+								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
+								assert(inventoryType == InventoryType::WEARABLES);
 
 								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
 									stack != nullptr && stack->count > 0)
@@ -932,11 +1095,15 @@ namespace flex
 
 	void UIManager::Destroy()
 	{
+		delete playerInventoryUI;
+		playerInventoryUI = nullptr;
+
 		delete playerQuickAccessUI;
 		playerQuickAccessUI = nullptr;
 
-		delete playerInventoryUI;
-		playerInventoryUI = nullptr;
+		delete wearablesInventoryUI;
+		wearablesInventoryUI = nullptr;
+
 	}
 
 	void UIManager::Update()
@@ -962,9 +1129,17 @@ namespace flex
 
 				if (player->bInventoryShowing)
 				{
-					Rect rect{ -x, -y, x, y, VEC4_ONE };
-					playerInventoryUI->Update(rect);
-					playerInventoryUI->Draw();
+					{
+						Rect rect{ -x, -y, x, y, VEC4_ONE };
+						playerInventoryUI->Update(rect);
+						playerInventoryUI->Draw();
+					}
+
+					{
+						Rect rect{ -x, -y, x, y, VEC4_ONE };
+						wearablesInventoryUI->Update(rect);
+						wearablesInventoryUI->Draw();
+					}
 				}
 
 				if (draggedUIContainer != nullptr)
@@ -1033,7 +1208,7 @@ namespace flex
 					{
 						if (SerializeUIConfig(filePath, *uiContainer))
 						{
-							(*uiContainer)->bDirty = false;
+							(*uiContainer)->ClearDirty();
 						}
 					}
 
@@ -1069,11 +1244,14 @@ namespace flex
 					ImGui::PopID();
 				};
 
+				drawButtons((UIContainer**)&playerInventoryUI, UI_PLAYER_INVENTORY_LOCATION);
+				playerInventoryUI->DrawImGui();
+
 				drawButtons((UIContainer**)&playerQuickAccessUI, UI_PLAYER_QUICK_ACCESS_LOCATION);
 				playerQuickAccessUI->DrawImGui();
 
-				drawButtons((UIContainer**)&playerInventoryUI, UI_PLAYER_INVENTORY_LOCATION);
-				playerInventoryUI->DrawImGui();
+				drawButtons((UIContainer**)&wearablesInventoryUI, UI_WEARABLES_INVENTORY_LOCATION);
+				wearablesInventoryUI->DrawImGui();
 			}
 
 			ImGui::End();
@@ -1103,7 +1281,7 @@ namespace flex
 		}
 		else
 		{
-			Print("Failed to read UI config file at %s\n", filePath);
+			PrintError("Failed to read UI config file at %s\n", filePath);
 		}
 
 		return nullptr;
@@ -1152,29 +1330,9 @@ namespace flex
 	{
 		ParseUISettings();
 
-		if (playerQuickAccessUI != nullptr)
-		{
-			delete playerQuickAccessUI;
-		}
-
 		if (playerInventoryUI != nullptr)
 		{
 			delete playerInventoryUI;
-		}
-
-		playerQuickAccessUI = (QuickAccessItemUIContainer*)ParseUIConfig(UI_PLAYER_QUICK_ACCESS_LOCATION);
-		if (playerQuickAccessUI != nullptr)
-		{
-			if (playerQuickAccessUI->type != UIContainerType::QUICK_ACCESS)
-			{
-				PrintWarn("Ignoring player quick access UI from file, type did not match expectation of UIContainerType::QUICK_ACCESS\n");
-				delete playerQuickAccessUI;
-				playerQuickAccessUI = new QuickAccessItemUIContainer();
-			}
-		}
-		else
-		{
-			PrintError("Failed to read player quick access UI config to %s\n", UI_PLAYER_QUICK_ACCESS_LOCATION);
 		}
 
 		playerInventoryUI = (InventoryUIContainer*)ParseUIConfig(UI_PLAYER_INVENTORY_LOCATION);
@@ -1190,6 +1348,49 @@ namespace flex
 		else
 		{
 			PrintError("Failed to read player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+			playerInventoryUI = new InventoryUIContainer();
+		}
+
+		if (playerQuickAccessUI != nullptr)
+		{
+			delete playerQuickAccessUI;
+		}
+
+		playerQuickAccessUI = (QuickAccessItemUIContainer*)ParseUIConfig(UI_PLAYER_QUICK_ACCESS_LOCATION);
+		if (playerQuickAccessUI != nullptr)
+		{
+			if (playerQuickAccessUI->type != UIContainerType::QUICK_ACCESS)
+			{
+				PrintWarn("Ignoring player quick access UI from file, type did not match expectation of UIContainerType::QUICK_ACCESS\n");
+				delete playerQuickAccessUI;
+				playerQuickAccessUI = new QuickAccessItemUIContainer();
+			}
+		}
+		else
+		{
+			PrintError("Failed to read player quick access UI config to %s\n", UI_PLAYER_QUICK_ACCESS_LOCATION);
+			playerQuickAccessUI = new QuickAccessItemUIContainer();
+		}
+
+		if (wearablesInventoryUI != nullptr)
+		{
+			delete wearablesInventoryUI;
+		}
+
+		wearablesInventoryUI = (WearablesItemUIContainer*)ParseUIConfig(UI_WEARABLES_INVENTORY_LOCATION);
+		if (wearablesInventoryUI != nullptr)
+		{
+			if (wearablesInventoryUI->type != UIContainerType::WEARABLES)
+			{
+				PrintWarn("Ignoring player inventory UI from file, type did not match expectation of UIContainerType::WEARABLES\n");
+				delete wearablesInventoryUI;
+				wearablesInventoryUI = new WearablesItemUIContainer();
+			}
+		}
+		else
+		{
+			PrintError("Failed to read wearables UI config to %s\n", UI_WEARABLES_INVENTORY_LOCATION);
+			wearablesInventoryUI = new WearablesItemUIContainer();
 		}
 	}
 
@@ -1212,6 +1413,15 @@ namespace flex
 
 	void UIManager::Serialize()
 	{
+		if (SerializeUIConfig(UI_PLAYER_INVENTORY_LOCATION, playerInventoryUI))
+		{
+			playerInventoryUI->bDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to serialize player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+		}
+
 		if (SerializeUIConfig(UI_PLAYER_QUICK_ACCESS_LOCATION, playerQuickAccessUI))
 		{
 			playerQuickAccessUI->bDirty = false;
@@ -1221,13 +1431,13 @@ namespace flex
 			PrintError("Failed to serialize player quick access UI config to %s\n", UI_PLAYER_QUICK_ACCESS_LOCATION);
 		}
 
-		if (SerializeUIConfig(UI_PLAYER_INVENTORY_LOCATION, playerInventoryUI))
+		if (SerializeUIConfig(UI_WEARABLES_INVENTORY_LOCATION, wearablesInventoryUI))
 		{
-			playerInventoryUI->bDirty = false;
+			wearablesInventoryUI->bDirty = false;
 		}
 		else
 		{
-			PrintError("Failed to serialize player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
+			PrintError("Failed to serialize wearables UI config to %s\n", UI_WEARABLES_INVENTORY_LOCATION);
 		}
 
 		SerializeUISettings();

@@ -12,10 +12,12 @@
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "StringBuilder.hpp"
 
 namespace flex
 {
 	const char* SceneManager::s_newSceneModalWindowID = "New scene";
+	std::map<StringID, std::string> SceneManager::GameObjectTypeStringIDPairs;
 
 	SceneManager::SceneManager() :
 		m_SavedDirStr(RelativePathToAbsolute(SCENE_SAVED_DIRECTORY)),
@@ -504,7 +506,7 @@ namespace flex
 
 			if (ImGui::Button("New scene..."))
 			{
-				m_bOpenNewSceneWindow = true;
+				bOpenNewSceneWindow = true;
 			}
 
 			ImGui::SameLine();
@@ -517,14 +519,67 @@ namespace flex
 
 			ImGui::TreePop();
 		}
+
+		if (bOpenNewObjectTypePopup)
+		{
+			bOpenNewObjectTypePopup = false;
+			ImGui::OpenPopup(m_NewObjectTypePopupStr);
+			m_NewObjectTypeStrBuffer.clear();
+			m_NewObjectTypeStrBuffer.resize(GameObject::MaxNameLength);
+		}
+
+		if (ImGui::BeginPopupModal(m_NewObjectTypePopupStr, NULL,
+			ImGuiWindowFlags_AlwaysAutoResize |
+			ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_NoNavInputs))
+		{
+			bool bCreateType = false;
+			if (ImGui::InputText("Type", (char*)m_NewObjectTypeStrBuffer.data(), GameObject::MaxNameLength, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				bCreateType = true;
+			}
+
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
+			if (ImGui::Button("Cancel"))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+			ImGui::PopStyleColor();
+
+			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
+
+			if (ImGui::Button("Create") || bCreateType)
+			{
+				// Remove excess trailing \0 chars
+				m_NewObjectTypeStrBuffer = std::string(m_NewObjectTypeStrBuffer.c_str());
+
+				if (!m_NewObjectTypeStrBuffer.empty())
+				{
+					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
+					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
+
+					WriteGameObjectTypesFile();
+
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
 	}
 
 	void SceneManager::DrawImGuiModals()
 	{
 		bool bFocusNameTextBox = false;
-		if (m_bOpenNewSceneWindow)
+		if (bOpenNewSceneWindow)
 		{
-			m_bOpenNewSceneWindow = false;
+			bOpenNewSceneWindow = false;
 			bFocusNameTextBox = true;
 			ImGui::OpenPopup(s_newSceneModalWindowID);
 		}
@@ -585,7 +640,7 @@ namespace flex
 
 	void SceneManager::OpenNewSceneWindow()
 	{
-		m_bOpenNewSceneWindow = true;
+		bOpenNewSceneWindow = true;
 	}
 
 	u32 SceneManager::CurrentSceneIndex() const
@@ -705,4 +760,48 @@ namespace flex
 
 		return false;
 	}
+
+	void SceneManager::ReadGameObjectTypesFile()
+	{
+		GameObjectTypeStringIDPairs.clear();
+		std::string fileContents;
+		// TODO: Gather this info from reflection?
+		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
+		{
+			std::vector<std::string> lines = Split(fileContents, '\n');
+			for (const std::string& line : lines)
+			{
+				if (!line.empty())
+				{
+					const char* lineCStr = line.c_str();
+					StringID typeID = Hash(lineCStr);
+					if (GameObjectTypeStringIDPairs.find(typeID) != GameObjectTypeStringIDPairs.end())
+					{
+						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
+					}
+					GameObjectTypeStringIDPairs.emplace(typeID, line);
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	void SceneManager::WriteGameObjectTypesFile()
+	{
+		StringBuilder fileContents;
+
+		for (auto iter = GameObjectTypeStringIDPairs.begin(); iter != GameObjectTypeStringIDPairs.end(); ++iter)
+		{
+			fileContents.AppendLine(iter->second);
+		}
+
+		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
+		{
+			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
 } // namespace flex

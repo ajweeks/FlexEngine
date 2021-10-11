@@ -71,26 +71,10 @@ namespace flex
 
 	struct GameObjectStack
 	{
-		GameObjectStack() :
-			prefabID(InvalidPrefabID),
-			count(0),
-			userData({})
-		{
-		}
+		GameObjectStack();
+		GameObjectStack(const PrefabID& prefabID, i32 count);
 
-		GameObjectStack(const PrefabID& prefabID, i32 count) :
-			prefabID(prefabID),
-			count(count),
-			userData({})
-		{
-		}
-
-		void Clear()
-		{
-			prefabID = InvalidPrefabID;
-			count = 0;
-			userData.floatVal = 0.0f;
-		}
+		void Clear();
 
 		PrefabID prefabID;
 		i32 count;
@@ -217,6 +201,15 @@ namespace flex
 		template<class T>
 		void GetChildrenOfType(StringID objTypeID, bool bRecurse, std::vector<T*>& children)
 		{
+			for (GameObject* child : m_Children)
+			{
+				child->GetChildrenOfTypeInternal(objTypeID, bRecurse, children);
+			}
+		}
+
+		template<class T>
+		void GetChildrenOfTypeInternal(StringID objTypeID, bool bRecurse, std::vector<T*>& children)
+		{
 			if (m_TypeID == objTypeID)
 			{
 				children.push_back((T*)this);
@@ -230,7 +223,6 @@ namespace flex
 				}
 			}
 		}
-
 
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 		GameObject* GetChild(u32 childIndex);
@@ -310,6 +302,9 @@ namespace flex
 		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData);
 
 		bool IsItemizable() const;
+		bool IsWearable() const;
+
+		static const size_t MaxNameLength = 256;
 
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;

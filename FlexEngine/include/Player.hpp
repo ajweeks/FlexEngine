@@ -10,6 +10,14 @@ namespace flex
 {
 	class PlayerController;
 
+	enum class InventoryType
+	{
+		INVENTORY,
+		QUICK_ACCESS,
+		WEARABLES,
+		NONE
+	};
+
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
 	class Player : public GameObject
@@ -50,15 +58,16 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
-		i32 GetNextFreeQuickAccessInventorySlot();
 		i32 GetNextFreeInventorySlot();
+		i32 GetNextFreeQuickAccessInventorySlot();
 
 		bool IsRidingTrack();
 
-		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID);
+		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID, InventoryType& outInventoryType);
 		bool MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID);
-		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(i32 slotIndex);
 
 		void AddToInventory(const PrefabID& prefabID, i32 count);
 		void AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
@@ -74,6 +83,9 @@ namespace flex
 		bool IsHolding(GameObject* object);
 		void DropIfHolding(GameObject* object);
 		bool HasFreeHand() const;
+
+		void OnWearableEquipped(GameObjectStack* wearableStack);
+		void OnWearableUnequipped(GameObjectStack* wearableStack);
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -113,13 +125,24 @@ namespace flex
 
 		TrackState m_TrackState;
 
+		static const glm::vec3 HeadlampMountingPos;
+
+		static const i32 WEARABLES_ITEM_COUNT = 3;
 		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
 		static const i32 INVENTORY_ITEM_ROW_COUNT = 5;
 		static const i32 INVENTORY_ITEM_COL_COUNT = 7;
 		static const i32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
 
+		static const i32 INVENTORY_MIN = 0;
+		static const i32 INVENTORY_MAX = 999;
+		static const i32 INVENTORY_QUICK_ACCESS_MIN = 1000;
+		static const i32 INVENTORY_QUICK_ACCESS_MAX = 1999;
+		static const i32 INVENTORY_WEARABLES_MIN = 2000;
+		static const i32 INVENTORY_WEARABLES_MAX = 2999;
+
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
+		std::array<GameObjectStack, WEARABLES_ITEM_COUNT> m_WearablesInventory;
 		bool bInventoryShowing = false;
 		i32 heldItemSlot = 0;
 

@@ -261,24 +261,25 @@ namespace flex
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		bool RegisterDirectionalLight(DirectionalLight* dirLight);
-		PointLightID RegisterPointLight(PointLightData* pointLightData);
-		void UpdatePointLightData(PointLightID ID, PointLightData* data);
-		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
-		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
-		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
-		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
-
 		void RemoveDirectionalLight();
+		DirectionalLight* GetDirectionalLight();
+
+		PointLightID RegisterPointLight(PointLightData* pointLightData);
 		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
+		void UpdatePointLightData(PointLightID ID, PointLightData* data);
+		i32 GetNumPointLights();
+
+		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
 		void RemoveSpotLight(SpotLightID ID);
 		void RemoveAllSpotLights();
+		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
+		i32 GetNumSpotLights();
+
+		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
 		void RemoveAreaLight(AreaLightID ID);
 		void RemoveAllAreaLights();
-
-		DirectionalLight* GetDirectionalLight();
-		i32 GetNumPointLights();
-		i32 GetNumSpotLights();
+		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
 		i32 GetNumAreaLights();
 
 		i32 GetFramesRenderedCount() const;

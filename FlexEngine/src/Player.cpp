@@ -38,6 +38,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	const glm::vec3 Player::HeadlampMountingPos = glm::vec3(0.0f, 0.8f, 0.2f);
+
 	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
 		GameObject("Player " + std::to_string(index), SID("player"), gameObjectID),
 		m_Index(index),
@@ -270,6 +272,44 @@ namespace flex
 		return m_Controller;
 	}
 
+	template<typename T>
+	void DrawInventoryImGui(const char* inventoryName, i32 highlightedIndex, const T& inventory)
+	{
+		if (ImGui::TreeNode(inventoryName))
+		{
+			for (i32 i = 0; i < (i32)inventory.size(); ++i)
+			{
+				const bool bHeld = (i == highlightedIndex);
+				if (bHeld)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				}
+
+				if (inventory[i].count != 0)
+				{
+					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(inventory[i].prefabID);
+					if (prefabTemplate != nullptr)
+					{
+						std::string prefabTemplateName = prefabTemplate->GetName();
+						ImGui::Text("%s (%i), User data: %.3f", prefabTemplateName.c_str(), inventory[i].count, inventory[i].userData.floatVal);
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("INVALID (%i)", inventory[i].count);
+						ImGui::PopStyleColor();
+					}
+				}
+
+				if (bHeld)
+				{
+					ImGui::PopStyleColor();
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
+
 	void Player::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
@@ -293,58 +333,9 @@ namespace flex
 
 			ImGui::Text("Held item slot: %i", heldItemSlot);
 
-			ImGui::Text("Inventory:");
-			ImGui::Indent();
-			for (const GameObjectStack& gameObjectStack : m_Inventory)
-			{
-				if (gameObjectStack.count != 0)
-				{
-					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-					if (prefabTemplate != nullptr)
-					{
-						std::string prefabTemplateName = prefabTemplate->GetName();
-						ImGui::Text("%s (%i), User data: %.3f", prefabTemplateName.c_str(), gameObjectStack.count, gameObjectStack.userData.floatVal);
-					}
-					else
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-						ImGui::Text("INVALID (%i)", gameObjectStack.count);
-						ImGui::PopStyleColor();
-					}
-				}
-			}
-			ImGui::Unindent();
-
-			ImGui::Text("Quick access inventory:");
-			ImGui::Indent();
-			for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
-			{
-
-				const bool bHeld = (i == heldItemSlot);
-				if (bHeld)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
-				}
-
-				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QuickAccessInventory[i].prefabID);
-				if (prefabTemplate != nullptr)
-				{
-					std::string prefabTemplateName = prefabTemplate->GetName();
-					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), m_QuickAccessInventory[i].count);
-				}
-				else
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, bHeld ? ImVec4(0.7f, 0.7f, 0.7f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1));
-					ImGui::Text("Empty");
-					ImGui::PopStyleColor();
-				}
-
-				if (bHeld)
-				{
-					ImGui::PopStyleColor();
-				}
-			}
-			ImGui::Unindent();
+			DrawInventoryImGui("Inventory", -1, m_Inventory);
+			DrawInventoryImGui("Quick access inventory", heldItemSlot, m_QuickAccessInventory);
+			DrawInventoryImGui("Wearables inventory", -1, m_WearablesInventory);
 
 			m_Controller->DrawImGuiObjects();
 
@@ -471,19 +462,6 @@ namespace flex
 		}
 	}
 
-	i32 Player::GetNextFreeQuickAccessInventorySlot()
-	{
-		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
-		{
-			if (m_QuickAccessInventory[i].count == 0)
-			{
-				return i;
-			}
-		}
-
-		return -1;
-	}
-
 	i32 Player::GetNextFreeInventorySlot()
 	{
 		for (i32 i = 0; i < (i32)m_Inventory.size(); ++i)
@@ -497,59 +475,132 @@ namespace flex
 		return -1;
 	}
 
+	i32 Player::GetNextFreeQuickAccessInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
+		{
+			if (m_QuickAccessInventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
 	bool Player::IsRidingTrack()
 	{
 		return m_TrackRidingID != InvalidTrackID;
 	}
 
-	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID)
+	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID, InventoryType& outInventoryType)
 	{
-		if ((i32)stackID < QUICK_ACCESS_ITEM_COUNT)
+		if ((i32)stackID < INVENTORY_MAX)
 		{
-			return &m_QuickAccessInventory[(i32)stackID];
+			outInventoryType = InventoryType::INVENTORY;
+			return &m_Inventory[(i32)stackID - INVENTORY_MIN];
 		}
-		if ((i32)stackID < (QUICK_ACCESS_ITEM_COUNT + INVENTORY_ITEM_COUNT))
+		if ((i32)stackID < INVENTORY_QUICK_ACCESS_MAX)
 		{
-			return &m_Inventory[(i32)stackID - QUICK_ACCESS_ITEM_COUNT];
+			outInventoryType = InventoryType::QUICK_ACCESS;
+			return &m_QuickAccessInventory[(i32)stackID - INVENTORY_QUICK_ACCESS_MIN];
+		}
+		if ((i32)stackID < INVENTORY_WEARABLES_MAX)
+		{
+			outInventoryType = InventoryType::WEARABLES;
+			return &m_WearablesInventory[(i32)stackID - INVENTORY_WEARABLES_MIN];
 		}
 
+		outInventoryType = InventoryType::NONE;
 		PrintWarn("Attempted to get item from inventory with invalid stackID: %d!\n", (i32)stackID);
 		return nullptr;
 	}
 
 	bool Player::MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID)
 	{
-		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
-		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
+		InventoryType fromInventoryType, toInventoryType;
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID, fromInventoryType);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID, toInventoryType);
 
 		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
 		{
-			if (toStack->count == 0)
+			if (toInventoryType == InventoryType::WEARABLES)
 			{
-				toStack->prefabID = fromStack->prefabID;
-				toStack->count = fromStack->count;
-				toStack->userData = fromStack->userData;
-				fromStack->Clear();
-				return true;
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(fromStack->prefabID);
+				if (prefabTemplate->IsWearable())
+				{
+					if (toStack->count == 0 && fromStack->count == 1)
+					{
+						toStack->prefabID = fromStack->prefabID;
+						toStack->count = fromStack->count;
+						toStack->userData = fromStack->userData;
+						fromStack->Clear();
+
+						OnWearableEquipped(toStack);
+
+						return true;
+					}
+				}
 			}
-			else if (toStack->prefabID == fromStack->prefabID &&
-				(u32)(toStack->count + fromStack->count) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
+			else
 			{
-				toStack->count = toStack->count + fromStack->count;
-				// TODO: Merge user data's here somehow?
-				fromStack->Clear();
-				return true;
+				bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
+
+				if (toStack->count == 0)
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					toStack->prefabID = fromStack->prefabID;
+					toStack->count = fromStack->count;
+					toStack->userData = fromStack->userData;
+					fromStack->Clear();
+					return true;
+				}
+				else if (toStack->prefabID == fromStack->prefabID &&
+					(u32)(toStack->count + fromStack->count) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					toStack->count = toStack->count + fromStack->count;
+					// TODO: Merge user data's here somehow?
+					fromStack->Clear();
+					return true;
+				}
 			}
 		}
 
 		return false;
 	}
 
+	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex <= INVENTORY_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_MIN);
+		}
+		return InvalidID;
+	}
+
 	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)
 	{
-		if (slotIndex >= 0 && slotIndex < QUICK_ACCESS_ITEM_COUNT)
+		if (slotIndex >= 0 && slotIndex <= QUICK_ACCESS_ITEM_COUNT)
 		{
-			return (GameObjectStackID)slotIndex;
+			return (GameObjectStackID)slotIndex + INVENTORY_QUICK_ACCESS_MIN;
+		}
+		return InvalidID;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForWearablesInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex <= WEARABLES_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_WEARABLES_MIN);
 		}
 		return InvalidID;
 	}
@@ -648,19 +699,11 @@ namespace flex
 		printResults();
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
-	{
-		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
-		{
-			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
-		}
-		return InvalidID;
-	}
-
 	void Player::ClearInventory()
 	{
 		m_Inventory.fill({});
 		m_QuickAccessInventory.fill({});
+		m_WearablesInventory.fill({});
 	}
 
 	void Player::ParseInventoryFile()
@@ -673,10 +716,11 @@ namespace flex
 				JSONObject inventoryObj;
 				if (JSONParser::Parse(fileContents, inventoryObj))
 				{
-					std::vector<JSONObject> slotLists[2];
+					std::vector<JSONObject> slotLists[3];
 
 					inventoryObj.TryGetObjectArray("slots", slotLists[0]);
 					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
+					inventoryObj.TryGetObjectArray("wearable slots", slotLists[2]);
 
 					for (i32 slotListIndex = 0; slotListIndex < 2; ++slotListIndex)
 					{
@@ -697,9 +741,13 @@ namespace flex
 								{
 									m_Inventory[index] = GameObjectStack(prefabID, count);
 								}
-								else
+								else if (slotListIndex == 1)
 								{
 									m_QuickAccessInventory[index] = GameObjectStack(prefabID, count);
+								}
+								else if (slotListIndex == 2)
+								{
+									m_WearablesInventory[index] = GameObjectStack(prefabID, count);
 								}
 							}
 							else
@@ -757,8 +805,7 @@ namespace flex
 			GameObjectStack& stack = m_Inventory[slotIdx];
 			if (stack.count > 0)
 			{
-				JSONObject slot = SerializeSlot(slotIdx, stack);
-				slots.emplace_back(slot);
+				slots.emplace_back(SerializeSlot(slotIdx, stack));
 			}
 		}
 
@@ -769,8 +816,18 @@ namespace flex
 			GameObjectStack& stack = m_QuickAccessInventory[slotIdx];
 			if (stack.count > 0)
 			{
-				JSONObject slot = SerializeSlot(slotIdx, stack);
-				quickAccessSlots.emplace_back(slot);
+				quickAccessSlots.emplace_back(SerializeSlot(slotIdx, stack));
+			}
+		}
+
+		std::vector<JSONObject> wearablesSlots;
+		wearablesSlots.reserve(m_WearablesInventory.size());
+		for (i32 slotIdx = 0; slotIdx < (i32)m_WearablesInventory.size(); ++slotIdx)
+		{
+			GameObjectStack& stack = m_WearablesInventory[slotIdx];
+			if (stack.count > 0)
+			{
+				wearablesSlots.emplace_back(SerializeSlot(slotIdx, stack));
 			}
 		}
 
@@ -903,5 +960,54 @@ namespace flex
 	bool Player::HasFreeHand() const
 	{
 		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
+	}
+
+	void Player::OnWearableEquipped(GameObjectStack* wearableStack)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
+		assert(prefabTemplate->IsWearable());
+
+		switch (prefabTemplate->GetTypeID())
+		{
+		case SID("headlamp"):
+		{
+			GameObject* headLamp = prefabTemplate->CopySelf(this, GameObject::ALL);
+			headLamp->GetTransform()->SetLocalPosition(HeadlampMountingPos);
+		} break;
+		default:
+		{
+			PrintError("Unhandled wearable equipped\n");
+		} break;
+		}
+	}
+
+	void Player::OnWearableUnequipped(GameObjectStack* wearableStack)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
+		assert(prefabTemplate->IsWearable());
+
+		switch (prefabTemplate->GetTypeID())
+		{
+		case SID("headlamp"):
+		{
+			std::vector<HeadLamp*> headlamps;
+			GetChildrenOfType<HeadLamp>(SID("headlamp"), true, headlamps);
+			if (headlamps.size() == 1)
+			{
+				if (!RemoveChildImmediate(headlamps[0]->ID, true))
+				{
+					PrintError("Failed to remove headlamp from player\n");
+				}
+			}
+			else
+			{
+				PrintError("Failed to find headlamp child in player\n");
+			}
+		} break;
+		default:
+		{
+			PrintError("Unhandled wearable unequipped\n");
+		} break;
+		}
 	}
 } // namespace flex

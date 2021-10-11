@@ -36,8 +36,6 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	std::map<StringID, std::string> BaseScene::GameObjectTypeStringIDPairs;
-
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName)
 	{
@@ -129,7 +127,7 @@ namespace flex
 			m_bLoaded = true;
 		}
 
-		ReadGameObjectTypesFile();
+		g_SceneManager->ReadGameObjectTypesFile();
 
 		// All updating to new file version should be complete by this point
 		m_SceneFileVersion = LATEST_SCENE_FILE_VERSION;
@@ -306,6 +304,8 @@ namespace flex
 			{
 				objectPair.first->AddChildImmediate(objectPair.second);
 				RegisterGameObject(objectPair.second);
+				objectPair.second->Initialize();
+				objectPair.second->PostInitialize();
 			}
 			m_PendingAddChildObjects.clear();
 			UpdateRootObjectSiblingIndices();
@@ -604,59 +604,6 @@ namespace flex
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();
-
-		if (m_bTriggerNewObjectTypePopup)
-		{
-			m_bTriggerNewObjectTypePopup = false;
-			ImGui::OpenPopup(m_NewObjectTypePopupStr);
-			m_NewObjectTypeStrBuffer.clear();
-			m_NewObjectTypeStrBuffer.resize(m_MaxObjectNameLen);
-		}
-
-		if (ImGui::BeginPopupModal(m_NewObjectTypePopupStr, NULL,
-			ImGuiWindowFlags_AlwaysAutoResize |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoNavInputs))
-		{
-			bool bCreateType = false;
-			if (ImGui::InputText("Type", (char*)m_NewObjectTypeStrBuffer.data(), m_MaxObjectNameLen, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				bCreateType = true;
-			}
-
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
-
-			if (ImGui::Button("Cancel"))
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-
-			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
-
-			if (ImGui::Button("Create") || bCreateType)
-			{
-				// Remove excess trailing \0 chars
-				m_NewObjectTypeStrBuffer = std::string(m_NewObjectTypeStrBuffer.c_str());
-
-				if (!m_NewObjectTypeStrBuffer.empty())
-				{
-					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
-					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
-
-					WriteGameObjectTypesFile();
-
-					ImGui::CloseCurrentPopup();
-				}
-			}
-
-			ImGui::EndPopup();
-		}
 	}
 
 	void BaseScene::DoSceneContextMenu()
@@ -1312,7 +1259,7 @@ namespace flex
 
 		if (bShowCombo)
 		{
-			for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
+			for (const auto& typeIDPair : SceneManager::GameObjectTypeStringIDPairs)
 			{
 				bool bSelected = (typeIDPair.first == selectedTypeStringID);
 				if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
@@ -1328,7 +1275,7 @@ namespace flex
 
 		if (ImGui::Button("New Type"))
 		{
-			m_bTriggerNewObjectTypePopup = true;
+			g_SceneManager->bOpenNewObjectTypePopup = true;
 		}
 
 		return bChanged;
@@ -1345,7 +1292,7 @@ namespace flex
 			ImGui::OpenPopup(popupName);
 
 			m_NewObjectTypeIDPair.first = SID("object");
-			m_NewObjectTypeIDPair.second = GameObjectTypeStringIDPairs[SID("object")];
+			m_NewObjectTypeIDPair.second = SceneManager::GameObjectTypeStringIDPairs[SID("object")];
 
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
@@ -1370,11 +1317,11 @@ namespace flex
 			ImGuiWindowFlags_AlwaysAutoResize |
 			ImGuiWindowFlags_NoSavedSettings))
 		{
-			newObjectName.resize(m_MaxObjectNameLen);
+			newObjectName.resize(GameObject::MaxNameLength);
 
 			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
-				m_MaxObjectNameLen,
+				GameObject::MaxNameLength,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
 			// SetItemDefaultFocus doesn't work here for some reason
@@ -1973,8 +1920,8 @@ namespace flex
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
-		auto iter = GameObjectTypeStringIDPairs.find(typeID);
-		if (iter == GameObjectTypeStringIDPairs.end())
+		auto iter = SceneManager::GameObjectTypeStringIDPairs.find(typeID);
+		if (iter == SceneManager::GameObjectTypeStringIDPairs.end())
 		{
 			return "";
 		}
@@ -2616,49 +2563,6 @@ namespace flex
 		}
 
 		return InvalidGameObjectID;
-	}
-
-	void BaseScene::ReadGameObjectTypesFile()
-	{
-		GameObjectTypeStringIDPairs.clear();
-		std::string fileContents;
-		// TODO: Gather this info from reflection?
-		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
-		{
-			std::vector<std::string> lines = Split(fileContents, '\n');
-			for (const std::string& line : lines)
-			{
-				if (!line.empty())
-				{
-					const char* lineCStr = line.c_str();
-					StringID typeID = Hash(lineCStr);
-					if (GameObjectTypeStringIDPairs.find(typeID) != GameObjectTypeStringIDPairs.end())
-					{
-						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
-					}
-					GameObjectTypeStringIDPairs.emplace(typeID, line);
-				}
-			}
-		}
-		else
-		{
-			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
-		}
-	}
-
-	void BaseScene::WriteGameObjectTypesFile()
-	{
-		StringBuilder fileContents;
-
-		for (auto iter = GameObjectTypeStringIDPairs.begin(); iter != GameObjectTypeStringIDPairs.end(); ++iter)
-		{
-			fileContents.AppendLine(iter->second);
-		}
-
-		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
-		{
-			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
-		}
 	}
 
 	std::vector<GameObject*>& BaseScene::GetRootObjects()

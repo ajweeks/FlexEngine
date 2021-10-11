@@ -105,6 +105,27 @@ namespace flex
 	static const char* BrakeLightNames[] = { "Left", "Right" };
 	static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Vehicle::Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
 
+	GameObjectStack::GameObjectStack() :
+		prefabID(InvalidPrefabID),
+		count(0),
+		userData({})
+	{
+	}
+
+	GameObjectStack::GameObjectStack(const PrefabID& prefabID, i32 count) :
+		prefabID(prefabID),
+		count(count),
+		userData({})
+	{
+	}
+
+	void GameObjectStack::Clear()
+	{
+		prefabID = InvalidPrefabID;
+		count = 0;
+		userData.floatVal = 0.0f;
+	}
+
 	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		m_Name(name),
 		m_TypeID(typeID)
@@ -315,6 +336,7 @@ namespace flex
 		case SID("vehicle"): return new Vehicle(objectName, gameObjectID);
 		case SID("road"): return new Road(objectName, gameObjectID);
 		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
+		case SID("headlamp"): return new HeadLamp(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -1742,6 +1764,11 @@ namespace flex
 		return false;
 	}
 
+	bool GameObject::IsWearable() const
+	{
+		return m_TypeID == SID("headlamp");
+	}
+
 	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
 	{
 		m_NearbyInteractable = nearbyInteractable;
@@ -1933,19 +1960,19 @@ namespace flex
 
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
 
-		if (parent != nullptr)
+		if (bAddToScene)
 		{
-			parent->AddChild(newGameObject);
-		}
-		else
-		{
-			if (m_Parent != nullptr)
+			if (parent != nullptr)
 			{
-				g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
+				parent->AddChild(newGameObject);
 			}
 			else
 			{
-				if (bAddToScene)
+				if (m_Parent != nullptr)
+				{
+					g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
+				}
+				else
 				{
 					g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 				}
@@ -2055,7 +2082,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					GameObject* newChild = child->CopySelf(newGameObject, copyFlags);
+					GameObject* newChild = child->CopySelf(newGameObject, (CopyFlags)((i32)copyFlags & ~(i32)CopyFlags::ADD_TO_SCENE));
 					if (newChild != nullptr)
 					{
 						newGameObject->AddChildImmediate(newChild);
@@ -2229,7 +2256,7 @@ namespace flex
 			{
 				if (bDestroy)
 				{
-					child->Destroy();
+					child->Destroy(false);
 					delete child;
 				}
 				else
@@ -3578,18 +3605,31 @@ namespace flex
 
 	void PointLight::Initialize()
 	{
-		pointLightID = g_Renderer->RegisterPointLight(&data);
+		if (pointLightID == InvalidPointLightID)
+		{
+			pointLightID = g_Renderer->RegisterPointLight(&data);
+			if (pointLightID == InvalidPointLightID)
+			{
+				PrintError("More point lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_POINT_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = false;
+			}
 
-		m_Transform.updateParentOnStateChange = true;
+			m_Transform.updateParentOnStateChange = true;
 
-		GameObject::Initialize();
+			GameObject::Initialize();
+		}
 	}
 
 	void PointLight::Destroy(bool bDetachFromParent /* = true */)
 	{
-		g_Renderer->RemovePointLight(pointLightID);
+		if (pointLightID != InvalidPointLightID)
+		{
+			g_Renderer->RemovePointLight(pointLightID);
+			pointLightID = InvalidPointLightID;
 
-		GameObject::Destroy(bDetachFromParent);
+			GameObject::Destroy(bDetachFromParent);
+		}
 	}
 
 	void PointLight::Update()
@@ -3792,18 +3832,31 @@ namespace flex
 
 	void SpotLight::Initialize()
 	{
-		spotLightID = g_Renderer->RegisterSpotLight(&data);
+		if (spotLightID == InvalidSpotLightID)
+		{
+			spotLightID = g_Renderer->RegisterSpotLight(&data);
+			if (spotLightID == InvalidSpotLightID)
+			{
+				PrintError("More spot lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_SPOT_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = 0;
+			}
 
-		m_Transform.updateParentOnStateChange = true;
+			m_Transform.updateParentOnStateChange = true;
 
-		GameObject::Initialize();
+			GameObject::Initialize();
+		}
 	}
 
 	void SpotLight::Destroy(bool bDetachFromParent)
 	{
-		g_Renderer->RemoveSpotLight(spotLightID);
+		if (spotLightID != InvalidSpotLightID)
+		{
+			g_Renderer->RemoveSpotLight(spotLightID);
+			spotLightID = InvalidSpotLightID;
 
-		GameObject::Destroy(bDetachFromParent);
+			GameObject::Destroy(bDetachFromParent);
+		}
 	}
 
 	void SpotLight::Update()
@@ -4012,18 +4065,31 @@ namespace flex
 
 	void AreaLight::Initialize()
 	{
-		areaLightID = g_Renderer->RegisterAreaLight(&data);
+		if (areaLightID == InvalidAreaLightID)
+		{
+			areaLightID = g_Renderer->RegisterAreaLight(&data);
+			if (areaLightID == InvalidAreaLightID)
+			{
+				PrintError("More area lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_AREA_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = false;
+			}
 
-		m_Transform.updateParentOnStateChange = true;
+			m_Transform.updateParentOnStateChange = true;
 
-		GameObject::Initialize();
+			GameObject::Initialize();
+		}
 	}
 
 	void AreaLight::Destroy(bool bDetachFromParent)
 	{
-		g_Renderer->RemoveAreaLight(areaLightID);
+		if (areaLightID != InvalidAreaLightID)
+		{
+			g_Renderer->RemoveAreaLight(areaLightID);
+			areaLightID = InvalidAreaLightID;
 
-		GameObject::Destroy(bDetachFromParent);
+			GameObject::Destroy(bDetachFromParent);
+		}
 	}
 
 	void AreaLight::Update()
