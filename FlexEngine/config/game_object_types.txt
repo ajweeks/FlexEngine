@@ -1,3 +1,4 @@
+wire plug
 spring
 socket
 soft body
@@ -11,6 +12,7 @@ rising block
 engine cart
 skybox
 terminal
+headlamp
 blocks
 battery
 area light
@@ -20,9 +22,8 @@ mobile liquid box
 object
 road
 wire
-wire plug
 cart
 particle system
 terrain generator
-vehicle
 solar panel
+vehicle

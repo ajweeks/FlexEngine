@@ -1,0 +1,32 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "6CCB3D4A7730C88F43F091E6CE3EA8A3",
+	"root" : 
+	{
+		"name" : "headlamp",
+		"id" : "0BE25AF11AE695BE44C6F77171101623",
+		"type" : "headlamp",
+		"visible" : true,
+		"casts shadow" : true,
+		"children" : 
+		[
+			{
+				"name" : "SpotLight_00",
+				"id" : "C0027FEB48ECFB8448F31F5773008FBA",
+				"type" : "spot light",
+				"visible" : true,
+				"casts shadow" : true,
+				"spot light info" : 
+				{
+					"pos" : "0.000, 0.000, 0.000",
+					"colour" : "1.00, 1.00, 1.00",
+					"enabled" : true,
+					"brightness" : 500.0,
+					"direction" : "0.00, 0.00, -1.00",
+					"angle" : 0.818000
+				}
+			}
+		]
+	}
+}

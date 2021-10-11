@@ -1814,14 +1814,21 @@ namespace flex
 	public:
 		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
-		virtual void Initialize() override;
-		virtual void PostInitialize() override;
-		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
 	private:
 		real m_ChargeRate = 10.0f;
 		real m_Efficiency = 1.0f;
+
+	};
+
+	class HeadLamp : public GameObject
+	{
+	public:
+		HeadLamp(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+	private:
+		bool m_bOn = true;
 
 	};
 } // namespace flex

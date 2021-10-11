@@ -13044,22 +13044,6 @@ namespace flex
 		m_bItemizable = true;
 	}
 
-	void SolarPanel::Initialize()
-	{
-		GameObject::Initialize();
-	}
-
-	void SolarPanel::PostInitialize()
-	{
-		GameObject::PostInitialize();
-	}
-
-	void SolarPanel::Destroy(bool bDetachFromParent)
-	{
-		FLEX_UNUSED(bDetachFromParent);
-		GameObject::Destroy();
-	}
-
 	void SolarPanel::Update()
 	{
 		PROFILE_AUTO("SolarPanel Update");
@@ -13079,5 +13063,11 @@ namespace flex
 		}
 
 		GameObject::Update();
+	}
+
+	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID) :
+		GameObject(name, SID("headlamp"), gameObjectID)
+	{
+		m_bItemizable = true;
 	}
 } // namespace flex
