@@ -40,9 +40,9 @@ namespace flex
 	void ConfigFile::Serialize()
 	{
 		JSONObject rootObject = {};
-		for (auto iter = values.begin(); iter != values.end(); ++iter)
+		for (auto& valuePair : values)
 		{
-			rootObject.fields.emplace_back(iter->first, JSONValue::FromRawPtr(iter->second.valuePtr, iter->second.type));
+			rootObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type));
 		}
 
 		std::string fileContents = rootObject.ToString();
@@ -63,12 +63,11 @@ namespace flex
 				JSONObject rootObject;
 				if (JSONParser::Parse(fileContents, rootObject))
 				{
-					for (auto iter = values.begin(); iter != values.end(); ++iter)
+					for (auto& valuePair : values)
 					{
-						//JSONValue::type type = Variant::TypeToJSONValueType(iter->second.type);
-						if (!rootObject.TryGetValueOfType(iter->second.label, iter->second.valuePtr, iter->second.type))
+						if (!rootObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type))
 						{
-							PrintError("Failed to get property %s from config file %s\n", iter->second.label, filePath.c_str());
+							PrintError("Failed to get property %s from config file %s\n", valuePair.second.label, filePath.c_str());
 						}
 					}
 				}
@@ -86,42 +85,42 @@ namespace flex
 
 		if (ImGui::TreeNode(name.c_str()))
 		{
-			for (auto iter = values.begin(); iter != values.end(); ++iter)
+			for (auto& valuePair : values)
 			{
-				switch (iter->second.type)
+				switch (valuePair.second.type)
 				{
 				case ValueType::FLOAT:
-					if (iter->second.valueMin != nullptr && iter->second.valueMax != nullptr)
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
 					{
-						ImGui::SliderFloat(iter->first, (real*)iter->second.valuePtr, *(real*)&iter->second.valueMin, *(real*)&iter->second.valueMax);
+						ImGui::SliderFloat(valuePair.first, (real*)valuePair.second.valuePtr, *(real*)&valuePair.second.valueMin, *(real*)&valuePair.second.valueMax);
 					}
 					else
 					{
-						ImGui::DragFloat(iter->first, (real*)iter->second.valuePtr);
+						ImGui::DragFloat(valuePair.first, (real*)valuePair.second.valuePtr);
 					}
 					break;
 				case ValueType::INT:
-					if (iter->second.valueMin != nullptr && iter->second.valueMax != nullptr)
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
 					{
-						ImGui::SliderInt(iter->first, (i32*)iter->second.valuePtr, *(i32*)&iter->second.valueMin, *(i32*)&iter->second.valueMax);
+						ImGui::SliderInt(valuePair.first, (i32*)valuePair.second.valuePtr, *(i32*)&valuePair.second.valueMin, *(i32*)&valuePair.second.valueMax);
 					}
 					else
 					{
-						ImGui::DragInt(iter->first, (i32*)iter->second.valuePtr);
+						ImGui::DragInt(valuePair.first, (i32*)valuePair.second.valuePtr);
 					}
 					break;
 				case ValueType::UINT:
-					if (iter->second.valueMin != nullptr && iter->second.valueMax != nullptr)
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
 					{
-						ImGuiExt::SliderUInt(iter->first, (u32*)iter->second.valuePtr, *(u32*)&iter->second.valueMin, *(u32*)&iter->second.valueMax);
+						ImGuiExt::SliderUInt(valuePair.first, (u32*)valuePair.second.valuePtr, *(u32*)&valuePair.second.valueMin, *(u32*)&valuePair.second.valueMax);
 					}
 					else
 					{
-						ImGuiExt::DragUInt(iter->first, (u32*)iter->second.valuePtr);
+						ImGuiExt::DragUInt(valuePair.first, (u32*)valuePair.second.valuePtr);
 					}
 					break;
 				case ValueType::BOOL:
-					ImGui::Checkbox(iter->first, (bool*)iter->second.valuePtr);
+					ImGui::Checkbox(valuePair.first, (bool*)valuePair.second.valuePtr);
 					break;
 				default:
 					PrintError("Unhandled value type in ConfigFile::DrawImGuiObjects\n");
