@@ -1896,8 +1896,7 @@ namespace flex
 			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv", "", "" },
 			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv", "", "" },
 			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv", "", "" },
-			// TODO: Rename to .geom or move to compute slot?
-			{ "particle_sim", "", "", "vk_simulate_particles_comp.spv", "" },
+			{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
