@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "scene_shanghai",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -21,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-225.149, 32.131, -21.632",
-			"pitch" : -0.128863,
-			"yaw" : 0.364430
+			"position" : "-172.848, 43.553, 118.339",
+			"pitch" : -0.281976,
+			"yaw" : 0.199597
 		}
 	},
 	"objects" : 
@@ -34,9 +28,6 @@
 			"type" : "skybox",
 			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,12 +40,12 @@
 			"name" : "Reflection Probe 01",
 			"id" : "5859BF7AB488769B4FDDB6C46B2EAA46",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
-			}
+			},
+			"visible" : true,
+			"casts shadow" : true
 		},
 		{
 			"name" : "sphere",
@@ -62,9 +53,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "ico-sphere.glb",
 			"materials" : 
 			[
@@ -75,18 +63,18 @@
 			"name" : "Directional Light",
 			"id" : "7C8D14F48AB5BC814848CA9616EE5C09",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "3.122, -1.328, -0.368"
+				"rot" : "1.673, -0.000, 0.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.775, -0.151, 0.603, 0.120",
+				"rotation" : "0.742, 0.000, 0.000, 0.670",
 				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.92, 0.92, 0.62",
+				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
 				"brightness" : 1.172000,
 				"cast shadows" : true,
@@ -99,9 +87,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_bridge_1.glb",
 			"materials" : 
 			[
@@ -112,12 +97,12 @@
 			"name" : "ground",
 			"id" : "8B2C1E0BD3607EBC4357DC0562DC15B6",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -1.600, 4.100"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"mesh" : "shanghai_ground.glb",
 			"materials" : 
 			[
@@ -130,9 +115,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_river.glb",
 			"materials" : 
 			[
@@ -145,9 +127,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_boat.glb",
 			"materials" : 
 			[
@@ -160,9 +139,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_build_1.glb",
 			"materials" : 
 			[
@@ -175,9 +151,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_build_2.glb",
 			"materials" : 
 			[
@@ -190,9 +163,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_river_bed.glb",
 			"materials" : 
 			[
@@ -205,9 +175,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_tables.glb",
 			"materials" : 
 			[
@@ -220,9 +187,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_misc_1.glb",
 			"materials" : 
 			[
@@ -235,9 +199,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_misc_2.glb",
 			"materials" : 
 			[
@@ -250,9 +211,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_veg_1.glb",
 			"materials" : 
 			[
@@ -265,9 +223,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_benches.glb",
 			"materials" : 
 			[
@@ -280,9 +235,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_misc_3.glb",
 			"materials" : 
 			[
@@ -295,9 +247,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_misc_4.glb",
 			"materials" : 
 			[
@@ -310,9 +259,6 @@
 			"type" : "object",
 			"visible" : true,
 			"casts shadow" : true,
-			"transform" : 
-			{
-			},
 			"mesh" : "shanghai_build_3.glb",
 			"materials" : 
 			[
@@ -323,14 +269,14 @@
 			"name" : "dragon",
 			"id" : "73874CB0E384D2BA4E64AACB9F9243E3",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-88.200, -2.500, 144.400",
 				"rot" : "0.000, -1.138, 0.000",
 				"scale" : "30.000, 30.000, 30.000"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
@@ -341,111 +287,56 @@
 			"name" : "PointLight_00",
 			"id" : "452A778DE9ECB0884A00DC9B8186FD78",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "-106.600, 22.600, 159.700"
+				"pos" : "-94.115, 22.600, 159.700"
 			},
+			"visible" : true,
+			"casts shadow" : true,
 			"point light info" : 
 			{
-				"pos" : "-106.600, 22.600, 159.700",
+				"pos" : "-94.115, 22.600, 159.700",
 				"colour" : "0.79, 0.80, 0.81",
 				"enabled" : true,
 				"brightness" : 239.582993
 			}
 		},
 		{
-			"name" : "New_Object_00",
-			"id" : "2C6B247E62F7D2884B6C9624EB6AC067",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
-			"transform" : 
-			{
-				"pos" : "0.000, 5.469, 0.000"
-			},
-			"mesh" : "donut.glb",
-			"materials" : 
-			[
-				"New Material 02",
-				"New Material 02",
-				"New Material 02"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
-			"name" : "New_Object_01",
-			"id" : "003C59FA91C682A94646CFF3405BFFD4",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
-			"transform" : 
-			{
-				"pos" : "-4.131, 5.469, 0.000"
-			},
-			"mesh" : "donut.glb",
-			"materials" : 
-			[
-				"New Material 02",
-				"New Material 02",
-				"New Material 02"
-			],
-			"collider" : 
-			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
-			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
-			}
-		},
-		{
-			"name" : "New_Object_02",
+			"name" : "donut_1",
 			"id" : "5E9A55A8C4295A984D267F5A84471AA1",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
+			"type" : "prefab",
+			"prefab type" : "donut_1",
+			"prefab id" : "7B3E0280A3052287447666E389F36D9A",
 			"transform" : 
 			{
-				"pos" : "-4.131, 5.469, 4.469"
-			},
-			"mesh" : "donut.glb",
-			"materials" : 
-			[
-				"New Material 02",
-				"New Material 02",
-				"New Material 02"
-			],
-			"collider" : 
+				"pos" : "-4.131, 5.469, 4.469",
+				"rot" : "-0.214, 0.000, 0.000",
+				"scale" : "0.931, 0.931, 0.931"
+			}
+		},
+		{
+			"name" : "donut_2",
+			"id" : "AB9F5699475C4CB44A274B955EF05F17",
+			"type" : "prefab",
+			"prefab type" : "donut_1",
+			"prefab id" : "7B3E0280A3052287447666E389F36D9A",
+			"transform" : 
 			{
-				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
-			},
-			"rigid body" : 
+				"pos" : "-0.360, 5.485, 0.472",
+				"rot" : "0.200, -0.056, 0.599",
+				"scale" : "1.669, 1.669, 1.669"
+			}
+		},
+		{
+			"name" : "donut_3",
+			"id" : "49562144C20A6CAA486DE223A20E9719",
+			"type" : "prefab",
+			"prefab type" : "donut_1",
+			"prefab id" : "7B3E0280A3052287447666E389F36D9A",
+			"transform" : 
 			{
-				"mass" : 0.000000,
-				"kinematic" : true,
-				"static" : true,
-				"mask" : 1,
-				"group" : 1
+				"pos" : "-8.451, 5.485, -2.115",
+				"rot" : "0.313, 0.053, -0.163"
 			}
 		}
 	]

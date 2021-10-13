@@ -1,0 +1,33 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "7B3E0280A3052287447666E389F36D9A",
+	"root" : 
+	{
+		"name" : "donut_1",
+		"id" : "5E9A55A8C4295A984D267F5A84471AA1",
+		"type" : "object",
+		"visible" : true,
+		"casts shadow" : true,
+		"mesh" : "donut.glb",
+		"materials" : 
+		[
+			"donut_sprinkle",
+			"donut_dough",
+			"donut_icing"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.000, 1.000, 1.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 0.000000,
+			"kinematic" : true,
+			"static" : true,
+			"mask" : 1,
+			"group" : 1
+		}
+	}
+}

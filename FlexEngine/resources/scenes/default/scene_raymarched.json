@@ -2,12 +2,6 @@
 	"version" : 6,
 	"name" : "scene_raymarched",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -49,15 +43,15 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.727, 0.666, -0.895"
+				"rot" : "1.679, -0.000, 0.000"
 			},
 			"visible" : true,
 			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.435, 0.130, -0.487, 0.746",
+				"rotation" : "0.744, 0.000, 0.000, 0.668",
 				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"colour" : "0.99, 1.00, 0.84",
 				"enabled" : true,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -95,7 +89,7 @@
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
-				"Raymarched"
+				"cloud"
 			]
 		}
 	]
