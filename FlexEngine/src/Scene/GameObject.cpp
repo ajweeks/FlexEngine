@@ -235,10 +235,10 @@ namespace flex
 			if (prefabTemplate != nullptr)
 			{
 				JSONObject transformObj;
-				Transform transform = Transform::Identity();
+				Transform transform = Transform::Identity;
 				if (obj.TryGetObject("transform", transformObj))
 				{
-					transform = Transform::ParseJSON(transformObj);
+					Transform::ParseJSON(transformObj, transform);
 				}
 
 				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
@@ -295,7 +295,7 @@ namespace flex
 
 		if (optionalTransform != nullptr)
 		{
-			prefabInstance->m_Transform = *optionalTransform;
+			prefabInstance->m_Transform.CloneFrom(*optionalTransform);
 		}
 
 		return prefabInstance;
@@ -1299,7 +1299,7 @@ namespace flex
 		JSONObject transformObj;
 		if (obj.TryGetObject("transform", transformObj))
 		{
-			m_Transform = Transform::ParseJSON(transformObj);
+			Transform::ParseJSON(transformObj, m_Transform);
 		}
 
 		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs);
@@ -1945,7 +1945,7 @@ namespace flex
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		newGameObject->m_Tags = m_Tags;
-		newGameObject->m_Transform = m_Transform;
+		newGameObject->m_Transform.CloneFrom(m_Transform);
 		newGameObject->m_TypeID = m_TypeID;
 
 		newGameObject->m_bSerializable = m_bSerializable;
@@ -12242,8 +12242,8 @@ namespace flex
 			m_Vehicle->updateWheelTransform(i, true);
 
 			const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-			Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
-			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelTransform.GetWorldRotation());
+			glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
+			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelRotation);
 
 			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
@@ -12458,10 +12458,10 @@ namespace flex
 				m_Vehicle->updateWheelTransform(i, true);
 
 				const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-				Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
+				glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
 				GameObject* tireObject = scene->GetGameObject(m_TireIDs[i]);
 				Transform* tireTransform = tireObject->GetTransform();
-				tireTransform->SetWorldRotation(newWheelTransform.GetWorldRotation());
+				tireTransform->SetWorldRotation(newWheelRotation);
 
 				real x = (real)(i % 2);
 				real y = (real)(i / 2);

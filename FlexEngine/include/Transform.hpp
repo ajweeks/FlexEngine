@@ -17,14 +17,17 @@ namespace flex
 
 		Transform(const Transform& other);
 		Transform(const Transform&& other);
-		Transform& operator=(const Transform& other);
-		Transform& operator=(const Transform&& other);
+		Transform& operator=(const Transform& other) = delete;
+		Transform& operator=(const Transform&& other) = delete;
 
 		~Transform();
 
-		static Transform ParseJSON(const JSONObject& transformObject);
+		static void ParseJSON(const JSONObject& object, Transform& outTransform);
 		static void ParseJSON(const JSONObject& object, glm::mat4& outModel);
 		static void ParseJSON(const JSONObject& object, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale);
+
+		// Copies all fields (except game object reference) into this transform
+		void CloneFrom(const Transform& other);
 
 		JSONField Serialize() const;
 		static JSONField Serialize(const glm::mat4 matrix, const char* objName);
@@ -33,7 +36,6 @@ namespace flex
 		void SetAsIdentity();
 
 		bool IsIdentity() const;
-		static Transform Identity();
 
 		glm::vec3 GetLocalPosition() const;
 		glm::vec3 GetWorldPosition();
@@ -79,17 +81,19 @@ namespace flex
 
 		void ComputeValues(); // Climbs up the parent-child tree up to the root
 
+		static const Transform Identity;
+
 		bool updateParentOnStateChange = false;
 
 	private:
-		//void UpdateChildTransforms(); // Climbs down the parent-child trees to all leaves
+		friend struct MotionState;
 
 		// Callback from physics system
 		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
 
 		void MarkDirty();
 
-		bool bDirty = false;
+		bool bDirty = true;
 
 		glm::vec3 localPosition;
 		glm::quat localRotation;
@@ -107,8 +111,6 @@ namespace flex
 		glm::vec3 right;
 
 		GameObject* m_GameObject = nullptr;
-
-		static Transform m_Identity;
 
 	};
 } // namespace flex

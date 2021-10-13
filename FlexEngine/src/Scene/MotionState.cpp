@@ -13,7 +13,7 @@ namespace flex
 
 	void MotionState::getWorldTransform(btTransform& centerOfMassWorldTrans) const
 	{
-		centerOfMassWorldTrans = ToBtTransform(*m_Transform);
+		centerOfMassWorldTrans = btTransform(ToBtQuaternion(m_Transform->worldRotation), ToBtVec3(m_Transform->worldPosition));
 	}
 
 	void MotionState::setWorldTransform(const btTransform& centerOfMassWorldTrans)

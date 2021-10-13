@@ -45,15 +45,3 @@ glm::mat4 BtMat3ToMat4(const btMatrix3x3& mat3)
 		row2.x(), row2.y(), row2.z(), 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f);
 }
-
-btTransform ToBtTransform(flex::Transform /* copy */ transform)
-{
-	btTransform result(ToBtQuaternion(transform.GetWorldRotation()), ToBtVec3(transform.GetWorldPosition()));
-	return result;
-}
-
-flex::Transform ToTransform(const btTransform& transform)
-{
-	flex::Transform result(ToVec3(transform.getOrigin()), ToQuaternion(transform.getRotation()));
-	return result;
-}

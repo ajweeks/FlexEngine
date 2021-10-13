@@ -19,7 +19,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	Transform Transform::m_Identity = Transform(VEC3_ZERO, QUAT_IDENTITY, VEC3_ONE);
+	const Transform Transform::Identity = Transform(VEC3_ZERO, QUAT_IDENTITY, VEC3_ONE);
 
 	Transform::Transform()
 	{
@@ -100,7 +100,8 @@ namespace flex
 			glm::scale(MAT4_IDENTITY, other.localScale)),
 		worldTransform(glm::translate(MAT4_IDENTITY, other.worldPosition)*
 			glm::mat4((glm::quat)other.worldRotation)*
-			glm::scale(MAT4_IDENTITY, other.worldScale))
+			glm::scale(MAT4_IDENTITY, other.worldScale)),
+		m_GameObject(other.m_GameObject)
 	{
 	}
 
@@ -121,63 +122,20 @@ namespace flex
 		worldTransform = (glm::translate(MAT4_IDENTITY, worldPosition) *
 			glm::mat4(worldRotation) *
 			glm::scale(MAT4_IDENTITY, worldScale));
-	}
-
-	Transform& Transform::operator=(const Transform& other)
-	{
-		localPosition = other.localPosition;
-		localRotation = other.localRotation;
-		localScale = other.localScale;
-		worldPosition = other.worldPosition;
-		worldRotation = other.worldRotation;
-		worldScale = other.worldScale;
-		localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
-			glm::mat4(localRotation) *
-			glm::scale(MAT4_IDENTITY, localScale));
-		worldTransform = glm::mat4(glm::translate(MAT4_IDENTITY, worldPosition) *
-			glm::mat4(worldRotation) *
-			glm::scale(MAT4_IDENTITY, worldScale));
-		forward = other.forward;
-		up = other.up;
-		right = other.right;
-		return *this;
-	}
-
-	Transform& Transform::operator=(const Transform&& other)
-	{
-		if (this != &other)
-		{
-			localPosition = other.localPosition;
-			localRotation = other.localRotation;
-			localScale = other.localScale;
-			worldPosition = other.worldPosition;
-			worldRotation = other.worldRotation;
-			worldScale = other.worldScale;
-			localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
-				glm::mat4(localRotation) *
-				glm::scale(MAT4_IDENTITY, localScale));
-			worldTransform = glm::mat4(glm::translate(MAT4_IDENTITY, worldPosition) *
-				glm::mat4(worldRotation) *
-				glm::scale(MAT4_IDENTITY, worldScale));
-			forward = other.forward;
-			up = other.up;
-			right = other.right;
-		}
-
-		return *this;
+		m_GameObject = other.m_GameObject;
 	}
 
 	Transform::~Transform()
 	{
 	}
 
-	Transform Transform::ParseJSON(const JSONObject& transformObject)
+	void Transform::ParseJSON(const JSONObject& object, Transform& outTransform)
 	{
 		glm::vec3 pos;
 		glm::quat rot;
 		glm::vec3 scale;
-		ParseJSON(transformObject, pos, rot, scale);
-		return Transform(pos, rot, scale);
+		ParseJSON(object, pos, rot, scale);
+		outTransform.CloneFrom(Transform(pos, rot, scale));
 	}
 
 	void Transform::ParseJSON(const JSONObject& object, glm::mat4& outModel)
@@ -239,6 +197,27 @@ namespace flex
 #endif
 
 		outRot = glm::quat(rotEuler);
+	}
+
+	void Transform::CloneFrom(const Transform& other)
+	{
+		localPosition = other.localPosition;
+		localRotation = other.localRotation;
+		localScale = other.localScale;
+		worldPosition = other.worldPosition;
+		worldRotation = other.worldRotation;
+		worldScale = other.worldScale;
+		localTransform = glm::mat4(glm::translate(MAT4_IDENTITY, localPosition) *
+			glm::mat4(localRotation) *
+			glm::scale(MAT4_IDENTITY, localScale));
+		worldTransform = glm::mat4(glm::translate(MAT4_IDENTITY, worldPosition) *
+			glm::mat4(worldRotation) *
+			glm::scale(MAT4_IDENTITY, worldScale));
+		forward = other.forward;
+		up = other.up;
+		right = other.right;
+
+		// NOTE: m_GameObject is not copied here
 	}
 
 	JSONField Transform::Serialize() const
@@ -316,23 +295,14 @@ namespace flex
 
 	void Transform::SetAsIdentity()
 	{
-		*this = m_Identity;
+		CloneFrom(Identity);
 	}
 
 	bool Transform::IsIdentity() const
 	{
-		bool result = (localPosition == m_Identity.localPosition &&
-			localRotation == m_Identity.localRotation &&
-			localScale == m_Identity.localScale);
-		return result;
-	}
-
-	Transform Transform::Identity()
-	{
-		Transform result;
-
-		result.SetAsIdentity();
-
+		bool result = (localPosition == Identity.localPosition &&
+			localRotation == Identity.localRotation &&
+			localScale == Identity.localScale);
 		return result;
 	}
 
