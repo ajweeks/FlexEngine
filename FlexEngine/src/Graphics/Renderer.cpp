@@ -272,7 +272,7 @@ namespace flex
 		DestroyRenderObject(m_Quad3DSSRenderID);
 		DestroyRenderObject(m_GBufferQuadRenderID);
 
-		if (m_PhysicsDebugDrawer)
+		if (m_PhysicsDebugDrawer != nullptr)
 		{
 			m_PhysicsDebugDrawer->Destroy();
 			delete m_PhysicsDebugDrawer;
@@ -1630,6 +1630,14 @@ namespace flex
 		m_QueuedHologramRotWS = rotWS;
 		m_QueuedHologramScaleWS = scaleWS;
 		m_QueuedHologramColour = colour;
+	}
+
+	void Renderer::OnPreSceneChange()
+	{
+		if (m_PhysicsDebugDrawer != nullptr)
+		{
+			m_PhysicsDebugDrawer->OnPreSceneChange();
+		}
 	}
 
 	void Renderer::OnPostSceneChange()

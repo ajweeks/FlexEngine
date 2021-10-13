@@ -86,6 +86,8 @@ namespace flex
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
 		assert(renderID != InvalidRenderID);
+		assert(!newData.positions_3D.empty() || !newData.positions_2D.empty());
+
 		m_VertexBufferData.UpdateData(newData);
 		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
 		m_Indices = indexData;

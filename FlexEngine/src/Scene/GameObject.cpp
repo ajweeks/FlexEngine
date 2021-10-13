@@ -2192,7 +2192,7 @@ namespace flex
 		}
 
 		Transform* childTransform = child->GetTransform();
-		GameObject* childPParent = child->GetParent();
+		GameObject* childPrevParent = child->GetParent();
 		glm::mat4 childWorldTransform = childTransform->GetWorldTransform();
 
 		if (child == m_Parent)
@@ -2215,7 +2215,7 @@ namespace flex
 
 		g_SceneManager->CurrentScene()->RegisterGameObject(child);
 
-		if (childPParent != nullptr)
+		if (childPrevParent != nullptr)
 		{
 			childTransform->SetWorldTransform(childWorldTransform);
 		}

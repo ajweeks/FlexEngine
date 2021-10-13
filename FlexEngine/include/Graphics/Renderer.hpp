@@ -35,6 +35,7 @@ namespace flex
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) = 0;
 
+		virtual void OnPreSceneChange() = 0;
 		virtual void OnPostSceneChange() = 0;
 
 		virtual void flushLines() override;
@@ -126,7 +127,7 @@ namespace flex
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void OnPreSceneChange() = 0;
+		virtual void OnPreSceneChange();
 		virtual void OnPostSceneChange(); // Called once scene has been loaded and all objects have been initialized and post initialized
 
 		/*

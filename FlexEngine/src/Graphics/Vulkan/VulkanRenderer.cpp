@@ -2304,6 +2304,8 @@ namespace flex
 		{
 			PROFILE_AUTO("UpdateDynamicVertexData");
 
+			assert(vertexBufferData->VertexBufferSize > 0);
+
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 			if (!renderObject->bIndexed)
@@ -2547,6 +2549,8 @@ namespace flex
 			DestroyTerrain();
 
 			CreateDescriptorSets();
+
+			Renderer::OnPreSceneChange();
 		}
 
 		void VulkanRenderer::OnPostSceneChange()
@@ -7555,6 +7559,12 @@ namespace flex
 					vertBuffer = m_StaticVertexBuffers[staticVertexBufferIndex].second;
 					indexBuffer = m_StaticIndexBuffer;
 				}
+			}
+
+			if (vertBuffer->m_Buffer == VK_NULL_HANDLE)
+			{
+				// Buffer hasn't been created (can be the case when a dynamic mesh has 0 vertices)
+				return;
 			}
 
 			if (indexBuffer->m_Buffer != VK_NULL_HANDLE)

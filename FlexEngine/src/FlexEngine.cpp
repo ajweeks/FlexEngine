@@ -2359,15 +2359,11 @@ namespace flex
 			if (action == Action::DBG_ENTER_NEXT_SCENE)
 			{
 				g_SceneManager->SetNextSceneActive();
-				g_SceneManager->InitializeCurrentScene();
-				g_SceneManager->PostInitializeCurrentScene();
 				return EventReply::CONSUMED;
 			}
 			else if (action == Action::DBG_ENTER_PREV_SCENE)
 			{
 				g_SceneManager->SetPreviousSceneActive();
-				g_SceneManager->InitializeCurrentScene();
-				g_SceneManager->PostInitializeCurrentScene();
 				return EventReply::CONSUMED;
 			}
 		}

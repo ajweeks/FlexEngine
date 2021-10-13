@@ -24,6 +24,8 @@ namespace flex
 
 			virtual void Initialize() override;
 			virtual void Destroy() override;
+
+			virtual void OnPreSceneChange() override;
 			virtual void OnPostSceneChange() override;
 
 			virtual void reportErrorWarning(const char* warningString)  override;
@@ -54,7 +56,6 @@ namespace flex
 			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 
 			GameObject* m_Object = nullptr;
-			Mesh* m_ObjectMesh = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

@@ -50,6 +50,12 @@ namespace flex
 
 		void VulkanPhysicsDebugDraw::Destroy()
 		{
+			m_Object = nullptr;
+		}
+
+		void VulkanPhysicsDebugDraw::OnPreSceneChange()
+		{
+			m_Object = nullptr;
 		}
 
 		void VulkanPhysicsDebugDraw::OnPostSceneChange()
@@ -181,9 +187,9 @@ namespace flex
 				u32 newHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
 				PROFILE_END("Hash vertex buffer");
 
-				if (newHash != oldHash)
+				if (newHash != oldHash && !m_VertexBufferCreateInfo.positions_3D.empty())
 				{
-					m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+					m_Object->GetMesh()->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
 			}
 		}
@@ -192,12 +198,7 @@ namespace flex
 		{
 			PROFILE_AUTO("CreateDebugObject");
 
-			if (m_Object != nullptr)
-			{
-				// Object will have been destroyed by scene?
-				m_Object = nullptr;
-				m_ObjectMesh = nullptr;
-			}
+			assert(m_Object == nullptr);
 
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.materialID = m_MaterialID;
@@ -208,10 +209,10 @@ namespace flex
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);
-			m_ObjectMesh = m_Object->SetMesh(new Mesh(m_Object));
+			Mesh* mesh = m_Object->SetMesh(new Mesh(m_Object));
 			Material* mat = m_Renderer->GetMaterial(m_MaterialID);
 			const VertexAttributes vertexAttributes = m_Renderer->GetShader(mat->shaderID)->vertexAttributes;
-			if (!m_ObjectMesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
+			if (!mesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
 			}
@@ -219,7 +220,7 @@ namespace flex
 
 			if (!m_VertexBufferCreateInfo.positions_3D.empty())
 			{
-				m_ObjectMesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
+				mesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 			}
 		}
 
