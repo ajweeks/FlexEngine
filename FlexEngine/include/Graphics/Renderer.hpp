@@ -207,7 +207,7 @@ namespace flex
 
 		i32 GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials);
 		// Returns true when the selected material has changed
-		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
+		bool DrawImGuiMaterialList(MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
 		void DrawImGuiTexturePreviewTooltip(Texture* texture);
 		// Returns true if any property changed
 		bool DrawImGuiForGameObject(GameObject* gameObject, bool bDrawingEditorObjects);

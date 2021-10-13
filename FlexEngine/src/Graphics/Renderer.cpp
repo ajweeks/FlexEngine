@@ -1302,7 +1302,7 @@ namespace flex
 		for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 		{
 			auto matIter = m_Materials.find(i);
-			if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->bEditorMaterial))
+			if (matIter == m_Materials.end() ||	(!bShowEditorMaterials && matIter->second->bEditorMaterial))
 			{
 				continue;
 			}
@@ -1325,7 +1325,7 @@ namespace flex
 		return matShortIndex;
 	}
 
-	bool Renderer::DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected)
+	bool Renderer::DrawImGuiMaterialList(MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected)
 	{
 		bool bMaterialSelectionChanged = false;
 
@@ -1339,11 +1339,12 @@ namespace flex
 
 		if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
 		{
+			i32 selectedMaterialShortIndex = g_Renderer->GetShortMaterialIndex(*selectedMaterialID, bShowEditorMaterials);
 			i32 matShortIndex = 0;
 			for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 			{
 				auto matIter = m_Materials.find(i);
-				if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->bEditorMaterial))
+				if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
 				{
 					continue;
 				}
@@ -1357,18 +1358,18 @@ namespace flex
 
 				ImGui::PushID(i);
 
-				bool bSelected = (matShortIndex == *selectedMaterialIndexShort);
-				const bool bWasMatVisibleInEditor = material->bEditorMaterial;
-				if (!bWasMatVisibleInEditor)
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+				const bool bWasEditorMat = material->bEditorMaterial;
+				if (bWasEditorMat)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 				}
 
 				if (ImGui::Selectable(material->name.c_str(), &bSelected))
 				{
-					if (*selectedMaterialIndexShort != matShortIndex)
+					if (selectedMaterialShortIndex != matShortIndex)
 					{
-						*selectedMaterialIndexShort = matShortIndex;
+						selectedMaterialShortIndex = matShortIndex;
 						*selectedMaterialID = (MaterialID)i;
 						bMaterialSelectionChanged = true;
 					}
@@ -1379,7 +1380,7 @@ namespace flex
 					ImGui::SetScrollHereY();
 				}
 
-				if (!bWasMatVisibleInEditor)
+				if (bWasEditorMat)
 				{
 					ImGui::PopStyleColor();
 				}

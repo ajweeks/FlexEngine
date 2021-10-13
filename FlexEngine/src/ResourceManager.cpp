@@ -1582,18 +1582,21 @@ namespace flex
 				static bool bMaterialSelectionChanged = true;
 				static bool bScrollToSelected = true;
 				const i32 MAX_NAME_LEN = 128;
-				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 				static MaterialID selectedMaterialID = 0;
 
-				// Skip by any editor materials in case bShowEditorMaterials was set to false while we had one selected
-				if (!bShowEditorMaterials)
+				u32 matCount = (u32)g_Renderer->GetMaterialCount();
+				while (selectedMaterialID < (matCount - 1) &&
+					(!g_Renderer->MaterialExists(selectedMaterialID) ||
+						(!bShowEditorMaterials && g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial)))
 				{
-					i32 matCount = g_Renderer->GetMaterialCount();
-					while (!g_Renderer->MaterialExists(selectedMaterialID) ||
-						(!g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial && selectedMaterialID < (u32)(matCount - 1)))
-					{
-						++selectedMaterialID;
-					}
+					++selectedMaterialID;
+				}
+
+				while (selectedMaterialID > 0 &&
+					(!g_Renderer->MaterialExists(selectedMaterialID) ||
+						(!bShowEditorMaterials && g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial)))
+				{
+					--selectedMaterialID;
 				}
 
 				Material* material = g_Renderer->GetMaterial(selectedMaterialID);
@@ -1784,7 +1787,7 @@ namespace flex
 
 				ImGui::EndColumns();
 
-				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialIndexShort, &selectedMaterialID, bShowEditorMaterials, bScrollToSelected);
+				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialID, bShowEditorMaterials, bScrollToSelected);
 				bScrollToSelected = false;
 
 				const i32 MAX_MAT_NAME_LEN = 128;
@@ -1831,7 +1834,6 @@ namespace flex
 						createInfo.name = newMaterialName;
 						createInfo.shaderName = newMatShader->name;
 						selectedMaterialID = g_Renderer->InitializeMaterial(&createInfo);
-						selectedMaterialIndexShort = g_Renderer->GetShortMaterialIndex(selectedMaterialID, bShowEditorMaterials);
 
 						bMaterialSelectionChanged = true;
 						bScrollToSelected = true;
