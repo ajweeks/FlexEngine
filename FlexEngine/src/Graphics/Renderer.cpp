@@ -74,18 +74,18 @@ namespace flex
 		m_AreaLightData = (AreaLightData*)(m_SpotLightData + MAX_SPOT_LIGHT_COUNT);
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
+			memset(&m_PointLightData[i], 0, sizeof(PointLightData));
 			m_PointLightData[i].colour = VEC3_NEG_ONE;
-			m_PointLightData[i].enabled = 0;
 		}
 		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
 		{
+			memset(&m_SpotLightData[i], 0, sizeof(SpotLightData));
 			m_SpotLightData[i].colour = VEC3_NEG_ONE;
-			m_SpotLightData[i].enabled = 0;
 		}
 		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
 		{
+			memset(&m_AreaLightData[i], 0, sizeof(AreaLightData));
 			m_AreaLightData[i].colour = VEC3_NEG_ONE;
-			m_AreaLightData[i].enabled = 0;
 		}
 
 		// TODO: Move these defaults to config file
@@ -655,7 +655,8 @@ namespace flex
 			}
 			else
 			{
-				memset(m_PointLightData + ID, 0, sizeof(PointLightData));
+				memset(&m_PointLightData[ID], 0, sizeof(PointLightData));
+				m_PointLightData[ID].colour = VEC3_NEG_ONE;
 			}
 		}
 	}
@@ -713,8 +714,6 @@ namespace flex
 	{
 		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
 		{
-			m_SpotLightData[i].colour = VEC4_NEG_ONE;
-			m_SpotLightData[i].enabled = 0;
 			UpdateSpotLightData(i, nullptr);
 		}
 		m_NumSpotLightsEnabled = 0;
@@ -730,7 +729,8 @@ namespace flex
 			}
 			else
 			{
-				memset(m_SpotLightData + ID, 0, sizeof(SpotLightData));
+				memset(&m_SpotLightData[ID], 0, sizeof(SpotLightData));
+				m_SpotLightData[ID].colour = VEC3_NEG_ONE;
 			}
 		}
 	}
@@ -788,8 +788,6 @@ namespace flex
 	{
 		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
 		{
-			m_AreaLightData[i].colour = VEC4_NEG_ONE;
-			m_AreaLightData[i].enabled = 0;
 			UpdateAreaLightData(i, nullptr);
 		}
 		m_NumAreaLightsEnabled = 0;
@@ -805,7 +803,8 @@ namespace flex
 			}
 			else
 			{
-				memset(m_AreaLightData + ID, 0, sizeof(AreaLightData));
+				memset(&m_AreaLightData[ID], 0, sizeof(AreaLightData));
+				m_AreaLightData[ID].colour = VEC3_NEG_ONE;
 			}
 		}
 	}
