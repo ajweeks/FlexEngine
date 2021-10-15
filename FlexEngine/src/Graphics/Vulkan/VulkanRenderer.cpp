@@ -9923,6 +9923,15 @@ namespace flex
 		{
 			FLEX_UNUSED(pUserData);
 
+			bool bError = messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+			bool bWarning = messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+			bool bMessage = !bError && !bWarning && !(messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT);
+
+			if (!bError && !bWarning && !bMessage)
+			{
+				return VK_FALSE;
+			}
+
 			std::string msgStr = Replace(pCallbackData->pMessage, " | ", "\n\t");
 
 			// Place links on separate lines
@@ -9947,19 +9956,19 @@ namespace flex
 			// Place each sentence on a new line
 			msgStr = Replace(msgStr, ". ", ".\n");
 
-			if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+			if (bError)
 			{
 				PrintErrorLong(msgStr.c_str());
 				Print("\n");
 			}
-			else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+			else if (bWarning)
 			{
 				PrintWarnLong(msgStr.c_str());
 				Print("\n");
 			}
 			else
 			{
-				if (!(messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT))
+				if (bMessage)
 				{
 					PrintLong(msgStr.c_str());
 					Print("\n");
