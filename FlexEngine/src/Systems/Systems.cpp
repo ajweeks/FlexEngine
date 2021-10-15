@@ -796,13 +796,9 @@ namespace flex
 			if (!fileLines[i].empty())
 			{
 				stringBuilder.Append(fileLines[i]);
-
-				if (i < (i32)fileLines.size() - 1)
-				{
-					stringBuilder.Append('\n');
-				}
 			}
-			else
+
+			if (i < (i32)fileLines.size() - 1)
 			{
 				stringBuilder.Append('\n');
 			}
