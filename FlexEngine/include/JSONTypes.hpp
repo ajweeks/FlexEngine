@@ -20,6 +20,10 @@ namespace flex
 		ULONG,
 		FLOAT,
 		BOOL,
+		VEC2,
+		VEC3,
+		VEC4,
+		QUAT,
 		OBJECT,
 		OBJECT_ARRAY,
 		FIELD_ARRAY,
@@ -35,13 +39,18 @@ namespace flex
 		bool TryGetString(const std::string& label, std::string& value) const;
 		StringID GetStringID(const std::string& label) const;
 		bool TryGetStringID(const std::string& label, StringID& value) const;
-		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
-		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
-		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
 
 		glm::vec2 GetVec2(const std::string& label) const;
+		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
+
 		glm::vec3 GetVec3(const std::string& label) const;
+		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
+
 		glm::vec4 GetVec4(const std::string& label) const;
+		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
+
+		glm::quat GetQuat(const std::string& label) const;
+		bool TryGetQuat(const std::string& label, glm::quat& value) const;
 
 		i32 GetInt(const std::string& label) const;
 		bool TryGetInt(const std::string& label, i32& value) const;
@@ -106,12 +115,16 @@ namespace flex
 		explicit JSONValue(real inFloatValue);
 		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
+		explicit JSONValue(const glm::vec2& inVec2Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
 		explicit JSONValue(const GUID& inGUIDValue);
 
-		static JSONValue FromRawPtr(void* valuePtr, ValueType type);
+		static JSONValue FromRawPtr(void* valuePtr, ValueType type, u32 precision = DEFAULT_FLOAT_PRECISION);
 
 		i32 AsInt() const;
 		u32 AsUInt() const;
@@ -122,6 +135,7 @@ namespace flex
 		std::string AsString() const;
 
 		ValueType type = ValueType::UNINITIALIZED;
+
 		union
 		{
 			i32 intValue = 0;
@@ -130,12 +144,14 @@ namespace flex
 			u64 ulongValue;
 			real floatValue;
 			bool boolValue;
+			glm::vec4 vecValue;
 		};
 		JSONObject objectValue;
 		std::string strValue;
-		u32 floatPrecision;
 		std::vector<JSONField> fieldArrayValue;
 		std::vector<JSONObject> objectArrayValue;
+
+		u32 floatPrecision;
 	};
 
 	struct JSONField

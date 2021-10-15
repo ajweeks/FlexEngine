@@ -127,19 +127,22 @@ namespace flex
 
 	/* Parses a comma separated list of 2 floats */
 	FLEX_NO_DISCARD glm::vec2 ParseVec2(const std::string& vecStr);
+	bool TryParseVec2(const std::string& vecStr, glm::vec2& outVecValue);
 
 	/* Parses a comma separated list of 3 floats */
 	FLEX_NO_DISCARD glm::vec3 ParseVec3(const std::string& vecStr);
+	bool TryParseVec3(const std::string& vecStr, glm::vec3& outVecValue);
 
 	/*
 	* Parses a comma separated list of 3 or 4 floats
 	* If defaultW is non-negative and no w component exists in the string defaultW will be used
-	* If defaultW is negative then an error will be generated if the string doesn't
-	* contain 4 components
+	* If defaultW is negative then an error will be generated if the string doesn't have 4 numbers
 	*/
 	FLEX_NO_DISCARD glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
+	bool TryParseVec4(const std::string& vecStr, glm::vec4& outVecValue, real defaultW = 1.0f);
 
 	FLEX_NO_DISCARD glm::quat ParseQuat(const std::string& quatStr);
+	bool TryParseQuat(const std::string& quatStr, glm::quat& outQuatVal);
 
 	FLEX_NO_DISCARD u32 CountSetBits(u32 bits);
 

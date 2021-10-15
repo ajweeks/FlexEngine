@@ -1091,59 +1091,95 @@ namespace flex
 
 	glm::vec2 ParseVec2(const std::string& vecStr)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec2 result;
 
-		if (parts.size() != 2)
+		if (!TryParseVec2(vecStr, result))
 		{
 			PrintError("Invalid vec2 field: %s\n", vecStr.c_str());
 			return glm::vec2(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec2(const std::string& vecStr, glm::vec2& outVecValue)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 2)
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec2 result(
+			outVecValue = glm::vec2(
 				strtof(parts[0].c_str(), NULL),
 				strtof(parts[1].c_str(), NULL));
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::vec3 ParseVec3(const std::string& vecStr)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec3 result;
 
-		if (parts.size() != 3 && parts.size() != 4)
+		if (!TryParseVec3(vecStr, result))
 		{
 			PrintError("Invalid vec3 field: %s\n", vecStr.c_str());
 			return glm::vec3(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec3(const std::string& vecStr, glm::vec3& outVecValue)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		i32 numParts = (i32)parts.size();
+		if (numParts != 3 && numParts != 4)
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec3 result(
+			outVecValue = glm::vec3(
 				strtof(parts[0].c_str(), NULL),
 				strtof(parts[1].c_str(), NULL),
 				strtof(parts[2].c_str(), NULL));
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec4 result;
 
-		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
+		if (!TryParseVec4(vecStr, result, defaultW))
 		{
 			PrintError("Invalid vec4 field: %s\n", vecStr.c_str());
 			return glm::vec4(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec4(const std::string& vecStr, glm::vec4& outVecValue, real defaultW /* = 1.0f */)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		i32 numParts = (i32)parts.size();
+		if ((numParts != 4 && numParts != 3) || (defaultW < 0 && numParts != 4))
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec4 result;
-
-			if (parts.size() == 4)
+			if (numParts == 4)
 			{
-				result = glm::vec4(
+				outVecValue = glm::vec4(
 					strtof(parts[0].c_str(), NULL),
 					strtof(parts[1].c_str(), NULL),
 					strtof(parts[2].c_str(), NULL),
@@ -1151,26 +1187,43 @@ namespace flex
 			}
 			else
 			{
-				result = glm::vec4(
+				outVecValue = glm::vec4(
 					strtof(parts[0].c_str(), NULL),
 					strtof(parts[1].c_str(), NULL),
 					strtof(parts[2].c_str(), NULL),
 					defaultW);
 			}
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::quat ParseQuat(const std::string& quatStr)
 	{
-		std::vector<std::string> parts = Split(quatStr, ',');
 		glm::quat result;
-		result.x = strtof(parts[0].c_str(), NULL);
-		result.y = strtof(parts[1].c_str(), NULL);
-		result.z = strtof(parts[2].c_str(), NULL);
-		result.w = strtof(parts[3].c_str(), NULL);
+		if (!TryParseQuat(quatStr, result))
+		{
+			PrintError("Invalid quaternion field: %s\n", quatStr.c_str());
+			return QUAT_IDENTITY;
+		}
+
 		return result;
+	}
+
+	bool TryParseQuat(const std::string& quatStr, glm::quat& outQuatVal)
+	{
+		std::vector<std::string> parts = Split(quatStr, ',');
+		if (parts.size() != 4)
+		{
+			return false;
+		}
+
+		outQuatVal.x = strtof(parts[0].c_str(), NULL);
+		outQuatVal.y = strtof(parts[1].c_str(), NULL);
+		outQuatVal.z = strtof(parts[2].c_str(), NULL);
+		outQuatVal.w = strtof(parts[3].c_str(), NULL);
+
+		return true;
 	}
 
 	u32 CountSetBits(u32 bits)

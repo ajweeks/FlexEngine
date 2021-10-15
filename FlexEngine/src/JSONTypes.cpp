@@ -132,6 +132,31 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const glm::vec2& inVec2Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC2),
+		vecValue(inVec2Value, 0.0f, 0.0f),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC3),
+		vecValue(inVec3Value, 0.0f),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC4),
+		vecValue(inVec4Value),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision)
+	{
+	}
+
 	JSONValue::JSONValue(const JSONObject& inObjectValue) :
 		type(ValueType::OBJECT),
 		objectValue(inObjectValue)
@@ -156,7 +181,7 @@ namespace flex
 	{
 	}
 
-	JSONValue JSONValue::FromRawPtr(void* valuePtr, ValueType type)
+	JSONValue JSONValue::FromRawPtr(void* valuePtr, ValueType type, u32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		switch (type)
 		{
@@ -171,9 +196,17 @@ namespace flex
 		case ValueType::ULONG:
 			return JSONValue(*(u64*)valuePtr);
 		case ValueType::FLOAT:
-			return JSONValue(*(real*)valuePtr);
+			return JSONValue(*(real*)valuePtr, precision);
 		case ValueType::BOOL:
 			return JSONValue(*(bool*)valuePtr);
+		case ValueType::VEC2:
+			return JSONValue(*(glm::vec2*)valuePtr, precision);
+		case ValueType::VEC3:
+			return JSONValue(*(glm::vec3*)valuePtr, precision);
+		case ValueType::VEC4:
+			return JSONValue(*(glm::vec4*)valuePtr, precision);
+		case ValueType::QUAT:
+			return JSONValue(*(glm::quat*)valuePtr, precision);
 		default:
 			PrintError("FromRawPtr was called with invalid type\n");
 			return JSONValue();
@@ -295,17 +328,17 @@ namespace flex
 		switch (type)
 		{
 		case ValueType::INT:
-			return (intValue != 0) ? 1 : 0;
+			return (intValue != 0);
 		case ValueType::UINT:
-			return (uintValue != 0) ? 1 : 0;
+			return (uintValue != 0);
 		case ValueType::LONG:
-			return (longValue != 0) ? 1 : 0;
+			return (longValue != 0);
 		case ValueType::ULONG:
-			return (ulongValue != 0) ? 1 : 0;
+			return (ulongValue != 0);
 		case ValueType::FLOAT:
-			return (floatValue != 0.0f ? 1 : 0);
+			return (floatValue != 0.0f);
 		case ValueType::BOOL:
-			return (boolValue != 0 ? 1 : 0);
+			return (boolValue != 0);
 		default:
 			PrintError("AsBool was called on non-bool value\n");
 			return false;
@@ -379,70 +412,92 @@ namespace flex
 		return false;
 	}
 
+	glm::vec2 JSONObject::GetVec2(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return (glm::vec2)field.value.vecValue;
+			}
+		}
+		return VEC2_ZERO;
+	}
+
 	bool JSONObject::TryGetVec2(const std::string& label, glm::vec2& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec2(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec2(label);
 			return true;
 		}
 		return false;
+	}
+
+	glm::vec3 JSONObject::GetVec3(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return (glm::vec3)field.value.vecValue;
+			}
+		}
+		return VEC3_ZERO;
 	}
 
 	bool JSONObject::TryGetVec3(const std::string& label, glm::vec3& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec3(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec3(label);
 			return true;
 		}
 		return false;
+	}
+
+	glm::vec4 JSONObject::GetVec4(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return (glm::vec4)field.value.vecValue;
+			}
+		}
+		return VEC4_ZERO;
 	}
 
 	bool JSONObject::TryGetVec4(const std::string& label, glm::vec4& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec4(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec4(label);
 			return true;
 		}
 		return false;
 	}
 
-	glm::vec2 JSONObject::GetVec2(const std::string& label) const
+	glm::quat JSONObject::GetQuat(const std::string& label) const
 	{
-		if (HasField(label))
+		for (const JSONField& field : fields)
 		{
-			glm::vec2 value = ParseVec2(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
+			if (field.label == label)
+			{
+				return (glm::quat)field.value.vecValue;
+			}
 		}
-		return VEC2_ZERO;
+		return QUAT_IDENTITY;
 	}
 
-	glm::vec3 JSONObject::GetVec3(const std::string& label) const
+	bool JSONObject::TryGetQuat(const std::string& label, glm::quat& value) const
 	{
 		if (HasField(label))
 		{
-			glm::vec3 value = ParseVec3(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
+			value = GetQuat(label);
+			return true;
 		}
-		return VEC3_ZERO;
-	}
-
-	glm::vec4 JSONObject::GetVec4(const std::string& label) const
-	{
-		if (HasField(label))
-		{
-			glm::vec4 value = ParseVec4(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
-		}
-		return VEC4_ZERO;
+		return false;
 	}
 
 	i32 JSONObject::GetInt(const std::string& label) const
@@ -714,6 +769,12 @@ namespace flex
 			return TryGetFloat(label, *(real*)valuePtr);
 		case ValueType::BOOL:
 			return TryGetBool(label, *(bool*)valuePtr);
+		case ValueType::VEC2:
+			return TryGetVec2(label, *(glm::vec2*)valuePtr);
+		case ValueType::VEC3:
+			return TryGetVec3(label, *(glm::vec3*)valuePtr);
+		case ValueType::VEC4:
+			return TryGetVec4(label, *(glm::vec4*)valuePtr);
 		default:
 			PrintError("Unhandled type passed to JSONObject::TryGetValueOfType\n");
 			return false;
@@ -734,6 +795,8 @@ namespace flex
 	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
+
+		// TODO: Use StringBuilder
 		std::string result(tabs);
 
 		if (!label.empty())
@@ -763,6 +826,44 @@ namespace flex
 			break;
 		case ValueType::BOOL:
 			result += (value.boolValue ? "true" : "false");
+			break;
+		case ValueType::VEC2:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::VEC3:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::VEC4:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[3], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::QUAT:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[3], value.floatPrecision);
+			result += "\"";
 			break;
 		case ValueType::OBJECT:
 			result += '\n' + tabs + "{\n";

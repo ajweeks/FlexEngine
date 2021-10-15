@@ -36,6 +36,9 @@
     <DisplayString Condition="type == flex::JSONValue::Type::ULONG">{ulongValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::FLOAT">{floatValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::BOOL">{boolValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::VEC2">{(glm::vec2)vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::VEC3">{(glm::vec3)vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::JSONValue::Type::VEC4">{(glm::vec4)vecValue}</DisplayString>
     <DisplayString Condition="type == flex::JSONValue::Type::OBJECT">{objectValue}</DisplayString>
     <!--<DisplayString Condition="type == flex::JSONValue::Type::OBJECT_ARRAY">{obj}</DisplayString>
     <Expand>

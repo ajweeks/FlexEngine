@@ -201,6 +201,26 @@ namespace flex
 			stringValue = Replace(stringValue, "\\\"", "\"");
 			outValue = JSONValue(stringValue);
 
+			// Is this string actually representing a vector?
+			if (Contains(stringValue, ','))
+			{
+				glm::vec4 vec4Value;
+				glm::vec3 vec3Value;
+				glm::vec2 vec2Value;
+				if (TryParseVec4(stringValue, vec4Value, -1.0f))
+				{
+					outValue = JSONValue(vec4Value);
+				}
+				else if (TryParseVec3(stringValue, vec3Value))
+				{
+					outValue = JSONValue(vec3Value);
+				}
+				else if (TryParseVec2(stringValue, vec2Value))
+				{
+					outValue = JSONValue(vec2Value);
+				}
+			}
+
 			*offset = (i32)strQuoteEnd + 1;
 		} break;
 		case ValueType::INT:
