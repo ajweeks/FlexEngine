@@ -2243,7 +2243,6 @@ namespace flex
 			return child;
 		}
 
-
 		parent->AddChildImmediate(child);
 
 		return child;

@@ -1145,6 +1145,7 @@ namespace flex
 		void EvaluateCode();
 
 		bool SaveScript();
+		void ReloadScript();
 
 		std::string m_ScriptFileName;
 

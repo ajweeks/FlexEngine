@@ -6922,15 +6922,6 @@ namespace flex
 
 	void Terminal::PostInitialize()
 	{
-		//std::vector<GameObject*> gameObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-		//for (GameObject* gameObject : gameObjects)
-		//{
-		//	if (gameObject->GetType() == SID("point light"))
-		//	{
-		//		PointLight* pointLight = static_cast<PointLight*>(obj);
-		//		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES_SYSTEM)->AddWire(this, obj);
-		//	}
-		//}
 	}
 
 	void Terminal::Destroy(bool bDetachFromParent /* = true */)
@@ -6940,6 +6931,7 @@ namespace flex
 		if (m_VM != nullptr)
 		{
 			delete m_VM;
+			m_VM = nullptr;
 		}
 
 		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->DeregisterTerminal(this);
@@ -7144,6 +7136,21 @@ namespace flex
 				{
 					SaveScript();
 				}
+			}
+
+			if (!m_ScriptFileName.empty())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+
+				ImGui::SameLine();
+				if (ImGui::Button("Reload"))
+				{
+					ReloadScript();
+				}
+
+				ImGui::PopStyleColor(3);
 			}
 
 			ImGui::Separator();
@@ -7893,10 +7900,27 @@ namespace flex
 				m_bDirtyFlag = false;
 				return true;
 			}
+			else
+			{
+				PrintError("Failed to save terminal script to %s\n", m_ScriptFileName.c_str());
+			}
+		}
+		else
+		{
+			PrintError("Failed to save terminal script, file name not set\n");
 		}
 
-		PrintError("Failed to save terminal script to %s\n", m_ScriptFileName.c_str());
 		return false;
+	}
+
+	void Terminal::ReloadScript()
+	{
+		if (!m_ScriptFileName.empty())
+		{
+			OnScriptChanged();
+		}
+
+		PrintError("Failed to reload terminal script, file name not set\n");
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
