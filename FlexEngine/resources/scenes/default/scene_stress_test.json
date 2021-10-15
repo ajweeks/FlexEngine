@@ -121,7 +121,6 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
 					"children" : 
 					[
 						{
@@ -130,7 +129,6 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
 							"children" : 
 							[
 								{
@@ -221,7 +219,6 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
 							"children" : 
 							[
 								{
@@ -312,8 +309,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-10",
@@ -403,8 +399,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-15",
@@ -494,8 +489,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-20",
@@ -587,8 +581,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 5",
@@ -596,8 +589,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-25",
@@ -687,8 +679,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-26",
@@ -778,8 +769,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-27",
@@ -869,8 +859,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-28",
@@ -960,8 +949,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-29",
@@ -1053,8 +1041,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 10",
@@ -1062,8 +1049,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-30",
@@ -1153,8 +1139,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-31",
@@ -1244,8 +1229,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-32",
@@ -1335,8 +1319,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-33",
@@ -1426,8 +1409,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-34",
@@ -1519,8 +1501,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 15",
@@ -1528,8 +1509,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-35",
@@ -1619,8 +1599,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-36",
@@ -1710,8 +1689,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-37",
@@ -1801,8 +1779,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-38",
@@ -1892,8 +1869,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-39",
@@ -1985,8 +1961,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 20",
@@ -1994,8 +1969,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-40",
@@ -2085,8 +2059,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-41",
@@ -2176,8 +2149,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-42",
@@ -2267,8 +2239,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-43",
@@ -2358,8 +2329,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-44",
@@ -2465,8 +2435,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 25",
@@ -2474,8 +2443,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-45",
@@ -2565,8 +2533,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-45",
@@ -2656,8 +2623,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-45",
@@ -2747,8 +2713,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-45",
@@ -2838,8 +2803,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-45",
@@ -2931,8 +2895,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 26",
@@ -2940,8 +2903,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-46",
@@ -3031,8 +2993,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-46",
@@ -3122,8 +3083,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-46",
@@ -3213,8 +3173,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-46",
@@ -3304,8 +3263,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-46",
@@ -3397,8 +3355,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 27",
@@ -3406,8 +3363,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-47",
@@ -3497,8 +3453,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-47",
@@ -3588,8 +3543,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-47",
@@ -3679,8 +3633,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-47",
@@ -3770,8 +3723,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-47",
@@ -3863,8 +3815,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 28",
@@ -3872,8 +3823,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-48",
@@ -3963,8 +3913,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-48",
@@ -4054,8 +4003,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-48",
@@ -4145,8 +4093,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-48",
@@ -4236,8 +4183,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-48",
@@ -4329,8 +4275,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 29",
@@ -4338,8 +4283,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-49",
@@ -4429,8 +4373,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-49",
@@ -4520,8 +4463,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-49",
@@ -4611,8 +4553,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-49",
@@ -4702,8 +4643,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-49",
@@ -4809,8 +4749,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 30",
@@ -4818,8 +4757,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-50",
@@ -4909,8 +4847,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-50",
@@ -5000,8 +4937,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-50",
@@ -5091,8 +5027,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-50",
@@ -5182,8 +5117,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-50",
@@ -5275,8 +5209,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 31",
@@ -5284,8 +5217,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-51",
@@ -5375,8 +5307,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-51",
@@ -5466,8 +5397,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-51",
@@ -5557,8 +5487,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-51",
@@ -5648,8 +5577,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-51",
@@ -5741,8 +5669,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 32",
@@ -5750,8 +5677,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-52",
@@ -5841,8 +5767,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-52",
@@ -5932,8 +5857,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-52",
@@ -6023,8 +5947,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-52",
@@ -6114,8 +6037,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-52",
@@ -6207,8 +6129,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 33",
@@ -6216,8 +6137,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-53",
@@ -6307,8 +6227,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-53",
@@ -6398,8 +6317,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-53",
@@ -6489,8 +6407,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-53",
@@ -6580,8 +6497,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-53",
@@ -6673,8 +6589,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 34",
@@ -6682,8 +6597,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-54",
@@ -6773,8 +6687,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-54",
@@ -6864,8 +6777,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-54",
@@ -6955,8 +6867,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-54",
@@ -7046,8 +6957,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-54",
@@ -7153,8 +7063,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 35",
@@ -7162,8 +7071,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-55",
@@ -7253,8 +7161,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-55",
@@ -7344,8 +7251,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-55",
@@ -7435,8 +7341,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-55",
@@ -7526,8 +7431,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-55",
@@ -7619,8 +7523,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 36",
@@ -7628,8 +7531,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-56",
@@ -7719,8 +7621,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-56",
@@ -7810,8 +7711,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-56",
@@ -7901,8 +7801,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-56",
@@ -7992,8 +7891,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-56",
@@ -8085,8 +7983,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 37",
@@ -8094,8 +7991,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-57",
@@ -8185,8 +8081,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-57",
@@ -8276,8 +8171,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-57",
@@ -8367,8 +8261,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-57",
@@ -8458,8 +8351,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-57",
@@ -8551,8 +8443,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 38",
@@ -8560,8 +8451,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-58",
@@ -8651,8 +8541,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-58",
@@ -8742,8 +8631,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-58",
@@ -8833,8 +8721,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-58",
@@ -8924,8 +8811,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-58",
@@ -9017,8 +8903,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 39",
@@ -9026,8 +8911,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-59",
@@ -9117,8 +9001,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-59",
@@ -9208,8 +9091,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-59",
@@ -9299,8 +9181,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-59",
@@ -9390,8 +9271,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-59",
@@ -9497,8 +9377,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 40",
@@ -9506,8 +9385,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-60",
@@ -9597,8 +9475,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-60",
@@ -9688,8 +9565,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-60",
@@ -9779,8 +9655,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-60",
@@ -9870,8 +9745,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-60",
@@ -9963,8 +9837,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 41",
@@ -9972,8 +9845,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-61",
@@ -10063,8 +9935,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-61",
@@ -10154,8 +10025,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-61",
@@ -10245,8 +10115,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-61",
@@ -10336,8 +10205,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-61",
@@ -10429,8 +10297,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 42",
@@ -10438,8 +10305,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-62",
@@ -10529,8 +10395,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-62",
@@ -10620,8 +10485,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-62",
@@ -10711,8 +10575,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-62",
@@ -10802,8 +10665,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-62",
@@ -10895,8 +10757,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 43",
@@ -10904,8 +10765,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-63",
@@ -10995,8 +10855,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-63",
@@ -11086,8 +10945,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-63",
@@ -11177,8 +11035,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-63",
@@ -11268,8 +11125,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-63",
@@ -11361,8 +11217,7 @@
 					},
 					"visible" : true,
 					"casts shadow" : true,
-					"mesh" : "cube.glb",
-					"children" : 
+										"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 44",
@@ -11370,8 +11225,7 @@
 							"type" : "object",
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-64",
@@ -11461,8 +11315,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-64",
@@ -11552,8 +11405,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-64",
@@ -11643,8 +11495,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-64",
@@ -11734,8 +11585,7 @@
 							},
 							"visible" : true,
 							"casts shadow" : true,
-							"mesh" : "cube.glb",
-							"children" : 
+														"children" : 
 							[
 								{
 									"name" : "sphere-64",
