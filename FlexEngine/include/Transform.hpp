@@ -20,7 +20,7 @@ namespace flex
 		Transform& operator=(const Transform& other) = delete;
 		Transform& operator=(const Transform&& other) = delete;
 
-		~Transform();
+		~Transform() = default;
 
 		static void ParseJSON(const JSONObject& object, Transform& outTransform);
 		static void ParseJSON(const JSONObject& object, glm::mat4& outModel);
@@ -80,6 +80,7 @@ namespace flex
 		const glm::mat4& GetWorldTransform();
 
 		void ComputeValues(); // Climbs up the parent-child tree up to the root
+		void MarkDirty();
 
 		static const Transform Identity;
 
@@ -90,8 +91,6 @@ namespace flex
 
 		// Callback from physics system
 		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
-
-		void MarkDirty();
 
 		bool bDirty = true;
 

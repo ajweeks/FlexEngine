@@ -2229,6 +2229,8 @@ namespace flex
 			outputSignals.resize(sockets.size(), -1);
 		}
 
+		childTransform->MarkDirty();
+
 		if (g_SceneManager->HasSceneLoaded())
 		{
 			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
@@ -2265,7 +2267,9 @@ namespace flex
 
 					child->SetParent(nullptr);
 
-					child->GetTransform()->SetWorldTransform(childWorldTransform);
+					Transform* childTransform = child->GetTransform();
+
+					childTransform->SetWorldTransform(childWorldTransform);
 				}
 
 				if (g_SceneManager->HasSceneLoaded())
@@ -6902,8 +6906,6 @@ namespace flex
 		{
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
-
-		m_Transform.ComputeValues();
 
 		m_VM = new VM::VirtualMachine();
 	}

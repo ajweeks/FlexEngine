@@ -125,10 +125,6 @@ namespace flex
 		m_GameObject = other.m_GameObject;
 	}
 
-	Transform::~Transform()
-	{
-	}
-
 	void Transform::ParseJSON(const JSONObject& object, Transform& outTransform)
 	{
 		glm::vec3 pos;
@@ -575,7 +571,6 @@ namespace flex
 		localPosition.z += deltaZ;
 
 		MarkDirty();
-
 		ComputeValues();
 
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
@@ -598,7 +593,6 @@ namespace flex
 		localRotation *= deltaRotation;
 
 		MarkDirty();
-
 		ComputeValues();
 
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
@@ -621,7 +615,6 @@ namespace flex
 		localScale *= deltaScale;
 
 		MarkDirty();
-
 		ComputeValues();
 	}
 
@@ -651,6 +644,7 @@ namespace flex
 		glm::vec4 localPerspective;
 		glm::decompose(localTransform, localScale, localRotation, localPosition, localSkew, localPerspective);
 
+		MarkDirty();
 		ComputeValues();
 	}
 
@@ -729,6 +723,22 @@ namespace flex
 		}
 	}
 
+	void Transform::MarkDirty()
+	{
+		if (bDirty)
+		{
+			return;
+		}
+
+		bDirty = true;
+
+		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
+		for (GameObject* child : children)
+		{
+			child->GetTransform()->MarkDirty();
+		}
+	}
+
 	void Transform::OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation)
 	{
 		GameObject* parent = m_GameObject->GetParent();
@@ -744,23 +754,6 @@ namespace flex
 		}
 
 		MarkDirty();
-
 		ComputeValues();
-	}
-
-	void Transform::MarkDirty()
-	{
-		if (bDirty)
-		{
-			return;
-		}
-
-		bDirty = true;
-
-		const std::vector<GameObject*>& children = m_GameObject->GetChildren();
-		for (GameObject* child : children)
-		{
-			child->GetTransform()->MarkDirty();
-		}
 	}
 } // namespace flex
