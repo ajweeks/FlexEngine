@@ -894,8 +894,6 @@ namespace flex
 
 			if (dAngle != 0.0f)
 			{
-				glm::quat dRot = glm::angleAxis(dAngle, m_AxisOfRotation);
-
 				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
 					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
@@ -904,7 +902,9 @@ namespace flex
 					if (bObjectIsntChild)
 					{
 						Transform* t = gameObject->GetTransform();
-						t->SetLocalRotation(dRot * t->GetLocalRotation());
+						glm::vec3 axis = parent != nullptr ? (glm::inverse(parent->GetTransform()->GetWorldRotation()) * m_AxisOfRotation) : m_AxisOfRotation;
+						glm::quat dRot = glm::angleAxis(dAngle, axis);
+						t->SetLocalRotation(dRot* t->GetLocalRotation());
 					}
 				}
 			}
@@ -926,8 +926,6 @@ namespace flex
 					m_DraggingGizmoOffsetNeedsRecalculation,
 					m_PreviousIntersectionPoint);
 			};
-
-			glm::mat4 inverseTransform = glm::inverse(gizmoTransform->GetWorldTransform());
 
 			glm::vec3 dLocalScale(1.0f);
 			bool bControlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
@@ -952,7 +950,7 @@ namespace flex
 				}
 
 				glm::vec3 deltaScale = glm::sign(dotResult1) * (glm::abs(absoluteScale) - glm::abs(m_DraggingGizmoScaleLast1)) * dragSpeed;
-				dLocalScale += glm::vec3(inverseTransform * glm::vec4(deltaScale, 0.0f));
+				dLocalScale += glm::vec3(glm::vec4(deltaScale, 0.0f));
 				m_DraggingGizmoScaleLast1 = absoluteScale;
 
 				absoluteScale = glm::vec3(glm::clamp(dotResult2, -9999.0f, 9999.0f));
@@ -963,7 +961,7 @@ namespace flex
 				}
 
 				deltaScale = glm::sign(dotResult2) * (glm::abs(absoluteScale) - glm::abs(m_DraggingGizmoScaleLast2)) * dragSpeed;
-				dLocalScale += glm::vec3(inverseTransform * glm::vec4(deltaScale, 0.0f));
+				dLocalScale += glm::vec3(glm::vec4(deltaScale, 0.0f));
 				m_DraggingGizmoScaleLast2 = absoluteScale;
 			}
 			else
@@ -972,6 +970,8 @@ namespace flex
 				const glm::vec3* axes[] = { &gizmoRight, &gizmoUp, &gizmoForward };
 				const glm::vec3* altAxes[] = { &gizmoUp, &gizmoForward, &gizmoRight };
 				const glm::vec3* planeNormals[] = { &gizmoForward, &gizmoRight, &gizmoUp };
+
+				glm::mat4 inverseTransform = glm::inverse(gizmoTransform->GetWorldTransform());
 
 				glm::vec3 axis = *axes[m_DraggingAxisIndex];
 				glm::vec3 planeN = *planeNormals[m_DraggingAxisIndex];
