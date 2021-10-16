@@ -217,6 +217,7 @@ def build_project(config):
 		run_msbuild(free_type_path + 'builds/windows/vc2010/freetype.sln', freetype_msbuid_args)
 		shutil.copy(free_type_build_path + 'objs/x64/' + config + '/freetype.lib', libs_target)
 		shutil.copy(free_type_build_path + 'objs/x64/' + config + '/freetype.pdb', libs_target)
+		shutil.copy(free_type_build_path + 'objs/x64/' + config + '/freetype.dll', libs_target)
 	else:
 		subprocess.check_call('cd ' + free_type_path + '; dos2unix autogen.sh ; ./autogen.sh', stderr=subprocess.STDOUT, shell=True)
 		run_cmake(free_type_path, free_type_build_path, [
