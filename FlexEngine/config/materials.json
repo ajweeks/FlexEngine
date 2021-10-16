@@ -1,66 +1,66 @@
 {
-	"version" : 1,
+	"version" : 2,
 	"materials" : 
 	[
 		{
 			"name" : "pbr chrome",
 			"shader" : "pbr",
-			"const albedo" : "1.000, 0.791, 0.791, 1.000",
-			"const emissive" : "0.650, 0.418, 0.418, 1.000",
+			"const albedo" : "1.000,0.791,0.791",
+			"const emissive" : "0.650,0.418,0.418",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.130000
 		},
 		{
 			"name" : "pbr grey",
 			"shader" : "pbr",
-			"const albedo" : "0.004, 0.004, 0.004, 1.000",
+			"const albedo" : "0.004,0.004,0.004",
 			"const roughness" : 0.400000
 		},
 		{
 			"name" : "pbr light grey",
 			"shader" : "pbr",
-			"const albedo" : "0.230, 0.250, 0.290, 1.000",
+			"const albedo" : "0.230,0.250,0.290",
 			"const roughness" : 0.450000
 		},
 		{
 			"name" : "pbr white",
 			"shader" : "pbr",
-			"const albedo" : "0.990, 0.990, 0.990, 1.000",
+			"const albedo" : "0.990,0.990,0.990",
 			"const roughness" : 0.900000
 		},
 		{
 			"name" : "pbr red",
 			"shader" : "pbr",
-			"const albedo" : "0.010, 0.067, 0.085, 1.000",
+			"const albedo" : "0.010,0.067,0.085",
 			"const roughness" : 0.020000
 		},
 		{
 			"name" : "skybox 01",
 			"shader" : "skybox",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const albedo" : "0.000,0.000,0.000",
 			"albedo texture filepath" : "white-noise.png",
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
 			"enable cubemap trilinear filtering" : false,
-			"generated cubemap size" : "512, 512",
+			"generated cubemap size" : "512,512",
 			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32, 32",
+			"generated irradiance cubemap size" : "32,32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128"
+			"generated prefiltered map size" : "128,128"
 		},
 		{
 			"name" : "skybox 02",
 			"shader" : "skybox",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const albedo" : "0.000,0.000,0.000",
 			"albedo texture filepath" : "white-noise.png",
 			"generate hdr cubemap sampler" : true,
 			"enable cubemap sampler" : true,
 			"enable cubemap trilinear filtering" : false,
-			"generated cubemap size" : "512, 512",
+			"generated cubemap size" : "512,512",
 			"generate irradiance sampler" : true,
-			"generated irradiance cubemap size" : "32, 32",
+			"generated irradiance cubemap size" : "32,32",
 			"generate prefiltered map" : true,
-			"generated prefiltered map size" : "128, 128"
+			"generated prefiltered map size" : "128,128"
 		},
 		{
 			"name" : "cerberus",
@@ -82,142 +82,142 @@
 		{
 			"name" : "sphere 01",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.090000
 		},
 		{
 			"name" : "sphere 02",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.200000
 		},
 		{
 			"name" : "sphere 00",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000"
+			"const albedo" : "0.390,0.350,0.320"
 		},
 		{
 			"name" : "sphere 03",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.300000
 		},
 		{
 			"name" : "sphere 04",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.400000
 		},
 		{
 			"name" : "sphere 05",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.500000
 		},
 		{
 			"name" : "sphere 06",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.600000
 		},
 		{
 			"name" : "sphere 07",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.700000
 		},
 		{
 			"name" : "sphere 08",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.800000
 		},
 		{
 			"name" : "sphere 09",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 0.900000
 		},
 		{
 			"name" : "sphere 10",
 			"shader" : "pbr",
-			"const albedo" : "0.390, 0.350, 0.320, 1.000",
+			"const albedo" : "0.390,0.350,0.320",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "sphere 11",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.920000
 		},
 		{
 			"name" : "sphere 12",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.900000
 		},
 		{
 			"name" : "sphere 13",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.800000
 		},
 		{
 			"name" : "sphere 14",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.700000
 		},
 		{
 			"name" : "sphere 15",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.600000
 		},
 		{
 			"name" : "sphere 16",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.500000
 		},
 		{
 			"name" : "sphere 17",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.400000
 		},
 		{
 			"name" : "sphere 18",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.300000
 		},
 		{
 			"name" : "sphere 19",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.200000
 		},
 		{
 			"name" : "sphere 20",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.100000
 		},
 		{
 			"name" : "sphere 21",
 			"shader" : "pbr",
-			"const albedo" : "0.388, 0.349, 0.322, 1.000",
+			"const albedo" : "0.388,0.349,0.322",
 			"const metallic" : 1.000000
 		},
 		{
@@ -229,33 +229,33 @@
 		{
 			"name" : "pbr green",
 			"shader" : "pbr",
-			"const albedo" : "0.126, 0.515, 0.051, 1.000",
+			"const albedo" : "0.126,0.515,0.051",
 			"const roughness" : 0.110000
 		},
 		{
 			"name" : "pbr blue",
 			"shader" : "pbr",
-			"const albedo" : "0.080, 0.214, 0.480, 1.000",
+			"const albedo" : "0.080,0.214,0.480",
 			"const metallic" : 0.090000,
 			"const roughness" : 0.200000
 		},
 		{
 			"name" : "pbr cyan",
 			"shader" : "pbr",
-			"const albedo" : "0.096, 0.476, 0.477, 1.000",
+			"const albedo" : "0.096,0.476,0.477",
 			"const metallic" : 0.770000,
 			"const roughness" : 0.250000
 		},
 		{
 			"name" : "pbr cyan 1",
 			"shader" : "pbr",
-			"const albedo" : "0.079, 0.894, 0.897, 1.000",
+			"const albedo" : "0.079,0.894,0.897",
 			"const roughness" : 0.250000
 		},
 		{
 			"name" : "grid",
 			"shader" : "pbr_ws",
-			"const albedo" : "0.055, 0.055, 0.055, 1.000",
+			"const albedo" : "0.055,0.055,0.055",
 			"const roughness" : 1.000000,
 			"enable albedo sampler" : true,
 			"albedo texture filepath" : "alpha-bg.png"
@@ -263,14 +263,14 @@
 		{
 			"name" : "terminal copper",
 			"shader" : "pbr",
-			"const albedo" : "0.490, 0.127, 0.038, 1.000",
+			"const albedo" : "0.490,0.127,0.038",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.170000
 		},
 		{
 			"name" : "terminal display",
 			"shader" : "pbr",
-			"const albedo" : "0.001, 0.001, 0.001, 1.000"
+			"const albedo" : "0.001,0.001,0.001"
 		},
 		{
 			"name" : "noise",
@@ -325,62 +325,62 @@
 		{
 			"name" : "shanghai 2",
 			"shader" : "pbr",
-			"const albedo" : "0.684, 0.309, 0.309, 1.000",
+			"const albedo" : "0.684,0.309,0.309",
 			"const roughness" : 0.260000
 		},
 		{
 			"name" : "shanghai 3",
 			"shader" : "pbr",
-			"const albedo" : "0.315, 0.451, 0.676, 1.000",
+			"const albedo" : "0.315,0.451,0.676",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "shanghai 4",
 			"shader" : "pbr",
-			"const albedo" : "0.743, 0.768, 0.523, 1.000",
+			"const albedo" : "0.743,0.768,0.523",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "shanghai 5",
 			"shader" : "pbr",
-			"const albedo" : "0.694, 0.920, 0.529, 1.000",
+			"const albedo" : "0.694,0.920,0.529",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "shanghai 6",
 			"shader" : "pbr",
-			"const albedo" : "0.727, 0.727, 0.727, 1.000",
+			"const albedo" : "0.727,0.727,0.727",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "shanghai 7",
 			"shader" : "pbr",
-			"const albedo" : "0.441, 0.348, 0.242, 1.000",
+			"const albedo" : "0.441,0.348,0.242",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "case",
 			"shader" : "pbr",
-			"const albedo" : "0.055, 0.055, 0.055, 1.000",
+			"const albedo" : "0.055,0.055,0.055",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "gold",
 			"shader" : "pbr",
-			"const albedo" : "0.860, 0.739, 0.264, 1.000",
+			"const albedo" : "0.860,0.739,0.264",
 			"const metallic" : 0.560000,
 			"const roughness" : 0.320000
 		},
 		{
 			"name" : "wood",
 			"shader" : "pbr",
-			"const albedo" : "0.170, 0.142, 0.103, 1.000",
+			"const albedo" : "0.170,0.142,0.103",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "dirt",
 			"shader" : "pbr",
-			"const albedo" : "0.276, 0.160, 0.090, 1.000",
+			"const albedo" : "0.276,0.160,0.090",
 			"const roughness" : 1.000000
 		},
 		{
@@ -390,67 +390,67 @@
 		{
 			"name" : "brick",
 			"shader" : "pbr",
-			"const albedo" : "0.637, 0.565, 0.338, 1.000",
+			"const albedo" : "0.637,0.565,0.338",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "donut_dough",
 			"shader" : "pbr",
-			"const albedo" : "0.907, 0.557, 0.238, 1.000",
+			"const albedo" : "0.907,0.557,0.238",
 			"const roughness" : 0.990000
 		},
 		{
 			"name" : "donut_icing",
 			"shader" : "pbr",
-			"const albedo" : "0.618, 0.000, 0.610, 1.000",
+			"const albedo" : "0.618,0.000,0.610",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "donut_sprinkle",
 			"shader" : "pbr",
-			"const albedo" : "1.000, 0.000, 0.000, 1.000",
+			"const albedo" : "1.000,0.000,0.000",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "Black glass",
 			"shader" : "pbr",
-			"const albedo" : "0.047, 0.026, 0.026, 1.000",
+			"const albedo" : "0.047,0.026,0.026",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.050000
 		},
 		{
 			"name" : "black plastic",
 			"shader" : "pbr",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const albedo" : "0.000,0.000,0.000",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "Blue paint",
 			"shader" : "pbr",
-			"const albedo" : "0.018, 0.107, 0.920, 1.000",
+			"const albedo" : "0.018,0.107,0.920",
 			"const metallic" : 0.850000,
 			"const roughness" : 0.780000
 		},
 		{
 			"name" : "Brake-light",
 			"shader" : "emissive",
-			"const emissive" : "0.291, 0.000, 0.000, 1.000"
+			"const emissive" : "0.291,0.000,0.000"
 		},
 		{
 			"name" : "Reverse-light",
 			"shader" : "emissive",
-			"const emissive" : "0.346, 0.346, 0.346, 1.000"
+			"const emissive" : "0.346,0.346,0.346"
 		},
 		{
 			"name" : "grass 01",
 			"shader" : "pbr",
-			"const albedo" : "0.055, 0.715, 0.076, 1.000",
+			"const albedo" : "0.055,0.715,0.076",
 			"const roughness" : 1.000000
 		},
 		{
 			"name" : "area light red",
 			"shader" : "colour",
-			"colour multiplier" : "1.000, 0.177, 0.177, 1.000"
+			"colour multiplier" : "1.000,0.177,0.177,1.000"
 		},
 		{
 			"name" : "area light 1",
@@ -463,7 +463,7 @@
 		{
 			"name" : "Rock",
 			"shader" : "pbr",
-			"const albedo" : "0.001, 0.001, 0.001, 1.000",
+			"const albedo" : "0.001,0.001,0.001",
 			"const roughness" : 0.890000,
 			"enable normal sampler" : true,
 			"normal texture filepath" : "rock-cube-normal.png"
@@ -471,7 +471,7 @@
 		{
 			"name" : "rubber",
 			"shader" : "pbr",
-			"const albedo" : "0.014, 0.014, 0.014, 1.000",
+			"const albedo" : "0.014,0.014,0.014",
 			"const roughness" : 0.980000
 		},
 		{
@@ -484,7 +484,7 @@
 		{
 			"name" : "solar-panel-trim",
 			"shader" : "pbr",
-			"const albedo" : "0.540, 0.540, 0.540, 1.000",
+			"const albedo" : "0.540,0.540,0.540",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.130000
 		},
@@ -495,38 +495,38 @@
 		{
 			"name" : "Selection Hologram",
 			"shader" : "hologram",
-			"const emissive" : "2.000, 5.000, 2.750, 0.173"
+			"const emissive" : "2.000,5.000,2.750"
 		},
 		{
 			"name" : "BatteryCharge",
 			"shader" : "battery_charge",
-			"const albedo" : "0.004, 0.004, 0.004, 1.000",
-			"const emissive" : "0.000, 1.000, 0.125, 1.000"
+			"const albedo" : "0.004,0.004,0.004",
+			"const emissive" : "0.000,1.000,0.125"
 		},
 		{
 			"name" : "wire",
 			"shader" : "pbr",
-			"const albedo" : "0.085, 0.085, 0.085, 1.000",
+			"const albedo" : "0.085,0.085,0.085",
 			"dynamic" : true
 		},
 		{
 			"name" : "vantablack",
 			"shader" : "colour",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
-			"const emissive" : "0.000, 0.000, 0.000, 1.000",
-			"colour multiplier" : "0.000, 0.000, 0.000, 1.000"
+			"const albedo" : "0.000,0.000,0.000",
+			"const emissive" : "0.000,0.000,0.000",
+			"colour multiplier" : "0.000,0.000,0.000,1.000"
 		},
 		{
 			"name" : "blue",
 			"shader" : "pbr",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const albedo" : "0.000,0.000,0.000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.920000
 		},
 		{
 			"name" : "floor",
 			"shader" : "pbr",
-			"const albedo" : "0.000, 0.000, 0.000, 1.000",
+			"const albedo" : "0.000,0.000,0.000",
 			"const metallic" : 1.000000,
 			"const roughness" : 0.030000
 		}

@@ -4,9 +4,10 @@ IGNORE_WARNINGS_PUSH
 #include "LinearMath/btIDebugDraw.h"
 IGNORE_WARNINGS_POP
 
+#include "BitmapFont.hpp"
+#include "ConfigFile.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
-#include "BitmapFont.hpp"
 #include "VertexBufferData.hpp"
 
 class btIDebugDraw;
@@ -50,7 +51,7 @@ namespace flex
 
 		struct LineSegment
 		{
-			LineSegment() {}
+			LineSegment() = default;
 
 			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vColFrom, const btVector3& vColTo)
 			{
@@ -505,6 +506,7 @@ namespace flex
 		BitmapFont* m_CurrentFont = nullptr;
 
 		PostProcessSettings m_PostProcessSettings;
+		ConfigFile m_Settings;
 
 		UIMesh* m_UIMesh = nullptr;
 
@@ -567,8 +569,6 @@ namespace flex
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 
-		std::string m_RendererSettingsFilePathAbs;
-
 		Mesh* m_SkyBoxMesh = nullptr;
 		ShaderID m_SkyboxShaderID = InvalidShaderID;
 
@@ -620,8 +620,7 @@ namespace flex
 
 		static std::array<glm::mat4, 6> s_CaptureViews;
 
-		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
-		i32 m_RendererSettingsFileVersion = 0;
+		static const i32 CURRENT_RENDERER_SETTINGS_FILE_VERSION = 2;
 
 		DirectoryWatcher* m_ShaderDirectoryWatcher = nullptr;
 

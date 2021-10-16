@@ -153,7 +153,10 @@ namespace flex
 	{
 	}
 
-	JSONValue::JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision)
+	JSONValue::JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::QUAT),
+		vecValue(inQuatValue.x, inQuatValue.y, inQuatValue.z, inQuatValue.w),
+		floatPrecision(inFloatPrecision)
 	{
 	}
 
@@ -462,7 +465,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				return (glm::vec4)field.value.vecValue;
+				return field.value.vecValue;
 			}
 		}
 		return VEC4_ZERO;
@@ -916,9 +919,13 @@ namespace flex
 			break;
 		case ValueType::UNINITIALIZED:
 			result += "UNINITIALIZED TYPE\n";
+			DEBUG_BREAK();
+			PrintError("Uninitialized type in JSONField::ToString()\n");
 			break;
 		default:
 			result += "UNHANDLED TYPE\n";
+			DEBUG_BREAK();
+			PrintError("Unhandled type in JSONField::ToString()\n");
 			break;
 		}
 

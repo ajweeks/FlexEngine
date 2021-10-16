@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "first-person",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "15.582, 1.847, -13.579",
-			"pitch" : -0.077000,
-			"yaw" : 1.607794
+			"position" : "17.578, 12.701, 4.217",
+			"pitch" : -0.319436,
+			"yaw" : -0.405038
 		}
 	},
 	"objects" : 
@@ -42,7 +42,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
+				"half extents" : "0.500,0.500,0.500"
 			},
 			"rigid body" : 
 			{
@@ -93,15 +93,15 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.577, -0.000, 0.000"
+						"rot" : "1.580, -0.000, 0.000"
 					},
 					"visible" : true,
 					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.709, 0.000, 0.000, 0.705",
-						"pos" : "0.000, 15.000, 0.000",
-						"colour" : "0.99, 1.00, 0.84",
+						"rotation" : "0.710,0.000,0.000,0.704",
+						"pos" : "0.000,15.000,0.000",
+						"colour" : "0.99,1.00,0.84",
 						"enabled" : true,
 						"brightness" : 0.703000,
 						"cast shadows" : true,
@@ -120,8 +120,8 @@
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-20.950, 3.565, 5.352",
-						"colour" : "0.49, 0.78, 0.91",
+						"pos" : "-20.950,3.565,5.352",
+						"colour" : "0.49,0.78,0.91",
 						"enabled" : true,
 						"brightness" : 31.250000
 					},
@@ -152,8 +152,8 @@
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "18.486, 7.943, -3.520",
-						"colour" : "0.94, 0.80, 0.57",
+						"pos" : "18.486,7.943,-3.520",
+						"colour" : "0.94,0.80,0.57",
 						"enabled" : true,
 						"brightness" : 395.833008
 					},
@@ -184,8 +184,8 @@
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "2.159, 0.938, 17.654",
-						"colour" : "1.00, 1.00, 1.00",
+						"pos" : "2.159,0.938,17.654",
+						"colour" : "1.00,1.00,1.00",
 						"enabled" : true,
 						"brightness" : 135.417007
 					},
@@ -216,8 +216,8 @@
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "9.644, 4.930, 29.718",
-						"colour" : "1.00, 1.00, 1.00",
+						"pos" : "9.644,4.930,29.718",
+						"colour" : "1.00,1.00,1.00",
 						"enabled" : true,
 						"brightness" : 827.585999
 					},
@@ -250,7 +250,7 @@
 					"casts shadow" : true,
 					"area light info" : 
 					{
-						"colour" : "1.00, 1.00, 1.00",
+						"colour" : "1.00,1.00,1.00",
 						"enabled" : true,
 						"brightness" : 41.667000
 					},
@@ -287,8 +287,8 @@
 					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-32.370, 2.848, 21.634",
-						"colour" : "0.95, 0.96, 0.84",
+						"pos" : "-32.370,2.848,21.634",
+						"colour" : "0.95,0.96,0.84",
 						"enabled" : true,
 						"brightness" : 31.250000
 					},
@@ -323,7 +323,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.300, 1.000"
+				"half extents" : "1.000,1.300,1.000"
 			},
 			"rigid body" : 
 			{
@@ -497,7 +497,7 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.901, 1.848, -1.926",
+				"pos" : "-20.907, 1.848, -1.929",
 				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
@@ -599,6 +599,65 @@
 				"rot" : "-1.571, -0.000, -0.000",
 				"scale" : "1.000, 0.998, 0.998"
 			}
+		},
+		{
+			"name" : "New_Object_03",
+			"id" : "0A2BF0E45D5535924D6CC22846414DAF",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "27.413, 9.162, 0.000",
+				"rot" : "0.426, 0.121, -0.964"
+			},
+			"visible" : true,
+			"casts shadow" : true,
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr red"
+			],
+			"children" : 
+			[
+				{
+					"name" : "New_Object_04",
+					"id" : "037E892AD70154B84C302F17089E9788",
+					"type" : "object",
+					"transform" : 
+					{
+						"pos" : "-0.320, -0.327, -0.596",
+						"rot" : "2.376, 0.258, -0.811",
+						"scale" : "0.755, 0.755, 0.755"
+					},
+					"visible" : true,
+					"casts shadow" : true,
+					"mesh" : "cube.glb",
+					"materials" : 
+					[
+						"pbr grey"
+					],
+					"children" : 
+					[
+						{
+							"name" : "New_Object_05",
+							"id" : "0285496278CFE6BC4D26F513369E21AC",
+							"type" : "object",
+							"transform" : 
+							{
+								"pos" : "0.263, 0.448, 0.416",
+								"rot" : "2.549, -1.088, -2.862",
+								"scale" : "0.590, 0.590, 0.590"
+							},
+							"visible" : true,
+							"casts shadow" : true,
+							"mesh" : "cube.glb",
+							"materials" : 
+							[
+								"pbr light grey"
+							]
+						}
+					]
+				}
+			]
 		}
 	]
 }

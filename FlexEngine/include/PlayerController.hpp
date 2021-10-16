@@ -36,6 +36,8 @@ namespace flex
 		void LoadConfigFile();
 		void SerializeConfigFile();
 
+		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
+
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<PlayerController> m_ActionCallback;
 

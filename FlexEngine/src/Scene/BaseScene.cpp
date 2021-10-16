@@ -425,7 +425,7 @@ namespace flex
 			JSONObject cameraTransform;
 			if (cameraObj.TryGetObject("transform", cameraTransform))
 			{
-				glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
+				glm::vec3 camPos = cameraTransform.GetVec3("position");
 				if (IsNanOrInf(camPos))
 				{
 					PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");

@@ -503,11 +503,13 @@ namespace flex
 			JSONObject obj;
 			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
 			{
+				i32 fileVersion = obj.GetInt("version");
+
 				std::vector<JSONObject> materialObjects = obj.GetObjectArray("materials");
 				for (const JSONObject& materialObject : materialObjects)
 				{
 					MaterialCreateInfo matCreateInfo = {};
-					Material::ParseJSONObject(materialObject, matCreateInfo);
+					Material::ParseJSONObject(materialObject, matCreateInfo, fileVersion);
 
 					parsedMaterialInfos.push_back(matCreateInfo);
 

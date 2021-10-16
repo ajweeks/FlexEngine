@@ -41,8 +41,16 @@ namespace flex
 	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
 
 	Renderer::Renderer() :
-		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION))
+		m_Settings("Renderer settings", RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION), CURRENT_RENDERER_SETTINGS_FILE_VERSION)
 	{
+		m_Settings.RegisterProperty(1, "enable v-sync", &m_bVSyncEnabled);
+		m_Settings.RegisterProperty(1, "enable fxaa", &m_PostProcessSettings.bEnableFXAA);
+		m_Settings.RegisterProperty(1, "brightness", &m_PostProcessSettings.brightness, 3);
+		m_Settings.RegisterProperty(1, "offset", &m_PostProcessSettings.offset, 3);
+		m_Settings.RegisterProperty(1, "saturation", &m_PostProcessSettings.saturation);
+
+		m_Settings.RegisterProperty(2, "shadow cascade count", &m_ShadowCascadeCount);
+		m_Settings.RegisterProperty(2, "shadow cascade base resolution", &m_ShadowMapBaseResolution);
 	}
 
 	Renderer::~Renderer()
@@ -318,38 +326,12 @@ namespace flex
 
 	void Renderer::SaveSettingsToDisk(bool bAddEditorStr /* = true */)
 	{
-		if (FileExists(m_RendererSettingsFilePathAbs))
-		{
-			Platform::DeleteFile(m_RendererSettingsFilePathAbs);
-		}
-
-		JSONObject rootObject = {};
-		rootObject.fields.emplace_back("version", JSONValue(m_RendererSettingsFileVersion));
-		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
-		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-		rootObject.fields.emplace_back("brightness", JSONValue(VecToString(m_PostProcessSettings.brightness, 3)));
-		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
-		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
-
-		rootObject.fields.emplace_back("shadow cascade count", JSONValue(m_ShadowCascadeCount));
-		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue(m_ShadowMapBaseResolution));
-
-		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
-		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
-		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
-		std::string fileContents = rootObject.ToString();
-
-		if (WriteFile(m_RendererSettingsFilePathAbs, fileContents, false))
+		if (m_Settings.Serialize())
 		{
 			if (bAddEditorStr)
 			{
 				AddEditorString("Saved renderer settings");
 			}
-		}
-		else
-		{
-			PrintError("Failed to write render settings to %s\n", m_RendererSettingsFilePathAbs.c_str());
 		}
 	}
 
@@ -357,29 +339,9 @@ namespace flex
 	{
 		PROFILE_AUTO("Renderer LoadSettingsFromDisk");
 
-		JSONObject rootObject;
-		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
+		if (m_Settings.Deserialize())
 		{
-			if (rootObject.HasField("version"))
-			{
-				m_RendererSettingsFileVersion = rootObject.GetInt("version");
-			}
-
-			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
-			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
-
-			rootObject.TryGetInt("shadow cascade count", m_ShadowCascadeCount);
-			rootObject.TryGetUInt("shadow cascade base resolution", m_ShadowMapBaseResolution);
-
-			// Done loading
-			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
-		}
-		else
-		{
-			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
+			SetVSyncEnabled(m_bVSyncEnabled);
 		}
 	}
 

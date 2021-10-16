@@ -1,48 +1,77 @@
 #include "stdafx.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/euler_angles.hpp>
+IGNORE_WARNINGS_POP
+
 #include "ConfigFile.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 
 namespace flex
 {
-	ConfigFile::ConfigFile(const std::string& name, const std::string& filePath) :
+	ConfigFile::ConfigFile(const std::string& name, const std::string& filePath, i32 currentFileVersion) :
 		name(name),
-		filePath(filePath)
+		filePath(filePath),
+		fileVersion(currentFileVersion),
+		currentFileVersion(currentFileVersion)
 	{
 	}
 
-	void ConfigFile::RegisterProperty(const char* propertyName, real* propertyValue)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue)
 	{
-		values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::FLOAT));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, ValueType::FLOAT));
 	}
 
-	void ConfigFile::RegisterProperty(const char* propertyName, real* propertyValue, real valueMin, real valueMax)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue, real valueMin, real valueMax)
 	{
-		values.emplace(propertyName, ConfigValue(propertyName, propertyValue, *(void**)&valueMin, *(void**)&valueMax, ValueType::FLOAT));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&valueMin, *(void**)&valueMax, ValueType::FLOAT));
 	}
 
-	void ConfigFile::RegisterProperty(const char* propertyName, i32* propertyValue)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, i32* propertyValue)
 	{
-		values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::INT));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, ValueType::INT));
 	}
 
-	void ConfigFile::RegisterProperty(const char* propertyName, u32* propertyValue)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, u32* propertyValue)
 	{
-		values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::UINT));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, ValueType::UINT));
 	}
 
-	void ConfigFile::RegisterProperty(const char* propertyName, bool* propertyValue)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, bool* propertyValue)
 	{
-		values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::BOOL));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, ValueType::BOOL));
 	}
 
-	void ConfigFile::Serialize()
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, real precision)
 	{
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC2));
+	}
+
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, real precision)
+	{
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC3));
+	}
+
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, real precision)
+	{
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC4));
+	}
+
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, real precision)
+	{
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::QUAT));
+	}
+
+	bool ConfigFile::Serialize()
+	{
+		fileVersion = currentFileVersion;
+
 		JSONObject rootObject = {};
 		for (auto& valuePair : values)
 		{
-			rootObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type));
+			u32 precision = valuePair.second.precision != nullptr ? *(u32*)&valuePair.second.precision : JSONValue::DEFAULT_FLOAT_PRECISION;
+			rootObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type, precision));
 		}
 
 		std::string fileContents = rootObject.ToString();
@@ -50,10 +79,13 @@ namespace flex
 		if (!WriteFile(filePath, fileContents, false))
 		{
 			PrintError("Failed to write config file to %s\n", filePath.c_str());
+			return false;
 		}
+
+		return true;
 	}
 
-	void ConfigFile::Deserialize()
+	bool ConfigFile::Deserialize()
 	{
 		if (FileExists(filePath))
 		{
@@ -63,13 +95,24 @@ namespace flex
 				JSONObject rootObject;
 				if (JSONParser::Parse(fileContents, rootObject))
 				{
+					if (!rootObject.TryGetValueOfType("version", &fileVersion, ValueType::INT))
+					{
+						fileVersion = currentFileVersion;
+					}
+
 					for (auto& valuePair : values)
 					{
 						if (!rootObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type))
 						{
-							PrintError("Failed to get property %s from config file %s\n", valuePair.second.label, filePath.c_str());
+							// Don't warn about missing fields which weren't present in old file version
+							if (fileVersion >= valuePair.second.versionAdded)
+							{
+								PrintError("Failed to get property %s from config file %s\n", valuePair.second.label, filePath.c_str());
+							}
 						}
 					}
+
+					return true;
 				}
 				else
 				{
@@ -77,6 +120,8 @@ namespace flex
 				}
 			}
 		}
+
+		return false;
 	}
 
 	ConfigFile::Request ConfigFile::DrawImGuiObjects()
@@ -85,6 +130,8 @@ namespace flex
 
 		if (ImGui::TreeNode(name.c_str()))
 		{
+			ImGui::Text("Version: %i", fileVersion);
+
 			for (auto& valuePair : values)
 			{
 				switch (valuePair.second.type)
@@ -122,6 +169,44 @@ namespace flex
 				case ValueType::BOOL:
 					ImGui::Checkbox(valuePair.first, (bool*)valuePair.second.valuePtr);
 					break;
+				case ValueType::VEC2:
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
+					{
+						ImGui::SliderFloat2(valuePair.first, &((glm::vec2*)valuePair.second.valuePtr)->x, *(real*)&valuePair.second.valueMin, *(real*)&valuePair.second.valueMax);
+					}
+					else
+					{
+						ImGui::DragFloat2(valuePair.first, &((glm::vec2*)valuePair.second.valuePtr)->x);
+					}
+					break;
+				case ValueType::VEC3:
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
+					{
+						ImGui::SliderFloat3(valuePair.first, &((glm::vec3*)valuePair.second.valuePtr)->x, *(real*)&valuePair.second.valueMin, *(real*)&valuePair.second.valueMax);
+					}
+					else
+					{
+						ImGui::DragFloat3(valuePair.first, &((glm::vec3*)valuePair.second.valuePtr)->x);
+					}
+					break;
+				case ValueType::VEC4:
+					if (valuePair.second.valueMin != nullptr && valuePair.second.valueMax != nullptr)
+					{
+						ImGui::SliderFloat4(valuePair.first, &((glm::vec4*)valuePair.second.valuePtr)->x, *(real*)&valuePair.second.valueMin, *(real*)&valuePair.second.valueMax);
+					}
+					else
+					{
+						ImGui::DragFloat4(valuePair.first, &((glm::vec4*)valuePair.second.valuePtr)->x);
+					}
+					break;
+				case ValueType::QUAT:
+				{
+					glm::vec3 rotEuler = glm::eulerAngles(*(glm::quat*)valuePair.second.valuePtr);
+					if (ImGui::SliderFloat3(valuePair.first, &rotEuler.x, *(real*)&valuePair.second.valueMin, *(real*)&valuePair.second.valueMax))
+					{
+						*(glm::quat*)valuePair.second.valuePtr = glm::quat(rotEuler);
+					}
+				} break;
 				default:
 					PrintError("Unhandled value type in ConfigFile::DrawImGuiObjects\n");
 					break;

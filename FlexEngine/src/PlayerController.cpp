@@ -42,15 +42,15 @@ namespace flex
 	PlayerController::PlayerController() :
 		m_ActionCallback(this, &PlayerController::OnActionEvent),
 		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent),
-		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION)
+		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION)
 	{
-		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed);
-		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
-		m_ConfigFile.RegisterProperty("rotate h speed third person", &m_RotateHSpeedThirdPerson);
-		m_ConfigFile.RegisterProperty("rotate v speed", &m_RotateVSpeed);
-		m_ConfigFile.RegisterProperty("mouse rotate h speed", &m_MouseRotateHSpeed, 0.01f, 10.0f);
-		m_ConfigFile.RegisterProperty("mouse rotate v speed", &m_MouseRotateVSpeed, 0.01f, 10.0f);
-		m_ConfigFile.RegisterProperty("invert move v", &m_bInvertMouseV);
+		m_ConfigFile.RegisterProperty(1, "max move speed", &m_MaxMoveSpeed);
+		m_ConfigFile.RegisterProperty(1, "rotate h speed first person", &m_RotateHSpeedFirstPerson);
+		m_ConfigFile.RegisterProperty(1, "rotate h speed third person", &m_RotateHSpeedThirdPerson);
+		m_ConfigFile.RegisterProperty(1, "rotate v speed", &m_RotateVSpeed);
+		m_ConfigFile.RegisterProperty(1, "mouse rotate h speed", &m_MouseRotateHSpeed, 0.01f, 10.0f);
+		m_ConfigFile.RegisterProperty(1, "mouse rotate v speed", &m_MouseRotateVSpeed, 0.01f, 10.0f);
+		m_ConfigFile.RegisterProperty(1, "invert move v", &m_bInvertMouseV);
 	}
 
 	PlayerController::~PlayerController()

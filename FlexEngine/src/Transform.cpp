@@ -149,26 +149,19 @@ namespace flex
 
 	void Transform::ParseJSON(const JSONObject& object, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale)
 	{
-		std::string posStr = object.GetString("pos");
-		std::string rotStr = object.GetString("rot");
-		std::string scaleStr = object.GetString("scale");
-
-		outPos = glm::vec3(0.0f);
-		if (!posStr.empty())
+		if (!object.TryGetVec3("pos", outPos))
 		{
-			outPos = ParseVec3(posStr);
+			outPos = VEC3_ZERO;
 		}
 
-		glm::vec3 rotEuler(0.0f);
-		if (!rotStr.empty())
+		if (!object.TryGetQuat("rot", outRot))
 		{
-			rotEuler = ParseVec3(rotStr);
+			outRot = QUAT_IDENTITY;
 		}
 
-		outScale = glm::vec3(1.0f);
-		if (!scaleStr.empty())
+		if (!object.TryGetVec3("scale", outScale))
 		{
-			outScale = ParseVec3(scaleStr);
+			outScale = VEC3_ONE;
 		}
 
 		// Check we aren't getting garbage data in
@@ -179,10 +172,10 @@ namespace flex
 			outPos = VEC3_ZERO;
 		}
 
-		if (IsNanOrInf(rotEuler))
+		if (IsNanOrInf(outRot))
 		{
 			PrintError("Read garbage value from transform rot in serialized scene file! Using default value instead\n");
-			rotEuler = VEC3_ZERO;
+			outRot = QUAT_IDENTITY;
 		}
 
 		if (IsNanOrInf(outScale))
@@ -191,8 +184,6 @@ namespace flex
 			outScale = VEC3_ONE;
 		}
 #endif
-
-		outRot = glm::quat(rotEuler);
 	}
 
 	void Transform::CloneFrom(const Transform& other)

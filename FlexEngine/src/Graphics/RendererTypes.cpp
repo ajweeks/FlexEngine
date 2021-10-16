@@ -199,8 +199,10 @@ namespace flex
 		return equal;
 	}
 
-	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
+	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion)
 	{
+		FLEX_UNUSED(fileVersion);
+
 		material.TryGetString("name", createInfoOut.name);
 		material.TryGetString("shader", createInfoOut.shaderName);
 
@@ -254,6 +256,7 @@ namespace flex
 		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
 		material.TryGetVec4("const albedo", createInfoOut.constAlbedo);
 		material.TryGetVec4("const emissive", createInfoOut.constEmissive);
+
 		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
 		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 
@@ -476,13 +479,11 @@ namespace flex
 
 		if (constAlbedo != VEC4_ONE)
 		{
-			std::string constAlbedoStr = VecToString(constAlbedo, 3);
-			materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
+			materialObject.fields.emplace_back("const albedo", JSONValue((glm::vec3)constAlbedo, 3));
 		}
 		if (constEmissive != VEC4_ONE)
 		{
-			std::string constEmissiveStr = VecToString(constEmissive, 3);
-			materialObject.fields.emplace_back("const emissive", JSONValue(constEmissiveStr));
+			materialObject.fields.emplace_back("const emissive", JSONValue((glm::vec3)constEmissive, 3));
 		}
 		if (constMetallic != 0.0f)
 		{
@@ -563,27 +564,20 @@ namespace flex
 		if (shader->textureUniforms.HasUniform(&U_CUBEMAP_SAMPLER))
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
-
 			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
-
-			std::string cubemapSamplerSizeStr = VecToString(cubemapSamplerSize, 0);
-			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
+			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSize, 0));
 		}
 
 		if (shader->textureUniforms.HasUniform(&U_IRRADIANCE_SAMPLER) || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
-
-			std::string irradianceSamplerSizeStr = VecToString(irradianceSamplerSize, 0);
-			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
+			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSize, 0));
 		}
 
 		if (shader->textureUniforms.HasUniform(&U_PREFILTER_MAP) || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
-
-			std::string prefilteredMapSizeStr = VecToString(prefilteredMapSize, 0);
-			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
+			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSize, 0));
 		}
 
 		if (!environmentMapPath.empty())
@@ -599,8 +593,7 @@ namespace flex
 
 		if (colourMultiplier != VEC4_ONE)
 		{
-			std::string colourMultiplierStr = VecToString(colourMultiplier, 3);
-			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplierStr));
+			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplier, 3));
 		}
 
 		if (generateReflectionProbeMaps)

@@ -735,7 +735,7 @@ namespace flex
 
 		bool Equals(const Material& other);
 
-		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
+		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion);
 		JSONObject Serialize() const;
 
 		static std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);

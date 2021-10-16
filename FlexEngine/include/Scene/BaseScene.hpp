@@ -176,7 +176,7 @@ namespace flex
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static const i32 LATEST_SCENE_FILE_VERSION = 6;
-		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
+		static const i32 LATEST_MATERIALS_FILE_VERSION = 2;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		static const i32 LATETST_PREFAB_FILE_VERSION = 3;
 

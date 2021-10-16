@@ -401,7 +401,7 @@ namespace flex
 		}
 		else
 		{
-			PrintError("Invalid json file, expected :\n");
+			s_ErrorStr = "Invalid json field " + field.label + ", expected ':'";
 			return false;
 		}
 
@@ -467,7 +467,7 @@ namespace flex
 				if (fileContents[offsetCopy] != ',' &&
 					fileContents[offsetCopy] != ']')
 				{
-					s_ErrorStr = "Expected , or ] after field array entry " + fieldName;
+					s_ErrorStr = "Expected ',' or ']' after field array entry " + fieldName;
 					return false;
 				}
 
@@ -505,7 +505,7 @@ namespace flex
 			if (fileContents[*offset] != ',' &&
 				fileContents[*offset] != ']')
 			{
-				s_ErrorStr = "Expected , or ] after field array entry " + fieldName;
+				s_ErrorStr = "Expected ',' or ']' after field array entry " + fieldName;
 				return false;
 			}
 
