@@ -6644,11 +6644,20 @@ namespace flex
 	{
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
-		glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
+		glm::vec3 plug0Pos = plug0Transform->GetLocalPosition();
 
 		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
 		Transform* plug1Transform = plug1->GetTransform();
-		glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
+		glm::vec3 plug1Pos = plug1Transform->GetLocalPosition();
+
+		auto dd = g_Renderer->GetDebugDrawer();
+		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
+		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
+		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
+
+		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
+		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
+		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
 
 		glm::vec3 startToEnd = plug1Pos - plug0Pos;
 
@@ -9402,13 +9411,9 @@ namespace flex
 		// TODO: Upload as two channel texture
 		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
 		m_RandomTableTextureID = g_Renderer->InitializeTextureArrayFromMemory(textureMem.data(),
-			(u32)(textureMem.size() * sizeof(u32) * 4),
-			VK_FORMAT_R32G32B32A32_SFLOAT,
+			(u32)(textureMem.size() * sizeof(u32) * 4), VK_FORMAT_R32G32B32A32_SFLOAT,
 			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
-
-			VK_FILTER_NEAREST /* ? */
-
-		);
+			VK_FILTER_NEAREST);
 	}
 
 	void TerrainGenerator::UpdateRoadSegments()

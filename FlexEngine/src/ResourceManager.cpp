@@ -2000,11 +2000,27 @@ namespace flex
 				}
 				ImGui::EndChild();
 
+				if (ImGui::Button("Open externally"))
+				{
+					std::string absFilePath = RelativePathToAbsolute(discoveredTextures[selectedTextureIndex]);
+					Platform::OpenFileWithDefaultApplication(absFilePath);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Open in explorer"))
+				{
+					std::string absFilePath = RelativePathToAbsolute(ExtractDirectoryString(discoveredTextures[selectedTextureIndex]));
+					Platform::OpenFileExplorer(absFilePath.c_str());
+				}
+
 				// TODO: Hook up DirectoryWatcher here
 				if (ImGui::Button("Refresh"))
 				{
 					DiscoverTextures();
 				}
+
+				ImGui::SameLine();
 
 				if (ImGui::Button("Import Texture"))
 				{
@@ -2014,6 +2030,8 @@ namespace flex
 					std::string selectedAbsFilePath;
 					if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 					{
+						// TODO: Copy texture into Textures directory if not already there
+
 						const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 						std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
