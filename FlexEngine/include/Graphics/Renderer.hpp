@@ -131,6 +131,8 @@ namespace flex
 		virtual void OnPreSceneChange();
 		virtual void OnPostSceneChange(); // Called once scene has been loaded and all objects have been initialized and post initialized
 
+		virtual void OnSettingsReloaded() = 0;
+
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info
 		* Returns true if renderID refers to a valid render object

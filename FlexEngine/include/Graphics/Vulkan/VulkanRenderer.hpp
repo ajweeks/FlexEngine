@@ -73,6 +73,8 @@ namespace flex
 			virtual void OnPreSceneChange() override;
 			virtual void OnPostSceneChange() override;
 
+			virtual void OnSettingsReloaded() override;
+
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
 			virtual void SetVSyncEnabled(bool bEnableVSync) override;

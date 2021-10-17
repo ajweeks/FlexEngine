@@ -2619,6 +2619,15 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::OnSettingsReloaded()
+		{
+			if ((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
+				m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution)
+			{
+				RecreateEverything();
+			}
+		}
+
 		bool VulkanRenderer::GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo)
 		{
 			outInfo = {};
@@ -5122,6 +5131,11 @@ namespace flex
 			descSetCreateInfo.uniformBufferList = &spriteMat->uniformBufferList;
 			if (spriteShader->bTextureArr)
 			{
+				if (layer >= m_ShadowCascades.size())
+				{
+					PrintWarn("Attempted to create sprite desc referencing invalid shadow layer %i (Max: %i)\n", layer, m_ShadowCascades.size());
+					return VK_NULL_HANDLE;
+				}
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_ShadowCascades[layer]->imageView, m_LinMipLinSampler });
 			}
 			else

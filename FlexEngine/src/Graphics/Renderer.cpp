@@ -343,6 +343,10 @@ namespace flex
 		if (m_Settings.Deserialize())
 		{
 			SetVSyncEnabled(m_bVSyncEnabled);
+			if (m_bInitialized)
+			{
+				OnSettingsReloaded();
+			}
 		}
 	}
 
@@ -3213,13 +3217,15 @@ namespace flex
 			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
 			{
 				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, 4);
-				RecreateShadowFrameBuffers();
+				// TODO: Recreate less
+				RecreateEverything();
 			}
 
 			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
 			{
 				m_ShadowMapBaseResolution = NextPowerOfTwo(glm::clamp(m_ShadowMapBaseResolution, 128u, 4096u));
-				RecreateShadowFrameBuffers();
+				// TODO: Recreate less
+				RecreateEverything();
 			}
 
 			//ImGui::SliderFloat("Shadow bias", &m_ShadowSamplingData.baseBias, 0.0f, 0.1f);
