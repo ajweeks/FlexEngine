@@ -131,7 +131,7 @@ namespace flex
 			}
 			else
 			{
-				PrintError("Freeing vk allocation which doesn't correspond to a tracked allocation! (memory: %p)\n", memory);
+				PrintError("Freeing vk allocation which doesn't correspond to a tracked allocation! (memory: %p)\n", (void*)memory);
 			}
 
 			::vkFreeMemory(m_LogicalDevice, memory, pAllocator);

@@ -2057,7 +2057,7 @@ namespace flex
 
 	void ByteCountToString(char buf[], u32 bufSize, u64 bytes, u32 precision /* = 1 */)
 	{
-		assert(precision >= 0 && precision <= 9);
+		assert(precision <= 9);
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
 		double count = (double)bytes;

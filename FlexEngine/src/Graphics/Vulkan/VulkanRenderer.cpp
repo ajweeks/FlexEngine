@@ -2322,8 +2322,8 @@ namespace flex
 					char stringBuf[stringBufLen];
 					ByteCountToString(stringBuf, stringBufLen, m_VulkanDevice->m_vkAllocAmount, 3);
 					ImGui::Text("Total allocated: %s", stringBuf);
-					ImGui::Text("Alloc count: %llu", m_VulkanDevice->m_vkAllocCount);
-					ImGui::Text("Free count: %llu", m_VulkanDevice->m_vkFreeCount);
+					ImGui::Text("Alloc count: %lu", m_VulkanDevice->m_vkAllocCount);
+					ImGui::Text("Free count: %lu", m_VulkanDevice->m_vkFreeCount);
 
 					if (ImGui::BeginChild("alloc list", ImVec2(0, 0), true))
 					{
@@ -5134,7 +5134,7 @@ namespace flex
 			{
 				if (layer >= m_ShadowCascades.size())
 				{
-					PrintWarn("Attempted to create sprite desc referencing invalid shadow layer %i (Max: %i)\n", layer, m_ShadowCascades.size());
+					PrintWarn("Attempted to create sprite desc referencing invalid shadow layer %i (Max: %i)\n", layer, (i32)m_ShadowCascades.size());
 					return VK_NULL_HANDLE;
 				}
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ m_ShadowCascades[layer]->imageView, m_LinMipLinSampler });

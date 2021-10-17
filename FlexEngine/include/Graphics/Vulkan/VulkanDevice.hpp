@@ -4,6 +4,8 @@
 #include "VDeleter.hpp"
 #include "VulkanHelpers.hpp"
 
+#include <list>
+
 namespace flex
 {
 	namespace vk
