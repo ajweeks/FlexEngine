@@ -13,10 +13,10 @@ namespace flex
 		void RegisterProperty(i32 versionAdded, const char* propertyName, i32* propertyValue);
 		void RegisterProperty(i32 versionAdded, const char* propertyName, u32* propertyValue);
 		void RegisterProperty(i32 versionAdded, const char* propertyName, bool* propertyValue);
-		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, real precision);
-		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, real precision);
-		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, real precision);
-		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, real precision);
+		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, u32 precision);
+		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, u32 precision);
+		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, u32 precision);
+		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision);
 
 		bool Serialize();
 		bool Deserialize();

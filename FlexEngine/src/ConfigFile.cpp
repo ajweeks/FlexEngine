@@ -43,24 +43,24 @@ namespace flex
 		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, ValueType::BOOL));
 	}
 
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, real precision)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, u32 precision)
 	{
-		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC2));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC2));
 	}
 
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, real precision)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, u32 precision)
 	{
-		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC3));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC3));
 	}
 
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, real precision)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, u32 precision)
 	{
-		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::VEC4));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC4));
 	}
 
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, real precision)
+	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision)
 	{
-		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, nullptr, ValueType::QUAT));
+		values.emplace(propertyName, ConfigValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::QUAT));
 	}
 
 	bool ConfigFile::Serialize()
@@ -68,6 +68,9 @@ namespace flex
 		fileVersion = currentFileVersion;
 
 		JSONObject rootObject = {};
+
+		rootObject.fields.emplace_back("version", JSONValue(fileVersion));
+
 		for (auto& valuePair : values)
 		{
 			u32 precision = valuePair.second.precision != nullptr ? *(u32*)&valuePair.second.precision : JSONValue::DEFAULT_FLOAT_PRECISION;
