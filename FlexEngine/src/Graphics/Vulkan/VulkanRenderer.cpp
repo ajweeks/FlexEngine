@@ -1051,6 +1051,7 @@ namespace flex
 						else
 						{
 							delete texture;
+							texture = nullptr;
 						}
 					}
 
@@ -1096,7 +1097,7 @@ namespace flex
 				u32 channelCount = 4;
 				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap");
 				cubemapTexture->CreateCubemapEmpty((u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y,
-					channelCount, VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+					channelCount, VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(cubemapTexture);
 				material->textures.SetUniform(&U_CUBEMAP_SAMPLER, cubemapTexture);
 			}
@@ -1119,7 +1120,7 @@ namespace flex
 					(u32)createInfo->generatedIrradianceCubemapSize.x,
 					(u32)createInfo->generatedIrradianceCubemapSize.y,
 					channelCount,
-					VK_FORMAT_R32G32B32A32_SFLOAT, mipLevels, false);
+					VK_FORMAT_R16G16B16A16_SFLOAT, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(irradianceTexture);
 				material->textures.SetUniform(&U_IRRADIANCE_SAMPLER, irradianceTexture);
 			}
@@ -1166,7 +1167,7 @@ namespace flex
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
 					((VulkanTexture*)m_NoiseTexture)->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
-						VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
+						VK_FORMAT_R16G16B16A16_SFLOAT, 1, VK_FILTER_NEAREST);
 					g_ResourceManager->AddLoadedTexture(m_NoiseTexture);
 				}
 
@@ -3019,7 +3020,8 @@ namespace flex
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&matCreateInfo);
 			VulkanMaterial* equirectangularToCubeMat = (VulkanMaterial*)m_Materials.at(equirectangularToCubeMatID);
 
-			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
+			const VkFormat format = cubemapTexture->imageFormat;
 			const u32 dim = (u32)renderObjectMat->cubemapSamplerSize.x;
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
@@ -3133,8 +3135,6 @@ namespace flex
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
 			// Render
-
-			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
 
 			VkClearValue clearValues[1];
 			clearValues[0].color = m_ClearColour;
@@ -3297,7 +3297,8 @@ namespace flex
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
-			const VkFormat format = VK_FORMAT_R32G32B32A32_SFLOAT;
+			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
+			const VkFormat format = cubemapTexture->imageFormat;
 			const u32 dim = (u32)renderObjectMat->irradianceSamplerSize.x;
 			assert(dim <= MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
@@ -3378,7 +3379,6 @@ namespace flex
 			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[irradianceMaterial->shaderID];
 			irradianceDescriptorCreateInfo.shaderID = irradianceMaterial->shaderID;
 			irradianceDescriptorCreateInfo.uniformBufferList = &irradianceMaterial->uniformBufferList;
-			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
 			irradianceDescriptorCreateInfo.imageDescriptors.SetUniform(&U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_LinMipLinSampler });
 			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.uniformBufferList, irradianceDescriptorCreateInfo.shaderID);
 			VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&irradianceDescriptorCreateInfo);
