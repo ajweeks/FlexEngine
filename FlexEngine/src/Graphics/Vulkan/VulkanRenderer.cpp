@@ -257,7 +257,7 @@ namespace flex
 
 				m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 				m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
-				m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, vkFreeMemory };
+				m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, deviceFreeMemory };
 
 				CreateSwapChain();
 				CreateSwapChainImageViews();
@@ -1185,7 +1185,8 @@ namespace flex
 		{
 			PROFILE_AUTO("InitializeTextureFromFile");
 
-			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
+			std::string textureName = StripLeadingDirectories(relativeFilePath);
+			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName);
 			newTex->bHDR = bHDR;
 			newTex->bFlipVertically = bFlipVertically;
 			VkDeviceSize newTexSize = newTex->CreateFromFile(relativeFilePath, VK_FORMAT_UNDEFINED, bGenerateMipMaps);
@@ -1376,10 +1377,12 @@ namespace flex
 					constantBuffer->data.data = static_cast<u8*>(malloc(constantBuffer->data.unitSize));
 					assert(constantBuffer->data.data);
 
-					PrepareUniformBuffer(&constantBuffer->buffer, constantBuffer->data.unitSize,
-						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
 					std::string bufferName = material->name + " constant uniform buffer";
+					PrepareUniformBuffer(&constantBuffer->buffer, constantBuffer->data.unitSize,
+						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+						bufferName,
+						true);
+
 					SetBufferName(m_VulkanDevice, constantBuffer->buffer.m_Buffer, bufferName.c_str());
 				}
 			}
@@ -1406,10 +1409,12 @@ namespace flex
 					dynamicBuffer->fullDynamicBufferSize = dynamicBufferSize;
 					if (dynamicBufferSize > 0)
 					{
-						PrepareUniformBuffer(&dynamicBuffer->buffer, dynamicBufferSize,
-							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
 						std::string bufferName = material->name + " dynamic uniform buffer";
+						PrepareUniformBuffer(&dynamicBuffer->buffer, dynamicBufferSize,
+							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+							bufferName,
+							true);
+
 						SetBufferName(m_VulkanDevice, dynamicBuffer->buffer.m_Buffer, bufferName.c_str());
 					}
 				}
@@ -1434,7 +1439,9 @@ namespace flex
 				// Will be copied into from staging buffer
 				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.unitSize,
 					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false);
+					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+					"Particle buffer",
+					false);
 
 				SetBufferName(m_VulkanDevice, particleBuffer->buffer.m_Buffer, "Particle buffer");
 			}
@@ -1465,7 +1472,9 @@ namespace flex
 			m_Terrain->pointBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(pointBufferSize, m_DynamicAlignment));
 			PrepareUniformBuffer(&m_Terrain->pointBufferGPU->buffer, pointBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, false);
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				"Terrain point buffer",
+				false);
 			SetBufferName(m_VulkanDevice, m_Terrain->pointBufferGPU->buffer.m_Buffer, "Terrain point buffer");
 
 			// Vertex buffer
@@ -1486,7 +1495,9 @@ namespace flex
 			m_Terrain->vertexBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(vertBufferSize, m_DynamicAlignment));
 			PrepareUniformBuffer(&m_Terrain->vertexBufferGPU->buffer, vertBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, false);
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				"Terrain vertex buffer",
+				false);
 			SetBufferName(m_VulkanDevice, m_Terrain->vertexBufferGPU->buffer.m_Buffer, "Terrain vertex buffer");
 		}
 
@@ -2167,9 +2178,10 @@ namespace flex
 			//ImGui::SliderFloat("TAA KL", &(m_TAA_ks[0]), 0.0f, 100.0f);
 			//ImGui::SliderFloat("TAA KH", &(m_TAA_ks[1]), 0.0f, 100.0f);
 
-			if (bGPUTimingsWindowShowing)
+			bool* bGPUTimingsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("gpu timings"));
+			if (*bGPUTimingsWindowOpen)
 			{
-				if (ImGui::Begin("GPU Timings", &bGPUTimingsWindowShowing))
+				if (ImGui::Begin("GPU Timings", bGPUTimingsWindowOpen))
 				{
 					for (auto iter = m_TimestampQueryNames.begin(); iter != m_TimestampQueryNames.end(); ++iter)
 					{
@@ -2185,9 +2197,10 @@ namespace flex
 				ImGui::End();
 			}
 
-			if (bUniformBufferWindowShowing)
+			bool* bUniformBufferWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("uniform buffers"));
+			if (*bUniformBufferWindowOpen)
 			{
-				if (ImGui::Begin("Uniform Buffers", &bUniformBufferWindowShowing))
+				if (ImGui::Begin("Uniform Buffers", bUniformBufferWindowOpen))
 				{
 					ShaderBatch* shaderBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
 					const char* shaderBatchNames[] = { "Deferred", "Forward" };
@@ -2296,6 +2309,38 @@ namespace flex
 						ImGui::EndChild();
 					}
 				}
+				ImGui::End();
+			}
+
+			bool* bGPUMemoryWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("gpu memory"));
+			if (*bGPUMemoryWindowOpen)
+			{
+				if (ImGui::Begin("GPU Memory", bGPUMemoryWindowOpen))
+				{
+					static const u32 stringBufLen = 64;
+					char stringBuf[stringBufLen];
+					ByteCountToString(stringBuf, stringBufLen, m_VulkanDevice->m_vkAllocAmount, 3);
+					ImGui::Text("Total allocated: %s", stringBuf);
+					ImGui::Text("Alloc count: %llu", m_VulkanDevice->m_vkAllocCount);
+					ImGui::Text("Free count: %llu", m_VulkanDevice->m_vkFreeCount);
+
+					if (ImGui::BeginChild("alloc list", ImVec2(0, 0), true))
+					{
+						ImGui::BeginColumns("allocations", 2);
+
+						for (const VkAllocInfo& allocInfo : m_VulkanDevice->m_vkAllocations)
+						{
+							ImGui::Text("%s", allocInfo.debugName.c_str());
+							ImGui::NextColumn();
+							ByteCountToString(stringBuf, stringBufLen, allocInfo.size, 2);
+							ImGui::Text("%s", stringBuf);
+							ImGui::NextColumn();
+						}
+						ImGui::EndColumns();
+					}
+					ImGui::EndChild();
+				}
+
 				ImGui::End();
 			}
 		}
@@ -3005,7 +3050,7 @@ namespace flex
 			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
 			VkMemoryAllocateInfo offscreenMemAlloc = vks::memoryAllocateInfo(offscreenMemRequirements.size);
 			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
+			VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Cubemap from HDR", &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
 			VkImageViewCreateInfo colourImageView = vks::imageViewCreateInfo();
@@ -3222,7 +3267,7 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
+			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
@@ -3282,7 +3327,7 @@ namespace flex
 			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &offscreenMemRequirements);
 			VkMemoryAllocateInfo offscreenMemAlloc = vks::memoryAllocateInfo(offscreenMemRequirements.size);
 			offscreenMemAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, offscreenMemRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &offscreenMemAlloc, nullptr, &offscreen.memory));
+			VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Irradiance sampler", &offscreenMemAlloc, nullptr, &offscreen.memory));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
 			VkImageViewCreateInfo colourImageView = vks::imageViewCreateInfo();
@@ -3492,7 +3537,7 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
+			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
@@ -3553,7 +3598,7 @@ namespace flex
 				vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, offscreen.image, &memRequirements);
 				VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 				memAlloc.memoryTypeIndex = FindMemoryType(m_VulkanDevice, memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, &offscreen.memory));
+				VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Prefilter cube", &memAlloc, nullptr, &offscreen.memory));
 				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, offscreen.image, offscreen.memory, 0));
 
 				VkImageViewCreateInfo colourImageView = vks::imageViewCreateInfo();
@@ -3762,7 +3807,7 @@ namespace flex
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
-			vkFreeMemory(m_VulkanDevice->m_LogicalDevice, offscreen.memory, nullptr);
+			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
@@ -4255,7 +4300,7 @@ namespace flex
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 				std::string savedSDFDirectory = ExtractDirectoryString(savedSDFTextureAbsFilePath);
 				Platform::CreateDirectoryRecursive(savedSDFDirectory);
-				if (!fontTexColAttachment->SaveToFile(savedSDFTextureAbsFilePath, ImageFormat::PNG))
+				if (!fontTexColAttachment->SaveToFile(m_VulkanDevice, savedSDFTextureAbsFilePath, ImageFormat::PNG))
 				{
 					PrintError("Failed to write generated font SDF to %s\n", savedSDFTextureAbsFilePath.c_str());
 				}
@@ -4421,6 +4466,11 @@ namespace flex
 			}
 		}
 
+		VulkanDevice* VulkanRenderer::GetDevice()
+		{
+			return m_VulkanDevice;
+		}
+
 		void VulkanRenderer::RecreateShadowFrameBuffers()
 		{
 			PROFILE_AUTO("RecreateShadowFrameBuffers");
@@ -4446,7 +4496,9 @@ namespace flex
 			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, &memRequirements);
 			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 			memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAlloc, nullptr, m_ShadowImageMemory.replace()));
+			//VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Shadow image memory", &memAlloc, nullptr, m_ShadowImageMemory.replace()));
+			//
+			VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Shadow image memory", &memAlloc, nullptr, m_ShadowImageMemory.replace()));
 			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_ShadowImage, m_ShadowImageMemory, 0));
 
 			// Full image view (for all layers)
@@ -7155,13 +7207,17 @@ namespace flex
 			PROFILE_AUTO("CreateAndUploadToStaticVertexBuffer");
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(vertexBufferSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				DEBUG_name);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(vertexBufferSize));
 			memcpy(stagingBuffer.m_Mapped, vertexBufferData, vertexBufferSize);
 			stagingBuffer.Unmap();
 
-			vertexBuffer->Create(vertexBufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			vertexBuffer->Create(vertexBufferSize,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				DEBUG_name);
 
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, vertexBuffer->m_Buffer, vertexBufferSize);
 
@@ -7223,13 +7279,17 @@ namespace flex
 			const u32 bufferSize = sizeof(indices[0]) * (u32)indices.size();
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(bufferSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				DEBUG_name);
 
 			VK_CHECK_RESULT(stagingBuffer.Map(bufferSize));
 			memcpy(stagingBuffer.m_Mapped, indices.data(), bufferSize);
 			stagingBuffer.Unmap();
 
-			indexBuffer->Create(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			indexBuffer->Create(bufferSize,
+				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				DEBUG_name);
 			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, indexBuffer->m_Buffer, bufferSize);
 
 			if (DEBUG_name != nullptr)
@@ -7269,10 +7329,15 @@ namespace flex
 			return (u32)dynamicBufferSize;
 		}
 
-		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
-			VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap /* = true */)
+		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer,
+			u32 bufferSize,
+			VkBufferUsageFlags bufferUseageFlagBits,
+			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+			const std::string& DEBUG_name,
+			bool bMap /* = true */)
 		{
-			buffer->Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits);
+			buffer->Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, DEBUG_name.c_str());
+
 			if (bMap)
 			{
 				VK_CHECK_RESULT(buffer->Map());
@@ -8950,8 +9015,8 @@ namespace flex
 				{
 					char heapBudgetBuf[64];
 					char heapUsageBuf[64];
-					ByteCountToString(heapBudgetBuf, 64, (u32)memoryPropertiesEXT->heapBudget[i]);
-					ByteCountToString(heapUsageBuf, 64, (u32)memoryPropertiesEXT->heapUsage[i]);
+					ByteCountToString(heapBudgetBuf, 64, (u64)memoryPropertiesEXT->heapBudget[i]);
+					ByteCountToString(heapUsageBuf, 64, (u64)memoryPropertiesEXT->heapUsage[i]);
 					Print("Heap budget: %s\n", heapBudgetBuf);
 					Print("Heap usage: %s (%.2f%%)\n", heapUsageBuf,
 						(real)memoryPropertiesEXT->heapUsage[i] / memoryPropertiesEXT->heapBudget[i] * 100.0f);

@@ -20,6 +20,19 @@ namespace flex
 
 		void VK_CHECK_RESULT(VkResult result);
 
+		VkResult vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+		void vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator);
+
+		VkResult deviceAllocateMemory(const char* debugName, VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+		void deviceFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator);
+
+		struct VkAllocInfo
+		{
+			std::string debugName;
+			VkDeviceMemory memory;
+			u64 size;
+		};
+
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
 
@@ -306,7 +319,7 @@ namespace flex
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat);
+			bool SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat);
 
 			void Build(void* data = nullptr);
 
@@ -343,7 +356,6 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
 			VDeleter<VkSampler> sampler;
-
 
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;

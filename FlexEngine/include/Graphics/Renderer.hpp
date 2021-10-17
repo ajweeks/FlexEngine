@@ -350,9 +350,6 @@ namespace flex
 		void ClearShaderHash(const std::string& shaderName);
 		void RecompileShaders(bool bForceCompileAll);
 
-		bool bUniformBufferWindowShowing = false;
-		bool bGPUTimingsWindowShowing = false;
-
 		static const u32 MAX_PARTICLE_COUNT = 65536;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;

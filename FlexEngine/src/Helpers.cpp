@@ -2055,11 +2055,12 @@ namespace flex
 		return true;
 	}
 
-	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
+	void ByteCountToString(char buf[], u32 bufSize, u64 bytes, u32 precision /* = 1 */)
 	{
+		assert(precision >= 0 && precision <= 9);
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
-		double count = bytes;
+		double count = (double)bytes;
 		while (count >= 1024 && s < 6)
 		{
 			s++;
@@ -2072,7 +2073,10 @@ namespace flex
 		}
 		else
 		{
-			snprintf(buf, bufSize, "%.1f%s", count, suffixes[s]);
+			static char formatBuf[7];
+			strcpy(formatBuf, "%.Xf%s");
+			formatBuf[2] = (char)precision + '0';
+			snprintf(buf, bufSize, formatBuf, count, suffixes[s]);
 		}
 	}
 

@@ -5890,7 +5890,7 @@ namespace flex
 
 			{
 				char byteCountStr[64];
-				ByteCountToString(byteCountStr, 64, (u32)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
+				ByteCountToString(byteCountStr, 64, (u64)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
 
 				char nameBuf[256];
 				snprintf(nameBuf, 256, "CPU Vertex buffer size %s", byteCountStr);

@@ -111,11 +111,13 @@ namespace flex
 		i32 bDEBUGShowEdges;   // 28
 	};
 
-	// 272 bytes
+	// 288 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
-		glm::vec4 cascadeDepthSplits;								// 256
+		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];
+		glm::vec4 cascadeDepthSplits;
+		//real pad[3];
+		//real baseBias;
 	};
 
 	// 112 bytes

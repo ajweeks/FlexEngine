@@ -1279,10 +1279,10 @@ namespace flex
 			if (ImGui::BeginMenu("Window"))
 			{
 				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")].bOpen);
-				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("GPU Timings", nullptr, &m_UIWindows[SID("gpu timings")].bOpen);
 				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")].bOpen);
 				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")].bOpen);
-				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("Uniform Buffers", nullptr, &m_UIWindows[SID("uniform buffers")].bOpen);
 				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
 				ImGui::MenuItem("Jitter Detector", nullptr, &m_UIWindows[SID("jitter detector")].bOpen);
 				ImGui::Separator();

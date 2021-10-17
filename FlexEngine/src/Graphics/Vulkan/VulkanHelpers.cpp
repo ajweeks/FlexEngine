@@ -33,6 +33,40 @@ namespace flex
 			}
 		}
 
+		VkResult vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			FLEX_UNUSED(device);
+			FLEX_UNUSED(pAllocateInfo);
+			FLEX_UNUSED(pAllocator);
+			FLEX_UNUSED(pMemory);
+
+			ENSURE_NO_ENTRY();
+			return VK_ERROR_UNKNOWN;
+		}
+
+		void vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			FLEX_UNUSED(device);
+			FLEX_UNUSED(memory);
+			FLEX_UNUSED(pAllocator);
+
+			ENSURE_NO_ENTRY();
+		}
+
+		VkResult deviceAllocateMemory(const char* debugName, VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			FLEX_UNUSED(device);
+
+			return ((VulkanRenderer*)g_Renderer)->GetDevice()->AllocateMemory(debugName, pAllocateInfo, pAllocator, pMemory);
+		}
+
+		void deviceFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			FLEX_UNUSED(device);
+
+			((VulkanRenderer*)g_Renderer)->GetDevice()->FreeMemory(memory, pAllocator);
+		}
+
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
 		{
@@ -247,7 +281,7 @@ namespace flex
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue) :
 			Texture(),
 			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
@@ -258,7 +292,7 @@ namespace flex
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name) :
 			Texture(name),
 			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
 			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
@@ -298,7 +332,9 @@ namespace flex
 			imageLayout = imageCreateInfo.initialLayout;
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(imageSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
 			void* data = nullptr;
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
@@ -383,6 +419,7 @@ namespace flex
 			imageCreateInfo.mipLevels = inMipLevels;
 			imageCreateInfo.usage = inUsage;
 			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			imageCreateInfo.DBG_Name = "Empty texture";
 
 			VkDeviceSize imageSize = CreateImage(m_VulkanDevice, imageCreateInfo);
 
@@ -433,7 +470,7 @@ namespace flex
 			VkMemoryAllocateInfo memAllocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			memAllocInfo.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAllocInfo, nullptr, createInfo.imageMemory));
+			VK_CHECK_RESULT(device->AllocateMemory(createInfo.DBG_Name, &memAllocInfo, nullptr, createInfo.imageMemory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
 
 			VkSamplerCreateInfo samplerCreateInfo = vks::samplerCreateInfo();
@@ -498,6 +535,7 @@ namespace flex
 			createInfo.totalSize = width * height * channelCount * 6;
 			createInfo.mipLevels = inMipLevels;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
+			createInfo.DBG_Name = "Empty cubemap";
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
@@ -529,6 +567,11 @@ namespace flex
 			{
 				PrintError("CreateCubemapFromTextures was given an empty filepath!\n");
 				return 0;
+			}
+
+			if (name.empty())
+			{
+				name = fileName;
 			}
 
 			if (g_bEnableLogging_Loading)
@@ -584,7 +627,9 @@ namespace flex
 
 			// Create a host-visible staging buffer that contains the raw image data
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(totalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(totalSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
 			stagingBuffer.Map();
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
@@ -600,6 +645,7 @@ namespace flex
 			createInfo.format = inFormat;
 			createInfo.filePaths = filePaths;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
+			createInfo.DBG_Name = name.c_str();
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
@@ -855,7 +901,7 @@ namespace flex
 			VkMemoryAllocateInfo allocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			allocInfo.memoryTypeIndex = FindMemoryType(device, memRequirements.memoryTypeBits, createInfo.properties);
 
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &allocInfo, nullptr, createInfo.imageMemory));
+			VK_CHECK_RESULT(device->AllocateMemory(createInfo.DBG_Name, &allocInfo, nullptr, createInfo.imageMemory));
 
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
 
@@ -871,6 +917,10 @@ namespace flex
 
 			relativeFilePath = inRelativeFilePath;
 			fileName = StripLeadingDirectories(inRelativeFilePath);
+			if (name.empty())
+			{
+				name = fileName;
+			}
 
 			if (g_bEnableLogging_Loading)
 			{
@@ -961,6 +1011,7 @@ namespace flex
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT |
 				(bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
+			imageCreateInfo.DBG_Name = name.c_str();
 
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
 
@@ -975,7 +1026,9 @@ namespace flex
 			imageLayout = imageCreateInfo.initialLayout;
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(imageSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
 			u32 pixelBufSize = bHDR ?
 				(u32)(width * height * channelCount * sizeof(real)) :
@@ -1079,7 +1132,7 @@ namespace flex
 			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
 		}
 
-		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat)
+		bool VulkanTexture::SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat)
 		{
 			assert(channelCount == 3 || channelCount == 4);
 
@@ -1134,7 +1187,7 @@ namespace flex
 				VkMemoryAllocateInfo memAllocInfo = vks::memoryAllocateInfo(memRequirements.size);
 				memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 				VkDeviceMemory dstImageMemory;
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &dstImageMemory));
+				VK_CHECK_RESULT(device->AllocateMemory("Saving texture to file", &memAllocInfo, nullptr, &dstImageMemory));
 				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, dstImage, dstImageMemory, 0));
 
 				VkCommandBuffer copyCmd = VulkanCommandBufferManager::CreateCommandBuffer(m_VulkanDevice, VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -1237,7 +1290,7 @@ namespace flex
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory);
-				vkFreeMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, nullptr);
+				device->FreeMemory(dstImageMemory, nullptr);
 				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, dstImage, nullptr);
 			}
 			else
@@ -2000,7 +2053,7 @@ namespace flex
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, *image, &memRequirements);
 			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 			memAlloc.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, memory));
+			VK_CHECK_RESULT(device->AllocateMemory(DBG_ImageName, &memAlloc, nullptr, memory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *image, *memory, 0));
 
 			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
@@ -2027,7 +2080,7 @@ namespace flex
 				frameBufferAttachment->image = VK_NULL_HANDLE;
 				vkDestroyImageView(device->m_LogicalDevice, frameBufferAttachment->view, nullptr);
 				frameBufferAttachment->view = VK_NULL_HANDLE;
-				vkFreeMemory(device->m_LogicalDevice, frameBufferAttachment->mem, nullptr);
+				device->FreeMemory(frameBufferAttachment->mem, nullptr);
 				frameBufferAttachment->mem = VK_NULL_HANDLE;
 			}
 
@@ -2173,7 +2226,7 @@ namespace flex
 				}
 				if (mem != VK_NULL_HANDLE)
 				{
-					vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+					device->FreeMemory(mem, nullptr);
 				}
 				if (view != VK_NULL_HANDLE)
 				{
@@ -2204,7 +2257,7 @@ namespace flex
 
 			if (mem != VK_NULL_HANDLE)
 			{
-				vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				device->FreeMemory(mem, nullptr);
 				mem = VK_NULL_HANDLE;
 			}
 

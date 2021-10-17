@@ -22,6 +22,9 @@ namespace flex
 
 			VulkanDevice(const CreateInfo& createInfo);
 
+			VkResult AllocateMemory(const std::string& debugName, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+			void FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator);
+
 			u32 GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound = nullptr) const;
 
 			bool ExtensionSupported(const char* extensionName) const;
@@ -48,6 +51,12 @@ namespace flex
 			VulkanQueueFamilyIndices m_QueueFamilyIndices;
 			std::vector<VkExtensionProperties> m_SupportedExtensions;
 			std::vector<const char*> m_EnabledExtensions;
+
+			std::list<VkAllocInfo> m_vkAllocations;
+			u64 m_vkAllocAmount = 0;
+			u64 m_vkAllocCount = 0;
+			u64 m_vkFreeCount = 0;
+
 		};
 	} // namespace vk
 } // namespace flex

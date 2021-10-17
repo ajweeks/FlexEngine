@@ -104,6 +104,41 @@ namespace flex
 			m_CommandPool = { m_LogicalDevice, vkDestroyCommandPool };
 		}
 
+		VkResult VulkanDevice::AllocateMemory(const std::string& debugName, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			VkResult result = ::vkAllocateMemory(m_LogicalDevice, pAllocateInfo, pAllocator, pMemory);
+
+			m_vkAllocations.emplace_back(VkAllocInfo{ debugName, *pMemory, (u64)pAllocateInfo->allocationSize });
+			m_vkAllocations.sort([](const VkAllocInfo& a, const VkAllocInfo& b) {
+				return a.size > b.size;
+			});
+			++m_vkAllocCount;
+			m_vkAllocAmount += (u64)pAllocateInfo->allocationSize;
+
+			return result;
+		}
+
+		void VulkanDevice::FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			auto iter = std::find_if(m_vkAllocations.begin(), m_vkAllocations.end(), [memory](const VkAllocInfo& allocInfo)
+			{
+				return allocInfo.memory == memory;
+			});
+			if (iter != m_vkAllocations.end())
+			{
+				m_vkAllocAmount -= (u64)iter->size;
+				m_vkAllocations.erase(iter);
+			}
+			else
+			{
+				PrintError("Freeing vk allocation which doesn't correspond to a tracked allocation! (memory: %p)\n", memory);
+			}
+
+			::vkFreeMemory(m_LogicalDevice, memory, pAllocator);
+
+			++m_vkFreeCount;
+		}
+
 		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const
 		{
 			for (u32 i = 0; i < m_MemoryProperties.memoryTypeCount; i++)
