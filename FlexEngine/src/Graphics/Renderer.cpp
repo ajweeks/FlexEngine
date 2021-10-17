@@ -866,6 +866,7 @@ namespace flex
 
 	bool Renderer::MaterialWithNameExists(const std::string& matName)
 	{
+		// Search through loaded materials
 		for (const auto& matPair : m_Materials)
 		{
 			if (matPair.second->name.compare(matName) == 0)
@@ -874,10 +875,19 @@ namespace flex
 			}
 		}
 
+		// Search through unloaded materials
+		for (const MaterialCreateInfo& matCreateInfo : g_ResourceManager->parsedMaterialInfos)
+		{
+			if (matCreateInfo.name.compare(matName) == 0)
+			{
+				return true;
+			}
+		}
+
 		return false;
 	}
 
-	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
+	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& outMaterialID)
 	{
 		const char* matNameCStr = materialName.c_str();
 		for (u32 i = 0; i < (u32)m_Materials.size(); ++i)
@@ -885,7 +895,7 @@ namespace flex
 			auto matIter = m_Materials.find(i);
 			if (matIter != m_Materials.end() && matIter->second->name.compare(matNameCStr) == 0)
 			{
-				materialID = i;
+				outMaterialID = i;
 				return true;
 			}
 		}
@@ -893,7 +903,7 @@ namespace flex
 		MaterialCreateInfo* matCreateInfo = g_ResourceManager->GetMaterialInfo(matNameCStr);
 		if (matCreateInfo != nullptr)
 		{
-			materialID = InitializeMaterial(matCreateInfo);
+			outMaterialID = InitializeMaterial(matCreateInfo);
 			return true;
 		}
 
@@ -1218,6 +1228,11 @@ namespace flex
 				}
 			}
 
+			if (m_HologramMatID == InvalidMaterialID)
+			{
+				g_Renderer->FindOrCreateMaterialByName("Selection Hologram", m_HologramMatID);
+			}
+
 			if (!bValid)
 			{
 				bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
@@ -1228,12 +1243,16 @@ namespace flex
 			{
 				m_HologramProxyObject->SetVisible(true);
 
-				GetMaterial(m_HologramMatID)->constEmissive = m_QueuedHologramColour;
+				Material* hologramMat = GetMaterial(m_HologramMatID);
+				if (hologramMat != nullptr)
+				{
+					hologramMat->constEmissive = m_QueuedHologramColour;
 
-				Transform* transform = m_HologramProxyObject->GetTransform();
-				transform->SetWorldPosition(m_QueuedHologramPosWS, false);
-				transform->SetWorldRotation(m_QueuedHologramRotWS, false);
-				transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+					Transform* transform = m_HologramProxyObject->GetTransform();
+					transform->SetWorldPosition(m_QueuedHologramPosWS, false);
+					transform->SetWorldRotation(m_QueuedHologramRotWS, false);
+					transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+				}
 			}
 			else
 			{
@@ -1261,22 +1280,43 @@ namespace flex
 #endif
 	}
 
-	static ImGuiTextFilter materialFilter;
-
 	i32 Renderer::GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials)
 	{
 		i32 matShortIndex = 0;
 		for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 		{
 			auto matIter = m_Materials.find(i);
-			if (matIter == m_Materials.end() ||	(!bShowEditorMaterials && matIter->second->bEditorMaterial))
+			if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
 			{
 				continue;
 			}
 
 			Material* material = matIter->second;
 
-			if (!materialFilter.PassFilter(material->name.c_str()))
+			if (!m_MaterialFilter.PassFilter(material->name.c_str()))
+			{
+				continue;
+			}
+
+			if (materialID == (MaterialID)i)
+			{
+				break;
+			}
+
+			++matShortIndex;
+		}
+
+		for (i32 i = 0; i < (i32)g_ResourceManager->parsedMaterialInfos.size(); ++i)
+		{
+			auto matIter = m_Materials.find(i);
+			if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
+			{
+				continue;
+			}
+
+			Material* material = matIter->second;
+
+			if (!m_MaterialFilter.PassFilter(material->name.c_str()))
 			{
 				continue;
 			}
@@ -1296,12 +1336,12 @@ namespace flex
 	{
 		bool bMaterialSelectionChanged = false;
 
-		materialFilter.Draw("##material-filter");
+		m_MaterialFilter.Draw("##material-filter");
 
 		ImGui::SameLine();
 		if (ImGui::Button("x"))
 		{
-			materialFilter.Clear();
+			m_MaterialFilter.Clear();
 		}
 
 		if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
@@ -1318,7 +1358,7 @@ namespace flex
 
 				Material* material = matIter->second;
 
-				if (!materialFilter.PassFilter(material->name.c_str()))
+				if (!m_MaterialFilter.PassFilter(material->name.c_str()))
 				{
 					continue;
 				}
@@ -1446,6 +1486,49 @@ namespace flex
 						ImGui::EndDragDropSource();
 					}
 				}
+
+				++matShortIndex;
+
+				ImGui::PopID();
+			}
+
+			ImGui::Separator();
+
+			// Display unloaded materials
+			for (u32 i = 0; i < (u32)g_ResourceManager->parsedMaterialInfos.size(); ++i)
+			{
+				const MaterialCreateInfo& matCreateInfo = g_ResourceManager->parsedMaterialInfos[i];
+
+				bool bMaterialLoaded = g_Renderer->GetMaterialID(matCreateInfo.name) != InvalidMaterialID;
+				if (bMaterialLoaded || !m_MaterialFilter.PassFilter(matCreateInfo.name.c_str()))
+				{
+					continue;
+				}
+
+				ImGui::PushID(i);
+
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				if (ImGui::Selectable(matCreateInfo.name.c_str(), &bSelected))
+				{
+					if (selectedMaterialShortIndex != matShortIndex)
+					{
+						// Immediately load unloaded materials upon selection
+						MaterialID newMatID = InvalidMaterialID;
+						if (g_Renderer->FindOrCreateMaterialByName(matCreateInfo.name, newMatID))
+						{
+							selectedMaterialShortIndex = matShortIndex;
+							*selectedMaterialID = newMatID;
+							bMaterialSelectionChanged = true;
+						}
+						else
+						{
+							PrintError("Failed to create material from create info %s\n", matCreateInfo.name.c_str());
+						}
+					}
+				}
+				ImGui::PopStyleColor();
 
 				++matShortIndex;
 

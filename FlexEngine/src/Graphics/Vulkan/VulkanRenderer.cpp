@@ -2328,12 +2328,13 @@ namespace flex
 					{
 						ImGui::BeginColumns("allocations", 2);
 
+						u64 largestAlloc = m_VulkanDevice->m_vkAllocations.begin()->size;
 						for (const VkAllocInfo& allocInfo : m_VulkanDevice->m_vkAllocations)
 						{
 							ImGui::Text("%s", allocInfo.debugName.c_str());
 							ImGui::NextColumn();
 							ByteCountToString(stringBuf, stringBufLen, allocInfo.size, 2);
-							ImGui::Text("%s", stringBuf);
+							ImGui::ProgressBar((real)allocInfo.size / largestAlloc, ImVec2(-1, 0), stringBuf);
 							ImGui::NextColumn();
 						}
 						ImGui::EndColumns();

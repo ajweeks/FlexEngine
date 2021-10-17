@@ -304,7 +304,7 @@ namespace flex
 		bool MaterialWithNameExists(const std::string& matName);
 
 		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-		bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID);
+		bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& outMaterialID);
 
 		struct PostProcessSettings
 		{
@@ -594,6 +594,8 @@ namespace flex
 
 		ShaderBatch m_DepthAwareEditorObjBatches;
 		ShaderBatch m_DepthUnawareEditorObjBatches;
+
+		ImGuiTextFilter m_MaterialFilter;
 
 		static const u32 NUM_GPU_TIMINGS = 64;
 		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;

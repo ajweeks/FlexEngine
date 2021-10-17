@@ -512,8 +512,6 @@ namespace flex
 					Material::ParseJSONObject(materialObject, matCreateInfo, fileVersion);
 
 					parsedMaterialInfos.push_back(matCreateInfo);
-
-					g_Renderer->InitializeMaterial(&matCreateInfo);
 				}
 			}
 			else

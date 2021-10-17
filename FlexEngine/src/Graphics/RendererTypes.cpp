@@ -279,22 +279,24 @@ namespace flex
 					bool bSuccess = false;
 					if (!materialName.empty())
 					{
-						MaterialID materialID = g_Renderer->GetMaterialID(materialName);
-
-						if (materialID == InvalidMaterialID)
+						MaterialID materialID = InvalidMaterialID;
+						if (g_Renderer->FindOrCreateMaterialByName(materialName, materialID))
 						{
-							if (materialName.compare("placeholder") == 0)
+							if (materialID == InvalidMaterialID)
 							{
-								materialID = g_Renderer->GetPlaceholderMaterialID();
+								if (materialName.compare("placeholder") == 0)
+								{
+									materialID = g_Renderer->GetPlaceholderMaterialID();
+								}
 							}
-						}
 
-						if (materialID != InvalidMaterialID)
-						{
-							bSuccess = true;
-						}
+							if (materialID != InvalidMaterialID)
+							{
+								bSuccess = true;
+							}
 
-						matIDs.push_back(materialID);
+							matIDs.push_back(materialID);
+						}
 					}
 
 					if (!bSuccess)
@@ -306,18 +308,20 @@ namespace flex
 		}
 		else // fileVersion < 3
 		{
-			MaterialID materialID = InvalidMaterialID;
 			std::string materialName;
+			MaterialID materialID = InvalidMaterialID;
 			if (object.TryGetString("material", materialName))
 			{
 				if (!materialName.empty())
 				{
-					materialID = g_Renderer->GetMaterialID(materialName);
-					if (materialID == InvalidMaterialID)
+					if (g_Renderer->FindOrCreateMaterialByName(materialName, materialID))
 					{
-						if (materialName.compare("placeholder") == 0)
+						if (materialID == InvalidMaterialID)
 						{
-							materialID = g_Renderer->GetPlaceholderMaterialID();
+							if (materialName.compare("placeholder") == 0)
+							{
+								materialID = g_Renderer->GetPlaceholderMaterialID();
+							}
 						}
 					}
 				}
@@ -328,7 +332,10 @@ namespace flex
 				}
 			}
 
-			matIDs.push_back(materialID);
+			if (materialID != InvalidMaterialID)
+			{
+				matIDs.push_back(materialID);
+			}
 		}
 
 		return matIDs;
