@@ -417,8 +417,6 @@ namespace flex
 
 		void InitializeEngineMaterials();
 
-		std::string PickRandomSkyboxTexture();
-
 		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
 		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
 
@@ -574,9 +572,6 @@ namespace flex
 		ShaderID m_UIShaderID = InvalidShaderID;
 
 		glm::mat4 m_LastFrameViewProj;
-
-		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
-		std::vector<std::string> m_AvailableHDRIs;
 
 		ShadowSamplingData m_ShadowSamplingData;
 

@@ -61,12 +61,6 @@ namespace flex
 	{
 		PROFILE_AUTO("Renderer Initialize");
 
-		std::string hdriPath = TEXTURE_DIRECTORY "hdri/";
-		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
-		{
-			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
-		}
-
 #if COMPILE_SHADER_COMPILER
 		{
 			PROFILE_AUTO("Start shader compilation");
@@ -3007,25 +3001,6 @@ namespace flex
 		placeholderMatCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 		placeholderMatCreateInfo.bSerializable = false;
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
-	}
-
-	std::string Renderer::PickRandomSkyboxTexture()
-	{
-		i32 matIdx = -1;
-		i32 attemptCount = 0;
-		do
-		{
-			matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
-			++attemptCount;
-		} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
-
-		if (matIdx == -1)
-		{
-			PrintWarn("Unable to open any available HDRIs!\n");
-			return EMPTY_STRING;
-		}
-
-		return m_AvailableHDRIs[matIdx];
 	}
 
 	void Renderer::AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)

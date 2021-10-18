@@ -3010,13 +3010,6 @@ namespace flex
 			matCreateInfo.bEditorMaterial = true;
 			matCreateInfo.bSerializable = false;
 
-			bool bRandomizeSkybox = true;
-			if (bRandomizeSkybox && !m_AvailableHDRIs.empty())
-			{
-				// TODO: Select from current scene!
-				matCreateInfo.hdrEquirectangularTexturePath = PickRandomSkyboxTexture();
-			}
-
 			MaterialID equirectangularToCubeMatID = InitializeMaterial(&matCreateInfo);
 			VulkanMaterial* equirectangularToCubeMat = (VulkanMaterial*)m_Materials.at(equirectangularToCubeMatID);
 
