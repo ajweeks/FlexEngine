@@ -2623,8 +2623,11 @@ namespace flex
 
 		void VulkanRenderer::OnSettingsReloaded()
 		{
-			if ((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
-				m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution)
+			SetVSyncEnabled(m_bVSyncEnabled);
+
+			if (m_bInitialized &&
+				((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
+				m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution))
 			{
 				RecreateEverything();
 			}

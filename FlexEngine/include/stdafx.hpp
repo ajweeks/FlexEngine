@@ -285,6 +285,7 @@ namespace flex
 	extern class PhysicsManager* g_PhysicsManager;
 	extern class ResourceManager* g_ResourceManager;
 	extern class UIManager* g_UIManager;
+	extern class ConfigFileManager* g_ConfigFileManager;
 	extern bool g_bDebugBuild;
 
 	template<typename T>

@@ -198,18 +198,26 @@ namespace flex
 			return *this;
 		}
 
-		// Returns true when directory has changed
+		// Returns true when directory has changed. Modified files are then stored in modifiedFilePaths.
 		bool Update();
 
 		bool Installed() const;
 
 		void* userData = nullptr;
 		std::string directory;
+		std::vector<std::string> modifiedFilePaths;
 
 	private:
+		struct FileMetaData
+		{
+			std::string filePath;
+			Date lastModificationTime;
+		};
+
 		bool m_bInstalled = false;
 		bool m_bWatchSubtree = false;
 		void* m_ChangeHandle = nullptr;
+		std::vector<FileMetaData> fileCreationTimes;
 
 	};
 } // namespace flex

@@ -263,14 +263,11 @@ namespace flex
 	void ResourceManager::DiscoverAudioFiles()
 	{
 		std::map<StringID, AudioFileMetaData> newDiscoveredAudioFiles;
-		i32 unchangedCount = 0;
 		i32 modifiedCount = 0;
 		i32 addedCount = 0;
 		i32 removedCount = 0;
-		i32 failedCount = 0;
 
 		StringBuilder errorStringBuilder;
-
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(SFX_DIRECTORY, foundFiles, ".wav"))
 		{
@@ -279,58 +276,41 @@ namespace flex
 				std::string relativeFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
 				StringID stringID = SID(relativeFilePath.c_str());
 				AudioFileMetaData metaData(relativeFilePath);
-				if (Platform::GetFileModifcationTime(foundFilePath.c_str(), metaData.fileModifiedDate))
+				auto iter = discoveredAudioFiles.find(stringID);
+				if (iter != discoveredAudioFiles.end())
 				{
-					auto iter = discoveredAudioFiles.find(stringID);
-					if (iter != discoveredAudioFiles.end())
+					// Existing file
+					auto modifiedIter = std::find(m_AudioDirectoryWatcher->modifiedFilePaths.begin(), m_AudioDirectoryWatcher->modifiedFilePaths.end(), foundFilePath);
+					if (modifiedIter != m_AudioDirectoryWatcher->modifiedFilePaths.end())
 					{
-						// Existing file
-						if (iter->second.fileModifiedDate != metaData.fileModifiedDate)
+						++modifiedCount;
+						if (iter->second.sourceID != InvalidAudioSourceID)
 						{
-							++modifiedCount;
-							if (iter->second.sourceID != InvalidAudioSourceID)
+							// Reload existing audio file if already loaded, it's out of date
+							errorStringBuilder.Clear();
+							if (AudioManager::ReplaceAudioSource(foundFilePath, iter->second.sourceID, &errorStringBuilder) != InvalidAudioSourceID)
 							{
-								// Reload existing audio file if already loaded, it's out of date
-								errorStringBuilder.Clear();
-								if (AudioManager::ReplaceAudioSource(foundFilePath, iter->second.sourceID, &errorStringBuilder) != InvalidAudioSourceID)
-								{
-									metaData.bInvalid = false;
-								}
-								else
-								{
-									// Failed to replace
-									metaData.bInvalid = true;
-									newDiscoveredAudioFiles.emplace(stringID, metaData);
-									++failedCount;
-									continue;
-								}
+								metaData.bInvalid = false;
+							}
+							else
+							{
+								// Failed to replace
+								metaData.bInvalid = true;
+								newDiscoveredAudioFiles.emplace(stringID, metaData);
+								continue;
 							}
 						}
-						else
-						{
-							++unchangedCount;
-						}
+					}
 
-						metaData.sourceID = discoveredAudioFiles[stringID].sourceID;
-					}
-					else
-					{
-						// Newly discovered file
-						++addedCount;
-					}
-					newDiscoveredAudioFiles.emplace(stringID, metaData);
+					metaData.sourceID = discoveredAudioFiles[stringID].sourceID;
 				}
 				else
 				{
-					PrintError("Failed to get file modification time for %s\n", relativeFilePath.c_str());
-					newDiscoveredAudioFiles.emplace(stringID, metaData);
+					// Newly discovered file
+					++addedCount;
 				}
+				newDiscoveredAudioFiles.emplace(stringID, metaData);
 			}
-		}
-		else
-		{
-			PrintError("Failed to find sound files in \"" SFX_DIRECTORY "\"!\n");
-			return;
 		}
 
 		removedCount = (i32)discoveredAudioFiles.size() - (i32)(newDiscoveredAudioFiles.size() - addedCount);
@@ -340,9 +320,20 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("unchanged: %d, mod: %d, add: %d, removed: %d, failed: %d\n", unchangedCount, modifiedCount, addedCount, removedCount, failedCount);
+			if (modifiedCount != 0)
+			{
+				Print("%d audio file%s modified\n", modifiedCount, modifiedCount > 0 ? "s" : "");
+			}
 
-			Print("Discovered %u audio files\n", (u32)discoveredAudioFiles.size());
+			if (addedCount != 0)
+			{
+				Print("%d audio file%s added\n", addedCount, addedCount > 0 ? "s" : "");
+			}
+
+			if (removedCount != 0)
+			{
+				Print("%d audio file%s removed\n", removedCount, removedCount > 0 ? "s" : "");
+			}
 		}
 	}
 

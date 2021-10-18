@@ -1,10 +1,12 @@
 #include "stdafx.hpp"
 
+#include "ConfigFile.hpp"
+
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/euler_angles.hpp>
 IGNORE_WARNINGS_POP
 
-#include "ConfigFile.hpp"
+#include "ConfigFileManager.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 
@@ -16,6 +18,12 @@ namespace flex
 		fileVersion(currentFileVersion),
 		currentFileVersion(currentFileVersion)
 	{
+		g_ConfigFileManager->RegisterConfigFile(this);
+	}
+
+	ConfigFile::~ConfigFile()
+	{
+		g_ConfigFileManager->DeregisterConfigFile(this);
 	}
 
 	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue)
@@ -115,6 +123,11 @@ namespace flex
 						}
 					}
 
+					if (onDeserializeCallback)
+					{
+						onDeserializeCallback();
+					}
+
 					return true;
 				}
 				else
@@ -125,6 +138,11 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void ConfigFile::SetOnDeserialize(std::function<void()> callback)
+	{
+		onDeserializeCallback = callback;
 	}
 
 	ConfigFile::Request ConfigFile::DrawImGuiObjects()

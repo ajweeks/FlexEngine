@@ -41,7 +41,7 @@ namespace flex
 	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
 
 	Renderer::Renderer() :
-		m_Settings("Renderer settings", RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION), CURRENT_RENDERER_SETTINGS_FILE_VERSION)
+		m_Settings("Renderer settings", RENDERER_SETTINGS_LOCATION, CURRENT_RENDERER_SETTINGS_FILE_VERSION)
 	{
 		m_Settings.RegisterProperty(1, "enable v-sync", &m_bVSyncEnabled);
 		m_Settings.RegisterProperty(1, "enable fxaa", &m_PostProcessSettings.bEnableFXAA);
@@ -51,6 +51,11 @@ namespace flex
 
 		m_Settings.RegisterProperty(2, "shadow cascade count", &m_ShadowCascadeCount);
 		m_Settings.RegisterProperty(2, "shadow cascade base resolution", &m_ShadowMapBaseResolution);
+
+		m_Settings.SetOnDeserialize([this]()
+		{
+			OnSettingsReloaded();
+		});
 	}
 
 	Renderer::~Renderer()
@@ -336,11 +341,7 @@ namespace flex
 
 		if (m_Settings.Deserialize())
 		{
-			SetVSyncEnabled(m_bVSyncEnabled);
-			if (m_bInitialized)
-			{
-				OnSettingsReloaded();
-			}
+			OnSettingsReloaded();
 		}
 	}
 

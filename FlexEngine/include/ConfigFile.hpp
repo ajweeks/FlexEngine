@@ -7,6 +7,7 @@ namespace flex
 	struct ConfigFile
 	{
 		ConfigFile(const std::string& name, const std::string& filePath, i32 currentFileVersion);
+		~ConfigFile();
 
 		void RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue);
 		void RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue, real valueMin, real valueMax);
@@ -20,6 +21,8 @@ namespace flex
 
 		bool Serialize();
 		bool Deserialize();
+
+		void SetOnDeserialize(std::function<void()> callback);
 
 		enum class Request
 		{
@@ -77,5 +80,6 @@ namespace flex
 		std::string name;
 		i32 currentFileVersion;
 		i32 fileVersion;
+		std::function<void()> onDeserializeCallback;
 	};
 } // namespace flex

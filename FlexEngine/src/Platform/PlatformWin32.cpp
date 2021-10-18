@@ -703,6 +703,19 @@ namespace flex
 		else
 		{
 			m_bInstalled = true;
+
+			std::vector<std::string> directoryFilePaths;
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*"))
+			{
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					Date modificationTime;
+					if (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime))
+					{
+						fileCreationTimes.push_back(FileMetaData{ filePath, modificationTime });
+					}
+				}
+			}
 		}
 	}
 
@@ -723,11 +736,50 @@ namespace flex
 		case WAIT_OBJECT_0:
 			// A file was created, renamed, or deleted in the directory
 
-			// Clear modification flag (needs to be called twice for some reason...)
+			// Clear modification flag (needs to be called twice for some reason)
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)
 			{
 				PrintError("Something bad happened with the directory watch on %s\n", directory.c_str());
+			}
+
+			modifiedFilePaths.clear();
+			std::vector<std::string> directoryFilePaths;
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*"))
+			{
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					auto iter = std::find_if(fileCreationTimes.begin(), fileCreationTimes.end(), [&filePath](const FileMetaData& fileMetaData)
+					{
+						if (filePath == fileMetaData.filePath)
+						{
+							return true;
+						}
+						return false;
+					});
+					bool bNewFile = iter == fileCreationTimes.end();
+
+					Date modificationTime;
+					if (bNewFile || (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime) && modificationTime != iter->lastModificationTime))
+					{
+						modifiedFilePaths.push_back(filePath);
+					}
+				}
+
+				// Update creation times list
+				fileCreationTimes.clear();
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					Date modificationTime;
+					if (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime))
+					{
+						fileCreationTimes.push_back(FileMetaData{ filePath, modificationTime });
+					}
+				}
+			}
+			else
+			{
+				PrintError("Failed to get files in directory %s\n", directory.c_str());
 			}
 
 			return true;

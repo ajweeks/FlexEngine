@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Cameras/VehicleCamera.hpp"
+#include "ConfigFileManager.hpp"
 #include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -204,6 +205,8 @@ namespace flex
 		m_FrameTimes.resize(256);
 
 		Platform::Init();
+
+		g_ConfigFileManager = new ConfigFileManager();
 
 		CreateWindowAndRenderer();
 
@@ -586,6 +589,9 @@ namespace flex
 		delete g_ResourceManager;
 		g_ResourceManager = nullptr;
 
+		delete g_ConfigFileManager;
+		g_ConfigFileManager = nullptr;
+
 		delete g_CameraManager;
 		g_CameraManager = nullptr;
 
@@ -750,6 +756,8 @@ namespace flex
 				PROFILE_AUTO("Update");
 
 				UPDATE_TWEAKABLES();
+
+				g_ConfigFileManager->Update();
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)

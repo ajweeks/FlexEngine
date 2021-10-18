@@ -169,9 +169,6 @@ namespace flex
 			std::string name;
 			AudioSourceID sourceID = InvalidAudioSourceID;
 			bool bInvalid = false;
-
-			// Editor-only
-			Date fileModifiedDate;
 		};
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
