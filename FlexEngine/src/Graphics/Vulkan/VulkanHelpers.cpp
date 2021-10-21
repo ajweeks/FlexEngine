@@ -1750,7 +1750,6 @@ namespace flex
 			result += (u64)renderPass;
 			result += (u64)subpass * 5;
 			result += (u64)(pushConstantRangeCount + 1) * 7;
-			result += (u64)descriptorSetLayoutIndex * 13;
 			result += (u64)(bSetDynamicStates ? 68 : 458);
 			result += (u64)(bEnableColourBlending ? 19956 : 15485863);
 			result += (u64)(bEnableAdditiveColourBlending ? 898 : 123456789);
@@ -2587,8 +2586,9 @@ namespace flex
 		{
 		}
 
-		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device) :
+		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device, const char* name) :
 			device(device),
+			name(name),
 			size(maxNumDescSets)
 		{
 			std::vector<VkDescriptorPoolSize> poolSizes
@@ -2614,7 +2614,7 @@ namespace flex
 
 		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
 		{
-			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
+			VkDescriptorSetLayout layouts[] = { createInfo->descriptorSetLayout };
 			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(pool, layouts, 1);
 
 			if ((allocatedSetCount + 1) > maxNumDescSets)
@@ -2643,7 +2643,9 @@ namespace flex
 			UniformList textureUniforms = shader->textureUniforms;
 
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
+			writeDescriptorSets.reserve(
+				(size_t)createInfo->bufferDescriptors.Count() +
+				(size_t)createInfo->imageDescriptors.Count());
 
 			u32 binding = 0;
 
@@ -2734,7 +2736,7 @@ namespace flex
 			return descriptorSet;
 		}
 
-		void VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
+		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
 		{
 			DescriptorSetCreateInfo createInfo = {};
 			createInfo.DBG_Name = DBG_Name;
@@ -2751,7 +2753,7 @@ namespace flex
 
 			VulkanMaterial* material = (VulkanMaterial*)g_Renderer->GetMaterial(materialID);
 
-			createInfo.descriptorSetLayout = &descriptorSetLayouts[material->shaderID];
+			createInfo.descriptorSetLayout = GetOrCreateLayout(material->shaderID);
 			createInfo.shaderID = material->shaderID;
 			createInfo.uniformBufferList = &material->uniformBufferList;
 
@@ -2759,19 +2761,43 @@ namespace flex
 			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
 
 			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
-			if (descriptorSets.size() <= materialID)
+
+			if (materialID >= (u32)descriptorSets.size())
 			{
 				descriptorSets.resize(materialID + 1);
 			}
 			descriptorSets[materialID] = descriptorSet;
+
+			layoutUsageCounts[createInfo.descriptorSetLayout]++;
+
+			return descriptorSet;
 		}
 
-		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
+		VkDescriptorSet VulkanDescriptorPool::GetSet(MaterialID materialID)
+		{
+			if (materialID < (u32)descriptorSets.size())
+			{
+				return descriptorSets[materialID];
+			}
+
+			return VK_NULL_HANDLE;
+		}
+
+		VkDescriptorSet VulkanDescriptorPool::GetOrCreateSet(MaterialID materialID, const char* DBG_Name)
+		{
+			if (materialID >= (u32)descriptorSets.size() || descriptorSets[materialID] == VK_NULL_HANDLE)
+			{
+				return CreateDescriptorSet(materialID, DBG_Name);
+			}
+
+			return descriptorSets[materialID];
+		}
+
+		VkDescriptorSetLayout VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
 		{
 			PROFILE_AUTO("CreateDescriptorSetLayout");
 
-			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
+			VkDescriptorSetLayout descriptorSetLayout = {};
 
 			VulkanShader* shader = (VulkanShader*)g_Renderer->GetShader(shaderID);
 
@@ -2874,6 +2900,7 @@ namespace flex
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 
+			std::vector<Uniform const*> uniforms;
 			for (DescriptorSetInfo& descSetInfo : descriptorSetInfos)
 			{
 				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
@@ -2887,26 +2914,49 @@ namespace flex
 					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
 					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
 					bindings.push_back(descSetLayoutBinding);
+
+					descriptorTypeCounts[descSetInfo.descriptorType]++;
+
+					uniforms.push_back(descSetInfo.uniform);
 				}
 			}
 
 			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
 
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, &descriptorSetLayout));
 
 			std::string descSetLayoutName = shader->name + " descriptor set layout";
-			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, *descriptorSetLayout, descSetLayoutName.c_str());
+			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, descriptorSetLayout, descSetLayoutName.c_str());
+
+			descriptorSetLayouts[shaderID] = descriptorSetLayout;
+			layoutUniforms[descriptorSetLayout] = uniforms;
+
+			return descriptorSetLayouts[shaderID];
+		}
+
+		VkDescriptorSetLayout VulkanDescriptorPool::GetOrCreateLayout(ShaderID shaderID)
+		{
+			auto iter = descriptorSetLayouts.find(shaderID);
+			if (iter == descriptorSetLayouts.end())
+			{
+				return CreateDescriptorSetLayout(shaderID);
+			}
+
+			return iter->second;
 		}
 
 		void VulkanDescriptorPool::Replace()
 		{
-			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			for (const auto& pair : descriptorSetLayouts)
 			{
-				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, pair.second, nullptr);
 			}
 			descriptorSetLayouts.clear();
-
 			descriptorSets.clear();
+
+			layoutUniforms.clear();
+			layoutUsageCounts.clear();
+			descriptorTypeCounts.clear();
 
 			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
 			pool = VK_NULL_HANDLE;
@@ -2916,12 +2966,16 @@ namespace flex
 
 		void VulkanDescriptorPool::Reset()
 		{
-			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			for (const auto& pair : descriptorSetLayouts)
 			{
-				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, pair.second, nullptr);
 			}
 			descriptorSetLayouts.clear();
 			descriptorSets.clear();
+
+			layoutUniforms.clear();
+			layoutUsageCounts.clear();
+			descriptorTypeCounts.clear();
 
 			vkResetDescriptorPool(device->m_LogicalDevice, pool, 0);
 
@@ -2948,6 +3002,58 @@ namespace flex
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
+		}
+
+		void VulkanDescriptorPool::DrawImGui()
+		{
+			if (ImGui::TreeNode(name))
+			{
+				if (ImGui::TreeNode("Layouts"))
+				{
+					i32 i = 0;
+					for (const auto& pair : layoutUniforms)
+					{
+						ImGui::PushID(i++);
+						std::string label = "Layout";
+						auto usageCountIter = layoutUsageCounts.find(pair.first);
+						if (usageCountIter != layoutUsageCounts.end())
+						{
+							u32 usageCount = usageCountIter->second;
+							label += " (instances: " + std::to_string(usageCount) + ")";
+						}
+						if (ImGui::TreeNode(label.c_str()))
+						{
+
+							for (Uniform const* uniform : pair.second)
+							{
+								ImGui::Text("%s", uniform->DBG_name);
+							}
+
+							ImGui::TreePop();
+						}
+						ImGui::PopID();
+					}
+					ImGui::TreePop();
+				}
+
+				ImGui::Text("Sets allocated: %u/%u", allocatedSetCount, maxNumDescSets);
+
+				ImGui::Text("Types allocated");
+				ImGui::Indent();
+				for (const auto& pair : descriptorTypeCounts)
+				{
+					std::string descTypeStr = vkhpp::to_string((vkhpp::DescriptorType)pair.first);
+					ImGui::Text("%s: %u", descTypeStr.c_str(), pair.second);
+				}
+				ImGui::Unindent();
+
+				ImGui::TreePop();
+			}
+		}
+
+		VkDescriptorPool VulkanDescriptorPool::GetPool() const
+		{
+			return pool;
 		}
 	} // namespace vk
 } // namespace flex

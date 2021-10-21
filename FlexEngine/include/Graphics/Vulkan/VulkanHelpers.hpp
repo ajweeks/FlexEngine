@@ -511,9 +511,6 @@ namespace flex
 
 			u32 cubemapSamplerID = 0;
 			u32 cubemapDepthSamplerID = 0;
-
-			// TODO: Remove, this always equals shaderID
-			u32 descriptorSetLayoutIndex = 0;
 		};
 
 		struct SpecializationConstantCreateInfo
@@ -622,8 +619,6 @@ namespace flex
 			VkPushConstantRange* pushConstants = nullptr;
 			u32 pushConstantRangeCount = 0;
 
-			u32 descriptorSetLayoutIndex = 0;
-
 			bool bSetDynamicStates = false;
 			bool bEnableColourBlending = false;
 			bool bEnableAdditiveColourBlending = false;
@@ -654,8 +649,8 @@ namespace flex
 
 		struct DescriptorSetCreateInfo
 		{
-			VkDescriptorSet* descriptorSet = nullptr;
-			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 			ShaderID shaderID = InvalidShaderID;
 			UniformBufferList const * uniformBufferList = nullptr;
 
@@ -671,7 +666,7 @@ namespace flex
 			glm::vec2 translate;
 		};
 
-		struct VulkanParticleSystem
+		struct VulkanParticleSystem final
 		{
 			explicit VulkanParticleSystem(VulkanDevice* device);
 
@@ -715,10 +710,10 @@ namespace flex
 				: GPUVendor::UNKNOWN;
 		}
 
-		struct VulkanDescriptorPool
+		struct VulkanDescriptorPool final
 		{
 			VulkanDescriptorPool();
-			VulkanDescriptorPool(VulkanDevice* device);
+			VulkanDescriptorPool(VulkanDevice* device, const char* name);
 			~VulkanDescriptorPool();
 
 			VulkanDescriptorPool(const VulkanDescriptorPool& other) = delete;
@@ -727,27 +722,40 @@ namespace flex
 			VulkanDescriptorPool operator=(const VulkanDescriptorPool&& other) = delete;
 
 			VkDescriptorSet CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
-			void CreateDescriptorSetLayout(ShaderID shaderID);
+			VkDescriptorSet CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			VkDescriptorSet GetSet(MaterialID materialID);
+			VkDescriptorSet GetOrCreateSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			VkDescriptorSetLayout CreateDescriptorSetLayout(ShaderID shaderID);
+			VkDescriptorSetLayout GetOrCreateLayout(ShaderID shaderID);
 			void Replace();
 			void Reset();
 			void FreeSet(VkDescriptorSet descSet);
 
+			void DrawImGui();
+
+			VkDescriptorPool GetPool() const;
+
 			// TODO: Monitor number of used desc sets to set this value intelligently
-			u32 maxNumDescSets = 1024;
-			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 16;
-			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
-			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1;
-			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
-			static const u32 MAX_NUM_DESC_STORAGE_BUFFERS = 1; // Terrain
+			u32 maxNumDescSets = 256;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 64;
+			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 32;
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 32;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1;
+			static const u32 MAX_NUM_DESC_STORAGE_BUFFERS = 4;
+
+		private:
+			std::map<ShaderID, VkDescriptorSetLayout> descriptorSetLayouts;
+			std::vector<VkDescriptorSet> descriptorSets;
+			u32 allocatedSetCount = 0;
 
 			VulkanDevice* device = nullptr;
+			const char* name = "";
 			VkDescriptorPool pool = VK_NULL_HANDLE;
 			u32 size = 0;
 
-			std::vector<VkDescriptorSetLayout> descriptorSetLayouts; // One per shader
-			std::vector<VkDescriptorSet> descriptorSets; // One per material
-			u32 allocatedSetCount = 0;
+			std::map<VkDescriptorSetLayout, std::vector<Uniform const*>> layoutUniforms;
+			std::map<VkDescriptorSetLayout, u32> layoutUsageCounts;
+			std::map<VkDescriptorType, u32> descriptorTypeCounts;
 		};
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);

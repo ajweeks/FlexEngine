@@ -437,8 +437,8 @@ namespace flex
 
 			Renderer::PostInitialize();
 
-			m_DescriptorPool = new VulkanDescriptorPool(m_VulkanDevice);
-			m_DescriptorPoolPersistent = new VulkanDescriptorPool(m_VulkanDevice);
+			m_DescriptorPool = new VulkanDescriptorPool(m_VulkanDevice, "Descriptor pool");
+			m_DescriptorPoolPersistent = new VulkanDescriptorPool(m_VulkanDevice, "Persistent Descriptor pool");
 
 			GenerateGBuffer();
 
@@ -477,12 +477,6 @@ namespace flex
 						m_DynamicAlignment = newDynamicAllignment;
 					}
 				}
-			}
-
-			for (u32 i = 0; i < m_Shaders.size(); ++i)
-			{
-				m_DescriptorPool->CreateDescriptorSetLayout(i);
-				m_DescriptorPoolPersistent->CreateDescriptorSetLayout(i);
 			}
 
 			// TODO: (not so EZ): Move to base renderer
@@ -569,7 +563,7 @@ namespace flex
 				init_info.QueueFamily = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
 				init_info.Queue = m_GraphicsQueue;
 				init_info.PipelineCache = VK_NULL_HANDLE;
-				init_info.DescriptorPool = m_DescriptorPoolPersistent->pool;
+				init_info.DescriptorPool = m_DescriptorPoolPersistent->GetPool();
 				init_info.Allocator = NULL;
 				init_info.CheckVkResultFn = NULL;
 				ImGui_ImplVulkan_Init(&init_info, *m_UIRenderPass);
@@ -999,8 +993,6 @@ namespace flex
 
 			material->persistent = createInfo->persistent;
 			material->bEditorMaterial = createInfo->bEditorMaterial;
-
-			material->descriptorSetLayoutIndex = material->shaderID;
 
 			struct TextureInfo
 			{
@@ -1510,11 +1502,11 @@ namespace flex
 			{
 				VulkanMaterial* postProcessMaterial = (VulkanMaterial*)m_Materials[m_PostProcessMatID];
 				ShaderID postProcessShaderID = postProcessMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[postProcessShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(postProcessShaderID);
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Post Process descriptor set";
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = postProcessShaderID;
 				descSetCreateInfo.uniformBufferList = &postProcessMaterial->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_LinMipLinSampler });
@@ -1526,11 +1518,11 @@ namespace flex
 			{
 				VulkanMaterial* gammaCorrectMaterial = (VulkanMaterial*)m_Materials[m_GammaCorrectMaterialID];
 				ShaderID gammaCorrectShaderID = gammaCorrectMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[gammaCorrectShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(gammaCorrectShaderID);
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Gamma Correct descriptor set";
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.uniformBufferList = &gammaCorrectMaterial->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColourAttachment0->view, m_LinMipLinSampler });
@@ -1542,11 +1534,11 @@ namespace flex
 			{
 				VulkanMaterial* taaResolveMaterial = (VulkanMaterial*)m_Materials[m_TAAResolveMaterialID];
 				ShaderID taaResolveShaderID = taaResolveMaterial->shaderID;
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[taaResolveShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(taaResolveShaderID);
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "TAA Resolve descriptor set";
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = taaResolveShaderID;
 				descSetCreateInfo.uniformBufferList = &taaResolveMaterial->uniformBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
@@ -1571,7 +1563,6 @@ namespace flex
 				createInfo.renderPass = *m_UIRenderPass;
 				createInfo.shaderID = spriteArrMat->shaderID;
 				createInfo.vertexAttributes = m_Quad3DVertexBufferData.Attributes;
-				createInfo.descriptorSetLayoutIndex = spriteArrMat->shaderID;
 				createInfo.bEnableColourBlending = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
@@ -1590,7 +1581,6 @@ namespace flex
 				createInfo.renderPass = *m_PostProcessRenderPass;
 				createInfo.shaderID = postProcessMat->shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
-				createInfo.descriptorSetLayoutIndex = postProcessMat->shaderID;
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
@@ -1607,7 +1597,6 @@ namespace flex
 				createInfo.renderPass = *m_GammaCorrectRenderPass;
 				createInfo.shaderID = gammaCorrectMat->shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
-				createInfo.descriptorSetLayoutIndex = gammaCorrectMat->shaderID;
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
@@ -1630,7 +1619,6 @@ namespace flex
 				createInfo.renderPass = *m_TAAResolveRenderPass;
 				createInfo.shaderID = taaResolveMat->shaderID;
 				createInfo.vertexAttributes = m_FullScreenTriVertexBufferData.Attributes;
-				createInfo.descriptorSetLayoutIndex = taaResolveMat->shaderID;
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
@@ -1695,11 +1683,11 @@ namespace flex
 			VulkanShader* fullscreenShader = (VulkanShader*)m_Shaders[fullscreenShaderID];
 
 			{
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[fullscreenShaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(fullscreenShaderID);
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				descSetCreateInfo.DBG_Name = "Fullscreen blit descriptor set";
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = fullscreenShaderID;
 				descSetCreateInfo.uniformBufferList = &fullscreenBlitMat->uniformBufferList;
 				FrameBufferAttachment* sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFB1ColourAttachment0 : m_OffscreenFB0ColourAttachment0;
@@ -1718,7 +1706,6 @@ namespace flex
 
 				pipelineCreateInfo.shaderID = fullscreenBlitMat->shaderID;
 				pipelineCreateInfo.vertexAttributes = fullscreenShader->vertexAttributes;
-				pipelineCreateInfo.descriptorSetLayoutIndex = fullscreenBlitMat->descriptorSetLayoutIndex;
 				pipelineCreateInfo.subpass = fullscreenShader->subpass;
 				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
@@ -1755,12 +1742,12 @@ namespace flex
 				VulkanShader* particleSimulationShader = (VulkanShader*)m_Shaders[particleSimulationMaterial->shaderID];
 
 				// Particle simulation descriptor set
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[particleSimulationMaterial->shaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(particleSimulationMaterial->shaderID);
 
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				std::string descSetName = "Particle simulation descriptor set " + idStr;
 				descSetCreateInfo.DBG_Name = descSetName.c_str();
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = particleSimulationMaterial->shaderID;
 				descSetCreateInfo.uniformBufferList = &particleSimulationMaterial->uniformBufferList;
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -1788,13 +1775,13 @@ namespace flex
 				VulkanMaterial* particleRenderingMaterial = (VulkanMaterial*)m_Materials.at(particleSystem->system->renderingMaterialID);
 				VulkanShader* particleRenderingShader = (VulkanShader*)m_Shaders[particleRenderingMaterial->shaderID];
 
-				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[particleRenderingMaterial->shaderID];
+				VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(particleRenderingMaterial->shaderID);
 
 				// Particles descriptor set
 				DescriptorSetCreateInfo descSetCreateInfo = {};
 				std::string descSetName = "Particle rendering descriptor set " + idStr;
 				descSetCreateInfo.DBG_Name = descSetName.c_str();
-				descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = particleRenderingMaterial->shaderID;
 				descSetCreateInfo.uniformBufferList = &particleRenderingMaterial->uniformBufferList;
 
@@ -1811,7 +1798,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = particleRenderingShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = particleRenderingMaterial->shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableColourBlending = particleRenderingShader->bTranslucent;
 				pipelineCreateInfo.subpass = particleRenderingShader->subpass;
@@ -1835,11 +1821,11 @@ namespace flex
 				{
 					m_DescriptorPoolPersistent->CreateDescriptorSet(m_Terrain->genPointsMaterialID);
 				}
-				m_Terrain->genPointsDescriptorSet = m_DescriptorPoolPersistent->descriptorSets[m_Terrain->genPointsMaterialID];
+				m_Terrain->genPointsDescriptorSet = m_DescriptorPoolPersistent->GetOrCreateSet(m_Terrain->genPointsMaterialID);
 
 				if (m_Terrain->genPointsPipelineLayout == VK_NULL_HANDLE)
 				{
-					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[genPointsMat->shaderID];
+					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(genPointsMat->shaderID);
 					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
 					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_Terrain->genPointsPipelineLayout.replace()));
 				}
@@ -1861,11 +1847,11 @@ namespace flex
 				{
 					m_DescriptorPoolPersistent->CreateDescriptorSet(m_Terrain->genMeshMaterialID);
 				}
-				m_Terrain->genMeshDescriptorSet = m_DescriptorPoolPersistent->descriptorSets[m_Terrain->genMeshMaterialID];
+				m_Terrain->genMeshDescriptorSet = m_DescriptorPoolPersistent->GetOrCreateSet(m_Terrain->genMeshMaterialID);
 
 				if (m_Terrain->genMeshComputePipelineLayout == VK_NULL_HANDLE)
 				{
-					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[genMeshMat->shaderID];
+					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(genMeshMat->shaderID);
 					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
 					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_Terrain->genMeshComputePipelineLayout.replace()));
 				}
@@ -1883,11 +1869,11 @@ namespace flex
 				VulkanMaterial* renderingMaterial = (VulkanMaterial*)m_Materials.at(m_Terrain->renderingMaterialID);
 				VulkanShader* renderingShader = (VulkanShader*)m_Shaders[renderingMaterial->shaderID];
 
-				//VkDescriptorSetLayout descSetLayout = m_DescriptorPool->descriptorSetLayouts[renderingMaterial->shaderID];
+				//VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(renderingMaterial->shaderID);
 
 				//DescriptorSetCreateInfo descSetCreateInfo = {};
 				//descSetCreateInfo.DBG_Name = "Terrain descriptor set";
-				//descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+				//descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				//descSetCreateInfo.shaderID = renderingMaterial->shaderID;
 				//descSetCreateInfo.uniformBufferList = &renderingMaterial->uniformBufferList;
 				//
@@ -1895,12 +1881,7 @@ namespace flex
 				//FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
 				//m_DescriptorPool->CreateDescriptorSet(GetRenderObject(m_GBufferQuadRenderID)->materialID);
 
-				if (m_Terrain->renderingMaterialID >= (u32)m_DescriptorPool->descriptorSets.size() ||
-					m_DescriptorPool->descriptorSets[m_Terrain->renderingMaterialID] == nullptr)
-				{
-					m_DescriptorPool->CreateDescriptorSet(m_Terrain->renderingMaterialID);
-				}
-				m_Terrain->renderingDescriptorSet = m_DescriptorPool->descriptorSets[m_Terrain->renderingMaterialID];
+				m_Terrain->renderingDescriptorSet = m_DescriptorPool->GetOrCreateSet(m_Terrain->renderingMaterialID);
 
 				if (m_Terrain->graphicsPipelineID != InvalidGraphicsPipelineID)
 				{
@@ -1914,7 +1895,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = renderingShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-				pipelineCreateInfo.descriptorSetLayoutIndex = renderingMaterial->shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableColourBlending = renderingShader->bTranslucent;
 				pipelineCreateInfo.subpass = renderingShader->subpass;
@@ -2162,10 +2142,10 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			ImGui::Text("UI Mesh submeshes: %d(/%d)", m_UIMesh->GetUsedSubmeshCount(), m_UIMesh->GetSubmeshCount());
+			ImGui::Text("UI Mesh submeshes: %d/%d", m_UIMesh->GetUsedSubmeshCount(), m_UIMesh->GetSubmeshCount());
 
-			ImGui::Text("Persistent desc sets allocated: %d", m_DescriptorPoolPersistent->allocatedSetCount);
-			ImGui::Text("Desc sets allocated: %d", m_DescriptorPool->allocatedSetCount);
+			m_DescriptorPool->DrawImGui();
+			m_DescriptorPoolPersistent->DrawImGui();
 
 			m_VulkanDevice->DrawImGuiRendererInfo();
 		}
@@ -2580,13 +2560,8 @@ namespace flex
 			// TODO: Consolidate all recreation functions
 			GenerateGBuffer();
 
-			// Clear non-persistent descriptor pool
+			// Clear non-persistent descriptor pool only
 			m_DescriptorPool->Reset();
-
-			for (u32 i = 0; i < m_Shaders.size(); ++i)
-			{
-				m_DescriptorPool->CreateDescriptorSetLayout(i);
-			}
 
 			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
@@ -3097,7 +3072,7 @@ namespace flex
 
 			DescriptorSetCreateInfo equirectangularToCubeDescriptorCreateInfo = {};
 			equirectangularToCubeDescriptorCreateInfo.DBG_Name = "Equirectangular to cube descriptor set";
-			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[equirectangularToCubeShaderID];
+			equirectangularToCubeDescriptorCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(equirectangularToCubeShaderID);
 			equirectangularToCubeDescriptorCreateInfo.shaderID = equirectangularToCubeShaderID;
 			equirectangularToCubeDescriptorCreateInfo.uniformBufferList = &equirectangularToCubeMat->uniformBufferList;
 			VulkanTexture* equirectTexture = (VulkanTexture*)equirectangularToCubeMat->textures[&U_HDR_EQUIRECTANGULAR_SAMPLER];
@@ -3118,7 +3093,6 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = equirectangularToCubeShader->vertexAttributes;
 			pipelineCreateInfo.topology = skyboxRenderObject->topology;
 			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
-			pipelineCreateInfo.descriptorSetLayoutIndex = equirectangularToCubeShaderID;
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.bEnableAdditiveColourBlending = false;
 			pipelineCreateInfo.subpass = 0;
@@ -3372,7 +3346,7 @@ namespace flex
 
 			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
 			irradianceDescriptorCreateInfo.DBG_Name = "Irradiance descriptor set";
-			irradianceDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[irradianceMaterial->shaderID];
+			irradianceDescriptorCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(irradianceMaterial->shaderID);
 			irradianceDescriptorCreateInfo.shaderID = irradianceMaterial->shaderID;
 			irradianceDescriptorCreateInfo.uniformBufferList = &irradianceMaterial->uniformBufferList;
 			irradianceDescriptorCreateInfo.imageDescriptors.SetUniform(&U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_LinMipLinSampler });
@@ -3392,7 +3366,6 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = irradianceShader->vertexAttributes;
 			pipelineCreateInfo.topology = skyboxRenderObject->topology;
 			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
-			pipelineCreateInfo.descriptorSetLayoutIndex = irradianceMaterial->shaderID;
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.bEnableAdditiveColourBlending = false;
 			pipelineCreateInfo.subpass = 0;
@@ -3642,7 +3615,7 @@ namespace flex
 
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
 			prefilterDescriptorCreateInfo.DBG_Name = "Prefilter descriptor set";
-			prefilterDescriptorCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[prefilterMaterial->shaderID];
+			prefilterDescriptorCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(prefilterMaterial->shaderID);
 			prefilterDescriptorCreateInfo.shaderID = prefilterMaterial->shaderID;
 			prefilterDescriptorCreateInfo.uniformBufferList = &prefilterMaterial->uniformBufferList;
 			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
@@ -3663,7 +3636,6 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = prefilterShader->vertexAttributes;
 			pipelineCreateInfo.topology = skyboxRenderObject->topology;
 			pipelineCreateInfo.cullMode = skyboxRenderObject->cullMode;
-			pipelineCreateInfo.descriptorSetLayoutIndex = prefilterMaterial->shaderID;
 			pipelineCreateInfo.bSetDynamicStates = true;
 			pipelineCreateInfo.bEnableAdditiveColourBlending = false;
 			pipelineCreateInfo.subpass = 0;
@@ -3850,8 +3822,6 @@ namespace flex
 				VulkanMaterial* brdfMaterial = (VulkanMaterial*)m_Materials[m_BRDFMaterialID];
 				VulkanShader* brdfShader = (VulkanShader*)m_Shaders[brdfMaterial->shaderID];
 
-				//m_DescriptorPoolPersistent->descriptorSets[m_BRDFMaterialID];
-
 				GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 				pipelineCreateInfo.DBG_Name = "BRDF LUT pipeline";
@@ -3860,7 +3830,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = brdfShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = brdfMaterial->shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableAdditiveColourBlending = false;
 				pipelineCreateInfo.subpass = 0;
@@ -3928,7 +3897,6 @@ namespace flex
 			pipelineCreateInfo.DBG_Name = "SSAO pipeline";
 			pipelineCreateInfo.shaderID = ssaoMaterial->shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoShader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoMaterial->descriptorSetLayoutIndex;
 			pipelineCreateInfo.subpass = ssaoShader->subpass;
 			pipelineCreateInfo.depthWriteEnable = ssaoShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
@@ -3942,7 +3910,6 @@ namespace flex
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Horizontal pipeline";
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
@@ -3951,7 +3918,6 @@ namespace flex
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Vertcical pipeline";
 			pipelineCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
 			pipelineCreateInfo.vertexAttributes = ssaoBlurShader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = ssaoBlurMaterial->descriptorSetLayoutIndex;
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
@@ -3962,11 +3928,11 @@ namespace flex
 		{
 			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials[m_SSAOMatID];
 
-			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[ssaoMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(ssaoMaterial->shaderID);
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "SSAO descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.descriptorSetLayout = descSetLayout;
 			descSetCreateInfo.shaderID = ssaoMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &ssaoMaterial->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
@@ -3978,11 +3944,11 @@ namespace flex
 
 			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
 
-			descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[ssaoBlurMaterial->shaderID];
+			descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(ssaoBlurMaterial->shaderID);
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "SSAO Blur Horizontal descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.descriptorSetLayout = descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &ssaoBlurMaterial->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
@@ -3993,7 +3959,7 @@ namespace flex
 
 			descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "SSAO Blur Vertical descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.descriptorSetLayout = descSetLayout;
 			descSetCreateInfo.shaderID = ssaoBlurMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &ssaoBlurMaterial->uniformBufferList;
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_DepthSampler });
@@ -4012,11 +3978,11 @@ namespace flex
 
 			VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
 
-			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[wireframeMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(wireframeMaterial->shaderID);
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "Wireframe descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.descriptorSetLayout = descSetLayout;
 			descSetCreateInfo.shaderID = wireframeMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &wireframeMaterial->uniformBufferList;
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -4163,7 +4129,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = computeSDFShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = computeSDFShaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableAdditiveColourBlending = true;
 				pipelineCreateInfo.subpass = 0;
@@ -4249,11 +4214,11 @@ namespace flex
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
-					VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[computeSDFShaderID];
+					VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(computeSDFShaderID);
 
 					DescriptorSetCreateInfo descSetCreateInfo = {};
 					descSetCreateInfo.DBG_Name = "Font SDF descriptor set";
-					descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+					descSetCreateInfo.descriptorSetLayout = descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.uniformBufferList = &computeSDFMaterial->uniformBufferList;
 					descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
@@ -4297,7 +4262,7 @@ namespace flex
 				}
 				charTextures.clear();
 
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPoolPersistent->pool, (u32)descSets.size(), descSets.data());
+				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPoolPersistent->GetPool(), (u32)descSets.size(), descSets.data());
 				descSets.clear();
 
 				DestroyGraphicsPipeline(pipelineID);
@@ -4705,7 +4670,7 @@ namespace flex
 			}
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[fontMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(fontMaterial->shaderID);
 
 			CreateFontGraphicsPipelines();
 
@@ -4745,7 +4710,7 @@ namespace flex
 					{
 						DescriptorSetCreateInfo info;
 						info.DBG_Name = bScreenSpace ? "Font SS descriptor set" : "Font WS descriptor set";
-						info.descriptorSetLayout = &descSetLayout;
+						info.descriptorSetLayout = descSetLayout;
 						info.shaderID = fontMaterial->shaderID;
 						info.uniformBufferList = &fontMaterial->uniformBufferList;
 						info.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
@@ -4898,7 +4863,7 @@ namespace flex
 			MaterialID matID = mesh->GetMaterialID(0);
 			VulkanMaterial* uiMat = (VulkanMaterial*)m_Materials.at(matID);
 
-			VkDescriptorSet descSet = m_DescriptorPoolPersistent->descriptorSets[matID];
+			VkDescriptorSet descSet = m_DescriptorPoolPersistent->GetOrCreateSet(matID);
 
 			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicUIVertexIndexBufferPair;
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
@@ -5093,7 +5058,6 @@ namespace flex
 			pipelineCreateInfo.bEnableColourBlending = false;
 			pipelineCreateInfo.shaderID = shadowMaterial->shaderID;
 			pipelineCreateInfo.vertexAttributes = shadowShader->vertexAttributes;
-			pipelineCreateInfo.descriptorSetLayoutIndex = shadowMaterial->descriptorSetLayoutIndex;
 			pipelineCreateInfo.subpass = shadowShader->subpass;
 			pipelineCreateInfo.depthWriteEnable = shadowShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = shadowShader->renderPass;
@@ -5102,12 +5066,11 @@ namespace flex
 			pipelineCreateInfo.bPersistent = true;
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_ShadowGraphicsPipelineID);
 
-			// Shadow map descriptor set
-			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[shadowMaterial->shaderID];
+			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(shadowMaterial->shaderID);
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "Shadow descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &descSetLayout;
+			descSetCreateInfo.descriptorSetLayout = descSetLayout;
 			descSetCreateInfo.shaderID = shadowMaterial->shaderID;
 			descSetCreateInfo.uniformBufferList = &shadowMaterial->uniformBufferList;
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
@@ -5123,7 +5086,7 @@ namespace flex
 
 			DescriptorSetCreateInfo descSetCreateInfo = {};
 			descSetCreateInfo.DBG_Name = "Sprite descriptor set";
-			descSetCreateInfo.descriptorSetLayout = &m_DescriptorPoolPersistent->descriptorSetLayouts[spriteMat->shaderID];
+			descSetCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(spriteMat->shaderID);
 			descSetCreateInfo.shaderID = spriteMat->shaderID;
 			descSetCreateInfo.uniformBufferList = &spriteMat->uniformBufferList;
 			if (spriteShader->bTextureArr)
@@ -6225,7 +6188,6 @@ namespace flex
 			pipelineCreateInfo.vertexAttributes = shader->vertexAttributes;
 			pipelineCreateInfo.topology = renderObject->topology;
 			pipelineCreateInfo.cullMode = renderObject->cullMode;
-			pipelineCreateInfo.descriptorSetLayoutIndex = material->descriptorSetLayoutIndex;
 			pipelineCreateInfo.bSetDynamicStates = renderObject->bSetDynamicStates;
 			pipelineCreateInfo.bEnableColourBlending = shader->bTranslucent;
 			pipelineCreateInfo.subpass = shader->subpass;
@@ -6409,11 +6371,11 @@ namespace flex
 			VkDescriptorSetLayout setLayout;
 			if (createInfo->bPersistent)
 			{
-				setLayout = m_DescriptorPoolPersistent->descriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+				setLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(createInfo->shaderID);
 			}
 			else
 			{
-				setLayout = m_DescriptorPool->descriptorSetLayouts[createInfo->descriptorSetLayoutIndex];
+				setLayout = m_DescriptorPool->GetOrCreateLayout(createInfo->shaderID);
 			}
 			VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &setLayout);
 			pipelineLayoutInfo.pushConstantRangeCount = createInfo->pushConstantRangeCount;
@@ -7669,8 +7631,8 @@ namespace flex
 				VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
 				VkDescriptorSet descriptorSet = material->persistent ?
-					m_DescriptorPoolPersistent->descriptorSets[matID] :
-					m_DescriptorPool->descriptorSets[matID];
+					m_DescriptorPoolPersistent->GetOrCreateSet(matID) :
+					m_DescriptorPool->GetOrCreateSet(matID);
 
 				for (RenderID renderID : matBatch.batch.objects)
 				{
@@ -7719,7 +7681,6 @@ namespace flex
 								pipelineCreateInfo.DBG_Name = "Wireframe pipeline";
 								pipelineCreateInfo.shaderID = wireframeMaterial->shaderID;
 								pipelineCreateInfo.vertexAttributes = objectShader->vertexAttributes;
-								pipelineCreateInfo.descriptorSetLayoutIndex = wireframeMaterial->descriptorSetLayoutIndex;
 								pipelineCreateInfo.bEnableColourBlending = wireframeShader->bTranslucent;
 								pipelineCreateInfo.subpass = 0;
 								pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -8122,7 +8083,7 @@ namespace flex
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
-				VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->descriptorSets[gBufferObject->materialID];
+				VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->GetOrCreateSet(gBufferObject->materialID);
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(gBufferObject->graphicsPipelineID)->pipeline;
 				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, gBufferObject->materialID,
 					pipeline->layout, pipeline->pipeline, descriptorSet, true);
@@ -9722,7 +9683,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = fontShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial->shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableColourBlending = true;
 				pipelineCreateInfo.subpass = fontShader->subpass;
@@ -9746,7 +9706,6 @@ namespace flex
 				pipelineCreateInfo.vertexAttributes = fontShader->vertexAttributes;
 				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.descriptorSetLayoutIndex = fontMaterial->shaderID;
 				pipelineCreateInfo.bSetDynamicStates = true;
 				pipelineCreateInfo.bEnableColourBlending = true;
 				pipelineCreateInfo.subpass = fontShader->subpass;
