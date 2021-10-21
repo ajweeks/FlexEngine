@@ -102,13 +102,27 @@ namespace flex
 		}
 	}
 
-	RectCutResult UIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	RectCutResult UIContainer::DrawImGui()
+	{
+		bool bTreeOpen = ImGui::TreeNode("Base");
+
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
+
+		if (bTreeOpen)
+		{
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
+		}
+
+		return result;
+	}
+
+	RectCutResult UIContainer::DrawImGuiBase(bool bTreeOpen)
 	{
 		bool bRemoveSelf = false;
 		bool bDuplicateSelf = false;
 		bool bChangeSelfType = false;
-
-		bool bTreeOpen = ImGui::TreeNode(optionalTreeNodeName != nullptr ? optionalTreeNodeName : "UIContainer");
 
 		bHighlighted = ImGui::IsItemHovered();
 
@@ -184,49 +198,6 @@ namespace flex
 				children.emplace_back(new UIContainer());
 				bDirty = true;
 			}
-
-			for (i32 i = 0; i < (i32)children.size(); ++i)
-			{
-				ImGui::PushID(i);
-				RectCutResult result = children[i]->DrawImGui();
-				ImGui::PopID();
-
-				if (result == RectCutResult::REMOVE)
-				{
-					children.erase(children.begin() + i);
-					bDirty = true;
-					--i;
-				}
-				else if (result == RectCutResult::DUPLICATE)
-				{
-					children.emplace(children.begin() + i, children[i]->Duplicate());
-					bDirty = true;
-				}
-				else if (result == RectCutResult::CHANGE_SELF_TYPE)
-				{
-					UIContainer* oldUIContainer = children[i];
-
-					// type will have already been changed to new value
-					UIContainer* newUIContainer = CreateContainer(oldUIContainer->type);
-					newUIContainer->children = oldUIContainer->children;
-					newUIContainer->bVisible = oldUIContainer->bVisible;
-					newUIContainer->cutType = oldUIContainer->cutType;
-					newUIContainer->amount = oldUIContainer->amount;
-					newUIContainer->tagSourceStr = oldUIContainer->tagSourceStr;
-					newUIContainer->tag = oldUIContainer->tag;
-
-					children[i] = newUIContainer;
-					delete oldUIContainer;
-					bDirty = true;
-				}
-
-				if (children[i]->bDirty)
-				{
-					bDirty = true;
-				}
-			}
-
-			ImGui::TreePop();
 		}
 
 		if (bRemoveSelf)
@@ -243,6 +214,54 @@ namespace flex
 		}
 
 		return RectCutResult::DO_NOTHING;
+	}
+
+	void UIContainer::DrawImGuiChildren()
+	{
+		for (i32 i = 0; i < (i32)children.size(); ++i)
+		{
+			ImGui::PushID(i);
+			RectCutResult result = children[i]->DrawImGui();
+			ImGui::PopID();
+
+			if (result == RectCutResult::REMOVE)
+			{
+				children.erase(children.begin() + i);
+				bDirty = true;
+				if (i > 0)
+				{
+					--i;
+				}
+			}
+			else if (result == RectCutResult::DUPLICATE)
+			{
+				children.emplace(children.begin() + i, children[i]->Duplicate());
+				bDirty = true;
+			}
+			else if (result == RectCutResult::CHANGE_SELF_TYPE)
+			{
+				UIContainer* oldUIContainer = children[i];
+
+				// type will have already been changed to new value
+				UIContainer* newUIContainer = CreateContainer(oldUIContainer->type);
+				newUIContainer->children = oldUIContainer->children;
+				oldUIContainer->children.clear(); // Prevent container destructor from deleting moved children
+				newUIContainer->bVisible = oldUIContainer->bVisible;
+				newUIContainer->cutType = oldUIContainer->cutType;
+				newUIContainer->amount = oldUIContainer->amount;
+				newUIContainer->tagSourceStr = oldUIContainer->tagSourceStr;
+				newUIContainer->tag = oldUIContainer->tag;
+
+				children[i] = newUIContainer;
+				delete oldUIContainer;
+				bDirty = true;
+			}
+
+			if (children[i]->bDirty)
+			{
+				bDirty = true;
+			}
+		}
 	}
 
 	Rect UIContainer::Cut(Rect* rect)
@@ -328,6 +347,10 @@ namespace flex
 		case UIContainerType::ITEM:
 		{
 			uiContainer = new ItemUIContainer();
+		} break;
+		case UIContainerType::IMAGE:
+		{
+			uiContainer = new ImageUIContainer();
 		} break;
 		case UIContainerType::INVENTORY:
 		{
@@ -514,24 +537,7 @@ namespace flex
 
 				if (imageElement != nullptr)
 				{
-					real aspectRatio = g_Window->GetAspectRatio();
-
-					SpriteQuadDrawInfo spriteInfo = {};
-					spriteInfo.textureID = imageElement->textureID;
-					spriteInfo.materialID = g_Renderer->m_SpriteMatSSID;
-					real width = (lastCutRect.maxX - lastCutRect.minX);
-					real height = (lastCutRect.maxY - lastCutRect.minY);
-					spriteInfo.pos = glm::vec3(
-						(lastCutRect.minX + width * 0.5f) * aspectRatio,
-						lastCutRect.minY + height * 0.5f,
-						1.0f);
-					spriteInfo.scale = glm::vec3(width * 0.4f, -width * 0.4f, 1.0f);
-					spriteInfo.anchor = AnchorPoint::CENTER;
-					spriteInfo.bScreenSpace = true;
-					spriteInfo.bReadDepth = false;
-					spriteInfo.bRaw = true;
-					spriteInfo.zOrder = 75;
-					g_Renderer->EnqueueSprite(spriteInfo);
+					g_UIManager->EnqueueImageSprite(imageElement->textureID, lastCutRect);
 				}
 
 				if (textElement != nullptr)
@@ -564,30 +570,32 @@ namespace flex
 		}
 	}
 
-	void ItemUIContainer::Draw()
+	RectCutResult ItemUIContainer::DrawImGui()
 	{
-		UIContainer::Draw();
-	}
+		bool bTreeOpen = ImGui::TreeNode("Item");
 
-	RectCutResult ItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
-	{
-		FLEX_UNUSED(optionalTreeNodeName);
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
-		RectCutResult result = UIContainer::DrawImGui("Item");
-
-		ImGui::Text("Index: %i", index);
-
-		if (stackID != InvalidID)
+		if (bTreeOpen)
 		{
-			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-			if (player != nullptr)
+			ImGui::Text("Index: %i", index);
+
+			if (stackID != InvalidID)
 			{
-				InventoryType inventoryType;
-				GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID, inventoryType);
-				ImGui::Text("Stack count: %d", (stack->count > 0 ? stack->count : 0));
-				std::string stackTypeString = stack->prefabID.ToString();
-				ImGui::Text("Stack type: %s", stackTypeString.c_str());
+				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (player != nullptr)
+				{
+					InventoryType inventoryType;
+					GameObjectStack* stack = player->GetGameObjectStackFromInventory(stackID, inventoryType);
+					ImGui::Text("Stack count: %d", (stack->count > 0 ? stack->count : 0));
+					std::string stackTypeString = stack->prefabID.ToString();
+					ImGui::Text("Stack type: %s", stackTypeString.c_str());
+				}
 			}
+
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
 		}
 
 		return result;
@@ -633,6 +641,114 @@ namespace flex
 		return result;
 	}
 
+	ImageUIContainer::ImageUIContainer() :
+		UIContainer(UIContainerType::IMAGE)
+	{
+		margin = 0.9f;
+	}
+
+	ImageUIContainer::~ImageUIContainer()
+	{
+		delete imageElement;
+		imageElement = nullptr;
+	}
+
+	void ImageUIContainer::Update(Rect& parentRect, bool bIgnoreCut /* = false */)
+	{
+		UIContainer::Update(parentRect, bIgnoreCut);
+
+		if (imageElement == nullptr)
+		{
+			TextureID textureID = InvalidTextureID;
+
+			if (!iconName.empty())
+			{
+				textureID = g_ResourceManager->GetOrLoadTexture(ICON_DIRECTORY + iconName + "-icon-256.png");
+			}
+
+			if (textureID == InvalidTextureID)
+			{
+				// Invalid icon name, use placeholder
+				textureID = g_ResourceManager->tofuIconID;
+			}
+
+			if (textureID != InvalidTextureID)
+			{
+				imageElement = new ImageUIElement(textureID);
+			}
+		}
+
+		if (imageElement != nullptr)
+		{
+			g_UIManager->EnqueueImageSprite(imageElement->textureID, lastCutRect);
+		}
+	}
+
+	RectCutResult ImageUIContainer::DrawImGui()
+	{
+		bool bTreeOpen = ImGui::TreeNode("Image");
+
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
+
+		if (bTreeOpen)
+		{
+			if (bUpdateIconNameBuf)
+			{
+				bUpdateIconNameBuf = false;
+				memset(iconNameBuffer, 0, iconNameBufLen);
+				strcpy_s(iconNameBuffer, iconNameBufLen, iconName.c_str());
+			}
+
+			if (ImGui::InputText("Icon name", iconNameBuffer, iconNameBufLen, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				iconName = std::string(iconNameBuffer);
+
+				delete imageElement;
+				imageElement = nullptr;
+			}
+
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
+		}
+
+		return result;
+	}
+
+	void ImageUIContainer::Serialize(JSONObject& rootObject)
+	{
+		JSONObject imageObject = {};
+
+		imageObject.fields.emplace_back("icon name", JSONValue(iconName));
+
+		rootObject.fields.emplace_back("image", JSONValue(imageObject));
+	}
+
+	void ImageUIContainer::Deserialize(const JSONObject& rootObject)
+	{
+		JSONObject imageObject;
+		if (rootObject.TryGetObject("image", imageObject))
+		{
+			imageObject.TryGetString("icon name", iconName);
+			bUpdateIconNameBuf = true;
+		}
+	}
+
+	UIContainer* ImageUIContainer::Duplicate()
+	{
+		ImageUIContainer* result = (ImageUIContainer*)UIContainer::Duplicate();
+
+		if (imageElement != nullptr)
+		{
+			result->imageElement = new ImageUIElement(imageElement->textureID);
+		}
+
+		result->iconName = iconName;
+		result->bUpdateIconNameBuf = true;
+
+		return result;
+	}
+
 	InventoryUIContainer::InventoryUIContainer() :
 		UIContainer(UIContainerType::INVENTORY)
 	{
@@ -643,11 +759,19 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult flex::InventoryUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	RectCutResult InventoryUIContainer::DrawImGui()
 	{
-		FLEX_UNUSED(optionalTreeNodeName);
+		bool bTreeOpen = ImGui::TreeNode("Inventory");
 
-		RectCutResult result = UIContainer::DrawImGui("Inventory");
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
+
+		if (bTreeOpen)
+		{
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
+		}
+
 		return result;
 	}
 
@@ -683,14 +807,16 @@ namespace flex
 
 				itemContainers.clear();
 				itemContainers.reserve(Player::INVENTORY_ITEM_COUNT);
+				const char* dropTagStr = "drop";
+				const char* trashTagStr = "trash";
 				// Fill out item containers by finding tags pointing to start of each column of tiles
 				for (i32 c = 0; c < Player::INVENTORY_ITEM_COL_COUNT; ++c)
 				{
-					std::string tagString = "column" + IntToString(c);
+					std::string colTagStr = "column" + IntToString(c);
 					for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
 					{
 						UIContainer* uiContainer = uiContainers[i];
-						if (uiContainer->tag == Hash(tagString.c_str()))
+						if (uiContainer->tag == Hash(colTagStr.c_str()))
 						{
 							if (((i32)uiContainers.size() - i) >= Player::INVENTORY_ITEM_ROW_COUNT)
 							{
@@ -708,11 +834,24 @@ namespace flex
 							}
 							else
 							{
-								PrintError("Invalid inventory config, expected %d UI containers immediately after container with tag %s\n", Player::INVENTORY_ITEM_ROW_COUNT, tagString.c_str());
+								PrintError("Invalid inventory config, expected %d UI containers immediately after container with tag %s\n", Player::INVENTORY_ITEM_ROW_COUNT, colTagStr.c_str());
 							}
 
 							break;
 						}
+					}
+				}
+
+				for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
+				{
+					UIContainer* uiContainer = uiContainers[i];
+					if (uiContainer->tag == SID(dropTagStr))
+					{
+						dropContainer = (ItemUIContainer*)uiContainer;
+					}
+					else if (uiContainer->tag == SID(trashTagStr))
+					{
+						trashContainer = (ItemUIContainer*)uiContainer;
 					}
 				}
 			}
@@ -741,12 +880,12 @@ namespace flex
 
 				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
 				{
+					glm::vec2i windowSize = g_Window->GetSize();
+					glm::vec2 mousePos = g_InputManager->GetMousePosition();
+					glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+
 					if ((i32)itemContainers.size() == Player::INVENTORY_ITEM_COUNT)
 					{
-						glm::vec2i windowSize = g_Window->GetSize();
-						glm::vec2 mousePos = g_InputManager->GetMousePosition();
-						glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
-
 						for (ItemUIContainer* itemContainer : itemContainers)
 						{
 							bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
@@ -780,6 +919,50 @@ namespace flex
 								}
 							}
 						}
+
+						// Drop area
+						if (dropContainer != nullptr)
+						{
+							bool bOverlaps = dropContainer->lastCutRect.Overlaps(mousePosN);
+							dropContainer->bHovered = bOverlaps;
+							dropContainer->bHighlighted = bOverlaps;
+
+							if (bOverlaps)
+							{
+								dropContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+								if (g_UIManager->draggedUIContainer != nullptr &&
+									g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								{
+									if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, false))
+									{
+										g_UIManager->EndItemDrag();
+									}
+								}
+							}
+						}
+
+						// Trash area
+						if (trashContainer != nullptr)
+						{
+							bool bOverlaps = trashContainer->lastCutRect.Overlaps(mousePosN);
+							trashContainer->bHovered = bOverlaps;
+							trashContainer->bHighlighted = bOverlaps;
+
+							if (bOverlaps)
+							{
+								trashContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+								if (g_UIManager->draggedUIContainer != nullptr &&
+									g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								{
+									if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, true))
+									{
+										g_UIManager->EndItemDrag();
+									}
+								}
+							}
+						}
 					}
 				}
 			}
@@ -796,11 +979,19 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult QuickAccessItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	RectCutResult QuickAccessItemUIContainer::DrawImGui()
 	{
-		FLEX_UNUSED(optionalTreeNodeName);
+		bool bTreeOpen = ImGui::TreeNode("Quick access");
 
-		RectCutResult result = UIContainer::DrawImGui("Quick access");
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
+
+		if (bTreeOpen)
+		{
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
+		}
+
 		return result;
 	}
 
@@ -943,11 +1134,19 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult WearablesItemUIContainer::DrawImGui(const char* optionalTreeNodeName /* = nullptr */)
+	RectCutResult WearablesItemUIContainer::DrawImGui()
 	{
-		FLEX_UNUSED(optionalTreeNodeName);
+		bool bTreeOpen = ImGui::TreeNode("Wearables");
 
-		RectCutResult result = UIContainer::DrawImGui("Wearables");
+		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
+
+		if (bTreeOpen)
+		{
+			UIContainer::DrawImGuiChildren();
+
+			ImGui::TreePop();
+		}
+
 		return result;
 	}
 
@@ -1457,6 +1656,17 @@ namespace flex
 		return false;
 	}
 
+	bool UIManager::DropItemStack(ItemUIContainer* stack, bool bDestroyItem)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			return player->DropItemStack(stack->stackID, bDestroyItem);
+		}
+
+		return false;
+	}
+
 	void UIManager::BeginItemDrag(ItemUIContainer* draggedItem)
 	{
 		if (draggedUIContainer != nullptr)
@@ -1491,6 +1701,28 @@ namespace flex
 			AudioManager::SetSourceGain(sourceID, m_ItemSoundGain);
 			AudioManager::PlaySource(sourceID);
 		}
+	}
+
+	void UIManager::EnqueueImageSprite(TextureID textureID, Rect lastCutRect)
+	{
+		real aspectRatio = g_Window->GetAspectRatio();
+
+		SpriteQuadDrawInfo spriteInfo = {};
+		spriteInfo.textureID = textureID;
+		spriteInfo.materialID = g_Renderer->m_SpriteMatSSID;
+		real width = (lastCutRect.maxX - lastCutRect.minX);
+		real height = (lastCutRect.maxY - lastCutRect.minY);
+		spriteInfo.pos = glm::vec3(
+			(lastCutRect.minX + width * 0.5f) * aspectRatio,
+			lastCutRect.minY + height * 0.5f,
+			1.0f);
+		spriteInfo.scale = glm::vec3(width * 0.4f, -width * 0.4f, 1.0f);
+		spriteInfo.anchor = AnchorPoint::CENTER;
+		spriteInfo.bScreenSpace = true;
+		spriteInfo.bReadDepth = false;
+		spriteInfo.bRaw = true;
+		spriteInfo.zOrder = 75;
+		g_Renderer->EnqueueSprite(spriteInfo);
 	}
 
 	RectCutType RectCutTypeFromString(const char* cutTypeStr)
@@ -1546,4 +1778,4 @@ namespace flex
 		rect->minY = glm::min(rect->maxY, rect->minY + amount * (bRelative ? (rect->maxY - rect->minY) : 2.0f));
 		return Rect{ rect->minX, minY, rect->maxX, rect->minY, colour };
 	}
-}// namespace flex
+} // namespace flex

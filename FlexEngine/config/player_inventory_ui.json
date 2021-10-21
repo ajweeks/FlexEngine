@@ -25,7 +25,56 @@
 			"cut type" : "Right",
 			"amount" : 0.261000,
 			"visible" : false,
-			"relative" : true
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Right",
+					"amount" : 0.868000,
+					"visible" : false,
+					"relative" : true,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Left",
+							"amount" : 0.881000,
+							"visible" : false,
+							"relative" : true,
+							"tag" : 16067572051775909605,
+							"children" : 
+							[
+								{
+									"type" : "Image",
+									"cut type" : "Top",
+									"amount" : 0.500000,
+									"visible" : true,
+									"relative" : true,
+									"tag source string" : "drop",
+									"tag" : 17411663169601231788,
+									"image" : 
+									{
+										"icon name" : "drop"
+									}
+								},
+								{
+									"type" : "Image",
+									"cut type" : "Right",
+									"amount" : 1.000000,
+									"visible" : true,
+									"relative" : true,
+									"tag source string" : "trash",
+									"image" : 
+									{
+										"icon name" : "trash"
+									}
+								}
+							]
+						}
+					]
+				}
+			]
 		},
 		{
 			"type" : "Base",

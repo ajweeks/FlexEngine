@@ -125,6 +125,7 @@ namespace flex
 	{
 		BASE,
 		ITEM,
+		IMAGE,
 		INVENTORY,
 		QUICK_ACCESS,
 		WEARABLES,
@@ -136,6 +137,7 @@ namespace flex
 	{
 		"Base",
 		"Item",
+		"Image",
 		"Inventory",
 		"Quick Access",
 		"Wearables",
@@ -159,11 +161,11 @@ namespace flex
 		UIContainer& operator=(const UIContainer&) = delete;
 		UIContainer& operator=(const UIContainer&&) = delete;
 
+		virtual UIContainer* Duplicate();
 		virtual void Initialize();
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false);
 		virtual void Draw();
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr);
-		virtual UIContainer* Duplicate();
+		virtual RectCutResult DrawImGui();
 
 		void SerializeCommon(JSONObject& object);
 		static UIContainer* DeserializeCommon(const JSONObject& object);
@@ -194,6 +196,10 @@ namespace flex
 
 		std::vector<UIContainer*> children;
 
+	protected:
+		RectCutResult DrawImGuiBase(bool bTreeOpen);
+		void DrawImGuiChildren();
+
 	private:
 		virtual void Serialize(JSONObject& rootObject);
 		virtual void Deserialize(const JSONObject& rootObject);
@@ -209,8 +215,7 @@ namespace flex
 		~ItemUIContainer();
 
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui() override;
 		virtual void Serialize(JSONObject& rootObject) override;
 		virtual void Deserialize(const JSONObject& rootObject) override;
 		virtual UIContainer* Duplicate() override;
@@ -226,6 +231,30 @@ namespace flex
 
 	};
 
+	class ImageUIContainer : public UIContainer
+	{
+	public:
+		ImageUIContainer();
+		~ImageUIContainer();
+
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
+		virtual RectCutResult DrawImGui() override;
+		virtual void Serialize(JSONObject& rootObject) override;
+		virtual void Deserialize(const JSONObject& rootObject) override;
+		virtual UIContainer* Duplicate() override;
+
+		const static u32 iconNameBufLen = 64;
+		char iconNameBuffer[iconNameBufLen];
+		bool bUpdateIconNameBuf = true;
+		std::string iconName;
+		ImageUIElement* imageElement = nullptr;
+
+		GameObjectStackID stackID = InvalidID;
+		i32 index = -1;
+	private:
+
+	};
+
 	class InventoryUIContainer : public UIContainer
 	{
 	public:
@@ -233,9 +262,11 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui() override;
 
 		std::vector<ItemUIContainer*> itemContainers;
+		ItemUIContainer* dropContainer = nullptr;
+		ItemUIContainer* trashContainer = nullptr;
 
 	private:
 		void OnLayoutChanged();
@@ -249,7 +280,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui() override;
 
 		std::vector<ItemUIContainer*> itemContainers;
 
@@ -265,7 +296,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui() override;
 
 		std::vector<ItemUIContainer*> itemContainers;
 
@@ -288,9 +319,12 @@ namespace flex
 		void Serialize();
 
 		bool MoveItemStack(ItemUIContainer* from, ItemUIContainer* to);
+		bool DropItemStack(ItemUIContainer* stack, bool bDestroyItem);
 
 		void BeginItemDrag(ItemUIContainer* draggedItem);
 		void EndItemDrag();
+
+		void EnqueueImageSprite(TextureID textureID, Rect lastCutRect);
 
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;

@@ -1335,13 +1335,8 @@ namespace flex
 
 				u32 maxStackSize = g_ResourceManager->GetMaxStackSize(pair.prefabID);
 
-				static char maxStackSizeBuff[6];
-				static bool bMaxStackSizeBuffInitialized = false;
-				if (!bMaxStackSizeBuffInitialized)
-				{
-					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%u", maxStackSize);
-					bMaxStackSizeBuffInitialized = true;
-				}
+				char maxStackSizeBuff[6];
+				snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%u", maxStackSize);
 
 				if (ImGui::Button(maxStackSizeBuff))
 				{

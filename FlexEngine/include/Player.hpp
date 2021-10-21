@@ -65,6 +65,7 @@ namespace flex
 
 		GameObjectStack* GetGameObjectStackFromInventory(GameObjectStackID stackID, InventoryType& outInventoryType);
 		bool MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID);
+		bool DropItemStack(GameObjectStackID stackID, bool bDestroyItem);
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(i32 slotIndex);
@@ -84,8 +85,8 @@ namespace flex
 		void DropIfHolding(GameObject* object);
 		bool HasFreeHand() const;
 
-		void OnWearableEquipped(GameObjectStack* wearableStack);
-		void OnWearableUnequipped(GameObjectStack* wearableStack);
+		void OnWearableEquipped(GameObjectStack const* wearableStack);
+		void OnWearableUnequipped(GameObjectStack const* wearableStack);
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;

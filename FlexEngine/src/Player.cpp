@@ -524,7 +524,10 @@ namespace flex
 
 		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
 		{
-			if (toInventoryType == InventoryType::WEARABLES)
+			bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
+			bool bToWearables = toInventoryType == InventoryType::WEARABLES;
+
+			if (bToWearables)
 			{
 				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(fromStack->prefabID);
 				if (prefabTemplate->IsWearable())
@@ -536,7 +539,11 @@ namespace flex
 						toStack->userData = fromStack->userData;
 						fromStack->Clear();
 
-						OnWearableEquipped(toStack);
+						if (!bFromWearables)
+						{
+							// Only needed if the item wasn't being worn already
+							OnWearableEquipped(toStack);
+						}
 
 						return true;
 					}
@@ -544,7 +551,6 @@ namespace flex
 			}
 			else
 			{
-				bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
 
 				if (toStack->count == 0)
 				{
@@ -573,6 +579,32 @@ namespace flex
 					return true;
 				}
 			}
+		}
+
+		return false;
+	}
+
+	bool Player::DropItemStack(GameObjectStackID stackID, bool bDestroyItem)
+	{
+		InventoryType inventoryType;
+		GameObjectStack* stack = GetGameObjectStackFromInventory(stackID, inventoryType);
+
+		if (stack != nullptr)
+		{
+			bool bFromWearables = inventoryType == InventoryType::WEARABLES;
+
+			if (bFromWearables)
+			{
+				OnWearableUnequipped(stack);
+			}
+
+			if (!bDestroyItem)
+			{
+				// TODO: Spawn item in world
+			}
+
+			stack->Clear();
+			return true;
 		}
 
 		return false;
@@ -722,7 +754,7 @@ namespace flex
 					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
 					inventoryObj.TryGetObjectArray("wearable slots", slotLists[2]);
 
-					for (i32 slotListIndex = 0; slotListIndex < 2; ++slotListIndex)
+					for (i32 slotListIndex = 0; slotListIndex < ARRAY_LENGTH(slotLists); ++slotListIndex)
 					{
 						for (JSONObject& slot : slotLists[slotListIndex])
 						{
@@ -768,12 +800,19 @@ namespace flex
 							}
 						}
 					}
+
+					for (const GameObjectStack& stack : m_WearablesInventory)
+					{
+						if (stack.count > 0)
+						{
+							OnWearableEquipped(&stack);
+						}
+					}
 				}
 				else
 				{
 					PrintError("Failed to parse user inventory file, error: %s\n", JSONParser::GetErrorString());
 				}
-
 			}
 			else
 			{
@@ -833,6 +872,7 @@ namespace flex
 
 		inventoryObj.fields.emplace_back("slots", JSONValue(slots));
 		inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
+		inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 
 		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
 
@@ -962,7 +1002,7 @@ namespace flex
 		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
 	}
 
-	void Player::OnWearableEquipped(GameObjectStack* wearableStack)
+	void Player::OnWearableEquipped(GameObjectStack const* wearableStack)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
 		assert(prefabTemplate->IsWearable());
@@ -981,7 +1021,7 @@ namespace flex
 		}
 	}
 
-	void Player::OnWearableUnequipped(GameObjectStack* wearableStack)
+	void Player::OnWearableUnequipped(GameObjectStack const* wearableStack)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
 		assert(prefabTemplate->IsWearable());
