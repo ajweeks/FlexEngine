@@ -1,5 +1,7 @@
 #pragma once
 
+#include "InputTypes.hpp"
+
 namespace flex
 {
 	struct JSONObject;
@@ -319,9 +321,12 @@ namespace flex
 		void Serialize();
 
 		bool MoveItemStack(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveSingleItemFromStack(ItemUIContainer* from, ItemUIContainer* to);
 		bool DropItemStack(ItemUIContainer* stack, bool bDestroyItem);
+		bool DropSingleItemFromStack(ItemUIContainer* stack, bool bDestroyItem);
 
-		void BeginItemDrag(ItemUIContainer* draggedItem);
+		void HandleBeginStackDrag(ItemUIContainer* itemContainer, GameObjectStack* stack);
+		void BeginItemDrag(ItemUIContainer* draggedItem, MouseButton buttonDown);
 		void EndItemDrag();
 
 		void EnqueueImageSprite(TextureID textureID, Rect lastCutRect);
@@ -331,6 +336,7 @@ namespace flex
 		WearablesItemUIContainer* wearablesInventoryUI = nullptr;
 
 		ItemUIContainer* draggedUIContainer = nullptr;
+		MouseButton mouseButtonDragging = MouseButton::_NONE;
 
 	private:
 		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
@@ -340,9 +346,8 @@ namespace flex
 
 		StringID m_ItemPickupSoundSID = InvalidStringID;
 		StringID m_ItemDropSoundSID = InvalidStringID;
+		StringID m_ItemTrashSoundSID = InvalidStringID;
 		real m_ItemSoundGain = 0.5f;
-
-		//i32 m_PlayerInventorySlotIndexHovered = -1;
 
 	};
 

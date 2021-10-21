@@ -154,6 +154,7 @@ namespace flex
 		static real GetMasterGain();
 
 		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		static void PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart = true);
 		// Start source partway through (t in [0, 1])
 		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
 		static void PauseSource(AudioSourceID sourceID);

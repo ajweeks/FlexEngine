@@ -696,7 +696,7 @@ namespace flex
 			{
 				bUpdateIconNameBuf = false;
 				memset(iconNameBuffer, 0, iconNameBufLen);
-				strcpy_s(iconNameBuffer, iconNameBufLen, iconName.c_str());
+				strcpy(iconNameBuffer, iconName.c_str());
 			}
 
 			if (ImGui::InputText("Icon name", iconNameBuffer, iconNameBufLen, ImGuiInputTextFlags_EnterReturnsTrue))
@@ -900,20 +900,32 @@ namespace flex
 								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
 								assert(inventoryType == InventoryType::INVENTORY);
 
-								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
-									stack != nullptr && stack->count > 0)
-								{
-									g_UIManager->BeginItemDrag(itemContainer);
-								}
+								g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 
-								if (g_UIManager->draggedUIContainer != nullptr &&
-									itemContainer != g_UIManager->draggedUIContainer)
+								if (g_UIManager->draggedUIContainer != nullptr)
 								{
-									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+									// Release entire stack into to slot
+									if (itemContainer != g_UIManager->draggedUIContainer &&
+										g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 									{
 										if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
 										{
 											g_UIManager->EndItemDrag();
+										}
+									}
+
+									if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+									{
+										// Place a single item when right clicking with a stack held
+										if (g_UIManager->MoveSingleItemFromStack(g_UIManager->draggedUIContainer, itemContainer))
+										{
+											InventoryType draggedInvType;
+											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+											if (draggedStack->count == 0)
+											{
+												g_UIManager->EndItemDrag();
+											}
 										}
 									}
 								}
@@ -931,12 +943,28 @@ namespace flex
 							{
 								dropContainer->lastCutRect.colour = UIContainer::hoveredColour;
 
-								if (g_UIManager->draggedUIContainer != nullptr &&
-									g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								if (g_UIManager->draggedUIContainer != nullptr)
 								{
-									if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, false))
+									if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 									{
-										g_UIManager->EndItemDrag();
+										if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, false))
+										{
+											g_UIManager->EndItemDrag();
+										}
+									}
+									else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+									{
+										// Drop a single item when right clicking with a stack held
+										if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, false))
+										{
+											InventoryType draggedInvType;
+											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+											if (draggedStack->count == 0)
+											{
+												g_UIManager->EndItemDrag();
+											}
+										}
 									}
 								}
 							}
@@ -953,12 +981,28 @@ namespace flex
 							{
 								trashContainer->lastCutRect.colour = UIContainer::hoveredColour;
 
-								if (g_UIManager->draggedUIContainer != nullptr &&
-									g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								if (g_UIManager->draggedUIContainer != nullptr)
 								{
-									if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, true))
+									if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 									{
-										g_UIManager->EndItemDrag();
+										if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, true))
+										{
+											g_UIManager->EndItemDrag();
+										}
+									}
+									else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+									{
+										// Drop a single item when right clicking with a stack held
+										if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, true))
+										{
+											InventoryType draggedInvType;
+											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+											if (draggedStack->count == 0)
+											{
+												g_UIManager->EndItemDrag();
+											}
+										}
 									}
 								}
 							}
@@ -1094,26 +1138,35 @@ namespace flex
 						{
 							itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
 
-							if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
-							{
-								InventoryType inventoryType;
-								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-								assert(inventoryType == InventoryType::QUICK_ACCESS);
+							InventoryType inventoryType;
+							GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
+							assert(inventoryType == InventoryType::QUICK_ACCESS);
 
-								if (stack != nullptr && stack->count > 0)
-								{
-									g_UIManager->BeginItemDrag(itemContainer);
-								}
-							}
+							g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 
-							if (g_UIManager->draggedUIContainer != nullptr &&
-								itemContainer != g_UIManager->draggedUIContainer)
+							if (g_UIManager->draggedUIContainer != nullptr)
 							{
-								if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+								if (itemContainer != g_UIManager->draggedUIContainer &&
+									g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 								{
 									if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
 									{
 										g_UIManager->EndItemDrag();
+									}
+								}
+
+								if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+									g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+								{
+									// Place a single item when right clicking with a stack held
+									if (g_UIManager->MoveSingleItemFromStack(g_UIManager->draggedUIContainer, itemContainer))
+									{
+										InventoryType draggedInvType;
+										GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+										if (draggedStack->count == 0)
+										{
+											g_UIManager->EndItemDrag();
+										}
 									}
 								}
 							}
@@ -1258,20 +1311,30 @@ namespace flex
 								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
 								assert(inventoryType == InventoryType::WEARABLES);
 
-								if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) &&
-									stack != nullptr && stack->count > 0)
-								{
-									g_UIManager->BeginItemDrag(itemContainer);
-								}
+								g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 
-								if (g_UIManager->draggedUIContainer != nullptr &&
-									itemContainer != g_UIManager->draggedUIContainer)
+								if (g_UIManager->draggedUIContainer != nullptr)
 								{
-									if (g_InputManager->IsMouseButtonReleased(MouseButton::LEFT))
+									if (itemContainer != g_UIManager->draggedUIContainer &&
+										g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 									{
 										if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
 										{
 											g_UIManager->EndItemDrag();
+										}
+									}
+									if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+									{
+										// Place a single item when right clicking with a stack held
+										if (g_UIManager->MoveSingleItemFromStack(g_UIManager->draggedUIContainer, itemContainer))
+										{
+											InventoryType draggedInvType;
+											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+											if (draggedStack->count == 0)
+											{
+												g_UIManager->EndItemDrag();
+											}
 										}
 									}
 								}
@@ -1374,11 +1437,12 @@ namespace flex
 				if (draggedUIContainer != nullptr)
 				{
 					glm::vec2 mousePos = g_InputManager->GetMousePosition();
-					if (!g_InputManager->IsMouseButtonDown(MouseButton::LEFT) ||
+					if (!g_InputManager->IsMouseButtonDown(mouseButtonDragging) ||
 						g_InputManager->GetKeyDown(KeyCode::KEY_ESCAPE) ||
 						mousePos.x == -1.0f || mousePos.y == -1.0f)
 					{
 						draggedUIContainer = nullptr;
+						mouseButtonDragging = MouseButton::_NONE;
 					}
 				}
 			}
@@ -1398,6 +1462,7 @@ namespace flex
 
 				g_ResourceManager->DrawAudioSourceIDImGui("Item pickup", m_ItemPickupSoundSID);
 				g_ResourceManager->DrawAudioSourceIDImGui("Item drop", m_ItemDropSoundSID);
+				g_ResourceManager->DrawAudioSourceIDImGui("Item trash", m_ItemTrashSoundSID);
 
 				auto drawButtons = [this](UIContainer** uiContainer, const char* filePath)
 				{
@@ -1492,6 +1557,7 @@ namespace flex
 
 		rootObject.fields.emplace_back("item pickup sound sid", JSONValue(m_ItemPickupSoundSID));
 		rootObject.fields.emplace_back("item drop sound sid", JSONValue(m_ItemDropSoundSID));
+		rootObject.fields.emplace_back("item trash sound sid", JSONValue(m_ItemTrashSoundSID));
 
 		std::string directoryString = RelativePathToAbsolute(ExtractDirectoryString(UI_SETTINGS_LOCATION));
 		if (!Platform::DirectoryExists(directoryString))
@@ -1519,6 +1585,7 @@ namespace flex
 
 			rootObject.TryGetULong("item pickup sound sid", m_ItemPickupSoundSID);
 			rootObject.TryGetULong("item drop sound sid", m_ItemDropSoundSID);
+			rootObject.TryGetULong("item trash sound sid", m_ItemTrashSoundSID);
 			return true;
 		}
 
@@ -1649,8 +1716,39 @@ namespace flex
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				return player->MoveItemStack(from->stackID, to->stackID);
+				bool bMovedItem = player->MoveItemStack(from->stackID, to->stackID);
+
+				if (bMovedItem)
+				{
+					if (m_ItemDropSoundSID != InvalidStringID)
+					{
+						AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID), m_ItemSoundGain);
+					}
+				}
+
+				return bMovedItem;
 			}
+		}
+
+		return false;
+	}
+
+	bool UIManager::MoveSingleItemFromStack(ItemUIContainer* from, ItemUIContainer* to)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			bool bMovedItem = player->MoveSingleItemFromStack(from->stackID, to->stackID);
+
+			if (bMovedItem)
+			{
+				if (m_ItemDropSoundSID != InvalidStringID)
+				{
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID), m_ItemSoundGain);
+				}
+			}
+
+			return bMovedItem;
 		}
 
 		return false;
@@ -1661,13 +1759,71 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
-			return player->DropItemStack(stack->stackID, bDestroyItem);
+			bool bDroppedItem = player->DropItemStack(stack->stackID, bDestroyItem);
+
+			if (bDroppedItem)
+			{
+				StringID audioSourceSID = bDestroyItem ? m_ItemTrashSoundSID : m_ItemDropSoundSID;
+				if (audioSourceSID != InvalidStringID)
+				{
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(audioSourceSID), m_ItemSoundGain);
+				}
+			}
+
+			return bDroppedItem;
 		}
 
 		return false;
 	}
 
-	void UIManager::BeginItemDrag(ItemUIContainer* draggedItem)
+	bool UIManager::DropSingleItemFromStack(ItemUIContainer* stack, bool bDestroyItem)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			bool bDroppedItem = player->DropSingleItemFromStack(stack->stackID, bDestroyItem);
+
+			if (bDroppedItem)
+			{
+				StringID audioSourceSID = bDestroyItem ? m_ItemTrashSoundSID : m_ItemDropSoundSID;
+				if (audioSourceSID != InvalidStringID)
+				{
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(audioSourceSID), m_ItemSoundGain);
+				}
+			}
+
+			return bDroppedItem;
+		}
+
+		return false;
+	}
+
+	void UIManager::HandleBeginStackDrag(ItemUIContainer* itemContainer, GameObjectStack* stack)
+	{
+		if (draggedUIContainer == nullptr && stack != nullptr && stack->count > 0)
+		{
+			if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
+			{
+				BeginItemDrag(itemContainer, MouseButton::LEFT);
+
+				if (m_ItemPickupSoundSID != InvalidStringID)
+				{
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID), m_ItemSoundGain);
+				}
+			}
+			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+			{
+				BeginItemDrag(itemContainer, MouseButton::RIGHT);
+
+				if (m_ItemPickupSoundSID != InvalidStringID)
+				{
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID), m_ItemSoundGain);
+				}
+			}
+		}
+	}
+
+	void UIManager::BeginItemDrag(ItemUIContainer* draggedItem, MouseButton buttonDown)
 	{
 		if (draggedUIContainer != nullptr)
 		{
@@ -1676,13 +1832,7 @@ namespace flex
 		}
 
 		draggedUIContainer = draggedItem;
-
-		if (m_ItemPickupSoundSID != InvalidStringID)
-		{
-			AudioSourceID sourceID = g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID);
-			AudioManager::SetSourceGain(sourceID, m_ItemSoundGain);
-			AudioManager::PlaySource(sourceID);
-		}
+		mouseButtonDragging = buttonDown;
 	}
 
 	void UIManager::EndItemDrag()
@@ -1694,13 +1844,7 @@ namespace flex
 		}
 
 		draggedUIContainer = nullptr;
-
-		if (m_ItemDropSoundSID != InvalidStringID)
-		{
-			AudioSourceID sourceID = g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID);
-			AudioManager::SetSourceGain(sourceID, m_ItemSoundGain);
-			AudioManager::PlaySource(sourceID);
-		}
+		mouseButtonDragging = MouseButton::_NONE;
 	}
 
 	void UIManager::EnqueueImageSprite(TextureID textureID, Rect lastCutRect)

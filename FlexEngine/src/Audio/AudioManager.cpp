@@ -840,6 +840,12 @@ namespace flex
 		}
 	}
 
+	void AudioManager::PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart)
+	{
+		SetSourceGain(sourceID, gain);
+		PlaySource(sourceID, bForceRestart);
+	}
+
 	void AudioManager::PlaySourceFromPos(AudioSourceID sourceID, real t)
 	{
 		if (sourceID >= s_Sources.size())

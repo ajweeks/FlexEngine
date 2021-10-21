@@ -551,7 +551,6 @@ namespace flex
 			}
 			else
 			{
-
 				if (toStack->count == 0)
 				{
 					if (bFromWearables)
@@ -574,8 +573,85 @@ namespace flex
 					}
 
 					toStack->count = toStack->count + fromStack->count;
-					// TODO: Merge user data's here somehow?
 					fromStack->Clear();
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool Player::MoveSingleItemFromStack(GameObjectStackID fromID, GameObjectStackID toID)
+	{
+		InventoryType fromInventoryType, toInventoryType;
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID, fromInventoryType);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID, toInventoryType);
+
+		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
+		{
+			bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
+			bool bToWearables = toInventoryType == InventoryType::WEARABLES;
+
+			if (bToWearables)
+			{
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(fromStack->prefabID);
+				if (prefabTemplate->IsWearable())
+				{
+					if (toStack->count == 0 && fromStack->count >= 1)
+					{
+						toStack->prefabID = fromStack->prefabID;
+						toStack->count = 1;
+						toStack->userData = fromStack->userData;
+						--fromStack->count;
+						if (fromStack->count == 0)
+						{
+							fromStack->Clear();
+						}
+
+						if (!bFromWearables)
+						{
+							// Only needed if the item wasn't being worn already
+							OnWearableEquipped(toStack);
+						}
+
+						return true;
+					}
+				}
+			}
+			else
+			{
+				if (toStack->count == 0)
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					toStack->prefabID = fromStack->prefabID;
+					toStack->count = 1;
+					toStack->userData = fromStack->userData;
+					--fromStack->count;
+					if (fromStack->count == 0)
+					{
+						fromStack->Clear();
+					}
+					return true;
+				}
+				else if (toStack->prefabID == fromStack->prefabID &&
+					(u32)(toStack->count + 1) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					++toStack->count;
+					--fromStack->count;
+					if (fromStack->count == 0)
+					{
+						fromStack->Clear();
+					}
 					return true;
 				}
 			}
@@ -604,6 +680,36 @@ namespace flex
 			}
 
 			stack->Clear();
+			return true;
+		}
+
+		return false;
+	}
+
+	bool Player::DropSingleItemFromStack(GameObjectStackID stackID, bool bDestroyItem)
+	{
+		InventoryType inventoryType;
+		GameObjectStack* stack = GetGameObjectStackFromInventory(stackID, inventoryType);
+
+		if (stack != nullptr && stack->count > 0)
+		{
+			bool bFromWearables = inventoryType == InventoryType::WEARABLES;
+
+			if (bFromWearables)
+			{
+				OnWearableUnequipped(stack);
+			}
+
+			if (!bDestroyItem)
+			{
+				// TODO: Spawn item in world
+			}
+
+			--stack->count;
+			if (stack->count == 0)
+			{
+				stack->Clear();
+			}
 			return true;
 		}
 
