@@ -6412,8 +6412,8 @@ namespace flex
 	{
 		GeneratePoints();
 
-		MaterialID wireMatID = g_Renderer->GetMaterialID("wire");
-		if (wireMatID == InvalidMaterialID)
+		MaterialID wireMatID;
+		if (!g_Renderer->FindOrCreateMaterialByName("wire", wireMatID))
 		{
 			wireMatID = g_Renderer->GetPlaceholderMaterialID();
 		}
