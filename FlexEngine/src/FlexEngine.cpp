@@ -2128,7 +2128,7 @@ namespace flex
 		auto iter = m_UIWindows.find(windowNameSID);
 		if (iter == m_UIWindows.end())
 		{
-			m_UIWindows[windowNameSID] = UIWindow{ true, std::string(windowName) };
+			m_UIWindows[windowNameSID] = UIWindow{ false, std::string(windowName) };
 			return &m_UIWindows[windowNameSID].bOpen;
 		}
 		return &iter->second.bOpen;

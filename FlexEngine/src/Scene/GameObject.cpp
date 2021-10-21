@@ -8812,8 +8812,10 @@ namespace flex
 		u32 pointsPerVoxel = (m_NumPointsPerAxis - 1);
 		u32 maxVertsPerChunk = pointsPerVoxel * pointsPerVoxel * pointsPerVoxel * 5 * 3;
 		ImGui::Text("Max verts per chunk: %u", maxVertsPerChunk);
-		std::string vertMemoryStr = PrettifyLargeNumber((u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
-		ImGui::Text("Total vert memory: %sB", vertMemoryStr.c_str());
+		static const u32 strBufLen = 32;
+		char strBuf[strBufLen];
+		ByteCountToString(strBuf, strBufLen, (u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
+		ImGui::Text("Total vert memory: %s", strBuf);
 		std::string totalVertCountStr = PrettifyLargeNumber((u64)totalVertCount, 2);
 		ImGui::Text("Total verts: %s", totalVertCountStr.c_str());
 

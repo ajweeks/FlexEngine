@@ -1736,27 +1736,6 @@ namespace flex
 		{
 		}
 
-		bool GraphicsPipelineCreateInfo::operator=(const GraphicsPipelineCreateInfo& other)
-		{
-			// TODO: memcmp
-			return shaderID == other.shaderID &&
-				vertexAttributes == other.vertexAttributes &&
-				topology == other.topology &&
-				cullMode == other.cullMode &&
-				renderPass == other.renderPass &&
-				subpass == other.subpass &&
-				pushConstantRangeCount == other.pushConstantRangeCount &&
-				descriptorSetLayoutIndex == other.descriptorSetLayoutIndex &&
-				bSetDynamicStates == other.bSetDynamicStates &&
-				bEnableColourBlending == other.bEnableColourBlending &&
-				bEnableAdditiveColourBlending == other.bEnableAdditiveColourBlending &&
-				depthTestEnable == other.depthTestEnable &&
-				depthWriteEnable == other.depthWriteEnable &&
-				depthCompareOp == other.depthCompareOp &&
-				stencilTestEnable == other.stencilTestEnable;
-			// TODO: Check push constant value count/types?
-		}
-
 		u64 GraphicsPipelineCreateInfo::Hash()
 		{
 			// NOTE: Is this hash cryptographically secure? Heck no! Does it work for my purposes? Yes it does :)

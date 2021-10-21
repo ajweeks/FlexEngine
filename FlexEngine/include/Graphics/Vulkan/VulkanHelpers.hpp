@@ -608,7 +608,6 @@ namespace flex
 
 		struct GraphicsPipelineCreateInfo
 		{
-			bool operator=(const GraphicsPipelineCreateInfo& other);
 			u64 Hash();
 
 			ShaderID shaderID = InvalidShaderID;
