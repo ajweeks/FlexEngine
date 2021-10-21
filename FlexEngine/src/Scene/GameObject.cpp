@@ -2642,6 +2642,21 @@ namespace flex
 		return m_CollisionShape;
 	}
 
+	bool GameObject::GetCollisionAABB(AABB& outAABB)
+	{
+		if (m_CollisionShape != nullptr)
+		{
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 aabbMin, aabbMax;
+
+			m_CollisionShape->getAabb(tr, aabbMin, aabbMax);
+			outAABB = { aabbMin.x(), aabbMax.x(),aabbMin.z(), aabbMax.z(), aabbMin.y(), aabbMax.y() };
+			return true;
+		}
+		return false;
+	}
+
 	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
 	{
 		if (m_RigidBody != nullptr)
@@ -6692,8 +6707,8 @@ namespace flex
 				real cosTheta = cos(theta * TWO_PI);
 				real sinTheta = sin(theta * TWO_PI);
 				glm::vec3 pos = centerPos +
-					(cosTheta * radius) * wireBitangentWS  +
-					(sinTheta * radius) * wireNormalWS ;
+					(cosTheta * radius) * wireBitangentWS +
+					(sinTheta * radius) * wireNormalWS;
 
 				glm::vec3 normal = glm::normalize(cosTheta * wireBitangentWS + sinTheta * wireNormalWS);
 				// TODO: Take cross product with VEC3_UP when normal is similar to VEC3_RIGHT

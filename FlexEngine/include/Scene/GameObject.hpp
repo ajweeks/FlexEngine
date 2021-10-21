@@ -263,6 +263,7 @@ namespace flex
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;
+		bool GetCollisionAABB(AABB& outAABB);
 
 		RigidBody* SetRigidBody(RigidBody* rigidBody);
 		RigidBody* GetRigidBody() const;

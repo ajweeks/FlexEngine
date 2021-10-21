@@ -1267,6 +1267,42 @@ namespace flex
 				SelectAll();
 				return EventReply::CONSUMED;
 			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_END) && !m_CurrentlySelectedObjectIDs.empty())
+			{
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+				GameObject* firstObject = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0]);
+
+				btCollisionShape* collisionShape = firstObject->GetCollisionShape();
+				if (collisionShape != nullptr && collisionShape->isConvex())
+				{
+					btTransform from(ToBtQuaternion(m_SelectedObjectRotation), ToBtVec3(m_SelectedObjectsCenterPos));
+					btTransform to(ToBtQuaternion(m_SelectedObjectRotation), ToBtVec3(m_SelectedObjectsCenterPos - VEC3_UP * 10000.0f));
+					glm::vec3 pointOnGround, groundNormal;
+					if (currentScene->GetPhysicsWorld()->GetPointOnGround((btConvexShape*)collisionShape, from, to, pointOnGround, groundNormal))
+					{
+						AABB collisionAABB;
+						if (firstObject->GetCollisionAABB(collisionAABB))
+						{
+							real dPosY = pointOnGround.y - (firstObject->GetTransform()->GetWorldPosition().y + collisionAABB.minY);
+							glm::vec3 dPos(0.0f, dPosY, 0.0f);
+
+							for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+							{
+								GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+								GameObject* parent = gameObject->GetParent();
+								bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
+								if (bObjectIsntChild)
+								{
+									gameObject->GetTransform()->Translate(dPos);
+								}
+							}
+						}
+					}
+				}
+
+				return EventReply::CONSUMED;
+			}
 		}
 
 		return EventReply::UNCONSUMED;

@@ -54,7 +54,7 @@ namespace flex
 			{
 				btCollisionObject* obj = m_World->getCollisionObjectArray()[i];
 				btRigidBody* body = btRigidBody::upcast(obj);
-				if (body && body->getMotionState())
+				if (body != nullptr && body->getMotionState())
 				{
 					delete body->getMotionState();
 				}
@@ -146,7 +146,7 @@ namespace flex
 				{
 					GameObject* gameObject = static_cast<GameObject*>(body->getUserPointer());
 
-					if (gameObject && gameObject->HasTag(tag))
+					if (gameObject != nullptr && gameObject->HasTag(tag))
 					{
 						real dist2 = (pickPos - rayStart).length2();
 						if (dist2 < closestDist2)
@@ -162,6 +162,41 @@ namespace flex
 		return pickedGameObject;
 	}
 
+	bool PhysicsWorld::GetPointOnGround(const glm::vec3& startingPoint, glm::vec3& outPointOnGround)
+	{
+		btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(startingPoint), ToBtVec3(startingPoint - VEC3_UP * 10000.0f));
+		m_World->rayTest(rayCallback.m_rayFromWorld, rayCallback.m_rayToWorld, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObject);
+			if (body != nullptr)
+			{
+				outPointOnGround = ToVec3(rayCallback.m_hitPointWorld);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	bool PhysicsWorld::GetPointOnGround(const btConvexShape* shape, const btTransform& from, const btTransform& to, glm::vec3& outPointOnGround, glm::vec3& outGroundNormal)
+	{
+		btCollisionWorld::ClosestConvexResultCallback sweepCallback(from.getOrigin(), to.getOrigin());
+		m_World->convexSweepTest(shape, from, to, sweepCallback);
+		if (sweepCallback.hasHit())
+		{
+			const btRigidBody* body = btRigidBody::upcast(sweepCallback.m_hitCollisionObject);
+			if (body != nullptr)
+			{
+				outPointOnGround = ToVec3(sweepCallback.m_hitPointWorld);
+				outGroundNormal = ToVec3(sweepCallback.m_hitNormalWorld);
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	const btRigidBody* PhysicsWorld::PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd)
 	{
 		const btRigidBody* pickedBody = nullptr;
@@ -171,7 +206,7 @@ namespace flex
 		if (rayCallback.hasHit())
 		{
 			//btVector3 pickPos = rayCallback.m_hitPointWorld;
-			const btRigidBody* body = static_cast<const btRigidBody*>(btRigidBody::upcast(rayCallback.m_collisionObject));
+			const btRigidBody* body = btRigidBody::upcast(rayCallback.m_collisionObject);
 			if (body != nullptr)
 			{
 				GameObject* pickedGameObject = static_cast<GameObject*>(body->getUserPointer());
@@ -290,19 +325,19 @@ namespace flex
 
 
 	btScalar CustomContactResultCallback::addSingleResult(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap,
-			int partId0, int index0, const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1)
-		{
-			FLEX_UNUSED(cp);
-			FLEX_UNUSED(colObj0Wrap);
-			FLEX_UNUSED(partId0);
-			FLEX_UNUSED(index0);
-			FLEX_UNUSED(colObj1Wrap);
-			FLEX_UNUSED(partId1);
-			FLEX_UNUSED(index1);
+		int partId0, int index0, const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1)
+	{
+		FLEX_UNUSED(cp);
+		FLEX_UNUSED(colObj0Wrap);
+		FLEX_UNUSED(partId0);
+		FLEX_UNUSED(index0);
+		FLEX_UNUSED(colObj1Wrap);
+		FLEX_UNUSED(partId1);
+		FLEX_UNUSED(index1);
 
-			bHit = true;
+		bHit = true;
 
-			return 0.0f;
-		}
+		return 0.0f;
+	}
 } // namespace flex
 

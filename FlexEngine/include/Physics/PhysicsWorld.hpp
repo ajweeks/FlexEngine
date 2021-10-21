@@ -15,6 +15,8 @@ class btDiscreteDynamicsWorld;
 class btDynamicsWorld;
 class btRigidBody;
 class btCollisionObject;
+class btConvexShape;
+class btTransform;
 
 namespace flex
 {
@@ -38,6 +40,9 @@ namespace flex
 
 		// Returns the first body hit along the given ray with the given tag
 		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, i32 mask = (i32)CollisionType::DEFAULT);
+
+		bool GetPointOnGround(const glm::vec3& startingPoint, glm::vec3& outPointOnGround);
+		bool GetPointOnGround(const btConvexShape* shape, const btTransform& from, const btTransform& to, glm::vec3& outPointOnGround, glm::vec3& outGroundNormal);
 
 		static const u32 MAX_SUBSTEPS;
 
