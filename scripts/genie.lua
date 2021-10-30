@@ -153,7 +153,7 @@ startproject "Flex"
 
 project "Flex"
 	kind "ConsoleApp"
-	defines { "_CONSOLE", "USE_PL=1" } -- TODO: don't include palanteer in release
+	defines { "_CONSOLE", "USE_PL=0" } -- TODO: don't include palanteer in release
 	location "../build"
 	outputDirectories("FlexEngine")
 
