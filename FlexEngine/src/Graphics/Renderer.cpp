@@ -2113,7 +2113,7 @@ namespace flex
 		// PBR - WORLD SPACE
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2;
-		m_Shaders[shaderID]->maxObjectCount = 8;
+		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -2358,7 +2358,7 @@ namespace flex
 		// SSAO Blur
 		m_Shaders[shaderID]->renderPassType = RenderPassType::SSAO_BLUR;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 2;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;

@@ -173,17 +173,11 @@ namespace flex
 			UniformBuffer(const UniformBuffer&) = delete;
 			UniformBuffer& operator=(const UniformBuffer&) = delete;
 
-			UniformBuffer(const UniformBuffer&& other) :
-				buffer(other.buffer)
-			{
-				if (this != &other)
-				{
-					data = other.data;
-					fullDynamicBufferSize = other.fullDynamicBufferSize;
-					type = other.type;
-				}
-			}
+			UniformBuffer(const UniformBuffer&& other);
 			UniformBuffer& operator=(const UniformBuffer&&) = delete;
+
+			void Alloc(u32 size, u32 alignment = u32_max);
+			void Free();
 
 			VulkanBuffer buffer;
 			VulkanUniformBufferObjectData data;

@@ -468,13 +468,7 @@ namespace flex
 
 					if (dynamicAllignment > m_DynamicAlignment)
 					{
-						u32 newDynamicAllignment = 1;
-						// TODO: Use better nearest POT calculation!
-						while (newDynamicAllignment < dynamicAllignment)
-						{
-							newDynamicAllignment <<= 1;
-						}
-						m_DynamicAlignment = newDynamicAllignment;
+						m_DynamicAlignment = NextPowerOfTwo(dynamicAllignment);
 					}
 				}
 			}
@@ -1362,13 +1356,11 @@ namespace flex
 				constantBuffer->data.unitSize = shader->constantBufferUniforms.GetSizeInBytes();
 				if (constantBuffer->data.unitSize > 0)
 				{
-					free(constantBuffer->data.data);
-					constantBuffer->data.data = nullptr;
+					constantBuffer->Free();
 
 					constantBuffer->data.unitSize = GetAlignedUBOSize(constantBuffer->data.unitSize);
 
-					constantBuffer->data.data = static_cast<u8*>(malloc(constantBuffer->data.unitSize));
-					assert(constantBuffer->data.data);
+					constantBuffer->Alloc(constantBuffer->data.unitSize);
 
 					std::string bufferName = material->name + " constant uniform buffer";
 					PrepareUniformBuffer(&constantBuffer->buffer, constantBuffer->data.unitSize,
@@ -1393,12 +1385,22 @@ namespace flex
 				dynamicBuffer->data.unitSize = shader->dynamicBufferUniforms.GetSizeInBytes();
 				if (dynamicBuffer->data.unitSize > 0)
 				{
-					flex_aligned_free(dynamicBuffer->data.data);
-					dynamicBuffer->data.data = nullptr;
+					dynamicBuffer->Free();
 
 					dynamicBuffer->data.unitSize = GetAlignedUBOSize(dynamicBuffer->data.unitSize);
 
-					const u32 dynamicBufferSize = AllocateDynamicUniformBuffer(dynamicBuffer->data.unitSize, (void**)&dynamicBuffer->data.data, shader->maxObjectCount);
+					u32 uboAlignment = (u32)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
+					u32 dynamicAllignment =
+						(dynamicBuffer->data.unitSize / uboAlignment) * uboAlignment +
+						((dynamicBuffer->data.unitSize % uboAlignment) > 0 ? uboAlignment : 0);
+
+					if (dynamicAllignment > m_DynamicAlignment)
+					{
+						m_DynamicAlignment = NextPowerOfTwo(dynamicAllignment);
+					}
+
+					u32 dynamicBufferSize = m_DynamicAlignment * (shader->maxObjectCount != -1 ? shader->maxObjectCount : MAX_NUM_RENDER_OBJECTS);
+					dynamicBuffer->Alloc(dynamicBufferSize, m_DynamicAlignment);
 					dynamicBuffer->fullDynamicBufferSize = dynamicBufferSize;
 					if (dynamicBufferSize > 0)
 					{
@@ -1423,12 +1425,11 @@ namespace flex
 				PROFILE_AUTO("CreateParticleBuffer");
 
 				UniformBuffer* particleBuffer = material->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-				flex_aligned_free(particleBuffer->data.data);
-				particleBuffer->data.data = nullptr;
+				particleBuffer->Free();
 
 				particleBuffer->data.unitSize = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
 
-				particleBuffer->data.data = static_cast<u8*>(flex_aligned_malloc(particleBuffer->data.unitSize, m_DynamicAlignment));
+				particleBuffer->Alloc(particleBuffer->data.unitSize, m_DynamicAlignment);
 				// Will be copied into from staging buffer
 				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.unitSize,
 					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
@@ -1462,7 +1463,7 @@ namespace flex
 			u32 pointBufferSize = GetAlignedUBOSize(numPointsPerChunk * sizeof(glm::vec4));
 			m_Terrain->pointBufferGPU->data.unitSize = pointBufferSize;
 
-			m_Terrain->pointBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(pointBufferSize, m_DynamicAlignment));
+			m_Terrain->pointBufferGPU->Alloc(pointBufferSize, m_DynamicAlignment);
 			PrepareUniformBuffer(&m_Terrain->pointBufferGPU->buffer, pointBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -1485,7 +1486,7 @@ namespace flex
 			u32 vertBufferSize = GetAlignedUBOSize((u32)sizeof(i32) + softMaxChunkCount * maxNumTrianglesPerChunk * (u32)sizeof(TerrainVertex));
 			m_Terrain->vertexBufferGPU->data.unitSize = vertBufferSize;
 
-			m_Terrain->vertexBufferGPU->data.data = static_cast<u8*>(flex_aligned_malloc(vertBufferSize, m_DynamicAlignment));
+			m_Terrain->vertexBufferGPU->Alloc(vertBufferSize, m_DynamicAlignment);
 			PrepareUniformBuffer(&m_Terrain->vertexBufferGPU->buffer, vertBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -7271,37 +7272,6 @@ namespace flex
 			}
 		}
 
-		u32 VulkanRenderer::AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount /* = -1 */)
-		{
-			PROFILE_AUTO("AllocateDynamicUniformBuffer");
-
-			size_t uboAlignment = (size_t)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			size_t dynamicAllignment = (bufferUnitSize / uboAlignment) * uboAlignment + ((bufferUnitSize % uboAlignment) > 0 ? uboAlignment : 0);
-
-			if (dynamicAllignment > m_DynamicAlignment)
-			{
-				size_t newDynamicAllignment = 1;
-				while (newDynamicAllignment < dynamicAllignment)
-				{
-					newDynamicAllignment <<= 1;
-				}
-				m_DynamicAlignment = (u32)newDynamicAllignment;
-			}
-
-			if (maxObjectCount == -1)
-			{
-				maxObjectCount = MAX_NUM_RENDER_OBJECTS;
-			}
-
-			size_t dynamicBufferSize = (size_t)maxObjectCount * m_DynamicAlignment;
-
-			assert(*data == nullptr);
-			(*data) = flex_aligned_malloc(dynamicBufferSize, m_DynamicAlignment);
-			assert(*data);
-
-			return (u32)dynamicBufferSize;
-		}
-
 		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer,
 			u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits,
@@ -9651,6 +9621,7 @@ namespace flex
 						dataStart = &uniformOverride;
 					}
 
+					assert((dynamicOffset + index + uniformInfo.uniform->size) <= dynamicBuffer->fullDynamicBufferSize);
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.uniform->size);
 					index += uniformInfo.uniform->size;
 				}

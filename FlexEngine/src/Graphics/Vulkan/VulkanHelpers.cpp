@@ -229,6 +229,42 @@ namespace flex
 
 		UniformBuffer::~UniformBuffer()
 		{
+			Free();
+		}
+
+		UniformBuffer::UniformBuffer(const UniformBuffer&& other) :
+			buffer(other.buffer)
+		{
+			if (this != &other)
+			{
+				data = other.data;
+				fullDynamicBufferSize = other.fullDynamicBufferSize;
+				type = other.type;
+			}
+		}
+
+		void UniformBuffer::Alloc(u32 size, u32 alignment /* = u32_max */)
+		{
+			assert(data.data == nullptr);
+
+			if (type == UniformBufferType::DYNAMIC ||
+				type == UniformBufferType::PARTICLE_DATA ||
+				type == UniformBufferType::TERRAIN_POINT_BUFFER ||
+				type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
+			{
+				assert(alignment != u32_max);
+				data.data = (u8*)flex_aligned_malloc(size, alignment);
+			}
+			else
+			{
+				data.data = (u8*)malloc(size);
+			}
+
+			assert(data.data != nullptr);
+		}
+
+		void UniformBuffer::Free()
+		{
 			if (data.data != nullptr)
 			{
 				if (type == UniformBufferType::DYNAMIC ||
@@ -242,6 +278,7 @@ namespace flex
 				{
 					free(data.data);
 				}
+
 				data.data = nullptr;
 			}
 		}
