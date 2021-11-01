@@ -9598,7 +9598,7 @@ namespace flex
 					assert(uniformInfo.uniform->size != 0);
 
 					// Resize buffer is not large enough
-					if (dynamicOffset + index > dynamicBuffer->fullDynamicBufferSize)
+					if (dynamicOffset + index + uniformInfo.uniform->size > dynamicBuffer->fullDynamicBufferSize)
 					{
 						VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
 						VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
