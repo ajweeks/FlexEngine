@@ -115,7 +115,7 @@ namespace flex
 		m_SSAOSamplingData.powExp = 2.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
-		//m_ShadowSamplingData.baseBias = 0.003f;
+		m_ShadowSamplingData.baseBias = 0.002f;
 
 		m_UIMesh = new UIMesh();
 	}
@@ -3287,7 +3287,7 @@ namespace flex
 				RecreateEverything();
 			}
 
-			//ImGui::SliderFloat("Shadow bias", &m_ShadowSamplingData.baseBias, 0.0f, 0.1f);
+			ImGui::SliderFloat("Shadow bias", &m_ShadowSamplingData.baseBias, 0.0f, 0.02f);
 
 			SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
 			if (ImGui::SliderInt("Shader quality level", &specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL))

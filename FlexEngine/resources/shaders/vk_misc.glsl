@@ -68,6 +68,8 @@ struct ShadowSamplingData
 {
 	mat4 cascadeViewProjMats[NUM_CASCADES];
 	vec4 cascadeDepthSplits;
+	vec3 _pad;
+	float baseBias;
 };
 
 struct SSAOSamplingData
@@ -183,7 +185,7 @@ float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSampli
 		
 		if (transformedShadowPos.z > -1.0 && transformedShadowPos.z < 1.0)
 		{
-			float baseBias = 0.0005;
+			float baseBias = shadowSamplingData.baseBias;
 			float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
 
 			if (QUALITY_LEVEL >= 1)

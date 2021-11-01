@@ -116,8 +116,8 @@ namespace flex
 	{
 		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];
 		glm::vec4 cascadeDepthSplits;
-		//real pad[3];
-		//real baseBias;
+		real pad[3];
+		real baseBias;
 	};
 
 	// 112 bytes
