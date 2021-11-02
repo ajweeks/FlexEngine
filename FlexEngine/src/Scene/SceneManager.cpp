@@ -112,6 +112,9 @@ namespace flex
 			return false;
 		}
 
+		std::string sceneFileName = m_Scenes[sceneIndex]->GetFileName();
+		Print("Loading scene at %s\n", sceneFileName.c_str());
+
 		if (m_CurrentSceneIndex != InvalidID)
 		{
 			g_Editor->PreSceneChange();

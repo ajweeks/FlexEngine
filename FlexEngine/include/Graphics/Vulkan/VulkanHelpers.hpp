@@ -220,6 +220,8 @@ namespace flex
 			VulkanTexture& operator=(const VulkanTexture&) = delete;
 			VulkanTexture& operator=(const VulkanTexture&&) = delete;
 
+			virtual void Reload() override;
+
 			struct ImageCreateInfo
 			{
 				VkImage* image = nullptr;
@@ -315,6 +317,7 @@ namespace flex
 
 			bool SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat);
 
+			// TODO: EZ: Remove
 			void Build(void* data = nullptr);
 
 			/*

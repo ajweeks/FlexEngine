@@ -200,11 +200,12 @@ namespace flex
 		virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const = 0;
 		virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) = 0;
 
-
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
 		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
+
+		virtual void OnTextureReloaded(Texture* texture) = 0;
 
 		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 

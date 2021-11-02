@@ -4285,6 +4285,19 @@ namespace flex
 			return true;
 		}
 
+		void VulkanRenderer::OnTextureReloaded(Texture* texture)
+		{
+			FLEX_UNUSED(texture);
+
+			for (auto& iter : m_SpriteDescSets)
+			{
+				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
+				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
+			}
+
+			CreateDescriptorSets();
+		}
+
 		void VulkanRenderer::InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount)
 		{
 			PROFILE_AUTO("VulkanRenderer InitializeTerrain");

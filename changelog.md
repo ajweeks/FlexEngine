@@ -2,12 +2,32 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_November_
+
+
+_October_
+- Allow player to wear certain items (headlamp)
+- Track and optimize GPU memory usage
+- Improve startup times by lazily loading textures/materials/descriptor sets
+
+_September_ (0.8.7)
+- Display wires as simulated soft body tube
+- Refactor transform system & game loop (add fixed update)
+
+_August_
+- Show preview item placement
+- Support holding an item in each hand
+- Serialize player inventory
+
+_July_
+- Rewrite terrain generator to use marching cubes algorithm
+
 _June_
 - Replace home-brewed profiler with [palanteer](https://github.com/dfeneyrou/palanteer/)
 - Port terrain generation to GPU (async compute)
 - Make shader compilation async again
 
-_May_
+_May_ (0.8.6)
 - Begin adding support for terrain biomes & blending between
 - Add support for calling functions with arguments & non-void return types from in-game command line
 - Add support for calling C++ functions from script

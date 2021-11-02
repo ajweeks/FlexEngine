@@ -52,6 +52,9 @@ namespace flex
 		PROFILE_AUTO("ResourceManager Initialize");
 
 		m_AudioDirectoryWatcher = new DirectoryWatcher(SFX_DIRECTORY, false);
+		m_PrefabDirectoryWatcher = new DirectoryWatcher(PREFAB_DIRECTORY, false);
+		m_MeshDirectoryWatcher = new DirectoryWatcher(MESH_DIRECTORY, false);
+		m_TextureDirectoryWatcher = new DirectoryWatcher(TEXTURE_DIRECTORY, true);
 
 		DiscoverTextures();
 		DiscoverAudioFiles();
@@ -87,12 +90,36 @@ namespace flex
 			// to "file.wav". This delay prevents us from trying to load the temporary file.
 			m_AudioRefreshFrameCountdown = 1;
 		}
+
+		if (m_PrefabDirectoryWatcher->Update())
+		{
+			DiscoverPrefabs();
+		}
+
+		if (m_MeshDirectoryWatcher->Update())
+		{
+			DiscoverMeshes();
+		}
+
+		if (m_TextureDirectoryWatcher->Update())
+		{
+			DiscoverTextures();
+		}
 	}
 
 	void ResourceManager::Destroy()
 	{
 		delete m_AudioDirectoryWatcher;
 		m_AudioDirectoryWatcher = nullptr;
+
+		delete m_PrefabDirectoryWatcher;
+		m_PrefabDirectoryWatcher = nullptr;
+
+		delete m_MeshDirectoryWatcher;
+		m_MeshDirectoryWatcher = nullptr;
+
+		delete m_TextureDirectoryWatcher;
+		m_TextureDirectoryWatcher = nullptr;
 
 		for (BitmapFont* font : fontsScreenSpace)
 		{
@@ -159,10 +186,10 @@ namespace flex
 		}
 	}
 
-	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath)
+	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath, bool bForceReload /* = false */)
 	{
 		LoadedMesh* result = nullptr;
-		if (!FindPreLoadedMesh(relativeFilePath, &result))
+		if (bForceReload || !FindPreLoadedMesh(relativeFilePath, &result))
 		{
 			// Mesh hasn't been loaded before, load it now
 			result = Mesh::LoadMesh(relativeFilePath);
@@ -180,14 +207,36 @@ namespace flex
 		std::vector<std::string> filePaths;
 		if (Platform::FindFilesInDirectory(MESH_DIRECTORY, filePaths, "*"))
 		{
+			i32 modifiedFileCount = 0;
 			for (const std::string& filePath : filePaths)
 			{
 				std::string fileName = StripLeadingDirectories(filePath);
-				if (MeshFileNameConforms(filePath) && !Contains(discoveredMeshes, fileName))
+				if (MeshFileNameConforms(filePath))
 				{
-					// TODO: Support storing meshes in child directories
-					discoveredMeshes.push_back(fileName);
+					if (Contains(discoveredMeshes, fileName))
+					{
+						// Existing mesh
+
+						if (Contains(m_MeshDirectoryWatcher->modifiedFilePaths, filePath))
+						{
+							// File has been modified, update all usages
+							g_SceneManager->CurrentScene()->OnExternalMeshChange(filePath);
+							++modifiedFileCount;
+						}
+					}
+					else
+					{
+						// Newly discovered mesh
+
+						// TODO: Support storing meshes in child directories
+						discoveredMeshes.push_back(fileName);
+					}
 				}
+			}
+
+			if (modifiedFileCount > 0)
+			{
+				Print("Found and re-imported %d modified mesh%s\n", modifiedFileCount, modifiedFileCount > 1 ? "es" : "");
 			}
 		}
 	}
@@ -322,17 +371,17 @@ namespace flex
 		{
 			if (modifiedCount != 0)
 			{
-				Print("%d audio file%s modified\n", modifiedCount, modifiedCount > 0 ? "s" : "");
+				Print("%d audio file%s modified\n", modifiedCount, modifiedCount > 1 ? "s" : "");
 			}
 
 			if (addedCount != 0)
 			{
-				Print("%d audio file%s added\n", addedCount, addedCount > 0 ? "s" : "");
+				Print("%d audio file%s added\n", addedCount, addedCount > 1 ? "s" : "");
 			}
 
 			if (removedCount != 0)
 			{
-				Print("%d audio file%s removed\n", removedCount, removedCount > 0 ? "s" : "");
+				Print("%d audio file%s removed\n", removedCount, removedCount > 1 ? "s" : "");
 			}
 		}
 	}
@@ -367,10 +416,10 @@ namespace flex
 		{
 			icons.clear();
 
-			std::vector<std::string> foundFiles;
-			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
+			std::vector<std::string> foundIconFiles;
+			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundIconFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
 			{
-				for (const std::string& foundFilePath : foundFiles)
+				for (const std::string& foundFilePath : foundIconFiles)
 				{
 					std::string trimmedFileName = RelativePathToAbsolute(foundFilePath);
 					trimmedFileName = StripLeadingDirectories(StripFileType(foundFilePath));
@@ -381,6 +430,34 @@ namespace flex
 					trimmedFileName = Replace(trimmedFileName, '-', ' ');
 					StringID gameObjectTypeID = Hash(trimmedFileName.c_str());
 					icons.emplace_back(Pair<StringID, Pair<std::string, TextureID>>{ gameObjectTypeID, { foundFilePath, InvalidTextureID } });
+				}
+			}
+		}
+
+		{
+			std::vector<std::string> foundFiles;
+			if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
+			{
+				i32 modifiedTextureCount = 0;
+				for (const std::string& foundFilePath : foundFiles)
+				{
+					if (Contains(m_TextureDirectoryWatcher->modifiedFilePaths, foundFilePath))
+					{
+						for (Texture* tex : loadedTextures)
+						{
+							// File has been modified externally, reload its contents
+							if (tex->relativeFilePath == foundFilePath)
+							{
+								tex->Reload();
+								++modifiedTextureCount;
+							}
+						}
+					}
+				}
+
+				if (modifiedTextureCount > 0)
+				{
+					Print("Found and re-imported %d modified texture%s\n", modifiedTextureCount, modifiedTextureCount > 1 ? "s" : "");
 				}
 			}
 		}

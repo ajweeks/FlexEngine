@@ -264,7 +264,7 @@ namespace flex
 		return true;
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter)
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse /* = false */)
 	{
 		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
@@ -276,100 +276,71 @@ namespace flex
 		}
 
 		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
 
-		WIN32_FIND_DATAA findData;
-		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
-
-		if (hFind == INVALID_HANDLE_VALUE)
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
 		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		do
-		{
-			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if (cleanedFileTypeFilter == "*")
 			{
-				// Skip over directories
-				//Print(findData.cFileName);
+				return true;
 			}
 			else
 			{
-				bool bFoundFileTypeMatches = false;
-				if (cleanedFileTypeFilter == "*")
-				{
-					bFoundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileNameStr(findData.cFileName);
-					std::string fileType = ExtractFileType(fileNameStr);
-					if (fileType == cleanedFileTypeFilter)
-					{
-						bFoundFileTypeMatches = true;
-					}
-				}
-
-				if (bFoundFileTypeMatches)
-				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
-				}
+				std::string fileType = ExtractFileType(fileNameStr);
+				return fileType == cleanedFileTypeFilter;
 			}
-		} while (FindNextFile(hFind, &findData) != 0);
-
-		FindClose(hFind);
-
-		DWORD dwError = GetLastError();
-		if (dwError != ERROR_NO_MORE_FILES)
-		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
+		}, bRecurse);
 
 		return !filePaths.empty();
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen, bool bRecurse /* = false */)
 	{
 		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
-
 		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
+		{
+			std::string fileType = ExtractFileType(fileNameStr);
+			return Contains(fileTypes, fileTypesLen, fileType.c_str());
+		}, bRecurse);
+
+		return !filePaths.empty();
+	}
+
+	// Returns true if search succeeded
+	bool Platform::FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse)
+	{
+		std::string cleanedDirPathWithWildCard = directoryPath + '*';
 
 		WIN32_FIND_DATAA findData;
 		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			PrintError("Failed to find any file in directory %s\n", directoryPath.c_str());
 			return false;
 		}
 
 		do
 		{
-			if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			std::string fileNameStr(findData.cFileName);
+
+			if (fileNameStr != "." && fileNameStr != "..")
 			{
-				bool bFoundFileTypeMatches = false;
-
-				std::string fileNameStr(findData.cFileName);
-				std::string fileType = ExtractFileType(fileNameStr);
-				if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+				if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 				{
-					bFoundFileTypeMatches = true;
+					if (bRecurse)
+					{
+						// Recurse into directory
+						FindFilesInDirectoryInternal(directoryPath + fileNameStr + "/", filePaths, fileTypeFilter, bRecurse);
+					}
 				}
-
-				if (bFoundFileTypeMatches)
+				else
 				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
+					if (fileTypeFilter(fileNameStr))
+					{
+						filePaths.push_back(directoryPath + fileNameStr);
+					}
 				}
 			}
 		} while (FindNextFile(hFind, &findData) != 0);
@@ -379,11 +350,11 @@ namespace flex
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
 		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			PrintError("Error encountered while finding files in directory %s\n", directoryPath.c_str());
 			return false;
 		}
 
-		return !filePaths.empty();
+		return true;
 	}
 
 	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
@@ -705,7 +676,7 @@ namespace flex
 			m_bInstalled = true;
 
 			std::vector<std::string> directoryFilePaths;
-			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*"))
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*", m_bWatchSubtree))
 			{
 				for (const std::string& filePath : directoryFilePaths)
 				{
@@ -745,7 +716,7 @@ namespace flex
 
 			modifiedFilePaths.clear();
 			std::vector<std::string> directoryFilePaths;
-			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*"))
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*", m_bWatchSubtree))
 			{
 				for (const std::string& filePath : directoryFilePaths)
 				{

@@ -337,6 +337,16 @@ namespace flex
 		{
 		}
 
+		void VulkanTexture::Reload()
+		{
+			if (!fileName.empty())
+			{
+				CreateFromFile(relativeFilePath, imageFormat, mipLevels > 1);
+
+				g_Renderer->OnTextureReloaded(this);
+			}
+		}
+
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
 			VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{

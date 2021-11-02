@@ -98,7 +98,10 @@ namespace flex
 
 			if (FileExists(filePath))
 			{
-				LoadFromFile(filePath);
+				if (!LoadFromFile(filePath))
+				{
+					CreateBlank(filePath);
+				}
 			}
 			else
 			{
@@ -345,11 +348,6 @@ namespace flex
 		if (!FileExists(filePath))
 		{
 			return false;
-		}
-
-		if (g_bEnableLogging_Loading)
-		{
-			Print("Loading scene from %s\n", filePath.c_str());
 		}
 
 		JSONObject sceneRootObject;
@@ -1915,6 +1913,14 @@ namespace flex
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->Regenerate();
+		}
+	}
+
+	void BaseScene::OnExternalMeshChange(const std::string& meshFilePath)
+	{
+		for (u32 i = 0; i < (u32)m_RootObjects.size(); ++i)
+		{
+			m_RootObjects[i]->OnExternalMeshChange(meshFilePath);
 		}
 	}
 

@@ -582,7 +582,7 @@ namespace flex
 		Texture& operator=(const Texture&) = delete;
 		Texture& operator=(const Texture&&) = delete;
 
-		// TODO: Add Reload
+		virtual void Reload() = 0;
 
 		u32 width = 0;
 		u32 height = 0;

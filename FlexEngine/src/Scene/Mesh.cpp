@@ -447,6 +447,14 @@ namespace flex
 		return m_OwningGameObject;
 	}
 
+	void Mesh::OnExternalMeshChange(const std::string& meshFilePath)
+	{
+		if (meshFilePath == m_RelativeFilePath)
+		{
+			Reload();
+		}
+	}
+
 	void Mesh::SetOwner(GameObject* owner)
 	{
 		m_OwningGameObject = owner;

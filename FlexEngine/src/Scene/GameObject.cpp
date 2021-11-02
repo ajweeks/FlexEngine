@@ -2646,6 +2646,14 @@ namespace flex
 		return m_CollisionShape;
 	}
 
+	void GameObject::OnExternalMeshChange(const std::string& meshFilePath)
+	{
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->OnExternalMeshChange(meshFilePath);
+		}
+	}
+
 	bool GameObject::GetCollisionAABB(AABB& outAABB)
 	{
 		if (m_CollisionShape != nullptr)
@@ -6269,7 +6277,7 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("update speed", JSONValue(updateSpeed));
 
 		gerstnerWaveObj.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
-		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(m_PinnedPos));
+		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(m_PinnedPos, 2));
 
 		gerstnerWaveObj.fields.emplace_back("blend dist", JSONValue(blendDist));
 
@@ -6293,9 +6301,9 @@ namespace flex
 		}
 		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
 
-		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f))));
-		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f))));
-		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f))));
+		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)), 2));
+		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)), 2));
+		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)), 2));
 		gerstnerWaveObj.fields.emplace_back("fresnel factor", JSONValue(oceanData.fresnelFactor));
 		gerstnerWaveObj.fields.emplace_back("fresnel power", JSONValue(oceanData.fresnelPower));
 		gerstnerWaveObj.fields.emplace_back("sky reflection factor", JSONValue(oceanData.skyReflectionFactor));
@@ -9318,12 +9326,12 @@ namespace flex
 
 		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
 
-		chunkGenInfo.fields.emplace_back("low colour", JSONValue(m_LowCol));
-		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(m_MidCol));
-		chunkGenInfo.fields.emplace_back("high colour", JSONValue(m_HighCol));
+		chunkGenInfo.fields.emplace_back("low colour", JSONValue(m_LowCol, 2));
+		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(m_MidCol, 2));
+		chunkGenInfo.fields.emplace_back("high colour", JSONValue(m_HighCol, 2));
 
 		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
-		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(m_PinnedPos));
+		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(m_PinnedPos, 2));
 
 		std::vector<JSONObject> biomesArr;
 		for (const Biome& biome : m_Biomes)

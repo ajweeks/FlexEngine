@@ -173,6 +173,8 @@ namespace flex
 
 		void RegenerateTerrain();
 
+		void OnExternalMeshChange(const std::string& meshFilePath);
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static const i32 LATEST_SCENE_FILE_VERSION = 6;

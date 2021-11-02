@@ -99,6 +99,9 @@ namespace flex
 
 		GameObject* GetOwningGameObject() const;
 
+		// Gets called when any mesh file gets modified
+		void OnExternalMeshChange(const std::string& meshFilePath);
+
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath);
 
 		glm::vec3 m_MinPoint;

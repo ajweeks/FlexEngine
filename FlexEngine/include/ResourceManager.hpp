@@ -42,7 +42,7 @@ namespace flex
 
 		// Returns true if found and *loadedMesh was set
 		bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath);
+		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath, bool bForceReload = false);
 
 		bool MeshFileNameConforms(const std::string& fileName);
 
@@ -188,6 +188,9 @@ namespace flex
 
 		DirectoryWatcher* m_AudioDirectoryWatcher = nullptr;
 		i32 m_AudioRefreshFrameCountdown = -1; // When non-negative, counts down each frame until refresh is applied
+		DirectoryWatcher* m_PrefabDirectoryWatcher = nullptr;
+		DirectoryWatcher* m_MeshDirectoryWatcher = nullptr;
+		DirectoryWatcher* m_TextureDirectoryWatcher = nullptr;
 
 		std::map<StringID, u32> m_NonDefaultStackSizes;
 

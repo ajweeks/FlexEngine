@@ -126,8 +126,6 @@ namespace flex
 
 			virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) override;
 
-			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
-
 			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount) override;
 			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, u32 maxChunkCount) override;
 			virtual void RegisterTerrainChunk(const glm::ivec3& chunkIndex, u32 linearIndex) override;
@@ -135,6 +133,10 @@ namespace flex
 			virtual u32 GetCurrentTerrainChunkCapacity() const;
 			virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const override;
 			virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) override;
+
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
+
+			virtual void OnTextureReloaded(Texture* texture) override;
 
 			VulkanDevice* GetDevice();
 

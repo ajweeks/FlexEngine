@@ -295,70 +295,36 @@ namespace flex
 		return false;
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	// TODO: Test!
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse /* = false */)
 	{
-		std::string cleanedFileType = fileType;
+		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
-			size_t dotPos = cleanedFileType.find('.');
+			size_t dotPos = cleanedFileTypeFilter.find('.');
 			if (dotPos != std::string::npos)
 			{
-				cleanedFileType.erase(dotPos, 1);
+				cleanedFileTypeFilter.erase(dotPos, 1);
 			}
 		}
 
-		std::string cleanedDirPath = directoryPath;
-		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
 		{
-			cleanedDirPath += '/';
-		}
-
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
-
-		struct dirent *ent;
-		DIR *dir = opendir(cleanedDirPath.c_str());
-		if (dir != NULL)
-		{
-			/* print all the files and directories within directory */
-			while ((ent = readdir(dir)) != NULL)
+			if (cleanedFileTypeFilter == "*")
 			{
-				std::string fileNameStr(ent->d_name);
-				bool bFoundFileTypeMatches = false;
-				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
-				{
-					bFoundFileTypeMatches = false;
-				}
-				else if (cleanedFileType == "*")
-				{
-					bFoundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileType = ExtractFileType(fileNameStr);
-
-					if (fileType == cleanedFileType)
-					{
-						bFoundFileTypeMatches = true;
-					}
-				}
-
-				if (bFoundFileTypeMatches)
-				{
-					filePaths.push_back(cleanedDirPath + fileNameStr);
-				}
+				return true;
 			}
-			closedir(dir);
-		}
-		else
-		{
-			/* could not open directory */
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
+			else
+			{
+				std::string fileType = ExtractFileType(fileNameStr);
+				return fileType == cleanedFileTypeFilter;
+			}
+		}, bRecurse);
 
 		return !filePaths.empty();
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	// TODO: Test!
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen, bool bRecurse /* = false */)
 	{
 		std::string cleanedDirPath = directoryPath;
 		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
@@ -366,45 +332,65 @@ namespace flex
 			cleanedDirPath += '/';
 		}
 
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
+		{
+			std::string fileType = ExtractFileType(fileNameStr);
+			return Contains(fileTypes, fileTypesLen, fileType.c_str());
+		}, bRecurse);
+
+		return !filePaths.empty();
+	}
+
+	// Returns true if search succeeded
+	bool Platform::FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse)
+	{
+		std::string cleanedDirPathWithWildCard = directoryPath + '*';
 
 		struct dirent* ent;
 		DIR* dir = opendir(cleanedDirPath.c_str());
 		if (dir != NULL)
 		{
-			/* print all the files and directories within directory */
+			// Iterate over all files and directories within directory
 			while ((ent = readdir(dir)) != NULL)
 			{
 				std::string fileNameStr(ent->d_name);
-				bool bFoundFileTypeMatches = false;
-				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
+				if (fileNameStr != "." && fileNameStr != "..")
 				{
-					bFoundFileTypeMatches = false;
-				}
-				else
-				{
-					std::string fileType = ExtractFileType(fileNameStr);
-					if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+					if (readdir(dir) != NULL)
 					{
-						bFoundFileTypeMatches = true;
+						if (bRecurse)
+						{
+							// Recurse into directory
+							FindFilesInDirectoryInternal(directoryPath + fileNameStr + "/", filePaths, fileTypeFilter, bRecurse);
+						}
+					}
+					else
+					{
+						if (fileTypeFilter(fileNameStr))
+						{
+							filePaths.push_back(directoryPath + fileNameStr);
+						}
 					}
 				}
-
-				if (bFoundFileTypeMatches)
-				{
-					filePaths.push_back(cleanedDirPath + fileNameStr);
-				}
 			}
+
 			closedir(dir);
 		}
 		else
 		{
-			/* could not open directory */
+			// Could not open directory
 			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
 			return false;
 		}
 
-		return !filePaths.empty();
+		DWORD dwError = GetLastError();
+		if (dwError != ERROR_NO_MORE_FILES)
+		{
+			PrintError("Error encountered while finding files in directory %s\n", directoryPath.c_str());
+			return false;
+		}
+
+		return true;
 	}
 
 	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
@@ -587,7 +573,7 @@ namespace flex
 
 		if (index >= (u32)mutexes.size())
 		{
-			mutexes.resize((u32)((index+1) * 1.5f));
+			mutexes.resize((u32)((index + 1) * 1.5f));
 		}
 
 		mutexes[index] = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -640,6 +626,7 @@ namespace flex
 
 	bool DirectoryWatcher::Update()
 	{
+		// TODO: Unimplemented
 		return false;
 	}
 
@@ -647,6 +634,5 @@ namespace flex
 	{
 		return m_bInstalled;
 	}
-
 } // namespace flex
 #endif // linux
