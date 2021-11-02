@@ -2896,7 +2896,7 @@ namespace flex
 						{
 							mesh->Destroy();
 							mesh->SetOwner(owningGameObject);
-							mesh->LoadFromFile(relativeMeshFilePath, mesh->GetMaterialIDs(), false);
+							mesh->LoadFromFile(relativeMeshFilePath, mesh->GetMaterialIDs());
 						}
 					}
 				}

@@ -459,7 +459,7 @@ namespace flex
 
 				if (newValue.type != fieldType1)
 				{
-					s_ErrorStr = "Mismatched types found in array";
+					s_ErrorStr = "Mismatched types found in array " + fieldName;
 					return false;
 				}
 
@@ -497,7 +497,7 @@ namespace flex
 
 			if (newValue.type != fieldType)
 			{
-				s_ErrorStr = "Mismatched types found in array";
+				s_ErrorStr = "Mismatched types found in array " + fieldName;
 				return false;
 			}
 

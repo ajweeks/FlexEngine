@@ -54,21 +54,21 @@ namespace flex
 		static MeshComponent* LoadFromCGLTF(Mesh* owningMesh,
 			cgltf_primitive* primitive,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromCGLTFDynamic(Mesh* owningMesh,
 			cgltf_primitive* primitive,
 			MaterialID materialID,
 			u32 initialMaxVertexCount = u32_max,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true);
 
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 			const std::vector<u32>& indices,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true,
 			i32* outSubmeshIndex = nullptr);
 
@@ -77,18 +77,18 @@ namespace flex
 			const std::vector<u32>& indices,
 			MaterialID materialID,
 			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true,
 			i32* outSubmeshIndex = nullptr);
 
 		bool LoadPrefabShape(PrefabShape shape,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
 			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr);
 
 		MaterialID GetMaterialID() const;
 		void SetMaterialID(MaterialID materialID);
@@ -130,7 +130,7 @@ namespace flex
 			MaterialID materialID,
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 			bool bCreateRenderObject,
 			i32* outSubmeshIndex);
 
@@ -139,7 +139,7 @@ namespace flex
 			MaterialID materialID,
 			bool bDynamic,
 			u32 initialMaxDynamicVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 			bool bCreateRenderObject);
 
 		real CalculateBoundingSphereScale() const;

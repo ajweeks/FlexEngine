@@ -155,10 +155,10 @@ namespace flex
 		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalRenderObjectCreateInfo, bCreateRenderObject);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(
@@ -166,10 +166,10 @@ namespace flex
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		u32 initialMaxVertexCount /* = u32_max */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalRenderObjectCreateInfo, bCreateRenderObject);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFInternal(
@@ -178,7 +178,7 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 		bool bCreateRenderObject)
 	{
 		if (primitive->indices == nullptr)
@@ -418,9 +418,9 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
@@ -450,11 +450,11 @@ namespace flex
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */,
 		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalRenderObjectCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
@@ -463,11 +463,11 @@ namespace flex
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */,
 		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalRenderObjectCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryInternal(
@@ -477,7 +477,7 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 		bool bCreateRenderObject,
 		i32* outSubmeshIndex)
 	{
@@ -496,9 +496,9 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
@@ -534,7 +534,7 @@ namespace flex
 
 	bool MeshComponent::LoadPrefabShape(
 		PrefabShape shape,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
 		if (m_bInitialized)
@@ -549,9 +549,9 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningMesh->GetOwningGameObject();
@@ -1094,7 +1094,7 @@ namespace flex
 	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount,
 		VertexAttributes attributes,
 		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */)
 	{
 		assert(m_VertexBufferData.vertexData == nullptr);
 
@@ -1102,9 +1102,9 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningMesh->GetOwningGameObject();

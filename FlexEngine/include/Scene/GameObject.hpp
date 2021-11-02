@@ -271,6 +271,9 @@ namespace flex
 		Mesh* GetMesh();
 		Mesh* SetMesh(Mesh* mesh);
 
+		// Editor-only
+		void OnExternalMeshChange(const std::string& meshFilePath);
+
 		bool CastsShadow() const;
 		void SetCastsShadow(bool bCastsShadow);
 

@@ -2006,7 +2006,11 @@ namespace flex
 				case Mesh::Type::FILE:
 				{
 					std::string filePath = m_Mesh->GetRelativeFilePath();
-					newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject);
+					Mesh::CreateInfo meshCreateInfo = {};
+					meshCreateInfo.relativeFilePath = filePath;
+					meshCreateInfo.materialIDs = matIDs;
+					meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
+					newMesh->LoadFromFile(meshCreateInfo);
 				} break;
 				default:
 				{
@@ -2803,7 +2807,11 @@ namespace flex
 		{
 			Mesh* valveMesh = new Mesh(this);
 			bool bCreateRenderObject = !m_bIsTemplate;
-			valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs.empty() ? g_Renderer->GetPlaceholderMaterialID() : matIDs[0], false, bCreateRenderObject);
+			Mesh::CreateInfo meshCreateInfo = {};
+			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "valve.glb";
+			meshCreateInfo.materialIDs = { matIDs.empty() ? g_Renderer->GetPlaceholderMaterialID() : matIDs[0] };
+			meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
+			valveMesh->LoadFromFile(meshCreateInfo);
 			assert(m_Mesh == nullptr);
 			SetMesh(valveMesh);
 		}
@@ -4293,9 +4301,11 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		std::string meshFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
-		bool bCreateRenderObject = !bPrefabTemplate;
-		if (!mesh->LoadFromFile(meshFilePath, matID, false, bCreateRenderObject))
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.relativeFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
+		meshCreateInfo.materialIDs = { matID };
+		meshCreateInfo.bCreateRenderObject = !bPrefabTemplate;
+		if (!mesh->LoadFromFile(meshCreateInfo))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
@@ -4946,8 +4956,13 @@ namespace flex
 		UpdateWaveVertexData();
 
 		SetMesh(new Mesh(this));
-
-		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_VertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { m_WaveMaterialID };
+		meshCreateInfo.initialMaxVertexCount = (u32)m_VertexBufferCreateInfo.positions_3D.size();
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		GameObject::Initialize();
 	}
@@ -6123,6 +6138,7 @@ namespace flex
 	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
+		FLEX_UNUSED(scene);
 
 		JSONObject gerstnerWaveObj;
 		if (parentObject.TryGetObject("gerstner wave", gerstnerWaveObj))
@@ -6151,50 +6167,55 @@ namespace flex
 
 			gerstnerWaveObj.TryGetFloat("blend dist", blendDist);
 
-			std::vector<JSONField> waveSamplingLODsArrObj;
-			if (gerstnerWaveObj.TryGetFieldArray("wave sampling lods", waveSamplingLODsArrObj))
+			std::vector<JSONObject> waveSamplingLODsArrObj;
+			if (gerstnerWaveObj.TryGetObjectArray("wave sampling lods", waveSamplingLODsArrObj))
 			{
 				waveSamplingLODs.clear();
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
 				{
-					std::string samplingPropertyList = waveSamplingLODsArrObj[i].value.AsString();
-					std::vector<std::string> strParts = Split(samplingPropertyList, ',');
-					if (strParts.size() != 2)
-					{
-						std::string sceneName = scene->GetFileName();
-						PrintError("Invalid wave sampling LOD cutoff pair (%s) in scene %s\n", samplingPropertyList.c_str(), sceneName.c_str());
-						continue;
-					}
-					// TODO: Store as array of objects
-					real dist = (real)atof(strParts[0].c_str());
-					real amplitude = (real)atof(strParts[1].c_str());
-					waveSamplingLODs.emplace_back(dist, amplitude);
+					real sqrDist;
+					waveSamplingLODsArrObj[i].TryGetFloat("square dist", sqrDist);
+					real amplitude;
+					waveSamplingLODsArrObj[i].TryGetFloat("amplitude cutoff", amplitude);
+
+					waveSamplingLODs.emplace_back(sqrDist, amplitude);
 				}
 
 				SortWaveSamplingLODs();
 			}
+			else
+			{
+				// Set good default value
+				waveSamplingLODs.clear();
+				waveSamplingLODs.reserve(1);
+				waveSamplingLODs.emplace_back(35721.0f, 0.0f);
+			}
 
-			std::vector<JSONField> waveTessellationLODsArrObj;
-			if (gerstnerWaveObj.TryGetFieldArray("wave tessellation lods", waveTessellationLODsArrObj))
+			std::vector<JSONObject> waveTessellationLODsArrObj;
+			if (gerstnerWaveObj.TryGetObjectArray("wave tessellation lods", waveTessellationLODsArrObj))
 			{
 				waveTessellationLODs.clear();
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
 				{
-					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].value.AsString();
-					std::vector<std::string> strParts = Split(tessellationPropertyList, ',');
-					if (strParts.size() != 2)
-					{
-						std::string sceneName = scene->GetFileName();
-						PrintError("Invalid wave tessellation LOD cutoff pair (%s) in scene %s\n", tessellationPropertyList.c_str(), sceneName.c_str());
-						continue;
-					}
-					// TODO: Store as array of objects
-					real sqrDist = (real)atof(strParts[0].c_str());
-					u32 vertCount = (u32)atoi(strParts[1].c_str());
+					real sqrDist;
+					waveTessellationLODsArrObj[i].TryGetFloat("square dist", sqrDist);
+					u32 vertCount;
+					waveTessellationLODsArrObj[i].TryGetUInt("vert count per axis", vertCount);
+
 					waveTessellationLODs.emplace_back(sqrDist, vertCount);
 				}
+			}
+			else
+			{
+				// Set good default value
+				waveTessellationLODs.clear();
+				waveTessellationLODs.reserve(4);
+				waveTessellationLODs.emplace_back(37636.0f, 8);
+				waveTessellationLODs.emplace_back(14438.9f, 28);
+				waveTessellationLODs.emplace_back(4116.8f, 52);
+				waveTessellationLODs.emplace_back(0.0f, 80);
 			}
 
 			if (gerstnerWaveObj.TryGetVec4("colour top", oceanData.top))
@@ -6252,17 +6273,23 @@ namespace flex
 
 		gerstnerWaveObj.fields.emplace_back("blend dist", JSONValue(blendDist));
 
-		std::vector<JSONField> waveSamplingLODsArrObj(waveSamplingLODs.size());
+		std::vector<JSONObject> waveSamplingLODsArrObj(waveSamplingLODs.size());
 		for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
 		{
-			waveSamplingLODsArrObj[i] = JSONField(FloatToString(waveSamplingLODs[i].squareDist, 1) + "," + FloatToString(waveSamplingLODs[i].amplitudeCutoff, 6), JSONValue(0));
+			JSONObject samplingLOD = {};
+			samplingLOD.fields.emplace_back("square dist", JSONValue(waveSamplingLODs[i].squareDist, 1));
+			samplingLOD.fields.emplace_back("amplitude cutoff", JSONValue(waveSamplingLODs[i].amplitudeCutoff));
+			waveSamplingLODsArrObj[i] = samplingLOD;
 		}
 		gerstnerWaveObj.fields.emplace_back("wave sampling lods", JSONValue(waveSamplingLODsArrObj));
 
-		std::vector<JSONField> waveTessellationLODsArrObj(waveTessellationLODs.size());
+		std::vector<JSONObject> waveTessellationLODsArrObj(waveTessellationLODs.size());
 		for (u32 i = 0; i < (u32)waveTessellationLODs.size(); ++i)
 		{
-			waveTessellationLODsArrObj[i] = JSONField(FloatToString(waveTessellationLODs[i].squareDist, 1) + "," + IntToString(waveTessellationLODs[i].vertCountPerAxis), JSONValue(0));
+			JSONObject tessellationLOD = {};
+			tessellationLOD.fields.emplace_back("square dist", JSONValue(waveTessellationLODs[i].squareDist, 1));
+			tessellationLOD.fields.emplace_back("vert count per axis", JSONValue(waveTessellationLODs[i].vertCountPerAxis));
+			waveTessellationLODsArrObj[i] = tessellationLOD;
 		}
 		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
 
@@ -6423,8 +6450,13 @@ namespace flex
 		UpdateIndices();
 
 		SetMesh(new Mesh(this));
-		u32 maxInitialVertCount = numRadialPoints * numPoints;
-		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, wireMatID, maxInitialVertCount);
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_VertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { wireMatID };
+		meshCreateInfo.initialMaxVertexCount = numRadialPoints * numPoints;
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		UpdateMesh();
 
@@ -10678,7 +10710,13 @@ namespace flex
 
 		m_Mesh = new Mesh(m_OriginTransform);
 		m_Indices = m_ExtendedMesh->GetIndexBufferCopy();
-		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, s_SpringMatID, vertCount);
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_DynamicVertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { s_SpringMatID };
+		meshCreateInfo.initialMaxVertexCount = vertCount;
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
 		m_DynamicVertexBufferCreateInfo.texCoords_UV.resize(vertCount);
@@ -11445,9 +11483,16 @@ namespace flex
 		}
 
 		m_Mesh = new Mesh(this);
+
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.cullFace = CullFace::NONE;
-		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, true, &renderObjectCreateInfo))
+
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.relativeFilePath = m_CurrentMeshFilePath;
+		meshCreateInfo.materialIDs = { m_MeshMaterialID };
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.optionalRenderObjectCreateInfo = &renderObjectCreateInfo;
+		if (!m_Mesh->LoadFromFile(meshCreateInfo))
 		{
 			PrintError("Failed to load mesh\n");
 			m_Mesh->Destroy();

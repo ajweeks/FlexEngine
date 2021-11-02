@@ -61,7 +61,7 @@
 			"directional light info" : 
 			{
 				"rotation" : "0.452, 0.399, -0.598, 0.527",
-				"pos" : "0.638, 20.078, -1.444",
+				"pos" : "0.638,20.078,-1.444",
 				"colour" : "1.00, 1.00, 1.00",
 				"enabled" : true,
 				"brightness" : 2.578000,
@@ -133,22 +133,37 @@
 				"chunk load radius" : 674.239990,
 				"update speed" : 19.700001,
 				"pin center" : true,
-				"pinned center position" : "4.08, 8.98, 2.91",
+				"pinned center position" : "4.08,8.98,2.91",
 				"blend dist" : 18.229000,
 				"wave sampling lods" : 
 				[
-					"35721.0,0.000000"
+					{
+						"square dist" : 35721.0,
+						"amplitude cutoff" : 0.000000
+					}
 				],
 				"wave tessellation lods" : 
 				[
-					"37636.0,8",
-					"14438.9,28",
-					"4116.8,52",
-					"0.0,80"
+					{
+						"square dist" : 37636.0,
+						"vert count per axis" : 8
+					},
+					{
+						"square dist" : 14438.9,
+						"vert count per axis" : 28
+					},
+					{
+						"square dist" : 4116.8,
+						"vert count per axis" : 52
+					},
+					{
+						"square dist" : 0.0,
+						"vert count per axis" : 80
+					}
 				],
-				"colour top" : "1.00, 1.00, 1.00, 0.00",
-				"colour mid" : "1.00, 1.00, 1.00, 0.00",
-				"colour btm" : "0.01, 0.06, 0.11, 0.00",
+				"colour top" : "1.00,1.00,1.00,0.00",
+				"colour mid" : "1.00,1.00,1.00,0.00",
+				"colour btm" : "0.01,0.06,0.11,0.00",
 				"fresnel factor" : 1.000000,
 				"fresnel power" : 6.380000,
 				"sky reflection factor" : 0.177000,
@@ -168,8 +183,8 @@
 			"casts shadow" : true,
 			"point light info" : 
 			{
-				"pos" : "0.000, 26.277, -16.438",
-				"colour" : "1.00, 1.00, 1.00",
+				"pos" : "0.000,26.277,-16.438",
+				"colour" : "1.00,1.00,1.00",
 				"enabled" : false,
 				"brightness" : 500.000000
 			}
@@ -186,8 +201,8 @@
 			"casts shadow" : true,
 			"point light info" : 
 			{
-				"pos" : "0.000, 21.528, 14.364",
-				"colour" : "1.00, 1.00, 1.00",
+				"pos" : "0.000,21.528,14.364",
+				"colour" : "1.00,1.00,1.00",
 				"enabled" : false,
 				"brightness" : 500.000000
 			}
