@@ -298,6 +298,12 @@ namespace flex
 	// TODO: Test!
 	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse /* = false */)
 	{
+		std::string cleanedDirPath = directoryPath;
+		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
+		{
+			cleanedDirPath += '/';
+		}
+
 		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
 			size_t dotPos = cleanedFileTypeFilter.find('.');
@@ -344,10 +350,8 @@ namespace flex
 	// Returns true if search succeeded
 	bool Platform::FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse)
 	{
-		std::string cleanedDirPathWithWildCard = directoryPath + '*';
-
 		struct dirent* ent;
-		DIR* dir = opendir(cleanedDirPath.c_str());
+		DIR* dir = opendir(directoryPath.c_str());
 		if (dir != NULL)
 		{
 			// Iterate over all files and directories within directory
@@ -379,13 +383,6 @@ namespace flex
 		else
 		{
 			// Could not open directory
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		DWORD dwError = GetLastError();
-		if (dwError != ERROR_NO_MORE_FILES)
-		{
 			PrintError("Error encountered while finding files in directory %s\n", directoryPath.c_str());
 			return false;
 		}
