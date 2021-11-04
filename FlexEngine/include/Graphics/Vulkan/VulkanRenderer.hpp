@@ -649,14 +649,14 @@ namespace flex
 
 				UniformBuffer* pointBufferGPU = nullptr;
 				UniformBuffer* vertexBufferGPU = nullptr;
-				u32 maxChunkCount;
+				u32 maxChunkCount = 0;
 
 				VkFence fence = VK_NULL_HANDLE;
 				i32 lastTriCount = 0;
 				glm::ivec3 loadingChunkIndex;
 				u32 loadingChunkLinearIndex = u32_max;
 
-				const u32 maxNumRenderedChunks = 32;
+				const u32 maxNumRenderedChunks = 256;
 			};
 			Terrain* m_Terrain = nullptr;
 

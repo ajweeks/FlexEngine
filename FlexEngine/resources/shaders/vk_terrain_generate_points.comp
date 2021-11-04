@@ -49,23 +49,24 @@ void main()
 	//	debugPrintfEXT("posWS: %1.2f - %1.2f - %1.2f", posWS.x, posWS.y, posWS.z);//, posWS.y posWS.z);
 	//}
 
-	// float sphereRadius = 0.75; // + noise(posWS) * 0.45
-	// float surface = length(mod(posOS, chunkSize) - vec3(0.5)) - sphereRadius;
-	// float surface = abs(posWS.y) - 0.1;
+	float sphereRadius = chunkSize; // + noise(posWS) * 0.45
+	float distToSurface = length(posWS + vec3(-sphereRadius, 0.0, 0.0)) - sphereRadius;
+	distToSurface = min(distToSurface, length(posWS + vec3(sphereRadius, 0.0, 0.0)) - sphereRadius);
+	distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0, -sphereRadius)) - sphereRadius);
+	distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0,  sphereRadius)) - sphereRadius);
 
-	vec3 normal;
-	vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,
-		uboConstant.terrainGenConstantData.randomTableSize, posWS, normal);
- 	float normalizedHeight = terrainSample.x;
- 	float height = (normalizedHeight * 0.5 + 0.5) * uboConstant.terrainGenConstantData.maxHeight;
+	// vec3 normal;
+	// vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,
+	// uboConstant.terrainGenConstantData.randomTableSize, posWS, normal);
+	// float normalizedHeight = terrainSample.x;
+ 	// float height = (normalizedHeight * 0.5 + 0.5) * uboConstant.terrainGenConstantData.maxHeight;
 	//float blendWeight = terrainSample.y;
 	//float matID0 = terrainSample.z;
 	//float matID1 = terrainSample.w;
-
-	float surface = posWS.y - height;
+	// float distToSurface = posWS.y - height;
 
 	uint index = coordToIndex(id.x, id.y, id.z, numPointsPerAxis);
-	points[index] = vec4(posWS, surface);
+	points[index] = vec4(posWS, distToSurface);
 }
 
 

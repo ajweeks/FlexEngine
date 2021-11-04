@@ -2086,14 +2086,17 @@ namespace flex
 						if (chunkVertCount > 0)
 						{
 							m_TerrainChunksLoaded.emplace_back(terrainPair);
-
-							if (m_TerrainChunksLoaded.size() >= m_Terrain->maxChunkCount)
-							{
-								// Reached capacity, ignore new workloads
-								m_TerrainGenWorkloads.clear();
-							}
 						}
-						m_TerrainGenWorkloads.erase(m_TerrainGenWorkloads.begin());
+
+						if (m_TerrainChunksLoaded.size() >= m_Terrain->maxChunkCount)
+						{
+							// Reached capacity, ignore new workloads
+							m_TerrainGenWorkloads.clear();
+						}
+						else
+						{
+							m_TerrainGenWorkloads.erase(m_TerrainGenWorkloads.begin());
+						}
 
 						Print("Terrain (%i) first vert: %u, vert count: %u, newTotalTriCount: %i, total loaded: %u\n",
 							m_Terrain->loadingChunkLinearIndex,
@@ -4970,7 +4973,7 @@ namespace flex
 
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(m_Terrain->graphicsPipelineID)->pipeline;
 
-			VkDeviceSize offsets[1] = { sizeof(u32) }; // Skip past tri count int
+			VkDeviceSize offsets[1] = { sizeof(i32) }; // Skip past triangleCount
 			const VkBuffer* terrainVertexBuffer = &m_Terrain->vertexBufferGPU->buffer.m_Buffer;
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, terrainVertexBuffer, offsets);
 
@@ -8594,7 +8597,7 @@ namespace flex
 			u32 numVoxels = numVoxelsPerAxis * numVoxelsPerAxis * numVoxelsPerAxis;
 			u32 maxNumTrianglesPerChunk = numVoxels * 5; // Each voxel can contain at most five triangles
 
-			// Round up to next multiple of max num tris per chunk
+			// Round up to next multiple of max num triangles per chunk
 			i32 slack = (maxNumTrianglesPerChunk - (m_Terrain->lastTriCount % maxNumTrianglesPerChunk)) % maxNumTrianglesPerChunk;
 			i32 nextChunkTriOffset = m_Terrain->lastTriCount + slack;
 
@@ -8662,8 +8665,8 @@ namespace flex
 				// TODO: Dispatch all workloads at once
 				vkCmdDispatch(commandBuffer, numThreadsPerAxis, numThreadsPerAxis, numThreadsPerAxis);
 
-				// This memory barrier ensures that the first compute shader has finished writing
-				// to the buffer before the second runs.
+				// Memory barrier ensuring that the point generation compute shader has finished writing
+				// to the buffer before the mesh generation compute shader runs.
 				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
 				memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 				memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -8692,7 +8695,7 @@ namespace flex
 			}
 
 			{
-				// This memory barrier ensures that the second compute shader has finished writing to
+				// Memory barrier ensuring that the mesh generation compute shader has finished writing to
 				// the buffer before the vertex shader reads it.
 				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
 				memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;

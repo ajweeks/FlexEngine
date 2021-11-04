@@ -1476,7 +1476,11 @@ namespace flex
 		// TODO: Handle overrides
 		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
 		{
-			object.fields.emplace_back("visible", JSONValue(IsVisible()));
+			if (!m_bVisible)
+			{
+				object.fields.emplace_back("visible", JSONValue(m_bVisible));
+			}
+
 			if (!IsVisibleInSceneExplorer())
 			{
 				object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
@@ -1487,7 +1491,10 @@ namespace flex
 				object.fields.emplace_back("static", JSONValue(true));
 			}
 
-			object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
+			if (m_bCastsShadow != true)
+			{
+				object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
+			}
 
 			if (m_Mesh != nullptr)
 			{
@@ -5887,6 +5894,13 @@ namespace flex
 			}
 		}
 
+		if (m_bPinCenter)
+		{
+			ImGui::SameLine();
+
+			ImGui::Text("(0.2f, 0.2f, 0.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
+		}
+
 		ImGui::SliderFloat("Reverse wave amp", &reverseWaveAmplitude, 0.0f, 2.0f);
 
 		// TODO: Remove
@@ -8889,6 +8903,13 @@ namespace flex
 			{
 				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
 			}
+		}
+
+		if (m_bPinCenter)
+		{
+			ImGui::SameLine();
+
+			ImGui::Text("(0.2f, 0.2f, 0.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
 		ImGui::Separator();

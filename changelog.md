@@ -3,7 +3,7 @@
 
 **2021**
 _November_
-
+- Auto detect modifications of textures/prefab/meshes/audio files
 
 _October_
 - Allow player to wear certain items (headlamp)
