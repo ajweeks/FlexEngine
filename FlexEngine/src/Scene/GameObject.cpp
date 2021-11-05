@@ -5898,7 +5898,7 @@ namespace flex
 		{
 			ImGui::SameLine();
 
-			ImGui::Text("(0.2f, 0.2f, 0.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
+			ImGui::Text("(%.2f, %.2f, %.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
 		ImGui::SliderFloat("Reverse wave amp", &reverseWaveAmplitude, 0.0f, 2.0f);
@@ -8909,7 +8909,7 @@ namespace flex
 		{
 			ImGui::SameLine();
 
-			ImGui::Text("(0.2f, 0.2f, 0.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
+			ImGui::Text("(%.2f, %.2f, %.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
 		ImGui::Separator();
