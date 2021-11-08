@@ -134,10 +134,12 @@ namespace flex
 			return result;
 		}
 
-		std::string GetUniqueObjectName(const std::string& existingName);
+		// Returns a unique name beginning with existingName that no other children of parent have
+		// If root object, specify nullptr as parent
+		std::string GetUniqueObjectName(const std::string& existingName, GameObject* parent = nullptr);
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
-		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
+		std::string GetUniqueObjectName(const std::string& prefix, i16 digits, GameObject* parent = nullptr);
 
 		i32 GetSceneFileVersion() const;
 
@@ -198,6 +200,8 @@ namespace flex
 		void UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID);
 
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
+
+		bool FindConflictingObjectsWithName(GameObject* parent, const std::string& name, const std::vector<GameObject*>& objects);
 
 		i32 m_SceneFileVersion = 1;
 		i32 m_MaterialsFileVersion = 1;

@@ -189,7 +189,7 @@ namespace flex
 		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
-		GameObject* AddChildImmediate(GameObject* child);
+		GameObject* AddChildImmediate(GameObject* child, bool bIsPrefabTemplate = false);
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
@@ -340,7 +340,7 @@ namespace flex
 		bool GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const;
 		bool GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const;
 
-		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID);
+		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, GameObject* parent, std::string& newObjectName, GameObjectID& newGameObjectID);
 
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00

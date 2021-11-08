@@ -177,7 +177,7 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObjectID::Get()
+	GameObject* GameObjectID::Get() const
 	{
 		if (!IsValid())
 		{
@@ -207,7 +207,7 @@ namespace flex
 	{
 	}
 
-	GameObject* EditorObjectID::Get()
+	GameObject* EditorObjectID::Get() const
 	{
 		if (!IsValid())
 		{

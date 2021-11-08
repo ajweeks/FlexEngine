@@ -339,8 +339,13 @@ namespace flex
 				{
 					gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
 					CalculateSelectedObjectsCenter();
-					return;
 				}
+				else
+				{
+					Erase(m_CurrentlySelectedObjectIDs, gameObjectID);
+				}
+
+				return;
 			}
 		}
 

@@ -168,7 +168,7 @@ namespace flex
 
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
@@ -248,7 +248,7 @@ namespace flex
 				{
 					for (JSONObject& child : children)
 					{
-						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, bIsPrefabTemplate, copyFlags));
+						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, bIsPrefabTemplate, copyFlags), bIsPrefabTemplate);
 					}
 				}
 
@@ -1183,7 +1183,6 @@ namespace flex
 				| CopyFlags::COPYING_TO_PREFAB);
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
 
-			currentScene->UnregisterGameObjectRecursive(previousPrefabTemplate->ID);
 			currentScene->UnregisterGameObjectRecursive(ID);
 
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
@@ -1192,6 +1191,7 @@ namespace flex
 			newPrefabTemplate->m_PrefabIDLoadedFrom = InvalidPrefabID;
 			newPrefabTemplate->ID = previousPrefabTemplate->ID;
 			newPrefabTemplate->m_Name = previousPrefabName;
+			// Use previous game object IDs where possible to prevent unnecessary changes in file
 			OverwritePrefabIDs(previousPrefabTemplate, newPrefabTemplate);
 			previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
 
@@ -1405,7 +1405,7 @@ namespace flex
 		{
 			for (JSONObject& child : children)
 			{
-				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, bIsPrefabTemplate, copyFlags));
+				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, bIsPrefabTemplate, copyFlags), bIsPrefabTemplate);
 			}
 		}
 	}
@@ -1900,7 +1900,7 @@ namespace flex
 		return false;
 	}
 
-	void GameObject::GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID)
+	void GameObject::GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, GameObject* parent, std::string& newObjectName, GameObjectID& newGameObjectID)
 	{
 		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
 		{
@@ -1909,7 +1909,7 @@ namespace flex
 		}
 		else
 		{
-			newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
+			newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name, parent));
 		}
 	}
 
@@ -1963,6 +1963,7 @@ namespace flex
 		newGameObject->m_bCastsShadow = m_bCastsShadow;
 		newGameObject->m_bUniformScale = m_bUniformScale;
 
+		bool bIsPrefabTemplate = (copyFlags & CopyFlags::COPYING_TO_PREFAB);
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
 
 		if (bAddToScene)
@@ -1991,6 +1992,7 @@ namespace flex
 
 		bool bCreateRenderObject = (copyFlags & CopyFlags::CREATE_RENDER_OBJECT);
 
+		// TODO: Move to Mesh class
 		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && m_bSerializeMesh)
 		{
 			std::vector<MaterialID> matIDs = m_Mesh->GetMaterialIDs();
@@ -2027,6 +2029,7 @@ namespace flex
 			}
 		}
 
+		// TODO: Move to RigidBody class
 		if ((copyFlags & CopyFlags::RIGIDBODY) && m_RigidBody != nullptr)
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
@@ -2094,7 +2097,7 @@ namespace flex
 					GameObject* newChild = child->CopySelf(newGameObject, (CopyFlags)((i32)copyFlags & ~(i32)CopyFlags::ADD_TO_SCENE));
 					if (newChild != nullptr)
 					{
-						newGameObject->AddChildImmediate(newChild);
+						newGameObject->AddChildImmediate(newChild, bIsPrefabTemplate);
 					}
 				}
 			}
@@ -2187,7 +2190,7 @@ namespace flex
 		return g_SceneManager->CurrentScene()->AddChildObject(this, child);
 	}
 
-	GameObject* GameObject::AddChildImmediate(GameObject* child)
+	GameObject* GameObject::AddChildImmediate(GameObject* child, bool bIsPrefabTemplate /* = false */)
 	{
 		if (child == nullptr)
 		{
@@ -2222,7 +2225,11 @@ namespace flex
 
 		child->SetParent(this);
 
-		g_SceneManager->CurrentScene()->RegisterGameObject(child);
+		// Prefab templates aren't registered in the scene
+		if (!bIsPrefabTemplate)
+		{
+			g_SceneManager->CurrentScene()->RegisterGameObject(child);
+		}
 
 		if (childPrevParent != nullptr)
 		{
@@ -2780,7 +2787,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Valve* newGameObject = new Valve(newObjectName, newGameObjectID);
 
 		newGameObject->minRotation = minRotation;
@@ -2979,7 +2986,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		RisingBlock* newGameObject = new RisingBlock(newObjectName, newGameObjectID);
 
 		newGameObject->valve = valve;
@@ -3158,7 +3165,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		GlassPane* newGameObject = new GlassPane(newObjectName, newGameObjectID);
 
 		newGameObject->bBroken = bBroken;
@@ -3226,7 +3233,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName, newGameObjectID);
 
 		newGameObject->captureMatID = captureMatID;
@@ -3618,7 +3625,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumPointLights() >= MAX_POINT_LIGHT_COUNT)
 		{
@@ -3840,7 +3847,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumSpotLights() >= MAX_SPOT_LIGHT_COUNT)
 		{
@@ -4068,7 +4075,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumAreaLights() >= MAX_AREA_LIGHT_COUNT)
 		{
@@ -4336,7 +4343,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
 		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
@@ -4592,7 +4599,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
 		EngineCart* newGameObject = new EngineCart(cartID, newObjectName, newGameObjectID);
@@ -4723,7 +4730,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		MobileLiquidBox* newGameObject = new MobileLiquidBox(newObjectName, newGameObjectID);
 
 		newGameObject->bInCart = bInCart;
@@ -4795,7 +4802,7 @@ namespace flex
 	{
 	}
 
-	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID) :
+	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("battery"), gameObjectID)
 	{
 		m_bItemizable = true;
@@ -4847,7 +4854,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Battery* newGameObject = new Battery(newObjectName, newGameObjectID);
 
 		newGameObject->chargeAmount = chargeAmount;
@@ -8284,7 +8291,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		ParticleSystem* newParticleSystem = new ParticleSystem(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newParticleSystem, parent, copyFlags);
@@ -10692,7 +10699,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		SpringObject* newObject = new SpringObject(newObjectName, newGameObjectID);
 
 		// Ensure mesh & rigid body isn't copied
@@ -11015,7 +11022,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		SoftBody* newSoftBody = new SoftBody(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newSoftBody, parent, copyFlags);
@@ -12007,7 +12014,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Vehicle* newGameObject = new Vehicle(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
@@ -13021,7 +13028,7 @@ namespace flex
 
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Road* newGameObject = new Road(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newGameObject, parent, CopyFlags::ADD_TO_SCENE);
@@ -13167,7 +13174,7 @@ namespace flex
 		GameObject::Update();
 	}
 
-	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID) :
+	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("headlamp"), gameObjectID)
 	{
 		m_bItemizable = true;

@@ -961,14 +961,66 @@ namespace flex
 		return result;
 	}
 
-	std::string BaseScene::GetUniqueObjectName(const std::string& existingName)
+	bool BaseScene::FindConflictingObjectsWithName(GameObject* parent, const std::string& name, const std::vector<GameObject*>& objects)
 	{
-		const std::vector<GameObject*> allObjects = GetAllObjects();
+		for (const GameObject* gameObject : objects)
+		{
+			if (gameObject->GetName() == name)
+			{
+				return true;
+			}
+		}
+
+		if (parent == nullptr)
+		{
+			// Check for pending root object name collisions
+			for (const GameObject* gameObject : m_PendingAddObjects)
+			{
+				if (gameObject->GetName() == name)
+				{
+					return true;
+				}
+			}
+		}
+		else
+		{
+			// Check for pending child object name collisions
+			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
+			{
+				if (gameObjectPair.first == parent && gameObjectPair.second->GetName() == name)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	std::string BaseScene::GetUniqueObjectName(const std::string& existingName, GameObject* parent /* = nullptr */)
+	{
+		const std::vector<GameObject*> allObjects = parent != nullptr ? parent->GetChildren() : GetRootObjects();
+
+		if (!FindConflictingObjectsWithName(parent, existingName, allObjects))
+		{
+			return existingName;
+		}
 
 		i16 digits;
 		i32 existingIndex = GetNumberEndingWith(existingName, digits);
 
-		std::string prefix = existingName.substr(0, existingName.length() - digits);
+		std::string prefix;
+		if (existingIndex != -1)
+		{
+			prefix = existingName.substr(0, existingName.length() - digits);
+		}
+		else
+		{
+			prefix = existingName;
+			existingIndex = 0;
+			digits = 2;
+		}
+
 
 		i32 newIndex = existingIndex;
 		bool bNameTaken = true;
@@ -979,41 +1031,20 @@ namespace flex
 			bNameTaken = false;
 			std::string suffix = IntToString(newIndex, digits);
 			name = prefix + suffix;
-			for (const GameObject* gameObject : allObjects)
+
+			if (FindConflictingObjectsWithName(parent, name, allObjects))
 			{
-				if (gameObject->GetName().compare(name) == 0)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const GameObject* gameObject : m_PendingAddObjects)
-			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
-			{
-				if (gameObjectPair.second->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
+				bNameTaken = true;
+				++newIndex;
 			}
 		}
 
 		return name;
 	}
 
-	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
+	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits, GameObject* parent /* = nullptr */)
 	{
-		const std::vector<GameObject*> allObjects = GetAllObjects();
+		const std::vector<GameObject*> allObjects = parent != nullptr ? parent->GetChildren() : GetRootObjects();
 
 		i32 newIndex = 0;
 		bool bNameTaken = true;
@@ -1022,32 +1053,11 @@ namespace flex
 			bNameTaken = false;
 			std::string suffix = IntToString(newIndex, digits);
 			std::string name = prefix + suffix;
-			for (const GameObject* gameObject : allObjects)
+
+			if (FindConflictingObjectsWithName(parent, name, allObjects))
 			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const GameObject* gameObject : m_PendingAddObjects)
-			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
-			{
-				if (gameObjectPair.second->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
+				bNameTaken = true;
+				++newIndex;
 			}
 		}
 
@@ -1391,7 +1401,7 @@ namespace flex
 		} break;
 		case SID("socket"):
 		{
-			std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3);
+			std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3, parent);
 
 			u32 socketIndex = 0;
 			if (parent != nullptr)
@@ -1728,7 +1738,7 @@ namespace flex
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 		std::string prefabName = prefabTemplate->GetName();
-		std::string newObjectName = GetUniqueObjectName(prefabName);
+		std::string newObjectName = GetUniqueObjectName(prefabName, parent);
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, &newObjectName, parent);
 
 		newPrefabInstance->Initialize();

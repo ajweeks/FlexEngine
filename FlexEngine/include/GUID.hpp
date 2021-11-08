@@ -38,7 +38,7 @@ namespace flex
 		GameObjectID();
 		GameObjectID(u64 data1, u64 data2);
 
-		GameObject* Get();
+		GameObject* Get() const;
 
 		static GameObjectID FromString(const std::string& str);
 	};
@@ -48,7 +48,7 @@ namespace flex
 		EditorObjectID();
 		EditorObjectID(u64 data1, u64 data2);
 
-		GameObject* Get();
+		GameObject* Get() const;
 
 		static EditorObjectID FromString(const std::string& str);
 	};
