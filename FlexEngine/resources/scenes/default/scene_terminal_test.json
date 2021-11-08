@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "17.578, 12.701, 4.217",
-			"pitch" : -0.319436,
-			"yaw" : -0.405038
+			"position" : "13.382, 6.184, -16.177",
+			"pitch" : -0.267099,
+			"yaw" : -4.266994
 		}
 	},
 	"objects" : 
@@ -32,8 +32,6 @@
 				"pos" : "-2.400, -0.653, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "unit-plane.glb",
 			"materials" : 
 			[
@@ -57,15 +55,12 @@
 			"name" : "Lighting",
 			"id" : "33BF534E4C5D72AC4A02E827589D0CDE",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
 					"name" : "Skybox",
 					"id" : "3C40C6CCE0DAA3914AAD5DBE31B94281",
 					"type" : "skybox",
-					"visible" : true,
 					"casts shadow" : false,
 					"materials" : 
 					[
@@ -82,9 +77,7 @@
 					"transform" : 
 					{
 						"pos" : "-2.045, 14.562, 0.000"
-					},
-					"visible" : true,
-					"casts shadow" : true
+					}
 				},
 				{
 					"name" : "Directional Light",
@@ -93,13 +86,11 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.580, -0.000, 0.000"
+						"rot" : "1.578, -0.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.710,0.000,0.000,0.704",
+						"rotation" : "0.710,0.000,0.000,0.705",
 						"pos" : "0.000,15.000,0.000",
 						"colour" : "0.99,1.00,0.84",
 						"enabled" : true,
@@ -116,8 +107,6 @@
 					{
 						"pos" : "-20.950, 3.565, 5.352"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
 						"pos" : "-20.950,3.565,5.352",
@@ -131,8 +120,6 @@
 							"name" : "socket_005",
 							"id" : "D2B4586102FEFE87433539B90CB0227C",
 							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
 							"socket" : 
 							{
 								"slotIdx" : 0
@@ -148,8 +135,6 @@
 					{
 						"pos" : "18.486, 7.943, -3.520"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
 						"pos" : "18.486,7.943,-3.520",
@@ -163,8 +148,6 @@
 							"name" : "socket_004",
 							"id" : "564F997157E832B04E56B9B3C26BF4BB",
 							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
 							"socket" : 
 							{
 								"slotIdx" : 0
@@ -180,8 +163,6 @@
 					{
 						"pos" : "2.159, 0.938, 17.654"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
 						"pos" : "2.159,0.938,17.654",
@@ -195,8 +176,6 @@
 							"name" : "socket_006",
 							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
 							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
 							"socket" : 
 							{
 								"slotIdx" : 0
@@ -212,8 +191,6 @@
 					{
 						"pos" : "9.644, 4.930, 29.718"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
 						"pos" : "9.644,4.930,29.718",
@@ -227,8 +204,6 @@
 							"name" : "socket_007",
 							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
 							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
 							"socket" : 
 							{
 								"slotIdx" : 0
@@ -246,8 +221,6 @@
 						"rot" : "-0.696, 0.000, 0.000",
 						"scale" : "3.923, 1.840, 3.923"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"area light info" : 
 					{
 						"colour" : "1.00,1.00,1.00",
@@ -265,8 +238,6 @@
 								"rot" : "3.141, 1.569, 3.141",
 								"scale" : "0.010, 2.000, 2.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
 							"mesh" : "cube.glb",
 							"materials" : 
 							[
@@ -283,8 +254,6 @@
 					{
 						"pos" : "-32.370, 2.848, 21.634"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
 						"pos" : "-32.370,2.848,21.634",
@@ -298,8 +267,6 @@
 							"name" : "socket_008",
 							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
 							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
 							"socket" : 
 							{
 								"slotIdx" : 0
@@ -318,8 +285,6 @@
 				"pos" : "-3.227, 0.000, 9.288",
 				"rot" : "3.141, 0.567, 3.141"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"collider" : 
 			{
 				"shape" : "box",
@@ -348,8 +313,6 @@
 						"pos" : "0.000, 0.933, 0.484",
 						"scale" : "1.760, 1.790, 1.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "cube.glb",
 					"materials" : 
 					[
@@ -365,8 +328,6 @@
 						"pos" : "-0.755, -0.362, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 0
@@ -381,8 +342,6 @@
 						"pos" : "-0.247, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 1
@@ -397,8 +356,6 @@
 						"pos" : "0.279, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 2
@@ -413,8 +370,6 @@
 						"pos" : "0.802, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 3
@@ -432,8 +387,6 @@
 				"rot" : "0.000, -1.070, 0.000",
 				"scale" : "11.430, 11.430, 11.430"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "moka.glb",
 			"materials" : 
 			[
@@ -451,8 +404,6 @@
 				"rot" : "0.000, -1.059, 0.000",
 				"scale" : "3.450, 3.450, 3.450"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
@@ -469,8 +420,6 @@
 				"rot" : "0.000, 0.630, 0.000",
 				"scale" : "4.500, 2.000, 2.330"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -497,7 +446,7 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.907, 1.848, -1.929",
+				"pos" : "-20.909, 1.848, -1.930",
 				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
@@ -545,8 +494,6 @@
 				"pos" : "-26.777, 3.115, 15.404",
 				"rot" : "-0.712, 0.037, 0.780"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -562,8 +509,6 @@
 				"pos" : "-26.921, 3.353, 11.325",
 				"rot" : "0.629, 0.332, -1.486"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -579,8 +524,6 @@
 				"pos" : "-27.303, 3.335, 6.916",
 				"rot" : "-1.893, 0.460, 1.137"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -609,8 +552,6 @@
 				"pos" : "27.413, 9.162, 0.000",
 				"rot" : "0.426, 0.121, -0.964"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -628,8 +569,6 @@
 						"rot" : "2.376, 0.258, -0.811",
 						"scale" : "0.755, 0.755, 0.755"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "cube.glb",
 					"materials" : 
 					[
@@ -647,8 +586,6 @@
 								"rot" : "2.549, -1.088, -2.862",
 								"scale" : "0.590, 0.590, 0.590"
 							},
-							"visible" : true,
-							"casts shadow" : true,
 							"mesh" : "cube.glb",
 							"materials" : 
 							[
@@ -658,6 +595,17 @@
 					]
 				}
 			]
+		},
+		{
+			"name" : "power_pole",
+			"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
+			"type" : "prefab",
+			"prefab type" : "power_pole",
+			"prefab id" : "FF518D129F74B1B442494D703055E816",
+			"transform" : 
+			{
+				"pos" : "6.003, 0.000, -3.670"
+			}
 		}
 	]
 }

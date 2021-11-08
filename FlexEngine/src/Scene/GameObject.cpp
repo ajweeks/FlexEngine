@@ -337,6 +337,7 @@ namespace flex
 		case SID("road"): return new Road(objectName, gameObjectID);
 		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
 		case SID("headlamp"): return new HeadLamp(objectName, gameObjectID);
+		case SID("power pole"): return new PowerPole(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -13178,5 +13179,28 @@ namespace flex
 		GameObject(name, SID("headlamp"), gameObjectID)
 	{
 		m_bItemizable = true;
+	}
+
+	PowerPole::PowerPole(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("power pole"), gameObjectID)
+	{
+	}
+
+	void PowerPole::OnCharge(real chargeAmount)
+	{
+		if (!sockets.empty())
+		{
+			std::vector<Socket*> activeSockets;
+
+			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+			for (Socket* socket : sockets)
+			{
+				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
+				if (otherSocket != nullptr)
+				{
+					otherSocket->parent->OnCharge(chargeAmount);
+				}
+			}
+		}
 	}
 } // namespace flex

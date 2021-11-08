@@ -1832,8 +1832,17 @@ namespace flex
 	public:
 		HeadLamp(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+	};
+
+	class PowerPole : public GameObject
+	{
+	public:
+		PowerPole(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void OnCharge(real chargeAmount) override;
+
 	private:
-		bool m_bOn = true;
 
 	};
+
 } // namespace flex

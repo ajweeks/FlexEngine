@@ -1,0 +1,32 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "FF518D129F74B1B442494D703055E816",
+	"root" : 
+	{
+		"name" : "power_pole",
+		"id" : "191A04404B58C2804B662089BB27F3E0",
+		"type" : "object",
+		"mesh" : "power-pole.glb",
+		"materials" : 
+		[
+			"pbr chrome"
+		],
+		"children" : 
+		[
+			{
+				"name" : "socket",
+				"id" : "4ECDF61FCBFDA8A548AC2DABAAC05DCD",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "0.000, 2.001, 0.000"
+				},
+				"socket" : 
+				{
+					"slotIdx" : 0
+				}
+			}
+		]
+	}
+}
