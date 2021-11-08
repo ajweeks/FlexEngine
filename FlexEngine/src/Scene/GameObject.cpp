@@ -3413,7 +3413,7 @@ namespace flex
 	{
 		PROFILE_AUTO("DirectionalLight Update");
 
-		if (sockets.size() >= 1)
+		if (!sockets.empty())
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
 			if (receivedSignal != -1)
@@ -3669,7 +3669,7 @@ namespace flex
 	{
 		PROFILE_AUTO("PointLight Update");
 
-		if (sockets.size() >= 1)
+		if (!sockets.empty())
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
 			if (receivedSignal != -1)
@@ -3891,7 +3891,7 @@ namespace flex
 	{
 		PROFILE_AUTO("SpotLight Update");
 
-		if (sockets.size() >= 1)
+		if (!sockets.empty())
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
 			if (receivedSignal != -1)
@@ -4119,7 +4119,7 @@ namespace flex
 	{
 		PROFILE_AUTO("AreaLight Update");
 
-		if (sockets.size() >= 1)
+		if (!sockets.empty())
 		{
 			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
 			if (receivedSignal != -1)
@@ -6615,7 +6615,7 @@ namespace flex
 		m_SoftBody->points[numPoints - 2]->invMass = m_SoftBody->points[numPoints - 3]->invMass;
 	}
 
-	void Wire::StepSimulation()
+	void Wire::UpdateWireMesh()
 	{
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
@@ -13140,7 +13140,7 @@ namespace flex
 		m_RigidBodies[meshIndex] = rigidBody;
 	}
 
-	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID) :
+	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("solar panel"), gameObjectID)
 	{
 		m_bItemizable = true;
@@ -13150,7 +13150,7 @@ namespace flex
 	{
 		PROFILE_AUTO("SolarPanel Update");
 
-		if (sockets.size() >= 1)
+		if (!sockets.empty())
 		{
 			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 			for (Socket* socket : sockets)

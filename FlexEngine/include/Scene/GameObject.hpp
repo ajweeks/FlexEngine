@@ -1021,7 +1021,7 @@ namespace flex
 		void SetEndTangent(const glm::vec3& tangent);
 		void ClearEndTangent();
 
-		void StepSimulation();
+		void UpdateWireMesh();
 
 		void CalculateTangentAtPoint(real t, glm::vec3& outTangent);
 		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);

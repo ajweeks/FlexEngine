@@ -171,7 +171,6 @@ namespace flex
 
 		m_OnGameObjectDestroyedCallbacks.clear();
 
-		g_Renderer->SetSkyboxMesh(nullptr);
 		g_Renderer->RemoveDirectionalLight();
 		g_Renderer->RemoveAllPointLights();
 		g_Renderer->RemoveAllSpotLights();

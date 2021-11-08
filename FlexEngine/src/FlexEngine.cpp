@@ -260,7 +260,6 @@ namespace flex
 		g_ResourceManager->ParseFontFile();
 
 		g_SceneManager = new SceneManager();
-		g_SceneManager->AddFoundScenes();
 
 		if (!LoadCommonSettingsFromDisk())
 		{
@@ -557,8 +556,7 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
-		g_Renderer->DestroyPersistentObjects();
-		g_SceneManager->DestroyAllScenes();
+		g_SceneManager->Destroy();
 		g_CameraManager->Destroy();
 		g_PhysicsManager->Destroy();
 		g_ResourceManager->Destroy();

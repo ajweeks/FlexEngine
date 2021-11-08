@@ -205,13 +205,13 @@ namespace flex
 
 	void Editor::PreSceneChange()
 	{
-		if (m_TransformGizmo)
+		if (m_TransformGizmo != nullptr)
 		{
 			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_TransformGizmo);
 			m_TransformGizmo = nullptr;
 		}
 
-		if (m_GridObject)
+		if (m_GridObject != nullptr)
 		{
 			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_GridObject);
 			m_GridObject = nullptr;

@@ -61,6 +61,7 @@ namespace flex
 
 			const real hoverAmount = TWEAKABLE(0.1f);
 
+			// Handle plugging/unplugging events
 			for (Wire* wire : wires)
 			{
 				Transform* wireTransform = wire->GetTransform();
@@ -189,7 +190,7 @@ namespace flex
 					wire->ClearEndTangent();
 				}
 
-				wire->StepSimulation();
+				wire->UpdateWireMesh();
 
 				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();

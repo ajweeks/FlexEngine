@@ -236,7 +236,7 @@ namespace flex
 		}
 	}
 
-	void Renderer::DestroyPersistentObjects()
+	void Renderer::Destroy()
 	{
 		for (GameObject* obj : m_PersistentObjects)
 		{
@@ -244,10 +244,7 @@ namespace flex
 			delete obj;
 		}
 		m_PersistentObjects.clear();
-	}
 
-	void Renderer::Destroy()
-	{
 #if COMPILE_SHADER_COMPILER
 		if (m_ShaderCompiler != nullptr)
 		{

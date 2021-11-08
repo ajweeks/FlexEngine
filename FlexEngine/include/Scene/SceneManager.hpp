@@ -4,23 +4,20 @@ namespace flex
 {
 	class BaseScene;
 
-	class SceneManager
+	class SceneManager final
 	{
 	public:
 		SceneManager();
-		virtual ~SceneManager();
+		~SceneManager() = default;
 
-		void AddScene(BaseScene* newScene);
+		SceneManager(const SceneManager&&) = delete;
+		SceneManager(const SceneManager&) = delete;
+		SceneManager& operator=(const SceneManager&&) = delete;
+		SceneManager& operator=(const SceneManager&) = delete;
 
-		/* To be called after AddScene */
-		void InitializeCurrentScene();
+		void Destroy();
 
-		/* To be called after InitializeCurrentScene */
-		void PostInitializeCurrentScene();
-
-		void RemoveScene(BaseScene* scene);
-
-		/* Destroys previous scene if exists, then sets current index (NOTE: Does *not* initialize new scene! */
+		// Destroys previous scene if exists, then sets current index
 		bool SetCurrentScene(u32 sceneIndex, bool bPrintErrorOnFailure = true);
 		bool SetCurrentScene(BaseScene* scene, bool bPrintErrorOnFailure = true);
 		bool SetCurrentScene(const std::string& sceneFileName, bool bPrintErrorOnFailure = true);
@@ -28,27 +25,16 @@ namespace flex
 		void SetPreviousSceneActive();
 		void ReloadCurrentScene();
 
-		// Adds all scenes found in scenes directory
-		void AddFoundScenes();
-		void RemoveDeletedScenes();
-
-		void DeleteScene(BaseScene* scene);
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
+		void DeleteScene(BaseScene* scene);
 
 		void DrawImGuiObjects();
 		void DrawImGuiModals();
 
-		u32 CurrentSceneIndex() const;
 		BaseScene* CurrentScene() const;
 		bool HasSceneLoaded() const; // False during initial load
-		u32 GetSceneCount() const;
-
-		i32 GetCurrentSceneIndex() const;
-		BaseScene* GetSceneAtIndex(i32 index);
 
 		bool DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName);
-
-		void DestroyAllScenes();
 
 		void OpenNewSceneWindow();
 
@@ -64,20 +50,27 @@ namespace flex
 		std::string MakeSceneNameUnique(const std::string& originalName);
 		bool SceneFileExists(const std::string& fileName) const;
 
+		// Adds all scenes found in scenes directory
+		void AddFoundScenes();
+
+		void AddScene(BaseScene* newScene);
+		void RemoveDeletedScenes();
+
+		/* To be called after AddScene */
+		void InitializeCurrentScene(u32 previousSceneIndex);
+
+		/* To be called after InitializeCurrentScene */
+		void PostInitializeCurrentScene();
+
 		u32 m_CurrentSceneIndex = InvalidID;
-		u32 m_PreviousSceneIndex = InvalidID;
 		std::vector<BaseScene*> m_Scenes;
 
-		std::string m_SavedDirStr;
 		std::string m_DefaultDirStr;
 
-		const char* m_NewObjectTypePopupStr = "New Object Type";
+		static const char* s_NewObjectTypePopupStr;
 		std::string m_NewObjectTypeStrBuffer;
 
 		static const char* s_newSceneModalWindowID;
-
-		SceneManager(const SceneManager&) = delete;
-		SceneManager& operator=(const SceneManager&) = delete;
 
 	};
 } // namespace flex
