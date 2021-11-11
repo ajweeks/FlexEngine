@@ -426,6 +426,26 @@ namespace flex
 
 	// Child classes
 
+	class DroppedItem final : public GameObject
+	{
+	public:
+		DroppedItem(const PrefabID& prefabID, i32 stackSize);
+
+		virtual void Initialize() override;
+
+		virtual void Update() override;
+
+		bool CanBePickedUp() const;
+		PrefabID GetPrefabID() const;
+
+		PrefabID prefabID = InvalidPrefabID;
+		i32 stackSize = 0;
+		real secondsAlive = 0.0f;
+
+		static const real MIN_TIME_BEFORE_PICKUP;
+
+	};
+
 	class DirectionalLight final : public GameObject
 	{
 	public:

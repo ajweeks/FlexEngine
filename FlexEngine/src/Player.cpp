@@ -207,6 +207,18 @@ namespace flex
 			Reset();
 		}
 
+		std::vector<DroppedItem*> nearbyItems;
+		if (scene->GetNearbyDroppedItems(m_Transform.GetWorldPosition(), m_ItemPickupRadius, nearbyItems))
+		{
+			for (DroppedItem* item : nearbyItems)
+			{
+				if (item->CanBePickedUp())
+				{
+					AddToInventory(item);
+				}
+			}
+		}
+
 		GameObject::Update();
 	}
 
@@ -676,7 +688,7 @@ namespace flex
 
 			if (!bDestroyItem)
 			{
-				// TODO: Spawn item in world
+				CreateDroppedItemFromStack(stack);
 			}
 
 			stack->Clear();
@@ -702,7 +714,7 @@ namespace flex
 
 			if (!bDestroyItem)
 			{
-				// TODO: Spawn item in world
+				CreateDroppedItemFromStack(stack);
 			}
 
 			--stack->count;
@@ -714,6 +726,17 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void Player::CreateDroppedItemFromStack(GameObjectStack* stack)
+	{
+		glm::vec3 forward = m_Transform.GetForward();
+		glm::vec3 dropPos = m_Transform.GetWorldPosition() + forward * m_ItemDropPosForwardOffset;
+		g_SceneManager->CurrentScene()->CreateDroppedItem(
+			stack->prefabID,
+			stack->count,
+			dropPos,
+			forward * m_ItemDropForwardVelocity);
 	}
 
 	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
@@ -741,6 +764,14 @@ namespace flex
 			return (GameObjectStackID)(slotIndex + INVENTORY_WEARABLES_MIN);
 		}
 		return InvalidID;
+	}
+
+	void Player::AddToInventory(DroppedItem* droppedItem)
+	{
+		GameObjectStack::UserData userData = {};
+		AddToInventory(droppedItem->prefabID, droppedItem->stackSize, userData);
+
+		g_SceneManager->CurrentScene()->DestroyDroppedItem(droppedItem);
 	}
 
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count)

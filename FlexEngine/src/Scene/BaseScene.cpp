@@ -73,10 +73,6 @@ namespace flex
 		m_PlayerSpawnPoint = glm::vec3(0.0f, 2.0f, 0.0f);
 	}
 
-	BaseScene::~BaseScene()
-	{
-	}
-
 	void BaseScene::Initialize()
 	{
 		if (!m_bInitialized)
@@ -1931,6 +1927,50 @@ namespace flex
 		{
 			m_RootObjects[i]->OnExternalMeshChange(meshFilePath);
 		}
+	}
+
+	bool BaseScene::GetNearbyDroppedItems(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items)
+	{
+		real radiusSq = radius * radius;
+		for (DroppedItem* item : m_DroppedItems)
+		{
+			if (glm::distance2(pos, item->GetTransform()->GetWorldPosition()) < radiusSq)
+			{
+				items.push_back(item);
+			}
+		}
+
+		return !items.empty();
+	}
+
+	void BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity)
+	{
+		DroppedItem* item = new DroppedItem(prefabID, stackSize);
+		Transform* itemTransform = item->GetTransform();
+		itemTransform->SetWorldPosition(dropPosWS, false);
+		itemTransform->SetWorldScale(glm::vec3(m_DroppedItemScale), true);
+
+		m_DroppedItems.push_back(item);
+
+		AddRootObjectImmediate(item);
+
+		item->Initialize();
+		item->PostInitialize();
+
+		if (item->GetRigidBody() != nullptr)
+		{
+			item->GetRigidBody()->GetRigidBodyInternal()->setLinearVelocity(ToBtVec3(dropVelocity));
+		}
+	}
+
+	void BaseScene::DestroyDroppedItem(DroppedItem* item)
+	{
+		if (!Erase(m_DroppedItems, item))
+		{
+			PrintWarn("Attempted to destroy dropped item not found in scene\n");
+		}
+
+		RemoveObject(item, true);
 	}
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)

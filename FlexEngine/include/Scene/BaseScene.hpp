@@ -20,7 +20,10 @@ namespace flex
 	public:
 		// fileName e.g. "scene_01.json"
 		explicit BaseScene(const std::string& fileName);
-		~BaseScene();
+		~BaseScene() = default;
+
+		BaseScene(const BaseScene&) = delete;
+		BaseScene& operator=(const BaseScene&) = delete;
 
 		void Initialize();
 		void PostInitialize();
@@ -177,6 +180,12 @@ namespace flex
 
 		void OnExternalMeshChange(const std::string& meshFilePath);
 
+		// Returns true when there are nearby items
+		bool GetNearbyDroppedItems(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
+
+		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity);
+		void DestroyDroppedItem(DroppedItem* item);
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
 		static const i32 LATEST_SCENE_FILE_VERSION = 6;
@@ -233,6 +242,8 @@ namespace flex
 
 		glm::vec3 m_DirLightColours[4];
 
+		const real m_DroppedItemScale = 0.3f;
+
 		// Kill zone for player
 		real m_PlayerMinHeight = -500.0f;
 		glm::vec3 m_PlayerSpawnPoint;
@@ -247,6 +258,8 @@ namespace flex
 		std::vector<GameObjectID> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
 		std::vector<GameObjectID> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
 
+		std::vector<DroppedItem*> m_DroppedItems;
+
 	private:
 		/*
 		* Recursively searches through all game objects and returns first
@@ -255,9 +268,6 @@ namespace flex
 		GameObjectID FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
 		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
-
-		BaseScene(const BaseScene&) = delete;
-		BaseScene& operator=(const BaseScene&) = delete;
 
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
 

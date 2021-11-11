@@ -68,6 +68,8 @@ namespace flex
 	AudioCue GameObject::s_SqueakySounds;
 	AudioSourceID GameObject::s_BunkSound;
 
+	const real DroppedItem::MIN_TIME_BEFORE_PICKUP = 3.0f;
+
 	const char* Cart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
@@ -1914,17 +1916,6 @@ namespace flex
 		}
 	}
 
-	//void GameObject::OnConnectionMade(Wire* wire)
-	//{
-	//	wireConnections.push_back(wire);
-	//	outputSignals.resize(wireConnections.size(), -1);
-	//}
-	//
-	//void GameObject::OnConnectionBroke(Wire* wire)
-	//{
-	//	FLEX_UNUSED(wire);
-	//}
-
 	void GameObject::ParseTypeUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
 	{
 		// Generic game objects have no unique fields
@@ -2001,14 +1992,14 @@ namespace flex
 			}
 			else
 			{
-				m_Mesh->CloneSelf(newGameObject);
+				m_Mesh->CloneSelf(newGameObject, bCreateRenderObject);
 			}
 		}
 
 		if ((copyFlags & CopyFlags::RIGIDBODY) && m_RigidBody != nullptr)
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
-			newGameObject->SetCollisionShape(CloneCollisionShape(m_CollisionShape));
+			newGameObject->SetCollisionShape(CloneCollisionShape(m_Transform.GetWorldScale(), m_CollisionShape));
 		}
 
 		if (copyFlags & CopyFlags::CHILDREN)
@@ -3289,6 +3280,37 @@ namespace flex
 		SetMesh(skyboxMesh);
 
 		g_Renderer->SetSkyboxMesh(m_Mesh);
+	}
+
+	DroppedItem::DroppedItem(const PrefabID& prefabID, i32 stackSize) :
+		GameObject("", SID("dropped item"), InvalidGameObjectID),
+		prefabID(prefabID),
+		stackSize(stackSize)
+	{
+		m_bSerializable = false;
+	}
+
+	void DroppedItem::Update()
+	{
+		secondsAlive += g_DeltaTime;
+
+		GameObject::Update();
+	}
+
+	void DroppedItem::Initialize()
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+
+		prefabTemplate->GetMesh()->CloneSelf(this, true);
+		SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
+		SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
+
+		GameObject::Initialize();
+	}
+
+	bool DroppedItem::CanBePickedUp() const
+	{
+		return secondsAlive > MIN_TIME_BEFORE_PICKUP;
 	}
 
 	DirectionalLight::DirectionalLight() :

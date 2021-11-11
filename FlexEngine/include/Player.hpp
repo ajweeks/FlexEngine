@@ -72,6 +72,7 @@ namespace flex
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(i32 slotIndex);
 
+		void AddToInventory(DroppedItem* droppedItem);
 		void AddToInventory(const PrefabID& prefabID, i32 count);
 		void AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
 
@@ -126,6 +127,10 @@ namespace flex
 
 		real m_TrackAttachMinDist = 4.0f;
 
+		real m_ItemPickupRadius = 3.0f;
+		real m_ItemDropPosForwardOffset = 1.2f;
+		real m_ItemDropForwardVelocity = 1.0f;
+
 		TrackState m_TrackState;
 
 		static const glm::vec3 HeadlampMountingPos;
@@ -162,6 +167,8 @@ namespace flex
 
 	private:
 		friend class PlayerController;
+
+		void CreateDroppedItemFromStack(GameObjectStack* stack);
 
 		AudioSourceID m_SoundPlaceTrackNodeID = InvalidAudioSourceID;
 		AudioSourceID m_SoundPlaceFinalTrackNodeID = InvalidAudioSourceID;
