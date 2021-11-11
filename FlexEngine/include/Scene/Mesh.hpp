@@ -50,6 +50,8 @@ namespace flex
 		void DestroyAllSubmeshes();
 		void Reload();
 
+		Mesh* CloneSelf(GameObject* newOwner, bool bCreateRenderObject);
+
 		void RemoveSubmesh(u32 index);
 
 		bool LoadFromFile(CreateInfo& createInfo);

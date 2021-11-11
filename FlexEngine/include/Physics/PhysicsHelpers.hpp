@@ -4,6 +4,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 IGNORE_WARNINGS_POP
 
+class btCollisionShape;
+
 namespace flex
 {
 	static BroadphaseNativeTypes g_CollisionTypes[] =
@@ -66,4 +68,5 @@ namespace flex
 		MAX_FLAG = (1 << 30)
 	};
 
+	btCollisionShape* CloneCollisionShape(const glm::vec3& worldScale, btCollisionShape* originalShape);
 } // namespace flex

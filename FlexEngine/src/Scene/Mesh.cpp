@@ -115,6 +115,36 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
+	Mesh* Mesh::CloneSelf(GameObject* newOwner, bool bCreateRenderObject)
+	{
+		std::vector<MaterialID> matIDs = GetMaterialIDs();
+
+		Mesh* newMesh = newOwner->SetMesh(new Mesh(newOwner));
+		switch (m_Type)
+		{
+		case Type::PREFAB:
+		{
+			PrefabShape shape = m_Meshes[0]->GetShape();
+			newMesh->LoadPrefabShape(shape, matIDs[0], nullptr, bCreateRenderObject);
+		} break;
+		case Type::FILE:
+		{
+			std::string filePath = m_RelativeFilePath;
+			Mesh::CreateInfo meshCreateInfo = {};
+			meshCreateInfo.relativeFilePath = filePath;
+			meshCreateInfo.materialIDs = matIDs;
+			meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
+			newMesh->LoadFromFile(meshCreateInfo);
+		} break;
+		default:
+		{
+			PrintError("Unhandled mesh component prefab type in Mesh::CloneSelf\n");
+		} break;
+		}
+
+		return newMesh;
+	}
+
 	void Mesh::RemoveSubmesh(u32 index)
 	{
 		m_Meshes[index] = nullptr;

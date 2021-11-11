@@ -1993,100 +1993,22 @@ namespace flex
 
 		bool bCreateRenderObject = (copyFlags & CopyFlags::CREATE_RENDER_OBJECT);
 
-		// TODO: Move to Mesh class
 		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && m_bSerializeMesh)
 		{
-			std::vector<MaterialID> matIDs = m_Mesh->GetMaterialIDs();
-
 			if (newGameObject->GetMesh() != nullptr)
 			{
 				PrintError("New mesh (%s) already has mesh, perhaps it should have m_bSerializeMesh set to false?\n", newGameObject->m_Name.c_str());
 			}
 			else
 			{
-				Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
-				Mesh::Type meshType = m_Mesh->GetType();
-				switch (meshType)
-				{
-				case Mesh::Type::PREFAB:
-				{
-					PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
-					newMesh->LoadPrefabShape(shape, matIDs[0], nullptr, bCreateRenderObject);
-				} break;
-				case Mesh::Type::FILE:
-				{
-					std::string filePath = m_Mesh->GetRelativeFilePath();
-					Mesh::CreateInfo meshCreateInfo = {};
-					meshCreateInfo.relativeFilePath = filePath;
-					meshCreateInfo.materialIDs = matIDs;
-					meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
-					newMesh->LoadFromFile(meshCreateInfo);
-				} break;
-				default:
-				{
-					PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
-				} break;
-				}
+				m_Mesh->CloneSelf(newGameObject);
 			}
 		}
 
-		// TODO: Move to RigidBody class
 		if ((copyFlags & CopyFlags::RIGIDBODY) && m_RigidBody != nullptr)
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
-
-			btCollisionShape* pCollisionShape = m_CollisionShape;
-			btCollisionShape* newCollisionShape = nullptr;
-
-			btVector3 btWorldScale = ToBtVec3(m_Transform.GetWorldScale());
-			real btWorldScaleX = btWorldScale.getX();
-
-			i32 shapeType = pCollisionShape->getShapeType();
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btBoxShape*>(pCollisionShape)->getHalfExtentsWithMargin();
-				btHalfExtents = btHalfExtents / btWorldScale;
-				newCollisionShape = new btBoxShape(btHalfExtents);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btSphereShape*>(pCollisionShape)->getRadius();
-				radius /= btWorldScaleX;
-				newCollisionShape = new btSphereShape(radius);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getRadius();
-				real height = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getHalfHeight() * 2.0f;
-				radius /= btWorldScaleX;
-				height /= btWorldScaleX;
-				newCollisionShape = new btCapsuleShapeZ(radius, height);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btConeShape*>(pCollisionShape)->getRadius();
-				real height = static_cast<btConeShape*>(pCollisionShape)->getHeight();
-				radius /= btWorldScaleX;
-				height /= btWorldScaleX;
-				newCollisionShape = new btConeShape(radius, height);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btCylinderShape*>(pCollisionShape)->getHalfExtentsWithMargin();
-				btHalfExtents = btHalfExtents / btWorldScale;
-				newCollisionShape = new btCylinderShape(btHalfExtents);
-			} break;
-			default:
-			{
-				PrintWarn("Unhanded shape type in GameObject::CopyGenericFields\n");
-			} break;
-			}
-
-			newGameObject->SetCollisionShape(newCollisionShape);
-
-			// TODO: Copy over constraints here
+			newGameObject->SetCollisionShape(CloneCollisionShape(m_CollisionShape));
 		}
 
 		if (copyFlags & CopyFlags::CHILDREN)
