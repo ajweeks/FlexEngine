@@ -712,21 +712,21 @@ namespace flex
 
 					ImGui::PushItemWidth(80.0f);
 					{
-						i32 group = m_RigidBody->GetGroup();
-						if (ImGui::InputInt("Group", &group, 1, 16))
+						u32 group = m_RigidBody->GetGroup();
+						if (ImGuiExt::InputUInt("Group", &group, 1u, 16u))
 						{
 							bAnyPropertyChanged = true;
-							group = glm::clamp(group, -1, 16);
+							group = glm::clamp(group, 0u, 16u);
 							m_RigidBody->SetGroup(group);
 						}
 
 						ImGui::SameLine();
 
-						i32 mask = m_RigidBody->GetMask();
-						if (ImGui::InputInt("Mask", &mask, 1, 16))
+						u32 mask = m_RigidBody->GetMask();
+						if (ImGuiExt::InputUInt("Mask", &mask, 1u, 16u))
 						{
 							bAnyPropertyChanged = true;
-							mask = glm::clamp(mask, -1, 16);
+							mask = glm::clamp(mask, 0u, 16u);
 							m_RigidBody->SetMask(mask);
 						}
 					}
@@ -952,8 +952,8 @@ namespace flex
 
 					ImGui::Text("Activation state: %i", rbInternal->getActivationState());
 
-					ImGui::Text("Group: %i", m_RigidBody->GetGroup());
-					ImGui::Text("Mask: %i", m_RigidBody->GetMask());
+					ImGui::Text("Group: %u", m_RigidBody->GetGroup());
+					ImGui::Text("Mask: %u", m_RigidBody->GetMask());
 				}
 
 				ImGui::TreePop();
@@ -1373,8 +1373,8 @@ namespace flex
 				real mass = rigidBodyObj.GetFloat("mass");
 				bool bKinematic = rigidBodyObj.GetBool("kinematic");
 				bool bStatic = rigidBodyObj.GetBool("static");
-				i32 mask = rigidBodyObj.GetInt("mask");
-				i32 group = rigidBodyObj.GetInt("group");
+				u32 mask = rigidBodyObj.GetUInt("mask");
+				u32 group = rigidBodyObj.GetUInt("group");
 
 				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
 				rigidBody->SetMass(mass);
@@ -1619,8 +1619,8 @@ namespace flex
 					real mass = rigidBody->GetMass();
 					bool bKinematic = rigidBody->IsKinematic();
 					bool bStatic = rigidBody->IsStatic();
-					i32 mask = m_RigidBody->GetMask();
-					i32 group = m_RigidBody->GetGroup();
+					u32 mask = m_RigidBody->GetMask();
+					u32 group = m_RigidBody->GetGroup();
 
 					rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
 					rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
@@ -3301,9 +3301,9 @@ namespace flex
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
-		prefabTemplate->GetMesh()->CloneSelf(this, true);
+			prefabTemplate->GetMesh()->CloneSelf(this, true);
 		SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
-		SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
+			SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
 
 		GameObject::Initialize();
 	}
@@ -9843,7 +9843,7 @@ namespace flex
 		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
 
 		// TODO: Don't even create rb?
-		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(chunk->collisionShape, &m_Transform);
 		chunk->rigidBody = rigidBody;
@@ -13086,7 +13086,7 @@ namespace flex
 		submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
 
 		// TODO: Don't even create rb?
-		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(shape, &m_Transform);
 		m_RigidBodies[meshIndex] = rigidBody;

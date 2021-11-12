@@ -782,7 +782,7 @@ namespace flex
 						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
 						pairCache.setWorldTransform(bbTransform);
 
-						i32 mask = (i32)CollisionType::NOTHING;
+						i32 mask = (u32)CollisionType::NOTHING;
 						pairCache.setCollisionFlags(mask);
 
 						CustomContactResultCallback resultCallback;

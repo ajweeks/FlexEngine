@@ -127,13 +127,13 @@ namespace flex
 		return rayDirection;
 	}
 
-	GameObject* PhysicsWorld::PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, i32 mask /* = (i32)CollisionType::DEFAULT */)
+	GameObject* PhysicsWorld::PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, u32 mask /* = (u32)CollisionType::DEFAULT */)
 	{
 		GameObject* pickedGameObject = nullptr;
 
 		btCollisionWorld::AllHitsRayResultCallback rayCallback(rayStart, rayEnd);
-		rayCallback.m_collisionFilterGroup = mask;
-		rayCallback.m_collisionFilterMask = mask;
+		rayCallback.m_collisionFilterGroup = (i32)mask;
+		rayCallback.m_collisionFilterMask = (i32)mask;
 		m_World->rayTest(rayStart, rayEnd, rayCallback);
 		real closestDist2 = FLT_MAX;
 		if (rayCallback.hasHit())

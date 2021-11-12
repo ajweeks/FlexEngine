@@ -51,13 +51,14 @@ namespace flex
 	std::string CollisionShapeTypeToString(int shapeType);
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str);
 
-	enum class CollisionType
+	enum class CollisionType : u32
 	{
 		NOTHING = 0,
 		DEFAULT = 1 << 0,
 		EDITOR_OBJECT = 1 << 1,
 		STATIC = 1 << 2,
-		EVERYTHING = ~0
+		DROPPED_ITEM = 1 << 3,
+		EVERYTHING = ~(u32)0
 	};
 
 	enum class PhysicsFlag : u32

@@ -20,7 +20,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	RigidBody::RigidBody(i32 group, i32 mask) :
+	RigidBody::RigidBody(u32 group, u32 mask) :
 		m_Group(group),
 		m_Mask(mask)
 	{
@@ -76,7 +76,7 @@ namespace flex
 		m_btRigidBody->setFriction(m_Friction);
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		world->addRigidBody(m_btRigidBody, m_Group, m_Mask);
+		world->addRigidBody(m_btRigidBody, (i32)m_Group, (i32)m_Mask);
 
 		m_btRigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(transform->GetWorldScale()));
 	}
@@ -200,12 +200,12 @@ namespace flex
 		}
 	}
 
-	i32 RigidBody::GetGroup() const
+	u32 RigidBody::GetGroup() const
 	{
 		return m_Group;
 	}
 
-	void RigidBody::SetGroup(i32 group)
+	void RigidBody::SetGroup(u32 group)
 	{
 		m_Group = group;
 
@@ -213,16 +213,16 @@ namespace flex
 		if (m_btRigidBody)
 		{
 			world->removeRigidBody(m_btRigidBody);
-			world->addRigidBody(m_btRigidBody, m_Group, m_Mask);
+			world->addRigidBody(m_btRigidBody, (i32)m_Group, (i32)m_Mask);
 		}
 	}
 
-	i32 RigidBody::GetMask() const
+	u32 RigidBody::GetMask() const
 	{
 		return m_Mask;
 	}
 
-	void RigidBody::SetMask(i32 mask)
+	void RigidBody::SetMask(u32 mask)
 	{
 		m_Mask = mask;
 

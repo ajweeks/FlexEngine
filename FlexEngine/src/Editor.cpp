@@ -492,7 +492,7 @@ namespace flex
 			m_CurrentTransformGizmoState == TransformState::TRANSLATE ? m_TranslationGizmoTag :
 			(m_CurrentTransformGizmoState == TransformState::ROTATE ? m_RotationGizmoTag :
 				m_ScaleGizmoTag));
-		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag, (i32)CollisionType::EDITOR_OBJECT);
+		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag, (u32)CollisionType::EDITOR_OBJECT);
 
 		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
@@ -1437,8 +1437,8 @@ namespace flex
 		m_TransformGizmo = new GameObject("Transform gizmo", SID("object"));
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
-		i32 gizmoRBMask = (i32)CollisionType::EDITOR_OBJECT;
+		u32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
+		u32 gizmoRBMask = (u32)CollisionType::EDITOR_OBJECT;
 
 		Mesh::CreateInfo meshCreateInfo = {};
 		meshCreateInfo.optionalRenderObjectCreateInfo = &gizmoCreateInfo;

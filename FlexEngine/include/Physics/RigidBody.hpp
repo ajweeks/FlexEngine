@@ -13,7 +13,7 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = (i32)CollisionType::DEFAULT, i32 mask = (i32)CollisionType::DEFAULT);
+		RigidBody(u32 group = (u32)CollisionType::DEFAULT, u32 mask = (u32)CollisionType::DEFAULT);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
@@ -44,13 +44,13 @@ namespace flex
 		void SetWorldPosition(const glm::vec3& worldPos);
 		void SetWorldRotation(const glm::quat& worldRot);
 
-		i32 GetGroup() const;
+		u32 GetGroup() const;
 		// NOTE: This function removes, then re-adds this object to the world!
-		void SetGroup(i32 group);
+		void SetGroup(u32 group);
 
-		i32 GetMask() const;
+		u32 GetMask() const;
 		// NOTE: This function removes, then re-adds this object to the world!
-		void SetMask(i32 mask);
+		void SetMask(u32 mask);
 
 		// Applies rigid body transform to our transform (taking into account local transform)
 		//void UpdateTransform();
@@ -77,8 +77,8 @@ namespace flex
 		bool m_bKinematic = false;
 		real m_Friction = 1.0f;
 
-		i32 m_Group = 0;
-		i32 m_Mask = 0;
+		u32 m_Group = (u32)CollisionType::DEFAULT;
+		u32 m_Mask = (u32)CollisionType::DEFAULT;
 
 		real m_AngularDamping = 0.0f;
 		real m_LinearDamping = 0.0f;

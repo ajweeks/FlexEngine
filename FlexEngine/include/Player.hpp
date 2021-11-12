@@ -128,8 +128,8 @@ namespace flex
 		real m_TrackAttachMinDist = 4.0f;
 
 		real m_ItemPickupRadius = 3.0f;
-		real m_ItemDropPosForwardOffset = 1.2f;
-		real m_ItemDropForwardVelocity = 1.0f;
+		real m_ItemDropPosForwardOffset = 1.5f;
+		real m_ItemDropForwardVelocity = 10.0f;
 
 		TrackState m_TrackState;
 
