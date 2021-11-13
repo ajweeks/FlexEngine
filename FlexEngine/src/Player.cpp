@@ -49,12 +49,12 @@ namespace flex
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "click-02.wav");
-		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "jingle-single-01.wav");
-		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "crunch-13.wav");
-		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-02.wav");
-		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_DIRECTORY "whistle-01.wav");
-		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-07.wav");
+		m_SoundPlaceTrackNodeID = g_ResourceManager->GetOrLoadAudioID(SID("click-02.wav"));
+		m_SoundPlaceFinalTrackNodeID = g_ResourceManager->GetOrLoadAudioID(SID("jingle-single-01.wav"));
+		m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioID(SID("crunch-13.wav"));
+		m_SoundTrackDetachID = g_ResourceManager->GetOrLoadAudioID(SID("schluck-02.wav"));
+		m_SoundTrackSwitchDirID = g_ResourceManager->GetOrLoadAudioID(SID("whistle-01.wav"));
+		//m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioID(SID("schluck-07.wav"));
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -771,7 +771,9 @@ namespace flex
 		GameObjectStack::UserData userData = {};
 		AddToInventory(droppedItem->prefabID, droppedItem->stackSize, userData);
 
-		g_SceneManager->CurrentScene()->DestroyDroppedItem(droppedItem);
+		droppedItem->OnPickedUp();
+
+		g_SceneManager->CurrentScene()->RemoveObject(droppedItem, true);
 	}
 
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count)

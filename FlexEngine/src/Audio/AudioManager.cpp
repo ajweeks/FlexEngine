@@ -144,7 +144,7 @@ namespace flex
 			stateLength = std::max(AudioManager::GetSourceLength(start) - m_FadeDuration, 0.0f);
 			if (offset != -1.0f)
 			{
-				AudioManager::PlaySourceFromPos(start, offset);
+				AudioManager::PlaySourceAtOffset(start, offset);
 			}
 			else
 			{
@@ -191,7 +191,7 @@ namespace flex
 			stateLength = AudioManager::GetSourceLength(end);
 			if (offset != -1.0f)
 			{
-				AudioManager::PlaySourceFromPos(end, offset);
+				AudioManager::PlaySourceAtOffset(end, offset);
 			}
 			else
 			{
@@ -810,10 +810,17 @@ namespace flex
 		s_TemporarySources.clear();
 	}
 
+	void AudioManager::SetListenerPos(const glm::vec3& posWS)
+	{
+		alListener3f(AL_POSITION, posWS.x, posWS.y, posWS.z);
+		DisplayALError("SetListenerPos", alGetError());
+	}
+
 	void AudioManager::SetMasterGain(real masterGain)
 	{
 		s_MasterGain = glm::clamp(masterGain, 0.0f, 1.0f);
 		alListenerf(AL_GAIN, s_MasterGain);
+		DisplayALError("SetMasterGain", alGetError());
 	}
 
 	real AudioManager::GetMasterGain()
@@ -846,7 +853,7 @@ namespace flex
 		PlaySource(sourceID, bForceRestart);
 	}
 
-	void AudioManager::PlaySourceFromPos(AudioSourceID sourceID, real t)
+	void AudioManager::PlaySourceAtOffset(AudioSourceID sourceID, real t)
 	{
 		if (sourceID >= s_Sources.size())
 		{
@@ -858,7 +865,21 @@ namespace flex
 		alSourcef(s_Sources[sourceID].source, AL_SEC_OFFSET, offset);
 		alSourcePlay(s_Sources[sourceID].source);
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-		DisplayALError("PlaySourceFromPos", alGetError());
+		DisplayALError("PlaySourceAtOffset", alGetError());
+	}
+
+	void AudioManager::PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS)
+	{
+		if (sourceID >= s_Sources.size())
+		{
+			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
+			return;
+		}
+
+		alSource3f(s_Sources[sourceID].source, AL_POSITION, posWS.x, posWS.y, posWS.z);
+		alSourcePlay(s_Sources[sourceID].source);
+		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
+		DisplayALError("PlaySourceAtPosWS", alGetError());
 	}
 
 	void AudioManager::PauseSource(AudioSourceID sourceID)

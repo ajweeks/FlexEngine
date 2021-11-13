@@ -294,9 +294,9 @@ namespace flex
 		{
 			PROFILE_AUTO("Initialize audio sources");
 
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("dud_dud_dud_dud.wav")));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("drmapan.wav")));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("blip.wav")));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 523.25f)); // C5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 587.33f)); // D5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 659.25f)); // E5

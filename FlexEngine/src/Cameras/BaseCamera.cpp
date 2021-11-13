@@ -72,6 +72,8 @@ namespace flex
 	void BaseCamera::Update()
 	{
 		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_DeltaTime);
+
+		AudioManager::SetListenerPos(position);
 	}
 
 	void BaseCamera::LateUpdate()

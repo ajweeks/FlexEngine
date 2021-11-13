@@ -146,9 +146,9 @@ namespace flex
 
 		if (!s_SqueakySounds.IsInitialized())
 		{
-			s_SqueakySounds.Initialize(SFX_DIRECTORY "squeak00.wav", 5);
+			s_SqueakySounds.Initialize("squeak00.wav", 5);
 
-			s_BunkSound = AudioManager::AddAudioSource(SFX_DIRECTORY "bunk.wav");
+			s_BunkSound = g_ResourceManager->GetOrLoadAudioID(SID("bunk.wav"));
 		}
 	}
 
@@ -3290,27 +3290,79 @@ namespace flex
 		m_bSerializable = false;
 	}
 
-	void DroppedItem::Update()
-	{
-		secondsAlive += g_DeltaTime;
-
-		GameObject::Update();
-	}
-
 	void DroppedItem::Initialize()
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
-			prefabTemplate->GetMesh()->CloneSelf(this, true);
-		SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
+		GameObject* child = new GameObject("dropped item child", SID("object"), InvalidGameObjectID);
+		child->SetSerializable(false);
+
+		if (prefabTemplate->GetMesh() != nullptr)
+		{
+			prefabTemplate->GetMesh()->CloneSelf(child, true);
+		}
+		else
+		{
+			Mesh* mesh = SetMesh(new Mesh(child));
+			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+		}
+
+		if (prefabTemplate->GetRigidBody() != nullptr)
+		{
+			RigidBody* rb = SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
+			// TODO: Figure out how to get dropped items to collide with everything but themselves
+			rb->SetKinematic(true);
 			SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
+		}
+
+		AddChild(child);
 
 		GameObject::Initialize();
+
+		if (m_RigidBody != nullptr)
+		{
+			m_RigidBody->SetAngularFactor(btVector3(0.0f, 0.0f, 0.0f)); // Prevent rotation
+		}
+	}
+
+	void DroppedItem::Destroy(bool bDetachFromParent /* = true */)
+	{
+		g_SceneManager->CurrentScene()->OnDroppedItemDestroyed(this);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void DroppedItem::Update()
+	{
+		secondsAlive += g_DeltaTime;
+
+		GameObject* child = GetChild(0);
+		if (child != nullptr)
+		{
+			Transform* childTransform = child->GetTransform();
+
+			bobAmount = (sin(g_SecElapsedSinceProgramStart * 7.0f) * 0.5f + 0.5f) * 0.6f;
+
+			glm::vec3 newPos(0.0f, bobAmount, 0.0f);
+
+			glm::quat newRot = childTransform->GetLocalRotation();
+			newRot *= glm::quat(glm::vec3(0.0f, turnSpeed * g_DeltaTime, 0.0f));
+
+			childTransform->SetLocalPosition(newPos, false);
+			childTransform->SetLocalRotation(newRot, true);
+		}
+
+		GameObject::Update();
 	}
 
 	bool DroppedItem::CanBePickedUp() const
 	{
 		return secondsAlive > MIN_TIME_BEFORE_PICKUP;
+	}
+
+	void DroppedItem::OnPickedUp()
+	{
+		AudioManager::PlaySourceAtPosWS(BaseScene::s_PickupAudioID, m_Transform.GetWorldPosition());
 	}
 
 	DirectionalLight::DirectionalLight() :

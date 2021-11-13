@@ -36,6 +36,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	AudioSourceID BaseScene::s_PickupAudioID = InvalidAudioSourceID;
+
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName)
 	{
@@ -71,6 +73,11 @@ namespace flex
 		m_SkyboxData.fog = m_SkyboxDatas[0].fog;
 
 		m_PlayerSpawnPoint = glm::vec3(0.0f, 2.0f, 0.0f);
+
+		if (s_PickupAudioID == InvalidAudioSourceID)
+		{
+			s_PickupAudioID = g_ResourceManager->GetOrLoadAudioID(SID("pickup-item.wav"));
+		}
 	}
 
 	void BaseScene::Initialize()
@@ -1963,14 +1970,12 @@ namespace flex
 		}
 	}
 
-	void BaseScene::DestroyDroppedItem(DroppedItem* item)
+	void BaseScene::OnDroppedItemDestroyed(DroppedItem* item)
 	{
 		if (!Erase(m_DroppedItems, item))
 		{
 			PrintWarn("Attempted to destroy dropped item not found in scene\n");
 		}
-
-		RemoveObject(item, true);
 	}
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)

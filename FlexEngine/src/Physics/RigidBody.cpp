@@ -83,7 +83,7 @@ namespace flex
 
 	void RigidBody::Destroy()
 	{
-		if (m_btRigidBody)
+		if (m_btRigidBody != nullptr)
 		{
 			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			for (btTypedConstraint* constraint : m_Constraints)
@@ -122,7 +122,7 @@ namespace flex
 	{
 		m_bKinematic = bKinematic;
 
-		if (bKinematic && m_btRigidBody)
+		if (bKinematic && m_btRigidBody != nullptr)
 		{
 			m_btRigidBody->clearForces();
 			m_btRigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
@@ -153,7 +153,7 @@ namespace flex
 	{
 		m_Friction = friction;
 
-		if (m_btRigidBody)
+		if (m_btRigidBody != nullptr)
 		{
 			m_btRigidBody->setFriction(friction);
 		}
@@ -172,6 +172,16 @@ namespace flex
 	void RigidBody::SetAngularDamping(real angularDamping)
 	{
 		m_AngularDamping = angularDamping;
+	}
+
+	void RigidBody::SetLinearFactor(const btVector3& factor)
+	{
+		m_btRigidBody->setLinearFactor(factor);
+	}
+
+	void RigidBody::SetAngularFactor(const btVector3& factor)
+	{
+		m_btRigidBody->setAngularFactor(factor);
 	}
 
 	void RigidBody::SetOrientationConstraint(const btVector3& axis)
@@ -210,7 +220,7 @@ namespace flex
 		m_Group = group;
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		if (m_btRigidBody)
+		if (m_btRigidBody != nullptr)
 		{
 			world->removeRigidBody(m_btRigidBody);
 			world->addRigidBody(m_btRigidBody, (i32)m_Group, (i32)m_Mask);
@@ -227,7 +237,7 @@ namespace flex
 		m_Mask = mask;
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		if (m_btRigidBody)
+		if (m_btRigidBody != nullptr)
 		{
 			world->removeRigidBody(m_btRigidBody);
 			world->addRigidBody(m_btRigidBody, m_Group, m_Mask);

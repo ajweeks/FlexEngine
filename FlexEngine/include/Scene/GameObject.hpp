@@ -432,15 +432,18 @@ namespace flex
 		DroppedItem(const PrefabID& prefabID, i32 stackSize);
 
 		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
 
 		virtual void Update() override;
 
 		bool CanBePickedUp() const;
-		PrefabID GetPrefabID() const;
+		void OnPickedUp();
 
 		PrefabID prefabID = InvalidPrefabID;
 		i32 stackSize = 0;
 		real secondsAlive = 0.0f;
+		real bobAmount = 0.0f;
+		real turnSpeed = 6.0f;
 
 		static const real MIN_TIME_BEFORE_PICKUP;
 

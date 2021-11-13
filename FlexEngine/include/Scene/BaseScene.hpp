@@ -184,7 +184,7 @@ namespace flex
 		bool GetNearbyDroppedItems(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
 
 		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity);
-		void DestroyDroppedItem(DroppedItem* item);
+		void OnDroppedItemDestroyed(DroppedItem* item);
 
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
@@ -192,6 +192,8 @@ namespace flex
 		static const i32 LATEST_MATERIALS_FILE_VERSION = 2;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		static const i32 LATETST_PREFAB_FILE_VERSION = 3;
+
+		static AudioSourceID s_PickupAudioID;
 
 	protected:
 		friend GameObject;

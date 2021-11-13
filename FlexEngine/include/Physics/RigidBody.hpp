@@ -35,6 +35,11 @@ namespace flex
 		void SetLinearDamping(real linearDamping);
 		void SetAngularDamping(real angularDamping);
 
+		// Limit movement to the given axes (0 = locked, 1 = free)
+		void SetLinearFactor(const btVector3& factor);
+		// Limit rotation to the given axes (0 = locked, 1 = free)
+		void SetAngularFactor(const btVector3& factor);
+
 		// Vector passed in defines the axis (or axes) this body can rotate around
 		void SetOrientationConstraint(const btVector3& axis);
 

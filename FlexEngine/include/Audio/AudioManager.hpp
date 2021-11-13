@@ -142,12 +142,12 @@ namespace flex
 
 		static real NoteToFrequencyHz(i32 note);
 
-		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
-		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
 		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
+
+		static void SetListenerPos(const glm::vec3& posWS);
 
 		/* [0.0, 1.0] logarithmic */
 		static void SetMasterGain(real masterGain);
@@ -156,7 +156,8 @@ namespace flex
 		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
 		static void PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart = true);
 		// Start source partway through (t in [0, 1])
-		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
+		static void PlaySourceAtOffset(AudioSourceID sourceID, real t);
+		static void PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS);
 		static void PauseSource(AudioSourceID sourceID);
 		static void StopSource(AudioSourceID sourceID);
 		static void PlayNote(real frequency, sec length, real gain);
@@ -200,6 +201,11 @@ namespace flex
 		static bool AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen);
 
 	private:
+		friend ResourceManager;
+
+		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
+		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
+
 		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format);
 
 		static void DisplayALError(const std::string& str, ALenum error);
