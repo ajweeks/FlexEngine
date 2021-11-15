@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "2292977FE92C438E424D082E6CA36714",
+	"root" : 
+	{
+		"name" : "mineral_deposit",
+		"id" : "039DF209DA76F2BB4735D0D01D1C3D72",
+		"type" : "mineral deposit",
+		"mesh" : "mineral-deposit-01.glb",
+		"materials" : 
+		[
+			"pbr grey"
+		]
+	}
+}

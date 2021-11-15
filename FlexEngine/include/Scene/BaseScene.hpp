@@ -93,7 +93,7 @@ namespace flex
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 
 		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
-		GameObject* ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance);
+		GameObject* ReinstantiateFromPrefab(const PrefabID& prefabID, GameObject* previousInstance);
 
 		GameObjectID FirstObjectWithTag(const std::string& tag);
 
@@ -180,8 +180,32 @@ namespace flex
 
 		void OnExternalMeshChange(const std::string& meshFilePath);
 
+		// Fills out a sorted list of objects with the given typeID & their distance to the given point
+		// Returns true when there are nearby objects
+		template<class T>
+		bool GetObjectsInRadius(const glm::vec3& pos, real radius, StringID typeID, std::vector<Pair<T*, real>>& objects)
+		{
+			real radiusSq = radius * radius;
+			std::vector<T*> allObjects = GetObjectsOfType<T>(typeID);
+			for (T* object : allObjects)
+			{
+				real dist2 = glm::distance2(pos, object->GetTransform()->GetWorldPosition());
+				if (dist2 < radiusSq)
+				{
+					objects.push_back({ object, glm::sqrt(dist2) });
+				}
+			}
+
+			std::sort(objects.begin(), objects.end(), [](const Pair<MineralDeposit*, real>& a, const Pair<MineralDeposit*, real>& b)
+			{
+				return a.second > b.second;
+			});
+
+			return !objects.empty();
+		}
+
 		// Returns true when there are nearby items
-		bool GetNearbyDroppedItems(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
+		bool GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
 
 		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity);
 		void OnDroppedItemDestroyed(DroppedItem* item);

@@ -336,7 +336,7 @@ namespace flex
 	{
 		if (gameObject->m_PrefabIDLoadedFrom == prefabID)
 		{
-			GameObject* newGameObject = ReplacePrefab(prefabID, gameObject);
+			GameObject* newGameObject = ReinstantiateFromPrefab(prefabID, gameObject);
 
 			for (GameObject* child : newGameObject->m_Children)
 			{
@@ -1754,7 +1754,7 @@ namespace flex
 		return newPrefabInstance;
 	}
 
-	GameObject* BaseScene::ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance)
+	GameObject* BaseScene::ReinstantiateFromPrefab(const PrefabID& prefabID, GameObject* previousInstance)
 	{
 		using CopyFlags = GameObject::CopyFlags;
 
@@ -1945,7 +1945,7 @@ namespace flex
 		}
 	}
 
-	bool BaseScene::GetNearbyDroppedItems(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items)
+	bool BaseScene::GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items)
 	{
 		real radiusSq = radius * radius;
 		for (DroppedItem* item : m_DroppedItems)
@@ -2260,7 +2260,7 @@ namespace flex
 
 	void BaseScene::UnregisterEditorGameObject(EditorObjectID* editorObjectID)
 	{
-		auto iter = m_EditorGameObjectLUT.find(*editorObjectID);
+		auto iter =		m_EditorGameObjectLUT.find(*editorObjectID);
 		if (iter != m_EditorGameObjectLUT.end())
 		{
 			m_EditorGameObjectLUT.erase(iter);

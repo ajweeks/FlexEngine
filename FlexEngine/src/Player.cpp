@@ -208,7 +208,7 @@ namespace flex
 		}
 
 		std::vector<DroppedItem*> nearbyItems;
-		if (scene->GetNearbyDroppedItems(m_Transform.GetWorldPosition(), m_ItemPickupRadius, nearbyItems))
+		if (scene->GetDroppedItemsInRadius(m_Transform.GetWorldPosition(), m_ItemPickupRadius, nearbyItems))
 		{
 			for (DroppedItem* item : nearbyItems)
 			{

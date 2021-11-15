@@ -128,6 +128,23 @@ namespace flex
 		userData.floatVal = 0.0f;
 	}
 
+	void GameObjectStack::SerializeToJSON(JSONObject& parentObject)
+	{
+		parentObject.fields.emplace_back("prefab id", JSONValue(prefabID));
+		parentObject.fields.emplace_back("count", JSONValue(count));
+		if (userData.floatVal != 0.0f)
+		{
+			parentObject.fields.emplace_back("user data", JSONValue(userData.floatVal));
+		}
+	}
+
+	void GameObjectStack::ParseFromJSON(const JSONObject& parentObject)
+	{
+		prefabID = parentObject.GetPrefabID("prefab id");
+		count = parentObject.GetInt("count");
+		parentObject.TryGetFloat("user data", userData.floatVal);
+	}
+
 	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		m_Name(name),
 		m_TypeID(typeID)
@@ -340,6 +357,8 @@ namespace flex
 		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
 		case SID("headlamp"): return new HeadLamp(objectName, gameObjectID);
 		case SID("power pole"): return new PowerPole(objectName, gameObjectID);
+		case SID("mineral deposit"): return new MineralDeposit(objectName, gameObjectID);
+		case SID("miner"): return new Miner(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -1204,7 +1223,7 @@ namespace flex
 		{
 			PrefabID newPrefabID = g_ResourceManager->WriteNewPrefabToDisk(this);
 			g_ResourceManager->DiscoverPrefabs();
-			currentScene->ReplacePrefab(newPrefabID, this);
+			currentScene->ReinstantiateFromPrefab(newPrefabID, this);
 		}
 	}
 
@@ -13110,7 +13129,7 @@ namespace flex
 			matCreateInfo.enableAlbedoSampler = true;
 			matCreateInfo.bSerializable = false;
 
-			m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
+m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
 		}
 	}
 
@@ -13200,5 +13219,196 @@ namespace flex
 				}
 			}
 		}
+	}
+
+	const char* MineralTypeToString(MineralType type)
+	{
+		return MineralTypeStrings[(i32)type];
+	}
+
+	MineralType MineralTypeFromString(const char* typeStr)
+	{
+		for (i32 i = 0; i < (i32)MineralType::_NONE; ++i)
+		{
+			if (StrCmpCaseInsensitive(MineralTypeStrings[i], typeStr) == 0)
+			{
+				return (MineralType)i;
+			}
+		}
+
+		return MineralType::_NONE;
+	}
+
+	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */):
+		GameObject(name, SID("mineral deposit"), gameObjectID)
+	{
+	}
+
+	void MineralDeposit::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		const char* mineralTypeStr = MineralTypeToString(m_Type);
+		ImGui::Text("Mineral Type: %s", mineralTypeStr);
+		ImGui::Text("Mineral remaining: %.2f", m_MineralRemaining);
+	}
+
+	u32 MineralDeposit::GetMineralRemaining() const
+	{
+		return m_MineralRemaining;
+	}
+
+	PrefabID MineralDeposit::GetMineralPrefabID()
+	{
+		std::string prefabName = "mineral_" + std::string(MineralTypeToString(m_Type));
+		return g_ResourceManager->GetPrefabID(prefabName.c_str());
+	}
+
+	u32 MineralDeposit::OnMine(real mineAmount)
+	{
+		assert(mineAmount >= 0.0f);
+
+		u32 actualMineAmount = glm::clamp((u32)mineAmount, 0u, m_MineralRemaining);
+		m_MineralRemaining -= actualMineAmount;
+		return actualMineAmount;
+	}
+
+	void MineralDeposit::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject mineralDepositObj;
+		if (parentObject.TryGetObject("mineral deposit", mineralDepositObj))
+		{
+			std::string typeStr = mineralDepositObj.GetString("type");
+			m_Type = MineralTypeFromString(typeStr.c_str());
+			m_MineralRemaining = mineralDepositObj.GetUInt("mineral remaining");
+		}
+	}
+
+	void MineralDeposit::SerializeTypeUniqueFields(JSONObject& parentObject)
+	{
+		JSONObject mineralDepositObj = {};
+
+		const char* typeStr = MineralTypeToString(m_Type);
+		mineralDepositObj.fields.emplace_back("type", JSONValue(typeStr));
+		mineralDepositObj.fields.emplace_back("mineral remaining", JSONValue(m_MineralRemaining));
+
+		parentObject.fields.emplace_back("mineral deposit", JSONValue(mineralDepositObj));
+	}
+
+	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("miner"), gameObjectID)
+	{
+	}
+
+	void Miner::Update()
+	{
+		if (!m_NearestMineralDepositID.IsValid())
+		{
+			// TODO: Only search every second or so rather than every frame
+			std::vector<Pair<MineralDeposit*, real>> nearbyDeposits;
+			if (g_SceneManager->CurrentScene()->GetObjectsInRadius<MineralDeposit>(m_Transform.GetWorldPosition(), m_MineRadius, SID("mineral deposit"), nearbyDeposits))
+			{
+				for (const Pair<MineralDeposit*, real>& mineralDepositPair : nearbyDeposits)
+				{
+					if (mineralDepositPair.first->GetMineralRemaining() > 0.0f)
+					{
+						m_NearestMineralDepositID = mineralDepositPair.first->ID;
+						break;
+					}
+				}
+			}
+		}
+
+		if (m_NearestMineralDepositID.IsValid())
+		{
+			MineralDeposit* nearestMineralDeposit = (MineralDeposit*)m_NearestMineralDepositID.Get();
+			if (nearestMineralDeposit == nullptr)
+			{
+				m_NearestMineralDepositID = InvalidGameObjectID;
+			}
+			else
+			{
+				if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+				{
+					m_NearestMineralDepositID = InvalidGameObjectID;
+				}
+
+				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
+				if (minedMineralPrefabID != InvalidPrefabID)
+				{
+					u32 maxStackSize = g_ResourceManager->GetMaxStackSize(minedMineralPrefabID);
+					if (m_Charge > m_PowerDraw && m_MinedObjectStack.count < (i32)maxStackSize)
+					{
+						u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
+						m_Charge -= m_PowerDraw;
+
+						if (mineralMined > 0)
+						{
+							if (!m_MinedObjectStack.prefabID.IsValid())
+							{
+								m_MinedObjectStack.prefabID = minedMineralPrefabID;
+								m_MinedObjectStack.count = (i32)mineralMined;
+							}
+							else if (m_MinedObjectStack.prefabID == minedMineralPrefabID)
+							{
+								m_MinedObjectStack.count = glm::min(m_MinedObjectStack.count + (i32)mineralMined, (i32)maxStackSize);
+							}
+						}
+
+						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+						{
+							m_NearestMineralDepositID = InvalidGameObjectID;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	void Miner::OnCharge(real chargeAmount)
+	{
+		m_Charge = glm::clamp(m_Charge + chargeAmount, 0.0f, m_MaxCharge);
+	}
+
+	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject minerObj;
+		if (parentObject.TryGetObject("mineral deposit", minerObj))
+		{
+			m_Charge = minerObj.GetFloat("charge");
+			m_MaxCharge = minerObj.GetFloat("max charge");
+			m_MineRate = minerObj.GetFloat("mine rate");
+			m_PowerDraw = minerObj.GetFloat("power draw");
+			m_MineRadius = minerObj.GetFloat("mine radius");
+
+			JSONObject minedObjectStack;
+			if (minerObj.TryGetObject("mined object stack", minedObjectStack))
+			{
+				m_MinedObjectStack.ParseFromJSON(minedObjectStack);
+			}
+		}
+	}
+
+	void Miner::SerializeTypeUniqueFields(JSONObject& parentObject)
+	{
+		JSONObject minerObj = {};
+
+		minerObj.fields.emplace_back("charge", JSONValue(m_Charge));
+		minerObj.fields.emplace_back("max charge", JSONValue(m_MaxCharge));
+		minerObj.fields.emplace_back("mine rate", JSONValue(m_MineRate));
+		minerObj.fields.emplace_back("power draw", JSONValue(m_PowerDraw));
+		minerObj.fields.emplace_back("mine radius", JSONValue(m_MineRadius));
+
+		JSONObject minedObjectStack = {};
+		m_MinedObjectStack.SerializeToJSON(minedObjectStack);
+		minerObj.fields.emplace_back("mined object stack", JSONValue(minedObjectStack));
+
+		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
 	}
 } // namespace flex

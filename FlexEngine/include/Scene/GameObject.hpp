@@ -76,6 +76,9 @@ namespace flex
 
 		void Clear();
 
+		void SerializeToJSON(JSONObject& parentObject);
+		void ParseFromJSON(const JSONObject& parentObject);
+
 		PrefabID prefabID;
 		i32 count;
 
@@ -1868,6 +1871,88 @@ namespace flex
 		virtual void OnCharge(real chargeAmount) override;
 
 	private:
+
+	};
+
+	enum class MineralType
+	{
+		// Elements
+		IRON, // Fe - Atomic no. 26 (most common element by mass on Earth)
+		SILICON, // Si - Atomic no. 14
+		ALUMINUM, // Al - Atomic no. 13
+		TIN, // Sn - Atomic no. 50
+
+		// Minerals
+		QUARTZ, // SiO2 - second most abundant mineral in Earth's crust
+		OLIVINE, // Magnesium iron silicate 2SiO 4
+
+		_NONE
+	};
+
+	static const char* MineralTypeStrings[] =
+	{
+		"iron",
+		"silicon",
+		"aluminium",
+		"tin",
+
+		"quartz",
+		"olivine",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(MineralTypeStrings) == (u32)MineralType::_NONE + 1, "MineralTypeStrings length must match MineralType enum");
+
+
+	const char* MineralTypeToString(MineralType type);
+	MineralType MineralTypeFromString(const char* typeStr);
+
+	class MineralDeposit : public GameObject
+	{
+	public:
+		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		u32 GetMineralRemaining() const;
+		PrefabID GetMineralPrefabID();
+
+		// Returns the actual amount of mineral mined
+		u32 OnMine(real mineAmount);
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+	private:
+		u32 m_MineralRemaining = 100;
+		MineralType m_Type = MineralType::_NONE;
+
+	};
+
+	class Miner : public GameObject
+	{
+	public:
+		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Update();
+		virtual void OnCharge(real chargeAmount) override;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+	private:
+		real m_Charge = 0.0f;
+		real m_MaxCharge = 10.0f;
+		real m_MineRate = 0.1f;
+		real m_PowerDraw = 0.1f;
+		real m_MineRadius = 2.0f;
+		GameObjectStack m_MinedObjectStack;
+
+		// Non-serialized fields
+		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
 
 	};
 
