@@ -103,7 +103,7 @@ namespace flex
 		void SetPrefabDirty(const PrefabID& prefabID);
 		void SetAllPrefabsDirty(bool bDirty);
 		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
-		PrefabID AddNewPrefab(GameObject* prefabTemplate, const char* fileName = nullptr);
+		PrefabID WriteNewPrefabToDisk(GameObject* prefabTemplate, const char* fileName = nullptr);
 		bool IsPrefabIDValid(const PrefabID& prefabID);
 
 		void RemovePrefabTemplate(const PrefabID& prefabID);

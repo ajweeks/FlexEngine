@@ -167,7 +167,10 @@ namespace flex
 		const Transform* GetTransform() const;
 
 		bool DrawImGuiDuplicateGameObjectButton();
+
+		// Create a new prefab from this object
 		void SaveAsPrefab();
+
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);

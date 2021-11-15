@@ -1175,10 +1175,10 @@ namespace flex
 
 	void GameObject::SaveAsPrefab()
 	{
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
 		if (m_PrefabIDLoadedFrom.IsValid())
 		{
-			BaseScene* currentScene = g_SceneManager->CurrentScene();
-
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
@@ -1202,7 +1202,9 @@ namespace flex
 		}
 		else
 		{
-			m_PrefabIDLoadedFrom = g_ResourceManager->AddNewPrefab(this);
+			PrefabID newPrefabID = g_ResourceManager->WriteNewPrefabToDisk(this);
+			g_ResourceManager->DiscoverPrefabs();
+			currentScene->ReplacePrefab(newPrefabID, this);
 		}
 	}
 

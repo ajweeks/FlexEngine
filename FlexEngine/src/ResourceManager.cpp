@@ -1169,6 +1169,8 @@ namespace flex
 		{
 			if (prefabID == prefabTemplatePair.prefabID)
 			{
+				assert(prefabTemplatePair.templateObject != prefabTemplate);
+
 				prefabTemplatePair.templateObject->Destroy();
 				delete prefabTemplatePair.templateObject;
 
@@ -1187,25 +1189,12 @@ namespace flex
 		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
 	}
 
-	PrefabID ResourceManager::AddNewPrefab(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
+	PrefabID ResourceManager::WriteNewPrefabToDisk(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
 	{
 		PrefabID newID = Platform::GenerateGUID();
 
-		std::string fileNameStr;
-
-		if (fileName != nullptr)
-		{
-			fileNameStr = std::string(fileName);
-		}
-		else
-		{
-			fileNameStr = prefabTemplate->GetName() + ".json";
-		}
-
+		std::string fileNameStr = fileName != nullptr ? std::string(fileName) : (prefabTemplate->GetName() + ".json");
 		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newID, fileNameStr, false };
-
-		prefabTemplates.emplace_back(prefabTemplatePair);
-
 		WritePrefabToDisk(prefabTemplatePair, newID);
 
 		return newID;
