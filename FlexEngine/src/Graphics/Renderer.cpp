@@ -1574,11 +1574,7 @@ namespace flex
 			real windowHeight = glm::min(subMeshes.size() * maxWindowHeight / maxItemCount + verticalPad, maxWindowHeight);
 			if (ImGui::BeginChild("materials", ImVec2(windowWidth - 4.0f, windowHeight), true))
 			{
-				// TODO: Obliterate!
-				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames(bDrawingEditorObjects);
-
-				bool bMatChanged = false;
-				for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
+				for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
 				{
 					MeshComponent* meshComponent = subMeshes[slotIndex];
 
@@ -1587,61 +1583,10 @@ namespace flex
 						continue;
 					}
 
-					MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
-
-					i32 selectedMaterialShortIndex = 0;
-					std::string currentMaterialName = "NONE";
-					i32 matShortIndex = 0;
-					for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+					if (meshComponent->DrawImGui(slotIndex, bDrawingEditorObjects))
 					{
-						if (matPair.second == matID)
-						{
-							selectedMaterialShortIndex = matShortIndex;
-							currentMaterialName = matPair.first;
-							break;
-						}
-
-						++matShortIndex;
-					}
-
-					std::string comboStrID = std::to_string(slotIndex);
-					if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
-					{
-						matShortIndex = 0;
-						for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
-						{
-							bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-							std::string materialName = matPair.first;
-							if (ImGui::Selectable(materialName.c_str(), &bSelected))
-							{
-								bAnyPropertyChanged = true;
-								meshComponent->SetMaterialID(matPair.second);
-								selectedMaterialShortIndex = matShortIndex;
-								bMatChanged = true;
-							}
-
-							++matShortIndex;
-						}
-
-						ImGui::EndCombo();
-					}
-
-					if (ImGui::BeginDragDropTarget())
-					{
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
-
-						if (payload && payload->Data)
-						{
-							MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-							if (draggedMaterialID)
-							{
-								bAnyPropertyChanged = true;
-								meshComponent->SetMaterialID(*draggedMaterialID);
-								bMatChanged = true;
-							}
-						}
-
-						ImGui::EndDragDropTarget();
+						bAnyPropertyChanged = true;
+						break;
 					}
 				}
 			}

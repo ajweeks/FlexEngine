@@ -20,6 +20,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Colours.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -111,6 +112,71 @@ namespace flex
 	void MeshComponent::SetOwner(Mesh* owner)
 	{
 		m_OwningMesh = owner;
+	}
+
+	bool MeshComponent::DrawImGui(i32 slotIndex, bool bDrawingEditorObjects)
+	{
+		bool bAnyPropertyChanged = false;
+
+		MaterialID matID = g_Renderer->GetRenderObjectMaterialID(renderID);
+
+		// TODO: Obliterate!
+		std::vector<Pair<std::string, MaterialID>> validMaterialNames = g_Renderer->GetValidMaterialNames(bDrawingEditorObjects);
+
+		i32 selectedMaterialShortIndex = 0;
+		std::string currentMaterialName = "NONE";
+		i32 matShortIndex = 0;
+		for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+		{
+			if (matPair.second == matID)
+			{
+				selectedMaterialShortIndex = matShortIndex;
+				currentMaterialName = matPair.first;
+				break;
+			}
+
+			++matShortIndex;
+		}
+
+		std::string comboStrID = std::to_string(slotIndex);
+		if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
+		{
+			matShortIndex = 0;
+			for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+			{
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+				std::string materialName = matPair.first;
+				if (ImGui::Selectable(materialName.c_str(), &bSelected))
+				{
+					bAnyPropertyChanged = true;
+					SetMaterialID(matPair.second);
+					selectedMaterialShortIndex = matShortIndex;
+				}
+
+				++matShortIndex;
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
+
+			if (payload && payload->Data)
+			{
+				MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+				if (draggedMaterialID)
+				{
+					bAnyPropertyChanged = true;
+					SetMaterialID(*draggedMaterialID);
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		return bAnyPropertyChanged;
 	}
 
 	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape)

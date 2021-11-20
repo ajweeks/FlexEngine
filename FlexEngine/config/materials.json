@@ -564,7 +564,7 @@
 			"colour multiplier" : "0.000,0.000,0.000,1.000"
 		},
 		{
-			"name" : "mineral silicone",
+			"name" : "mineral silicon",
 			"shader" : "pbr",
 			"const albedo" : "0.101,0.153,0.242",
 			"const emissive" : "0.000,0.000,0.000",

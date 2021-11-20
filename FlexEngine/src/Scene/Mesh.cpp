@@ -152,6 +152,8 @@ namespace flex
 
 	bool Mesh::LoadFromFile(CreateInfo& createInfo)
 	{
+		assert(m_OwningGameObject != nullptr);
+
 		// TODO: Call SetRequiredAttributesFromMaterialID for each mesh with each matID?
 
 		if (m_bInitialized)

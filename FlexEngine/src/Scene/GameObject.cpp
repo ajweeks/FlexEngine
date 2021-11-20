@@ -1225,7 +1225,7 @@ namespace flex
 		else if (m_PrefabIDLoadedFrom.IsValid())
 		{
 			// Save a prefab over an existing prefab
-			g_ResourceManager->WriteExistingPrefabToDisk(this);
+			return g_ResourceManager->WriteExistingPrefabToDisk(this);
 		}
 		else
 		{
@@ -1691,8 +1691,10 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					if (m_PrefabIDLoadedFrom.IsValid())
+					if (m_PrefabIDLoadedFrom.IsValid() && !m_bIsTemplate)
 					{
+						// Don't serialize children if this is a prefab instance and
+						// the children are present in the prefab definition
 						if (g_ResourceManager->PrefabTemplateContainsChild(m_PrefabIDLoadedFrom, child))
 						{
 							continue;
@@ -2002,7 +2004,6 @@ namespace flex
 			newGameObject->m_bIsTemplate = m_bIsTemplate;
 		}
 
-		bool bIsPrefabTemplate = (copyFlags & CopyFlags::COPYING_TO_PREFAB);
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
 
 		if (bAddToScene)
@@ -13268,6 +13269,14 @@ m_RigidBodies[meshIndex] = rigidBody;
 	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("mineral deposit"), gameObjectID)
 	{
+		m_bSerializeMesh = false;
+	}
+
+	void MineralDeposit::Initialize()
+	{
+		GameObject::Initialize();
+
+		UpdateMesh();
 	}
 
 	void MineralDeposit::DrawImGuiObjects(bool bDrawingEditorObjects)
@@ -13275,6 +13284,16 @@ m_RigidBodies[meshIndex] = rigidBody;
 		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		bool bAnyPropertyChanged = false;
+
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
+		{
+			ImGui::Text("Material");
+			MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+			if (meshComponent->DrawImGui(0, bDrawingEditorObjects))
+			{
+				bAnyPropertyChanged = true;
+			}
+		}
 
 		const char* mineralTypeStr = MineralTypeToString(m_Type);
 		if (ImGui::BeginCombo("Mineral Type", mineralTypeStr))
@@ -13297,7 +13316,7 @@ m_RigidBodies[meshIndex] = rigidBody;
 			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
 		}
 
-		ImGui::Text("Mineral remaining: %.2f", m_MineralRemaining);
+		ImGui::Text("Mineral remaining: %u", m_MineralRemaining);
 	}
 
 	GameObject* MineralDeposit::CopySelf(
@@ -13326,7 +13345,7 @@ m_RigidBodies[meshIndex] = rigidBody;
 
 	PrefabID MineralDeposit::GetMineralPrefabID()
 	{
-		std::string prefabName = "mineral_" + std::string(MineralTypeToString(m_Type));
+		std::string prefabName = "mineral_deposit_" + std::string(MineralTypeToString(m_Type));
 		return g_ResourceManager->GetPrefabID(prefabName.c_str());
 	}
 
@@ -13336,6 +13355,7 @@ m_RigidBodies[meshIndex] = rigidBody;
 
 		u32 actualMineAmount = glm::clamp((u32)mineAmount, 0u, m_MineralRemaining);
 		m_MineralRemaining -= actualMineAmount;
+		UpdateMesh();
 		return actualMineAmount;
 	}
 
@@ -13362,6 +13382,55 @@ m_RigidBodies[meshIndex] = rigidBody;
 		mineralDepositObj.fields.emplace_back("mineral remaining", JSONValue(m_MineralRemaining));
 
 		parentObject.fields.emplace_back("mineral deposit", JSONValue(mineralDepositObj));
+	}
+
+	void MineralDeposit::UpdateMesh()
+	{
+		static const char* meshes[] = { "mineral-deposit-100.glb", "mineral-deposit-66.glb", "mineral-deposit-33.glb" };
+
+		const char* newMeshFileName = "";
+		if (m_MineralRemaining > 80u)
+		{
+			newMeshFileName = meshes[0];
+		}
+		else if (m_MineralRemaining > 50u)
+		{
+			newMeshFileName = meshes[1];
+		}
+		else if (m_MineralRemaining > 0u)
+		{
+			newMeshFileName = meshes[2];
+		}
+
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
+		{
+			std::string meshFileName = m_Mesh->GetFileName();
+			if (strcmp(meshFileName.c_str(), newMeshFileName))
+			{
+				MaterialID matID = m_Mesh->GetSubMesh(0)->GetMaterialID();
+				m_Mesh->Destroy();
+				m_Mesh->SetOwner(this);
+				m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+			}
+		}
+		else
+		{
+			if (m_Mesh == nullptr)
+			{
+				SetMesh(new Mesh(this));
+			}
+
+			const char* mineralTypeStr = MineralTypeToString(m_Type);
+			MaterialID matID = g_Renderer->GetMaterialID("mineral " + std::string(mineralTypeStr));
+			if (matID == InvalidMaterialID)
+			{
+				PrintWarn("No mineral material found for mineral %s, using placeholder\n", mineralTypeStr);
+				matID = g_Renderer->GetPlaceholderMaterialID();
+			}
+			m_Mesh->Destroy();
+			m_Mesh->SetOwner(this);
+			m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+		}
 	}
 
 	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -13432,11 +13501,49 @@ m_RigidBodies[meshIndex] = rigidBody;
 				}
 			}
 		}
+
+		if (g_Editor->IsObjectSelected(ID))
+		{
+			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+			debugDrawer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
+		}
 	}
 
 	void Miner::OnCharge(real chargeAmount)
 	{
 		m_Charge = glm::clamp(m_Charge + chargeAmount, 0.0f, m_MaxCharge);
+	}
+
+	void Miner::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		bool bAnyPropertyChanged = false;
+
+		ImGui::Text("Charge: %.2f", m_Charge);
+		bAnyPropertyChanged = ImGui::DragFloat("Max charge", &m_MaxCharge, 0.5f, 0.0f, 100.0f) || bAnyPropertyChanged;
+		bAnyPropertyChanged = ImGui::DragFloat("Mine rate", &m_MineRate, 0.1f, 0.0f, 100.0f) || bAnyPropertyChanged;
+		bAnyPropertyChanged = ImGui::DragFloat("Power draw", &m_PowerDraw, 0.01f, 0.0f, 10.0f) || bAnyPropertyChanged;
+		bAnyPropertyChanged = ImGui::DragFloat("Mine radius", &m_MineRadius, 0.1f, 0.0f, 20.0f) || bAnyPropertyChanged;
+		if (m_MinedObjectStack.prefabID.IsValid())
+		{
+			ImGui::Text("Mined object stack");
+			ImGui::Indent();
+			std::string prefabIDStr = m_MinedObjectStack.prefabID.ToString();
+			std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_MinedObjectStack.prefabID)->GetName();
+			ImGui::Text("Prefab: %s (%s)", prefabName.c_str(), prefabIDStr.c_str());
+			ImGui::Text("Count: %u", m_MinedObjectStack.count);
+			ImGui::Unindent();
+		}
+		else
+		{
+			ImGui::Text("Mined object stack: Empty");
+		}
+
+		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
+		{
+			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+		}
 	}
 
 	GameObject* Miner::CopySelf(
@@ -13468,7 +13575,7 @@ m_RigidBodies[meshIndex] = rigidBody;
 		FLEX_UNUSED(matIDs);
 
 		JSONObject minerObj;
-		if (parentObject.TryGetObject("mineral deposit", minerObj))
+		if (parentObject.TryGetObject("miner", minerObj))
 		{
 			m_Charge = minerObj.GetFloat("charge");
 			m_MaxCharge = minerObj.GetFloat("max charge");
@@ -13494,9 +13601,12 @@ m_RigidBodies[meshIndex] = rigidBody;
 		minerObj.fields.emplace_back("power draw", JSONValue(m_PowerDraw));
 		minerObj.fields.emplace_back("mine radius", JSONValue(m_MineRadius));
 
-		JSONObject minedObjectStack = {};
-		m_MinedObjectStack.SerializeToJSON(minedObjectStack);
-		minerObj.fields.emplace_back("mined object stack", JSONValue(minedObjectStack));
+		if (m_MinedObjectStack.prefabID.IsValid())
+		{
+			JSONObject minedObjectStack = {};
+			m_MinedObjectStack.SerializeToJSON(minedObjectStack);
+			minerObj.fields.emplace_back("mined object stack", JSONValue(minedObjectStack));
+		}
 
 		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
 	}

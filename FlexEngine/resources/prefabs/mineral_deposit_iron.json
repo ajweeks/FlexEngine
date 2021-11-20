@@ -7,7 +7,6 @@
 		"name" : "mineral_deposit_iron",
 		"id" : "039DF209DA76F2BB4735D0D01D1C3D72",
 		"type" : "mineral deposit",
-		"mesh" : "mineral-deposit-01.glb",
 		"materials" : 
 		[
 			"mineral iron"

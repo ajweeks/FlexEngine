@@ -2369,7 +2369,7 @@ namespace flex
 				if (ImGui::BeginPopupModal(deletePrefabPopupModalName, &bShowDeletePrefabPopup))
 				{
 					std::string message = "Are you sure you want to delete the prefab " + selectedPrefabTemplate.fileName + "?";
-					ImGui::TextWrapped(message.c_str());
+					ImGui::TextWrapped("%s", message.c_str());
 					std::string prefabIDStr = selectedPrefabTemplate.prefabID.ToString();
 					ImGui::TextWrapped("(%s)", prefabIDStr.c_str());
 

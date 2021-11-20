@@ -26,6 +26,14 @@
 			"mask" : 1,
 			"group" : 1
 		},
+		"miner" : 
+		{
+			"charge" : 0.000000,
+			"max charge" : 10.000000,
+			"mine rate" : 1.000000,
+			"power draw" : 0.100000,
+			"mine radius" : 10.000000
+		},
 		"children" : 
 		[
 			{

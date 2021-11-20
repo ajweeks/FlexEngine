@@ -7,14 +7,13 @@
 		"name" : "mineral_deposit_aluminum",
 		"id" : "ACB634397342B3B148BE2E82650E3428",
 		"type" : "mineral deposit",
-		"mesh" : "mineral-deposit-01.glb",
 		"materials" : 
 		[
 			"mineral aluminum"
 		],
 		"mineral deposit" : 
 		{
-			"type" : "aluminium",
+			"type" : "aluminum",
 			"mineral remaining" : 100
 		}
 	}

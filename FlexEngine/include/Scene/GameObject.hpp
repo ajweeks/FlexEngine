@@ -1896,7 +1896,7 @@ namespace flex
 	{
 		"iron",
 		"silicon",
-		"aluminium",
+		"aluminum",
 		"tin",
 
 		"stone",
@@ -1917,6 +1917,8 @@ namespace flex
 	public:
 		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
+		virtual void Initialize() override;
+
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual GameObject* CopySelf(
@@ -1936,6 +1938,8 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 	private:
+		void UpdateMesh();
+
 		u32 m_MineralRemaining = 100;
 		MineralType m_Type = MineralType::_NONE;
 
@@ -1948,6 +1952,7 @@ namespace flex
 
 		virtual void Update();
 		virtual void OnCharge(real chargeAmount) override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1962,7 +1967,7 @@ namespace flex
 	private:
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;
-		real m_MineRate = 0.1f;
+		real m_MineRate = 1.0f;
 		real m_PowerDraw = 0.1f;
 		real m_MineRadius = 2.0f;
 		GameObjectStack m_MinedObjectStack;

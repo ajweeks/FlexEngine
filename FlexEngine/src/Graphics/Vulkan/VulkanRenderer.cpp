@@ -672,7 +672,7 @@ namespace flex
 				{
 					if (renderObject != nullptr)
 					{
-						if (renderObject->gameObject)
+						if (renderObject->gameObject != nullptr)
 						{
 							Print("%s\n", renderObject->gameObject->GetName().c_str());
 						}

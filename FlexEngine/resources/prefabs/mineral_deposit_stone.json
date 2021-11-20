@@ -7,7 +7,6 @@
 		"name" : "mineral_deposit_stone",
 		"id" : "37AEAEF54928519D4C97CC87DCEEDAB4",
 		"type" : "mineral deposit",
-		"mesh" : "mineral-deposit-01.glb",
 		"materials" : 
 		[
 			"mineral stone"

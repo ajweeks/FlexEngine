@@ -42,6 +42,9 @@ namespace flex
 		void Destroy();
 		void SetOwner(Mesh* owner);
 
+		// Returns true if any property changed
+		bool DrawImGui(i32 slotIndex, bool bDrawingEditorObjects);
+
 		void CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape);
 
 		/*
