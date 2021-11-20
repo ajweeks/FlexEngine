@@ -337,7 +337,7 @@ namespace flex
 				GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
 				if (gameObject != nullptr)
 				{
-					gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
+					gameObject->RemoveSelfIDAndChildrenFromVec(m_CurrentlySelectedObjectIDs);
 					CalculateSelectedObjectsCenter();
 				}
 				else

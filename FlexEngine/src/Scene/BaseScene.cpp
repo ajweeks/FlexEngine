@@ -4,8 +4,6 @@
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-
-#include <glm/gtx/norm.hpp> // for distance2
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
@@ -940,7 +938,7 @@ namespace flex
 		return m_bLoaded;
 	}
 
-	std::vector<GameObject*> BaseScene::GetAllObjects()
+	std::vector<GameObject*> BaseScene::GetAllObjects() const
 	{
 		std::vector<GameObject*> result;
 
@@ -952,7 +950,7 @@ namespace flex
 		return result;
 	}
 
-	std::vector<GameObjectID> BaseScene::GetAllObjectIDs()
+	std::vector<GameObjectID> BaseScene::GetAllObjectIDs() const
 	{
 		std::vector<GameObjectID> result;
 
@@ -1802,6 +1800,40 @@ namespace flex
 		return newPrefabInstance;
 	}
 
+	u32 BaseScene::NumObjectsLoadedFromPrefabID(const PrefabID& prefabID) const
+	{
+		u32 total = 0;
+
+		std::vector<GameObject*> allObjects = GetAllObjects();
+		for (GameObject* gameObject : allObjects)
+		{
+			if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+			{
+				++total;
+			}
+		}
+
+		return total;
+	}
+
+	void BaseScene::DeleteInstancesOfPrefab(const PrefabID& prefabID)
+	{
+		std::vector<GameObjectID> allGameObjectIDs = GetAllObjectIDs();
+		for (const GameObjectID& gameObjectID : allGameObjectIDs)
+		{
+			GameObject* gameObject = gameObjectID.Get();
+			if (gameObject != nullptr)
+			{
+				if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+				{
+					std::string objName = gameObject->GetName();
+					PrintWarn("Deleting prefab instance %s\n", objName.c_str());
+					RemoveObjectImmediate(gameObject, true);
+				}
+			}
+		}
+	}
+
 	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID) const
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
@@ -2206,6 +2238,9 @@ namespace flex
 
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
+		// Prefab templates shouldn't get registered
+		assert(!gameObject->IsTemplate());
+
 		auto iter = m_GameObjectLUT.find(gameObject->ID);
 		if (iter != m_GameObjectLUT.end())
 		{

@@ -103,10 +103,11 @@ namespace flex
 		void SetPrefabDirty(const PrefabID& prefabID);
 		void SetAllPrefabsDirty(bool bDirty);
 		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
+		bool WriteExistingPrefabToDisk(GameObject* prefabTemplate);
 		PrefabID WriteNewPrefabToDisk(GameObject* prefabTemplate, const char* fileName = nullptr);
 		bool IsPrefabIDValid(const PrefabID& prefabID);
 
-		void RemovePrefabTemplate(const PrefabID& prefabID);
+		void DeletePrefabTemplate(const PrefabID& prefabID);
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
@@ -177,11 +178,8 @@ namespace flex
 		std::vector<std::string> debugOverlayNames;
 
 	private:
-		void WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID);
+		bool WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
-
-		UIContainer* ParseUIConfig(const char* filePath);
-		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

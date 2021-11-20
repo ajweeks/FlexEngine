@@ -171,8 +171,8 @@ namespace flex
 
 		bool DrawImGuiDuplicateGameObjectButton();
 
-		// Create a new prefab from this object
-		void SaveAsPrefab();
+		// Create new/overwrite existing prefab from this object
+		bool SaveAsPrefab();
 
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
@@ -195,7 +195,7 @@ namespace flex
 		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
-		GameObject* AddChildImmediate(GameObject* child, bool bIsPrefabTemplate = false);
+		GameObject* AddChildImmediate(GameObject* child);
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
@@ -290,11 +290,11 @@ namespace flex
 
 		StringID GetTypeID() const;
 
-		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
-		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec) const;
+		void RemoveSelfAndChildrenFromVec(std::vector<GameObject*>& vec) const;
 
-		void AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
-		void RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
+		void AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec) const;
+		void RemoveSelfIDAndChildrenFromVec(std::vector<GameObjectID>& vec) const;
 
 		bool SelfOrChildIsSelected() const;
 
@@ -410,6 +410,8 @@ namespace flex
 
 		bool m_bItemizable = false;
 
+		// The PrefabID this object is loaded from if it's a prefab instance, or the PrefabID
+		// of the prefab this object defines (when m_bIsTemplate is true), or InvalidPrefabID otherwise.
 		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
 
 		// TODO: Remove?

@@ -267,7 +267,7 @@ namespace flex
 				{
 					for (JSONObject& child : children)
 					{
-						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, bIsPrefabTemplate, copyFlags), bIsPrefabTemplate);
+						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, bIsPrefabTemplate, copyFlags));
 					}
 				}
 
@@ -286,7 +286,6 @@ namespace flex
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->m_bIsTemplate = bIsPrefabTemplate;
 			newGameObject->ParseJSON(obj, scene, sceneFileVersion, InvalidMaterialID, bIsPrefabTemplate, copyFlags);
 		}
 
@@ -458,14 +457,17 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		if (g_Editor->IsObjectSelected(ID))
+		if (!m_bIsTemplate)
 		{
-			g_Editor->DeselectObject(ID);
-		}
+			if (g_Editor->IsObjectSelected(ID))
+			{
+				g_Editor->DeselectObject(ID);
+			}
 
-		if (g_SceneManager->HasSceneLoaded())
-		{
-			g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
+			if (g_SceneManager->HasSceneLoaded())
+			{
+				g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
+			}
 		}
 	}
 
@@ -547,8 +549,9 @@ namespace flex
 
 			if (m_PrefabIDLoadedFrom.IsValid())
 			{
+				std::string prefabIDStr = m_PrefabIDLoadedFrom.ToString();
 				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_PrefabIDLoadedFrom);
-				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
+				ImGui::Text("Prefab source: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStr.c_str());
 			}
 
 			ImGui::EndTooltip();
@@ -1030,12 +1033,9 @@ namespace flex
 		ImGui::Text("Parent: %s", parentName.c_str());
 		ImGui::Text("Num children: %u", (u32)m_Children.size());
 
-		if (bAnyPropertyChanged)
+		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
 		{
-			if (m_PrefabIDLoadedFrom.IsValid())
-			{
-				g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
-			}
+			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
 		}
 	}
 
@@ -1192,12 +1192,14 @@ namespace flex
 		return bDeletedOrDuplicated;
 	}
 
-	void GameObject::SaveAsPrefab()
+	bool GameObject::SaveAsPrefab()
 	{
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
 
-		if (m_PrefabIDLoadedFrom.IsValid())
+		if (!m_bIsTemplate)
 		{
+			// Save an instance over an existing prefab
+
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
@@ -1210,7 +1212,6 @@ namespace flex
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
 			newPrefabTemplate->m_bIsTemplate = true;
-			newPrefabTemplate->m_PrefabIDLoadedFrom = InvalidPrefabID;
 			newPrefabTemplate->ID = previousPrefabTemplate->ID;
 			newPrefabTemplate->m_Name = previousPrefabName;
 			// Use previous game object IDs where possible to prevent unnecessary changes in file
@@ -1218,12 +1219,31 @@ namespace flex
 			previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
 
 			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_PrefabIDLoadedFrom);
+
+			return true;
+		}
+		else if (m_PrefabIDLoadedFrom.IsValid())
+		{
+			// Save a prefab over an existing prefab
+			g_ResourceManager->WriteExistingPrefabToDisk(this);
 		}
 		else
 		{
+			// Save as a new prefab
+
 			PrefabID newPrefabID = g_ResourceManager->WriteNewPrefabToDisk(this);
+			if (!newPrefabID.IsValid())
+			{
+				return false;
+			}
+
 			g_ResourceManager->DiscoverPrefabs();
-			currentScene->ReinstantiateFromPrefab(newPrefabID, this);
+			if (!m_bIsTemplate)
+			{
+				currentScene->ReinstantiateFromPrefab(newPrefabID, this);
+			}
+
+			return true;
 		}
 	}
 
@@ -1300,6 +1320,8 @@ namespace flex
 		bool bIsPrefabTemplate /* = false */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
+		m_bIsTemplate = bIsPrefabTemplate;
+
 		bool bVisible = true;
 		obj.TryGetBool("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
@@ -1429,7 +1451,7 @@ namespace flex
 		{
 			for (JSONObject& child : children)
 			{
-				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, bIsPrefabTemplate, copyFlags), bIsPrefabTemplate);
+				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, bIsPrefabTemplate, copyFlags));
 			}
 		}
 	}
@@ -1700,11 +1722,11 @@ namespace flex
 		return m_TypeID;
 	}
 
-	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec) const
 	{
-		if (!Contains(vec, this))
+		if (!Contains<GameObject*>(vec, const_cast<GameObject*>(this)))
 		{
-			vec.push_back(this);
+			vec.push_back(const_cast<GameObject*>(this));
 		}
 
 		for (GameObject* child : m_Children)
@@ -1718,9 +1740,9 @@ namespace flex
 		}
 	}
 
-	void GameObject::RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	void GameObject::RemoveSelfAndChildrenFromVec(std::vector<GameObject*>& vec) const
 	{
-		auto iter = FindIter(vec, this);
+		auto iter = FindIter(vec, const_cast<GameObject*>(this));
 		if (iter != vec.end())
 		{
 			vec.erase(iter);
@@ -1734,10 +1756,10 @@ namespace flex
 				vec.erase(childIter);
 			}
 
-			child->RemoveSelfAndChildrenToVec(vec);
+			child->RemoveSelfAndChildrenFromVec(vec);
 		}
 	}
-	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec) const
 	{
 		if (!Contains(vec, ID))
 		{
@@ -1755,7 +1777,7 @@ namespace flex
 		}
 	}
 
-	void GameObject::RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	void GameObject::RemoveSelfIDAndChildrenFromVec(std::vector<GameObjectID>& vec) const
 	{
 		auto iter = FindIter(vec, ID);
 		if (iter != vec.end())
@@ -1771,7 +1793,7 @@ namespace flex
 				vec.erase(childIter);
 			}
 
-			child->RemoveSelfIDAndChildrenToVec(vec);
+			child->RemoveSelfIDAndChildrenFromVec(vec);
 		}
 	}
 
@@ -1975,6 +1997,10 @@ namespace flex
 		newGameObject->m_PrefabIDLoadedFrom = m_PrefabIDLoadedFrom;
 		newGameObject->m_bCastsShadow = m_bCastsShadow;
 		newGameObject->m_bUniformScale = m_bUniformScale;
+		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
+		{
+			newGameObject->m_bIsTemplate = m_bIsTemplate;
+		}
 
 		bool bIsPrefabTemplate = (copyFlags & CopyFlags::COPYING_TO_PREFAB);
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
@@ -2032,7 +2058,7 @@ namespace flex
 					GameObject* newChild = child->CopySelf(newGameObject, (CopyFlags)((i32)copyFlags & ~(i32)CopyFlags::ADD_TO_SCENE));
 					if (newChild != nullptr)
 					{
-						newGameObject->AddChildImmediate(newChild, bIsPrefabTemplate);
+						newGameObject->AddChildImmediate(newChild);
 					}
 				}
 			}
@@ -2125,7 +2151,7 @@ namespace flex
 		return g_SceneManager->CurrentScene()->AddChildObject(this, child);
 	}
 
-	GameObject* GameObject::AddChildImmediate(GameObject* child, bool bIsPrefabTemplate /* = false */)
+	GameObject* GameObject::AddChildImmediate(GameObject* child)
 	{
 		if (child == nullptr)
 		{
@@ -2161,7 +2187,7 @@ namespace flex
 		child->SetParent(this);
 
 		// Prefab templates aren't registered in the scene
-		if (!bIsPrefabTemplate)
+		if (!m_bIsTemplate)
 		{
 			g_SceneManager->CurrentScene()->RegisterGameObject(child);
 		}
@@ -13155,14 +13181,14 @@ m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterial
 
 		MeshComponent* submesh = roadSegments[meshIndex].mesh;
 
-		btBvhTriangleMeshShape* shape;
-		submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
+btBvhTriangleMeshShape* shape;
+submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
 
-		// TODO: Don't even create rb?
-		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
-		rigidBody->SetStatic(true);
-		rigidBody->Initialize(shape, &m_Transform);
-		m_RigidBodies[meshIndex] = rigidBody;
+// TODO: Don't even create rb?
+RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
+rigidBody->SetStatic(true);
+rigidBody->Initialize(shape, &m_Transform);
+m_RigidBodies[meshIndex] = rigidBody;
 	}
 
 	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -13239,7 +13265,7 @@ m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterial
 		return MineralType::_NONE;
 	}
 
-	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */):
+	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("mineral deposit"), gameObjectID)
 	{
 	}

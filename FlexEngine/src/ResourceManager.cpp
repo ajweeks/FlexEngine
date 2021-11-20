@@ -287,6 +287,7 @@ namespace flex
 					JSONObject prefabRootObject = prefabObject.GetObject("root");
 
 					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, true);
+					prefabTemplate->m_PrefabIDLoadedFrom = prefabID;
 
 					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);
 				}
@@ -1176,7 +1177,7 @@ namespace flex
 
 				prefabTemplatePair.templateObject = prefabTemplate;
 
-				WritePrefabToDisk(prefabTemplatePair, prefabID);
+				WritePrefabToDisk(prefabTemplatePair);
 
 				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabID);
 
@@ -1189,13 +1190,30 @@ namespace flex
 		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
 	}
 
+	bool ResourceManager::WriteExistingPrefabToDisk(GameObject* prefabTemplate)
+	{
+		std::string prefabName = prefabTemplate->GetName();
+		PrefabID prefabID = GetPrefabID(prefabName.c_str());
+		std::string fileNameStr = prefabTemplate->GetName() + ".json";
+		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, prefabID, fileNameStr, false };
+		bool bResult = WritePrefabToDisk(prefabTemplatePair);
+		return bResult;
+	}
+
 	PrefabID ResourceManager::WriteNewPrefabToDisk(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
 	{
 		PrefabID newID = Platform::GenerateGUID();
 
+		// This object's GameObjectID will match that of the existing object in
+		// the scene, but that shouldn't pose any issues.
 		std::string fileNameStr = fileName != nullptr ? std::string(fileName) : (prefabTemplate->GetName() + ".json");
 		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newID, fileNameStr, false };
-		WritePrefabToDisk(prefabTemplatePair, newID);
+		bool bResult = WritePrefabToDisk(prefabTemplatePair);
+
+		if (!bResult)
+		{
+			return InvalidPrefabID;
+		}
 
 		return newID;
 	}
@@ -1206,15 +1224,22 @@ namespace flex
 		return prefabTemplate != nullptr;
 	}
 
-	void ResourceManager::RemovePrefabTemplate(const PrefabID& prefabID)
+	void ResourceManager::DeletePrefabTemplate(const PrefabID& prefabID)
 	{
 		for (auto iter = prefabTemplates.begin(); iter != prefabTemplates.end(); ++iter)
 		{
 			if (iter->prefabID == prefabID)
 			{
+				g_SceneManager->CurrentScene()->DeleteInstancesOfPrefab(prefabID);
+
+				if (!Platform::DeleteFile(PREFAB_DIRECTORY + iter->fileName))
+				{
+					PrintError("Failed to delete prefab template at %s\n", iter->fileName.c_str());
+				}
 				iter->templateObject->Destroy();
 				delete iter->templateObject;
 				prefabTemplates.erase(iter);
+
 				break;
 			}
 		}
@@ -1280,7 +1305,7 @@ namespace flex
 		return false;
 	}
 
-	void ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID)
+	bool ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair)
 	{
 		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplatePair.fileName);
 
@@ -1289,8 +1314,13 @@ namespace flex
 		// Added in prefab v3
 		prefabJSON.fields.emplace_back("scene version", JSONValue(BaseScene::LATEST_SCENE_FILE_VERSION));
 
+		if (!prefabTemplatePair.prefabID.IsValid())
+		{
+			PrintError("Prefab %s has invalid prefabID!\n", prefabTemplatePair.fileName.c_str());
+		}
+
 		// Added in prefab v2
-		std::string prefabIDStr = prefabID.ToString();
+		std::string prefabIDStr = prefabTemplatePair.prefabID.ToString();
 		prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 
 		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
@@ -1300,12 +1330,14 @@ namespace flex
 		if (WriteFile(path, fileContents, false))
 		{
 			prefabTemplatePair.bDirty = false;
+			return true;
 		}
 		else
 		{
 			prefabTemplatePair.bDirty = true;
 			std::string prefabName = prefabTemplatePair.templateObject->GetName();
 			PrintError("Failed to write prefab to disk (%s, %s\n)", prefabName.c_str(), path.c_str());
+			return false;
 		}
 	}
 
@@ -1916,9 +1948,7 @@ namespace flex
 						selectedMaterialID = 0;
 						bMaterialSelectionChanged = true;
 					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
+					ImGui::PopStyleColor(3);
 				}
 
 				if (ImGui::Checkbox("Show editor materials", &bShowEditorMaterials))
@@ -2308,18 +2338,165 @@ namespace flex
 
 				PrefabTemplatePair& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
 				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
-				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "");
+				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "") + " (" + selectedPrefabTemplate.prefabID.ToString() + ")";
 				ImGui::Text("%s", prefabNameStr.c_str());
+
+				const char* contextMenuID = "game object context window";
+				static std::string newObjectName = selectedPrefabTemplate.templateObject->GetName();
+				const size_t maxStrLen = 256;
+
+				if (ImGui::Button("Rename") || g_Editor->GetWantRenameActiveElement())
+				{
+					ImGui::OpenPopup(contextMenuID);
+					g_Editor->ClearWantRenameActiveElement();
+				}
+
+				ImGui::SameLine();
+
+				static const char* deletePrefabPopupModalName = "Are you sure?";
+				static bool bShowDeletePrefabPopup = false;
+				static u32 bTemplateUsagesInScene = 0;
 
 				if (ImGui::Button("Delete"))
 				{
-					RemovePrefabTemplate(selectedPrefabTemplate.prefabID);
+					bTemplateUsagesInScene = g_SceneManager->CurrentScene()->NumObjectsLoadedFromPrefabID(selectedPrefabTemplate.prefabID);
+
+					ImGui::OpenPopup(deletePrefabPopupModalName);
+					bShowDeletePrefabPopup = true;
 				}
+
+				ImGui::SetNextWindowSize(ImVec2(650, 180), ImGuiCond_FirstUseEver);
+				if (ImGui::BeginPopupModal(deletePrefabPopupModalName, &bShowDeletePrefabPopup))
+				{
+					std::string message = "Are you sure you want to delete the prefab " + selectedPrefabTemplate.fileName + "?";
+					ImGui::TextWrapped(message.c_str());
+					std::string prefabIDStr = selectedPrefabTemplate.prefabID.ToString();
+					ImGui::TextWrapped("(%s)", prefabIDStr.c_str());
+
+					if (bTemplateUsagesInScene > 0)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColour);
+						ImGui::TextWrapped("This prefab is used %d times in the current scene! Deleting it will destroy those instances.\n", bTemplateUsagesInScene);
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+					if (ImGui::Button("Delete"))
+					{
+						DeletePrefabTemplate(selectedPrefabTemplate.prefabID);
+						bShowDeletePrefabPopup = false;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::PopStyleColor(3);
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel") || g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+					{
+						bShowDeletePrefabPopup = false;
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::SameLine();
 
 				if (ImGui::Button("Duplicate"))
 				{
-					// TODO: Implement
-					PrintError("Unimplemented!\n");
+					GameObject* newTemplateObject = selectedPrefabTemplate.templateObject->CopySelf();
+					newTemplateObject->m_PrefabIDLoadedFrom = InvalidPrefabID;
+					newTemplateObject->m_bIsTemplate = true;
+					std::string namePrefix = newTemplateObject->GetName();
+
+					i16 numChars;
+					i32 numEndingWith = GetNumberEndingWith(namePrefix, numChars);
+
+					std::string newName = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
+					while (GetPrefabID(newName.c_str()).IsValid())
+					{
+						++numEndingWith;
+						newName = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
+					}
+
+					newTemplateObject->SetName(newName);
+					newTemplateObject->SaveAsPrefab();
+				}
+
+
+				if (ImGui::BeginPopupContextItem(contextMenuID))
+				{
+					if (ImGui::IsWindowAppearing())
+					{
+						ImGui::SetKeyboardFocusHere();
+						newObjectName = selectedPrefabTemplate.templateObject->GetName();
+					}
+
+					bool bRename = ImGui::InputText("##rename-game-object",
+						(char*)newObjectName.data(),
+						maxStrLen,
+						ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRename |= ImGui::Button("Rename");
+
+					bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+					if (bRename && !bInvalidName)
+					{
+						// Remove excess trailing \0 chars
+						newObjectName = std::string(newObjectName.c_str());
+
+						std::string prevName = selectedPrefabTemplate.templateObject->GetName();
+						std::string prevFilePath = PREFAB_DIRECTORY + selectedPrefabTemplate.fileName;
+
+						selectedPrefabTemplate.templateObject->SetName(newObjectName);
+						if (selectedPrefabTemplate.templateObject->SaveAsPrefab())
+						{
+							// NOTE: At this point selectedPrefabTemplate is invalid because DiscoverPrefabs has been called
+							// and thus all prefab templates have been recreated.
+							if (!Platform::DeleteFile(prevFilePath))
+							{
+								PrintError("Failed to delete previous prefab file at %s\n", prevFilePath.c_str());
+							}
+						}
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					// ID
+					{
+						char buffer[33];
+						selectedPrefabTemplate.prefabID.ToString(buffer);
+						char data0Buffer[17];
+						char data1Buffer[17];
+						memcpy(data0Buffer, buffer, 16);
+						data0Buffer[16] = 0;
+						memcpy(data1Buffer, buffer + 16, 16);
+						data1Buffer[16] = 0;
+						ImGui::Text("GUID: %s-%s", data0Buffer, data1Buffer);
+
+						if (ImGui::IsItemHovered())
+						{
+							ImGui::BeginTooltip();
+
+							ImGui::Text("Data1, Data2: %lu, %lu", selectedPrefabTemplate.prefabID.Data1, selectedPrefabTemplate.prefabID.Data2);
+
+							ImGui::EndTooltip();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Copy"))
+						{
+							g_Window->SetClipboardText(buffer);
+						}
+					}
+
+					ImGui::EndPopup();
 				}
 			}
 

@@ -533,7 +533,7 @@ namespace flex
 
 		// PBR Constant values
 		glm::vec4 constAlbedo = VEC4_ONE;
-		glm::vec4 constEmissive = VEC4_ONE;
+		glm::vec4 constEmissive = VEC4_ZERO;
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
 

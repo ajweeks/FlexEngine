@@ -3,6 +3,10 @@
 #include "Graphics/RendererTypes.hpp"
 #include "Scene/GameObject.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/norm.hpp> // for distance2
+IGNORE_WARNINGS_POP
+
 namespace flex
 {
 	class PhysicsWorld;
@@ -95,14 +99,17 @@ namespace flex
 		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
 		GameObject* ReinstantiateFromPrefab(const PrefabID& prefabID, GameObject* previousInstance);
 
+		u32 NumObjectsLoadedFromPrefabID(const PrefabID& prefabID) const;
+		void DeleteInstancesOfPrefab(const PrefabID& prefabID);
+
 		GameObjectID FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
 
 		bool IsLoaded() const;
 
-		std::vector<GameObject*> GetAllObjects();
-		std::vector<GameObjectID> GetAllObjectIDs();
+		std::vector<GameObject*> GetAllObjects() const;
+		std::vector<GameObjectID> GetAllObjectIDs() const;
 
 		template<class T>
 		T* GetObjectOfType(StringID typeID)
