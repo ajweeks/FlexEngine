@@ -1885,6 +1885,7 @@ namespace flex
 		TIN, // Sn - Atomic no. 50
 
 		// Minerals
+		STONE,
 		QUARTZ, // SiO2 - second most abundant mineral in Earth's crust
 		OLIVINE, // Magnesium iron silicate 2SiO 4
 
@@ -1898,6 +1899,7 @@ namespace flex
 		"aluminium",
 		"tin",
 
+		"stone",
 		"quartz",
 		"olivine",
 
@@ -1916,6 +1918,12 @@ namespace flex
 		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		u32 GetMineralRemaining() const;
 		PrefabID GetMineralPrefabID();
@@ -1940,6 +1948,12 @@ namespace flex
 
 		virtual void Update();
 		virtual void OnCharge(real chargeAmount) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;

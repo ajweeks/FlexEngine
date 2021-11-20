@@ -19,6 +19,8 @@ battery
 area light
 glass pane
 valve
+miner
+mineral deposit
 mobile liquid box
 object
 road

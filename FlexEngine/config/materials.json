@@ -530,5 +530,51 @@
 			"const metallic" : 1.000000,
 			"const roughness" : 0.030000
 		}
+		{
+			"name" : "mineral aluminum",
+			"shader" : "pbr",
+			"const albedo" : "0.692,0.692,0.692",
+			"const emissive" : "0.000,0.000,0.000",
+			"const roughness" : 0.240000
+		},
+		{
+			"name" : "mineral tin",
+			"shader" : "pbr",
+			"const albedo" : "0.264,0.862,0.920",
+			"const emissive" : "0.000,0.000,0.000"
+		},
+		{
+			"name" : "mineral olivine",
+			"shader" : "pbr",
+			"const albedo" : "0.278,0.953,0.543",
+			"const emissive" : "0.000,0.000,0.000"
+		},
+		{
+			"name" : "mineral quartz",
+			"shader" : "pbr",
+			"const albedo" : "0.728,0.728,0.728",
+			"const emissive" : "0.000,0.000,0.000"
+		}
+		{
+			"name" : "mineral iron",
+			"shader" : "pbr",
+			"const albedo" : "0.041,0.041,0.041",
+			"const emissive" : "0.000,0.000,0.000",
+			"const roughness" : 0.640000,
+			"colour multiplier" : "0.000,0.000,0.000,1.000"
+		},
+		{
+			"name" : "mineral silicone",
+			"shader" : "pbr",
+			"const albedo" : "0.101,0.153,0.242",
+			"const emissive" : "0.000,0.000,0.000",
+			"const roughness" : 0.320000
+		},
+		{
+			"name" : "mineral stone",
+			"shader" : "pbr",
+			"const albedo" : "0.109,0.109,0.109",
+			"const emissive" : "0.000,0.000,0.000"
+		}
 	]
 }

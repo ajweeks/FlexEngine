@@ -1,0 +1,21 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "8014F0FFA52C70B6467FE67C43C3363C",
+	"root" : 
+	{
+		"name" : "mineral_deposit_silicon",
+		"id" : "7BFFD7021B00B6B741FCCD1C25771ED9",
+		"type" : "mineral deposit",
+		"mesh" : "mineral-deposit-01.glb",
+		"materials" : 
+		[
+			"mineral silicone"
+		],
+		"mineral deposit" : 
+		{
+			"type" : "silicon",
+			"mineral remaining" : 100
+		}
+	}
+}

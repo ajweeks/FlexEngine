@@ -1,0 +1,21 @@
+{
+	"version" : 3,
+	"scene version" : 6,
+	"prefab id" : "56FC31EDE61483A54F4B50971FC9DE27",
+	"root" : 
+	{
+		"name" : "mineral_deposit_aluminum",
+		"id" : "ACB634397342B3B148BE2E82650E3428",
+		"type" : "mineral deposit",
+		"mesh" : "mineral-deposit-01.glb",
+		"materials" : 
+		[
+			"mineral aluminum"
+		],
+		"mineral deposit" : 
+		{
+			"type" : "aluminium",
+			"mineral remaining" : 100
+		}
+	}
+}

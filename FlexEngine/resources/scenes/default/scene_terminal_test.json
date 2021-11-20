@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "19.838, 10.392, 0.805",
-			"pitch" : -0.357889,
-			"yaw" : 3.040068
+			"position" : "-39.980, 56.137, 101.752",
+			"pitch" : -0.545201,
+			"yaw" : -1.300946
 		}
 	},
 	"objects" : 
@@ -86,11 +86,11 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.661, -0.000, 0.000"
+						"rot" : "1.581, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.738,0.000,0.000,0.675",
+						"rotation" : "0.711,0.000,0.000,0.703",
 						"pos" : "0.000,15.000,0.000",
 						"colour" : "0.99,1.00,0.84",
 						"enabled" : true,
@@ -446,7 +446,7 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.918, 2.501, -1.934",
+				"pos" : "-20.942, 2.501, -1.946",
 				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
@@ -482,7 +482,7 @@
 			"transform" : 
 			{
 				"pos" : "-28.614, 1.500, -1.553",
-				"rot" : "0.192, -0.000, 1.571"
+				"rot" : "0.192, 0.000, 1.571"
 			}
 		},
 		{
@@ -608,17 +608,6 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit",
-			"id" : "039DF209DA76F2BB4735D0D01D1C3D72",
-			"type" : "prefab",
-			"prefab type" : "mineral_deposit",
-			"prefab id" : "2292977FE92C438E424D082E6CA36714",
-			"transform" : 
-			{
-				"pos" : "20.522, 0.000, -23.407"
-			}
-		},
-		{
 			"name" : "miner",
 			"id" : "7C58E205F327AF8E4C60CA2570CA0190",
 			"type" : "prefab",
@@ -626,8 +615,87 @@
 			"prefab id" : "A43DB14860BDDB8A406C48E105BD22BA",
 			"transform" : 
 			{
-				"pos" : "20.346, 0.847, -22.753",
+				"pos" : "20.346, 0.000, -22.753",
 				"rot" : "0.000, 0.786, 0.000"
+			}
+		},
+		{
+			"name" : "mineral_deposit_iron",
+			"id" : "D43AD3B3CE84169249BD470C2E36A181",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_iron",
+			"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+			"transform" : 
+			{
+				"pos" : "21.306, 0.000, -22.254"
+			}
+		},
+		{
+			"name" : "mineral_deposit_silicon",
+			"id" : "5F3FE1997191F6A7438AB8EC96A2EC1C",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_silicon",
+			"prefab id" : "8014F0FFA52C70B6467FE67C43C3363C",
+			"transform" : 
+			{
+				"pos" : "-5.641, 0.000, -27.813"
+			}
+		},
+		{
+			"name" : "mineral_deposit_stone",
+			"id" : "343ACE72646E29974D777F594FBFCD5C",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_stone",
+			"prefab id" : "18DC46A7569BA0844A8721C36FF54D77",
+			"transform" : 
+			{
+				"pos" : "31.388, 0.000, 3.247",
+				"rot" : "-3.141, -0.810, -3.141"
+			}
+		},
+		{
+			"name" : "mineral_deposit_aluminum",
+			"id" : "B3CB7220A21F0FA64B8E0024647DFCDB",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_aluminum",
+			"prefab id" : "56FC31EDE61483A54F4B50971FC9DE27",
+			"transform" : 
+			{
+				"pos" : "-31.337, 0.000, -24.014"
+			}
+		},
+		{
+			"name" : "mineral_deposit_tin",
+			"id" : "6DA88CF19762FC904F0B75183E0F04B4",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_tin",
+			"prefab id" : "56ADD055CA44E1BD4B9078348550E9BE",
+			"transform" : 
+			{
+				"pos" : "29.872, 0.000, 29.101"
+			}
+		},
+		{
+			"name" : "mineral_deposit_quartz",
+			"id" : "62852C11369C898649D4F7AB5A425583",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_quartz",
+			"prefab id" : "B4EF3520650297A242AE680526C8DA8E",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.000, 35.000"
+			}
+		},
+		{
+			"name" : "mineral_deposit_olivine",
+			"id" : "E53A36741709F0B64F7127674B74B664",
+			"type" : "prefab",
+			"prefab type" : "mineral_deposit_olivine",
+			"prefab id" : "192082D7335E52AE4616BAF655239916",
+			"transform" : 
+			{
+				"pos" : "-27.420, 0.000, 33.582",
+				"rot" : "0.000, 1.345, 0.000"
 			}
 		}
 	]

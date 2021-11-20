@@ -1544,7 +1544,7 @@ namespace flex
 
 			if (m_Mesh != nullptr)
 			{
-				if (m_bSerializeMesh && !m_PrefabIDLoadedFrom.IsValid())
+				if (m_bSerializeMesh && (!m_PrefabIDLoadedFrom.IsValid() || m_bIsTemplate))
 				{
 					object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
 				}
@@ -13274,9 +13274,49 @@ m_RigidBodies[meshIndex] = rigidBody;
 	{
 		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
+		bool bAnyPropertyChanged = false;
+
 		const char* mineralTypeStr = MineralTypeToString(m_Type);
-		ImGui::Text("Mineral Type: %s", mineralTypeStr);
+		if (ImGui::BeginCombo("Mineral Type", mineralTypeStr))
+		{
+			for (u32 i = 0; i < (u32)MineralType::_NONE; ++i)
+			{
+				bool bSelected = (u32)m_Type == i;
+				if (ImGui::Selectable(MineralTypeToString((MineralType)i), &bSelected))
+				{
+					m_Type = (MineralType)i;
+					bAnyPropertyChanged = true;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
+		{
+			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+		}
+
 		ImGui::Text("Mineral remaining: %.2f", m_MineralRemaining);
+	}
+
+	GameObject* MineralDeposit::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		MineralDeposit* newGameObject = new MineralDeposit(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_MineralRemaining = m_MineralRemaining;
+		newGameObject->m_Type = m_Type;
+
+		return newGameObject;
 	}
 
 	u32 MineralDeposit::GetMineralRemaining() const
@@ -13397,6 +13437,29 @@ m_RigidBodies[meshIndex] = rigidBody;
 	void Miner::OnCharge(real chargeAmount)
 	{
 		m_Charge = glm::clamp(m_Charge + chargeAmount, 0.0f, m_MaxCharge);
+	}
+
+	GameObject* Miner::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		Miner* newGameObject = new Miner(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_Charge = m_Charge;
+		newGameObject->m_MaxCharge = m_MaxCharge;
+		newGameObject->m_MineRate = m_MineRate;
+		newGameObject->m_PowerDraw = m_PowerDraw;
+		newGameObject->m_MineRadius = m_MineRadius;
+		newGameObject->m_MinedObjectStack = m_MinedObjectStack;
+
+		return newGameObject;
 	}
 
 	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
