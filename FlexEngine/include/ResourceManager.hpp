@@ -111,9 +111,9 @@ namespace flex
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
-		AudioSourceID GetAudioID(StringID audioFileSID);
-		AudioSourceID GetOrLoadAudioID(StringID audioFileSID);
-		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder);
+		AudioSourceID GetAudioSourceID(StringID audioFileSID);
+		AudioSourceID GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D);
+		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D);
 
 		u32 GetMaxStackSize(const PrefabID& prefabID);
 

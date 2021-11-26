@@ -1722,7 +1722,7 @@ namespace flex
 				{
 					if (m_ItemDropSoundSID != InvalidStringID)
 					{
-						AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID), m_ItemSoundGain);
+						AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemDropSoundSID, true), m_ItemSoundGain);
 					}
 				}
 
@@ -1744,7 +1744,7 @@ namespace flex
 			{
 				if (m_ItemDropSoundSID != InvalidStringID)
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemDropSoundSID), m_ItemSoundGain);
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemDropSoundSID, true), m_ItemSoundGain);
 				}
 			}
 
@@ -1766,7 +1766,7 @@ namespace flex
 				StringID audioSourceSID = bDestroyItem ? m_ItemTrashSoundSID : m_ItemDropSoundSID;
 				if (audioSourceSID != InvalidStringID)
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(audioSourceSID), m_ItemSoundGain);
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(audioSourceSID, true), m_ItemSoundGain);
 				}
 			}
 
@@ -1788,7 +1788,7 @@ namespace flex
 				StringID audioSourceSID = bDestroyItem ? m_ItemTrashSoundSID : m_ItemDropSoundSID;
 				if (audioSourceSID != InvalidStringID)
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(audioSourceSID), m_ItemSoundGain);
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(audioSourceSID, true), m_ItemSoundGain);
 				}
 			}
 
@@ -1808,7 +1808,7 @@ namespace flex
 
 				if (m_ItemPickupSoundSID != InvalidStringID)
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID), m_ItemSoundGain);
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
 				}
 			}
 			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
@@ -1817,7 +1817,7 @@ namespace flex
 
 				if (m_ItemPickupSoundSID != InvalidStringID)
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioID(m_ItemPickupSoundSID), m_ItemSoundGain);
+					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
 				}
 			}
 		}

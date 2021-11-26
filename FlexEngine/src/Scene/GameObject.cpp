@@ -65,8 +65,8 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
-	AudioCue GameObject::s_SqueakySounds;
-	AudioSourceID GameObject::s_BunkSound;
+	AudioCue Valve::s_SqueakySounds;
+	AudioSourceID Valve::s_BunkSound;
 
 	const real DroppedItem::MIN_TIME_BEFORE_PICKUP = 3.0f;
 
@@ -160,13 +160,6 @@ namespace flex
 
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
-
-		if (!s_SqueakySounds.IsInitialized())
-		{
-			s_SqueakySounds.Initialize("squeak00.wav", 5);
-
-			s_BunkSound = g_ResourceManager->GetOrLoadAudioID(SID("bunk.wav"));
-		}
 	}
 
 	GameObject::~GameObject()
@@ -358,6 +351,7 @@ namespace flex
 		case SID("power pole"): return new PowerPole(objectName, gameObjectID);
 		case SID("mineral deposit"): return new MineralDeposit(objectName, gameObjectID);
 		case SID("miner"): return new Miner(objectName, gameObjectID);
+		case SID("speaker"): return new Speaker(objectName, gameObjectID);
 		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
 		case SID("player"):
 		{
@@ -1196,7 +1190,7 @@ namespace flex
 	{
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
 
-		if (!m_bIsTemplate)
+		if (m_bIsTemplate)
 		{
 			// Save an instance over an existing prefab
 
@@ -2739,6 +2733,15 @@ namespace flex
 		GameObject(name, SID("valve"), gameObjectID)
 	{
 		// TODO: Set m_bSerializeMesh to false here?
+
+		if (!s_SqueakySounds.IsInitialized())
+		{
+			s_SqueakySounds.Initialize("squeak00.wav", 5, true);
+		}
+		if (!s_SqueakySounds.IsInitialized())
+		{
+			s_BunkSound = g_ResourceManager->GetOrLoadAudioSourceID(SID("bunk.wav"), true);
+		}
 	}
 
 	GameObject* Valve::CopySelf(
@@ -12046,7 +12049,7 @@ namespace flex
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
-			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID);
+			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID, false);
 			m_SoundEffectSIDs[i] = InvalidStringID;
 		}
 	}
@@ -12713,7 +12716,7 @@ namespace flex
 
 	void Vehicle::SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID)
 	{
-		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID);
+		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID, false);
 		if (soundSID != InvalidStringID && soundEffect == SoundEffect::ENGINE)
 		{
 			// TODO: Save this metadata somewhere in a file
@@ -13156,7 +13159,7 @@ namespace flex
 			matCreateInfo.enableAlbedoSampler = true;
 			matCreateInfo.bSerializable = false;
 
-m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
+			m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterialID);
 		}
 	}
 
@@ -13182,14 +13185,14 @@ m_RoadMaterialID = g_Renderer->InitializeMaterial(&matCreateInfo, m_RoadMaterial
 
 		MeshComponent* submesh = roadSegments[meshIndex].mesh;
 
-btBvhTriangleMeshShape* shape;
-submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
+		btBvhTriangleMeshShape* shape;
+		submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
 
-// TODO: Don't even create rb?
-RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
-rigidBody->SetStatic(true);
-rigidBody->Initialize(shape, &m_Transform);
-m_RigidBodies[meshIndex] = rigidBody;
+		// TODO: Don't even create rb?
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
+		rigidBody->SetStatic(true);
+		rigidBody->Initialize(shape, &m_Transform);
+		m_RigidBodies[meshIndex] = rigidBody;
 	}
 
 	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
@@ -13609,5 +13612,138 @@ m_RigidBodies[meshIndex] = rigidBody;
 		}
 
 		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
+	}
+
+	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+		GameObject(name, SID("speaker"), gameObjectID)
+	{
+	}
+
+	void Speaker::Initialize()
+	{
+		GameObject::Initialize();
+
+		if (!m_AudioSourceFileName.empty())
+		{
+			m_SourceID = g_ResourceManager->GetOrLoadAudioSourceID(Hash(m_AudioSourceFileName.c_str()), false);
+
+			if (m_SourceID != InvalidAudioSourceID)
+			{
+				AudioManager::SetSourceLooping(m_SourceID, true);
+				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+			}
+		}
+	}
+
+	void Speaker::Update()
+	{
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			if (AudioManager::IsSourcePlaying(m_SourceID))
+			{
+				AudioManager::SetSourcePositionWS(m_SourceID, m_Transform.GetWorldPosition());
+			}
+			else
+			{
+				AudioManager::SetSourceLooping(m_SourceID, true);
+				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+			}
+		}
+	}
+
+	void Speaker::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		AudioManager::DestroyAudioSource(m_SourceID);
+	}
+
+	void Speaker::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		StringID sourceSID = Hash(m_AudioSourceFileName.c_str());
+		if (g_ResourceManager->DrawAudioSourceIDImGui("Audio source", sourceSID))
+		{
+			if (sourceSID != InvalidStringID)
+			{
+				AudioSourceID newSourceID = g_ResourceManager->GetAudioSourceID(sourceSID);
+				if (newSourceID == InvalidAudioSourceID)
+				{
+					newSourceID = g_ResourceManager->GetOrLoadAudioSourceID(sourceSID, false);
+				}
+
+				if (newSourceID == InvalidAudioSourceID)
+				{
+					PrintError("Speaker set to use invalid audio source\n");
+					return;
+				}
+
+				if (m_SourceID != InvalidAudioSourceID)
+				{
+					AudioManager::StopSource(m_SourceID);
+				}
+
+				if (AudioManager::GetSource(newSourceID)->b2D)
+				{
+					PrintWarn("2D sound selected for speaker. Audio will not be localized.\n");
+				}
+
+				AudioManager::SetSourceLooping(newSourceID, true);
+				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+
+				m_SourceID = newSourceID;
+				m_AudioSourceFileName = AudioManager::GetSourceFileName(newSourceID);
+			}
+			else
+			{
+				if (m_SourceID != InvalidAudioSourceID)
+				{
+					AudioManager::StopSource(m_SourceID);
+				}
+
+				m_SourceID = InvalidAudioSourceID;
+				m_AudioSourceFileName.clear();
+			}
+		}
+	}
+
+	GameObject* Speaker::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		Speaker* newGameObject = new Speaker(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_AudioSourceFileName = m_AudioSourceFileName;
+		// Leave m_SourceID as invalid so the new object creates its own audio source
+
+		return newGameObject;
+	}
+
+	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(scene);
+		FLEX_UNUSED(matIDs);
+
+		JSONObject speakerObj;
+		if (parentObject.TryGetObject("speaker", speakerObj))
+		{
+			m_AudioSourceFileName = speakerObj.GetString("audio source path");
+		}
+	}
+
+	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject)
+	{
+		JSONObject speakerObj = {};
+		speakerObj.fields.emplace_back("audio source path", JSONValue(m_AudioSourceFileName));
+
+		parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
 	}
 } // namespace flex

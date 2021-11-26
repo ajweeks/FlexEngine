@@ -9,7 +9,7 @@
 
 namespace flex
 {
-	void AudioCue::Initialize(const std::string& firstFileName, i32 fileCount)
+	void AudioCue::Initialize(const std::string& firstFileName, i32 fileCount, bool b2D)
 	{
 		// "xxx00.wav"
 		//     ^
@@ -29,7 +29,7 @@ namespace flex
 				iStr = "0" + iStr;
 			}
 			std::string filePath = filePathStripped + iStr + fileTypeStr;
-			AudioSourceID sourceIDi = g_ResourceManager->GetOrLoadAudioID(SID(filePath.c_str()));
+			AudioSourceID sourceIDi = g_ResourceManager->GetOrLoadAudioSourceID(SID(filePath.c_str()), b2D);
 			m_SourceIDs.push_back(sourceIDi);
 		}
 

@@ -331,9 +331,6 @@ namespace flex
 
 		static const char* s_DefaultNewGameObjectName;
 
-		static AudioCue s_SqueakySounds;
-		static AudioSourceID s_BunkSound;
-
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject);
@@ -605,6 +602,9 @@ namespace flex
 		real pRotation = 0.0f;
 
 		bool m_bBeingInteractedWith = false;
+
+		static AudioCue s_SqueakySounds;
+		static AudioSourceID s_BunkSound;
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
@@ -1974,6 +1974,34 @@ namespace flex
 
 		// Non-serialized fields
 		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
+
+	};
+
+	class Speaker : public GameObject
+	{
+	public:
+		Speaker(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+
+		virtual void Initialize() override;
+		virtual void Update() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+
+	private:
+		std::string m_AudioSourceFileName;
+
+		// Non-serialized fields
+		AudioSourceID m_SourceID = InvalidAudioSourceID;
 
 	};
 

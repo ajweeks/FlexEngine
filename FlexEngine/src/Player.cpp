@@ -49,12 +49,12 @@ namespace flex
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = g_ResourceManager->GetOrLoadAudioID(SID("click-02.wav"));
-		m_SoundPlaceFinalTrackNodeID = g_ResourceManager->GetOrLoadAudioID(SID("jingle-single-01.wav"));
-		m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioID(SID("crunch-13.wav"));
-		m_SoundTrackDetachID = g_ResourceManager->GetOrLoadAudioID(SID("schluck-02.wav"));
-		m_SoundTrackSwitchDirID = g_ResourceManager->GetOrLoadAudioID(SID("whistle-01.wav"));
-		//m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioID(SID("schluck-07.wav"));
+		m_SoundPlaceTrackNodeID = g_ResourceManager->GetOrLoadAudioSourceID(SID("click-02.wav"), true);
+		m_SoundPlaceFinalTrackNodeID = g_ResourceManager->GetOrLoadAudioSourceID(SID("jingle-single-01.wav"), true);
+		m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("crunch-13.wav"), true);
+		m_SoundTrackDetachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("schluck-02.wav"), true);
+		m_SoundTrackSwitchDirID = g_ResourceManager->GetOrLoadAudioSourceID(SID("whistle-01.wav"), true);
+		//m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("schluck-07.wav"), true);
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";

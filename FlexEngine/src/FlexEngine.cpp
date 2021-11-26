@@ -294,9 +294,9 @@ namespace flex
 		{
 			PROFILE_AUTO("Initialize audio sources");
 
-			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("dud_dud_dud_dud.wav")));
-			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("drmapan.wav")));
-			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioID(SID("blip.wav")));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("dud_dud_dud_dud.wav"), true));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("drmapan.wav"), true));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("blip.wav"), true));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 523.25f)); // C5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 587.33f)); // D5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 659.25f)); // E5
@@ -1297,7 +1297,7 @@ namespace flex
 				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")].bOpen);
 				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")].bOpen);
 				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")].bOpen);
-				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")].bOpen);
+				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("audio")].bOpen);
 				ImGui::Separator();
 				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")].bOpen);
 				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")].bOpen);

@@ -3,6 +3,9 @@
 
 **2021**
 _November_
+- Add support for positional audio sources & configurable reverb
+- Add mineral deposits & miners
+- Fix prefab creation/deletion/duplication/renaming
 - Auto detect modifications of textures/prefab/meshes/audio files
 
 _October_

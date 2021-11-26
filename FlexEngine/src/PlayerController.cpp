@@ -69,8 +69,8 @@ namespace flex
 		g_InputManager->BindActionCallback(&m_ActionCallback, 14);
 		g_InputManager->BindMouseMovedCallback(&m_MouseMovedCallback, 14);
 
-		m_PlaceItemAudioID = g_ResourceManager->GetOrLoadAudioID(SID("drip-01.wav"));
-		m_PlaceItemFailureAudioID = g_ResourceManager->GetOrLoadAudioID(SID("spook-01.wav"));
+		m_PlaceItemAudioID = g_ResourceManager->GetOrLoadAudioSourceID(SID("drip-01.wav"), true);
+		m_PlaceItemFailureAudioID = g_ResourceManager->GetOrLoadAudioSourceID(SID("spook-01.wav"), true);
 
 		LoadConfigFile();
 	}

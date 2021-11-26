@@ -28,8 +28,8 @@ namespace flex
 
 	void PluggablesSystem::Initialize()
 	{
-		m_PlugInAudioSourceID = g_ResourceManager->GetOrLoadAudioID(SID("latch-open-19.wav"));
-		m_UnplugAudioSourceID = g_ResourceManager->GetOrLoadAudioID(SID("latch-closing-09.wav"));
+		m_PlugInAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-open-19.wav"), true);
+		m_UnplugAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-closing-09.wav"), true);
 	}
 
 	void PluggablesSystem::Destroy()

@@ -71,13 +71,18 @@ namespace flex
 
 	void BaseCamera::Update()
 	{
+		prevPosition = position;
+
 		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_DeltaTime);
 
 		AudioManager::SetListenerPos(position);
+		AudioManager::SetListenerVel(velocity);
 	}
 
 	void BaseCamera::LateUpdate()
 	{
+		velocity = (position - prevPosition) / g_DeltaTime;
+
 	}
 
 	void BaseCamera::Destroy()

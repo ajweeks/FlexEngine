@@ -1252,25 +1252,25 @@ namespace flex
 		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
 	}
 
-	AudioSourceID ResourceManager::GetAudioID(StringID audioFileSID)
+	AudioSourceID ResourceManager::GetAudioSourceID(StringID audioFileSID)
 	{
 		return discoveredAudioFiles[audioFileSID].sourceID;
 	}
 
-	AudioSourceID ResourceManager::GetOrLoadAudioID(StringID audioFileSID)
+	AudioSourceID ResourceManager::GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D)
 	{
 		if (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID)
 		{
-			LoadAudioFile(audioFileSID, nullptr);
+			LoadAudioFile(audioFileSID, nullptr, b2D);
 		}
 
 		return discoveredAudioFiles[audioFileSID].sourceID;
 	}
 
-	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder)
+	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D)
 	{
 		std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[audioFileSID].name;
-		discoveredAudioFiles[audioFileSID].sourceID = AudioManager::AddAudioSource(filePath, errorStringBuilder);
+		discoveredAudioFiles[audioFileSID].sourceID = AudioManager::AddAudioSource(filePath, errorStringBuilder, b2D);
 		discoveredAudioFiles[audioFileSID].bInvalid = (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID);
 	}
 
@@ -2503,10 +2503,10 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("sounds"));
+		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("audio"));
 		if (*bSoundsWindowOpen)
 		{
-			if (ImGui::Begin("Sound clips", bSoundsWindowOpen))
+			if (ImGui::Begin("Audio", bSoundsWindowOpen))
 			{
 				// TODO: Add tickbox/env var somewhere to disable this
 				static bool bAutoPlay = true;
@@ -2611,7 +2611,7 @@ namespace flex
 						if (bLoadSound)
 						{
 							errorStringBuilder.Clear();
-							LoadAudioFile(selectedAudioFileID, &errorStringBuilder);
+							LoadAudioFile(selectedAudioFileID, &errorStringBuilder, true);
 							sourceID = discoveredAudioFiles[selectedAudioFileID].sourceID;
 							bValuesChanged = true;
 						}
@@ -2800,6 +2800,227 @@ namespace flex
 						}
 					}
 				}
+
+				ImGui::Text("Effects");
+
+				for (AudioEffect& effect : AudioManager::s_Effects)
+				{
+					if (ImGui::Combo("Type", (i32*)&effect.type, AudioEffectTypeStrings, ARRAY_LENGTH(AudioEffectTypeStrings)))
+					{
+
+					}
+
+					if (effect.type == AudioEffect::Type::EAX_REVERB)
+					{
+						bool bChanged = false;
+
+						static const Pair<const char*, EFXEAXREVERBPROPERTIES> presets[] =
+						{
+							/* Default Presets */
+
+							{ "Generic", EFX_REVERB_PRESET_GENERIC },
+							{ "Padded cell",  EFX_REVERB_PRESET_PADDEDCELL },
+							{ "Room",  EFX_REVERB_PRESET_ROOM },
+							{ "Bathroom",  EFX_REVERB_PRESET_BATHROOM },
+							{ "Livingroom",  EFX_REVERB_PRESET_LIVINGROOM },
+							{ "Stoneroom",  EFX_REVERB_PRESET_STONEROOM },
+							{ "Auditorium",  EFX_REVERB_PRESET_AUDITORIUM },
+							{ "Concerthall",  EFX_REVERB_PRESET_CONCERTHALL },
+							{ "Cave",  EFX_REVERB_PRESET_CAVE },
+							{ "Arena",  EFX_REVERB_PRESET_ARENA },
+							{ "Hangar",  EFX_REVERB_PRESET_HANGAR },
+							{ "Carpted hallway",  EFX_REVERB_PRESET_CARPETEDHALLWAY },
+							{ "Hallway",  EFX_REVERB_PRESET_HALLWAY },
+							{ "Stone corridor",  EFX_REVERB_PRESET_STONECORRIDOR },
+							{ "Alley",  EFX_REVERB_PRESET_ALLEY },
+							{ "Forest",  EFX_REVERB_PRESET_FOREST },
+							{ "City",  EFX_REVERB_PRESET_CITY },
+							{ "Mountains",  EFX_REVERB_PRESET_MOUNTAINS },
+							{ "Quarry",  EFX_REVERB_PRESET_QUARRY },
+							{ "Plain",  EFX_REVERB_PRESET_PLAIN },
+							{ "Parking lot",  EFX_REVERB_PRESET_PARKINGLOT },
+							{ "Sewer pipe",  EFX_REVERB_PRESET_SEWERPIPE },
+							{ "Underwater",  EFX_REVERB_PRESET_UNDERWATER },
+							{ "Drugged",  EFX_REVERB_PRESET_DRUGGED },
+							{ "Dizzy",  EFX_REVERB_PRESET_DIZZY },
+							{ "Psychotic",  EFX_REVERB_PRESET_PSYCHOTIC },
+
+							/* Castle Presets */
+
+							{ "Small room",  EFX_REVERB_PRESET_CASTLE_SMALLROOM },
+							{ "Short passage",  EFX_REVERB_PRESET_CASTLE_SHORTPASSAGE },
+							{ "Medium room",  EFX_REVERB_PRESET_CASTLE_MEDIUMROOM },
+							{ "Large room",  EFX_REVERB_PRESET_CASTLE_LARGEROOM },
+							{ "Long passage",  EFX_REVERB_PRESET_CASTLE_LONGPASSAGE },
+							{ "Castle hall",  EFX_REVERB_PRESET_CASTLE_HALL },
+							{ "Castle cupboard",  EFX_REVERB_PRESET_CASTLE_CUPBOARD },
+							{ "Courtyard",  EFX_REVERB_PRESET_CASTLE_COURTYARD },
+							{ "Alcove",  EFX_REVERB_PRESET_CASTLE_ALCOVE },
+
+							/* Factory Presets */
+
+							{ "Factory Smallroom",  EFX_REVERB_PRESET_FACTORY_SMALLROOM },
+							{ "Factory short passage",  EFX_REVERB_PRESET_FACTORY_SHORTPASSAGE },
+							{ "Factory medium room",  EFX_REVERB_PRESET_FACTORY_MEDIUMROOM },
+							{ "Factory large room",  EFX_REVERB_PRESET_FACTORY_LARGEROOM },
+							{ "Factory long passage",  EFX_REVERB_PRESET_FACTORY_LONGPASSAGE },
+							{ "Factory hall",  EFX_REVERB_PRESET_FACTORY_HALL },
+							{ "Factory cupboard",  EFX_REVERB_PRESET_FACTORY_CUPBOARD },
+							{ "Factory courtyard",  EFX_REVERB_PRESET_FACTORY_COURTYARD },
+							{ "Factory alcove",  EFX_REVERB_PRESET_FACTORY_ALCOVE },
+
+							/* Ice Palace Presets */
+
+							{ "Ice Palace small room",  EFX_REVERB_PRESET_ICEPALACE_SMALLROOM },
+							{ "Ice Palace short passage",  EFX_REVERB_PRESET_ICEPALACE_SHORTPASSAGE },
+							{ "Ice Palace mediumroom",  EFX_REVERB_PRESET_ICEPALACE_MEDIUMROOM },
+							{ "Ice Palace large room",  EFX_REVERB_PRESET_ICEPALACE_LARGEROOM },
+							{ "Ice Palace long passage",  EFX_REVERB_PRESET_ICEPALACE_LONGPASSAGE },
+							{ "Ice Palace hall",  EFX_REVERB_PRESET_ICEPALACE_HALL },
+							{ "Ice Palace cupboard",  EFX_REVERB_PRESET_ICEPALACE_CUPBOARD },
+							{ "Ice Palace courtyard",  EFX_REVERB_PRESET_ICEPALACE_COURTYARD },
+							{ "Ice Palace alcove",  EFX_REVERB_PRESET_ICEPALACE_ALCOVE },
+
+							/* Space Station Presets */
+
+							{ "Space Station small room",  EFX_REVERB_PRESET_SPACESTATION_SMALLROOM },
+							{ "Space Station short passage",  EFX_REVERB_PRESET_SPACESTATION_SHORTPASSAGE },
+							{ "Space Station medium room",  EFX_REVERB_PRESET_SPACESTATION_MEDIUMROOM },
+							{ "Space Station large room",  EFX_REVERB_PRESET_SPACESTATION_LARGEROOM },
+							{ "Space Station long passage",  EFX_REVERB_PRESET_SPACESTATION_LONGPASSAGE },
+							{ "Space Station hall",  EFX_REVERB_PRESET_SPACESTATION_HALL },
+							{ "Space Station cupboard",  EFX_REVERB_PRESET_SPACESTATION_CUPBOARD },
+							{ "Space Station alcove",  EFX_REVERB_PRESET_SPACESTATION_ALCOVE },
+
+							/* Wooden Galleon Presets */
+
+							{ "Wooden small room",  EFX_REVERB_PRESET_WOODEN_SMALLROOM },
+							{ "Wooden short passage",  EFX_REVERB_PRESET_WOODEN_SHORTPASSAGE },
+							{ "Wooden medium room",  EFX_REVERB_PRESET_WOODEN_MEDIUMROOM },
+							{ "Wooden large room",  EFX_REVERB_PRESET_WOODEN_LARGEROOM },
+							{ "Wooden long passage",  EFX_REVERB_PRESET_WOODEN_LONGPASSAGE },
+							{ "Wooden hall",  EFX_REVERB_PRESET_WOODEN_HALL },
+							{ "Wooden cupboard",  EFX_REVERB_PRESET_WOODEN_CUPBOARD },
+							{ "Wooden courtyard",  EFX_REVERB_PRESET_WOODEN_COURTYARD },
+							{ "Wooden alcove",  EFX_REVERB_PRESET_WOODEN_ALCOVE },
+
+							/* Sports Presets */
+
+							{ "Sport empty stadium",  EFX_REVERB_PRESET_SPORT_EMPTYSTADIUM },
+							{ "Sport squash court",  EFX_REVERB_PRESET_SPORT_SQUASHCOURT },
+							{ "Sport small swimming pool",  EFX_REVERB_PRESET_SPORT_SMALLSWIMMINGPOOL },
+							{ "Sport large swimming pool",  EFX_REVERB_PRESET_SPORT_LARGESWIMMINGPOOL },
+							{ "Sport gymnasium",  EFX_REVERB_PRESET_SPORT_GYMNASIUM },
+							{ "Sport full stadium",  EFX_REVERB_PRESET_SPORT_FULLSTADIUM },
+							{ "Sport staduym tannoy",  EFX_REVERB_PRESET_SPORT_STADIUMTANNOY },
+
+							/* Prefab Presets */
+
+							{ "Prefab workshop",  EFX_REVERB_PRESET_PREFAB_WORKSHOP },
+							{ "Prefab school room",  EFX_REVERB_PRESET_PREFAB_SCHOOLROOM },
+							{ "Prefab practice room",  EFX_REVERB_PRESET_PREFAB_PRACTISEROOM },
+							{ "Prefab outhouse",  EFX_REVERB_PRESET_PREFAB_OUTHOUSE },
+							{ "Prefab caravan",  EFX_REVERB_PRESET_PREFAB_CARAVAN },
+
+							/* Dome and Pipe Presets */
+
+							{ "Dome tomb",  EFX_REVERB_PRESET_DOME_TOMB },
+							{ "Dome pipe small",  EFX_REVERB_PRESET_PIPE_SMALL },
+							{ "Dome Saint Pauls",  EFX_REVERB_PRESET_DOME_SAINTPAULS },
+							{ "Pipe long thin",  EFX_REVERB_PRESET_PIPE_LONGTHIN },
+							{ "Pipe large",  EFX_REVERB_PRESET_PIPE_LARGE },
+							{ "Pipe resonant",  EFX_REVERB_PRESET_PIPE_RESONANT },
+
+							/* Outdoors Presets */
+
+							{ "Outdoors backyard",  EFX_REVERB_PRESET_OUTDOORS_BACKYARD },
+							{ "Outdoors rolling plains",  EFX_REVERB_PRESET_OUTDOORS_ROLLINGPLAINS },
+							{ "Outdoors deep canyon",  EFX_REVERB_PRESET_OUTDOORS_DEEPCANYON },
+							{ "Outdoors creek",  EFX_REVERB_PRESET_OUTDOORS_CREEK },
+							{ "Outdoors valley",  EFX_REVERB_PRESET_OUTDOORS_VALLEY },
+
+							/* Mood Presets */
+
+							{ "Mood heaven",  EFX_REVERB_PRESET_MOOD_HEAVEN },
+							{ "Mood hell",  EFX_REVERB_PRESET_MOOD_HELL },
+							{ "Mood memory",  EFX_REVERB_PRESET_MOOD_MEMORY },
+
+							/* Driving Presets */
+
+							{ "Driving commentator",  EFX_REVERB_PRESET_DRIVING_COMMENTATOR },
+							{ "Driving pit garage",  EFX_REVERB_PRESET_DRIVING_PITGARAGE },
+							{ "Driving in car racer",  EFX_REVERB_PRESET_DRIVING_INCAR_RACER },
+							{ "Driving in car sports",  EFX_REVERB_PRESET_DRIVING_INCAR_SPORTS },
+							{ "Driving in car luxury",  EFX_REVERB_PRESET_DRIVING_INCAR_LUXURY },
+							{ "Driving full grand stand",  EFX_REVERB_PRESET_DRIVING_FULLGRANDSTAND },
+							{ "Driving empty grand stand",  EFX_REVERB_PRESET_DRIVING_EMPTYGRANDSTAND },
+							{ "Driving driving tunnel",  EFX_REVERB_PRESET_DRIVING_TUNNEL },
+
+							/* City Presets */
+
+							{ "City streets",  EFX_REVERB_PRESET_CITY_STREETS },
+							{ "City subway",  EFX_REVERB_PRESET_CITY_SUBWAY },
+							{ "City museum",  EFX_REVERB_PRESET_CITY_MUSEUM },
+							{ "City library",  EFX_REVERB_PRESET_CITY_LIBRARY },
+							{ "City underpass",  EFX_REVERB_PRESET_CITY_UNDERPASS },
+							{ "City abandoned",  EFX_REVERB_PRESET_CITY_ABANDONED },
+
+							/* Misc. Presets */
+
+							{ "Dusty room",  EFX_REVERB_PRESET_DUSTYROOM },
+							{ "Chapel",  EFX_REVERB_PRESET_CHAPEL },
+							{ "Small water room",  EFX_REVERB_PRESET_SMALLWATERROOM },
+						};
+
+						if (ImGui::BeginCombo("Preset", effect.presetIndex != -1 ? presets[effect.presetIndex].first : ""))
+						{
+							for (i32 i = 0; i < (i32)ARRAY_LENGTH(presets); ++i)
+							{
+								if (ImGui::Selectable(presets[i].first))
+								{
+									effect.presetIndex = i;
+									effect.reverbProperties = presets[i].second;
+									bChanged = true;
+								}
+							}
+
+							ImGui::EndCombo();
+						}
+
+						real speed = 0.02f;
+
+						bChanged = ImGui::DragFloat("Density", &effect.reverbProperties.flDensity, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Diffusion", &effect.reverbProperties.flDiffusion, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain", &effect.reverbProperties.flGain, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain HF", &effect.reverbProperties.flGainHF, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain LF", &effect.reverbProperties.flGainLF, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay time", &effect.reverbProperties.flDecayTime, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay HF Ratio", &effect.reverbProperties.flDecayHFRatio, speed, 0.1f, 2.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay LF Ratio", &effect.reverbProperties.flDecayLFRatio, speed, 0.1f, 2.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Reflections gain", &effect.reverbProperties.flReflectionsGain, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Reflections delay", &effect.reverbProperties.flReflectionsDelay, 0.001f, 0.0f, 0.3f) || bChanged;
+						bChanged = ImGui::DragFloat3("Reflections pan", effect.reverbProperties.flReflectionsPan, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Late reverb gain", &effect.reverbProperties.flLateReverbGain, speed, 0.0f, 5.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Late reverb delay", &effect.reverbProperties.flLateReverbDelay, 0.001f, 0.0f, 0.1f) || bChanged;
+						bChanged = ImGui::DragFloat3("Late reverb pan", effect.reverbProperties.flLateReverbPan, speed, -1.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Echo time", &effect.reverbProperties.flEchoTime, 0.0005f, 0.1f, 0.25f) || bChanged;
+						bChanged = ImGui::DragFloat("Echo depth", &effect.reverbProperties.flEchoDepth, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Modulation time", &effect.reverbProperties.flModulationTime, speed, 0.25f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Modulation depth", &effect.reverbProperties.flModulationDepth, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Air absorption gain HF", &effect.reverbProperties.flAirAbsorptionGainHF, 0.0001f, 0.9920f, 0.9943f) || bChanged;
+						bChanged = ImGui::DragFloat("HF Reference", &effect.reverbProperties.flHFReference, 10.0f, 0.0f, 10000.0f) || bChanged;
+						bChanged = ImGui::DragFloat("LF Reference", &effect.reverbProperties.flLFReference, 5.0f, 0.0f, 5000.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Room Rolloff Factor", &effect.reverbProperties.flRoomRolloffFactor, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragInt("Decay HF Limit", &effect.reverbProperties.iDecayHFLimit, speed, 0, 1) || bChanged;
+
+						if (bChanged)
+						{
+							AudioManager::SetupReverbEffect(&effect.reverbProperties, effect.effectID);
+							AudioManager::UpdateReverbEffect(AudioManager::SLOT_DEFAULT_3D, (i32)effect.effectID);
+						}
+					}
+				}
+
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 			}

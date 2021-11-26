@@ -74,7 +74,7 @@ namespace flex
 
 		if (s_PickupAudioID == InvalidAudioSourceID)
 		{
-			s_PickupAudioID = g_ResourceManager->GetOrLoadAudioID(SID("pickup-item.wav"));
+			s_PickupAudioID = g_ResourceManager->GetOrLoadAudioSourceID(SID("pickup-item.wav"), true);
 		}
 	}
 
