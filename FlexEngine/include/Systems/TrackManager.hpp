@@ -23,11 +23,19 @@ namespace flex
 		i32 curveIndices[MAX_TRACKS]{ -1, -1, -1, -1 };
 	};
 
-	class TrackManager : public System
+	class TrackManager final : public System
 	{
 	public:
 		TrackManager();
-		virtual ~TrackManager() = default;
+		~TrackManager() = default;
+
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
+
+		virtual void DrawImGui() override;
+
+		JSONObject Serialize() const;
 
 		void InitializeFromJSON(const JSONObject& obj);
 
@@ -35,11 +43,9 @@ namespace flex
 		TrackID AddTrack(const BezierCurveList& track);
 		BezierCurveList* GetTrack(TrackID trackID);
 
-		virtual void Initialize() override;
-		virtual void Update() override;
-		virtual void Destroy() override;
+		void OnSceneChanged();
 
-		virtual void DrawImGui() override;
+		void DrawDebug();
 
 		glm::vec3 GetPointOnTrack(TrackID trackID,
 			real distAlongTrack,
@@ -70,12 +76,8 @@ namespace flex
 		bool IsTrackInRange(TrackID trackID, const glm::vec3& pos, real range, real* outDistToTrack, real* outDistAlongTrack);
 		TrackID GetTrackInRangeID(const glm::vec3& pos, real range, real* outDistAlongTrack);
 
-		void DrawDebug();
-
 		// Moves t along track according to curve length
 		real AdvanceTAlongTrack(TrackID trackID, real amount, real t);
-
-		JSONObject Serialize() const;
 
 		real GetCartTargetDistAlongTrackInChain(CartChainID cartChainID, CartID cartID) const;
 

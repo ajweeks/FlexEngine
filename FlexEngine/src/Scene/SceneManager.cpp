@@ -13,6 +13,7 @@
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "StringBuilder.hpp"
+#include "Systems/TrackManager.hpp"
 
 namespace flex
 {
@@ -710,6 +711,7 @@ namespace flex
 			g_Editor->OnSceneChanged();
 			g_CameraManager->OnSceneChanged();
 			g_Renderer->OnPostSceneChange();
+			GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->OnSceneChanged();
 		}
 	}
 
