@@ -10737,6 +10737,8 @@ namespace flex
 	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("spring"), gameObjectID)
 	{
+		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 	}
 
 	GameObject* SpringObject::CopySelf(

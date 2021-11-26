@@ -6035,8 +6035,15 @@ namespace flex
 				if (shader->textureUniforms.HasUniform(texturePair.uniform->id))
 				{
 					VulkanTexture* texture = (VulkanTexture*)texturePair.object;
-					assert(texture != nullptr);
-					imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ texture->imageView, texture->sampler });
+					if (texture != nullptr)
+					{
+						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ texture->imageView, texture->sampler });
+					}
+					else
+					{
+						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ ((VulkanTexture*)m_BlankTexture)->imageView, ((VulkanTexture*)m_BlankTexture)->sampler });
+						PrintWarn("Invalid texture passed to FillOutTextureDescriptorInfos\n");
+					}
 				}
 			}
 
@@ -7700,7 +7707,7 @@ namespace flex
 					if (shader->bNeedPushConstantBlock)
 					{
 						// Push constants
-						if (drawCallInfo && drawCallInfo->pushConstantOverride)
+						if (drawCallInfo != nullptr && drawCallInfo->pushConstantOverride)
 						{
 							pushConstantBlock = drawCallInfo->pushConstantOverride;
 						}

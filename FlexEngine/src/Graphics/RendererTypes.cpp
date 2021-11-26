@@ -388,7 +388,10 @@ namespace flex
 	{
 		if (data == nullptr)
 		{
-			assert(size == dataSize || size == 0);
+			if (size != dataSize && size != 0)
+			{
+				PrintError("Push constant block size changed! (%d to %d) Memory leak will occur\n", size, dataSize);
+			}
 
 			size = dataSize;
 			if (dataSize != 0)
