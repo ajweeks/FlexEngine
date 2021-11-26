@@ -54,6 +54,11 @@ namespace flex
 	// Removes all chars before first '.' occurrence
 	FLEX_NO_DISCARD std::string ExtractFileType(const std::string& filePath);
 
+	FLEX_NO_DISCARD bool IsSpace(char c);
+	FLEX_NO_DISCARD bool IsNewLine(char c);
+	FLEX_NO_DISCARD bool IsDigit(char c);
+	FLEX_NO_DISCARD bool IsLetter(char c);
+
 	// Strips leading and trailing whitespace
 	FLEX_NO_DISCARD std::string Trim(const std::string& str);
 

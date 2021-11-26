@@ -508,26 +508,6 @@ namespace flex
 		}
 	}
 
-	bool Lexer::IsNewLine(char c)
-	{
-		return c == '\n' || c == '\r';
-	}
-
-	bool Lexer::IsDigit(char c)
-	{
-		return c >= '0' && c <= '9';
-	}
-
-	bool Lexer::IsLetter(char c)
-	{
-		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-	}
-
-	bool Lexer::IsSpace(char c)
-	{
-		return isspace(c);
-	}
-
 	void Lexer::EatWhitespaceAndComments()
 	{
 		bool bAdvanced = true;

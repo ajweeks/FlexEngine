@@ -102,11 +102,6 @@ namespace flex
 		Token NextStringLiteral();
 		Token NextIdentifierOrKeyword();
 
-		bool IsNewLine(char c);
-		bool IsDigit(char c);
-		bool IsLetter(char c);
-		bool IsSpace(char c);
-
 		// Consumes all ignored characters and advances the
 		// source iter to point at the next non-ignored char
 		void EatWhitespaceAndComments();

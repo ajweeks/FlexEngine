@@ -624,6 +624,30 @@ namespace flex
 		return "";
 	}
 
+	bool IsSpace(char c)
+	{
+		i32 m0 = (i32)(c == '\r');
+		i32 m1 = (i32)(c == '\n');
+		i32 m2 = (i32)(c == ' ');
+		i32 m3 = (i32)(c == '\t');
+		return (m0 | m1 | m2 | m3) != 0;
+	}
+
+	bool IsNewLine(char c)
+	{
+		return c == '\n' || c == '\r';
+	}
+
+	bool IsDigit(char c)
+	{
+		return c >= '0' && c <= '9';
+	}
+
+	bool IsLetter(char c)
+	{
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	}
+
 	std::string Trim(const std::string& str)
 	{
 		if (str.empty())
@@ -633,12 +657,12 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (iter != riter && isspace(*iter))
+		while (iter != riter && IsSpace(*iter))
 		{
 			++iter;
 		}
 
-		while (riter != iter && isspace(*riter))
+		while (riter != iter && IsSpace(*riter))
 		{
 			--riter;
 		}
@@ -655,7 +679,7 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (iter != riter && isspace(*iter))
+		while (iter != riter && IsSpace(*iter))
 		{
 			++iter;
 		}
@@ -672,7 +696,7 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (riter != iter && isspace(*riter))
+		while (riter != iter && IsSpace(*riter))
 		{
 			--riter;
 		}

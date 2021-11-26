@@ -181,7 +181,6 @@ namespace flex
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
 
-
 		std::string m_CommonSettingsFileName;
 		std::string m_CommonSettingsAbsFilePath;
 

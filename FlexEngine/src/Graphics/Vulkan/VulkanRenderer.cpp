@@ -4045,12 +4045,9 @@ namespace flex
 						{
 							FontMetric* metric = charPair.second;
 
-							if (isspace(metric->character) ||
-								metric->character == '\0' ||
-								metric->character == '\t' ||
-								metric->character == '\r' ||
-								metric->character == '\n' ||
-								metric->character == '\b')
+							if (IsSpace((char)metric->character) ||
+								metric->character == L'\0' ||
+								metric->character == L'\b')
 							{
 								continue;
 							}

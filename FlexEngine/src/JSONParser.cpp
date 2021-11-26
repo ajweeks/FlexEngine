@@ -63,7 +63,7 @@ namespace flex
 						continue;
 					}
 					// Skip all whitespace characters
-					else if (!isspace(currentChar))
+					else if (!IsSpace(currentChar))
 					{
 						cleanFileContents.push_back(currentChar);
 					}
