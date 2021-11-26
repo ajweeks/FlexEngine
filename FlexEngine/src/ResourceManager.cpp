@@ -1196,7 +1196,9 @@ namespace flex
 		PrefabID prefabID = GetPrefabID(prefabName.c_str());
 		std::string fileNameStr = prefabTemplate->GetName() + ".json";
 		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, prefabID, fileNameStr, false };
+		prefabTemplate->m_bIsTemplate = true;
 		bool bResult = WritePrefabToDisk(prefabTemplatePair);
+		prefabTemplate->m_bIsTemplate = false;
 		return bResult;
 	}
 
