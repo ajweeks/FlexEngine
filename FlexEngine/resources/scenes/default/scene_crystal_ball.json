@@ -43,15 +43,14 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "2.415, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.935, 0.000, 0.000, 0.355",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.28, 0.34, 0.39",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : false,
 				"brightness" : 15.000000,
 				"cast shadows" : false,
@@ -66,9 +65,7 @@
 			{
 				"scale" : "812.400, 1.000, 12000.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -84,9 +81,7 @@
 				"pos" : "0.000, 184.957, 0.000",
 				"scale" : "861.200, 1.000, 12000.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -103,9 +98,7 @@
 				"rot" : "0.000, -0.000, 1.571",
 				"scale" : "200.000, 1.000, 12000.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -122,9 +115,7 @@
 				"rot" : "0.000, -0.000, 1.571",
 				"scale" : "200.000, 1.000, 12000.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -141,11 +132,9 @@
 				"rot" : "1.948, 1.040, -1.811",
 				"scale" : "10.153, 10.153, 10.153"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.03, 0.07, 1.00",
+				"colour" : "0.03,0.07,1.00",
 				"enabled" : true,
 				"brightness" : 479.166992
 			}
@@ -160,9 +149,7 @@
 				"rot" : "1.571, -0.000, 0.000",
 				"scale" : "699.500, 1.000, 200.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -178,8 +165,6 @@
 				"pos" : "0.000, 24.554, 62.150",
 				"scale" : "10.000, 10.000, 10.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
@@ -197,7 +182,6 @@
 			},
 			"visible" : false,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[

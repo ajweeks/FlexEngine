@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "27F7672A65C29A944B1C0908E1377F5B",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -42,15 +41,15 @@
 			"type" : "directional light",
 			"transform" : 
 			{
-				"pos" : "0.000, 15.000, 0.000"
+				"pos" : "0.000, 15.000, 0.000",
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.000, 0.000, 0.000, 1.000",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : false,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -65,8 +64,6 @@
 			{
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -83,11 +80,9 @@
 				"rot" : "-0.172, 0.291, 1.026",
 				"scale" : "4.696, 2.743, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -102,8 +97,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
@@ -122,11 +115,9 @@
 				"rot" : "0.171, 0.292, 2.110",
 				"scale" : "4.696, 2.743, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -141,8 +132,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
@@ -161,11 +150,9 @@
 				"rot" : "0.337, -0.007, -3.121",
 				"scale" : "5.552, 1.455, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -180,8 +167,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[

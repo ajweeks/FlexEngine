@@ -27,7 +27,6 @@
 			"name" : "Skybox",
 			"id" : "550D6BBEFAA67685495BCE9A868118FE",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -44,15 +43,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.589, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.714, 0.000, 0.000, 0.701",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 0.887000,
 				"cast shadows" : true,
@@ -62,15 +59,12 @@
 		{
 			"name" : "Road",
 			"id" : "868430323533558740C132FED8F0E1C0",
-			"type" : "road",
-			"visible" : true,
-			"casts shadow" : true
+			"type" : "road"
 		},
 		{
 			"name" : "Terrain",
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
 			"type" : "terrain generator",
-			"visible" : true,
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
@@ -85,11 +79,11 @@
 				"loaded chunk radius" : 2408.229004,
 				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 256,
-				"low colour" : "0.33, 0.41, 0.33",
-				"mid colour" : "0.51, 0.58, 0.37",
-				"high colour" : "0.65, 0.70, 0.43",
+				"low colour" : "0.33,0.41,0.33",
+				"mid colour" : "0.51,0.58,0.37",
+				"high colour" : "0.65,0.70,0.43",
 				"pin center" : true,
-				"pinned center" : "0.03, 10.43, -0.00",
+				"pinned center" : "0.03,10.43,-0.00",
 				"biomes" : 
 				[
 					{
@@ -174,8 +168,6 @@
 				"pos" : "66.446, 52.293, 25.470",
 				"scale" : "16.010, 16.010, 16.010"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
@@ -191,8 +183,6 @@
 				"pos" : "35.889, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
@@ -222,8 +212,6 @@
 				"rot" : "0.000, -0.522, 0.000",
 				"scale" : "16.801, 1.000, 20.780"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -232,7 +220,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
+				"half extents" : "0.500,0.500,0.500"
 			},
 			"rigid body" : 
 			{
@@ -252,8 +240,6 @@
 				"pos" : "107.559, 45.023, 59.114",
 				"scale" : "8.791, 8.791, 8.791"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
@@ -268,9 +254,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "2.876, 0.916, -0.545",
-				"rot" : "-0.012, 0.804, -0.006",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "2.884, 1.667, -0.553",
+				"rot" : "-0.012, 0.809, -0.004"
 			}
 		}
 	]

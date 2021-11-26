@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "scene_pbd",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.02, 0.09, 0.17, 0.00",
-		"mid colour" : "0.07, 0.08, 0.13, 0.00",
-		"btm colour" : "0.01, 0.01, 0.01, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -32,11 +26,7 @@
 			"name" : "Skybox",
 			"id" : "E33D3F704D2A8BB240747101C7B74D76",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,18 +39,16 @@
 			"name" : "Directional Light",
 			"id" : "351D7B866F7BEDB24B38A5A39DA008B3",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.679, -0.491, 0.858"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.724, 0.153, 0.434, 0.514",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
@@ -70,19 +58,12 @@
 		{
 			"name" : "Soft Bodies",
 			"id" : "19B226A6109ED5BC427D75C257C320BE",
-			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
-			"transform" : 
-			{
-			}
+			"type" : "object"
 		},
 		{
 			"name" : "New_Object_00",
 			"id" : "BC56E4CFA335CFB748F08EB08FA373A6",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 5.028, 0.000"
@@ -97,8 +78,6 @@
 			"name" : "New_Object_01",
 			"id" : "0804F61832DB0F96448DC9A368C23C69",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 5.028, 10.072",
@@ -114,8 +93,6 @@
 			"name" : "New_Object_02",
 			"id" : "1638653263CA5BBC4D038B5D6AB9C3DB",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-8.113, 5.028, 5.940",
@@ -131,8 +108,6 @@
 			"name" : "SoftBody_000",
 			"id" : "4FDC2E83F9D248974D1D5C2BD5991EC4",
 			"type" : "soft body",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-2.000, -0.500, 0.000"
@@ -143,327 +118,327 @@
 				"points" : 
 				[
 					{
-						"position" : "-1.97, -2.45, 0.00",
+						"position" : "2.028318,-1.447085,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.47, -2.91, 0.00",
+						"position" : "1.529248,-1.909817,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.49, -2.37, 0.00",
+						"position" : "1.510120,-1.367172,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.93, -2.95, 0.00",
+						"position" : "2.069549,-1.952416,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.12, -1.45, 0.00",
+						"position" : "2.874558,-0.447856,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.79, -1.44, 0.00",
+						"position" : "2.207723,-0.437544,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.38, -1.05, 0.00",
+						"position" : "2.624184,-0.047899,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.45, -1.08, 0.00",
+						"position" : "2.552715,-0.074329,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.43, -0.16, 0.00",
+						"position" : "3.574828,0.845127,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.78, -0.75, 0.00",
+						"position" : "3.219297,0.246376,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.93, -0.26, 0.00",
+						"position" : "3.073170,0.740847,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.29, -0.64, 0.00",
+						"position" : "3.706166,0.356014,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.03, -2.11, 0.00",
+						"position" : "4.032453,-1.109141,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.36, -2.71, 0.00",
+						"position" : "3.639625,-1.713210,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.46, -2.22, 0.00",
+						"position" : "3.542470,-1.223101,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.14, -2.60, 0.00",
+						"position" : "4.139437,-1.595907,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.17, -1.13, 0.00",
+						"position" : "3.830236,-0.131563,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.55, -1.74, 0.00",
+						"position" : "3.452631,-0.737619,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.64, -1.25, 0.00",
+						"position" : "3.360297,-0.248502,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.07, -1.62, 0.00",
+						"position" : "3.930619,-0.624829,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.79, -0.90, 0.00",
+						"position" : "4.792724,0.098028,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.41, -1.51, 0.00",
+						"position" : "4.413995,-0.509937,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.31, -1.02, 0.00",
+						"position" : "4.312654,-0.018452,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.90, -1.39, 0.00",
+						"position" : "4.899692,-0.391823,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.01, -1.88, 0.00",
+						"position" : "5.006585,-0.882989,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.63, -2.48, 0.00",
+						"position" : "4.627609,-1.483963,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.52, -2.00, 0.00",
+						"position" : "4.518273,-0.997289,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.12, -2.37, 0.00",
+						"position" : "5.115588,-1.371185,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.06, 0.43, 0.00",
+						"position" : "3.944481,1.431686,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.46, -0.14, 0.00",
+						"position" : "3.540256,0.865258,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.02, 0.01, 0.00",
+						"position" : "3.981680,1.006979,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.54, 0.34, 0.00",
+						"position" : "3.460924,1.339397,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.31, 1.05, 0.00",
+						"position" : "4.310431,2.051788,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.04, 0.43, 0.00",
+						"position" : "3.958196,1.433892,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.09, 0.90, 0.00",
+						"position" : "3.908743,1.902629,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.44, 0.57, 0.00",
+						"position" : "4.441809,1.573395,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.56, 0.08, 0.00",
+						"position" : "4.560440,1.081384,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.20, -0.53, 0.00",
+						"position" : "4.195853,0.472717,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.07, -0.04, 0.00",
+						"position" : "4.069702,0.957553,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.68, -0.41, 0.00",
+						"position" : "4.679065,0.587226,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.23, -1.09, 0.00",
+						"position" : "3.767691,-0.086796,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.91, -0.80, 0.00",
+						"position" : "3.086015,0.197860,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.41, -0.63, 0.00",
+						"position" : "3.588215,0.372920,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.68, -1.23, 0.00",
+						"position" : "3.320406,-0.232068,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.48, -0.12, 0.00",
+						"position" : "3.519001,0.882971,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.85, -0.77, 0.00",
+						"position" : "3.150858,0.232519,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.36, -0.61, 0.00",
+						"position" : "3.638346,0.391950,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.34, -0.61, 0.00",
+						"position" : "3.655425,0.389572,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.81, -0.74, 0.00",
+						"position" : "3.191019,0.259030,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.11, -1.37, 0.00",
+						"position" : "2.893922,-0.373212,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.71, -1.19, 0.00",
+						"position" : "3.288541,-0.192956,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.26, -0.90, 0.00",
+						"position" : "2.738085,0.099414,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.84, -1.44, 0.00",
+						"position" : "2.155969,-0.438835,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.45, -1.81, 0.00",
+						"position" : "1.552103,-0.811291,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-2.22, -1.24, 0.00",
+						"position" : "1.781330,-0.235140,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.96, -1.93, 0.00",
+						"position" : "2.036229,-0.931242,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.09, -1.37, 0.00",
+						"position" : "2.908747,-0.373661,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.47, -1.98, 0.00",
+						"position" : "2.533732,-0.975011,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.39, -1.57, 0.00",
+						"position" : "2.610498,-0.572172,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.02, -1.85, 0.00",
+						"position" : "2.983355,-0.851243,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.95, -2.34, 0.00",
+						"position" : "3.050160,-1.334925,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.39, -2.93, 0.00",
+						"position" : "2.604106,-1.927333,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-1.46, -2.44, 0.00",
+						"position" : "2.542436,-1.439454,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.86, -2.82, 0.00",
+						"position" : "3.143018,-1.821204,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.00, 0.00, 0.00",
+						"position" : "4.000000,1.000000,0.000000",
 						"inverse mass" : 0.000000
 					},
 					{
-						"position" : "0.12, -0.47, 0.00",
+						"position" : "4.117855,0.525193,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.05, 0.49, 0.00",
+						"position" : "3.950300,1.485889,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.23, -0.95, 0.00",
+						"position" : "4.232859,0.050829,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.06, -0.48, 0.00",
+						"position" : "4.061209,0.524903,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.92, 0.70, 0.00",
+						"position" : "4.919585,1.703604,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.05, 0.20, 0.00",
+						"position" : "5.045927,1.196962,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.17, -0.30, 0.00",
+						"position" : "5.165671,0.700591,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.07, 1.51, 0.00",
+						"position" : "4.066957,2.505249,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.41, 1.11, 0.00",
+						"position" : "3.588787,2.109691,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.56, 1.70, 0.00",
+						"position" : "4.561907,2.696056,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "0.78, 1.20, 0.00",
+						"position" : "4.783329,2.196355,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "-0.52, 0.59, 0.00",
+						"position" : "3.481638,1.586195,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.39, -1.28, 0.00",
+						"position" : "5.386628,-0.284134,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.50, -1.77, 0.00",
+						"position" : "5.494410,-0.774086,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.60, -2.26, 0.00",
+						"position" : "5.603514,-1.262182,0.000000",
 						"inverse mass" : 1.000000
 					},
 					{
-						"position" : "1.28, -0.79, 0.00",
+						"position" : "5.279339,0.205706,0.000000",
 						"inverse mass" : 1.000000
 					}
 				],
@@ -472,7 +447,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -483,7 +457,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 1,
@@ -494,7 +467,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 2,
@@ -505,7 +477,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -516,7 +487,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 3,
@@ -527,7 +497,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 1,
@@ -538,7 +507,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -549,7 +517,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 5,
@@ -560,7 +527,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 6,
@@ -571,7 +537,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -582,7 +547,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -593,7 +557,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 5,
@@ -604,7 +567,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -615,7 +577,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -626,7 +587,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -637,7 +597,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -648,7 +607,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -659,7 +617,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -670,7 +627,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -681,7 +637,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 13,
@@ -692,7 +647,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -703,7 +657,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -714,7 +667,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 15,
@@ -725,7 +677,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 13,
@@ -736,7 +687,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -747,7 +697,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -758,7 +707,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -769,7 +717,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -780,7 +727,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -791,7 +737,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -802,7 +747,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -813,7 +757,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -824,7 +767,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -835,7 +777,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -846,7 +787,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -857,7 +797,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -868,7 +807,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -879,7 +817,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 25,
@@ -890,7 +827,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -901,7 +837,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -912,7 +847,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 27,
@@ -923,7 +857,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 25,
@@ -934,7 +867,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -945,7 +877,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -956,7 +887,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -967,7 +897,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -978,7 +907,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -989,7 +917,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -1000,7 +927,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -1011,7 +937,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -1022,7 +947,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -1033,7 +957,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -1044,7 +967,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -1055,7 +977,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -1066,7 +987,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -1077,7 +997,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -1088,7 +1007,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -1099,7 +1017,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -1110,7 +1027,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -1121,7 +1037,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -1132,7 +1047,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -1143,7 +1057,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 41,
@@ -1154,7 +1067,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 42,
@@ -1165,7 +1077,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -1176,7 +1087,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -1187,7 +1097,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 41,
@@ -1198,7 +1107,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -1209,7 +1117,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -1220,7 +1127,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -1231,7 +1137,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -1242,7 +1147,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -1253,7 +1157,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -1264,7 +1167,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -1275,7 +1177,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -1286,7 +1187,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -1297,7 +1197,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -1308,7 +1207,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -1319,7 +1217,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -1330,7 +1227,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -1341,7 +1237,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 53,
@@ -1352,7 +1247,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 54,
@@ -1363,7 +1257,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -1374,7 +1267,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -1385,7 +1277,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 53,
@@ -1396,7 +1287,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1407,7 +1297,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -1418,7 +1307,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -1429,7 +1317,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1440,7 +1327,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1451,7 +1337,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -1462,7 +1347,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1473,7 +1357,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 61,
@@ -1484,7 +1367,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -1495,7 +1377,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1506,7 +1387,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 63,
@@ -1517,7 +1397,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 61,
@@ -1528,7 +1407,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1539,7 +1417,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -1550,7 +1427,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -1561,7 +1437,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1572,7 +1447,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1583,7 +1457,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -1594,7 +1467,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -1605,7 +1477,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1616,7 +1487,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1627,7 +1497,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -1638,7 +1507,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -1649,7 +1517,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1660,7 +1527,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -1671,7 +1537,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 63,
@@ -1682,7 +1547,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 60,
@@ -1693,7 +1557,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -1704,7 +1567,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 13,
@@ -1715,7 +1577,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 63,
@@ -1726,7 +1587,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -1737,7 +1597,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -1748,7 +1607,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -1759,7 +1617,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -1770,7 +1627,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1781,7 +1637,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -1792,7 +1647,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -1803,7 +1657,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1814,7 +1667,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -1825,7 +1677,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -1836,7 +1687,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -1847,7 +1697,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1858,7 +1707,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -1869,7 +1717,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1880,7 +1727,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 56,
@@ -1891,7 +1737,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -1902,7 +1747,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -1913,7 +1757,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 59,
@@ -1924,7 +1767,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -1935,7 +1777,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 54,
@@ -1946,7 +1787,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 5,
@@ -1957,7 +1797,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -1968,7 +1807,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -1979,7 +1817,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 54,
@@ -1990,7 +1827,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -2001,7 +1837,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -2012,7 +1847,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -2023,7 +1857,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -2034,7 +1867,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -2045,7 +1877,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -2056,7 +1887,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -2067,7 +1897,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -2078,7 +1907,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 52,
@@ -2089,7 +1917,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 58,
@@ -2100,7 +1927,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -2111,7 +1937,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -2122,7 +1947,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -2133,7 +1957,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -2144,7 +1967,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -2155,7 +1977,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -2166,7 +1987,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -2177,7 +1997,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -2188,7 +2007,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -2199,7 +2017,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -2210,7 +2027,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -2221,7 +2037,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -2232,7 +2047,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -2243,7 +2057,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -2254,7 +2067,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -2265,7 +2077,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -2276,7 +2087,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 48,
@@ -2287,7 +2097,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -2298,7 +2107,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -2309,7 +2117,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 51,
@@ -2320,7 +2127,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 64,
@@ -2331,7 +2137,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -2342,7 +2147,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 65,
@@ -2353,7 +2157,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 64,
@@ -2364,7 +2167,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -2375,7 +2177,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -2386,7 +2187,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 66,
@@ -2397,7 +2197,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -2408,7 +2207,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 64,
@@ -2419,7 +2217,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 66,
@@ -2430,7 +2227,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -2441,7 +2237,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -2452,7 +2247,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -2463,7 +2257,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -2474,7 +2267,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 44,
@@ -2485,7 +2277,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -2496,7 +2287,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -2507,7 +2297,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 47,
@@ -2518,7 +2307,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 67,
@@ -2529,7 +2317,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 42,
@@ -2540,7 +2327,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 68,
@@ -2551,7 +2337,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 67,
@@ -2562,7 +2347,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -2573,7 +2357,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 42,
@@ -2584,7 +2367,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 65,
@@ -2595,7 +2377,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -2606,7 +2387,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 67,
@@ -2617,7 +2397,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 65,
@@ -2628,7 +2407,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -2639,7 +2417,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -2650,7 +2427,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -2661,7 +2437,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -2672,7 +2447,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 40,
@@ -2683,7 +2457,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 46,
@@ -2694,7 +2467,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -2705,7 +2477,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -2716,7 +2487,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -2727,7 +2497,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -2738,7 +2507,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -2749,7 +2517,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -2760,7 +2527,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -2771,7 +2537,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -2782,7 +2547,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 69,
@@ -2793,7 +2557,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -2804,7 +2567,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -2815,7 +2577,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 69,
@@ -2826,7 +2587,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 70,
@@ -2837,7 +2597,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -2848,7 +2607,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 70,
@@ -2859,7 +2617,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -2870,7 +2627,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 36,
@@ -2881,7 +2637,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 70,
@@ -2892,7 +2647,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 71,
@@ -2903,7 +2657,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -2914,7 +2667,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 72,
@@ -2925,7 +2677,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -2936,7 +2687,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 73,
@@ -2947,7 +2697,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 72,
@@ -2958,7 +2707,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -2969,7 +2717,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -2980,7 +2727,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 74,
@@ -2991,7 +2737,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -3002,7 +2747,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 72,
@@ -3013,7 +2757,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 74,
@@ -3024,7 +2767,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 75,
@@ -3035,7 +2777,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -3046,7 +2787,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 75,
@@ -3057,7 +2797,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -3068,7 +2807,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 32,
@@ -3079,7 +2817,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 75,
@@ -3090,7 +2827,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 69,
@@ -3101,7 +2837,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 35,
@@ -3112,7 +2847,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 76,
@@ -3123,7 +2857,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -3134,7 +2867,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 66,
@@ -3145,7 +2877,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 76,
@@ -3156,7 +2887,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -3167,7 +2897,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 30,
@@ -3178,7 +2907,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 73,
@@ -3189,7 +2917,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -3200,7 +2927,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 76,
@@ -3211,7 +2937,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 73,
@@ -3222,7 +2947,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -3233,7 +2957,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -3244,7 +2967,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -3255,7 +2977,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -3266,7 +2987,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 28,
@@ -3277,7 +2997,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 34,
@@ -3288,7 +3007,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -3299,7 +3017,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -3310,7 +3027,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -3321,7 +3037,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -3332,7 +3047,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -3343,7 +3057,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -3354,7 +3067,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -3365,7 +3077,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -3376,7 +3087,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 77,
@@ -3387,7 +3097,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -3398,7 +3107,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -3409,7 +3117,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 77,
@@ -3420,7 +3127,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 78,
@@ -3431,7 +3137,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -3442,7 +3147,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 78,
@@ -3453,7 +3157,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 27,
@@ -3464,7 +3167,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 24,
@@ -3475,7 +3177,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 78,
@@ -3486,7 +3187,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 79,
@@ -3497,7 +3197,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 27,
@@ -3508,7 +3207,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -3519,7 +3217,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -3530,7 +3227,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -3541,7 +3237,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -3552,7 +3247,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -3563,7 +3257,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -3574,7 +3267,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 71,
@@ -3585,7 +3277,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -3596,7 +3287,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 39,
@@ -3607,7 +3297,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 71,
@@ -3618,7 +3307,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 80,
@@ -3629,7 +3317,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -3640,7 +3327,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 80,
@@ -3651,7 +3337,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -3662,7 +3347,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 20,
@@ -3673,7 +3357,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 80,
@@ -3684,7 +3367,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 77,
@@ -3695,7 +3377,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 23,
@@ -3706,7 +3387,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -3717,7 +3397,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -3728,7 +3407,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 9,
@@ -3739,7 +3417,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -3750,7 +3427,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -3761,7 +3437,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 18,
@@ -3772,7 +3447,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -3783,7 +3457,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -3794,7 +3467,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -3805,7 +3477,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -3816,7 +3487,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -3827,7 +3497,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -3838,7 +3507,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -3849,7 +3517,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -3860,7 +3527,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 16,
@@ -3871,7 +3537,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 22,
@@ -3882,7 +3547,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -3893,7 +3557,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -3904,7 +3567,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -3915,7 +3577,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -3926,7 +3587,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 17,
@@ -3937,7 +3597,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -3948,7 +3607,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -3959,7 +3617,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 14,
@@ -3970,7 +3627,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -3981,7 +3637,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -3992,7 +3647,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 19,
@@ -4003,7 +3657,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 21,
@@ -4014,7 +3667,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -4025,7 +3677,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -4036,7 +3687,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -4047,7 +3697,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 15,
@@ -4058,7 +3707,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 12,
@@ -4069,7 +3717,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 26,
@@ -4080,7 +3727,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 25,
@@ -4091,7 +3737,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 15,
@@ -4102,7 +3747,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -4113,7 +3757,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -4124,7 +3767,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 29,
@@ -4135,7 +3777,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -4146,7 +3787,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -4157,7 +3797,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 10,
@@ -4168,7 +3807,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -4179,7 +3817,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -4190,7 +3827,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 31,
@@ -4201,7 +3837,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 33,
@@ -4212,7 +3847,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -4223,7 +3857,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -4234,7 +3867,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -4245,7 +3877,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -4256,7 +3887,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 8,
@@ -4267,7 +3897,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 38,
@@ -4278,7 +3907,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 37,
@@ -4289,7 +3917,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 11,
@@ -4300,7 +3927,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -4311,7 +3937,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 6,
@@ -4322,7 +3947,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 41,
@@ -4333,7 +3957,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -4344,7 +3967,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -4355,7 +3977,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 6,
@@ -4366,7 +3987,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -4377,7 +3997,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -4388,7 +4007,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 43,
@@ -4399,7 +4017,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 45,
@@ -4410,7 +4027,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -4421,7 +4037,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -4432,7 +4047,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -4443,7 +4057,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -4454,7 +4067,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 4,
@@ -4465,7 +4077,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 50,
@@ -4476,7 +4087,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 49,
@@ -4487,7 +4097,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 7,
@@ -4498,7 +4107,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -4509,7 +4117,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 2,
@@ -4520,7 +4127,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 53,
@@ -4531,7 +4137,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -4542,7 +4147,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -4553,7 +4157,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 2,
@@ -4564,7 +4167,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -4575,7 +4177,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -4586,7 +4187,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 55,
@@ -4597,7 +4197,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 57,
@@ -4608,7 +4207,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -4619,7 +4217,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -4630,7 +4227,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -4641,7 +4237,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 3,
@@ -4652,7 +4247,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 0,
@@ -4663,7 +4257,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 62,
@@ -4674,7 +4267,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 61,
@@ -4685,7 +4277,6 @@
 					{
 						"stiffness" : 0.995000,
 						"type" : 0,
-						"dragging point index" : 64,
 						"distance constraint" : 
 						{
 							"index 0" : 3,
@@ -4696,7 +4287,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -4709,7 +4299,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 2,
@@ -4722,7 +4311,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -4735,7 +4323,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 1,
@@ -4748,7 +4335,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -4761,7 +4347,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 6,
@@ -4774,7 +4359,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -4787,7 +4371,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -4800,7 +4383,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 5,
@@ -4813,7 +4395,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -4826,7 +4407,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -4839,7 +4419,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -4852,7 +4431,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -4865,7 +4443,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -4878,7 +4455,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -4891,7 +4467,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -4904,7 +4479,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 13,
@@ -4917,7 +4491,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -4930,7 +4503,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -4943,7 +4515,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 13,
@@ -4956,7 +4527,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -4969,7 +4539,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -4982,7 +4551,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -4995,7 +4563,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -5008,7 +4575,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -5021,7 +4587,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -5034,7 +4599,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -5047,7 +4611,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -5060,7 +4623,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -5073,7 +4635,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -5086,7 +4647,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -5099,7 +4659,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -5112,7 +4671,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -5125,7 +4683,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 25,
@@ -5138,7 +4695,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -5151,7 +4707,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -5164,7 +4719,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 25,
@@ -5177,7 +4731,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -5190,7 +4743,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -5203,7 +4755,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -5216,7 +4767,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -5229,7 +4779,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -5242,7 +4791,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -5255,7 +4803,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -5268,7 +4815,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -5281,7 +4827,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -5294,7 +4839,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -5307,7 +4851,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -5320,7 +4863,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -5333,7 +4875,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -5346,7 +4887,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -5359,7 +4899,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -5372,7 +4911,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -5385,7 +4923,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -5398,7 +4935,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -5411,7 +4947,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -5424,7 +4959,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 42,
@@ -5437,7 +4971,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -5450,7 +4983,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -5463,7 +4995,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 41,
@@ -5476,7 +5007,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -5489,7 +5019,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -5502,7 +5031,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -5515,7 +5043,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -5528,7 +5055,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -5541,7 +5067,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -5554,7 +5079,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -5567,7 +5091,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -5580,7 +5103,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -5593,7 +5115,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -5606,7 +5127,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -5619,7 +5139,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -5632,7 +5151,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -5645,7 +5163,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 54,
@@ -5658,7 +5175,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -5671,7 +5187,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -5684,7 +5199,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 53,
@@ -5697,7 +5211,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -5710,7 +5223,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -5723,7 +5235,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -5736,7 +5247,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -5749,7 +5259,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -5762,7 +5271,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -5775,7 +5283,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -5788,7 +5295,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 61,
@@ -5801,7 +5307,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -5814,7 +5319,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -5827,7 +5331,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 61,
@@ -5840,7 +5343,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -5853,7 +5355,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -5866,7 +5367,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -5879,7 +5379,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -5892,7 +5391,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -5905,7 +5403,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -5918,7 +5415,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -5931,7 +5427,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -5944,7 +5439,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -5957,7 +5451,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -5970,7 +5463,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -5983,7 +5475,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -5996,7 +5487,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -6009,7 +5499,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 63,
@@ -6022,7 +5511,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 60,
@@ -6035,7 +5523,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -6048,7 +5535,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 63,
@@ -6061,7 +5547,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -6074,7 +5559,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -6087,7 +5571,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -6100,7 +5583,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -6113,7 +5595,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -6126,7 +5607,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -6139,7 +5619,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -6152,7 +5631,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -6165,7 +5643,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -6178,7 +5655,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -6191,7 +5667,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -6204,7 +5679,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -6217,7 +5691,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -6230,7 +5703,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -6243,7 +5715,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 56,
@@ -6256,7 +5727,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -6269,7 +5739,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -6282,7 +5751,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 59,
@@ -6295,7 +5763,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -6308,7 +5775,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 5,
@@ -6321,7 +5787,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -6334,7 +5799,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -6347,7 +5811,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 54,
@@ -6360,7 +5823,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -6373,7 +5835,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -6386,7 +5847,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -6399,7 +5859,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -6412,7 +5871,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -6425,7 +5883,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -6438,7 +5895,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -6451,7 +5907,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -6464,7 +5919,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 52,
@@ -6477,7 +5931,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 58,
@@ -6490,7 +5943,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -6503,7 +5955,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -6516,7 +5967,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -6529,7 +5979,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -6542,7 +5991,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -6555,7 +6003,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -6568,7 +6015,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -6581,7 +6027,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -6594,7 +6039,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -6607,7 +6051,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -6620,7 +6063,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -6633,7 +6075,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -6646,7 +6087,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -6659,7 +6099,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -6672,7 +6111,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -6685,7 +6123,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -6698,7 +6135,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 48,
@@ -6711,7 +6147,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -6724,7 +6159,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -6737,7 +6171,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 51,
@@ -6750,7 +6183,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 64,
@@ -6763,7 +6195,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -6776,7 +6207,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 64,
@@ -6789,7 +6219,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -6802,7 +6231,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -6815,7 +6243,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 66,
@@ -6828,7 +6255,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -6841,7 +6267,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 66,
@@ -6854,7 +6279,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -6867,7 +6291,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -6880,7 +6303,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -6893,7 +6315,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -6906,7 +6327,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 44,
@@ -6919,7 +6339,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -6932,7 +6351,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -6945,7 +6363,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 47,
@@ -6958,7 +6375,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 67,
@@ -6971,7 +6387,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 67,
@@ -6984,7 +6399,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -6997,7 +6411,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 42,
@@ -7010,7 +6423,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 65,
@@ -7023,7 +6435,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -7036,7 +6447,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 65,
@@ -7049,7 +6459,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -7062,7 +6471,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -7075,7 +6483,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -7088,7 +6495,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -7101,7 +6507,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 40,
@@ -7114,7 +6519,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 46,
@@ -7127,7 +6531,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -7140,7 +6543,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -7153,7 +6555,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -7166,7 +6567,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -7179,7 +6579,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -7192,7 +6591,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -7205,7 +6603,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -7218,7 +6615,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -7231,7 +6627,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 69,
@@ -7244,7 +6639,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -7257,7 +6651,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -7270,7 +6663,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 70,
@@ -7283,7 +6675,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -7296,7 +6687,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 70,
@@ -7309,7 +6699,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -7322,7 +6711,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 36,
@@ -7335,7 +6723,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 71,
@@ -7348,7 +6735,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -7361,7 +6747,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 72,
@@ -7374,7 +6759,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -7387,7 +6771,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 72,
@@ -7400,7 +6783,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -7413,7 +6795,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -7426,7 +6807,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 74,
@@ -7439,7 +6819,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -7452,7 +6831,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 75,
@@ -7465,7 +6843,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -7478,7 +6855,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 75,
@@ -7491,7 +6867,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -7504,7 +6879,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 32,
@@ -7517,7 +6891,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 69,
@@ -7530,7 +6903,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 35,
@@ -7543,7 +6915,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 76,
@@ -7556,7 +6927,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -7569,7 +6939,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 76,
@@ -7582,7 +6951,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -7595,7 +6963,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 30,
@@ -7608,7 +6975,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 73,
@@ -7621,7 +6987,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -7634,7 +6999,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 73,
@@ -7647,7 +7011,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -7660,7 +7023,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -7673,7 +7035,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -7686,7 +7047,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -7699,7 +7059,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 28,
@@ -7712,7 +7071,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 34,
@@ -7725,7 +7083,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -7738,7 +7095,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -7751,7 +7107,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -7764,7 +7119,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -7777,7 +7131,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -7790,7 +7143,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -7803,7 +7155,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -7816,7 +7167,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -7829,7 +7179,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 77,
@@ -7842,7 +7191,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -7855,7 +7203,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -7868,7 +7215,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 78,
@@ -7881,7 +7227,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -7894,7 +7239,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 78,
@@ -7907,7 +7251,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 27,
@@ -7920,7 +7263,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 24,
@@ -7933,7 +7275,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 27,
@@ -7946,7 +7287,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -7959,7 +7299,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -7972,7 +7311,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -7985,7 +7323,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -7998,7 +7335,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -8011,7 +7347,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -8024,7 +7359,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 71,
@@ -8037,7 +7371,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -8050,7 +7383,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 39,
@@ -8063,7 +7395,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 80,
@@ -8076,7 +7407,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -8089,7 +7419,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 80,
@@ -8102,7 +7431,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -8115,7 +7443,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 20,
@@ -8128,7 +7455,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 77,
@@ -8141,7 +7467,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 23,
@@ -8154,7 +7479,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -8167,7 +7491,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -8180,7 +7503,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 9,
@@ -8193,7 +7515,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -8206,7 +7527,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -8219,7 +7539,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 18,
@@ -8232,7 +7551,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -8245,7 +7563,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -8258,7 +7575,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -8271,7 +7587,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -8284,7 +7599,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -8297,7 +7611,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -8310,7 +7623,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -8323,7 +7635,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -8336,7 +7647,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 16,
@@ -8349,7 +7659,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 22,
@@ -8362,7 +7671,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -8375,7 +7683,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -8388,7 +7695,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -8401,7 +7707,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -8414,7 +7719,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 17,
@@ -8427,7 +7731,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -8440,7 +7743,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -8453,7 +7755,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 14,
@@ -8466,7 +7767,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -8479,7 +7779,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -8492,7 +7791,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 19,
@@ -8505,7 +7803,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 21,
@@ -8518,7 +7815,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -8531,7 +7827,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -8544,7 +7839,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -8557,7 +7851,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 15,
@@ -8570,7 +7863,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 12,
@@ -8583,7 +7875,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 26,
@@ -8596,7 +7887,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 15,
@@ -8609,7 +7899,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -8622,7 +7911,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -8635,7 +7923,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 29,
@@ -8648,7 +7935,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -8661,7 +7947,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -8674,7 +7959,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 10,
@@ -8687,7 +7971,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -8700,7 +7983,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -8713,7 +7995,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 31,
@@ -8726,7 +8007,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 33,
@@ -8739,7 +8019,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -8752,7 +8031,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -8765,7 +8043,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -8778,7 +8055,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -8791,7 +8067,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 8,
@@ -8804,7 +8079,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 38,
@@ -8817,7 +8091,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 37,
@@ -8830,7 +8103,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 11,
@@ -8843,7 +8115,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -8856,7 +8127,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 41,
@@ -8869,7 +8139,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -8882,7 +8151,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -8895,7 +8163,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 6,
@@ -8908,7 +8175,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -8921,7 +8187,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -8934,7 +8199,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 43,
@@ -8947,7 +8211,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 45,
@@ -8960,7 +8223,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -8973,7 +8235,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -8986,7 +8247,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -8999,7 +8259,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -9012,7 +8271,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 4,
@@ -9025,7 +8283,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 50,
@@ -9038,7 +8295,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 49,
@@ -9051,7 +8307,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 7,
@@ -9064,7 +8319,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -9077,7 +8331,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 53,
@@ -9090,7 +8343,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -9103,7 +8355,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -9116,7 +8367,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 2,
@@ -9129,7 +8379,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -9142,7 +8391,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -9155,7 +8403,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 55,
@@ -9168,7 +8415,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 57,
@@ -9181,7 +8427,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -9194,7 +8439,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -9207,7 +8451,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -9220,7 +8463,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 3,
@@ -9233,7 +8475,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 0,
@@ -9246,7 +8487,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 62,
@@ -9259,7 +8499,6 @@
 					{
 						"stiffness" : 0.100000,
 						"type" : 1,
-						"dragging point index" : 64,
 						"bending constraint" : 
 						{
 							"index 0" : 3,

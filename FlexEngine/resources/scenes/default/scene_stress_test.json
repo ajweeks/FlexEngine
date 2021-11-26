@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "A9F2182A1A01E0A74116C1BB46827ACA",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -43,9 +42,7 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 43.470, 0.000"
-			},
-			"visible" : true,
-			"casts shadow" : true
+			}
 		},
 		{
 			"name" : "ground plane",
@@ -55,9 +52,7 @@
 			{
 				"scale" : "300.000, 1.000, 300.000"
 			},
-			"visible" : true,
 			"static" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -66,15 +61,15 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "1.000,1.000,1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
 				"kinematic" : true,
 				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"mask" : 4294967295,
+				"group" : 4294967295
 			}
 		},
 		{
@@ -84,15 +79,13 @@
 			"transform" : 
 			{
 				"pos" : "-0.614, 19.647, -9.413",
-				"rot" : "2.021, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.847, 0.000, 0.000, 0.532",
-				"pos" : "-0.614, 19.647, -9.413",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "-0.614,19.647,-9.413",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,
@@ -107,8 +100,6 @@
 			{
 				"pos" : "5.000, 10.000, 5.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -119,24 +110,18 @@
 					{
 						"pos" : "0.000, 5.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 0",
 							"id" : "BD74F9D41D20CDAC49644284D507215E",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
 							"children" : 
 							[
 								{
 									"name" : "sphere-0",
 									"id" : "2225D679BBA7419C42C388DA6A2D4E65",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -151,8 +136,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -167,8 +150,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -183,8 +164,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -199,8 +178,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -217,16 +194,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
 							"children" : 
 							[
 								{
 									"name" : "sphere-5",
 									"id" : "71CDBB7A9AC06C984C52CD4BD3B2A9BD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -241,8 +214,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -257,8 +228,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -273,8 +242,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -289,8 +256,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -307,16 +272,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-10",
 									"id" : "BA03BE07805E39B14205B700C185C3E1",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -331,8 +292,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -347,8 +306,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -363,8 +320,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -379,8 +334,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -397,16 +350,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-15",
 									"id" : "13D09E0E82CE789246AC047B312F1F2B",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -421,8 +370,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -437,8 +384,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -453,8 +398,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -469,8 +412,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -487,16 +428,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-20",
 									"id" : "525A66EF43F0DBA24C6B30DDCDB81E94",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -511,8 +448,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -527,8 +462,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -543,8 +476,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -559,8 +490,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -579,24 +508,18 @@
 					{
 						"pos" : "0.000, 7.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 5",
 							"id" : "96F243E7875D14834BE7421EC0830B4F",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-25",
 									"id" : "4C5FCA9D1D15C08944C50955F75C1E75",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -611,8 +534,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -627,8 +548,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -643,8 +562,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -659,8 +576,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -677,16 +592,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-26",
 									"id" : "BCFCE69CFEF363AC4DD4212912142006",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -701,8 +612,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -717,8 +626,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -733,8 +640,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -749,8 +654,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -767,16 +670,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-27",
 									"id" : "8A133A63B992A896402345DF2CF227B4",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -791,8 +690,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -807,8 +704,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -823,8 +718,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -839,8 +732,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -857,16 +748,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-28",
 									"id" : "5316C73F7AC2E8924E1D08B2766DA965",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -881,8 +768,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -897,8 +782,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -913,8 +796,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -929,8 +810,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -947,16 +826,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-29",
 									"id" : "DFC460728FA7FD874F7453E494A60AEC",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -971,8 +846,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -987,8 +860,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1003,8 +874,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1019,8 +888,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1039,24 +906,18 @@
 					{
 						"pos" : "0.000, 10.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 10",
 							"id" : "24018200EBF678AD4AFDAD7791A8A781",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-30",
 									"id" : "A7E2F3B9AF3D42A8414A1327E300167D",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1071,8 +932,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1087,8 +946,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1103,8 +960,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1119,8 +974,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1137,16 +990,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-31",
 									"id" : "6EBC923523259FAE489538DA617DEF16",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1161,8 +1010,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1177,8 +1024,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1193,8 +1038,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1209,8 +1052,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1227,16 +1068,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-32",
 									"id" : "CC127D94AA2240864420E346FBA72134",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1251,8 +1088,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1267,8 +1102,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1283,8 +1116,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1299,8 +1130,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1317,16 +1146,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-33",
 									"id" : "CF62A716B8875CBA4C8CF73C7AE1AAAF",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1341,8 +1166,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1357,8 +1180,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1373,8 +1194,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1389,8 +1208,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1407,16 +1224,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-34",
 									"id" : "3D9281F5E8B6398E4A38013450AA787F",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1431,8 +1244,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1447,8 +1258,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1463,8 +1272,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1479,8 +1286,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1499,24 +1304,18 @@
 					{
 						"pos" : "0.000, 12.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 15",
 							"id" : "DC42C4BA368AB0BE4CFB5335C6C1D4B8",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-35",
 									"id" : "B7150073A84BDB9A4E3E9668778E8331",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1531,8 +1330,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1547,8 +1344,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1563,8 +1358,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1579,8 +1372,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1597,16 +1388,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-36",
 									"id" : "F570CB5B92AFD8B642E10F2DA639941F",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1621,8 +1408,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1637,8 +1422,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1653,8 +1436,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1669,8 +1450,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1687,16 +1466,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-37",
 									"id" : "94D4B9AE77631F9F4E36B1E6F2EC5551",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1711,8 +1486,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1727,8 +1500,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1743,8 +1514,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1759,8 +1528,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1777,16 +1544,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-38",
 									"id" : "A4494722F7813DAE425A3FE0F00F5883",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1801,8 +1564,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1817,8 +1578,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1833,8 +1592,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1849,8 +1606,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1867,16 +1622,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-39",
 									"id" : "4F27015DAEFD94BB489FAC6525BA9A01",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1891,8 +1642,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1907,8 +1656,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1923,8 +1670,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1939,8 +1684,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1959,24 +1702,18 @@
 					{
 						"pos" : "0.000, 15.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 20",
 							"id" : "4B61B79F563B799E4ED2CF4A1CB6C1FF",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-40",
 									"id" : "3BB9A4C5B2AAAEB048BC0232A1AB0986",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -1991,8 +1728,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2007,8 +1742,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2023,8 +1756,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2039,8 +1770,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2057,16 +1786,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-41",
 									"id" : "CB07C9DFBE2C35984E3CA8FE672F4B6D",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2081,8 +1806,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2097,8 +1820,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2113,8 +1834,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2129,8 +1848,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2147,16 +1864,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-42",
 									"id" : "EF38CBB5198BA1A84898431E7E1E4408",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2171,8 +1884,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2187,8 +1898,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2203,8 +1912,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2219,8 +1926,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2237,16 +1942,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-43",
 									"id" : "7297AA10957A17BE45D9BAC4AD822ADA",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2261,8 +1962,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2277,8 +1976,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2293,8 +1990,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2309,8 +2004,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2327,16 +2020,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-44",
 									"id" : "B8B745DEE140DB824E6379FA4BF3D9EC",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2351,8 +2040,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2367,8 +2054,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2383,8 +2068,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2399,8 +2082,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2421,8 +2102,6 @@
 			{
 				"pos" : "17.500, 10.000, 5.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -2433,24 +2112,18 @@
 					{
 						"pos" : "0.000, 5.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 25",
 							"id" : "222CC17B4E4BEBBA4D31130596481DA5",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-45",
 									"id" : "7B76724DE10F669C45E4630C277BC51A",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2465,8 +2138,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2481,8 +2152,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2497,8 +2166,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2513,8 +2180,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2531,16 +2196,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-45",
 									"id" : "9E591FAB95653C924CD4E06BD7F36EB2",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2555,8 +2216,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2571,8 +2230,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2587,8 +2244,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2603,8 +2258,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2621,16 +2274,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-45",
 									"id" : "A97E8A77BDAB32874895398CC0214D9F",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2645,8 +2294,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2661,8 +2308,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2677,8 +2322,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2693,8 +2336,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2711,16 +2352,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-45",
 									"id" : "600085C111F6BDA5462D5D29C71E4BCB",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2735,8 +2372,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2751,8 +2386,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2767,8 +2400,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2783,8 +2414,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2801,16 +2430,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-45",
 									"id" : "A218A559CC841CA74E22C183CE121385",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2825,8 +2450,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2841,8 +2464,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2857,8 +2478,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2873,8 +2492,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2893,24 +2510,18 @@
 					{
 						"pos" : "0.000, 7.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 26",
 							"id" : "2FBA19D211513081464E451496758F85",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-46",
 									"id" : "72FF6849E960F39147104B9CF99B451C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2925,8 +2536,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2941,8 +2550,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2957,8 +2564,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2973,8 +2578,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -2991,16 +2594,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-46",
 									"id" : "7E95B0CF2F6DBEBF450734BF8ADC6C2C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3015,8 +2614,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3031,8 +2628,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3047,8 +2642,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3063,8 +2656,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3081,16 +2672,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-46",
 									"id" : "3CEE064132B0EFBF4A151DCB7ED4B1EE",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3105,8 +2692,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3121,8 +2706,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3137,8 +2720,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3153,8 +2734,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3171,16 +2750,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-46",
 									"id" : "33F00975CFA174AA4190B5134AC9707D",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3195,8 +2770,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3211,8 +2784,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3227,8 +2798,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3243,8 +2812,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3261,16 +2828,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-46",
 									"id" : "4FCE829E64A9899D46C3A6B2A61706C9",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3285,8 +2848,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3301,8 +2862,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3317,8 +2876,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3333,8 +2890,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3353,24 +2908,18 @@
 					{
 						"pos" : "0.000, 10.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 27",
 							"id" : "3F1787780717E79D494B83882A496078",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-47",
 									"id" : "F7AABC4FE198CF884A79630CF62E5834",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3385,8 +2934,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3401,8 +2948,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3417,8 +2962,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3433,8 +2976,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3451,16 +2992,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-47",
 									"id" : "B605D52690818BB24BC5A01E29D585A4",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3475,8 +3012,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3491,8 +3026,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3507,8 +3040,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3523,8 +3054,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3541,16 +3070,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-47",
 									"id" : "841EB210451164B24862D427AD2073C1",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3565,8 +3090,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3581,8 +3104,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3597,8 +3118,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3613,8 +3132,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3631,16 +3148,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-47",
 									"id" : "F5C89415821AD6AF4D7665DAD1E6487E",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3655,8 +3168,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3671,8 +3182,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3687,8 +3196,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3703,8 +3210,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3721,16 +3226,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-47",
 									"id" : "08C01EB578605ABD4D22546BDE1BD905",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3745,8 +3246,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3761,8 +3260,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3777,8 +3274,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3793,8 +3288,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3813,24 +3306,18 @@
 					{
 						"pos" : "0.000, 12.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 28",
 							"id" : "0B6C1E5960EA8DB04AAA59B57F3259C6",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-48",
 									"id" : "23A9149E6AA79DB443BC5196D1ACF7FD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3845,8 +3332,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3861,8 +3346,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3877,8 +3360,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3893,8 +3374,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3911,16 +3390,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-48",
 									"id" : "411EEBC4CE5CCCAB48BC90C14EC6A63E",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3935,8 +3410,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3951,8 +3424,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3967,8 +3438,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -3983,8 +3452,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4001,16 +3468,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-48",
 									"id" : "A32068A5021787B8413796996535EC4E",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4025,8 +3488,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4041,8 +3502,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4057,8 +3516,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4073,8 +3530,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4091,16 +3546,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-48",
 									"id" : "11A9B0BB3465CB8A4D6B65D0E7264FBD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4115,8 +3566,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4131,8 +3580,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4147,8 +3594,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4163,8 +3608,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4181,16 +3624,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-48",
 									"id" : "18DA229A3F2812A34B5FBEBAA22EBA85",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4205,8 +3644,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4221,8 +3658,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4237,8 +3672,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4253,8 +3686,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4273,24 +3704,18 @@
 					{
 						"pos" : "0.000, 15.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 29",
 							"id" : "AC780865DBF25BBD4E7707509853B9F7",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-49",
 									"id" : "FB1A037F1E5912B640CD1419CBE54ACD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4305,8 +3730,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4321,8 +3744,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4337,8 +3758,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4353,8 +3772,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4371,16 +3788,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-49",
 									"id" : "CD75701BF44880AB465C7B2E2888A368",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4395,8 +3808,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4411,8 +3822,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4427,8 +3836,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4443,8 +3850,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4461,16 +3866,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-49",
 									"id" : "9FF08884F71860994050457381CED87E",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4485,8 +3886,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4501,8 +3900,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4517,8 +3914,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4533,8 +3928,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4551,16 +3944,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-49",
 									"id" : "2B281AEA197C3BA84AB98EE8D62723D5",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4575,8 +3964,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4591,8 +3978,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4607,8 +3992,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4623,8 +4006,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4641,16 +4022,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-49",
 									"id" : "CEEBBA5E790338954F467FB9100937FE",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4665,8 +4042,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4681,8 +4056,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4697,8 +4070,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4713,8 +4084,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4735,8 +4104,6 @@
 			{
 				"pos" : "30.000, 10.000, 5.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -4747,24 +4114,18 @@
 					{
 						"pos" : "0.000, 5.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 30",
 							"id" : "1B64246D34C0E39E4ACC21CFEE5477FD",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-50",
 									"id" : "E724228CF6F541AC427B2666D65DE120",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4779,8 +4140,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4795,8 +4154,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4811,8 +4168,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4827,8 +4182,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4845,16 +4198,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-50",
 									"id" : "D0FC91279FFE019E414391387C2EDDA6",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4869,8 +4218,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4885,8 +4232,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4901,8 +4246,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4917,8 +4260,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4935,16 +4276,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-50",
 									"id" : "8E4C88CA5D0E58BC42B96A2130F6163D",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4959,8 +4296,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4975,8 +4310,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -4991,8 +4324,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5007,8 +4338,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5025,16 +4354,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-50",
 									"id" : "D04F4E77B008C593461295E410E2EF95",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5049,8 +4374,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5065,8 +4388,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5081,8 +4402,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5097,8 +4416,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5115,16 +4432,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-50",
 									"id" : "505D56F03827DFAF4F9656F5ABAA5A66",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5139,8 +4452,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5155,8 +4466,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5171,8 +4480,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5187,8 +4494,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5207,24 +4512,18 @@
 					{
 						"pos" : "0.000, 7.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 31",
 							"id" : "AA92A253C1250F8B4C43B110BC7542CA",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-51",
 									"id" : "C269DE769C3870BB426DABD17270FE76",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5239,8 +4538,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5255,8 +4552,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5271,8 +4566,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5287,8 +4580,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5305,16 +4596,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-51",
 									"id" : "37079B07B1783AA8402132260C6F360A",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5329,8 +4616,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5345,8 +4630,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5361,8 +4644,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5377,8 +4658,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5395,16 +4674,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-51",
 									"id" : "B620938E06EE108A491707DF577A7BFC",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5419,8 +4694,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5435,8 +4708,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5451,8 +4722,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5467,8 +4736,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5485,16 +4752,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-51",
 									"id" : "3B8D3BF9F79061AD4CAC55CE7CC8005D",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5509,8 +4772,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5525,8 +4786,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5541,8 +4800,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5557,8 +4814,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5575,16 +4830,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-51",
 									"id" : "2C54ECF5E7F3E0B3462E8580F9CAE8C5",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5599,8 +4850,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5615,8 +4864,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5631,8 +4878,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5647,8 +4892,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5667,24 +4910,18 @@
 					{
 						"pos" : "0.000, 10.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 32",
 							"id" : "F3DA2F310320CE9C46CF24C510E37D3E",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-52",
 									"id" : "8CEA03BB5E8F48AE49FD1223BE6421D6",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5699,8 +4936,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5715,8 +4950,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5731,8 +4964,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5747,8 +4978,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5765,16 +4994,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-52",
 									"id" : "4320CD54D00567934DB6CDB97A3D7B84",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5789,8 +5014,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5805,8 +5028,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5821,8 +5042,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5837,8 +5056,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5855,16 +5072,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-52",
 									"id" : "BC86AEBA581A5E954317A6F330E6C12B",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5879,8 +5092,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5895,8 +5106,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5911,8 +5120,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5927,8 +5134,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5945,16 +5150,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-52",
 									"id" : "055536DFA6DAC7BA4EF115643F114A3C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5969,8 +5170,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -5985,8 +5184,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6001,8 +5198,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6017,8 +5212,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6035,16 +5228,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-52",
 									"id" : "CA4E15ED900257984A3B4B783FCB6BF1",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6059,8 +5248,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6075,8 +5262,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6091,8 +5276,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6107,8 +5290,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6127,24 +5308,18 @@
 					{
 						"pos" : "0.000, 12.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 33",
 							"id" : "41051C09A90165AD4D371448AC7374B8",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-53",
 									"id" : "6EACC012771BDB9C43BBEB21DF13F10C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6159,8 +5334,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6175,8 +5348,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6191,8 +5362,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6207,8 +5376,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6225,16 +5392,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-53",
 									"id" : "FF7C5EF2CE5AEBBA46F9E438F6326F78",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6249,8 +5412,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6265,8 +5426,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6281,8 +5440,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6297,8 +5454,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6315,16 +5470,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-53",
 									"id" : "FB7DC52C6D228C8E484A9198144169FF",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6339,8 +5490,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6355,8 +5504,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6371,8 +5518,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6387,8 +5532,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6405,16 +5548,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-53",
 									"id" : "C802F62F1E7B5AA3418B3C4BD0F71CA8",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6429,8 +5568,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6445,8 +5582,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6461,8 +5596,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6477,8 +5610,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6495,16 +5626,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-53",
 									"id" : "DDE545D385B164A44D6B9B62068A331B",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6519,8 +5646,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6535,8 +5660,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6551,8 +5674,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6567,8 +5688,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6587,24 +5706,18 @@
 					{
 						"pos" : "0.000, 15.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 34",
 							"id" : "7F5B9E39B5911489473669BB37A3AB7C",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-54",
 									"id" : "B6B1238A9B4BC5864354A77CD289D236",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6619,8 +5732,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6635,8 +5746,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6651,8 +5760,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6667,8 +5774,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6685,16 +5790,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-54",
 									"id" : "BD3387852FFA3A974EEEFFBD0FADB585",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6709,8 +5810,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6725,8 +5824,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6741,8 +5838,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6757,8 +5852,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6775,16 +5868,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-54",
 									"id" : "82034460F1F414A940CD95B533101F03",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6799,8 +5888,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6815,8 +5902,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6831,8 +5916,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6847,8 +5930,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6865,16 +5946,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-54",
 									"id" : "A29C34519426EA8744087B92F4369EE0",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6889,8 +5966,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6905,8 +5980,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6921,8 +5994,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6937,8 +6008,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6955,16 +6024,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-54",
 									"id" : "0F9D3D5EAD0C0A984EC94BBB4A6EBD26",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6979,8 +6044,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -6995,8 +6058,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7011,8 +6072,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7027,8 +6086,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7049,8 +6106,6 @@
 			{
 				"pos" : "42.500, 10.000, 5.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -7061,24 +6116,18 @@
 					{
 						"pos" : "0.000, 5.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 35",
 							"id" : "4C110EA7AAF128BC404548B8ED0DB3ED",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-55",
 									"id" : "B6280686DC746A8B4C5909EFB37E0A57",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7093,8 +6142,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7109,8 +6156,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7125,8 +6170,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7141,8 +6184,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7159,16 +6200,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-55",
 									"id" : "E2BF984D2F462F8C4175FC395B1AE7C2",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7183,8 +6220,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7199,8 +6234,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7215,8 +6248,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7231,8 +6262,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7249,16 +6278,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-55",
 									"id" : "771D63327DBEB18443D612E3BF1F84A2",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7273,8 +6298,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7289,8 +6312,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7305,8 +6326,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7321,8 +6340,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7339,16 +6356,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-55",
 									"id" : "1A2DF73A67D21D804422458310A55059",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7363,8 +6376,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7379,8 +6390,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7395,8 +6404,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7411,8 +6418,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7429,16 +6434,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-55",
 									"id" : "48EC31E545CB808447DBC8AF9F6D36AF",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7453,8 +6454,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7469,8 +6468,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7485,8 +6482,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7501,8 +6496,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7521,24 +6514,18 @@
 					{
 						"pos" : "0.000, 7.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 36",
 							"id" : "1F3AAB16263A11B24531F7C6AD55AE6E",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-56",
 									"id" : "51BCDBBA25C1119947B7C99C55ADF2D4",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7553,8 +6540,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7569,8 +6554,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7585,8 +6568,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7601,8 +6582,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7619,16 +6598,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-56",
 									"id" : "BCB99A0035BFCA9149C2B9109388E32C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7643,8 +6618,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7659,8 +6632,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7675,8 +6646,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7691,8 +6660,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7709,16 +6676,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-56",
 									"id" : "AD1CA9033EA16CBD4A0831016E446CD9",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7733,8 +6696,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7749,8 +6710,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7765,8 +6724,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7781,8 +6738,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7799,16 +6754,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-56",
 									"id" : "D43E4C4D3F7A5DB240DD853BADECD0F5",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7823,8 +6774,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7839,8 +6788,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7855,8 +6802,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7871,8 +6816,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7889,16 +6832,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-56",
 									"id" : "3F571E07260A6D8D44D1399F30ABBFE2",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7913,8 +6852,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7929,8 +6866,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7945,8 +6880,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7961,8 +6894,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -7981,24 +6912,18 @@
 					{
 						"pos" : "0.000, 10.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 37",
 							"id" : "492517626D78A699417C3BAE65CF2A33",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-57",
 									"id" : "D53E676CC998D48F443846627F650C79",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8013,8 +6938,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8029,8 +6952,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8045,8 +6966,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8061,8 +6980,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8079,16 +6996,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-57",
 									"id" : "444C5DA11860928C4F679C9A15E024DD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8103,8 +7016,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8119,8 +7030,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8135,8 +7044,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8151,8 +7058,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8169,16 +7074,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-57",
 									"id" : "2015B3D0FD86DB9348C1007F31CFD210",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8193,8 +7094,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8209,8 +7108,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8225,8 +7122,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8241,8 +7136,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8259,16 +7152,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-57",
 									"id" : "CA9A6F64C01333A74E52B98463E0A2AD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8283,8 +7172,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8299,8 +7186,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8315,8 +7200,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8331,8 +7214,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8349,16 +7230,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-57",
 									"id" : "A498E1BD063315B84A5C339D0AAFACB9",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8373,8 +7250,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8389,8 +7264,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8405,8 +7278,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8421,8 +7292,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8441,24 +7310,18 @@
 					{
 						"pos" : "0.000, 12.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 38",
 							"id" : "92AEF66B144CC58D475156F9149BD2E9",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-58",
 									"id" : "74301DD62D81DB984F44FBCAF5548E28",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8473,8 +7336,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8489,8 +7350,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8505,8 +7364,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8521,8 +7378,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8539,16 +7394,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-58",
 									"id" : "FCC2ADC471B4A39648FC11E7AC75D102",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8563,8 +7414,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8579,8 +7428,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8595,8 +7442,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8611,8 +7456,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8629,16 +7472,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-58",
 									"id" : "7329A5F98150CCB54CD5B67C6DB899F0",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8653,8 +7492,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8669,8 +7506,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8685,8 +7520,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8701,8 +7534,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8719,16 +7550,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-58",
 									"id" : "7CE4400CC381679C4D845D4BA06093FC",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8743,8 +7570,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8759,8 +7584,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8775,8 +7598,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8791,8 +7612,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8809,16 +7628,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-58",
 									"id" : "69593282167F28964C513A0893C2C99E",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8833,8 +7648,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8849,8 +7662,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8865,8 +7676,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8881,8 +7690,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8901,24 +7708,18 @@
 					{
 						"pos" : "0.000, 15.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 39",
 							"id" : "224D52C821B0C0A54EB4CC3DF23A4E08",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-59",
 									"id" : "550EDF72B4BEF7A142821A8468CDD3AF",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8933,8 +7734,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8949,8 +7748,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8965,8 +7762,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8981,8 +7776,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -8999,16 +7792,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-59",
 									"id" : "5679475E01A0C8874389D3D95CF6CDBD",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9023,8 +7812,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9039,8 +7826,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9055,8 +7840,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9071,8 +7854,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9089,16 +7870,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-59",
 									"id" : "5148DB5C9A60F4AA4821DC3499597A88",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9113,8 +7890,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9129,8 +7904,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9145,8 +7918,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9161,8 +7932,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9179,16 +7948,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-59",
 									"id" : "99731F6DF239899E49E50CFB2434CAFE",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9203,8 +7968,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9219,8 +7982,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9235,8 +7996,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9251,8 +8010,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9269,16 +8026,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-59",
 									"id" : "90AD00154DCB6B8E46170439A248EF28",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9293,8 +8046,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9309,8 +8060,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9325,8 +8074,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9341,8 +8088,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9363,8 +8108,6 @@
 			{
 				"pos" : "55.000, 10.000, 5.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -9375,24 +8118,18 @@
 					{
 						"pos" : "0.000, 5.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 40",
 							"id" : "40327620A8595AA846DBF26AD2C7D7BA",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-60",
 									"id" : "20C6C6386CA088A849FF9025C90E9614",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9407,8 +8144,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9423,8 +8158,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9439,8 +8172,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9455,8 +8186,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9473,16 +8202,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-60",
 									"id" : "C58814DC06591CAA44C781F3526FB865",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9497,8 +8222,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9513,8 +8236,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9529,8 +8250,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9545,8 +8264,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9563,16 +8280,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-60",
 									"id" : "0387E3E8898510B84F4A3AAA6369D3E5",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9587,8 +8300,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9603,8 +8314,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9619,8 +8328,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9635,8 +8342,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9653,16 +8358,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-60",
 									"id" : "7DC0B95EFD757681477DF3FDE8D6AC28",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9677,8 +8378,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9693,8 +8392,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9709,8 +8406,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9725,8 +8420,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9743,16 +8436,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-60",
 									"id" : "E5C853758B2004864DCCE19F193AA005",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9767,8 +8456,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9783,8 +8470,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9799,8 +8484,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9815,8 +8498,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9835,24 +8516,18 @@
 					{
 						"pos" : "0.000, 7.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 41",
 							"id" : "CB1024FDC37F228141F788DFAC286F3E",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-61",
 									"id" : "0978B9A68CCD61994E1B4FCDA6E70536",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9867,8 +8542,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9883,8 +8556,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9899,8 +8570,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9915,8 +8584,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9933,16 +8600,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-61",
 									"id" : "383A3ADEE2EC77874E7E5A5EDD112E55",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9957,8 +8620,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9973,8 +8634,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -9989,8 +8648,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10005,8 +8662,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10023,16 +8678,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-61",
 									"id" : "7E275EC879449E9541011C19B03D435F",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10047,8 +8698,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10063,8 +8712,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10079,8 +8726,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10095,8 +8740,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10113,16 +8756,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-61",
 									"id" : "434B69A24C14C19A4DB76501E964545C",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10137,8 +8776,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10153,8 +8790,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10169,8 +8804,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10185,8 +8818,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10203,16 +8834,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-61",
 									"id" : "C6C0D3AE346FF6B941F1FC3A4F1D5790",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10227,8 +8854,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10243,8 +8868,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10259,8 +8882,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10275,8 +8896,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10295,24 +8914,18 @@
 					{
 						"pos" : "0.000, 10.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 42",
 							"id" : "25B3254BEB8D4E8E49ED99845E48EAF7",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-62",
 									"id" : "0A2D32D7D571DDBE47987F42CC56667F",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10327,8 +8940,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10343,8 +8954,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10359,8 +8968,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10375,8 +8982,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10393,16 +8998,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-62",
 									"id" : "B3620079F7125FB14E269160859882E5",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10417,8 +9018,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10433,8 +9032,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10449,8 +9046,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10465,8 +9060,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10483,16 +9076,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-62",
 									"id" : "3C324C98A1F8D09C450F749154CB8EE3",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10507,8 +9096,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10523,8 +9110,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10539,8 +9124,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10555,8 +9138,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10573,16 +9154,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-62",
 									"id" : "801FFE4529832D8C4F81247301901155",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10597,8 +9174,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10613,8 +9188,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10629,8 +9202,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10645,8 +9216,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10663,16 +9232,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-62",
 									"id" : "10937FF79EFEFC9B4F847C05DF7A98B1",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10687,8 +9252,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10703,8 +9266,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10719,8 +9280,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10735,8 +9294,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10755,24 +9312,18 @@
 					{
 						"pos" : "0.000, 12.500, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 43",
 							"id" : "D7F5252B5B12CF924FC7ACF6C5441F80",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-63",
 									"id" : "597C8281E0F37EA246C2F24C70048E43",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10787,8 +9338,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10803,8 +9352,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10819,8 +9366,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10835,8 +9380,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10853,16 +9396,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-63",
 									"id" : "946B4386EF2F79BD45877AF7D00D2AAE",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10877,8 +9416,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10893,8 +9430,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10909,8 +9444,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10925,8 +9458,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10943,16 +9474,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-63",
 									"id" : "A527BD945D74A5A74ED41C658777E903",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10967,8 +9494,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10983,8 +9508,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -10999,8 +9522,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11015,8 +9536,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11033,16 +9552,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-63",
 									"id" : "00EEB09CAD12CAAD410A97FE41706293",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11057,8 +9572,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11073,8 +9586,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11089,8 +9600,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11105,8 +9614,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11123,16 +9630,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-63",
 									"id" : "47B20D585515A4BB4B0FEC5F1F8AD79A",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11147,8 +9650,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11163,8 +9664,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11179,8 +9678,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11195,8 +9692,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11215,24 +9710,18 @@
 					{
 						"pos" : "0.000, 15.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
-										"children" : 
+					"children" : 
 					[
 						{
 							"name" : "sphere holder jr. 44",
 							"id" : "3FBAD1F9A77D3E914AA4DCC81B69F892",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-64",
 									"id" : "8B6EB7D58CA625B247C18C1650A97969",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11247,8 +9736,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11263,8 +9750,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11279,8 +9764,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11295,8 +9778,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11313,16 +9794,12 @@
 							{
 								"pos" : "2.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-64",
 									"id" : "3A9ACF968EA0F89444107FD9C279C7F2",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11337,8 +9814,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11353,8 +9828,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11369,8 +9842,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11385,8 +9856,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11403,16 +9872,12 @@
 							{
 								"pos" : "5.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-64",
 									"id" : "A30C2F14CB77019A47EF2DF821063588",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11427,8 +9892,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11443,8 +9906,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11459,8 +9920,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11475,8 +9934,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11493,16 +9950,12 @@
 							{
 								"pos" : "7.500, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-64",
 									"id" : "BC5DBC8269B81D82486A7EA1985EB4D6",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11517,8 +9970,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11533,8 +9984,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11549,8 +9998,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11565,8 +10012,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11583,16 +10028,12 @@
 							{
 								"pos" : "10.000, 0.000, 0.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
-														"children" : 
+							"children" : 
 							[
 								{
 									"name" : "sphere-64",
 									"id" : "7B925084EBFEEF944AF21F04DF75B262",
 									"type" : "object",
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11607,8 +10048,6 @@
 									{
 										"pos" : "0.000, 0.000, 2.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11623,8 +10062,6 @@
 									{
 										"pos" : "0.000, 0.000, 5.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11639,8 +10076,6 @@
 									{
 										"pos" : "0.000, 0.000, 7.500"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[
@@ -11655,8 +10090,6 @@
 									{
 										"pos" : "0.000, 0.000, 10.000"
 									},
-									"visible" : true,
-									"casts shadow" : true,
 									"mesh" : "sphere.glb",
 									"materials" : 
 									[

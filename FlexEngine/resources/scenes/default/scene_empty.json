@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "Scene Empty",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -32,8 +26,6 @@
 			"name" : "Reflection Probe 01",
 			"id" : "7A4F63B71FE65DA64C44E445F265B832",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
@@ -43,11 +35,7 @@
 			"name" : "Skybox",
 			"id" : "75C7C4C99FDECDBA4D5CD097E646926C",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 02"

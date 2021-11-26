@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "scene_donut",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -32,11 +26,7 @@
 			"name" : "Skybox",
 			"id" : "6A50D04E9281558E457A9814F613E56D",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,8 +39,6 @@
 			"name" : "Reflection Probe 01",
 			"id" : "0F6205F6C105D99C451A6E96CBB23243",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
@@ -60,8 +48,6 @@
 			"name" : "donut",
 			"id" : "F064E1C44DB843B1411FAAB9AF86DFB6",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "2.622, -0.304, -1.214",
@@ -80,8 +66,6 @@
 					"name" : "donut2",
 					"id" : "7725190D2D416181453E9AE57CEEEDB8",
 					"type" : "object",
-					"visible" : true,
-					"casts shadow" : true,
 					"transform" : 
 					{
 						"pos" : "13.047, -2.297, -13.776",
@@ -100,8 +84,6 @@
 							"name" : "donut3",
 							"id" : "B8123D5F8BB321BD47E6A3D4E93193BF",
 							"type" : "object",
-							"visible" : true,
-							"casts shadow" : true,
 							"transform" : 
 							{
 								"pos" : "-3.094, 11.297, 8.041",
@@ -123,18 +105,16 @@
 			"name" : "Directional Light",
 			"id" : "9844037EC2F88A954FE6D074D9820BD1",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.194, -0.973, -2.523"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.217, -0.591, -0.616, 0.473",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 5.000000,
 				"cast shadows" : true,

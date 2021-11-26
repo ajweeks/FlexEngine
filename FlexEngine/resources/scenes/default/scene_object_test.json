@@ -27,7 +27,6 @@
 			"name" : "Skybox",
 			"id" : "27F7672A65C29A944B1C0908E1377F5B",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -44,15 +43,14 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.609, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.720, 0.000, 0.000, 0.694",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : false,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -67,8 +65,6 @@
 			{
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -77,7 +73,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500"
+				"half extents" : "0.500,0.500,0.500"
 			},
 			"rigid body" : 
 			{
@@ -98,11 +94,9 @@
 				"rot" : "-0.165, -0.039, 1.082",
 				"scale" : "4.696, 2.743, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -117,8 +111,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
@@ -137,11 +129,9 @@
 				"rot" : "-0.118, 0.121, 2.105",
 				"scale" : "4.696, 2.743, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -156,8 +146,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
@@ -176,11 +164,9 @@
 				"rot" : "-0.065, 0.112, -3.099",
 				"scale" : "5.552, 2.593, 1.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"area light info" : 
 			{
-				"colour" : "0.95, 0.24, 0.28",
+				"colour" : "0.95,0.24,0.28",
 				"enabled" : true,
 				"brightness" : 14.778000
 			},
@@ -195,8 +181,6 @@
 						"rot" : "-1.571, -0.000, 0.000",
 						"scale" : "2.000, 2.000, 2.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "unit-plane.glb",
 					"materials" : 
 					[
@@ -215,8 +199,6 @@
 				"rot" : "2.039, 0.270, 0.568",
 				"scale" : "7.342, 7.342, 7.342"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -231,7 +213,7 @@
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
-				"pos" : "12.594, 3.500, 17.073",
+				"pos" : "12.594, 2.617, 17.073",
 				"rot" : "-3.141, -1.511, -3.141"
 			}
 		},
@@ -244,8 +226,7 @@
 			"transform" : 
 			{
 				"pos" : "-9.495, 1.500, 4.637",
-				"rot" : "-0.000, 0.889, 0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"rot" : "0.000, 0.889, 0.000"
 			}
 		}
 	]

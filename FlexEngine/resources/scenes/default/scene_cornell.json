@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "Cornell Scene",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -32,11 +26,7 @@
 			"name" : "Skybox",
 			"id" : "2944E534890C2CB341F8D0351ECDCF80",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -49,8 +39,6 @@
 			"name" : "Reflection Probe 01",
 			"id" : "164762DE29E79BAA416262B2FCE73D7A",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 18.600, 0.000"
@@ -60,8 +48,6 @@
 			"name" : "Cornell Box",
 			"id" : "29E7BE6AABC10DBB4E07F203EDC1FE07",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-28.690, 0.000, -0.001",
@@ -83,8 +69,6 @@
 			"name" : "Sphere 01",
 			"id" : "35967DFA94D73A824F85A15D8CCD2F4D",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "6.849, 5.205, -12.373",
@@ -100,8 +84,6 @@
 			"name" : "Sphere 02",
 			"id" : "4AAA7EF3F0E2008E465E05898022F33D",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-0.269, 8.073, -9.520",
@@ -117,8 +99,6 @@
 			"name" : "mori knob",
 			"id" : "88CEF7AFDA78A4844C486782C0851511",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-12.514, 0.000, 12.608",
@@ -136,8 +116,6 @@
 			"name" : "Cerberus",
 			"id" : "A47308EE2527708D4D91788B5763ABE2",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "7.800, 5.420, 16.700",
@@ -154,8 +132,6 @@
 			"name" : "Baby cornell",
 			"id" : "5C9C06CCDD2B9C8947355F78170AE3F3",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-27.380, 20.111, 0.025",
@@ -177,11 +153,9 @@
 			"name" : "Valve",
 			"id" : "66D8768BFC2D679647F41632905B6299",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
-				"pos" : "19.958, -0.000, 16.185",
+				"pos" : "19.958, -0.731, 16.185",
 				"rot" : "0.000, 1.284, 0.000",
 				"scale" : "5.000, 5.000, 5.000"
 			},
@@ -193,8 +167,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.750, 0.750, 0.750",
-				"offset pos" : "0.000, 3.700, 0.000"
+				"half extents" : "0.750,0.750,0.750"
 			},
 			"rigid body" : 
 			{
@@ -209,8 +182,6 @@
 			"name" : "ground plane",
 			"id" : "D328F1B3A9AEB08E4564CE6FC843D4A0",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"scale" : "50.520, 1.000, 50.320"
@@ -223,33 +194,31 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "1.000,1.000,1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
 				"kinematic" : true,
 				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"mask" : 4294967295,
+				"group" : 4294967295
 			}
 		},
 		{
 			"name" : "Directional Light",
 			"id" : "E4F5D9118FDEB980403876DF9208CA04",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.194, -0.973, -2.523"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "-0.217, -0.591, -0.616, 0.473",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 1.953000,
 				"cast shadows" : true,
@@ -260,16 +229,14 @@
 			"name" : "PointLight_00",
 			"id" : "E3982A33F4298C874215471B544437E3",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "9.000, 26.800, 26.900"
 			},
 			"point light info" : 
 			{
-				"pos" : "9.000, 26.800, 26.900",
-				"colour" : "1.00, 1.00, 1.00",
+				"pos" : "9.000,26.800,26.900",
+				"colour" : "1.00,1.00,1.00",
 				"enabled" : true,
 				"brightness" : 1000.000000
 			}

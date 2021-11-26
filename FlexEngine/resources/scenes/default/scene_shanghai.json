@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "DF181A72E1BFD28546577F637E5582F3",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -43,16 +42,12 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 8.000, 0.000"
-			},
-			"visible" : true,
-			"casts shadow" : true
+			}
 		},
 		{
 			"name" : "sphere",
 			"id" : "EC6804C4A94B68894650B0C2CC70BD41",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "ico-sphere.glb",
 			"materials" : 
 			[
@@ -66,15 +61,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.673, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.742, 0.000, 0.000, 0.670",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 1.172000,
 				"cast shadows" : true,
@@ -85,8 +78,6 @@
 			"name" : "bridge",
 			"id" : "F7CE1A888FCEDE8C40DCE54F3CA66D89",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_bridge_1.glb",
 			"materials" : 
 			[
@@ -101,8 +92,6 @@
 			{
 				"pos" : "0.000, -1.600, 4.100"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_ground.glb",
 			"materials" : 
 			[
@@ -113,8 +102,6 @@
 			"name" : "river",
 			"id" : "E58DEB999F40B4B54AB1B5C2C9A66312",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_river.glb",
 			"materials" : 
 			[
@@ -125,8 +112,6 @@
 			"name" : "boat",
 			"id" : "AD9254D2DA8A9EA14D89F7A54E9C5D0E",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_boat.glb",
 			"materials" : 
 			[
@@ -137,8 +122,6 @@
 			"name" : "build1",
 			"id" : "165555ED8C3D51B142BA8139EC2730A2",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_build_1.glb",
 			"materials" : 
 			[
@@ -149,8 +132,6 @@
 			"name" : "build2",
 			"id" : "A072C3A0505C42A64F134DF50E36D43E",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_build_2.glb",
 			"materials" : 
 			[
@@ -161,8 +142,6 @@
 			"name" : "river bed",
 			"id" : "B4E9F4939CABDFBB45BAB5CC19AFCA3F",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_river_bed.glb",
 			"materials" : 
 			[
@@ -173,8 +152,6 @@
 			"name" : "tables",
 			"id" : "B426E4AACEB20291477CE42399ADFC6E",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_tables.glb",
 			"materials" : 
 			[
@@ -185,8 +162,6 @@
 			"name" : "misc1",
 			"id" : "DF88B2E178696F994CD65B765AAB1A54",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_misc_1.glb",
 			"materials" : 
 			[
@@ -197,8 +172,6 @@
 			"name" : "misc2",
 			"id" : "6E2968A3F3CDDAB44C1391B8A66E0F33",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_misc_2.glb",
 			"materials" : 
 			[
@@ -209,8 +182,6 @@
 			"name" : "veg1",
 			"id" : "49D02C38D9EB798E4264D608686746A1",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_veg_1.glb",
 			"materials" : 
 			[
@@ -221,8 +192,6 @@
 			"name" : "benches",
 			"id" : "AA3E6DE9610F74894D5626137BCED58F",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_benches.glb",
 			"materials" : 
 			[
@@ -233,8 +202,6 @@
 			"name" : "misc3",
 			"id" : "3D65FBF9CE9B67A44ADAFCDD4A5913A8",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_misc_3.glb",
 			"materials" : 
 			[
@@ -245,8 +212,6 @@
 			"name" : "misc4",
 			"id" : "D3C2FA41C7B3379544B53088A67891B0",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_misc_4.glb",
 			"materials" : 
 			[
@@ -257,8 +222,6 @@
 			"name" : "build3",
 			"id" : "6DE407353D42D6A54D07F6EB476F6B08",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "shanghai_build_3.glb",
 			"materials" : 
 			[
@@ -275,8 +238,6 @@
 				"rot" : "0.000, -1.138, 0.000",
 				"scale" : "30.000, 30.000, 30.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
@@ -291,12 +252,10 @@
 			{
 				"pos" : "-94.115, 22.600, 159.700"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"point light info" : 
 			{
-				"pos" : "-94.115, 22.600, 159.700",
-				"colour" : "0.79, 0.80, 0.81",
+				"pos" : "-94.115,22.600,159.700",
+				"colour" : "0.79,0.80,0.81",
 				"enabled" : true,
 				"brightness" : 239.582993
 			}

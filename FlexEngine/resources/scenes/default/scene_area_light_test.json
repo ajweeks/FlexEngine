@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "A88E777AB703778D4EDB89E1B342C090",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -43,15 +42,14 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.588, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.713, 0.000, 0.000, 0.701",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : false,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -67,8 +65,6 @@
 				"pos" : "0.000, -0.911, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -81,10 +77,8 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"rot" : "-0.000, 0.674, -0.000"
+				"rot" : "3.142, -1.471, 3.142"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
@@ -96,7 +90,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 2.200, 3.000",
-						"rot" : "-0.349, 0.000, -0.000",
+						"rot" : "-0.349, -0.000, -0.000",
 						"scale" : "0.559, 2.239, 1.000"
 					}
 				},
@@ -122,7 +116,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 2.200, -3.000",
-						"rot" : "2.793, -0.000, 3.141",
+						"rot" : "2.793, 0.000, 3.141",
 						"scale" : "0.599, 2.239, 1.000"
 					}
 				},
@@ -150,8 +144,6 @@
 				"pos" : "0.000, -0.420, 0.000",
 				"scale" : "2.440, 2.440, 2.440"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
@@ -168,8 +160,6 @@
 				"rot" : "-1.571, 0.000, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -186,8 +176,6 @@
 				"rot" : "-1.571, 1.570, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[

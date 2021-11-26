@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "5A5E3EBF8B00FF96467AFE417DAEBBCA",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -44,8 +43,7 @@
 			{
 				"pos" : "0.000, 8.000, 0.000"
 			},
-			"visible" : false,
-			"casts shadow" : true
+			"visible" : false
 		},
 		{
 			"name" : "Directional Light",
@@ -54,15 +52,13 @@
 			"transform" : 
 			{
 				"pos" : "0.638, 20.078, -1.444",
-				"rot" : "-0.002, 1.296, -1.698"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.452, 0.399, -0.598, 0.527",
+				"rotation" : "0.707,0.000,0.000,0.707",
 				"pos" : "0.638,20.078,-1.444",
-				"colour" : "1.00, 1.00, 1.00",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 2.578000,
 				"cast shadows" : false,
@@ -73,8 +69,6 @@
 			"name" : "Gerstner Wave",
 			"id" : "097971388B9245B14AE148BA63355EAD",
 			"type" : "gerstner wave",
-			"visible" : true,
-			"casts shadow" : true,
 			"gerstner wave" : 
 			{
 				"waves" : 
@@ -180,7 +174,6 @@
 				"pos" : "0.000, 26.277, -16.438"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"point light info" : 
 			{
 				"pos" : "0.000,26.277,-16.438",
@@ -198,7 +191,6 @@
 				"pos" : "0.000, 21.528, 14.364"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"point light info" : 
 			{
 				"pos" : "0.000,21.528,14.364",

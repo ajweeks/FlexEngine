@@ -26,7 +26,6 @@
 			"name" : "Skybox",
 			"id" : "A05A1A496025D1894604B6A0C2EAF247",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -43,15 +42,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.679, -0.000, 0.000"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "0.744, 0.000, 0.000, 0.668",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.84",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -68,7 +65,6 @@
 				"scale" : "26.310, 0.840, 19.370"
 			},
 			"visible" : false,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -84,8 +80,6 @@
 				"pos" : "0.000, 0.036, 0.000",
 				"scale" : "1.159, 1.159, 1.159"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "sphere.glb",
 			"materials" : 
 			[
