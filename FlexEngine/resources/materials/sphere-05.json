@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "sphere 05",
+		"shader" : "pbr",
+		"const albedo" : "0.390,0.350,0.320",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 0.500000
+	}
+}

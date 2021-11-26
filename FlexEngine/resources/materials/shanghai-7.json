@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "shanghai 7",
+		"shader" : "pbr",
+		"const albedo" : "0.441,0.348,0.242",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 1.000000
+	}
+}

@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Reverse-light",
+		"shader" : "emissive",
+		"const emissive" : "0.346,0.346,0.346"
+	}
+}

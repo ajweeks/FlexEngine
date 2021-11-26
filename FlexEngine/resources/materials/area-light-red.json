@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "area light red",
+		"shader" : "colour",
+		"const emissive" : "0.000,0.000,0.000",
+		"colour multiplier" : "1.000,0.177,0.177,1.000"
+	}
+}

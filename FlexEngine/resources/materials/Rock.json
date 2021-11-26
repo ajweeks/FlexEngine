@@ -1,0 +1,13 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Rock",
+		"shader" : "pbr",
+		"const albedo" : "0.001,0.001,0.001",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 0.890000,
+		"enable normal sampler" : true,
+		"normal texture filepath" : "rock-cube-normal.png"
+	}
+}

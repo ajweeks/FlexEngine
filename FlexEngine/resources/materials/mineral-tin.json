@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "mineral tin",
+		"shader" : "pbr",
+		"const albedo" : "0.264,0.862,0.920",
+		"const emissive" : "0.000,0.000,0.000"
+	}
+}

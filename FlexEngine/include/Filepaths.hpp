@@ -17,6 +17,7 @@
 #define SCENE_DEFAULT_DIRECTORY						RESOURCE_DIRECTORY "scenes/default/"
 #define SCENE_SAVED_DIRECTORY						RESOURCE_DIRECTORY "scenes/saved/"
 #define SCRIPTS_DIRECTORY							RESOURCE_DIRECTORY "scripts/"
+#define MATERIALS_DIRECTORY							RESOURCE_DIRECTORY "materials/"
 
 #define FONT_SDF_DIRECTORY							SAVED_DIRECTORY "fonts/"
 #define SCREENSHOT_DIRECTORY						SAVED_DIRECTORY "screenshots/"
@@ -27,7 +28,6 @@
 #define FONT_DEFINITION_LOCATION					CONFIG_DIRECTORY "fonts.json"
 #define GAME_OBJECT_TYPES_LOCATION					CONFIG_DIRECTORY "game_object_types.txt"
 #define INPUT_BINDINGS_LOCATION						CONFIG_DIRECTORY "input_bindings.json"
-#define MATERIALS_FILE_LOCATION						CONFIG_DIRECTORY "materials.json"
 #define UI_PLAYER_QUICK_ACCESS_LOCATION				CONFIG_DIRECTORY "player_quick_access_ui.json"
 #define UI_PLAYER_INVENTORY_LOCATION				CONFIG_DIRECTORY "player_inventory_ui.json"
 #define UI_WEARABLES_INVENTORY_LOCATION				CONFIG_DIRECTORY "wearables_inventory_ui.json"

@@ -1,0 +1,17 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "cerberus",
+		"shader" : "pbr",
+		"const emissive" : "0.000,0.000,0.000",
+		"enable albedo sampler" : true,
+		"enable metallic sampler" : true,
+		"enable roughness sampler" : true,
+		"enable normal sampler" : true,
+		"albedo texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_A_1024.jpg",
+		"metallic texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_M_1024.jpg",
+		"roughness texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_R_1024.jpg",
+		"normal texture filepath" : "Cerberus_by_Andrew_Maximov/Cerberus_N_1024.jpg"
+	}
+}

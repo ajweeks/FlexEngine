@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr white",
+		"shader" : "pbr",
+		"const albedo" : "0.990,0.990,0.990",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 0.900000
+	}
+}

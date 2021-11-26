@@ -1,0 +1,12 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr blue",
+		"shader" : "pbr",
+		"const albedo" : "0.080,0.214,0.480",
+		"const emissive" : "0.000,0.000,0.000",
+		"const metallic" : 0.090000,
+		"const roughness" : 0.200000
+	}
+}

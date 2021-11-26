@@ -2044,7 +2044,7 @@ namespace flex
 
 		// TODO: Check for dirty prefabs in scene and warn user if so
 
-		success = g_ResourceManager->SerializeMaterialFile() && success;
+		success = g_ResourceManager->SerializeLoadedMaterials() && success;
 		//success &= BaseScene::SerializePrefabFile();
 
 		PROFILE_AUTO("Serialize scene");

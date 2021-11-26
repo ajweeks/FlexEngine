@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "grass 01",
+		"shader" : "pbr",
+		"const albedo" : "0.055,0.715,0.076",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 1.000000
+	}
+}

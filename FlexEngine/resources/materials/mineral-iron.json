@@ -1,0 +1,12 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "mineral iron",
+		"shader" : "pbr",
+		"const albedo" : "0.041,0.041,0.041",
+		"const emissive" : "0.000,0.000,0.000",
+		"const roughness" : 0.640000,
+		"colour multiplier" : "0.000,0.000,0.000,1.000"
+	}
+}

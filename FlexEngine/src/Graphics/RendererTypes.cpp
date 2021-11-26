@@ -4,6 +4,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "ResourceManager.hpp"
+#include "Scene/BaseScene.hpp"
 
 namespace flex
 {
@@ -471,6 +472,10 @@ namespace flex
 
 		assert(bSerializable);
 
+		JSONObject parentObj = {};
+
+		parentObj.fields.emplace_back("version", JSONValue(BaseScene::LATEST_MATERIALS_FILE_VERSION));
+
 		JSONObject materialObject = {};
 
 		materialObject.fields.emplace_back("name", JSONValue(name));
@@ -613,7 +618,9 @@ namespace flex
 			materialObject.fields.emplace_back("dynamic", JSONValue(bDynamic));
 		}
 
-		return materialObject;
+		parentObj.fields.emplace_back("material", JSONValue(materialObject));
+
+		return parentObj;
 	}
 
 	Texture::Texture(const std::string& name) :

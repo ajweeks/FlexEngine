@@ -56,8 +56,8 @@ namespace flex
 		void ParseFontFile();
 		void SerializeFontFile();
 
-		void ParseMaterialsFile();
-		bool SerializeMaterialFile() const;
+		void ParseMaterialsFiles();
+		bool SerializeLoadedMaterials() const;
 
 		void ParseDebugOverlayNamesFile();
 

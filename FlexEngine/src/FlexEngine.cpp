@@ -256,7 +256,7 @@ namespace flex
 		g_Systems[(i32)SystemType::CART_MANAGER] = new CartManager();
 
 		g_ResourceManager->DiscoverMeshes();
-		g_ResourceManager->ParseMaterialsFile();
+		g_ResourceManager->ParseMaterialsFiles();
 		g_ResourceManager->ParseFontFile();
 
 		g_SceneManager = new SceneManager();

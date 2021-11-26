@@ -1,0 +1,12 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr chrome",
+		"shader" : "pbr",
+		"const albedo" : "1.000,0.791,0.791",
+		"const emissive" : "0.650,0.418,0.418",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.130000
+	}
+}

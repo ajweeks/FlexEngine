@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Brake-light",
+		"shader" : "emissive",
+		"const emissive" : "0.291,0.000,0.000"
+	}
+}

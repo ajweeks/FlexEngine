@@ -555,43 +555,37 @@ namespace flex
 		}
 	}
 
-	void ResourceManager::ParseMaterialsFile()
+	void ResourceManager::ParseMaterialsFiles()
 	{
-		PROFILE_AUTO("ResourceManager ParseMaterialsFile");
+		PROFILE_AUTO("ResourceManager ParseMaterialsFiles");
 
 		parsedMaterialInfos.clear();
 
-		if (FileExists(MATERIALS_FILE_LOCATION))
+		std::vector<std::string> filePaths;
+		if (Platform::FindFilesInDirectory(MATERIALS_DIRECTORY, filePaths, "*", false))
 		{
-			if (g_bEnableLogging_Loading)
+			for (const std::string& filePath : filePaths)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
-				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
-			}
-
-			JSONObject obj;
-			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
-			{
-				i32 fileVersion = obj.GetInt("version");
-
-				std::vector<JSONObject> materialObjects = obj.GetObjectArray("materials");
-				for (const JSONObject& materialObject : materialObjects)
+				JSONObject parentObj;
+				if (JSONParser::ParseFromFile(filePath, parentObj))
 				{
+					i32 fileVersion = parentObj.GetInt("version");
+
 					MaterialCreateInfo matCreateInfo = {};
-					Material::ParseJSONObject(materialObject, matCreateInfo, fileVersion);
+					JSONObject materialObj = parentObj.GetObject("material");
+					Material::ParseJSONObject(materialObj, matCreateInfo, fileVersion);
 
 					parsedMaterialInfos.push_back(matCreateInfo);
 				}
-			}
-			else
-			{
-				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_LOCATION, JSONParser::GetErrorString());
-				return;
+				else
+				{
+					PrintError("Failed to parse material file at %s\n\terror: %s\n", filePath.c_str(), JSONParser::GetErrorString());
+				}
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_LOCATION);
+			PrintError("Failed to find any material files in %s\n", MATERIALS_DIRECTORY);
 			return;
 		}
 
@@ -601,31 +595,9 @@ namespace flex
 		}
 	}
 
-	bool ResourceManager::SerializeMaterialFile() const
+	bool ResourceManager::SerializeLoadedMaterials() const
 	{
-		JSONObject materialsObj = {};
-
-		materialsObj.fields.emplace_back("version", JSONValue(BaseScene::LATEST_MATERIALS_FILE_VERSION));
-
-		// Overwrite all materials in current scene in case any values were tweaked
-		std::vector<JSONObject> materialJSONObjects = g_Renderer->SerializeAllMaterialsToJSON();
-
-		materialsObj.fields.emplace_back("materials", JSONValue(materialJSONObjects));
-
-		std::string fileContents = materialsObj.ToString();
-
-		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
-		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
-		{
-			Print("Serialized materials file to: %s\n", fileName.c_str());
-		}
-		else
-		{
-			PrintWarn("Failed to serialize materials file to: %s\n", fileName.c_str());
-			return false;
-		}
-
-		return true;
+		return g_Renderer->SerializeLoadedMaterials();
 	}
 
 	void ResourceManager::ParseDebugOverlayNamesFile()
