@@ -3373,6 +3373,7 @@ namespace flex
 		if (m_RigidBody != nullptr)
 		{
 			m_RigidBody->SetAngularFactor(btVector3(0.0f, 0.0f, 0.0f)); // Prevent rotation
+			m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(ToBtVec3(initialVel));
 		}
 	}
 

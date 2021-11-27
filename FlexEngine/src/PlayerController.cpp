@@ -121,16 +121,16 @@ namespace flex
 
 		if (m_Player->m_bPossessed)
 		{
-			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_HELD_ITEM_FORWARD);
+			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_SELECTED_ITEM_FORWARD);
 			if (!ImGui::GetIO().WantCaptureMouse)
 			{
 				if (cycleItemAxis > 0.0f)
 				{
-					m_Player->heldItemSlot = (m_Player->heldItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->selectedItemSlot = (m_Player->selectedItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 				else if (cycleItemAxis < 0.0f)
 				{
-					m_Player->heldItemSlot = (m_Player->heldItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->selectedItemSlot = (m_Player->selectedItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 			}
 
@@ -517,12 +517,12 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->heldItemSlot == -1)
+			if (m_Player->selectedItemSlot == -1)
 			{
-				m_Player->heldItemSlot = 0;
+				m_Player->selectedItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
 
 			if (gameObjectStack.count >= 1)
 			{
@@ -561,14 +561,14 @@ namespace flex
 		{
 			m_bAttemptPlaceItemFromInventory = false;
 
-			if (m_Player->heldItemSlot == -1)
+			if (m_Player->selectedItemSlot == -1)
 			{
-				m_Player->heldItemSlot = 0;
+				m_Player->selectedItemSlot = 0;
 			}
 
 			if (m_bItemPlacementValid)
 			{
-				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
 
 				if (gameObjectStack.count >= 1)
 				{
@@ -647,6 +647,13 @@ namespace flex
 				m_Player->heldItemLeftHand = m_PlacingWire->plug0ID;
 				m_Player->heldItemRightHand = m_PlacingWire->plug1ID;
 			}
+		}
+
+		if (m_bDropItem)
+		{
+			m_bDropItem = false;
+
+			m_Player->DropSelectedItem();
 		}
 
 		if (m_Player->objectInteractingWithID.IsValid())
@@ -751,12 +758,12 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->heldItemSlot == -1)
+			if (m_Player->selectedItemSlot == -1)
 			{
-				m_Player->heldItemSlot = 0;
+				m_Player->selectedItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->heldItemSlot];
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
 
 			if (gameObjectStack.count >= 1)
 			{
@@ -1039,6 +1046,15 @@ namespace flex
 						m_bSpawnWire = true;
 						return EventReply::CONSUMED;
 					}
+				}
+			}
+
+			if (action == Action::DROP_ITEM)
+			{
+				if (m_Player->HasFullSelectedInventorySlot() && actionEvent == ActionEvent::ACTION_TRIGGER)
+				{
+					m_bDropItem = true;
+					return EventReply::CONSUMED;
 				}
 			}
 

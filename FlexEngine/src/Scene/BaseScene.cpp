@@ -1991,24 +1991,17 @@ namespace flex
 		return !items.empty();
 	}
 
-	void BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity)
+	void BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel)
 	{
 		DroppedItem* item = new DroppedItem(prefabID, stackSize);
+		item->initialVel = initialVel;
 		Transform* itemTransform = item->GetTransform();
 		itemTransform->SetWorldPosition(dropPosWS, false);
 		itemTransform->SetWorldScale(glm::vec3(m_DroppedItemScale), true);
 
 		m_DroppedItems.push_back(item);
 
-		AddRootObjectImmediate(item);
-
-		item->Initialize();
-		item->PostInitialize();
-
-		if (item->GetRigidBody() != nullptr)
-		{
-			item->GetRigidBody()->GetRigidBodyInternal()->setLinearVelocity(ToBtVec3(dropVelocity));
-		}
+		AddRootObject(item);
 	}
 
 	void BaseScene::OnDroppedItemDestroyed(DroppedItem* item)

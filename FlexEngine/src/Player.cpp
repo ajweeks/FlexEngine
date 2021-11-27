@@ -343,10 +343,10 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item slot: %i", heldItemSlot);
+			ImGui::Text("Held item slot: %i", selectedItemSlot);
 
 			DrawInventoryImGui("Inventory", -1, m_Inventory);
-			DrawInventoryImGui("Quick access inventory", heldItemSlot, m_QuickAccessInventory);
+			DrawInventoryImGui("Quick access inventory", selectedItemSlot, m_QuickAccessInventory);
 			DrawInventoryImGui("Wearables inventory", -1, m_WearablesInventory);
 
 			m_Controller->DrawImGuiObjects();
@@ -472,6 +472,16 @@ namespace flex
 		{
 			PrintWarn("Unhandled track state when starting turn transition: %d/n", (i32)m_TrackState);
 		}
+	}
+
+	void Player::DropSelectedItem()
+	{
+		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(selectedItemSlot), false);
+	}
+
+	bool Player::HasFullSelectedInventorySlot()
+	{
+		return m_QuickAccessInventory[selectedItemSlot].count > 0;
 	}
 
 	i32 Player::GetNextFreeInventorySlot()

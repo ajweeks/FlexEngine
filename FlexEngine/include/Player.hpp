@@ -58,6 +58,8 @@ namespace flex
 		bool IsFacingDownTrack() const;
 		void BeginTurnTransition();
 
+		void DropSelectedItem();
+		bool HasFullSelectedInventorySlot();
 		i32 GetNextFreeInventorySlot();
 		i32 GetNextFreeQuickAccessInventorySlot();
 
@@ -128,8 +130,8 @@ namespace flex
 		real m_TrackAttachMinDist = 4.0f;
 
 		real m_ItemPickupRadius = 4.0f;
-		real m_ItemDropPosForwardOffset = 1.5f;
-		real m_ItemDropForwardVelocity = 10.0f;
+		real m_ItemDropPosForwardOffset = 1.0f;
+		real m_ItemDropForwardVelocity = 14.0f;
 
 		TrackState m_TrackState;
 
@@ -152,7 +154,7 @@ namespace flex
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
 		std::array<GameObjectStack, WEARABLES_ITEM_COUNT> m_WearablesInventory;
 		bool bInventoryShowing = false;
-		i32 heldItemSlot = 0;
+		i32 selectedItemSlot = 0;
 
 		GameObjectID heldItemLeftHand = InvalidGameObjectID;
 		GameObjectID heldItemRightHand = InvalidGameObjectID;

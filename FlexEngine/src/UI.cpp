@@ -1120,7 +1120,7 @@ namespace flex
 			{
 				for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
 				{
-					itemContainers[n]->bHighlighted = (n == player->heldItemSlot);
+					itemContainers[n]->bHighlighted = (n == player->selectedItemSlot);
 				}
 
 				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)

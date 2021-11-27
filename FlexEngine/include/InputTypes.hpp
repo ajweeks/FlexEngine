@@ -454,6 +454,7 @@ namespace flex
 		INTERACT_RIGHT_HAND,
 		PLACE_ITEM,
 		PLACE_WIRE,
+		DROP_ITEM,
 		PAUSE,
 		ZOOM_IN,
 		ZOOM_OUT,
@@ -468,8 +469,8 @@ namespace flex
 		// Inventory
 		SHOW_INVENTORY,
 		TOGGLE_ITEM_HOLDING,
-		CYCLE_HELD_ITEM_FORWARD,
-		CYCLE_HELD_ITEM_BACKWARD,
+		CYCLE_SELECTED_ITEM_FORWARD,
+		CYCLE_SELECTED_ITEM_BACKWARD,
 
 		// Vehicle
 		VEHICLE_ACCELERATE,
@@ -531,6 +532,7 @@ namespace flex
 		"Interact Right Hand",
 		"Place item",
 		"Place wire",
+		"Drop item",
 		"Pause",
 		"Zoom in",
 		"Zoom out",
@@ -545,8 +547,8 @@ namespace flex
 		// Inventory
 		"Show inventory",
 		"Toggle holding item",
-		"Cycle held item forward",
-		"Cycle held item backward",
+		"Cycle selected item forward",
+		"Cycle selected item backward",
 
 		// Vehicle
 		"Vehicle accelerate",

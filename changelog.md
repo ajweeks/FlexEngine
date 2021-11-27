@@ -3,6 +3,8 @@
 
 **2021**
 _November_
+- Add keybinding for dropping items (V)
+- Add speaker object which can play positional audio and be toggled by the player
 - Add support for positional audio sources & configurable reverb
 - Add mineral deposits & miners
 - Fix prefab creation/deletion/duplication/renaming

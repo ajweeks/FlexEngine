@@ -80,6 +80,7 @@ namespace flex
 
 		bool m_bCancelPlaceWire = false;
 		bool m_bSpawnWire = false;
+		bool m_bDropItem = false;
 
 		//Transform m_TargetItemPlacementTransform;
 		glm::vec3 m_TargetItemPlacementPos;

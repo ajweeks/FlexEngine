@@ -119,6 +119,16 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
+	"Drop item" : 
+	{
+		"key code" : 39,
+		"mouse button" : -1,
+		"mouse axis" : -1,
+		"gamepad button" : -1,
+		"gamepad axis" : -1,
+		"invert mouse axis" : false,
+		"invert gamepad axis" : false
+	},
 	"Pause" : 
 	{
 		"key code" : 50,
@@ -219,7 +229,7 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
-	"Cycle held item forward" : 
+	"Cycle selected item forward" : 
 	{
 		"key code" : -1,
 		"mouse button" : -1,
@@ -229,7 +239,7 @@
 		"invert mouse axis" : false,
 		"invert gamepad axis" : false
 	},
-	"Cycle held item backward" : 
+	"Cycle selected item backward" : 
 	{
 		"key code" : -1,
 		"mouse button" : -1,

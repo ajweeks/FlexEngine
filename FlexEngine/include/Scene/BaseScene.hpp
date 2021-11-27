@@ -214,7 +214,7 @@ namespace flex
 		// Returns true when there are nearby items
 		bool GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
 
-		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& dropVelocity);
+		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel);
 		void OnDroppedItemDestroyed(DroppedItem* item);
 
 		static const char* GameObjectTypeIDToString(StringID typeID);

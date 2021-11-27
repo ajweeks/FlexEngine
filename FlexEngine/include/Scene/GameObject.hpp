@@ -449,6 +449,7 @@ namespace flex
 		real secondsAlive = 0.0f;
 		real bobAmount = 0.0f;
 		real turnSpeed = 6.0f;
+		glm::vec3 initialVel = VEC3_ZERO;
 
 		static const real MIN_TIME_BEFORE_PICKUP;
 
