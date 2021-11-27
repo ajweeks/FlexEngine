@@ -1993,12 +1993,15 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		void TogglePlaying();
+
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 	private:
 		std::string m_AudioSourceFileName;
+		bool m_bPlaying = true;
 
 		// Non-serialized fields
 		AudioSourceID m_SourceID = InvalidAudioSourceID;

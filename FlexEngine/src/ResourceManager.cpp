@@ -1233,12 +1233,32 @@ namespace flex
 
 	AudioSourceID ResourceManager::GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D)
 	{
-		if (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID)
+		auto iter = discoveredAudioFiles.find(audioFileSID);
+		if (iter == discoveredAudioFiles.end())
+		{
+			PrintError("Attempted to get undiscovered audio file with SID %ull", audioFileSID);
+			return InvalidAudioSourceID;
+		}
+
+		if (iter->second.sourceID == InvalidAudioSourceID)
 		{
 			LoadAudioFile(audioFileSID, nullptr, b2D);
 		}
 
 		return discoveredAudioFiles[audioFileSID].sourceID;
+	}
+
+	void ResourceManager::DestroyAudioSource(AudioSourceID audioSourceID)
+	{
+		for (auto& pair : discoveredAudioFiles)
+		{
+			if (pair.second.sourceID == audioSourceID)
+			{
+				AudioManager::DestroyAudioSource(pair.second.sourceID);
+				pair.second.sourceID = InvalidAudioSourceID;
+				break;
+			}
+		}
 	}
 
 	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D)

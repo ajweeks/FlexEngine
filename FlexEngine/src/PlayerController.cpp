@@ -494,6 +494,11 @@ namespace flex
 							Terminal* terminal = (Terminal*)nearestInteractable;
 							m_Player->SetInteractingWithTerminal(terminal);
 						} break;
+						case SID("speaker"):
+						{
+							Speaker* speaker = (Speaker*)nearestInteractable;
+							speaker->TogglePlaying();
+						} break;
 						}
 
 						++nearbyInteractableIter;

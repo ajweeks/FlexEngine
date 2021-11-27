@@ -13619,6 +13619,7 @@ namespace flex
 	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("speaker"), gameObjectID)
 	{
+		m_bInteractable = true;
 	}
 
 	void Speaker::Initialize()
@@ -13631,15 +13632,18 @@ namespace flex
 
 			if (m_SourceID != InvalidAudioSourceID)
 			{
-				AudioManager::SetSourceLooping(m_SourceID, true);
-				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+				if (m_bPlaying)
+				{
+					AudioManager::SetSourceLooping(m_SourceID, true);
+					AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+				}
 			}
 		}
 	}
 
 	void Speaker::Update()
 	{
-		if (m_SourceID != InvalidAudioSourceID)
+		if (m_SourceID != InvalidAudioSourceID && m_bPlaying)
 		{
 			if (AudioManager::IsSourcePlaying(m_SourceID))
 			{
@@ -13657,7 +13661,11 @@ namespace flex
 	{
 		GameObject::Destroy(bDetachFromParent);
 
-		AudioManager::DestroyAudioSource(m_SourceID);
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			g_ResourceManager->DestroyAudioSource(m_SourceID);
+			m_SourceID = InvalidAudioSourceID;
+		}
 	}
 
 	void Speaker::DrawImGuiObjects(bool bDrawingEditorObjects)
@@ -13692,7 +13700,11 @@ namespace flex
 				}
 
 				AudioManager::SetSourceLooping(newSourceID, true);
-				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+
+				if (m_bPlaying)
+				{
+					AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+				}
 
 				m_SourceID = newSourceID;
 				m_AudioSourceFileName = AudioManager::GetSourceFileName(newSourceID);
@@ -13706,6 +13718,27 @@ namespace flex
 
 				m_SourceID = InvalidAudioSourceID;
 				m_AudioSourceFileName.clear();
+			}
+		}
+
+		if (ImGui::Checkbox("Playing", &m_bPlaying))
+		{
+			if (m_SourceID != InvalidAudioSourceID)
+			{
+				if (m_bPlaying)
+				{
+					if (!AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition()))
+					{
+						m_SourceID = InvalidAudioSourceID;
+					}
+				}
+				else
+				{
+					if (!AudioManager::StopSource(m_SourceID))
+					{
+						m_SourceID = InvalidAudioSourceID;
+					}
+				}
 			}
 		}
 	}
@@ -13724,9 +13757,33 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		newGameObject->m_AudioSourceFileName = m_AudioSourceFileName;
+		newGameObject->m_bPlaying = m_bPlaying;
 		// Leave m_SourceID as invalid so the new object creates its own audio source
 
 		return newGameObject;
+	}
+
+	void Speaker::TogglePlaying()
+	{
+		m_bPlaying = !m_bPlaying;
+
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			if (m_bPlaying)
+			{
+				if (!AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition()))
+				{
+					m_SourceID = InvalidAudioSourceID;
+				}
+			}
+			else
+			{
+				if (!AudioManager::StopSource(m_SourceID))
+				{
+					m_SourceID = InvalidAudioSourceID;
+				}
+			}
+		}
 	}
 
 	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -13738,6 +13795,7 @@ namespace flex
 		if (parentObject.TryGetObject("speaker", speakerObj))
 		{
 			m_AudioSourceFileName = speakerObj.GetString("audio source path");
+			speakerObj.TryGetBool("playing", m_bPlaying);
 		}
 	}
 
@@ -13745,6 +13803,7 @@ namespace flex
 	{
 		JSONObject speakerObj = {};
 		speakerObj.fields.emplace_back("audio source path", JSONValue(m_AudioSourceFileName));
+		speakerObj.fields.emplace_back("playing", JSONValue(m_bPlaying));
 
 		parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
 	}

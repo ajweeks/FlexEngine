@@ -14,7 +14,8 @@
 		],
 		"speaker" : 
 		{
-			"audio source path" : "basic-stepping.wav"
+			"audio source path" : "basic-stepping.wav",
+			"playing" : false
 		}
 	}
 }

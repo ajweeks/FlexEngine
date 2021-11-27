@@ -204,9 +204,6 @@ namespace flex
 
 		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
-		static bool DestroyAudioSource(AudioSourceID sourceID);
-		static void ClearAllAudioSources();
-
 		static void SetListenerPos(const glm::vec3& posWS);
 		static void SetListenerVel(const glm::vec3& velocity);
 
@@ -214,14 +211,14 @@ namespace flex
 		static void SetMasterGain(real masterGain);
 		static real GetMasterGain();
 
-		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
-		static void PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart = true);
+		static bool PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		static bool PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart = true);
 		// Start source partway through (t in [0, 1])
-		static void PlaySourceAtOffset(AudioSourceID sourceID, real t);
-		static void PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS);
-		static void PauseSource(AudioSourceID sourceID);
-		static void StopSource(AudioSourceID sourceID);
-		static void PlayNote(real frequency, sec length, real gain);
+		static bool PlaySourceAtOffset(AudioSourceID sourceID, real t);
+		static bool PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS, bool bForceRestart = true);
+		static bool PauseSource(AudioSourceID sourceID);
+		static bool StopSource(AudioSourceID sourceID);
+		static bool PlayNote(real frequency, sec length, real gain);
 
 		static void SetSourcePositionWS(AudioSourceID sourceID, const glm::vec3& posWS);
 
@@ -280,6 +277,9 @@ namespace flex
 		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 
 		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format, bool b2D);
+
+		static bool DestroyAudioSource(AudioSourceID sourceID);
+		static void ClearAllAudioSources();
 
 		// If error is not AL_NO_ERROR then an appropriate error message is printed
 		// Returns true when error != AL_NO_ERROR

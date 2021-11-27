@@ -113,6 +113,7 @@ namespace flex
 
 		AudioSourceID GetAudioSourceID(StringID audioFileSID);
 		AudioSourceID GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D);
+		void DestroyAudioSource(AudioSourceID audioSourceID);
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D);
 
 		u32 GetMaxStackSize(const PrefabID& prefabID);

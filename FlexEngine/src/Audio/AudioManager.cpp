@@ -963,12 +963,12 @@ namespace flex
 		return s_MasterGain;
 	}
 
-	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
+	bool AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
 	{
 		if (sourceID >= s_Sources.size())
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		// TODO: Just test cached value?
@@ -980,20 +980,22 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("PlaySource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart)
+	bool AudioManager::PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart)
 	{
 		SetSourceGain(sourceID, gain);
-		PlaySource(sourceID, bForceRestart);
+		return PlaySource(sourceID, bForceRestart);
 	}
 
-	void AudioManager::PlaySourceAtOffset(AudioSourceID sourceID, real t)
+	bool AudioManager::PlaySourceAtOffset(AudioSourceID sourceID, real t)
 	{
 		if (sourceID >= s_Sources.size())
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		sec offset = t * s_Sources[sourceID].length;
@@ -1001,29 +1003,28 @@ namespace flex
 		alSourcePlay(s_Sources[sourceID].source);
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		DisplayALError("PlaySourceAtOffset", alGetError());
+
+		return true;
 	}
 
-	void AudioManager::PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS)
+	bool AudioManager::PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS, bool bForceRestart /* = true */)
 	{
 		if (sourceID >= s_Sources.size())
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		SetSourcePositionWS(sourceID, posWS);
-
-		alSourcePlay(s_Sources[sourceID].source);
-		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-		DisplayALError("PlaySourceAtPosWS", alGetError());
+		return PlaySource(sourceID, bForceRestart);
 	}
 
-	void AudioManager::PauseSource(AudioSourceID sourceID)
+	bool AudioManager::PauseSource(AudioSourceID sourceID)
 	{
 		if (sourceID >= s_Sources.size())
 		{
 			PrintError("Attempted to pause invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
@@ -1034,14 +1035,16 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("PauseSource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::StopSource(AudioSourceID sourceID)
+	bool AudioManager::StopSource(AudioSourceID sourceID)
 	{
 		if (sourceID >= s_Sources.size())
 		{
 			PrintError("Attempted to stop invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
@@ -1052,14 +1055,16 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("StopSource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::PlayNote(real frequency, sec length, real gain)
+	bool AudioManager::PlayNote(real frequency, sec length, real gain)
 	{
 		AudioSourceID sourceID = AudioManager::SynthesizeSound(length, frequency);
 		MarkSourceTemporary(sourceID);
 		SetSourceGain(sourceID, gain);
-		PlaySource(sourceID);
+		return PlaySource(sourceID);
 	}
 
 	void AudioManager::SetSourcePositionWS(AudioSourceID sourceID, const glm::vec3& posWS)

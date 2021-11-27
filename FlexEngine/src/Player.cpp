@@ -138,11 +138,11 @@ namespace flex
 			delete m_Controller;
 		}
 
-		AudioManager::DestroyAudioSource(m_SoundPlaceTrackNodeID);
-		AudioManager::DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
-		AudioManager::DestroyAudioSource(m_SoundTrackAttachID);
-		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
-		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
+		g_ResourceManager->DestroyAudioSource(m_SoundPlaceTrackNodeID);
+		g_ResourceManager->DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackAttachID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackDetachID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackSwitchDirID);
 
 		GameObject::Destroy(bDetachFromParent);
 	}
