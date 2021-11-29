@@ -4915,6 +4915,7 @@ namespace flex
 
 				BindDescriptorSet(uiMat, dynamicUBOOffset, commandBuffer, pipelineLayout, descSet);
 
+				// TODO: Draw all in single draw call
 				vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 			}
 		}

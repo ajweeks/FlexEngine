@@ -128,7 +128,8 @@ namespace flex
 		BASE,
 		ITEM,
 		IMAGE,
-		INVENTORY,
+		PLAYER_INVENTORY,
+		MINER_INVENTORY,
 		QUICK_ACCESS,
 		WEARABLES,
 
@@ -140,7 +141,8 @@ namespace flex
 		"Base",
 		"Item",
 		"Image",
-		"Inventory",
+		"Player Inventory",
+		"Miner Inventory",
 		"Quick Access",
 		"Wearables",
 
@@ -167,7 +169,7 @@ namespace flex
 		virtual void Initialize();
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false);
 		virtual void Draw();
-		virtual RectCutResult DrawImGui();
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr);
 
 		void SerializeCommon(JSONObject& object);
 		static UIContainer* DeserializeCommon(const JSONObject& object);
@@ -217,7 +219,7 @@ namespace flex
 		~ItemUIContainer();
 
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui() override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 		virtual void Serialize(JSONObject& rootObject) override;
 		virtual void Deserialize(const JSONObject& rootObject) override;
 		virtual UIContainer* Duplicate() override;
@@ -240,7 +242,7 @@ namespace flex
 		~ImageUIContainer();
 
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui() override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 		virtual void Serialize(JSONObject& rootObject) override;
 		virtual void Deserialize(const JSONObject& rootObject) override;
 		virtual UIContainer* Duplicate() override;
@@ -260,18 +262,28 @@ namespace flex
 	class InventoryUIContainer : public UIContainer
 	{
 	public:
-		InventoryUIContainer();
+		enum class Type
+		{
+			PLAYER_INVENTORY,
+			MINER_INVENTORY,
+
+			_NONE
+		};
+
+		InventoryUIContainer(Type type);
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui() override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 
 		std::vector<ItemUIContainer*> itemContainers;
+		std::vector<ItemUIContainer*> itemContainersSecondary;
 		ItemUIContainer* dropContainer = nullptr;
 		ItemUIContainer* trashContainer = nullptr;
 
 	private:
 		void OnLayoutChanged();
+		Type m_Type;
 
 	};
 
@@ -282,7 +294,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui() override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 
 		std::vector<ItemUIContainer*> itemContainers;
 
@@ -298,7 +310,7 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual RectCutResult DrawImGui() override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 
 		std::vector<ItemUIContainer*> itemContainers;
 
@@ -334,6 +346,7 @@ namespace flex
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;
 		WearablesItemUIContainer* wearablesInventoryUI = nullptr;
+		InventoryUIContainer* minerInventoryUI = nullptr;
 
 		ItemUIContainer* draggedUIContainer = nullptr;
 		MouseButton mouseButtonDragging = MouseButton::_NONE;

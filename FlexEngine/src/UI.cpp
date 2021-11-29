@@ -80,6 +80,11 @@ namespace flex
 		for (UIContainer* child : children)
 		{
 			child->Update(lastCutRect, bIgnoreCut);
+
+			if (child->bDirty)
+			{
+				bDirty = true;
+			}
 		}
 	}
 
@@ -102,9 +107,9 @@ namespace flex
 		}
 	}
 
-	RectCutResult UIContainer::DrawImGui()
+	RectCutResult UIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Base");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Base");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -256,11 +261,6 @@ namespace flex
 				delete oldUIContainer;
 				bDirty = true;
 			}
-
-			if (children[i]->bDirty)
-			{
-				bDirty = true;
-			}
 		}
 	}
 
@@ -352,9 +352,13 @@ namespace flex
 		{
 			uiContainer = new ImageUIContainer();
 		} break;
-		case UIContainerType::INVENTORY:
+		case UIContainerType::PLAYER_INVENTORY:
 		{
-			uiContainer = new InventoryUIContainer();
+			uiContainer = new InventoryUIContainer(InventoryUIContainer::Type::PLAYER_INVENTORY);
+		} break;
+		case UIContainerType::MINER_INVENTORY:
+		{
+			uiContainer = new InventoryUIContainer(InventoryUIContainer::Type::MINER_INVENTORY);
 		} break;
 		case UIContainerType::QUICK_ACCESS:
 		{
@@ -570,9 +574,9 @@ namespace flex
 		}
 	}
 
-	RectCutResult ItemUIContainer::DrawImGui()
+	RectCutResult ItemUIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Item");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Item");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -684,9 +688,9 @@ namespace flex
 		}
 	}
 
-	RectCutResult ImageUIContainer::DrawImGui()
+	RectCutResult ImageUIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Image");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Image");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -749,8 +753,9 @@ namespace flex
 		return result;
 	}
 
-	InventoryUIContainer::InventoryUIContainer() :
-		UIContainer(UIContainerType::INVENTORY)
+	InventoryUIContainer::InventoryUIContainer(Type type) :
+		UIContainer(type == Type::PLAYER_INVENTORY ? UIContainerType::PLAYER_INVENTORY : UIContainerType::MINER_INVENTORY),
+		m_Type(type)
 	{
 	}
 
@@ -759,9 +764,9 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult InventoryUIContainer::DrawImGui()
+	RectCutResult InventoryUIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Inventory");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Inventory");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -780,8 +785,6 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
-			Print("Inventory children: %u\n", (u32)children.size());
-
 			if (!children.empty())
 			{
 				// Compute list of all children, breadth-first to find all slots (assuming slots are immediate siblings)
@@ -806,20 +809,24 @@ namespace flex
 				}
 
 				itemContainers.clear();
-				itemContainers.reserve(Player::INVENTORY_ITEM_COUNT);
+				itemContainersSecondary.clear();
 				const char* dropTagStr = "drop";
 				const char* trashTagStr = "trash";
 				// Fill out item containers by finding tags pointing to start of each column of tiles
 				for (i32 c = 0; c < Player::INVENTORY_ITEM_COL_COUNT; ++c)
 				{
 					std::string colTagStr = "column" + IntToString(c);
+					StringID colTagSID = Hash(colTagStr.c_str());
+					std::string minerRowTagStr = "miner-row-" + IntToString(c);
+					StringID minerRowTagSID = Hash(minerRowTagStr.c_str());
 					for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
 					{
 						UIContainer* uiContainer = uiContainers[i];
-						if (uiContainer->tag == Hash(colTagStr.c_str()))
+						if (uiContainer->tag == colTagSID)
 						{
 							if (((i32)uiContainers.size() - i) >= Player::INVENTORY_ITEM_ROW_COUNT)
 							{
+								itemContainers.reserve(Player::INVENTORY_ITEM_COUNT);
 								for (i32 r = 0; r < Player::INVENTORY_ITEM_ROW_COUNT; ++r)
 								{
 									ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + r];
@@ -836,8 +843,28 @@ namespace flex
 							{
 								PrintError("Invalid inventory config, expected %d UI containers immediately after container with tag %s\n", Player::INVENTORY_ITEM_ROW_COUNT, colTagStr.c_str());
 							}
+						}
+						else if (uiContainer->tag == minerRowTagSID)
+						{
+							if (((i32)uiContainers.size() - i) >= Miner::INVENTORY_SIZE)
+							{
+								itemContainersSecondary.reserve(Miner::INVENTORY_SIZE);
+								for (i32 r = 0; r < Miner::INVENTORY_SIZE; ++r)
+								{
+									ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + r];
+									itemContainer->index = r;
+									itemContainer->stackID = Player::GetGameObjectStackIDForMinerInventory(itemContainer->index);
 
-							break;
+									if (itemContainer->stackID != InvalidID)
+									{
+										itemContainersSecondary.emplace_back(itemContainer);
+									}
+								}
+							}
+							else
+							{
+								PrintError("Invalid inventory config, expected %d UI containers immediately after container with tag %s\n", Miner::INVENTORY_SIZE, minerRowTagStr.c_str());
+							}
 						}
 					}
 				}
@@ -855,12 +882,6 @@ namespace flex
 					}
 				}
 			}
-
-			if ((i32)itemContainers.size() != Player::INVENTORY_ITEM_COUNT)
-			{
-				PrintWarn("Failed to find %i items in InventoryUIContainer::OnLayoutChanged (found %i)\n",
-					Player::INVENTORY_ITEM_COUNT, (i32)itemContainers.size());
-			}
 		}
 	}
 
@@ -871,138 +892,159 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
 		{
-			if ((i32)itemContainers.size() == Player::INVENTORY_ITEM_COUNT)
+			for (i32 n = 0; n < (i32)itemContainers.size(); ++n)
 			{
-				for (i32 n = 0; n < Player::INVENTORY_ITEM_COUNT; ++n)
+				itemContainers[n]->bHighlighted = false;
+			}
+
+			for (i32 n = 0; n < (i32)itemContainersSecondary.size(); ++n)
+			{
+				itemContainersSecondary[n]->bHighlighted = false;
+			}
+
+			bool bDisplay = false;
+			switch (m_Type)
+			{
+			case Type::PLAYER_INVENTORY:
+			{
+				bDisplay = player->bInventoryShowing;
+			} break;
+			case Type::MINER_INVENTORY:
+			{
+				bDisplay = player->bMinerInventoryShowing;
+			} break;
+			}
+
+			if (bDisplay && !ImGui::GetIO().WantCaptureMouse)
+			{
+				glm::vec2i windowSize = g_Window->GetSize();
+				glm::vec2 mousePos = g_InputManager->GetMousePosition();
+				glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+
+				auto DoItemOverlapTests = [](ItemUIContainer* itemContainer, const glm::vec2& mousePosN, Player* player)
 				{
-					itemContainers[n]->bHighlighted = false;
+					bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
+					itemContainer->bHovered = bOverlaps;
+					itemContainer->bHighlighted = bOverlaps;
+
+					if (bOverlaps)
+					{
+						itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+						InventoryType inventoryType;
+						GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
+
+						g_UIManager->HandleBeginStackDrag(itemContainer, stack);
+
+						if (g_UIManager->draggedUIContainer != nullptr)
+						{
+							// Release entire stack into to slot
+							if (itemContainer != g_UIManager->draggedUIContainer &&
+								g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
+							{
+								if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
+								{
+									g_UIManager->EndItemDrag();
+								}
+							}
+
+							if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+								g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+							{
+								// Place a single item when right clicking with a stack held
+								if (g_UIManager->MoveSingleItemFromStack(g_UIManager->draggedUIContainer, itemContainer))
+								{
+									InventoryType draggedInvType;
+									GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+									if (draggedStack->count == 0)
+									{
+										g_UIManager->EndItemDrag();
+									}
+								}
+							}
+						}
+					}
+				};
+
+				for (ItemUIContainer* itemContainer : itemContainers)
+				{
+					DoItemOverlapTests(itemContainer, mousePosN, player);
 				}
 
-				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
+				for (ItemUIContainer* itemContainer : itemContainersSecondary)
 				{
-					glm::vec2i windowSize = g_Window->GetSize();
-					glm::vec2 mousePos = g_InputManager->GetMousePosition();
-					glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+					DoItemOverlapTests(itemContainer, mousePosN, player);
+				}
 
-					if ((i32)itemContainers.size() == Player::INVENTORY_ITEM_COUNT)
+				// Drop area
+				if (dropContainer != nullptr)
+				{
+					bool bOverlaps = dropContainer->lastCutRect.Overlaps(mousePosN);
+					dropContainer->bHovered = bOverlaps;
+					dropContainer->bHighlighted = bOverlaps;
+
+					if (bOverlaps)
 					{
-						for (ItemUIContainer* itemContainer : itemContainers)
+						dropContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+						if (g_UIManager->draggedUIContainer != nullptr)
 						{
-							bool bOverlaps = itemContainer->lastCutRect.Overlaps(mousePosN);
-							itemContainer->bHovered = bOverlaps;
-							itemContainer->bHighlighted = bOverlaps;
-
-							if (bOverlaps)
+							if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 							{
-								itemContainer->lastCutRect.colour = UIContainer::hoveredColour;
-
-								InventoryType inventoryType;
-								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-								assert(inventoryType == InventoryType::INVENTORY);
-
-								g_UIManager->HandleBeginStackDrag(itemContainer, stack);
-
-								if (g_UIManager->draggedUIContainer != nullptr)
+								if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, false))
 								{
-									// Release entire stack into to slot
-									if (itemContainer != g_UIManager->draggedUIContainer &&
-										g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
+									g_UIManager->EndItemDrag();
+								}
+							}
+							else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+								g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+							{
+								// Drop a single item when right clicking with a stack held
+								if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, false))
+								{
+									InventoryType draggedInvType;
+									GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+									if (draggedStack->count == 0)
 									{
-										if (g_UIManager->MoveItemStack(g_UIManager->draggedUIContainer, itemContainer))
-										{
-											g_UIManager->EndItemDrag();
-										}
-									}
-
-									if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
-										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
-									{
-										// Place a single item when right clicking with a stack held
-										if (g_UIManager->MoveSingleItemFromStack(g_UIManager->draggedUIContainer, itemContainer))
-										{
-											InventoryType draggedInvType;
-											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
-											if (draggedStack->count == 0)
-											{
-												g_UIManager->EndItemDrag();
-											}
-										}
+										g_UIManager->EndItemDrag();
 									}
 								}
 							}
 						}
+					}
+				}
 
-						// Drop area
-						if (dropContainer != nullptr)
+				// Trash area
+				if (trashContainer != nullptr)
+				{
+					bool bOverlaps = trashContainer->lastCutRect.Overlaps(mousePosN);
+					trashContainer->bHovered = bOverlaps;
+					trashContainer->bHighlighted = bOverlaps;
+
+					if (bOverlaps)
+					{
+						trashContainer->lastCutRect.colour = UIContainer::hoveredColour;
+
+						if (g_UIManager->draggedUIContainer != nullptr)
 						{
-							bool bOverlaps = dropContainer->lastCutRect.Overlaps(mousePosN);
-							dropContainer->bHovered = bOverlaps;
-							dropContainer->bHighlighted = bOverlaps;
-
-							if (bOverlaps)
+							if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
 							{
-								dropContainer->lastCutRect.colour = UIContainer::hoveredColour;
-
-								if (g_UIManager->draggedUIContainer != nullptr)
+								if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, true))
 								{
-									if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
-									{
-										if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, false))
-										{
-											g_UIManager->EndItemDrag();
-										}
-									}
-									else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
-										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
-									{
-										// Drop a single item when right clicking with a stack held
-										if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, false))
-										{
-											InventoryType draggedInvType;
-											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
-											if (draggedStack->count == 0)
-											{
-												g_UIManager->EndItemDrag();
-											}
-										}
-									}
+									g_UIManager->EndItemDrag();
 								}
 							}
-						}
-
-						// Trash area
-						if (trashContainer != nullptr)
-						{
-							bool bOverlaps = trashContainer->lastCutRect.Overlaps(mousePosN);
-							trashContainer->bHovered = bOverlaps;
-							trashContainer->bHighlighted = bOverlaps;
-
-							if (bOverlaps)
+							else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
+								g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
 							{
-								trashContainer->lastCutRect.colour = UIContainer::hoveredColour;
-
-								if (g_UIManager->draggedUIContainer != nullptr)
+								// Drop a single item when right clicking with a stack held
+								if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, true))
 								{
-									if (g_InputManager->IsMouseButtonReleased(g_UIManager->mouseButtonDragging))
+									InventoryType draggedInvType;
+									GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
+									if (draggedStack->count == 0)
 									{
-										if (g_UIManager->DropItemStack(g_UIManager->draggedUIContainer, true))
-										{
-											g_UIManager->EndItemDrag();
-										}
-									}
-									else if (g_UIManager->mouseButtonDragging == MouseButton::LEFT &&
-										g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
-									{
-										// Drop a single item when right clicking with a stack held
-										if (g_UIManager->DropSingleItemFromStack(g_UIManager->draggedUIContainer, true))
-										{
-											InventoryType draggedInvType;
-											GameObjectStack* draggedStack = player->GetGameObjectStackFromInventory(g_UIManager->draggedUIContainer->stackID, draggedInvType);
-											if (draggedStack->count == 0)
-											{
-												g_UIManager->EndItemDrag();
-											}
-										}
+										g_UIManager->EndItemDrag();
 									}
 								}
 							}
@@ -1023,9 +1065,9 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult QuickAccessItemUIContainer::DrawImGui()
+	RectCutResult QuickAccessItemUIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Quick access");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Quick access");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -1187,9 +1229,9 @@ namespace flex
 		OnLayoutChanged();
 	}
 
-	RectCutResult WearablesItemUIContainer::DrawImGui()
+	RectCutResult WearablesItemUIContainer::DrawImGui(const char* optionalName /* = nullptr */)
 	{
-		bool bTreeOpen = ImGui::TreeNode("Wearables");
+		bool bTreeOpen = ImGui::TreeNode(optionalName != nullptr ? optionalName : "Wearables");
 
 		RectCutResult result = UIContainer::DrawImGuiBase(bTreeOpen);
 
@@ -1366,6 +1408,8 @@ namespace flex
 		delete wearablesInventoryUI;
 		wearablesInventoryUI = nullptr;
 
+		delete minerInventoryUI;
+		minerInventoryUI = nullptr;
 	}
 
 	void UIManager::Update()
@@ -1402,6 +1446,13 @@ namespace flex
 						wearablesInventoryUI->Update(rect);
 						wearablesInventoryUI->Draw();
 					}
+				}
+
+				if (player->bMinerInventoryShowing)
+				{
+					Rect rect{ -x, -y, x, y, VEC4_ONE };
+					minerInventoryUI->Update(rect);
+					minerInventoryUI->Draw();
 				}
 
 				if (draggedUIContainer != nullptr)
@@ -1509,13 +1560,16 @@ namespace flex
 				};
 
 				drawButtons((UIContainer**)&playerInventoryUI, UI_PLAYER_INVENTORY_LOCATION);
-				playerInventoryUI->DrawImGui();
+				playerInventoryUI->DrawImGui("Player inventory");
 
 				drawButtons((UIContainer**)&playerQuickAccessUI, UI_PLAYER_QUICK_ACCESS_LOCATION);
-				playerQuickAccessUI->DrawImGui();
+				playerQuickAccessUI->DrawImGui("Quick access inventory");
 
 				drawButtons((UIContainer**)&wearablesInventoryUI, UI_WEARABLES_INVENTORY_LOCATION);
-				wearablesInventoryUI->DrawImGui();
+				wearablesInventoryUI->DrawImGui("Wearables inventory");
+
+				drawButtons((UIContainer**)&minerInventoryUI, UI_MINER_INVENTORY_LOCATION);
+				minerInventoryUI->DrawImGui("Miner inventory");
 			}
 
 			ImGui::End();
@@ -1604,17 +1658,17 @@ namespace flex
 		playerInventoryUI = (InventoryUIContainer*)ParseUIConfig(UI_PLAYER_INVENTORY_LOCATION);
 		if (playerInventoryUI != nullptr)
 		{
-			if (playerInventoryUI->type != UIContainerType::INVENTORY)
+			if (playerInventoryUI->type != UIContainerType::PLAYER_INVENTORY)
 			{
-				PrintWarn("Ignoring player inventory UI from file, type did not match expectation of UIContainerType::INVENTORY\n");
+				PrintWarn("Ignoring player inventory UI from file, type did not match expectation of UIContainerType::PLAYER_INVENTORY\n");
 				delete playerInventoryUI;
-				playerInventoryUI = new InventoryUIContainer();
+				playerInventoryUI = new InventoryUIContainer(InventoryUIContainer::Type::PLAYER_INVENTORY);
 			}
 		}
 		else
 		{
 			PrintError("Failed to read player inventory UI config to %s\n", UI_PLAYER_INVENTORY_LOCATION);
-			playerInventoryUI = new InventoryUIContainer();
+			playerInventoryUI = new InventoryUIContainer(InventoryUIContainer::Type::PLAYER_INVENTORY);
 		}
 
 		if (playerQuickAccessUI != nullptr)
@@ -1658,6 +1712,28 @@ namespace flex
 			PrintError("Failed to read wearables UI config to %s\n", UI_WEARABLES_INVENTORY_LOCATION);
 			wearablesInventoryUI = new WearablesItemUIContainer();
 		}
+
+		if (minerInventoryUI != nullptr)
+		{
+			delete minerInventoryUI;
+		}
+
+		minerInventoryUI = (InventoryUIContainer*)ParseUIConfig(UI_MINER_INVENTORY_LOCATION);
+		if (minerInventoryUI != nullptr)
+		{
+			if (minerInventoryUI->type != UIContainerType::MINER_INVENTORY)
+			{
+				PrintWarn("Ignoring miner inventory UI from file, type did not match expectation of UIContainerType::MINER_INVENTORY\n");
+				delete minerInventoryUI;
+				minerInventoryUI = new InventoryUIContainer(InventoryUIContainer::Type::MINER_INVENTORY);
+			}
+		}
+		else
+		{
+			PrintError("Failed to read miner inventory UI config to %s\n", UI_MINER_INVENTORY_LOCATION);
+			minerInventoryUI = new InventoryUIContainer(InventoryUIContainer::Type::MINER_INVENTORY);
+		}
+
 	}
 
 	bool UIManager::SerializeUIConfig(const char* filePath, UIContainer* uiContainer)
@@ -1700,6 +1776,15 @@ namespace flex
 		if (SerializeUIConfig(UI_WEARABLES_INVENTORY_LOCATION, wearablesInventoryUI))
 		{
 			wearablesInventoryUI->bDirty = false;
+		}
+		else
+		{
+			PrintError("Failed to serialize wearables UI config to %s\n", UI_WEARABLES_INVENTORY_LOCATION);
+		}
+
+		if (SerializeUIConfig(UI_MINER_INVENTORY_LOCATION, minerInventoryUI))
+		{
+			minerInventoryUI->bDirty = false;
 		}
 		else
 		{

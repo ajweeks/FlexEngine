@@ -44,6 +44,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -128,7 +129,7 @@ namespace flex
 		userData.floatVal = 0.0f;
 	}
 
-	void GameObjectStack::SerializeToJSON(JSONObject& parentObject)
+	void GameObjectStack::SerializeToJSON(JSONObject& parentObject) const
 	{
 		parentObject.fields.emplace_back("prefab id", JSONValue(prefabID));
 		parentObject.fields.emplace_back("count", JSONValue(count));
@@ -490,9 +491,6 @@ namespace flex
 		{
 			m_Transform.SetWorldRotation(glm::quat(glm::vec3(0.0f, g_SecElapsedSinceProgramStart, 0.0f)));
 		}
-
-		// Clear every frame
-		m_NearbyInteractable = nullptr;
 
 		for (GameObject* child : m_Children)
 		{
@@ -1668,9 +1666,9 @@ namespace flex
 
 				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
-
-			SerializeTypeUniqueFields(object);
 		}
+
+		SerializeTypeUniqueFields(object);
 
 		if (!bSerializePrefabData)
 		{
@@ -1824,6 +1822,16 @@ namespace flex
 	bool GameObject::IsTemplate() const
 	{
 		return m_bIsTemplate;
+	}
+
+	void GameObject::ClearNearbyInteractable()
+	{
+		m_NearbyInteractable = nullptr;
+
+		for (GameObject* child : m_Children)
+		{
+			child->ClearNearbyInteractable();
+		}
 	}
 
 	void GameObject::OnCharge(real chargeAmount)
@@ -6775,14 +6783,14 @@ namespace flex
 		Transform* plug1Transform = plug1->GetTransform();
 		glm::vec3 plug1Pos = plug1Transform->GetLocalPosition();
 
-		auto dd = g_Renderer->GetDebugDrawer();
-		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
-		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
-		dd->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
+		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
+		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
+		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
 
-		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
-		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
-		dd->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
+		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
+		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
+		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
 
 		glm::vec3 startToEnd = plug1Pos - plug0Pos;
 
@@ -13411,7 +13419,12 @@ namespace flex
 		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
 		{
 			std::string meshFileName = m_Mesh->GetFileName();
-			if (strcmp(meshFileName.c_str(), newMeshFileName))
+			if (strcmp(newMeshFileName, "") == 0)
+			{
+				// Mineral depleted, no need for a mesh anymore
+				m_Mesh->Destroy();
+			}
+			else if (strcmp(meshFileName.c_str(), newMeshFileName))
 			{
 				MaterialID matID = m_Mesh->GetSubMesh(0)->GetMaterialID();
 				m_Mesh->Destroy();
@@ -13442,6 +13455,7 @@ namespace flex
 	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("miner"), gameObjectID)
 	{
+		m_bInteractable = true;
 	}
 
 	void Miner::Update()
@@ -13480,23 +13494,14 @@ namespace flex
 				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
 				if (minedMineralPrefabID != InvalidPrefabID)
 				{
-					u32 maxStackSize = g_ResourceManager->GetMaxStackSize(minedMineralPrefabID);
-					if (m_Charge > m_PowerDraw && m_MinedObjectStack.count < (i32)maxStackSize)
+					if (m_Charge > m_PowerDraw && !IsInventoryFull())
 					{
 						u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
 						m_Charge -= m_PowerDraw;
 
 						if (mineralMined > 0)
 						{
-							if (!m_MinedObjectStack.prefabID.IsValid())
-							{
-								m_MinedObjectStack.prefabID = minedMineralPrefabID;
-								m_MinedObjectStack.count = (i32)mineralMined;
-							}
-							else if (m_MinedObjectStack.prefabID == minedMineralPrefabID)
-							{
-								m_MinedObjectStack.count = glm::min(m_MinedObjectStack.count + (i32)mineralMined, (i32)maxStackSize);
-							}
+							AddToInventory(minedMineralPrefabID, mineralMined);
 						}
 
 						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
@@ -13531,19 +13536,18 @@ namespace flex
 		bAnyPropertyChanged = ImGui::DragFloat("Mine rate", &m_MineRate, 0.1f, 0.0f, 100.0f) || bAnyPropertyChanged;
 		bAnyPropertyChanged = ImGui::DragFloat("Power draw", &m_PowerDraw, 0.01f, 0.0f, 10.0f) || bAnyPropertyChanged;
 		bAnyPropertyChanged = ImGui::DragFloat("Mine radius", &m_MineRadius, 0.1f, 0.0f, 20.0f) || bAnyPropertyChanged;
-		if (m_MinedObjectStack.prefabID.IsValid())
+		ImGui::Text("Inventory");
+		for (const GameObjectStack& stack : m_Inventory)
 		{
-			ImGui::Text("Mined object stack");
-			ImGui::Indent();
-			std::string prefabIDStr = m_MinedObjectStack.prefabID.ToString();
-			std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_MinedObjectStack.prefabID)->GetName();
-			ImGui::Text("Prefab: %s (%s)", prefabName.c_str(), prefabIDStr.c_str());
-			ImGui::Text("Count: %u", m_MinedObjectStack.count);
-			ImGui::Unindent();
-		}
-		else
-		{
-			ImGui::Text("Mined object stack: Empty");
+			if (stack.prefabID.IsValid())
+			{
+				std::string prefabName = g_ResourceManager->GetPrefabTemplate(stack.prefabID)->GetName();
+				ImGui::Text("%s : %i", prefabName.c_str(), stack.count);
+			}
+			else
+			{
+				ImGui::Text("Empty");
+			}
 		}
 
 		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
@@ -13570,9 +13574,58 @@ namespace flex
 		newGameObject->m_MineRate = m_MineRate;
 		newGameObject->m_PowerDraw = m_PowerDraw;
 		newGameObject->m_MineRadius = m_MineRadius;
-		newGameObject->m_MinedObjectStack = m_MinedObjectStack;
+		newGameObject->m_Inventory = m_Inventory;
 
 		return newGameObject;
+	}
+
+	GameObjectStack* Miner::GetStackFromInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < m_Inventory.size())
+		{
+			return &m_Inventory[slotIndex];
+		}
+		return nullptr;
+	}
+
+	bool Miner::IsInventoryFull() const
+	{
+		for (const GameObjectStack& stack : m_Inventory)
+		{
+			if (!stack.prefabID.IsValid())
+			{
+				return false;
+			}
+
+			i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(stack.prefabID);
+			if (stack.count < maxStackSize)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool Miner::AddToInventory(const PrefabID& prefabID, u32 stackSize)
+	{
+		for (GameObjectStack& stack : m_Inventory)
+		{
+			if (!stack.prefabID.IsValid())
+			{
+				stack.prefabID = prefabID;
+				stack.count = (i32)stackSize;
+				return true;
+			}
+			else if (stack.prefabID == prefabID)
+			{
+				i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(stack.prefabID);
+				i32 deltaToAdd = glm::min((i32)stackSize, maxStackSize - stack.count);
+				stack.count += deltaToAdd;
+				return deltaToAdd == (i32)stackSize;
+			}
+		}
+		return false;
 	}
 
 	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -13589,10 +13642,10 @@ namespace flex
 			m_PowerDraw = minerObj.GetFloat("power draw");
 			m_MineRadius = minerObj.GetFloat("mine radius");
 
-			JSONObject minedObjectStack;
-			if (minerObj.TryGetObject("mined object stack", minedObjectStack))
+			std::vector<JSONObject> inventory;
+			if (minerObj.TryGetObjectArray("inventory", inventory))
 			{
-				m_MinedObjectStack.ParseFromJSON(minedObjectStack);
+				ParseInventory(m_Inventory, inventory);
 			}
 		}
 	}
@@ -13607,11 +13660,10 @@ namespace flex
 		minerObj.fields.emplace_back("power draw", JSONValue(m_PowerDraw));
 		minerObj.fields.emplace_back("mine radius", JSONValue(m_MineRadius));
 
-		if (m_MinedObjectStack.prefabID.IsValid())
+		std::vector<JSONObject> inventory;
+		if (SerializeInventory(m_Inventory, inventory))
 		{
-			JSONObject minedObjectStack = {};
-			m_MinedObjectStack.SerializeToJSON(minedObjectStack);
-			minerObj.fields.emplace_back("mined object stack", JSONValue(minedObjectStack));
+			minerObj.fields.emplace_back("inventory", JSONValue(inventory));
 		}
 
 		parentObject.fields.emplace_back("miner", JSONValue(minerObj));

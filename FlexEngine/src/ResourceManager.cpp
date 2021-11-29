@@ -1236,7 +1236,7 @@ namespace flex
 		auto iter = discoveredAudioFiles.find(audioFileSID);
 		if (iter == discoveredAudioFiles.end())
 		{
-			PrintError("Attempted to get undiscovered audio file with SID %ull", audioFileSID);
+			PrintError("Attempted to get undiscovered audio file with SID %lu", audioFileSID);
 			return InvalidAudioSourceID;
 		}
 
@@ -1271,10 +1271,13 @@ namespace flex
 	u32 ResourceManager::GetMaxStackSize(const PrefabID& prefabID)
 	{
 		GameObject* templateObject = GetPrefabTemplate(prefabID);
-		auto iter = m_NonDefaultStackSizes.find(templateObject->GetTypeID());
-		if (iter != m_NonDefaultStackSizes.end())
+		if (templateObject != nullptr)
 		{
-			return iter->second;
+			auto iter = m_NonDefaultStackSizes.find(templateObject->GetTypeID());
+			if (iter != m_NonDefaultStackSizes.end())
+			{
+				return iter->second;
+			}
 		}
 		return DEFAULT_MAX_STACK_SIZE;
 	}

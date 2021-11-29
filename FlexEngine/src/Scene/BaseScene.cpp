@@ -207,6 +207,15 @@ namespace flex
 
 		{
 			PROFILE_AUTO("Update scene objects");
+
+			for (GameObject* rootObject : m_RootObjects)
+			{
+				if (rootObject != nullptr)
+				{
+					rootObject->ClearNearbyInteractable();
+				}
+			}
+
 			for (GameObject* rootObject : m_RootObjects)
 			{
 				if (rootObject != nullptr)

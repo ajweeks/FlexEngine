@@ -31,6 +31,7 @@
 #define UI_PLAYER_QUICK_ACCESS_LOCATION				CONFIG_DIRECTORY "player_quick_access_ui.json"
 #define UI_PLAYER_INVENTORY_LOCATION				CONFIG_DIRECTORY "player_inventory_ui.json"
 #define UI_WEARABLES_INVENTORY_LOCATION				CONFIG_DIRECTORY "wearables_inventory_ui.json"
+#define UI_MINER_INVENTORY_LOCATION					CONFIG_DIRECTORY "miner_inventory_ui.json"
 #define RENDERER_SETTINGS_LOCATION					CONFIG_DIRECTORY "renderer_settings.json"
 #define SHADER_SPECIALIZATION_CONSTANTS_LOCATION	CONFIG_DIRECTORY "shader_specialization_constants.json"
 #define SPECIALIZATION_CONSTANTS_LOCATION			CONFIG_DIRECTORY "specialization_constants.json"

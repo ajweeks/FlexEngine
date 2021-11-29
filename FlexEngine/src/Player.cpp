@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -519,7 +520,7 @@ namespace flex
 	{
 		if ((i32)stackID < INVENTORY_MAX)
 		{
-			outInventoryType = InventoryType::INVENTORY;
+			outInventoryType = InventoryType::PLAYER_INVENTORY;
 			return &m_Inventory[(i32)stackID - INVENTORY_MIN];
 		}
 		if ((i32)stackID < INVENTORY_QUICK_ACCESS_MAX)
@@ -531,6 +532,21 @@ namespace flex
 		{
 			outInventoryType = InventoryType::WEARABLES;
 			return &m_WearablesInventory[(i32)stackID - INVENTORY_WEARABLES_MIN];
+		}
+		if ((i32)stackID < INVENTORY_MINER_MAX)
+		{
+			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+			{
+				Miner* miner = (Miner*)m_NearbyInteractable;
+				outInventoryType = InventoryType::MINER_INVENTORY;
+				return miner->GetStackFromInventory((i32)stackID - INVENTORY_MINER_MIN);
+			}
+			else
+			{
+				PrintWarn("Attempted to get game object from miner inventory when not being interacted with\n");
+				outInventoryType = InventoryType::NONE;
+				return nullptr;
+			}
 		}
 
 		outInventoryType = InventoryType::NONE;
@@ -776,6 +792,15 @@ namespace flex
 		return InvalidID;
 	}
 
+	GameObjectStackID Player::GetGameObjectStackIDForMinerInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex <= Miner::INVENTORY_SIZE)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_MINER_MIN);
+		}
+		return InvalidID;
+	}
+
 	void Player::AddToInventory(DroppedItem* droppedItem)
 	{
 		GameObjectStack::UserData userData = {};
@@ -987,41 +1012,22 @@ namespace flex
 		};
 
 		std::vector<JSONObject> slots;
-		slots.reserve(m_Inventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)m_Inventory.size(); ++slotIdx)
+		if (SerializeInventory(m_Inventory, slots))
 		{
-			GameObjectStack& stack = m_Inventory[slotIdx];
-			if (stack.count > 0)
-			{
-				slots.emplace_back(SerializeSlot(slotIdx, stack));
-			}
+			inventoryObj.fields.emplace_back("slots", JSONValue(slots));
 		}
 
 		std::vector<JSONObject> quickAccessSlots;
-		quickAccessSlots.reserve(m_QuickAccessInventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)m_QuickAccessInventory.size(); ++slotIdx)
+		if (SerializeInventory(m_QuickAccessInventory, quickAccessSlots))
 		{
-			GameObjectStack& stack = m_QuickAccessInventory[slotIdx];
-			if (stack.count > 0)
-			{
-				quickAccessSlots.emplace_back(SerializeSlot(slotIdx, stack));
-			}
+			inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
 		}
 
 		std::vector<JSONObject> wearablesSlots;
-		wearablesSlots.reserve(m_WearablesInventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)m_WearablesInventory.size(); ++slotIdx)
+		if (SerializeInventory(m_WearablesInventory, quickAccessSlots))
 		{
-			GameObjectStack& stack = m_WearablesInventory[slotIdx];
-			if (stack.count > 0)
-			{
-				wearablesSlots.emplace_back(SerializeSlot(slotIdx, stack));
-			}
+			inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 		}
-
-		inventoryObj.fields.emplace_back("slots", JSONValue(slots));
-		inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
-		inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 
 		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
 
@@ -1198,5 +1204,10 @@ namespace flex
 			PrintError("Unhandled wearable unequipped\n");
 		} break;
 		}
+	}
+
+	bool Player::IsInventoryShowing() const
+	{
+		return bInventoryShowing || bMinerInventoryShowing;
 	}
 } // namespace flex

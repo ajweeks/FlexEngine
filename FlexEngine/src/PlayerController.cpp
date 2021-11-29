@@ -90,7 +90,7 @@ namespace flex
 			g_Window->HasFocus() &&
 			!g_EngineInstance->IsSimulationPaused())
 		{
-			g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
+			g_Window->SetCursorMode(m_Player->IsInventoryShowing() ? CursorMode::NORMAL : CursorMode::DISABLED);
 		}
 
 		// TODO: Make frame-rate-independent!
@@ -371,6 +371,7 @@ namespace flex
 
 						nearestInteractable = nearbyInteractables.front().first;
 						nearestInteractable->SetNearbyInteractable(m_Player);
+						m_Player->SetNearbyInteractable(nearestInteractable);
 					}
 				}
 			}
@@ -498,6 +499,14 @@ namespace flex
 						{
 							Speaker* speaker = (Speaker*)nearestInteractable;
 							speaker->TogglePlaying();
+						} break;
+						case SID("miner"):
+						{
+							//Miner* miner = (Miner*)nearestInteractable;
+							if (!m_Player->bInventoryShowing)
+							{
+								m_Player->bMinerInventoryShowing = !m_Player->bMinerInventoryShowing;
+							}
 						} break;
 						}
 
@@ -863,7 +872,9 @@ namespace flex
 			}
 			else
 			{
-				if (!m_Player->terminalInteractingWithID.IsValid() && !m_Player->ridingVehicleID.IsValid())
+				if (!m_Player->terminalInteractingWithID.IsValid() &&
+					!m_Player->ridingVehicleID.IsValid() && 
+					!m_Player->IsInventoryShowing())
 				{
 					real moveAcceleration = TWEAKABLE(80000.0f);
 
@@ -1002,163 +1013,165 @@ namespace flex
 
 	EventReply PlayerController::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
-		if (m_Player->m_bPossessed)
+		if (action == Action::PAUSE && actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
-			if (action == Action::PAUSE)
-			{
-				if (m_bPreviewPlaceItemFromInventory)
-				{
-					m_bCancelPlaceItemFromInventory = true;
-					return EventReply::CONSUMED;
-				}
-				if (m_PlacingWire != nullptr)
-				{
-					m_bCancelPlaceWire = true;
-					return EventReply::CONSUMED;
-				}
-			}
+			g_EngineInstance->SetSimulationPaused(!g_EngineInstance->IsSimulationPaused());
+			g_Window->SetCursorMode(CursorMode::NORMAL);
+			return EventReply::CONSUMED;
+		}
 
-			if (action == Action::PLACE_ITEM)
-			{
-				if (!m_bSpawnWire)
-				{
-					if (actionEvent == ActionEvent::ACTION_TRIGGER)
-					{
-						m_bItemPlacementValid = false;
-						m_bPreviewPlaceItemFromInventory = true;
-						return EventReply::CONSUMED;
-					}
-					else if (actionEvent == ActionEvent::ACTION_RELEASE)
-					{
-						m_bPreviewPlaceItemFromInventory = false;
-						m_bAttemptPlaceItemFromInventory = true;
-						return EventReply::CONSUMED;
-					}
-				}
-			}
+		if (g_EngineInstance->IsSimulationPaused() || !m_Player->m_bPossessed)
+		{
+			return EventReply::UNCONSUMED;
+		}
 
-			if (action == Action::PLACE_WIRE)
+		if (action == Action::PAUSE)
+		{
+			if (m_bPreviewPlaceItemFromInventory)
 			{
-				if (!m_bPreviewPlaceItemFromInventory && !m_Player->heldItemLeftHand.IsValid() && !m_Player->heldItemRightHand.IsValid())
-				{
-					if (actionEvent == ActionEvent::ACTION_TRIGGER)
-					{
-						m_bSpawnWire = true;
-						return EventReply::CONSUMED;
-					}
-				}
+				m_bCancelPlaceItemFromInventory = true;
+				return EventReply::CONSUMED;
 			}
-
-			if (action == Action::DROP_ITEM)
+			if (m_PlacingWire != nullptr)
 			{
-				if (m_Player->HasFullSelectedInventorySlot() && actionEvent == ActionEvent::ACTION_TRIGGER)
-				{
-					m_bDropItem = true;
-					return EventReply::CONSUMED;
-				}
+				m_bCancelPlaceWire = true;
+				return EventReply::CONSUMED;
 			}
+		}
 
+		if (action == Action::SHOW_INVENTORY &&
+			!m_Player->bMinerInventoryShowing &&
+			actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			m_Player->bInventoryShowing = !m_Player->bInventoryShowing;
+			g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::INTERACT_LEFT_HAND && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			m_bAttemptInteractLeftHand = true;
+			// TODO: Determine if we can interact with anything here to allow
+			// others to consume this event in the case we don't want it
+			return EventReply::CONSUMED;
+		}
+		if (action == Action::INTERACT_RIGHT_HAND && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			m_bAttemptInteractRightHand = true;
+			// TODO: Determine if we can interact with anything here to allow
+			// others to consume this event in the case we don't want it
+			return EventReply::CONSUMED;
+		}
+
+		if (m_Player->IsInventoryShowing())
+		{
+			return EventReply::UNCONSUMED;
+		}
+
+		if (action == Action::PLACE_ITEM && !m_bSpawnWire)
+		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
-				if (action == Action::SHOW_INVENTORY)
-				{
-					m_Player->bInventoryShowing = !m_Player->bInventoryShowing;
-					g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
-					return EventReply::CONSUMED;
-				}
+				m_bItemPlacementValid = false;
+				m_bPreviewPlaceItemFromInventory = true;
+				return EventReply::CONSUMED;
+			}
+			else if (actionEvent == ActionEvent::ACTION_RELEASE)
+			{
+				m_bPreviewPlaceItemFromInventory = false;
+				m_bAttemptPlaceItemFromInventory = true;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::PAUSE)
-				{
-					g_EngineInstance->SetSimulationPaused(!g_EngineInstance->IsSimulationPaused());
-					g_Window->SetCursorMode(CursorMode::NORMAL);
-					return EventReply::CONSUMED;
-				}
+		if (action == Action::PLACE_WIRE && !m_bPreviewPlaceItemFromInventory
+			&& !m_Player->heldItemLeftHand.IsValid() && !m_Player->heldItemRightHand.IsValid())
+		{
+			if (actionEvent == ActionEvent::ACTION_TRIGGER)
+			{
+				m_bSpawnWire = true;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::ENTER_TRACK_BUILD_MODE)
-				{
-					if (m_Player->m_TrackRidingID == InvalidTrackID)
-					{
-						m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-						m_Player->m_bEditingTrack = false;
-						return EventReply::CONSUMED;
-					}
-				}
+		if (action == Action::DROP_ITEM)
+		{
+			if (m_Player->HasFullSelectedInventorySlot() && actionEvent == ActionEvent::ACTION_TRIGGER)
+			{
+				m_bDropItem = true;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::ENTER_TRACK_EDIT_MODE)
-				{
-					if (m_Player->m_TrackRidingID == InvalidTrackID)
-					{
-						m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-						m_Player->m_bPlacingTrack = false;
-						return EventReply::CONSUMED;
-					}
-				}
+		if (action == Action::ENTER_TRACK_BUILD_MODE && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
+				m_Player->m_bEditingTrack = false;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::COMPLETE_TRACK)
-				{
-					if (m_Player->m_TrackRidingID == InvalidTrackID)
-					{
-						m_bAttemptCompleteTrack = true;
-						return EventReply::CONSUMED;
-					}
-				}
-				if (action == Action::PICKUP_ITEM)
-				{
-					if (!m_Player->bInventoryShowing && m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
-					{
-						m_bAttemptPickup = true;
-						return EventReply::CONSUMED;
-					}
-				}
+		if (action == Action::ENTER_TRACK_EDIT_MODE && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
+				m_Player->m_bPlacingTrack = false;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::TOGGLE_ITEM_HOLDING)
-				{
-					//if (m_Player->m_HeldItem == nullptr)
-					//{
-					//	if (!m_Player->m_Inventory.empty())
-					//	{
-					//		m_Player->m_HeldItem = m_Player->m_Inventory[0];
-					//	}
-					//}
-					//else
-					//{
-					//	m_Player->m_HeldItem = nullptr;
-					//}
-					return EventReply::CONSUMED;
-				}
+		if (action == Action::COMPLETE_TRACK && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID)
+			{
+				m_bAttemptCompleteTrack = true;
+				return EventReply::CONSUMED;
+			}
+		}
 
-				if (action == Action::TOGGLE_TABLET)
+		if (action == Action::PICKUP_ITEM)
+		{
+			if (actionEvent == ActionEvent::ACTION_TRIGGER)
+			{
+				if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
 				{
-					m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-					return EventReply::CONSUMED;
-				}
-
-				if (action == Action::INTERACT_LEFT_HAND)
-				{
-					m_bAttemptInteractLeftHand = true;
-					// TODO: Determine if we can interact with anything here to allow
-					// others to consume this event in the case we don't want it
-					return EventReply::CONSUMED;
-				}
-				if (action == Action::INTERACT_RIGHT_HAND)
-				{
-					m_bAttemptInteractRightHand = true;
-					// TODO: Determine if we can interact with anything here to allow
-					// others to consume this event in the case we don't want it
+					m_bAttemptPickup = true;
 					return EventReply::CONSUMED;
 				}
 			}
 			else if (actionEvent == ActionEvent::ACTION_RELEASE)
 			{
-				if (action == Action::PICKUP_ITEM)
+				if (m_ItemPickingTimer != -1.0f)
 				{
-					if (m_ItemPickingTimer != -1.0f)
-					{
-						m_ItemPickingTimer = -1.0f;
-						return EventReply::CONSUMED;
-					}
+					m_ItemPickingTimer = -1.0f;
+					return EventReply::CONSUMED;
 				}
 			}
+		}
+
+		if (action == Action::TOGGLE_ITEM_HOLDING && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			//if (m_Player->m_HeldItem == nullptr)
+			//{
+			//	if (!m_Player->m_Inventory.empty())
+			//	{
+			//		m_Player->m_HeldItem = m_Player->m_Inventory[0];
+			//	}
+			//}
+			//else
+			//{
+			//	m_Player->m_HeldItem = nullptr;
+			//}
+			return EventReply::CONSUMED;
+		}
+
+		if (action == Action::TOGGLE_TABLET && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
+			return EventReply::CONSUMED;
 		}
 
 		return EventReply::UNCONSUMED;
@@ -1166,7 +1179,8 @@ namespace flex
 
 	EventReply PlayerController::OnMouseMovedEvent(const glm::vec2& dMousePos)
 	{
-		if (m_Player != nullptr && !m_Player->bInventoryShowing && g_Window->HasFocus())
+		if (m_Player != nullptr && !m_Player->IsInventoryShowing() &&
+			g_Window->HasFocus() && !g_EngineInstance->IsSimulationPaused())
 		{
 			if (m_Player->m_bPossessed &&
 				!m_Player->terminalInteractingWithID.IsValid() &&

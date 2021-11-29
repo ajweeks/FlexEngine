@@ -12,7 +12,8 @@ namespace flex
 
 	enum class InventoryType
 	{
-		INVENTORY,
+		PLAYER_INVENTORY,
+		MINER_INVENTORY,
 		QUICK_ACCESS,
 		WEARABLES,
 		NONE
@@ -73,6 +74,7 @@ namespace flex
 		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(i32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForMinerInventory(i32 slotIndex);
 
 		void AddToInventory(DroppedItem* droppedItem);
 		void AddToInventory(const PrefabID& prefabID, i32 count);
@@ -92,6 +94,8 @@ namespace flex
 
 		void OnWearableEquipped(GameObjectStack const* wearableStack);
 		void OnWearableUnequipped(GameObjectStack const* wearableStack);
+
+		bool IsInventoryShowing() const;
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -149,11 +153,14 @@ namespace flex
 		static const i32 INVENTORY_QUICK_ACCESS_MAX = 1999;
 		static const i32 INVENTORY_WEARABLES_MIN = 2000;
 		static const i32 INVENTORY_WEARABLES_MAX = 2999;
+		static const i32 INVENTORY_MINER_MIN = 3000;
+		static const i32 INVENTORY_MINER_MAX = 3999;
 
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
 		std::array<GameObjectStack, WEARABLES_ITEM_COUNT> m_WearablesInventory;
 		bool bInventoryShowing = false;
+		bool bMinerInventoryShowing = false;
 		i32 selectedItemSlot = 0;
 
 		GameObjectID heldItemLeftHand = InvalidGameObjectID;

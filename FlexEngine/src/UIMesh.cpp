@@ -59,6 +59,12 @@ namespace flex
 	{
 		FLEX_UNUSED(cornerRadius);
 
+		if (NearlyEquals(bottomLeft.x, topRight.x, 0.001f) || NearlyEquals(bottomLeft.y, topRight.y, 0.001f))
+		{
+			// Degenerate rect
+			return;
+		}
+
 		if (bottomLeft.x >= topRight.x || bottomLeft.y >= topRight.y)
 		{
 			PrintWarn("Invalid rect parameters, (bottom left, top right = (%.2f, %.2f), (%.2f,%.2f)\n",

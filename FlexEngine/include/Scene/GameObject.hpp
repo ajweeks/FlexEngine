@@ -76,7 +76,7 @@ namespace flex
 
 		void Clear();
 
-		void SerializeToJSON(JSONObject& parentObject);
+		void SerializeToJSON(JSONObject& parentObject) const;
 		void ParseFromJSON(const JSONObject& parentObject);
 
 		PrefabID prefabID;
@@ -298,6 +298,7 @@ namespace flex
 
 		bool SelfOrChildIsSelected() const;
 
+		void ClearNearbyInteractable();
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
 		bool IsTemplate() const;
@@ -1961,17 +1962,26 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		GameObjectStack* GetStackFromInventory(i32 slotIndex);
+
+		bool IsInventoryFull() const;
+
+		static const u32 INVENTORY_SIZE = 5;
+
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 	private:
+		bool AddToInventory(const PrefabID& prefabID, u32 stackSize);
+
+
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;
 		real m_MineRate = 1.0f;
 		real m_PowerDraw = 0.1f;
 		real m_MineRadius = 2.0f;
-		GameObjectStack m_MinedObjectStack;
+		std::array<GameObjectStack, INVENTORY_SIZE> m_Inventory;
 
 		// Non-serialized fields
 		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
