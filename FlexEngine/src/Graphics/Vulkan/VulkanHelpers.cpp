@@ -3070,10 +3070,13 @@ namespace flex
 						}
 						if (ImGui::TreeNode(label.c_str()))
 						{
-
 							for (Uniform const* uniform : pair.second)
 							{
+#if DEBUG
 								ImGui::Text("%s", uniform->DBG_name);
+#else
+								ImGui::Text("Size: %u (name stripped)", uniform->size);
+#endif
 							}
 
 							ImGui::TreePop();
