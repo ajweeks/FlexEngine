@@ -212,7 +212,7 @@ namespace flex
 
 	void InputManager::UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15])
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		m_pGamepadStates[gamepadIndex] = m_GamepadStates[gamepadIndex];
 
@@ -265,7 +265,7 @@ namespace flex
 
 	GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 		return m_GamepadStates[gamepadIndex];
 	}
 
@@ -567,7 +567,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bDown = ((m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button)) != 0);
 		return bDown;
@@ -575,7 +575,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bPressed = ((m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button)) != 0);
 		return bPressed;
@@ -583,7 +583,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bReleased = ((m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button)) != 0);
 		return bReleased;
@@ -591,7 +591,7 @@ namespace flex
 
 	real InputManager::GetPrevGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		real axisValue = m_pGamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
@@ -599,7 +599,7 @@ namespace flex
 
 	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		real axisValue = m_GamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
@@ -607,7 +607,7 @@ namespace flex
 
 	bool InputManager::HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		if (threshold >= 0.0f)
 		{
@@ -737,7 +737,7 @@ namespace flex
 	{
 		FLEX_UNUSED(mods);
 
-		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
+		CHECK_LT((i32)mouseButton, MOUSE_BUTTON_COUNT);
 
 		if (keyAction == KeyAction::KEY_PRESS)
 		{
@@ -1015,7 +1015,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1027,7 +1027,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1039,7 +1039,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonsReleased & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1088,14 +1088,14 @@ namespace flex
 
 	glm::vec2 InputManager::GetMouseDragDistance(MouseButton mouseButton)
 	{
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonDrags[(i32)mouseButton].endLocation - m_MouseButtonDrags[(i32)mouseButton].startLocation);
 	}
 
 	void InputManager::ClearMouseDragDistance(MouseButton mouseButton)
 	{
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MouseButtonDrags[(i32)mouseButton].endLocation;
 	}
@@ -1145,7 +1145,7 @@ namespace flex
 
 	void InputManager::ClearGampadInput(i32 gamepadIndex)
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		GamepadState& gamepadState = m_GamepadStates[gamepadIndex];
 

@@ -23,7 +23,7 @@ namespace flex
 			VkMemoryPropertyFlags properties,
 			const char* DEBUG_name /* = nullptr */)
 		{
-			assert(size != 0);
+			CHECK_NE(size, 0);
 
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;

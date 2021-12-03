@@ -71,10 +71,10 @@ namespace flex
 		bool MoveSingleItemFromStack(GameObjectStackID fromID, GameObjectStackID toID);
 		bool DropItemStack(GameObjectStackID stackID, bool bDestroyItem);
 		bool DropSingleItemFromStack(GameObjectStackID stackID, bool bDestroyItem);
-		static GameObjectStackID GetGameObjectStackIDForInventory(i32 slotIndex);
-		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex);
-		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(i32 slotIndex);
-		static GameObjectStackID GetGameObjectStackIDForMinerInventory(i32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForInventory(u32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(u32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(u32 slotIndex);
+		static GameObjectStackID GetGameObjectStackIDForMinerInventory(u32 slotIndex);
 
 		void AddToInventory(DroppedItem* droppedItem);
 		void AddToInventory(const PrefabID& prefabID, i32 count);
@@ -141,20 +141,20 @@ namespace flex
 
 		static const glm::vec3 HeadlampMountingPos;
 
-		static const i32 WEARABLES_ITEM_COUNT = 3;
-		static const i32 QUICK_ACCESS_ITEM_COUNT = 11;
-		static const i32 INVENTORY_ITEM_ROW_COUNT = 5;
-		static const i32 INVENTORY_ITEM_COL_COUNT = 7;
-		static const i32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
+		static const u32 WEARABLES_ITEM_COUNT = 3;
+		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
+		static const u32 INVENTORY_ITEM_ROW_COUNT = 5;
+		static const u32 INVENTORY_ITEM_COL_COUNT = 7;
+		static const u32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
 
-		static const i32 INVENTORY_MIN = 0;
-		static const i32 INVENTORY_MAX = 999;
-		static const i32 INVENTORY_QUICK_ACCESS_MIN = 1000;
-		static const i32 INVENTORY_QUICK_ACCESS_MAX = 1999;
-		static const i32 INVENTORY_WEARABLES_MIN = 2000;
-		static const i32 INVENTORY_WEARABLES_MAX = 2999;
-		static const i32 INVENTORY_MINER_MIN = 3000;
-		static const i32 INVENTORY_MINER_MAX = 3999;
+		static const u32 INVENTORY_MIN = 0;
+		static const u32 INVENTORY_MAX = 999;
+		static const u32 INVENTORY_QUICK_ACCESS_MIN = 1000;
+		static const u32 INVENTORY_QUICK_ACCESS_MAX = 1999;
+		static const u32 INVENTORY_WEARABLES_MIN = 2000;
+		static const u32 INVENTORY_WEARABLES_MAX = 2999;
+		static const u32 INVENTORY_MINER_MIN = 3000;
+		static const u32 INVENTORY_MINER_MAX = 3999;
 
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;

@@ -152,7 +152,7 @@ namespace flex
 
 	bool Mesh::LoadFromFile(CreateInfo& createInfo)
 	{
-		assert(m_OwningGameObject != nullptr);
+		CHECK_NE(m_OwningGameObject, nullptr);
 
 		// TODO: Call SetRequiredAttributesFromMaterialID for each mesh with each matID?
 
@@ -191,7 +191,7 @@ namespace flex
 		}
 
 		// TODO: Support multiple meshes in one file
-		//assert(data->meshes_count == 1);
+		//CHECK_EQ(data->meshes_count, 1);
 		for (i32 i = 0; i < (i32)1; ++i)
 		{
 			cgltf_mesh* mesh = &(data->meshes[i]);
@@ -618,8 +618,7 @@ namespace flex
 		} break;
 		default:
 		{
-			PrintError("Unhandled Mesh::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)m_Type);
-			assert(false);
+			PRINT_FATAL("Unhandled Mesh::Type in Renderer::DrawImGuiForGameObject: %d\n", (i32)m_Type);
 		} break;
 		}
 

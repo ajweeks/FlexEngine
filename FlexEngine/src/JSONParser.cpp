@@ -524,7 +524,7 @@ namespace flex
 
 	i32 JSONParser::MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset)
 	{
-		assert(fileContents[offset] == openingBracket);
+		CHECK_EQ(fileContents[offset], openingBracket);
 
 		char closingBracket;
 		if (openingBracket == '[')

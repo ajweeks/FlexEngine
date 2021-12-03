@@ -43,8 +43,8 @@ namespace flex
 
 	void RigidBody::Initialize(btCollisionShape* collisionShape, Transform* transform)
 	{
-		assert(m_btRigidBody == nullptr);
-		assert(m_btMotionState == nullptr);
+		CHECK_EQ(m_btRigidBody, nullptr);
+		CHECK_EQ(m_btMotionState, nullptr);
 
 		btVector3 localInertia(0, 0, 0);
 		if (!m_bStatic)
@@ -54,7 +54,7 @@ namespace flex
 
 		if (m_bStatic)
 		{
-			assert(m_Mass == 0); // Static objects must have a mass of 0!
+			CHECK_EQ(m_Mass, 0.0f); // Static objects must have a mass of 0!
 		}
 
 		m_btMotionState = new MotionState(transform);
@@ -261,7 +261,7 @@ namespace flex
 
 	//void RigidBody::UpdateTransform()
 	//{
-	//	assert(m_Transform);
+	//	CHECK_NE(m_Transform, nullptr);
 
 	//	btTransform transform = m_btRigidBody->getWorldTransform();
 

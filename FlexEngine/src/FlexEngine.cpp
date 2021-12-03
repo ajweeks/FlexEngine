@@ -532,8 +532,8 @@ namespace flex
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
 	{
-		assert((i32)effect >= 0);
-		assert((i32)effect < (i32)SoundEffect::LAST_ELEMENT);
+		CHECK_GE((i32)effect, 0);
+		CHECK_LT((i32)effect, (i32)SoundEffect::LAST_ELEMENT);
 
 		return s_AudioSourceIDs[(i32)effect];
 	}
@@ -612,8 +612,8 @@ namespace flex
 	{
 		PROFILE_AUTO("FlexEngine CreateWindowAndRenderer");
 
-		assert(g_Window == nullptr);
-		assert(g_Renderer == nullptr);
+		CHECK_EQ(g_Window, nullptr);
+		CHECK_EQ(g_Renderer, nullptr);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
@@ -635,7 +635,7 @@ namespace flex
 		real desiredWindowSizeScreenPercetange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
-		assert(g_Monitor->contentScaleX == g_Monitor->contentScaleY);
+		CHECK_EQ(g_Monitor->contentScaleX, g_Monitor->contentScaleY);
 
 		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
@@ -2413,8 +2413,8 @@ namespace flex
 			}
 
 			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(m_RenderDocModule, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
-			assert(ret == 1);
+			i32 ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
+			CHECK_EQ(ret, 1);
 
 			m_RenderDocAPI->GetAPIVersion(&m_RenderDocAPIVerionMajor, &m_RenderDocAPIVerionMinor, &m_RenderDocAPIVerionPatch);
 			Print("### RenderDoc API v%i.%i.%i connected, F9 to capture ###\n", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);

@@ -446,7 +446,7 @@ namespace flex
 			OnWindowSizeChanged(windowSize.x, windowSize.y);
 
 			// TODO: Pull out into functions
-			assert(m_PhysicsDebugDrawer == nullptr);
+			CHECK_EQ(m_PhysicsDebugDrawer, nullptr);
 			m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
 			m_PhysicsDebugDrawer->Initialize();
 
@@ -486,7 +486,7 @@ namespace flex
 					ssaoMatCreateInfo.bSerializable = false;
 					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
 				}
-				assert(m_SSAOMatID != InvalidMaterialID);
+				CHECK_NE(m_SSAOMatID, InvalidMaterialID);
 				m_SSAOShaderID = m_Materials[m_SSAOMatID]->shaderID;
 
 				if (m_SSAOBlurMatID == InvalidMaterialID)
@@ -499,7 +499,7 @@ namespace flex
 					ssaoBlurMatCreateInfo.bSerializable = false;
 					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
 				}
-				assert(m_SSAOBlurMatID != InvalidMaterialID);
+				CHECK_NE(m_SSAOBlurMatID, InvalidMaterialID);
 				m_SSAOBlurShaderID = m_Materials[m_SSAOBlurMatID]->shaderID;
 			}
 
@@ -595,7 +595,7 @@ namespace flex
 			{
 				// TODO: Bring out to Mesh class?
 				void* vertData = malloc(m_FullScreenTriVertexBufferData.VertexBufferSize);
-				assert(vertData != nullptr);
+				CHECK_NE(vertData, nullptr);
 				memcpy(vertData, m_FullScreenTriVertexBufferData.vertexData, m_FullScreenTriVertexBufferData.VertexBufferSize);
 				CreateAndUploadToStaticVertexBuffer(m_FullScreenTriVertexBuffer, vertData, m_FullScreenTriVertexBufferData.VertexBufferSize, "Fullscreen tri vertex buffer");
 				free(vertData);
@@ -1062,7 +1062,7 @@ namespace flex
 			// Cubemaps are treated differently than regular textures because they require 6 filepaths
 			if (material->generateCubemapSampler)
 			{
-				assert(!material->textures.Contains(&U_CUBEMAP_SAMPLER));
+				CHECK(!material->textures.Contains(&U_CUBEMAP_SAMPLER));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 				u32 channelCount = 4;
@@ -1077,7 +1077,7 @@ namespace flex
 			}
 			else if (material->generateHDRCubemapSampler)
 			{
-				assert(!material->textures.Contains(&U_CUBEMAP_SAMPLER));
+				CHECK(!material->textures.Contains(&U_CUBEMAP_SAMPLER));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 				u32 channelCount = 4;
@@ -1097,7 +1097,7 @@ namespace flex
 
 			if (material->generateIrradianceSampler)
 			{
-				assert(!material->textures.Contains(&U_IRRADIANCE_SAMPLER));
+				CHECK(!material->textures.Contains(&U_IRRADIANCE_SAMPLER));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
 				u32 channelCount = 4;
@@ -1120,7 +1120,7 @@ namespace flex
 
 			if (material->generatePrefilteredMap)
 			{
-				assert(!material->textures.Contains(&U_PREFILTER_MAP));
+				CHECK(!material->textures.Contains(&U_PREFILTER_MAP));
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
 				u32 channelCount = 4;
@@ -1648,7 +1648,7 @@ namespace flex
 			}
 
 			result->pData = malloc(result->dataSize);
-			assert(result->pData != nullptr);
+			CHECK_NE(result->pData, nullptr);
 			{
 				u8* data = (u8*)result->pData;
 				for (const SpecializationConstantCreateInfo& entry : entries)
@@ -1656,11 +1656,11 @@ namespace flex
 					memcpy(data, entry.data, entry.size);
 					data += entry.size;
 				}
-				assert(data == ((u8*)result->pData + result->dataSize));
+				CHECK_EQ(data, ((u8*)result->pData + result->dataSize));
 			}
 
 			VkSpecializationMapEntry* mapEntries = (VkSpecializationMapEntry*)malloc(result->mapEntryCount * sizeof(VkSpecializationMapEntry));
-			assert(mapEntries != nullptr);
+			CHECK_NE(mapEntries, nullptr);
 
 			u32 offset = 0;
 			for (u32 i = 0; i < result->mapEntryCount; ++i)
@@ -1949,7 +1949,7 @@ namespace flex
 			// TODO: Only update when things have changed
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				UpdateDynamicUniformBuffer(i);
+				//UpdateDynamicUniformBuffer(i);
 			}
 
 			if (!m_TimestampQueryNames.empty())
@@ -2335,7 +2335,7 @@ namespace flex
 		{
 			PROFILE_AUTO("UpdateDynamicVertexData");
 
-			assert(vertexBufferData->VertexBufferSize > 0);
+			CHECK_GT(vertexBufferData->VertexBufferSize, 0u);
 
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
@@ -2369,15 +2369,15 @@ namespace flex
 
 			VkDeviceSize vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
 			VkDeviceSize indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
-			assert(vertSubBufferSize != (VkDeviceSize)-1);
-			assert(indexSubBufferSize != (VkDeviceSize)-1);
+			CHECK_NE(vertSubBufferSize, (VkDeviceSize)-1);
+			CHECK_NE(indexSubBufferSize, (VkDeviceSize)-1);
 
 			// Resize when growing
 			if (vertexBufferData->VertexBufferSize > vertSubBufferSize)
 			{
 				renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->VertexBufferSize);
 				vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
-				assert(vertSubBufferSize != ((VkDeviceSize)-1));
+				CHECK_NE(vertSubBufferSize, ((VkDeviceSize)-1));
 				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 			}
 
@@ -2385,7 +2385,7 @@ namespace flex
 			{
 				renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize);
 				indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
-				assert(indexSubBufferSize != ((VkDeviceSize)-1));
+				CHECK_NE(indexSubBufferSize, ((VkDeviceSize)-1));
 				vkDeviceWaitIdle(m_VulkanDevice->m_LogicalDevice);
 			}
 
@@ -2401,14 +2401,14 @@ namespace flex
 				{
 					renderObject->dynamicVertexBufferOffset = vertexBuffer->Realloc(renderObject->dynamicVertexBufferOffset, vertexBufferData->UsedVertexBufferSize);
 					vertSubBufferSize = vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
-					assert(vertSubBufferSize != ((VkDeviceSize)-1));
+					CHECK_NE(vertSubBufferSize, ((VkDeviceSize)-1));
 				}
 
 				if (bResizeIndexBuffer)
 				{
 					renderObject->dynamicIndexBufferOffset = indexBuffer->Realloc(renderObject->dynamicIndexBufferOffset, newIndexDataSize);
 					indexSubBufferSize = indexBuffer->GetAllocationSize(renderObject->dynamicIndexBufferOffset);
-					assert(indexSubBufferSize != ((VkDeviceSize)-1));
+					CHECK_NE(indexSubBufferSize, ((VkDeviceSize)-1));
 				}
 
 
@@ -2423,8 +2423,8 @@ namespace flex
 			VkDeviceSize vertOffsetBytes = renderObject->dynamicVertexBufferOffset;
 			VkDeviceSize indexOffsetBytes = renderObject->dynamicIndexBufferOffset;
 
-			assert((vertOffsetBytes + vertSubBufferSize) <= vertexBuffer->m_Size);
-			assert((indexOffsetBytes + indexSubBufferSize) <= indexBuffer->m_Size);
+			CHECK_LE((vertOffsetBytes + vertSubBufferSize), vertexBuffer->m_Size);
+			CHECK_LE((indexOffsetBytes + indexSubBufferSize), indexBuffer->m_Size);
 
 			VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
 			VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
@@ -2828,7 +2828,7 @@ namespace flex
 			real spacing,
 			real scale /* = 1.0f */)
 		{
-			assert(m_CurrentFont != nullptr);
+			CHECK_NE(m_CurrentFont, nullptr);
 
 			TextCache newCache(str, anchor, pos, colour, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
@@ -2841,7 +2841,7 @@ namespace flex
 			real spacing,
 			real scale /* = 1.0f */)
 		{
-			assert(m_CurrentFont != nullptr);
+			CHECK_NE(m_CurrentFont, nullptr);
 
 			TextCache newCache(str, pos, rot, colour, spacing, scale);
 			m_CurrentFont->AddTextCache(newCache);
@@ -2998,7 +2998,7 @@ namespace flex
 			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
 			const VkFormat format = cubemapTexture->imageFormat;
 			const u32 dim = (u32)renderObjectMat->cubemapSamplerSize.x;
-			assert(dim <= MAX_TEXTURE_DIM);
+			CHECK_LE(dim, MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
@@ -3274,7 +3274,7 @@ namespace flex
 			VulkanTexture* cubemapTexture = (VulkanTexture*)renderObjectMat->textures[&U_CUBEMAP_SAMPLER];
 			const VkFormat format = cubemapTexture->imageFormat;
 			const u32 dim = (u32)renderObjectMat->irradianceSamplerSize.x;
-			assert(dim <= MAX_TEXTURE_DIM);
+			CHECK_LE(dim, MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
@@ -3542,7 +3542,7 @@ namespace flex
 
 			const VkFormat format = VK_FORMAT_R16G16B16A16_SFLOAT;
 			const u32 dim = (u32)renderObjectMat->prefilteredMapSize.x;
-			assert(dim <= MAX_TEXTURE_DIM);
+			CHECK_LE(dim, MAX_TEXTURE_DIM);
 			const u32 mipLevels = static_cast<u32>(floor(log2(dim))) + 1;
 
 			VulkanRenderPass renderPass(m_VulkanDevice);
@@ -3800,7 +3800,7 @@ namespace flex
 			if (!bRenderedBRDFLUT)
 			{
 				const u32 dim = (u32)m_BRDFSize.x;
-				assert(dim <= MAX_TEXTURE_DIM);
+				CHECK_LE(dim, MAX_TEXTURE_DIM);
 
 				if (m_BRDFTexture == nullptr)
 				{
@@ -4186,7 +4186,7 @@ namespace flex
 					u32 width = alignedBitmap.width;
 					u32 height = alignedBitmap.rows;
 
-					assert(width != 0 && height != 0);
+					CHECK(width != 0 && height != 0);
 
 					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex");
 					charTextures.push_back(highResTex);
@@ -5094,7 +5094,7 @@ namespace flex
 
 		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer /* = 0 */)
 		{
-			assert(textureID != InvalidTextureID);
+			CHECK_NE(textureID, InvalidTextureID);
 
 			VulkanMaterial* spriteMat = (VulkanMaterial*)m_Materials.at(spriteMaterialID);
 			VulkanShader* spriteShader = (VulkanShader*)m_Shaders[spriteMat->shaderID];
@@ -5299,7 +5299,7 @@ namespace flex
 		{
 			if (renderObject->renderID < m_RenderObjects.size())
 			{
-				assert(m_RenderObjects[renderObject->renderID] == nullptr);
+				CHECK_EQ(m_RenderObjects[renderObject->renderID], nullptr);
 				m_RenderObjects[renderObject->renderID] = renderObject;
 			}
 			else
@@ -5307,14 +5307,14 @@ namespace flex
 				m_RenderObjects.emplace_back(renderObject);
 			}
 
-			assert(m_RenderObjects[renderObject->renderID] == renderObject);
+			CHECK_EQ(m_RenderObjects[renderObject->renderID], renderObject);
 		}
 
 		void VulkanRenderer::InsertNewParticleSystem(VulkanParticleSystem* particleSystem)
 		{
 			if (particleSystem->ID < m_ParticleSystems.size())
 			{
-				assert(m_ParticleSystems[particleSystem->ID] == nullptr);
+				CHECK_EQ(m_ParticleSystems[particleSystem->ID], nullptr);
 				m_ParticleSystems[particleSystem->ID] = particleSystem;
 			}
 			else
@@ -5322,14 +5322,14 @@ namespace flex
 				m_ParticleSystems.emplace_back(particleSystem);
 			}
 
-			assert(m_ParticleSystems[particleSystem->ID] == particleSystem);
+			CHECK_EQ(m_ParticleSystems[particleSystem->ID], particleSystem);
 		}
 
 		bool VulkanRenderer::CreateInstance()
 		{
 			PROFILE_AUTO("CreateInstance");
 
-			assert(m_Instance == VK_NULL_HANDLE);
+			CHECK_EQ(m_Instance, (VkInstance)VK_NULL_HANDLE);
 
 			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 2, 0);
 
@@ -5456,7 +5456,7 @@ namespace flex
 		{
 			PROFILE_AUTO("CreateSurface");
 
-			assert(m_Surface == VK_NULL_HANDLE);
+			CHECK_EQ(m_Surface, (VkSurfaceKHR)VK_NULL_HANDLE);
 			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, &m_Surface));
 		}
 
@@ -5712,7 +5712,7 @@ namespace flex
 			for (i32 passIndex = 0; passIndex < (i32)m_AutoTransitionedRenderPasses.size(); ++passIndex)
 			{
 				VulkanRenderPass* pass = m_AutoTransitionedRenderPasses[passIndex];
-				assert(pass->m_TargetColourAttachmentInitialLayouts.size() == pass->m_TargetColourAttachmentFinalLayouts.size());
+				CHECK_EQ(pass->m_TargetColourAttachmentInitialLayouts.size(), pass->m_TargetColourAttachmentFinalLayouts.size());
 				const u32 colourAttachmentCount = (u32)pass->m_TargetColourAttachmentInitialLayouts.size();
 				autoGeneratedLayouts[passIndex].colourInitialLayouts.resize(colourAttachmentCount, VK_IMAGE_LAYOUT_UNDEFINED);
 				autoGeneratedLayouts[passIndex].colourFinalLayouts.resize(colourAttachmentCount, VK_IMAGE_LAYOUT_UNDEFINED);
@@ -6020,7 +6020,7 @@ namespace flex
 
 				// Final pass must target swapchain
 				VulkanRenderPass* finalPass = m_AutoTransitionedRenderPasses[m_AutoTransitionedRenderPasses.size() - 1];
-				assert(finalPass->m_TargetColourAttachmentFinalLayouts.size() == 1);
+				CHECK_EQ(finalPass->m_TargetColourAttachmentFinalLayouts.size(), 1);
 				finalPass->m_TargetColourAttachmentFinalLayouts[0] = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 				finalPass->m_TargetDepthAttachmentFinalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 			}
@@ -6089,7 +6089,7 @@ namespace flex
 
 			if (shader->textureUniforms.HasUniform(&U_LTC_MATRICES_SAMPLER))
 			{
-				assert(shader->textureUniforms.HasUniform(&U_LTC_AMPLITUDES_SAMPLER));
+				CHECK(shader->textureUniforms.HasUniform(&U_LTC_AMPLITUDES_SAMPLER));
 				VulkanTexture* ltcMatrices = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCMatricesID);
 				VulkanTexture* ltcAmplitudes = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCAmplitudesID);
 				imageDescriptors->SetUniform(&U_LTC_MATRICES_SAMPLER, ImageDescriptorInfo{ ltcMatrices->imageView, ltcMatrices->sampler });
@@ -6403,7 +6403,7 @@ namespace flex
 			pipelineLayoutInfo.pushConstantRangeCount = createInfo->pushConstantRangeCount;
 			pipelineLayoutInfo.pPushConstantRanges = createInfo->pushConstants;
 
-			assert(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
+			CHECK(createInfo->pushConstantRangeCount == 0 || createInfo->pushConstants != nullptr);
 
 			// TODO: Investigate using pipeline caches here
 
@@ -6448,7 +6448,7 @@ namespace flex
 			m_GraphicsPipelineHashes.emplace(pipelineHash, newPipelineID);
 			outPipelineID = newPipelineID;
 
-			assert(m_GraphicsPipelineHashes.size() == m_GraphicsPipelines.size());
+			CHECK_EQ(m_GraphicsPipelineHashes.size(), m_GraphicsPipelines.size());
 		}
 
 		void VulkanRenderer::DestroyAllGraphicsPipelines()
@@ -6496,7 +6496,7 @@ namespace flex
 						}
 					}
 
-					assert(bFoundHash);
+					CHECK(bFoundHash);
 				}
 				else
 				{
@@ -6541,7 +6541,7 @@ namespace flex
 				}
 			}
 
-			assert(!bFoundHash || (bFoundHash && bFoundPipeline));
+			CHECK(!bFoundHash || (bFoundHash && bFoundPipeline));
 		}
 
 		bool VulkanRenderer::IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const
@@ -6684,8 +6684,8 @@ namespace flex
 
 			// Offscreen frame buffer attachments
 			{
-				assert(m_OffscreenFB0ColourAttachment0->width == m_OffscreenFB1ColourAttachment0->width);
-				assert(m_OffscreenFB0ColourAttachment0->height == m_OffscreenFB1ColourAttachment0->height);
+				CHECK_EQ(m_OffscreenFB0ColourAttachment0->width, m_OffscreenFB1ColourAttachment0->width);
+				CHECK_EQ(m_OffscreenFB0ColourAttachment0->height, m_OffscreenFB1ColourAttachment0->height);
 
 				CreateAttachment(m_VulkanDevice, m_OffscreenFB0ColourAttachment0, "Offscreen 0 image", "Offscreen 0 image view");
 				CreateAttachment(m_VulkanDevice, m_OffscreenFB1ColourAttachment0, "Offscreen 1 image", "Offscreen 1 image view");
@@ -6720,8 +6720,8 @@ namespace flex
 
 			// SSAO Blur frame buffers
 			{
-				assert(m_SSAOBlurHFBColourAttachment0->width == m_SSAOBlurVFBColourAttachment0->width);
-				assert(m_SSAOBlurHFBColourAttachment0->height == m_SSAOBlurVFBColourAttachment0->height);
+				CHECK_EQ(m_SSAOBlurHFBColourAttachment0->width, m_SSAOBlurVFBColourAttachment0->width);
+				CHECK_EQ(m_SSAOBlurHFBColourAttachment0->height, m_SSAOBlurVFBColourAttachment0->height);
 
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFBColourAttachment0, "SSAO Blur Horizontal image", "SSAO Blur Horizontal image view");
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFBColourAttachment0, "SSAO Blur Vertical image", "SSAO Blur Vertical image view");
@@ -6992,7 +6992,7 @@ namespace flex
 
 						if (vertexBufferSize > 0 && vertexCount > 0)
 						{
-							assert(vertexBufferData == ((char*)vertexDataStart + vertexBufferSize));
+							CHECK_EQ(vertexBufferData, ((char*)vertexDataStart + vertexBufferSize));
 							char buffer[256];
 							sprintf(buffer, "Static vertex buffer (stride: %u)", vertexBufferPair.first);
 							CreateAndUploadToStaticVertexBuffer(vertexBuffer, vertexDataStart, vertexBufferSize, buffer);
@@ -7639,7 +7639,7 @@ namespace flex
 						if (drawCallInfo->graphicsPipelineOverride != InvalidID)
 						{
 							graphicsPipeline = (VkPipeline)drawCallInfo->graphicsPipelineOverride;
-							assert(drawCallInfo->pipelineLayoutOverride != InvalidID);
+							CHECK_NE(drawCallInfo->pipelineLayoutOverride, InvalidID);
 							pipelineLayout = (VkPipelineLayout)drawCallInfo->pipelineLayoutOverride;
 						}
 						if (drawCallInfo->descriptorSetOverride != InvalidID)
@@ -7950,7 +7950,7 @@ namespace flex
 
 					m_SSAORenderPass->Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColour, 1);
 
-					assert(m_SSAOShaderID != InvalidShaderID);
+					CHECK_NE(m_SSAOShaderID, InvalidShaderID);
 
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(m_SSAOGraphicsPipelineID)->pipeline;
 					vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
@@ -7983,7 +7983,7 @@ namespace flex
 						// Horizontal pass
 						m_SSAOBlurHRenderPass->Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColour, 1);
 
-						assert(m_SSAOBlurShaderID != InvalidShaderID);
+						CHECK_NE(m_SSAOBlurShaderID, InvalidShaderID);
 
 						GraphicsPipeline* blurHPipeline = GetGraphicsPipeline(m_SSAOBlurHGraphicsPipelineID)->pipeline;
 						vkCmdBindPipeline(m_OffScreenCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, blurHPipeline->pipeline);
@@ -8038,7 +8038,7 @@ namespace flex
 		{
 			PROFILE_AUTO("FillOutForwardCommandBuffer");
 
-			assert(drawCallInfo.bRenderToCubemap == false); // Unsupported in Vulkan renderer!
+			CHECK_EQ(drawCallInfo.bRenderToCubemap, false); // Unsupported in Vulkan renderer!
 
 			if (g_EngineInstance->IsRenderingImGui())
 			{
@@ -9421,7 +9421,7 @@ namespace flex
 								dataStart = &uniformOverride;
 							}
 
-							assert(uniformInfo.uniform->size != 0);
+							CHECK_NE(uniformInfo.uniform->size, 0u);
 
 							memcpy(constantBuffer->data.data + index, dataStart, uniformInfo.uniform->size);
 							index += uniformInfo.uniform->size;
@@ -9432,7 +9432,7 @@ namespace flex
 
 #ifdef DEBUG
 					u32 calculatedUnitSize = GetAlignedUBOSize(index);
-					assert(calculatedUnitSize == bufferUnitSize);
+					CHECK_EQ(calculatedUnitSize, bufferUnitSize);
 #endif
 
 					memcpy(material->uniformBufferList.Get(UniformBufferType::STATIC)->buffer.m_Mapped, constantBuffer->data.data, bufferUnitSize);
@@ -9616,7 +9616,7 @@ namespace flex
 			{
 				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
 				{
-					assert(uniformInfo.uniform->size != 0);
+					CHECK_NE(uniformInfo.uniform->size, 0u);
 
 					// Resize buffer is not large enough
 					if (dynamicOffset + index + uniformInfo.uniform->size > dynamicBuffer->fullDynamicBufferSize)
@@ -9642,7 +9642,7 @@ namespace flex
 						dataStart = &uniformOverride;
 					}
 
-					assert((dynamicOffset + index + uniformInfo.uniform->size) <= dynamicBuffer->fullDynamicBufferSize);
+					CHECK_LE((dynamicOffset + index + uniformInfo.uniform->size), dynamicBuffer->fullDynamicBufferSize);
 					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.uniform->size);
 					index += uniformInfo.uniform->size;
 				}
@@ -9652,7 +9652,7 @@ namespace flex
 
 #ifdef DEBUG
 			u32 calculatedUnitSize = GetAlignedUBOSize(index);
-			assert(calculatedUnitSize == bufferUnitSize);
+			CHECK_EQ(calculatedUnitSize, bufferUnitSize);
 #endif
 
 			u64 firstIndex = (u64)dynamicBuffer->buffer.m_Mapped;
@@ -9877,7 +9877,7 @@ namespace flex
 		{
 			// Start counting at 1 because 0 is the default value
 			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2) + 1;
-			assert(queryIndex < (i32)MAX_TIMESTAMP_QUERIES - 2);
+			CHECK_LT(queryIndex, (i32)MAX_TIMESTAMP_QUERIES - 2);
 			m_TimestampQueryNames[name] = queryIndex;
 
 			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)(queryIndex - 1), 2);

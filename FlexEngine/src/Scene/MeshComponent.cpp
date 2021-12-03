@@ -86,8 +86,8 @@ namespace flex
 
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
-		assert(renderID != InvalidRenderID);
-		assert(!newData.positions_3D.empty() || !newData.positions_2D.empty());
+		CHECK_NE(renderID, InvalidRenderID);
+		CHECK(!newData.positions_3D.empty() || !newData.positions_2D.empty());
 
 		m_VertexBufferData.UpdateData(newData);
 		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
@@ -303,17 +303,17 @@ namespace flex
 			}
 		}
 
-		assert(posAttribIndex != -1);
+		CHECK_NE(posAttribIndex, -1);
 		cgltf_accessor* posAccessor = primitive->attributes[posAttribIndex].data;
-		assert(primitive->attributes[posAttribIndex].type == cgltf_attribute_type_position);
-		assert(posAccessor->component_type == cgltf_component_type_r_32f);
-		assert(posAccessor->type == cgltf_type_vec3);
+		CHECK_EQ(primitive->attributes[posAttribIndex].type, cgltf_attribute_type_position);
+		CHECK_EQ(posAccessor->component_type, cgltf_component_type_r_32f);
+		CHECK_EQ(posAccessor->type, cgltf_type_vec3);
 		u32 vertCount = (u32)posAccessor->count;
 
 		vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
-		assert(posAccessor->has_min);
-		assert(posAccessor->has_max);
+		CHECK(posAccessor->has_min);
+		CHECK(posAccessor->has_max);
 		glm::vec3 posMin = glm::make_vec3(&posAccessor->min[0]);
 		glm::vec3 posMax = glm::make_vec3(&posAccessor->max[0]);
 
@@ -363,9 +363,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* normAccessor = primitive->attributes[normAttribIndex].data;
-					assert(primitive->attributes[normAttribIndex].type == cgltf_attribute_type_normal);
-					assert(normAccessor->component_type == cgltf_component_type_r_32f);
-					assert(normAccessor->type == cgltf_type_vec3);
+					CHECK_EQ(primitive->attributes[normAttribIndex].type, cgltf_attribute_type_normal);
+					CHECK_EQ(normAccessor->component_type, cgltf_component_type_r_32f);
+					CHECK_EQ(normAccessor->type, cgltf_type_vec3);
 
 					glm::vec3 norm;
 					cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
@@ -385,9 +385,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* tanAccessor = primitive->attributes[tanAttribIndex].data;
-					assert(primitive->attributes[tanAttribIndex].type == cgltf_attribute_type_tangent);
-					assert(tanAccessor->component_type == cgltf_component_type_r_32f);
-					//assert(tanAccessor->type == cgltf_type_vec3);
+					CHECK_EQ(primitive->attributes[tanAttribIndex].type, cgltf_attribute_type_tangent);
+					CHECK_EQ(tanAccessor->component_type, cgltf_component_type_r_32f);
+					//CHECK_EQ(tanAccessor->type, cgltf_type_vec3);
 
 					glm::vec4 tangent;
 					cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
@@ -407,8 +407,8 @@ namespace flex
 				else
 				{
 					cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
-					assert(primitive->attributes[colAttribIndex].type == cgltf_attribute_type_color);
-					assert(colAccessor->type == cgltf_type_vec4);
+					CHECK_EQ(primitive->attributes[colAttribIndex].type, cgltf_attribute_type_color);
+					CHECK_EQ(colAccessor->type, cgltf_type_vec4);
 
 					glm::vec4 col;
 					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
@@ -428,9 +428,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* uvAccessor = primitive->attributes[uvAttribIndex].data;
-					assert(primitive->attributes[uvAttribIndex].type == cgltf_attribute_type_texcoord);
-					assert(uvAccessor->component_type == cgltf_component_type_r_32f);
-					assert(uvAccessor->type == cgltf_type_vec2);
+					CHECK_EQ(primitive->attributes[uvAttribIndex].type, cgltf_attribute_type_texcoord);
+					CHECK_EQ(uvAccessor->component_type, cgltf_component_type_r_32f);
+					CHECK_EQ(uvAccessor->type, cgltf_type_vec2);
 
 					glm::vec2 uv0;
 					cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
@@ -443,12 +443,12 @@ namespace flex
 
 		// Indices
 		{
-			assert(primitive->indices->type == cgltf_type_scalar);
+			CHECK_EQ(primitive->indices->type, cgltf_type_scalar);
 			const i32 indexCount = (i32)primitive->indices->count;
 			newMeshComponent->m_Indices.resize(newMeshComponent->m_Indices.size() + indexCount);
 
-			//assert(primitive->indices->buffer_view->type == cgltf_buffer_view_type_indices);
-			assert(primitive->indices->component_type == cgltf_component_type_r_8u ||
+			//CHECK_EQ(primitive->indices->buffer_view->type, cgltf_buffer_view_type_indices);
+			CHECK(primitive->indices->component_type == cgltf_component_type_r_8u ||
 				primitive->indices->component_type == cgltf_component_type_r_16u ||
 				primitive->indices->component_type == cgltf_component_type_r_32u);
 
@@ -860,8 +860,10 @@ namespace flex
 			}
 
 			// Make sure we didn't allocate too much data
-			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.positions_3D.capacity(),
+				vertexBufferDataCreateInfo.positions_3D.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity(),
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -909,8 +911,10 @@ namespace flex
 			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			// Make sure we didn't allocate too much data
-			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.positions_3D.capacity(),
+				vertexBufferDataCreateInfo.positions_3D.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity(),
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -1162,7 +1166,7 @@ namespace flex
 		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
 		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */)
 	{
-		assert(m_VertexBufferData.vertexData == nullptr);
+		CHECK_EQ(m_VertexBufferData.vertexData, nullptr);
 
 		m_VertexBufferData.InitializeDynamic(attributes, initialMaxVertCount);
 

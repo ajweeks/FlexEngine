@@ -14,19 +14,16 @@ namespace flex
 	void Print(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
 	void PrintWarn(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
 	void PrintError(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
+	void PrintFatal(FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
+	void PrintFatal(const char* file, int line, FORMAT_STRING_PRE const char* str, ...) FORMAT_STRING_POST;
 	// Call when results are expected to be larger than MAX_CHARS
 	void PrintLong(const char* str);
 	void PrintWarnLong(const char* str);
 	void PrintErrorLong(const char* str);
+	void PrintFatal(const char* file, int line, const char* str);
 
-	//
-	// Private functions
-	//
-
-	void Print(const char* str, va_list argList);
-	void PrintSimple(const char* str);
-	// Max number of characters allowed in a single message
-	static const int MAX_CHARS = 1024;
+#define PRINT_FATAL(...) \
+	PrintFatal(__FILE__, __LINE__, __VA_ARGS__)
 
 	extern bool g_bEnableLogToConsole;
 

@@ -419,7 +419,7 @@ namespace flex
 	{
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		BezierCurveList* track = trackManager->GetTrack(trackID);
-		assert(track);
+		CHECK_NE(track, nullptr);
 
 		if (m_TrackRidingID != InvalidTrackID)
 		{
@@ -765,36 +765,36 @@ namespace flex
 			forward * m_ItemDropForwardVelocity);
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
+	GameObjectStackID Player::GetGameObjectStackIDForInventory(u32 slotIndex)
 	{
-		if (slotIndex >= 0 && slotIndex <= INVENTORY_ITEM_COUNT)
+		if (slotIndex <= INVENTORY_ITEM_COUNT)
 		{
 			return (GameObjectStackID)(slotIndex + INVENTORY_MIN);
 		}
 		return InvalidID;
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)
+	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(u32 slotIndex)
 	{
-		if (slotIndex >= 0 && slotIndex <= QUICK_ACCESS_ITEM_COUNT)
+		if (slotIndex <= QUICK_ACCESS_ITEM_COUNT)
 		{
 			return (GameObjectStackID)slotIndex + INVENTORY_QUICK_ACCESS_MIN;
 		}
 		return InvalidID;
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForWearablesInventory(i32 slotIndex)
+	GameObjectStackID Player::GetGameObjectStackIDForWearablesInventory(u32 slotIndex)
 	{
-		if (slotIndex >= 0 && slotIndex <= WEARABLES_ITEM_COUNT)
+		if (slotIndex <= WEARABLES_ITEM_COUNT)
 		{
 			return (GameObjectStackID)(slotIndex + INVENTORY_WEARABLES_MIN);
 		}
 		return InvalidID;
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForMinerInventory(i32 slotIndex)
+	GameObjectStackID Player::GetGameObjectStackIDForMinerInventory(u32 slotIndex)
 	{
-		if (slotIndex >= 0 && slotIndex <= Miner::INVENTORY_SIZE)
+		if (slotIndex <= Miner::INVENTORY_SIZE)
 		{
 			return (GameObjectStackID)(slotIndex + INVENTORY_MINER_MIN);
 		}
@@ -1046,7 +1046,7 @@ namespace flex
 	{
 		if (terminal != nullptr)
 		{
-			assert(!terminalInteractingWithID.IsValid());
+			CHECK(!terminalInteractingWithID.IsValid());
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			TerminalCamera* terminalCam = nullptr;
@@ -1066,11 +1066,11 @@ namespace flex
 		}
 		else
 		{
-			assert(terminalInteractingWithID.IsValid());
+			CHECK(terminalInteractingWithID.IsValid());
 			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			assert(cam->type == CameraType::TERMINAL);
+			CHECK_EQ(cam->type, CameraType::TERMINAL);
 			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
 			terminalCam->SetTerminal(nullptr);
 
@@ -1083,7 +1083,7 @@ namespace flex
 	{
 		if (vehicle != nullptr)
 		{
-			assert(!ridingVehicleID.IsValid());
+			CHECK(!ridingVehicleID.IsValid());
 
 			vehicle->OnPlayerEnter();
 
@@ -1160,7 +1160,7 @@ namespace flex
 	void Player::OnWearableEquipped(GameObjectStack const* wearableStack)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
-		assert(prefabTemplate->IsWearable());
+		CHECK(prefabTemplate->IsWearable());
 
 		switch (prefabTemplate->GetTypeID())
 		{
@@ -1179,7 +1179,7 @@ namespace flex
 	void Player::OnWearableUnequipped(GameObjectStack const* wearableStack)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
-		assert(prefabTemplate->IsWearable());
+		CHECK(prefabTemplate->IsWearable());
 
 		switch (prefabTemplate->GetTypeID())
 		{

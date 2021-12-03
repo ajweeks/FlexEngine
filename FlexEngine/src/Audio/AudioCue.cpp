@@ -14,8 +14,8 @@ namespace flex
 		// "xxx00.wav"
 		//     ^
 		//     654321
-		assert(firstFileName.substr(firstFileName.length() - 6, 2).compare("00") == 0);
-		assert(fileCount >= 1);
+		CHECK_EQ(firstFileName.substr(firstFileName.length() - 6, 2).compare("00"), 0);
+		CHECK_GE(fileCount, 1);
 
 		// ".wav"
 		std::string fileTypeStr = firstFileName.substr(firstFileName.length() - 4);

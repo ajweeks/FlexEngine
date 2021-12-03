@@ -695,7 +695,7 @@ namespace flex
 
 	void SceneManager::InitializeCurrentScene(u32 previousSceneIndex)
 	{
-		assert(!m_Scenes.empty());
+		CHECK(!m_Scenes.empty());
 
 		if (m_CurrentSceneIndex == InvalidID)
 		{
@@ -717,7 +717,7 @@ namespace flex
 
 	void SceneManager::PostInitializeCurrentScene()
 	{
-		assert(!m_Scenes.empty());
+		CHECK(!m_Scenes.empty());
 
 		CurrentScene()->PostInitialize();
 

@@ -255,7 +255,7 @@ namespace flex
 
 		SYSTEMTIME fileWriteTimeSystem;
 		bool bSuccess = FileTimeToSystemTime(&fileWriteTime, &fileWriteTimeSystem);
-		assert(bSuccess);
+		CHECK(bSuccess);
 		// Incorrect hour? TODO: Get in UTC
 		outModificationDate = Date(fileWriteTimeSystem.wYear, fileWriteTimeSystem.wMonth, fileWriteTimeSystem.wDay,
 			fileWriteTimeSystem.wHour, fileWriteTimeSystem.wMinute, fileWriteTimeSystem.wSecond, fileWriteTimeSystem.wMilliseconds);
@@ -459,7 +459,7 @@ namespace flex
 		GameObjectID result;
 		::UUID winGuid;
 		RPC_STATUS status = ::UuidCreate(&winGuid);
-		assert(status == RPC_S_OK);
+		CHECK_EQ(status, RPC_S_OK);
 		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
 		return result;
 	}
@@ -606,7 +606,7 @@ namespace flex
 		}
 
 		ptr = buffer;
-		assert(ptr != nullptr);
+		CHECK_NE(ptr, nullptr);
 
 		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 		{

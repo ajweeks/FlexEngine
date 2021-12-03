@@ -114,8 +114,8 @@ namespace flex
 			indices.emplace_back(3);
 		}
 
-		assert((u32)points.size() == vertCount);
-		assert((u32)indices.size() == indexCount);
+		CHECK_EQ((u32)points.size(), vertCount);
+		CHECK_EQ((u32)indices.size(), indexCount);
 
 		glm::vec2 uvBlendAmount(0.5f / width, 0.5f / height);
 
@@ -189,8 +189,8 @@ namespace flex
 			}
 		}
 
-		assert((u32)points.size() == vertCount);
-		assert((u32)indices.size() == indexCount);
+		CHECK_EQ((u32)points.size(), vertCount);
+		CHECK_EQ((u32)indices.size(), indexCount);
 
 		real width = thickness * windowSize.x; // strip width
 		real height = totalAngle * (innerRadius + thickness * 0.5f) * windowSize.y; // circumference
@@ -267,7 +267,7 @@ namespace flex
 			else
 			{
 				i32 submeshIndex1 = mesh->AddSubMesh(newSubMesh);
-				assert(submeshIndex1 == submeshIndex);
+				CHECK_EQ(submeshIndex1, submeshIndex);
 				m_DrawData.emplace_back(drawData);
 			}
 		}

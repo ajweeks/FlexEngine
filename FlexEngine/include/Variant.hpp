@@ -98,7 +98,7 @@ namespace flex
 			}
 			else
 			{
-				assert(type == other.type);
+				CHECK_EQ(type, other.type);
 			}
 
 			valStr = other.valStr;

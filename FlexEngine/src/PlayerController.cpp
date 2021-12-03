@@ -62,7 +62,7 @@ namespace flex
 		m_Player = player;
 		m_PlayerIndex = m_Player->GetIndex();
 
-		assert(m_PlayerIndex == 0 || m_PlayerIndex == 1);
+		CHECK(m_PlayerIndex == 0 || m_PlayerIndex == 1);
 
 		m_Player->UpdateIsPossessed();
 
@@ -650,8 +650,8 @@ namespace flex
 
 				currentScene->AddRootObject(m_PlacingWire);
 
-				assert(!m_Player->heldItemLeftHand.IsValid());
-				assert(!m_Player->heldItemRightHand.IsValid());
+				CHECK(!m_Player->heldItemLeftHand.IsValid());
+				CHECK(!m_Player->heldItemRightHand.IsValid());
 
 				m_Player->heldItemLeftHand = m_PlacingWire->plug0ID;
 				m_Player->heldItemRightHand = m_PlacingWire->plug1ID;

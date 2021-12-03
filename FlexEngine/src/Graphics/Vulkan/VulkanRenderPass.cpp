@@ -31,7 +31,7 @@ namespace flex
 
 		void VulkanRenderPass::Create()
 		{
-			assert(m_bRegistered); // This function can only be called on render passes whose Register[...] function has been called
+			CHECK(m_bRegistered); // This function can only be called on render passes whose Register[...] function has been called
 
 			const bool bDepthAttachmentPresent = m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID;
 
@@ -138,7 +138,7 @@ namespace flex
 
 			if (bCreateFrameBuffer)
 			{
-				assert(frameBufferWidth != -1 && frameBufferHeight != -1);
+				CHECK(frameBufferWidth != -1 && frameBufferHeight != -1);
 			}
 			Create(m_Name, &renderPassCreateInfo, attachmentImageViews, frameBufferWidth, frameBufferHeight);
 		}

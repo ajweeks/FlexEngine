@@ -402,8 +402,8 @@ namespace flex
 		i32 VirtualMachine::CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex)
 		{
 			u32 value = ((u32)instructionBlockIndex << 16) + ((u32)instructionIndex & 0xFFFF);
-			assert((value >> 16) == (u32)instructionBlockIndex);
-			assert((value & 0xFFFF) == (u32)instructionIndex);
+			CHECK_EQ((value >> 16), (u32)instructionBlockIndex);
+			CHECK_EQ((value & 0xFFFF), (u32)instructionIndex);
 			return static_cast<i32>(value);
 		}
 

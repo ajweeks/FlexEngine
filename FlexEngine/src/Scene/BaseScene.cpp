@@ -470,7 +470,6 @@ namespace flex
 			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, false, copyFlags);
 			if (rootObj != nullptr)
 			{
-				rootObj->GetTransform()->ComputeValues();
 				AddRootObjectImmediate(rootObj);
 			}
 			else
@@ -502,7 +501,7 @@ namespace flex
 		{
 			MaterialID skyboxMatID = InvalidMaterialID;
 			g_Renderer->FindOrCreateMaterialByName("skybox 01", skyboxMatID);
-			assert(skyboxMatID != InvalidMaterialID);
+			CHECK_NE(skyboxMatID, InvalidMaterialID);
 
 			Skybox* skybox = new Skybox("Skybox");
 			skybox->ProcedurallyInitialize(skyboxMatID);
@@ -515,7 +514,7 @@ namespace flex
 		{
 			MaterialID sphereMatID = InvalidMaterialID;
 			g_Renderer->FindOrCreateMaterialByName("pbr chrome", sphereMatID);
-			assert(sphereMatID != InvalidMaterialID);
+			CHECK_NE(sphereMatID, InvalidMaterialID);
 
 			ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 
@@ -849,7 +848,7 @@ namespace flex
 				{
 					if (!EndsWith(newSceneFileNameStr, ".json"))
 					{
-						assert(!Contains(newSceneFileNameStr, '.'));
+						CHECK(!Contains(newSceneFileNameStr, '.'));
 						newSceneFileNameStr += ".json";
 					}
 					if (g_SceneManager->DuplicateScene(this, newSceneFileNameStr, newSceneName))
@@ -1580,7 +1579,7 @@ namespace flex
 
 							const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
 							auto objectBIter = FindIter(objectALaterSiblings, objectB);
-							assert(objectBIter != objectALaterSiblings.end());
+							CHECK(objectBIter != objectALaterSiblings.end());
 							for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
 							{
 								(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
@@ -2241,12 +2240,12 @@ namespace flex
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
 		// Prefab templates shouldn't get registered
-		assert(!gameObject->IsTemplate());
+		CHECK(!gameObject->IsTemplate());
 
 		auto iter = m_GameObjectLUT.find(gameObject->ID);
 		if (iter != m_GameObjectLUT.end())
 		{
-			assert(iter->second == gameObject);
+			CHECK_EQ(iter->second, gameObject);
 		}
 		m_GameObjectLUT[gameObject->ID] = gameObject;
 
@@ -2285,7 +2284,7 @@ namespace flex
 		auto iter = m_EditorGameObjectLUT.find(*editorObjectID);
 		if (iter != m_EditorGameObjectLUT.end())
 		{
-			assert(iter->second == gameObject);
+			CHECK_EQ(iter->second, gameObject);
 		}
 		m_EditorGameObjectLUT[*editorObjectID] = gameObject;
 
@@ -2717,7 +2716,7 @@ namespace flex
 
 	void BaseScene::SetName(const std::string& name)
 	{
-		assert(!name.empty());
+		CHECK(!name.empty());
 		m_Name = name;
 	}
 

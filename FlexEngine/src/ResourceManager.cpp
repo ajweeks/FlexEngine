@@ -728,7 +728,7 @@ namespace flex
 		std::array<glm::vec2i, 4>* outMaxPositions,
 		FT_Face* outFace)
 	{
-		assert(metaData.bitmapFont == nullptr);
+		CHECK_EQ(metaData.bitmapFont, nullptr);
 
 		// TODO: Save in common place
 		u32 sampleDensity = 32;
@@ -1142,7 +1142,7 @@ namespace flex
 		{
 			if (prefabID == prefabTemplatePair.prefabID)
 			{
-				assert(prefabTemplatePair.templateObject != prefabTemplate);
+				CHECK_NE(prefabTemplatePair.templateObject, prefabTemplate);
 
 				prefabTemplatePair.templateObject->Destroy();
 				delete prefabTemplatePair.templateObject;
@@ -1576,14 +1576,14 @@ namespace flex
 							if (metaData.bScreenSpace)
 							{
 								auto vecIterSS = std::find(fontsScreenSpace.begin(), fontsScreenSpace.end(), metaData.bitmapFont);
-								assert(vecIterSS != fontsScreenSpace.end());
+								CHECK(vecIterSS != fontsScreenSpace.end());
 
 								fontsScreenSpace.erase(vecIterSS);
 							}
 							else
 							{
 								auto vecIterWS = std::find(fontsWorldSpace.begin(), fontsWorldSpace.end(), metaData.bitmapFont);
-								assert(vecIterWS != fontsWorldSpace.end());
+								CHECK(vecIterWS != fontsWorldSpace.end());
 
 								fontsWorldSpace.erase(vecIterWS);
 							}
@@ -2684,7 +2684,7 @@ namespace flex
 							{
 								free(valsFloat);
 								valsFloat = (real*)malloc(sizeof(real) * valsCount);
-								assert(valsFloat != nullptr);
+								CHECK_NE(valsFloat, nullptr);
 								valsFloatLen = valsCount;
 								bValuesChanged = true;
 							}

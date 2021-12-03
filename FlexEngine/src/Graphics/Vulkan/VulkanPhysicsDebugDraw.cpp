@@ -198,7 +198,7 @@ namespace flex
 		{
 			PROFILE_AUTO("CreateDebugObject");
 
-			assert(m_Object == nullptr);
+			CHECK_EQ(m_Object, nullptr);
 
 			RenderObjectCreateInfo createInfo = {};
 			createInfo.materialID = m_MaterialID;

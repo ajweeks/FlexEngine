@@ -9,11 +9,11 @@
 
 namespace flex
 {
-	template<i32 Len>
+	template<u32 Len>
 	bool SerializeInventory(const std::array<GameObjectStack, Len>& inventory, std::vector<JSONObject>& outObjList)
 	{
-		outObjList.reserve(inventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)inventory.size(); ++slotIdx)
+		outObjList.reserve(Len);
+		for (u32 slotIdx = 0; slotIdx < Len; ++slotIdx)
 		{
 			const GameObjectStack& stack = inventory[slotIdx];
 			if (stack.count > 0)
@@ -28,11 +28,11 @@ namespace flex
 		return true;
 	}
 
-	template<i32 Len>
+	template<u32 Len>
 	bool ParseInventory(std::array<GameObjectStack, Len>& inventory, const std::vector<JSONObject>& slots)
 	{
-		i32 len = glm::min((i32)inventory.size(), (i32)slots.size());
-		for (i32 i = 0; i < len; ++i)
+		u32 len = glm::min(Len, (u32)slots.size());
+		for (u32 i = 0; i < len; ++i)
 		{
 			inventory[i].ParseFromJSON(slots[i]);
 		}

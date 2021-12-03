@@ -15,7 +15,7 @@ namespace flex
 			PROFILE_AUTO("VulkanDevice::VulkanDevice");
 
 			// TODO: Move work to Initialize
-			assert(createInfo.physicalDevice);
+			CHECK(createInfo.physicalDevice);
 			m_PhysicalDevice = createInfo.physicalDevice;
 
 			m_QueueFamilyIndices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
@@ -26,7 +26,7 @@ namespace flex
 
 			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
-			assert(queueFamilyCount > 0);
+			CHECK_GT(queueFamilyCount, 0u);
 			m_QueueFamilyProperties.resize(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
 

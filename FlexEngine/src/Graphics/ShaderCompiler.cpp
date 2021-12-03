@@ -132,7 +132,7 @@ namespace flex
 
 	void ShaderCompiler::QueueWorkItem(const std::string& shaderAbsPath)
 	{
-		assert(shaderWorkItemsCreated < s_ShaderCompilationResultsLength);
+		CHECK_LT(shaderWorkItemsCreated, s_ShaderCompilationResultsLength);
 
 		s_ShaderCompilationResults[shaderWorkItemsCreated] = new ShaderCompilationResult();
 		s_ShaderCompilationResults[shaderWorkItemsCreated]->shaderAbsPath = shaderAbsPath;

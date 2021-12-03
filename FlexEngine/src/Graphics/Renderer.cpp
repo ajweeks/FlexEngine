@@ -75,7 +75,7 @@ namespace flex
 #endif
 
 		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData) + MAX_AREA_LIGHT_COUNT * sizeof(AreaLightData));
-		assert(m_LightData != nullptr);
+		CHECK_NE(m_LightData, nullptr);
 		m_PointLightData = (PointLightData*)m_LightData;
 		m_SpotLightData = (SpotLightData*)(m_PointLightData + MAX_POINT_LIGHT_COUNT);
 		m_AreaLightData = (AreaLightData*)(m_SpotLightData + MAX_SPOT_LIGHT_COUNT);
@@ -587,7 +587,7 @@ namespace flex
 				m_PointLightData[ID].colour = VEC4_NEG_ONE;
 				m_PointLightData[ID].enabled = 0;
 				m_NumPointLightsEnabled--;
-				assert(m_NumPointLightsEnabled >= 0);
+				CHECK_GE(m_NumPointLightsEnabled, 0);
 				UpdatePointLightData(ID, nullptr);
 			}
 		}
@@ -663,7 +663,7 @@ namespace flex
 				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
 				m_SpotLightData[ID].enabled = 0;
 				m_NumSpotLightsEnabled--;
-				assert(m_NumSpotLightsEnabled >= 0);
+				CHECK_GE(m_NumSpotLightsEnabled, 0);
 				UpdateSpotLightData(ID, nullptr);
 			}
 		}
@@ -737,7 +737,7 @@ namespace flex
 				m_AreaLightData[ID].colour = VEC4_NEG_ONE;
 				m_AreaLightData[ID].enabled = 0;
 				m_NumAreaLightsEnabled--;
-				assert(m_NumAreaLightsEnabled >= 0);
+				CHECK_GE(m_NumAreaLightsEnabled, 0);
 				UpdateAreaLightData(ID, nullptr);
 			}
 		}
@@ -2573,7 +2573,7 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
 		++shaderID;
 
-		assert(shaderID == m_Shaders.size());
+		CHECK_EQ(shaderID, m_Shaders.size());
 #endif // USE_SHADER_REFLECTION
 
 		for (shaderID = 0; shaderID < (ShaderID)m_Shaders.size(); ++shaderID)
@@ -2584,20 +2584,20 @@ namespace flex
 
 			// Sanity checks
 			{
-				assert(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
-				assert(!shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT));
+				CHECK(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
+				CHECK(!shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT));
 
-				assert((shader->bNeedPushConstantBlock && shader->pushConstantBlockSize != 0) ||
+				CHECK((shader->bNeedPushConstantBlock && shader->pushConstantBlockSize != 0) ||
 					(!shader->bNeedPushConstantBlock && shader->pushConstantBlockSize == 0));
 
 
 				if (shader->textureUniforms.HasUniform(&U_HIGH_RES_TEX))
 				{
-					assert(!shader->textureUniforms.HasUniform(&U_ALBEDO_SAMPLER));
+					CHECK(!shader->textureUniforms.HasUniform(&U_ALBEDO_SAMPLER));
 				}
 
 				// -1 means allocate max, anything else must be > 0
-				assert(shader->maxObjectCount != 0);
+				CHECK_NE(shader->maxObjectCount, 0);
 			}
 
 			if (!LoadShaderCode(shaderID))
@@ -2632,8 +2632,8 @@ namespace flex
 	{
 		PROFILE_AUTO("GenerateGBuffer");
 
-		assert(m_SkyBoxMesh != nullptr);
-		assert(m_SkyboxShaderID != InvalidShaderID);
+		CHECK_NE(m_SkyBoxMesh, nullptr);
+		CHECK_NE(m_SkyboxShaderID, InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";

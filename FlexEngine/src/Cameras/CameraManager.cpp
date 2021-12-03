@@ -16,7 +16,7 @@ namespace flex
 	void CameraManager::Initialize()
 	{
 		BaseCamera* camera = CurrentCamera();
-		assert(camera != nullptr);
+		CHECK_NE(camera, nullptr);
 
 		camera->Initialize();
 		camera->OnPossess();
@@ -64,7 +64,7 @@ namespace flex
 
 	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
 	{
-		assert(camera != nullptr);
+		CHECK_NE(camera, nullptr);
 
 		i32 cameraIndex = GetCameraIndex(camera);
 		if (cameraIndex == -1) // Only add camera if it hasn't been added before
@@ -97,7 +97,7 @@ namespace flex
 
 	BaseCamera* CameraManager::CycleCamera(i32 deltaIndex, bool bAlignWithPrevious)
 	{
-		assert(glm::abs(deltaIndex) == 1);
+		CHECK_EQ(glm::abs(deltaIndex), 1);
 
 		const i32 numCameras = (i32)m_Cameras.size();
 

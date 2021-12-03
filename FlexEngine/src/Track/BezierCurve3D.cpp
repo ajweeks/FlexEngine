@@ -104,7 +104,7 @@ namespace flex
 
 	BezierCurve3D BezierCurve3D::FromString(const std::string& str)
 	{
-		assert(!str.empty());
+		CHECK(!str.empty());
 
 		BezierCurve3D result = {};
 

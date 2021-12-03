@@ -12,8 +12,8 @@ namespace flex
 		metaData(inMetaData)
 	{
 		metaData.bitmapFont = this;
-		assert(metaData.size > 0);
-		assert(charCount > 0);
+		CHECK_GT(metaData.size, 0);
+		CHECK_GT(charCount, 0);
 	}
 
 	BitmapFont::~BitmapFont()

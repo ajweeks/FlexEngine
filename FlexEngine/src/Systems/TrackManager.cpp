@@ -131,7 +131,7 @@ namespace flex
 
 	flex::BezierCurveList* TrackManager::GetTrack(TrackID trackID)
 	{
-		assert((i32)trackID < (i32)tracks.size());
+		CHECK_LT((i32)trackID, (i32)tracks.size());
 		return &tracks[(i32)trackID];
 	}
 

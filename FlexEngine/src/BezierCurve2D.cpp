@@ -36,7 +36,7 @@ namespace flex
 
 	BezierCurve2D BezierCurve2D::FromString(const std::string& str)
 	{
-		assert(!str.empty());
+		CHECK(!str.empty());
 
 		BezierCurve2D result = {};
 

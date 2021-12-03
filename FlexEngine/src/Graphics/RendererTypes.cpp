@@ -345,7 +345,7 @@ namespace flex
 	Material::PushConstantBlock::PushConstantBlock(i32 initialSize) :
 		size(initialSize)
 	{
-		assert(initialSize != 0);
+		CHECK_NE(initialSize, 0);
 	}
 
 	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock& rhs)
@@ -376,7 +376,7 @@ namespace flex
 
 	Material::PushConstantBlock::~PushConstantBlock()
 	{
-		if (data)
+		if (data != nullptr)
 		{
 			free(data);
 			data = nullptr;
@@ -401,7 +401,8 @@ namespace flex
 		}
 		else
 		{
-			assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
+			// Push constant blocks must be reallocated when block size changes.
+			CHECK_EQ(size, dataSize);
 		}
 	}
 
@@ -413,7 +414,7 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const std::vector<Pair<void*, u32>>& dataList)
 	{
-		i32 dataSize = 0;
+		u32 dataSize = 0;
 		for (const auto& pair : dataList)
 		{
 			dataSize += pair.second;
@@ -431,7 +432,7 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& viewProj)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 1;
+		const u32 dataSize = sizeof(glm::mat4) * 1;
 		InitWithSize(dataSize);
 
 		real* dst = (real*)data;
@@ -440,7 +441,7 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 2;
+		const u32 dataSize = sizeof(glm::mat4) * 2;
 		InitWithSize(dataSize);
 
 		real* dst = (real*)data;
@@ -450,18 +451,19 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
+		const u32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
 		if (data == nullptr)
 		{
-			assert(size == dataSize || size == 0);
+			CHECK(size == dataSize || size == 0);
 
 			size = dataSize;
 			data = malloc(dataSize);
-			assert(data != nullptr);
+			CHECK_NE(data, nullptr);
 		}
 		else
 		{
-			assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+			// Push constant block must be reallocated when block size changes.
+			CHECK_EQ(size, dataSize);
 		}
 		real* dst = (real*)data;
 		memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
@@ -473,7 +475,7 @@ namespace flex
 	{
 		// TODO: Make more generic key-value system
 
-		assert(bSerializable);
+		CHECK(bSerializable);
 
 		JSONObject parentObj = {};
 

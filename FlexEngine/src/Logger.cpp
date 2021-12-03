@@ -13,6 +13,15 @@ namespace flex
 	std::stringstream g_LogBuffer;
 	const char* g_LogBufferFilePath;
 
+	// Max number of characters allowed in a single message
+	static const int MAX_CHARS = 1024;
+
+	//
+	// File-private function declarations
+	//
+	void Print(const char* str, va_list argList);
+	void PrintSimple(const char* str);
+
 	void InitializeLogger()
 	{
 		g_LogBufferFilePath = SAVED_DIRECTORY "flex.log";
@@ -29,7 +38,7 @@ namespace flex
 	{
 		FILE* f = fopen(g_LogBufferFilePath, "w");
 
-		if (f)
+		if (f != nullptr)
 		{
 			fprintf(f, "%c", '\0');
 			fclose(f);
@@ -42,7 +51,7 @@ namespace flex
 
 		FILE* f = fopen(g_LogBufferFilePath, "w");
 
-		if (f)
+		if (f != nullptr)
 		{
 			std::string fileContents(g_LogBuffer.str());
 			fprintf(f, "%s", fileContents.c_str());
@@ -101,6 +110,49 @@ namespace flex
 		va_end(argList);
 	}
 
+	void PrintFatal(const char* str, ...)
+	{
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
+
+		va_list argList;
+		va_start(argList, str);
+
+		Print(str, argList);
+
+		va_end(argList);
+
+		abort();
+	}
+
+	void PrintFatal(const char* file, int line, const char* str, ...)
+	{
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		const char* fileStart = strstr(file, "FlexEngine/");
+		if (!fileStart) fileStart = strstr(file, "FlexEngine\\");
+		std::string shortfile(fileStart ? (fileStart + 11) : file);
+		PrintError("[%s:%d] ", shortfile.c_str(), line);
+
+		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
+
+		va_list argList;
+		va_start(argList, str);
+
+		Print(str, argList);
+
+		va_end(argList);
+
+		abort();
+	}
+
 	void PrintLong(const char* str)
 	{
 		if (!g_bEnableLogToConsole)
@@ -137,8 +189,16 @@ namespace flex
 		PrintSimple(str);
 	}
 
+	void PrintFatal(const char* file, int line, const char* str)
+	{
+		const char* fileStart = strstr(file, "FlexEngine/");
+		if (!fileStart) fileStart = strstr(file, "FlexEngine\\");
+		std::string shortfile(fileStart ? (fileStart + 11) : file);
+		PrintFatal("[%s:%d] %s", shortfile.c_str(), line, str);
+	}
+
 	//
-	// Private functions
+	// File-private function definitions
 	//
 
 	void Print(const char* str, va_list argList)

@@ -205,7 +205,7 @@ namespace flex
 			return;
 		}
 
-		assert(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
+		CHECK(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
 		g_Monitor->width = vidMode->width;
 		g_Monitor->height = vidMode->height;
 		g_Monitor->redBits = vidMode->redBits;
@@ -375,7 +375,7 @@ namespace flex
 			} break;
 			case WindowMode::WINDOWED:
 			{
-				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
+				CHECK(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
 
 				if (m_LastWindowedPos.y == 0)
 				{
@@ -401,7 +401,7 @@ namespace flex
 	{
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
 		{
-			assert(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
+			CHECK(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
 
 			SetWindowMode(m_LastNonFullscreenWindowMode, bForce);
 		}

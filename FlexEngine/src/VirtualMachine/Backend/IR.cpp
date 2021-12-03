@@ -1120,7 +1120,7 @@ namespace flex
 							Value::Type lhsType = state->variableTypes[assignment->lhs];
 							if (Value::TypeAssignable(state, lhsType, rhs))
 							{
-								assert(state->variableTypes[assignment->lhs] == state->GetValueType(rhs));
+								CHECK_EQ(state->variableTypes[assignment->lhs], state->GetValueType(rhs));
 								state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
 							}
 							else
@@ -1198,7 +1198,7 @@ namespace flex
 					/*
 					AST::BinaryOperation* binOp = (AST::BinaryOperation*)statement;
 					OpCode binaryOpTranslation = BinaryOperatorTypeToOpCode(binOp->operatorType);
-					assert(binaryOpTranslation != OpCode::_NONE);
+					CHECK_NE(binaryOpTranslation, OpCode::_NONE);
 
 					VariantWrapper lhsWrapper = GetValueWrapperFromExpression(binOp->lhs);
 					VariantWrapper rhsWrapper = GetValueWrapperFromExpression(binOp->rhs);
@@ -1227,7 +1227,7 @@ namespace flex
 							}
 							else
 							{
-								assert(false);
+								CHECK(false);
 							}
 						}
 					}
@@ -1399,7 +1399,7 @@ namespace flex
 						case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(*lhsVal && *rhsVal);
 						case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(*lhsVal || *rhsVal);
 						default:
-							assert(false);
+							CHECK(false);
 							return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, -1));
 						}
 					}

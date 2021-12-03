@@ -29,7 +29,7 @@ namespace flex
 				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
 				((VulkanRenderer*)g_Renderer)->GetCheckPointData();
 				DEBUG_BREAK();
-				assert(result == VK_SUCCESS);
+				CHECK_EQ(result, VK_SUCCESS);
 			}
 		}
 
@@ -245,14 +245,14 @@ namespace flex
 
 		void UniformBuffer::Alloc(u32 size, u32 alignment /* = u32_max */)
 		{
-			assert(data.data == nullptr);
+			CHECK_EQ(data.data, nullptr);
 
 			if (type == UniformBufferType::DYNAMIC ||
 				type == UniformBufferType::PARTICLE_DATA ||
 				type == UniformBufferType::TERRAIN_POINT_BUFFER ||
 				type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
 			{
-				assert(alignment != u32_max);
+				CHECK_NE(alignment, u32_max);
 				data.data = (u8*)flex_aligned_malloc(size, alignment);
 			}
 			else
@@ -260,7 +260,7 @@ namespace flex
 				data.data = (u8*)malloc(size);
 			}
 
-			assert(data.data != nullptr);
+			CHECK_NE(data.data, nullptr);
 		}
 
 		void UniformBuffer::Free()
@@ -350,10 +350,10 @@ namespace flex
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
 			VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{
-			assert(inWidth != 0 && inHeight != 0);
-			assert(buffer != nullptr);
-			assert(bufferSize != 0);
-			assert((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
+			CHECK(inWidth != 0u && inHeight != 0u);
+			CHECK_NE(buffer, nullptr);
+			CHECK_NE(bufferSize, 0u);
+			CHECK((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
 
 			width = inWidth;
 			height = inHeight;
@@ -448,8 +448,8 @@ namespace flex
 		{
 			PROFILE_AUTO("VulkanTexture CreateEmpty");
 
-			assert(inWidth > 0);
-			assert(inHeight > 0);
+			CHECK_GT(inWidth, 0u);
+			CHECK_GT(inHeight, 0u);
 
 			width = inWidth;
 			height = inHeight;
@@ -562,9 +562,9 @@ namespace flex
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
 
-			assert(inWidth > 0);
-			assert(inHeight > 0);
-			assert(inChannelCount > 0);
+			CHECK_GT(inWidth, 0u);
+			CHECK_GT(inHeight, 0u);
+			CHECK_GT(inChannelCount, 0u);
 
 			width = inWidth;
 			height = inHeight;
@@ -898,9 +898,9 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
 		{
-			assert(createInfo.width != 0);
-			assert(createInfo.height != 0);
-			assert(createInfo.format != VK_FORMAT_UNDEFINED);
+			CHECK_NE(createInfo.width, 0u);
+			CHECK_NE(createInfo.height, 0u);
+			CHECK_NE(createInfo.format, VK_FORMAT_UNDEFINED);
 
 			if (createInfo.width > MAX_TEXTURE_DIM ||
 				createInfo.height > MAX_TEXTURE_DIM ||
@@ -1181,7 +1181,7 @@ namespace flex
 
 		bool VulkanTexture::SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat)
 		{
-			assert(channelCount == 3 || channelCount == 4);
+			CHECK(channelCount == 3 || channelCount == 4);
 
 			bool bSupportsBlit = true;
 
@@ -1484,7 +1484,7 @@ namespace flex
 			}
 			else
 			{
-				assert(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+				CHECK(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
 					newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1735,7 +1735,7 @@ namespace flex
 
 			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-			assert(queueFamilyCount > 0);
+			CHECK_GT(queueFamilyCount, 0u);
 			std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilyProperties.data());
 
@@ -2030,10 +2030,10 @@ namespace flex
 			VkDeviceMemory* memory, VkImageView* imageView,
 			const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
-			assert(format != VK_FORMAT_UNDEFINED);
-			assert(width != 0 && height != 0);
-			assert(width <= MAX_TEXTURE_DIM);
-			assert(height <= MAX_TEXTURE_DIM);
+			CHECK_NE(format, VK_FORMAT_UNDEFINED);
+			CHECK(width != 0 && height != 0);
+			CHECK_LE(width, MAX_TEXTURE_DIM);
+			CHECK_LE(height, MAX_TEXTURE_DIM);
 
 			VkImageAspectFlags aspectMask = 0;
 
@@ -2457,7 +2457,7 @@ namespace flex
 
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
-			assert(type != UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
+			CHECK_NE(type, UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
 			for (UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)
@@ -2668,7 +2668,7 @@ namespace flex
 			{
 				// TODO: Create new pool or recreate and copy old one?
 				//maxNumDescSets *= 2;
-				assert(false);
+				PRINT_FATAL("Ran out of descriptor sets (max: %d)\n", maxNumDescSets);
 			}
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -2702,12 +2702,12 @@ namespace flex
 			{
 				const u64 uniformID = pair.uniform->id;
 				const BufferDescriptorInfo& bufferDescInfo = pair.object;
-				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+				CHECK((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
 					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
-				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
+				CHECK_NE(bufferDescInfo.buffer, (VkBuffer)VK_NULL_HANDLE);
 
 				VkDescriptorType type;
 				switch (bufferDescInfo.type)
@@ -2746,7 +2746,7 @@ namespace flex
 			i = 0;
 			for (const auto& pair : createInfo->imageDescriptors)
 			{
-				assert(textureUniforms.HasUniform(pair.uniform));
+				CHECK(textureUniforms.HasUniform(pair.uniform));
 				const ImageDescriptorInfo& imageDescInfo = pair.object;
 
 				VkDescriptorImageInfo& imageInfo = imageInfos[i];

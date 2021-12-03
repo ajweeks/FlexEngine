@@ -79,7 +79,7 @@ namespace flex
 
 	real CartChain::GetCartAtIndexDistAlongTrack(i32 cartIndex)
 	{
-		assert(cartIndex >= 0 && cartIndex < (i32)carts.size());
+		CHECK(cartIndex >= 0 && cartIndex < (i32)carts.size());
 		return GetSystem<CartManager>(SystemType::CART_MANAGER)->GetCart(carts[cartIndex])->distAlongTrack;
 	}
 
@@ -99,7 +99,7 @@ namespace flex
 		CartManager* cartManager = GetSystem<CartManager>(SystemType::CART_MANAGER);
 		std::sort(carts.begin(), carts.end(), [cartManager, this](CartID cartAID, CartID cartBID) -> bool
 			{
-				assert(cartManager->GetCart(cartAID)->chainID == chainID &&
+			CHECK(cartManager->GetCart(cartAID)->chainID == chainID &&
 					   cartManager->GetCart(cartBID)->chainID == chainID);
 				real distA = cartManager->GetCart(cartAID)->distAlongTrack;
 				real distB = cartManager->GetCart(cartBID)->distAlongTrack;
@@ -188,18 +188,18 @@ namespace flex
 							{
 								// Neither are already in a chain
 
-								assert(GetCart(i)->chainID == InvalidCartChainID);
-								assert(GetCart(j)->chainID == InvalidCartChainID);
+								CHECK_EQ(GetCart(i)->chainID, InvalidCartChainID);
+								CHECK_EQ(GetCart(j)->chainID, InvalidCartChainID);
 
 								CartChainID newCartChainID = GetNextAvailableCartChainID();
 								CartChain& newChain = m_CartChains[newCartChainID];
-								assert(newChain.chainID == newCartChainID);
+								CHECK_EQ(newChain.chainID, newCartChainID);
 
 								newChain.AddUnique(i);
 								newChain.AddUnique(j);
 
-								assert(GetCart(i)->chainID == newCartChainID);
-								assert(GetCart(j)->chainID == newCartChainID);
+								CHECK_EQ(GetCart(i)->chainID, newCartChainID);
+								CHECK_EQ(GetCart(j)->chainID, newCartChainID);
 
 								if (newCartChainID != InvalidCartChainID &&
 									newCartChainID >= m_CartChains.size())
@@ -211,15 +211,15 @@ namespace flex
 							{
 								// Only c2 is already in a chain
 
-								assert(GetCart(i)->chainID == InvalidCartChainID);
-								assert(GetCart(j)->chainID != InvalidCartChainID);
+								CHECK_EQ(GetCart(i)->chainID, InvalidCartChainID);
+								CHECK_NE(GetCart(j)->chainID, InvalidCartChainID);
 
 								CartChain& chain = m_CartChains[c2];
-								assert(chain.chainID == c2);
+								CHECK_EQ(chain.chainID, c2);
 								chain.AddUnique(i);
 
-								assert(GetCart(i)->chainID == c2);
-								assert(GetCart(j)->chainID == c2);
+								CHECK_EQ(GetCart(i)->chainID, c2);
+								CHECK_EQ(GetCart(j)->chainID, c2);
 
 								if (m_Carts[i]->chainID != InvalidCartChainID &&
 									m_Carts[i]->chainID >= m_CartChains.size())
@@ -231,15 +231,15 @@ namespace flex
 							{
 								// Only c1 is already in a chain
 
-								assert(GetCart(i)->chainID != InvalidCartChainID);
-								assert(GetCart(j)->chainID == InvalidCartChainID);
+								CHECK_NE(GetCart(i)->chainID, InvalidCartChainID);
+								CHECK_EQ(GetCart(j)->chainID, InvalidCartChainID);
 
 								CartChain& chain = m_CartChains[c1];
-								assert(chain.chainID == c1);
+								CHECK_EQ(chain.chainID, c1);
 								chain.AddUnique(j);
 
-								assert(GetCart(i)->chainID == c1);
-								assert(GetCart(j)->chainID == c1);
+								CHECK_EQ(GetCart(i)->chainID, c1);
+								CHECK_EQ(GetCart(j)->chainID, c1);
 
 								if (m_Carts[j]->chainID != InvalidCartChainID &&
 									m_Carts[j]->chainID >= m_CartChains.size())
@@ -251,16 +251,16 @@ namespace flex
 							{
 								// Both are already in chains moving the same direction, move all of c2 into c1
 
-								assert(GetCart(i)->chainID != InvalidCartChainID);
-								assert(GetCart(j)->chainID != InvalidCartChainID);
+								CHECK_NE(GetCart(i)->chainID, InvalidCartChainID);
+								CHECK_NE(GetCart(j)->chainID, InvalidCartChainID);
 
 								CartChain& chain1 = m_CartChains[c1];
 								CartChain& chain2 = m_CartChains[c2];
 
-								assert(chain1.chainID == c1);
-								assert(chain2.chainID == c2);
+								CHECK_EQ(chain1.chainID, c1);
+								CHECK_EQ(chain2.chainID, c2);
 
-								assert(chain1 != chain2);
+								CHECK(chain1 != chain2);
 
 								if ((chain1.velT > 0.0f && chain2.velT > 0.0f) ||
 									(chain1.velT < 0.0f && chain2.velT < 0.0f) ||
@@ -274,9 +274,9 @@ namespace flex
 									}
 									m_CartChains[c2].Reset();
 
-									assert(GetCart(i)->chainID == c1);
-									assert(GetCart(j)->chainID == c1);
-									assert(m_CartChains[c2].carts.empty());
+									CHECK_EQ(GetCart(i)->chainID, c1);
+									CHECK_EQ(GetCart(j)->chainID, c1);
+									CHECK(m_CartChains[c2].carts.empty());
 								}
 							}
 						}
@@ -378,7 +378,7 @@ namespace flex
 
 	Cart* CartManager::GetCart(CartID cartID) const
 	{
-		assert(cartID < m_Carts.size());
+		CHECK_LT(cartID, m_Carts.size());
 		return m_Carts[cartID];
 	}
 
@@ -418,15 +418,15 @@ namespace flex
 
 		CartChainID newCartChainID = (CartChainID)m_CartChains.size();
 		m_CartChains.emplace_back(newCartChainID);
-		assert(m_CartChains[(i32)m_CartChains.size()-1].chainID == newCartChainID);
+		CHECK_EQ(m_CartChains[(i32)m_CartChains.size()-1].chainID, newCartChainID);
 
 		return newCartChainID;
 	}
 
 	real CartManager::GetChainDrivePower(CartChainID cartChainID)
 	{
-		assert(cartChainID < m_CartChains.size());
-		assert(m_CartChains[cartChainID].chainID != InvalidCartChainID);
+		CHECK_LT(cartChainID, m_CartChains.size());
+		CHECK_NE(m_CartChains[cartChainID].chainID, InvalidCartChainID);
 
 		real power = 0.0f;
 		for (CartID cartID : m_CartChains[cartChainID].carts)
@@ -439,8 +439,8 @@ namespace flex
 
 	CartChain* CartManager::GetCartChain(CartChainID cartChainID)
 	{
-		assert(cartChainID < m_CartChains.size());
-		assert(m_CartChains[cartChainID].chainID != InvalidCartChainID);
+		CHECK_LT(cartChainID, m_CartChains.size());
+		CHECK_NE(m_CartChains[cartChainID].chainID, InvalidCartChainID);
 
 		return &m_CartChains[cartChainID];
 	}

@@ -411,8 +411,6 @@ namespace flex
 			child->PostInitialize();
 		}
 
-		m_Transform.ComputeValues();
-
 		GetChildrenOfType(SID("socket"), false, sockets);
 		outputSignals.resize((u32)sockets.size());
 	}
@@ -485,11 +483,6 @@ namespace flex
 			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
 			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
 			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
-		}
-
-		if (m_Name == "Spinner")
-		{
-			m_Transform.SetWorldRotation(glm::quat(glm::vec3(0.0f, g_SecElapsedSinceProgramStart, 0.0f)));
 		}
 
 		for (GameObject* child : m_Children)
@@ -2209,8 +2202,6 @@ namespace flex
 			outputSignals.resize(sockets.size(), -1);
 		}
 
-		childTransform->MarkDirty();
-
 		if (g_SceneManager->HasSceneLoaded())
 		{
 			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
@@ -2398,7 +2389,7 @@ namespace flex
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
 			auto thisIter = FindIter(siblings, this);
-			assert(thisIter != siblings.end());
+			CHECK(thisIter != siblings.end());
 
 			for (auto iter = siblings.begin(); iter != thisIter; ++iter)
 			{
@@ -2410,7 +2401,7 @@ namespace flex
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
 			auto thisIter = FindIter(rootObjects, this);
-			assert(thisIter != rootObjects.end());
+			CHECK(thisIter != rootObjects.end());
 
 			for (auto iter = rootObjects.begin(); iter != thisIter; ++iter)
 			{
@@ -2430,7 +2421,7 @@ namespace flex
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
 			auto thisIter = FindIter(siblings, this);
-			assert(thisIter != siblings.end());
+			CHECK(thisIter != siblings.end());
 
 			for (auto iter = thisIter + 1; iter != siblings.end(); ++iter)
 			{
@@ -2442,7 +2433,7 @@ namespace flex
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
 			auto thisIter = FindIter(rootObjects, this);
-			assert(thisIter != rootObjects.end());
+			CHECK(thisIter != rootObjects.end());
 
 			for (auto iter = thisIter + 1; iter != rootObjects.end(); ++iter)
 			{
@@ -2807,7 +2798,7 @@ namespace flex
 			meshCreateInfo.materialIDs = { matIDs.empty() ? g_Renderer->GetPlaceholderMaterialID() : matIDs[0] };
 			meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
 			valveMesh->LoadFromFile(meshCreateInfo);
-			assert(m_Mesh == nullptr);
+			CHECK_EQ(m_Mesh, nullptr);
 			SetMesh(valveMesh);
 		}
 
@@ -3247,7 +3238,7 @@ namespace flex
 
 		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
 
-		//assert(m_MeshComponent == nullptr);
+		//CHECK_EQ(m_MeshComponent, nullptr);
 		//sphereMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb");
 		//SetMeshComponent(sphereMesh);
 
@@ -3300,7 +3291,7 @@ namespace flex
 	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(scene);
-		assert(matIDs.size() == 1);
+		CHECK_EQ(matIDs.size(), 1);
 
 		JSONObject skyboxInfo;
 		if (parentObj.TryGetObject("skybox info", skyboxInfo))
@@ -4190,7 +4181,11 @@ namespace flex
 			{
 				m_bVisible = receivedSignal == 1;
 				data.enabled = m_bVisible ? 1 : 0;
-				g_Renderer->UpdateAreaLightData(areaLightID, &data);
+
+				if (areaLightID != InvalidAreaLightID)
+				{
+					g_Renderer->UpdateAreaLightData(areaLightID, &data);
+				}
 			}
 		}
 
@@ -4449,7 +4444,7 @@ namespace flex
 			TrackState trackState;
 			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, newDistAlongTrack, newDistAlongTrack,
 				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
-			assert(newTrackID == trackID);
+			CHECK_EQ(newTrackID, trackID);
 
 			distAlongTrack = newDistAlongTrack;
 			m_Transform.SetLocalPosition(newPos);
@@ -4523,7 +4518,7 @@ namespace flex
 				CartManager* cartManager = GetSystem<CartManager>(SystemType::CART_MANAGER);
 
 				//real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
-				//assert(targetT != -1.0f);
+				//CHECK_NE(targetT, -1.0f);
 
 				//m_TSpringToCartAhead.targetPos = targetT;
 				//m_TSpringToCartAhead.Tick(g_DeltaTime);
@@ -5219,7 +5214,7 @@ namespace flex
 		const u32 vertCountPerChunk = maxChunkVertCountPerAxis * maxChunkVertCountPerAxis;
 		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
 
-		assert((*wave_workQueue)[workQueueIndex].positionsx_4 == nullptr);
+		CHECK_EQ((*wave_workQueue)[workQueueIndex].positionsx_4, nullptr);
 
 		(*wave_workQueue)[workQueueIndex].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*wave_workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
@@ -5565,8 +5560,8 @@ namespace flex
 
 						WRITE_BARRIER;
 
-						assert(wave_workQueueEntriesClaimed <= wave_workQueueEntriesCreated);
-						assert(wave_workQueueEntriesClaimed <= wave_workQueue->Size());
+						CHECK_LE(wave_workQueueEntriesClaimed, wave_workQueueEntriesCreated);
+						CHECK_LE(wave_workQueueEntriesClaimed, wave_workQueue->Size());
 					}
 
 				}
@@ -6694,7 +6689,7 @@ namespace flex
 
 	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
 	{
-		assert(t >= 0.0f && t <= 1.0f);
+		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
 			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
@@ -6709,7 +6704,7 @@ namespace flex
 
 	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
 	{
-		assert(t >= 0.0f && t <= 1.0f);
+		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
 			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
@@ -6738,7 +6733,7 @@ namespace flex
 
 	void Wire::GeneratePoints()
 	{
-		assert(m_SoftBody == nullptr);
+		CHECK_EQ(m_SoftBody, nullptr);
 
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
@@ -7992,7 +7987,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(m_VM != nullptr);
+		CHECK_NE(m_VM, nullptr);
 
 		std::string str;
 		for (const std::string& line : lines)
@@ -9738,7 +9733,7 @@ namespace flex
 					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
 					auto iter = m_Meshes.find(chunkIdx);
-					assert(iter != m_Meshes.end());
+					CHECK(iter != m_Meshes.end());
 					DestroyChunk(iter->second);
 					m_Meshes.erase(iter);
 
@@ -9763,7 +9758,7 @@ namespace flex
 			{
 				const glm::ivec3& chunkIndex = *chunkToLoadIter;
 
-				assert(m_Meshes.find(chunkIndex) == m_Meshes.end());
+				CHECK(m_Meshes.find(chunkIndex) == m_Meshes.end());
 
 				Chunk* chunk = new Chunk();
 				chunk->meshComponent = nullptr;
@@ -9950,7 +9945,7 @@ namespace flex
 
 		MeshComponent* submesh = chunk->meshComponent;
 
-		assert(chunk->collisionShape == nullptr);
+		CHECK_EQ(chunk->collisionShape, nullptr);
 
 		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
 
@@ -9999,14 +9994,14 @@ namespace flex
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
 
 		chunkData.positions = (glm::vec3*)malloc(vertCountPerChunk * sizeof(glm::vec3));
-		assert(chunkData.positions != nullptr);
+		CHECK_NE(chunkData.positions, nullptr);
 		chunkData.colours = (glm::vec4*)malloc(vertCountPerChunk * sizeof(glm::vec4));
-		assert(chunkData.colours != nullptr);
+		CHECK_NE(chunkData.colours, nullptr);
 		chunkData.uvs = (glm::vec2*)malloc(vertCountPerChunk * sizeof(glm::vec2));
-		assert(chunkData.uvs != nullptr);
+		CHECK_NE(chunkData.uvs, nullptr);
 
 		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
-		assert(chunkData.indices != nullptr);
+		CHECK_NE(chunkData.indices, nullptr);
 
 		FillInTerrainChunkData(chunkData);
 	}
@@ -10015,19 +10010,19 @@ namespace flex
 	{
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
 
-		assert(chunkData.positions != nullptr);
+		CHECK_NE(chunkData.positions, nullptr);
 		free((void*)chunkData.positions);
 		chunkData.positions = nullptr;
 
-		assert(chunkData.colours != nullptr);
+		CHECK_NE(chunkData.colours, nullptr);
 		free((void*)chunkData.colours);
 		chunkData.colours = nullptr;
 
-		assert(chunkData.uvs != nullptr);
+		CHECK_NE(chunkData.uvs, nullptr);
 		free((void*)chunkData.uvs);
 		chunkData.uvs = nullptr;
 
-		assert(chunkData.indices != nullptr);
+		CHECK_NE(chunkData.indices, nullptr);
 		free((void*)chunkData.indices);
 		chunkData.indices = nullptr;
 	}
@@ -10133,8 +10128,8 @@ namespace flex
 
 						WRITE_BARRIER;
 
-						assert(terrain_workQueueEntriesClaimed <= terrain_workQueueEntriesCreated);
-						assert(terrain_workQueueEntriesClaimed <= terrain_workQueue->Size());
+						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueueEntriesCreated);
+						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueue->Size());
 					}
 
 				}
@@ -10690,7 +10685,7 @@ namespace flex
 		// Divide by 2 to transform range from [-1, 1] to [0, 1]
 		height = height * 0.5f + 0.5f;
 
-		assert(biome0Index >= 0 && biome0Index < 65536);
+		CHECK(biome0Index >= 0 && biome0Index < 65536);
 
 		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
 	}
@@ -12482,7 +12477,7 @@ namespace flex
 			std::vector<JSONField> tireIDs;
 			if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
 			{
-				assert(m_TireCount == (i32)tireIDs.size());
+				CHECK_EQ(m_TireCount, (i32)tireIDs.size());
 				for (i32 i = 0; i < m_TireCount; ++i)
 				{
 					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
@@ -12492,7 +12487,7 @@ namespace flex
 			std::vector<JSONField> brakeLightIDs;
 			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 			{
-				assert((i32)brakeLightIDs.size() == 2);
+				CHECK_EQ((i32)brakeLightIDs.size(), 2);
 				for (i32 i = 0; i < 2; ++i)
 				{
 					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
@@ -13074,7 +13069,7 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_RoadMaterialID, &renderObjectCreateInfo);
 		if (meshComponent != nullptr)
 		{
-			assert(roadSegments[index].mesh == nullptr);
+			CHECK_EQ(roadSegments[index].mesh, nullptr);
 			roadSegments[index].mesh = meshComponent;
 		}
 
@@ -13365,7 +13360,7 @@ namespace flex
 
 	u32 MineralDeposit::OnMine(real mineAmount)
 	{
-		assert(mineAmount >= 0.0f);
+		CHECK_GE(mineAmount, 0.0f);
 
 		u32 actualMineAmount = glm::clamp((u32)mineAmount, 0u, m_MineralRemaining);
 		m_MineralRemaining -= actualMineAmount;

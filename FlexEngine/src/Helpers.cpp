@@ -70,7 +70,7 @@ namespace flex
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* outChannelCount /* = nullptr */)
 	{
-		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
+		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
@@ -96,8 +96,8 @@ namespace flex
 			return result;
 		}
 
-		assert((u32)result.width <= MAX_TEXTURE_DIM);
-		assert((u32)result.height <= MAX_TEXTURE_DIM);
+		CHECK_LE((u32)result.width, MAX_TEXTURE_DIM);
+		CHECK_LE((u32)result.height, MAX_TEXTURE_DIM);
 
 		result.pixels = static_cast<unsigned char*>(data);
 
@@ -117,7 +117,7 @@ namespace flex
 
 	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
 	{
-		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
+		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		filePath = hdrFilePath;
 
@@ -146,8 +146,8 @@ namespace flex
 
 		channelCount = 4;
 
-		assert(width <= MAX_TEXTURE_DIM);
-		assert(height <= MAX_TEXTURE_DIM);
+		CHECK_LE(width, MAX_TEXTURE_DIM);
+		CHECK_LE(height, MAX_TEXTURE_DIM);
 
 		return true;
 	}
@@ -1301,7 +1301,7 @@ namespace flex
 
 	u32 NextPowerOfTwo(u32 x)
 	{
-		assert(x != 0);
+		CHECK_NE(x, 0u);
 		x--;
 		x |= x >> 1;
 		x |= x >> 2;
@@ -1313,7 +1313,7 @@ namespace flex
 
 	u64 NextPowerOfTwo(u64 x)
 	{
-		assert(x != 0);
+		CHECK_NE(x, 0u);
 		x--;
 		x |= x >> 1;
 		x |= x >> 2;
@@ -2081,7 +2081,7 @@ namespace flex
 
 	void ByteCountToString(char buf[], u32 bufSize, u64 bytes, u32 precision /* = 1 */)
 	{
-		assert(precision <= 9);
+		CHECK_LE(precision, 9u);
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
 		double count = (double)bytes;

@@ -878,7 +878,7 @@ namespace flex
 
 				if (!varContainer->SetVariableType(identifierStr, initializer->typeName))
 				{
-					assert(false);
+					CHECK(false);
 					//std::string diagnosticStr = "Mismatched types (" + std::string(TypeNameToString(initializer->typeName)) + " vs. " + std::string(TypeNameToString(varTypeName)) + ")";
 					//diagnosticContainer->AddDiagnostic(initializer->span, diagnosticStr);
 				}
@@ -958,7 +958,7 @@ namespace flex
 
 		Identifier* CompoundAssignment::RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements)
 		{
-			assert(IsCompoundAssignment(operatorType));
+			CHECK(IsCompoundAssignment(operatorType));
 
 			Identifier* rhsTempIdent = rhs->RewriteCompoundStatements(parser, tmpStatements);
 			if (rhsTempIdent != nullptr)
@@ -996,7 +996,7 @@ namespace flex
 			FLEX_UNUSED(varContainer);
 			FLEX_UNUSED(diagnosticContainer);
 			// Type propagation should happen after complex types are eliminated (in RewriteCompoundStatement calls)
-			assert(false);
+			CHECK(false);
 		}
 
 		ListInitializer::~ListInitializer()
@@ -1102,7 +1102,7 @@ namespace flex
 				stringBuilder.Append('~');
 				break;
 			default:
-				assert(false);
+				CHECK(false);
 			}
 
 			stringBuilder.Append(expression->ToString());

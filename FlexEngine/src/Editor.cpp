@@ -606,8 +606,8 @@ namespace flex
 
 	void Editor::HandleGizmoClick()
 	{
-		assert(m_bDraggingGizmo == false);
-		assert(m_HoveringAxisIndex != -1);
+		CHECK_EQ(m_bDraggingGizmo, false);
+		CHECK_NE(m_HoveringAxisIndex, -1);
 
 		m_DraggingAxisIndex = m_HoveringAxisIndex;
 		m_bDraggingGizmo = true;
@@ -686,9 +686,9 @@ namespace flex
 
 	void Editor::HandleGizmoMovement()
 	{
-		assert(m_HoveringAxisIndex != -1);
-		assert(m_DraggingAxisIndex != -1);
-		assert(m_bDraggingGizmo);
+		CHECK_NE(m_HoveringAxisIndex, -1);
+		CHECK_NE(m_DraggingAxisIndex, -1);
+		CHECK(m_bDraggingGizmo);
 		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			SelectNone();

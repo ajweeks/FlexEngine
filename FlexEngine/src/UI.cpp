@@ -819,19 +819,20 @@ namespace flex
 					StringID colTagSID = Hash(colTagStr.c_str());
 					std::string minerRowTagStr = "miner-row-" + IntToString(c);
 					StringID minerRowTagSID = Hash(minerRowTagStr.c_str());
-					for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
+					for (u32 i = 0; i < (u32)uiContainers.size(); ++i)
 					{
 						UIContainer* uiContainer = uiContainers[i];
 						if (uiContainer->tag == colTagSID)
 						{
-							if (((i32)uiContainers.size() - i) >= Player::INVENTORY_ITEM_ROW_COUNT)
+							if (((u32)uiContainers.size() - i) >= Player::INVENTORY_ITEM_ROW_COUNT)
 							{
 								itemContainers.reserve(Player::INVENTORY_ITEM_COUNT);
-								for (i32 r = 0; r < Player::INVENTORY_ITEM_ROW_COUNT; ++r)
+								for (u32 r = 0; r < Player::INVENTORY_ITEM_ROW_COUNT; ++r)
 								{
 									ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + r];
-									itemContainer->index = (c * Player::INVENTORY_ITEM_ROW_COUNT) + r;
-									itemContainer->stackID = Player::GetGameObjectStackIDForInventory(itemContainer->index);
+									u32 index = (c * Player::INVENTORY_ITEM_ROW_COUNT) + r;
+									itemContainer->index = (i32)index;
+									itemContainer->stackID = Player::GetGameObjectStackIDForInventory(index);
 
 									if (itemContainer->stackID != InvalidID)
 									{
@@ -846,14 +847,15 @@ namespace flex
 						}
 						else if (uiContainer->tag == minerRowTagSID)
 						{
-							if (((i32)uiContainers.size() - i) >= Miner::INVENTORY_SIZE)
+							if (((u32)uiContainers.size() - i) >= Miner::INVENTORY_SIZE)
 							{
 								itemContainersSecondary.reserve(Miner::INVENTORY_SIZE);
-								for (i32 r = 0; r < Miner::INVENTORY_SIZE; ++r)
+								for (u32 r = 0; r < Miner::INVENTORY_SIZE; ++r)
 								{
 									ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + r];
-									itemContainer->index = r;
-									itemContainer->stackID = Player::GetGameObjectStackIDForMinerInventory(itemContainer->index);
+									u32 index = r;
+									itemContainer->index = (i32)index;
+									itemContainer->stackID = Player::GetGameObjectStackIDForMinerInventory(index);
 
 									if (itemContainer->stackID != InvalidID)
 									{
@@ -869,7 +871,7 @@ namespace flex
 					}
 				}
 
-				for (i32 i = 0; i < (i32)uiContainers.size(); ++i)
+				for (u32 i = 0; i < (u32)uiContainers.size(); ++i)
 				{
 					UIContainer* uiContainer = uiContainers[i];
 					if (uiContainer->tag == SID(dropTagStr))
@@ -1182,7 +1184,7 @@ namespace flex
 
 							InventoryType inventoryType;
 							GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-							assert(inventoryType == InventoryType::QUICK_ACCESS);
+							CHECK_EQ(inventoryType, InventoryType::QUICK_ACCESS);
 
 							g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 
@@ -1287,10 +1289,10 @@ namespace flex
 					{
 						if (((i32)uiContainers.size() - i) >= Player::WEARABLES_ITEM_COUNT)
 						{
-							for (i32 n = 0; n < Player::WEARABLES_ITEM_COUNT; ++n)
+							for (u32 n = 0; n < Player::WEARABLES_ITEM_COUNT; ++n)
 							{
 								ItemUIContainer* itemContainer = (ItemUIContainer*)uiContainers[i + n];
-								itemContainer->index = n;
+								itemContainer->index = (i32)n;
 								itemContainer->stackID = Player::GetGameObjectStackIDForWearablesInventory(n);
 
 								if (itemContainer->stackID != InvalidID)
@@ -1351,7 +1353,7 @@ namespace flex
 
 								InventoryType inventoryType;
 								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-								assert(inventoryType == InventoryType::WEARABLES);
+								CHECK_EQ(inventoryType, InventoryType::WEARABLES);
 
 								g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 

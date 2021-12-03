@@ -77,6 +77,7 @@
 #define FLEX_NO_DISCARD [[nodiscard]]
 
 #include "FlexPreprocessors.hpp"
+#include "AssertHelpers.hpp"
 
 #undef TRUE
 #undef FALSE

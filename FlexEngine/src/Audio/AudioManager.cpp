@@ -831,7 +831,7 @@ namespace flex
 		u32 sampleCount = (u32)(sampleRate * length);
 		u32 bufferSize = sampleCount * sizeof(i16);
 		i16* data = (i16*)malloc(bufferSize);
-		assert(data != nullptr);
+		CHECK_NE(data, nullptr);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
 		for (u32 i = 0; i < sampleCount; ++i)
@@ -884,7 +884,7 @@ namespace flex
 		u32 sampleCount = (i32)(sampleRate * lengthSec);
 		u32 bufferSize = sampleCount * sizeof(i16);
 		i16* data = (i16*)malloc(bufferSize);
-		assert(data != nullptr);
+		CHECK_NE(data, nullptr);
 
 		for (i32 i = 0; i < (i32)sampleCount; ++i)
 		{
@@ -1094,7 +1094,7 @@ namespace flex
 
 	void AudioManager::SetSourceGain(AudioSourceID sourceID, real gain)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 		s_Sources[sourceID].gain = gain;
 
 		UpdateSourceGain(sourceID);
@@ -1102,14 +1102,14 @@ namespace flex
 
 	real AudioManager::GetSourceGain(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].gain;
 	}
 
 	void AudioManager::SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 		s_Sources[sourceID].gainMultiplier = gainMultiplier;
 
 		UpdateSourceGain(sourceID);
@@ -1117,28 +1117,28 @@ namespace flex
 
 	real AudioManager::GetSourceGainMultiplier(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].gainMultiplier;
 	}
 
 	bool AudioManager::IsSource2D(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].b2D;
 	}
 
 	void AudioManager::AddToSourcePitch(AudioSourceID sourceID, real deltaPitch)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		SetSourcePitch(sourceID, s_Sources[sourceID].pitch + deltaPitch);
 	}
 
 	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool bLooping)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		if (s_Sources[sourceID].bLooping != bLooping)
 		{
@@ -1151,14 +1151,14 @@ namespace flex
 
 	bool AudioManager::GetSourceLooping(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].bLooping;
 	}
 
 	bool AudioManager::IsSourcePlaying(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		return (s_Sources[sourceID].state == AL_PLAYING);
@@ -1406,7 +1406,7 @@ namespace flex
 
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		// openAL range (found in al.h)
 		pitch = glm::clamp(pitch, 0.5f, 2.0f);
@@ -1422,7 +1422,7 @@ namespace flex
 
 	real AudioManager::GetSourcePitch(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].pitch;
 	}
