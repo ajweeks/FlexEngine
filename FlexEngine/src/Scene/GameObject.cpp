@@ -3364,6 +3364,11 @@ namespace flex
 		{
 			RigidBody* rb = SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
 			// TODO: Figure out how to get dropped items to collide with everything but themselves
+			if (rb->IsStatic())
+			{
+				rb->SetStatic(false);
+				rb->SetMass(1.0f);
+			}
 			rb->SetKinematic(true);
 			SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
 		}
