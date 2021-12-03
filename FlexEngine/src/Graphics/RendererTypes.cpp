@@ -26,28 +26,40 @@ namespace flex
 #endif
 	}
 
-	static std::map<StringID, Uniform*>& GetAllUniforms()
+	static std::vector<Uniform const*>& GetAllUniforms()
 	{
-		static std::map<StringID, Uniform*> allUniforms;
+		static std::vector<Uniform const*> allUniforms;
 		return allUniforms;
+	}
+
+	static Uniform const* GetUniform(const std::vector<Uniform const*>& uniforms, StringID uniformID)
+	{
+		for (Uniform const* uniform : uniforms)
+		{
+			if (uniform->id == uniformID)
+			{
+				return uniform;
+			}
+		}
+		return nullptr;
 	}
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform)
 	{
-		std::map<StringID, Uniform*>& allUniforms = GetAllUniforms();
-		if (allUniforms.find(uniformNameSID) == allUniforms.end())
+		std::vector<Uniform const*>& allUniforms = GetAllUniforms();
+		if (GetUniform(allUniforms, uniformNameSID) == nullptr)
 		{
-			allUniforms[uniformNameSID] = uniform;
+			allUniforms.emplace_back(uniform);
 		}
 	}
 
-	Uniform* UniformFromStringID(StringID uniformNameSID)
+	Uniform const* UniformFromStringID(StringID uniformNameSID)
 	{
-		std::map<StringID, Uniform*>& allUniforms = GetAllUniforms();
-		auto iter = allUniforms.find(uniformNameSID);
-		if (iter != allUniforms.end())
+		std::vector<Uniform const*>& allUniforms = GetAllUniforms();
+		Uniform const* uniform = GetUniform(allUniforms, uniformNameSID);
+		if (uniform != nullptr)
 		{
-			return iter->second;
+			return uniform;
 		}
 
 		return nullptr;
@@ -73,14 +85,21 @@ namespace flex
 
 	bool UniformList::HasUniform(const StringID& uniformID) const
 	{
-		return Contains(uniforms, uniformID);
+		for (Uniform const* uniform : uniforms)
+		{
+			if (uniform->id == uniformID)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	void UniformList::AddUniform(Uniform const* uniform)
 	{
 		if (!HasUniform(uniform))
 		{
-			uniforms[uniform->id] = uniform;
+			uniforms.emplace_back(uniform);
 			totalSizeInBytes += (u32)uniform->size;
 		}
 	}

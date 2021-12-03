@@ -289,7 +289,7 @@ namespace flex
 	};
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);
-	Uniform* UniformFromStringID(StringID uniformNameSID);
+	Uniform const* UniformFromStringID(StringID uniformNameSID);
 
 #define UNIFORM(val) val, SID(val)
 
@@ -885,7 +885,7 @@ namespace flex
 		void AddUniform(Uniform const* uniform);
 		u32 GetSizeInBytes() const;
 
-		std::map<StringID, Uniform const*> uniforms;
+		std::vector<Uniform const*> uniforms;
 		u32 totalSizeInBytes = 0;
 	};
 
