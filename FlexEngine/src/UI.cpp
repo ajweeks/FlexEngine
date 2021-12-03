@@ -1167,7 +1167,7 @@ namespace flex
 					itemContainers[n]->bHighlighted = (n == player->selectedItemSlot);
 				}
 
-				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
+				if (player->IsInventoryShowing() && !ImGui::GetIO().WantCaptureMouse)
 				{
 					glm::vec2i windowSize = g_Window->GetSize();
 					glm::vec2 mousePos = g_InputManager->GetMousePosition();
@@ -1452,9 +1452,17 @@ namespace flex
 
 				if (player->bMinerInventoryShowing)
 				{
-					Rect rect{ -x, -y, x, y, VEC4_ONE };
-					minerInventoryUI->Update(rect);
-					minerInventoryUI->Draw();
+					{
+						Rect rect{ -x, -y, x, y, VEC4_ONE };
+						minerInventoryUI->Update(rect);
+						minerInventoryUI->Draw();
+					}
+
+					{
+						Rect rect{ -x, -y, x, y, VEC4_ONE };
+						wearablesInventoryUI->Update(rect);
+						wearablesInventoryUI->Draw();
+					}
 				}
 
 				if (draggedUIContainer != nullptr)

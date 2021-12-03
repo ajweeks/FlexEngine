@@ -16,7 +16,7 @@
 		{
 			"type" : "Base",
 			"cut type" : "Top",
-			"amount" : 0.019000,
+			"amount" : 0.120000,
 			"visible" : false,
 			"relative" : true
 		},
@@ -80,14 +80,108 @@
 		{
 			"type" : "Base",
 			"cut type" : "Left",
-			"amount" : 0.360000,
+			"amount" : 0.401000,
 			"visible" : false,
 			"relative" : true
 		},
 		{
 			"type" : "Base",
 			"cut type" : "Top",
-			"amount" : 0.552000,
+			"amount" : 0.202000,
+			"visible" : false,
+			"relative" : false,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Top",
+					"amount" : 0.512000,
+					"visible" : false,
+					"relative" : true,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Left",
+							"amount" : 0.433000,
+							"visible" : false,
+							"relative" : false,
+							"children" : 
+							[
+								{
+									"type" : "Base",
+									"cut type" : "Left",
+									"amount" : 0.050000,
+									"visible" : false,
+									"relative" : false
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"tag source string" : "miner-row-0",
+									"tag" : 3375175944003802980,
+									"item" : 
+									{
+										"index" : 0
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 1
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 2
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 3
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 4
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Bottom",
+			"amount" : 1.000000,
 			"visible" : false,
 			"relative" : true,
 			"children" : 
@@ -606,79 +700,6 @@
 							"item" : 
 							{
 								"index" : 34
-							}
-						}
-					]
-				}
-			]
-		},
-		{
-			"type" : "Base",
-			"cut type" : "Bottom",
-			"amount" : 0.406000,
-			"visible" : false,
-			"relative" : false,
-			"children" : 
-			[
-				{
-					"type" : "Base",
-					"cut type" : "Left",
-					"amount" : 0.060000,
-					"visible" : false,
-					"relative" : false,
-					"children" : 
-					[
-						{
-							"type" : "Base",
-							"cut type" : "Top",
-							"amount" : 0.010000,
-							"visible" : false,
-							"relative" : false
-						},
-						{
-							"type" : "Item",
-							"cut type" : "Top",
-							"amount" : 0.093000,
-							"visible" : true,
-							"relative" : false,
-							"tag source string" : "miner-row-0",
-							"tag" : 9663373554028997877,
-							"item" : 
-							{
-								"index" : 0
-							}
-						},
-						{
-							"type" : "Item",
-							"cut type" : "Top",
-							"amount" : 0.093000,
-							"visible" : true,
-							"relative" : false,
-							"item" : 
-							{
-								"index" : 1
-							}
-						},
-						{
-							"type" : "Item",
-							"cut type" : "Top",
-							"amount" : 0.093000,
-							"visible" : true,
-							"relative" : false,
-							"item" : 
-							{
-								"index" : 2
-							}
-						},
-						{
-							"type" : "Item",
-							"cut type" : "Top",
-							"amount" : 0.093000,
-							"visible" : true,
-							"relative" : false,
-							"item" : 
-							{
-								"index" : 3
 							}
 						}
 					]
