@@ -13418,7 +13418,8 @@ namespace flex
 	}
 
 	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("miner"), gameObjectID)
+		GameObject(name, SID("miner"), gameObjectID),
+		m_MineTimer(1.0f)
 	{
 		m_bInteractable = true;
 	}
@@ -13459,19 +13460,31 @@ namespace flex
 				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
 				if (minedMineralPrefabID != InvalidPrefabID)
 				{
-					if (m_Charge > m_PowerDraw && !IsInventoryFull())
+					if (m_MineTimer.Update())
 					{
-						u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
-						m_Charge -= m_PowerDraw;
+						m_MineTimer.Restart();
 
-						if (mineralMined > 0)
+						if (m_Charge > m_PowerDraw && !IsInventoryFull())
 						{
-							AddToInventory(minedMineralPrefabID, mineralMined);
-						}
+							u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
+							m_Charge -= m_PowerDraw;
 
-						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
-						{
-							m_NearestMineralDepositID = InvalidGameObjectID;
+							if (mineralMined > 0)
+							{
+								u32 extraItems = AddToInventory(minedMineralPrefabID, mineralMined);
+								if (extraItems > 0)
+								{
+									glm::vec3 pos = m_Transform.GetWorldPosition() +
+										m_Transform.GetUp() * 0.5f +
+										m_Transform.GetForward() * 1.0f;
+									g_SceneManager->CurrentScene()->CreateDroppedItem(minedMineralPrefabID, extraItems, pos, VEC3_ZERO);
+								}
+							}
+
+							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+							{
+								m_NearestMineralDepositID = InvalidGameObjectID;
+							}
 						}
 					}
 				}
@@ -13572,25 +13585,31 @@ namespace flex
 		return true;
 	}
 
-	bool Miner::AddToInventory(const PrefabID& prefabID, u32 stackSize)
+	u32 Miner::AddToInventory(const PrefabID& prefabID, u32 stackSize)
 	{
+		u32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 		for (GameObjectStack& stack : m_Inventory)
 		{
 			if (!stack.prefabID.IsValid())
 			{
+				// Empty slot
 				stack.prefabID = prefabID;
 				stack.count = (i32)stackSize;
-				return true;
+				return 0;
 			}
 			else if (stack.prefabID == prefabID)
 			{
-				i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(stack.prefabID);
-				i32 deltaToAdd = glm::min((i32)stackSize, maxStackSize - stack.count);
+				u32 deltaToAdd = glm::min((u32)stackSize, maxStackSize - stack.count);
 				stack.count += deltaToAdd;
-				return deltaToAdd == (i32)stackSize;
+				if (deltaToAdd == stackSize)
+				{
+					return 0;
+				}
+
+				stackSize -= deltaToAdd;
 			}
 		}
-		return false;
+		return stackSize;
 	}
 
 	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)

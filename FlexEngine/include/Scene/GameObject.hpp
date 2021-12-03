@@ -16,6 +16,7 @@ IGNORE_WARNINGS_POP
 #include "Track/BezierCurve3D.hpp"
 #include "Transform.hpp"
 #include "Time.hpp"
+#include "Timer.hpp"
 
 class btCollisionShape;
 class btTriangleIndexVertexArray;
@@ -1964,8 +1965,8 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 	private:
-		bool AddToInventory(const PrefabID& prefabID, u32 stackSize);
-
+		// Returns the number of items which didn't fit
+		u32 AddToInventory(const PrefabID& prefabID, u32 stackSize);
 
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;
@@ -1977,6 +1978,7 @@ namespace flex
 		// Non-serialized fields
 		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
 
+		Timer m_MineTimer;
 	};
 
 	class Speaker : public GameObject

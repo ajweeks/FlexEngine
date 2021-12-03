@@ -14,7 +14,7 @@
 		"mineral deposit" : 
 		{
 			"type" : "tin",
-			"mineral remaining" : 100
+			"mineral remaining" : 1000
 		}
 	}
 }

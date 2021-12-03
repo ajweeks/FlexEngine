@@ -449,7 +449,7 @@ namespace flex
 
 	bool SceneManager::HasSceneLoaded() const
 	{
-		return m_CurrentSceneIndex != InvalidID;
+		return m_CurrentSceneIndex != InvalidID && CurrentScene()->m_bInitialized;
 	}
 
 	void SceneManager::OpenNewSceneWindow()
