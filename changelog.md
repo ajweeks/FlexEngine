@@ -2,6 +2,10 @@
 ### Flex Engine change log (reverse chronological order)
 
 **2021**
+_December_
+- Optimize Transform class (cut size from 256B to 120B)
+- Make miner's inventories accessible
+
 _November_
 - Add keybinding for dropping items (V)
 - Add speaker object which can play positional audio and be toggled by the player

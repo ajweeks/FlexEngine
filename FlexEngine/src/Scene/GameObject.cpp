@@ -2181,6 +2181,7 @@ namespace flex
 		m_Children.push_back(child);
 
 		child->SetParent(this);
+		child->GetTransform()->MarkDirty();
 
 		// Prefab templates aren't registered in the scene
 		if (!m_bIsTemplate)
@@ -2237,6 +2238,7 @@ namespace flex
 					glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
 
 					child->SetParent(nullptr);
+					child->GetTransform()->MarkDirty();
 
 					Transform* childTransform = child->GetTransform();
 
@@ -2280,6 +2282,11 @@ namespace flex
 		}
 
 		return count;
+	}
+
+	u32 GameObject::GetChildCount() const
+	{
+		return (u32)m_Children.size();
 	}
 
 	GameObject* GameObject::AddSibling(GameObject* child)
@@ -2452,10 +2459,6 @@ namespace flex
 	const Transform* GameObject::GetTransform() const
 	{
 		return &m_Transform;
-	}
-
-	void GameObject::OnTransformChanged()
-	{
 	}
 
 	void GameObject::AddTag(const std::string& tag)
@@ -3452,8 +3455,6 @@ namespace flex
 		g_Renderer->RegisterDirectionalLight(this);
 		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 
-		m_Transform.updateParentOnStateChange = true;
-
 		GameObject::Initialize();
 	}
 
@@ -3480,6 +3481,9 @@ namespace flex
 
 		if (data.enabled && g_EngineInstance->IsRenderingEditorObjects())
 		{
+			pos = m_Transform.GetWorldPosition();
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
+
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 
 			if (!cam->bIsGameplayCam)
@@ -3571,12 +3575,6 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-	}
-
-	void DirectionalLight::OnTransformChanged()
-	{
-		pos = m_Transform.GetLocalPosition();
-		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
 	}
 
 	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
@@ -3703,8 +3701,6 @@ namespace flex
 				data.enabled = false;
 			}
 
-			m_Transform.updateParentOnStateChange = true;
-
 			GameObject::Initialize();
 		}
 	}
@@ -3816,15 +3812,7 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		if (pointLightID != InvalidPointLightID)
-		{
-			g_Renderer->UpdatePointLightData(pointLightID, &data);
-		}
-	}
 
-	void PointLight::OnTransformChanged()
-	{
-		data.pos = m_Transform.GetWorldPosition();
 		if (pointLightID != InvalidPointLightID)
 		{
 			g_Renderer->UpdatePointLightData(pointLightID, &data);
@@ -3924,8 +3912,6 @@ namespace flex
 				m_bVisible = false;
 				data.enabled = 0;
 			}
-
-			m_Transform.updateParentOnStateChange = true;
 
 			GameObject::Initialize();
 		}
@@ -4040,13 +4026,7 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		OnTransformChanged();
-	}
 
-	void SpotLight::OnTransformChanged()
-	{
-		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
-		data.pos = m_Transform.GetWorldPosition();
 		if (spotLightID != InvalidSpotLightID)
 		{
 			g_Renderer->UpdateSpotLightData(spotLightID, &data);
@@ -4152,8 +4132,6 @@ namespace flex
 				m_bVisible = false;
 				data.enabled = false;
 			}
-
-			m_Transform.updateParentOnStateChange = true;
 
 			GameObject::Initialize();
 		}
@@ -4288,12 +4266,6 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		OnTransformChanged();
-	}
-
-	void AreaLight::OnTransformChanged()
-	{
-		UpdatePoints();
 
 		if (areaLightID != InvalidAreaLightID)
 		{
@@ -8326,7 +8298,6 @@ namespace flex
 	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("particle system"), gameObjectID)
 	{
-		m_Transform.updateParentOnStateChange = true;
 	}
 
 	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
@@ -8354,7 +8325,6 @@ namespace flex
 		newParticleSystem->data.particleCount = data.particleCount;
 		newParticleSystem->bEnabled = true;
 		newParticleSystem->scale = scale;
-		newParticleSystem->model = model;
 		g_Renderer->AddParticleSystem(m_Name, newParticleSystem, data.particleCount);
 
 		return newParticleSystem;
@@ -8367,6 +8337,7 @@ namespace flex
 
 		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
 
+		glm::mat4 model;
 		Transform::ParseJSON(particleSystemObj, model);
 		m_Transform.SetWorldFromMatrix(model);
 		particleSystemObj.TryGetFloat("scale", scale);
@@ -8390,6 +8361,7 @@ namespace flex
 	{
 		JSONObject particleSystemObj = {};
 
+		glm::mat4 model = m_Transform.GetWorldTransform();
 		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
 		particleSystemObj.fields.emplace_back("scale", JSONValue(scale));
 		particleSystemObj.fields.emplace_back("enabled", JSONValue(bEnabled));
@@ -8431,19 +8403,11 @@ namespace flex
 		}
 	}
 
-	void ParticleSystem::OnTransformChanged()
-	{
-		scale = m_Transform.GetLocalScale().x;
-		UpdateModelMatrix();
-	}
-
-	void ParticleSystem::UpdateModelMatrix()
+	void ParticleSystem::Update()
 	{
 		PROFILE_AUTO("ParticleSystem Update");
 
-		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
-
-		GameObject::Update();
+		scale = m_Transform.GetWorldScale().x;
 	}
 
 	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
@@ -12734,7 +12698,7 @@ namespace flex
 	{
 		m_RigidBody->GetRigidBodyInternal()->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
 		m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-		m_Transform.SetWorldFromMatrix(MAT4_IDENTITY);
+		m_Transform.CloneFrom(Transform::Identity);
 		m_Transform.Translate(0.0f, 2.0f, 0.0f);
 		m_SecUpsideDown = 0.0f;
 		m_bFlippingRightSideUp = false;

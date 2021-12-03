@@ -2349,6 +2349,7 @@ namespace flex
 		}
 
 		parent->AddChildImmediate(child);
+		child->GetTransform()->MarkDirty();
 
 		return child;
 	}

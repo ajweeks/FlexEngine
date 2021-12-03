@@ -48,6 +48,7 @@ namespace flex
 
 		void SetWorldPosition(const glm::vec3& worldPos);
 		void SetWorldRotation(const glm::quat& worldRot);
+		void SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot);
 
 		u32 GetGroup() const;
 		// NOTE: This function removes, then re-adds this object to the world!

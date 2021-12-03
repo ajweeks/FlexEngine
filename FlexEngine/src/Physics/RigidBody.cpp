@@ -199,6 +199,7 @@ namespace flex
 		if (m_btRigidBody != nullptr)
 		{
 			m_btRigidBody->setCenterOfMassTransform(btTransform(m_btRigidBody->getCenterOfMassTransform().getRotation(), ToBtVec3(worldPos)));
+			m_btRigidBody->activate(false);
 		}
 	}
 
@@ -207,6 +208,16 @@ namespace flex
 		if (m_btRigidBody != nullptr)
 		{
 			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), m_btRigidBody->getCenterOfMassPosition()));
+			m_btRigidBody->activate(false);
+		}
+	}
+
+	void RigidBody::SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot)
+	{
+		if (m_btRigidBody != nullptr)
+		{
+			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), ToBtVec3(worldPos)));
+			m_btRigidBody->activate(false);
 		}
 	}
 

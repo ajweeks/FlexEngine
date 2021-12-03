@@ -146,7 +146,6 @@ namespace flex
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
-		virtual void OnTransformChanged();
 
 		virtual void ParseJSON(
 			const JSONObject& obj,
@@ -200,6 +199,7 @@ namespace flex
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(StringID objTypeID, bool bRecurse);
+		u32 GetChildCount() const;
 
 		GameObject* AddSibling(GameObject* child);
 		GameObject* AddSiblingImmediate(GameObject* child);
@@ -468,7 +468,6 @@ namespace flex
 		virtual void Update() override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const DirectionalLight& other);
 
@@ -499,7 +498,6 @@ namespace flex
 		virtual void Update() override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const PointLight& other);
 
@@ -528,7 +526,6 @@ namespace flex
 		virtual void Update() override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const SpotLight& other);
 
@@ -557,7 +554,6 @@ namespace flex
 		virtual void Update() override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const AreaLight& other);
 
@@ -1226,25 +1222,20 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
-		virtual void OnTransformChanged() override;
-
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
-		glm::mat4 model;
 		real scale;
 		ParticleSimData data;
-		bool bEnabled;
+		bool bEnabled = true;
 		MaterialID simMaterialID = InvalidMaterialID;
 		MaterialID renderingMaterialID = InvalidMaterialID;
 		ParticleSystemID particleSystemID = InvalidParticleSystemID;
-
-	private:
-		void UpdateModelMatrix();
 
 	};
 

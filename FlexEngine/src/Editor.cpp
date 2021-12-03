@@ -171,12 +171,21 @@ namespace flex
 			UpdateGizmoVisibility();
 			CalculateSelectedObjectsCenter();
 			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-			gizmoTransform->SetWorldPosition(m_SelectedObjectsCenterPos, true);
-			gizmoTransform->SetWorldRotation(m_SelectedObjectRotation, true);
+			if (!NearlyEquals(gizmoTransform->GetLocalPosition(), m_SelectedObjectsCenterPos, 0.0001f))
+			{
+				gizmoTransform->SetLocalPosition(m_SelectedObjectsCenterPos, true);
+			}
+			if (!NearlyEquals(gizmoTransform->GetLocalRotation(), m_SelectedObjectRotation, 0.0001f))
+			{
+				gizmoTransform->SetLocalRotation(m_SelectedObjectRotation, true);
+			}
 
 			glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
-			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 50.0f, 0.2f);
-			gizmoTransform->SetWorldScale(glm::vec3(scale));
+			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 80.0f + 0.5f, 0.1f);
+			if (!NearlyEquals(scale, gizmoTransform->GetLocalScale().x, 0.0001f))
+			{
+				gizmoTransform->SetWorldScale(glm::vec3(scale));
+			}
 		}
 		else
 		{
@@ -718,7 +727,7 @@ namespace flex
 		{
 			m_DraggingGizmoOffsetNeedsRecalculation = true; // Signal to recalculate offset in CalculateRayPlaneIntersectionAlongAxis
 
-			m_SelectedObjectDragStartPos = m_TransformGizmo->GetTransform()->GetWorldPosition();
+			m_SelectedObjectDragStartPos = gizmoTransform->GetWorldPosition();
 			if (m_CurrentTransformGizmoState == TransformState::ROTATE)
 			{
 				m_bFirstFrameDraggingRotationGizmo = true;

@@ -1949,7 +1949,7 @@ namespace flex
 			// TODO: Only update when things have changed
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
-				//UpdateDynamicUniformBuffer(i);
+				UpdateDynamicUniformBuffer(i);
 			}
 
 			if (!m_TimestampQueryNames.empty())
@@ -4940,7 +4940,8 @@ namespace flex
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(particleSystem->graphicsPipelineID)->pipeline;
 
 					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->model, nullptr);
+					glm::mat4 model = particleSystem->system->GetTransform()->GetWorldTransform();
+					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, model, nullptr);
 
 					VkDeviceSize offsets[1] = { 0 };
 					const VkBuffer* particleBuffer = &particleSimMat->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer;

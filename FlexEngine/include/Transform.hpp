@@ -38,17 +38,17 @@ namespace flex
 		bool IsIdentity() const;
 
 		glm::vec3 GetLocalPosition() const;
-		glm::vec3 GetWorldPosition();
+		glm::vec3 GetWorldPosition() const;
 
 		glm::quat GetLocalRotation() const;
-		glm::quat GetWorldRotation();
+		glm::quat GetWorldRotation() const;
 
 		glm::vec3 GetLocalScale() const;
-		glm::vec3 GetWorldScale();
+		glm::vec3 GetWorldScale() const;
 
-		glm::vec3 GetRight();
-		glm::vec3 GetUp();
-		glm::vec3 GetForward();
+		glm::vec3 GetRight() const;
+		glm::vec3 GetUp() const;
+		glm::vec3 GetForward() const;
 
 		void SetLocalPosition(const glm::vec3& position, bool bUpdateChain = true);
 		void SetWorldPosition(const glm::vec3& position, bool bUpdateChain = true);
@@ -76,15 +76,13 @@ namespace flex
 		void SetGameObject(GameObject* gameObject);
 		GameObject* GetGameObject() const;
 
-		const glm::mat4& GetLocalTransform() const;
-		const glm::mat4& GetWorldTransform();
+		glm::mat4 GetWorldTransform();
 
-		void ComputeValues(); // Climbs up the parent-child tree up to the root
 		void MarkDirty();
 
-		static const Transform Identity;
+		static void Decompose(const glm::mat4& mat, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale);
 
-		bool updateParentOnStateChange = false;
+		static const Transform Identity;
 
 	private:
 		friend struct MotionState;
@@ -92,24 +90,16 @@ namespace flex
 		// Callback from physics system
 		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
 
-		bool bDirty = true;
+		// Only valid when bDirty is false
+		glm::mat4 cachedWorldTransform;
 
-		glm::vec3 localPosition;
 		glm::quat localRotation;
+		glm::vec3 localPosition;
 		glm::vec3 localScale;
 
-		glm::vec3 worldPosition;
-		glm::quat worldRotation;
-		glm::vec3 worldScale;
-
-		glm::mat4 localTransform;
-		glm::mat4 worldTransform;
-
-		glm::vec3 forward;
-		glm::vec3 up;
-		glm::vec3 right;
-
 		GameObject* m_GameObject = nullptr;
+
+		bool bDirty = true;
 
 	};
 } // namespace flex
