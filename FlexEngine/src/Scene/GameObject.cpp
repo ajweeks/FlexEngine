@@ -1659,9 +1659,10 @@ namespace flex
 
 				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
+
+			SerializeTypeUniqueFields(object);
 		}
 
-		SerializeTypeUniqueFields(object);
 
 		if (!bSerializePrefabData)
 		{
