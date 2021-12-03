@@ -98,7 +98,7 @@ namespace flex
 			}
 			else
 			{
-				CHECK_EQ(type, other.type);
+				CHECK_EQ((u32)type, (u32)other.type);
 			}
 
 			valStr = other.valStr;
