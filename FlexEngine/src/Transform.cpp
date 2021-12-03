@@ -230,7 +230,8 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			return parent->GetTransform()->GetWorldPosition() + localPosition;
+			glm::mat4 m = parent->GetTransform()->GetWorldTransform();
+			return glm::vec3(m * glm::vec4(localPosition, 1.0f));
 		}
 		return localPosition;
 	}
@@ -245,7 +246,8 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			return parent->GetTransform()->GetWorldRotation() * localRotation;
+			glm::mat4 m = parent->GetTransform()->GetWorldTransform();
+			return glm::quat_cast(m) * localRotation;
 		}
 		return localRotation;
 	}
