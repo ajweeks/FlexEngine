@@ -6486,6 +6486,8 @@ namespace flex
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("wire"), gameObjectID)
 	{
+		m_bSerializeMesh = false;
+		m_bSerializeMaterial = false;
 	}
 
 	void Wire::Initialize()
@@ -6510,8 +6512,6 @@ namespace flex
 		meshCreateInfo.materialIDs = { wireMatID };
 		meshCreateInfo.initialMaxVertexCount = numRadialPoints * numPoints;
 		m_Mesh->LoadFromMemory(meshCreateInfo);
-
-		UpdateMesh();
 
 		GameObject::Initialize();
 	}
