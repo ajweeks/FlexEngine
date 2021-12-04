@@ -2,6 +2,7 @@
 
 #include "Scene/GameObject.hpp"
 
+#include "ResourceManager.hpp"
 #include "Types.hpp" // For TrackState
 #include "Track/BezierCurve3D.hpp"
 #include "Track/BezierCurveList.hpp"
