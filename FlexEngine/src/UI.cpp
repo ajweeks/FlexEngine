@@ -558,7 +558,6 @@ namespace flex
 					g_Renderer->DrawStringSS(textElement->text, VEC4_ONE, AnchorPoint::CENTER, pos, spacing, scale);
 				}
 			}
-
 		}
 		else
 		{
@@ -1493,11 +1492,7 @@ namespace flex
 					uiMesh->DrawRect(
 						glm::vec2(rect.minX, rect.minY),
 						glm::vec2(rect.maxX, rect.maxY), rect.colour, 0.0f);
-				}
 
-				if (draggedUIContainer != nullptr)
-				{
-					glm::vec2 mousePos = g_InputManager->GetMousePosition();
 					if (!g_InputManager->IsMouseButtonDown(mouseButtonDragging) ||
 						g_InputManager->GetKeyDown(KeyCode::KEY_ESCAPE) ||
 						mousePos.x == -1.0f || mousePos.y == -1.0f)
@@ -1806,12 +1801,17 @@ namespace flex
 
 	bool UIManager::MoveItemStack(ItemUIContainer* from, ItemUIContainer* to)
 	{
-		if (from != to)
+		return MoveItemStack(from->stackID, to->stackID);
+	}
+
+	bool UIManager::MoveItemStack(GameObjectStackID fromStackID, GameObjectStackID toStackID)
+	{
+		if (fromStackID != toStackID)
 		{
 			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 			if (player != nullptr)
 			{
-				bool bMovedItem = player->MoveItemStack(from->stackID, to->stackID);
+				bool bMovedItem = player->MoveItemStack(fromStackID, toStackID);
 
 				if (bMovedItem)
 				{
@@ -1897,22 +1897,36 @@ namespace flex
 	{
 		if (draggedUIContainer == nullptr && stack != nullptr && stack->count > 0)
 		{
-			if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) > 0)
 			{
-				BeginItemDrag(itemContainer, MouseButton::LEFT);
-
-				if (m_ItemPickupSoundSID != InvalidStringID)
+				if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
+					TransferStack(itemContainer, -1);
+				}
+				else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+				{
+					TransferStack(itemContainer, 1);
 				}
 			}
-			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+			else
 			{
-				BeginItemDrag(itemContainer, MouseButton::RIGHT);
-
-				if (m_ItemPickupSoundSID != InvalidStringID)
+				if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
 				{
-					AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
+					BeginItemDrag(itemContainer, MouseButton::LEFT);
+
+					if (m_ItemPickupSoundSID != InvalidStringID)
+					{
+						AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
+					}
+				}
+				else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT))
+				{
+					BeginItemDrag(itemContainer, MouseButton::RIGHT);
+
+					if (m_ItemPickupSoundSID != InvalidStringID)
+					{
+						AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(m_ItemPickupSoundSID, true), m_ItemSoundGain);
+					}
 				}
 			}
 		}
@@ -1928,6 +1942,49 @@ namespace flex
 
 		draggedUIContainer = draggedItem;
 		mouseButtonDragging = buttonDown;
+	}
+
+	bool UIManager::TransferStack(ItemUIContainer* itemStack, i32 countToMove)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			InventoryType sourceInventoryType;
+			player->GetGameObjectStackFromInventory(itemStack->stackID, sourceInventoryType);
+			if (player->bMinerInventoryShowing)
+			{
+				if (sourceInventoryType == InventoryType::MINER_INVENTORY)
+				{
+					u32 itemsNotMoved = player->MoveStackBetweenInventories(itemStack->stackID, InventoryType::PLAYER_INVENTORY, countToMove);
+					if (itemsNotMoved > 0)
+					{
+						itemsNotMoved = player->MoveStackBetweenInventories(itemStack->stackID, InventoryType::QUICK_ACCESS, itemsNotMoved);
+						return itemsNotMoved == 0;
+					}
+				}
+				else if (sourceInventoryType == InventoryType::PLAYER_INVENTORY
+					|| sourceInventoryType == InventoryType::QUICK_ACCESS)
+				{
+					u32 itemsNotMoved = player->MoveStackBetweenInventories(itemStack->stackID, InventoryType::MINER_INVENTORY, countToMove);
+					return itemsNotMoved == 0;
+				}
+			}
+			else
+			{
+				if (sourceInventoryType == InventoryType::QUICK_ACCESS)
+				{
+					u32 itemsNotMoved = player->MoveStackBetweenInventories(itemStack->stackID, InventoryType::PLAYER_INVENTORY, countToMove);
+					return itemsNotMoved == 0;
+				}
+				else if (sourceInventoryType == InventoryType::PLAYER_INVENTORY)
+				{
+					u32 itemsNotMoved = player->MoveStackBetweenInventories(itemStack->stackID, InventoryType::QUICK_ACCESS, countToMove);
+					return itemsNotMoved == 0;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	void UIManager::EndItemDrag()

@@ -267,7 +267,7 @@ namespace flex
 		glm::vec3 lookDir = rotMat[2];
 		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
 
-		return lookDir;
+		return glm::normalize(lookDir);
 	}
 
 	i32 Player::GetIndex() const
@@ -509,6 +509,20 @@ namespace flex
 		}
 
 		return -1;
+	}
+
+	i32 Player::GetNextFreeMinerInventorySlot()
+	{
+		if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+		{
+			Miner* miner = (Miner*)m_NearbyInteractable;
+			return miner->GetNextFreeInventorySlot();
+		}
+		else
+		{
+			PrintWarn("Attempted to get free inventory slot from miner inventory when not being interacted with\n");
+			return -1;
+		}
 	}
 
 	bool Player::IsRidingTrack()
@@ -754,15 +768,45 @@ namespace flex
 		return false;
 	}
 
+	i32 Player::MoveStackBetweenInventories(GameObjectStackID stackID, InventoryType destInventoryType, i32 countToMove)
+	{
+		InventoryType sourceInventoryType;
+		GameObjectStack* sourceStack = GetGameObjectStackFromInventory(stackID, sourceInventoryType);
+		if (sourceInventoryType != destInventoryType && sourceStack != nullptr)
+		{
+			if (countToMove == -1)
+			{
+				countToMove = sourceStack->count;
+			}
+			u32 itemsNotMoved = AddToInventory(sourceStack->prefabID, countToMove, sourceStack->userData, destInventoryType);
+			if (itemsNotMoved == 0)
+			{
+				sourceStack->count -= countToMove;
+				if (sourceStack->count == 0)
+				{
+					sourceStack->Clear();
+				}
+				return 0;
+			}
+			else
+			{
+				sourceStack->count = itemsNotMoved;
+				return itemsNotMoved;
+			}
+		}
+
+		return countToMove;
+	}
+
 	void Player::CreateDroppedItemFromStack(GameObjectStack* stack)
 	{
-		glm::vec3 forward = m_Transform.GetForward();
-		glm::vec3 dropPos = m_Transform.GetWorldPosition() + forward * m_ItemDropPosForwardOffset;
+		glm::vec3 lookDir = GetLookDirection();
+		glm::vec3 dropPos = m_Transform.GetWorldPosition() + lookDir * m_ItemDropPosForwardOffset;
 		g_SceneManager->CurrentScene()->CreateDroppedItem(
 			stack->prefabID,
 			stack->count,
 			dropPos,
-			forward * m_ItemDropForwardVelocity);
+			lookDir * m_ItemDropForwardVelocity);
 	}
 
 	GameObjectStackID Player::GetGameObjectStackIDForInventory(u32 slotIndex)
@@ -818,15 +862,7 @@ namespace flex
 
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
 	{
-		i32 initialCount = count;
-
 		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
-
-		auto printResults = [initialCount, &prefabID, &count]()
-		{
-			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
-			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
-		};
 
 		// Fill up any existing slots in quick access
 		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
@@ -841,7 +877,6 @@ namespace flex
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -859,7 +894,6 @@ namespace flex
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -878,7 +912,6 @@ namespace flex
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -897,12 +930,32 @@ namespace flex
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
+	}
 
-		printResults();
+	u32 Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType)
+	{
+		switch (inventoryType)
+		{
+		case InventoryType::QUICK_ACCESS:
+			return AddToInventory(m_QuickAccessInventory, prefabID, count, userData);
+		case InventoryType::PLAYER_INVENTORY:
+			return AddToInventory(m_Inventory, prefabID, count, userData);
+		case InventoryType::WEARABLES:
+			return AddToInventory(m_WearablesInventory, prefabID, count, userData);
+		case InventoryType::MINER_INVENTORY:
+		{
+			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+			{
+				Miner* miner = (Miner*)m_NearbyInteractable;
+				return miner->AddToInventory(prefabID, count, userData);
+			}
+		} break;
+		}
+
+		return count;
 	}
 
 	void Player::ClearInventory()

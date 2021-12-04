@@ -63,6 +63,7 @@ namespace flex
 		bool HasFullSelectedInventorySlot();
 		i32 GetNextFreeInventorySlot();
 		i32 GetNextFreeQuickAccessInventorySlot();
+		i32 GetNextFreeMinerInventorySlot();
 
 		bool IsRidingTrack();
 
@@ -71,14 +72,61 @@ namespace flex
 		bool MoveSingleItemFromStack(GameObjectStackID fromID, GameObjectStackID toID);
 		bool DropItemStack(GameObjectStackID stackID, bool bDestroyItem);
 		bool DropSingleItemFromStack(GameObjectStackID stackID, bool bDestroyItem);
+		i32 MoveStackBetweenInventories(GameObjectStackID stackID, InventoryType destInventoryType, i32 countToMove);
 		static GameObjectStackID GetGameObjectStackIDForInventory(u32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForQuickAccessInventory(u32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(u32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForMinerInventory(u32 slotIndex);
 
+		// Adds the specified items to any inventory with space
 		void AddToInventory(DroppedItem* droppedItem);
 		void AddToInventory(const PrefabID& prefabID, i32 count);
 		void AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
+		// Adds the given items to the specified inventory, returns number of items that weren't added
+		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType);
+
+		template<u32 Len>
+		u32 AddToInventory( std::array<GameObjectStack, Len>& inventory, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+		{
+			i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
+
+			// Fill up any existing slots
+			for (GameObjectStack& gameObjectStack : inventory)
+			{
+				if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
+				{
+					i32 deposit = glm::min((maxStackSize - gameObjectStack.count), count);
+					count -= deposit;
+					gameObjectStack.count += deposit;
+					// TODO: Merge user data here
+				}
+
+				if (count == 0)
+				{
+					return 0;
+				}
+			}
+
+			// Fill empty slots
+			for (GameObjectStack& gameObjectStack : inventory)
+			{
+				if (gameObjectStack.count == 0)
+				{
+					i32 deposit = glm::min(maxStackSize, count);
+					count -= deposit;
+					gameObjectStack.prefabID = prefabID;
+					gameObjectStack.count = deposit;
+					gameObjectStack.userData = userData;
+				}
+
+				if (count == 0)
+				{
+					return 0;
+				}
+			}
+
+			return count;
+		}
 
 		void ClearInventory();
 		void ParseInventoryFile();
@@ -134,8 +182,8 @@ namespace flex
 		real m_TrackAttachMinDist = 4.0f;
 
 		real m_ItemPickupRadius = 4.0f;
-		real m_ItemDropPosForwardOffset = 1.0f;
-		real m_ItemDropForwardVelocity = 14.0f;
+		real m_ItemDropPosForwardOffset = 1.5f;
+		real m_ItemDropForwardVelocity = 25.0f;
 
 		TrackState m_TrackState;
 

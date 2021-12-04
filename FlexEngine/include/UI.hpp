@@ -333,6 +333,7 @@ namespace flex
 		void Serialize();
 
 		bool MoveItemStack(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveItemStack(GameObjectStackID fromStackID, GameObjectStackID toStackID);
 		bool MoveSingleItemFromStack(ItemUIContainer* from, ItemUIContainer* to);
 		bool DropItemStack(ItemUIContainer* stack, bool bDestroyItem);
 		bool DropSingleItemFromStack(ItemUIContainer* stack, bool bDestroyItem);
@@ -340,6 +341,10 @@ namespace flex
 		void HandleBeginStackDrag(ItemUIContainer* itemContainer, GameObjectStack* stack);
 		void BeginItemDrag(ItemUIContainer* draggedItem, MouseButton buttonDown);
 		void EndItemDrag();
+		// Attempts to transfer stack to an alternate inventory if present
+		bool TransferStack(ItemUIContainer* itemStack, i32 countToMove);
+		// Attempts to transfer one item from the given stack to an alternate inventory if present
+		bool TransferSingleItemFromStack(ItemUIContainer* itemStack);
 
 		void EnqueueImageSprite(TextureID textureID, Rect lastCutRect);
 

@@ -1955,8 +1955,13 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		GameObjectStack* GetStackFromInventory(i32 slotIndex);
+		i32 GetNextFreeInventorySlot();
 
 		bool IsInventoryFull() const;
+
+		// Returns the number of items which didn't fit
+		u32 AddToInventory(const PrefabID& prefabID, i32 stackSize, const GameObjectStack::UserData& userData);
+		u32 AddToInventory(GameObjectStack* stack);
 
 		static const u32 INVENTORY_SIZE = 5;
 
@@ -1965,8 +1970,6 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 	private:
-		// Returns the number of items which didn't fit
-		u32 AddToInventory(const PrefabID& prefabID, u32 stackSize);
 
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;

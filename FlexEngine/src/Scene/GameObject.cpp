@@ -13471,7 +13471,8 @@ namespace flex
 
 							if (mineralMined > 0)
 							{
-								u32 extraItems = AddToInventory(minedMineralPrefabID, mineralMined);
+								GameObjectStack::UserData userData = {};
+								u32 extraItems = AddToInventory(minedMineralPrefabID, mineralMined, userData);
 								if (extraItems > 0)
 								{
 									glm::vec3 pos = m_Transform.GetWorldPosition() +
@@ -13557,6 +13558,18 @@ namespace flex
 		return newGameObject;
 	}
 
+	i32 Miner::GetNextFreeInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_Inventory.size(); ++i)
+		{
+			if (m_Inventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
 	GameObjectStack* Miner::GetStackFromInventory(i32 slotIndex)
 	{
 		if (slotIndex >= 0 && slotIndex < m_Inventory.size())
@@ -13585,22 +13598,24 @@ namespace flex
 		return true;
 	}
 
-	u32 Miner::AddToInventory(const PrefabID& prefabID, u32 stackSize)
+	u32 Miner::AddToInventory(const PrefabID& prefabID, i32 stackSize, const GameObjectStack::UserData& userData)
 	{
-		u32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
+		i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
 		for (GameObjectStack& stack : m_Inventory)
 		{
 			if (!stack.prefabID.IsValid())
 			{
 				// Empty slot
 				stack.prefabID = prefabID;
-				stack.count = (i32)stackSize;
+				stack.count = stackSize;
+				stack.userData = userData;
 				return 0;
 			}
 			else if (stack.prefabID == prefabID)
 			{
-				u32 deltaToAdd = glm::min((u32)stackSize, maxStackSize - stack.count);
+				i32 deltaToAdd = glm::min(stackSize, maxStackSize - stack.count);
 				stack.count += deltaToAdd;
+				// TODO: Merge user data
 				if (deltaToAdd == stackSize)
 				{
 					return 0;
@@ -13610,6 +13625,11 @@ namespace flex
 			}
 		}
 		return stackSize;
+	}
+
+	u32 Miner::AddToInventory(GameObjectStack* stack)
+	{
+		return AddToInventory(stack->prefabID, stack->count, stack->userData);
 	}
 
 	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
