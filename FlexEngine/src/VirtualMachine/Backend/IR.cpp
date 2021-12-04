@@ -1120,7 +1120,7 @@ namespace flex
 							Value::Type lhsType = state->variableTypes[assignment->lhs];
 							if (Value::TypeAssignable(state, lhsType, rhs))
 							{
-								CHECK_EQ(state->variableTypes[assignment->lhs], state->GetValueType(rhs));
+								CHECK_EQ((u32)state->variableTypes[assignment->lhs], (u32)state->GetValueType(rhs));
 								state->InsertionBlock()->AddAssignment(new IR::Assignment(state, assignment->span, assignment->lhs, rhs));
 							}
 							else

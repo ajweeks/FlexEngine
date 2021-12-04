@@ -1184,7 +1184,7 @@ namespace flex
 
 							InventoryType inventoryType;
 							GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-							CHECK_EQ(inventoryType, InventoryType::QUICK_ACCESS);
+							CHECK_EQ((u32)inventoryType, (u32)InventoryType::QUICK_ACCESS);
 
 							g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 
@@ -1353,7 +1353,7 @@ namespace flex
 
 								InventoryType inventoryType;
 								GameObjectStack* stack = player->GetGameObjectStackFromInventory(itemContainer->stackID, inventoryType);
-								CHECK_EQ(inventoryType, InventoryType::WEARABLES);
+								CHECK_EQ((u32)inventoryType, (u32)InventoryType::WEARABLES);
 
 								g_UIManager->HandleBeginStackDrag(itemContainer, stack);
 

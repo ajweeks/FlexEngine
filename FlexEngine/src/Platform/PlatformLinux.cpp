@@ -23,6 +23,9 @@ IGNORE_WARNINGS_PUSH
 #include <linux/limits.h> // for PATH_MAX
 #include <uuid/uuid.h>
 
+#include <cxxabi.h> // for __cxa_demangle
+#include <execinfo.h> // for backtrace
+
 #include <stdlib.h>
 IGNORE_WARNINGS_POP
 
@@ -596,6 +599,74 @@ namespace flex
 	void Platform::Sleep(ms milliseconds)
 	{
 		usleep((useconds_t)Time::ConvertFormats(milliseconds, Time::Format::MILLISECOND, Time::Format::MICROSECOND));
+	}
+
+	void Platform::PrintStackTrace()
+	{
+		void* callstack[32];
+		i32 frames = backtrace(callstack, ARRAY_LENGTH(callstack));
+		char** strs = backtrace_symbols(callstack, frames);
+		for (i32 i = 0; i < frames; ++i)
+		{
+			char moduleName[1024] = {};
+			char functionSymbol[1024] = {};
+			char offset[64] = {};
+			i32 validCppName = 0;
+			char* demangledFunctionSymbol = nullptr;
+
+			const char* ptr = strs[i];
+			char* mptr = moduleName;
+			while (*ptr && *ptr != '(')
+			{
+				*mptr++ = *ptr++;
+			}
+			*mptr = '\0';
+			++ptr;
+			if (*ptr == '+')
+			{
+				strcpy(functionSymbol, "(unknown)");
+				++ptr;
+			}
+			else
+			{
+				// Copy mangled function name
+				char* fptr = functionSymbol;
+				while (*ptr && *ptr != '+')
+				{
+					*fptr++ = *ptr++;
+				}
+				*fptr = '\0';
+
+				if (*ptr != '+')
+				{
+					fprintf(stderr, "Unable to decode frame: %s\n", strs[i]);
+					continue;
+				}
+				++ptr;
+			}
+
+			char* optr = offset;
+			while (*ptr && *ptr != ')')
+			{
+				*optr++ = *ptr++;
+			}
+			*optr = '\0';
+
+			validCppName = 0;
+			demangledFunctionSymbol = abi::__cxa_demangle(functionSymbol, NULL, 0, &validCppName);
+
+			if (validCppName == 0)
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + %s\n", moduleName, callstack[i],
+					demangledFunctionSymbol, offset);
+			}
+			else
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + %s\n", moduleName, callstack[i],
+					functionSymbol, offset);
+			}
+		}
+		free(strs);
 	}
 
 	void Platform::RetrieveCPUInfo()

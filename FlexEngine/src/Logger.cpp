@@ -110,25 +110,6 @@ namespace flex
 		va_end(argList);
 	}
 
-	void PrintFatal(const char* str, ...)
-	{
-		if (!g_bEnableLogToConsole)
-		{
-			return;
-		}
-
-		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
-
-		va_list argList;
-		va_start(argList, str);
-
-		Print(str, argList);
-
-		va_end(argList);
-
-		abort();
-	}
-
 	void PrintFatal(const char* file, int line, const char* str, ...)
 	{
 		if (!g_bEnableLogToConsole)
@@ -136,10 +117,15 @@ namespace flex
 			return;
 		}
 
-		const char* fileStart = strstr(file, "FlexEngine/");
-		if (!fileStart) fileStart = strstr(file, "FlexEngine\\");
-		std::string shortfile(fileStart ? (fileStart + 11) : file);
-		PrintError("[%s:%d] ", shortfile.c_str(), line);
+		// TODO: Make thread safe?
+		//static std::mutex mutex;
+		//std::lock_guard<std::mutex> lock(mutex);
+
+		// Strip leading directories
+		const char* filePath = strstr(file, "FlexEngine/");
+		if (!filePath) filePath = strstr(file, "FlexEngine\\");
+		std::string shortFilePath(filePath ? (filePath + 11) : file);
+		PrintError("[%s:%d] ", shortFilePath.c_str(), line);
 
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
@@ -149,6 +135,8 @@ namespace flex
 		Print(str, argList);
 
 		va_end(argList);
+
+		Platform::PrintStackTrace();
 
 		abort();
 	}
@@ -187,14 +175,6 @@ namespace flex
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
 		PrintSimple(str);
-	}
-
-	void PrintFatal(const char* file, int line, const char* str)
-	{
-		const char* fileStart = strstr(file, "FlexEngine/");
-		if (!fileStart) fileStart = strstr(file, "FlexEngine\\");
-		std::string shortfile(fileStart ? (fileStart + 11) : file);
-		PrintFatal("[%s:%d] %s", shortfile.c_str(), line, str);
 	}
 
 	//

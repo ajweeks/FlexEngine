@@ -2,7 +2,7 @@
 
 // Originally taken from mmp/pbrt-v4/src/pbrt/util/check.h
 
-#define CHECK(x) (!(!(x) && (PrintFatal("Check failed: %s", #x), true)))
+#define CHECK(x) (!(!(x) && (PRINT_FATAL("Check failed: %s", #x), true)))
 
 #define CHECK_EQ(a, b) CHECK_IMPL(a, b, ==)
 #define CHECK_NE(a, b) CHECK_IMPL(a, b, !=)
@@ -11,16 +11,15 @@
 #define CHECK_LT(a, b) CHECK_IMPL(a, b, <)
 #define CHECK_LE(a, b) CHECK_IMPL(a, b, <=)
 
-#define CHECK_IMPL(a, b, op)                                                \
-    do {                                                                    \
-        auto va = a;                                                        \
-        auto vb = b;                                                        \
-        if (!(va op vb))                                                    \
-        {                                                                   \
-            PrintFatal("Check failed: %s " #op " %s with %s = %s, %s = %s", \
-                #a, #b, #a, va, #b, vb);                                    \
-        }                                                                   \
-    } while (false) /* swallow semicolon */
+#define CHECK_IMPL(a, b, op)                                    \
+	do {                                                        \
+		auto va = a;                                            \
+		auto vb = b;                                            \
+		if (!(va op vb))                                        \
+		{                                                       \
+			PRINT_FATAL("Check failed: %s " #op " %s\n", #a, #b); \
+		}                                                       \
+	} while (false) /* swallow semicolon */
 
 
 #ifdef DEBUG
@@ -36,8 +35,8 @@
 #else
 
 #define EMPTY_CHECK \
-    do {            \
-    } while (false) /* swallow semicolon */
+	do {            \
+	} while (false) /* swallow semicolon */
 
 // Use an empty check (rather than expanding the macros to nothing) to swallow the
 // semicolon at the end, and avoid empty if-statements.

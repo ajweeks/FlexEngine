@@ -1070,7 +1070,7 @@ namespace flex
 			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			CHECK_EQ(cam->type, CameraType::TERMINAL);
+			CHECK_EQ((u32)cam->type, (u32)CameraType::TERMINAL);
 			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
 			terminalCam->SetTerminal(nullptr);
 

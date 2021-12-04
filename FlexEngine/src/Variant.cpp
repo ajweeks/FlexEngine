@@ -16,6 +16,26 @@ namespace flex
 		return VariantTypeNames[(u32)type];
 	}
 
+	Variant::Variant(const Variant& other)
+	{
+		if (type == Type::_NONE)
+		{
+			type = other.type;
+		}
+		else
+		{
+			CHECK_EQ((u32)type, (u32)other.type);
+		}
+
+		valStr = other.valStr;
+	}
+
+	Variant::Variant(const Variant&& other) :
+		type(other.type),
+		valStr(other.valStr)
+	{
+	}
+
 	Variant::Variant(const IR::Value& other)
 	{
 		switch (other.type)

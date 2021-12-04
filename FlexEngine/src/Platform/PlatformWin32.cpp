@@ -14,6 +14,8 @@ IGNORE_WARNINGS_PUSH
 #include <stdio.h> // For gcvt, fopen
 
 #include <Rpc.h> // For UuidCreate
+
+#include <dbghelp.h> // For SymInitialize
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -427,43 +429,6 @@ namespace flex
 		return result.str();
 	}
 
-	u64 Platform::GetUSSinceEpoch()
-	{
-		FILETIME ft;
-		LARGE_INTEGER li;
-
-		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
-		// copy it to a LARGE_INTEGER structure.
-		GetSystemTimeAsFileTime(&ft);
-		li.LowPart = ft.dwLowDateTime;
-		li.HighPart = ft.dwHighDateTime;
-
-		u64 result = li.QuadPart;
-
-		// Convert from file time to UNIX epoch time
-		result -= 116444736000000000LL;
-
-		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
-		//result /= 10000;
-
-		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
-		result /= 10;
-
-		return result;
-	}
-
-	GameObjectID Platform::GenerateGUID()
-	{
-		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
-
-		GameObjectID result;
-		::UUID winGuid;
-		RPC_STATUS status = ::UuidCreate(&winGuid);
-		CHECK_EQ(status, RPC_S_OK);
-		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
-		return result;
-	}
-
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);
@@ -533,6 +498,75 @@ namespace flex
 	void Platform::Sleep(ms milliseconds)
 	{
 		::Sleep((DWORD)milliseconds);
+	}
+
+	u64 Platform::GetUSSinceEpoch()
+	{
+		FILETIME ft;
+		LARGE_INTEGER li;
+
+		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
+		// copy it to a LARGE_INTEGER structure.
+		GetSystemTimeAsFileTime(&ft);
+		li.LowPart = ft.dwLowDateTime;
+		li.HighPart = ft.dwHighDateTime;
+
+		u64 result = li.QuadPart;
+
+		// Convert from file time to UNIX epoch time
+		result -= 116444736000000000LL;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
+		//result /= 10000;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
+		result /= 10;
+
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
+
+		GameObjectID result;
+		::UUID winGuid;
+		RPC_STATUS status = ::UuidCreate(&winGuid);
+		CHECK_EQ(status, RPC_S_OK);
+		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
+		return result;
+	}
+
+	void Platform::PrintStackTrace()
+	{
+		// https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
+		void* stack[32];
+		constexpr i32 maxNameLength = 1024;
+		HANDLE process = GetCurrentProcess();
+		SymInitialize(process, NULL, TRUE);
+		WORD nFrames = CaptureStackBackTrace(0, ARRAY_LENGTH(stack), stack, NULL);
+		SYMBOL_INFO* symbol =
+			(SYMBOL_INFO*)malloc(sizeof(SYMBOL_INFO) + (maxNameLength - 1) * sizeof(TCHAR));
+		symbol->MaxNameLen = maxNameLength;
+		symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		DWORD displacement;
+		IMAGEHLP_LINE64* line = (IMAGEHLP_LINE64*)malloc(sizeof(IMAGEHLP_LINE64));
+		line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+		for (i32 i = 0; i < nFrames; ++i)
+		{
+			DWORD64 address = (DWORD64)(stack[i]);
+			SymFromAddr(process, address, NULL, symbol);
+			if (SymGetLineFromAddr64(process, address, &displacement, line))
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + line %d\n", line->FileName,
+					(void*)symbol->Address, symbol->Name, line->LineNumber);
+			}
+			else
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s\n", "unknown", (void*)symbol->Address,
+					symbol->Name);
+			}
+		}
 	}
 
 	void Platform::RetrieveCPUInfo()

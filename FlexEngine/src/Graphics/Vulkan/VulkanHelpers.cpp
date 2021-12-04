@@ -900,7 +900,7 @@ namespace flex
 		{
 			CHECK_NE(createInfo.width, 0u);
 			CHECK_NE(createInfo.height, 0u);
-			CHECK_NE(createInfo.format, VK_FORMAT_UNDEFINED);
+			CHECK_NE((u32)createInfo.format, (u32)VK_FORMAT_UNDEFINED);
 
 			if (createInfo.width > MAX_TEXTURE_DIM ||
 				createInfo.height > MAX_TEXTURE_DIM ||
@@ -2030,7 +2030,7 @@ namespace flex
 			VkDeviceMemory* memory, VkImageView* imageView,
 			const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
-			CHECK_NE(format, VK_FORMAT_UNDEFINED);
+			CHECK_NE((u32)format, (u32)VK_FORMAT_UNDEFINED);
 			CHECK(width != 0 && height != 0);
 			CHECK_LE(width, MAX_TEXTURE_DIM);
 			CHECK_LE(height, MAX_TEXTURE_DIM);
@@ -2457,7 +2457,7 @@ namespace flex
 
 		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
 		{
-			CHECK_NE(type, UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
+			CHECK_NE((u32)type, (u32)UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
 			for (UniformBuffer& buffer : uniformBufferList)
 			{
 				if (buffer.type == type)

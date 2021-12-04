@@ -90,25 +90,8 @@ namespace flex
 			valChar(val)
 		{}
 
-		Variant(const Variant& other)
-		{
-			if (type == Type::_NONE)
-			{
-				type = other.type;
-			}
-			else
-			{
-				CHECK_EQ((u32)type, (u32)other.type);
-			}
-
-			valStr = other.valStr;
-		}
-
-		Variant(const Variant&& other) :
-			type(other.type),
-			valStr(other.valStr)
-		{
-		}
+		Variant(const Variant& other);
+		Variant(const Variant&& other);
 
 		explicit Variant(const IR::Value& other);
 

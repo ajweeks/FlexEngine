@@ -138,6 +138,8 @@ namespace flex
 		static u64 GetUSSinceEpoch();
 		static GameObjectID GenerateGUID();
 
+		static void PrintStackTrace();
+
 		static CPUInfo cpuInfo;
 
 	private:

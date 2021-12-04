@@ -142,6 +142,8 @@ configuration "vs*"
 configuration { "vs*", "x32" }
 	flags { "EnableSSE2" }
 	defines { "WIN32" }
+configuration { "vs*", "DEBUG" }
+	links { "Dbghelp" }
 configuration { "x32" }
 	defines { "PLATFORM_x32" }
 configuration "linux*"

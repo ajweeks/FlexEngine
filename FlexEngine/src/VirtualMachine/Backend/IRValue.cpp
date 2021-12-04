@@ -120,7 +120,7 @@ namespace flex
 			}
 			else
 			{
-				CHECK_EQ(type, other.type);
+				CHECK_EQ((u32)type, (u32)other.type);
 			}
 
 			memcpy(&_largestField, &other._largestField, sizeof(_largestField));
