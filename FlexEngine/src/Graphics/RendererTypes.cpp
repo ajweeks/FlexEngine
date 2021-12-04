@@ -125,17 +125,6 @@ namespace flex
 		const std::string& inComputeShaderFilePath /* = "" */) :
 		name(name)
 	{
-#if COMPILE_OPEN_GL
-		vertexShaderFilePath = SHADER_SOURCE_DIRECTORY + inVertexShaderFilePath;
-		if (!inFragmentShaderFilePath.empty())
-		{
-			fragmentShaderFilePath = SHADER_SOURCE_DIRECTORY + inFragmentShaderFilePath;
-		}
-		if (!inGeometryShaderFilePath.empty())
-		{
-			geometryShaderFilePath = SHADER_SOURCE_DIRECTORY + inGeometryShaderFilePath;
-		}
-#elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
 			vertexShaderFilePath = COMPILED_SHADERS_DIRECTORY + inVertexShaderFilePath;
@@ -152,7 +141,6 @@ namespace flex
 		{
 			computeShaderFilePath = COMPILED_SHADERS_DIRECTORY + inComputeShaderFilePath;
 		}
-#endif
 	}
 
 	Material::~Material()

@@ -125,7 +125,7 @@ namespace flex
 
 	protected:
 
-#if COMPILE_OPEN_GL || COMPILE_VULKAN
+#if COMPILE_VULKAN
 		friend void GLFWKeyCallback(GLFWwindow* glfwWindow, i32 key, i32 scancode, i32 action, i32 mods);
 		friend void GLFWCharCallback(GLFWwindow* glfwWindow, u32 character);
 		friend void GLFWMouseButtonCallback(GLFWwindow* glfwWindow, i32 button, i32 action, i32 mods);
@@ -135,7 +135,7 @@ namespace flex
 		friend void GLFWWindowSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 		friend void GLFWWindowPosCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
 		friend void GLFWFramebufferSizeCallback(GLFWwindow* glfwWindow, i32 width, i32 height);
-#endif // COMPILE_OPEN_GL || COMPILE_VULKAN
+#endif // COMPILE_VULKAN
 
 		//void UpdateWindowSize(i32 width, i32 height);
 		//void UpdateWindowSize(glm::vec2i windowSize);

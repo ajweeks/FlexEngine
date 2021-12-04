@@ -76,12 +76,6 @@ namespace flex
 	bool g_bEnableLogging_Loading = false;
 	bool g_bEnableLogging_Shaders = true;
 
-#if COMPILE_OPEN_GL
-	bool g_bOpenGLEnabled = true;
-#else
-	bool g_bOpenGLEnabled = false;
-#endif
-
 #if COMPILE_VULKAN
 	bool g_bVulkanEnabled = true;
 #else

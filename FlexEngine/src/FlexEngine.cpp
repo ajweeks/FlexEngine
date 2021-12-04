@@ -56,10 +56,6 @@ IGNORE_WARNINGS_POP
 #include "Window/Monitor.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
 
-#if COMPILE_OPEN_GL
-#include "Graphics/GL/GLRenderer.hpp"
-#endif
-
 #if COMPILE_VULKAN
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #endif
@@ -118,9 +114,7 @@ namespace flex
 		m_LogSaveTimer = Timer(5.0f);
 		m_UIWindowCacheSaveTimer = Timer(20.0f);
 
-#if COMPILE_OPEN_GL
-		m_RendererName = "Open GL";
-#elif COMPILE_VULKAN
+#if COMPILE_VULKAN
 		m_RendererName = "Vulkan";
 #endif
 
@@ -645,9 +639,7 @@ namespace flex
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
 
-#if COMPILE_OPEN_GL
-		g_Renderer = new gl::GLRenderer();
-#elif COMPILE_VULKAN
+#if COMPILE_VULKAN
 		g_Renderer = new vk::VulkanRenderer();
 #endif
 	}

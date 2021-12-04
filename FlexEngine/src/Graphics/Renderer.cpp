@@ -1841,32 +1841,6 @@ namespace flex
 #endif
 		std::vector<ShaderInfo> shaderInfos;
 		SUPPRESS_WARN_BEGIN;
-#if COMPILE_OPEN_GL
-		shaderInfos = {
-			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
-			{ "colour", "colour.vert", "colour.frag" },
-			{ "pbr", "pbr.vert", "pbr.frag" },
-			{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
-			{ "skybox", "skybox.vert", "skybox.frag" },
-			{ "equirectangular_to_cube", "skybox.vert", "equirectangular_to_cube.frag" },
-			{ "irradiance", "skybox.vert", "irradiance.frag" },
-			{ "prefilter", "skybox.vert", "prefilter.frag" },
-			{ "brdf", "brdf.vert", "brdf.frag" },
-			{ "sprite", "sprite.vert", "sprite.frag" },
-			{ "sprite_arr", "sprite.vert", "sprite_arr.frag" },
-			{ "post_process", "post_process.vert", "post_process.frag" },
-			{ "post_fxaa", "post_fxaa.vert", "post_fxaa.frag" },
-			{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
-			{ "font_ss", "font_ss.vert", "font_ss.frag", "font_ss.geom" },
-			{ "font_ws", "font_ws.vert", "font_ws.frag", "font_ws.geom" },
-			{ "shadow", "shadow.vert" },
-			{ "ssao", "ssao.vert", "ssao.frag" },
-			{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
-			{ "taa_resolve", "post_process.vert", "taa_resolve.frag" },
-			{ "gamma_correct", "post_process.vert", "gamma_correct.frag" },
-			{ "blit", "blit.vert", "blit.frag" },
-		};
-#elif COMPILE_VULKAN
 		shaderInfos = {
 			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv", "", "" },
 			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv", "", "" },
@@ -1903,7 +1877,6 @@ namespace flex
 			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
 			{ "hologram", "vk_hologram_vert.spv", "vk_hologram_frag.spv", "", "" },
 		};
-#endif
 		SUPPRESS_WARN_END;
 
 		InitializeShaders(shaderInfos);

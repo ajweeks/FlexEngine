@@ -1,7 +1,6 @@
 
 // Configuration variables
 
-#define COMPILE_OPEN_GL 0
 #define COMPILE_VULKAN 1
 
 #define COMPILE_IMGUI 1
@@ -223,21 +222,6 @@ IGNORE_WARNINGS_POP
 // Turns a const char* into a StringID and const char* pair of params
 #define SID_PAIR(window) SID(window), window
 
-#if COMPILE_OPEN_GL
-#ifdef DEBUG
-#define GL_PUSH_DEBUG_GROUP(str) \
-if (FlexEngine::s_bHasGLDebugExtension) { glPushDebugGroupKHR(GL_DEBUG_SOURCE_APPLICATION, 0, -1, str); }
-#define GL_POP_DEBUG_GROUP() \
-if (FlexEngine::s_bHasGLDebugExtension) { glPopDebugGroupKHR(); }
-#else
-#define GL_PUSH_DEBUG_GROUP(str)
-#define GL_POP_DEBUG_GROUP()
-#endif // DEBUG
-#else
-#define GL_PUSH_DEBUG_GROUP(str)
-#define GL_POP_DEBUG_GROUP()
-#endif // COMPILE_OPEN_GL
-
 #define SID(str) Hash(str)
 
 namespace flex
@@ -307,7 +291,6 @@ namespace flex
 	extern bool g_bEnableLogging_Loading;
 	extern bool g_bEnableLogging_Shaders;
 
-	extern bool g_bOpenGLEnabled;
 	extern bool g_bVulkanEnabled;
 }
 
