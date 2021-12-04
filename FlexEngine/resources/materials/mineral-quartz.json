@@ -4,7 +4,6 @@
 	{
 		"name" : "mineral quartz",
 		"shader" : "pbr",
-		"const albedo" : "0.728,0.728,0.728",
-		"const emissive" : "0.000,0.000,0.000"
+		"const albedo" : "0.728,0.728,0.728"
 	}
 }

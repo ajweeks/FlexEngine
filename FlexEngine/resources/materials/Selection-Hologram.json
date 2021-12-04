@@ -4,6 +4,6 @@
 	{
 		"name" : "Selection Hologram",
 		"shader" : "hologram",
-		"const emissive" : "2.000,5.000,2.750"
+		"const emissive" : "2.000,4.000,2.500"
 	}
 }

@@ -5,7 +5,6 @@
 		"name" : "Blue paint",
 		"shader" : "pbr",
 		"const albedo" : "0.018,0.107,0.920",
-		"const emissive" : "0.000,0.000,0.000",
 		"const metallic" : 0.850000,
 		"const roughness" : 0.780000
 	}

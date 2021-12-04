@@ -5,7 +5,6 @@
 		"name" : "black plastic",
 		"shader" : "pbr",
 		"const albedo" : "0.000,0.000,0.000",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 1.000000
 	}
 }

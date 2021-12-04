@@ -505,7 +505,7 @@ namespace flex
 		{
 			materialObject.fields.emplace_back("const albedo", JSONValue((glm::vec3)constAlbedo, 3));
 		}
-		if (constEmissive != VEC4_ONE)
+		if (constEmissive != VEC4_ZERO)
 		{
 			materialObject.fields.emplace_back("const emissive", JSONValue((glm::vec3)constEmissive, 3));
 		}

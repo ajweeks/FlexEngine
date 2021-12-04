@@ -5,7 +5,6 @@
 		"name" : "donut_dough",
 		"shader" : "pbr",
 		"const albedo" : "0.907,0.557,0.238",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 0.990000
 	}
 }

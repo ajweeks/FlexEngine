@@ -4,7 +4,6 @@
 	{
 		"name" : "mineral olivine",
 		"shader" : "pbr",
-		"const albedo" : "0.278,0.953,0.543",
-		"const emissive" : "0.000,0.000,0.000"
+		"const albedo" : "0.278,0.953,0.543"
 	}
 }

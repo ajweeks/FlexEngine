@@ -5,7 +5,6 @@
 		"name" : "skybox 01",
 		"shader" : "skybox",
 		"const albedo" : "0.000,0.000,0.000",
-		"const emissive" : "0.000,0.000,0.000",
 		"albedo texture filepath" : "white-noise.png",
 		"generate hdr cubemap sampler" : true,
 		"enable cubemap sampler" : true,

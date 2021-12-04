@@ -5,7 +5,6 @@
 		"name" : "solar-panel-trim",
 		"shader" : "pbr",
 		"const albedo" : "0.540,0.540,0.540",
-		"const emissive" : "0.000,0.000,0.000",
 		"const metallic" : 1.000000,
 		"const roughness" : 0.130000
 	}

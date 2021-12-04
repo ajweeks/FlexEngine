@@ -5,7 +5,6 @@
 		"name" : "pbr grey",
 		"shader" : "pbr",
 		"const albedo" : "0.004,0.004,0.004",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 0.400000
 	}
 }
