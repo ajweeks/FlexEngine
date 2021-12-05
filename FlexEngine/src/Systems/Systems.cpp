@@ -56,8 +56,8 @@ namespace flex
 			glm::vec3 playerRight = playerTransform->GetRight();
 			glm::vec3 wireHoldingOffset = playerForward * 5.0f + playerUp * -0.75f;
 
-			glm::vec3 plug0DefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
-			glm::vec3 plug1DefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
+			glm::vec3 plugLDefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
+			glm::vec3 plugRDefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
 
 			const real hoverAmount = TWEAKABLE(0.1f);
 
@@ -113,7 +113,9 @@ namespace flex
 				else if (player->IsHolding(plug0))
 				{
 					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					nearbySocket0 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true);
+					bool bLeftHand = player->heldItemLeftHand == plug0->ID;
+					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
+					nearbySocket0 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true);
 					if (nearbySocket0 != nullptr)
 					{
 						// Found nearby socket
@@ -128,7 +130,7 @@ namespace flex
 					else
 					{
 						// Stick to player
-						plug0Transform->SetWorldPosition(plug0DefaultPos);
+						plug0Transform->SetWorldPosition(plugDefaultPos);
 					}
 				}
 				else
@@ -149,7 +151,9 @@ namespace flex
 				else if (player->IsHolding(plug1))
 				{
 					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					nearbySocket1 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
+					bool bLeftHand = player->heldItemLeftHand == plug1->ID;
+					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
+					nearbySocket1 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
 					if (nearbySocket1 != nullptr)
 					{
 						// Found nearby socket
@@ -164,7 +168,7 @@ namespace flex
 					else
 					{
 						// Stick to player
-						plug1Transform->SetWorldPosition(plug1DefaultPos);
+						plug1Transform->SetWorldPosition(plugDefaultPos);
 					}
 				}
 				else
