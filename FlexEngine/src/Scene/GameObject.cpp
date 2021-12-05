@@ -13190,7 +13190,7 @@ namespace flex
 				if (otherSocket != nullptr)
 				{
 					real chargeAmount = m_ChargeRate * m_Efficiency * g_DeltaTime;
-					otherSocket->parent->OnCharge(chargeAmount);
+					otherSocket->GetParent()->OnCharge(chargeAmount);
 				}
 			}
 		}
@@ -13221,7 +13221,7 @@ namespace flex
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{
-					otherSocket->parent->OnCharge(chargeAmount);
+					otherSocket->GetParent()->OnCharge(chargeAmount);
 				}
 			}
 		}

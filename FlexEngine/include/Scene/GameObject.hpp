@@ -1114,8 +1114,6 @@ namespace flex
 		void OnPlugIn(WirePlug* plug);
 		void OnUnPlug();
 
-		GameObject* parent = nullptr;
-
 		GameObjectID connectedPlugID = InvalidGameObjectID;
 		i32 slotIdx = 0;
 	};

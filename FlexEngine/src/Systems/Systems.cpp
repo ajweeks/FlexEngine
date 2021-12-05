@@ -248,8 +248,8 @@ namespace flex
 
 				bool bWire0PluggedIn = socket0 != nullptr;
 				bool bWire1PluggedIn = socket1 != nullptr;
-				bool bWire0On = bWire0PluggedIn && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
-				bool bWire1On = bWire1PluggedIn && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
+				bool bWire0On = bWire0PluggedIn && (socket0->GetParent()->outputSignals[socket0->slotIdx] != -1);
+				bool bWire1On = bWire1PluggedIn && (socket1->GetParent()->outputSignals[socket1->slotIdx] != -1);
 				debugDrawer->drawSphere(plug0PosBt, 0.2f, bWire0PluggedIn ? wireColPluggedIn : (bWire0On ? wireColOn : wireColOff));
 				debugDrawer->drawSphere(plug1PosBt, 0.2f, bWire1PluggedIn ? wireColPluggedIn : (bWire1On ? wireColOn : wireColOff));
 #endif
@@ -270,7 +270,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket1 = (Socket*)plug1->socketID.Get();
-					i32 sendSignal = socket1->parent->outputSignals[socket1->slotIdx];
+					i32 sendSignal = socket1->GetParent()->outputSignals[socket1->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -279,7 +279,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket0 = (Socket*)plug0->socketID.Get();
-					i32 sendSignal = socket0->parent->outputSignals[socket0->slotIdx];
+					i32 sendSignal = socket0->GetParent()->outputSignals[socket0->slotIdx];
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -439,6 +439,11 @@ namespace flex
 		if (plug != nullptr)
 		{
 			Wire* wire = (Wire*)plug->wireID.Get();
+			if (wire == nullptr)
+			{
+				PrintWarn("Plug lost reference to its wire\n");
+				return nullptr;
+			}
 			WirePlug* otherPlug = (WirePlug*)wire->GetOtherPlug(plug).Get();
 			return (Socket*)otherPlug->socketID.Get();
 		}
@@ -493,7 +498,11 @@ namespace flex
 
 	void PluggablesSystem::UnplugFromSocket(WirePlug* plug)
 	{
-		((Socket*)plug->socketID.Get())->OnUnPlug();
+		Socket* socket = (Socket*)plug->socketID.Get();
+		if (socket != nullptr)
+		{
+			socket->OnUnPlug();
+		}
 		plug->Unplug();
 
 		AudioManager::PlaySource(m_UnplugAudioSourceID);
