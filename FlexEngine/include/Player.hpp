@@ -87,7 +87,7 @@ namespace flex
 		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType);
 
 		template<u32 Len>
-		u32 AddToInventory( std::array<GameObjectStack, Len>& inventory, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+		u32 MoveToInventory( std::array<GameObjectStack, Len>& inventory, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
 		{
 			i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 

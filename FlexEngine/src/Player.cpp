@@ -940,11 +940,11 @@ namespace flex
 		switch (inventoryType)
 		{
 		case InventoryType::QUICK_ACCESS:
-			return AddToInventory(m_QuickAccessInventory, prefabID, count, userData);
+			return MoveToInventory(m_QuickAccessInventory, prefabID, count, userData);
 		case InventoryType::PLAYER_INVENTORY:
-			return AddToInventory(m_Inventory, prefabID, count, userData);
+			return MoveToInventory(m_Inventory, prefabID, count, userData);
 		case InventoryType::WEARABLES:
-			return AddToInventory(m_WearablesInventory, prefabID, count, userData);
+			return MoveToInventory(m_WearablesInventory, prefabID, count, userData);
 		case InventoryType::MINER_INVENTORY:
 		{
 			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
