@@ -2200,7 +2200,6 @@ namespace flex
 			Socket* socket = (Socket*)child;
 			socket->slotIdx = (i32)sockets.size();
 			sockets.push_back(socket);
-			socket->parent = this;
 			outputSignals.resize(sockets.size(), -1);
 		}
 
@@ -13649,7 +13648,8 @@ namespace flex
 			std::vector<JSONObject> inventory;
 			if (minerObj.TryGetObjectArray("inventory", inventory))
 			{
-				ParseInventory(m_Inventory, inventory);
+				// TODO: Change function to take arrays once custom array class is in use (clang didn't like templatizing over std::array len)
+				ParseInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory);
 			}
 		}
 	}
@@ -13665,7 +13665,7 @@ namespace flex
 		minerObj.fields.emplace_back("mine radius", JSONValue(m_MineRadius));
 
 		std::vector<JSONObject> inventory;
-		if (SerializeInventory(m_Inventory, inventory))
+		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory))
 		{
 			minerObj.fields.emplace_back("inventory", JSONValue(inventory));
 		}

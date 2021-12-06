@@ -86,19 +86,18 @@ namespace flex
 		// Adds the given items to the specified inventory, returns number of items that weren't added
 		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType);
 
-		template<u32 Len>
-		u32 MoveToInventory( std::array<GameObjectStack, Len>& inventory, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+		u32 MoveToInventory(GameObjectStack* inventory, u32 inventorySize, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
 		{
 			i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 
 			// Fill up any existing slots
-			for (GameObjectStack& gameObjectStack : inventory)
+			for (u32 i = 0; i < inventorySize; ++i)
 			{
-				if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
+				if (inventory[i].prefabID == prefabID && (inventory[i].count + 1) <= maxStackSize)
 				{
-					i32 deposit = glm::min((maxStackSize - gameObjectStack.count), count);
+					i32 deposit = glm::min((maxStackSize - inventory[i].count), count);
 					count -= deposit;
-					gameObjectStack.count += deposit;
+					inventory[i].count += deposit;
 					// TODO: Merge user data here
 				}
 
@@ -109,15 +108,15 @@ namespace flex
 			}
 
 			// Fill empty slots
-			for (GameObjectStack& gameObjectStack : inventory)
+			for (u32 i = 0; i < inventorySize; ++i)
 			{
-				if (gameObjectStack.count == 0)
+				if (inventory[i].count == 0)
 				{
 					i32 deposit = glm::min(maxStackSize, count);
 					count -= deposit;
-					gameObjectStack.prefabID = prefabID;
-					gameObjectStack.count = deposit;
-					gameObjectStack.userData = userData;
+					inventory[i].prefabID = prefabID;
+					inventory[i].count = deposit;
+					inventory[i].userData = userData;
 				}
 
 				if (count == 0)

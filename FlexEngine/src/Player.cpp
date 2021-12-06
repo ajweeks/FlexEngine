@@ -940,11 +940,11 @@ namespace flex
 		switch (inventoryType)
 		{
 		case InventoryType::QUICK_ACCESS:
-			return MoveToInventory(m_QuickAccessInventory, prefabID, count, userData);
+			return MoveToInventory(&m_QuickAccessInventory[0], (u32)m_QuickAccessInventory.size(), prefabID, count, userData);
 		case InventoryType::PLAYER_INVENTORY:
-			return MoveToInventory(m_Inventory, prefabID, count, userData);
+			return MoveToInventory(&m_Inventory[0], (u32)m_Inventory.size(), prefabID, count, userData);
 		case InventoryType::WEARABLES:
-			return MoveToInventory(m_WearablesInventory, prefabID, count, userData);
+			return MoveToInventory(&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), prefabID, count, userData);
 		case InventoryType::MINER_INVENTORY:
 		{
 			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
@@ -1065,19 +1065,19 @@ namespace flex
 		};
 
 		std::vector<JSONObject> slots;
-		if (SerializeInventory(m_Inventory, slots))
+		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), slots))
 		{
 			inventoryObj.fields.emplace_back("slots", JSONValue(slots));
 		}
 
 		std::vector<JSONObject> quickAccessSlots;
-		if (SerializeInventory(m_QuickAccessInventory, quickAccessSlots))
+		if (SerializeInventory((GameObjectStack*)&m_QuickAccessInventory[0], (u32)m_QuickAccessInventory.size(), quickAccessSlots))
 		{
 			inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
 		}
 
 		std::vector<JSONObject> wearablesSlots;
-		if (SerializeInventory(m_WearablesInventory, quickAccessSlots))
+		if (SerializeInventory((GameObjectStack*)&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), wearablesSlots))
 		{
 			inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 		}
