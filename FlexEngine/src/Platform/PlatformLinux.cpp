@@ -363,7 +363,10 @@ namespace flex
 				std::string fileNameStr(ent->d_name);
 				if (fileNameStr != "." && fileNameStr != "..")
 				{
-					if (readdir(dir) != NULL)
+					struct stat path_stat;
+					stat(fileNameStr.c_str(), &path_stat);
+					bool bIsDir = S_ISREG(path_stat.st_mode) != 0;
+					if (bIsDir)
 					{
 						if (bRecurse)
 						{
