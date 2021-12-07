@@ -1975,7 +1975,10 @@ namespace flex
 		// Non-serialized fields
 		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
 
+		real m_LaserEmitterHeight;
 		Timer m_MineTimer;
+		glm::vec3 m_LaserEndPoint;
+		glm::vec4 laserColour;
 	};
 
 	class Speaker : public GameObject

@@ -13371,6 +13371,8 @@ namespace flex
 		m_MineTimer(1.0f)
 	{
 		m_bInteractable = true;
+		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
+		m_LaserEmitterHeight = 5.0f;
 
 		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
 		collection->RegisterProperty(6, "charge", &m_Charge);
@@ -13430,6 +13432,12 @@ namespace flex
 							u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
 							m_Charge -= m_PowerDraw;
 
+							real radius = 3.0f;
+							m_LaserEndPoint = glm::vec3(
+								RandomFloat(-radius, radius),
+								-m_LaserEmitterHeight,
+								RandomFloat(-radius, radius));
+
 							if (mineralMined > 0)
 							{
 								GameObjectStack::UserData userData = {};
@@ -13445,6 +13453,7 @@ namespace flex
 
 							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 							{
+								m_MineTimer.Complete();
 								m_NearestMineralDepositID = InvalidGameObjectID;
 							}
 						}
@@ -13457,6 +13466,13 @@ namespace flex
 		{
 			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 			debugDrawer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
+		}
+
+		if (m_MineTimer.remaining > 0.0f)
+		{
+			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+			debugDrawer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserEndPoint), ToBtVec4(laserColour));
 		}
 	}
 
