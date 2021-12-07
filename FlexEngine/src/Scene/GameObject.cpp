@@ -6489,6 +6489,7 @@ namespace flex
 		MaterialID wireMatID;
 		if (!g_Renderer->FindOrCreateMaterialByName("wire", wireMatID))
 		{
+			PrintWarn("Failed to find wire material, using placeholder\n");
 			wireMatID = g_Renderer->GetPlaceholderMaterialID();
 		}
 		m_VertexBufferCreateInfo = {};
@@ -6506,6 +6507,48 @@ namespace flex
 		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		GameObject::Initialize();
+	}
+
+	void Wire::PostInitialize()
+	{
+		if (plug0ID.IsValid())
+		{
+			WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+			if (!plug0->wireID.IsValid())
+			{
+				plug0->wireID = ID;
+			}
+			else
+			{
+				if (plug0->wireID != ID)
+				{
+					StringBuilder plugPath;
+					plug0->GetFullyPathedName(plugPath);
+					PrintError("Wire plug \"%s\" references unexpected wire\n", plugPath.ToCString());
+				}
+			}
+		}
+
+		if (plug1ID.IsValid())
+		{
+			WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+			if (!plug1->wireID.IsValid())
+			{
+				plug1->wireID = ID;
+			}
+			else
+			{
+				if (plug1->wireID != ID)
+				{
+					StringBuilder plugPath;
+					plug1->GetFullyPathedName(plugPath);
+					PrintError("Wire plug \"%s\" references unexpected wire\n", plugPath.ToCString());
+				}
+			}
+		}
+
+
+		GameObject::PostInitialize();
 	}
 
 	void Wire::Update()
@@ -6889,30 +6932,6 @@ namespace flex
 		parentObject.fields.emplace_back("wire plug", JSONValue(obj));
 	}
 
-	void Socket::OnPlugIn(WirePlug* plug)
-	{
-		if (!connectedPlugID.IsValid())
-		{
-			connectedPlugID = plug->ID;
-		}
-		else
-		{
-			PrintError("Attempted to plug socket in when already full\n");
-		}
-	}
-
-	void Socket::OnUnPlug()
-	{
-		if (connectedPlugID.IsValid())
-		{
-			connectedPlugID = InvalidGameObjectID;
-		}
-		else
-		{
-			PrintError("Attempted to unplug from socket which had nothing plugged in\n");
-		}
-	}
-
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("socket"), gameObjectID)
 	{
@@ -6950,6 +6969,30 @@ namespace flex
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
 
 		parentObject.fields.emplace_back("socket", JSONValue(obj));
+	}
+
+	void Socket::OnPlugIn(WirePlug* plug)
+	{
+		if (!connectedPlugID.IsValid())
+		{
+			connectedPlugID = plug->ID;
+		}
+		else
+		{
+			PrintError("Attempted to plug socket in when already full\n");
+		}
+	}
+
+	void Socket::OnUnPlug()
+	{
+		if (connectedPlugID.IsValid())
+		{
+			connectedPlugID = InvalidGameObjectID;
+		}
+		else
+		{
+			PrintError("Attempted to unplug from socket which had nothing plugged in\n");
+		}
 	}
 
 	Terminal::Terminal() :

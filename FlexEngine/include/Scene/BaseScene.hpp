@@ -36,6 +36,8 @@ namespace flex
 		void Update();
 		void LateUpdate();
 
+		bool IsInitialized() const;
+
 		void OnPrefabChanged(const PrefabID& prefabID);
 
 		bool LoadFromFile(const std::string& filePath);

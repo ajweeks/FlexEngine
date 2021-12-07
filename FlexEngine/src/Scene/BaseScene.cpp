@@ -325,6 +325,11 @@ namespace flex
 		}
 	}
 
+	bool BaseScene::IsInitialized() const
+	{
+		return m_bInitialized;
+	}
+
 	void BaseScene::OnPrefabChanged(const PrefabID& prefabID)
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
