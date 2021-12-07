@@ -830,4 +830,58 @@ namespace flex
 
 		return bSuccess;
 	}
+
+	PropertyCollection* PropertyCollectionManager::GetCollectionForObject(GameObjectID gameObjectID)
+	{
+		auto iter = m_RegisteredObjects.find(gameObjectID);
+		if (iter != m_RegisteredObjects.end())
+		{
+			return iter->second;
+		}
+		return nullptr;
+	}
+
+	PropertyCollection* PropertyCollectionManager::RegisterObject(GameObjectID gameObjectID)
+	{
+		auto iter = m_RegisteredObjects.find(gameObjectID);
+		if (iter != m_RegisteredObjects.end())
+		{
+			GameObject* gameObject = gameObjectID.Get();
+			std::string gameObjectName = gameObject != nullptr ? gameObject->GetName() : "";
+			PrintWarn("Attempted to register object with PropertyCollectionManager multiple times! %s\n", gameObjectName.c_str());
+		}
+
+		PropertyCollection* result = m_Allocator.Alloc();
+		m_RegisteredObjects.emplace(gameObjectID, result);
+		return result;
+	}
+
+	bool PropertyCollectionManager::DeregisterObject(GameObjectID gameObjectID)
+	{
+		auto iter = m_RegisteredObjects.find(gameObjectID);
+		if (iter != m_RegisteredObjects.end())
+		{
+			m_RegisteredObjects.erase(iter);
+			return true;
+		}
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializeObjectIfPresent(GameObjectID gameObjectID, const JSONObject& parentObject, i32 fileVersion)
+	{
+		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
+		if (collection != nullptr)
+		{
+			collection->Deserialize(parentObject, fileVersion);
+		}
+	}
+
+	void PropertyCollectionManager::SerializeObjectIfPresent(GameObjectID gameObjectID, JSONObject& parentObject)
+	{
+		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
+		if (collection != nullptr)
+		{
+			collection->Serialize(parentObject);
+		}
+	}
 } // namespace flex

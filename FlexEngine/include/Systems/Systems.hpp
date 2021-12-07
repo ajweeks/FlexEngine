@@ -2,6 +2,8 @@
 
 #include "Systems/System.hpp"
 
+#include "PoolAllocator.hpp"
+
 namespace flex
 {
 	class Wire;
@@ -10,6 +12,8 @@ namespace flex
 	class Road;
 	class Terminal;
 	class DirectoryWatcher;
+	struct PropertyCollection;
+	struct JSONObject;
 
 	class PluggablesSystem final : public System
 	{
@@ -115,6 +119,23 @@ namespace flex
 		std::vector<Terminal*> m_Terminals;
 		std::map<std::string, u64> m_ScriptHashes; // Maps file path to file checksum to know when files change
 		DirectoryWatcher* m_ScriptDirectoryWatch = nullptr;
+
+	};
+
+	class PropertyCollectionManager
+	{
+	public:
+		PropertyCollection* GetCollectionForObject(GameObjectID gameObjectID);
+		PropertyCollection* RegisterObject(GameObjectID gameObjectID);
+		bool DeregisterObject(GameObjectID gameObjectID);
+
+		void DeserializeObjectIfPresent(GameObjectID gameObjectID, const JSONObject& parentObject, i32 fileVersion);
+		void SerializeObjectIfPresent(GameObjectID gameObjectID, JSONObject& parentObject);
+
+	private:
+		std::map<GameObjectID, PropertyCollection*> m_RegisteredObjects;
+
+		PoolAllocator<PropertyCollection, 32> m_Allocator;
 
 	};
 } // namespace flex

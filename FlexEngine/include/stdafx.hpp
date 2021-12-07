@@ -220,7 +220,7 @@ IGNORE_WARNINGS_POP
 #endif
 
 // Turns a const char* into a StringID and const char* pair of params
-#define SID_PAIR(window) SID(window), window
+#define SID_PAIR(str) SID(str), str
 
 #define SID(str) Hash(str)
 
@@ -271,6 +271,7 @@ namespace flex
 	extern class ResourceManager* g_ResourceManager;
 	extern class UIManager* g_UIManager;
 	extern class ConfigFileManager* g_ConfigFileManager;
+	extern class PropertyCollectionManager* g_PropertyCollectionManager;
 	extern bool g_bDebugBuild;
 
 	template<typename T>

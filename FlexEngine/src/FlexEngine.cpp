@@ -201,6 +201,7 @@ namespace flex
 		Platform::Init();
 
 		g_ConfigFileManager = new ConfigFileManager();
+		g_PropertyCollectionManager = new PropertyCollectionManager();
 
 		CreateWindowAndRenderer();
 
@@ -208,11 +209,8 @@ namespace flex
 		g_ResourceManager->Initialize();
 
 		g_UIManager = new UIManager();
-
 		g_Editor = new Editor();
-
 		g_InputManager = new InputManager();
-
 		g_CameraManager = new CameraManager();
 
 		InitializeWindowAndRenderer();
@@ -583,6 +581,9 @@ namespace flex
 
 		delete g_ConfigFileManager;
 		g_ConfigFileManager = nullptr;
+
+		delete g_PropertyCollectionManager;
+		g_PropertyCollectionManager = nullptr;
 
 		delete g_CameraManager;
 		g_CameraManager = nullptr;

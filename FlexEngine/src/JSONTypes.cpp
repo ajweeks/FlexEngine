@@ -754,7 +754,7 @@ namespace flex
 		return false;
 	}
 
-	bool JSONObject::TryGetValueOfType(const char* label, void* valuePtr, ValueType type)
+	bool JSONObject::TryGetValueOfType(const char* label, void* valuePtr, ValueType type) const
 	{
 		switch (type)
 		{

@@ -2,15 +2,20 @@
 
 #include <list>
 
+#include "Pair.hpp"
+
 namespace flex
 {
 	template<typename T, u32 PoolSize>
 	class PoolAllocator
 	{
 	public:
-		PoolAllocator()
-		{
-		}
+		PoolAllocator() = default;
+
+		PoolAllocator(const PoolAllocator&&) = delete;
+		PoolAllocator(const PoolAllocator&) = delete;
+		PoolAllocator& operator=(const PoolAllocator&&) = delete;
+		PoolAllocator& operator=(const PoolAllocator&) = delete;
 
 		~PoolAllocator()
 		{
@@ -21,7 +26,7 @@ namespace flex
 		{
 			if (data.size() == 0 || data.back().second == PoolSize)
 			{
-				Resize();
+				PushPool();
 			}
 
 			auto& arrPair = data.back();
@@ -48,17 +53,13 @@ namespace flex
 			return (u32)(sizeof(T) * GetPoolCount() * PoolSize);
 		}
 
-		PoolAllocator(const PoolAllocator&&) = delete;
-		PoolAllocator(const PoolAllocator&) = delete;
-		PoolAllocator& operator=(const PoolAllocator&&) = delete;
-		PoolAllocator& operator=(const PoolAllocator&) = delete;
-
 	private:
-		void Resize()
+		void PushPool()
 		{
 			data.push_back({ std::array<T, PoolSize>(), 0u });
 		}
 
+		// List of pairs of arrays (pools) & usage counts
 		std::list<Pair<std::array<T, PoolSize>, u32>> data;
 	};
 } // namespace flex

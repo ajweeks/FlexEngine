@@ -88,7 +88,7 @@ namespace flex
 		const JSONObject& GetObject(const std::string& label) const;
 		bool TryGetObject(const std::string& label, JSONObject& value) const;
 
-		bool TryGetValueOfType(const char* label, void* valuePtr, ValueType type);
+		bool TryGetValueOfType(const char* label, void* valuePtr, ValueType type) const;
 
 		std::string ToString(i32 tabCount = 0) const;
 

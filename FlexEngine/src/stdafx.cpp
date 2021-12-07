@@ -57,6 +57,7 @@ namespace flex
 	class ResourceManager* g_ResourceManager = nullptr;
 	class UIManager* g_UIManager = nullptr;
 	class ConfigFileManager* g_ConfigFileManager = nullptr;
+	class PropertyCollectionManager* g_PropertyCollectionManager = nullptr;
 
 #if DEBUG
 	bool g_bDebugBuild = true;

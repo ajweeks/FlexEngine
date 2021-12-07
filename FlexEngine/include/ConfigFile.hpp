@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JSONTypes.hpp"
+#include "PropertyCollection.hpp"
 
 namespace flex
 {
@@ -34,52 +35,12 @@ namespace flex
 		// Returns true when user requested data to be serialized
 		Request DrawImGuiObjects();
 
-		struct ConfigValue
-		{
-			ConfigValue(i32 versionAdded, const char* label, void* valuePtr, ValueType type) :
-				label(label),
-				valuePtr(valuePtr),
-				versionAdded(versionAdded),
-				valueMin(nullptr),
-				valueMax(nullptr),
-				precision(nullptr),
-				type(type)
-			{}
-
-			ConfigValue(i32 versionAdded, const char* label, void* valuePtr, void* precision, ValueType type) :
-				label(label),
-				valuePtr(valuePtr),
-				versionAdded(versionAdded),
-				valueMin(nullptr),
-				valueMax(nullptr),
-				precision(precision),
-				type(type)
-			{}
-
-			ConfigValue(i32 versionAdded, const char* label, void* valuePtr, void* valueMin, void* valueMax, ValueType type) :
-				label(label),
-				valuePtr(valuePtr),
-				versionAdded(versionAdded),
-				valueMin(valueMin),
-				valueMax(valueMax),
-				precision(nullptr),
-				type(type)
-			{}
-
-			const char* label;
-			void* valuePtr;
-			i32 versionAdded;
-			void* valueMin;
-			void* valueMax;
-			void* precision;
-			ValueType type;
-		};
-
-		std::map<const char*, ConfigValue> values;
+		PropertyCollection propertyCollection;
 		std::string filePath;
 		std::string name;
 		i32 currentFileVersion;
 		i32 fileVersion;
+		bool bDirty = false;
 		std::function<void()> onDeserializeCallback;
 	};
 } // namespace flex
