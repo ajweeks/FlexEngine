@@ -26,7 +26,10 @@ namespace flex
 		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision);
 
 		void Serialize(JSONObject& parentObject);
+		void SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID);
 		void Deserialize(const JSONObject& parentObject, i32 fileVersion, const char* filePath = nullptr);
+
+		bool DrawImGuiObjects();
 
 		struct PropertyValue
 		{

@@ -125,12 +125,12 @@ namespace flex
 	class PropertyCollectionManager
 	{
 	public:
-		PropertyCollection* GetCollectionForObject(GameObjectID gameObjectID);
-		PropertyCollection* RegisterObject(GameObjectID gameObjectID);
-		bool DeregisterObject(GameObjectID gameObjectID);
+		PropertyCollection* GetCollectionForObject(const GameObjectID& gameObjectID);
+		PropertyCollection* RegisterObject(const GameObjectID& gameObjectID);
+		bool DeregisterObject(const GameObjectID& gameObjectID);
 
-		void DeserializeObjectIfPresent(GameObjectID gameObjectID, const JSONObject& parentObject, i32 fileVersion);
-		void SerializeObjectIfPresent(GameObjectID gameObjectID, JSONObject& parentObject);
+		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject, i32 fileVersion);
+		void SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject);
 
 	private:
 		std::map<GameObjectID, PropertyCollection*> m_RegisteredObjects;

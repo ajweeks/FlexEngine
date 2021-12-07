@@ -257,6 +257,9 @@ namespace flex
 
 				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
 
+				// Apply prefab overrides that may exist in scene
+				newPrefabInstance->ParseTypeUniqueFields(obj);
+
 				std::vector<JSONObject> children;
 				if (obj.TryGetObjectArray("children", children))
 				{
@@ -1654,14 +1657,9 @@ namespace flex
 
 				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
-
-			SerializeTypeUniqueFields(object);
 		}
 
-		if (!bSerializePrefabData)
-		{
-			SerializeInstanceUniqueFields(object);
-		}
+		SerializeTypeUniqueFields(object);
 
 		if (!m_Children.empty())
 		{
@@ -1805,6 +1803,11 @@ namespace flex
 	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
 	{
 		m_NearbyInteractable = nearbyInteractable;
+	}
+
+	PrefabID GameObject::GetPrefabIDLoadedFrom() const
+	{
+		return m_PrefabIDLoadedFrom;
 	}
 
 	bool GameObject::IsTemplate() const
@@ -1958,12 +1961,6 @@ namespace flex
 	}
 
 	void GameObject::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		// Generic game objects have no unique fields
-		FLEX_UNUSED(parentObject);
-	}
-
-	void GameObject::SerializeInstanceUniqueFields(JSONObject& parentObject) const
 	{
 		// Generic game objects have no unique fields
 		FLEX_UNUSED(parentObject);
@@ -12516,11 +12513,6 @@ namespace flex
 		parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
 	}
 
-	void Vehicle::SerializeInstanceUniqueFields(JSONObject& parentObject) const
-	{
-		FLEX_UNUSED(parentObject);
-	}
-
 	void Vehicle::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
@@ -13530,11 +13522,8 @@ namespace flex
 
 		bool bAnyPropertyChanged = false;
 
-		ImGui::Text("Charge: %.2f", m_Charge);
-		bAnyPropertyChanged = ImGui::DragFloat("Max charge", &m_MaxCharge, 0.5f, 0.0f, 100.0f) || bAnyPropertyChanged;
-		bAnyPropertyChanged = ImGui::DragFloat("Mine rate", &m_MineRate, 0.1f, 0.0f, 100.0f) || bAnyPropertyChanged;
-		bAnyPropertyChanged = ImGui::DragFloat("Power draw", &m_PowerDraw, 0.01f, 0.0f, 10.0f) || bAnyPropertyChanged;
-		bAnyPropertyChanged = ImGui::DragFloat("Mine radius", &m_MineRadius, 0.1f, 0.0f, 20.0f) || bAnyPropertyChanged;
+		bAnyPropertyChanged = g_PropertyCollectionManager->GetCollectionForObject(ID)->DrawImGuiObjects();
+
 		ImGui::Text("Inventory");
 		for (const GameObjectStack& stack : m_Inventory)
 		{

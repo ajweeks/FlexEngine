@@ -304,6 +304,7 @@ namespace flex
 		void ClearNearbyInteractable();
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
+		PrefabID GetPrefabIDLoadedFrom() const;
 		bool IsTemplate() const;
 
 		virtual void OnCharge(real chargeAmount);
@@ -337,7 +338,6 @@ namespace flex
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject);
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject);
-		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const;
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
@@ -1666,7 +1666,6 @@ namespace flex
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 

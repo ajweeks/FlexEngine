@@ -831,7 +831,7 @@ namespace flex
 		return bSuccess;
 	}
 
-	PropertyCollection* PropertyCollectionManager::GetCollectionForObject(GameObjectID gameObjectID)
+	PropertyCollection* PropertyCollectionManager::GetCollectionForObject(const GameObjectID& gameObjectID)
 	{
 		auto iter = m_RegisteredObjects.find(gameObjectID);
 		if (iter != m_RegisteredObjects.end())
@@ -841,7 +841,7 @@ namespace flex
 		return nullptr;
 	}
 
-	PropertyCollection* PropertyCollectionManager::RegisterObject(GameObjectID gameObjectID)
+	PropertyCollection* PropertyCollectionManager::RegisterObject(const GameObjectID& gameObjectID)
 	{
 		auto iter = m_RegisteredObjects.find(gameObjectID);
 		if (iter != m_RegisteredObjects.end())
@@ -856,7 +856,7 @@ namespace flex
 		return result;
 	}
 
-	bool PropertyCollectionManager::DeregisterObject(GameObjectID gameObjectID)
+	bool PropertyCollectionManager::DeregisterObject(const GameObjectID& gameObjectID)
 	{
 		auto iter = m_RegisteredObjects.find(gameObjectID);
 		if (iter != m_RegisteredObjects.end())
@@ -867,7 +867,7 @@ namespace flex
 		return false;
 	}
 
-	void PropertyCollectionManager::DeserializeObjectIfPresent(GameObjectID gameObjectID, const JSONObject& parentObject, i32 fileVersion)
+	void PropertyCollectionManager::DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject, i32 fileVersion)
 	{
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
 		if (collection != nullptr)
@@ -876,12 +876,12 @@ namespace flex
 		}
 	}
 
-	void PropertyCollectionManager::SerializeObjectIfPresent(GameObjectID gameObjectID, JSONObject& parentObject)
+	void PropertyCollectionManager::SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject)
 	{
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
 		if (collection != nullptr)
 		{
-			collection->Serialize(parentObject);
+			collection->SerializeGameObjectFields(parentObject, gameObjectID);
 		}
 	}
 } // namespace flex
