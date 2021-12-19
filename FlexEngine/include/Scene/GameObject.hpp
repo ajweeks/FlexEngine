@@ -178,9 +178,8 @@ namespace flex
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);
 
-		JSONObject Serialize(const BaseScene* scene,
-			bool bIsRoot = false,
-			bool bSerializePrefabData = false);
+		// If bSerializePrefabData is true, we are serializing a prefab template object
+		JSONObject Serialize(const BaseScene* scene, bool bIsRoot, bool bSerializePrefabData);
 
 		void RemoveRigidBody();
 
@@ -337,7 +336,9 @@ namespace flex
 		static const char* s_DefaultNewGameObjectName;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject);
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject);
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData);
+		void SerializeField(JSONObject& parentObject, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision = 2);
+		bool SerializeProperties(JSONObject& parentObject);
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
@@ -398,7 +399,7 @@ namespace flex
 
 		bool m_bCastsShadow = true;
 
-		// If true, this object will never live in the real world and will only be duplicated
+		// If true, this object will never live in the real world and will only be instantiated
 		bool m_bIsTemplate = false;
 
 		bool m_bSerializeMesh = true;
@@ -479,7 +480,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
 	class PointLight final : public GameObject
@@ -507,7 +508,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
 	class SpotLight final : public GameObject
@@ -535,7 +536,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
 	class AreaLight final : public GameObject
@@ -563,7 +564,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void UpdatePoints();
 
@@ -607,7 +608,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -641,7 +642,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -660,7 +661,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -681,7 +682,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -694,7 +695,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void InternalInit(MaterialID matID);
 	};
@@ -752,7 +753,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -786,7 +787,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -836,7 +837,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
@@ -949,7 +950,7 @@ namespace flex
 
 	private:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void UpdateDependentVariables(i32 waveIndex);
 
@@ -1039,7 +1040,7 @@ namespace flex
 		virtual bool ShouldSerialize() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		GameObjectID GetOtherPlug(WirePlug* plug);
 
@@ -1085,7 +1086,7 @@ namespace flex
 		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID);
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void PlugIn(Socket* socket);
 		void Unplug();
@@ -1106,7 +1107,7 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void OnPlugIn(WirePlug* plug);
 		void OnUnPlug();
@@ -1157,7 +1158,7 @@ namespace flex
 		void ClampCursorX();
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
 		friend TerminalCamera;
@@ -1224,7 +1225,7 @@ namespace flex
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		real scale;
 		ParticleSimData data;
@@ -1291,7 +1292,7 @@ namespace flex
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void Regenerate();
 
@@ -1463,7 +1464,7 @@ namespace flex
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		virtual void ParseJSON(
 			const JSONObject& obj,
@@ -1591,7 +1592,7 @@ namespace flex
 		virtual void Update() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
@@ -1665,7 +1666,7 @@ namespace flex
 		virtual void Update() override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
@@ -1922,7 +1923,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
 		void UpdateMesh();
@@ -1961,7 +1962,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
 
@@ -2001,7 +2002,7 @@ namespace flex
 
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
 		std::string m_AudioSourceFileName;

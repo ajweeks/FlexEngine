@@ -189,7 +189,7 @@ namespace flex
 		switch (type)
 		{
 		case ValueType::STRING:
-			return JSONValue((const char*)valuePtr);
+			return JSONValue(*(std::string*)valuePtr);
 		case ValueType::INT:
 			return JSONValue(*(i32*)valuePtr);
 		case ValueType::UINT:

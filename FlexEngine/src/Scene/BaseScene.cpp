@@ -2112,7 +2112,7 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				JSONObject rootObj = rootObject->Serialize(this, true);
+				JSONObject rootObj = rootObject->Serialize(this, true, false);
 				if (!rootObj.fields.empty())
 				{
 					objectsArray.push_back(rootObj);

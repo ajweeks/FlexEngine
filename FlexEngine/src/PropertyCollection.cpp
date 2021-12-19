@@ -99,27 +99,76 @@ namespace flex
 		}
 	}
 
-	void PropertyCollection::SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID)
+	void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, void* templateField, u32 precision /* = 2 */)
+	{
+		const real threshold = 0.0001f;
+
+		bool bSerialize = false;
+		switch (valueType)
+		{
+		case ValueType::STRING:
+			bSerialize = *(std::string*)valuePtr != *(std::string*)templateField;
+			break;
+		case ValueType::INT:
+			bSerialize = *(i32*)valuePtr != *(i32*)templateField;
+			break;
+		case ValueType::UINT:
+			bSerialize = *(u32*)valuePtr != *(u32*)templateField;
+			break;
+		case ValueType::LONG:
+			bSerialize = *(i64*)valuePtr != *(i64*)templateField;
+			break;
+		case ValueType::ULONG:
+			bSerialize = *(u64*)valuePtr != *(u64*)templateField;
+			break;
+		case ValueType::FLOAT:
+			bSerialize = !NearlyEquals(*(real*)valuePtr, *(real*)templateField, threshold);
+			break;
+		case ValueType::BOOL:
+			bSerialize = *(bool*)valuePtr != *(bool*)templateField;
+			break;
+		case ValueType::VEC2:
+			bSerialize = !NearlyEquals(*(glm::vec2*)valuePtr, *(glm::vec2*)templateField, threshold);
+			break;
+		case ValueType::VEC3:
+			bSerialize = !NearlyEquals(*(glm::vec3*)valuePtr, *(glm::vec3*)templateField, threshold);
+			break;
+		case ValueType::VEC4:
+			bSerialize = !NearlyEquals(*(glm::vec4*)valuePtr, *(glm::vec4*)templateField, threshold);
+			break;
+		case ValueType::QUAT:
+			bSerialize = !NearlyEquals(*(glm::quat*)valuePtr, *(glm::quat*)templateField, threshold);
+			break;
+		default:
+			ENSURE_NO_ENTRY();
+			break;
+		}
+
+		if (bSerialize)
+		{
+			parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+		}
+	}
+
+	bool PropertyCollection::SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID)
 	{
 		GameObject* gameObject = gameObjectID.Get();
 
 		if (gameObject == nullptr)
 		{
 			PrintError("Attempted to serialize missing game object\n");
-			return;
+			return false;
 		}
 
 		PrefabID prefabIDLoadedFrom = gameObject->GetPrefabIDLoadedFrom();
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabIDLoadedFrom);
 
-		if (prefabTemplate == nullptr)
+		if (prefabTemplate == nullptr || gameObject->IsTemplate())
 		{
-			// No need to worry about overrides if this object isn't a prefab instance
+			// No need to worry about overrides if this object either isn't a prefab instance or is a template itself
 			Serialize(parentObject);
-			return;
+			return true;
 		}
-
-		const real threshold = 0.0001f;
 
 		for (auto& valuePair : values)
 		{
@@ -127,62 +176,20 @@ namespace flex
 			void* templateField = ((u8*)prefabTemplate + fieldOffset);
 
 			u32 precision = valuePair.second.precision != nullptr ? *(u32*)&valuePair.second.precision : JSONValue::DEFAULT_FLOAT_PRECISION;
-			bool bSerialize = false;
-			switch (valuePair.second.type)
-			{
-			case ValueType::STRING:
-				bSerialize = strcmp((const char*)valuePair.second.valuePtr, (const char*)templateField) != 0;
-				break;
-			case ValueType::INT:
-				bSerialize = *(i32*)valuePair.second.valuePtr != *(i32*)templateField;
-				break;
-			case ValueType::UINT:
-				bSerialize = *(u32*)valuePair.second.valuePtr != *(u32*)templateField;
-				break;
-			case ValueType::LONG:
-				bSerialize = *(i64*)valuePair.second.valuePtr != *(i64*)templateField;
-				break;
-			case ValueType::ULONG:
-				bSerialize = *(u64*)valuePair.second.valuePtr != *(u64*)templateField;
-				break;
-			case ValueType::FLOAT:
-				bSerialize = !NearlyEquals(*(real*)valuePair.second.valuePtr, *(real*)templateField, threshold);
-				break;
-			case ValueType::BOOL:
-				bSerialize = *(bool*)valuePair.second.valuePtr != *(bool*)templateField;
-				break;
-			case ValueType::VEC2:
-				bSerialize = !NearlyEquals(*(glm::vec2*)valuePair.second.valuePtr, *(glm::vec2*)templateField, threshold);
-				break;
-			case ValueType::VEC3:
-				bSerialize = !NearlyEquals(*(glm::vec3*)valuePair.second.valuePtr, *(glm::vec3*)templateField, threshold);
-				break;
-			case ValueType::VEC4:
-				bSerialize = !NearlyEquals(*(glm::vec4*)valuePair.second.valuePtr, *(glm::vec4*)templateField, threshold);
-				break;
-			case ValueType::QUAT:
-				bSerialize = !NearlyEquals(*(glm::quat*)valuePair.second.valuePtr, *(glm::quat*)templateField, threshold);
-				break;
-			default:
-				ENSURE_NO_ENTRY();
-				break;
-			}
-
-			if (bSerialize)
-			{
-				parentObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type, precision));
-			}
+			SerializePrefabInstanceFieldIfUnique(parentObject, valuePair.first, valuePair.second.valuePtr, valuePair.second.type, templateField, precision);
 		}
+
+		return true;
 	}
 
-	void PropertyCollection::Deserialize(const JSONObject& parentObject, i32 fileVersion, const char* filePath /* = nullptr */)
+	void PropertyCollection::Deserialize(const JSONObject& parentObject, i32 fileVersion, bool bWarnForMissingFields, const char* filePath /* = nullptr */)
 	{
 		for (auto& valuePair : values)
 		{
 			if (!parentObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type))
 			{
 				// Don't warn about missing fields which weren't present in old file version
-				if (fileVersion >= valuePair.second.versionAdded)
+				if (fileVersion >= valuePair.second.versionAdded && bWarnForMissingFields)
 				{
 					PrintError("Failed to get property %s %s\n", valuePair.second.label, (filePath != nullptr ? filePath : ""));
 				}

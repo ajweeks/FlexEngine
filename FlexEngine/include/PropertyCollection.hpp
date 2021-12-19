@@ -26,8 +26,8 @@ namespace flex
 		void RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision);
 
 		void Serialize(JSONObject& parentObject);
-		void SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID);
-		void Deserialize(const JSONObject& parentObject, i32 fileVersion, const char* filePath = nullptr);
+		bool SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID);
+		void Deserialize(const JSONObject& parentObject, i32 fileVersion, bool bWarnForMissingFields, const char* filePath = nullptr);
 
 		bool DrawImGuiObjects();
 
@@ -79,4 +79,8 @@ namespace flex
 		std::string name;
 		std::function<void()> onDeserializeCallback;
 	};
+
+	extern void SerializeGameObjectField(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, GameObjectID gameObjectID, u32 precision = 2);
+	extern void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, GameObjectID gameObjectID, u32 precision = 2);
+	extern void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, void* templateField, u32 precision = 2);
 } // namespace flex

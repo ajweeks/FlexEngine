@@ -1187,6 +1187,11 @@ namespace flex
 
 		if (m_bIsTemplate)
 		{
+			// Save a prefab over an existing prefab
+			return g_ResourceManager->WriteExistingPrefabToDisk(this);
+		}
+		else if (m_PrefabIDLoadedFrom.IsValid())
+		{
 			// Save an instance over an existing prefab
 
 			CopyFlags copyFlags = (CopyFlags)(
@@ -1197,6 +1202,7 @@ namespace flex
 			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
 
 			currentScene->UnregisterGameObjectRecursive(ID);
+			g_PropertyCollectionManager->DeregisterObject(ID);
 
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
 			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
@@ -1210,11 +1216,6 @@ namespace flex
 			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_PrefabIDLoadedFrom);
 
 			return true;
-		}
-		else if (m_PrefabIDLoadedFrom.IsValid())
-		{
-			// Save a prefab over an existing prefab
-			return g_ResourceManager->WriteExistingPrefabToDisk(this);
 		}
 		else
 		{
@@ -1439,10 +1440,10 @@ namespace flex
 		}
 	}
 
-	JSONObject GameObject::Serialize(const BaseScene* scene,
-		bool bIsRoot /* = false */,
-		bool bSerializePrefabData /* = false */)
+	JSONObject GameObject::Serialize(const BaseScene* scene, bool bIsRoot, bool bSerializePrefabData)
 	{
+		CHECK_EQ(bSerializePrefabData, m_bIsTemplate);
+
 		JSONObject object = {};
 
 		if (!m_bSerializable)
@@ -1492,8 +1493,9 @@ namespace flex
 			}
 		}
 
-		// Don't serialize prefab root's transform data
-		if (!bSerializePrefabData || !bIsRoot)
+		// Prefab root's transform is always assumed to be at the origin
+		bool bIsPrefabRoot = bSerializePrefabData && bIsRoot;
+		if (!bIsPrefabRoot)
 		{
 			JSONField transformField = m_Transform.Serialize();
 			if (!transformField.value.objectValue.fields.empty())
@@ -1510,17 +1512,17 @@ namespace flex
 				object.fields.emplace_back("visible", JSONValue(m_bVisible));
 			}
 
-			if (!IsVisibleInSceneExplorer())
+			if (!m_bVisibleInSceneExplorer)
 			{
-				object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
+				object.fields.emplace_back("visible in scene graph", JSONValue(m_bVisibleInSceneExplorer));
 			}
 
-			if (IsStatic())
+			if (m_bStatic)
 			{
-				object.fields.emplace_back("static", JSONValue(true));
+				object.fields.emplace_back("static", JSONValue(m_bStatic));
 			}
 
-			if (m_bCastsShadow != true)
+			if (!m_bCastsShadow)
 			{
 				object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
 			}
@@ -1659,7 +1661,7 @@ namespace flex
 			}
 		}
 
-		SerializeTypeUniqueFields(object);
+		SerializeTypeUniqueFields(object, bSerializePrefabData);
 
 		if (!m_Children.empty())
 		{
@@ -1960,10 +1962,48 @@ namespace flex
 		FLEX_UNUSED(parentObject);
 	}
 
-	void GameObject::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void GameObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		// Generic game objects have no unique fields
 		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(bSerializePrefabData);
+	}
+
+	void GameObject::SerializeField(JSONObject& parentObject, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision /* = 2 */)
+	{
+		PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
+
+		if (m_bIsTemplate)
+		{
+			collection->Serialize(parentObject);
+		}
+		else
+		{
+			if (!m_PrefabIDLoadedFrom.IsValid())
+			{
+				// Object isn't a prefab instance, always serialize
+				parentObject.fields.emplace_back(fieldLabel, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+				return;
+			}
+
+
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
+			if (prefabTemplate == nullptr)
+			{
+				PrintWarn("Attempted to serialize prefab instance which wasn't loaded from a valid prefab in GameObject::SerializeField (%s)\n", m_Name.c_str());
+				return;
+			}
+
+			u32 fieldOffset = (u32)((u64)valuePtr - (u64)this);
+			void* templateField = ((u8*)prefabTemplate + fieldOffset);
+
+			SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, valueType, templateField, precision);
+		}
+	}
+
+	bool GameObject::SerializeProperties(JSONObject& parentObject)
+	{
+		return g_PropertyCollectionManager->SerializeObjectIfPresent(ID, parentObject);
 	}
 
 	void GameObject::CopyGenericFields(
@@ -2828,8 +2868,10 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		FLEX_UNUSED(bSerializePrefabData);
+
 		JSONObject valveInfo = {};
 
 		glm::vec2 valveRange(minRotation, maxRotation);
@@ -3034,7 +3076,7 @@ namespace flex
 		}
 	}
 
-	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject blockInfo = {};
 
@@ -3193,7 +3235,7 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject windowInfo = {};
 
@@ -3278,7 +3320,7 @@ namespace flex
 		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		FLEX_UNUSED(parentObject);
 
@@ -3328,7 +3370,7 @@ namespace flex
 		InternalInit(matID);
 	}
 
-	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject skyboxInfo = {};
 		glm::quat worldRot = m_Transform.GetWorldRotation();
@@ -3646,7 +3688,7 @@ namespace flex
 		}
 	}
 
-	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject dirLightObj = {};
 
@@ -3862,7 +3904,7 @@ namespace flex
 		}
 	}
 
-	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject pointLightObj = {};
 
@@ -4086,7 +4128,7 @@ namespace flex
 		}
 	}
 
-	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject spotLightObj = {};
 
@@ -4313,7 +4355,7 @@ namespace flex
 		}
 	}
 
-	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject areaLightObj = {};
 
@@ -4598,7 +4640,7 @@ namespace flex
 		distAlongTrack = cartInfo.GetFloat("dist along track");
 	}
 
-	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject cartInfo = {};
 
@@ -4718,7 +4760,7 @@ namespace flex
 		powerRemaining = cartInfo.GetFloat("power remaining");
 	}
 
-	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject cartInfo = {};
 
@@ -4902,7 +4944,7 @@ namespace flex
 		}
 	}
 
-	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject batteryInfo = {};
 
@@ -6288,7 +6330,7 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject gerstnerWaveObj = {};
 
@@ -6627,7 +6669,7 @@ namespace flex
 		}
 	}
 
-	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject wireInfo = {};
 
@@ -6910,7 +6952,7 @@ namespace flex
 		obj.TryGetGameObjectID("socket id", socketID);
 	}
 
-	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject obj = {};
 
@@ -6953,7 +6995,7 @@ namespace flex
 
 	}
 
-	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject obj = {};
 
@@ -7595,7 +7637,7 @@ namespace flex
 		MoveCursorToStart();
 	}
 
-	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject terminalObj = {};
 
@@ -8374,7 +8416,7 @@ namespace flex
 		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
 	}
 
-	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject particleSystemObj = {};
 
@@ -9364,7 +9406,7 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject chunkGenInfo = {};
 
@@ -10958,7 +11000,7 @@ namespace flex
 		}
 	}
 
-	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject springObj = {};
 
@@ -11811,7 +11853,7 @@ namespace flex
 		}
 	}
 
-	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject softBodyObject = JSONObject();
 
@@ -12476,7 +12518,7 @@ namespace flex
 		}
 	}
 
-	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject vehicleObj = JSONObject();
 
@@ -13336,7 +13378,7 @@ namespace flex
 		}
 	}
 
-	void MineralDeposit::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void MineralDeposit::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject mineralDepositObj = {};
 
@@ -13648,7 +13690,9 @@ namespace flex
 		JSONObject minerObj;
 		if (parentObject.TryGetObject("miner", minerObj))
 		{
-			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, minerObj, fileVersion);
+			// Only warn when this isn't a prefab template
+			bool bWarnForMissingFields = !m_PrefabIDLoadedFrom.IsValid();
+			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, minerObj, fileVersion, bWarnForMissingFields);
 
 			std::vector<JSONObject> inventory;
 			if (minerObj.TryGetObjectArray("inventory", inventory))
@@ -13659,7 +13703,7 @@ namespace flex
 		}
 	}
 
-	void Miner::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Miner::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject minerObj = {};
 
@@ -13678,6 +13722,9 @@ namespace flex
 		GameObject(name, SID("speaker"), gameObjectID)
 	{
 		m_bInteractable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty(6, "playing", &m_bPlaying);
 	}
 
 	void Speaker::Initialize()
@@ -13846,20 +13893,33 @@ namespace flex
 
 	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject)
 	{
+		i32 sceneFileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
+
 		JSONObject speakerObj;
 		if (parentObject.TryGetObject("speaker", speakerObj))
 		{
+			// Only warn when this isn't a prefab template
+			bool bWarnForMissingFields = !m_PrefabIDLoadedFrom.IsValid();
+			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, speakerObj, sceneFileVersion, bWarnForMissingFields);
+			//PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
+			//collection->Deserialize(speakerObj, sceneFileVersion, bWarnForMissingFields);
+
 			m_AudioSourceFileName = speakerObj.GetString("audio source path");
-			speakerObj.TryGetBool("playing", m_bPlaying);
 		}
 	}
 
-	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject speakerObj = {};
-		speakerObj.fields.emplace_back("audio source path", JSONValue(m_AudioSourceFileName));
-		speakerObj.fields.emplace_back("playing", JSONValue(m_bPlaying));
 
-		parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
+		SerializeProperties(speakerObj);
+		SerializeField(speakerObj, "audio source path", &m_AudioSourceFileName, ValueType::STRING);
+
+		//speakerObj.fields.emplace_back("audio source path", JSONValue(m_AudioSourceFileName));
+
+		if (!speakerObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
+		}
 	}
 } // namespace flex
