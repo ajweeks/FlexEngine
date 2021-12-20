@@ -16,8 +16,6 @@ namespace flex
 	{
 		struct VulkanDevice;
 
-		std::string VulkanErrorString(VkResult errorCode);
-
 		void VK_CHECK_RESULT(VkResult result);
 
 		VkResult vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);

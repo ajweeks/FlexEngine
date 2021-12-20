@@ -4,6 +4,8 @@
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include "vulkan/vk_enum_string_helper.h"
+
 #include "stb_image.h"
 IGNORE_WARNINGS_POP
 
@@ -26,7 +28,7 @@ namespace flex
 		{
 			if (result != VK_SUCCESS)
 			{
-				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
+				PrintError("Vulkan fatal error: %s\n", string_VkResult(result));
 				((VulkanRenderer*)g_Renderer)->GetCheckPointData();
 				DEBUG_BREAK();
 				CHECK_EQ(result, VK_SUCCESS);
@@ -1808,49 +1810,6 @@ namespace flex
 			result += (u64)(stencilTestEnable ? 3 : 199);
 
 			return result;
-		}
-
-		std::string VulkanErrorString(VkResult errorCode)
-		{
-			switch (errorCode)
-			{
-#define STR(r) case VK_ ##r: return #r
-				STR(NOT_READY);
-				STR(TIMEOUT);
-				STR(EVENT_SET);
-				STR(EVENT_RESET);
-				STR(INCOMPLETE);
-				STR(ERROR_OUT_OF_HOST_MEMORY);
-				STR(ERROR_OUT_OF_DEVICE_MEMORY);
-				STR(ERROR_INITIALIZATION_FAILED);
-				STR(ERROR_DEVICE_LOST);
-				STR(ERROR_MEMORY_MAP_FAILED);
-				STR(ERROR_LAYER_NOT_PRESENT);
-				STR(ERROR_EXTENSION_NOT_PRESENT);
-				STR(ERROR_FEATURE_NOT_PRESENT);
-				STR(ERROR_INCOMPATIBLE_DRIVER);
-				STR(ERROR_TOO_MANY_OBJECTS);
-				STR(ERROR_FORMAT_NOT_SUPPORTED);
-				STR(ERROR_SURFACE_LOST_KHR);
-				STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
-				STR(SUBOPTIMAL_KHR);
-				STR(ERROR_OUT_OF_DATE_KHR);
-				STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
-				STR(ERROR_VALIDATION_FAILED_EXT);
-				STR(ERROR_INVALID_SHADER_NV);
-				STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
-				STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-#undef STR
-			case VK_SUCCESS:
-				// No error to print
-				return "";
-			case VK_RESULT_RANGE_SIZE:
-			case VK_RESULT_MAX_ENUM:
-			case VK_RESULT_BEGIN_RANGE:
-				return "INVALID_ENUM";
-			default:
-				return "UNKNOWN_ERROR";
-			}
 		}
 
 		void SetImageLayout(
