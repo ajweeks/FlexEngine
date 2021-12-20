@@ -125,8 +125,17 @@ namespace flex
 			{
 				if (g_bDebugBuild || !extensionPair.bDebugOnly)
 				{
-					optionalDeviceExtensions.push_back(extensionPair.extensionName);
+					optionalDeviceExtensions.emplace_back(extensionPair.extensionName);
 				}
+			}
+
+			if (m_bTryEnableRayTracing)
+			{
+				optionalDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+				optionalDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+				optionalDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+				optionalDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+				optionalDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 			}
 
 			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
@@ -134,6 +143,10 @@ namespace flex
 			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
 			deviceCreateInfo.validationLayers = &m_ValidationLayers;
 			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
+
+			m_bRayTracingEnabled = m_VulkanDevice->ExtensionEnabled(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
+				m_VulkanDevice->ExtensionEnabled(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+			//Print("Ray tracing %s\n", m_bRayTracingEnabled ? "enabled" : "_not_ enabled");
 
 			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
 			m_bMemoryBudgetExtensionEnabled = m_VulkanDevice->ExtensionEnabled(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);

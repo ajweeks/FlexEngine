@@ -400,6 +400,9 @@ namespace flex
 			bool m_bEnableBestPracticesValidationFeature = false;
 			bool m_bEnableDebugPrintf = true;
 #endif
+			
+			bool m_bTryEnableRayTracing = true;
+			bool m_bRayTracingEnabled = false;
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
 			std::vector<VulkanRenderObject*> m_RenderObjects;
