@@ -1971,7 +1971,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = true;
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 16; // (1835008) TODO: FIXME:
 		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -1988,7 +1988,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 16; // (1835008) TODO: FIXME:
 		m_Shaders[shaderID]->maxObjectCount = 64;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
@@ -2004,7 +2004,7 @@ namespace flex
 		// PBR
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2; // TODO: Work out automatically from samplers?
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // 10MB
 		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -2370,7 +2370,7 @@ namespace flex
 		// Terrain
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->maxObjectCount = 4096 * 8; // TODO: -1
+		m_Shaders[shaderID]->maxObjectCount = 4096; // TODO: -1
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
