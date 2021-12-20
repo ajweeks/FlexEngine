@@ -417,7 +417,7 @@ namespace flex
 			const std::vector<const char*> m_RequiredDeviceExtensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,
 			};
 
 			const std::vector<const char*> m_RequiredInstanceExtensions =

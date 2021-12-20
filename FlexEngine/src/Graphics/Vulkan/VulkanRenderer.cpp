@@ -4203,7 +4203,7 @@ namespace flex
 					VkViewport viewport = {
 						(real)viewportTL.x, (real)(viewportTL.y + res.y),
 						(real)res.x, -(real)res.y,
-						0.1f, 100.0f
+						0.1f, 1.0f
 					};
 					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
