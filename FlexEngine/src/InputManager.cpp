@@ -1802,28 +1802,28 @@ namespace flex
 			}
 			else
 			{
-				i32 keyCode = child.GetInt("key code");
-				if (keyCode != -1)
+				i32 keyCode;
+				if (child.TryGetInt("key code", keyCode))
 				{
 					m_InputBindings[i].keyCode = (KeyCode)keyCode;
 				}
-				i32 mouseButton = child.GetInt("mouse button");
-				if (mouseButton != -1)
+				i32 mouseButton;
+				if (child.TryGetInt("mouse button", mouseButton))
 				{
 					m_InputBindings[i].mouseButton = (MouseButton)mouseButton;
 				}
-				i32 mouseAxis = child.GetInt("mouse axis");
-				if (mouseAxis != -1)
+				i32 mouseAxis;
+				if (child.TryGetInt("mouse axis", mouseAxis))
 				{
 					m_InputBindings[i].mouseAxis = (MouseAxis)mouseAxis;
 				}
-				i32 gamepadButton = child.GetInt("gamepad button");
-				if (gamepadButton != -1)
+				i32 gamepadButton;
+				if (child.TryGetInt("gamepad button", gamepadButton))
 				{
 					m_InputBindings[i].gamepadButton = (GamepadButton)gamepadButton;
 				}
-				i32 gamepadAxis = child.GetInt("gamepad axis");
-				if (gamepadAxis != -1)
+				i32 gamepadAxis;
+				if (child.TryGetInt("gamepad axis", gamepadAxis))
 				{
 					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
 				}
@@ -1848,18 +1848,34 @@ namespace flex
 
 			JSONObject bindingObj = {};
 
-			i32 keyCode = binding.keyCode == KeyCode::_NONE ? -1 : (i32)binding.keyCode;
-			bindingObj.fields.emplace_back("key code", JSONValue(keyCode));
-			i32 mouseButton = binding.mouseButton == MouseButton::_NONE ? -1 : (i32)binding.mouseButton;
-			bindingObj.fields.emplace_back("mouse button", JSONValue(mouseButton));
-			i32 mouseAxis = binding.mouseAxis == MouseAxis::_NONE ? -1 : (i32)binding.mouseAxis;
-			bindingObj.fields.emplace_back("mouse axis", JSONValue(mouseAxis));
-			i32 gamepadButton = binding.gamepadButton == GamepadButton::_NONE ? -1 : (i32)binding.gamepadButton;
-			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
-			i32 gamepadAxis = binding.gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)binding.gamepadAxis;
-			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
-			bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
-			bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
+			if (binding.keyCode != KeyCode::_NONE)
+			{
+				bindingObj.fields.emplace_back("key code", JSONValue((i32)binding.keyCode));
+			}
+			if (binding.mouseButton != MouseButton::_NONE)
+			{
+				bindingObj.fields.emplace_back("mouse button", JSONValue((i32)binding.mouseButton));
+			}
+			if (binding.mouseAxis != MouseAxis::_NONE)
+			{
+				bindingObj.fields.emplace_back("mouse axis", JSONValue((i32)binding.mouseAxis));
+			}
+			if (binding.gamepadButton != GamepadButton::_NONE)
+			{
+				bindingObj.fields.emplace_back("gamepad button", JSONValue((i32)binding.gamepadButton));
+			}
+			if (binding.gamepadAxis != GamepadAxis::_NONE)
+			{
+				bindingObj.fields.emplace_back("gamepad axis", JSONValue((i32)binding.gamepadAxis));
+			}
+			if (binding.bInvertMouseAxis)
+			{
+				bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
+			}
+			if (binding.bInvertGamepadAxis)
+			{
+				bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
+			}
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}
