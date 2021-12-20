@@ -4636,7 +4636,11 @@ namespace flex
 	void Cart::ParseTypeUniqueFields(const JSONObject& parentObject)
 	{
 		JSONObject cartInfo = parentObject.GetObject("cart info");
-		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
+		u32 trackID;
+		if (cartInfo.TryGetUInt("track ID", trackID))
+		{
+			currentTrackID = (TrackID)trackID;
+		}
 		distAlongTrack = cartInfo.GetFloat("dist along track");
 	}
 
@@ -4644,7 +4648,10 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
+		if (currentTrackID != InvalidTrackID)
+		{
+			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
+		}
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
@@ -4753,7 +4760,11 @@ namespace flex
 	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject)
 	{
 		JSONObject cartInfo = parentObject.GetObject("cart info");
-		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
+		u32 trackID;
+		if (cartInfo.TryGetUInt("track ID",trackID))
+		{
+			currentTrackID = (TrackID)trackID;
+		}
 		distAlongTrack = cartInfo.GetFloat("dist along track");
 
 		moveDirection = cartInfo.GetFloat("move direction");
@@ -4764,7 +4775,10 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 
-		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
+		if (currentTrackID != InvalidTrackID)
+		{
+			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
+		}
 		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
 
 		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
