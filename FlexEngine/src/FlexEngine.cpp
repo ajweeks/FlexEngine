@@ -627,12 +627,12 @@ namespace flex
 		g_Window->RetrieveMonitorInfo();
 
 		real desiredAspectRatio = 16.0f / 9.0f;
-		real desiredWindowSizeScreenPercetange = 0.85f;
+		real desiredWindowSizeScreenPercentange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
 		CHECK_EQ(g_Monitor->contentScaleX, g_Monitor->contentScaleY);
 
-		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
+		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercentange * glm::max(g_Monitor->contentScaleY, 1.0f))	;
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
