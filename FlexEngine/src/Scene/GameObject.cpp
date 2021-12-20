@@ -257,8 +257,14 @@ namespace flex
 
 				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
 
+				std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(obj, sceneFileVersion);
+				if (matIDs.empty())
+				{
+					matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
+				}
+
 				// Apply prefab overrides that may exist in scene
-				newPrefabInstance->ParseTypeUniqueFields(obj);
+				newPrefabInstance->ParseTypeUniqueFields(obj, matIDs);
 
 				std::vector<JSONObject> children;
 				if (obj.TryGetObjectArray("children", children))
@@ -1417,7 +1423,7 @@ namespace flex
 			}
 		}
 
-		ParseTypeUniqueFields(obj);
+		ParseTypeUniqueFields(obj, matIDs);
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -1956,10 +1962,11 @@ namespace flex
 		}
 	}
 
-	void GameObject::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void GameObject::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		// Generic game objects have no unique fields
 		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(matIDs);
 	}
 
 	void GameObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
@@ -2809,14 +2816,8 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Valve::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Valve::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(parentObject, g_SceneManager->CurrentScene()->GetSceneFileVersion());
-		if (matIDs.empty())
-		{
-			matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
-		}
-
 		JSONObject valveInfo;
 		if (parentObject.TryGetObject("valve info", valveInfo))
 		{
@@ -3014,16 +3015,10 @@ namespace flex
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		if (m_Mesh == nullptr)
 		{
-			std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(parentObject, g_SceneManager->CurrentScene()->GetSceneFileVersion());
-			if (matIDs.empty())
-			{
-				matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
-			}
-
 			Mesh* cubeMesh = new Mesh(this);
 			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
 			SetMesh(cubeMesh);
@@ -3196,7 +3191,7 @@ namespace flex
 		return newGameObject;
 	}
 
-	void GlassPane::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void GlassPane::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject glassInfo;
 		if (parentObject.TryGetObject("window info", glassInfo))
@@ -3205,12 +3200,6 @@ namespace flex
 
 			if (m_Mesh == nullptr)
 			{
-				std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(parentObject, g_SceneManager->CurrentScene()->GetSceneFileVersion());
-				if (matIDs.empty())
-				{
-					matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
-				}
-
 				Mesh* windowMesh = new Mesh(this);
 				const char* filePath;
 				if (bBroken)
@@ -3267,9 +3256,10 @@ namespace flex
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void ReflectionProbe::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(matIDs);
 
 		// Probe capture material
 		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
@@ -3346,7 +3336,7 @@ namespace flex
 		InternalInit(matID);
 	}
 
-	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject skyboxInfo;
 		if (parentObject.TryGetObject("skybox info", skyboxInfo))
@@ -3358,16 +3348,7 @@ namespace flex
 			}
 		}
 
-		MaterialID matID;
-		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() >= 1)
-		{
-			matID = m_Mesh->GetSubMesh(0)->GetMaterialID();
-		}
-		else
-		{
-			matID = g_Renderer->GetPlaceholderMaterialID();
-		}
-		InternalInit(matID);
+		InternalInit(matIDs[0]);
 	}
 
 	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
@@ -3643,8 +3624,10 @@ namespace flex
 		GameObject::SetVisible(bVisible, bEffectChildren);
 	}
 
-	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		i32 fileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
 
 		JSONObject directionalLightObj;
@@ -3883,8 +3866,10 @@ namespace flex
 		}
 	}
 
-	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject pointLightObj;
 		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
@@ -4104,8 +4089,10 @@ namespace flex
 			other.data.angle == data.angle;
 	}
 
-	void SpotLight::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void SpotLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject spotLightObj;
 		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
@@ -4338,8 +4325,10 @@ namespace flex
 			other.data.brightness == data.brightness;
 	}
 
-	void AreaLight::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void AreaLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject areaLightObj;
 		if (parentObject.TryGetObject("area light info", areaLightObj))
 		{
@@ -4633,8 +4622,10 @@ namespace flex
 		return 0.0f;
 	}
 
-	void Cart::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Cart::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		u32 trackID;
 		if (cartInfo.TryGetUInt("track ID", trackID))
@@ -4757,8 +4748,10 @@ namespace flex
 		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
-	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		u32 trackID;
 		if (cartInfo.TryGetUInt("track ID",trackID))
@@ -4949,8 +4942,10 @@ namespace flex
 		chargeAmount = glm::clamp(userData.floatVal, 0.0f, chargeCapacity);
 	}
 
-	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject batteryInfo;
 		if (parentObject.TryGetObject("battery info", batteryInfo))
 		{
@@ -6236,8 +6231,10 @@ namespace flex
 		return memcmp(&lhs, &rhs, sizeof(GerstnerWave::WaveInfo)) == 0;
 	}
 
-	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject gerstnerWaveObj;
 		if (parentObject.TryGetObject("gerstner wave", gerstnerWaveObj))
 		{
@@ -6673,8 +6670,10 @@ namespace flex
 		return true;
 	}
 
-	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject wireInfo;
 		if (parentObject.TryGetObject("wire", wireInfo))
 		{
@@ -6958,8 +6957,10 @@ namespace flex
 		}
 	}
 
-	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject obj = parentObject.GetObject("wire plug");
 
 		obj.TryGetGameObjectID("wire id", wireID);
@@ -6998,8 +6999,10 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject obj = parentObject.GetObject("socket");
 		obj.TryGetInt("slotIdx", slotIdx);
 
@@ -7628,8 +7631,10 @@ namespace flex
 		m_Camera = camera;
 	}
 
-	void Terminal::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Terminal::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject terminalObj = parentObject.GetObject("terminal");
 
 		m_ScriptFileName = terminalObj.GetString("script file path");
@@ -8406,8 +8411,10 @@ namespace flex
 		return newParticleSystem;
 	}
 
-	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
 
 		glm::mat4 model;
@@ -9353,8 +9360,10 @@ namespace flex
 		return noiseFunctionObj;
 	}
 
-	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		if (parentObject.HasField("chunk generator info"))
 		{
 			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
@@ -11005,8 +11014,10 @@ namespace flex
 
 	}
 
-	void SpringObject::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void SpringObject::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject springObj;
 		if (parentObject.TryGetObject("spring", springObj))
 		{
@@ -11764,8 +11775,10 @@ namespace flex
 		return false;
 	}
 
-	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject softBodyObject;
 		if (parentObject.TryGetObject("soft body", softBodyObject))
 		{
@@ -12494,8 +12507,10 @@ namespace flex
 		m_pLinearVelocity = linearVel;
 	}
 
-	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject vehicleObj;
 		if (parentObject.TryGetObject("vehicle", vehicleObj))
 		{
@@ -13381,8 +13396,10 @@ namespace flex
 		return actualMineAmount;
 	}
 
-	void MineralDeposit::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void MineralDeposit::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		JSONObject mineralDepositObj;
 		if (parentObject.TryGetObject("mineral deposit", mineralDepositObj))
 		{
@@ -13697,8 +13714,10 @@ namespace flex
 		return AddToInventory(stack->prefabID, stack->count, stack->userData);
 	}
 
-	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		i32 fileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
 
 		JSONObject minerObj;
@@ -13905,8 +13924,10 @@ namespace flex
 		}
 	}
 
-	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject)
+	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
+		FLEX_UNUSED(matIDs);
+
 		i32 sceneFileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
 
 		JSONObject speakerObj;
