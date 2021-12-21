@@ -106,13 +106,13 @@ namespace flex
 			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
 			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
 		}
-		m_SSAOGenData.radius = 8.0f;
+		m_SSAOGenData.radius = 1.0f;
 
-		m_SSAOBlurDataConstant.radius = 4;
+		m_SSAOBlurDataConstant.radius = 3;
 		m_SSAOBlurSamplePixelOffset = 2;
 
 		m_SSAOSamplingData.enabled = 1;
-		m_SSAOSamplingData.powExp = 2.0f;
+		m_SSAOSamplingData.powExp = 3.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
 		m_ShadowSamplingData.baseBias = 0.002f;
@@ -1101,6 +1101,11 @@ namespace flex
 					m_ShaderCompiler->WasShaderRecompiled("terrain_generate_mesh"))
 				{
 					g_SceneManager->CurrentScene()->RegenerateTerrain();
+				}
+				if (m_ShaderCompiler->WasShaderRecompiled("ssao") ||
+					m_ShaderCompiler->WasShaderRecompiled("ssao_blur"))
+				{
+					m_bSSAOStateChanged = true;
 				}
 			}
 			else

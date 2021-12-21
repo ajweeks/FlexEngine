@@ -486,35 +486,7 @@ namespace flex
 				}
 			}
 
-			// TODO: (not so EZ): Move to base renderer
-			// SSAO Materials
-			{
-				if (m_SSAOMatID == InvalidMaterialID)
-				{
-					MaterialCreateInfo ssaoMatCreateInfo = {};
-					ssaoMatCreateInfo.name = "ssao";
-					ssaoMatCreateInfo.shaderName = "ssao";
-					ssaoMatCreateInfo.persistent = true;
-					ssaoMatCreateInfo.bEditorMaterial = true;
-					ssaoMatCreateInfo.bSerializable = false;
-					m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo);
-				}
-				CHECK_NE(m_SSAOMatID, InvalidMaterialID);
-				m_SSAOShaderID = m_Materials[m_SSAOMatID]->shaderID;
-
-				if (m_SSAOBlurMatID == InvalidMaterialID)
-				{
-					MaterialCreateInfo ssaoBlurMatCreateInfo = {};
-					ssaoBlurMatCreateInfo.name = "ssao blur";
-					ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
-					ssaoBlurMatCreateInfo.persistent = true;
-					ssaoBlurMatCreateInfo.bEditorMaterial = true;
-					ssaoBlurMatCreateInfo.bSerializable = false;
-					m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo);
-				}
-				CHECK_NE(m_SSAOBlurMatID, InvalidMaterialID);
-				m_SSAOBlurShaderID = m_Materials[m_SSAOBlurMatID]->shaderID;
-			}
+			CreateSSAOMaterials();
 
 			for (auto& matPair : m_Materials)
 			{
@@ -875,6 +847,11 @@ namespace flex
 			if (matToReplace != InvalidMaterialID)
 			{
 				matID = matToReplace;
+
+				VulkanMaterial* prevMat = (VulkanMaterial*)GetMaterial(matToReplace);
+				delete prevMat;
+
+				m_Materials[matID] = new VulkanMaterial();
 			}
 			else
 			{
@@ -1166,7 +1143,7 @@ namespace flex
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
 					((VulkanTexture*)m_NoiseTexture)->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
-						VK_FORMAT_R16G16B16A16_SFLOAT, 1, VK_FILTER_NEAREST);
+						VK_FORMAT_R32G32B32A32_SFLOAT, 1, VK_FILTER_NEAREST);
 					g_ResourceManager->AddLoadedTexture(m_NoiseTexture);
 				}
 
@@ -1933,11 +1910,16 @@ namespace flex
 			{
 				m_bSSAOStateChanged = false;
 
+				CreateSSAOMaterials();
+				CreateUniformBuffers((VulkanMaterial*)GetMaterial(m_SSAOMatID));
+				CreateUniformBuffers((VulkanMaterial*)GetMaterial(m_SSAOBlurMatID));
+
 				// Update GBuffer pipeline in case blur or SSAO entirely was toggled
 				CreateGraphicsPipeline(m_GBufferQuadRenderID);
 				m_DescriptorPoolPersistent->CreateDescriptorSet(GetRenderObject(m_GBufferQuadRenderID)->materialID);
 
 				// Update SSAO pipelines in case kernel size changed
+				CreateSSAODescriptorSets();
 				CreateSSAOPipelines();
 			}
 
@@ -2619,7 +2601,7 @@ namespace flex
 
 			if (m_bInitialized &&
 				((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
-				m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution))
+					m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution))
 			{
 				RecreateEverything();
 			}
@@ -3897,6 +3879,31 @@ namespace flex
 			}
 		}
 
+		void VulkanRenderer::CreateSSAOMaterials()
+		{
+			// TODO: (not so EZ): Move to base renderer
+
+			MaterialCreateInfo ssaoMatCreateInfo = {};
+			ssaoMatCreateInfo.name = "ssao";
+			ssaoMatCreateInfo.shaderName = "ssao";
+			ssaoMatCreateInfo.persistent = true;
+			ssaoMatCreateInfo.bEditorMaterial = true;
+			ssaoMatCreateInfo.bSerializable = false;
+			m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo, m_SSAOMatID);
+			CHECK_NE(m_SSAOMatID, InvalidMaterialID);
+			m_SSAOShaderID = m_Materials[m_SSAOMatID]->shaderID;
+
+			MaterialCreateInfo ssaoBlurMatCreateInfo = {};
+			ssaoBlurMatCreateInfo.name = "ssao blur";
+			ssaoBlurMatCreateInfo.shaderName = "ssao_blur";
+			ssaoBlurMatCreateInfo.persistent = true;
+			ssaoBlurMatCreateInfo.bEditorMaterial = true;
+			ssaoBlurMatCreateInfo.bSerializable = false;
+			m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo, m_SSAOBlurMatID);
+			CHECK_NE(m_SSAOBlurMatID, InvalidMaterialID);
+			m_SSAOBlurShaderID = m_Materials[m_SSAOBlurMatID]->shaderID;
+		}
+
 		void VulkanRenderer::CreateSSAOPipelines()
 		{
 			VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
@@ -3919,6 +3926,11 @@ namespace flex
 			pipelineCreateInfo.depthCompareOp = gBufferObject->depthCompareOp;
 			pipelineCreateInfo.renderPass = ssaoShader->renderPass;
 			pipelineCreateInfo.fragSpecializationInfo = ssaoShader->fragSpecializationInfo;
+			if (m_SSAOGraphicsPipelineID != InvalidGraphicsPipelineID)
+			{
+				DestroyGraphicsPipeline(m_SSAOGraphicsPipelineID);
+				m_SSAOGraphicsPipelineID = InvalidGraphicsPipelineID;
+			}
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_SSAOGraphicsPipelineID);
 
 			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
@@ -3930,6 +3942,11 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
+			if (m_SSAOBlurHGraphicsPipelineID != InvalidGraphicsPipelineID)
+			{
+				DestroyGraphicsPipeline(m_SSAOBlurHGraphicsPipelineID);
+				m_SSAOBlurHGraphicsPipelineID = InvalidGraphicsPipelineID;
+			}
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_SSAOBlurHGraphicsPipelineID);
 
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Vertcical pipeline";
@@ -3938,6 +3955,11 @@ namespace flex
 			pipelineCreateInfo.subpass = 0;
 			pipelineCreateInfo.depthWriteEnable = ssaoBlurShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
 			pipelineCreateInfo.renderPass = ssaoBlurShader->renderPass;
+			if (m_SSAOBlurVGraphicsPipelineID != InvalidGraphicsPipelineID)
+			{
+				DestroyGraphicsPipeline(m_SSAOBlurVGraphicsPipelineID);
+				m_SSAOBlurVGraphicsPipelineID = InvalidGraphicsPipelineID;
+			}
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_SSAOBlurVGraphicsPipelineID);
 		}
 

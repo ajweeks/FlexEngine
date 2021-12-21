@@ -720,6 +720,8 @@ namespace flex
 		bool HasUniform(Uniform const* uniform) const;
 		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const;
 
+		void Clear();
+
 		std::map<StringID, UniformPair> overrides;
 	};
 

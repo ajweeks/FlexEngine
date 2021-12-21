@@ -191,6 +191,7 @@ namespace flex
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT();
 
+			void CreateSSAOMaterials();
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
