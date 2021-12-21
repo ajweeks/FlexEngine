@@ -427,15 +427,19 @@
 			]
 		},
 		{
-			"name" : "Cart_00",
+			"name" : "Cart",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
 			"prefab type" : "cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
-				"pos" : "-9.387, 1.700, 10.428",
+				"pos" : "-9.387, 1.800, 10.428",
 				"rot" : "0.000, 0.605, 0.000"
+			},
+			"cart info" : 
+			{
+				"dist along track" : 0.000000
 			}
 		},
 		{
@@ -446,8 +450,12 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.954, 2.501, -1.952",
-				"rot" : "-0.000, -0.676, -3.142"
+				"pos" : "-20.956, 2.501, -1.953",
+				"rot" : "0.000, -0.676, -3.142"
+			},
+			"battery info" : 
+			{
+				"charge amount" : 0.000000
 			}
 		},
 		{
@@ -460,6 +468,10 @@
 			{
 				"pos" : "-25.457, 2.501, -1.190",
 				"rot" : "-0.000, -0.006, -0.000"
+			},
+			"battery info" : 
+			{
+				"charge amount" : 0.000000
 			}
 		},
 		{
@@ -471,6 +483,12 @@
 			"transform" : 
 			{
 				"pos" : "12.505, 1.347, 0.161"
+			},
+			"cart info" : 
+			{
+				"dist along track" : 0.000000,
+				"move direction" : 0.000000,
+				"power remaining" : 0.000000
 			}
 		},
 		{
@@ -483,6 +501,10 @@
 			{
 				"pos" : "-28.614, 1.500, -1.553",
 				"rot" : "0.192, 0.000, 1.571"
+			},
+			"battery info" : 
+			{
+				"charge amount" : 0.000000
 			}
 		},
 		{
@@ -617,6 +639,12 @@
 			{
 				"pos" : "20.346, 0.000, -22.753",
 				"rot" : "0.000, 0.786, 0.000"
+			},
+			"miner" : 
+			{
+				"inventory" : 
+				[
+				]
 			}
 		},
 		{
@@ -628,6 +656,11 @@
 			"transform" : 
 			{
 				"pos" : "21.306, 0.000, -22.254"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "iron",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -639,6 +672,11 @@
 			"transform" : 
 			{
 				"pos" : "-5.641, 0.000, -27.813"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "silicon",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -651,6 +689,11 @@
 			{
 				"pos" : "31.388, 0.000, 3.247",
 				"rot" : "-3.141, -0.810, -3.141"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "stone",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -662,6 +705,11 @@
 			"transform" : 
 			{
 				"pos" : "-31.337, 0.000, -24.014"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "aluminum",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -673,6 +721,11 @@
 			"transform" : 
 			{
 				"pos" : "29.872, 0.000, 29.101"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "tin",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -684,6 +737,11 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 0.000, 35.000"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "quartz",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -696,6 +754,11 @@
 			{
 				"pos" : "-27.420, 0.000, 33.582",
 				"rot" : "0.000, 1.345, 0.000"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "olivine",
+				"mineral remaining" : 1000
 			}
 		},
 		{
@@ -703,7 +766,11 @@
 			"id" : "85B0A92857622390432E7511AECB345B",
 			"type" : "prefab",
 			"prefab type" : "speaker",
-			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216"
+			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216",
+			"speaker" : 
+			{
+				"playing" : false
+			}
 		}
 	]
 }

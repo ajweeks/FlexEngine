@@ -7,8 +7,6 @@
 		"name" : "battery",
 		"id" : "49BA1A00D02473914B4C060DFA113653",
 		"type" : "battery",
-		"visible" : true,
-		"casts shadow" : true,
 		"mesh" : "battery_cell_2.glb",
 		"materials" : 
 		[
@@ -19,7 +17,7 @@
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.000, 2.001, 1.000"
+			"half extents" : "1.000,2.001,1.000"
 		},
 		"rigid body" : 
 		{
@@ -44,8 +42,6 @@
 					"pos" : "-0.485, 2.282, -0.458",
 					"rot" : "-1.571, -0.000, -3.141"
 				},
-				"visible" : true,
-				"casts shadow" : true,
 				"socket" : 
 				{
 					"slotIdx" : 0
@@ -60,8 +56,6 @@
 					"pos" : "-0.484, 2.271, 0.464",
 					"rot" : "-1.571, -0.000, -3.141"
 				},
-				"visible" : true,
-				"casts shadow" : true,
 				"socket" : 
 				{
 					"slotIdx" : 1

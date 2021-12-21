@@ -99,3 +99,15 @@ Add the following line to `~/.profile`:
 `export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json`
 
 Then run `source ~/.profile`
+
+
+## Debugging with RenderDoc
+
+Flex Engine supports triggering RenderDoc captures directly. You can of course capture RenderDoc frames normally as well, but the integration allows you to capture with a single keypress. Follow these steps to enable the integration:
+1. Set the `COMPILE_RENDERDOC_API` define to `1` in stdafx.hpp
+2. Compile a recent version RenderDoc locally
+3. Launch your local build of RenderDoc and register it as the system-wide Vulkan handler
+4. Launch Flex Engine and specify the absolute path to `renderdoc.dll` via Edit > RenderDoc DLL path (e.g., `C:/renderdoc/x64/Development/renderdoc.dll`)
+5. Relaunch the engine and the connection should be made
+  a. If successful, you will see a line logged such as: "### RenderDoc API v1.4.2 connected, F9 to capture ###"
+6. Press F9 to trigger a capture. If successful, it will automatically load in RenderDoc. Captures are temporarily saved in `FlexEngine/saved/RenderDocCaptures/`, you need to manually save them to keep them persistently though.

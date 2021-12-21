@@ -4632,7 +4632,7 @@ namespace flex
 		{
 			currentTrackID = (TrackID)trackID;
 		}
-		distAlongTrack = cartInfo.GetFloat("dist along track");
+		cartInfo.TryGetFloat("dist along track", distAlongTrack);
 	}
 
 	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
@@ -4643,7 +4643,10 @@ namespace flex
 		{
 			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		}
-		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		if (distAlongTrack != 0.0f)
+		{
+			cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		}
 
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
@@ -4754,11 +4757,11 @@ namespace flex
 
 		JSONObject cartInfo = parentObject.GetObject("cart info");
 		u32 trackID;
-		if (cartInfo.TryGetUInt("track ID",trackID))
+		if (cartInfo.TryGetUInt("track ID", trackID))
 		{
 			currentTrackID = (TrackID)trackID;
 		}
-		distAlongTrack = cartInfo.GetFloat("dist along track");
+		cartInfo.TryGetFloat("dist along track", distAlongTrack);
 
 		moveDirection = cartInfo.GetFloat("move direction");
 		powerRemaining = cartInfo.GetFloat("power remaining");
@@ -4772,7 +4775,10 @@ namespace flex
 		{
 			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
 		}
-		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		if (distAlongTrack != 0.0f)
+		{
+			cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
+		}
 
 		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
 		cartInfo.fields.emplace_back("power remaining", JSONValue(powerRemaining));

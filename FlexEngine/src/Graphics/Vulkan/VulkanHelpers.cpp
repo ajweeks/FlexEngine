@@ -385,9 +385,9 @@ namespace flex
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				name.c_str());
 
-			void* data = nullptr;
-			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
-			memcpy(data, buffer, bufferSize);
+			void* stagingBufferData = nullptr;
+			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &stagingBufferData));
+			memcpy(stagingBufferData, buffer, bufferSize);
 			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 			{
 				VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);

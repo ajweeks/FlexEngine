@@ -7,13 +7,10 @@
 		"name" : "cart",
 		"id" : "4F5C7B9E0D52C484401567D9337167F7",
 		"type" : "cart",
-		"visible" : true,
-		"casts shadow" : true,
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.100, 1.200, 1.500",
-			"offset pos" : "0.000, 1.100, 0.000"
+			"half extents" : "1.100,1.300,1.500"
 		},
 		"rigid body" : 
 		{
@@ -25,8 +22,6 @@
 		},
 		"cart info" : 
 		{
-			"track ID" : 4294967295,
-			"dist along track" : -1.000000
 		}
 	}
 }
