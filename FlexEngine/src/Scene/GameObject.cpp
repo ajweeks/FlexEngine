@@ -1448,8 +1448,6 @@ namespace flex
 
 	JSONObject GameObject::Serialize(const BaseScene* scene, bool bIsRoot, bool bSerializePrefabData)
 	{
-		CHECK_EQ(bSerializePrefabData, m_bIsTemplate);
-
 		JSONObject object = {};
 
 		if (!m_bSerializable)
@@ -13487,6 +13485,11 @@ namespace flex
 		m_bInteractable = true;
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
 		m_LaserEmitterHeight = 5.0f;
+	}
+
+	void Miner::Initialize()
+	{
+		GameObject::Initialize();
 
 		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
 		collection->RegisterProperty(6, "charge", &m_Charge);
@@ -13496,8 +13499,10 @@ namespace flex
 		collection->RegisterProperty(6, "mine radius", &m_MineRadius, 0.0f, 20.0f);
 	}
 
-	Miner::~Miner()
+	void Miner::Destroy(bool bDetachFromParent /* = true */)
 	{
+		GameObject::Destroy(bDetachFromParent);
+
 		g_PropertyCollectionManager->DeregisterObject(ID);
 	}
 
@@ -13601,7 +13606,9 @@ namespace flex
 
 		bool bAnyPropertyChanged = false;
 
-		bAnyPropertyChanged = g_PropertyCollectionManager->GetCollectionForObject(ID)->DrawImGuiObjects();
+		PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
+		CHECK_NE(collection, nullptr);
+		bAnyPropertyChanged = collection->DrawImGuiObjects();
 
 		ImGui::Text("Inventory");
 		for (const GameObjectStack& stack : m_Inventory)
@@ -13751,7 +13758,10 @@ namespace flex
 		std::vector<JSONObject> inventory;
 		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory))
 		{
-			minerObj.fields.emplace_back("inventory", JSONValue(inventory));
+			if (!inventory.empty())
+			{
+				minerObj.fields.emplace_back("inventory", JSONValue(inventory));
+			}
 		}
 
 		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
@@ -13761,14 +13771,14 @@ namespace flex
 		GameObject(name, SID("speaker"), gameObjectID)
 	{
 		m_bInteractable = true;
-
-		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
-		collection->RegisterProperty(6, "playing", &m_bPlaying);
 	}
 
 	void Speaker::Initialize()
 	{
 		GameObject::Initialize();
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty(6, "playing", &m_bPlaying);
 
 		if (!m_AudioSourceFileName.empty())
 		{
@@ -13804,6 +13814,8 @@ namespace flex
 	void Speaker::Destroy(bool bDetachFromParent /* = true */)
 	{
 		GameObject::Destroy(bDetachFromParent);
+
+		g_PropertyCollectionManager->DeregisterObject(ID);
 
 		if (m_SourceID != InvalidAudioSourceID)
 		{

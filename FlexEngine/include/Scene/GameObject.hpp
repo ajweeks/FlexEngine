@@ -1937,9 +1937,10 @@ namespace flex
 	{
 	public:
 		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-		~Miner();
-
-		virtual void Update();
+		
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
 		virtual void OnCharge(real chargeAmount) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 

@@ -847,7 +847,7 @@ namespace flex
 		if (iter != m_RegisteredObjects.end())
 		{
 			GameObject* gameObject = gameObjectID.Get();
-			std::string gameObjectName = gameObject != nullptr ? gameObject->GetName() : "";
+			std::string gameObjectName = gameObject != nullptr ? gameObject->GetName() : gameObjectID.ToString();
 			PrintWarn("Attempted to register object with PropertyCollectionManager multiple times! %s\n", gameObjectName.c_str());
 		}
 

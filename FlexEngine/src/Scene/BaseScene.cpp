@@ -1774,6 +1774,8 @@ namespace flex
 		std::string previousName = previousInstance->m_Name;
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
 
+		g_PropertyCollectionManager->DeregisterObject(previousInstance->ID);
+
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousGameObjectID, &previousName, previousParent, nullptr, copyFlags);
 
 		if (newPrefabInstance == nullptr)
@@ -1801,8 +1803,12 @@ namespace flex
 			g_SceneManager->CurrentScene()->AddChildObject(previousParent, newPrefabInstance);
 		}
 
+		// Clear out old instance's ID to prevent it from unregistering
+		// the new object from various systems on destruction
+		previousInstance->ID = InvalidGameObjectID;
 		previousInstance->Destroy(true);
 		delete previousInstance;
+		previousInstance = nullptr;
 
 		// Destroy will have removed our ID from the LUT
 		RegisterGameObject(newPrefabInstance);
