@@ -532,9 +532,11 @@ namespace flex
 #endif
 
 		// Default directional light
-		DirectionalLight* dirLight = new DirectionalLight("Directional light", glm::vec3(0.0f, 15.0f, 0.0f), glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
-		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
+		DirectionalLight* dirLight = new DirectionalLight("Directional light");
+		dirLight->pos = glm::vec3(0.0f, 15.0f, 0.0f);
+		dirLight->data.dir = glm::rotate(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)), VEC3_RIGHT);
 		dirLight->data.brightness = 3.0f;
+		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
 		dirLight->Initialize();
 		dirLight->PostInitialize();
 	}
@@ -2250,7 +2252,7 @@ namespace flex
 
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
-		// Prefab templates shouldn't get registered
+		// Prefab templates shouldn't get registered in the scene
 		CHECK(!gameObject->IsTemplate());
 
 		auto iter = m_GameObjectLUT.find(gameObject->ID);

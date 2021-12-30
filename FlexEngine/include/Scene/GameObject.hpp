@@ -147,7 +147,6 @@ namespace flex
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
-
 		virtual void ParseJSON(
 			const JSONObject& obj,
 			BaseScene* scene,
@@ -157,6 +156,7 @@ namespace flex
 			CopyFlags copyFlags = CopyFlags::ALL);
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
+		virtual void OnIDChanged(const GameObjectID& oldID, const GameObjectID& newID);
 
 		virtual bool ShouldSerialize();
 
@@ -173,6 +173,9 @@ namespace flex
 
 		// Create new/overwrite existing prefab from this object
 		bool SaveAsPrefab();
+
+		// Gives this object and all its children new GameObjectIDs
+		void ChangeAllIDs();
 
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
@@ -337,8 +340,9 @@ namespace flex
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs);
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData);
-		void SerializeField(JSONObject& parentObject, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision = 2);
-		bool SerializeProperties(JSONObject& parentObject);
+		void SerializeField(JSONObject& parentObject, bool bSerializePrefabData, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision = 2);
+		bool SerializeRegisteredProperties(JSONObject& parentObject, bool bSerializePrefabData);
+		void DeserializeRegisteredProperties(JSONObject& parentObject);
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
@@ -462,7 +466,6 @@ namespace flex
 	{
 	public:
 		DirectionalLight();
-		DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation);
 		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
@@ -585,8 +588,7 @@ namespace flex
 		virtual void Update() override;
 
 		// Serialized fields
-		real minRotation = 0.0f;
-		real maxRotation = 0.0f;
+		glm::vec2 valveRange;
 
 		// Non-serialized fields
 		// Multiplied with value retrieved from input manager
@@ -679,11 +681,6 @@ namespace flex
 		virtual void PostInitialize() override;
 
 		MaterialID captureMatID = 0;
-
-	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
-
 	};
 
 	class Skybox final : public GameObject
@@ -1219,15 +1216,15 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
-		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
-		real scale;
+		real scale = 1.0f;
 		ParticleSimData data;
 		bool bEnabled = true;
 		MaterialID simMaterialID = InvalidMaterialID;
@@ -1938,8 +1935,6 @@ namespace flex
 	public:
 		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 		
-		virtual void Initialize() override;
-		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 		virtual void OnCharge(real chargeAmount) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
@@ -1989,8 +1984,8 @@ namespace flex
 		Speaker(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
 
 		virtual void Initialize() override;
-		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual GameObject* CopySelf(

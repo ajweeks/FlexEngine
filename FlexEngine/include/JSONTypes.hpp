@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "GUID.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -24,6 +25,7 @@ namespace flex
 		VEC3,
 		VEC4,
 		QUAT,
+		GUID,
 		OBJECT,
 		OBJECT_ARRAY,
 		FIELD_ARRAY,
@@ -119,10 +121,10 @@ namespace flex
 		explicit JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const GUID& inGUIDValue);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
-		explicit JSONValue(const GUID& inGUIDValue);
 
 		static JSONValue FromRawPtr(void* valuePtr, ValueType type, u32 precision = DEFAULT_FLOAT_PRECISION);
 
@@ -133,6 +135,7 @@ namespace flex
 		real AsFloat() const;
 		bool AsBool() const;
 		std::string AsString() const;
+		GUID AsGUID() const;
 
 		ValueType type = ValueType::UNINITIALIZED;
 
@@ -146,6 +149,7 @@ namespace flex
 			bool boolValue;
 			glm::vec4 vecValue;
 		};
+		GUID guidValue;
 		JSONObject objectValue;
 		std::string strValue;
 		std::vector<JSONField> fieldArrayValue;

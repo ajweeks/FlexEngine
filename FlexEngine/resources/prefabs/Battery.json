@@ -5,7 +5,7 @@
 	"root" : 
 	{
 		"name" : "battery",
-		"id" : "49BA1A00D02473914B4C060DFA113653",
+		"id" : "361FC57CDA633FB14CBAE8A233B42CC7",
 		"type" : "battery",
 		"mesh" : "battery_cell_2.glb",
 		"materials" : 

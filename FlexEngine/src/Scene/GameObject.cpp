@@ -166,6 +166,7 @@ namespace flex
 
 	GameObject::~GameObject()
 	{
+		g_PropertyCollectionManager->DeregisterObject(ID);
 	}
 
 	GameObject* GameObject::CopySelf(
@@ -1178,6 +1179,15 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
+			if (ImGui::Button("Save as prefab (force new)"))
+			{
+				m_PrefabIDLoadedFrom = InvalidPrefabID;
+				SaveAsPrefab();
+				bDeletedOrDuplicated = true;
+
+				ImGui::CloseCurrentPopup();
+			}
+
 			ImGui::EndPopup();
 		}
 
@@ -1243,6 +1253,20 @@ namespace flex
 		}
 	}
 
+	void GameObject::ChangeAllIDs()
+	{
+		GameObjectID oldID = ID;
+		GameObjectID newID = (GameObjectID)Platform::GenerateGUID();
+		OnIDChanged(oldID, newID);
+
+		ID = newID;
+
+		for (GameObject* child : m_Children)
+		{
+			child->ChangeAllIDs();
+		}
+	}
+
 	void GameObject::OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject)
 	{
 		if (previousGameObject->m_Name == newGameObject->m_Name)
@@ -1291,6 +1315,14 @@ namespace flex
 	void GameObject::FixupPrefabTemplateIDs(GameObject* newGameObject)
 	{
 		FLEX_UNUSED(newGameObject);
+	}
+
+	void GameObject::OnIDChanged(const GameObjectID& oldID, const GameObjectID& newID)
+	{
+		for (GameObject* child : m_Children)
+		{
+			child->OnIDChanged(oldID, newID);
+		}
 	}
 
 	bool GameObject::ShouldSerialize()
@@ -1974,41 +2006,36 @@ namespace flex
 		FLEX_UNUSED(bSerializePrefabData);
 	}
 
-	void GameObject::SerializeField(JSONObject& parentObject, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision /* = 2 */)
+	void GameObject::SerializeField(JSONObject& parentObject, bool bSerializePrefabData, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision /* = 2 */)
 	{
-		PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
-
-		if (m_bIsTemplate)
+		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
 		{
-			collection->Serialize(parentObject);
+			// Object isn't loaded from a prefab or we're saving it as a prefab template, ignore overrides
+			parentObject.fields.emplace_back(fieldLabel, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+			return;
 		}
-		else
+
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
+		if (prefabTemplate == nullptr)
 		{
-			if (!m_PrefabIDLoadedFrom.IsValid())
-			{
-				// Object isn't a prefab instance, always serialize
-				parentObject.fields.emplace_back(fieldLabel, JSONValue::FromRawPtr(valuePtr, valueType, precision));
-				return;
-			}
-
-
-			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
-			if (prefabTemplate == nullptr)
-			{
-				PrintWarn("Attempted to serialize prefab instance which wasn't loaded from a valid prefab in GameObject::SerializeField (%s)\n", m_Name.c_str());
-				return;
-			}
-
-			u32 fieldOffset = (u32)((u64)valuePtr - (u64)this);
-			void* templateField = ((u8*)prefabTemplate + fieldOffset);
-
-			SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, valueType, templateField, precision);
+			PrintWarn("Attempted to serialize prefab instance which wasn't loaded from a valid prefab in GameObject::SerializeField (%s)\n", m_Name.c_str());
+			return;
 		}
+
+		u32 fieldOffset = (u32)((u64)valuePtr - (u64)this);
+		void* templateField = ((u8*)prefabTemplate + fieldOffset);
+
+		SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, valueType, templateField, precision);
 	}
 
-	bool GameObject::SerializeProperties(JSONObject& parentObject)
+	bool GameObject::SerializeRegisteredProperties(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		return g_PropertyCollectionManager->SerializeObjectIfPresent(ID, parentObject);
+		return g_PropertyCollectionManager->SerializeObjectIfPresent(ID, parentObject, bSerializePrefabData);
+	}
+
+	void GameObject::DeserializeRegisteredProperties(JSONObject& parentObject)
+	{
+		g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, parentObject);
 	}
 
 	void GameObject::CopyGenericFields(
@@ -2789,6 +2816,11 @@ namespace flex
 		{
 			s_BunkSound = g_ResourceManager->GetOrLoadAudioSourceID(SID("bunk.wav"), true);
 		}
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("valve info", &valveRange)
+			.VersionAdded(6)
+			.Precision(3);
 	}
 
 	GameObject* Valve::CopySelf(
@@ -2802,8 +2834,7 @@ namespace flex
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Valve* newGameObject = new Valve(newObjectName, newGameObjectID);
 
-		newGameObject->minRotation = minRotation;
-		newGameObject->maxRotation = maxRotation;
+		newGameObject->valveRange = valveRange;
 		newGameObject->rotationSpeedScale = rotationSpeedScale;
 		newGameObject->invSlowDownRate = invSlowDownRate;
 		newGameObject->rotationSpeed = rotationSpeed;
@@ -2819,14 +2850,13 @@ namespace flex
 		JSONObject valveInfo;
 		if (parentObject.TryGetObject("valve info", valveInfo))
 		{
-			glm::vec2 valveRange = valveInfo.GetVec2("range");
-			minRotation = valveRange.x;
-			maxRotation = valveRange.y;
-			if (glm::abs(maxRotation - minRotation) <= 0.0001f)
+			DeserializeRegisteredProperties(valveInfo);
+
+			if (glm::abs(valveRange.y - valveRange.x) <= 0.0001f)
 			{
 				PrintWarn("Valve's rotation range is 0, it will not be able to rotate!\n");
 			}
-			if (minRotation > maxRotation)
+			if (valveRange.x > valveRange.y)
 			{
 				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
@@ -2869,13 +2899,8 @@ namespace flex
 
 	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		FLEX_UNUSED(bSerializePrefabData);
-
 		JSONObject valveInfo = {};
-
-		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(valveRange, 2));
-
+		SerializeRegisteredProperties(valveInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
 	}
 
@@ -2906,10 +2931,8 @@ namespace flex
 			bRotatedByOtherObject = (glm::abs(rotation - pRotation) > 0);
 		}
 
-		if ((rotationSpeed < 0.0f &&
-			rotation <= minRotation) ||
-			(rotationSpeed > 0.0f &&
-				rotation >= maxRotation))
+		if ((rotationSpeed < 0.0f && rotation <= valveRange.x) ||
+			(rotationSpeed > 0.0f && rotation >= valveRange.y))
 		{
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
@@ -2932,15 +2955,15 @@ namespace flex
 		}
 
 		real overshoot = 0.0f;
-		if (rotation > maxRotation)
+		if (rotation > valveRange.y)
 		{
-			overshoot = rotation - maxRotation;
-			rotation = maxRotation;
+			overshoot = rotation - valveRange.y;
+			rotation = valveRange.y;
 		}
-		else if (rotation < minRotation)
+		else if (rotation < valveRange.x)
 		{
-			overshoot = minRotation - rotation;
-			rotation = minRotation;
+			overshoot = valveRange.x - rotation;
+			rotation = valveRange.x;
 		}
 
 		pRotation = rotation;
@@ -2990,6 +3013,13 @@ namespace flex
 		GameObject(name, SID("rising block"), gameObjectID)
 	{
 		m_bItemizable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("move axis", &moveAxis)
+			.VersionAdded(6)
+			.Precision(3);
+		collection->RegisterProperty("affected by gravity", &bAffectedByGravity)
+			.VersionAdded(6);
 	}
 
 	GameObject* RisingBlock::CopySelf(
@@ -3013,73 +3043,6 @@ namespace flex
 		return newGameObject;
 	}
 
-	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
-	{
-		if (m_Mesh == nullptr)
-		{
-			Mesh* cubeMesh = new Mesh(this);
-			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
-			SetMesh(cubeMesh);
-		}
-
-		if (m_RigidBody == nullptr)
-		{
-			RigidBody* rigidBody = SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-		}
-
-		std::string valveName;
-
-		JSONObject blockInfo;
-		if (parentObject.TryGetObject("block info", blockInfo))
-		{
-			valveName = blockInfo.GetString("valve name");
-		}
-
-		if (valveName.empty())
-		{
-			PrintWarn("Rising block's \"valve name\" field is empty! Can't find matching valve\n");
-		}
-		else
-		{
-			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-			for (GameObject* rootObject : rootObjects)
-			{
-				if (rootObject->GetName().compare(valveName) == 0)
-				{
-					valve = static_cast<Valve*>(rootObject);
-					break;
-				}
-			}
-		}
-
-		if (!valve)
-		{
-			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
-		}
-
-		blockInfo.TryGetBool("affected by gravity", bAffectedByGravity);
-
-		if (!blockInfo.TryGetVec3("move axis", moveAxis))
-		{
-			moveAxis = VEC3_ZERO;
-			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
-		}
-	}
-
-	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
-	{
-		JSONObject blockInfo = {};
-
-		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(moveAxis, 3));
-		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
-
-		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
-	}
-
 	void RisingBlock::Initialize()
 	{
 		startingPos = m_Transform.GetWorldPosition();
@@ -3093,31 +3056,18 @@ namespace flex
 
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
-
-		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
-		//btFixedConstraint* constraint = new btFixedConstraint(
-		//	*m_RigidBody->GetRigidBodyInternal(),
-		//	*m_RigidBody->GetRigidBodyInternal(),
-		//	transform,
-		//	transform);
-		////constraint->setAngularLowerLimit(btVector3(0, 0, 0));
-		////constraint->setAngularUpperLimit(btVector3(0, 0, 0));
-		//m_RigidBody->AddConstraint(constraint);
 	}
 
 	void RisingBlock::Update()
 	{
 		PROFILE_AUTO("RisingBlock Update");
 
-		real minDist = valve->minRotation;
-		real maxDist = valve->maxRotation;
-		//real totalDist = (maxDist - minDist);
+		real minDist = valve->valveRange.x;
+		real maxDist = valve->valveRange.y;
 		real dist = valve->rotation;
 
-		//real playerControlledValveRotationSpeed = 0.0f;
-
 		if (bAffectedByGravity &&
-			valve->rotation >= valve->minRotation + 0.1f)
+			valve->rotation >= valve->valveRange.x + 0.1f)
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
@@ -3165,10 +3115,73 @@ namespace flex
 		GameObject::Update();
 	}
 
+	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		if (m_Mesh == nullptr)
+		{
+			Mesh* cubeMesh = new Mesh(this);
+			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
+			SetMesh(cubeMesh);
+		}
+
+		if (m_RigidBody == nullptr)
+		{
+			RigidBody* rigidBody = SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetStatic(false);
+		}
+
+		std::string valveName;
+
+		JSONObject blockInfo;
+		if (parentObject.TryGetObject("block info", blockInfo))
+		{
+			DeserializeRegisteredProperties(blockInfo);
+
+			valveName = blockInfo.GetString("valve name");
+		}
+
+		if (valveName.empty())
+		{
+			PrintWarn("Rising block's \"valve name\" field is empty! Can't find matching valve\n");
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+			for (GameObject* rootObject : rootObjects)
+			{
+				if (rootObject->GetName().compare(valveName) == 0)
+				{
+					valve = static_cast<Valve*>(rootObject);
+					break;
+				}
+			}
+		}
+
+		if (valve == nullptr)
+		{
+			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
+		}
+	}
+
+	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		JSONObject blockInfo = {};
+		SerializeRegisteredProperties(blockInfo, bSerializePrefabData);
+		std::string valveName = valve->GetName();
+		SerializeField(blockInfo, bSerializePrefabData, "valve name", &valveName, ValueType::STRING);
+		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
+	}
+
 	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("glass pane"), gameObjectID)
 	{
 		m_bItemizable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("broken", &bBroken)
+			.VersionAdded(6);
 	}
 
 	GameObject* GlassPane::CopySelf(
@@ -3194,7 +3207,7 @@ namespace flex
 		JSONObject glassInfo;
 		if (parentObject.TryGetObject("window info", glassInfo))
 		{
-			glassInfo.TryGetBool("broken", bBroken);
+			DeserializeRegisteredProperties(glassInfo);
 
 			if (m_Mesh == nullptr)
 			{
@@ -3225,9 +3238,7 @@ namespace flex
 	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject windowInfo = {};
-
-		windowInfo.fields.emplace_back("broken", JSONValue(bBroken));
-
+		SerializeRegisteredProperties(windowInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 	}
 
@@ -3252,67 +3263,6 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		return newGameObject;
-	}
-
-	void ReflectionProbe::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(parentObject);
-		FLEX_UNUSED(matIDs);
-
-		// Probe capture material
-		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		//probeCaptureMatCreateInfo.name = "reflection probe capture";
-		//probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-		//probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-		//probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		//probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		//probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		//probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-		//probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		//probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-		//probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-		//probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		//probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		//probeCaptureMatCreateInfo.persistent = true;
-		//probeCaptureMatCreateInfo.bEditorMaterial = false;
-		//probeCaptureMatCreateInfo.sampledFrameBuffers = {
-		//	{ "positionMetallicFrameBufferSampler", nullptr },
-		//	{ "normalRoughnessFrameBufferSampler", nullptr },
-		//	{ "albedoAOFrameBufferSampler", nullptr },
-		//};
-		//captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
-
-		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
-
-		//CHECK_EQ(m_MeshComponent, nullptr);
-		//sphereMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb");
-		//SetMeshComponent(sphereMesh);
-
-		//std::string captureName = m_Name + "_capture";
-		//GameObject* captureObject = new GameObject(captureName, SID("_NONE);
-		//captureObject->SetSerializable(false);
-		//captureObject->SetVisible(false);
-		//captureObject->SetVisibleInSceneExplorer(false);
-
-		//RenderObjectCreateInfo captureObjectCreateInfo = {};
-		//captureObjectCreateInfo.vertexBufferData = nullptr;
-		//captureObjectCreateInfo.materialID = captureMatID;
-		//captureObjectCreateInfo.gameObject = captureObject;
-		//captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-		//RenderID captureRenderID = g_Renderer->InitializeRenderObject(&captureObjectCreateInfo);
-		//captureObject->SetRenderID(captureRenderID);
-
-		//AddChild(captureObject);
-
-		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
-	}
-
-	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
-	{
-		FLEX_UNUSED(parentObject);
-
-		// Reflection probes have no unique fields currently
 	}
 
 	void ReflectionProbe::PostInitialize()
@@ -3352,13 +3302,15 @@ namespace flex
 	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject skyboxInfo = {};
-		glm::quat worldRot = m_Transform.GetWorldRotation();
-		if (worldRot != QUAT_IDENTITY)
+		glm::vec3 eulerRot = glm::eulerAngles(m_Transform.GetWorldRotation());
+		if (!NearlyEquals(eulerRot, VEC3_ZERO, 0.001f))
 		{
-			skyboxInfo.fields.emplace_back("rot", JSONValue(glm::eulerAngles(worldRot), 2));
+			SerializeField(skyboxInfo, bSerializePrefabData, "rot", &eulerRot, ValueType::VEC3, 2);
 		}
-
-		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+		if (!skyboxInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+		}
 	}
 
 	void Skybox::InternalInit(MaterialID matID)
@@ -3469,20 +3421,6 @@ namespace flex
 	{
 	}
 
-	DirectionalLight::DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation) :
-		GameObject(name, SID("directional light"), InvalidGameObjectID)
-	{
-		m_Transform.SetWorldPosition(initialPos);
-
-		data.enabled = m_bVisible ? 1 : 0;
-		data.dir = glm::rotate(initialOrientation, VEC3_RIGHT);
-		data.colour = VEC3_ONE;
-		data.brightness = 1.0f;
-		data.castShadows = 1;
-		data.shadowDarkness = 1.0f;
-		data.pad[0] = data.pad[1] = 0;
-	}
-
 	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("directional light"), gameObjectID)
 	{
@@ -3493,6 +3431,26 @@ namespace flex
 		data.castShadows = 1;
 		data.shadowDarkness = 1.0f;
 		data.pad[0] = data.pad[1] = 0;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("pos", &pos)
+			.VersionAdded(2)
+			.Precision(2);
+		collection->RegisterProperty("colour", &data.colour)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->RegisterProperty("brightness", &data.brightness)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(1.0f);
+		collection->RegisterProperty("cast shadows", &data.castShadows)
+			.VersionAdded(2)
+			.DefaultValue(1);
+		collection->RegisterProperty("shadow darkness", &data.shadowDarkness)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(1.0f);
 	}
 
 	void DirectionalLight::Initialize()
@@ -3631,6 +3589,8 @@ namespace flex
 		JSONObject directionalLightObj;
 		if (parentObject.TryGetObject("directional light info", directionalLightObj))
 		{
+			DeserializeRegisteredProperties(directionalLightObj);
+
 			if (fileVersion < 2)
 			{
 				// Rotation was saved using euler angles in this version
@@ -3644,44 +3604,17 @@ namespace flex
 				data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 			}
 
-			glm::vec3 posVal;
-			if (directionalLightObj.TryGetVec3("pos", posVal))
-			{
-				m_Transform.SetLocalPosition(posVal);
-				pos = m_Transform.GetWorldPosition();
-			}
-
-			directionalLightObj.TryGetVec3("colour", data.colour);
-
-			directionalLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (directionalLightObj.HasField("enabled"))
-			{
-				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
-			}
-
-			bool bCastShadow = false;
-			if (directionalLightObj.TryGetBool("cast shadows", bCastShadow))
-			{
-				data.castShadows = bCastShadow ? 1 : 0;
-			}
-			directionalLightObj.TryGetFloat("shadow darkness", data.shadowDarkness);
+			m_Transform.SetLocalPosition(pos);
+			data.enabled = m_bVisible ? 1 : 0;
 		}
 	}
 
 	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject dirLightObj = {};
-
-		dirLightObj.fields.emplace_back("rotation", JSONValue(m_Transform.GetWorldRotation(), 3));
-		dirLightObj.fields.emplace_back("pos", JSONValue(m_Transform.GetLocalPosition(), 3));
-		dirLightObj.fields.emplace_back("colour", JSONValue(data.colour, 2));
-		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(static_cast<bool>(data.castShadows)));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
-
+		SerializeRegisteredProperties(dirLightObj, bSerializePrefabData);
+		glm::quat rotWS = m_Transform.GetWorldRotation();
+		SerializeField(dirLightObj, bSerializePrefabData, "rotation", &rotWS, ValueType::VEC3, 3);
 		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
 	}
 
@@ -3704,8 +3637,24 @@ namespace flex
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("pos", &data.pos)
+			.VersionAdded(2)
+			.Precision(3);
+		collection->RegisterProperty("colour", &data.colour)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->RegisterProperty("brightness", &data.brightness)
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(1.0f);
+		collection->RegisterProperty("enabled", &data.enabled)
+			.VersionAdded(2)
+			.DefaultValue(1);
 	}
 
 	GameObject* PointLight::CopySelf(
@@ -3745,9 +3694,9 @@ namespace flex
 				m_bVisible = false;
 				data.enabled = false;
 			}
-
-			GameObject::Initialize();
 		}
+
+		GameObject::Initialize();
 	}
 
 	void PointLight::Destroy(bool bDetachFromParent /* = true */)
@@ -3756,9 +3705,9 @@ namespace flex
 		{
 			g_Renderer->RemovePointLight(pointLightID);
 			pointLightID = InvalidPointLightID;
-
-			GameObject::Destroy(bDetachFromParent);
 		}
+
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void PointLight::Update()
@@ -3871,31 +3820,15 @@ namespace flex
 		JSONObject pointLightObj;
 		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
-			glm::vec3 pos = pointLightObj.GetVec3("pos");
-			m_Transform.SetLocalPosition(pos);
-			data.pos = pos;
-
-			pointLightObj.TryGetVec3("colour", data.colour);
-
-			pointLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (pointLightObj.HasField("enabled"))
-			{
-				m_bVisible = pointLightObj.GetBool("enabled") ? 1 : 0;
-				data.enabled = m_bVisible ? 1 : 0;
-			}
+			DeserializeRegisteredProperties(pointLightObj);
+			m_Transform.SetLocalPosition(data.pos);
 		}
 	}
 
 	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject pointLightObj = {};
-
-		pointLightObj.fields.emplace_back("pos", JSONValue(m_Transform.GetLocalPosition(), 3));
-		pointLightObj.fields.emplace_back("colour", JSONValue(data.colour, 2));
-		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		pointLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
+		SerializeRegisteredProperties(pointLightObj, bSerializePrefabData);
 		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
 	}
 
@@ -3917,10 +3850,34 @@ namespace flex
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
 		data.dir = VEC3_RIGHT;
-		data.angle = 0.1f;
+		data.angle = 0.0f;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("pos", &data.pos)
+			.VersionAdded(2)
+			.Precision(3);
+		collection->RegisterProperty("colour", &data.colour)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->RegisterProperty("brightness", &data.brightness)
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(1.0f);
+		collection->RegisterProperty("enabled", &data.enabled)
+			.VersionAdded(2)
+			.DefaultValue(1);
+		collection->RegisterProperty("direction", &data.dir)
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(VEC3_RIGHT);
+		collection->RegisterProperty("angle", &data.angle)
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(0.0f);
 	}
 
 	GameObject* SpotLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
@@ -3956,9 +3913,9 @@ namespace flex
 				m_bVisible = false;
 				data.enabled = 0;
 			}
-
-			GameObject::Initialize();
 		}
+
+		GameObject::Initialize();
 	}
 
 	void SpotLight::Destroy(bool bDetachFromParent)
@@ -4094,37 +4051,15 @@ namespace flex
 		JSONObject spotLightObj;
 		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
-			glm::vec3 posVal = spotLightObj.GetVec3("pos");
-			m_Transform.SetLocalPosition(posVal);
-			data.pos = posVal;
-
-			spotLightObj.TryGetVec3("colour", data.colour);
-
-			spotLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (spotLightObj.HasField("enabled"))
-			{
-				m_bVisible = spotLightObj.GetBool("enabled") ? 1 : 0;
-				data.enabled = m_bVisible ? 1 : 0;
-			}
-
-			spotLightObj.TryGetVec3("direction", data.dir);
-			spotLightObj.TryGetFloat("angle", data.angle);
+			DeserializeRegisteredProperties(spotLightObj);
+			m_Transform.SetLocalPosition(data.pos);
 		}
 	}
 
 	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject spotLightObj = {};
-
-		spotLightObj.fields.emplace_back("pos", JSONValue(m_Transform.GetLocalPosition(), 3));
-		spotLightObj.fields.emplace_back("colour", JSONValue(data.colour, 2));
-		spotLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		spotLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		spotLightObj.fields.emplace_back("direction", JSONValue(data.dir));
-		spotLightObj.fields.emplace_back("angle", JSONValue(data.angle));
-
+		SerializeRegisteredProperties(spotLightObj, bSerializePrefabData);
 		parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
 	}
 
@@ -4137,9 +4072,21 @@ namespace flex
 		GameObject(name, SID("area light"), gameObjectID)
 	{
 		data.enabled = 1;
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
 		UpdatePoints();
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("colour", &data.colour)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->RegisterProperty("brightness", &data.brightness)
+			.VersionAdded(2)
+			.DefaultValue(500.0f);
+		collection->RegisterProperty("enabled", &data.enabled)
+			.VersionAdded(2)
+			.DefaultValue(1);
 	}
 
 	GameObject* AreaLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
@@ -4175,9 +4122,9 @@ namespace flex
 				m_bVisible = false;
 				data.enabled = false;
 			}
-
-			GameObject::Initialize();
 		}
+
+		GameObject::Initialize();
 	}
 
 	void AreaLight::Destroy(bool bDetachFromParent)
@@ -4186,9 +4133,9 @@ namespace flex
 		{
 			g_Renderer->RemoveAreaLight(areaLightID);
 			areaLightID = InvalidAreaLightID;
-
-			GameObject::Destroy(bDetachFromParent);
 		}
+
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void AreaLight::Update()
@@ -4330,27 +4277,14 @@ namespace flex
 		JSONObject areaLightObj;
 		if (parentObject.TryGetObject("area light info", areaLightObj))
 		{
-			areaLightObj.TryGetVec3("colour", data.colour);
-
-			areaLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (areaLightObj.HasField("enabled"))
-			{
-				m_bVisible = areaLightObj.GetBool("enabled");
-				data.enabled = m_bVisible ? 1 : 0;
-			}
+			DeserializeRegisteredProperties(areaLightObj);
 		}
 	}
 
 	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject areaLightObj = {};
-
-		areaLightObj.fields.emplace_back("colour", JSONValue(data.colour, 2));
-
-		areaLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		areaLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
+		SerializeRegisteredProperties(areaLightObj, bSerializePrefabData);
 		parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
 	}
 
@@ -4399,6 +4333,14 @@ namespace flex
 		}
 
 		m_TSpringToCartAhead.DR = 1.0f;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("track ID", &currentTrackID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidTrackID);
+		collection->RegisterProperty("dist along track", &distAlongTrack)
+			.VersionAdded(6)
+			.DefaultValue(-1.0f);
 	}
 
 	GameObject* Cart::CopySelf(
@@ -4624,28 +4566,17 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		JSONObject cartInfo = parentObject.GetObject("cart info");
-		u32 trackID;
-		if (cartInfo.TryGetUInt("track ID", trackID))
+		JSONObject cartInfo;
+		if (parentObject.TryGetObject("cart info", cartInfo))
 		{
-			currentTrackID = (TrackID)trackID;
+			DeserializeRegisteredProperties(cartInfo);
 		}
-		cartInfo.TryGetFloat("dist along track", distAlongTrack);
 	}
 
 	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject cartInfo = {};
-
-		if (currentTrackID != InvalidTrackID)
-		{
-			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
-		}
-		if (distAlongTrack != 0.0f)
-		{
-			cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
-		}
-
+		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
 
@@ -4664,6 +4595,17 @@ namespace flex
 		m_bItemizable = true;
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
+
+		// Base class should have already registered us
+		PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
+		// Cart already registered trackID & dist along track fields
+		collection->RegisterProperty("move direction", &moveDirection)
+			.VersionAdded(6)
+			.Precision(1)
+			.DefaultValue(1.0f);
+		collection->RegisterProperty("power remaining", &powerRemaining)
+			.VersionAdded(6)
+			.DefaultValue(1.0f);
 	}
 
 	GameObject* EngineCart::CopySelf(
@@ -4753,34 +4695,17 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		JSONObject cartInfo = parentObject.GetObject("cart info");
-		u32 trackID;
-		if (cartInfo.TryGetUInt("track ID", trackID))
+		JSONObject cartInfo;
+		if (parentObject.TryGetObject("cart info", cartInfo))
 		{
-			currentTrackID = (TrackID)trackID;
+			DeserializeRegisteredProperties(cartInfo);
 		}
-		cartInfo.TryGetFloat("dist along track", distAlongTrack);
-
-		moveDirection = cartInfo.GetFloat("move direction");
-		powerRemaining = cartInfo.GetFloat("power remaining");
 	}
 
 	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject cartInfo = {};
-
-		if (currentTrackID != InvalidTrackID)
-		{
-			cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
-		}
-		if (distAlongTrack != 0.0f)
-		{
-			cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
-		}
-
-		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
-		cartInfo.fields.emplace_back("power remaining", JSONValue(powerRemaining));
-
+		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
 	}
 
@@ -4878,6 +4803,12 @@ namespace flex
 		GameObject(name, SID("battery"), gameObjectID)
 	{
 		m_bItemizable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("charge amount", &chargeAmount)
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(0.0f);
 	}
 
 	void Battery::Update()
@@ -4953,16 +4884,14 @@ namespace flex
 		JSONObject batteryInfo;
 		if (parentObject.TryGetObject("battery info", batteryInfo))
 		{
-			batteryInfo.TryGetFloat("charge amount", chargeAmount);
+			DeserializeRegisteredProperties(batteryInfo);
 		}
 	}
 
 	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject batteryInfo = {};
-
-		batteryInfo.fields.emplace_back("charge amount", JSONValue(chargeAmount));
-
+		SerializeRegisteredProperties(batteryInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
 	}
 
@@ -5018,6 +4947,23 @@ namespace flex
 			PrintError("Failed to load bobber mesh\n");
 		}
 		g_SceneManager->CurrentScene()->AddRootObject(bobber);
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("fresnel factor", &oceanData.fresnelFactor)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("fresnel power", &oceanData.fresnelPower)
+			.VersionAdded(2)
+			.Precision(2);
+		collection->RegisterProperty("sky reflection factor", &oceanData.skyReflectionFactor)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("fog falloff", &oceanData.fogFalloff)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("fog density", &oceanData.fogDensity)
+			.VersionAdded(6)
+			.Precision(2);
 	}
 
 	void GerstnerWave::Initialize()
@@ -6329,11 +6275,6 @@ namespace flex
 			{
 				oceanData.btm = glm::pow(oceanData.btm, glm::vec4(2.2f));
 			}
-			gerstnerWaveObj.TryGetFloat("fresnel factor", oceanData.fresnelFactor);
-			gerstnerWaveObj.TryGetFloat("fresnel power", oceanData.fresnelPower);
-			gerstnerWaveObj.TryGetFloat("sky reflection factor", oceanData.skyReflectionFactor);
-			gerstnerWaveObj.TryGetFloat("fog falloff", oceanData.fogFalloff);
-			gerstnerWaveObj.TryGetFloat("fog density", oceanData.fogDensity);
 		}
 
 		SortWaves();
@@ -6395,11 +6336,8 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)), 2));
 		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)), 2));
 		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)), 2));
-		gerstnerWaveObj.fields.emplace_back("fresnel factor", JSONValue(oceanData.fresnelFactor));
-		gerstnerWaveObj.fields.emplace_back("fresnel power", JSONValue(oceanData.fresnelPower));
-		gerstnerWaveObj.fields.emplace_back("sky reflection factor", JSONValue(oceanData.skyReflectionFactor));
-		gerstnerWaveObj.fields.emplace_back("fog falloff", JSONValue(oceanData.fogFalloff));
-		gerstnerWaveObj.fields.emplace_back("fog density", JSONValue(oceanData.fogDensity));
+
+		SerializeRegisteredProperties(gerstnerWaveObj, bSerializePrefabData);
 
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
@@ -6534,6 +6472,12 @@ namespace flex
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("plug 0 id", &plug0ID)
+			.VersionAdded(6);
+		collection->RegisterProperty("plug 1 id", &plug1ID)
+			.VersionAdded(6);
 	}
 
 	void Wire::Initialize()
@@ -6681,18 +6625,14 @@ namespace flex
 		JSONObject wireInfo;
 		if (parentObject.TryGetObject("wire", wireInfo))
 		{
-			wireInfo.TryGetGameObjectID("plug 0 id", plug0ID);
-			wireInfo.TryGetGameObjectID("plug 1 id", plug1ID);
+			DeserializeRegisteredProperties(wireInfo);
 		}
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject wireInfo = {};
-
-		wireInfo.fields.emplace_back("plug 0 id", JSONValue(plug0ID));
-		wireInfo.fields.emplace_back("plug 1 id", JSONValue(plug1ID));
-
+		SerializeRegisteredProperties(wireInfo, bSerializePrefabData);
 		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
 	}
 
@@ -6929,6 +6869,14 @@ namespace flex
 		GameObject(name, SID("wire plug"), gameObjectID)
 	{
 		m_bInteractable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("wire id", &wireID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+		collection->RegisterProperty("socket id", &socketID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
 	}
 
 	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID) :
@@ -6965,35 +6913,32 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("wire plug");
-
-		obj.TryGetGameObjectID("wire id", wireID);
-		obj.TryGetGameObjectID("socket id", socketID);
+		JSONObject wireObj;
+		if (parentObject.TryGetObject("wire plug", wireObj))
+		{
+			DeserializeRegisteredProperties(wireObj);
+		}
 	}
 
 	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject obj = {};
-
-		if (wireID.IsValid())
-		{
-			obj.fields.emplace_back("wire id", JSONValue(wireID));
-		}
-
-		if (socketID.IsValid())
-		{
-			obj.fields.emplace_back("socket id", JSONValue(socketID));
-		}
-
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
-		parentObject.fields.emplace_back("wire plug", JSONValue(obj));
+		JSONObject wireObj = {};
+		SerializeRegisteredProperties(wireObj, bSerializePrefabData);
+		parentObject.fields.emplace_back("wire plug", JSONValue(wireObj));
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("socket"), gameObjectID)
 	{
 		m_bInteractable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("slotIdx", &slotIdx)
+			.VersionAdded(6)
+			.DefaultValue(0);
+		collection->RegisterProperty("connected plug id", &connectedPlugID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
 	}
 
 	void Socket::Destroy(bool bDetachFromParent /* = true */)
@@ -7007,28 +6952,18 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("socket");
-		obj.TryGetInt("slotIdx", slotIdx);
-
-		obj.TryGetGameObjectID("connected plug id", connectedPlugID);
-
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
+		JSONObject socketObj;
+		if (parentObject.TryGetObject("socket", socketObj))
+		{
+			DeserializeRegisteredProperties(socketObj);
+		}
 	}
 
 	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject obj = {};
-
-		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
-		if (connectedPlugID.IsValid())
-		{
-			obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
-		}
-
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
-		parentObject.fields.emplace_back("socket", JSONValue(obj));
+		JSONObject socketObj = {};
+		SerializeRegisteredProperties(socketObj, bSerializePrefabData);
+		parentObject.fields.emplace_back("socket", JSONValue(socketObj));
 	}
 
 	void Socket::OnPlugIn(WirePlug* plug)
@@ -7666,7 +7601,7 @@ namespace flex
 
 		SaveScript();
 
-		terminalObj.fields.emplace_back("script file path", JSONValue(m_ScriptFileName));
+		SerializeField(terminalObj, bSerializePrefabData, "script file path", &m_ScriptFileName, ValueType::STRING);
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
 	}
@@ -8383,12 +8318,14 @@ namespace flex
 	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
 		GameObject(name, SID("particle system"), gameObjectID)
 	{
-	}
-
-	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
-	{
-		g_Renderer->RemoveParticleSystem(particleSystemID);
-		GameObject::Destroy(bDetachFromParent);
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("scale", &scale)
+			.VersionAdded(6)
+			.Precision(2)
+			.DefaultValue(1.0f);
+		collection->RegisterProperty("enabled", &bEnabled)
+			.VersionAdded(6)
+			.DefaultValue(true);
 	}
 
 	GameObject* ParticleSystem::CopySelf(
@@ -8415,30 +8352,46 @@ namespace flex
 		return newParticleSystem;
 	}
 
+	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
+	{
+		g_Renderer->RemoveParticleSystem(particleSystemID);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void ParticleSystem::Update()
+	{
+		PROFILE_AUTO("ParticleSystem Update");
+
+		scale = m_Transform.GetWorldScale().x;
+	}
+
 	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 
-		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
-
-		glm::mat4 model;
-		Transform::ParseJSON(particleSystemObj, model);
-		m_Transform.SetWorldFromMatrix(model);
-		particleSystemObj.TryGetFloat("scale", scale);
-		particleSystemObj.TryGetBool("enabled", bEnabled);
-
-		JSONObject systemDataObj = particleSystemObj.GetObject("data");
-		data = {};
-		systemDataObj.TryGetVec4("colour0", data.colour0);
-		systemDataObj.TryGetVec4("colour1", data.colour1);
-		systemDataObj.TryGetFloat("speed", data.speed);
-		i32 particleCount;
-		if (systemDataObj.TryGetInt("particle count", particleCount))
+		JSONObject particleSystemObj;
+		if (parentObject.TryGetObject("particle system info", particleSystemObj))
 		{
-			data.particleCount = particleCount;
-		}
+			glm::mat4 model;
+			Transform::ParseJSON(particleSystemObj, model);
+			m_Transform.SetWorldFromMatrix(model);
 
-		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
+			DeserializeRegisteredProperties(particleSystemObj);
+
+			JSONObject systemDataObj = particleSystemObj.GetObject("data");
+			data = {};
+			systemDataObj.TryGetVec4("colour0", data.colour0);
+			systemDataObj.TryGetVec4("colour1", data.colour1);
+			systemDataObj.TryGetFloat("speed", data.speed);
+			i32 particleCount;
+			if (systemDataObj.TryGetInt("particle count", particleCount))
+			{
+				data.particleCount = particleCount;
+			}
+
+			particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
+		}
 	}
 
 	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
@@ -8447,9 +8400,8 @@ namespace flex
 
 		glm::mat4 model = m_Transform.GetWorldTransform();
 		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
-		particleSystemObj.fields.emplace_back("scale", JSONValue(scale));
-		particleSystemObj.fields.emplace_back("enabled", JSONValue(bEnabled));
 
+		SerializeRegisteredProperties(particleSystemObj, bSerializePrefabData);
 
 		JSONObject systemDataObj = {};
 		systemDataObj.fields.emplace_back("colour0", JSONValue(data.colour0, 2));
@@ -8485,13 +8437,6 @@ namespace flex
 		{
 			data.particleCount = particleCount;
 		}
-	}
-
-	void ParticleSystem::Update()
-	{
-		PROFILE_AUTO("ParticleSystem Update");
-
-		scale = m_Transform.GetWorldScale().x;
 	}
 
 	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
@@ -8571,18 +8516,66 @@ namespace flex
 		{
 			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
 		}
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("vert count per chunk axis", &m_VertCountPerChunkAxis)
+			.VersionAdded(6);
+		collection->RegisterProperty("chunk size", &m_ChunkSize)
+			.VersionAdded(6);
+		collection->RegisterProperty("max height", &m_MaxHeight)
+			.VersionAdded(6);
+		collection->RegisterProperty("use manual seed", &m_UseManualSeed)
+			.VersionAdded(6);
+		collection->RegisterProperty("manual seed", &m_ManualSeed);
+
+		collection->RegisterProperty("loaded chunk radius", &m_LoadedChunkRadius)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("loaded chunk rigid body square radius", &m_LoadedChunkRigidBodyRadius2)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("base table width", &m_BasePerlinTableWidth)
+			.VersionAdded(6);
+
+		collection->RegisterProperty("isolate noise layer", &m_IsolateNoiseLayer)
+			.VersionAdded(6);
+
+		collection->RegisterProperty("num points per axis", &m_NumPointsPerAxis)
+			.VersionAdded(6);
+		collection->RegisterProperty("max chunk count", &m_MaxChunkCount)
+			.VersionAdded(6);
+
+		collection->RegisterProperty("low colour", &m_LowCol)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("mid colour", &m_MidCol)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("high colour", &m_HighCol)
+			.VersionAdded(6)
+			.Precision(2);
+
+		collection->RegisterProperty("pin center", &m_bPinCenter)
+			.VersionAdded(6);
+		collection->RegisterProperty("pinned center", &m_PinnedPos)
+			.VersionAdded(6)
+			.Precision(2);
 	}
 
 	void TerrainGenerator::Initialize()
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Terrain";
-		matCreateInfo.shaderName = "terrain";
-		matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		matCreateInfo.constRoughness = 1.0f;
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bSerializable = false;
-		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		m_TerrainMatID = g_Renderer->GetMaterialID("Terrain");
+		if (m_TerrainMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Terrain";
+			matCreateInfo.shaderName = "terrain";
+			matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			matCreateInfo.constRoughness = 1.0f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.bSerializable = false;
+			m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 
 		GenerateGradients();
 
@@ -9368,30 +9361,10 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		if (parentObject.HasField("chunk generator info"))
+		JSONObject chunkGenInfo;
+		if (parentObject.TryGetObject("chunk generator info", chunkGenInfo))
 		{
-			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
-			m_VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
-			m_ChunkSize = chunkGenInfo.GetFloat("chunk size");
-			m_MaxHeight = chunkGenInfo.GetFloat("max height");
-			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
-			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
-
-			chunkGenInfo.TryGetFloat("loaded chunk radius", m_LoadedChunkRadius);
-			chunkGenInfo.TryGetFloat("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
-			chunkGenInfo.TryGetUInt("base table width", m_BasePerlinTableWidth);
-
-			chunkGenInfo.TryGetInt("isolate noise layer", m_IsolateNoiseLayer);
-
-			chunkGenInfo.TryGetUInt("num points per axis", m_NumPointsPerAxis);
-			chunkGenInfo.TryGetUInt("max chunk count", m_MaxChunkCount);
-
-			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
-			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
-			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
-
-			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
-			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
+			DeserializeRegisteredProperties(chunkGenInfo);
 
 			std::vector<JSONObject> biomesArr;
 			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
@@ -9437,28 +9410,7 @@ namespace flex
 	{
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(m_VertCountPerChunkAxis));
-		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(m_ChunkSize));
-		chunkGenInfo.fields.emplace_back("max height", JSONValue(m_MaxHeight));
-		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
-		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
-
-		chunkGenInfo.fields.emplace_back("isolate noise layer", JSONValue(m_IsolateNoiseLayer));
-
-		chunkGenInfo.fields.emplace_back("num points per axis", JSONValue(m_NumPointsPerAxis));
-		chunkGenInfo.fields.emplace_back("max chunk count", JSONValue(m_MaxChunkCount));
-
-		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
-		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
-
-		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
-
-		chunkGenInfo.fields.emplace_back("low colour", JSONValue(m_LowCol, 2));
-		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(m_MidCol, 2));
-		chunkGenInfo.fields.emplace_back("high colour", JSONValue(m_HighCol, 2));
-
-		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
-		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(m_PinnedPos, 2));
+		SerializeRegisteredProperties(chunkGenInfo, bSerializePrefabData);
 
 		std::vector<JSONObject> biomesArr;
 		for (const Biome& biome : m_Biomes)
@@ -10790,6 +10742,12 @@ namespace flex
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("end point", &m_TargetPos)
+			.VersionAdded(6)
+			.Precision(2)
+			.DefaultValue(VEC3_ZERO);
 	}
 
 	GameObject* SpringObject::CopySelf(
@@ -10985,9 +10943,11 @@ namespace flex
 	{
 		m_ExtendedMesh->Destroy();
 		delete m_ExtendedMesh;
+		m_ExtendedMesh = nullptr;
 
 		m_ContractedMesh->Destroy();
 		delete m_ContractedMesh;
+		m_ContractedMesh = nullptr;
 
 		m_SpringSim->Destroy();
 		delete m_SpringSim;
@@ -11025,7 +10985,7 @@ namespace flex
 		JSONObject springObj;
 		if (parentObject.TryGetObject("spring", springObj))
 		{
-			m_TargetPos = springObj.GetVec3("end point");
+			DeserializeRegisteredProperties(springObj);
 		}
 	}
 
@@ -11033,7 +10993,8 @@ namespace flex
 	{
 		JSONObject springObj = {};
 
-		springObj.fields.emplace_back("end point", JSONValue(m_SpringSim->points[1]->pos));
+		m_TargetPos = m_SpringSim->points[1]->pos;
+		SerializeRegisteredProperties(springObj, bSerializePrefabData);
 
 		parentObject.fields.emplace_back("spring", JSONValue(springObj));
 	}
@@ -11056,24 +11017,32 @@ namespace flex
 
 	void SpringObject::CreateMaterials()
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Spring";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
-		matCreateInfo.constRoughness = 1.0f;
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bDynamic = true;
-		matCreateInfo.bSerializable = false;
-		s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		s_SpringMatID = g_Renderer->GetMaterialID("Spring");
+		if (s_SpringMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Spring";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
+			matCreateInfo.constRoughness = 1.0f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.bDynamic = true;
+			matCreateInfo.bSerializable = false;
+			s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 
-		matCreateInfo = {};
-		matCreateInfo.name = "Bobber";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
-		matCreateInfo.constRoughness = 0.0f;
-		matCreateInfo.constMetallic = 1.0f;
-		matCreateInfo.bSerializable = false;
-		s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		s_BobberMatID = g_Renderer->GetMaterialID("Bobber");
+		if (s_BobberMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Bobber";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
+			matCreateInfo.constRoughness = 0.0f;
+			matCreateInfo.constMetallic = 1.0f;
+			matCreateInfo.bSerializable = false;
+			s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :
@@ -11112,6 +11081,20 @@ namespace flex
 		GameObject(name, SID("soft body"), gameObjectID),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("solver iteration count", &m_SolverIterationCount)
+			.VersionAdded(6);
+		collection->RegisterProperty("render wireframe", &m_bRenderWireframe)
+			.VersionAdded(6);
+		collection->RegisterProperty("damping", &m_Damping)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("stiffness", &m_Stiffness)
+			.VersionAdded(6)
+			.Precision(2);
+		collection->RegisterProperty("bending stiffness", &m_BendingStiffness)
+			.VersionAdded(6)
+			.Precision(2);
 	}
 
 	GameObject* SoftBody::CopySelf(
@@ -11182,6 +11165,8 @@ namespace flex
 	void SoftBody::Initialize()
 	{
 		m_MSToSim = 0.0f;
+
+		GameObject::Initialize();
 	}
 
 	void SoftBody::Destroy(bool bDetachFromParent /* = true */)
@@ -11786,7 +11771,7 @@ namespace flex
 		JSONObject softBodyObject;
 		if (parentObject.TryGetObject("soft body", softBodyObject))
 		{
-			softBodyObject.TryGetUInt("solver iteration count", m_SolverIterationCount);
+			DeserializeRegisteredProperties(softBodyObject);
 
 			std::vector<JSONObject> pointsArr;
 			if (softBodyObject.TryGetObjectArray("points", pointsArr))
@@ -11853,9 +11838,8 @@ namespace flex
 				}
 			}
 
-			if (softBodyObject.HasField("mesh file path"))
+			if (softBodyObject.TryGetString("mesh file path", m_CurrentMeshFilePath))
 			{
-				m_CurrentMeshFilePath = softBodyObject.GetString("mesh file path");
 				m_CurrentMeshFileName = StripLeadingDirectories(m_CurrentMeshFilePath);
 				for (i32 i = 0; i < (i32)g_ResourceManager->discoveredMeshes.size(); ++i)
 				{
@@ -11876,19 +11860,14 @@ namespace flex
 					LoadFromMesh();
 				}
 			}
-
-			softBodyObject.TryGetBool("render wireframe", m_bRenderWireframe);
-			softBodyObject.TryGetFloat("damping", m_Damping);
-			softBodyObject.TryGetFloat("stiffness", m_Stiffness);
-			softBodyObject.TryGetFloat("bending stiffness", m_BendingStiffness);
 		}
 	}
 
 	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject softBodyObject = JSONObject();
+		JSONObject softBodyObject = {};
 
-		softBodyObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
+		SerializeRegisteredProperties(softBodyObject, bSerializePrefabData);
 
 		std::vector<JSONObject> pointsArr(points.size());
 		{
@@ -11896,7 +11875,6 @@ namespace flex
 			glm::vec3 parentPos = m_Transform.GetWorldPosition();
 			for (const Point* point : points)
 			{
-				pointsArr[i] = JSONObject();
 				pointsArr[i].fields.emplace_back("position", JSONValue(point->pos - parentPos));
 				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
 
@@ -11910,7 +11888,6 @@ namespace flex
 			u32 i = 0;
 			for (const Constraint* constraint : constraints)
 			{
-				constraintsArr[i] = JSONObject();
 				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
 				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
 
@@ -11920,7 +11897,7 @@ namespace flex
 				{
 					DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
 
-					JSONObject distanceConstraintObj = JSONObject();
+					JSONObject distanceConstraintObj = {};
 
 					distanceConstraintObj.fields.emplace_back("index 0", JSONValue(distanceConstraint->pointIndices[0]));
 					distanceConstraintObj.fields.emplace_back("index 1", JSONValue(distanceConstraint->pointIndices[1]));
@@ -11932,7 +11909,7 @@ namespace flex
 				{
 					BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
 
-					JSONObject bendingConstraintObj = JSONObject();
+					JSONObject bendingConstraintObj = {};
 
 					bendingConstraintObj.fields.emplace_back("index 0", JSONValue(bendingConstraint->pointIndices[0]));
 					bendingConstraintObj.fields.emplace_back("index 1", JSONValue(bendingConstraint->pointIndices[1]));
@@ -11957,11 +11934,6 @@ namespace flex
 		{
 			softBodyObject.fields.emplace_back("mesh file path", JSONValue(m_CurrentMeshFilePath));
 		}
-
-		softBodyObject.fields.emplace_back("render wireframe", JSONValue(m_bRenderWireframe));
-		softBodyObject.fields.emplace_back("damping", JSONValue(m_Damping));
-		softBodyObject.fields.emplace_back("stiffness", JSONValue(m_Stiffness));
-		softBodyObject.fields.emplace_back("bending stiffness", JSONValue(m_BendingStiffness));
 
 		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
@@ -12553,7 +12525,9 @@ namespace flex
 
 	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject vehicleObj = JSONObject();
+		FLEX_UNUSED(bSerializePrefabData);
+
+		JSONObject vehicleObj = {};
 
 		std::vector<JSONField> tireIDs;
 		tireIDs.reserve(m_TireCount);
@@ -13183,6 +13157,7 @@ namespace flex
 
 	void Road::GenerateMaterial()
 	{
+		m_RoadMaterialID = g_Renderer->GetMaterialID("Road surface");
 		if (m_RoadMaterialID == InvalidMaterialID)
 		{
 			// TODO: Add serialized member which points at material ID once support for that is in
@@ -13311,6 +13286,10 @@ namespace flex
 		GameObject(name, SID("mineral deposit"), gameObjectID)
 	{
 		m_bSerializeMesh = false;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("mineral remaining", &m_MineralRemaining)
+			.VersionAdded(6);
 	}
 
 	void MineralDeposit::Initialize()
@@ -13407,9 +13386,10 @@ namespace flex
 		JSONObject mineralDepositObj;
 		if (parentObject.TryGetObject("mineral deposit", mineralDepositObj))
 		{
+			DeserializeRegisteredProperties(mineralDepositObj);
+
 			std::string typeStr = mineralDepositObj.GetString("type");
 			m_Type = MineralTypeFromString(typeStr.c_str());
-			m_MineralRemaining = mineralDepositObj.GetUInt("mineral remaining");
 		}
 	}
 
@@ -13417,9 +13397,10 @@ namespace flex
 	{
 		JSONObject mineralDepositObj = {};
 
+		SerializeRegisteredProperties(mineralDepositObj, bSerializePrefabData);
+
 		const char* typeStr = MineralTypeToString(m_Type);
 		mineralDepositObj.fields.emplace_back("type", JSONValue(typeStr));
-		mineralDepositObj.fields.emplace_back("mineral remaining", JSONValue(m_MineralRemaining));
 
 		parentObject.fields.emplace_back("mineral deposit", JSONValue(mineralDepositObj));
 	}
@@ -13485,25 +13466,20 @@ namespace flex
 		m_bInteractable = true;
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
 		m_LaserEmitterHeight = 5.0f;
-	}
-
-	void Miner::Initialize()
-	{
-		GameObject::Initialize();
 
 		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
-		collection->RegisterProperty(6, "charge", &m_Charge);
-		collection->RegisterProperty(6, "max charge", &m_MaxCharge, 0.0f, 100.0f);
-		collection->RegisterProperty(6, "mine rate", &m_MineRate, 0.0f, 100.0f);
-		collection->RegisterProperty(6, "power draw", &m_PowerDraw, 0.0f, 10.0f);
-		collection->RegisterProperty(6, "mine radius", &m_MineRadius, 0.0f, 20.0f);
-	}
-
-	void Miner::Destroy(bool bDetachFromParent /* = true */)
-	{
-		GameObject::Destroy(bDetachFromParent);
-
-		g_PropertyCollectionManager->DeregisterObject(ID);
+		collection->RegisterProperty("charge", &m_Charge)
+			.VersionAdded(6)
+			.DefaultValue(0.0f);
+		collection->RegisterProperty("max charge", &m_MaxCharge)
+			.VersionAdded(6)
+			.Range(0.0f, 100.0f);
+		collection->RegisterProperty("mine rate", &m_MineRate)
+			.VersionAdded(6)
+			.Range(0.0f, 100.0f);
+		collection->RegisterProperty("power draw", &m_PowerDraw)
+			.VersionAdded(6)
+			.Range(0.0f, 10.0f);
 	}
 
 	void Miner::Update()
@@ -13731,14 +13707,10 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		i32 fileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
-
 		JSONObject minerObj;
 		if (parentObject.TryGetObject("miner", minerObj))
 		{
-			// Only warn when this isn't a prefab template
-			bool bWarnForMissingFields = !m_PrefabIDLoadedFrom.IsValid();
-			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, minerObj, fileVersion, bWarnForMissingFields);
+			DeserializeRegisteredProperties(minerObj);
 
 			std::vector<JSONObject> inventory;
 			if (minerObj.TryGetObjectArray("inventory", inventory))
@@ -13753,7 +13725,7 @@ namespace flex
 	{
 		JSONObject minerObj = {};
 
-		g_PropertyCollectionManager->SerializeObjectIfPresent(ID, minerObj);
+		SerializeRegisteredProperties(minerObj, bSerializePrefabData);
 
 		std::vector<JSONObject> inventory;
 		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory))
@@ -13771,14 +13743,17 @@ namespace flex
 		GameObject(name, SID("speaker"), gameObjectID)
 	{
 		m_bInteractable = true;
+
+		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
+		collection->RegisterProperty("playing", &m_bPlaying)
+			.VersionAdded(6);
+		collection->RegisterProperty("audio source path", &m_AudioSourceFileName)
+			.VersionAdded(6);
 	}
 
 	void Speaker::Initialize()
 	{
 		GameObject::Initialize();
-
-		PropertyCollection* collection = g_PropertyCollectionManager->RegisterObject(ID);
-		collection->RegisterProperty(6, "playing", &m_bPlaying);
 
 		if (!m_AudioSourceFileName.empty())
 		{
@@ -13795,6 +13770,17 @@ namespace flex
 		}
 	}
 
+	void Speaker::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			g_ResourceManager->DestroyAudioSource(m_SourceID);
+			m_SourceID = InvalidAudioSourceID;
+		}
+	}
+
 	void Speaker::Update()
 	{
 		if (m_SourceID != InvalidAudioSourceID && m_bPlaying)
@@ -13808,19 +13794,6 @@ namespace flex
 				AudioManager::SetSourceLooping(m_SourceID, true);
 				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
 			}
-		}
-	}
-
-	void Speaker::Destroy(bool bDetachFromParent /* = true */)
-	{
-		GameObject::Destroy(bDetachFromParent);
-
-		g_PropertyCollectionManager->DeregisterObject(ID);
-
-		if (m_SourceID != InvalidAudioSourceID)
-		{
-			g_ResourceManager->DestroyAudioSource(m_SourceID);
-			m_SourceID = InvalidAudioSourceID;
 		}
 	}
 
@@ -13946,33 +13919,17 @@ namespace flex
 	{
 		FLEX_UNUSED(matIDs);
 
-		i32 sceneFileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
-
 		JSONObject speakerObj;
 		if (parentObject.TryGetObject("speaker", speakerObj))
 		{
-			// Only warn when this isn't a prefab template
-			bool bWarnForMissingFields = !m_PrefabIDLoadedFrom.IsValid();
-			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, speakerObj, sceneFileVersion, bWarnForMissingFields);
-			//PropertyCollection* collection = g_PropertyCollectionManager->GetCollectionForObject(ID);
-			//collection->Deserialize(speakerObj, sceneFileVersion, bWarnForMissingFields);
-
-			m_AudioSourceFileName = speakerObj.GetString("audio source path");
+			DeserializeRegisteredProperties(speakerObj);
 		}
 	}
 
 	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject speakerObj = {};
-
-		SerializeProperties(speakerObj);
-		SerializeField(speakerObj, "audio source path", &m_AudioSourceFileName, ValueType::STRING);
-
-		//speakerObj.fields.emplace_back("audio source path", JSONValue(m_AudioSourceFileName));
-
-		if (!speakerObj.fields.empty())
-		{
-			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
-		}
+		SerializeRegisteredProperties(speakerObj, bSerializePrefabData);
+		parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
 	}
 } // namespace flex

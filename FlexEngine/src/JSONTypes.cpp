@@ -160,6 +160,12 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const GUID& inGUIDValue) :
+		type(ValueType::GUID),
+		guidValue(inGUIDValue)
+	{
+	}
+
 	JSONValue::JSONValue(const JSONObject& inObjectValue) :
 		type(ValueType::OBJECT),
 		objectValue(inObjectValue)
@@ -175,12 +181,6 @@ namespace flex
 	JSONValue::JSONValue(const std::vector<JSONField>& inFieldArrayValue) :
 		type(ValueType::FIELD_ARRAY),
 		fieldArrayValue(inFieldArrayValue)
-	{
-	}
-
-	JSONValue::JSONValue(const GUID& inGUIDValue) :
-		type(ValueType::STRING),
-		strValue(inGUIDValue.ToString())
 	{
 	}
 
@@ -210,6 +210,8 @@ namespace flex
 			return JSONValue(*(glm::vec4*)valuePtr, precision);
 		case ValueType::QUAT:
 			return JSONValue(*(glm::quat*)valuePtr, precision);
+		case ValueType::GUID:
+			return JSONValue(*(GUID*)valuePtr);
 		default:
 			PrintError("FromRawPtr was called with invalid type\n");
 			return JSONValue();
@@ -357,6 +359,18 @@ namespace flex
 		default:
 			PrintError("AsFloat was called on non-string value\n");
 			return "";
+		}
+	}
+
+	GUID JSONValue::AsGUID() const
+	{
+		switch (type)
+		{
+			case ValueType::GUID:
+				return guidValue;
+			default:
+				PrintError("AsGUID was called on non-GUID value\n");
+				return InvalidGUID;
 		}
 	}
 
@@ -778,6 +792,10 @@ namespace flex
 			return TryGetVec3(label, *(glm::vec3*)valuePtr);
 		case ValueType::VEC4:
 			return TryGetVec4(label, *(glm::vec4*)valuePtr);
+		case ValueType::QUAT:
+			return TryGetQuat(label, *(glm::quat*)valuePtr);
+		case ValueType::GUID:
+			return TryGetGUID(label, *(GUID*)valuePtr);
 		default:
 			PrintError("Unhandled type passed to JSONObject::TryGetValueOfType\n");
 			return false;
@@ -866,6 +884,11 @@ namespace flex
 			result += FloatToString(value.vecValue[2], value.floatPrecision);
 			result += ",";
 			result += FloatToString(value.vecValue[3], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::GUID:
+			result += "\"";
+			result += value.guidValue.ToString();
 			result += "\"";
 			break;
 		case ValueType::OBJECT:

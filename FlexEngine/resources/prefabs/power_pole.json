@@ -5,7 +5,7 @@
 	"root" : 
 	{
 		"name" : "power_pole",
-		"id" : "191A04404B58C2804B662089BB27F3E0",
+		"id" : "74B15FCB3E24ADA646790299A066C7E6",
 		"type" : "object",
 		"mesh" : "power-pole.glb",
 		"materials" : 

@@ -867,21 +867,21 @@ namespace flex
 		return false;
 	}
 
-	void PropertyCollectionManager::DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject, i32 fileVersion, bool bWarnIfMissingFields)
+	void PropertyCollectionManager::DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject)
 	{
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
 		if (collection != nullptr)
 		{
-			collection->Deserialize(parentObject, fileVersion, bWarnIfMissingFields);
+			collection->Deserialize(parentObject);
 		}
 	}
 
-	bool PropertyCollectionManager::SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject)
+	bool PropertyCollectionManager::SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
 		if (collection != nullptr)
 		{
-			return collection->SerializeGameObjectFields(parentObject, gameObjectID);
+			return collection->SerializeGameObjectFields(parentObject, gameObjectID, bSerializePrefabData);
 		}
 		return false;
 	}

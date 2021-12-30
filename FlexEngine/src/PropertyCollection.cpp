@@ -45,112 +45,100 @@ namespace flex
 		return *this;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue)
+	PropertyCollection::PropertyValue::PropertyValue(const PropertyValue& other)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, ValueType::FLOAT));
+		memcpy(this, &other, sizeof(PropertyValue));
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue, real valueMin, real valueMax)
+	PropertyCollection::PropertyValue::PropertyValue(const PropertyValue&& other)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, *(void**)&valueMin, *(void**)&valueMax, ValueType::FLOAT));
+		memcpy(this, &other, sizeof(PropertyValue));
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, i32* propertyValue)
+	PropertyCollection::PropertyValue& PropertyCollection::PropertyValue::operator=(const PropertyValue& other)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, ValueType::INT));
+		memcpy(this, &other, sizeof(PropertyValue));
+		return *this;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, u32* propertyValue)
+	PropertyCollection::PropertyValue& PropertyCollection::PropertyValue::operator=(const PropertyValue&& other)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, ValueType::UINT));
+		memcpy(this, &other, sizeof(PropertyValue));
+		return *this;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, bool* propertyValue)
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, real* propertyValue)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, ValueType::BOOL));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::FLOAT));
+		return pair.first->second;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, u32 precision)
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, i32* propertyValue)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC2));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::INT));
+		return pair.first->second;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, u32 precision)
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, u32* propertyValue)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC3));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::UINT));
+		return pair.first->second;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, u32 precision)
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, bool* propertyValue)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::VEC4));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::BOOL));
+		return pair.first->second;
 	}
 
-	void PropertyCollection::RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision)
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::vec2* propertyValue)
 	{
-		values.emplace(propertyName, PropertyValue(versionAdded, propertyName, propertyValue, *(void**)&precision, ValueType::QUAT));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::VEC2));
+		return pair.first->second;
+	}
+
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::vec3* propertyValue)
+	{
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::VEC3));
+		return pair.first->second;
+	}
+
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::vec4* propertyValue)
+	{
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::VEC4));
+		return pair.first->second;
+	}
+
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::quat* propertyValue)
+	{
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::QUAT));
+		return pair.first->second;
+	}
+
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, std::string* propertyValue)
+	{
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::STRING));
+		return pair.first->second;
+	}
+
+	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, GUID* propertyValue)
+	{
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::GUID));
+		return pair.first->second;
 	}
 
 	void PropertyCollection::Serialize(JSONObject& parentObject)
 	{
 		for (auto& valuePair : values)
 		{
-			u32 precision = valuePair.second.precision != nullptr ? *(u32*)&valuePair.second.precision : JSONValue::DEFAULT_FLOAT_PRECISION;
-			parentObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type, precision));
+			if (!valuePair.second.IsDefaultValue())
+			{
+				parentObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type, valuePair.second.GetPrecision()));
+			}
 		}
 	}
 
-	void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, void* templateField, u32 precision /* = 2 */)
-	{
-		const real threshold = 0.0001f;
-
-		bool bSerialize = false;
-		switch (valueType)
-		{
-		case ValueType::STRING:
-			bSerialize = *(std::string*)valuePtr != *(std::string*)templateField;
-			break;
-		case ValueType::INT:
-			bSerialize = *(i32*)valuePtr != *(i32*)templateField;
-			break;
-		case ValueType::UINT:
-			bSerialize = *(u32*)valuePtr != *(u32*)templateField;
-			break;
-		case ValueType::LONG:
-			bSerialize = *(i64*)valuePtr != *(i64*)templateField;
-			break;
-		case ValueType::ULONG:
-			bSerialize = *(u64*)valuePtr != *(u64*)templateField;
-			break;
-		case ValueType::FLOAT:
-			bSerialize = !NearlyEquals(*(real*)valuePtr, *(real*)templateField, threshold);
-			break;
-		case ValueType::BOOL:
-			bSerialize = *(bool*)valuePtr != *(bool*)templateField;
-			break;
-		case ValueType::VEC2:
-			bSerialize = !NearlyEquals(*(glm::vec2*)valuePtr, *(glm::vec2*)templateField, threshold);
-			break;
-		case ValueType::VEC3:
-			bSerialize = !NearlyEquals(*(glm::vec3*)valuePtr, *(glm::vec3*)templateField, threshold);
-			break;
-		case ValueType::VEC4:
-			bSerialize = !NearlyEquals(*(glm::vec4*)valuePtr, *(glm::vec4*)templateField, threshold);
-			break;
-		case ValueType::QUAT:
-			bSerialize = !NearlyEquals(*(glm::quat*)valuePtr, *(glm::quat*)templateField, threshold);
-			break;
-		default:
-			ENSURE_NO_ENTRY();
-			break;
-		}
-
-		if (bSerialize)
-		{
-			parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, valueType, precision));
-		}
-	}
-
-	bool PropertyCollection::SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID)
+	bool PropertyCollection::SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData)
 	{
 		GameObject* gameObject = gameObjectID.Get();
 
@@ -163,9 +151,9 @@ namespace flex
 		PrefabID prefabIDLoadedFrom = gameObject->GetPrefabIDLoadedFrom();
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabIDLoadedFrom);
 
-		if (prefabTemplate == nullptr || gameObject->IsTemplate())
+		if (prefabTemplate == nullptr || bSerializePrefabData)
 		{
-			// No need to worry about overrides if this object either isn't a prefab instance or is a template itself
+			// No need to worry about overrides if this object isn't a prefab instance
 			Serialize(parentObject);
 			return true;
 		}
@@ -173,27 +161,20 @@ namespace flex
 		for (auto& valuePair : values)
 		{
 			u32 fieldOffset = (u32)((u64)valuePair.second.valuePtr - (u64)gameObject);
+			CHECK_LT(fieldOffset, 1'024u);
 			void* templateField = ((u8*)prefabTemplate + fieldOffset);
 
-			u32 precision = valuePair.second.precision != nullptr ? *(u32*)&valuePair.second.precision : JSONValue::DEFAULT_FLOAT_PRECISION;
-			SerializePrefabInstanceFieldIfUnique(parentObject, valuePair.first, valuePair.second.valuePtr, valuePair.second.type, templateField, precision);
+			SerializePrefabInstanceFieldIfUnique(parentObject, valuePair.first, valuePair.second.valuePtr, valuePair.second.type, templateField, valuePair.second.GetPrecision());
 		}
 
 		return true;
 	}
 
-	void PropertyCollection::Deserialize(const JSONObject& parentObject, i32 fileVersion, bool bWarnForMissingFields, const char* filePath /* = nullptr */)
+	void PropertyCollection::Deserialize(const JSONObject& parentObject)
 	{
 		for (auto& valuePair : values)
 		{
-			if (!parentObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type))
-			{
-				// Don't warn about missing fields which weren't present in old file version
-				if (fileVersion >= valuePair.second.versionAdded && bWarnForMissingFields)
-				{
-					PrintError("Failed to get property %s %s\n", valuePair.second.label, (filePath != nullptr ? filePath : ""));
-				}
-			}
+			parentObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type);
 		}
 	}
 
@@ -218,7 +199,7 @@ namespace flex
 		switch (type)
 		{
 		case ValueType::FLOAT:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGui::SliderFloat(label, (real*)valuePtr, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
 			}
@@ -228,7 +209,7 @@ namespace flex
 			}
 			break;
 		case ValueType::INT:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGui::SliderInt(label, (i32*)valuePtr, *(i32*)&valueMin, *(i32*)&valueMax) || bValueChanged;
 			}
@@ -238,7 +219,7 @@ namespace flex
 			}
 			break;
 		case ValueType::UINT:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGuiExt::SliderUInt(label, (u32*)valuePtr, *(u32*)&valueMin, *(u32*)&valueMax) || bValueChanged;
 			}
@@ -251,7 +232,7 @@ namespace flex
 			bValueChanged = ImGui::Checkbox(label, (bool*)valuePtr) || bValueChanged;
 			break;
 		case ValueType::VEC2:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGui::SliderFloat2(label, &((glm::vec2*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
 			}
@@ -261,7 +242,7 @@ namespace flex
 			}
 			break;
 		case ValueType::VEC3:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGui::SliderFloat3(label, &((glm::vec3*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
 			}
@@ -271,7 +252,7 @@ namespace flex
 			}
 			break;
 		case ValueType::VEC4:
-			if (valueMin != nullptr && valueMax != nullptr)
+			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
 				bValueChanged = ImGui::SliderFloat4(label, &((glm::vec4*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
 			}
@@ -283,11 +264,29 @@ namespace flex
 		case ValueType::QUAT:
 		{
 			glm::vec3 rotEuler = glm::eulerAngles(*(glm::quat*)valuePtr);
-			if (ImGui::SliderFloat3(label, &rotEuler.x, *(real*)&valueMin, *(real*)&valueMax))
+
+			real valueMinReal = -TWO_PI;
+			real valueMaxReal = TWO_PI;
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				valueMinReal = *(real*)&valueMin;
+				valueMaxReal = *(real*)&valueMax;
+			}
+
+			if (ImGui::SliderFloat3(label, &rotEuler.x, valueMinReal, valueMaxReal))
 			{
 				*(glm::quat*)valuePtr = glm::quat(rotEuler);
 				bValueChanged = true;
 			}
+		} break;
+		case ValueType::STRING:
+		{
+			ImGui::Text("%s", ((std::string*)valuePtr)->c_str());
+		} break;
+		case ValueType::GUID:
+		{
+			std::string guidStr = ((GUID*)valuePtr)->ToString();
+			ImGui::Text("%s", guidStr.c_str());
 		} break;
 		default:
 			PrintError("Unhandled value type in ConfigFile::DrawImGuiObjects\n");
@@ -295,5 +294,86 @@ namespace flex
 		}
 
 		return bValueChanged;
+	}
+
+	u32 PropertyCollection::PropertyValue::GetPrecision() const
+	{
+		return precisionSet != 0 ? *(u32*)&precision : JSONValue::DEFAULT_FLOAT_PRECISION;
+	}
+
+	bool PropertyCollection::PropertyValue::IsDefaultValue() const
+	{
+		if (defaultValueSet != 0)
+		{
+			switch (type)
+			{
+			case ValueType::INT:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.intValue);
+			case ValueType::UINT:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.uintValue);
+			case ValueType::FLOAT:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.realValue);
+			case ValueType::BOOL:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.boolValue);
+			case ValueType::GUID:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.guidValue);
+			case ValueType::VEC2:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.vec2Value);
+			case ValueType::VEC3:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.vec3Value);
+			case ValueType::VEC4:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.vec4Value);
+			case ValueType::QUAT:
+				return ValuesAreEqual(type, valuePtr, (void*)&defaultValue.quatValue);
+			default:
+				ENSURE_NO_ENTRY();
+			}
+		}
+
+		return false;
+	}
+
+	bool ValuesAreEqual(ValueType valueType, void* value0, void* value1)
+	{
+		const real threshold = 0.0001f;
+
+		switch (valueType)
+		{
+		case ValueType::STRING:
+			return *(std::string*)value0 == *(std::string*)value1;
+		case ValueType::INT:
+			return *(i32*)value0 == *(i32*)value1;
+		case ValueType::UINT:
+			return *(u32*)value0 == *(u32*)value1;
+		case ValueType::LONG:
+			return *(i64*)value0 == *(i64*)value1;
+		case ValueType::ULONG:
+			return *(u64*)value0 == *(u64*)value1;
+		case ValueType::FLOAT:
+			return NearlyEquals(*(real*)value0, *(real*)value1, threshold);
+		case ValueType::BOOL:
+			return *(bool*)value0 == *(bool*)value1;
+		case ValueType::VEC2:
+			return NearlyEquals(*(glm::vec2*)value0, *(glm::vec2*)value1, threshold);
+		case ValueType::VEC3:
+			return NearlyEquals(*(glm::vec3*)value0, *(glm::vec3*)value1, threshold);
+		case ValueType::VEC4:
+			return NearlyEquals(*(glm::vec4*)value0, *(glm::vec4*)value1, threshold);
+		case ValueType::QUAT:
+			return NearlyEquals(*(glm::quat*)value0, *(glm::quat*)value1, threshold);
+		case ValueType::GUID:
+			return *(GUID*)value0 == *(GUID*)value1;
+		default:
+			ENSURE_NO_ENTRY();
+			return false;
+		}
+	}
+
+	void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, void* templateField, u32 precision /* = 2 */)
+	{
+		if (!ValuesAreEqual(valueType, valuePtr, templateField))
+		{
+			parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+		}
 	}
 } // namespace flex

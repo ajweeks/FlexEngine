@@ -129,8 +129,8 @@ namespace flex
 		PropertyCollection* RegisterObject(const GameObjectID& gameObjectID);
 		bool DeregisterObject(const GameObjectID& gameObjectID);
 
-		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject, i32 fileVersion, bool bWarnIfMissingFields);
-		bool SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject);
+		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject);
+		bool SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject, bool bSerializePrefabData);
 
 	private:
 		std::map<GameObjectID, PropertyCollection*> m_RegisteredObjects;

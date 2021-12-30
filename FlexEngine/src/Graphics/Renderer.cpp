@@ -43,14 +43,18 @@ namespace flex
 	Renderer::Renderer() :
 		m_Settings("Renderer settings", RENDERER_SETTINGS_LOCATION, CURRENT_RENDERER_SETTINGS_FILE_VERSION)
 	{
-		m_Settings.RegisterProperty(1, "enable v-sync", &m_bVSyncEnabled);
-		m_Settings.RegisterProperty(1, "enable fxaa", &m_PostProcessSettings.bEnableFXAA);
-		m_Settings.RegisterProperty(1, "brightness", &m_PostProcessSettings.brightness, 3);
-		m_Settings.RegisterProperty(1, "offset", &m_PostProcessSettings.offset, 3);
-		m_Settings.RegisterProperty(1, "saturation", &m_PostProcessSettings.saturation);
+		m_Settings.RegisterProperty("enable v-sync", &m_bVSyncEnabled);
+		m_Settings.RegisterProperty("enable fxaa", &m_PostProcessSettings.bEnableFXAA);
+		m_Settings.RegisterProperty("brightness", &m_PostProcessSettings.brightness)
+			.Precision(3);
+		m_Settings.RegisterProperty("offset", &m_PostProcessSettings.offset)
+			.Precision(3);
+		m_Settings.RegisterProperty("saturation", &m_PostProcessSettings.saturation);
 
-		m_Settings.RegisterProperty(2, "shadow cascade count", &m_ShadowCascadeCount);
-		m_Settings.RegisterProperty(2, "shadow cascade base resolution", &m_ShadowMapBaseResolution);
+		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount)
+			.VersionAdded(2);
+		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution)
+			.VersionAdded(2);
 
 		m_Settings.SetOnDeserialize([this]()
 		{

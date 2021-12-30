@@ -26,50 +26,6 @@ namespace flex
 		g_ConfigFileManager->DeregisterConfigFile(this);
 	}
 
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, real* propertyValue, real valueMin, real valueMax)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue, valueMin, valueMax);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, i32* propertyValue)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, u32* propertyValue)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, bool* propertyValue)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec2* propertyValue, u32 precision)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue, precision);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec3* propertyValue, u32 precision)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue, precision);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::vec4* propertyValue, u32 precision)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue, precision);
-	}
-
-	void ConfigFile::RegisterProperty(i32 versionAdded, const char* propertyName, glm::quat* propertyValue, u32 precision)
-	{
-		propertyCollection.RegisterProperty(versionAdded, propertyName, propertyValue, precision);
-	}
 
 	bool ConfigFile::Serialize()
 	{
@@ -107,7 +63,7 @@ namespace flex
 						fileVersion = currentFileVersion;
 					}
 
-					propertyCollection.Deserialize(rootObject, fileVersion, filePath.c_str());
+					propertyCollection.Deserialize(rootObject);
 
 					if (onDeserializeCallback)
 					{

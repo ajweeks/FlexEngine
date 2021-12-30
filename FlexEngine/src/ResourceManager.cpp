@@ -1174,14 +1174,25 @@ namespace flex
 		return bResult;
 	}
 
-	PrefabID ResourceManager::WriteNewPrefabToDisk(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
+	PrefabID ResourceManager::WriteNewPrefabToDisk(GameObject* prefabInstance, const char* fileName /* = nullptr */)
 	{
-		PrefabID newID = Platform::GenerateGUID();
+		using CopyFlags = GameObject::CopyFlags;
+
+		PrefabID newPrefabID = Platform::GenerateGUID();
+
+		CopyFlags copyFlags = (CopyFlags)(
+			(CopyFlags::ALL &
+				~CopyFlags::ADD_TO_SCENE &
+				~CopyFlags::CREATE_RENDER_OBJECT)
+			| CopyFlags::COPYING_TO_PREFAB);
+		GameObject* prefabTemplate = prefabInstance->CopySelf(nullptr, copyFlags);
+		// Give all objects new IDs so they don't conflict with the instance's
+		prefabTemplate->ChangeAllIDs();
 
 		// This object's GameObjectID will match that of the existing object in
 		// the scene, but that shouldn't pose any issues.
 		std::string fileNameStr = fileName != nullptr ? std::string(fileName) : (prefabTemplate->GetName() + ".json");
-		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newID, fileNameStr, false };
+		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newPrefabID, fileNameStr, false };
 		bool bResult = WritePrefabToDisk(prefabTemplatePair);
 
 		if (!bResult)
@@ -1189,7 +1200,9 @@ namespace flex
 			return InvalidPrefabID;
 		}
 
-		return newID;
+		g_SceneManager->CurrentScene()->RemoveObjectImmediate(prefabInstance, true);
+
+		return newPrefabID;
 	}
 
 	bool ResourceManager::IsPrefabIDValid(const PrefabID& prefabID)
