@@ -25,15 +25,14 @@ namespace flex
 
 		i32 GetReceivedSignal(Socket* socket);
 
-		Wire* AddWire(const GameObjectID& gameObjectID = InvalidGameObjectID);
-		bool DestroyWire(Wire* wire);
+		Wire* RegisterWire(Wire* wire);
+		bool UnregisterWire(Wire* wire);
 
-		WirePlug* AddWirePlug(const GameObjectID& gameObjectID = InvalidGameObjectID);
-		bool DestroyWirePlug(WirePlug* wirePlug);
+		WirePlug* RegisterWirePlug(WirePlug* wirePlug);
+		bool UnregisterWirePlug(WirePlug* wirePlug);
 
-		Socket* AddSocket(const std::string& name, const GameObjectID& gameObjectID);
-		Socket* AddSocket(Socket* socket, i32 slotIdx = 0);
-		bool DestroySocket(Socket* socket);
+		Socket* RegisterSocket(Socket* socket, i32 slotIdx = 0);
+		bool UnregisterSocket(Socket* socket);
 
 		Socket* GetSocketAtOtherEnd(Socket* socket);
 
@@ -51,8 +50,6 @@ namespace flex
 		real maxDistBeforeSnapSq = 25.0f * 25.0f;
 
 	private:
-		bool RemoveSocket(const GameObjectID& socketID);
-
 		AudioSourceID m_PlugInAudioSourceID = InvalidAudioSourceID;
 		AudioSourceID m_UnplugAudioSourceID = InvalidAudioSourceID;
 
@@ -126,14 +123,25 @@ namespace flex
 	{
 	public:
 		PropertyCollection* GetCollectionForObject(const GameObjectID& gameObjectID);
+		PropertyCollection* GetCollectionForPrefab(const PrefabID& prefabID);
+
 		PropertyCollection* RegisterObject(const GameObjectID& gameObjectID);
 		bool DeregisterObject(const GameObjectID& gameObjectID);
+		bool DeregisterObjectRecursive(const GameObjectID& gameObjectID);
 
-		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject);
+		PropertyCollection* RegisterPrefabTemplate(const PrefabID& prefabID);
+		bool DeregisterPrefabTemplate(const PrefabID& prefabID);
+		bool DeregisterPrefabTemplateRecursive(const PrefabID& prefabID);
+
 		bool SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject, bool bSerializePrefabData);
+		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject);
+
+		bool SerializePrefabTemplate(const PrefabID& prefabID, JSONObject& parentObject);
+		void DeserializePrefabTemplate(const PrefabID& prefabID, const JSONObject& parentObject);
 
 	private:
 		std::map<GameObjectID, PropertyCollection*> m_RegisteredObjects;
+		std::map<PrefabID, PropertyCollection*> m_RegisteredPrefabTemplates;
 
 		PoolAllocator<PropertyCollection, 32> m_Allocator;
 

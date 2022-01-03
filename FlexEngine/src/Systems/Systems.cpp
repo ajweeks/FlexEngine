@@ -287,10 +287,8 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	Wire* PluggablesSystem::RegisterWire(Wire* wire)
 	{
-		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
-
 		// Plugs were not found, create new ones
 		PrefabID wirePlugID = g_ResourceManager->GetPrefabID("wire plug");
 		GameObject* wirePlugTemplate = g_ResourceManager->GetPrefabTemplate(wirePlugID);
@@ -298,55 +296,28 @@ namespace flex
 		WirePlug* plug0 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
 		WirePlug* plug1 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
 
-		plug0->wireID = newWire->ID;
-		plug1->wireID = newWire->ID;
+		plug0->wireID = wire->ID;
+		plug1->wireID = wire->ID;
 
-		newWire->plug0ID = plug0->ID;
-		newWire->plug1ID = plug1->ID;
+		wire->plug0ID = plug0->ID;
+		wire->plug1ID = plug1->ID;
 
-		newWire->AddSibling(plug0);
-		newWire->AddSibling(plug1);
+		wire->AddSibling(plug0);
+		wire->AddSibling(plug1);
 
 		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
 		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
 
-		wires.push_back(newWire);
+		wires.push_back(wire);
 
-		return newWire;
+		return wire;
 	}
 
-	bool PluggablesSystem::DestroySocket(Socket* socket)
-	{
-		// Unplug any wire plugs plugged into this socket before removing it
-		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
-		{
-			Wire* wire = *iter;
-			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
-			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
-
-			if (plug0->socketID == socket->ID)
-			{
-				UnplugFromSocket(plug0);
-				RemoveSocket(plug0->socketID);
-				return true;
-			}
-
-			if (plug1->socketID == socket->ID)
-			{
-				UnplugFromSocket(plug1);
-				RemoveSocket(plug1->socketID);
-				return true;
-			}
-		}
-
-		return RemoveSocket(socket->ID);
-	}
-
-	bool PluggablesSystem::RemoveSocket(const GameObjectID& socketID)
+	bool PluggablesSystem::UnregisterSocket(Socket* socket)
 	{
 		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
 		{
-			if ((*iter)->ID == socketID)
+			if ((*iter)->ID == socket->ID)
 			{
 				sockets.erase(iter);
 				return true;
@@ -355,7 +326,7 @@ namespace flex
 		return false;
 	}
 
-	bool PluggablesSystem::DestroyWire(Wire* wire)
+	bool PluggablesSystem::UnregisterWire(Wire* wire)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		Player* player = scene->GetPlayer(0);
@@ -376,7 +347,6 @@ namespace flex
 					{
 						UnplugFromSocket(plug0);
 					}
-					scene->RemoveObject(plug0, true);
 				}
 				if (plug1 != nullptr)
 				{
@@ -384,9 +354,7 @@ namespace flex
 					{
 						UnplugFromSocket(plug1);
 					}
-					scene->RemoveObject(plug1, true);
 				}
-				scene->RemoveObject(wire, true);
 
 				wires.erase(iter);
 
@@ -396,14 +364,13 @@ namespace flex
 		return false;
 	}
 
-	WirePlug* PluggablesSystem::AddWirePlug(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	WirePlug* PluggablesSystem::RegisterWirePlug(WirePlug* wirePlug)
 	{
-		WirePlug* plug = new WirePlug("wire plug", gameObjectID);
-		wirePlugs.push_back(plug);
-		return plug;
+		wirePlugs.push_back(wirePlug);
+		return wirePlug;
 	}
 
-	bool PluggablesSystem::DestroyWirePlug(WirePlug* wirePlug)
+	bool PluggablesSystem::UnregisterWirePlug(WirePlug* wirePlug)
 	{
 		for (auto iter = wirePlugs.begin(); iter != wirePlugs.end(); ++iter)
 		{
@@ -417,19 +384,10 @@ namespace flex
 		return false;
 	}
 
-	Socket* PluggablesSystem::AddSocket(const std::string& name, const GameObjectID& gameObjectID)
-	{
-		Socket* newSocket = new Socket(name, gameObjectID);
-		sockets.push_back(newSocket);
-
-		return newSocket;
-	}
-
-	Socket* PluggablesSystem::AddSocket(Socket* socket, i32 slotIdx /* = 0 */)
+	Socket* PluggablesSystem::RegisterSocket(Socket* socket, i32 slotIdx /* = 0 */)
 	{
 		socket->slotIdx = slotIdx;
 		sockets.push_back(socket);
-
 		return socket;
 	}
 
@@ -841,8 +799,19 @@ namespace flex
 		return nullptr;
 	}
 
+	PropertyCollection* PropertyCollectionManager::GetCollectionForPrefab(const PrefabID& prefabID)
+	{
+		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
+		if (iter != m_RegisteredPrefabTemplates.end())
+		{
+			return iter->second;
+		}
+		return nullptr;
+	}
+
 	PropertyCollection* PropertyCollectionManager::RegisterObject(const GameObjectID& gameObjectID)
 	{
+		CHECK(gameObjectID != InvalidGameObjectID);
 		auto iter = m_RegisteredObjects.find(gameObjectID);
 		if (iter != m_RegisteredObjects.end())
 		{
@@ -867,6 +836,66 @@ namespace flex
 		return false;
 	}
 
+	bool PropertyCollectionManager::DeregisterObjectRecursive(const GameObjectID& gameObjectID)
+	{
+		if (g_SceneManager->HasSceneLoaded())
+		{
+			GameObject* gameObject = gameObjectID.Get();
+			if (gameObject != nullptr)
+			{
+				for (u32 i = 0; i < gameObject->GetChildCount(); ++i)
+				{
+					DeregisterObjectRecursive(gameObject->GetChild(i)->ID);
+				}
+			}
+		}
+
+		return DeregisterObject(gameObjectID);
+	}
+
+	PropertyCollection* PropertyCollectionManager::RegisterPrefabTemplate(const PrefabID& prefabID)
+	{
+		CHECK(prefabID != InvalidPrefabID);
+		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
+		if (iter != m_RegisteredPrefabTemplates.end())
+		{
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+			std::string prefabTemplateName = prefabTemplate != nullptr ? prefabTemplate->GetName() : prefabID.ToString();
+			PrintWarn("Attempted to register prefab template with PropertyCollectionManager multiple times! %s\n", prefabTemplateName.c_str());
+		}
+
+		PropertyCollection* result = m_Allocator.Alloc();
+		m_RegisteredPrefabTemplates.emplace(prefabID, result);
+		return result;
+	}
+
+	bool PropertyCollectionManager::DeregisterPrefabTemplate(const PrefabID& prefabID)
+	{
+		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
+		if (iter != m_RegisteredPrefabTemplates.end())
+		{
+			m_RegisteredPrefabTemplates.erase(iter);
+			return true;
+		}
+		return false;
+	}
+
+	bool PropertyCollectionManager::DeregisterPrefabTemplateRecursive(const PrefabID& prefabID)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+		if (prefabTemplate != nullptr)
+		{
+			for (u32 i = 0; i < prefabTemplate->GetChildCount(); ++i)
+			{
+				// Yeah or nah?
+				// TODO: Should prefab template children have m_bIsTemplate set?
+				DeregisterObjectRecursive(prefabTemplate->GetChild(i)->ID);
+			}
+		}
+
+		return DeregisterPrefabTemplate(prefabID);
+	}
+
 	void PropertyCollectionManager::DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject)
 	{
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
@@ -881,8 +910,27 @@ namespace flex
 		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
 		if (collection != nullptr)
 		{
-			return collection->SerializeGameObjectFields(parentObject, gameObjectID, bSerializePrefabData);
+			return collection->SerializeRegisteredGameObjectFields(parentObject, gameObjectID, bSerializePrefabData);
 		}
 		return false;
+	}
+
+	bool PropertyCollectionManager::SerializePrefabTemplate(const PrefabID& prefabID, JSONObject& parentObject)
+	{
+		PropertyCollection* collection = GetCollectionForPrefab(prefabID);
+		if (collection != nullptr)
+		{
+			return collection->SerializeRegisteredPrefabFields(parentObject, prefabID);
+		}
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializePrefabTemplate(const PrefabID& prefabID, const JSONObject& parentObject)
+	{
+		PropertyCollection* collection = GetCollectionForPrefab(prefabID);
+		if (collection != nullptr)
+		{
+			collection->Deserialize(parentObject);
+		}
 	}
 } // namespace flex

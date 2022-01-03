@@ -624,9 +624,7 @@ namespace flex
 
 			if (m_PlacingWire != nullptr)
 			{
-				PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-
-				pluggablesSystem->DestroyWire(m_PlacingWire);
+				g_SceneManager->CurrentScene()->RemoveObject(m_PlacingWire, true);
 				m_PlacingWire = nullptr;
 			}
 		}
@@ -638,8 +636,7 @@ namespace flex
 			if (m_PlacingWire == nullptr)
 			{
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
-				PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-				m_PlacingWire = pluggablesSystem->AddWire();
+				m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(SID("wire"), currentScene->GetUniqueObjectName("wire_", 3));
 
 				Transform* playerTransform = m_Player->GetTransform();
 				Transform* wireTransform = m_PlacingWire->GetTransform();

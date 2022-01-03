@@ -548,11 +548,11 @@ namespace flex
 		g_Window->SaveToConfig();
 
 		g_Editor->Destroy();
-		g_SceneManager->Destroy();
 		g_CameraManager->Destroy();
-		g_PhysicsManager->Destroy();
 		g_ResourceManager->Destroy();
 		g_UIManager->Destroy();
+		g_SceneManager->Destroy();
+		g_PhysicsManager->Destroy();
 		DestroyWindowAndRenderer();
 		g_ResourceManager->DestroyAllLoadedMeshes();
 

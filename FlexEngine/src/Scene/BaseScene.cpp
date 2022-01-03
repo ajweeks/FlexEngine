@@ -472,7 +472,7 @@ namespace flex
 			using CopyFlags = GameObject::CopyFlags;
 
 			CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
-			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, false, copyFlags);
+			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, InvalidPrefabID, false, copyFlags);
 			if (rootObj != nullptr)
 			{
 				AddRootObjectImmediate(rootObj);
@@ -1417,15 +1417,14 @@ namespace flex
 		} break;
 		case SID("socket"):
 		{
-			std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3, parent);
-
-			u32 socketIndex = 0;
+			u32 slotIdx = 0;
 			if (parent != nullptr)
 			{
-				socketIndex = (u32)parent->sockets.size();
+				slotIdx = (u32)parent->sockets.size();
 			}
 
-			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket((Socket*)newGameObject, socketIndex);
+			Socket* socket = (Socket*)newGameObject;
+			socket->slotIdx = slotIdx;
 		} break;
 		};
 
@@ -1776,7 +1775,8 @@ namespace flex
 		std::string previousName = previousInstance->m_Name;
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
 
-		g_PropertyCollectionManager->DeregisterObject(previousInstance->ID);
+		CHECK(!previousInstance->m_bIsTemplate);
+		g_PropertyCollectionManager->DeregisterObjectRecursive(previousInstance->ID);
 
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousGameObjectID, &previousName, previousParent, nullptr, copyFlags);
 
@@ -2253,7 +2253,7 @@ namespace flex
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
 		// Prefab templates shouldn't get registered in the scene
-		CHECK(!gameObject->IsTemplate());
+		CHECK(!gameObject->IsPrefabTemplate());
 
 		auto iter = m_GameObjectLUT.find(gameObject->ID);
 		if (iter != m_GameObjectLUT.end())

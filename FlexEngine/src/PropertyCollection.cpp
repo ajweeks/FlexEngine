@@ -99,19 +99,19 @@ namespace flex
 
 	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::vec3* propertyValue)
 	{
-		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::VEC3));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::VEC3));
 		return pair.first->second;
 	}
 
 	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::vec4* propertyValue)
 	{
-		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::VEC4));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::VEC4));
 		return pair.first->second;
 	}
 
 	PropertyCollection::PropertyValue& PropertyCollection::RegisterProperty(const char* propertyName, glm::quat* propertyValue)
 	{
-		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue,  ValueType::QUAT));
+		auto pair = values.emplace(propertyName, PropertyValue(propertyName, propertyValue, ValueType::QUAT));
 		return pair.first->second;
 	}
 
@@ -138,7 +138,7 @@ namespace flex
 		}
 	}
 
-	bool PropertyCollection::SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData)
+	bool PropertyCollection::SerializeRegisteredGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData)
 	{
 		GameObject* gameObject = gameObjectID.Get();
 
@@ -176,6 +176,20 @@ namespace flex
 		{
 			parentObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type);
 		}
+	}
+
+	bool PropertyCollection::SerializeRegisteredPrefabFields(JSONObject& parentObject, const PrefabID& prefabID)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+
+		if (prefabTemplate == nullptr)
+		{
+			PrintError("Attempted to serialize collection for invalid prefab template\n");
+			return false;
+		}
+
+		Serialize(parentObject);
+		return true;
 	}
 
 	bool PropertyCollection::DrawImGuiObjects()

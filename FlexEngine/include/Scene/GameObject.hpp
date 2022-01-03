@@ -106,13 +106,14 @@ namespace flex
 			_NONE = 0
 		};
 
-		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 		virtual ~GameObject();
 
 		static GameObject* CreateObjectFromJSON(
 			const JSONObject& obj,
 			BaseScene* scene,
 			i32 sceneFileVersion,
+			const PrefabID& prefabIDLoadedFrom = InvalidPrefabID,
 			bool bIsPrefabTemplate = false,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
@@ -125,10 +126,11 @@ namespace flex
 			CopyFlags copyFlags = CopyFlags::ALL);
 
 		static GameObject* CreateObjectOfType(
-			StringID typeID,
+			StringID gameObjectTypeID,
 			const std::string& objectName,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
 			const char* optionalTypeStr = nullptr,
+			const PrefabID& prefabLoadedFrom = InvalidPrefabID,
 			bool bIsPrefabTemplate = false);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
@@ -147,12 +149,11 @@ namespace flex
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
-		virtual void ParseJSON(
+		void ParseJSON(
 			const JSONObject& obj,
 			BaseScene* scene,
 			i32 fileVersion,
 			MaterialID overriddenMatID = InvalidMaterialID,
-			bool bIsPrefabTemplate = false,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
@@ -307,7 +308,7 @@ namespace flex
 		void SetNearbyInteractable(GameObject* nearbyInteractable);
 
 		PrefabID GetPrefabIDLoadedFrom() const;
-		bool IsTemplate() const;
+		bool IsPrefabTemplate() const;
 
 		virtual void OnCharge(real chargeAmount);
 
@@ -352,6 +353,10 @@ namespace flex
 		bool GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const;
 
 		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, GameObject* parent, std::string& newObjectName, GameObjectID& newGameObjectID);
+
+		PropertyCollection* RegisterPropertyCollection();
+		void DeregisterPropertyCollection();
+		PropertyCollection* GetPropertyCollection();
 
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
@@ -466,7 +471,7 @@ namespace flex
 	{
 	public:
 		DirectionalLight();
-		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -490,7 +495,7 @@ namespace flex
 	{
 	public:
 		explicit PointLight(BaseScene* scene);
-		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -518,7 +523,7 @@ namespace flex
 	{
 	public:
 		explicit SpotLight(BaseScene* scene);
-		explicit SpotLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit SpotLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -546,7 +551,7 @@ namespace flex
 	{
 	public:
 		explicit AreaLight(BaseScene* scene);
-		explicit AreaLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit AreaLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -576,7 +581,7 @@ namespace flex
 	class Valve final : public GameObject
 	{
 	public:
-		explicit Valve(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Valve(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -617,7 +622,7 @@ namespace flex
 	class RisingBlock final : public GameObject
 	{
 	public:
-		explicit RisingBlock(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit RisingBlock(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -651,7 +656,7 @@ namespace flex
 	class GlassPane final : public GameObject
 	{
 	public:
-		explicit GlassPane(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit GlassPane(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -670,7 +675,7 @@ namespace flex
 	class ReflectionProbe final : public GameObject
 	{
 	public:
-		explicit ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -686,7 +691,7 @@ namespace flex
 	class Skybox final : public GameObject
 	{
 	public:
-		explicit Skybox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Skybox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		void ProcedurallyInitialize(MaterialID matID);
 
@@ -699,23 +704,18 @@ namespace flex
 
 	class EngineCart;
 
-	class Cart : public GameObject
+	class BaseCart : public GameObject
 	{
 	public:
-		Cart(CartID cartID);
-		Cart(CartID cartID,
-			const std::string& name,
+		BaseCart(const std::string& name,
+			StringID typeID,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
-			StringID typeID = SID("cart"),
 			const char* meshName = emptyCartMeshName,
+			const PrefabID& prefabIDLoadedFrom = InvalidPrefabID,
 			bool bPrefabTemplate = false);
 
-		virtual GameObject* CopySelf(
-			GameObject* parent = nullptr,
-			CopyFlags copyFlags = CopyFlags::ALL,
-			std::string* optionalName = nullptr,
-			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
-
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent /* = true */) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const;
 
@@ -754,13 +754,28 @@ namespace flex
 
 	};
 
-	class EngineCart : public Cart
+	class EmptyCart : public BaseCart
 	{
 	public:
-		explicit EngineCart(CartID cartID);
-		EngineCart(CartID cartID,
-			const std::string& name,
+		EmptyCart(const std::string& name,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
+			const PrefabID& prefabIDLoadedFrom = InvalidPrefabID,
+			bool bPrefabTemplate = false);
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	};
+
+	class EngineCart : public BaseCart
+	{
+	public:
+		EngineCart(const std::string& name,
+			const GameObjectID& gameObjectID = InvalidGameObjectID,
+			const PrefabID& prefabIDLoadedFrom = InvalidPrefabID,
 			bool bPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
@@ -792,7 +807,7 @@ namespace flex
 	{
 	public:
 		MobileLiquidBox();
-		explicit MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -813,7 +828,7 @@ namespace flex
 	{
 	public:
 		Battery();
-		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Update() override;
 		virtual void OnCharge(real amount) override;
@@ -841,7 +856,7 @@ namespace flex
 	class GerstnerWave final : public GameObject
 	{
 	public:
-		explicit GerstnerWave(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit GerstnerWave(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void Update() override;
@@ -1017,7 +1032,7 @@ namespace flex
 	class Blocks final : public GameObject
 	{
 	public:
-		explicit Blocks(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Blocks(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 	protected:
 
@@ -1027,7 +1042,7 @@ namespace flex
 	class Wire final : public GameObject
 	{
 	public:
-		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1079,8 +1094,10 @@ namespace flex
 	class WirePlug final : public GameObject
 	{
 	public:
-		WirePlug(const std::string& name, const GameObjectID& gameObjectID);
-		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID);
+		WirePlug(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
+		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
+
+		virtual void Destroy(bool bDetachFromParent /* = true */) override;
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
@@ -1099,7 +1116,7 @@ namespace flex
 	class Socket final : public GameObject
 	{
 	public:
-		Socket(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Socket(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
@@ -1117,7 +1134,7 @@ namespace flex
 	{
 	public:
 		Terminal();
-		explicit Terminal(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Terminal(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1208,7 +1225,7 @@ namespace flex
 	class ParticleSystem final : public GameObject
 	{
 	public:
-		explicit ParticleSystem(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit ParticleSystem(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1280,7 +1297,7 @@ namespace flex
 	class TerrainGenerator final : public GameObject
 	{
 	public:
-		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void Update() override;
@@ -1446,7 +1463,7 @@ namespace flex
 	class SpringObject final : public GameObject
 	{
 	public:
-		SpringObject(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SpringObject(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1462,14 +1479,6 @@ namespace flex
 
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
-
-		virtual void ParseJSON(
-			const JSONObject& obj,
-			BaseScene* scene,
-			i32 fileVersion,
-			MaterialID overriddenMatID = InvalidMaterialID,
-			bool bIsPrefabTemplate = false,
-			CopyFlags copyFlags = CopyFlags::ALL) override;
 
 	private:
 		static void CreateMaterials();
@@ -1576,7 +1585,7 @@ namespace flex
 	class SoftBody final : public GameObject
 	{
 	public:
-		SoftBody(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SoftBody(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1649,7 +1658,7 @@ namespace flex
 	class Vehicle final : public GameObject
 	{
 	public:
-		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1790,7 +1799,7 @@ namespace flex
 	class Road : public GameObject
 	{
 	public:
-		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
@@ -1833,7 +1842,7 @@ namespace flex
 	class SolarPanel : public GameObject
 	{
 	public:
-		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Update() override;
 
@@ -1846,14 +1855,14 @@ namespace flex
 	class HeadLamp : public GameObject
 	{
 	public:
-		HeadLamp(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		HeadLamp(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 	};
 
 	class PowerPole : public GameObject
 	{
 	public:
-		PowerPole(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		PowerPole(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void OnCharge(real chargeAmount) override;
 
@@ -1900,7 +1909,7 @@ namespace flex
 	class MineralDeposit : public GameObject
 	{
 	public:
-		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 
@@ -1933,8 +1942,8 @@ namespace flex
 	class Miner : public GameObject
 	{
 	public:
-		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-		
+		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
+
 		virtual void Update() override;
 		virtual void OnCharge(real chargeAmount) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
@@ -1981,7 +1990,7 @@ namespace flex
 	class Speaker : public GameObject
 	{
 	public:
-		Speaker(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Speaker(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;

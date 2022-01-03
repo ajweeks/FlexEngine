@@ -204,7 +204,7 @@ namespace flex
 								if (newCartChainID != InvalidCartChainID &&
 									newCartChainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", newCartChainID, (u32)m_CartChains.size());
+									PrintError("BaseCart chain update failed! BaseCart has invalid cart chain ID: %u, num cart chains: %u\n", newCartChainID, (u32)m_CartChains.size());
 								}
 							}
 							else if (c1 == InvalidCartChainID)
@@ -224,7 +224,7 @@ namespace flex
 								if (m_Carts[i]->chainID != InvalidCartChainID &&
 									m_Carts[i]->chainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[i]->chainID, (u32)m_CartChains.size());
+									PrintError("BaseCart chain update failed! BaseCart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[i]->chainID, (u32)m_CartChains.size());
 								}
 							}
 							else if (c2 == InvalidCartChainID)
@@ -244,7 +244,7 @@ namespace flex
 								if (m_Carts[j]->chainID != InvalidCartChainID &&
 									m_Carts[j]->chainID >= m_CartChains.size())
 								{
-									PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[j]->chainID, (u32)m_CartChains.size());
+									PrintError("BaseCart chain update failed! BaseCart has invalid cart chain ID: %u, num cart chains: %u\n", m_Carts[j]->chainID, (u32)m_CartChains.size());
 								}
 							}
 							else
@@ -302,7 +302,7 @@ namespace flex
 		{
 			PROFILE_AUTO("Update positions out of chains");
 
-			for (Cart* cart : m_Carts)
+			for (BaseCart* cart : m_Carts)
 			{
 				if (cart->chainID == InvalidCartChainID)
 				{
@@ -322,61 +322,48 @@ namespace flex
 			if (bRenderBoundingSpheres)
 			{
 				auto debugDrawer = g_Renderer->GetDebugDrawer();
-				for (Cart* cart : m_Carts)
+				for (BaseCart* cart : m_Carts)
 				{
 					debugDrawer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
 				}
 			}
 
-			for (Cart* cart : m_Carts)
+			for (BaseCart* cart : m_Carts)
 			{
 				if (cart->chainID != InvalidCartChainID &&
 					cart->chainID >= m_CartChains.size())
 				{
-					PrintError("Cart chain update failed! Cart has invalid cart chain ID: %u, num cart chains: %u\n", cart->chainID, (u32)m_CartChains.size());
+					PrintError("BaseCart chain update failed! BaseCart has invalid cart chain ID: %u, num cart chains: %u\n", cart->chainID, (u32)m_CartChains.size());
 				}
 			}
 		}
 	}
 
-	Cart* CartManager::CreateCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */, bool bPrefabTemplate /* = false */)
+	CartID CartManager::RegisterCart(BaseCart* cart)
 	{
 		CartID cartID = (CartID)m_Carts.size();
-		std::string newName = name;
-		if (newName.empty())
+
+		if (!cart->IsPrefabTemplate())
 		{
-			newName = g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 2);
+			m_Carts.push_back(cart);
 		}
 
-		Cart* newCart = new Cart(cartID, newName, gameObjectID, SID("cart"), Cart::emptyCartMeshName, bPrefabTemplate);
-
-		if (!bPrefabTemplate)
-		{
-			m_Carts.push_back(newCart);
-		}
-
-		return newCart;
+		return cartID;
 	}
 
-	EngineCart* CartManager::CreateEngineCart(const std::string& name, GameObjectID gameObjectID /* = InvalidGameObjectID */, bool bPrefabTemplate /* = false */)
+	void CartManager::DeregisterCart(BaseCart* cart)
 	{
-		CartID cartID = (CartID)m_Carts.size();
-		std::string newName = name;
-		if (newName.empty())
+		for (auto iter = m_Carts.begin(); iter != m_Carts.end(); ++iter)
 		{
-			newName = g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 2);
+			if (cart == *iter)
+			{
+				m_Carts.erase(iter);
+				return;
+			}
 		}
-		EngineCart* newCart = new EngineCart(cartID, newName, gameObjectID, bPrefabTemplate);
-
-		if (!bPrefabTemplate)
-		{
-			m_Carts.push_back(newCart);
-		}
-
-		return newCart;
 	}
 
-	Cart* CartManager::GetCart(CartID cartID) const
+	BaseCart* CartManager::GetCart(CartID cartID) const
 	{
 		CHECK_LT(cartID, m_Carts.size());
 		return m_Carts[cartID];
@@ -451,7 +438,7 @@ namespace flex
 
 		if (gameObject->GetTypeID() == SID("cart"))
 		{
-			Cart* cart = (Cart*)gameObject;
+			BaseCart* cart = (BaseCart*)gameObject;
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
 				if (m_CartChains[i].chainID != InvalidCartChainID &&

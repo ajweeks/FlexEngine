@@ -28,8 +28,10 @@ namespace flex
 		PropertyValue& RegisterProperty(const char* propertyName, GUID* propertyValue);
 
 		void Serialize(JSONObject& parentObject);
-		bool SerializeGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData);
+		bool SerializeRegisteredGameObjectFields(JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData);
 		void Deserialize(const JSONObject& parentObject);
+
+		bool SerializeRegisteredPrefabFields(JSONObject& parentObject, const PrefabID& prefabID);
 
 		bool DrawImGuiObjects();
 
@@ -182,6 +184,7 @@ namespace flex
 		std::map<const char*, PropertyValue> values;
 		std::string name;
 		std::function<void()> onDeserializeCallback;
+
 	};
 
 	extern bool ValuesAreEqual(ValueType valueType, void* value0, void* value1);

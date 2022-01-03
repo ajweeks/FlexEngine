@@ -286,7 +286,7 @@ namespace flex
 
 					JSONObject prefabRootObject = prefabObject.GetObject("root");
 
-					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, true);
+					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true);
 					prefabTemplate->m_PrefabIDLoadedFrom = prefabID;
 
 					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);
@@ -655,7 +655,7 @@ namespace flex
 
 	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
 	{
-		bool bCreateRenderObject = !parent->IsTemplate();
+		bool bCreateRenderObject = !parent->IsPrefabTemplate();
 
 		std::string meshFilePath;
 		if (meshObj.TryGetString("mesh", meshFilePath))
@@ -1178,6 +1178,8 @@ namespace flex
 	{
 		using CopyFlags = GameObject::CopyFlags;
 
+		GameObject* prevParent = prefabInstance->GetParent();
+
 		PrefabID newPrefabID = Platform::GenerateGUID();
 
 		CopyFlags copyFlags = (CopyFlags)(
@@ -1201,6 +1203,8 @@ namespace flex
 		}
 
 		g_SceneManager->CurrentScene()->RemoveObjectImmediate(prefabInstance, true);
+		GameObject* newInstance = prefabTemplate->CopySelf(prevParent, CopyFlags::ALL);
+		FLEX_UNUSED(newInstance);
 
 		return newPrefabID;
 	}
