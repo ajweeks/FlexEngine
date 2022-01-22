@@ -149,6 +149,7 @@ namespace flex
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
+		// TODO: Rename to Deserialize
 		void ParseJSON(
 			const JSONObject& obj,
 			BaseScene* scene,

@@ -2082,11 +2082,11 @@ namespace flex
 	{
 		if (m_bIsTemplate)
 		{
-			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, parentObject);
+			g_PropertyCollectionManager->DeserializePrefabTemplate(m_PrefabIDLoadedFrom, parentObject);
 		}
 		else
 		{
-			g_PropertyCollectionManager->DeserializePrefabTemplate(m_PrefabIDLoadedFrom, parentObject);
+			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, parentObject);
 		}
 	}
 
@@ -2953,7 +2953,10 @@ namespace flex
 	{
 		JSONObject valveInfo = {};
 		SerializeRegisteredProperties(valveInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
+		if (!valveInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
+		}
 	}
 
 	void Valve::PostInitialize()
@@ -3223,7 +3226,10 @@ namespace flex
 		SerializeRegisteredProperties(blockInfo, bSerializePrefabData);
 		std::string valveName = valve->GetName();
 		SerializeField(blockInfo, bSerializePrefabData, "valve name", &valveName, ValueType::STRING);
-		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
+		if (!blockInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
+		}
 	}
 
 	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
@@ -3291,7 +3297,10 @@ namespace flex
 	{
 		JSONObject windowInfo = {};
 		SerializeRegisteredProperties(windowInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
+		if (!windowInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
+		}
 	}
 
 	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
@@ -3485,9 +3494,6 @@ namespace flex
 		data.pad[0] = data.pad[1] = 0;
 
 		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("pos", &pos)
-			.VersionAdded(2)
-			.Precision(2);
 		collection->RegisterProperty("colour", &data.colour)
 			.VersionAdded(2)
 			.Precision(2)
@@ -3645,18 +3651,22 @@ namespace flex
 
 			if (fileVersion < 2)
 			{
-				// Rotation was saved using euler angles in this version
+				// Rotation is saved using euler angles in these versions
 				glm::vec3 rot = directionalLightObj.GetVec3("rotation");
 				m_Transform.SetWorldRotation(glm::quat(rot));
 			}
-			else
+			else if (fileVersion <= 6)
 			{
+				// Rotation is saved explicitly in these versions
 				glm::quat rot = directionalLightObj.GetQuat("rotation");
 				m_Transform.SetWorldRotation(rot);
 				data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 			}
+			else
+			{
+				// Rotation is saved simply through the transform in this version
+			}
 
-			m_Transform.SetLocalPosition(pos);
 			data.enabled = m_bVisible ? 1 : 0;
 		}
 	}
@@ -3665,9 +3675,10 @@ namespace flex
 	{
 		JSONObject dirLightObj = {};
 		SerializeRegisteredProperties(dirLightObj, bSerializePrefabData);
-		glm::quat rotWS = m_Transform.GetWorldRotation();
-		SerializeField(dirLightObj, bSerializePrefabData, "rotation", &rotWS, ValueType::VEC3, 3);
-		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+		if (!dirLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+		}
 	}
 
 	bool DirectionalLight::operator==(const DirectionalLight& other)
@@ -3693,9 +3704,6 @@ namespace flex
 		data.brightness = 500.0f;
 
 		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("pos", &data.pos)
-			.VersionAdded(2)
-			.Precision(3);
 		collection->RegisterProperty("colour", &data.colour)
 			.VersionAdded(2)
 			.Precision(2)
@@ -3873,7 +3881,6 @@ namespace flex
 		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
 			DeserializeRegisteredProperties(pointLightObj);
-			m_Transform.SetLocalPosition(data.pos);
 		}
 	}
 
@@ -3881,7 +3888,10 @@ namespace flex
 	{
 		JSONObject pointLightObj = {};
 		SerializeRegisteredProperties(pointLightObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+		if (!pointLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+		}
 	}
 
 	bool PointLight::operator==(const PointLight& other)
@@ -3908,9 +3918,6 @@ namespace flex
 		data.angle = 0.0f;
 
 		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("pos", &data.pos)
-			.VersionAdded(2)
-			.Precision(3);
 		collection->RegisterProperty("colour", &data.colour)
 			.VersionAdded(2)
 			.Precision(2)
@@ -3922,10 +3929,6 @@ namespace flex
 		collection->RegisterProperty("enabled", &data.enabled)
 			.VersionAdded(2)
 			.DefaultValue(1);
-		collection->RegisterProperty("direction", &data.dir)
-			.VersionAdded(2)
-			.Precision(3)
-			.DefaultValue(VEC3_RIGHT);
 		collection->RegisterProperty("angle", &data.angle)
 			.VersionAdded(2)
 			.Precision(3)
@@ -4104,7 +4107,6 @@ namespace flex
 		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
 			DeserializeRegisteredProperties(spotLightObj);
-			m_Transform.SetLocalPosition(data.pos);
 		}
 	}
 
@@ -4112,7 +4114,10 @@ namespace flex
 	{
 		JSONObject spotLightObj = {};
 		SerializeRegisteredProperties(spotLightObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
+		if (!spotLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
+		}
 	}
 
 	AreaLight::AreaLight(BaseScene* scene) :
@@ -4337,7 +4342,10 @@ namespace flex
 	{
 		JSONObject areaLightObj = {};
 		SerializeRegisteredProperties(areaLightObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
+		if (!areaLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
+		}
 	}
 
 	void AreaLight::UpdatePoints()
@@ -4614,7 +4622,10 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		if (!cartInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		}
 	}
 
 	EmptyCart::EmptyCart(const std::string& name,
@@ -4770,7 +4781,10 @@ namespace flex
 	{
 		JSONObject cartInfo = {};
 		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		if (!cartInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		}
 	}
 
 	MobileLiquidBox::MobileLiquidBox() :
@@ -4956,7 +4970,10 @@ namespace flex
 	{
 		JSONObject batteryInfo = {};
 		SerializeRegisteredProperties(batteryInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
+		if (!batteryInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
+		}
 	}
 
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
@@ -6705,7 +6722,10 @@ namespace flex
 	{
 		JSONObject wireInfo = {};
 		SerializeRegisteredProperties(wireInfo, bSerializePrefabData);
-		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
+		if (!wireInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
+		}
 	}
 
 	GameObjectID Wire::GetOtherPlug(WirePlug* plug)
@@ -7012,9 +7032,12 @@ namespace flex
 
 	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject wireObj = {};
-		SerializeRegisteredProperties(wireObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("wire plug", JSONValue(wireObj));
+		JSONObject wirePlugObj = {};
+		SerializeRegisteredProperties(wirePlugObj, bSerializePrefabData);
+		if (!wirePlugObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("wire plug", JSONValue(wirePlugObj));
+		}
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
@@ -7061,7 +7084,10 @@ namespace flex
 	{
 		JSONObject socketObj = {};
 		SerializeRegisteredProperties(socketObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("socket", JSONValue(socketObj));
+		if (!socketObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("socket", JSONValue(socketObj));
+		}
 	}
 
 	void Socket::OnPlugIn(WirePlug* plug)
@@ -11093,8 +11119,10 @@ namespace flex
 
 		m_TargetPos = m_SpringSim->points[1]->pos;
 		SerializeRegisteredProperties(springObj, bSerializePrefabData);
-
-		parentObject.fields.emplace_back("spring", JSONValue(springObj));
+		if (!springObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("spring", JSONValue(springObj));
+		}
 	}
 
 	void SpringObject::CreateMaterials()
@@ -14012,6 +14040,9 @@ namespace flex
 	{
 		JSONObject speakerObj = {};
 		SerializeRegisteredProperties(speakerObj, bSerializePrefabData);
-		parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
+		if (!speakerObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
+		}
 	}
 } // namespace flex

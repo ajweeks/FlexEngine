@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
@@ -87,10 +87,8 @@
 					},
 					"directional light info" : 
 					{
-						"pos" : "0.00,15.00,0.00",
 						"colour" : "0.99,1.00,0.84",
-						"brightness" : 0.70,
-						"rotation" : "0.711,0.000,0.000"
+						"brightness" : 0.70
 					}
 				},
 				{
@@ -103,7 +101,6 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "-20.950,3.565,5.352",
 						"colour" : "0.49,0.78,0.91",
 						"brightness" : 31.250
 					},
@@ -112,10 +109,7 @@
 						{
 							"name" : "socket_005",
 							"id" : "D2B4586102FEFE87433539B90CB0227C",
-							"type" : "socket",
-							"socket" : 
-							{
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -129,7 +123,6 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "18.486,7.943,-3.520",
 						"colour" : "0.94,0.80,0.57",
 						"brightness" : 395.833
 					},
@@ -138,10 +131,7 @@
 						{
 							"name" : "socket_004",
 							"id" : "564F997157E832B04E56B9B3C26BF4BB",
-							"type" : "socket",
-							"socket" : 
-							{
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -155,7 +145,6 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "2.159,0.938,17.654",
 						"brightness" : 135.417
 					},
 					"children" : 
@@ -163,10 +152,7 @@
 						{
 							"name" : "socket_006",
 							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
-							"type" : "socket",
-							"socket" : 
-							{
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -180,7 +166,6 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "9.644,4.930,29.718",
 						"brightness" : 827.586
 					},
 					"children" : 
@@ -188,10 +173,7 @@
 						{
 							"name" : "socket_007",
 							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
-							"type" : "socket",
-							"socket" : 
-							{
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -238,7 +220,6 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "-32.370,2.848,21.634",
 						"colour" : "0.95,0.96,0.84",
 						"brightness" : 31.250
 					},
@@ -247,10 +228,7 @@
 						{
 							"name" : "socket_008",
 							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
-							"type" : "socket",
-							"socket" : 
-							{
-							}
+							"type" : "socket"
 						}
 					]
 				}
@@ -307,9 +285,6 @@
 					{
 						"pos" : "-0.755, -0.362, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
-					},
-					"socket" : 
-					{
 					}
 				},
 				{
@@ -409,16 +384,12 @@
 			"name" : "Cart",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
-			"prefab type" : "cart",
+			"prefab type" : "empty-cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
 				"pos" : "-9.387, 1.800, 10.428",
 				"rot" : "0.000, 0.605, 0.000"
-			},
-			"cart info" : 
-			{
-				"dist along track" : 0.000000
 			}
 		},
 		{
@@ -429,11 +400,8 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.966, 2.501, -1.958",
+				"pos" : "-20.970, 2.501, -1.960",
 				"rot" : "0.000, -0.676, -3.142"
-			},
-			"battery info" : 
-			{
 			}
 		},
 		{
@@ -446,9 +414,6 @@
 			{
 				"pos" : "-25.457, 2.501, -1.190",
 				"rot" : "-0.000, -0.006, -0.000"
-			},
-			"battery info" : 
-			{
 			}
 		},
 		{
@@ -463,8 +428,6 @@
 			},
 			"cart info" : 
 			{
-				"dist along track" : 0.000000,
-				"move direction" : 0.0,
 				"power remaining" : 0.000000
 			}
 		},
@@ -478,9 +441,6 @@
 			{
 				"pos" : "-28.614, 1.500, -1.553",
 				"rot" : "0.192, 0.000, 1.571"
-			},
-			"battery info" : 
-			{
 			}
 		},
 		{
@@ -732,10 +692,7 @@
 			"id" : "85B0A92857622390432E7511AECB345B",
 			"type" : "prefab",
 			"prefab type" : "speaker",
-			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216",
-			"speaker" : 
-			{
-			}
+			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216"
 		}
 	]
 }
