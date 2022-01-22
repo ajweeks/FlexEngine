@@ -354,7 +354,7 @@ namespace flex
 		case SID("blocks"): return new Blocks(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SID("particle system"): return new ParticleSystem(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SID("terrain generator"): return new TerrainGenerator(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("wire"): new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SID("wire"): return new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SID("wire plug"): return new WirePlug(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SID("socket"): return new Socket(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SID("spring"): return new SpringObject(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
