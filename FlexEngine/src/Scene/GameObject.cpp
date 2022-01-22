@@ -6748,6 +6748,7 @@ namespace flex
 
 	void Wire::UpdateWireMesh()
 	{
+		CHECK_NE(m_SoftBody, nullptr);
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
 		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
@@ -6761,6 +6762,7 @@ namespace flex
 
 	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
 	{
+		CHECK_NE(m_SoftBody, nullptr);
 		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
@@ -6776,6 +6778,7 @@ namespace flex
 
 	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
 	{
+		CHECK_NE(m_SoftBody, nullptr);
 		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{

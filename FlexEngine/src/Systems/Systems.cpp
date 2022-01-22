@@ -313,19 +313,6 @@ namespace flex
 		return wire;
 	}
 
-	bool PluggablesSystem::UnregisterSocket(Socket* socket)
-	{
-		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
-		{
-			if ((*iter)->ID == socket->ID)
-			{
-				sockets.erase(iter);
-				return true;
-			}
-		}
-		return false;
-	}
-
 	bool PluggablesSystem::UnregisterWire(Wire* wire)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
@@ -389,6 +376,19 @@ namespace flex
 		socket->slotIdx = slotIdx;
 		sockets.push_back(socket);
 		return socket;
+	}
+
+	bool PluggablesSystem::UnregisterSocket(Socket* socket)
+	{
+		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
+		{
+			if ((*iter)->ID == socket->ID)
+			{
+				sockets.erase(iter);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	Socket* PluggablesSystem::GetSocketAtOtherEnd(Socket* socket)
