@@ -373,54 +373,42 @@ namespace flex
 
 		StringID m_TypeID = InvalidStringID;
 
-		// TODO: Store as bitfield
+		// Bitfield 0
+		// If true, this object will be written out to file
+		// NOTE: If false, children will also not be serialized
+		bool m_bSerializable : 1;
 
-		/*
-		* If true, this object will be written out to file
-		* NOTE: If false, children will also not be serialized
-		*/
-		bool m_bSerializable = true;
+		// Whether or not this object should be rendered
+		// NOTE: Does *not* effect childrens' visibility
+		bool m_bVisible : 1;
 
-		/*
-		* Whether or not this object should be rendered
-		* NOTE: Does *not* effect childrens' visibility
-		*/
-		bool m_bVisible = true;
+		// Whether or not this object should be shown in the scene explorer UI
+		// NOTE: Children are also hidden when this if false!
+		bool m_bVisibleInSceneExplorer : 1;
 
-		/*
-		* Whether or not this object should be shown in the scene explorer UI
-		* NOTE: Children are also hidden when this if false!
-		*/
-		bool m_bVisibleInSceneExplorer = true;
+		// True if and only if this object will never move
+		// NOTE: If true, this object will be rendered to reflection probes
+		bool m_bStatic : 1;
 
-		/*
-		* True if and only if this object will never move
-		* If true, this object will be rendered to reflection probes
-		*/
-		bool m_bStatic = false;
+		// If true this object will not collide with other game objects
+		// Overlapping objects will cause OnOverlapBegin/End to be called
+		bool m_bTrigger : 1;
 
-		/*
-		* If true this object will not collide with other game objects
-		* Overlapping objects will cause OnOverlapBegin/End to be called
-		*/
-		bool m_bTrigger = false;
+		// True if this object can currently be interacted with (can be based on
+		// player proximity, among other things)
+		bool m_bInteractable : 1;
 
-		/*
-		* True if this object can currently be interacted with (can be based on
-		* player proximity, among other things)
-		*/
-		bool m_bInteractable = false;
-
-		bool m_bCastsShadow = true;
+		bool m_bCastsShadow : 1;
 
 		// If true, this object will never live in the real world and will only be instantiated
-		bool m_bIsTemplate = false;
+		bool m_bIsTemplate : 1;
 
+		// Bitfield 1
+		bool m_bSerializeMaterial : 1;
 
-		// Editor only
-		bool m_bUniformScale = false;
-
-		bool m_bItemizable = false;
+		// Editor only fields
+		bool m_bUniformScale : 1;
+		bool m_bItemizable : 1;
 
 		// The PrefabID this object is loaded from if it's a prefab instance, or the PrefabID
 		// of the prefab this object defines (when m_bIsTemplate is true), or InvalidPrefabID otherwise.

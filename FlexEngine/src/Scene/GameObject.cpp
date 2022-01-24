@@ -150,8 +150,17 @@ namespace flex
 	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		m_Name(name),
 		m_TypeID(typeID),
+		m_PrefabIDLoadedFrom(prefabIDLoadedFrom),
+		m_bSerializable(true),
+		m_bVisible(true),
+		m_bVisibleInSceneExplorer(true),
+		m_bStatic(false),
+		m_bTrigger(false),
+		m_bInteractable(true),
+		m_bCastsShadow(false),
 		m_bIsTemplate(bIsPrefabTemplate),
-		m_PrefabIDLoadedFrom(prefabIDLoadedFrom)
+		m_bUniformScale(false),
+		m_bItemizable(false)
 	{
 		if (gameObjectID.IsValid())
 		{
@@ -1467,7 +1476,11 @@ namespace flex
 			SetStatic(bStatic);
 		}
 
-		obj.TryGetBool("casts shadow", m_bCastsShadow);
+		bool bCastsShadow = m_bCastsShadow;
+		if (obj.TryGetBool("casts shadow", bCastsShadow))
+		{
+			m_bCastsShadow = bCastsShadow;
+		}
 
 		std::vector<JSONObject> children;
 		if (obj.TryGetObjectArray("children", children))
@@ -2184,11 +2197,13 @@ namespace flex
 
 		bool bCreateRenderObject = (copyFlags & CopyFlags::CREATE_RENDER_OBJECT);
 
-		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && m_bSerializeMesh)
+		bool bSerializeMesh = ShouldSerializeMesh();
+		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && bSerializeMesh)
 		{
 			if (newGameObject->GetMesh() != nullptr)
 			{
-				PrintError("New mesh (%s) already has mesh, perhaps it should have m_bSerializeMesh set to false?\n", newGameObject->m_Name.c_str());
+				const char* typeStr = g_ResourceManager->TypeIDToString(newGameObject->GetTypeID());
+				PrintError("New object %s already has mesh, perhaps its type (%s) should not be set to serialize mesh?\n", newGameObject->m_Name.c_str(), typeStr);
 			}
 			else
 			{
@@ -3652,9 +3667,11 @@ namespace flex
 
 		ImGui::Text("Directional Light");
 
-		if (ImGui::Checkbox("Enabled", &m_bVisible))
+		bool bVisible = m_bVisible;
+		if (ImGui::Checkbox("Enabled", &bVisible))
 		{
-			data.enabled = m_bVisible ? 1 : 0;
+			m_bVisible = bVisible;
+			data.enabled = bVisible ? 1 : 0;
 		}
 
 		ImGui::SameLine();
@@ -3884,10 +3901,12 @@ namespace flex
 
 			if (!bRemovedPointLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedPointLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -4099,10 +4118,12 @@ namespace flex
 
 			if (!bRemovedSpotLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedSpotLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -4331,10 +4352,12 @@ namespace flex
 
 			if (!bRemovedAreaLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedAreaLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
