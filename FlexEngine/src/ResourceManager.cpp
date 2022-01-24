@@ -59,6 +59,7 @@ namespace flex
 		DiscoverTextures();
 		DiscoverAudioFiles();
 		ParseDebugOverlayNamesFile();
+		ParseGameObjectTypesFile();
 
 		m_NonDefaultStackSizes[SID("battery")] = 1;
 	}
@@ -200,6 +201,91 @@ namespace flex
 	bool ResourceManager::MeshFileNameConforms(const std::string& fileName)
 	{
 		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
+	}
+
+	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
+	{
+		bool bCreateRenderObject = !parent->IsPrefabTemplate();
+
+		std::string meshFilePath;
+		if (meshObj.TryGetString("mesh", meshFilePath))
+		{
+			if (sceneFileVersion >= 4)
+			{
+				meshFilePath = MESH_DIRECTORY + meshFilePath;
+			}
+			else
+			{
+				// "file" field stored mesh name without extension in versions <= 3, try to guess it
+				bool bMatched = false;
+				for (const std::string& path : discoveredMeshes)
+				{
+					std::string discoveredMeshName = StripFileType(path);
+					if (discoveredMeshName.compare(meshFilePath) == 0)
+					{
+						meshFilePath = MESH_DIRECTORY + path;
+						bMatched = true;
+						break;
+					}
+				}
+
+				if (!bMatched)
+				{
+					std::string glbFilePath = MESH_DIRECTORY + meshFilePath + ".glb";
+					std::string gltfFilePath = MESH_DIRECTORY + meshFilePath + ".gltf";
+					if (FileExists(glbFilePath))
+					{
+						meshFilePath = glbFilePath;
+					}
+					else if (FileExists(glbFilePath))
+					{
+						meshFilePath = gltfFilePath;
+					}
+				}
+
+				if (!FileExists(meshFilePath))
+				{
+					PrintError("Failed to upgrade scene file, unable to find path of mesh with name %s\n", meshFilePath.c_str());
+					return;
+				}
+			}
+
+			Mesh::ImportFromFile(meshFilePath, parent, materialIDs, bCreateRenderObject);
+			return;
+		}
+
+		std::string prefabName;
+		if (meshObj.TryGetString("prefab", prefabName))
+		{
+			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
+			return;
+		}
+	}
+
+	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
+	{
+		JSONField meshObject = {};
+
+		switch (mesh->GetType())
+		{
+		case Mesh::Type::FILE:
+		{
+			std::string prefixStr = MESH_DIRECTORY;
+			std::string meshFilepath = mesh->GetRelativeFilePath().substr(prefixStr.length());
+			meshObject = JSONField("mesh", JSONValue(meshFilepath));
+		} break;
+		case Mesh::Type::PREFAB:
+		{
+			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(mesh->GetSubMesh(0)->GetShape());
+			meshObject = JSONField("prefab", JSONValue(prefabShapeStr));
+		} break;
+		default:
+		{
+			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
+		} break;
+		}
+
+		return meshObject;
 	}
 
 	void ResourceManager::DiscoverMeshes()
@@ -464,6 +550,61 @@ namespace flex
 		}
 	}
 
+	void ResourceManager::ParseGameObjectTypesFile()
+	{
+		gameObjectTypeStringIDPairs.clear();
+		std::string fileContents;
+		// TODO: Gather this info from reflection?
+		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
+		{
+			std::vector<std::string> lines = Split(fileContents, '\n');
+			for (const std::string& line : lines)
+			{
+				if (!line.empty())
+				{
+					const char* lineCStr = line.c_str();
+					StringID typeID = Hash(lineCStr);
+					if (gameObjectTypeStringIDPairs.find(typeID) != gameObjectTypeStringIDPairs.end())
+					{
+						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
+					}
+					gameObjectTypeStringIDPairs.emplace(typeID, line);
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	void ResourceManager::SerializeGameObjectTypesFile()
+	{
+		StringBuilder fileContents;
+
+		for (auto iter = gameObjectTypeStringIDPairs.begin(); iter != gameObjectTypeStringIDPairs.end(); ++iter)
+		{
+			fileContents.AppendLine(iter->second);
+		}
+
+		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
+		{
+			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	const char* ResourceManager::TypeIDToString(StringID typeID)
+	{
+		for (const auto& pair : gameObjectTypeStringIDPairs)
+		{
+			if (pair.first == typeID)
+			{
+				return pair.second.c_str();
+			}
+		}
+		return "Unknown";
+	}
+
 	void ResourceManager::ParseFontFile()
 	{
 		PROFILE_AUTO("ResourceManager ParseFontFile");
@@ -624,91 +765,6 @@ namespace flex
 		for (JSONField& field : nameFields)
 		{
 			debugOverlayNames.emplace_back(field.value.strValue);
-		}
-	}
-
-	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
-	{
-		JSONField meshObject = {};
-
-		switch (mesh->GetType())
-		{
-		case Mesh::Type::FILE:
-		{
-			std::string prefixStr = MESH_DIRECTORY;
-			std::string meshFilepath = mesh->GetRelativeFilePath().substr(prefixStr.length());
-			meshObject = JSONField("mesh", JSONValue(meshFilepath));
-		} break;
-		case Mesh::Type::PREFAB:
-		{
-			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(mesh->GetSubMesh(0)->GetShape());
-			meshObject = JSONField("prefab", JSONValue(prefabShapeStr));
-		} break;
-		default:
-		{
-			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
-		} break;
-		}
-
-		return meshObject;
-	}
-
-	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
-	{
-		bool bCreateRenderObject = !parent->IsPrefabTemplate();
-
-		std::string meshFilePath;
-		if (meshObj.TryGetString("mesh", meshFilePath))
-		{
-			if (sceneFileVersion >= 4)
-			{
-				meshFilePath = MESH_DIRECTORY + meshFilePath;
-			}
-			else
-			{
-				// "file" field stored mesh name without extension in versions <= 3, try to guess it
-				bool bMatched = false;
-				for (const std::string& path : discoveredMeshes)
-				{
-					std::string discoveredMeshName = StripFileType(path);
-					if (discoveredMeshName.compare(meshFilePath) == 0)
-					{
-						meshFilePath = MESH_DIRECTORY + path;
-						bMatched = true;
-						break;
-					}
-				}
-
-				if (!bMatched)
-				{
-					std::string glbFilePath = MESH_DIRECTORY + meshFilePath + ".glb";
-					std::string gltfFilePath = MESH_DIRECTORY + meshFilePath + ".gltf";
-					if (FileExists(glbFilePath))
-					{
-						meshFilePath = glbFilePath;
-					}
-					else if (FileExists(glbFilePath))
-					{
-						meshFilePath = gltfFilePath;
-					}
-				}
-
-				if (!FileExists(meshFilePath))
-				{
-					PrintError("Failed to upgrade scene file, unable to find path of mesh with name %s\n", meshFilePath.c_str());
-					return;
-				}
-			}
-
-			Mesh::ImportFromFile(meshFilePath, parent, materialIDs, bCreateRenderObject);
-			return;
-		}
-
-		std::string prefabName;
-		if (meshObj.TryGetString("prefab", prefabName))
-		{
-			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
-			return;
 		}
 	}
 
@@ -1297,6 +1353,14 @@ namespace flex
 			}
 		}
 		return DEFAULT_MAX_STACK_SIZE;
+	}
+
+	void ResourceManager::AddNewGameObjectType(const char* newType)
+	{
+		StringID newTypeID = Hash(newType);
+		gameObjectTypeStringIDPairs.emplace(newTypeID, std::string(newType));
+
+		SerializeGameObjectTypesFile();
 	}
 
 	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const

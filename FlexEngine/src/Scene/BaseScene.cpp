@@ -131,8 +131,6 @@ namespace flex
 			m_bLoaded = true;
 		}
 
-		g_SceneManager->ReadGameObjectTypesFile();
-
 		// All updating to new file version should be complete by this point
 		m_SceneFileVersion = LATEST_SCENE_FILE_VERSION;
 		m_MaterialsFileVersion = LATEST_MATERIALS_FILE_VERSION;
@@ -1282,7 +1280,7 @@ namespace flex
 
 		if (bShowCombo)
 		{
-			for (const auto& typeIDPair : SceneManager::GameObjectTypeStringIDPairs)
+			for (const auto& typeIDPair : g_ResourceManager->gameObjectTypeStringIDPairs)
 			{
 				bool bSelected = (typeIDPair.first == selectedTypeStringID);
 				if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
@@ -1315,6 +1313,7 @@ namespace flex
 			ImGui::OpenPopup(popupName);
 
 			m_NewObjectTypeIDPair.first = BaseObjectSID;
+			m_NewObjectTypeIDPair.second = g_ResourceManager->gameObjectTypeStringIDPairs[BaseObjectSID];
 
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
@@ -2034,8 +2033,8 @@ namespace flex
 
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
-		auto iter = SceneManager::GameObjectTypeStringIDPairs.find(typeID);
-		if (iter == SceneManager::GameObjectTypeStringIDPairs.end())
+		auto iter = g_ResourceManager->gameObjectTypeStringIDPairs.find(typeID);
+		if (iter == g_ResourceManager->gameObjectTypeStringIDPairs.end())
 		{
 			return "";
 		}

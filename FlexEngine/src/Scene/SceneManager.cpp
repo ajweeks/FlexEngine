@@ -19,7 +19,6 @@ namespace flex
 {
 	const char* SceneManager::s_NewObjectTypePopupStr = "New Object Type";
 	const char* SceneManager::s_newSceneModalWindowID = "New scene";
-	std::map<StringID, std::string> SceneManager::GameObjectTypeStringIDPairs;
 
 	SceneManager::SceneManager() :
 		m_DefaultDirStr(RelativePathToAbsolute(SCENE_DEFAULT_DIRECTORY))
@@ -365,11 +364,7 @@ namespace flex
 
 				if (!m_NewObjectTypeStrBuffer.empty())
 				{
-					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
-					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
-
-					WriteGameObjectTypesFile();
-
+					g_ResourceManager->AddNewGameObjectType(m_NewObjectTypeStrBuffer.c_str());
 					ImGui::CloseCurrentPopup();
 				}
 			}
@@ -457,49 +452,6 @@ namespace flex
 	void SceneManager::OpenNewSceneWindow()
 	{
 		bOpenNewSceneWindow = true;
-	}
-
-	void SceneManager::ReadGameObjectTypesFile()
-	{
-		GameObjectTypeStringIDPairs.clear();
-		std::string fileContents;
-		// TODO: Gather this info from reflection?
-		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
-		{
-			std::vector<std::string> lines = Split(fileContents, '\n');
-			for (const std::string& line : lines)
-			{
-				if (!line.empty())
-				{
-					const char* lineCStr = line.c_str();
-					StringID typeID = Hash(lineCStr);
-					if (GameObjectTypeStringIDPairs.find(typeID) != GameObjectTypeStringIDPairs.end())
-					{
-						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
-					}
-					GameObjectTypeStringIDPairs.emplace(typeID, line);
-				}
-			}
-		}
-		else
-		{
-			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
-		}
-	}
-
-	void SceneManager::WriteGameObjectTypesFile()
-	{
-		StringBuilder fileContents;
-
-		for (auto iter = GameObjectTypeStringIDPairs.begin(); iter != GameObjectTypeStringIDPairs.end(); ++iter)
-		{
-			fileContents.AppendLine(iter->second);
-		}
-
-		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
-		{
-			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
-		}
 	}
 
 	bool SceneManager::DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName)

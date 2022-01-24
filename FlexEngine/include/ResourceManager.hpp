@@ -46,12 +46,18 @@ namespace flex
 
 		bool MeshFileNameConforms(const std::string& fileName);
 
+		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
+
+		JSONField SerializeMesh(Mesh* mesh);
+
 		void DiscoverMeshes();
 		void DiscoverPrefabs();
 		void DiscoverAudioFiles();
 		void DiscoverTextures();
 
-		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
+		void ParseGameObjectTypesFile();
+		void SerializeGameObjectTypesFile();
+		const char* TypeIDToString(StringID typeID);
 
 		void ParseFontFile();
 		void SerializeFontFile();
@@ -60,8 +66,6 @@ namespace flex
 		bool SerializeLoadedMaterials() const;
 
 		void ParseDebugOverlayNamesFile();
-
-		JSONField SerializeMesh(Mesh* mesh);
 
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
 
@@ -117,6 +121,8 @@ namespace flex
 		void LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D);
 
 		u32 GetMaxStackSize(const PrefabID& prefabID);
+
+		void AddNewGameObjectType(const char* newType);
 
 		static const i32 DEFAULT_MAX_STACK_SIZE = 32;
 
@@ -175,6 +181,8 @@ namespace flex
 		std::map<StringID, AudioFileMetaData> discoveredAudioFiles;
 
 		static const char* s_SupportedTextureFormats[];
+
+		std::map<StringID, std::string> gameObjectTypeStringIDPairs;
 
 		std::vector<std::string> debugOverlayNames;
 

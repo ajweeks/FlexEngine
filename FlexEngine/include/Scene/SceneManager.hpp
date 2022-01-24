@@ -38,11 +38,6 @@ namespace flex
 
 		void OpenNewSceneWindow();
 
-		void ReadGameObjectTypesFile();
-		void WriteGameObjectTypesFile();
-
-		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
-
 		bool bOpenNewSceneWindow = false;
 		bool bOpenNewObjectTypePopup = false;
 
