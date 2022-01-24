@@ -1567,12 +1567,14 @@ namespace flex
 
 			if (m_Mesh != nullptr)
 			{
-				if (m_bSerializeMesh && (!m_PrefabIDLoadedFrom.IsValid() || m_bIsTemplate))
+				bool bSerializeMesh = ShouldSerializeMesh();
+				if (bSerializeMesh && (!m_PrefabIDLoadedFrom.IsValid() || m_bIsTemplate))
 				{
 					object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
 				}
 
-				if (m_bSerializeMaterial)
+				bool bSerializeMaterial = ShouldSerializeMaterial();
+				if (bSerializeMaterial)
 				{
 					std::vector<JSONField> materialFields;
 					for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
@@ -2028,6 +2030,47 @@ namespace flex
 		{
 			return g_PropertyCollectionManager->GetCollectionForObject(ID);
 		}
+	}
+
+	bool GameObject::ShouldSerializeMesh() const
+	{
+		switch (m_TypeID)
+		{
+		case MineralDepositSID:
+		case VehicleSID:
+		case SkyboxSID:
+		case GerstnerWaveSID:
+		case BaseCartSID:
+		case EmptyCartSID:
+		case EngineCartSID:
+		case WireSID:
+		case TerminalSID:
+		case TerrainGeneratorSID:
+		case SpringObjectSID:
+		case RoadSID:
+			return false;
+		}
+
+		return true;
+	}
+
+	bool GameObject::ShouldSerializeMaterial() const
+	{
+		switch (m_TypeID)
+		{
+		case BaseCartSID:
+		case EmptyCartSID:
+		case EngineCartSID:
+		case GerstnerWaveSID:
+		case WireSID:
+		case TerminalSID:
+		case TerrainGeneratorSID:
+		case SpringObjectSID:
+		case RoadSID:
+			return false;
+		}
+
+		return true;
 	}
 
 	void GameObject::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
@@ -2858,8 +2901,6 @@ namespace flex
 	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, ValveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		// TODO: Set m_bSerializeMesh to false here?
-
 		if (!s_SqueakySounds.IsInitialized())
 		{
 			s_SqueakySounds.Initialize("squeak00.wav", 5, true);
@@ -3337,7 +3378,6 @@ namespace flex
 		GameObject(name, SkyboxSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		SetCastsShadow(false);
-		m_bSerializeMesh = false;
 	}
 
 	void Skybox::ProcedurallyInitialize(MaterialID matID)
@@ -4366,8 +4406,6 @@ namespace flex
 		GameObject(name, typeID, gameObjectID, prefabIDLoadedFrom, bPrefabTemplate)
 	{
 		m_bItemizable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr grey", matID))
@@ -4667,8 +4705,6 @@ namespace flex
 	{
 		// TODO: Serialize and expose in ImGui
 		m_bItemizable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 
 		// Base class should have already registered us
 		PropertyCollection* collection = GetPropertyCollection();
@@ -4979,8 +5015,6 @@ namespace flex
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, GerstnerWaveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		wave_workQueue = new ThreadSafeArray<WaveGenData>(32);
 
 		// Defaults to use if not set in file
@@ -6551,9 +6585,6 @@ namespace flex
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, WireSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
-
 		if (!m_bIsTemplate)
 		{
 			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterWire(this);
@@ -7125,8 +7156,6 @@ namespace flex
 		cursor(0, 0)
 	{
 		m_bInteractable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 
 		MaterialID matID;
 		// TODO: Don't rely on material names!
@@ -8634,8 +8663,6 @@ namespace flex
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 		AddTag("terrain");
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		if (!m_bUseAsyncCompute)
 		{
 			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
@@ -10864,9 +10891,6 @@ namespace flex
 	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, SpringObjectSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
-
 		PropertyCollection* collection = RegisterPropertyCollection();
 		collection->RegisterProperty("end point", &m_TargetPos)
 			.VersionAdded(6)
@@ -12947,8 +12971,6 @@ namespace flex
 	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, RoadSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		AddTag("road");
 	}
 
@@ -13395,8 +13417,6 @@ namespace flex
 	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, MineralDepositSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-
 		PropertyCollection* collection = RegisterPropertyCollection();
 		collection->RegisterProperty("mineral remaining", &m_MineralRemaining)
 			.VersionAdded(6);

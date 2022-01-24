@@ -360,6 +360,9 @@ namespace flex
 		void DeregisterPropertyCollection();
 		PropertyCollection* GetPropertyCollection();
 
+		bool ShouldSerializeMesh() const;
+		bool ShouldSerializeMaterial() const;
+
 		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
 
 		std::string m_Name;
@@ -413,8 +416,6 @@ namespace flex
 		// If true, this object will never live in the real world and will only be instantiated
 		bool m_bIsTemplate = false;
 
-		bool m_bSerializeMesh = true;
-		bool m_bSerializeMaterial = true;
 
 		// Editor only
 		bool m_bUniformScale = false;
@@ -715,8 +716,6 @@ namespace flex
 
 		void InternalInit(MaterialID matID);
 	};
-
-	class EngineCart;
 
 	static constexpr StringID BaseCartSID = SID("base cart");
 	class BaseCart : public GameObject
