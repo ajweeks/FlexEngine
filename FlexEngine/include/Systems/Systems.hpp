@@ -15,6 +15,18 @@ namespace flex
 	struct PropertyCollection;
 	struct JSONObject;
 
+	struct SocketData
+	{
+		SocketData(const GameObjectID& socketID) :
+			socketID(socketID),
+			outputSignal(0)
+		{
+		}
+
+		GameObjectID socketID;
+		i32 outputSignal;
+	};
+
 	class PluggablesSystem final : public System
 	{
 	public:
@@ -43,9 +55,19 @@ namespace flex
 		void PlugInToSocket(WirePlug* plug, Socket* socket);
 		void UnplugFromSocket(WirePlug* plug);
 
-		std::vector<Wire*> wires;
-		std::vector<WirePlug*> wirePlugs;
-		std::vector<Socket*> sockets;
+		void CacheGameObjectSockets(const GameObjectID& gameObjectID);
+		void RemoveGameObjectSockets(const GameObjectID& gameObjectID);
+		void OnSocketChildAdded(const GameObjectID& parentObjectID, const GameObjectID& childObjectID);
+		std::vector<SocketData> const* GetGameObjectSockets(const GameObjectID& gameObjectID);
+
+		void SetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx, i32 value);
+		i32 GetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx);
+
+		std::vector<Wire*> registeredWires;
+		std::vector<WirePlug*> registeredWirePlugs;
+		std::vector<Socket*> registeredSockets;
+		// Stores each registered object's child sockets
+		std::map<GameObjectID, std::vector<SocketData>> gameObjectSockets;
 
 		real maxDistBeforeSnapSq = 25.0f * 25.0f;
 

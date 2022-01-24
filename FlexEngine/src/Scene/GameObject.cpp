@@ -434,8 +434,7 @@ namespace flex
 			child->PostInitialize();
 		}
 
-		GetChildrenOfType(SocketSID, false, sockets);
-		outputSignals.resize((u32)sockets.size());
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->CacheGameObjectSockets(ID);
 	}
 
 	void GameObject::Destroy(bool bDetachFromParent /* = true */)
@@ -444,6 +443,8 @@ namespace flex
 		{
 			DetachFromParent();
 		}
+
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RemoveGameObjectSockets(ID);
 
 		// Handle m_Children being modified during loop (from call to DetachFromParent)
 		for (GameObject* child : m_Children)
@@ -1006,17 +1007,18 @@ namespace flex
 			}
 		}
 
-		if (!sockets.empty())
+		std::vector<SocketData> const* sockets = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
 			bool bTreeOpen = ImGui::TreeNode("Sockets");
 			ImGui::SameLine();
-			ImGui::Text("(%i)", (i32)sockets.size());
+			ImGui::Text("(%i)", (i32)sockets->size());
 
 			if (bTreeOpen)
 			{
-				for (u32 i = 0; i < (u32)sockets.size(); ++i)
+				for (u32 i = 0; i < (u32)sockets->size(); ++i)
 				{
-					ImGui::Text("%u: %i", i, outputSignals[i]);
+					ImGui::Text("%u: %i", i, (*sockets)[i].outputSignal);
 				}
 				ImGui::TreePop();
 			}
@@ -2235,11 +2237,7 @@ namespace flex
 
 	void GameObject::SetOutputSignal(i32 slotIdx, i32 value)
 	{
-		if (slotIdx >= (i32)outputSignals.size())
-		{
-			outputSignals.resize(slotIdx + 1);
-		}
-		outputSignals[slotIdx] = value;
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->SetGameObjectOutputSignal(ID, slotIdx, value);
 	}
 
 	GameObject* GameObject::GetParent()
@@ -2366,12 +2364,12 @@ namespace flex
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
 
-		if (child->GetTypeID() == SocketSID)
+		if (!m_bIsTemplate)
 		{
-			Socket* socket = (Socket*)child;
-			socket->slotIdx = (i32)sockets.size();
-			sockets.push_back(socket);
-			outputSignals.resize(sockets.size(), -1);
+			if (child->GetTypeID() == SocketSID)
+			{
+				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child->ID);
+			}
 		}
 
 		if (g_SceneManager->HasSceneLoaded())
@@ -3585,9 +3583,12 @@ namespace flex
 	{
 		PROFILE_AUTO("DirectionalLight Update");
 
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -3831,9 +3832,12 @@ namespace flex
 	{
 		PROFILE_AUTO("PointLight Update");
 
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -4047,9 +4051,12 @@ namespace flex
 	{
 		PROFILE_AUTO("SpotLight Update");
 
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -4260,9 +4267,12 @@ namespace flex
 	{
 		PROFILE_AUTO("AreaLight Update");
 
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -7372,21 +7382,24 @@ namespace flex
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
+		std::vector<SocketData> const* sockets = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectSockets(ID);
+		u32 socketCount = sockets != nullptr ? (u32)sockets->size() : 0;
+
 		if (m_VM != nullptr && m_VM->IsExecuting())
 		{
-			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), (u32)outputSignals.size());
+			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), socketCount);
 			for (u32 i = 0; i < outputCount; ++i)
 			{
 				SetOutputSignal(i, m_VM->terminalOutputs[i].valInt);
 			}
-			for (u32 i = outputCount; i < (u32)outputSignals.size(); ++i)
+			for (u32 i = outputCount; i < socketCount; ++i)
 			{
 				SetOutputSignal(i, -1);
 			}
 		}
 		else
 		{
-			for (u32 i = 0; i < (u32)outputSignals.size(); ++i)
+			for (u32 i = 0; i < socketCount; ++i)
 			{
 				SetOutputSignal(i, -1);
 			}
@@ -13373,11 +13386,13 @@ namespace flex
 	{
 		PROFILE_AUTO("SolarPanel Update");
 
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector< SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-			for (Socket* socket : sockets)
+			for (const SocketData& socketData : *sockets)
 			{
+				Socket* socket = (Socket*)socketData.socketID.Get();
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{
@@ -13403,13 +13418,15 @@ namespace flex
 
 	void PowerPole::OnCharge(real chargeAmount)
 	{
-		if (!sockets.empty())
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
 			std::vector<Socket*> activeSockets;
 
-			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-			for (Socket* socket : sockets)
+			for (const SocketData& socketData : *sockets)
 			{
+				Socket* socket = (Socket*)socketData.socketID.Get();
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{

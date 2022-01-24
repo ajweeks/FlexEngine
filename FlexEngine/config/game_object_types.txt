@@ -1,4 +1,4 @@
-power_pole
+power pole
 wire plug
 spring
 socket
@@ -14,7 +14,7 @@ empty cart
 engine cart
 skybox
 terminal
-headlamp
+head lamp
 blocks
 battery
 area light

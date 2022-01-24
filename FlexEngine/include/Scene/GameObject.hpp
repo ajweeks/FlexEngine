@@ -329,10 +329,6 @@ namespace flex
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
 
-		// Signals that connected objects get sent
-		std::vector<i32> outputSignals;
-		std::vector<Socket*> sockets;
-
 		GameObjectID ID;
 
 	protected:

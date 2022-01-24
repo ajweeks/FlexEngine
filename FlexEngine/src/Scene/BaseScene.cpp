@@ -1413,17 +1413,6 @@ namespace flex
 			Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
 			mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 		} break;
-		case SocketSID:
-		{
-			u32 slotIdx = 0;
-			if (parent != nullptr)
-			{
-				slotIdx = (u32)parent->sockets.size();
-			}
-
-			Socket* socket = (Socket*)newGameObject;
-			socket->slotIdx = slotIdx;
-		} break;
 		};
 
 		newGameObject->Initialize();

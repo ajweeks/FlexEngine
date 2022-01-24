@@ -1,12 +1,13 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "FF518D129F74B1B442494D703055E816",
 	"root" : 
 	{
 		"name" : "power_pole",
-		"id" : "74B15FCB3E24ADA646790299A066C7E6",
-		"type" : "object",
+		"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
+		"type" : "power pole",
+		"casts shadow" : false,
 		"mesh" : "power-pole.glb",
 		"materials" : 
 		[
@@ -16,15 +17,16 @@
 		[
 			{
 				"name" : "socket",
-				"id" : "4ECDF61FCBFDA8A548AC2DABAAC05DCD",
+				"id" : "A5420D8186A708B74AB81D9E2E1C1434",
 				"type" : "socket",
 				"transform" : 
 				{
 					"pos" : "0.000, 2.001, 0.000"
 				},
+				"casts shadow" : false,
 				"socket" : 
 				{
-					"slotIdx" : 0
+					"slotIdx" : 1
 				}
 			}
 		]

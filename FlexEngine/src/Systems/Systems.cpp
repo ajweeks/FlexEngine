@@ -34,12 +34,12 @@ namespace flex
 
 	void PluggablesSystem::Destroy()
 	{
-		wires.clear();
+		registeredWires.clear();
 	}
 
 	void PluggablesSystem::Update()
 	{
-		if (!wires.empty())
+		if (!registeredWires.empty())
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
 
@@ -62,7 +62,7 @@ namespace flex
 			const real hoverAmount = TWEAKABLE(0.1f);
 
 			// Handle plugging/unplugging events
-			for (Wire* wire : wires)
+			for (Wire* wire : registeredWires)
 			{
 				Transform* wireTransform = wire->GetTransform();
 
@@ -260,7 +260,8 @@ namespace flex
 	i32 PluggablesSystem::GetReceivedSignal(Socket* socket)
 	{
 		i32 result = -1;
-		for (Wire* wire : wires)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		for (Wire* wire : registeredWires)
 		{
 			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
@@ -270,7 +271,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket1 = (Socket*)plug1->socketID.Get();
-					i32 sendSignal = socket1->GetParent()->outputSignals[socket1->slotIdx];
+					i32 sendSignal = pluggablesSystem->GetGameObjectOutputSignal(socket1->GetParent()->ID, socket1->slotIdx);
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -279,7 +280,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket0 = (Socket*)plug0->socketID.Get();
-					i32 sendSignal = socket0->GetParent()->outputSignals[socket0->slotIdx];
+					i32 sendSignal = pluggablesSystem->GetGameObjectOutputSignal(socket0->GetParent()->ID, socket0->slotIdx);
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -308,7 +309,7 @@ namespace flex
 		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
 		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
 
-		wires.push_back(wire);
+		registeredWires.push_back(wire);
 
 		return wire;
 	}
@@ -321,7 +322,7 @@ namespace flex
 		WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 		WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
 
-		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
+		for (auto iter = registeredWires.begin(); iter != registeredWires.end(); ++iter)
 		{
 			if ((*iter)->ID == wire->ID)
 			{
@@ -343,7 +344,7 @@ namespace flex
 					}
 				}
 
-				wires.erase(iter);
+				registeredWires.erase(iter);
 
 				return true;
 			}
@@ -353,18 +354,18 @@ namespace flex
 
 	WirePlug* PluggablesSystem::RegisterWirePlug(WirePlug* wirePlug)
 	{
-		wirePlugs.push_back(wirePlug);
+		registeredWirePlugs.push_back(wirePlug);
 		return wirePlug;
 	}
 
 	bool PluggablesSystem::UnregisterWirePlug(WirePlug* wirePlug)
 	{
-		for (auto iter = wirePlugs.begin(); iter != wirePlugs.end(); ++iter)
+		for (auto iter = registeredWirePlugs.begin(); iter != registeredWirePlugs.end(); ++iter)
 		{
 			if ((*iter)->ID == wirePlug->ID)
 			{
 				// TODO: Check for wires/sockets interacting with plug
-				wirePlugs.erase(iter);
+				registeredWirePlugs.erase(iter);
 				return true;
 			}
 		}
@@ -374,17 +375,17 @@ namespace flex
 	Socket* PluggablesSystem::RegisterSocket(Socket* socket, i32 slotIdx /* = 0 */)
 	{
 		socket->slotIdx = slotIdx;
-		sockets.push_back(socket);
+		registeredSockets.push_back(socket);
 		return socket;
 	}
 
 	bool PluggablesSystem::UnregisterSocket(Socket* socket)
 	{
-		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
+		for (auto iter = registeredSockets.begin(); iter != registeredSockets.end(); ++iter)
 		{
 			if ((*iter)->ID == socket->ID)
 			{
-				sockets.erase(iter);
+				registeredSockets.erase(iter);
 				return true;
 			}
 		}
@@ -414,7 +415,7 @@ namespace flex
 		real threshold2 = threshold * threshold;
 		real closestDist2 = threshold2;
 		Socket* closestSocket = nullptr;
-		for (Socket* socket : sockets)
+		for (Socket* socket : registeredSockets)
 		{
 			if (socket != excludeSocket && (!bExcludeFilled || !socket->connectedPlugID.IsValid()))
 			{
@@ -464,6 +465,94 @@ namespace flex
 		plug->Unplug();
 
 		AudioManager::PlaySource(m_UnplugAudioSourceID);
+	}
+
+	void PluggablesSystem::CacheGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		GameObject* gameObject = gameObjectID.Get();
+		if (gameObject == nullptr)
+		{
+			// TODO: Print errors here (once editor objects can be ignored)
+			return;
+		}
+
+		std::vector<Socket*> sockets;
+		gameObject->GetChildrenOfType(SocketSID, false, sockets);
+		if (!sockets.empty())
+		{
+			std::vector<SocketData> socketData;
+			socketData.reserve(sockets.size());
+			for (Socket* socket : sockets)
+			{
+				socketData.emplace_back(socket->ID);
+			}
+			gameObjectSockets[gameObjectID] = socketData;
+		}
+	}
+
+	void PluggablesSystem::RemoveGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			gameObjectSockets.erase(iter);
+		}
+	}
+
+	void PluggablesSystem::OnSocketChildAdded(const GameObjectID& parentObjectID, const GameObjectID& childObjectID)
+	{
+		std::vector<SocketData>* sockets;
+
+		auto iter = gameObjectSockets.find(parentObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			sockets = &iter->second;
+		}
+		else
+		{
+			gameObjectSockets[parentObjectID] = {};
+			sockets = &gameObjectSockets[parentObjectID];
+		}
+
+		Socket* socket = (Socket*)childObjectID.Get();
+		socket->slotIdx = (i32)sockets->size();
+		(*sockets).emplace_back(socket->ID);
+	}
+
+	std::vector<SocketData> const* PluggablesSystem::GetGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			return &iter->second;
+		}
+		return nullptr;
+	}
+
+	void PluggablesSystem::SetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx, i32 value)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			std::vector<SocketData>* sockets = &iter->second;
+			if (slotIdx < (i32)sockets->size())
+			{
+				(*sockets)[slotIdx].outputSignal = value;
+			}
+		}
+	}
+
+	i32 PluggablesSystem::GetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx)
+	{
+		std::vector<SocketData> const* sockets = GetGameObjectSockets(gameObjectID);
+		if (sockets != nullptr)
+		{
+			if (slotIdx < (i32)sockets->size())
+			{
+				return (*sockets)[slotIdx].outputSignal;
+			}
+		}
+		return -1;
 	}
 
 	void RoadManager::Initialize()
