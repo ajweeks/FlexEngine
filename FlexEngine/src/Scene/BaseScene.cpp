@@ -1314,8 +1314,7 @@ namespace flex
 		{
 			ImGui::OpenPopup(popupName);
 
-			m_NewObjectTypeIDPair.first = SID("object");
-			m_NewObjectTypeIDPair.second = SceneManager::GameObjectTypeStringIDPairs[SID("object")];
+			m_NewObjectTypeIDPair.first = BaseObjectSID;
 
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
@@ -1410,12 +1409,12 @@ namespace flex
 		// Special case handling
 		switch (m_NewObjectTypeIDPair.first)
 		{
-		case SID("object"):
+		case BaseObjectSID:
 		{
 			Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
 			mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 		} break;
-		case SID("socket"):
+		case SocketSID:
 		{
 			u32 slotIdx = 0;
 			if (parent != nullptr)
@@ -1983,7 +1982,7 @@ namespace flex
 
 	void BaseScene::RegenerateTerrain()
 	{
-		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(SID("terrain generator"));
+		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(TerrainGeneratorSID);
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->Regenerate();

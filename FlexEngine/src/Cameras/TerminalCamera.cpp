@@ -37,7 +37,7 @@ namespace flex
 				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 				if (player != nullptr)
 				{
-					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>(SID("terminal"));
+					std::vector<Terminal*> terminals = g_SceneManager->CurrentScene()->GetObjectsOfType<Terminal>(TerminalSID);
 					if (!terminals.empty())
 					{
 						Transform* playerTransform = player->GetTransform();

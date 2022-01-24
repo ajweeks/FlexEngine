@@ -205,7 +205,7 @@ namespace flex
 			createInfo.bEditorObject = true;
 			createInfo.bIndexed = true;
 			createInfo.indices = &indexBuffer;
-			m_Object = new GameObject("Vk Physics Debug Draw", SID("object"));
+			m_Object = new GameObject("Vk Physics Debug Draw", BaseObjectSID);
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);

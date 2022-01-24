@@ -42,7 +42,7 @@ namespace flex
 	const glm::vec3 Player::HeadlampMountingPos = glm::vec3(0.0f, 0.8f, 0.2f);
 
 	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
-		GameObject("Player " + std::to_string(index), SID("player"), gameObjectID),
+		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID),
 		m_Index(index),
 		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
 	{
@@ -95,7 +95,7 @@ namespace flex
 			mapTabletMatCreateInfo.bSerializable = false;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-			m_MapTabletHolder = new GameObject("Map tablet", SID("object"));
+			m_MapTabletHolder = new GameObject("Map tablet", BaseObjectSID);
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
@@ -108,7 +108,7 @@ namespace flex
 				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
 			}
 
-			m_MapTablet = new GameObject("Map tablet mesh", SID("object"));
+			m_MapTablet = new GameObject("Map tablet mesh", BaseObjectSID);
 			Mesh* mapTabletMesh = m_MapTablet->SetMesh(new Mesh(m_MapTablet));
 			mapTabletMesh->LoadFromFile(MESH_DIRECTORY "map_tablet.glb", mapTabletMatID);
 			m_MapTabletHolder->AddChild(m_MapTablet);
@@ -513,7 +513,7 @@ namespace flex
 
 	i32 Player::GetNextFreeMinerInventorySlot()
 	{
-		if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+		if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
 		{
 			Miner* miner = (Miner*)m_NearbyInteractable;
 			return miner->GetNextFreeInventorySlot();
@@ -549,7 +549,7 @@ namespace flex
 		}
 		if ((i32)stackID < INVENTORY_MINER_MAX)
 		{
-			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
 			{
 				Miner* miner = (Miner*)m_NearbyInteractable;
 				outInventoryType = InventoryType::MINER_INVENTORY;
@@ -947,7 +947,7 @@ namespace flex
 			return MoveToInventory(&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), prefabID, count, userData);
 		case InventoryType::MINER_INVENTORY:
 		{
-			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == SID("miner"))
+			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
 			{
 				Miner* miner = (Miner*)m_NearbyInteractable;
 				return miner->AddToInventory(prefabID, count, userData);
@@ -1217,7 +1217,7 @@ namespace flex
 
 		switch (prefabTemplate->GetTypeID())
 		{
-		case SID("headlamp"):
+		case HeadLampSID:
 		{
 			GameObject* headLamp = prefabTemplate->CopySelf(this, GameObject::ALL);
 			headLamp->GetTransform()->SetLocalPosition(HeadlampMountingPos);
@@ -1236,10 +1236,10 @@ namespace flex
 
 		switch (prefabTemplate->GetTypeID())
 		{
-		case SID("headlamp"):
+		case HeadLampSID:
 		{
 			std::vector<HeadLamp*> headlamps;
-			GetChildrenOfType<HeadLamp>(SID("headlamp"), true, headlamps);
+			GetChildrenOfType<HeadLamp>(HeadLampSID, true, headlamps);
 			if (headlamps.size() == 1)
 			{
 				if (!RemoveChildImmediate(headlamps[0]->ID, true))

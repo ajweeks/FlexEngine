@@ -436,7 +436,7 @@ namespace flex
 	{
 		// TODO: Update chains properly!?
 
-		if (gameObject->GetTypeID() == SID("cart"))
+		if (gameObject->GetTypeID() == BaseCartSID)
 		{
 			BaseCart* cart = (BaseCart*)gameObject;
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)

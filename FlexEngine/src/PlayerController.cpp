@@ -391,8 +391,8 @@ namespace flex
 					// Toggle interaction when already interacting
 					GameObject* heldItemLeftHand = m_Player->heldItemLeftHand.Get();
 					GameObject* heldItemRightHand = m_Player->heldItemRightHand.Get();
-					bool bPlaceWireLeft = bPlaceItemLeft && heldItemLeftHand->GetTypeID() == SID("wire plug");
-					bool bPlaceWireRight = bPlaceItemRight && heldItemRightHand->GetTypeID() == SID("wire plug");
+					bool bPlaceWireLeft = bPlaceItemLeft && heldItemLeftHand->GetTypeID() == WirePlugSID;
+					bool bPlaceWireRight = bPlaceItemRight && heldItemRightHand->GetTypeID() == WirePlugSID;
 					if (bPlaceWireLeft || bPlaceWireRight)
 					{
 						WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? heldItemLeftHand : heldItemRightHand);
@@ -411,8 +411,8 @@ namespace flex
 
 							heldItemLeftHand = m_Player->heldItemLeftHand.Get();
 							heldItemRightHand = m_Player->heldItemRightHand.Get();
-							if ((heldItemLeftHand == nullptr || heldItemLeftHand->GetTypeID() != SID("wire plug")) &&
-								(heldItemRightHand == nullptr || heldItemRightHand->GetTypeID() != SID("wire plug")))
+							if ((heldItemLeftHand == nullptr || heldItemLeftHand->GetTypeID() != WirePlugSID) &&
+								(heldItemRightHand == nullptr || heldItemRightHand->GetTypeID() != WirePlugSID))
 							{
 								m_PlacingWire = nullptr;
 							}
@@ -430,12 +430,12 @@ namespace flex
 
 						switch (nearbyInteractable->GetTypeID())
 						{
-						case SID("socket"):
-						case SID("wire plug"):
+						case SocketSID:
+						case WirePlugSID:
 						{
 							WirePlug* wirePlugInteractingWith = nullptr;
 
-							if (nearbyInteractable->GetTypeID() == SID("socket"))
+							if (nearbyInteractable->GetTypeID() == SocketSID)
 							{
 								// Interacting with full socket, unplug wire
 								Socket* socket = (Socket*)nearbyInteractable;
@@ -492,17 +492,17 @@ namespace flex
 								}
 							}
 						} break;
-						case SID("terminal"):
+						case TerminalSID:
 						{
 							Terminal* terminal = (Terminal*)nearestInteractable;
 							m_Player->SetInteractingWithTerminal(terminal);
 						} break;
-						case SID("speaker"):
+						case SpeakerSID:
 						{
 							Speaker* speaker = (Speaker*)nearestInteractable;
 							speaker->TogglePlaying();
 						} break;
-						case SID("miner"):
+						case MineralDepositSID:
 						{
 							//Miner* miner = (Miner*)nearestInteractable;
 							if (!m_Player->bInventoryShowing)
@@ -636,7 +636,7 @@ namespace flex
 			if (m_PlacingWire == nullptr)
 			{
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
-				m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(SID("wire"), currentScene->GetUniqueObjectName("wire_", 3));
+				m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
 
 				Transform* playerTransform = m_Player->GetTransform();
 				Transform* wireTransform = m_PlacingWire->GetTransform();
@@ -667,7 +667,7 @@ namespace flex
 		if (m_Player->objectInteractingWithID.IsValid())
 		{
 			GameObject* objectInteractingWith = m_Player->objectInteractingWithID.Get();
-			if (objectInteractingWith->GetTypeID() == SID("valve"))
+			if (objectInteractingWith->GetTypeID() == ValveSID)
 			{
 				Valve* valve = (Valve*)objectInteractingWith;
 
@@ -872,7 +872,7 @@ namespace flex
 			else
 			{
 				if (!m_Player->terminalInteractingWithID.IsValid() &&
-					!m_Player->ridingVehicleID.IsValid() && 
+					!m_Player->ridingVehicleID.IsValid() &&
 					!m_Player->IsInventoryShowing())
 				{
 					real moveAcceleration = TWEAKABLE(80000.0f);

@@ -176,7 +176,7 @@ namespace flex
 		std::string* optionalName /* = nullptr */,
 		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
 	{
-		if (parent != nullptr && (parent->GetTypeID() == SID("directional light")))
+		if (parent != nullptr && (parent->GetTypeID() == DirectionalLightSID))
 		{
 			PrintError("Attempted to copy directional light\n");
 			return nullptr;
@@ -336,39 +336,39 @@ namespace flex
 	{
 		switch (gameObjectTypeID)
 		{
-		case SID("skybox"): return new Skybox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("reflection probe"): return new ReflectionProbe(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("valve"): return new Valve(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("rising block"): return new RisingBlock(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("glass pane"): return new GlassPane(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("point light"): return new PointLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("spot light"): return new SpotLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("area light"): return new AreaLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("empty cart"): return new EmptyCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("engine cart"): return new EngineCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("battery"): return new Battery(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("terminal"): return new Terminal(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("gerstner wave"): return new GerstnerWave(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("blocks"): return new Blocks(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("particle system"): return new ParticleSystem(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("terrain generator"): return new TerrainGenerator(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("wire"): return new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("wire plug"): return new WirePlug(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("socket"): return new Socket(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("spring"): return new SpringObject(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("soft body"): return new SoftBody(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("vehicle"): return new Vehicle(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("road"): return new Road(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("headlamp"): return new HeadLamp(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("power pole"): return new PowerPole(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("mineral deposit"): return new MineralDeposit(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("miner"): return new Miner(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("speaker"): return new Speaker(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
-		case SID("player"):
+		case SkyboxSID: return new Skybox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case ReflectionProbeSID: return new ReflectionProbe(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case ValveSID: return new Valve(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case RisingBlockSID: return new RisingBlock(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case GlassPaneSID: return new GlassPane(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case PointLightSID: return new PointLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SpotLightSID: return new SpotLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case AreaLightSID: return new AreaLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case DirectionalLightSID: return new DirectionalLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case EmptyCartSID: return new EmptyCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case EngineCartSID: return new EngineCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case MobileLiquidBoxSID: return new MobileLiquidBox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case BatterySID: return new Battery(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case TerminalSID: return new Terminal(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case GerstnerWaveSID: return new GerstnerWave(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case BlocksSID: return new Blocks(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case ParticleSystemSID: return new ParticleSystem(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case TerrainGeneratorSID: return new TerrainGenerator(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case WireSID: return new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case WirePlugSID: return new WirePlug(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SocketSID: return new Socket(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SpringObjectSID: return new SpringObject(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SoftBodySID: return new SoftBody(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case VehicleSID: return new Vehicle(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case RoadSID: return new Road(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SolarPanelSID: return new SolarPanel(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case HeadLampSID: return new HeadLamp(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case PowerPoleSID: return new PowerPole(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case MinerSID: return new Miner(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SpeakerSID: return new Speaker(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID);
+		case PlayerSID:
 		{
 			PrintError("Player was serialized to scene file!\n");
 		} break;
@@ -425,7 +425,7 @@ namespace flex
 			child->PostInitialize();
 		}
 
-		GetChildrenOfType(SID("socket"), false, sockets);
+		GetChildrenOfType(SocketSID, false, sockets);
 		outputSignals.resize((u32)sockets.size());
 	}
 
@@ -1837,7 +1837,7 @@ namespace flex
 
 	bool GameObject::IsWearable() const
 	{
-		return m_TypeID == SID("headlamp");
+		return m_TypeID == HeadLampSID;
 	}
 
 	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
@@ -2308,7 +2308,7 @@ namespace flex
 			childTransform->SetWorldTransform(childWorldTransform);
 		}
 
-		if (child->GetTypeID() == SID("socket"))
+		if (child->GetTypeID() == SocketSID)
 		{
 			Socket* socket = (Socket*)child;
 			socket->slotIdx = (i32)sockets.size();
@@ -2821,7 +2821,7 @@ namespace flex
 	{
 		overlappingObjects.push_back(other);
 
-		if (m_TypeID != SID("player"))
+		if (m_TypeID != PlayerSID)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
@@ -2845,7 +2845,7 @@ namespace flex
 			}
 		}
 
-		if (m_TypeID != SID("player"))
+		if (m_TypeID != PlayerSID)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
@@ -2856,7 +2856,7 @@ namespace flex
 	}
 
 	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("valve"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, ValveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		// TODO: Set m_bSerializeMesh to false here?
 
@@ -3065,7 +3065,7 @@ namespace flex
 	}
 
 	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("rising block"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, RisingBlockSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 
@@ -3233,7 +3233,7 @@ namespace flex
 	}
 
 	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("glass pane"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, GlassPaneSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 
@@ -3304,7 +3304,7 @@ namespace flex
 	}
 
 	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("reflection probe"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, ReflectionProbeSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 	}
 
@@ -3334,7 +3334,7 @@ namespace flex
 	}
 
 	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("skybox"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SkyboxSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		SetCastsShadow(false);
 		m_bSerializeMesh = false;
@@ -3389,7 +3389,7 @@ namespace flex
 	}
 
 	DroppedItem::DroppedItem(const PrefabID& prefabID, i32 stackSize) :
-		GameObject("", SID("dropped item"), InvalidGameObjectID),
+		GameObject("", DroppedItemSID, InvalidGameObjectID),
 		prefabID(prefabID),
 		stackSize(stackSize)
 	{
@@ -3400,7 +3400,7 @@ namespace flex
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
-		GameObject* child = new GameObject("dropped item child", SID("object"), InvalidGameObjectID);
+		GameObject* child = new GameObject("dropped item child", BaseObjectSID, InvalidGameObjectID);
 		child->SetSerializable(false);
 
 		if (prefabTemplate->GetMesh() != nullptr)
@@ -3483,7 +3483,7 @@ namespace flex
 	}
 
 	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("directional light"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, DirectionalLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		data.enabled = m_bVisible ? 1 : 0;
 		data.dir = VEC3_RIGHT;
@@ -3696,7 +3696,7 @@ namespace flex
 	}
 
 	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("point light"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, PointLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
@@ -3908,7 +3908,7 @@ namespace flex
 	}
 
 	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("spot light"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SpotLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
@@ -4126,7 +4126,7 @@ namespace flex
 	}
 
 	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("area light"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, AreaLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.colour = VEC3_ONE;
@@ -4632,7 +4632,7 @@ namespace flex
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
 		bool bPrefabTemplate /* = false */) :
-		BaseCart(name, SID("empty cart"), gameObjectID, BaseCart::emptyCartMeshName, prefabIDLoadedFrom, bPrefabTemplate)
+		BaseCart(name, EmptyCartSID, gameObjectID, BaseCart::emptyCartMeshName, prefabIDLoadedFrom, bPrefabTemplate)
 	{
 	}
 
@@ -4663,7 +4663,7 @@ namespace flex
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
 		bool bPrefabTemplate /* = false */) :
-		BaseCart(name, SID("engine cart"), gameObjectID, engineMeshName, prefabIDLoadedFrom, bPrefabTemplate)
+		BaseCart(name, EngineCartSID, gameObjectID, engineMeshName, prefabIDLoadedFrom, bPrefabTemplate)
 	{
 		// TODO: Serialize and expose in ImGui
 		m_bItemizable = true;
@@ -4794,7 +4794,7 @@ namespace flex
 	}
 
 	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("mobile liquid box"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, MobileLiquidBoxSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
@@ -4832,7 +4832,7 @@ namespace flex
 	{
 		// TODO: Query from CartManager?
 		BaseScene* scene = g_SceneManager->CurrentScene();
-		std::vector<BaseCart*> carts = scene->GetObjectsOfType<BaseCart>(SID("cart"));
+		std::vector<BaseCart*> carts = scene->GetObjectsOfType<BaseCart>(BaseCartSID);
 		Player* player = scene->GetPlayer(0);
 		if (player != nullptr)
 		{
@@ -4878,7 +4878,7 @@ namespace flex
 	}
 
 	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("battery"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, BatterySID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 
@@ -4977,7 +4977,7 @@ namespace flex
 	}
 
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("gerstner wave"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, GerstnerWaveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
@@ -5011,7 +5011,7 @@ namespace flex
 		bobberTarget = Spring<real>(0.0f);
 		bobberTarget.DR = 2.5f;
 		bobberTarget.UAF = 40.0f;
-		bobber = new GameObject("Bobber", SID("object"));
+		bobber = new GameObject("Bobber", BaseObjectSID);
 		bobber->SetSerializable(false);
 		MaterialID bobberMatID = InvalidMaterialID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", bobberMatID))
@@ -6513,7 +6513,7 @@ namespace flex
 	}
 
 	Blocks::Blocks(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("blocks"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, BlocksSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.shaderName = "pbr";
@@ -6535,7 +6535,7 @@ namespace flex
 		{
 			for (i32 z = 0; z < count; ++z)
 			{
-				GameObject* obj = new GameObject("block", SID("object"));
+				GameObject* obj = new GameObject("block", BaseObjectSID);
 				obj->SetMesh(new Mesh(obj));
 				obj->GetMesh()->LoadFromFile(MESH_DIRECTORY "cube.glb", PickRandomFrom(matIDs));
 				AddChild(obj);
@@ -6549,7 +6549,7 @@ namespace flex
 	}
 
 	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("wire"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, WireSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
@@ -6961,7 +6961,7 @@ namespace flex
 	}
 
 	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("wire plug"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, WirePlugSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 
@@ -7041,7 +7041,7 @@ namespace flex
 	}
 
 	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("socket"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SocketSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 
@@ -7120,7 +7120,7 @@ namespace flex
 	}
 
 	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("terminal"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+		GameObject(name, TerminalSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
 		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
 		cursor(0, 0)
 	{
@@ -8440,7 +8440,7 @@ namespace flex
 	}
 
 	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("particle system"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, ParticleSystemSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		PropertyCollection* collection = RegisterPropertyCollection();
 		collection->RegisterProperty("scale", &scale)
@@ -8628,7 +8628,7 @@ namespace flex
 	}
 
 	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("terrain generator"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+		GameObject(name, TerrainGeneratorSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
@@ -10862,7 +10862,7 @@ namespace flex
 	// ---
 
 	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("spring"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SpringObjectSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
@@ -10912,7 +10912,7 @@ namespace flex
 
 		if (m_bSimulateTarget)
 		{
-			m_OriginTransform = new GameObject("Spring origin", SID("object"));
+			m_OriginTransform = new GameObject("Spring origin", BaseObjectSID);
 			m_OriginTransform->SetSerializable(false);
 			m_OriginTransform->SetVisibleInSceneExplorer(false);
 			AddChild(m_OriginTransform);
@@ -10989,7 +10989,7 @@ namespace flex
 			m_SpringSim->Initialize();
 			m_SpringSim->PostInitialize();
 
-			m_Bobber = new GameObject("Spring bobber", SID("object"));
+			m_Bobber = new GameObject("Spring bobber", BaseObjectSID);
 			m_Bobber->SetSerializable(false);
 			m_Bobber->SetVisibleInSceneExplorer(false);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
@@ -10999,7 +10999,7 @@ namespace flex
 		}
 		else
 		{
-			m_Target = new GameObject("Spring target", SID("object"));
+			m_Target = new GameObject("Spring target", BaseObjectSID);
 			m_Target->SetSerializable(false);
 			m_Target->GetTransform()->SetWorldPosition(initialTargetPos);
 			AddSibling(m_Target);
@@ -11188,7 +11188,7 @@ namespace flex
 	}
 
 	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("soft body"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+		GameObject(name, SoftBodySID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
 		PropertyCollection* collection = RegisterPropertyCollection();
@@ -12076,7 +12076,7 @@ namespace flex
 
 		if (ImGui::Checkbox("Render wireframe", &m_bRenderWireframe))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_bRenderWireframe = m_bRenderWireframe;
@@ -12085,7 +12085,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Damping", &m_Damping, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_Damping = m_Damping;
@@ -12094,7 +12094,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Stiffness", &m_Stiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)
@@ -12109,7 +12109,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Bending stiffness", &m_BendingStiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)
@@ -12175,7 +12175,7 @@ namespace flex
 	}
 
 	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("vehicle"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+		GameObject(name, VehicleSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
 		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
 	{
 		m_bInteractable = true;
@@ -12246,8 +12246,8 @@ namespace flex
 		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
 		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
 		if (brakeLightL != nullptr && brakeLightR != nullptr &&
-			brakeLightL->GetTypeID() == SID("spot light") &&
-			brakeLightR->GetTypeID() == SID("spot light"))
+			brakeLightL->GetTypeID() == SpotLightSID &&
+			brakeLightR->GetTypeID() == SpotLightSID)
 		{
 			((SpotLight*)brakeLightL)->SetVisible(false, true);
 			((SpotLight*)brakeLightR)->SetVisible(false, true);
@@ -12444,8 +12444,8 @@ namespace flex
 		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
 		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
 		if (brakeLightL != nullptr && brakeLightR != nullptr &&
-			brakeLightL->GetTypeID() == SID("spot light") &&
-			brakeLightR->GetTypeID() == SID("spot light"))
+			brakeLightL->GetTypeID() == SpotLightSID &&
+			brakeLightR->GetTypeID() == SpotLightSID)
 		{
 			((SpotLight*)brakeLightL)->SetVisible(bBraking, true);
 			((SpotLight*)brakeLightR)->SetVisible(bBraking, true);
@@ -12945,7 +12945,7 @@ namespace flex
 	}
 
 	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("road"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, RoadSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bSerializeMesh = false;
 		m_bSerializeMaterial = false;
@@ -13319,7 +13319,7 @@ namespace flex
 	}
 
 	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("solar panel"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SolarPanelSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 	}
@@ -13346,13 +13346,13 @@ namespace flex
 	}
 
 	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("headlamp"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, HeadLampSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 	}
 
 	PowerPole::PowerPole(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("power pole"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, PowerPoleSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 	}
 
@@ -13393,7 +13393,7 @@ namespace flex
 	}
 
 	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("mineral deposit"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, MineralDepositSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bSerializeMesh = false;
 
@@ -13570,7 +13570,7 @@ namespace flex
 	}
 
 	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("miner"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+		GameObject(name, MinerSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
 		m_MineTimer(1.0f)
 	{
 		m_bInteractable = true;
@@ -13598,7 +13598,7 @@ namespace flex
 		{
 			// TODO: Only search every second or so rather than every frame
 			std::vector<Pair<MineralDeposit*, real>> nearbyDeposits;
-			if (g_SceneManager->CurrentScene()->GetObjectsInRadius<MineralDeposit>(m_Transform.GetWorldPosition(), m_MineRadius, SID("mineral deposit"), nearbyDeposits))
+			if (g_SceneManager->CurrentScene()->GetObjectsInRadius<MineralDeposit>(m_Transform.GetWorldPosition(), m_MineRadius, MineralDepositSID, nearbyDeposits))
 			{
 				for (const Pair<MineralDeposit*, real>& mineralDepositPair : nearbyDeposits)
 				{
@@ -13850,7 +13850,7 @@ namespace flex
 	}
 
 	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SID("speaker"), gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+		GameObject(name, SpeakerSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 

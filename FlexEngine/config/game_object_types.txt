@@ -10,6 +10,7 @@ directional light
 point light
 reflection probe
 rising block
+empty cart
 engine cart
 skybox
 terminal
@@ -25,7 +26,6 @@ mobile liquid box
 object
 road
 wire
-cart
 particle system
 terrain generator
 solar panel

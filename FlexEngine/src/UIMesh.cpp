@@ -342,7 +342,7 @@ namespace flex
 			m_Object = nullptr;
 		}
 
-		m_Object = new GameObject("UI Mesh", SID("object"));
+		m_Object = new GameObject("UI Mesh", BaseObjectSID);
 		m_Object->SetSerializable(false);
 		m_Object->SetVisibleInSceneExplorer(false);
 		m_Object->SetCastsShadow(false);

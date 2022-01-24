@@ -89,6 +89,7 @@ namespace flex
 		} userData;
 	};
 
+	static constexpr StringID BaseObjectSID = SID("object");
 	class GameObject
 	{
 	public:
@@ -442,8 +443,11 @@ namespace flex
 
 	};
 
+	//
 	// Child classes
+	//
 
+	static constexpr StringID DroppedItemSID = SID("dropped item");
 	class DroppedItem final : public GameObject
 	{
 	public:
@@ -468,6 +472,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID DirectionalLightSID = SID("directional light");
 	class DirectionalLight final : public GameObject
 	{
 	public:
@@ -492,6 +497,7 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID PointLightSID = SID("point light");
 	class PointLight final : public GameObject
 	{
 	public:
@@ -520,6 +526,7 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID SpotLightSID = SID("spot light");
 	class SpotLight final : public GameObject
 	{
 	public:
@@ -548,6 +555,7 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID AreaLightSID = SID("area light");
 	class AreaLight final : public GameObject
 	{
 	public:
@@ -579,6 +587,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID ValveSID = SID("valve");
 	class Valve final : public GameObject
 	{
 	public:
@@ -620,6 +629,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID RisingBlockSID = SID("rising block");
 	class RisingBlock final : public GameObject
 	{
 	public:
@@ -654,6 +664,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID GlassPaneSID = SID("glass pane");
 	class GlassPane final : public GameObject
 	{
 	public:
@@ -673,6 +684,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID ReflectionProbeSID = SID("reflection probe");
 	class ReflectionProbe final : public GameObject
 	{
 	public:
@@ -689,6 +701,7 @@ namespace flex
 		MaterialID captureMatID = 0;
 	};
 
+	static constexpr StringID SkyboxSID = SID("skybox");
 	class Skybox final : public GameObject
 	{
 	public:
@@ -705,6 +718,7 @@ namespace flex
 
 	class EngineCart;
 
+	static constexpr StringID BaseCartSID = SID("base cart");
 	class BaseCart : public GameObject
 	{
 	public:
@@ -755,6 +769,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID EmptyCartSID = SID("empty cart");
 	class EmptyCart : public BaseCart
 	{
 	public:
@@ -771,6 +786,8 @@ namespace flex
 
 	};
 
+
+	static constexpr StringID EngineCartSID = SID("engine cart");
 	class EngineCart : public BaseCart
 	{
 	public:
@@ -804,6 +821,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID MobileLiquidBoxSID = SID("mobile liquid box");
 	class MobileLiquidBox final : public GameObject
 	{
 	public:
@@ -825,6 +843,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID BatterySID = SID("battery");
 	class Battery final : public GameObject
 	{
 	public:
@@ -854,6 +873,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID GerstnerWaveSID = SID("gerstner wave");
 	class GerstnerWave final : public GameObject
 	{
 	public:
@@ -1030,6 +1050,7 @@ namespace flex
 	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
 	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
+	static constexpr StringID BlocksSID = SID("blocks");
 	class Blocks final : public GameObject
 	{
 	public:
@@ -1040,6 +1061,7 @@ namespace flex
 	};
 
 	// Connects together devices to transmit information & power
+	static constexpr StringID WireSID = SID("wire");
 	class Wire final : public GameObject
 	{
 	public:
@@ -1092,6 +1114,7 @@ namespace flex
 	};
 
 	// End of wire - the part you actually interact with
+	static constexpr StringID WirePlugSID = SID("wire plug");
 	class WirePlug final : public GameObject
 	{
 	public:
@@ -1114,6 +1137,7 @@ namespace flex
 	};
 
 	// Connect wires to objects
+	static constexpr StringID SocketSID = SID("socket");
 	class Socket final : public GameObject
 	{
 	public:
@@ -1131,6 +1155,7 @@ namespace flex
 		i32 slotIdx = 0;
 	};
 
+	static constexpr StringID TerminalSID = SID("terminal");
 	class Terminal final : public GameObject
 	{
 	public:
@@ -1223,6 +1248,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID ParticleSystemSID = SID("particle system");
 	class ParticleSystem final : public GameObject
 	{
 	public:
@@ -1295,6 +1321,7 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(NoiseFunctionTypeNames) == (u32)NoiseFunction::Type::_NONE + 1, "NoiseFunctionTypeNames length must match NoiseFunction::Type enum");
 
+	static constexpr StringID TerrainGeneratorSID = SID("terrain generator");
 	class TerrainGenerator final : public GameObject
 	{
 	public:
@@ -1461,6 +1488,7 @@ namespace flex
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
 	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);
 
+	static constexpr StringID SpringObjectSID = SID("spring");
 	class SpringObject final : public GameObject
 	{
 	public:
@@ -1583,6 +1611,7 @@ namespace flex
 		i32 pointIndices[3];
 	};
 
+	static constexpr StringID SoftBodySID = SID("soft body");
 	class SoftBody final : public GameObject
 	{
 	public:
@@ -1656,6 +1685,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID VehicleSID = SID("vehicle");
 	class Vehicle final : public GameObject
 	{
 	public:
@@ -1797,6 +1827,7 @@ namespace flex
 		void ComputeAABB();
 	};
 
+	static constexpr StringID RoadSID = SID("road");
 	class Road : public GameObject
 	{
 	public:
@@ -1840,6 +1871,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID SolarPanelSID = SID("solar panel");
 	class SolarPanel : public GameObject
 	{
 	public:
@@ -1853,6 +1885,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID HeadLampSID = SID("head lamp");
 	class HeadLamp : public GameObject
 	{
 	public:
@@ -1860,6 +1893,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID PowerPoleSID = SID("power pole");
 	class PowerPole : public GameObject
 	{
 	public:
@@ -1907,6 +1941,7 @@ namespace flex
 	const char* MineralTypeToString(MineralType type);
 	MineralType MineralTypeFromString(const char* typeStr);
 
+	static constexpr StringID MineralDepositSID = SID("mineral deposit");
 	class MineralDeposit : public GameObject
 	{
 	public:
@@ -1940,6 +1975,7 @@ namespace flex
 
 	};
 
+	static constexpr StringID MinerSID = SID("miner");
 	class Miner : public GameObject
 	{
 	public:
@@ -1988,6 +2024,7 @@ namespace flex
 		glm::vec4 laserColour;
 	};
 
+	static constexpr StringID SpeakerSID = SID("speaker");
 	class Speaker : public GameObject
 	{
 	public:
