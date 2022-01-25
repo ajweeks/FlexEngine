@@ -619,7 +619,7 @@ namespace flex
 		{
 			Source& source = s_Sources[i];
 
-			if (source.fadeDurationRemaining > 0.0f)
+			if (s_Sources[i].source != InvalidAudioSourceID && source.fadeDurationRemaining > 0.0f)
 			{
 				real gain;
 
@@ -639,6 +639,17 @@ namespace flex
 					gain = glm::clamp(source.fadeDurationRemaining / source.fadeDuration, 0.0f, 1.0f);
 				}
 				SetSourceGain((AudioSourceID)i, gain);
+			}
+		}
+	}
+
+	void AudioManager::StopAllSources()
+	{
+		for (u32 i = 0; i < (u32)s_Sources.size(); ++i)
+		{
+			if (s_Sources[i].source != InvalidAudioSourceID)
+			{
+				StopSource(i);
 			}
 		}
 	}
@@ -965,7 +976,7 @@ namespace flex
 
 	bool AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
 			return false;
@@ -992,7 +1003,7 @@ namespace flex
 
 	bool AudioManager::PlaySourceAtOffset(AudioSourceID sourceID, real t)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
 			return false;
@@ -1009,7 +1020,7 @@ namespace flex
 
 	bool AudioManager::PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS, bool bForceRestart /* = true */)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
 			return false;
@@ -1021,7 +1032,7 @@ namespace flex
 
 	bool AudioManager::PauseSource(AudioSourceID sourceID)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to pause invalid source %u\n", (u32)sourceID);
 			return false;
@@ -1041,7 +1052,7 @@ namespace flex
 
 	bool AudioManager::StopSource(AudioSourceID sourceID)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to stop invalid source %u\n", (u32)sourceID);
 			return false;

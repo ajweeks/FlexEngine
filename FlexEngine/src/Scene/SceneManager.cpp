@@ -59,6 +59,8 @@ namespace flex
 			g_Renderer->OnPreSceneChange();
 		}
 
+		AudioManager::StopAllSources();
+
 		// Any modifications will now be lost, so all prefabs will be clean again
 		g_ResourceManager->SetAllPrefabsDirty(false);
 

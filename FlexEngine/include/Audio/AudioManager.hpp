@@ -200,6 +200,8 @@ namespace flex
 		static void Destroy();
 		static void Update();
 
+		static void StopAllSources();
+
 		static real NoteToFrequencyHz(i32 note);
 
 		static AudioSourceID SynthesizeSound(sec length, real freq);
