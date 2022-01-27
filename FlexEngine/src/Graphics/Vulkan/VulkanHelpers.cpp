@@ -1309,11 +1309,6 @@ namespace flex
 			return bResult;
 		}
 
-		void VulkanTexture::Build(void* data /* = nullptr */)
-		{
-			FLEX_UNUSED(data);
-		}
-
 		VkFormat VulkanTexture::CalculateFormat()
 		{
 			if (channelCount == 4)
@@ -2389,20 +2384,10 @@ namespace flex
 		{
 		}
 
-		GraphicsPipeline::GraphicsPipeline()
-		{
-		}
-
 		GraphicsPipeline::GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice) :
 			pipeline(vulkanDevice, vkDestroyPipeline),
 			layout(vulkanDevice, vkDestroyPipelineLayout)
 		{
-		}
-
-		void GraphicsPipeline::replace()
-		{
-			pipeline.replace();
-			layout.replace();
 		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)

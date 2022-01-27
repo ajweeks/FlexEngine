@@ -314,9 +314,6 @@ namespace flex
 
 			bool SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat);
 
-			// TODO: EZ: Remove
-			void Build(void* data = nullptr);
-
 			/*
 			 * Creates image, image view, and sampler based on the texture at relativeFilePath
 			 * Returns size of image in bytes
@@ -491,8 +488,8 @@ namespace flex
 
 		struct VulkanMaterial final : public Material
 		{
-			VulkanMaterial() {};
-			virtual ~VulkanMaterial() {};
+			VulkanMaterial() = default;
+			virtual ~VulkanMaterial() = default;
 
 			VulkanMaterial(const VulkanMaterial&) = delete;
 			VulkanMaterial(const VulkanMaterial&&) = delete;
@@ -517,10 +514,7 @@ namespace flex
 
 		struct GraphicsPipeline
 		{
-			GraphicsPipeline();
 			GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice);
-
-			void replace();
 
 			VDeleter<VkPipeline> pipeline;
 			VDeleter<VkPipelineLayout> layout;
