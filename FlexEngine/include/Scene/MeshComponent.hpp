@@ -37,7 +37,7 @@ namespace flex
 		void PostInitialize();
 
 		void Update();
-		void UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData);
+		void UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const Array<u32>& indexData);
 
 		void Destroy();
 		void SetOwner(Mesh* owner);
@@ -69,7 +69,7 @@ namespace flex
 
 		static MeshComponent* LoadFromMemory(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
+			const Array<u32>& indices,
 			MaterialID materialID,
 			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true,
@@ -77,7 +77,7 @@ namespace flex
 
 		static MeshComponent* LoadFromMemoryDynamic(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
+			const Array<u32>& indices,
 			MaterialID materialID,
 			u32 initialMaxVertexCount,
 			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
@@ -102,7 +102,7 @@ namespace flex
 		static PrefabShape StringToPrefabShape(const std::string& prefabName);
 		static std::string PrefabShapeToString(PrefabShape shape);
 
-		static bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices);
+		static bool CalculateTangents(VertexBufferDataCreateInfo& createInfo, const Array<u32>& indices);
 
 		PrefabShape GetShape() const;
 		Mesh* GetOwner();
@@ -112,7 +112,7 @@ namespace flex
 
 		VertexBufferData* GetVertexBufferData();
 		u32* GetIndexBufferUnsafePtr();
-		std::vector<u32> GetIndexBufferCopy();
+		Array<u32> GetIndexBufferCopy();
 		u32* GetIndexBufferDataPtr();
 		u32 GetIndexCount();
 
@@ -129,7 +129,7 @@ namespace flex
 	private:
 		static MeshComponent* LoadFromMemoryInternal(Mesh* owningMesh,
 			const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
+			const Array<u32>& indices,
 			MaterialID materialID,
 			bool bDyanmic,
 			u32 initialMaxDynamicVertexCount,
@@ -174,7 +174,7 @@ namespace flex
 		VertexAttributes m_RequiredAttributes = (u32)VertexAttribute::_NONE;
 		VertexBufferData m_VertexBufferData = {};
 
-		std::vector<u32> m_Indices;
+		Array<u32> m_Indices;
 
 	};
 } // namespace flex

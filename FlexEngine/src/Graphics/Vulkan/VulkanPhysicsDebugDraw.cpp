@@ -143,7 +143,7 @@ namespace flex
 
 				m_VertexBufferCreateInfo.positions_3D.clear();
 				m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
-				indexBuffer.clear();
+				indexBuffer.Clear();
 
 				if (lineCount > 0)
 				{
@@ -160,12 +160,12 @@ namespace flex
 
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
 					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);
-					indexBuffer.resize(numVerts);
+					indexBuffer.Realloc(numVerts);
 
 					i32 i = 0;
 					glm::vec3* posData = m_VertexBufferCreateInfo.positions_3D.data();
 					glm::vec4* colData = m_VertexBufferCreateInfo.colours_R32G32B32A32.data();
-					u32* idxData = indexBuffer.data();
+					u32* idxData = indexBuffer.data;
 					for (u32 li = 0; li < lineCount; ++li)
 					{
 						memcpy(posData + i, m_LineSegments[li].start, sizeof(real) * 3);
@@ -204,7 +204,7 @@ namespace flex
 			createInfo.materialID = m_MaterialID;
 			createInfo.bEditorObject = true;
 			createInfo.bIndexed = true;
-			createInfo.indices = &indexBuffer;
+			createInfo.indices = indexBuffer;
 			m_Object = new GameObject("Vk Physics Debug Draw", BaseObjectSID);
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
@@ -228,7 +228,7 @@ namespace flex
 		{
 			m_VertexBufferCreateInfo.positions_3D.clear();
 			m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();
-			indexBuffer.clear();
+			indexBuffer.Clear();
 		}
 	} // namespace vk
 } // namespace flex

@@ -5187,14 +5187,14 @@ namespace flex
 		UpdateWaveVertexData();
 
 		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
-		if (!m_Indices.empty())
+		if (!m_Indices.Empty())
 		{
 			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
 			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
 		}
 
 		// Bobber
-		if (!m_Indices.empty())
+		if (!m_Indices.Empty())
 		{
 			const glm::vec3 wavePos = m_Transform.GetWorldPosition();
 			glm::vec3 bobberTargetPos = QueryHeightFieldFromVerts(m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position);
@@ -5370,9 +5370,9 @@ namespace flex
 		DEBUG_lastUsedVertCount = vertCount;
 
 		// Resize & regenerate index buffer
-		if ((i32)m_Indices.size() != indexCount)
+		if ((i32)m_Indices.Size() != indexCount)
 		{
-			m_Indices.resize(indexCount);
+			m_Indices.Realloc(indexCount);
 			i32 i = 0;
 			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 			{
@@ -6705,7 +6705,7 @@ namespace flex
 		UpdateMesh();
 
 		MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
-		if (!m_Indices.empty())
+		if (!m_Indices.Empty())
 		{
 			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
 			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
@@ -7005,8 +7005,7 @@ namespace flex
 	{
 		u32 numIndices = (numPoints - 1) * numRadialPoints * 6;
 
-		m_Indices.clear();
-		m_Indices.resize(numIndices);
+		m_Indices.Realloc(numIndices);
 
 		i32 indexIndex = 0;
 		for (i32 i = 0; i < numPoints - 1; ++i)
@@ -10002,8 +10001,8 @@ namespace flex
 				vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
 				vertexBufferCreateInfo.normals.resize(vertexCount);
 
-				static std::vector<u32> indices;
-				indices.resize(indexCount);
+				static Array<u32> indices;
+				indices.Realloc(indexCount);
 
 				real quadSize = m_ChunkSize / (m_VertCountPerChunkAxis - 1);
 
@@ -10018,7 +10017,7 @@ namespace flex
 					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
-					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
+					memcpy((void*)indices.data, (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
 
 					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
 					auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
@@ -11605,7 +11604,7 @@ namespace flex
 				m_MeshVertexBufferCreateInfo.positions_3D[i] = points[i]->pos - worldPos;
 			}
 
-			std::vector<u32> indices = m_MeshComponent->GetIndexBufferCopy();
+			Array<u32> indices = m_MeshComponent->GetIndexBufferCopy();
 			MeshComponent::CalculateTangents(m_MeshVertexBufferCreateInfo, indices);
 
 			//for (u32 i = 0; i <(u32)m_MeshVertexBufferCreateInfo.normals.size(); ++i)
@@ -11798,7 +11797,7 @@ namespace flex
 
 			m_MeshComponent = m_Mesh->GetSubMesh(0);
 			VertexBufferData* vertexBufferData = m_MeshComponent->GetVertexBufferData();
-			std::vector<u32> indexData = m_MeshComponent->GetIndexBufferCopy();
+			Array<u32> indexData = m_MeshComponent->GetIndexBufferCopy();
 			std::vector<glm::vec3> posData(vertexBufferData->VertexCount);
 			std::vector<glm::vec2> uvData(vertexBufferData->VertexCount);
 			VertexBufferData::ResizeForPresentAttributes(m_MeshVertexBufferCreateInfo, vertexBufferData->VertexCount);
@@ -11844,15 +11843,15 @@ namespace flex
 					points[i] = new Point(pos, VEC3_ZERO, 1.0f);
 				}
 
-				triangles.resize(indexData.size() / 3);
+				triangles.resize(indexData.Size() / 3);
 				for (u32 i = 0; i < (u32)triangles.size(); ++i)
 				{
 					triangles[i] = new Triangle(indexData[i * 3], indexData[i * 3 + 1], indexData[i * 3 + 2]);
 				}
 
-				constraints.resize(indexData.size() / 3);
+				constraints.resize(indexData.Size() / 3);
 				u32 constraintIndex = 0;
-				for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+				for (u32 i = 0; i < indexData.Size() - 1; i += 3)
 				{
 					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 0], indexData[i + 1], constraintIndex, 0.995f);
 					constraintIndex = AddUniqueDistanceConstraint(indexData[i + 1], indexData[i + 2], constraintIndex, 0.995f);
@@ -11862,7 +11861,7 @@ namespace flex
 				m_FirstBendingConstraintIndex = (i32)constraints.size();
 				m_ShownBendingIndex = m_FirstBendingConstraintIndex;
 
-				for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+				for (u32 i = 0; i < indexData.Size() - 1; i += 3)
 				{
 					i32 index0 = indexData[i + 0];
 					i32 index1 = indexData[i + 1];
@@ -11896,11 +11895,11 @@ namespace flex
 		}
 	}
 
-	bool SoftBody::GetTriangleSharingEdge(const std::vector<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex)
+	bool SoftBody::GetTriangleSharingEdge(const Array<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex)
 	{
 		outOutsideVertIndex = -1;
 
-		for (u32 i = 0; i < (u32)indexData.size() - 1; i += 3)
+		for (u32 i = 0; i < indexData.Size() - 1; i += 3)
 		{
 			i32 index0 = indexData[i + 0];
 			i32 index1 = indexData[i + 1];
@@ -13196,7 +13195,7 @@ namespace flex
 		vertexBufferCreateInfo.normals.reserve(vertexCount);
 		vertexBufferCreateInfo.tangents.reserve(vertexCount);
 
-		std::vector<u32> indices(indexCount);
+		Array<u32> indices(indexCount);
 
 		for (u32 z = 0; z < m_QuadCountPerSegment + 1; ++z)
 		{

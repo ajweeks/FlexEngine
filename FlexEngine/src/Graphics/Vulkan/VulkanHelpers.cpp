@@ -1733,7 +1733,11 @@ namespace flex
 		}
 
 		VulkanRenderObject::VulkanRenderObject(RenderID renderID) :
-			renderID(renderID)
+			renderID(renderID),
+			bIndexed(false),
+			bEditorObject(false),
+			bSetDynamicStates(false),
+			bAllowDynamicBufferShrinking(true)
 		{
 		}
 

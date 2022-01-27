@@ -501,31 +501,30 @@ namespace flex
 
 	// TODO: Move to separate file
 	template<typename T>
-	struct ThreadSafeArray
+	struct ThreadSafeArray final
 	{
-		ThreadSafeArray()
-		{
-		}
+		ThreadSafeArray() = default;
 
 		explicit ThreadSafeArray<T>(u32 inSize)
 		{
 			size = inSize;
-			t = new T[inSize];
+			data = new T[inSize];
 		}
 
 		~ThreadSafeArray()
 		{
-			delete[] t;
+			delete[] data;
+			data = nullptr;
 		}
 
 		volatile T& operator[](u32 index) volatile
 		{
-			return t[index];
+			return data[index];
 		}
 
 		const volatile T& operator[](u32 index) volatile const
 		{
-			return t[index];
+			return data[index];
 		}
 
 		u32 Size() volatile const
@@ -533,8 +532,114 @@ namespace flex
 			return size;
 		}
 
+		u32 size = 0;
+		volatile T* data = nullptr;
+	};
+
+	template<typename T>
+	struct Array final
+	{
+		Array()
+		{
+			size = 0;
+			data = nullptr;
+		}
+
+		explicit Array<T>(u32 inSize)
+		{
+			size = inSize;
+			data = new T[inSize];
+		}
+
+		~Array()
+		{
+			size = 0;
+			delete[] data;
+			data = nullptr;
+		}
+
+		Array& operator=(const Array& rhs)
+		{
+			if (this != &rhs)
+			{
+				size = rhs.size;
+				data = new T[rhs.size];
+				memcpy(data, rhs.data, rhs.size * sizeof(T));
+			}
+			return *this;
+		}
+
+		Array& operator=(Array&& rhs)
+		{
+			if (this != &rhs)
+			{
+				size = rhs.size;
+				data = rhs.data;
+				rhs.size = 0;
+				rhs.data = nullptr;
+			}
+			return *this;
+		}
+
+		Array(const Array& rhs)
+		{
+			if (this != &rhs)
+			{
+				size = rhs.size;
+				data = new T[rhs.size];
+				memcpy(data, rhs.data, rhs.size * sizeof(T));
+			}
+		}
+
+		Array(Array&& rhs)
+		{
+			if (this != &rhs)
+			{
+				size = rhs.size;
+				data = rhs.data;
+				rhs.size = 0;
+				rhs.data = nullptr;
+			}
+		}
+
+		T& operator[](u32 index)
+		{
+			return data[index];
+		}
+
+		const T& operator[](u32 index) const
+		{
+			return data[index];
+		}
+
+		void Clear()
+		{
+			size = 0;
+			delete[] data;
+			data = nullptr;
+		}
+
+		u32 Size() const
+		{
+			return size;
+		}
+
+		bool Empty() const
+		{
+			return size == 0;
+		}
+
+		void Realloc(u32 newSize)
+		{
+			delete[] data;
+
+			size = newSize;
+			data = new T[newSize];
+		}
+
+		T* data;
 		u32 size;
-		volatile T* t = nullptr;
+		u32 padding; // TODO: Use to track usage?
 	};
 
 	struct WaveThreadData

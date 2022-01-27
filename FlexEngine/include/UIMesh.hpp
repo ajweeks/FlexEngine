@@ -27,7 +27,7 @@ namespace flex
 		void DrawArc(const glm::vec2& centerPos, real startAngle, real endAngle, real innerRadius, real thickness, i32 segmentsInFullCircle, const glm::vec4& colour);
 		void DrawPolygon(const std::vector<glm::vec2>& points,
 			const std::vector<glm::vec2>& texCoords,
-			const std::vector<u32>& indices,
+			const Array<u32>& indices,
 			const glm::vec4& colour,
 			const glm::vec2& uvBlendAmount);
 
@@ -50,7 +50,7 @@ namespace flex
 
 		struct DrawData
 		{
-			std::vector<u32> indexBuffer;
+			Array<u32> indexBuffer;
 			VertexBufferDataCreateInfo vertexBufferCreateInfo;
 			bool bInUse = false;
 			glm::vec2 uvBlendAmount;

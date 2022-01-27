@@ -39,7 +39,7 @@ namespace flex
 			// Load from memory fields
 			VertexBufferDataCreateInfo* vertexBufferCreateInfo = nullptr;
 			u32 initialMaxVertexCount = 0;
-			std::vector<u32> indices;
+			Array<u32> indices;
 		};
 
 		Mesh(GameObject* owner);

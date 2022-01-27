@@ -56,7 +56,7 @@ namespace flex
 			virtual void DrawImGuiRendererInfo() override;
 			virtual void DrawImGuiWindows() override;
 
-			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
+			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const Array<u32>& indexData) override;
 			virtual void FreeDynamicVertexData(RenderID renderID) override;
 			virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) override;
 			virtual u32 GetDynamicVertexBufferSize(RenderID renderID) override;

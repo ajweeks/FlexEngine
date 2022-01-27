@@ -86,11 +86,10 @@ namespace flex
 
 		std::vector<glm::vec2> points;
 		std::vector<glm::vec2> texCoords;
-		std::vector<u32> indices;
+		Array<u32> indices(indexCount);
 
 		points.reserve(vertCount);
 		texCoords.reserve(vertCount);
-		indices.reserve(indexCount);
 
 		{
 			points.emplace_back(glm::vec2(bottomLeft.x, bottomLeft.y));
@@ -105,17 +104,17 @@ namespace flex
 		}
 
 		{
-			indices.emplace_back(0);
-			indices.emplace_back(2);
-			indices.emplace_back(1);
+			i32 indexIndex = 0;
+			indices[indexIndex++] = 0;
+			indices[indexIndex++] = 2;
+			indices[indexIndex++] = 1;
 
-			indices.emplace_back(0);
-			indices.emplace_back(1);
-			indices.emplace_back(3);
+			indices[indexIndex++] = 0;
+			indices[indexIndex++] = 1;
+			indices[indexIndex++] = 3;
 		}
 
 		CHECK_EQ((u32)points.size(), vertCount);
-		CHECK_EQ((u32)indices.size(), indexCount);
 
 		glm::vec2 uvBlendAmount(0.5f / width, 0.5f / height);
 
@@ -139,11 +138,12 @@ namespace flex
 
 		std::vector<glm::vec2> points;
 		std::vector<glm::vec2> texCoords;
-		std::vector<u32> indices;
+		Array<u32> indices(indexCount);
 
 		points.reserve(vertCount);
 		texCoords.reserve(vertCount);
-		indices.reserve(indexCount);
+
+		i32 indexIndex = 0;
 
 		for (u32 i = 0; i <= quadCount; ++i)
 		{
@@ -169,28 +169,27 @@ namespace flex
 			u32 indexStart = i * 2;
 			if (radiansPerSegment < 0.0f)
 			{
-				indices.emplace_back(indexStart + 0);
-				indices.emplace_back(indexStart + 1);
-				indices.emplace_back(indexStart + 3);
+				indices[indexIndex++] = indexStart + 0;
+				indices[indexIndex++] = indexStart + 1;
+				indices[indexIndex++] = indexStart + 3;
 
-				indices.emplace_back(indexStart + 0);
-				indices.emplace_back(indexStart + 3);
-				indices.emplace_back(indexStart + 2);
+				indices[indexIndex++] = indexStart + 0;
+				indices[indexIndex++] = indexStart + 3;
+				indices[indexIndex++] = indexStart + 2;
 			}
 			else
 			{
-				indices.emplace_back(indexStart + 0);
-				indices.emplace_back(indexStart + 3);
-				indices.emplace_back(indexStart + 1);
+				indices[indexIndex++] = indexStart + 0;
+				indices[indexIndex++] = indexStart + 3;
+				indices[indexIndex++] = indexStart + 1;
 
-				indices.emplace_back(indexStart + 0);
-				indices.emplace_back(indexStart + 2);
-				indices.emplace_back(indexStart + 3);
+				indices[indexIndex++] = indexStart + 0;
+				indices[indexIndex++] = indexStart + 2;
+				indices[indexIndex++] = indexStart + 3;
 			}
 		}
 
 		CHECK_EQ((u32)points.size(), vertCount);
-		CHECK_EQ((u32)indices.size(), indexCount);
 
 		real width = thickness * windowSize.x; // strip width
 		real height = totalAngle * (innerRadius + thickness * 0.5f) * windowSize.y; // circumference
@@ -208,7 +207,7 @@ namespace flex
 
 	void UIMesh::DrawPolygon(const std::vector<glm::vec2>& points,
 		const std::vector<glm::vec2>& texCoords,
-		const std::vector<u32>& indices,
+		const Array<u32>& indices,
 		const glm::vec4& colour,
 		const glm::vec2& uvBlendAmount)
 	{
@@ -255,7 +254,7 @@ namespace flex
 			createInfo.bEditorObject = true;
 			createInfo.bIndexed = true;
 			createInfo.bAllowDynamicBufferShrinking = false;
-			createInfo.indices = &drawData->indexBuffer;
+			createInfo.indices = drawData->indexBuffer;
 
 			Material* mat = g_Renderer->GetMaterial(m_MaterialID);
 			const VertexAttributes vertexAttributes = g_Renderer->GetShader(mat->shaderID)->vertexAttributes;

@@ -52,7 +52,7 @@ namespace flex
 			MaterialID m_MaterialID = InvalidMaterialID;
 
 			// Per-frame data
-			std::vector<u32> indexBuffer;
+			Array<u32> indexBuffer;
 			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 
 			GameObject* m_Object = nullptr;

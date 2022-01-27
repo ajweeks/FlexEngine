@@ -1239,11 +1239,11 @@ namespace flex
 			renderObject->renderPassOverride = createInfo->renderPassOverride;
 			renderObject->bAllowDynamicBufferShrinking = createInfo->bAllowDynamicBufferShrinking;
 
-			if (createInfo->indices != nullptr)
+			if (!createInfo->indices.Empty())
 			{
 				renderObject->indices = createInfo->indices;
 			}
-			if ((renderObject->indices != nullptr && !renderObject->indices->empty()) || createInfo->bIndexed)
+			if (!renderObject->indices.Empty() || createInfo->bIndexed)
 			{
 				renderObject->bIndexed = true;
 			}
@@ -2330,7 +2330,7 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData)
+		void VulkanRenderer::UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const Array<u32>& indexData)
 		{
 			PROFILE_AUTO("UpdateDynamicVertexData");
 
@@ -2357,7 +2357,7 @@ namespace flex
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
-			const u32 newIndexDataSize = (u32)indexData.size() * sizeof(u32);
+			const u32 newIndexDataSize = (u32)indexData.Size() * sizeof(u32);
 
 			// Initial allocation
 			if (renderObject->dynamicVertexBufferOffset == u64_max)
@@ -2428,7 +2428,7 @@ namespace flex
 			VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
 			VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
 			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertexBufferData->UsedVertexBufferSize);
-			memcpy(indexBuffer->m_Mapped, indexData.data(), newIndexDataSize);
+			memcpy(indexBuffer->m_Mapped, indexData.data, newIndexDataSize);
 			vertexBuffer->Unmap();
 			indexBuffer->Unmap();
 
@@ -3184,7 +3184,7 @@ namespace flex
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &skyboxVertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices.Size(), 1, 0, 0, 0);
 					}
 					else
 					{
@@ -3452,7 +3452,7 @@ namespace flex
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &vertBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices.Size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
@@ -3721,7 +3721,7 @@ namespace flex
 					if (skyboxRenderObject->bIndexed)
 					{
 						vkCmdBindIndexBuffer(cmdBuf, m_StaticIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
-						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
+						vkCmdDrawIndexed(cmdBuf, skyboxRenderObject->indices.Size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
@@ -4965,7 +4965,7 @@ namespace flex
 				BindDescriptorSet(uiMat, dynamicUBOOffset, commandBuffer, pipelineLayout, descSet);
 
 				// TODO: Draw all in single draw call
-				vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+				vkCmdDrawIndexed(commandBuffer, renderObject->indices.Size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 			}
 		}
 
@@ -7171,7 +7171,11 @@ namespace flex
 					!m_Materials[renderObject->materialID]->bDynamic)
 				{
 					renderObject->indexOffset = (u32)indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+					indices.reserve(indices.size() + renderObject->indices.Size());
+					for (u32 i = 0; i < renderObject->indices.Size(); ++i)
+					{
+						indices.emplace_back(renderObject->indices[i]);
+					}
 				}
 			}
 
@@ -7304,7 +7308,11 @@ namespace flex
 					renderObject->gameObject->IsVisible())
 				{
 					renderObject->shadowIndexOffset = (u32)indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+					indices.reserve(indices.size() + renderObject->indices.Size());
+					for (u32 i = 0; i < renderObject->indices.Size(); ++i)
+					{
+						indices.emplace_back(renderObject->indices[i]);
+					}
 				}
 			}
 
@@ -7780,11 +7788,11 @@ namespace flex
 						if (drawCallInfo == nullptr ||
 							!drawCallInfo->bRenderingShadows)
 						{
-							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices.Size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 						}
 						else
 						{
-							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
+							vkCmdDrawIndexed(commandBuffer, renderObject->indices.Size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
 						}
 					}
 					else

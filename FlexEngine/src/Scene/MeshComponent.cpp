@@ -84,7 +84,7 @@ namespace flex
 		}
 	}
 
-	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
+	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const Array<u32>& indexData)
 	{
 		CHECK_NE(renderID, InvalidRenderID);
 		CHECK(!newData.positions_3D.empty() || !newData.positions_2D.empty());
@@ -445,7 +445,7 @@ namespace flex
 		{
 			CHECK_EQ(primitive->indices->type, cgltf_type_scalar);
 			const i32 indexCount = (i32)primitive->indices->count;
-			newMeshComponent->m_Indices.resize(newMeshComponent->m_Indices.size() + indexCount);
+			newMeshComponent->m_Indices.Realloc(newMeshComponent->m_Indices.Size() + indexCount);
 
 			//CHECK_EQ(primitive->indices->buffer_view->type, cgltf_buffer_view_type_indices);
 			CHECK(primitive->indices->component_type == cgltf_component_type_r_8u ||
@@ -491,7 +491,7 @@ namespace flex
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
-		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
+		renderObjectCreateInfo.indices = newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
 		if (bCreateRenderObject)
@@ -514,7 +514,7 @@ namespace flex
 	MeshComponent* MeshComponent::LoadFromMemory(
 		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-		const std::vector<u32>& indices,
+		const Array<u32>& indices,
 		MaterialID materialID,
 		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */,
@@ -526,7 +526,7 @@ namespace flex
 	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
 		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-		const std::vector<u32>& indices,
+		const Array<u32>& indices,
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
 		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
@@ -539,7 +539,7 @@ namespace flex
 	MeshComponent* MeshComponent::LoadFromMemoryInternal(
 		Mesh* owningMesh,
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-		const std::vector<u32>& indices,
+		const Array<u32>& indices,
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
@@ -569,7 +569,7 @@ namespace flex
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
-		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
+		renderObjectCreateInfo.indices = newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 
 		if (bCreateRenderObject)
@@ -1027,16 +1027,18 @@ namespace flex
 			const u32 numVerts = (u32)vertexBufferDataCreateInfo.positions_3D.size();
 
 			// Indices
-			m_Indices.clear();
+			u32 indexCount = meridianCount * 3 + (parallelCount - 2) * 6 + meridianCount * 3;
+			m_Indices.Realloc(indexCount);
 
+			i32 indexIndex = 0;
 			// Top triangles
 			for (u32 i = 0; i < meridianCount; ++i)
 			{
 				u32 a = (u32)i + 1;
 				u32 b = (u32)((i + 1) % meridianCount + 1);
-				m_Indices.push_back(0);
-				m_Indices.push_back(b);
-				m_Indices.push_back(a);
+				m_Indices[indexIndex++] = 0;
+				m_Indices[indexIndex++] = b;
+				m_Indices[indexIndex++] = a;
 			}
 
 			// Center quads
@@ -1050,13 +1052,13 @@ namespace flex
 					u32 a1 = aStart + (i + 1) % meridianCount;
 					u32 b = bStart + i;
 					u32 b1 = bStart + (i + 1) % meridianCount;
-					m_Indices.push_back(a);
-					m_Indices.push_back(a1);
-					m_Indices.push_back(b1);
+					m_Indices[indexIndex++] = a;
+					m_Indices[indexIndex++] = a1;
+					m_Indices[indexIndex++] = b1;
 
-					m_Indices.push_back(a);
-					m_Indices.push_back(b1);
-					m_Indices.push_back(b);
+					m_Indices[indexIndex++] = a;
+					m_Indices[indexIndex++] = b1;
+					m_Indices[indexIndex++] = b;
 				}
 			}
 
@@ -1065,9 +1067,9 @@ namespace flex
 			{
 				u32 a = (u32)(i + meridianCount * (parallelCount - 2) + 1);
 				u32 b = (u32)((i + 1) % meridianCount + meridianCount * (parallelCount - 2) + 1);
-				m_Indices.push_back(numVerts - 1);
-				m_Indices.push_back(a);
-				m_Indices.push_back(b);
+				m_Indices[indexIndex++] = numVerts - 1;
+				m_Indices[indexIndex++] = a;
+				m_Indices[indexIndex++] = b;
 			}
 		} break;
 		case PrefabShape::SKYBOX:
@@ -1147,7 +1149,7 @@ namespace flex
 		m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.indices = m_Indices;
 
 		if (bCreateRenderObject)
 		{
@@ -1179,7 +1181,7 @@ namespace flex
 
 		renderObjectCreateInfo.gameObject = m_OwningMesh->GetOwningGameObject();
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
-		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.indices = m_Indices;
 		renderObjectCreateInfo.materialID = m_MaterialID;
 
 		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
@@ -1313,7 +1315,7 @@ namespace flex
 		return &m_Indices[0];
 	}
 
-	std::vector<u32> MeshComponent::GetIndexBufferCopy()
+	Array<u32> MeshComponent::GetIndexBufferCopy()
 	{
 		return m_Indices;
 	}
@@ -1325,7 +1327,7 @@ namespace flex
 
 	u32 MeshComponent::GetIndexCount()
 	{
-		return (u32)m_Indices.size();
+		return m_Indices.Size();
 	}
 
 	real MeshComponent::GetVertexBufferUsage() const
@@ -1346,11 +1348,8 @@ namespace flex
 		return sphereScale;
 	}
 
-	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
+	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const Array<u32>& indices)
 	{
-		// TODO:
-		FLEX_UNUSED(indices);
-
 		if (createInfo.normals.empty())
 		{
 			PrintError("Can't calculate tangents for mesh which contains no normal data!\n");
@@ -1368,6 +1367,8 @@ namespace flex
 		}
 
 #if 1
+		FLEX_UNUSED(indices);
+
 		for (u32 i = 0; i < createInfo.positions_3D.size() - 2; i += 3)
 		{
 			glm::vec3 p0 = createInfo.positions_3D[i + 0];
@@ -1400,7 +1401,7 @@ namespace flex
 
 #else
 
-		for (u32 i = 0; i < indices.size() - 2; i += 3)
+		for (u32 i = 0; i < indices.Size() - 2; i += 3)
 		{
 			i32 index0 = indices[i + 0];
 			i32 index1 = indices[i + 1];
@@ -1559,9 +1560,9 @@ namespace flex
 		{
 			PrintWarn("Attempted to override vertexBufferData! Ignoring passed in data\n");
 		}
-		if (overrides.indices != nullptr)
+		if (!overrides.indices.Empty())
 		{
-			m_Indices = *overrides.indices;
+			m_Indices = overrides.indices;
 		}
 	}
 } // namespace flex

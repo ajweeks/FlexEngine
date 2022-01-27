@@ -565,19 +565,19 @@ namespace flex
 			VertexBufferData* vertexBufferData = nullptr;
 			u32 vertexOffset = 0;
 
-			bool bIndexed = false;
-			std::vector<u32>* indices = nullptr;
+			bool bIndexed : 1;
+			bool bEditorObject : 1;
+			bool bSetDynamicStates : 1;
+			bool bAllowDynamicBufferShrinking : 1;
+
 			u32 indexOffset = 0;
+			Array<u32> indices;
 
 			u32 shadowVertexOffset = 0;
 			u32 shadowIndexOffset = 0;
 
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
-
-			bool bEditorObject = false;
-			bool bSetDynamicStates = false;
-			bool bAllowDynamicBufferShrinking = true;
 
 			u32 dynamicUBOOffset = 0;
 			u32 dynamicShadowUBOOffset = 0;

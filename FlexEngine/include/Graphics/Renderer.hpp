@@ -113,7 +113,7 @@ namespace flex
 		virtual void DrawImGuiWindows();
 		virtual void DrawImGuiRendererInfo() = 0;
 
-		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
+		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const Array<u32>& indexData) = 0;
 		virtual void FreeDynamicVertexData(RenderID renderID) = 0;
 		virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) = 0;
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;

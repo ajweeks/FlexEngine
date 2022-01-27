@@ -864,7 +864,7 @@ namespace flex
 		MaterialID materialID = InvalidMaterialID;
 
 		VertexBufferData* vertexBufferData = nullptr;
-		std::vector<u32>* indices = nullptr;
+		Array<u32> indices;
 
 		GameObject* gameObject = nullptr;
 

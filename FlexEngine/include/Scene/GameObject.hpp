@@ -1015,7 +1015,7 @@ namespace flex
 		glm::vec3 m_PinnedPos;
 
 		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
-		std::vector<u32> m_Indices;
+		Array<u32> m_Indices;
 
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;
@@ -1092,7 +1092,7 @@ namespace flex
 		void UpdateIndices();
 
 		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
-		std::vector<u32> m_Indices;
+		Array<u32> m_Indices;
 
 	};
 
@@ -1505,7 +1505,7 @@ namespace flex
 		MeshComponent* m_ContractedMesh = nullptr;
 
 		VertexBufferDataCreateInfo m_DynamicVertexBufferCreateInfo;
-		std::vector<u32> m_Indices;
+		Array<u32> m_Indices;
 
 		GameObject* m_Target = nullptr;
 		real m_MinLength = 5.0f;
@@ -1639,7 +1639,7 @@ namespace flex
 		void LoadFromMesh();
 
 		// Outside vert is vert not on shared edge
-		bool GetTriangleSharingEdge(const std::vector<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex);
+		bool GetTriangleSharingEdge(const Array<u32>& indexData, i32 edgeIndex0, i32 edgeIndex1, const Triangle& originalTri, Triangle& outTri, i32& outOutsideVertIndex);
 
 		u32 m_SolverIterationCount;
 		bool m_bPaused = false;
