@@ -1022,7 +1022,8 @@ namespace flex
 			}
 		}
 
-		TextureID texID = g_Renderer->InitializeTextureFromFile(textureFilePath, false, false, false);
+		// TODO: Support other samplers
+		TextureID texID = g_Renderer->InitializeTextureFromFile(textureFilePath, g_Renderer->GetSamplerLinearRepeat(), false, false, false);
 		return texID;
 	}
 
@@ -2211,8 +2212,9 @@ namespace flex
 						}
 						else
 						{
+							// TODO: Support other samplers
 							Print("Importing texture: %s\n", relativeFilePath.c_str());
-							g_Renderer->InitializeTextureFromFile(relativeFilePath, false, false, false);
+							g_Renderer->InitializeTextureFromFile(relativeFilePath, g_Renderer->GetSamplerLinearRepeat(), false, false, false);
 						}
 
 						ImGui::CloseCurrentPopup();

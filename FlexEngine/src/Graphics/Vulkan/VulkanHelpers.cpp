@@ -322,7 +322,6 @@ namespace flex
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
 			m_Queue(queue)
 		{
@@ -333,7 +332,6 @@ namespace flex
 			image(device->m_LogicalDevice, vkDestroyImage),
 			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
 			m_Queue(queue)
 		{
@@ -343,14 +341,14 @@ namespace flex
 		{
 			if (!fileName.empty())
 			{
-				CreateFromFile(relativeFilePath, imageFormat, mipLevels > 1);
+				CreateFromFile(relativeFilePath, sampler, imageFormat, mipLevels > 1);
 
 				g_Renderer->OnTextureReloaded(this);
 			}
 		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-			VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
+			VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
 		{
 			CHECK(inWidth != 0u && inHeight != 0u);
 			CHECK_NE(buffer, nullptr);
@@ -361,6 +359,7 @@ namespace flex
 			height = inHeight;
 			channelCount = inChannelCount;
 			imageFormat = inFormat;
+			sampler = inSampler;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.DBG_Name = name.c_str();
@@ -411,21 +410,6 @@ namespace flex
 			viewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
 
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.DBG_Name = name.c_str();
-			samplerCreateInfo.sampler = &sampler;
-			samplerCreateInfo.minFilter = filter;
-			samplerCreateInfo.magFilter = filter;
-			if (bSamplerClampToBorder)
-			{
-				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-			}
-			else
-			{
-				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			}
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
-
 			return imageSize;
 		}
 
@@ -446,7 +430,7 @@ namespace flex
 			height = inHeight;
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
+		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels, VkImageUsageFlags inUsage)
 		{
 			PROFILE_AUTO("VulkanTexture CreateEmpty");
 
@@ -458,6 +442,7 @@ namespace flex
 			channelCount = inChannelCount;
 			mipLevels = inMipLevels;
 			imageFormat = inFormat;
+			sampler = inSampler;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
@@ -478,10 +463,6 @@ namespace flex
 			imageViewCreateInfo.format = inFormat;
 			imageViewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, imageViewCreateInfo);
-
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sampler = &sampler;
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 
 			return imageSize;
 		}
@@ -522,29 +503,6 @@ namespace flex
 			VK_CHECK_RESULT(device->AllocateMemory(createInfo.DBG_Name, &memAllocInfo, nullptr, createInfo.imageMemory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
 
-			VkSamplerCreateInfo samplerCreateInfo = vks::samplerCreateInfo();
-			samplerCreateInfo.maxAnisotropy = 1.0f;
-			samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
-			samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
-			samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
-			samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
-			samplerCreateInfo.mipLodBias = 0.0f;
-			samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
-			samplerCreateInfo.minLod = 0.0f;
-			samplerCreateInfo.maxLod = (real)createInfo.mipLevels;
-			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			// Enable anisotropy if desired with:
-			//if (device->m_PhysicalDeviceFeatures.samplerAnisotropy)
-			//{
-			//	samplerCreateInfo.maxAnisotropy = device->m_PhysicalDeviceProperties.limits.maxSamplerAnisotropy;
-			//	samplerCreateInfo.anisotropyEnable = VK_TRUE;
-			//}
-
-			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerCreateInfo, nullptr, createInfo.sampler));
-			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
-
 			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
 			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
 			imageViewCreateInfo.format = createInfo.format;
@@ -560,7 +518,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
 
@@ -571,12 +529,12 @@ namespace flex
 			width = inWidth;
 			height = inHeight;
 			channelCount = inChannelCount;
+			sampler = inSampler;
 
 			CubemapCreateInfo createInfo = {};
 			createInfo.image = &image;
 			createInfo.imageMemory = &imageMemory;
 			createInfo.imageView = &imageView;
-			createInfo.sampler = &sampler;
 			createInfo.format = inFormat;
 			createInfo.width = width;
 			createInfo.height = height;
@@ -595,9 +553,11 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, VkSampler* inSampler, bool bEnableTrilinearFiltering)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
+
+			sampler = inSampler;
 
 			struct Image
 			{
@@ -689,7 +649,6 @@ namespace flex
 			createInfo.image = &image;
 			createInfo.imageMemory = &imageMemory;
 			createInfo.imageView = &imageView;
-			createInfo.sampler = &sampler;
 			createInfo.totalSize = totalSize;
 			createInfo.format = inFormat;
 			createInfo.filePaths = filePaths;
@@ -959,10 +918,13 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateFromFile(
 			const std::string& inRelativeFilePath,
+			VkSampler* inSampler,
 			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
 			bool bGenerateFullMipChain /* = false */)
 		{
 			PROFILE_AUTO("VulkanTexture CreateFromFile");
+
+			sampler = inSampler;
 
 			relativeFilePath = inRelativeFilePath;
 			fileName = StripLeadingDirectories(inRelativeFilePath);
@@ -1127,11 +1089,6 @@ namespace flex
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = mipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
-
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sampler = &sampler;
-			samplerCreateInfo.maxLod = (real)mipLevels;
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
 
 			if (bGenerateFullMipChain)
 			{
@@ -2726,7 +2683,7 @@ namespace flex
 				{
 					VulkanTexture* blankTexture = ((VulkanTexture*)g_Renderer->m_BlankTexture);
 					imageInfo.imageView = blankTexture->imageView;
-					imageInfo.sampler = blankTexture->sampler;
+					imageInfo.sampler = *blankTexture->sampler;
 				}
 				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
 
