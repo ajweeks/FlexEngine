@@ -65,9 +65,6 @@ namespace flex
 			virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 
-			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColour(real r, real g, real b) override;
-
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
 			virtual void OnPreSceneChange() override;
@@ -257,6 +254,8 @@ namespace flex
 			// Creates all dynamic vertex/index buffer pairs that are marked as dirty
 			void CreateDynamicVertexAndIndexBuffers();
 			void CreateAllDynamicVertexAndIndexBuffers();
+
+			void AllocateDynamicVertexBuffers();
 
 			// Creates the static index buffer used by all static geometry
 			void CreateStaticIndexBuffer();

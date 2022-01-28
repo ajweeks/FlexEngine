@@ -871,6 +871,7 @@ namespace flex
 		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
 		CullFace cullFace = CullFace::BACK;
 		RenderPassType renderPassOverride = RenderPassType::_NONE;
+		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;

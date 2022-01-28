@@ -104,9 +104,6 @@ namespace flex
 
 		virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) = 0;
 
-		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
-		virtual void SetClearColour(real r, real g, real b) = 0;
-
 		virtual void Update();
 		virtual void EndOfFrame();
 		virtual void Draw() = 0;

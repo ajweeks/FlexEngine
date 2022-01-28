@@ -394,32 +394,7 @@ namespace flex
 				}
 			}
 
-			{
-				PROFILE_AUTO("Allocate dynamic vertex buffers");
-				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
-				{
-					const u32 stride = CalculateVertexStride(m_Shaders[shaderID]->vertexAttributes);
-					if (stride == 0)
-					{
-						continue;
-					}
-
-					bool bExists = false;
-					for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
-					{
-						auto& pair = m_DynamicVertexIndexBufferPairs[bufferIndex];
-						if (pair.first == stride)
-						{
-							bExists = true;
-							break;
-						}
-					}
-					if (!bExists)
-					{
-						m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
-					}
-				}
-			}
+			AllocateDynamicVertexBuffers();
 
 			m_StaticIndexBuffer = new VulkanBuffer(m_VulkanDevice);
 
@@ -1238,6 +1213,7 @@ namespace flex
 			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
 			renderObject->renderPassOverride = createInfo->renderPassOverride;
 			renderObject->bAllowDynamicBufferShrinking = createInfo->bAllowDynamicBufferShrinking;
+			renderObject->topology = TopologyModeToVkPrimitiveTopology(createInfo->topologyMode);
 
 			if (createInfo->indices != nullptr)
 			{
@@ -2517,31 +2493,6 @@ namespace flex
 			ImGui::Image((void*)&textureImage, ImVec2(texSize * textureAspectRatio, texSize), uv0, uv1);
 		}
 
-		void VulkanRenderer::SetTopologyMode(RenderID renderID, TopologyMode topology)
-		{
-			VulkanRenderObject* renderObject = GetRenderObject(renderID);
-			if (renderObject == nullptr)
-			{
-				return;
-			}
-
-			VkPrimitiveTopology vkTopology = TopologyModeToVkPrimitiveTopology(topology);
-
-			if (vkTopology == VK_PRIMITIVE_TOPOLOGY_MAX_ENUM)
-			{
-				PrintError("Unsupported TopologyMode passed to VulkanRenderer::SetTopologyMode: %d\n", (i32)topology);
-			}
-			else
-			{
-				renderObject->topology = vkTopology;
-			}
-		}
-
-		void VulkanRenderer::SetClearColour(real r, real g, real b)
-		{
-			m_ClearColour = VkClearColorValue{ r, g, b, 1.0f };
-		}
-
 		void VulkanRenderer::OnWindowSizeChanged(i32 width, i32 height)
 		{
 			FLEX_UNUSED(width);
@@ -2566,10 +2517,7 @@ namespace flex
 			// Clear non-persistent descriptor pool only
 			m_DescriptorPool->Reset();
 
-			for (auto& pair : m_DynamicVertexIndexBufferPairs)
-			{
-				pair.second->Clear();
-			}
+			// TODO: Clear m_ShadowVertexIndexBufferPair, m_StaticVertexBuffers, m_StaticIndexBuffer?
 
 			DestroyTerrain();
 
@@ -2583,6 +2531,11 @@ namespace flex
 			PROFILE_AUTO("VulkanRenderer OnPostSceneChange");
 
 			Renderer::OnPostSceneChange();
+
+			for (auto& pair : m_DynamicVertexIndexBufferPairs)
+			{
+				pair.second->Clear();
+			}
 
 			if (m_bPostInitialized)
 			{
@@ -7163,6 +7116,35 @@ namespace flex
 			}
 		}
 
+
+		void VulkanRenderer::AllocateDynamicVertexBuffers()
+		{
+			PROFILE_AUTO("Allocate dynamic vertex buffers");
+			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+			{
+				const u32 stride = CalculateVertexStride(m_Shaders[shaderID]->vertexAttributes);
+				if (stride == 0)
+				{
+					continue;
+				}
+
+				bool bExists = false;
+				for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
+				{
+					auto& pair = m_DynamicVertexIndexBufferPairs[bufferIndex];
+					if (pair.first == stride)
+					{
+						bExists = true;
+						break;
+					}
+				}
+				if (!bExists)
+				{
+					m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
+				}
+			}
+		}
+
 		void VulkanRenderer::CreateStaticIndexBuffer()
 		{
 			PROFILE_AUTO("CreateStaticIndexBuffer");
@@ -7319,7 +7301,6 @@ namespace flex
 			}
 
 			CreateAndUploadToStaticIndexBuffer(m_ShadowVertexIndexBufferPair->indexBuffer, indices, "Shadow index buffer");
-			m_ShadowVertexIndexBufferPair->indexCount = (u32)indices.size();
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name /* = nullptr */)

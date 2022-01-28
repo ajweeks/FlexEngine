@@ -66,6 +66,10 @@ namespace flex
 		{
 			m_Buffer.replace();
 			m_Memory.replace();
+			allocations.clear();
+			m_Size = 0;
+			m_Alignment = 0;
+			m_Mapped = nullptr;
 		}
 
 		VkResult VulkanBuffer::Bind()

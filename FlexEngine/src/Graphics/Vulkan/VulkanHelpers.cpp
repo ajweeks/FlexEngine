@@ -299,8 +299,6 @@ namespace flex
 				delete indexBuffer;
 				indexBuffer = nullptr;
 			}
-			vertexCount = 0;
-			indexCount = 0;
 		}
 
 		void VertexIndexBufferPair::Clear()
@@ -313,8 +311,6 @@ namespace flex
 			{
 				indexBuffer->Reset();
 			}
-			vertexCount = 0;
-			indexCount = 0;
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue) :
@@ -1740,26 +1736,26 @@ namespace flex
 		u64 GraphicsPipelineCreateInfo::Hash()
 		{
 			// NOTE: Is this hash cryptographically secure? Heck no! Does it work for my purposes? Yes it does :)
-			u64 result = 0;
+			u64 result = 0u;
 
-			result += (u64)shaderID * 11;
-			result += (u64)vertexAttributes * 2;
-			result += (u64)topology * 5;
+			result += (u64)shaderID * 111u;
+			result += (u64)vertexAttributes * 652u;
+			result += ((u64)topology * 931u) << 1u;
 			result <<= 2;
-			result *= 982451653;
-			result += (u64)cullMode * 3;
-			result += (u64)renderPass;
-			result += (u64)subpass * 5;
-			result += (u64)(pushConstantRangeCount + 1) * 7;
-			result += (u64)(bSetDynamicStates ? 68 : 458);
-			result += (u64)(bEnableColourBlending ? 19956 : 15485863);
-			result += (u64)(bEnableAdditiveColourBlending ? 898 : 123456789);
-			result += (u64)(depthTestEnable ? 77 : 2829);
-			result <<= 1;
-			result *= 492876847;
-			result += (u64)(depthWriteEnable ? 13 : 9);
-			result += (u64)depthCompareOp * 6;
-			result += (u64)(stencilTestEnable ? 3 : 199);
+			result += (u64)cullMode * 84u;
+			result *= 982451653u;
+			result += ((u64)renderPass + 1) * ((u64)renderPass + 1u);
+			result += (u64)subpass * 46;
+			result += ((u64)pushConstantRangeCount + 1) * 7u; // TODO: Deeper hash of push contant types
+			result += (u64)(bSetDynamicStates ? 9568u : 458u);
+			result += (u64)(bEnableColourBlending ? 19956u : 15485863u);
+			result += (u64)(bEnableAdditiveColourBlending ? 898u : 123456789u);
+			result <<= 1u;
+			result += (u64)(depthTestEnable ? 77u : 2829u);
+			result *= 492876847u;
+			result += (u64)(depthWriteEnable ? 1613u : 259u);
+			result += (u64)depthCompareOp * 45u;
+			result += (u64)(stencilTestEnable ? 869u : 199u);
 
 			return result;
 		}

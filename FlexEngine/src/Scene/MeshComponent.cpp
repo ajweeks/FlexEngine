@@ -493,6 +493,7 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
+		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		if (bCreateRenderObject)
 		{
@@ -503,7 +504,6 @@ namespace flex
 
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
-			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -571,6 +571,7 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
+		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		if (bCreateRenderObject)
 		{
@@ -580,8 +581,6 @@ namespace flex
 			}
 
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -1148,12 +1147,11 @@ namespace flex
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.topologyMode = topologyMode;
 
 		if (bCreateRenderObject)
 		{
 			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-			g_Renderer->SetTopologyMode(renderID, topologyMode);
 		}
 
 		m_bInitialized = true;
@@ -1181,10 +1179,9 @@ namespace flex
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 		renderObjectCreateInfo.materialID = m_MaterialID;
+		renderObjectCreateInfo.topologyMode = topologyMode;
 
 		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(renderID, topologyMode);
 
 		m_bInitialized = true;
 

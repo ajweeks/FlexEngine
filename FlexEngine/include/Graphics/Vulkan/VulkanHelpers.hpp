@@ -201,8 +201,6 @@ namespace flex
 
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
-			u32 vertexCount = 0;
-			u32 indexCount = 0;
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 

@@ -217,11 +217,6 @@ namespace flex
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
 			}
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
-
-			if (!m_VertexBufferCreateInfo.positions_3D.empty())
-			{
-				mesh->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
-			}
 		}
 
 		void VulkanPhysicsDebugDraw::Clear()
