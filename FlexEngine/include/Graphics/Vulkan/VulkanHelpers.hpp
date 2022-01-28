@@ -307,7 +307,7 @@ namespace flex
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-				VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
+				VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, i32 layerCount = 1);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);

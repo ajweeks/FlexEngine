@@ -1143,7 +1143,7 @@ namespace flex
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
 					((VulkanTexture*)m_NoiseTexture)->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
-						VK_FORMAT_R32G32B32A32_SFLOAT, 1, &m_LinearRepeatSampler, VK_FILTER_NEAREST);
+						VK_FORMAT_R32G32B32A32_SFLOAT, 1, &m_LinearRepeatSampler);
 					g_ResourceManager->AddLoadedTexture(m_NoiseTexture);
 				}
 
@@ -1188,13 +1188,13 @@ namespace flex
 			return textureID;
 		}
 
-		TextureID VulkanRenderer::InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkSampler* inSampler, VkFilter inFilter)
+		TextureID VulkanRenderer::InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkSampler* inSampler)
 		{
 			PROFILE_AUTO("InitializeTextureArrayFromMemory");
 
 			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, name);
 			newTex->bIsArray = true;
-			newTex->CreateFromMemory(data, size, width, height, channelCount, inFormat, 1, inSampler, inFilter, layerCount);
+			newTex->CreateFromMemory(data, size, width, height, channelCount, inFormat, 1, inSampler, layerCount);
 			TextureID textureID = g_ResourceManager->AddLoadedTexture(newTex);
 
 			return textureID;
@@ -4345,6 +4345,11 @@ namespace flex
 		VkSampler* VulkanRenderer::GetSamplerLinearClamp()
 		{
 			return &m_LinearClampSampler;
+		}
+
+		VkSampler* VulkanRenderer::GetSamplerNearestClamp()
+		{
+			return &m_NearestClampEdgeSampler;
 		}
 
 		void VulkanRenderer::InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount)

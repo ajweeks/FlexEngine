@@ -348,7 +348,7 @@ namespace flex
 		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-			VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
+			VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, i32 layerCount /* = 1 */)
 		{
 			CHECK(inWidth != 0u && inHeight != 0u);
 			CHECK_NE(buffer, nullptr);
