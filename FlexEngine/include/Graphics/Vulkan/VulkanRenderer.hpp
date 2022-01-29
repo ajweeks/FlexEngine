@@ -136,8 +136,9 @@ namespace flex
 			virtual void OnTextureReloaded(Texture* texture) override;
 
 			virtual VkSampler* GetSamplerLinearRepeat() override;
-			virtual VkSampler* GetSamplerLinearClamp() override;
-			virtual VkSampler* GetSamplerNearestClamp() override;
+			virtual VkSampler* GetSamplerLinearClampToEdge() override;
+			virtual VkSampler* GetSamplerLinearClampToBorder() override;
+			virtual VkSampler* GetSamplerNearestClampToEdge() override;
 
 			VulkanDevice* GetDevice();
 
@@ -230,6 +231,7 @@ namespace flex
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
+			void CreateSamplers();
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
@@ -476,9 +478,11 @@ namespace flex
 			FrameBufferAttachment* m_GBufferColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
-			VDeleter<VkSampler> m_LinMipLinSampler;
-			VDeleter<VkSampler> m_DepthSampler;
-			VDeleter<VkSampler> m_NearestClampEdgeSampler;
+			VDeleter<VkSampler> m_SamplerDepth;
+			VDeleter<VkSampler> m_SamplerLinearRepeat;
+			VDeleter<VkSampler> m_SamplerLinearClampToEdge;
+			VDeleter<VkSampler> m_SamplerLinearClampToBorder;
+			VDeleter<VkSampler> m_SamplerNearestClampToEdge;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
 			FrameBufferAttachment* m_OffscreenFB0ColourAttachment0 = nullptr;
@@ -504,9 +508,6 @@ namespace flex
 			VkFormat m_ShadowBufFormat = VK_FORMAT_UNDEFINED;
 			VkDescriptorSet m_ShadowDescriptorSet = VK_NULL_HANDLE;
 			std::vector<Cascade*> m_ShadowCascades;
-
-			VDeleter<VkSampler> m_LinearRepeatSampler;
-			VDeleter<VkSampler> m_LinearClampSampler;
 
 			std::map<FrameBufferAttachmentID, FrameBufferAttachment*> m_FrameBufferAttachments;
 

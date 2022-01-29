@@ -1653,8 +1653,28 @@ namespace flex
 						//ImGui::Image((void*)&tex->image, texSize, uv0, uv1);
 
 						ImGui::NextColumn();
-						if (ImGui::Button("Re-bake"))
+						bool bRebake = false;
+						bRebake = ImGui::Button("Re-bake");
+
+#if COMPILE_RENDERDOC_API
+						bool bCaptureRenderDocFrame = false;
+						ImGui::SameLine();
+						if (ImGui::Button("Re-bake (trigger render doc capture)"))
 						{
+							bRebake = true;
+							bCaptureRenderDocFrame = true;
+						}
+#endif
+
+						if (bRebake)
+						{
+#if COMPILE_RENDERDOC_API
+							if (bCaptureRenderDocFrame)
+							{
+								g_EngineInstance->RenderDocStartCapture();
+							}
+#endif
+
 							if (metaData.bScreenSpace)
 							{
 								auto vecIterSS = std::find(fontsScreenSpace.begin(), fontsScreenSpace.end(), metaData.bitmapFont);
@@ -1677,6 +1697,13 @@ namespace flex
 							SetRenderedSDFFilePath(metaData);
 
 							g_Renderer->LoadFont(metaData, true);
+
+#if COMPILE_RENDERDOC_API
+							if (bCaptureRenderDocFrame)
+							{
+								g_EngineInstance->RenderDocEndCapture();
+							}
+#endif
 						}
 						if (ImGui::Button("View SDF"))
 						{

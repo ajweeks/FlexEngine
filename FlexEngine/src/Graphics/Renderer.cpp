@@ -2755,7 +2755,7 @@ namespace flex
 		if (previewedFont != InvalidStringID)
 		{
 			SetFont(previewedFont);
-			DrawStringSS("Preview text... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
+			DrawStringSS("PREVIEW TEXT... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
 	}
 

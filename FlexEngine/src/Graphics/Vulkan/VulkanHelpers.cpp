@@ -426,7 +426,7 @@ namespace flex
 			height = inHeight;
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels, VkImageUsageFlags inUsage)
+		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels /* = 1 */, VkImageUsageFlags inUsage /* = VK_IMAGE_USAGE_SAMPLED_BIT */)
 		{
 			PROFILE_AUTO("VulkanTexture CreateEmpty");
 
@@ -449,7 +449,7 @@ namespace flex
 			imageCreateInfo.mipLevels = inMipLevels;
 			imageCreateInfo.usage = inUsage;
 			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-			imageCreateInfo.DBG_Name = "Empty texture";
+			imageCreateInfo.DBG_Name = name.c_str();
 
 			VkDeviceSize imageSize = CreateImage(m_VulkanDevice, imageCreateInfo);
 
@@ -1116,19 +1116,19 @@ namespace flex
 			VkSamplerCreateInfo samplerInfo = vks::samplerCreateInfo();
 			samplerInfo.magFilter = createInfo.magFilter;
 			samplerInfo.minFilter = createInfo.minFilter;
+			samplerInfo.mipmapMode = createInfo.mipmapMode;
 			samplerInfo.addressModeU = createInfo.samplerAddressMode;
 			samplerInfo.addressModeV = createInfo.samplerAddressMode;
 			samplerInfo.addressModeW = createInfo.samplerAddressMode;
+			samplerInfo.mipLodBias = 0.0f;
 			samplerInfo.anisotropyEnable = VK_FALSE;
 			samplerInfo.maxAnisotropy = createInfo.maxAnisotropy;
-			samplerInfo.borderColor = createInfo.borderColor;
-			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 			samplerInfo.compareEnable = VK_FALSE;
 			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			samplerInfo.mipLodBias = 0.0f;
 			samplerInfo.minLod = createInfo.minLod;
 			samplerInfo.maxLod = createInfo.maxLod;
+			samplerInfo.borderColor = createInfo.borderColor;
+			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
 			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, createInfo.sampler));
 			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
@@ -1266,8 +1266,6 @@ namespace flex
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-				TransitionToLayout(previousLayout);
-
 				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 				// Get layout of the image (including row pitch)
@@ -1294,6 +1292,8 @@ namespace flex
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory);
 				device->FreeMemory(dstImageMemory, nullptr);
 				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, dstImage, nullptr);
+
+				TransitionToLayout(previousLayout);
 			}
 			else
 			{
@@ -2566,6 +2566,7 @@ namespace flex
 				// TODO: Create new pool or recreate and copy old one?
 				//maxNumDescSets *= 2;
 				PRINT_FATAL("Ran out of descriptor sets (max: %d)\n", maxNumDescSets);
+				return VK_NULL_HANDLE;
 			}
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -2657,7 +2658,7 @@ namespace flex
 					}
 					else
 					{
-						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_LinMipLinSampler;
+						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_SamplerLinearRepeat;
 					}
 				}
 				else

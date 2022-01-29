@@ -112,6 +112,12 @@ namespace flex
 		static bool s_bHasGLDebugExtension;
 		u32 mainProcessID = 0;
 
+#if COMPILE_RENDERDOC_API
+		void RenderDocStartCapture();
+		void RenderDocEndCapture();
+		void TriggerRenderDocCaptureOnNextFrame();
+#endif
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;

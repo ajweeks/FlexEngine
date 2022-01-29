@@ -205,8 +205,9 @@ namespace flex
 
 		// TODO: Use render-agnostic handles
 		virtual VkSampler* GetSamplerLinearRepeat() = 0;
-		virtual VkSampler* GetSamplerLinearClamp() = 0;
-		virtual VkSampler* GetSamplerNearestClamp() = 0;
+		virtual VkSampler* GetSamplerLinearClampToEdge() = 0;
+		virtual VkSampler* GetSamplerLinearClampToBorder() = 0;
+		virtual VkSampler* GetSamplerNearestClampToEdge() = 0;
 
 		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 

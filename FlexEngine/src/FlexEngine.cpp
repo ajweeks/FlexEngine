@@ -224,8 +224,7 @@ namespace flex
 			m_RenderDocAutoCaptureFrameCount != -1 &&
 			m_RenderDocAutoCaptureFrameOffset == 0)
 		{
-			m_bRenderDocCapturingFrame = true;
-			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+			RenderDocStartCapture();
 		}
 #endif
 
@@ -775,8 +774,7 @@ namespace flex
 					if (m_bRenderDocTriggerCaptureNextFrame)
 					{
 						m_bRenderDocTriggerCaptureNextFrame = false;
-						m_bRenderDocCapturingFrame = true;
-						m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+						RenderDocStartCapture();
 					}
 				}
 #endif
@@ -899,28 +897,7 @@ namespace flex
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
 			{
-				PROFILE_AUTO("Capture RenderDoc frame");
-
-				m_bRenderDocCapturingFrame = false;
-				Print("Capturing RenderDoc frame...\n");
-				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
-
-				std::string captureFilePath;
-				if (GetLatestRenderDocCaptureFilePath(captureFilePath))
-				{
-					g_Renderer->AddEditorString("Captured RenderDoc frame");
-
-					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
-					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
-
-					CheckForRenderDocUIRunning();
-
-					if (m_RenderDocUIPID == -1)
-					{
-						const std::string& cmdLineArgs = captureFilePath;
-						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
-					}
-				}
+				RenderDocEndCapture();
 			}
 #endif
 
@@ -2193,6 +2170,48 @@ namespace flex
 		VehicleCamera* vehicleCamera = new VehicleCamera();
 		g_CameraManager->AddCamera(vehicleCamera, false);
 	}
+
+#if COMPILE_RENDERDOC_API
+	void FlexEngine::RenderDocStartCapture()
+	{
+		PROFILE_AUTO("RenderDocStartCapture");
+
+		Print("Capturing RenderDoc frame...\n");
+		m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+		m_bRenderDocCapturingFrame = true;
+	}
+
+	void FlexEngine::RenderDocEndCapture()
+	{
+		PROFILE_AUTO("RenderDocEndCapture");
+
+		m_RenderDocAPI->EndFrameCapture(NULL, NULL);
+		m_bRenderDocCapturingFrame = false;
+
+		std::string captureFilePath;
+		if (GetLatestRenderDocCaptureFilePath(captureFilePath))
+		{
+			g_Renderer->AddEditorString("Captured RenderDoc frame");
+
+			const std::string captureFileName = StripLeadingDirectories(captureFilePath);
+			Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
+
+			CheckForRenderDocUIRunning();
+
+			if (m_RenderDocUIPID == -1)
+			{
+				const std::string& cmdLineArgs = captureFilePath;
+				// Auto open RenderDoc UI if not already running
+				m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
+			}
+		}
+	}
+
+	void FlexEngine::TriggerRenderDocCaptureOnNextFrame()
+	{
+		m_bRenderDocTriggerCaptureNextFrame = true;
+	}
+#endif
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{

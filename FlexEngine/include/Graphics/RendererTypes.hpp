@@ -596,7 +596,6 @@ namespace flex
 		bool bGenerateMipMaps = false;
 		bool bHDR = false;
 		bool bIsArray = false;
-		bool bSamplerClampToBorder = false;
 	};
 
 	template<typename UniformType>
