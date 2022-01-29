@@ -678,6 +678,11 @@ namespace flex
 					m_Transform.SetLocalScale(scale, true);
 				}
 
+				if (m_RigidBody != nullptr)
+				{
+					m_RigidBody->GetRigidBodyInternal()->activate(true);
+				}
+
 				SetUseUniformScale(m_bUniformScale, false);
 
 				//if (m_RigidBody != nullptr)
@@ -822,39 +827,8 @@ namespace flex
 
 										selectedColliderShape = i;
 
-										BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
-										switch (collisionShapeType)
-										{
-										case BOX_SHAPE_PROXYTYPE:
-										{
-											btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
-											SetCollisionShape(newShape);
-										} break;
-										case SPHERE_SHAPE_PROXYTYPE:
-										{
-											btSphereShape* newShape = new btSphereShape(1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										case CAPSULE_SHAPE_PROXYTYPE:
-										{
-											btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										case CYLINDER_SHAPE_PROXYTYPE:
-										{
-											btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
-											SetCollisionShape(newShape);
-										} break;
-										case CONE_SHAPE_PROXYTYPE:
-										{
-											btConeShape* newShape = new btConeShape(1.0f, 1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										default:
-										{
-											PrintError("Unhandled BroadphaseNativeType in GameObject::DrawImGuiObjects: %d\n", (i32)collisionShapeType);
-										} break;
-										}
+										btCollisionShape* collisionShape = CreateCollisionShape(g_CollisionTypes[selectedColliderShape]);
+										SetCollisionShape(collisionShape);
 									}
 								}
 							}
@@ -873,13 +847,12 @@ namespace flex
 						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.01f, 0.0f, 1000.0f))
 						{
+							halfExtentsG *= scale;
 							bAnyPropertyChanged = true;
-							halfExtents = ToBtVec3(halfExtentsG);
-							btBoxShape* newShape = new btBoxShape(halfExtents);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(BOX_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case SPHERE_SHAPE_PROXYTYPE:
@@ -888,12 +861,12 @@ namespace flex
 						real radius = sphereShape->getRadius();
 						radius /= scale.x;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, 1000.0f))
 						{
+							radius *= scale.x;
 							bAnyPropertyChanged = true;
-							btSphereShape* newShape = new btSphereShape(radius);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, radius);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case CAPSULE_SHAPE_PROXYTYPE:
@@ -904,15 +877,16 @@ namespace flex
 						radius /= scale.x;
 						halfHeight /= scale.x;
 
-						real maxExtent = 1000.0f;
-						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
-						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, 1000.0f);
+						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, 1000.0f);
 
 						if (bUpdateShape)
 						{
+							radius *= scale.x;
+							halfHeight *= scale.x;
 							bAnyPropertyChanged = true;
-							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, radius, halfHeight * 2.0f);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case CYLINDER_SHAPE_PROXYTYPE:
@@ -922,13 +896,12 @@ namespace flex
 						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, 1000.0f))
 						{
+							halfExtentsG *= scale;
 							bAnyPropertyChanged = true;
-							halfExtents = ToBtVec3(halfExtentsG);
-							btCylinderShape* newShape = new btCylinderShape(halfExtents);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					default:
@@ -998,11 +971,10 @@ namespace flex
 			{
 				bAnyPropertyChanged = true;
 				RigidBody* rb = SetRigidBody(new RigidBody());
-				btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+				btCollisionShape* collisionShape = CreateCollisionShape(BOX_SHAPE_PROXYTYPE);
+				SetCollisionShape(collisionShape);
 
-				SetCollisionShape(boxShape);
-				rb->Initialize(boxShape, &m_Transform);
+				rb->Initialize(collisionShape, &m_Transform);
 				rb->GetRigidBodyInternal()->setUserPointer(this);
 			}
 		}
@@ -2777,7 +2749,7 @@ namespace flex
 
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
 	{
-		if (m_CollisionShape)
+		if (m_CollisionShape != nullptr)
 		{
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
@@ -2785,9 +2757,10 @@ namespace flex
 
 		m_CollisionShape = collisionShape;
 
-		if (m_RigidBody != nullptr && m_RigidBody->GetRigidBodyInternal())
+		if (m_RigidBody != nullptr && m_RigidBody->GetRigidBodyInternal() != nullptr)
 		{
 			m_RigidBody->GetRigidBodyInternal()->setCollisionShape(collisionShape);
+			m_RigidBody->GetRigidBodyInternal()->activate(true);
 		}
 
 		return collisionShape;

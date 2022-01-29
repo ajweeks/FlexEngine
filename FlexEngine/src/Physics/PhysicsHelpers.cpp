@@ -42,6 +42,34 @@ namespace flex
 		return MAX_BROADPHASE_COLLISION_TYPES;
 	}
 
+	btCollisionShape* CreateCollisionShape(BroadphaseNativeTypes collisionShapeType,
+		float optionalHalfExtentsX /* = -1.0f */,
+		float optionalHalfExtentsY /* = -1.0f */,
+		float optionalHalfExtentsZ /* = -1.0f */)
+	{
+		btVector3 halfExtents(
+			optionalHalfExtentsX != -1.0f ? optionalHalfExtentsX : 0.5f,
+			optionalHalfExtentsY != -1.0f ? optionalHalfExtentsY : 0.5f,
+			optionalHalfExtentsZ != -1.0f ? optionalHalfExtentsZ : 0.5f);
+
+		switch (collisionShapeType)
+		{
+		case BOX_SHAPE_PROXYTYPE:
+			return new btBoxShape(halfExtents);
+		case SPHERE_SHAPE_PROXYTYPE:
+			return new btSphereShape(halfExtents.x());
+		case CAPSULE_SHAPE_PROXYTYPE:
+			return new btCapsuleShapeZ(halfExtents.x(), halfExtents.y());
+		case CYLINDER_SHAPE_PROXYTYPE:
+			return new btCylinderShape(halfExtents);
+		case CONE_SHAPE_PROXYTYPE:
+			return new btConeShape(halfExtents.x(), halfExtents.y());
+		default:
+			PrintError("Unhandled BroadphaseNativeType in CreateCollisionShape: %d\n", (i32)collisionShapeType);
+			return nullptr;
+		}
+	}
+
 	btCollisionShape* CloneCollisionShape(const glm::vec3& worldScale, btCollisionShape* originalShape)
 	{
 		btCollisionShape* newCollisionShape = nullptr;

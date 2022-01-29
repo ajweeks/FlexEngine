@@ -69,5 +69,9 @@ namespace flex
 		MAX_FLAG = (1 << 30)
 	};
 
+	btCollisionShape* CreateCollisionShape(BroadphaseNativeTypes collisionShapeType,
+		float optionalHalfExtentsX = -1.0f,
+		float optionalHalfExtentsY = -1.0f,
+		float optionalHalfExtentsZ = -1.0f);
 	btCollisionShape* CloneCollisionShape(const glm::vec3& worldScale, btCollisionShape* originalShape);
 } // namespace flex

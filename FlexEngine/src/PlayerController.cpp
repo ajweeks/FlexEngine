@@ -676,9 +676,6 @@ namespace flex
 			}
 		}
 
-		// ?
-		//m_Player->GetRigidBody()->UpdateTransform();
-
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		btVector3 rbPos = rb->getInterpolationWorldTransform().getOrigin();
 
