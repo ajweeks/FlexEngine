@@ -494,17 +494,17 @@ namespace flex
 						} break;
 						case TerminalSID:
 						{
-							Terminal* terminal = (Terminal*)nearestInteractable;
+							Terminal* terminal = (Terminal*)nearbyInteractable;
 							m_Player->SetInteractingWithTerminal(terminal);
 						} break;
 						case SpeakerSID:
 						{
-							Speaker* speaker = (Speaker*)nearestInteractable;
+							Speaker* speaker = (Speaker*)nearbyInteractable;
 							speaker->TogglePlaying();
 						} break;
 						case MineralDepositSID:
 						{
-							//Miner* miner = (Miner*)nearestInteractable;
+							//Miner* miner = (Miner*)nearbyInteractable;
 							if (!m_Player->bInventoryShowing)
 							{
 								m_Player->bMinerInventoryShowing = !m_Player->bMinerInventoryShowing;
