@@ -502,9 +502,8 @@ namespace flex
 							Speaker* speaker = (Speaker*)nearbyInteractable;
 							speaker->TogglePlaying();
 						} break;
-						case MineralDepositSID:
+						case MinerSID:
 						{
-							//Miner* miner = (Miner*)nearbyInteractable;
 							if (!m_Player->bInventoryShowing)
 							{
 								m_Player->bMinerInventoryShowing = !m_Player->bMinerInventoryShowing;

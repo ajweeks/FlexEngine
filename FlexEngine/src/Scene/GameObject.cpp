@@ -156,8 +156,8 @@ namespace flex
 		m_bVisibleInSceneExplorer(true),
 		m_bStatic(false),
 		m_bTrigger(false),
-		m_bInteractable(true),
-		m_bCastsShadow(false),
+		m_bInteractable(false),
+		m_bCastsShadow(true),
 		m_bIsTemplate(bIsPrefabTemplate),
 		m_bUniformScale(false),
 		m_bItemizable(false)
@@ -7189,10 +7189,6 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void Terminal::PostInitialize()
-	{
-	}
-
 	void Terminal::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
@@ -7211,6 +7207,8 @@ namespace flex
 	void Terminal::Update()
 	{
 		PROFILE_AUTO("Terminal Update");
+
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 
 		if (m_DisplayReloadTimeRemaining != -1.0f)
 		{
@@ -7269,6 +7267,7 @@ namespace flex
 
 			if (bRenderText)
 			{
+				// TODO: EZ: Define in hot-reloadable config file
 				static const glm::vec4 lineNumberColour(0.4f, 0.4f, 0.4f, 1.0f);
 				static const glm::vec4 lineNumberColourActive(0.65f, 0.65f, 0.65f, 1.0f);
 				static const glm::vec4 textColour(0.85f, 0.81f, 0.80f, 1.0f);
@@ -7355,7 +7354,7 @@ namespace flex
 			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
-		std::vector<SocketData> const* sockets = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectSockets(ID);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
 		u32 socketCount = sockets != nullptr ? (u32)sockets->size() : 0;
 
 		if (m_VM != nullptr && m_VM->IsExecuting())
@@ -7363,18 +7362,18 @@ namespace flex
 			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), socketCount);
 			for (u32 i = 0; i < outputCount; ++i)
 			{
-				SetOutputSignal(i, m_VM->terminalOutputs[i].valInt);
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, m_VM->terminalOutputs[i].valInt);
 			}
 			for (u32 i = outputCount; i < socketCount; ++i)
 			{
-				SetOutputSignal(i, -1);
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
 			}
 		}
 		else
 		{
 			for (u32 i = 0; i < socketCount; ++i)
 			{
-				SetOutputSignal(i, -1);
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
 			}
 		}
 

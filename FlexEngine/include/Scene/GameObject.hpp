@@ -1146,7 +1146,6 @@ namespace flex
 		explicit Terminal(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
