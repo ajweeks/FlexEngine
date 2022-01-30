@@ -501,26 +501,33 @@ namespace flex
 		}
 
 		{
-			icons.clear();
+			discoveredIcons.clear();
 
 			std::vector<std::string> foundIconFiles;
-			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundIconFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
+			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundIconFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
 			{
 				for (const std::string& foundFilePath : foundIconFiles)
 				{
 					std::string trimmedFileName = RelativePathToAbsolute(foundFilePath);
 					trimmedFileName = StripLeadingDirectories(StripFileType(foundFilePath));
-					if (EndsWith(trimmedFileName, "-icon-256"))
+					i32 resolution = 0;
+					size_t iconEnd = trimmedFileName.find_last_of("-icon-");
+					if (iconEnd != std::string::npos)
 					{
-						trimmedFileName = RemoveEndIfPresent(trimmedFileName, "-icon-256");
+						resolution = ParseInt(trimmedFileName.substr(iconEnd + 1));
+						trimmedFileName = trimmedFileName.substr(0, iconEnd - 6 + 1);
 					}
 					trimmedFileName = Replace(trimmedFileName, '-', ' ');
-					StringID gameObjectTypeID = Hash(trimmedFileName.c_str());
-					icons.emplace_back(Pair<StringID, Pair<std::string, TextureID>>{ gameObjectTypeID, { foundFilePath, InvalidTextureID } });
+					StringID prefabNameSID = Hash(trimmedFileName.c_str());
+					IconMetaData iconMetaData = {};
+					iconMetaData.relativeFilePath = foundFilePath;
+					iconMetaData.resolution = resolution;
+					discoveredIcons.emplace_back(prefabNameSID, iconMetaData);
 				}
 			}
 		}
 
+		// Check for modified files to reload
 		{
 			std::vector<std::string> foundFiles;
 			if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
@@ -1057,17 +1064,18 @@ namespace flex
 		return false;
 	}
 
-	TextureID ResourceManager::GetOrLoadIcon(StringID gameObjectTypeID)
+	TextureID ResourceManager::GetOrLoadIcon(StringID prefabNameSID, i32 resolution /* = -1 */)
 	{
-		for (Pair<StringID, Pair<std::string, TextureID>>& pair : icons)
+		for (Pair<StringID, IconMetaData>& pair : discoveredIcons)
 		{
-			if (pair.first == gameObjectTypeID)
+			if (pair.first == prefabNameSID &&
+				(resolution == -1 || pair.second.resolution == resolution))
 			{
-				if (pair.second.second == InvalidTextureID)
+				if (pair.second.textureID == InvalidTextureID)
 				{
-					pair.second.second = GetOrLoadTexture(pair.second.first);
+					pair.second.textureID = GetOrLoadTexture(pair.second.relativeFilePath);
 				}
-				return pair.second.second;
+				return pair.second.textureID;
 			}
 		}
 

@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "first-person",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "20.075, 12.765, -32.638",
-			"pitch" : -0.298438,
-			"yaw" : -4.204949
+			"position" : "-0.000, 2.500, 0.000",
+			"pitch" : -0.018000,
+			"yaw" : 1.346798
 		}
 	},
 	"objects" : 
@@ -83,7 +83,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.571, -0.000, 0.000"
+						"rot" : "1.701, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
@@ -365,26 +365,39 @@
 			]
 		},
 		{
-			"name" : "New_Object_00",
+			"name" : "Dragon stand",
 			"id" : "3214B079039EE582499DBB446FEE87CB",
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "12.025, 0.979, 27.633",
-				"rot" : "0.000, 0.630, 0.000",
+				"pos" : "12.025, 1.000, 27.635",
+				"rot" : "0.000, 0.629, -0.002",
 				"scale" : "4.500, 2.000, 2.330"
 			},
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr white"
-			]
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500,0.500,0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		},
 		{
 			"name" : "Cart",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
-			"prefab type" : "empty-cart",
+			"prefab type" : "empty cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
@@ -400,7 +413,7 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.970, 2.501, -1.960",
+				"pos" : "-20.974, 2.501, -1.962",
 				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
@@ -420,7 +433,7 @@
 			"name" : "EngineCart-1",
 			"id" : "C54A90F938F82C944622007A9EDCFB70",
 			"type" : "prefab",
-			"prefab type" : "engine-cart",
+			"prefab type" : "engine cart",
 			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 			"transform" : 
 			{
@@ -489,19 +502,6 @@
 			]
 		},
 		{
-			"name" : "solar_panel",
-			"id" : "2D243FB411A1C1A947E0CE3315BB487D",
-			"type" : "prefab",
-			"prefab type" : "solar-panel",
-			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
-			"transform" : 
-			{
-				"pos" : "0.000, -0.033, -7.224",
-				"rot" : "-1.571, -0.000, -0.000",
-				"scale" : "1.000, 0.998, 0.998"
-			}
-		},
-		{
 			"name" : "New_Object_03",
 			"id" : "0A2BF0E45D5535924D6CC22846414DAF",
 			"type" : "object",
@@ -558,7 +558,7 @@
 			"name" : "power_pole",
 			"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
 			"type" : "prefab",
-			"prefab type" : "power_pole",
+			"prefab type" : "power pole",
 			"prefab id" : "FF518D129F74B1B442494D703055E816",
 			"transform" : 
 			{
@@ -578,13 +578,37 @@
 			},
 			"miner" : 
 			{
+				"charge" : 6.299994,
+				"inventory" : 
+				[
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 0
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 1
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 2
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 10,
+						"index" : 3
+					}
+				]
 			}
 		},
 		{
-			"name" : "mineral_deposit_iron",
+			"name" : "mineral deposit iron",
 			"id" : "D43AD3B3CE84169249BD470C2E36A181",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_iron",
+			"prefab type" : "mineral deposit iron",
 			"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
 			"transform" : 
 			{
@@ -592,14 +616,15 @@
 			},
 			"mineral deposit" : 
 			{
+				"mineral remaining" : 894,
 				"type" : "iron"
 			}
 		},
 		{
-			"name" : "mineral_deposit_silicon",
+			"name" : "mineral deposit silicon",
 			"id" : "5F3FE1997191F6A7438AB8EC96A2EC1C",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_silicon",
+			"prefab type" : "mineral deposit silicon",
 			"prefab id" : "8014F0FFA52C70B6467FE67C43C3363C",
 			"transform" : 
 			{
@@ -611,10 +636,10 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit_stone",
+			"name" : "mineral deposit stone",
 			"id" : "343ACE72646E29974D777F594FBFCD5C",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_stone",
+			"prefab type" : "mineral deposit stone",
 			"prefab id" : "18DC46A7569BA0844A8721C36FF54D77",
 			"transform" : 
 			{
@@ -627,10 +652,10 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit_aluminum",
+			"name" : "mineral deposit aluminum",
 			"id" : "B3CB7220A21F0FA64B8E0024647DFCDB",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_aluminum",
+			"prefab type" : "mineral deposit aluminum",
 			"prefab id" : "56FC31EDE61483A54F4B50971FC9DE27",
 			"transform" : 
 			{
@@ -642,10 +667,10 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit_tin",
+			"name" : "mineral deposit tin",
 			"id" : "6DA88CF19762FC904F0B75183E0F04B4",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_tin",
+			"prefab type" : "mineral deposit tin",
 			"prefab id" : "56ADD055CA44E1BD4B9078348550E9BE",
 			"transform" : 
 			{
@@ -657,10 +682,10 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit_quartz",
+			"name" : "mineral deposit quartz",
 			"id" : "62852C11369C898649D4F7AB5A425583",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_quartz",
+			"prefab type" : "mineral deposit quartz",
 			"prefab id" : "B4EF3520650297A242AE680526C8DA8E",
 			"transform" : 
 			{
@@ -672,10 +697,10 @@
 			}
 		},
 		{
-			"name" : "mineral_deposit_olivine",
+			"name" : "mineral deposit olivine",
 			"id" : "E53A36741709F0B64F7127674B74B664",
 			"type" : "prefab",
-			"prefab type" : "mineral_deposit_olivine",
+			"prefab type" : "mineral deposit olivine",
 			"prefab id" : "192082D7335E52AE4616BAF655239916",
 			"transform" : 
 			{
@@ -693,6 +718,97 @@
 			"type" : "prefab",
 			"prefab type" : "speaker",
 			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216"
+		},
+		{
+			"name" : "solar panel",
+			"id" : "F51EF76A4718D5954ACC8B30A73824DD",
+			"type" : "prefab",
+			"prefab type" : "solar panel",
+			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
+			"transform" : 
+			{
+				"pos" : "11.303, 3.500, -30.371",
+				"rot" : "-3.141, 0.577, -3.141"
+			}
+		},
+		{
+			"name" : "wire plug",
+			"id" : "0C8119B7D8C14F934F292ED197F49611",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "13.120, 1.751, -29.970",
+				"rot" : "-0.437, 1.026, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC",
+				"socket id" : "410B80DE1822B9BD4789158B71521A24"
+			}
+		},
+		{
+			"name" : "wire plug",
+			"id" : "DFE2C56963EAE98744B640F4E67E5D5C",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "10.692, 4.220, -31.441",
+				"rot" : "1.909, -1.026, 3.142"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC",
+				"socket id" : "B6529BC9C46870A74A50F8D4853E52F9"
+			}
+		},
+		{
+			"name" : "wire_000",
+			"id" : "9A67BC4372E37FBA45C5FA890110E8EC",
+			"type" : "wire",
+			"transform" : 
+			{
+				"pos" : "11.906, 2.985, -30.705",
+				"rot" : "-3.141, 0.577, -3.141"
+			},
+			"wire" : 
+			{
+				"plug 0 id" : "0C8119B7D8C14F934F292ED197F49611",
+				"plug 1 id" : "DFE2C56963EAE98744B640F4E67E5D5C"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "F6DBE6350B96BAA64229D2C6B7E0B5AC",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "-1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "0F251F450D6B6F92444507E148A1361F",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
 		}
 	]
 }

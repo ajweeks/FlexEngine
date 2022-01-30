@@ -449,7 +449,7 @@ namespace flex
 	{
 		delete imageElement;
 		imageElement = nullptr;
-		lastImageUpdatedStackTypeID = InvalidID;
+		lastImageUpdatedPrefabNameSID = InvalidID;
 		delete textElement;
 		textElement = nullptr;
 		lastTextElementUpdateCount = -1;
@@ -476,8 +476,8 @@ namespace flex
 						GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack->prefabID);
 						if (prefabTemplate != nullptr)
 						{
-							StringID stackTypeID = prefabTemplate->GetTypeID();
-							textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
+							StringID prefabNameSID = SID(prefabTemplate->GetName().c_str());
+							textureID = g_ResourceManager->GetOrLoadIcon(prefabNameSID, 256);
 						}
 
 						if (textureID == InvalidTextureID)
@@ -499,7 +499,7 @@ namespace flex
 					{
 						delete imageElement;
 						imageElement = nullptr;
-						lastImageUpdatedStackTypeID = InvalidID;
+						lastImageUpdatedPrefabNameSID = InvalidID;
 						delete textElement;
 						textElement = nullptr;
 						lastTextElementUpdateCount = -1;
@@ -522,11 +522,11 @@ namespace flex
 							GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack->prefabID);
 							if (prefabTemplate != nullptr)
 							{
-								StringID stackTypeID = prefabTemplate->GetTypeID();
-								if (lastImageUpdatedStackTypeID != stackTypeID)
+								StringID prefabNameSID = SID(prefabTemplate->GetName().c_str());
+								if (lastImageUpdatedPrefabNameSID != prefabNameSID)
 								{
-									imageElement->textureID = g_ResourceManager->GetOrLoadIcon(stackTypeID);
-									lastImageUpdatedStackTypeID = stackTypeID;
+									imageElement->textureID = g_ResourceManager->GetOrLoadIcon(prefabNameSID, 256);
+									lastImageUpdatedPrefabNameSID = prefabNameSID;
 								}
 							}
 
@@ -565,7 +565,7 @@ namespace flex
 			{
 				delete imageElement;
 				imageElement = nullptr;
-				lastImageUpdatedStackTypeID = InvalidID;
+				lastImageUpdatedPrefabNameSID = InvalidID;
 				delete textElement;
 				textElement = nullptr;
 				lastTextElementUpdateCount = -1;

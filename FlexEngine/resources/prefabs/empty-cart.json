@@ -4,7 +4,7 @@
 	"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 	"root" : 
 	{
-		"name" : "empty-cart",
+		"name" : "empty cart",
 		"id" : "CC6102DA5011249843BF11E3D64BBC8A",
 		"type" : "empty cart",
 		"collider" : 

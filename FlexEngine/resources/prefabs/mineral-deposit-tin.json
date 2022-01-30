@@ -1,19 +1,19 @@
 {
 	"version" : 3,
 	"scene version" : 6,
-	"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+	"prefab id" : "56ADD055CA44E1BD4B9078348550E9BE",
 	"root" : 
 	{
-		"name" : "mineral_deposit_iron",
-		"id" : "039DF209DA76F2BB4735D0D01D1C3D72",
+		"name" : "mineral deposit tin",
+		"id" : "48849104A8DD75BA493CAE8E391BCE01",
 		"type" : "mineral deposit",
 		"materials" : 
 		[
-			"mineral iron"
+			"mineral tin"
 		],
 		"mineral deposit" : 
 		{
-			"type" : "iron",
+			"type" : "tin",
 			"mineral remaining" : 1000
 		}
 	}

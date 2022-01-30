@@ -91,7 +91,7 @@ namespace flex
 		TextureID GetOrLoadTexture(const std::string& textureFilePath);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
-		TextureID GetOrLoadIcon(StringID gameObjectTypeID);
+		TextureID GetOrLoadIcon(StringID prefabNameSID, i32 resolution = -1);
 
 		TextureID GetNextAvailableTextureID();
 		TextureID AddLoadedTexture(Texture* texture);
@@ -135,9 +135,15 @@ namespace flex
 
 		std::vector<Texture*> loadedTextures;
 		std::vector<std::string> discoveredTextures; // Stores relative file paths to all textures in textures directory
-		// Pair of (GameObjectTypeID, (Relative file path, texture ID))
-		// texture ID will be invalid until texture is loaded
-		std::vector<Pair<StringID, Pair<std::string, TextureID>>> icons;
+		struct IconMetaData
+		{
+			std::string relativeFilePath;
+			TextureID textureID = InvalidTextureID;
+			i32 resolution = 0;
+		};
+		// One entry per icon found on disk, mapped on prefab name SID
+		// Texture ID will be invalid until texture is loaded
+		std::vector<Pair<StringID, IconMetaData>> discoveredIcons;
 		TextureID tofuIconID = InvalidTextureID;
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;

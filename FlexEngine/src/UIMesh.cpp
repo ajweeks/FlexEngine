@@ -263,6 +263,7 @@ namespace flex
 			if (!newSubMesh->CreateProcedural(vertCount, vertexAttributes, TopologyMode::TRIANGLE_LIST, &createInfo))
 			{
 				PrintWarn("UIMesh failed to create new submesh\n");
+				delete drawData;
 			}
 			else
 			{

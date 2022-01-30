@@ -4,7 +4,7 @@
 	"prefab id" : "FF518D129F74B1B442494D703055E816",
 	"root" : 
 	{
-		"name" : "power_pole",
+		"name" : "power pole",
 		"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
 		"type" : "power pole",
 		"casts shadow" : false,

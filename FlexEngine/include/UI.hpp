@@ -225,7 +225,7 @@ namespace flex
 		virtual UIContainer* Duplicate() override;
 
 		ImageUIElement* imageElement = nullptr;
-		u64 lastImageUpdatedStackTypeID = InvalidID;
+		u64 lastImageUpdatedPrefabNameSID = InvalidID;
 		TextUIElement* textElement = nullptr;
 		i32 lastTextElementUpdateCount = -1;
 

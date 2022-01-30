@@ -13429,6 +13429,8 @@ namespace flex
 	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, MineralDepositSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
 	{
+		m_bItemizable = true;
+
 		PropertyCollection* collection = RegisterPropertyCollection();
 		collection->RegisterProperty("mineral remaining", &m_MineralRemaining)
 			.VersionAdded(6);
@@ -13507,7 +13509,7 @@ namespace flex
 
 	PrefabID MineralDeposit::GetMineralPrefabID()
 	{
-		std::string prefabName = "mineral_deposit_" + std::string(MineralTypeToString(m_Type));
+		std::string prefabName = "mineral deposit " + std::string(MineralTypeToString(m_Type));
 		return g_ResourceManager->GetPrefabID(prefabName.c_str());
 	}
 
@@ -13606,6 +13608,7 @@ namespace flex
 		m_MineTimer(1.0f)
 	{
 		m_bInteractable = true;
+		m_bItemizable = true;
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
 		m_LaserEmitterHeight = 5.0f;
 
