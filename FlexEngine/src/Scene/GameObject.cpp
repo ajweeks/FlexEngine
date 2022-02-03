@@ -3500,7 +3500,7 @@ namespace flex
 
 	void DroppedItem::OnPickedUp()
 	{
-		AudioManager::PlaySourceAtPosWS(BaseScene::s_PickupAudioID, m_Transform.GetWorldPosition());
+		AudioManager::PlaySource(BaseScene::s_PickupAudioID);
 	}
 
 	DirectionalLight::DirectionalLight() :
@@ -13402,6 +13402,7 @@ namespace flex
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{
+					// TODO: Detect and avoid infinite loops
 					otherSocket->GetParent()->OnCharge(chargeAmount);
 				}
 			}

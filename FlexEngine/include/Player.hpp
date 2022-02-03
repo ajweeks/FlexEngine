@@ -210,7 +210,7 @@ namespace flex
 		std::array<GameObjectStack, WEARABLES_ITEM_COUNT> m_WearablesInventory;
 		bool bInventoryShowing = false;
 		bool bMinerInventoryShowing = false;
-		i32 selectedItemSlot = 0;
+		i32 selectedQuickAccessItemSlot = 0;
 
 		GameObjectID heldItemLeftHand = InvalidGameObjectID;
 		GameObjectID heldItemRightHand = InvalidGameObjectID;

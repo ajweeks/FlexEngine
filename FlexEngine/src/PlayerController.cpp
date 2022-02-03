@@ -42,7 +42,10 @@ namespace flex
 	PlayerController::PlayerController() :
 		m_ActionCallback(this, &PlayerController::OnActionEvent),
 		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent),
-		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION)
+		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION),
+		m_TargetItemPlacementPosSmoothed(FLT_MAX),
+		m_TargetItemPlacementRotSmoothed(glm::vec3(FLT_MAX)),
+		m_ItemPlacementGroundedPos(FLT_MAX)
 	{
 		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed);
 		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
@@ -128,11 +131,11 @@ namespace flex
 			{
 				if (cycleItemAxis > 0.0f)
 				{
-					m_Player->selectedItemSlot = (m_Player->selectedItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->selectedQuickAccessItemSlot = (m_Player->selectedQuickAccessItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 				else if (cycleItemAxis < 0.0f)
 				{
-					m_Player->selectedItemSlot = (m_Player->selectedItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->selectedQuickAccessItemSlot = (m_Player->selectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 			}
 
@@ -527,34 +530,28 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->selectedItemSlot == -1)
+			if (m_Player->selectedQuickAccessItemSlot == -1)
 			{
-				m_Player->selectedItemSlot = 0;
+				m_Player->selectedQuickAccessItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
 
 			if (gameObjectStack.count >= 1)
 			{
 				if (gameObjectStack.prefabID.IsValid())
 				{
-					// TODO: Interpolate towards target point
-					Transform* playerTransform = m_Player->GetTransform();
-					m_TargetItemPlacementPos = playerTransform->GetWorldPosition() +
-						playerTransform->GetForward() * 4.0f +
-						playerTransform->GetUp() * 1.0f;
-					m_TargetItemPlacementRot = playerTransform->GetWorldRotation();
-
 					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 					Mesh* mesh = templateObject->GetMesh();
-
 					if (mesh != nullptr)
 					{
+						UpdateItemPlacementTransform();
+
 						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
 						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
 						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
-							m_TargetItemPlacementPos,
-							m_TargetItemPlacementRot,
+							m_TargetItemPlacementPosSmoothed,
+							m_TargetItemPlacementRotSmoothed,
 							VEC3_ONE,
 							m_bItemPlacementValid ? validColour : invalidColour);
 					}
@@ -571,20 +568,27 @@ namespace flex
 		{
 			m_bAttemptPlaceItemFromInventory = false;
 
-			if (m_Player->selectedItemSlot == -1)
+			if (m_Player->selectedQuickAccessItemSlot == -1)
 			{
-				m_Player->selectedItemSlot = 0;
+				m_Player->selectedQuickAccessItemSlot = 0;
 			}
 
 			if (m_bItemPlacementValid)
 			{
-				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
+				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
 
 				if (gameObjectStack.count >= 1)
 				{
 					if (gameObjectStack.prefabID.IsValid())
 					{
+						UpdateItemPlacementTransform();
+
 						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot, gameObjectStack.userData);
+
+						m_TargetItemPlacementPosSmoothed = glm::vec3(FLT_MAX);
+						m_TargetItemPlacementRotSmoothed = glm::quat(glm::vec3(FLT_MAX));
+						m_ItemPlacementGroundedPos = glm::vec3(FLT_MAX);
+
 						if (gameObject != nullptr)
 						{
 							// Add non-immediate
@@ -735,9 +739,6 @@ namespace flex
 		btVector3 force(0.0f, 0.0f, 0.0f);
 
 		Transform* playerTransform = m_Player->GetTransform();
-		glm::vec3 playerUp = playerTransform->GetUp();
-		glm::vec3 playerRight = playerTransform->GetRight();
-		glm::vec3 playerForward = playerTransform->GetForward();
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
@@ -762,42 +763,70 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->selectedItemSlot == -1)
+			if (m_Player->selectedQuickAccessItemSlot == -1)
 			{
-				m_Player->selectedItemSlot = 0;
+				m_Player->selectedQuickAccessItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedItemSlot];
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
 
 			if (gameObjectStack.count >= 1)
 			{
 				if (gameObjectStack.prefabID.IsValid())
 				{
-					// TODO: Interpolate towards target point
-					m_TargetItemPlacementPos = playerTransform->GetWorldPosition() +
-						playerForward * 4.0f +
-						playerUp * 1.0f;
-					m_TargetItemPlacementRot = playerTransform->GetWorldRotation();
+					UpdateItemPlacementTransform();
+
+					real posInterpolateSpeed = 60.0f;
+					real rotInterpolateSpeed = 25.0f;
+					if (NearlyEquals(m_TargetItemPlacementPosSmoothed.y, m_TargetItemPlacementPos.y, 0.001f))
+					{
+						m_TargetItemPlacementPosSmoothed = m_TargetItemPlacementPos;
+					}
+					else
+					{
+						// Only interpolate position when changing height
+						m_TargetItemPlacementPosSmoothed = MoveTowards(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementPos, posInterpolateSpeed);
+					}
+					m_TargetItemPlacementRotSmoothed = MoveTowards(m_TargetItemPlacementRotSmoothed, m_TargetItemPlacementRot, g_DeltaTime * rotInterpolateSpeed);
 
 					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 					Mesh* mesh = templateObject->GetMesh();
 
 					if (mesh != nullptr)
 					{
-						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
-						btTransform bbTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
 						PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
 						if (m_ItemPlacementBoundingBoxShape == nullptr)
 						{
+							btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
 							m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
 						}
 
+						{
+							// Un-smoothed, un-snapped target pos
+							glm::vec3 targetItemPlacementPos = GetTargetItemPos();
+							real maxDrop = 5.0f;
+
+							btTransform floatingTargetTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(targetItemPlacementPos));
+
+							btTransform sweepEndTransform(floatingTargetTransform.getRotation(), ToBtVec3(targetItemPlacementPos + (-VEC3_UP) * maxDrop));
+							glm::vec3 groundPos, groundNormal;
+							if (physicsWorld->GetPointOnGround(m_ItemPlacementBoundingBoxShape, floatingTargetTransform, sweepEndTransform, groundPos, groundNormal))
+							{
+								m_ItemPlacementGroundedPos.x = targetItemPlacementPos.x;
+								m_ItemPlacementGroundedPos.y = groundPos.y +
+									((mesh->m_MaxPoint.y - mesh->m_MinPoint.y) * 0.5f);
+								m_ItemPlacementGroundedPos.z = targetItemPlacementPos.z;
+
+								m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
+							}
+						}
+
+						btTransform transform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
+
 						btPairCachingGhostObject pairCache;
-
 						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
-						pairCache.setWorldTransform(bbTransform);
-
+						pairCache.setWorldTransform(transform);
 						i32 mask = (u32)CollisionType::NOTHING;
 						pairCache.setCollisionFlags(mask);
 
@@ -826,7 +855,7 @@ namespace flex
 
 			glm::quat rot = playerTransform->GetLocalRotation();
 			real angle = lookH * (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson) * g_FixedDeltaTime;
-			rot = glm::rotate(rot, angle, playerUp);
+			rot = glm::rotate(rot, angle, playerTransform->GetUp());
 			playerTransform->SetWorldRotation(rot);
 
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_FixedDeltaTime);
@@ -873,8 +902,8 @@ namespace flex
 				{
 					real moveAcceleration = TWEAKABLE(80000.0f);
 
-					force += ToBtVec3(playerRight) * moveAcceleration * moveLR * g_FixedDeltaTime;
-					force += ToBtVec3(playerForward) * moveAcceleration * moveFB * g_FixedDeltaTime;
+					force += ToBtVec3(playerTransform->GetRight()) * moveAcceleration * moveLR * g_FixedDeltaTime;
+					force += ToBtVec3(playerTransform->GetForward()) * moveAcceleration * moveFB * g_FixedDeltaTime;
 				}
 			}
 		}
@@ -1199,5 +1228,37 @@ namespace flex
 		}
 
 		return EventReply::UNCONSUMED;
+	}
+
+	glm::vec3 PlayerController::GetTargetItemPos()
+	{
+		real forwardOffset = 6.0f;
+		real upOffset = 1.0f;
+
+		Transform* playerTransform = m_Player->GetTransform();
+		return playerTransform->GetWorldPosition() +
+			playerTransform->GetForward() * forwardOffset +
+			playerTransform->GetUp() * upOffset;
+	}
+
+	void PlayerController::UpdateItemPlacementTransform()
+	{
+		if (m_ItemPlacementGroundedPos.x != FLT_MAX)
+		{
+			m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
+		}
+		else
+		{
+			m_TargetItemPlacementPos = GetTargetItemPos();
+		}
+
+		m_TargetItemPlacementRot = m_Player->GetTransform()->GetWorldRotation();
+
+		if (m_TargetItemPlacementPosSmoothed.x == FLT_MAX)
+		{
+			m_TargetItemPlacementPosSmoothed = m_TargetItemPlacementPos;
+			m_TargetItemPlacementRotSmoothed = m_TargetItemPlacementRot;
+		}
+
 	}
 } // namespace flex

@@ -36,13 +36,17 @@ namespace flex
 		void LoadConfigFile();
 		void SerializeConfigFile();
 
-		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
-
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<PlayerController> m_ActionCallback;
 
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
 		MouseMovedCallback<PlayerController> m_MouseMovedCallback;
+
+		void UpdateItemPlacementTransform();
+		glm::vec3 GetTargetItemPos();
+
+		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
+
 
 		real m_MaxMoveSpeed = 20.0f;
 		real m_RotateHSpeedFirstPerson = 1.5f;
@@ -82,9 +86,11 @@ namespace flex
 		bool m_bSpawnWire = false;
 		bool m_bDropItem = false;
 
-		//Transform m_TargetItemPlacementTransform;
-		glm::vec3 m_TargetItemPlacementPos;
-		glm::quat m_TargetItemPlacementRot;
+		glm::vec3 m_TargetItemPlacementPos; // Position of to-be-placed item, potentially snapped to the ground
+		glm::vec3 m_TargetItemPlacementPosSmoothed;
+		glm::quat m_TargetItemPlacementRot; // Rotation of to-be-placed item, potentially snapped to the ground
+		glm::quat m_TargetItemPlacementRotSmoothed;
+		glm::vec3 m_ItemPlacementGroundedPos; // Position on ground below to-be-placed item location
 		bool m_bItemPlacementValid = false;
 
 		Wire* m_PlacingWire = nullptr;

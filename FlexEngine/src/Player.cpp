@@ -344,10 +344,10 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item slot: %i", selectedItemSlot);
+			ImGui::Text("Held item slot: %i", selectedQuickAccessItemSlot);
 
 			DrawInventoryImGui("Inventory", -1, m_Inventory);
-			DrawInventoryImGui("Quick access inventory", selectedItemSlot, m_QuickAccessInventory);
+			DrawInventoryImGui("Quick access inventory", selectedQuickAccessItemSlot, m_QuickAccessInventory);
 			DrawInventoryImGui("Wearables inventory", -1, m_WearablesInventory);
 
 			m_Controller->DrawImGuiObjects();
@@ -477,12 +477,12 @@ namespace flex
 
 	void Player::DropSelectedItem()
 	{
-		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(selectedItemSlot), false);
+		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(selectedQuickAccessItemSlot), false);
 	}
 
 	bool Player::HasFullSelectedInventorySlot()
 	{
-		return m_QuickAccessInventory[selectedItemSlot].count > 0;
+		return m_QuickAccessInventory[selectedQuickAccessItemSlot].count > 0;
 	}
 
 	i32 Player::GetNextFreeInventorySlot()
