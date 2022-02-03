@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
+#include "Particles.hpp"
 
 namespace flex
 {
@@ -136,22 +137,12 @@ namespace flex
 	// 56 bytes
 	struct ParticleBufferData
 	{
-		glm::vec3 pos;		// 0
-		glm::vec4 colour;	// 12
-		glm::vec3 vel;		// 28
-		glm::vec4 extraVec4;// 40
+		glm::vec3 pos;
+		glm::vec3 vel;
+		glm::vec4 colour;
+		glm::vec4 extraVec4;
 	};
 #pragma pack(pop)
-
-	// 44 bytes
-	struct ParticleSimData
-	{
-		glm::vec4 colour0;	// 0
-		glm::vec4 colour1;	// 16
-		real dt;			// 32
-		real speed;			// 36
-		u32 particleCount;	// 40
-	};
 
 	// 80 bytes
 	struct OceanData

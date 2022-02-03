@@ -2874,8 +2874,8 @@ namespace flex
 			particleSystem->ID = GetNextAvailableParticleSystemID();
 			particleSystem->system = system;
 
-			system->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim Material");
-			system->renderingMaterialID = CreateParticleSystemRenderingMaterial(name + " rendering Material");
+			system->simMaterialID = CreateParticleSystemSimulationMaterial(name + " sim material");
+			system->renderingMaterialID = CreateParticleSystemRenderingMaterial(name + " rendering material");
 
 			InsertNewParticleSystem(particleSystem);
 
@@ -4938,7 +4938,7 @@ namespace flex
 
 				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					if (!particleSystem || !particleSystem->system->IsVisible())
+					if (!particleSystem || !particleSystem->system->bEnabled)
 					{
 						continue;
 					}
@@ -4949,8 +4949,7 @@ namespace flex
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(particleSystem->graphicsPipelineID)->pipeline;
 
 					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-					glm::mat4 model = particleSystem->system->GetTransform()->GetWorldTransform();
-					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, model, nullptr);
+					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->objectToWorld, nullptr);
 
 					VkDeviceSize offsets[1] = { 0 };
 					const VkBuffer* particleBuffer = &particleSimMat->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer;
@@ -5163,22 +5162,19 @@ namespace flex
 			const real invDim = 1.0f / (real)dim;
 			for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
 			{
-				// TODO: Is this necessary?
 				real x = (i % dim) * invDim - 0.5f;
 				real y = (i / dim % dim) * invDim - 0.5f;
 				real z = (i / (dim * dim) % dim) * invDim - 0.5f;
 
-				real mag = glm::length(glm::vec3(x, y, z));
+				real up = RandomFloat(3.0f, 5.0f);
+				real theta = RandomFloat(0.0f, TWO_PI);
+				real lifetime = RandomFloat(0.25f, 0.4f);
+				real brightness = RandomFloat(0.2f, 1.0f);
+				real initialAlpha = RandomFloat(0.7f, 1.0f);
 
-				real dx = x * 2.0f;
-				real dz = z * 2.0f;
-
-				real theta = atan2(dz, dx) - PI_DIV_TWO;
-
-				particleBufferData[i].pos = glm::vec3(x, y, z) * particleSystem->system->scale;
-				particleBufferData[i].colour = glm::vec4(1.0f);
-				particleBufferData[i].vel = glm::vec3(cos(theta), 0.0f, sin(theta)) * mag;
-				particleBufferData[i].extraVec4 = glm::vec4(Lerp(0.6f, 0.2f, mag), 0.0f, 0.0f, 0.0f);
+				particleBufferData[i].pos = glm::vec3(x, y, z);
+				particleBufferData[i].vel = glm::vec3(cos(theta) * 0.5f, up, sin(theta) * 0.5f);
+				particleBufferData[i].extraVec4 = glm::vec4(lifetime, lifetime, 0.0f, 0.0f);
 			}
 
 			VulkanMaterial* particleSimMat = (VulkanMaterial*)m_Materials.at(particleSystem->system->simMaterialID);
@@ -8575,7 +8571,7 @@ namespace flex
 
 				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					if (!particleSystem || !particleSystem->system->IsVisible() || !particleSystem->system->bEnabled)
+					if (!particleSystem || !particleSystem->system->bEnabled)
 					{
 						continue;
 					}
@@ -9515,6 +9511,7 @@ namespace flex
 		void VulkanRenderer::UpdateDynamicUniformBuffer(
 			MaterialID materialID,
 			u32 dynamicOffset,
+			// TODO: Rename to objectToWorld
 			const glm::mat4& model,
 			UniformOverrides const* uniformOverrides /* = nullptr */)
 		{

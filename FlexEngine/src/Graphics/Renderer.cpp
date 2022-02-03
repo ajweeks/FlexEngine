@@ -2359,7 +2359,8 @@ namespace flex
 
 		// Particles
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bDepthWriteEnable = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::VELOCITY3 |

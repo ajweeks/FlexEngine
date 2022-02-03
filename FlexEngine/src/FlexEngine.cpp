@@ -246,6 +246,9 @@ namespace flex
 
 		g_Systems[(i32)SystemType::CART_MANAGER] = new CartManager();
 
+		g_Systems[(i32)SystemType::PARTICLE_MANAGER] = new ParticleManager();
+		g_Systems[(i32)SystemType::PARTICLE_MANAGER]->Initialize();
+
 		g_ResourceManager->DiscoverMeshes();
 		g_ResourceManager->ParseMaterialsFiles();
 		g_ResourceManager->ParseFontFile();

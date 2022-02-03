@@ -6,14 +6,14 @@
 
 namespace flex
 {
+	class DirectoryWatcher;
+	struct JSONObject;
+	struct PropertyCollection;
+	class Road;
+	class Socket;
+	class Terminal;
 	class Wire;
 	class WirePlug;
-	class Socket;
-	class Road;
-	class Terminal;
-	class DirectoryWatcher;
-	struct PropertyCollection;
-	struct JSONObject;
 
 	struct SocketData
 	{

@@ -1230,35 +1230,6 @@ namespace flex
 
 	};
 
-	static constexpr StringID ParticleSystemSID = SID("particle system");
-	class ParticleSystem final : public GameObject
-	{
-	public:
-		explicit ParticleSystem(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
-
-		virtual GameObject* CopySelf(
-			GameObject* parent = nullptr,
-			CopyFlags copyFlags = CopyFlags::ALL,
-			std::string* optionalName = nullptr,
-			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
-
-		virtual void Destroy(bool bDetachFromParent = true) override;
-		virtual void Update() override;
-
-		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
-
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
-
-		real scale = 1.0f;
-		ParticleSimData data;
-		bool bEnabled = true;
-		MaterialID simMaterialID = InvalidMaterialID;
-		MaterialID renderingMaterialID = InvalidMaterialID;
-		ParticleSystemID particleSystemID = InvalidParticleSystemID;
-
-	};
-
 	struct NoiseFunction
 	{
 		enum class Type : u32
@@ -1989,7 +1960,6 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
-
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;
 		real m_MineRate = 1.0f;

@@ -18,7 +18,9 @@ struct Particle
 	vec3 pos;
 	vec3 vel;
 	vec4 col;
-	vec4 extraVec4;
+	float lifetime;
+	float initial_lifetime;
+	vec2 unused;
 	*/
 };
 
@@ -40,20 +42,19 @@ void main()
 	vec3 pos = vec3(particles[index].data[0], particles[index].data[1], particles[index].data[2]);
 	vec3 vel = vec3(particles[index].data[3], particles[index].data[4], particles[index].data[5]);
 	vec4 col = vec4(particles[index].data[6], particles[index].data[7], particles[index].data[8], particles[index].data[9]);
+	float lifetime = particles[index].data[10];
+	float initial_lifetime = particles[index].data[11];
 
-	float mag = pow(length(pos.xz), 0.9);
-	float dz = pos.z * 2.0;
-	float dx = pos.x * 2.0;
-	float theta = atan(dz, dx) - PI_DIV_TWO;
-
-	vec3 perpVec = vec3(cos(theta), 0, sin(theta));
-	vel += perpVec * uboDynamic.speed * (mag + sin(pos.y*0.2));
-	float velMag = length(perpVec);
-	vel *= 0.4;
+	if (lifetime <= 0.0) return;
 
 	pos += vel * uboDynamic.dt;
-
-	col = mix(uboDynamic.colour0, uboDynamic.colour1, clamp(pow(length(vel)*0.03, 5.0), 0, 1));
+	float alpha = clamp(lifetime / initial_lifetime, 0.0, 1.0);
+	lifetime -= uboDynamic.dt;
+	if (lifetime <= 0.0) alpha = 0.0;
+	col.rgb = mix(uboDynamic.colour0.rgb, uboDynamic.colour1.rgb, alpha);
+	col.a = alpha;
+	vel.y -= uboDynamic.dt * 0.2;
+	vel *= 1.0 - uboDynamic.dt * 0.1;
 
 	particles[index].data[0] = pos[0];
 	particles[index].data[1] = pos[1];
@@ -65,5 +66,5 @@ void main()
 	particles[index].data[7] = col[1];
 	particles[index].data[8] = col[2];
 	particles[index].data[9] = col[3];
-	particles[index].data[10] = mix(5.0, 4.0, clamp(mag, 0, 1)); // Size
+	particles[index].data[10] = lifetime;
 }

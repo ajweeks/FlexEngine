@@ -361,7 +361,6 @@ namespace flex
 		case TerminalSID: return new Terminal(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case GerstnerWaveSID: return new GerstnerWave(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case BlocksSID: return new Blocks(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case ParticleSystemSID: return new ParticleSystem(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case TerrainGeneratorSID: return new TerrainGenerator(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case WireSID: return new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case WirePlugSID: return new WirePlug(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
@@ -8476,130 +8475,6 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, ParticleSystemSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
-	{
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("scale", &scale)
-			.VersionAdded(6)
-			.Precision(2)
-			.DefaultValue(1.0f);
-		collection->RegisterProperty("enabled", &bEnabled)
-			.VersionAdded(6)
-			.DefaultValue(true);
-	}
-
-	GameObject* ParticleSystem::CopySelf(
-		GameObject* parent /* = nullptr */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */,
-		std::string* optionalName /* = nullptr */,
-		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
-	{
-		std::string newObjectName;
-		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
-		ParticleSystem* newParticleSystem = new ParticleSystem(newObjectName, newGameObjectID);
-
-		CopyGenericFields(newParticleSystem, parent, copyFlags);
-
-		newParticleSystem->data.colour0 = data.colour0;
-		newParticleSystem->data.colour1 = data.colour1;
-		newParticleSystem->data.speed = data.speed;
-		newParticleSystem->data.particleCount = data.particleCount;
-		newParticleSystem->bEnabled = true;
-		newParticleSystem->scale = scale;
-		g_Renderer->AddParticleSystem(m_Name, newParticleSystem, data.particleCount);
-
-		return newParticleSystem;
-	}
-
-	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
-	{
-		g_Renderer->RemoveParticleSystem(particleSystemID);
-
-		GameObject::Destroy(bDetachFromParent);
-	}
-
-	void ParticleSystem::Update()
-	{
-		PROFILE_AUTO("ParticleSystem Update");
-
-		scale = m_Transform.GetWorldScale().x;
-	}
-
-	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(matIDs);
-
-		JSONObject particleSystemObj;
-		if (parentObject.TryGetObject("particle system info", particleSystemObj))
-		{
-			glm::mat4 model;
-			Transform::ParseJSON(particleSystemObj, model);
-			m_Transform.SetWorldFromMatrix(model);
-
-			DeserializeRegisteredProperties(particleSystemObj);
-
-			JSONObject systemDataObj = particleSystemObj.GetObject("data");
-			data = {};
-			systemDataObj.TryGetVec4("colour0", data.colour0);
-			systemDataObj.TryGetVec4("colour1", data.colour1);
-			systemDataObj.TryGetFloat("speed", data.speed);
-			i32 particleCount;
-			if (systemDataObj.TryGetInt("particle count", particleCount))
-			{
-				data.particleCount = particleCount;
-			}
-
-			particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
-		}
-	}
-
-	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
-	{
-		JSONObject particleSystemObj = {};
-
-		glm::mat4 model = m_Transform.GetWorldTransform();
-		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
-
-		SerializeRegisteredProperties(particleSystemObj, bSerializePrefabData);
-
-		JSONObject systemDataObj = {};
-		systemDataObj.fields.emplace_back("colour0", JSONValue(data.colour0, 2));
-		systemDataObj.fields.emplace_back("colour1", JSONValue(data.colour1, 2));
-		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
-		systemDataObj.fields.emplace_back("particle count", JSONValue(data.particleCount));
-		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
-
-		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
-	}
-
-	void ParticleSystem::DrawImGuiObjects(bool bDrawingEditorObjects)
-	{
-		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
-
-		static const ImGuiColorEditFlags colorEditFlags =
-			ImGuiColorEditFlags_NoInputs |
-			ImGuiColorEditFlags_Float |
-			ImGuiColorEditFlags_RGB |
-			ImGuiColorEditFlags_PickerHueWheel |
-			ImGuiColorEditFlags_HDR;
-
-		ImGui::Text("Particle System");
-
-		ImGui::Checkbox("Enabled", &bEnabled);
-
-		ImGui::ColorEdit4("Colour 0", &data.colour0.r, colorEditFlags);
-		ImGui::SameLine();
-		ImGui::ColorEdit4("Colour 1", &data.colour1.r, colorEditFlags);
-		ImGui::SliderFloat("Speed", &data.speed, -10.0f, 10.0f);
-		i32 particleCount = (i32)data.particleCount;
-		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
-		{
-			data.particleCount = particleCount;
-		}
-	}
-
 	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
 	{
 		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
@@ -13673,12 +13548,6 @@ namespace flex
 							u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
 							m_Charge -= m_PowerDraw;
 
-							real radius = 3.0f;
-							m_LaserEndPoint = glm::vec3(
-								RandomFloat(-radius, radius),
-								-m_LaserEmitterHeight,
-								RandomFloat(-radius, radius));
-
 							if (mineralMined > 0)
 							{
 								GameObjectStack::UserData userData = {};
@@ -13690,12 +13559,45 @@ namespace flex
 										m_Transform.GetForward() * 1.0f;
 									g_SceneManager->CurrentScene()->CreateDroppedItem(minedMineralPrefabID, extraItems, pos, VEC3_ZERO);
 								}
+
+								ParticleSimData particleSimData = {};
+								particleSimData.colour0 = glm::vec4(0.35f, 0.34f, 0.32f, 1.0f);
+								particleSimData.colour1 = glm::vec4(0.16f, 0.14f, 0.12f, 1.0f);
+								particleSimData.speed = 1.0f;
+								particleSimData.particleCount = 512;
+
+								glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+								glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
+								PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+								btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
+								physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
+
+								btVector3 posWS;
+								if (rayCallback.hasHit())
+								{
+									posWS = rayCallback.m_hitPointWorld;
+								}
+								else
+								{
+									posWS = ToBtVec3(laserEndWS);
+								}
+								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, ToVec3(posWS));
+								GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER)->AddParticleSystem(particleSimData, "Mineral dust particle system", objectToWorld, 3.0f);
 							}
 
 							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 							{
 								m_MineTimer.Complete();
 								m_NearestMineralDepositID = InvalidGameObjectID;
+							}
+							else
+							{
+								real radius = 3.0f;
+								m_LaserEndPoint = glm::vec3(
+									RandomFloat(-radius, radius),
+									-m_LaserEmitterHeight,
+									RandomFloat(-radius, radius));
 							}
 						}
 					}

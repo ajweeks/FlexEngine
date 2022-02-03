@@ -22,10 +22,6 @@ namespace flex
 	GameObjectID TerminalManager::m_TerminalSavingID = InvalidGameObjectID;
 	bool TerminalManager::m_bOpenSavePopup = false;
 
-	void System::DrawImGui()
-	{
-	}
-
 	void PluggablesSystem::Initialize()
 	{
 		m_PlugInAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-open-19.wav"), true);

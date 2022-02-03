@@ -160,6 +160,13 @@ namespace flex
 	{
 	}
 
+	JSONValue::JSONValue(const glm::mat4& inMatValue, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::MAT4),
+		matValue(inMatValue),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
 	JSONValue::JSONValue(const GUID& inGUIDValue) :
 		type(ValueType::GUID),
 		guidValue(inGUIDValue)
@@ -210,6 +217,8 @@ namespace flex
 			return JSONValue(*(glm::vec4*)valuePtr, precision);
 		case ValueType::QUAT:
 			return JSONValue(*(glm::quat*)valuePtr, precision);
+		case ValueType::MAT4:
+			return JSONValue(*(glm::mat4*)valuePtr, precision);
 		case ValueType::GUID:
 			return JSONValue(*(GUID*)valuePtr);
 		default:
@@ -517,6 +526,28 @@ namespace flex
 		return false;
 	}
 
+	glm::mat4 JSONObject::GetMat4(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.matValue;
+			}
+		}
+		return MAT4_IDENTITY;
+	}
+
+	bool JSONObject::TryGetMat4(const std::string& label, glm::mat4& value) const
+	{
+		if (HasField(label))
+		{
+			value = GetMat4(label);
+			return true;
+		}
+		return false;
+	}
+
 	i32 JSONObject::GetInt(const std::string& label) const
 	{
 		for (const JSONField& field : fields)
@@ -794,6 +825,8 @@ namespace flex
 			return TryGetVec4(label, *(glm::vec4*)valuePtr);
 		case ValueType::QUAT:
 			return TryGetQuat(label, *(glm::quat*)valuePtr);
+		case ValueType::MAT4:
+			return TryGetMat4(label, *(glm::mat4*)valuePtr);
 		case ValueType::GUID:
 			return TryGetGUID(label, *(GUID*)valuePtr);
 		default:
@@ -885,6 +918,44 @@ namespace flex
 			result += ",";
 			result += FloatToString(value.vecValue[3], value.floatPrecision);
 			result += "\"";
+			break;
+		case ValueType::MAT4:
+			result += "\"(";
+			result += FloatToString(value.matValue[0][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[1][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[2][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[3][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][3], value.floatPrecision);
+			result += ")\"";
 			break;
 		case ValueType::GUID:
 			result += "\"";

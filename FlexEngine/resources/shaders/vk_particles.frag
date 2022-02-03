@@ -15,7 +15,7 @@ void main()
 	// out_Colour = vec4(inputs.colour); return;
 	// out_Colour = vec4(inputs.texCoord, 0, 1); return;
 
-	if (length(inputs.texCoord*2.0-1.0) > 0.5)
+	if (length(inputs.texCoord * 2.0 - 1.0) > 0.5)
 	{
 		discard;
 	}

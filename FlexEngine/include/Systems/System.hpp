@@ -9,6 +9,7 @@ namespace flex
 		TERMINAL_MANAGER,
 		TRACK_MANAGER,
 		CART_MANAGER,
+		PARTICLE_MANAGER,
 
 		_NONE
 	};
@@ -22,7 +23,7 @@ namespace flex
 		virtual void Destroy() = 0;
 		virtual void Update() = 0;
 
-		virtual void DrawImGui();
+		virtual void DrawImGui() {};
 
 	};
 } // namespace flex

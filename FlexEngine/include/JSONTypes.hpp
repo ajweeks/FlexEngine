@@ -25,6 +25,7 @@ namespace flex
 		VEC3,
 		VEC4,
 		QUAT,
+		MAT4,
 		GUID,
 		OBJECT,
 		OBJECT_ARRAY,
@@ -53,6 +54,9 @@ namespace flex
 
 		glm::quat GetQuat(const std::string& label) const;
 		bool TryGetQuat(const std::string& label, glm::quat& value) const;
+
+		glm::mat4 GetMat4(const std::string& label) const;
+		bool TryGetMat4(const std::string& label, glm::mat4& value) const;
 
 		i32 GetInt(const std::string& label) const;
 		bool TryGetInt(const std::string& label, i32& value) const;
@@ -121,6 +125,7 @@ namespace flex
 		explicit JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::mat4& inMatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
 		explicit JSONValue(const GUID& inGUIDValue);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
@@ -148,6 +153,7 @@ namespace flex
 			real floatValue;
 			bool boolValue;
 			glm::vec4 vecValue;
+			glm::mat4 matValue;
 		};
 		GUID guidValue;
 		JSONObject objectValue;
