@@ -7,7 +7,6 @@ layout (binding = 0) uniform UBODynamic
 	vec4 colour0;
 	vec4 colour1;
 	float dt;
-	float speed;
 	uint particleCount;
 } uboDynamic;
 

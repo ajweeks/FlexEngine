@@ -5162,18 +5162,12 @@ namespace flex
 			const real invDim = 1.0f / (real)dim;
 			for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
 			{
-				real x = (i % dim) * invDim - 0.5f;
-				real y = (i / dim % dim) * invDim - 0.5f;
-				real z = (i / (dim * dim) % dim) * invDim - 0.5f;
+				const ParticleParameters& params = particleSystem->system->GetParameters();
 
-				real up = RandomFloat(3.0f, 5.0f);
-				real theta = RandomFloat(0.0f, TWO_PI);
-				real lifetime = RandomFloat(0.25f, 0.4f);
-				real brightness = RandomFloat(0.2f, 1.0f);
-				real initialAlpha = RandomFloat(0.7f, 1.0f);
+				real lifetime = params.GetReal(SID("lifetime"));
 
-				particleBufferData[i].pos = glm::vec3(x, y, z);
-				particleBufferData[i].vel = glm::vec3(cos(theta) * 0.5f, up, sin(theta) * 0.5f);
+				particleBufferData[i].pos = params.GetVec3(SID("initial position"));
+				particleBufferData[i].vel = params.GetVec3(SID("initial velocity"));
 				particleBufferData[i].extraVec4 = glm::vec4(lifetime, lifetime, 0.0f, 0.0f);
 			}
 

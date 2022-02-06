@@ -18,6 +18,7 @@
 #define SCENE_SAVED_DIRECTORY						RESOURCE_DIRECTORY "scenes/saved/"
 #define SCRIPTS_DIRECTORY							RESOURCE_DIRECTORY "scripts/"
 #define MATERIALS_DIRECTORY							RESOURCE_DIRECTORY "materials/"
+#define PARTICLE_SYSTEMS_DIRECTORY					RESOURCE_DIRECTORY "particle_systems/"
 
 #define FONT_SDF_DIRECTORY							SAVED_DIRECTORY "fonts/"
 #define SCREENSHOT_DIRECTORY						SAVED_DIRECTORY "screenshots/"
@@ -36,6 +37,7 @@
 #define SHADER_SPECIALIZATION_CONSTANTS_LOCATION	CONFIG_DIRECTORY "shader_specialization_constants.json"
 #define SPECIALIZATION_CONSTANTS_LOCATION			CONFIG_DIRECTORY "specialization_constants.json"
 #define UI_SETTINGS_LOCATION						CONFIG_DIRECTORY "ui_settings.json"
+#define PARTICLE_PARAMETER_TYPES_LOCATION			CONFIG_DIRECTORY "particle_parameter_types.json"
 
 #define COMMON_CONFIG_LOCATION						SAVED_DIRECTORY "common.json"
 #define BOOTUP_TIMES_LOCATION						SAVED_DIRECTORY "bootup_times.log"

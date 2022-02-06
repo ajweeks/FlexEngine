@@ -21,5 +21,5 @@ void main()
 {
 	outputs.position = (uboDynamic.model * vec4(in_Position, 1.0)).xyz;
 	outputs.colour = in_Colour;
-	outputs.size = mix(1.0, 0.5, in_ExtraVec4.x);
+	outputs.size = 0.5;
 }

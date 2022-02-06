@@ -30,11 +30,18 @@ namespace flex
 			}
 
 			auto& arrPair = data.back();
-			return &arrPair.first[arrPair.second++];
+			void* result = (T*)arrPair.first + arrPair.second++;
+			T* r = new(result) T;
+			return r;
 		}
 
 		void ReleaseAll()
 		{
+			for (auto& pair : data)
+			{
+				((T*)pair.first)->~T();
+				free(pair.first);
+			}
 			data.clear();
 		}
 
@@ -56,10 +63,13 @@ namespace flex
 	private:
 		void PushPool()
 		{
-			data.push_back({ std::array<T, PoolSize>(), 0u });
+			void* newAlloc = malloc(sizeof(T) * PoolSize);
+			memset(newAlloc, 0, sizeof(T) * PoolSize);
+			CHECK_NE(newAlloc, nullptr);
+			data.push_back({ newAlloc, 0u });
 		}
 
 		// List of pairs of arrays (pools) & usage counts
-		std::list<Pair<std::array<T, PoolSize>, u32>> data;
+		std::list<Pair<void*, u32>> data;
 	};
 } // namespace flex

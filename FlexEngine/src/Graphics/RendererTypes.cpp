@@ -361,7 +361,7 @@ namespace flex
 		size = rhs.size;
 	}
 
-	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock&& rhs)
+	Material::PushConstantBlock::PushConstantBlock(PushConstantBlock&& rhs)
 	{
 		data = rhs.data;
 		size = rhs.size;
@@ -374,7 +374,7 @@ namespace flex
 		return *this;
 	}
 
-	Material::PushConstantBlock& Material::PushConstantBlock::operator=(const PushConstantBlock&& rhs)
+	Material::PushConstantBlock& Material::PushConstantBlock::operator=(PushConstantBlock&& rhs)
 	{
 		data = rhs.data;
 		size = rhs.size;

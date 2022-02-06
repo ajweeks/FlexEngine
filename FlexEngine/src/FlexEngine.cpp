@@ -1264,6 +1264,7 @@ namespace flex
 				ImGui::MenuItem("Uniform Buffers", nullptr, &m_UIWindows[SID("uniform buffers")].bOpen);
 				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
 				ImGui::MenuItem("Jitter Detector", nullptr, &m_UIWindows[SID("jitter detector")].bOpen);
+				ImGui::MenuItem("Particle manager", nullptr, &m_UIWindows[SID("particle manager")].bOpen);
 				ImGui::Separator();
 				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")].bOpen);
 				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")].bOpen);

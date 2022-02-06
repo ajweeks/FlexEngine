@@ -1,0 +1,26 @@
+{
+	"particle parameter types" : 
+	[
+		{
+			"initial velocity" : "vec3"
+		},
+		{
+			"initial position" : "vec3"
+		},
+		{
+			"initial colour" : "vec4"
+		},
+		{
+			"final colour" : "vec4"
+		},
+		{
+			"lifetime" : "float"
+		},
+		{
+			"fade over lifetime" : "bool"
+		},
+		{
+			"particle count" : "int"
+		}
+	]
+}
