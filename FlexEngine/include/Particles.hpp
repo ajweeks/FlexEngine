@@ -25,8 +25,8 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(ParticleSampleTypeStrings) == (u32)ParticleSampleType::_NONE + 1, "ParticleSampleTypeStrings length must match ParticleSampleType enum");
 
-	static const char* ParticleSampleTypeToString(ParticleSampleType type);
-	static ParticleSampleType ParticleSampleTypeFromString(const char* typeStr);
+	const char* ParticleSampleTypeToString(ParticleSampleType type);
+	ParticleSampleType ParticleSampleTypeFromString(const char* typeStr);
 
 
 	enum class ParticleParamterValueType
@@ -56,8 +56,8 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(ParticleParamterValueTypeStrings) == (u32)ParticleParamterValueType::_NONE + 1, "ParticleParamterValueTypeStrings length must match ParticleParamterValueType enum");
 
-	static const char* ParticleParamterValueTypeToString(ParticleParamterValueType type);
-	static ParticleParamterValueType ParticleParamterValueTypeFromString(const char* typeStr);
+	const char* ParticleParamterValueTypeToString(ParticleParamterValueType type);
+	ParticleParamterValueType ParticleParamterValueTypeFromString(const char* typeStr);
 
 	struct ParticleParameterType
 	{
