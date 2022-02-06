@@ -31,10 +31,10 @@ namespace flex
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
 
-			VulkanRenderer(const VulkanRenderer&&) = delete;
 			VulkanRenderer(const VulkanRenderer&) = delete;
-			VulkanRenderer& operator=(const VulkanRenderer&&) = delete;
+			VulkanRenderer(VulkanRenderer&&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+			VulkanRenderer& operator=(VulkanRenderer&&) = delete;
 
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;

@@ -267,9 +267,9 @@ namespace flex
 	{
 		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
 
-		Uniform(Uniform&) = delete;
+		Uniform(const Uniform&) = delete;
 		Uniform(Uniform&&) = delete;
-		Uniform& operator=(Uniform&) = delete;
+		Uniform& operator=(const Uniform&) = delete;
 		Uniform& operator=(Uniform&&) = delete;
 
 		StringID id;
@@ -569,9 +569,9 @@ namespace flex
 		virtual ~Texture() = default;
 
 		Texture(const Texture&) = delete;
-		Texture(const Texture&&) = delete;
+		Texture(Texture&&) = delete;
 		Texture& operator=(const Texture&) = delete;
-		Texture& operator=(const Texture&&) = delete;
+		Texture& operator=(Texture&&) = delete;
 
 		virtual void Reload() = 0;
 
@@ -676,9 +676,9 @@ namespace flex
 	{
 		MaterialPropertyOverride() : i32Value(0) {}
 		MaterialPropertyOverride(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		MaterialPropertyOverride(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		MaterialPropertyOverride(MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
 		void operator=(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		void operator=(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
+		void operator=(MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
 		MaterialPropertyOverride(real realValue) : realValue(realValue) {}
 		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value) {}
 		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value) {}
@@ -722,10 +722,9 @@ namespace flex
 		Material() = default;
 		virtual ~Material();
 		explicit Material(const Material& rhs);
-
-		Material(const Material&&) = delete;
+		Material(Material&&) = delete;
 		Material& operator=(const Material&) = delete;
-		Material& operator=(const Material&&) = delete;
+		Material& operator=(Material&&) = delete;
 
 		bool Equals(const Material& other);
 
@@ -810,9 +809,9 @@ namespace flex
 			PushConstantBlock(i32 initialSize);
 
 			PushConstantBlock(const PushConstantBlock& rhs);
-			PushConstantBlock(const PushConstantBlock&& rhs);
+			PushConstantBlock(PushConstantBlock&& rhs);
 			PushConstantBlock& operator=(const PushConstantBlock& rhs);
-			PushConstantBlock& operator=(const PushConstantBlock&& rhs);
+			PushConstantBlock& operator=(PushConstantBlock&& rhs);
 
 			~PushConstantBlock();
 
@@ -903,9 +902,9 @@ namespace flex
 		virtual ~Shader() = default;
 
 		Shader(const Shader&) = delete;
-		Shader(const Shader&&) = delete;
+		Shader(Shader&&) = delete;
 		Shader& operator=(const Shader&) = delete;
-		Shader& operator=(const Shader&&) = delete;
+		Shader& operator=(Shader&&) = delete;
 
 		std::string name;
 

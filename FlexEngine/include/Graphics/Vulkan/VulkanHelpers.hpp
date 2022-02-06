@@ -54,9 +54,9 @@ namespace flex
 			~FrameBufferAttachment();
 
 			FrameBufferAttachment(const FrameBufferAttachment&) = delete;
-			FrameBufferAttachment(const FrameBufferAttachment&&) = delete;
-			FrameBufferAttachment& operator=(FrameBufferAttachment&) = delete;
-			FrameBufferAttachment& operator=(const FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment(FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment& operator=(const FrameBufferAttachment&) = delete;
+			FrameBufferAttachment& operator=(FrameBufferAttachment&&) = delete;
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -89,9 +89,9 @@ namespace flex
 			~FrameBuffer();
 
 			FrameBuffer(const FrameBuffer&) = delete;
-			FrameBuffer(const FrameBuffer&&) = delete;
-			FrameBuffer& operator=(FrameBuffer&) = delete;
-			FrameBuffer& operator=(const FrameBuffer&&) = delete;
+			FrameBuffer(FrameBuffer&&) = delete;
+			FrameBuffer& operator=(const FrameBuffer&) = delete;
+			FrameBuffer& operator=(FrameBuffer&&) = delete;
 
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
@@ -116,9 +116,9 @@ namespace flex
 			~Cascade();
 
 			Cascade(const Cascade&) = delete;
-			Cascade(const Cascade&&) = delete;
+			Cascade(Cascade&&) = delete;
 			Cascade& operator=(const Cascade&) = delete;
-			Cascade& operator=(const Cascade&&) = delete;
+			Cascade& operator=(Cascade&&) = delete;
 
 			FrameBuffer frameBuffer;
 			FrameBufferAttachment* attachment = nullptr;
@@ -169,10 +169,9 @@ namespace flex
 			~UniformBuffer();
 
 			UniformBuffer(const UniformBuffer&) = delete;
+			UniformBuffer(UniformBuffer&& other);
 			UniformBuffer& operator=(const UniformBuffer&) = delete;
-
-			UniformBuffer(const UniformBuffer&& other);
-			UniformBuffer& operator=(const UniformBuffer&&) = delete;
+			UniformBuffer& operator=(UniformBuffer&&) = delete;
 
 			void Alloc(u32 size, u32 alignment = u32_max);
 			void Free();
@@ -192,9 +191,9 @@ namespace flex
 			{}
 
 			VertexIndexBufferPair(const VertexIndexBufferPair&) = delete;
-			VertexIndexBufferPair(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair(VertexIndexBufferPair&&) = delete;
 			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&) = delete;
-			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair& operator=(VertexIndexBufferPair&&) = delete;
 
 			void Destroy();
 			void Clear();
@@ -212,9 +211,9 @@ namespace flex
 			virtual ~VulkanTexture() {}
 
 			VulkanTexture(const VulkanTexture&) = delete;
-			VulkanTexture(const VulkanTexture&&) = delete;
+			VulkanTexture(VulkanTexture&&) = delete;
 			VulkanTexture& operator=(const VulkanTexture&) = delete;
-			VulkanTexture& operator=(const VulkanTexture&&) = delete;
+			VulkanTexture& operator=(VulkanTexture&&) = delete;
 
 			virtual void Reload() override;
 
@@ -471,9 +470,9 @@ namespace flex
 			virtual ~VulkanShader();
 
 			VulkanShader(const VulkanShader&) = delete;
-			VulkanShader(const VulkanShader&&) = delete;
+			VulkanShader(VulkanShader&&) = delete;
 			VulkanShader& operator=(const VulkanShader&) = delete;
-			VulkanShader& operator=(const VulkanShader&&) = delete;
+			VulkanShader& operator=(VulkanShader&&) = delete;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -491,9 +490,9 @@ namespace flex
 			virtual ~VulkanMaterial() = default;
 
 			VulkanMaterial(const VulkanMaterial&) = delete;
-			VulkanMaterial(const VulkanMaterial&&) = delete;
+			VulkanMaterial(VulkanMaterial&&) = delete;
 			VulkanMaterial& operator=(const VulkanMaterial&) = delete;
-			VulkanMaterial& operator=(const VulkanMaterial&&) = delete;
+			VulkanMaterial& operator=(VulkanMaterial&&) = delete;
 
 			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
 			UniformBufferList uniformBufferList;
@@ -550,9 +549,9 @@ namespace flex
 			VulkanRenderObject(RenderID renderID);
 
 			VulkanRenderObject(const VulkanRenderObject&) = delete;
-			VulkanRenderObject(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject(VulkanRenderObject&&) = delete;
 			VulkanRenderObject& operator=(const VulkanRenderObject&) = delete;
-			VulkanRenderObject& operator=(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject& operator=(VulkanRenderObject&&) = delete;
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -659,9 +658,9 @@ namespace flex
 			explicit VulkanParticleSystem(VulkanDevice* device);
 
 			VulkanParticleSystem(const VulkanParticleSystem&) = delete;
-			VulkanParticleSystem(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem(VulkanParticleSystem&&) = delete;
 			VulkanParticleSystem& operator=(const VulkanParticleSystem&) = delete;
-			VulkanParticleSystem& operator=(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem& operator=(VulkanParticleSystem&&) = delete;
 
 			ParticleSystemID ID = InvalidParticleSystemID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
@@ -705,9 +704,9 @@ namespace flex
 			~VulkanDescriptorPool();
 
 			VulkanDescriptorPool(const VulkanDescriptorPool& other) = delete;
-			VulkanDescriptorPool(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool(VulkanDescriptorPool&& other) = delete;
 			VulkanDescriptorPool operator=(const VulkanDescriptorPool& other) = delete;
-			VulkanDescriptorPool operator=(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool operator=(VulkanDescriptorPool&& other) = delete;
 
 			VkDescriptorSet CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
 			VkDescriptorSet CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
