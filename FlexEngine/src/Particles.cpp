@@ -704,7 +704,7 @@ namespace flex
 
 	void ParticleSystem::SetParameters(const ParticleParameters& params)
 	{
-		memcpy(&m_Parameters, &params, sizeof(ParticleParameters));
+		m_Parameters = params;
 	}
 
 	const ParticleParameters& ParticleSystem::GetParameters()
