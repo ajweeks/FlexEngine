@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "first-person",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-0.000, 2.500, 0.000",
-			"pitch" : -0.018000,
-			"yaw" : 1.346798
+			"position" : "-8.652, 7.783, -10.187",
+			"pitch" : -0.218866,
+			"yaw" : -0.268888
 		}
 	},
 	"objects" : 
@@ -83,7 +83,7 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.701, -0.000, 0.000"
+						"rot" : "1.575, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
@@ -413,7 +413,7 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.974, 2.501, -1.962",
+				"pos" : "-20.980, 2.501, -1.965",
 				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
@@ -578,7 +578,7 @@
 			},
 			"miner" : 
 			{
-				"charge" : 6.299994,
+				"charge" : 5.199995,
 				"inventory" : 
 				[
 					{
@@ -598,7 +598,7 @@
 					},
 					{
 						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
-						"count" : 10,
+						"count" : 21,
 						"index" : 3
 					}
 				]
@@ -616,7 +616,7 @@
 			},
 			"mineral deposit" : 
 			{
-				"mineral remaining" : 894,
+				"mineral remaining" : 883,
 				"type" : "iron"
 			}
 		},
@@ -740,7 +740,7 @@
 			"transform" : 
 			{
 				"pos" : "13.120, 1.751, -29.970",
-				"rot" : "-0.437, 1.026, 0.000"
+				"rot" : "-0.437, 1.026, -0.000"
 			},
 			"wire plug" : 
 			{
@@ -798,6 +798,96 @@
 		{
 			"name" : "wire plug00",
 			"id" : "0F251F450D6B6F92444507E148A1361F",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "449FCB679D80859F4060B3DD2B432013",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "-1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "0AF00FA8D36B1FB24D0DC02258D2881F",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "EB4A1926E49D3A9347E063B6DC0AEF0C",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "-1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "790E69541396559144F6D51A3C8F24DB",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "3CC150710FF6288049F54E9BDB5885A3",
+			"type" : "prefab",
+			"prefab type" : "wire plug",
+			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
+			"transform" : 
+			{
+				"pos" : "-1.000, 0.000, 0.000"
+			},
+			"wire plug" : 
+			{
+				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
+			}
+		},
+		{
+			"name" : "wire plug00",
+			"id" : "22EDF3A56FE3EF8940117B11326C58B9",
 			"type" : "prefab",
 			"prefab type" : "wire plug",
 			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",

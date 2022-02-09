@@ -13561,8 +13561,6 @@ namespace flex
 								}
 
 								ParticleSimData particleSimData = {};
-								particleSimData.colour0 = glm::vec4(0.35f, 0.34f, 0.32f, 1.0f);
-								particleSimData.colour1 = glm::vec4(0.16f, 0.14f, 0.12f, 1.0f);
 								particleSimData.particleCount = 512;
 
 								glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;

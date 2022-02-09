@@ -54,6 +54,16 @@ namespace flex
 		return ParticleParamterValueType::_NONE;
 	}
 
+	bool IsValueTypeFloat(ParticleParamterValueType valueType)
+	{
+		return valueType == ParticleParamterValueType::FLOAT ||
+			valueType == ParticleParamterValueType::VEC2 ||
+			valueType == ParticleParamterValueType::VEC3 ||
+			valueType == ParticleParamterValueType::VEC4 ||
+			valueType == ParticleParamterValueType::COL3 ||
+			valueType == ParticleParamterValueType::COL4;
+	}
+
 	//
 	// ParticleParameter
 	//
@@ -186,6 +196,8 @@ namespace flex
 			case ParticleParamterValueType::VEC2:
 			case ParticleParamterValueType::VEC3:
 			case ParticleParamterValueType::VEC4:
+			case ParticleParamterValueType::COL3:
+			case ParticleParamterValueType::COL4:
 				obj.fields.emplace_back("constant", JSONValue(constantValue));
 				break;
 			case ParticleParamterValueType::BOOL:
@@ -227,6 +239,8 @@ namespace flex
 			case ParticleParamterValueType::VEC2:
 			case ParticleParamterValueType::VEC3:
 			case ParticleParamterValueType::VEC4:
+			case ParticleParamterValueType::COL3:
+			case ParticleParamterValueType::COL4:
 			{
 				parentObject.TryGetFloat("constant", result.constantValue);
 			} break;
@@ -256,6 +270,7 @@ namespace flex
 			parentObject.TryGetFloat("random max", result.randomRange.second);
 			break;
 		default:
+			ENSURE_NO_ENTRY();
 			PrintError("Parsed invalid particle parameter type: %s\n", typeStr.c_str());
 			break;
 		}
@@ -263,7 +278,7 @@ namespace flex
 		return result;
 	}
 
-	void ParticleParameter::DrawImGuiObjects(const char* label)
+	void ParticleParameter::DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType)
 	{
 		ImGui::PushID(this);
 
@@ -276,13 +291,68 @@ namespace flex
 		switch (type)
 		{
 		case ParticleSampleType::CONSTANT:
-			ImGui::InputFloat(label, &constantValue);
-			break;
+		{
+			switch (parentValueType)
+			{
+			case ParticleParamterValueType::INT:
+			{
+				i32 intValue = GetInt();
+				if (ImGui::InputInt(label, &intValue))
+				{
+					SetInt(intValue);
+				}
+			} break;
+			case ParticleParamterValueType::BOOL:
+			{
+				bool bValue = GetBool();
+				if (ImGui::Checkbox(label, &bValue))
+				{
+					SetBool(bValue);
+				}
+			} break;
+			default:
+			{
+				if (IsValueTypeFloat(parentValueType))
+				{
+					ImGui::InputFloat(label, &constantValue);
+				}
+				else
+				{
+					ENSURE_NO_ENTRY();
+				}
+			} break;
+			}
+		} break;
 		case ParticleSampleType::RANDOM:
-			ImGui::DragFloatRange2(label, &randomRange.first, &randomRange.second);
-			break;
+		{
+			switch (parentValueType)
+			{
+			case ParticleParamterValueType::INT:
+			{
+				i32 intValueMin = (i32)randomRange.first;
+				i32 intValueMax = (i32)randomRange.second;
+				if (ImGui::DragIntRange2(label, &intValueMin, &intValueMax))
+				{
+					randomRange.first = (real)intValueMin;
+					randomRange.second = (real)intValueMax;
+				}
+			} break;
+			default:
+			{
+				if (IsValueTypeFloat(parentValueType))
+				{
+					ImGui::DragFloatRange2(label, &randomRange.first, &randomRange.second);
+				}
+				else
+				{
+					ENSURE_NO_ENTRY();
+				}
+			} break;
+			}
+		} break;
 		default:
 			ENSURE_NO_ENTRY();
+			break;
 		}
 
 		ImGui::PopID();
@@ -307,9 +377,11 @@ namespace flex
 			params.resize(2, {});
 			break;
 		case ParticleParamterValueType::VEC3:
+		case ParticleParamterValueType::COL3:
 			params.resize(3, {});
 			break;
 		case ParticleParamterValueType::VEC4:
+		case ParticleParamterValueType::COL4:
 			params.resize(4, {});
 			break;
 		default:
@@ -446,60 +518,60 @@ namespace flex
 		i32 count = (i32)params.size();
 		if (count == 1)
 		{
-			switch (valueType)
-			{
-			case ParticleParamterValueType::BOOL:
-			{
-				bool bValue = params[0].GetBool();
-				if (ImGui::Checkbox(name.c_str(), &bValue))
-				{
-					params[0].SetBool(bValue);
-				}
-			} break;
-			case ParticleParamterValueType::FLOAT:
-			{
-				real value = params[0].GetReal();
-				if (ImGui::InputFloat(name.c_str(), &value))
-				{
-					params[0].SetReal(value);
-				}
-			} break;
-			case ParticleParamterValueType::INT:
-			{
-				i32 value = params[0].GetInt();
-				if (ImGui::InputInt(name.c_str(), &value))
-				{
-					params[0].SetInt(value);
-				}
-			} break;
-			default:
-				ENSURE_NO_ENTRY();
-				break;
-			}
+			params[0].DrawImGuiObjects(name.c_str(), valueType);
 		}
 		else if (count == 2)
 		{
 			CHECK_EQ(valueType, ParticleParamterValueType::VEC2);
 
-			params[0].DrawImGuiObjects("x");
-			params[1].DrawImGuiObjects("y");
+			params[0].DrawImGuiObjects("x", valueType);
+			params[1].DrawImGuiObjects("y", valueType);
 		}
 		else if (count == 3)
 		{
-			CHECK_EQ(valueType, ParticleParamterValueType::VEC3);
+			CHECK(valueType == ParticleParamterValueType::VEC3 ||
+				valueType == ParticleParamterValueType::COL3);
 
-			params[0].DrawImGuiObjects("x");
-			params[1].DrawImGuiObjects("y");
-			params[2].DrawImGuiObjects("z");
+			if (valueType == ParticleParamterValueType::VEC3)
+			{
+				params[0].DrawImGuiObjects("x", valueType);
+				params[1].DrawImGuiObjects("y", valueType);
+				params[2].DrawImGuiObjects("z", valueType);
+			}
+			else
+			{
+				glm::vec3 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal());
+				if (ImGui::ColorEdit3("", &col.x))
+				{
+					params[0].SetReal(col.x);
+					params[1].SetReal(col.y);
+					params[2].SetReal(col.z);
+				}
+			}
 		}
 		else if (count == 4)
 		{
-			CHECK_EQ(valueType, ParticleParamterValueType::VEC4);
+			CHECK(valueType == ParticleParamterValueType::VEC4 ||
+				valueType == ParticleParamterValueType::COL4);
 
-			params[0].DrawImGuiObjects("x");
-			params[1].DrawImGuiObjects("y");
-			params[2].DrawImGuiObjects("z");
-			params[3].DrawImGuiObjects("w");
+			if (valueType == ParticleParamterValueType::VEC4)
+			{
+				params[0].DrawImGuiObjects("x", valueType);
+				params[1].DrawImGuiObjects("y", valueType);
+				params[2].DrawImGuiObjects("z", valueType);
+				params[3].DrawImGuiObjects("w", valueType);
+			}
+			else
+			{
+				glm::vec4 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal(), params[3].GetReal());
+				if (ImGui::ColorEdit4("", &col.x))
+				{
+					params[0].SetReal(col.x);
+					params[1].SetReal(col.y);
+					params[2].SetReal(col.z);
+					params[3].SetReal(col.w);
+				}
+			}
 		}
 		else
 		{
@@ -515,7 +587,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			m_Parameters = std::map<StringID, ParticleParameterPack>(other.m_Parameters);
+			m_Parameters = std::unordered_map<StringID, ParticleParameterPack>(other.m_Parameters);
 		}
 	}
 
@@ -531,7 +603,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			m_Parameters = std::map<StringID, ParticleParameterPack>(other.m_Parameters);
+			m_Parameters = std::unordered_map<StringID, ParticleParameterPack>(other.m_Parameters);
 		}
 		return *this;
 	}
@@ -751,9 +823,6 @@ namespace flex
 
 		ImGui::Checkbox("Enabled", &bEnabled);
 
-		ImGui::ColorEdit4("Colour 0", &data.colour0.r, colorEditFlags);
-		ImGui::SameLine();
-		ImGui::ColorEdit4("Colour 1", &data.colour1.r, colorEditFlags);
 		i32 particleCount = (i32)data.particleCount;
 		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
 		{
@@ -969,8 +1038,6 @@ namespace flex
 
 		newParticleSystem->SetParameters(*params);
 
-		newParticleSystem->data.colour0 = data.colour0;
-		newParticleSystem->data.colour1 = data.colour1;
 		newParticleSystem->data.particleCount = data.particleCount;
 
 		ParticleSystemID particleSystemID = g_Renderer->AddParticleSystem(name, newParticleSystem, data.particleCount);

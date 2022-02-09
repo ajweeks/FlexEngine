@@ -21,30 +21,30 @@
 	[
 		{
 			"type" : "constant",
-			"constant" : 0.000000
+			"constant" : 0.301254
 		},
 		{
 			"type" : "constant",
-			"constant" : 0.000000
+			"constant" : 0.305433
 		},
 		{
 			"type" : "constant",
-			"constant" : 0.000000
+			"constant" : 0.308824
 		},
 		{
 			"type" : "constant",
-			"constant" : 0.000000
+			"constant" : 1.000000
 		}
 	],
 	"particle count" : 
 	{
 		"type" : "constant",
-		"constant" : 250
+		"constant" : 256
 	},
 	"fade over lifetime" : 
 	{
 		"type" : "constant",
-		"constant" : false
+		"constant" : true
 	},
 	"initial position" : 
 	[

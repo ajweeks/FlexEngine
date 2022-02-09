@@ -8,10 +8,10 @@
 			"initial position" : "vec3"
 		},
 		{
-			"initial colour" : "vec4"
+			"initial colour" : "col4"
 		},
 		{
-			"final colour" : "vec4"
+			"final colour" : "col4"
 		},
 		{
 			"lifetime" : "float"

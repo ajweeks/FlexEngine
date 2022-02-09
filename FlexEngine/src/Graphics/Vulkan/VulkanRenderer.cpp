@@ -5164,10 +5164,14 @@ namespace flex
 			{
 				const ParticleParameters& params = particleSystem->system->GetParameters();
 
-				real lifetime = params.GetReal(SID("lifetime"));
+				i32 particleCount = params.GetInt(SID("particle count"));
+				if (particleCount == -1) particleCount = 1024;
+				particleSystem->system->data.particleCount = particleCount;
 
 				particleBufferData[i].pos = params.GetVec3(SID("initial position"));
 				particleBufferData[i].vel = params.GetVec3(SID("initial velocity"));
+				real lifetime = params.GetReal(SID("lifetime"));
+				particleBufferData[i].colour = params.GetVec4(SID("initial colour"));
 				particleBufferData[i].extraVec4 = glm::vec4(lifetime, lifetime, 0.0f, 0.0f);
 			}
 

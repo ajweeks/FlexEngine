@@ -4,8 +4,6 @@
 
 layout (binding = 0) uniform UBODynamic
 {
-	vec4 colour0;
-	vec4 colour1;
 	float dt;
 	uint particleCount;
 } uboDynamic;
@@ -50,7 +48,6 @@ void main()
 	float alpha = clamp(lifetime / initial_lifetime, 0.0, 1.0);
 	lifetime -= uboDynamic.dt;
 	if (lifetime <= 0.0) alpha = 0.0;
-	col.rgb = mix(uboDynamic.colour0.rgb, uboDynamic.colour1.rgb, alpha);
 	col.a = alpha;
 	vel.y -= uboDynamic.dt * 0.2;
 	vel *= 1.0 - uboDynamic.dt * 0.1;

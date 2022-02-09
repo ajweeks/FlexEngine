@@ -37,10 +37,11 @@ namespace flex
 		VEC2,
 		VEC3,
 		VEC4,
+		COL3,
+		COL4,
 
 		_NONE
 	};
-
 
 	static const char* ParticleParamterValueTypeStrings[] =
 	{
@@ -50,6 +51,8 @@ namespace flex
 		"vec2",
 		"vec3",
 		"vec4",
+		"col3",
+		"col4",
 
 		"NONE",
 	};
@@ -58,6 +61,14 @@ namespace flex
 
 	const char* ParticleParamterValueTypeToString(ParticleParamterValueType type);
 	ParticleParamterValueType ParticleParamterValueTypeFromString(const char* typeStr);
+
+	bool IsValueTypeFloat(ParticleParamterValueType valueType);
+
+	struct ParticleSimData
+	{
+		real dt;
+		u32 particleCount;
+	};
 
 	struct ParticleParameterType
 	{
@@ -89,7 +100,7 @@ namespace flex
 		JSONObject Serialize(ParticleParamterValueType parentValueType);
 		static ParticleParameter Deserialize(const JSONObject& parentObject, ParticleParamterValueType parentValueType);
 
-		void DrawImGuiObjects(const char* label);
+		void DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType);
 
 		ParticleSampleType type;
 		union
@@ -151,15 +162,7 @@ namespace flex
 
 		void DrawImGuiObjects();
 
-		std::map<StringID, ParticleParameterPack> m_Parameters;
-	};
-
-	struct ParticleSimData
-	{
-		glm::vec4 colour0;
-		glm::vec4 colour1;
-		real dt;
-		u32 particleCount;
+		std::unordered_map<StringID, ParticleParameterPack> m_Parameters;
 	};
 
 	class ParticleSystem final
@@ -235,7 +238,7 @@ namespace flex
 	private:
 		ParticleParameters* GetTemplateParams(StringID particleTemplateSID);
 
-		std::map<ParticleSystemID, ParticleSystem*> m_ParticleSystems;
+		std::unordered_map<ParticleSystemID, ParticleSystem*> m_ParticleSystems;
 		PoolAllocator<ParticleSystem, 8> m_ParticleSystemAllocator;
 
 		std::vector<ParticleParameterType> m_ParameterTypes;
@@ -251,7 +254,7 @@ namespace flex
 		};
 		friend ParticleSystemTemplate;
 
-		std::map<StringID, ParticleSystemTemplate> m_ParticleTemplates;
+		std::unordered_map<StringID, ParticleSystemTemplate> m_ParticleTemplates;
 
 	};
 } // namespace flex
