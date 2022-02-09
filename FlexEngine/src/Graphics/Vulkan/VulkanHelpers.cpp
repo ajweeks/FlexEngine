@@ -234,7 +234,7 @@ namespace flex
 			Free();
 		}
 
-		UniformBuffer::UniformBuffer(const UniformBuffer&& other) :
+		UniformBuffer::UniformBuffer(UniformBuffer&& other) :
 			buffer(other.buffer)
 		{
 			if (this != &other)
