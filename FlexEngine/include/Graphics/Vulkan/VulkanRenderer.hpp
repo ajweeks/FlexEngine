@@ -116,8 +116,10 @@ namespace flex
 			virtual void RenderObjectStateChanged() override;
 			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) override;
 
-			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
+			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
+			virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
+			virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
 
 			virtual void RecreateEverything() override;
 
@@ -256,7 +258,6 @@ namespace flex
 			void CreateUniformBuffers(VulkanMaterial* material);
 			void CreateStaticUniformBuffer(VulkanMaterial* material);
 			void CreateDynamicUniformBuffer(VulkanMaterial* material);
-			void CreateParticleBuffer(VulkanMaterial* material);
 
 			void CreateTerrainBuffers();
 
@@ -389,8 +390,7 @@ namespace flex
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer = 0);
 
-			void InitializeAllParticleSystemBuffers();
-			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
+			bool InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem, ParticleEmitterID emitterID);
 
 			void DestroyTerrain();
 

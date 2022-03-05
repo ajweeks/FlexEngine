@@ -5,6 +5,8 @@
 
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Graphics/RendererTypes.hpp"
+#include "ResourceManager.hpp"
 #include "Transform.hpp"
 #include "JSONParser.hpp"
 
@@ -116,6 +118,34 @@ namespace flex
 		}
 	}
 
+	real ParticleParameter::GetRealMin() const
+	{
+		switch (type)
+		{
+		case ParticleSampleType::CONSTANT:
+			return constantValue;
+		case ParticleSampleType::RANDOM:
+			return randomRange.first;
+		default:
+			ENSURE_NO_ENTRY();
+			return -1.0f;
+		}
+	}
+
+	real ParticleParameter::GetRealMax() const
+	{
+		switch (type)
+		{
+		case ParticleSampleType::CONSTANT:
+			return constantValue;
+		case ParticleSampleType::RANDOM:
+			return randomRange.second;
+		default:
+			ENSURE_NO_ENTRY();
+			return -1.0f;
+		}
+	}
+
 	bool ParticleParameter::GetBool() const
 	{
 		switch (type)
@@ -138,6 +168,34 @@ namespace flex
 			return (i32)constantValue;
 		case ParticleSampleType::RANDOM:
 			return (i32)RandomFloat(randomRange.first, randomRange.second);
+		default:
+			ENSURE_NO_ENTRY();
+			return -1;
+		}
+	}
+
+	i32 ParticleParameter::GetIntMin() const
+	{
+		switch (type)
+		{
+		case ParticleSampleType::CONSTANT:
+			return (i32)constantValue;
+		case ParticleSampleType::RANDOM:
+			return (i32)randomRange.first;
+		default:
+			ENSURE_NO_ENTRY();
+			return -1;
+		}
+	}
+
+	i32 ParticleParameter::GetIntMax() const
+	{
+		switch (type)
+		{
+		case ParticleSampleType::CONSTANT:
+			return (i32)constantValue;
+		case ParticleSampleType::RANDOM:
+			return (i32)randomRange.second;
 		default:
 			ENSURE_NO_ENTRY();
 			return -1;
@@ -278,14 +336,17 @@ namespace flex
 		return result;
 	}
 
-	void ParticleParameter::DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType)
+	bool ParticleParameter::DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType)
 	{
 		ImGui::PushID(this);
+
+		bool bValueChanged = false;
 
 		i32 typeInt = (i32)type;
 		if (ImGui::Combo("Type", &typeInt, ParticleSampleTypeStrings, ARRAY_LENGTH(ParticleSampleTypeStrings) - 1))
 		{
 			type = (ParticleSampleType)typeInt;
+			bValueChanged = true;
 		}
 
 		switch (type)
@@ -300,6 +361,7 @@ namespace flex
 				if (ImGui::InputInt(label, &intValue))
 				{
 					SetInt(intValue);
+					bValueChanged = true;
 				}
 			} break;
 			case ParticleParamterValueType::BOOL:
@@ -308,13 +370,14 @@ namespace flex
 				if (ImGui::Checkbox(label, &bValue))
 				{
 					SetBool(bValue);
+					bValueChanged = true;
 				}
 			} break;
 			default:
 			{
 				if (IsValueTypeFloat(parentValueType))
 				{
-					ImGui::InputFloat(label, &constantValue);
+					bValueChanged = ImGui::InputFloat(label, &constantValue) || bValueChanged;
 				}
 				else
 				{
@@ -335,13 +398,14 @@ namespace flex
 				{
 					randomRange.first = (real)intValueMin;
 					randomRange.second = (real)intValueMax;
+					bValueChanged = true;
 				}
 			} break;
 			default:
 			{
 				if (IsValueTypeFloat(parentValueType))
 				{
-					ImGui::DragFloatRange2(label, &randomRange.first, &randomRange.second);
+					bValueChanged = ImGui::DragFloatRange2(label, &randomRange.first, &randomRange.second) || bValueChanged;
 				}
 				else
 				{
@@ -356,6 +420,8 @@ namespace flex
 		}
 
 		ImGui::PopID();
+
+		return bValueChanged;
 	}
 
 	//
@@ -366,6 +432,8 @@ namespace flex
 		name(name),
 		valueType(valueType)
 	{
+		nameSID = SID(name.c_str());
+
 		switch (valueType)
 		{
 		case ParticleParamterValueType::BOOL:
@@ -394,6 +462,7 @@ namespace flex
 		if (this != &other)
 		{
 			name = other.name;
+			nameSID = other.nameSID;
 			valueType = other.valueType;
 			params = std::vector<ParticleParameter>(other.params);
 		}
@@ -404,6 +473,7 @@ namespace flex
 		if (this != &other)
 		{
 			name = std::move(other.name);
+			nameSID = other.nameSID;
 			valueType = other.valueType;
 			params = std::move(other.params);
 		}
@@ -414,6 +484,7 @@ namespace flex
 		if (this != &other)
 		{
 			name = other.name;
+			nameSID = other.nameSID;
 			valueType = other.valueType;
 			params = std::vector<ParticleParameter>(other.params);
 		}
@@ -425,6 +496,7 @@ namespace flex
 		if (this != &other)
 		{
 			name = std::move(other.name);
+			nameSID = other.nameSID;
 			valueType = other.valueType;
 			params = std::move(other.params);
 		}
@@ -435,7 +507,8 @@ namespace flex
 	{
 		ParticleParameterPack result;
 		result.name = std::string(label);
-		result.valueType = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER)->GetParameterValueType(label);
+		result.valueType = g_ResourceManager->GetParticleParameterValueType(label);
+		result.nameSID = SID(label);
 
 		std::vector<JSONObject> members;
 		if (parentObject.TryGetObjectArray(label, members) && !members.empty())
@@ -483,19 +556,44 @@ namespace flex
 		}
 	}
 
-	bool ParticleParameterPack::GetBool(u32 index) const
+	ParticleSampleType ParticleParameterPack::GetSampleType(u32 index /* = 0 */) const
+	{
+		return params[index].type;
+	}
+
+	bool ParticleParameterPack::GetBool(u32 index /* = 0 */) const
 	{
 		return params[index].GetBool();
 	}
 
-	real ParticleParameterPack::GetReal(u32 index) const
+	real ParticleParameterPack::GetReal(u32 index /* = 0 */) const
 	{
 		return params[index].GetReal();
 	}
 
-	i32 ParticleParameterPack::GetInt(u32 index) const
+	real ParticleParameterPack::GetRealMin(u32 index /* = 0 */) const
+	{
+		return params[index].GetRealMin();
+	}
+
+	real ParticleParameterPack::GetRealMax(u32 index /* = 0 */) const
+	{
+		return params[index].GetRealMax();
+	}
+
+	i32 ParticleParameterPack::GetInt(u32 index /* = 0 */) const
 	{
 		return params[index].GetInt();
+	}
+
+	i32 ParticleParameterPack::GetIntMin(u32 index /* = 0 */) const
+	{
+		return params[index].GetIntMin();
+	}
+
+	i32 ParticleParameterPack::GetIntMax(u32 index /* = 0 */) const
+	{
+		return params[index].GetIntMax();
 	}
 
 	glm::vec2 ParticleParameterPack::GetVec2() const
@@ -503,9 +601,29 @@ namespace flex
 		return glm::vec2(params[0].GetReal(), params[1].GetReal());
 	}
 
+	glm::vec2 ParticleParameterPack::GetVec2Min() const
+	{
+		return glm::vec2(params[0].GetRealMin(), params[1].GetRealMin());
+	}
+
+	glm::vec2 ParticleParameterPack::GetVec2Max() const
+	{
+		return glm::vec2(params[0].GetRealMax(), params[1].GetRealMax());
+	}
+
 	glm::vec3 ParticleParameterPack::GetVec3() const
 	{
 		return glm::vec3(params[0].GetReal(), params[1].GetReal(), params[2].GetReal());
+	}
+
+	glm::vec3 ParticleParameterPack::GetVec3Min() const
+	{
+		return glm::vec3(params[0].GetRealMin(), params[1].GetRealMin(), params[2].GetRealMin());
+	}
+
+	glm::vec3 ParticleParameterPack::GetVec3Max() const
+	{
+		return glm::vec3(params[0].GetRealMax(), params[1].GetRealMax(), params[2].GetRealMax());
 	}
 
 	glm::vec4 ParticleParameterPack::GetVec4() const
@@ -513,19 +631,32 @@ namespace flex
 		return glm::vec4(params[0].GetReal(), params[1].GetReal(), params[2].GetReal(), params[3].GetReal());
 	}
 
-	void ParticleParameterPack::DrawImGuiObjects()
+	glm::vec4 ParticleParameterPack::GetVec4Min() const
+	{
+		return glm::vec4(params[0].GetRealMin(), params[1].GetRealMin(), params[2].GetRealMin(), params[3].GetRealMin());
+	}
+
+	glm::vec4 ParticleParameterPack::GetVec4Max() const
+	{
+		return glm::vec4(params[0].GetRealMax(), params[1].GetRealMax(), params[2].GetRealMax(), params[3].GetRealMax());
+	}
+
+	bool ParticleParameterPack::DrawImGuiObjects()
 	{
 		i32 count = (i32)params.size();
 		if (count == 1)
 		{
-			params[0].DrawImGuiObjects(name.c_str(), valueType);
+			bool bValueChanged = bValueChanged = params[0].DrawImGuiObjects(name.c_str(), valueType);
+			return bValueChanged;
 		}
 		else if (count == 2)
 		{
 			CHECK_EQ(valueType, ParticleParamterValueType::VEC2);
 
-			params[0].DrawImGuiObjects("x", valueType);
-			params[1].DrawImGuiObjects("y", valueType);
+			bool bValueChanged = false;
+			bValueChanged = params[0].DrawImGuiObjects("x", valueType) || bValueChanged;
+			bValueChanged = params[1].DrawImGuiObjects("y", valueType) || bValueChanged;
+			return bValueChanged;
 		}
 		else if (count == 3)
 		{
@@ -534,9 +665,11 @@ namespace flex
 
 			if (valueType == ParticleParamterValueType::VEC3)
 			{
-				params[0].DrawImGuiObjects("x", valueType);
-				params[1].DrawImGuiObjects("y", valueType);
-				params[2].DrawImGuiObjects("z", valueType);
+				bool bValueChanged = false;
+				bValueChanged = params[0].DrawImGuiObjects("x", valueType) || bValueChanged;
+				bValueChanged = params[1].DrawImGuiObjects("y", valueType) || bValueChanged;
+				bValueChanged = params[2].DrawImGuiObjects("z", valueType) || bValueChanged;
+				return bValueChanged;
 			}
 			else
 			{
@@ -546,7 +679,9 @@ namespace flex
 					params[0].SetReal(col.x);
 					params[1].SetReal(col.y);
 					params[2].SetReal(col.z);
+					return true;
 				}
+				return false;
 			}
 		}
 		else if (count == 4)
@@ -556,10 +691,12 @@ namespace flex
 
 			if (valueType == ParticleParamterValueType::VEC4)
 			{
-				params[0].DrawImGuiObjects("x", valueType);
-				params[1].DrawImGuiObjects("y", valueType);
-				params[2].DrawImGuiObjects("z", valueType);
-				params[3].DrawImGuiObjects("w", valueType);
+				bool bValueChanged = false;
+				bValueChanged = params[0].DrawImGuiObjects("x", valueType) || bValueChanged;
+				bValueChanged = params[1].DrawImGuiObjects("y", valueType) || bValueChanged;
+				bValueChanged = params[2].DrawImGuiObjects("z", valueType) || bValueChanged;
+				bValueChanged = params[3].DrawImGuiObjects("w", valueType) || bValueChanged;
+				return bValueChanged;
 			}
 			else
 			{
@@ -570,13 +707,16 @@ namespace flex
 					params[1].SetReal(col.y);
 					params[2].SetReal(col.z);
 					params[3].SetReal(col.w);
+					return true;
 				}
+				return false;
 			}
 		}
 		else
 		{
 			ENSURE_NO_ENTRY();
 		}
+		return false;
 	}
 
 	//
@@ -587,7 +727,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			m_Parameters = std::unordered_map<StringID, ParticleParameterPack>(other.m_Parameters);
+			m_Parameters = std::vector<ParticleParameterPack>(other.m_Parameters);
 		}
 	}
 
@@ -603,7 +743,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			m_Parameters = std::unordered_map<StringID, ParticleParameterPack>(other.m_Parameters);
+			m_Parameters = std::vector<ParticleParameterPack>(other.m_Parameters);
 		}
 		return *this;
 	}
@@ -619,9 +759,9 @@ namespace flex
 
 	void ParticleParameters::Serialize(JSONObject& parentObject)
 	{
-		for (auto& pair : m_Parameters)
+		for (ParticleParameterPack& paramPack : m_Parameters)
 		{
-			parentObject.fields.emplace_back(pair.second.name.c_str(), pair.second.Serialize());
+			parentObject.fields.emplace_back(paramPack.name.c_str(), paramPack.Serialize());
 		}
 	}
 
@@ -630,9 +770,9 @@ namespace flex
 		m_Parameters.clear();
 		for (const JSONField& field : parentObject.fields)
 		{
-			StringID paramNameSID = Hash(field.label.c_str());
-			m_Parameters.emplace(paramNameSID, ParticleParameterPack::Deserialize(field.label.c_str(), parentObject));
+			m_Parameters.emplace_back(ParticleParameterPack::Deserialize(field.label.c_str(), parentObject));
 		}
+		SortParams();
 	}
 
 	bool ParticleParameters::Deserialize(const std::string& filePath, ParticleParameters& particleParameters)
@@ -674,84 +814,51 @@ namespace flex
 		}
 	}
 
-	bool ParticleParameters::GetBool(StringID parameterName) const
+	void ParticleParameters::AddParam(const ParticleParameterPack& paramPack)
 	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
-		{
-			return iter->second.GetBool(0);
-		}
-		return false;
+		m_Parameters.emplace_back(paramPack);
+		SortParams();
 	}
 
-	real ParticleParameters::GetReal(StringID parameterName) const
+	ParticleParameterPack const* ParticleParameters::GetParam(StringID paramNameSID) const
 	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
+		for (const ParticleParameterPack& paramPack : m_Parameters)
 		{
-			return iter->second.GetReal(0);
+			if (paramPack.nameSID == paramNameSID)
+			{
+				return &paramPack;
+			}
 		}
-		return -1.0f;
+		return nullptr;
 	}
 
-	i32 ParticleParameters::GetInt(StringID parameterName) const
-	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
-		{
-			return iter->second.GetInt(0);
-		}
-		return -1;
-	}
-
-	glm::vec2 ParticleParameters::GetVec2(StringID parameterName) const
-	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
-		{
-			return iter->second.GetVec2();
-		}
-		return VEC2_NEG_ONE;
-	}
-
-	glm::vec3 ParticleParameters::GetVec3(StringID parameterName) const
-	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
-		{
-			return iter->second.GetVec3();
-		}
-		return VEC3_NEG_ONE;
-	}
-
-	glm::vec4 ParticleParameters::GetVec4(StringID parameterName) const
-	{
-		auto iter = m_Parameters.find(parameterName);
-		if (iter != m_Parameters.end())
-		{
-			return iter->second.GetVec4();
-		}
-		return VEC4_NEG_ONE;
-	}
-
-	void ParticleParameters::DrawImGuiObjects()
+	bool ParticleParameters::DrawImGuiObjects()
 	{
 		ImGui::PushID(this);
 
+		bool bValueChanged = false;
+
 		for (auto iter = m_Parameters.begin(); iter != m_Parameters.end(); ++iter)
 		{
-			ParticleParameterPack& paramPack = iter->second;
+			ParticleParameterPack& paramPack = *iter;
 
 			if (ImGui::TreeNode(paramPack.name.c_str()))
 			{
-				paramPack.DrawImGuiObjects();
+				bValueChanged = paramPack.DrawImGuiObjects() || bValueChanged;
 
 				bool bRemoved = false;
+
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+
 				if (ImGui::Button("Remove param"))
 				{
 					m_Parameters.erase(iter);
 					bRemoved = true;
 				}
+
+				ImGui::PopStyleColor(3);
 
 				ImGui::TreePop();
 
@@ -763,6 +870,61 @@ namespace flex
 		}
 
 		ImGui::PopID();
+
+		return bValueChanged;
+	}
+
+	void ParticleParameters::FillOutGPUParams(ParticleSpawnParams& particleSpawnParams)
+	{
+		i32 paramIndex = 0;
+		for (ParticleParameterPack& paramPack : m_Parameters)
+		{
+			ParticleParamGPU& param = particleSpawnParams.params[paramIndex];
+			param.sampleType = (u32)paramPack.GetSampleType();
+			switch (paramPack.valueType)
+			{
+			case ParticleParamterValueType::FLOAT:
+				param.valueMin = glm::vec4(paramPack.GetRealMin(), 0.0f, 0.0f, 0.0f);
+				param.valueMax = glm::vec4(paramPack.GetRealMax(), 0.0f, 0.0f, 0.0f);
+				break;
+			case ParticleParamterValueType::BOOL:
+				param.valueMin = glm::vec4(paramPack.GetBool() ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
+				param.valueMax = glm::vec4(paramPack.GetBool() ? 1.0f : 0.0f, 0.0f, 0.0f, 0.0f);
+				break;
+			case ParticleParamterValueType::INT:
+				param.valueMin = glm::vec4((real)paramPack.GetIntMin(), 0.0f, 0.0f, 0.0f);
+				param.valueMax = glm::vec4((real)paramPack.GetIntMax(), 0.0f, 0.0f, 0.0f);
+				break;
+			case ParticleParamterValueType::VEC2:
+				param.valueMin = glm::vec4(paramPack.GetVec2Min(), 0.0f, 0.0f);
+				param.valueMax = glm::vec4(paramPack.GetVec2Max(), 0.0f, 0.0f);
+				break;
+			case ParticleParamterValueType::VEC3:
+			case ParticleParamterValueType::COL3:
+				param.valueMin = glm::vec4(paramPack.GetVec3Min(), 0.0f);
+				param.valueMax = glm::vec4(paramPack.GetVec3Max(), 0.0f);
+				break;
+			case ParticleParamterValueType::VEC4:
+			case ParticleParamterValueType::COL4:
+				param.valueMin = paramPack.GetVec4Min();
+				param.valueMax = paramPack.GetVec4Max();
+				break;
+			default:
+				PrintError("Unhandled type in ParticleParameters::FillOutGPUParams\n");
+				ENSURE_NO_ENTRY();
+				break;
+			}
+
+			++paramIndex;
+		}
+	}
+
+	void ParticleParameters::SortParams()
+	{
+		std::sort(m_Parameters.begin(), m_Parameters.end(), [](const ParticleParameterPack& lhs, const ParticleParameterPack& rhs)
+		{
+			return lhs.name.compare(rhs.name) < 0;
+		});
 	}
 
 	//
@@ -777,6 +939,8 @@ namespace flex
 	void ParticleSystem::SetParameters(const ParticleParameters& params)
 	{
 		m_Parameters = params;
+		ParticleParameterPack const* particleCount = m_Parameters.GetParam(SID("particle count"));
+		m_ParticleCount = particleCount != nullptr ? particleCount->GetInt() : 0;
 	}
 
 	const ParticleParameters& ParticleSystem::GetParameters()
@@ -786,12 +950,72 @@ namespace flex
 
 	void ParticleSystem::Destroy()
 	{
-		GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER)->RemoveParticleSystem(ID);
+		GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER)->RemoveParticleSystem(SID(name.c_str()));
+	}
+
+	ParticleEmitterID ParticleSystem::SpawnEmitterInstance(const glm::mat4& objectToWorld)
+	{
+		if ((u32)emitterInstances.size() >= (Renderer::MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM - 1))
+		{
+			PrintWarn("Failed to spawn particle emitter instance, max number of %d already active\n", Renderer::MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM);
+			return InvalidParticleEmitterID;
+		}
+
+		ParticleParameterPack const* lifetimeParam = m_Parameters.GetParam(SID("lifetime"));
+		real emitterLifetime = lifetimeParam != nullptr ? lifetimeParam->GetRealMax() : -1.0f;
+		if (emitterLifetime == -1.0f)
+		{
+			emitterLifetime = 3.0f;
+			PrintWarn("Particle template doesn't specify emitter lifetime, using default value of %.2f\n", emitterLifetime);
+		}
+
+		ParticleEmitterID emitterID = m_LastEmitterIndex;
+		++m_LastEmitterIndex;
+
+		ParticleEmitterInstance emitter = {};
+		emitter.data = {};
+		if (m_ParticleCount == -1)
+		{
+			m_ParticleCount = 256;
+			PrintWarn("No particle count set in particle system %s, using default value (%i)", name.c_str(), m_ParticleCount);
+		}
+		emitter.data.particleCount = m_ParticleCount;
+		ParticleParameterPack const* enableSpawningParam = m_Parameters.GetParam(SID("enable spawning"));
+		bool bEnableRespawning = enableSpawningParam != nullptr ? enableSpawningParam->GetBool() : false;
+		emitter.data.enableSpawning = bEnableRespawning ? 1 : 0;
+		emitter.objectToWorld = objectToWorld;
+		emitter.lifetimeRemaining = emitterLifetime;
+		emitter.ID = emitterID;
+		emitter.bufferIndex = u32_max;
+
+		m_Parameters.FillOutGPUParams(m_SpawnParams);
+		memcpy(emitter.data.spawnParams.params, m_SpawnParams.params, sizeof(m_SpawnParams.params));
+
+		auto iter = emitterInstances.emplace(emitterID, emitter);
+
+		if (!g_Renderer->AddParticleEmitterInstance(ID, emitterID))
+		{
+			emitterInstances.erase(iter.first);
+		}
+
+		return emitterID;
+	}
+
+	void ParticleSystem::ExtinguishEmitter(ParticleEmitterID emitterID)
+	{
+		auto iter = emitterInstances.find(emitterID);
+		if (iter != emitterInstances.end())
+		{
+			ParticleEmitterInstance& emitter = iter->second;
+			emitter.data.enableSpawning = 0;
+		}
 	}
 
 	void ParticleSystem::Deserialize()
 	{
 		ParticleParameters::Deserialize(GetFilePath(), m_Parameters);
+		ParticleParameterPack const* particleCount = m_Parameters.GetParam(SID("particle count"));
+		m_ParticleCount = particleCount != nullptr ? particleCount->GetInt() : 0;
 	}
 
 	void ParticleSystem::Serialize()
@@ -804,10 +1028,28 @@ namespace flex
 		return PARTICLE_SYSTEMS_DIRECTORY + name + ".json";
 	}
 
-	bool ParticleSystem::Update()
+	i32 ParticleSystem::GetEmitterInstanceCount() const
 	{
-		lifetimeRemaining -= g_DeltaTime;
-		return lifetimeRemaining <= 0.0f;
+		return (i32)emitterInstances.size();
+	}
+
+	void ParticleSystem::Update()
+	{
+		auto iter = emitterInstances.begin();
+		while (iter != emitterInstances.end())
+		{
+			ParticleEmitterInstance& emitter = iter->second;
+			emitter.lifetimeRemaining -= g_DeltaTime;
+			if (emitter.lifetimeRemaining <= 0.0f)
+			{
+				g_Renderer->RemoveParticleEmitterInstance(ID, emitter.ID);
+				iter = emitterInstances.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
 	}
 
 	void ParticleSystem::DrawImGuiObjects()
@@ -823,50 +1065,33 @@ namespace flex
 
 		ImGui::Checkbox("Enabled", &bEnabled);
 
-		i32 particleCount = (i32)data.particleCount;
-		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
-		{
-			data.particleCount = particleCount;
-		}
+		ImGui::Text("Instance count: %i", GetEmitterInstanceCount());
 	}
 
 	//
 	// Particle Manager
 	//
 
-	ParticleManager::ParticleManager()
-	{
-	}
-
-	ParticleManager::~ParticleManager()
-	{
-	}
-
 	void ParticleManager::Initialize()
 	{
-		DiscoverParameterTypes();
-		DiscoverTemplates();
 	}
 
 	void ParticleManager::Destroy()
 	{
+		DestroyAllSystems();
 	}
 
 	void ParticleManager::Update()
 	{
-		std::vector<ParticleSystemID> systemsToRemove;
 		for (auto& pair : m_ParticleSystems)
 		{
-			if (pair.second->Update())
-			{
-				systemsToRemove.push_back(pair.second->ID);
-			}
+			pair.second->Update();
 		}
+	}
 
-		for (ParticleSystemID particleSystemID : systemsToRemove)
-		{
-			RemoveParticleSystem(particleSystemID);
-		}
+	void ParticleManager::OnPreSceneChange()
+	{
+		DestroyAllSystems();
 	}
 
 	void ParticleManager::DrawImGui()
@@ -878,35 +1103,35 @@ namespace flex
 			{
 				if (ImGui::Button("Serialize all templates"))
 				{
-					SerializeAllTemplates();
+					g_ResourceManager->SerializeAllParticleSystemTemplates();
 				}
 
 				ImGui::SameLine();
 
 				if (ImGui::Button("Discover templates"))
 				{
-					DiscoverTemplates();
+					g_ResourceManager->DiscoverParticleSystemTemplates();
 				}
 
-				static const char* newParticleSystemPopup = "new particle system";
+				static const char* newParticleTemplatePopup = "new particle template";
 				if (ImGui::Button("New particle system template"))
 				{
-					ImGui::OpenPopup(newParticleSystemPopup);
+					ImGui::OpenPopup(newParticleTemplatePopup);
 				}
 
-				if (ImGui::BeginPopupModal(newParticleSystemPopup))
+				if (ImGui::BeginPopupModal(newParticleTemplatePopup))
 				{
 					static char newParticleSystemNameBuff[256];
-					bool bCreateNewSystem = ImGui::InputText("New particle system", newParticleSystemNameBuff, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+					bool bCreate = ImGui::InputText("New particle system template", newParticleSystemNameBuff, 256, ImGuiInputTextFlags_EnterReturnsTrue);
 
-					bCreateNewSystem = ImGui::Button("Create") || bCreateNewSystem;
+					bCreate = ImGui::Button("Create") || bCreate;
 
-					if (bCreateNewSystem)
+					if (bCreate)
 					{
 						ParticleSystemTemplate particleTemplate = {};
 						std::string newNameStr(newParticleSystemNameBuff);
 						particleTemplate.filePath = PARTICLE_SYSTEMS_DIRECTORY + newNameStr + ".json";
-						m_ParticleTemplates.emplace(Hash(newNameStr.c_str()), particleTemplate);
+						g_ResourceManager->AddNewParticleTemplate(SID(newNameStr.c_str()), particleTemplate);
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -927,104 +1152,17 @@ namespace flex
 
 				ImGui::Separator();
 
-				if (ImGui::TreeNode("Templates"))
-				{
-					for (auto iter = m_ParticleTemplates.begin(); iter != m_ParticleTemplates.end(); ++iter)
-					{
-						if (iter->second.DrawImGuiObjects())
-						{
-							Platform::DeleteFile(iter->second.filePath);
-							m_ParticleTemplates.erase(iter);
-							break;
-						}
-					}
-					ImGui::TreePop();
-				}
-
-				if (ImGui::TreeNode("Parameter types"))
-				{
-					if (ImGui::Button(m_bParameterTypesDirty ? "Save to file*" : "Save to file"))
-					{
-						SerializeParameterTypes();
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Reload from file"))
-					{
-						DiscoverParameterTypes();
-					}
-
-					for (auto iter = m_ParameterTypes.begin(); iter != m_ParameterTypes.end(); ++iter)
-					{
-						const char* typeName = iter->name.c_str();
-						ImGui::PushID(typeName);
-
-						ImGui::Text("%s", typeName);
-
-						i32 valueTypeIndex = (i32)iter->valueType;
-						if (ImGui::Combo("", &valueTypeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1))
-						{
-							iter->valueType = (ParticleParamterValueType)valueTypeIndex;
-							m_bParameterTypesDirty = true;
-						}
-
-						ImGui::SameLine();
-
-						bool bRemoved = false;
-						if (ImGui::Button("x"))
-						{
-							m_ParameterTypes.erase(iter);
-							m_bParameterTypesDirty = true;
-							bRemoved = true;
-						}
-
-						ImGui::PopID();
-
-						if (bRemoved)
-						{
-							break;
-						}
-					}
-
-					static const char* addNewTypePopup = "New particle parameter type";
-					if (ImGui::Button("Add new type"))
-					{
-						ImGui::OpenPopup(addNewTypePopup);
-					}
-
-					if (ImGui::BeginPopupModal(addNewTypePopup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-					{
-						static char typeNameBuff[256];
-						bool bCreateNewType = ImGui::InputText("Name", typeNameBuff, 256, ImGuiInputTextFlags_EnterReturnsTrue);
-
-						static i32 typeIndex = (i32)ParticleParamterValueType::FLOAT;
-						ImGui::Combo("Type", &typeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1);
-
-						bCreateNewType = ImGui::Button("Create") || bCreateNewType;
-
-						if (bCreateNewType && typeIndex != (i32)ParticleParamterValueType::_NONE)
-						{
-							std::string typeNameStr(typeNameBuff);
-							m_ParameterTypes.emplace_back(typeNameStr, (ParticleParamterValueType)typeIndex);
-							m_bParameterTypesDirty = true;
-							ImGui::CloseCurrentPopup();
-						}
-
-						ImGui::EndPopup();
-					}
-
-					ImGui::TreePop();
-				}
+				g_ResourceManager->DrawParticleSystemTemplateImGuiObjects();
+				g_ResourceManager->DrawParticleParameterTypesImGui();
 			}
 			ImGui::End();
 		}
 	}
 
-	ParticleSystemID ParticleManager::AddParticleSystem(StringID particleTemplateNameSID, const ParticleSimData& data, const std::string& name, const glm::mat4& objectToWorld, real lifetime)
+	ParticleSystemID ParticleManager::CreateParticleSystem(StringID particleTemplateNameSID, const std::string& name)
 	{
-		ParticleParameters* params = GetTemplateParams(particleTemplateNameSID);
-		if (params == nullptr)
+		ParticleSystemTemplate particleTemplate;
+		if (!g_ResourceManager->GetParticleTemplate(particleTemplateNameSID, particleTemplate))
 		{
 			PrintError("Invalid particle template name SID: %u\n", (u32)particleTemplateNameSID);
 			return InvalidParticleSystemID;
@@ -1032,158 +1170,65 @@ namespace flex
 
 		ParticleSystem* newParticleSystem = m_ParticleSystemAllocator.Alloc();
 		newParticleSystem->name = name;
-		newParticleSystem->bEnabled = true;
-		newParticleSystem->objectToWorld = objectToWorld;
-		newParticleSystem->lifetimeRemaining = lifetime;
 
-		newParticleSystem->SetParameters(*params);
+		newParticleSystem->SetParameters(particleTemplate.params);
 
-		newParticleSystem->data.particleCount = data.particleCount;
-
-		ParticleSystemID particleSystemID = g_Renderer->AddParticleSystem(name, newParticleSystem, data.particleCount);
+		ParticleSystemID particleSystemID = g_Renderer->AddParticleSystem(name, newParticleSystem);
 		newParticleSystem->ID = particleSystemID;
-		m_ParticleSystems.emplace(particleSystemID, newParticleSystem);
+		m_ParticleSystems.emplace(particleTemplateNameSID, newParticleSystem);
 		return particleSystemID;
 	}
 
-	void ParticleManager::RemoveParticleSystem(ParticleSystemID particleSystemID)
+	ParticleSystem* ParticleManager::GetOrCreateParticleSystem(StringID particleTemplateNameSID, const char* particleTemplateName)
 	{
-		m_ParticleSystems.erase(particleSystemID);
+		auto iter = m_ParticleSystems.find(particleTemplateNameSID);
+		if (iter != m_ParticleSystems.end())
+		{
+			return iter->second;
+		}
+
+		// Lazily create system on-demand
+		ParticleSystemTemplate particleTemplate;
+		if (g_ResourceManager->GetParticleTemplate(particleTemplateNameSID, particleTemplate))
+		{
+			CreateParticleSystem(particleTemplateNameSID, std::string(particleTemplateName));
+			return m_ParticleSystems[particleTemplateNameSID];
+		}
+		return nullptr;
+	}
+
+	void ParticleManager::RemoveParticleSystem(StringID particleTemplateNameSID)
+	{
+		ParticleSystemID particleSystemID = m_ParticleSystems[particleTemplateNameSID]->ID;
+		m_ParticleSystems.erase(particleTemplateNameSID);
 		g_Renderer->RemoveParticleSystem(particleSystemID);
 	}
 
-	void ParticleManager::DiscoverParameterTypes()
+	void ParticleManager::DestroyAllSystems()
 	{
-		m_ParameterTypes.clear();
-
-		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
-		if (FileExists(filePath))
+		if (g_Renderer != nullptr)
 		{
-			std::string fileContents;
-			if (!ReadFile(filePath, fileContents, false))
+			auto iter = m_ParticleSystems.begin();
+			while (iter != m_ParticleSystems.end())
 			{
-				PrintError("Failed to read particle parameter types file at %s\n", filePath);
-				return;
-			}
-
-			JSONObject rootObj;
-			if (!JSONParser::Parse(fileContents, rootObj))
-			{
-				PrintError("Failed to parse particle parameter types file at %s\n", filePath);
-				return;
-			}
-
-			std::vector<JSONObject> typeObjs = rootObj.GetObjectArray("particle parameter types");
-			for (const JSONObject& typeObj : typeObjs)
-			{
-				std::string label = typeObj.fields[0].label;
-				std::string typeStr = typeObj.fields[0].value.AsString();
-				ParticleParamterValueType type = ParticleParamterValueTypeFromString(typeStr.c_str());
-
-				if (type != ParticleParamterValueType::_NONE)
-				{
-					m_ParameterTypes.emplace_back(label, type);
-				}
-			}
-
-			m_bParameterTypesDirty = false;
-		}
-	}
-
-	void ParticleManager::SerializeParameterTypes()
-	{
-		std::vector<JSONObject> parameterTypeObjs;
-		for (ParticleParameterType& type : m_ParameterTypes)
-		{
-			const char* valueStr = ParticleParamterValueTypeToString(type.valueType);
-			JSONObject obj = {};
-			obj.fields.emplace_back(type.name, JSONValue(valueStr));
-			parameterTypeObjs.emplace_back(obj);
-		}
-
-		JSONObject particleParameterTypesObj = {};
-		particleParameterTypesObj.fields.emplace_back("particle parameter types", JSONValue(parameterTypeObjs));
-		std::string fileContents = particleParameterTypesObj.ToString();
-
-		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
-		if (!WriteFile(filePath, fileContents, false))
-		{
-			PrintError("Failed to write particle parameter types to %s\n", filePath);
-		}
-		else
-		{
-			m_bParameterTypesDirty = false;
-		}
-	}
-
-	void ParticleManager::SerializeAllTemplates()
-	{
-		for (auto& pair : m_ParticleTemplates)
-		{
-			ParticleParameters::Serialize(pair.second.filePath, pair.second.params);
-		}
-	}
-
-	void ParticleManager::DiscoverTemplates()
-	{
-		m_ParticleTemplates.clear();
-
-		std::string absoluteDirectory = RelativePathToAbsolute(PARTICLE_SYSTEMS_DIRECTORY);
-		if (Platform::DirectoryExists(absoluteDirectory))
-		{
-			std::vector<std::string> filePaths;
-			if (Platform::FindFilesInDirectory(absoluteDirectory, filePaths, ".json"))
-			{
-				for (const std::string& filePath : filePaths)
-				{
-					ParticleSystemTemplate particleTemplate = {};
-					particleTemplate.filePath = filePath;
-					if (!ParticleParameters::Deserialize(filePath, particleTemplate.params))
-					{
-						PrintError("Failed to read particle parameters file at %s\n", filePath.c_str());
-						continue;
-					}
-
-					std::string fileName = StripLeadingDirectories(StripFileType(filePath));
-					StringID particleNameSID = SID(fileName.c_str());
-					m_ParticleTemplates.emplace(particleNameSID, particleTemplate);
-				}
+				g_Renderer->RemoveParticleSystem(iter->second->ID);
+				iter = m_ParticleSystems.erase(iter);
 			}
 		}
-	}
-
-	ParticleParamterValueType ParticleManager::GetParameterValueType(const char* paramName)
-	{
-		for (ParticleParameterType& type : m_ParameterTypes)
-		{
-			if (strcmp(type.name.c_str(), paramName) == 0)
-			{
-				return type.valueType;
-			}
-		}
-		return ParticleParamterValueType::_NONE;
-	}
-
-	ParticleParameters* ParticleManager::GetTemplateParams(StringID particleTemplateSID)
-	{
-		auto iter = m_ParticleTemplates.find(particleTemplateSID);
-		if (iter != m_ParticleTemplates.end())
-		{
-			return &iter->second.params;
-		}
-		return nullptr;
+		m_ParticleSystems.clear();
 	}
 
 	//
 	// ParticleSystemTemplate
 	//
 
-	bool ParticleManager::ParticleSystemTemplate::DrawImGuiObjects()
+	ParticleSystemTemplate::ImGuiResult ParticleSystemTemplate::DrawImGuiObjects()
 	{
 		bool bRemove = false;
+		bool bValueChanged = false;
 
 		std::string fileName = StripLeadingDirectories(StripFileType(filePath));
-		if (ImGui::TreeNode(this, "%s", fileName.c_str()))
+		if (ImGui::TreeNode(this, "%s%s", fileName.c_str(), bDirty ? "*" : ""))
 		{
 			if (ImGui::Button("Delete"))
 			{
@@ -1195,9 +1240,10 @@ namespace flex
 			if (ImGui::Button("Save"))
 			{
 				ParticleParameters::Serialize(filePath, params);
+				bDirty = false;
 			}
 
-			params.DrawImGuiObjects();
+			bValueChanged = params.DrawImGuiObjects() || bValueChanged;
 
 			const char* addParameterPopup = "Add parameter";
 			if (ImGui::Button("Add parameter"))
@@ -1207,20 +1253,19 @@ namespace flex
 
 			if (ImGui::BeginPopupModal(addParameterPopup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
 				static i32 paramIndex = 0;
 				ImGui::Combo("Parameter", &paramIndex, [](void* data, i32 index, const char** outText)
 				{
 					ParticleParameterType* type = (((ParticleParameterType*)data) + index);
 					*outText = type->name.c_str();
 					return true;
-				}, particleManager->m_ParameterTypes.data(), (i32)particleManager->m_ParameterTypes.size());
+				}, g_ResourceManager->particleParameterTypes.data(), (i32)g_ResourceManager->particleParameterTypes.size());
 
 				if (ImGui::Button("Add"))
 				{
-					ParticleParameterType& paramType = particleManager->m_ParameterTypes[paramIndex];
-					StringID paramNameSID = SID(paramType.name.c_str());
-					params.m_Parameters.emplace(paramNameSID, ParticleParameterPack(paramType.name, paramType.valueType));
+					ParticleParameterType& paramType = g_ResourceManager->particleParameterTypes[paramIndex];
+					params.AddParam(ParticleParameterPack(paramType.name, paramType.valueType));
+					bDirty = true;
 					ImGui::CloseCurrentPopup();
 				}
 
@@ -1230,7 +1275,19 @@ namespace flex
 			ImGui::TreePop();
 		}
 
-		return bRemove;
+		if (bRemove)
+		{
+			return ImGuiResult::REMOVED;
+		}
+		else if (bValueChanged)
+		{
+			bDirty = true;
+			return ImGuiResult::CHANGED;
+		}
+		else
+		{
+			return ImGuiResult::NOTHING;
+		}
 	}
 
 } // namespace flex

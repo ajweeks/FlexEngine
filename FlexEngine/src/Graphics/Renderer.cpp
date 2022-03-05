@@ -296,6 +296,17 @@ namespace flex
 		m_HologramProxyObject->SetVisible(false);
 	}
 
+	u32 Renderer::GetAlignedUBOSize(u32 unalignedSize)
+	{
+		u32 alignedSize = unalignedSize;
+		const u32 nCAS = GetNonCoherentAtomSize();
+		if (unalignedSize % nCAS != 0)
+		{
+			alignedSize += nCAS - (alignedSize % nCAS);
+		}
+		return alignedSize;
+	}
+
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
 	{
 		m_ReflectionProbeMaterialID = reflectionProbeMaterialID;
@@ -2351,6 +2362,9 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_PARTICLES;
 		m_Shaders[shaderID]->bCompute = true;
 
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_PARTICLE_SIM_DATA);
 
@@ -3931,6 +3945,31 @@ namespace flex
 		if (!WriteFile(SHADER_SPECIALIZATION_CONSTANTS_LOCATION, fileContents, false))
 		{
 			PrintError("Failed to write shader specialization constants\n");
+		}
+	}
+
+	void Renderer::CreateParticleBuffer(Material* material)
+	{
+		Shader* shader = m_Shaders[material->shaderID];
+
+		if (shader->additionalBufferUniforms.HasUniform(&U_PARTICLE_BUFFER))
+		{
+			PROFILE_AUTO("CreateParticleBuffer");
+
+			GPUBuffer* particleBuffer = material->gpuBufferList.Get(GPUBufferType::PARTICLE_DATA);
+			particleBuffer->FreeHostMemory();
+
+			particleBuffer->data.unitSize = GetAlignedUBOSize(MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM * MAX_PARTICLE_COUNT_PER_INSTANCE * sizeof(ParticleBufferData));
+
+			particleBuffer->AllocHostMemory(particleBuffer->data.unitSize, m_DynamicAlignment);
+			// Will be copied into from staging buffer
+			PrepareGPUBuffer(particleBuffer, particleBuffer->data.unitSize,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				"Particle buffer",
+				false);
+
+			SetGPUBufferName(particleBuffer, "Particle buffer");
 		}
 	}
 

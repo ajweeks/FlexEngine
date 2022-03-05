@@ -39,6 +39,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Particles.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
@@ -584,8 +585,6 @@ namespace flex
 			{
 				UpdateDynamicUniformBuffer(i);
 			}
-
-			InitializeAllParticleSystemBuffers();
 
 			m_bPostInitialized = true;
 
@@ -1384,31 +1383,6 @@ namespace flex
 						SetGPUBufferName(dynamicBuffer, bufferName.c_str());
 					}
 				}
-			}
-		}
-
-		void VulkanRenderer::CreateParticleBuffer(VulkanMaterial* material)
-		{
-			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
-
-			if (shader->additionalBufferUniforms.HasUniform(&U_PARTICLE_BUFFER))
-			{
-				PROFILE_AUTO("CreateParticleBuffer");
-
-				UniformBuffer* particleBuffer = material->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-				particleBuffer->Free();
-
-				particleBuffer->data.unitSize = GetAlignedUBOSize(MAX_PARTICLE_COUNT * sizeof(ParticleBufferData));
-
-				particleBuffer->Alloc(particleBuffer->data.unitSize, m_DynamicAlignment);
-				// Will be copied into from staging buffer
-				PrepareUniformBuffer(&particleBuffer->buffer, particleBuffer->data.unitSize,
-					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-					VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-					"Particle buffer",
-					false);
-
-				SetBufferName(m_VulkanDevice, particleBuffer->buffer.m_Buffer, "Particle buffer");
 			}
 		}
 
@@ -2552,8 +2526,6 @@ namespace flex
 				CreateShadowIndexBuffer();
 
 				GenerateIrradianceMaps();
-
-				InitializeAllParticleSystemBuffers();
 			}
 		}
 
@@ -2863,12 +2835,12 @@ namespace flex
 			}
 		}
 
-		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount)
+		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, ParticleSystem* system)
 		{
-			if ((u32)particleCount > MAX_PARTICLE_COUNT)
-			{
-				PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
-			}
+			//if ((u32)particleCount > MAX_PARTICLE_COUNT)
+			//{
+			//	PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
+			//}
 
 			VulkanParticleSystem* particleSystem = new VulkanParticleSystem(m_VulkanDevice);
 			particleSystem->ID = GetNextAvailableParticleSystemID();
@@ -2882,8 +2854,31 @@ namespace flex
 			if (m_bPostInitialized)
 			{
 				CreateParticleSystemResources(particleSystem);
-				InitializeParticleSystemBuffer(particleSystem);
 			}
+
+			//const StringID lifetimeSID = SID("lifetime");
+			//const StringID posSID = SID("initial position");
+			//const StringID velSID = SID("initial velocity");
+			//const StringID colSID = SID("initial colour");
+			//
+			//ParticleParamGPU& lifetimeParam = particleSystem->particleParamsGPU.params[0];
+			//lifetimeParam.sampleType = (u32)particleParameters.GetSampleType(lifetimeSID);
+			//lifetimeParam.valueMin = glm::vec4(particleParameters.GetRealMin(lifetimeSID), 0.0f, 0.0f, 0.0f);
+			//lifetimeParam.valueMax = glm::vec4(particleParameters.GetRealMax(lifetimeSID), 0.0f, 0.0f, 0.0f);
+			//ParticleParamGPU& posParam = particleSystem->particleParamsGPU.params[1];
+			//posParam.sampleType = (u32)particleParameters.GetSampleType(posSID);
+			//posParam.valueMin = glm::vec4(particleParameters.GetParam(posSID)->GetVec3Min(), 0.0f);
+			//posParam.valueMax = glm::vec4(particleParameters.GetVec3Max(posSID), 0.0f);
+
+			//ParticleParamGPU& velParam = particleSystem->particleParamsGPU.params[2];
+			//velParam.sampleType = (u32)particleParameters.GetSampleType(velSID);
+			//velParam.valueMin = glm::vec4(particleParameters.GetVec3Min(velSID), 0.0f);
+			//velParam.valueMax = glm::vec4(particleParameters.GetVec3Max(velSID), 0.0f);
+
+			//ParticleParamGPU& colParam = particleSystem->particleParamsGPU.params[3];
+			//colParam.sampleType = (u32)particleParameters.GetSampleType(colSID);
+			//colParam.valueMin = particleParameters.GetVec4Min(colSID);
+			//colParam.valueMax = particleParameters.GetVec4Max(colSID);
 
 			return particleSystem->ID;
 		}
@@ -2892,12 +2887,27 @@ namespace flex
 		{
 			if (particleSystemID < m_ParticleSystems.size())
 			{
+				RemoveMaterial(m_ParticleSystems[particleSystemID]->system->simMaterialID);
+				RemoveMaterial(m_ParticleSystems[particleSystemID]->system->renderingMaterialID);
+
 				delete m_ParticleSystems[particleSystemID];
 				m_ParticleSystems[particleSystemID] = nullptr;
 				return true;
 			}
 
 			return false;
+		}
+
+		bool VulkanRenderer::AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID)
+		{
+			VulkanParticleSystem* particleSystem = m_ParticleSystems[particleSystemID];
+			return InitializeParticleSystemBuffer(particleSystem, emitterID);
+		}
+
+		void VulkanRenderer::RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID)
+		{
+			FLEX_UNUSED(particleSystemID);
+			FLEX_UNUSED(emitterID);
 		}
 
 		bool VulkanRenderer::InitializeFreeType()
@@ -3224,6 +3234,8 @@ namespace flex
 
 			PROFILE_AUTO("GenerateIrradianceSampler");
 
+			PROFILE_BEGIN("Create resources");
+
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMesh(0)->renderID);
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
@@ -3338,7 +3350,11 @@ namespace flex
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
+			PROFILE_END("Create resources");
+
 			// Render
+
+			PROFILE_BEGIN("Render");
 
 			VulkanTexture* irradianceTexture = (VulkanTexture*)renderObjectMat->textures[&U_IRRADIANCE_SAMPLER];
 
@@ -3481,6 +3497,8 @@ namespace flex
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
+
+			PROFILE_END("Render");
 		}
 
 		void VulkanRenderer::GeneratePrefilteredCube(VulkanRenderObject* renderObject)
@@ -3492,6 +3510,8 @@ namespace flex
 			}
 
 			PROFILE_AUTO("GeneratePrefilteredCube");
+
+			PROFILE_BEGIN("Create resources");
 
 			VulkanRenderObject* skyboxRenderObject = GetRenderObject(m_SkyBoxMesh->GetSubMesh(0)->renderID);
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
@@ -3608,7 +3628,11 @@ namespace flex
 			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
+			PROFILE_END("Create resources");
+
 			// Render
+
+			PROFILE_BEGIN("Render");
 
 			VulkanTexture* prefilterTexture = (VulkanTexture*)renderObjectMat->textures[&U_PREFILTER_MAP];
 
@@ -3750,10 +3774,14 @@ namespace flex
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
+
+			PROFILE_END("Render");
 		}
 
 		void VulkanRenderer::GenerateBRDFLUT()
 		{
+			PROFILE_AUTO("GenerateBRDFLUT");
+
 			if (!bRenderedBRDFLUT)
 			{
 				const u32 dim = (u32)m_BRDFSize.x;
@@ -3763,6 +3791,8 @@ namespace flex
 				{
 					CreateBRDFTexture();
 				}
+
+				PROFILE_BEGIN("Create resources");
 
 				VulkanRenderPass renderPass(m_VulkanDevice);
 				renderPass.RegisterForColourOnly("Generate BRDF LUT render pass", InvalidFrameBufferAttachmentID, {});
@@ -3800,7 +3830,11 @@ namespace flex
 				CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 
+				PROFILE_END("Create resources");
+
 				// Render
+
+				PROFILE_BEGIN("Render");
 
 				VkClearValue clearValues[1];
 				clearValues[0].color = m_ClearColour;
@@ -3838,6 +3872,8 @@ namespace flex
 				DestroyGraphicsPipeline(pipelineID);
 
 				bRenderedBRDFLUT = true;
+
+				PROFILE_END("Render");
 			}
 		}
 
@@ -4005,6 +4041,8 @@ namespace flex
 
 		bool VulkanRenderer::LoadFont(FontMetaData& fontMetaData, bool bForceRender)
 		{
+			PROFILE_BEGIN("LoadFont");
+
 			std::vector<char> fileMemory;
 			ReadFile(fontMetaData.filePath, fileMemory, true);
 
@@ -4653,6 +4691,8 @@ namespace flex
 				return;
 			}
 
+			PROFILE_AUTO("DrawText");
+
 			const VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials[matID];
 			const VulkanShader* fontShader = (VulkanShader*)m_Shaders[fontMaterial->shaderID];
 
@@ -4703,15 +4743,6 @@ namespace flex
 			if (!bHasText)
 			{
 				return;
-			}
-
-			if (bScreenSpace)
-			{
-				PROFILE_BEGIN("DrawTextSS");
-			}
-			else
-			{
-				PROFILE_BEGIN("DrawTextWS");
 			}
 
 			glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
@@ -4787,6 +4818,8 @@ namespace flex
 
 		void VulkanRenderer::DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer)
 		{
+			PROFILE_AUTO("DrawSpriteBatch");
+
 			if (batch.empty())
 			{
 				return;
@@ -4960,7 +4993,9 @@ namespace flex
 
 				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					if (!particleSystem || !particleSystem->system->bEnabled)
+					if (!particleSystem ||
+						!particleSystem->system->bEnabled ||
+						particleSystem->system->emitterInstances.empty())
 					{
 						continue;
 					}
@@ -4970,18 +5005,30 @@ namespace flex
 
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(particleSystem->graphicsPipelineID)->pipeline;
 
-					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
-					UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, particleSystem->system->objectToWorld, nullptr);
-
-					VkDeviceSize offsets[1] = { 0 };
-					const VkBuffer* particleBuffer = &particleSimMat->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA)->buffer.m_Buffer;
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, particleBuffer, offsets);
+					VulkanGPUBuffer* uniformBuffer = (VulkanGPUBuffer*)particleSimMat->gpuBufferList.Get(GPUBufferType::PARTICLE_DATA);
+					const VkBuffer* particleBuffer = &uniformBuffer->buffer.m_Buffer;
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
 
-					BindDescriptorSet(particleRenderingMat, dynamicUBOOffset, commandBuffer, pipeline->layout, particleSystem->renderingDescriptorSet);
+					u32 i = 0;
+					for (const auto& pair : particleSystem->system->emitterInstances)
+					{
+						const ParticleEmitterInstance& emitterInstance = pair.second;
+						CHECK_NE(emitterInstance.bufferIndex, u32_max);
 
-					vkCmdDraw(commandBuffer, MAX_PARTICLE_COUNT, 1, 0, 0);
+						VkDeviceSize offsets[1] = { emitterInstance.bufferIndex * MAX_PARTICLE_COUNT_PER_INSTANCE * sizeof(ParticleBufferData) };
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, particleBuffer, offsets);
+
+						const glm::mat4& objectToWorld = emitterInstance.objectToWorld;
+						u32 dynamicUBOOffset = i * m_DynamicAlignment; // particleSystem->ID
+						BindDescriptorSet(particleRenderingMat, dynamicUBOOffset, commandBuffer, pipeline->layout, particleSystem->renderingDescriptorSet);
+
+						UpdateDynamicUniformBuffer(particleSystem->system->renderingMaterialID, dynamicUBOOffset, objectToWorld, nullptr);
+
+						// TODO: Use vkCmdDrawIndirectCount to allow each emitter to calculate its own particle count in the shader
+						vkCmdDraw(commandBuffer, particleSystem->system->m_ParticleCount, 1, 0, 0);
+						++i;
+					}
 				}
 
 				EndDebugMarkerRegion(commandBuffer, "End Particle rendering");
@@ -5149,65 +5196,130 @@ namespace flex
 				VulkanTexture* texture = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(textureID);
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, *texture->sampler });
 			}
-			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.uniformBufferList, descSetCreateInfo.shaderID);
+			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 			VkDescriptorSet descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			return descSet;
 		}
 
-		void VulkanRenderer::InitializeAllParticleSystemBuffers()
+		bool VulkanRenderer::InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem, ParticleEmitterID emitterID)
 		{
-			PROFILE_AUTO("InitializeAllParticleSystemBuffers");
-
-			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			auto emitterIter = particleSystem->system->emitterInstances.find(emitterID);
+			if (emitterIter == particleSystem->system->emitterInstances.end())
 			{
-				if (particleSystem != nullptr)
+				PrintError("Invalid particle emitter instance passed to VulkanRenderer::InitializeParticleSystemBuffer\n");
+				return false;
+			}
+
+			u32 emitterBufferIndex = u32_max;
+			for (u32 i = 0; i < MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM; ++i)
+			{
+				bool bIndexTaken = false;
+				for (const auto& emitterInstance : particleSystem->system->emitterInstances)
 				{
-					InitializeParticleSystemBuffer(particleSystem);
+					if (emitterInstance.second.bufferIndex == i)
+					{
+						bIndexTaken = true;
+						break;
+					}
+				}
+				if (!bIndexTaken)
+				{
+					emitterBufferIndex = i;
+					break;
 				}
 			}
-		}
-
-		void VulkanRenderer::InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem)
-		{
-			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT * sizeof(ParticleBufferData);
-
-			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(
-				maxParticleBufferSize,
-				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT);
-
-			const u32 dim = (u32)glm::pow((real)particleBufferData.size(), 1.0f / 3.0f);
-			const real invDim = 1.0f / (real)dim;
-			for (u32 i = 0; i < particleSystem->system->data.particleCount; ++i)
+			if (emitterBufferIndex == u32_max)
 			{
-				const ParticleParameters& params = particleSystem->system->GetParameters();
+				PrintError("Failed to find an available particle emitter buffer index\n");
+				return false;
+			}
 
-				i32 particleCount = params.GetInt(SID("particle count"));
-				if (particleCount == -1) particleCount = 1024;
-				particleSystem->system->data.particleCount = particleCount;
+			emitterIter->second.bufferIndex = emitterBufferIndex;
 
-				particleBufferData[i].pos = params.GetVec3(SID("initial position"));
-				particleBufferData[i].vel = params.GetVec3(SID("initial velocity"));
-				real lifetime = params.GetReal(SID("lifetime"));
-				particleBufferData[i].colour = params.GetVec4(SID("initial colour"));
+			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT_PER_INSTANCE * MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM * sizeof(ParticleBufferData);
+
+			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT_PER_INSTANCE);
+
+			const ParticleParameters& params = particleSystem->system->GetParameters();
+			for (i32 i = 0; i < particleSystem->system->m_ParticleCount; ++i)
+			{
+				// TODO: Make vertex buffer layout & stride data driven
+				particleBufferData[i].pos = params.GetParam(SID("initial position"))->GetVec3();
+				particleBufferData[i].vel = params.GetParam(SID("initial velocity"))->GetVec3();
+				real lifetime = params.GetParam(SID("lifetime"))->GetReal();
+				particleBufferData[i].colour = params.GetParam(SID("initial colour"))->GetVec4();
 				particleBufferData[i].extraVec4 = glm::vec4(lifetime, lifetime, 0.0f, 0.0f);
 			}
 
+			//u32 emitterCount = (u32)particleSystem->system->emitterInstances.size();
+			//const ParticleEmitterInstance& emitterInstance = particleSystem->system->emitterInstances[emitterInstanceIndex];
+
 			VulkanMaterial* particleSimMat = (VulkanMaterial*)m_Materials.at(particleSystem->system->simMaterialID);
 
-			const u32 particleBufferSize = particleSystem->system->data.particleCount * sizeof(particleBufferData[0]);
+			u32 bufferOffset = emitterBufferIndex * MAX_PARTICLE_COUNT_PER_INSTANCE * sizeof(ParticleBufferData);
+			UploadDataViaStagingBuffer(particleSimMat->gpuBufferList.Get(GPUBufferType::PARTICLE_DATA)->ID, bufferOffset, particleBufferData.data(), (u32)(particleBufferData.size() * sizeof(ParticleBufferData)));
+
+			return true;
+		}
+
+		void VulkanRenderer::UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferOffset, void* data, u32 dataSize)
+		{
+			VulkanBuffer stagingBuffer(m_VulkanDevice);
+			stagingBuffer.Create(
+				dataSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+			VulkanGPUBuffer* buffer = (VulkanGPUBuffer*)GetGPUBuffer(bufferID);
+			//
+			//u32 bufferSize = buffer->fullDynamicBufferSize;
+			//
 
 			VK_CHECK_RESULT(stagingBuffer.Map());
-			memcpy(stagingBuffer.m_Mapped, particleBufferData.data(), particleBufferSize);
-			memset(((u8*)stagingBuffer.m_Mapped) + particleBufferSize, 0, MAX_PARTICLE_COUNT * sizeof(ParticleBufferData) - particleBufferSize);
+			memcpy(stagingBuffer.m_Mapped, data, dataSize);
+			// TODO: Optionally allow
+			//memset(((u8*)stagingBuffer.m_Mapped) + bufferSize, 0, bufferSize - dataSize);
 			stagingBuffer.Unmap();
 
-			UniformBuffer* particleBuffer = particleSimMat->uniformBufferList.Get(UniformBufferType::PARTICLE_DATA);
-			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, particleBuffer->buffer.m_Buffer, particleBuffer->buffer.m_Size);
+			CopyBuffer(m_VulkanDevice, m_GraphicsQueue, stagingBuffer.m_Buffer, buffer->buffer.m_Buffer, dataSize, 0, bufferOffset);
+		}
+
+		void VulkanRenderer::FreeGPUBuffer(GPUBuffer* buffer)
+		{
+			delete buffer;
+		}
+
+		GPUBuffer* VulkanRenderer::AllocateGPUBuffer(GPUBufferType type)
+		{
+			// TODO: Use pool
+			return new VulkanGPUBuffer(m_VulkanDevice, type);
+		}
+
+		void VulkanRenderer::PrepareGPUBuffer(GPUBuffer* buffer,
+			u32 bufferSize,
+			VkBufferUsageFlags bufferUseageFlagBits,
+			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+			const std::string& DEBUG_name,
+			bool bMap /* = true */)
+		{
+			VulkanGPUBuffer* vkBuffer = (VulkanGPUBuffer*)buffer;
+			vkBuffer->buffer.Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, DEBUG_name.c_str());
+
+			if (bMap)
+			{
+				VK_CHECK_RESULT(vkBuffer->buffer.Map());
+			}
+		}
+
+		void VulkanRenderer::SetGPUBufferName(GPUBuffer const* buffer, const char* name)
+		{
+			SetBufferName(m_VulkanDevice, ((VulkanGPUBuffer*)buffer)->buffer.m_Buffer, name);
+		}
+
+		u32 VulkanRenderer::GetNonCoherentAtomSize() const
+		{
+			return (u32)m_VulkanDevice->m_PhysicalDeviceProperties.limits.nonCoherentAtomSize;
 		}
 
 		void VulkanRenderer::DestroyTerrain()
@@ -5285,6 +5397,8 @@ namespace flex
 
 		void VulkanRenderer::CreateBRDFTexture()
 		{
+			PROFILE_AUTO("CreateBRDFTexture");
+
 			if (m_BRDFTexture == nullptr)
 			{
 				m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF");
@@ -6223,7 +6337,7 @@ namespace flex
 				return;
 			}
 
-			PROFILE_AUTO("CreateGraphicsPipeline");
+			PROFILE_AUTO("CreateGraphicsPipeline (renderID)");
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
@@ -6261,6 +6375,8 @@ namespace flex
 		void VulkanRenderer::CreateGraphicsPipeline(GraphicsPipelineCreateInfo* createInfo,
 			GraphicsPipelineID& outPipelineID)
 		{
+			PROFILE_AUTO("CreateGraphicsPipeline");
+
 			const u64 pipelineHash = createInfo->Hash();
 
 			// Check for existing pipelines that are identical
@@ -6433,7 +6549,10 @@ namespace flex
 
 			// TODO: Investigate using pipeline caches here
 
-			VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, newPipeline->layout.replace()));
+			{
+				PROFILE_AUTO("vkCreatePipelineLayout");
+				VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, newPipeline->layout.replace()));
+			}
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(createInfo->depthTestEnable, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
 
@@ -6464,7 +6583,10 @@ namespace flex
 
 			VkPipelineCache pipelineCache = VK_NULL_HANDLE;
 
-			VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline->pipeline));
+			{
+				PROFILE_AUTO("vkCreateGraphicsPipelines");
+				VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline->pipeline));
+			}
 			SetPipelineName(m_VulkanDevice, newPipeline->pipeline, createInfo->DBG_Name);
 
 			GraphicsPipelineID newPipelineID = (GraphicsPipelineID)m_LastGraphicsPipelineID++;
@@ -6491,6 +6613,8 @@ namespace flex
 
 		void VulkanRenderer::DestroyNonPersistentGraphicsPipelines()
 		{
+			PROFILE_AUTO("DestroyNonPersistentGraphicsPipelines");
+
 			auto iter = m_GraphicsPipelines.begin();
 			while (iter != m_GraphicsPipelines.end())
 			{
@@ -6533,6 +6657,8 @@ namespace flex
 
 		void VulkanRenderer::DestroyGraphicsPipeline(GraphicsPipelineID pipelineID)
 		{
+			PROFILE_AUTO("DestroyGraphicsPipeline");
+
 			bool bFoundHash = false;
 			bool bFoundPipeline = false;
 			for (auto iter = m_GraphicsPipelineHashes.begin(); iter != m_GraphicsPipelineHashes.end(); ++iter)
@@ -6572,12 +6698,16 @@ namespace flex
 
 		bool VulkanRenderer::IsGraphicsPipelineValid(GraphicsPipelineID pipelineID) const
 		{
+			PROFILE_AUTO("IsGraphicsPipelineValid");
+
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
 			return pipeline != nullptr && pipeline->pipeline != nullptr;
 		}
 
 		GraphicsPipelineConfiguration* VulkanRenderer::GetGraphicsPipeline(GraphicsPipelineID pipelineID) const
 		{
+			PROFILE_AUTO("GetGraphicsPipeline");
+
 			if (pipelineID == InvalidGraphicsPipelineID)
 			{
 				return nullptr;
@@ -6756,6 +6886,8 @@ namespace flex
 
 		void VulkanRenderer::CreateSamplers()
 		{
+			PROFILE_AUTO("CreateSamplers");
+
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
 				samplerCreateInfo.sampler = m_SamplerDepth.replace();
@@ -6815,6 +6947,8 @@ namespace flex
 
 		void VulkanRenderer::InitializeShaders(const std::vector<ShaderInfo>& shaderInfos)
 		{
+			PROFILE_AUTO("InitializeShaders");
+
 			for (u32 i = 0; i < (u32)m_Shaders.size(); ++i)
 			{
 				delete m_Shaders[i];
@@ -6977,7 +7111,7 @@ namespace flex
 
 		void VulkanRenderer::PhysicsDebugRender()
 		{
-			PROFILE_AUTO("Physics debug render");
+			PROFILE_AUTO("PhysicsDebugRender");
 
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->debugDrawWorld();
@@ -7060,6 +7194,8 @@ namespace flex
 
 		void VulkanRenderer::CreateAllStaticVertexBuffers()
 		{
+			PROFILE_AUTO("CreateAllStaticVertexBuffers");
+
 			for (u32 i = 0; i < (u32)m_StaticVertexBuffers.size(); ++i)
 			{
 				if (!Contains(m_DirtyStaticVertexBufferIndices, i))
@@ -7073,6 +7209,8 @@ namespace flex
 
 		void VulkanRenderer::CreateDynamicVertexAndIndexBuffers()
 		{
+			PROFILE_AUTO("CreateDynamicVertexAndIndexBuffers");
+
 			struct SizePair
 			{
 				u32 vertMemoryReq;
@@ -7155,7 +7293,8 @@ namespace flex
 
 		void VulkanRenderer::AllocateDynamicVertexBuffers()
 		{
-			PROFILE_AUTO("Allocate dynamic vertex buffers");
+			PROFILE_AUTO("AllocateDynamicVertexBuffers");
+
 			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 			{
 				const u32 stride = CalculateVertexStride(m_Shaders[shaderID]->vertexAttributes);
@@ -7365,21 +7504,6 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::PrepareUniformBuffer(VulkanBuffer* buffer,
-			u32 bufferSize,
-			VkBufferUsageFlags bufferUseageFlagBits,
-			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
-			const std::string& DEBUG_name,
-			bool bMap /* = true */)
-		{
-			buffer->Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, DEBUG_name.c_str());
-
-			if (bMap)
-			{
-				VK_CHECK_RESULT(buffer->Map());
-			}
-		}
-
 		void VulkanRenderer::CreateSemaphores()
 		{
 			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
@@ -7388,9 +7512,13 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
 		}
 
-		void VulkanRenderer::FillOutShaderBatches(const std::vector<RenderID>& renderIDs, i32* inOutDynamicUBOOffset,
-			MaterialBatchPair& matBatchPair, MaterialBatchPair& depthAwareEditorMatBatchPair, MaterialBatchPair& depthUnawareEditorMatBatchPair,
-			MaterialID matID, bool bWriteUBOOffsets /* = true */)
+		void VulkanRenderer::FillOutShaderBatches(const std::vector<RenderID>& renderIDs,
+			i32* inOutDynamicUBOOffset,
+			MaterialBatchPair& matBatchPair,
+			MaterialBatchPair& depthAwareEditorMatBatchPair,
+			MaterialBatchPair& depthUnawareEditorMatBatchPair,
+			MaterialID matID,
+			bool bWriteUBOOffsets /* = true */)
 		{
 			PROFILE_AUTO("FillOutShaderBatches");
 
@@ -7503,11 +7631,11 @@ namespace flex
 				m_DepthAwareEditorObjBatches.batches.clear();
 				m_DepthUnawareEditorObjBatches.batches.clear();
 
-				std::vector<RenderID> renderIDs;
+				static std::vector<RenderID> renderIDs;
 				renderIDs.reserve(m_RenderObjects.size());
 				for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
 				{
-					if (m_RenderObjects[renderID])
+					if (m_RenderObjects[renderID] != nullptr)
 					{
 						renderIDs.push_back(renderID);
 					}
@@ -7525,7 +7653,7 @@ namespace flex
 					ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
 
 					// Blocklist certain shaders
-					if (m_Shaders[shaderID]->name == "ui")
+					if (strcmp(m_Shaders[shaderID]->name.c_str(), "ui") == 0)
 					{
 						continue;
 					}
@@ -8586,12 +8714,15 @@ namespace flex
 			if (!m_ParticleSystems.empty())
 			{
 				PROFILE_AUTO("DispatchParticleSimWorkloads");
+
 				BeginGPUTimeStamp(commandBuffer, "Simulate Particles");
 				BeginDebugMarkerRegion(commandBuffer, "Simulate Particles");
 
 				for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 				{
-					if (!particleSystem || !particleSystem->system->bEnabled)
+					if (!particleSystem ||
+						!particleSystem->system->bEnabled ||
+						particleSystem->system->emitterInstances.empty())
 					{
 						continue;
 					}
@@ -8619,19 +8750,27 @@ namespace flex
 
 					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, particleSystem->computePipeline);
 
-					u32 dynamicUBOOffset = particleSystem->ID * m_DynamicAlignment;
+					u32 i = 0;
+					for (auto& pair : particleSystem->system->emitterInstances)
+					{
+						ParticleEmitterInstance& emitterInstance = pair.second;
+						CHECK_NE(emitterInstance.bufferIndex, u32_max);
 
-					particleSystem->system->data.dt = g_DeltaTime;
+						UniformOverrides overrides = {};
+						emitterInstance.data.bufferOffset = emitterInstance.bufferIndex * MAX_PARTICLE_COUNT_PER_INSTANCE;
+						emitterInstance.data.particleCount = particleSystem->system->m_ParticleCount;
+						emitterInstance.data.dt = g_DeltaTime;
+						overrides.AddUniform(&U_PARTICLE_SIM_DATA, (void*)&emitterInstance.data);
+						// TODO: Only do once/on edit
+						u32 dynamicUBOOffset = i * m_DynamicAlignment; // /*particleSystem->ID * */
+						UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
 
-					UniformOverrides overrides = {};
-					overrides.AddUniform(&U_PARTICLE_SIM_DATA, (void*)&particleSystem->system->data);
-					// TODO: Only do once/on edit
-					UpdateDynamicUniformBuffer(particleSystem->system->simMaterialID, dynamicUBOOffset, MAT4_IDENTITY, &overrides);
+						u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
+						vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
 
-					u32 dynamicOffsets[2] = { dynamicUBOOffset, 0 };
-					vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_ParticleSimulationComputePipelineLayout, 0, 1, &particleSystem->computeDescriptorSet, ARRAY_LENGTH(dynamicOffsets), dynamicOffsets);
-
-					vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT / PARTICLES_PER_DISPATCH, 1, 1);
+						vkCmdDispatch(commandBuffer, MAX_PARTICLE_COUNT_PER_INSTANCE / PARTICLES_PER_DISPATCH, 1, 1);
+						++i;
+					}
 
 					// Add memory barrier to ensure that compute shader has finished writing to the buffer
 					// Without this the (rendering) vertex shader may display incomplete results (partial data from last frame)
@@ -9883,8 +10022,6 @@ namespace flex
 
 			m_WireframeGraphicsPipelines.clear();
 			CreateWireframeDescriptorSets();
-
-			InitializeAllParticleSystemBuffers();
 
 			CreatePostProcessingResources();
 			CreateFullscreenBlitResources();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "JSONTypes.hpp"
+#include "Graphics/RendererTypes.hpp"
 
 namespace flex
 {
@@ -64,11 +65,6 @@ namespace flex
 
 	bool IsValueTypeFloat(ParticleParamterValueType valueType);
 
-	struct ParticleSimData
-	{
-		real dt;
-		u32 particleCount;
-	};
 
 	struct ParticleParameterType
 	{
@@ -91,8 +87,12 @@ namespace flex
 		ParticleParameter& operator=(ParticleParameter&& other);
 
 		real GetReal() const;
+		real GetRealMin() const;
+		real GetRealMax() const;
 		bool GetBool() const;
 		i32 GetInt() const;
+		i32 GetIntMin() const;
+		i32 GetIntMax() const;
 		void SetReal(real value);
 		void SetBool(bool value);
 		void SetInt(i32 value);
@@ -100,9 +100,9 @@ namespace flex
 		JSONObject Serialize(ParticleParamterValueType parentValueType);
 		static ParticleParameter Deserialize(const JSONObject& parentObject, ParticleParamterValueType parentValueType);
 
-		void DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType);
+		bool DrawImGuiObjects(const char* label, ParticleParamterValueType parentValueType);
 
-		ParticleSampleType type;
+		ParticleSampleType type = ParticleSampleType::_NONE;
 		union
 		{
 			real constantValue;
@@ -123,16 +123,28 @@ namespace flex
 		static ParticleParameterPack Deserialize(const char* label, const JSONObject& parentObject);
 		JSONValue Serialize();
 
-		bool GetBool(u32 index) const;
-		real GetReal(u32 index) const;
-		i32 GetInt(u32 index) const;
+		ParticleSampleType GetSampleType(u32 index = 0) const;
+		bool GetBool(u32 index = 0) const;
+		real GetReal(u32 index = 0) const;
+		real GetRealMin(u32 index = 0) const;
+		real GetRealMax(u32 index = 0) const;
+		i32 GetInt(u32 index = 0) const;
+		i32 GetIntMin(u32 index = 0) const;
+		i32 GetIntMax(u32 index = 0) const;
 		glm::vec2 GetVec2() const;
+		glm::vec2 GetVec2Min() const;
+		glm::vec2 GetVec2Max() const;
 		glm::vec3 GetVec3() const;
+		glm::vec3 GetVec3Min() const;
+		glm::vec3 GetVec3Max() const;
 		glm::vec4 GetVec4() const;
+		glm::vec4 GetVec4Min() const;
+		glm::vec4 GetVec4Max() const;
 
-		void DrawImGuiObjects();
+		bool DrawImGuiObjects();
 
 		std::string name;
+		StringID nameSID = InvalidStringID;
 		ParticleParamterValueType valueType = ParticleParamterValueType::_NONE;
 		std::vector<ParticleParameter> params;
 	};
@@ -153,16 +165,26 @@ namespace flex
 		static bool Deserialize(const std::string& filePath, ParticleParameters& particleParameters);
 		static void Serialize(const std::string& filePath, ParticleParameters& particleParameters);
 
-		bool GetBool(StringID parameterName) const;
-		real GetReal(StringID parameterName) const;
-		i32 GetInt(StringID parameterName) const;
-		glm::vec2 GetVec2(StringID parameterName) const;
-		glm::vec3 GetVec3(StringID parameterName) const;
-		glm::vec4 GetVec4(StringID parameterName) const;
+		void AddParam(const ParticleParameterPack& paramPack);
+		ParticleParameterPack const* GetParam(StringID paramNameSID) const;
 
-		void DrawImGuiObjects();
+		bool DrawImGuiObjects();
 
-		std::unordered_map<StringID, ParticleParameterPack> m_Parameters;
+		void FillOutGPUParams(struct ParticleSpawnParams& particleSpawnParams);
+
+	private:
+		void SortParams();
+
+		std::vector<ParticleParameterPack> m_Parameters;
+	};
+
+	struct ParticleEmitterInstance
+	{
+		ParticleSimData data;
+		glm::mat4 objectToWorld;
+		real lifetimeRemaining = 0.0f;
+		ParticleEmitterID ID = InvalidParticleEmitterID;
+		u32 bufferIndex = u32_max;
 	};
 
 	class ParticleSystem final
@@ -181,8 +203,12 @@ namespace flex
 
 		void Destroy();
 
+		ParticleEmitterID SpawnEmitterInstance(const glm::mat4& objectToWorld);
+		void ExtinguishEmitter(ParticleEmitterID emitterID);
+
 		// Returns true when system can be destroyed
-		bool Update();
+		void Update();
+		i32 GetEmitterInstanceCount() const;
 
 		void DrawImGuiObjects();
 
@@ -192,26 +218,44 @@ namespace flex
 		std::string GetFilePath() const;
 
 		std::string name;
-		ParticleSystemID ID;
-		ParticleSimData data;
+		ParticleSystemID ID = InvalidParticleSystemID;
 		bool bEnabled = true;
-		glm::mat4 objectToWorld;
-		real lifetimeRemaining;
 
 		MaterialID simMaterialID = InvalidMaterialID;
 		MaterialID renderingMaterialID = InvalidMaterialID;
-		ParticleSystemID particleSystemID = InvalidParticleSystemID;
 
+		std::unordered_map<ParticleEmitterID, ParticleEmitterInstance> emitterInstances;
+		i32 m_ParticleCount = 0;
 	private:
 		ParticleParameters m_Parameters;
+		ParticleSpawnParams m_SpawnParams;
 
+		ParticleEmitterID m_LastEmitterIndex = 0;
+
+	};
+
+	struct ParticleSystemTemplate
+	{
+		enum class ImGuiResult
+		{
+			REMOVED,
+			CHANGED,
+			NOTHING
+		};
+
+		// Returns true when this template should be deleted
+		ImGuiResult DrawImGuiObjects();
+
+		std::string filePath;
+		ParticleParameters params;
+		bool bDirty = false;
 	};
 
 	class ParticleManager : public System
 	{
 	public:
-		ParticleManager();
-		~ParticleManager();
+		ParticleManager() = default;
+		~ParticleManager() = default;
 
 		ParticleManager(const ParticleManager& other) = delete;
 		ParticleManager(ParticleManager&& other) = delete;
@@ -221,40 +265,25 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
+		virtual void OnPreSceneChange() override;
 
 		virtual void DrawImGui() override;
 
-		ParticleSystemID AddParticleSystem(StringID particleTemplateNameSID, const ParticleSimData& data, const std::string& name, const glm::mat4& objectToWorld, real lifetime);
-		void RemoveParticleSystem(ParticleSystemID particleSystemID);
+		ParticleSystemID CreateParticleSystem(StringID particleTemplateNameSID, const std::string& name);
+		ParticleSystem* GetOrCreateParticleSystem(StringID particleTemplateNameSID, const char* particleTemplateName);
+		void RemoveParticleSystem(StringID particleTemplateNameSID);
 
 		void DiscoverParameterTypes();
 		void SerializeParameterTypes();
 
-		void SerializeAllTemplates();
-		void DiscoverTemplates();
-
-		ParticleParamterValueType GetParameterValueType(const char* paramName);
-
 	private:
-		ParticleParameters* GetTemplateParams(StringID particleTemplateSID);
-
-		std::unordered_map<ParticleSystemID, ParticleSystem*> m_ParticleSystems;
-		PoolAllocator<ParticleSystem, 8> m_ParticleSystemAllocator;
-
-		std::vector<ParticleParameterType> m_ParameterTypes;
-		bool m_bParameterTypesDirty = false;
-
-		struct ParticleSystemTemplate
-		{
-			// Returns true when this template should be deleted
-			bool DrawImGuiObjects();
-
-			std::string filePath;
-			ParticleParameters params;
-		};
 		friend ParticleSystemTemplate;
 
-		std::unordered_map<StringID, ParticleSystemTemplate> m_ParticleTemplates;
+		void DestroyAllSystems();
+
+		std::unordered_map<StringID, ParticleSystem*> m_ParticleSystems;
+		PoolAllocator<ParticleSystem, 8> m_ParticleSystemAllocator;
+
 
 	};
 } // namespace flex

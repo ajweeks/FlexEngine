@@ -1,5 +1,7 @@
 #version 450
 
+#include "vk_particles_common.glsl"
+
 layout(points, invocations = 1) in;
 layout(triangle_strip, max_vertices = 4) out;
 

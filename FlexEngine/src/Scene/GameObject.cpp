@@ -48,6 +48,7 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Particles.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "ResourceManager.hpp"
@@ -11239,6 +11240,7 @@ namespace flex
 
 			u32 fixedUpdateCount = glm::min((u32)(m_MSToSim / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
+			// TODO: Make member/store in manager
 			std::vector<glm::vec3> predictedPositions(points.size());
 
 			for (u32 updateIteration = 0; updateIteration < fixedUpdateCount; ++updateIteration)
@@ -13481,8 +13483,11 @@ namespace flex
 
 	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, MinerSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
-		m_MineTimer(1.0f)
+		m_MineTimer(1.0f),
+		m_MineCooldownTimer(0.2f)
 	{
+		// Ensure Update completes on first frame miner is active to begin mining
+		m_MineCooldownTimer.remaining = 0.001f;
 		m_bInteractable = true;
 		m_bItemizable = true;
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
@@ -13501,10 +13506,14 @@ namespace flex
 		collection->RegisterProperty("power draw", &m_PowerDraw)
 			.VersionAdded(6)
 			.Range(0.0f, 10.0f);
+
+		ComputeNewTargetPos();
 	}
 
 	void Miner::Update()
 	{
+		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
+
 		if (!m_NearestMineralDepositID.IsValid())
 		{
 			// TODO: Only search every second or so rather than every frame
@@ -13539,12 +13548,36 @@ namespace flex
 				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
 				if (minedMineralPrefabID != InvalidPrefabID)
 				{
-					if (m_MineTimer.Update())
+					if (m_MineCooldownTimer.Update())
 					{
-						m_MineTimer.Restart();
-
-						if (m_Charge > m_PowerDraw && !IsInventoryFull())
+						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 						{
+							m_MineTimer.Complete();
+							m_NearestMineralDepositID = InvalidGameObjectID;
+						}
+						else
+						{
+							m_MineTimer.Restart();
+							ComputeNewTargetPos();
+
+							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+							glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
+							glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
+							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+						}
+					}
+
+					if (m_Charge > m_PowerDraw && !IsInventoryFull())
+					{
+						if (m_MineTimer.Update())
+						{
+							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							m_MiningSparksEmitterID = InvalidParticleEmitterID;
+
+							m_MineCooldownTimer.Restart();
+
 							u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
 							m_Charge -= m_PowerDraw;
 
@@ -13560,13 +13593,10 @@ namespace flex
 									g_SceneManager->CurrentScene()->CreateDroppedItem(minedMineralPrefabID, extraItems, pos, VEC3_ZERO);
 								}
 
-								ParticleSimData particleSimData = {};
-								particleSimData.particleCount = 512;
+								PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
 								glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
 								glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
-								PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
 								btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
 								physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
 
@@ -13580,22 +13610,14 @@ namespace flex
 									posWS = ToBtVec3(laserEndWS);
 								}
 								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, ToVec3(posWS));
-								ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
-								particleManager->AddParticleSystem(SID("mining dust"), particleSimData, "Mineral dust particle system", objectToWorld, 3.0f);
+								ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
+								dustParticleSystem->SpawnEmitterInstance(objectToWorld);
 							}
 
 							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 							{
 								m_MineTimer.Complete();
 								m_NearestMineralDepositID = InvalidGameObjectID;
-							}
-							else
-							{
-								real radius = 3.0f;
-								m_LaserEndPoint = glm::vec3(
-									RandomFloat(-radius, radius),
-									-m_LaserEmitterHeight,
-									RandomFloat(-radius, radius));
 							}
 						}
 					}
@@ -13609,7 +13631,7 @@ namespace flex
 			debugDrawer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
 		}
 
-		if (m_MineTimer.remaining > 0.0f)
+		if (m_MineCooldownTimer.remaining == 0.0f && m_MineTimer.remaining > 0.0f)
 		{
 			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
@@ -13685,6 +13707,15 @@ namespace flex
 			}
 		}
 		return -1;
+	}
+
+	void Miner::ComputeNewTargetPos()
+	{
+		real radius = 3.0f;
+		m_LaserEndPoint = glm::vec3(
+			RandomFloat(-radius, radius),
+			-m_LaserEmitterHeight,
+			RandomFloat(-radius, radius));
 	}
 
 	GameObjectStack* Miner::GetStackFromInventory(i32 slotIndex)

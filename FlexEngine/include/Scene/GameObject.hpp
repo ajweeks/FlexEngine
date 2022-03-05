@@ -1960,6 +1960,8 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
+		void ComputeNewTargetPos();
+
 		real m_Charge = 0.0f;
 		real m_MaxCharge = 10.0f;
 		real m_MineRate = 1.0f;
@@ -1972,8 +1974,11 @@ namespace flex
 
 		real m_LaserEmitterHeight;
 		Timer m_MineTimer;
+		Timer m_MineCooldownTimer;
 		glm::vec3 m_LaserEndPoint;
 		glm::vec4 laserColour;
+
+		ParticleEmitterID m_MiningSparksEmitterID = InvalidParticleEmitterID;
 	};
 
 	static constexpr StringID SpeakerSID = SID("speaker");

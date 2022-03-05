@@ -1,4 +1,9 @@
 {
+	"enable spawning" : 
+	{
+		"type" : "constant",
+		"constant" : false
+	},
 	"initial velocity" : 
 	[
 		{
@@ -15,6 +20,24 @@
 			"type" : "random",
 			"random min" : -1.000000,
 			"random max" : 1.000000
+		}
+	],
+	"initial position" : 
+	[
+		{
+			"type" : "random",
+			"random min" : -0.200000,
+			"random max" : 0.200000
+		},
+		{
+			"type" : "random",
+			"random min" : 0.000000,
+			"random max" : 0.500000
+		},
+		{
+			"type" : "random",
+			"random min" : -0.200000,
+			"random max" : 0.200000
 		}
 	],
 	"initial colour" : 
@@ -46,24 +69,6 @@
 		"type" : "constant",
 		"constant" : true
 	},
-	"initial position" : 
-	[
-		{
-			"type" : "random",
-			"random min" : -0.200000,
-			"random max" : 0.200000
-		},
-		{
-			"type" : "random",
-			"random min" : 0.000000,
-			"random max" : 0.500000
-		},
-		{
-			"type" : "random",
-			"random min" : -0.200000,
-			"random max" : 0.200000
-		}
-	],
 	"lifetime" : 
 	{
 		"type" : "random",

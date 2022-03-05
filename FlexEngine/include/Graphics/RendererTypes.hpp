@@ -12,7 +12,6 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "JSONTypes.hpp"
 #include "Pair.hpp"
-#include "Particles.hpp"
 
 namespace flex
 {
@@ -30,6 +29,7 @@ namespace flex
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 	static const u32 TERRAIN_THREAD_GROUP_SIZE = 4;
+	static const i32 MAX_NUM_PARTICLE_PARAMS = 8;
 
 	// 48 bytes
 	struct DirLightData
@@ -143,6 +143,28 @@ namespace flex
 		glm::vec4 extraVec4;
 	};
 #pragma pack(pop)
+
+	struct ParticleParamGPU
+	{
+		glm::vec4 valueMin;
+		glm::vec4 valueMax;
+		u32 sampleType;
+		u32 pad0, pad1, pad2;
+	};
+
+	struct ParticleSpawnParams
+	{
+		ParticleParamGPU params[MAX_NUM_PARTICLE_PARAMS];
+	};
+
+	struct ParticleSimData
+	{
+		u32 bufferOffset;
+		u32 particleCount;
+		real dt;
+		u32 enableSpawning;
+		ParticleSpawnParams spawnParams;
+	};
 
 	// 80 bytes
 	struct OceanData
@@ -608,6 +630,7 @@ namespace flex
 
 		void SetUniform(Uniform const* uniform, const UniformType object)
 		{
+			PROFILE_AUTO("ShaderUniformContainer SetUniform");
 			for (u32 i = 0; i < (u32)values.size(); ++i)
 			{
 				if (values[i].uniform->id == uniform->id)
@@ -647,6 +670,7 @@ namespace flex
 
 		bool Contains(Uniform const* uniform) const
 		{
+			PROFILE_AUTO("ShaderUniformContainer Contains");
 			for (const auto& pair : values)
 			{
 				if (pair.uniform->id == uniform->id)
@@ -741,20 +765,56 @@ namespace flex
 
 	struct MaterialPropertyOverride
 	{
-		MaterialPropertyOverride() : i32Value(0) {}
-		MaterialPropertyOverride(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		MaterialPropertyOverride(MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		void operator=(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		void operator=(MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		MaterialPropertyOverride(real realValue) : realValue(realValue) {}
-		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value) {}
-		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value) {}
-		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue) {}
-		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value) {}
-		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value) {}
-		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value) {}
-		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value) {}
-		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue) {}
+		enum class ValueType
+		{
+			REAL,
+			UINT,
+			INT,
+			BOOL,
+			VEC2,
+			VEC3,
+			VEC4,
+			MAT4,
+			VOID_STAR,
+			_NONE
+		};
+
+		MaterialPropertyOverride(const MaterialPropertyOverride& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		MaterialPropertyOverride(MaterialPropertyOverride&& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		void operator=(const MaterialPropertyOverride& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		void operator=(MaterialPropertyOverride&& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+
+		MaterialPropertyOverride() : i32Value(0), valueType(ValueType::_NONE) {}
+		MaterialPropertyOverride(real realValue) : realValue(realValue), valueType(ValueType::REAL) {}
+		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value), valueType(ValueType::UINT) {}
+		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value), valueType(ValueType::INT) {}
+		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue), valueType(ValueType::BOOL) {}
+		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value), valueType(ValueType::VEC2) {}
+		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value), valueType(ValueType::VEC3) {}
+		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value), valueType(ValueType::VEC4) {}
+		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value), valueType(ValueType::MAT4) {}
+		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue), valueType(ValueType::VOID_STAR) {}
+
+		void* GetDataPointer()
+		{
+			if (valueType == ValueType::VOID_STAR)
+			{
+				return pointerValue;
+			}
+			return &realValue;
+		}
 
 		union {
 			real realValue;
@@ -767,6 +827,7 @@ namespace flex
 			glm::mat4 mat4Value;
 			void* pointerValue;
 		};
+		ValueType valueType;
 	};
 
 	struct UniformOverrides

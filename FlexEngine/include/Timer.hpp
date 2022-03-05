@@ -9,7 +9,7 @@ namespace flex
 		Timer(sec duration);
 		Timer(sec duration, sec initialRemaining);
 
-		// Returns true when complete
+		// Returns true when timer completed this update
 		bool Update();
 		void Restart();
 		void Complete();

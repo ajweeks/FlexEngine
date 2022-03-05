@@ -26,7 +26,7 @@ namespace flex
 			}
 		}
 
-		return (remaining == 0.0f);
+		return false;
 	}
 
 	void Timer::Restart()

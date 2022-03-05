@@ -43,7 +43,9 @@ namespace flex
 	using CartChainID = u32;
 	using VariableID = u32;
 	using ParticleSystemID = u32;
+	using ParticleEmitterID = u32;
 	using GameObjectStackID = u32;
+	using GPUBufferID = u32;
 
 	using StringID = u64;
 
@@ -87,6 +89,8 @@ namespace flex
 	static constexpr auto InvalidCartChainID = ((CartChainID)u32_max);
 	static constexpr auto InvalidVariableID = ((VariableID)u32_max);
 	static constexpr auto InvalidParticleSystemID = ((ParticleSystemID)u32_max);
+	static constexpr auto InvalidParticleEmitterID = ((ParticleEmitterID)u32_max);
+	static constexpr auto InvalidGPUBufferID = ((GPUBufferID)u32_max);
 	static constexpr auto InvalidThreadHandle = ((ThreadHandle)u64_max);
 	static constexpr auto InvalidBufferID = u64_max;
 	static constexpr auto InvalidSpecializationConstantID = (SpecializationConstantID)u32_max;

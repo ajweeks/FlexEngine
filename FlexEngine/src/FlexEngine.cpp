@@ -36,6 +36,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
+#include "Particles.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"

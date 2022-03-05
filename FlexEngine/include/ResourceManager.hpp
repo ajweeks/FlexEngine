@@ -11,19 +11,22 @@ typedef struct FT_FaceRec_* FT_Face;
 
 namespace flex
 {
+	class BitmapFont;
 	class DirectoryWatcher;
+	struct FontMetaData;
+	struct FontMetric;
 	struct JSONField;
 	struct JSONObject;
 	struct LoadedMesh;
-	struct FontMetaData;
-	class BitmapFont;
-	struct FontMetric;
-	struct Texture;
+	struct MaterialCreateInfo;
 	class Mesh;
 	struct MeshInfo;
-	struct MaterialCreateInfo;
+	struct ParticleParameterType;
+	enum class ParticleParamterValueType;
+	struct ParticleSystemTemplate;
 	struct PrefabInfo;
 	class StringBuilder;
+	struct Texture;
 
 	class ResourceManager
 	{
@@ -54,6 +57,10 @@ namespace flex
 		void DiscoverPrefabs();
 		void DiscoverAudioFiles();
 		void DiscoverTextures();
+		void DiscoverParticleParameterTypes();
+		void SerializeParticleParameterTypes();
+		void DiscoverParticleSystemTemplates();
+		void SerializeAllParticleSystemTemplates();
 
 		void ParseGameObjectTypesFile();
 		void SerializeGameObjectTypesFile();
@@ -83,6 +90,8 @@ namespace flex
 		// Expects to be called from within an ImGui menu
 		void DrawImGuiMenuItemizableItems();
 		bool DrawAudioSourceIDImGui(const char* label, StringID& audioSourceSID);
+		void DrawParticleSystemTemplateImGuiObjects();
+		void DrawParticleParameterTypesImGui();
 
 		// Returns a pointer into loadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
@@ -123,6 +132,10 @@ namespace flex
 		u32 GetMaxStackSize(const PrefabID& prefabID);
 
 		void AddNewGameObjectType(const char* newType);
+
+		void AddNewParticleTemplate(StringID particleTemplateNameSID, const ParticleSystemTemplate particleTemplate);
+		bool GetParticleTemplate(StringID particleTemplateNameSID, ParticleSystemTemplate& outParticleTemplate);
+		ParticleParamterValueType GetParticleParameterValueType(const char* paramName);
 
 		static const i32 DEFAULT_MAX_STACK_SIZE = 32;
 
@@ -192,6 +205,8 @@ namespace flex
 
 		std::vector<std::string> debugOverlayNames;
 
+		std::vector<ParticleParameterType> particleParameterTypes;
+
 	private:
 		bool WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
@@ -206,6 +221,10 @@ namespace flex
 		DirectoryWatcher* m_TextureDirectoryWatcher = nullptr;
 
 		std::map<StringID, u32> m_NonDefaultStackSizes;
+
+		bool m_bParticleParameterTypesDirty = false;
+
+		std::unordered_map<StringID, ParticleSystemTemplate> m_ParticleTemplates;
 
 	};
 } // namespace flex

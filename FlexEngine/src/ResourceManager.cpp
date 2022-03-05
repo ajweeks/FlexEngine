@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
+#include "Particles.hpp"
 #include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -60,6 +61,8 @@ namespace flex
 		DiscoverAudioFiles();
 		ParseDebugOverlayNamesFile();
 		ParseGameObjectTypesFile();
+		DiscoverParticleParameterTypes();
+		DiscoverParticleSystemTemplates();
 
 		m_NonDefaultStackSizes[SID("battery")] = 1;
 	}
@@ -557,6 +560,42 @@ namespace flex
 		}
 	}
 
+	void ResourceManager::DiscoverParticleSystemTemplates()
+	{
+		m_ParticleTemplates.clear();
+
+		std::string absoluteDirectory = RelativePathToAbsolute(PARTICLE_SYSTEMS_DIRECTORY);
+		if (Platform::DirectoryExists(absoluteDirectory))
+		{
+			std::vector<std::string> filePaths;
+			if (Platform::FindFilesInDirectory(absoluteDirectory, filePaths, ".json"))
+			{
+				for (const std::string& filePath : filePaths)
+				{
+					ParticleSystemTemplate particleTemplate = {};
+					particleTemplate.filePath = filePath;
+					if (!ParticleParameters::Deserialize(filePath, particleTemplate.params))
+					{
+						PrintError("Failed to read particle parameters file at %s\n", filePath.c_str());
+						continue;
+					}
+
+					std::string fileName = StripLeadingDirectories(StripFileType(filePath));
+					StringID particleNameSID = SID(fileName.c_str());
+					m_ParticleTemplates.emplace(particleNameSID, particleTemplate);
+				}
+			}
+		}
+	}
+
+	void ResourceManager::SerializeAllParticleSystemTemplates()
+	{
+		for (auto& pair : m_ParticleTemplates)
+		{
+			ParticleParameters::Serialize(pair.second.filePath, pair.second.params);
+		}
+	}
+
 	void ResourceManager::ParseGameObjectTypesFile()
 	{
 		gameObjectTypeStringIDPairs.clear();
@@ -791,6 +830,8 @@ namespace flex
 		std::array<glm::vec2i, 4>* outMaxPositions,
 		FT_Face* outFace)
 	{
+		PROFILE_BEGIN("LoadFontMetrics");
+
 		CHECK_EQ(metaData.bitmapFont, nullptr);
 
 		// TODO: Save in common place
@@ -1372,6 +1413,24 @@ namespace flex
 		SerializeGameObjectTypesFile();
 	}
 
+	void ResourceManager::AddNewParticleTemplate(StringID particleTemplateNameSID, const ParticleSystemTemplate particleTemplate)
+	{
+		m_ParticleTemplates.emplace(particleTemplateNameSID, particleTemplate);
+	}
+
+	bool ResourceManager::GetParticleTemplate(StringID particleTemplateNameSID, ParticleSystemTemplate& outParticleTemplate)
+	{
+		for (auto& pair : m_ParticleTemplates)
+		{
+			if (pair.first == particleTemplateNameSID)
+			{
+				outParticleTemplate = pair.second;
+				return true;
+			}
+		}
+		return false;
+	}
+
 	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const
 	{
 		std::string childName = child->GetName();
@@ -1611,6 +1670,180 @@ namespace flex
 		}
 
 		return bValuesChanged;
+	}
+
+	void ResourceManager::DrawParticleSystemTemplateImGuiObjects()
+	{
+		if (ImGui::TreeNode("Templates"))
+		{
+			for (auto iter = m_ParticleTemplates.begin(); iter != m_ParticleTemplates.end(); ++iter)
+			{
+				ParticleSystemTemplate::ImGuiResult result = iter->second.DrawImGuiObjects();
+				switch (result)
+				{
+				case ParticleSystemTemplate::ImGuiResult::REMOVED:
+				{
+					Platform::DeleteFile(iter->second.filePath);
+					m_ParticleTemplates.erase(iter);
+				} break;
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	void ResourceManager::DrawParticleParameterTypesImGui()
+	{
+		if (ImGui::TreeNode("Parameter types"))
+		{
+			if (ImGui::Button(m_bParticleParameterTypesDirty ? "Save to file*" : "Save to file"))
+			{
+				SerializeParticleParameterTypes();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reload from file"))
+			{
+				DiscoverParticleParameterTypes();
+			}
+
+			for (auto iter = particleParameterTypes.begin(); iter != particleParameterTypes.end(); ++iter)
+			{
+				const char* typeName = iter->name.c_str();
+				ImGui::PushID(typeName);
+
+				ImGui::Text("%s", typeName);
+
+				i32 valueTypeIndex = (i32)iter->valueType;
+				if (ImGui::Combo("", &valueTypeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1))
+				{
+					iter->valueType = (ParticleParamterValueType)valueTypeIndex;
+					m_bParticleParameterTypesDirty = true;
+				}
+
+				bool bRemoved = false;
+				if (ImGui::Button("Remove type"))
+				{
+					particleParameterTypes.erase(iter);
+					m_bParticleParameterTypesDirty = true;
+					bRemoved = true;
+				}
+
+				ImGui::PopID();
+
+				if (bRemoved)
+				{
+					break;
+				}
+			}
+
+			static const char* addNewTypePopup = "New particle parameter type";
+			if (ImGui::Button("Add new type"))
+			{
+				ImGui::OpenPopup(addNewTypePopup);
+			}
+
+			if (ImGui::BeginPopupModal(addNewTypePopup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				static char typeNameBuff[256];
+				bool bCreateNewType = ImGui::InputText("Name", typeNameBuff, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+
+				static i32 typeIndex = (i32)ParticleParamterValueType::FLOAT;
+				ImGui::Combo("Type", &typeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1);
+
+				bCreateNewType = ImGui::Button("Create") || bCreateNewType;
+
+				if (bCreateNewType && typeIndex != (i32)ParticleParamterValueType::_NONE)
+				{
+					std::string typeNameStr(typeNameBuff);
+					particleParameterTypes.emplace_back(typeNameStr, (ParticleParamterValueType)typeIndex);
+					m_bParticleParameterTypesDirty = true;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	void ResourceManager::DiscoverParticleParameterTypes()
+	{
+		particleParameterTypes.clear();
+
+		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
+		if (FileExists(filePath))
+		{
+			std::string fileContents;
+			if (!ReadFile(filePath, fileContents, false))
+			{
+				PrintError("Failed to read particle parameter types file at %s\n", filePath);
+				return;
+			}
+
+			JSONObject rootObj;
+			if (!JSONParser::Parse(fileContents, rootObj))
+			{
+				PrintError("Failed to parse particle parameter types file at %s\n", filePath);
+				return;
+			}
+
+			std::vector<JSONObject> typeObjs = rootObj.GetObjectArray("particle parameter types");
+			for (const JSONObject& typeObj : typeObjs)
+			{
+				std::string name = typeObj.GetString("name");
+				std::string typeStr = typeObj.GetString("type");
+				ParticleParamterValueType type = ParticleParamterValueTypeFromString(typeStr.c_str());
+
+				if (type != ParticleParamterValueType::_NONE)
+				{
+					particleParameterTypes.emplace_back(name, type);
+				}
+			}
+
+			m_bParticleParameterTypesDirty = false;
+		}
+	}
+
+	void ResourceManager::SerializeParticleParameterTypes()
+	{
+		std::vector<JSONObject> parameterTypeObjs;
+		for (ParticleParameterType& type : particleParameterTypes)
+		{
+			JSONObject obj = {};
+			const char* valueTypeStr = ParticleParamterValueTypeToString(type.valueType);
+			obj.fields.emplace_back("name", JSONValue(type.name));
+			obj.fields.emplace_back("type", JSONValue(valueTypeStr));
+			parameterTypeObjs.emplace_back(obj);
+		}
+
+		JSONObject particleParameterTypesObj = {};
+		particleParameterTypesObj.fields.emplace_back("particle parameter types", JSONValue(parameterTypeObjs));
+		std::string fileContents = particleParameterTypesObj.ToString();
+
+		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
+		if (!WriteFile(filePath, fileContents, false))
+		{
+			PrintError("Failed to write particle parameter types to %s\n", filePath);
+		}
+		else
+		{
+			m_bParticleParameterTypesDirty = false;
+		}
+	}
+
+	ParticleParamterValueType ResourceManager::GetParticleParameterValueType(const char* paramName)
+	{
+		for (const ParticleParameterType& type : particleParameterTypes)
+		{
+			if (strcmp(type.name.c_str(), paramName) == 0)
+			{
+				return type.valueType;
+			}
+		}
+		return ParticleParamterValueType::_NONE;
 	}
 
 	void ResourceManager::DrawImGuiWindows()

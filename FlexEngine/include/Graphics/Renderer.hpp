@@ -181,8 +181,10 @@ namespace flex
 		// TODO: Use MeshID
 		virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) = 0;
 
-		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
+		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
+		virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
+		virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
 
 		virtual void RecreateEverything() = 0;
 
@@ -375,8 +377,10 @@ namespace flex
 		void ClearShaderHash(const std::string& shaderName);
 		void RecompileShaders(bool bForceCompileAll);
 
-		static const u32 MAX_PARTICLE_COUNT = 65536;
 		u32 GetAlignedUBOSize(u32 unalignedSize);
+
+		static const u32 MAX_PARTICLE_COUNT_PER_INSTANCE = 65536;
+		static const u32 MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM = 16;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;
 
@@ -456,6 +460,8 @@ namespace flex
 		void ParseShaderSpecializationConstants();
 		void SerializeSpecializationConstantInfo();
 		void SerializeShaderSpecializationConstants();
+
+		void CreateParticleBuffer(Material* material);
 
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
