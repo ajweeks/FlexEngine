@@ -13,7 +13,7 @@ namespace flex
 		virtual ~FirstPersonCamera();
 
 		virtual void Initialize() override;
-		virtual void OnSceneChanged() override;
+		virtual void OnPostSceneChange() override;
 		virtual void FixedUpdate() override;
 
 	private:

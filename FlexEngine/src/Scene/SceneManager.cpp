@@ -57,6 +57,11 @@ namespace flex
 			g_Editor->PreSceneChange();
 			g_ResourceManager->PreSceneChange();
 			g_Renderer->OnPreSceneChange();
+
+			for (System* system : g_Systems)
+			{
+				system->OnPreSceneChange();
+			}
 		}
 
 		AudioManager::StopAllSources();
@@ -69,8 +74,6 @@ namespace flex
 		if (m_CurrentSceneIndex != InvalidID)
 		{
 			g_CameraManager->Destroy();
-			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->Destroy();
-			GetSystem<RoadManager>(SystemType::ROAD_MANAGER)->Destroy();
 
 			m_Scenes[m_CurrentSceneIndex]->Destroy();
 		}
@@ -665,7 +668,7 @@ namespace flex
 			g_EngineInstance->OnSceneChanged();
 			g_ResourceManager->OnSceneChanged();
 			g_Editor->OnSceneChanged();
-			g_CameraManager->OnSceneChanged();
+			g_CameraManager->OnPostSceneChange();
 			g_Renderer->OnPostSceneChange();
 			GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->OnSceneChanged();
 		}

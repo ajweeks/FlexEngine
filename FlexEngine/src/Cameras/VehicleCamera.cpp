@@ -58,9 +58,9 @@ namespace flex
 		}
 	}
 
-	void VehicleCamera::OnSceneChanged()
+	void VehicleCamera::OnPostSceneChange()
 	{
-		BaseCamera::OnSceneChanged();
+		BaseCamera::OnPostSceneChange();
 
 		m_TrackedVehicle = nullptr;
 		FindActiveVehicle();

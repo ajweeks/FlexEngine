@@ -32,6 +32,7 @@ namespace flex
 	public:
 		virtual void Initialize() override;
 		virtual void Destroy() override;
+		virtual void OnPreSceneChange() override;
 
 		virtual void Update() override;
 
@@ -86,6 +87,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy() override;
 		virtual void Update() override;
+		virtual void OnPreSceneChange() override;
 
 		virtual void DrawImGui() override;
 

@@ -44,9 +44,9 @@ namespace flex
 		}
 	}
 
-	void FirstPersonCamera::OnSceneChanged()
+	void FirstPersonCamera::OnPostSceneChange()
 	{
-		BaseCamera::OnSceneChanged();
+		BaseCamera::OnPostSceneChange();
 
 		FindPlayer();
 		TrackPlayer();

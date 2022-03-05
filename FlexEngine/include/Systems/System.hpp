@@ -22,8 +22,9 @@ namespace flex
 		virtual void Initialize() = 0;
 		virtual void Destroy() = 0;
 		virtual void Update() = 0;
+		virtual void OnPreSceneChange() {}
 
-		virtual void DrawImGui() {};
+		virtual void DrawImGui() {}
 
 	};
 } // namespace flex

@@ -9,6 +9,7 @@ namespace flex
 {
 	class BaseCamera;
 
+	// TODO: Make inherit from System
 	class CameraManager final
 	{
 	public:
@@ -17,8 +18,7 @@ namespace flex
 		void Initialize();
 		void Destroy();
 		void Update();
-
-		void OnSceneChanged();
+		void OnPostSceneChange();
 
 		BaseCamera* CurrentCamera() const;
 

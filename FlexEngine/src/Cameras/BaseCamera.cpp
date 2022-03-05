@@ -93,7 +93,7 @@ namespace flex
 		}
 	}
 
-	void BaseCamera::OnSceneChanged()
+	void BaseCamera::OnPostSceneChange()
 	{
 	}
 

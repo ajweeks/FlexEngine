@@ -49,11 +49,11 @@ namespace flex
 	{
 	}
 
-	void CameraManager::OnSceneChanged()
+	void CameraManager::OnPostSceneChange()
 	{
 		for (BaseCamera* cam : m_Cameras)
 		{
-			cam->OnSceneChanged();
+			cam->OnPostSceneChange();
 		}
 	}
 

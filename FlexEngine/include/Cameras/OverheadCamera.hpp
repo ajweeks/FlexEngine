@@ -16,7 +16,7 @@ namespace flex
 		virtual ~OverheadCamera();
 
 		virtual void Initialize() override;
-		virtual void OnSceneChanged() override;
+		virtual void OnPostSceneChange() override;
 		virtual void FixedUpdate() override;
 
 		virtual void DrawImGuiObjects() override;

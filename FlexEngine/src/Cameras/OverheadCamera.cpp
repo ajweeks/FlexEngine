@@ -50,9 +50,9 @@ namespace flex
 		}
 	}
 
-	void OverheadCamera::OnSceneChanged()
+	void OverheadCamera::OnPostSceneChange()
 	{
-		BaseCamera::OnSceneChanged();
+		BaseCamera::OnPostSceneChange();
 
 		m_Player0 = nullptr;
 		FindPlayer();

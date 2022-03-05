@@ -26,7 +26,7 @@ namespace flex
 		virtual void LateUpdate();
 		virtual void Destroy();
 
-		virtual void OnSceneChanged();
+		virtual void OnPostSceneChange();
 
 		virtual void OnPossess();
 		virtual void OnDepossess();

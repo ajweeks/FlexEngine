@@ -33,6 +33,11 @@ namespace flex
 		registeredWires.clear();
 	}
 
+	void PluggablesSystem::OnPreSceneChange()
+	{
+		registeredWires.clear();
+	}
+
 	void PluggablesSystem::Update()
 	{
 		if (!registeredWires.empty())
@@ -562,6 +567,11 @@ namespace flex
 
 	void RoadManager::Update()
 	{
+	}
+
+	void RoadManager::OnPreSceneChange()
+	{
+		m_RoadIDs.clear();
 	}
 
 	void RoadManager::DrawImGui()
