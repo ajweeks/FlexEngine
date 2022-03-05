@@ -109,6 +109,111 @@ namespace flex
 		return totalSizeInBytes;
 	}
 
+	GPUBufferList::~GPUBufferList()
+	{
+		for (GPUBuffer* buffer : bufferList)
+		{
+			g_Renderer->FreeGPUBuffer(buffer);
+		}
+		bufferList.clear();
+	}
+
+	void GPUBufferList::Add(GPUBufferType type)
+	{
+		GPUBuffer* buffer = g_Renderer->AllocateGPUBuffer(type);
+		bufferList.emplace_back(buffer);
+	}
+
+	const GPUBuffer* GPUBufferList::Get(GPUBufferType type) const
+	{
+		for (GPUBuffer* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return buffer;
+			}
+		}
+		return nullptr;
+	}
+
+	bool GPUBufferList::Has(GPUBufferType type) const
+	{
+		for (GPUBuffer const* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	GPUBuffer* GPUBufferList::Get(GPUBufferType type)
+	{
+		CHECK_NE((u32)type, (u32)GPUBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
+		for (GPUBuffer* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return buffer;
+			}
+		}
+		return nullptr;
+	}
+
+	GPUBuffer::GPUBuffer(GPUBufferType type) :
+		type(type)
+	{
+		ID = g_Renderer->RegisterGPUBuffer(this);
+	}
+
+	GPUBuffer::~GPUBuffer()
+	{
+		g_Renderer->UnregisterGPUBuffer(ID);
+		ID = InvalidGPUBufferID;
+		FreeHostMemory();
+	}
+
+	void GPUBuffer::AllocHostMemory(u32 size, u32 alignment /* = u32_max */)
+	{
+		CHECK_EQ(data.data, nullptr);
+
+		if (type == GPUBufferType::DYNAMIC ||
+			type == GPUBufferType::PARTICLE_DATA ||
+			type == GPUBufferType::TERRAIN_POINT_BUFFER ||
+			type == GPUBufferType::TERRAIN_VERTEX_BUFFER)
+		{
+			CHECK_NE(alignment, u32_max);
+			data.data = (u8*)flex_aligned_malloc(size, alignment);
+		}
+		else
+		{
+			data.data = (u8*)malloc(size);
+		}
+
+		CHECK_NE(data.data, nullptr);
+	}
+
+	void GPUBuffer::FreeHostMemory()
+	{
+		if (data.data != nullptr)
+		{
+			if (type == GPUBufferType::DYNAMIC ||
+				type == GPUBufferType::PARTICLE_DATA ||
+				type == GPUBufferType::TERRAIN_POINT_BUFFER ||
+				type == GPUBufferType::TERRAIN_VERTEX_BUFFER)
+			{
+				flex_aligned_free(data.data);
+			}
+			else
+			{
+				free(data.data);
+			}
+
+			data.data = nullptr;
+		}
+	}
+
 	Shader::Shader(const ShaderInfo& shaderInfo) :
 		Shader(shaderInfo.name,
 			shaderInfo.inVertexShaderFilePath,

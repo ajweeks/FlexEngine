@@ -145,42 +145,17 @@ namespace flex
 			std::vector<VkPresentModeKHR> presentModes;
 		};
 
-		struct VulkanUniformBufferObjectData
+		struct VulkanGPUBuffer final : public GPUBuffer
 		{
-			u8* data = nullptr;
-			u32 unitSize = 0; // Size of each buffer instance (per object)
-		};
+			VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type);
+			~VulkanGPUBuffer() = default;
 
-		enum class UniformBufferType
-		{
-			STATIC,
-			DYNAMIC,
-			PARTICLE_DATA,
-			TERRAIN_POINT_BUFFER,
-			TERRAIN_VERTEX_BUFFER,
-
-			_NONE
-		};
-
-		// TODO: Rename to just GPUBuffer?
-		struct UniformBuffer final
-		{
-			UniformBuffer(VulkanDevice* device, UniformBufferType type);
-			~UniformBuffer();
-
-			UniformBuffer(const UniformBuffer&) = delete;
-			UniformBuffer(UniformBuffer&& other);
-			UniformBuffer& operator=(const UniformBuffer&) = delete;
-			UniformBuffer& operator=(UniformBuffer&&) = delete;
-
-			void Alloc(u32 size, u32 alignment = u32_max);
-			void Free();
+			VulkanGPUBuffer(const VulkanGPUBuffer&) = delete;
+			VulkanGPUBuffer(VulkanGPUBuffer&& other) = delete;
+			VulkanGPUBuffer& operator=(const VulkanGPUBuffer&) = delete;
+			VulkanGPUBuffer& operator=(VulkanGPUBuffer&&) = delete;
 
 			VulkanBuffer buffer;
-			VulkanUniformBufferObjectData data;
-			u32 fullDynamicBufferSize = 0;
-
-			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
 		struct VertexIndexBufferPair final
@@ -445,25 +420,6 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
-		struct SpecializationInfoType
-		{
-			std::string name;
-			u32 id;
-			i32 defaultValut;
-		};
-
-		struct UniformBufferList
-		{
-			UniformBufferList();
-
-			void Add(VulkanDevice* device, UniformBufferType type);
-			UniformBuffer* Get(UniformBufferType type);
-			const UniformBuffer* Get(UniformBufferType type) const;
-			bool Has(UniformBufferType type) const;
-
-			std::vector<UniformBuffer> uniformBufferList;
-		};
-
 		struct VulkanShader final : public Shader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
@@ -493,9 +449,6 @@ namespace flex
 			VulkanMaterial(VulkanMaterial&&) = delete;
 			VulkanMaterial& operator=(const VulkanMaterial&) = delete;
 			VulkanMaterial& operator=(VulkanMaterial&&) = delete;
-
-			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
-			UniformBufferList uniformBufferList;
 
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
@@ -625,7 +578,7 @@ namespace flex
 		{
 			VkBuffer buffer;
 			VkDeviceSize bufferSize;
-			UniformBufferType type;
+			GPUBufferType type;
 		};
 
 		struct ImageDescriptorInfo
@@ -639,7 +592,7 @@ namespace flex
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
 			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBufferList const * uniformBufferList = nullptr;
+			GPUBufferList const* gpuBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;

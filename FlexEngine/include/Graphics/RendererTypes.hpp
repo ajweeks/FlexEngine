@@ -672,6 +672,73 @@ namespace flex
 		std::vector<TexPair> values;
 	};
 
+	struct UniformList
+	{
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(const StringID& uniformID) const;
+		void AddUniform(Uniform const* uniform);
+		u32 GetSizeInBytes() const;
+
+		std::vector<Uniform const*> uniforms;
+		u32 totalSizeInBytes = 0;
+	};
+
+	enum class GPUBufferType
+	{
+		STATIC,
+		DYNAMIC,
+		PARTICLE_DATA,
+		TERRAIN_POINT_BUFFER,
+		TERRAIN_VERTEX_BUFFER,
+
+		_NONE
+	};
+
+	struct UniformBufferObjectData
+	{
+		u8* data = nullptr;
+		u32 unitSize = 0; // Size of each buffer instance (per object)
+	};
+
+	struct GPUBuffer
+	{
+		GPUBuffer(GPUBufferType type);
+		virtual ~GPUBuffer();
+
+		GPUBuffer(const GPUBuffer&) = delete;
+		GPUBuffer(GPUBuffer&& other) = delete;
+		GPUBuffer& operator=(const GPUBuffer&) = delete;
+		GPUBuffer& operator=(GPUBuffer&&) = delete;
+
+		void AllocHostMemory(u32 size, u32 alignment = u32_max);
+		void FreeHostMemory();
+
+		GPUBufferID ID = InvalidGPUBufferID;
+		u32 fullDynamicBufferSize = 0;
+		UniformBufferObjectData data;
+
+		GPUBufferType type = GPUBufferType::_NONE;
+	};
+
+	struct SpecializationInfoType
+	{
+		std::string name;
+		u32 id;
+		i32 defaultValut;
+	};
+
+	struct GPUBufferList
+	{
+		~GPUBufferList();
+
+		void Add(GPUBufferType type);
+		GPUBuffer* Get(GPUBufferType type);
+		const GPUBuffer* Get(GPUBufferType type) const;
+		bool Has(GPUBufferType type) const;
+
+		std::vector<GPUBuffer*> bufferList;
+	};
+
 	struct MaterialPropertyOverride
 	{
 		MaterialPropertyOverride() : i32Value(0) {}
@@ -739,6 +806,9 @@ namespace flex
 
 		// GBuffer samplers
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers;
+
+		// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
+		GPUBufferList gpuBufferList;
 
 		glm::vec2 cubemapSamplerSize = VEC2_ZERO;
 
@@ -868,17 +938,6 @@ namespace flex
 		bool bSetDynamicStates = false;
 		bool bIndexed = false;
 		bool bAllowDynamicBufferShrinking = true;
-	};
-
-	struct UniformList
-	{
-		bool HasUniform(Uniform const* uniform) const;
-		bool HasUniform(const StringID& uniformID) const;
-		void AddUniform(Uniform const* uniform);
-		u32 GetSizeInBytes() const;
-
-		std::vector<Uniform const*> uniforms;
-		u32 totalSizeInBytes = 0;
 	};
 
 	struct ShaderInfo

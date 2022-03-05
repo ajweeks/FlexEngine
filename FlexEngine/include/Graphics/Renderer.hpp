@@ -209,6 +209,26 @@ namespace flex
 		virtual VkSampler* GetSamplerLinearClampToBorder() = 0;
 		virtual VkSampler* GetSamplerNearestClampToEdge() = 0;
 
+		virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) = 0;
+		virtual void UnregisterGPUBuffer(GPUBufferID bufferID) = 0;
+		virtual GPUBuffer* GetGPUBuffer(GPUBufferID bufferID) = 0;
+
+		virtual void UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferSize, void* data, u32 dataSize) = 0;
+
+		virtual void FreeGPUBuffer(GPUBuffer*) = 0;
+		virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type) = 0;
+
+		virtual void PrepareGPUBuffer(GPUBuffer* buffer,
+			u32 bufferSize,
+			VkBufferUsageFlags bufferUseageFlagBits,
+			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+			const std::string& DEBUG_name,
+			bool bMap = true) = 0;
+
+		virtual void SetGPUBufferName(GPUBuffer const* buffer, const char* name) = 0;
+
+		virtual u32 GetNonCoherentAtomSize() const = 0;
+
 		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		i32 GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials);
@@ -356,6 +376,7 @@ namespace flex
 		void RecompileShaders(bool bForceCompileAll);
 
 		static const u32 MAX_PARTICLE_COUNT = 65536;
+		u32 GetAlignedUBOSize(u32 unalignedSize);
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;
 
@@ -444,6 +465,8 @@ namespace flex
 		i32 m_NumSpotLightsEnabled = 0;
 		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
+
+		u32 m_DynamicAlignment = 0;
 
 		struct DrawCallInfo
 		{

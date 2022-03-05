@@ -223,66 +223,10 @@ namespace flex
 			}
 		}
 
-		UniformBuffer::UniformBuffer(VulkanDevice* device, UniformBufferType type) :
-			buffer(device),
-			type(type)
+		VulkanGPUBuffer::VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type) :
+			GPUBuffer(type),
+			buffer(device)
 		{
-		}
-
-		UniformBuffer::~UniformBuffer()
-		{
-			Free();
-		}
-
-		UniformBuffer::UniformBuffer(UniformBuffer&& other) :
-			buffer(other.buffer)
-		{
-			if (this != &other)
-			{
-				data = other.data;
-				fullDynamicBufferSize = other.fullDynamicBufferSize;
-				type = other.type;
-			}
-		}
-
-		void UniformBuffer::Alloc(u32 size, u32 alignment /* = u32_max */)
-		{
-			CHECK_EQ(data.data, nullptr);
-
-			if (type == UniformBufferType::DYNAMIC ||
-				type == UniformBufferType::PARTICLE_DATA ||
-				type == UniformBufferType::TERRAIN_POINT_BUFFER ||
-				type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
-			{
-				CHECK_NE(alignment, u32_max);
-				data.data = (u8*)flex_aligned_malloc(size, alignment);
-			}
-			else
-			{
-				data.data = (u8*)malloc(size);
-			}
-
-			CHECK_NE(data.data, nullptr);
-		}
-
-		void UniformBuffer::Free()
-		{
-			if (data.data != nullptr)
-			{
-				if (type == UniformBufferType::DYNAMIC ||
-					type == UniformBufferType::PARTICLE_DATA ||
-					type == UniformBufferType::TERRAIN_POINT_BUFFER ||
-					type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
-				{
-					flex_aligned_free(data.data);
-				}
-				else
-				{
-					free(data.data);
-				}
-
-				data.data = nullptr;
-			}
 		}
 
 		void VertexIndexBufferPair::Destroy()
@@ -2327,54 +2271,6 @@ namespace flex
 			}
 		}
 
-		UniformBufferList::UniformBufferList()
-		{
-			// Every instance will have at least one type
-			uniformBufferList.reserve(1);
-		}
-
-		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
-		{
-			uniformBufferList.emplace_back(device, type);
-		}
-
-		const UniformBuffer* UniformBufferList::Get(UniformBufferType type) const
-		{
-			for (const UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return &buffer;
-				}
-			}
-			return nullptr;
-		}
-
-		bool UniformBufferList::Has(UniformBufferType type) const
-		{
-			for (const UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-
-		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
-		{
-			CHECK_NE((u32)type, (u32)UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
-			for (UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return &buffer;
-				}
-			}
-			return nullptr;
-		}
-
 		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
 			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
 		{
@@ -2600,29 +2496,29 @@ namespace flex
 			{
 				const u64 uniformID = pair.uniform->id;
 				const BufferDescriptorInfo& bufferDescInfo = pair.object;
-				CHECK((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
+				CHECK((bufferDescInfo.type == GPUBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
 				CHECK_NE(bufferDescInfo.buffer, (VkBuffer)VK_NULL_HANDLE);
 
 				VkDescriptorType type;
 				switch (bufferDescInfo.type)
 				{
-				case UniformBufferType::STATIC:
+				case GPUBufferType::STATIC:
 					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					break;
-				case UniformBufferType::DYNAMIC:
+				case GPUBufferType::DYNAMIC:
 					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 					break;
-				case UniformBufferType::PARTICLE_DATA:
+				case GPUBufferType::PARTICLE_DATA:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 					break;
-				case UniformBufferType::TERRAIN_POINT_BUFFER:
+				case GPUBufferType::TERRAIN_POINT_BUFFER:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
-				case UniformBufferType::TERRAIN_VERTEX_BUFFER:
+				case GPUBufferType::TERRAIN_VERTEX_BUFFER:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
 				default:
@@ -2700,10 +2596,10 @@ namespace flex
 
 			createInfo.descriptorSetLayout = GetOrCreateLayout(material->shaderID);
 			createInfo.shaderID = material->shaderID;
-			createInfo.uniformBufferList = &material->uniformBufferList;
+			createInfo.gpuBufferList = &material->gpuBufferList;
 
 			((VulkanRenderer*)g_Renderer)->FillOutTextureDescriptorInfos(&createInfo.imageDescriptors, materialID);
-			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
+			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.gpuBufferList, createInfo.shaderID);
 
 			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
 

@@ -31,7 +31,7 @@ namespace flex
 
 			auto& arrPair = data.back();
 			void* result = (T*)arrPair.first + arrPair.second++;
-			T* r = new(result) T;
+			T* r = new(result) T();
 			return r;
 		}
 

@@ -376,6 +376,13 @@ namespace flex
 		return iter != map.end();
 	}
 
+	template<typename Key, typename Value>
+	inline bool Contains(const std::unordered_map<Key, Value>& map, const Key& key)
+	{
+		auto iter = map.find(key);
+		return iter != map.end();
+	}
+
 	template<typename Value, typename Comp>
 	inline bool Contains(const std::set<Value, Comp>& set, const Value& val)
 	{

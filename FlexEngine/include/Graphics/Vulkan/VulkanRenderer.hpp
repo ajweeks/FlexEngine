@@ -140,6 +140,25 @@ namespace flex
 			virtual VkSampler* GetSamplerLinearClampToBorder() override;
 			virtual VkSampler* GetSamplerNearestClampToEdge() override;
 
+			virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) override;
+			virtual void UnregisterGPUBuffer(GPUBufferID bufferID) override;
+			virtual GPUBuffer* GetGPUBuffer(GPUBufferID bufferID) override;
+			virtual void UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferOffset, void* data, u32 dataSize) override;
+
+			virtual void FreeGPUBuffer(GPUBuffer* buffer) override;
+			virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type) override;
+
+			virtual void PrepareGPUBuffer(GPUBuffer* buffer,
+				u32 bufferSize,
+				VkBufferUsageFlags bufferUseageFlagBits,
+				VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+				const std::string& DEBUG_name,
+				bool bMap = true) override;
+
+			virtual void SetGPUBufferName(GPUBuffer const* buffer, const char* name) override;
+
+			virtual u32 GetNonCoherentAtomSize() const override;
+
 			VulkanDevice* GetDevice();
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
@@ -217,7 +236,7 @@ namespace flex
 			void CreateSpecialzationInfos();
 
 			void FillOutTextureDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, GPUBufferList const* gpuBufferList, ShaderID shaderID);
 
 			void CreateDescriptorSets();
 
@@ -269,13 +288,6 @@ namespace flex
 
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name = nullptr);
-
-			void PrepareUniformBuffer(VulkanBuffer* buffer,
-				u32 bufferSize,
-				VkBufferUsageFlags bufferUseageFlagBits,
-				VkMemoryPropertyFlags memoryPropertyHostFlagBits,
-				const std::string& DEBUG_name,
-				bool bMap = true);
 
 			void CreateSemaphores();
 
@@ -363,8 +375,6 @@ namespace flex
 			}
 
 			u32 GetActiveRenderObjectCount() const;
-
-			u32 GetAlignedUBOSize(u32 unalignedSize);
 
 			void DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
@@ -616,8 +626,6 @@ namespace flex
 
 			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair;
 
-			u32 m_DynamicAlignment = 0;
-
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
@@ -669,8 +677,8 @@ namespace flex
 				VkDrawIndirectCommand* indirectBufferCPU = nullptr;
 				VulkanBuffer* indirectBuffer = nullptr;
 
-				UniformBuffer* pointBufferGPU = nullptr;
-				UniformBuffer* vertexBufferGPU = nullptr;
+				VulkanGPUBuffer* pointBufferGPU = nullptr;
+				VulkanGPUBuffer* vertexBufferGPU = nullptr;
 				u32 maxChunkCount = 0;
 
 				VkFence fence = VK_NULL_HANDLE;
@@ -684,6 +692,8 @@ namespace flex
 
 			std::vector<Pair<glm::ivec3, u32>> m_TerrainGenWorkloads;
 			std::vector<Pair<glm::ivec3, u32>> m_TerrainChunksLoaded;
+
+			std::vector<GPUBuffer*> m_GPUBuffers;
 		};
 	} // namespace vk
 } // namespace flex
