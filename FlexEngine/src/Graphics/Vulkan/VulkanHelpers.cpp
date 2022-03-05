@@ -864,6 +864,8 @@ namespace flex
 		{
 			PROFILE_AUTO("VulkanTexture CreateFromFile");
 
+			PROFILE_BEGIN("Load");
+
 			sampler = inSampler;
 
 			relativeFilePath = inRelativeFilePath;
@@ -907,6 +909,8 @@ namespace flex
 				}
 			}
 
+			PROFILE_END("Load");
+
 			if (width == 0 || height == 0 || channelCount == 0 ||
 				((bHDR && hdrImage.pixels == nullptr) || (!bHDR && pixels == nullptr)))
 			{
@@ -947,6 +951,7 @@ namespace flex
 				mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
 			}
 
+			PROFILE_BEGIN("Create image");
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
@@ -965,6 +970,7 @@ namespace flex
 			imageCreateInfo.DBG_Name = name.c_str();
 
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
+			PROFILE_END("Create image");
 
 			if (imageSize == 0)
 			{
@@ -976,6 +982,7 @@ namespace flex
 
 			imageLayout = imageCreateInfo.initialLayout;
 
+			PROFILE_BEGIN("Upload data");
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
 			stagingBuffer.Create(imageSize,
 				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -1022,13 +1029,16 @@ namespace flex
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
+			PROFILE_END("Upload data");
 
+			PROFILE_BEGIN("Create image view");
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.format = imageFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = mipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
+			PROFILE_END("Create image view");
 
 			if (bGenerateFullMipChain)
 			{

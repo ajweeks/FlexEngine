@@ -4,6 +4,8 @@
 #include "Spring.hpp"
 #include "Timer.hpp"
 
+#undef CreateWindow
+
 struct RENDERDOC_API_1_4_0;
 
 struct ImGuiInputTextCallbackData;
@@ -138,7 +140,7 @@ namespace flex
 
 		void Destroy();
 
-		void CreateWindowAndRenderer();
+		void CreateWindow();
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();

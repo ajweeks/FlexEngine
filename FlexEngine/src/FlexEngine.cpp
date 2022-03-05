@@ -179,6 +179,10 @@ namespace flex
 #endif
 
 		Print("FlexEngine v%u.%u.%u - Config: [%s %s, %s] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, targetStr, platformStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
+
+#if USE_PL
+		Print("Connected to palanteer\n");
+#endif
 	}
 
 	FlexEngine::~FlexEngine()
@@ -204,7 +208,14 @@ namespace flex
 		g_ConfigFileManager = new ConfigFileManager();
 		g_PropertyCollectionManager = new PropertyCollectionManager();
 
-		CreateWindowAndRenderer();
+		CreateWindow();
+
+#if COMPILE_VULKAN
+		{
+			PROFILE_AUTO("Create Renderer");
+			g_Renderer = new vk::VulkanRenderer();
+		}
+#endif
 
 		g_ResourceManager = new ResourceManager();
 		g_ResourceManager->Initialize();
@@ -606,9 +617,9 @@ namespace flex
 		Print("\n");
 	}
 
-	void FlexEngine::CreateWindowAndRenderer()
+	void FlexEngine::CreateWindow()
 	{
-		PROFILE_AUTO("FlexEngine CreateWindowAndRenderer");
+		PROFILE_AUTO("CreateWindow");
 
 		CHECK_EQ(g_Window, nullptr);
 		CHECK_EQ(g_Renderer, nullptr);
@@ -642,15 +653,11 @@ namespace flex
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
-
-#if COMPILE_VULKAN
-		g_Renderer = new vk::VulkanRenderer();
-#endif
 	}
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
-		PROFILE_AUTO("FlexEngine InitializeWindowAndRenderer");
+		PROFILE_AUTO("InitializeWindowAndRenderer");
 
 		g_Window->SetUpdateWindowTitleFrequency(0.5f);
 		g_Window->PostInitialize();
@@ -660,16 +667,18 @@ namespace flex
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		if (g_Renderer)
+		if (g_Renderer != nullptr)
 		{
 			g_Renderer->Destroy();
 			delete g_Renderer;
+			g_Renderer = nullptr;
 		}
 
-		if (g_Window)
+		if (g_Window != nullptr)
 		{
 			g_Window->Destroy();
 			delete g_Window;
+			g_Window = nullptr;
 		}
 	}
 
@@ -1952,7 +1961,7 @@ namespace flex
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()
 	{
-		PROFILE_AUTO("FlexEngine LoadCommonSettingsFromDisk");
+		PROFILE_AUTO("LoadCommonSettingsFromDisk");
 
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
@@ -2157,6 +2166,8 @@ namespace flex
 
 	void FlexEngine::CreateCameraInstances()
 	{
+		PROFILE_AUTO("CreateCameraInstances");
+
 		FirstPersonCamera* fpCamera = new FirstPersonCamera();
 		g_CameraManager->AddCamera(fpCamera, true);
 

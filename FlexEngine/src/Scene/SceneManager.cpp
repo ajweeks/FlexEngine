@@ -42,6 +42,8 @@ namespace flex
 
 	bool SceneManager::SetCurrentScene(u32 sceneIndex, bool bPrintErrorOnFailure /* = true */)
 	{
+		PROFILE_AUTO("SetCurrentScene");
+
 		if (bPrintErrorOnFailure && sceneIndex >= m_Scenes.size())
 		{
 			PrintError("Attempt to set scene to index %u failed, it does not exist in the SceneManager\n",
@@ -54,6 +56,8 @@ namespace flex
 
 		if (m_CurrentSceneIndex != InvalidID)
 		{
+			PROFILE_AUTO("PreSceneChange");
+
 			g_Editor->PreSceneChange();
 			g_ResourceManager->PreSceneChange();
 			g_Renderer->OnPreSceneChange();
@@ -654,6 +658,8 @@ namespace flex
 
 	void SceneManager::InitializeCurrentScene(u32 previousSceneIndex)
 	{
+		PROFILE_AUTO("InitializeCurrentScene");
+
 		CHECK(!m_Scenes.empty());
 
 		if (m_CurrentSceneIndex == InvalidID)
@@ -665,6 +671,8 @@ namespace flex
 
 		if (previousSceneIndex != InvalidID)
 		{
+			PROFILE_AUTO("OnSceneChanged");
+
 			g_EngineInstance->OnSceneChanged();
 			g_ResourceManager->OnSceneChanged();
 			g_Editor->OnSceneChanged();
@@ -676,6 +684,8 @@ namespace flex
 
 	void SceneManager::PostInitializeCurrentScene()
 	{
+		PROFILE_AUTO("PostInitializeCurrentScene");
+
 		CHECK(!m_Scenes.empty());
 
 		CurrentScene()->PostInitialize();

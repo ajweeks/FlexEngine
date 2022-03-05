@@ -513,8 +513,12 @@ namespace flex
 	{
 		PROFILE_AUTO("AudioManager Initialize");
 
-		// Retrieve preferred device
-		s_Device = alcOpenDevice(NULL);
+		{
+			PROFILE_AUTO("alcOpenDevice");
+
+			// Retrieve preferred device
+			s_Device = alcOpenDevice(NULL);
+		}
 
 		if (!s_Device)
 		{
@@ -540,8 +544,14 @@ namespace flex
 		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
 		Print("Chosen audio device: %s\n", deviceName);
 
-		s_Context = alcCreateContext(s_Device, NULL);
-		alcMakeContextCurrent(s_Context);
+		{
+			PROFILE_AUTO("alcCreateContext");
+			s_Context = alcCreateContext(s_Device, NULL);
+		}
+		{
+			PROFILE_AUTO("alcMakeContextCurrent");
+			alcMakeContextCurrent(s_Context);
+		}
 
 		//bool eaxPresent = (alIsExtensionPresent("EAX2.0") == GL_TRUE);
 
@@ -791,6 +801,8 @@ namespace flex
 
 	void AudioManager::CreateAudioEffects()
 	{
+		PROFILE_AUTO("CreateAudioEffects");
+
 		if (alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
 		{
 			// Load the reverb into an effect

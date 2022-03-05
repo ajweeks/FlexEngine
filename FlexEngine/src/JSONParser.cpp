@@ -14,6 +14,8 @@ namespace flex
 
 	bool JSONParser::ParseFromFile(const std::string& filePath, JSONObject& rootObject)
 	{
+		PROFILE_AUTO("JSONParser ParseFromFile");
+
 		std::string fileContents;
 		if (!ReadFile(filePath, fileContents, false))
 		{
@@ -26,6 +28,8 @@ namespace flex
 
 	bool JSONParser::Parse(const std::string& fileContents, JSONObject& rootObject)
 	{
+		PROFILE_AUTO("JSONParser Parse");
+
 		JSONParser::ClearErrors();
 
 		std::string dirtyFileContents = fileContents;
@@ -118,6 +122,8 @@ namespace flex
 
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
 	{
+		PROFILE_AUTO("JSONParser ParseObject");
+
 		i32 objectClosingBracket = MatchingBracket('{', fileContents, *offset);
 		if (objectClosingBracket == -1)
 		{
@@ -152,6 +158,8 @@ namespace flex
 
 	bool JSONParser::ReadNumericField(const std::string& fileContents, std::string& outValueStr, i32* offset)
 	{
+		PROFILE_AUTO("JSONParser ReadNumericField");
+
 		size_t start = (size_t)*offset;
 		size_t nextNonAlphaNumeric = NextNonAlphaNumeric(fileContents, (i32)start + 1);
 		size_t length = nextNonAlphaNumeric - start;
@@ -173,6 +181,8 @@ namespace flex
 
 	bool JSONParser::ParseValue(ValueType fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue)
 	{
+		PROFILE_AUTO("JSONParser ParseValue");
+
 		switch (fieldType)
 		{
 		case ValueType::STRING:
@@ -364,6 +374,8 @@ namespace flex
 
 	bool JSONParser::ParseField(const std::string& fileContents, i32* offset, JSONField& field)
 	{
+		PROFILE_AUTO("JSONParser ParseField");
+
 		size_t quoteStart = fileContents.find('\"', *offset);
 
 		if (quoteStart == std::string::npos)
@@ -410,6 +422,8 @@ namespace flex
 
 	bool JSONParser::ParseArray(const std::string& fileContents, size_t quoteEnd, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields)
 	{
+		PROFILE_AUTO("JSONParser ParseArray");
+
 		i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
 		if (arrayClosingBracket == -1)
 		{
@@ -524,6 +538,8 @@ namespace flex
 
 	i32 JSONParser::MatchingBracket(char openingBracket, const std::string& fileContents, i32 offset)
 	{
+		PROFILE_AUTO("JSONParser MatchingBracket");
+
 		CHECK_EQ(fileContents[offset], openingBracket);
 
 		char closingBracket;

@@ -34,6 +34,8 @@ namespace flex
 
 	static Uniform const* GetUniform(const std::vector<Uniform const*>& uniforms, StringID uniformID)
 	{
+		PROFILE_AUTO("GetUniform");
+
 		for (Uniform const* uniform : uniforms)
 		{
 			if (uniform->id == uniformID)
@@ -55,6 +57,8 @@ namespace flex
 
 	Uniform const* UniformFromStringID(StringID uniformNameSID)
 	{
+		PROFILE_AUTO("UniformFromStringID");
+
 		std::vector<Uniform const*>& allUniforms = GetAllUniforms();
 		Uniform const* uniform = GetUniform(allUniforms, uniformNameSID);
 		if (uniform != nullptr)
@@ -85,6 +89,8 @@ namespace flex
 
 	bool UniformList::HasUniform(const StringID& uniformID) const
 	{
+		PROFILE_AUTO("UniformList HasUniform");
+
 		for (Uniform const* uniform : uniforms)
 		{
 			if (uniform->id == uniformID)
@@ -97,6 +103,8 @@ namespace flex
 
 	void UniformList::AddUniform(Uniform const* uniform)
 	{
+		PROFILE_AUTO("UniformList AddUniform");
+
 		if (!HasUniform(uniform))
 		{
 			uniforms.emplace_back(uniform);
@@ -380,6 +388,8 @@ namespace flex
 
 	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
 	{
+		PROFILE_AUTO("Material ParseMaterialArrayJSON");
+
 		std::vector<MaterialID> matIDs;
 		if (fileVersion >= 3)
 		{
@@ -498,6 +508,8 @@ namespace flex
 
 	void Material::PushConstantBlock::InitWithSize(u32 dataSize)
 	{
+		PROFILE_AUTO("PushConstantBlock InitWithSize");
+
 		if (data == nullptr)
 		{
 			if (size != dataSize && size != 0)
@@ -520,12 +532,16 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(real* newData, u32 dataSize)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData u32");
+
 		InitWithSize(dataSize);
 		memcpy(data, newData, size);
 	}
 
 	void Material::PushConstantBlock::SetData(const std::vector<Pair<void*, u32>>& dataList)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData std::vector<Pair<void*, u32>>");
+
 		u32 dataSize = 0;
 		for (const auto& pair : dataList)
 		{
@@ -544,6 +560,8 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& viewProj)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4");
+
 		const u32 dataSize = sizeof(glm::mat4) * 1;
 		InitWithSize(dataSize);
 
@@ -553,6 +571,8 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4 glm::mat4");
+
 		const u32 dataSize = sizeof(glm::mat4) * 2;
 		InitWithSize(dataSize);
 
@@ -563,6 +583,8 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4 glm::mat4 i32");
+
 		const u32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
 		if (data == nullptr)
 		{
@@ -585,6 +607,8 @@ namespace flex
 
 	JSONObject Material::Serialize() const
 	{
+		PROFILE_AUTO("Material Serialize");
+
 		// TODO: Make more generic key-value system
 
 		CHECK(bSerializable);
@@ -747,16 +771,22 @@ namespace flex
 
 	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
 	{
+		PROFILE_AUTO("UniformOverrides AddUniform");
+
 		overrides[uniform->id] = UniformPair(uniform, propertyOverride);
 	}
 
 	bool UniformOverrides::HasUniform(Uniform const* uniform) const
 	{
+		PROFILE_AUTO("UniformOverrides HasUniform");
+
 		return Contains(overrides, uniform->id);
 	}
 
 	bool UniformOverrides::HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
 	{
+		PROFILE_AUTO("UniformOverrides HasUniform outPropertyOverride");
+
 		auto iter = overrides.find(uniform->id);
 		if (iter != overrides.end())
 		{

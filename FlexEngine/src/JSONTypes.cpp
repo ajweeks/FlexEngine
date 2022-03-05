@@ -385,6 +385,8 @@ namespace flex
 
 	bool JSONObject::HasField(const std::string& label) const
 	{
+		PROFILE_AUTO("JSONObject HasField");
+
 		for (const JSONField& field : fields)
 		{
 			if (field.label == label)

@@ -80,6 +80,7 @@
 
 #undef TRUE
 #undef FALSE
+#undef CreateWindow
 
 // Markup variadic arguments. n = index of format string, m = index of first variadic ar
 // Indices are 1-based due to implicit this param
