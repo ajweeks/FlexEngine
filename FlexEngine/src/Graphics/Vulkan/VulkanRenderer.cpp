@@ -1333,7 +1333,7 @@ namespace flex
 					constantBuffer->AllocHostMemory(constantBuffer->data.unitSize);
 
 					std::string bufferName = material->name + " constant uniform buffer";
-					PrepareGPUBuffer(constantBuffer, constantBuffer->data.unitSize,
+					CreateGPUBuffer(constantBuffer, constantBuffer->data.unitSize,
 						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 						bufferName,
 						true);
@@ -1375,7 +1375,7 @@ namespace flex
 					if (dynamicBufferSize > 0)
 					{
 						std::string bufferName = material->name + " dynamic uniform buffer";
-						PrepareGPUBuffer(dynamicBuffer, dynamicBufferSize,
+						CreateGPUBuffer(dynamicBuffer, dynamicBufferSize,
 							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 							bufferName,
 							true);
@@ -1409,7 +1409,7 @@ namespace flex
 			m_Terrain->pointBufferGPU->data.unitSize = pointBufferSize;
 
 			m_Terrain->pointBufferGPU->AllocHostMemory(pointBufferSize, m_DynamicAlignment);
-			PrepareGPUBuffer(m_Terrain->pointBufferGPU, pointBufferSize,
+			CreateGPUBuffer(m_Terrain->pointBufferGPU, pointBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				"Terrain point buffer",
@@ -1432,7 +1432,7 @@ namespace flex
 			m_Terrain->vertexBufferGPU->data.unitSize = vertBufferSize;
 
 			m_Terrain->vertexBufferGPU->AllocHostMemory(vertBufferSize, m_DynamicAlignment);
-			PrepareGPUBuffer(m_Terrain->vertexBufferGPU, vertBufferSize,
+			CreateGPUBuffer(m_Terrain->vertexBufferGPU, vertBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				"Terrain vertex buffer",
@@ -5296,7 +5296,7 @@ namespace flex
 			return new VulkanGPUBuffer(m_VulkanDevice, type);
 		}
 
-		void VulkanRenderer::PrepareGPUBuffer(GPUBuffer* buffer,
+		void VulkanRenderer::CreateGPUBuffer(GPUBuffer* buffer,
 			u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits,
 			VkMemoryPropertyFlags memoryPropertyHostFlagBits,

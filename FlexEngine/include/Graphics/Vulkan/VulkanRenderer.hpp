@@ -150,7 +150,7 @@ namespace flex
 			virtual void FreeGPUBuffer(GPUBuffer* buffer) override;
 			virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type) override;
 
-			virtual void PrepareGPUBuffer(GPUBuffer* buffer,
+			virtual void CreateGPUBuffer(GPUBuffer* buffer,
 				u32 bufferSize,
 				VkBufferUsageFlags bufferUseageFlagBits,
 				VkMemoryPropertyFlags memoryPropertyHostFlagBits,
