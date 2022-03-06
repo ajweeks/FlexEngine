@@ -280,6 +280,7 @@ namespace flex
 			PROFILE_AUTO("Calculate shader contents checksum");
 
 			const std::string shaderInputDirectory = SHADER_SOURCE_DIRECTORY;
+			const std::string spvDirectoryAbs = RelativePathToAbsolute(COMPILED_SHADERS_DIRECTORY);
 
 			if (FileExists(SHADER_CHECKSUM_LOCATION))
 			{
@@ -301,7 +302,13 @@ namespace flex
 								u64 storedChecksum = std::stoull(storedChecksumStr);
 
 								u64 calculatedChecksum = CalculteChecksum(filePath);
-								if (calculatedChecksum == storedChecksum)
+
+								std::string fileType = ExtractFileType(filePath);
+								std::string fileName = StripLeadingDirectories(StripFileType(filePath));
+								std::string compiledFileName = spvDirectoryAbs + fileName + "_" + fileType + ".spv";
+
+								bool bFileExists = FileExists(compiledFileName);
+								if (calculatedChecksum == storedChecksum && bFileExists)
 								{
 									compiledShaders.emplace(filePath, calculatedChecksum);
 								}
@@ -377,7 +384,7 @@ namespace flex
 			WRITE_BARRIER;
 
 			s_ShaderCompilationResultsLength = (u32)m_QueuedLoads.size();
-			Print("Compiling %u shader%s\n", s_ShaderCompilationResultsLength, (s_ShaderCompilationResultsLength == 1) ? "" : "s");
+			Print("Compiling %u shader%s...\n", s_ShaderCompilationResultsLength, (s_ShaderCompilationResultsLength == 1) ? "" : "s");
 			s_ShaderCompilationResults = new ShaderCompilationResult * [s_ShaderCompilationResultsLength];
 			for (u32 i = 0; i < s_ShaderCompilationResultsLength; ++i)
 			{
@@ -402,7 +409,7 @@ namespace flex
 			if (newChecksumFileContents.length() > 0)
 			{
 				Platform::CreateDirectoryRecursive(ExtractDirectoryString(s_ChecksumFilePathAbs).c_str());
-				std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out);
+				std::ofstream checksumFileStream(s_ChecksumFilePathAbs, std::ios::out | std::ios::trunc);
 				if (checksumFileStream.is_open())
 				{
 					checksumFileStream.write(newChecksumFileContents.c_str(), newChecksumFileContents.size());
