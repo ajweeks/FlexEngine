@@ -1,6 +1,19 @@
 
 ### Flex Engine change log (reverse chronological order)
 
+**2022**
+_February_
+- Generate particles on GPU to allow for particle re-spawning
+- Expose data-driven particle creation pipeline
+- Add particle manager & support for multiple active particle systems
+- Snap preview item placement to ground
+- Smoothen item preview placement
+
+_January_
+- Replace per-texture samplers with a handful of global ones
+- Slim down GameObjects (424 to 360 bytes each)
+- Unify GameObject creation
+
 **2021**
 _December_
 - Optimize Transform class (cut size from 256B to 120B)
