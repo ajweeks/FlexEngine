@@ -22,7 +22,9 @@ struct Param
 	vec4 valueMin;
 	vec4 valueMax;
 	uint sampleType;
-	vec3 pad;
+	uint pad0;
+	uint pad1;
+	uint pad2;
 };
 
 struct ParticleSimData
