@@ -3,6 +3,7 @@
 #include "Pair.hpp"
 #include "Platform/Platform.hpp" // For Date
 #include "UIMesh.hpp"
+#include "Particles.hpp"
 
 struct FT_LibraryRec_;
 struct FT_FaceRec_;
@@ -21,9 +22,6 @@ namespace flex
 	struct MaterialCreateInfo;
 	class Mesh;
 	struct MeshInfo;
-	struct ParticleParameterType;
-	enum class ParticleParamterValueType;
-	struct ParticleSystemTemplate;
 	struct PrefabInfo;
 	class StringBuilder;
 	struct Texture;

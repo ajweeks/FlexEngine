@@ -646,7 +646,7 @@ namespace flex
 		i32 count = (i32)params.size();
 		if (count == 1)
 		{
-			bool bValueChanged = bValueChanged = params[0].DrawImGuiObjects(name.c_str(), valueType);
+			bool bValueChanged = params[0].DrawImGuiObjects(name.c_str(), valueType);
 			return bValueChanged;
 		}
 		else if (count == 2)
