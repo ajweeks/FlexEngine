@@ -2005,9 +2005,10 @@ namespace flex
 						u32 numVoxels = numVoxelsPerAxis * numVoxelsPerAxis * numVoxelsPerAxis;
 						u32 maxNumTrianglesPerChunk = numVoxels * 5; // Each voxel can contain at most five triangles
 
-						VK_CHECK_RESULT(m_Terrain->vertexBufferGPU->buffer.Map());
-						i32 newTotalTriCount = *(i32*)m_Terrain->vertexBufferGPU->buffer.m_Mapped;
-						m_Terrain->vertexBufferGPU->buffer.Unmap();
+						VulkanGPUBuffer* vertexBufferGPU = (VulkanGPUBuffer*)m_Terrain->vertexBufferGPU;
+						VK_CHECK_RESULT(vertexBufferGPU->buffer.Map());
+						i32 newTotalTriCount = *(i32*)vertexBufferGPU->buffer.m_Mapped;
+						vertexBufferGPU->buffer.Unmap();
 
 						u32 chunkIndex = (u32)m_TerrainChunksLoaded.size();
 
@@ -2825,11 +2826,6 @@ namespace flex
 
 		ParticleSystemID VulkanRenderer::AddParticleSystem(const std::string& name, ParticleSystem* system)
 		{
-			//if ((u32)particleCount > MAX_PARTICLE_COUNT)
-			//{
-			//	PrintWarn("Attempted to create particle system with more particles than allowed (%d > %d) Only %d will be created\n", particleCount, MAX_PARTICLE_COUNT, MAX_PARTICLE_COUNT);
-			//}
-
 			VulkanParticleSystem* particleSystem = new VulkanParticleSystem(m_VulkanDevice);
 			particleSystem->ID = GetNextAvailableParticleSystemID();
 			particleSystem->system = system;
@@ -2843,30 +2839,6 @@ namespace flex
 			{
 				CreateParticleSystemResources(particleSystem);
 			}
-
-			//const StringID lifetimeSID = SID("lifetime");
-			//const StringID posSID = SID("initial position");
-			//const StringID velSID = SID("initial velocity");
-			//const StringID colSID = SID("initial colour");
-			//
-			//ParticleParamGPU& lifetimeParam = particleSystem->particleParamsGPU.params[0];
-			//lifetimeParam.sampleType = (u32)particleParameters.GetSampleType(lifetimeSID);
-			//lifetimeParam.valueMin = glm::vec4(particleParameters.GetRealMin(lifetimeSID), 0.0f, 0.0f, 0.0f);
-			//lifetimeParam.valueMax = glm::vec4(particleParameters.GetRealMax(lifetimeSID), 0.0f, 0.0f, 0.0f);
-			//ParticleParamGPU& posParam = particleSystem->particleParamsGPU.params[1];
-			//posParam.sampleType = (u32)particleParameters.GetSampleType(posSID);
-			//posParam.valueMin = glm::vec4(particleParameters.GetParam(posSID)->GetVec3Min(), 0.0f);
-			//posParam.valueMax = glm::vec4(particleParameters.GetVec3Max(posSID), 0.0f);
-
-			//ParticleParamGPU& velParam = particleSystem->particleParamsGPU.params[2];
-			//velParam.sampleType = (u32)particleParameters.GetSampleType(velSID);
-			//velParam.valueMin = glm::vec4(particleParameters.GetVec3Min(velSID), 0.0f);
-			//velParam.valueMax = glm::vec4(particleParameters.GetVec3Max(velSID), 0.0f);
-
-			//ParticleParamGPU& colParam = particleSystem->particleParamsGPU.params[3];
-			//colParam.sampleType = (u32)particleParameters.GetSampleType(colSID);
-			//colParam.valueMin = particleParameters.GetVec4Min(colSID);
-			//colParam.valueMax = particleParameters.GetVec4Max(colSID);
 
 			return particleSystem->ID;
 		}
@@ -2896,6 +2868,24 @@ namespace flex
 		{
 			FLEX_UNUSED(particleSystemID);
 			FLEX_UNUSED(emitterID);
+		}
+
+		void VulkanRenderer::OnParticleSystemTemplateUpdated(StringID particleTemplateNameSID)
+		{
+			ParticleSystemTemplate particleTemplate;
+			if (!g_ResourceManager->GetParticleTemplate(particleTemplateNameSID, particleTemplate))
+			{
+				PrintError("Invalid particle template name SID: %u\n", (u32)particleTemplateNameSID);
+				return;
+			}
+
+			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
+			{
+				if (particleSystem->system->GetParticleSystemTemplateNameSID() == particleTemplateNameSID)
+				{
+					particleSystem->system->OnTemplateUpdated(particleTemplate);
+				}
+			}
 		}
 
 		bool VulkanRenderer::InitializeFreeType()
@@ -5038,7 +5028,8 @@ namespace flex
 			GraphicsPipeline* pipeline = GetGraphicsPipeline(m_Terrain->graphicsPipelineID)->pipeline;
 
 			VkDeviceSize offsets[1] = { sizeof(i32) }; // Skip past triangleCount
-			const VkBuffer* terrainVertexBuffer = &m_Terrain->vertexBufferGPU->buffer.m_Buffer;
+			VulkanGPUBuffer* vertexBufferGPU = (VulkanGPUBuffer*)m_Terrain->vertexBufferGPU;
+			const VkBuffer* terrainVertexBuffer = &vertexBufferGPU->buffer.m_Buffer;
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, terrainVertexBuffer, offsets);
 
 			vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
@@ -5195,7 +5186,7 @@ namespace flex
 			auto emitterIter = particleSystem->system->emitterInstances.find(emitterID);
 			if (emitterIter == particleSystem->system->emitterInstances.end())
 			{
-				PrintError("Invalid particle emitter instance passed to VulkanRenderer::InitializeParticleSystemBuffer\n");
+				PrintError("Invalid particle emitter instance passed to InitializeParticleSystemBuffer\n");
 				return false;
 			}
 
@@ -5229,19 +5220,16 @@ namespace flex
 
 			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT_PER_INSTANCE);
 
-			const ParticleParameters& params = particleSystem->system->GetParameters();
 			for (i32 i = 0; i < particleSystem->system->m_ParticleCount; ++i)
 			{
 				// TODO: Make vertex buffer layout & stride data driven
-				particleBufferData[i].pos = params.GetParam(SID("initial position"))->GetVec3();
-				particleBufferData[i].vel = params.GetParam(SID("initial velocity"))->GetVec3();
-				real lifetime = params.GetParam(SID("lifetime"))->GetReal();
-				particleBufferData[i].colour = params.GetParam(SID("initial colour"))->GetVec4();
+				particleBufferData[i].pos = VEC3_ZERO;
+				particleBufferData[i].vel = VEC3_ZERO;
+				particleBufferData[i].colour = VEC4_ZERO;
+				// TODO: When system doesn't allow respawning fill out data on CPU
+				real lifetime = 0.0f; // Force immediate spawning of particles
 				particleBufferData[i].extraVec4 = glm::vec4(lifetime, lifetime, 0.0f, 0.0f);
 			}
-
-			//u32 emitterCount = (u32)particleSystem->system->emitterInstances.size();
-			//const ParticleEmitterInstance& emitterInstance = particleSystem->system->emitterInstances[emitterInstanceIndex];
 
 			VulkanMaterial* particleSimMat = (VulkanMaterial*)m_Materials.at(particleSystem->system->simMaterialID);
 
@@ -5260,9 +5248,6 @@ namespace flex
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 
 			VulkanGPUBuffer* buffer = (VulkanGPUBuffer*)GetGPUBuffer(bufferID);
-			//
-			//u32 bufferSize = buffer->fullDynamicBufferSize;
-			//
 
 			VK_CHECK_RESULT(stagingBuffer.Map());
 			memcpy(stagingBuffer.m_Mapped, data, dataSize);
@@ -5320,9 +5305,7 @@ namespace flex
 
 				m_Terrain->genPointsPipeline.replace();
 
-				m_Terrain->pointBufferGPU->buffer.Destroy();
 				delete m_Terrain->pointBufferGPU;
-				m_Terrain->vertexBufferGPU->buffer.Destroy();
 				delete m_Terrain->vertexBufferGPU;
 
 				delete m_Terrain->indirectBuffer;
@@ -6259,13 +6242,13 @@ namespace flex
 
 			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_POINT_BUFFER) && m_Terrain != nullptr)
 			{
-				VulkanGPUBuffer const* terrainPointBuffer = m_Terrain->pointBufferGPU;
+				VulkanGPUBuffer const* terrainPointBuffer = (VulkanGPUBuffer const*)m_Terrain->pointBufferGPU;
 				descriptors->SetUniform(&U_TERRAIN_POINT_BUFFER, BufferDescriptorInfo{ terrainPointBuffer->buffer.m_Buffer, terrainPointBuffer->data.unitSize, GPUBufferType::TERRAIN_POINT_BUFFER });
 			}
 
 			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_VERTEX_BUFFER) && m_Terrain != nullptr)
 			{
-				VulkanGPUBuffer const* terrainVertexBuffer = m_Terrain->vertexBufferGPU;
+				VulkanGPUBuffer const* terrainVertexBuffer = (VulkanGPUBuffer const*)m_Terrain->vertexBufferGPU;
 				descriptors->SetUniform(&U_TERRAIN_VERTEX_BUFFER, BufferDescriptorInfo{ terrainVertexBuffer->buffer.m_Buffer, terrainVertexBuffer->data.unitSize, GPUBufferType::TERRAIN_VERTEX_BUFFER });
 			}
 		}
@@ -8578,7 +8561,7 @@ namespace flex
 			}
 
 			// TODO: Make RenderPass set attachment layout values automatically
-//			m_OffscreenFB0DepthAttachment->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			//m_OffscreenFB0DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 			if (m_bEnableTAA)
 			{
@@ -8804,14 +8787,15 @@ namespace flex
 			i32 slack = (maxNumTrianglesPerChunk - (m_Terrain->lastTriCount % maxNumTrianglesPerChunk)) % maxNumTrianglesPerChunk;
 			i32 nextChunkTriOffset = m_Terrain->lastTriCount + slack;
 
-			VK_CHECK_RESULT(m_Terrain->vertexBufferGPU->buffer.Map());
+			VulkanGPUBuffer* vertexBufferGPU = (VulkanGPUBuffer*)m_Terrain->vertexBufferGPU;
+			VK_CHECK_RESULT(vertexBufferGPU->buffer.Map());
 			// Reset triangle atomic count var
 			m_Terrain->lastTriCount = nextChunkTriOffset;
-			*(i32*)m_Terrain->vertexBufferGPU->buffer.m_Mapped = nextChunkTriOffset;
-			m_Terrain->vertexBufferGPU->buffer.Unmap();
+			*(i32*)vertexBufferGPU->buffer.m_Mapped = nextChunkTriOffset;
+			vertexBufferGPU->buffer.Unmap();
 
 			{
-				// Host write -> shader read barrier
+				// Host m_Terrain->vertexBufferGPU read barrier
 				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
 				memoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
 				memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;

@@ -13,7 +13,7 @@
 
 #if defined(DEBUG) && defined(_WINDOWS)
 // RenderDoc API only supported on windows
-#define COMPILE_RENDERDOC_API 0
+#define COMPILE_RENDERDOC_API 1
 #else
 // Disable render doc integration in non-debug builds
 #define COMPILE_RENDERDOC_API 0

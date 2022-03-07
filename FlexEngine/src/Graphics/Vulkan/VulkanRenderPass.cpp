@@ -236,6 +236,21 @@ namespace flex
 
 			vkCmdEndRenderPass(m_ActiveCommandBuffer);
 
+			if (m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
+			{
+				FrameBufferAttachment* depthAttachment = ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetDepthAttachmentID);
+				depthAttachment->layout = m_TargetDepthAttachmentFinalLayout;
+			}
+
+			if (bCreateFrameBuffer)
+			{
+				for (u32 i = 0; i < (u32)m_TargetColourAttachmentFinalLayouts.size(); ++i)
+				{
+					FrameBufferAttachment* attachment = ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetColourAttachmentIDs[i]);
+					attachment->layout = m_TargetColourAttachmentFinalLayouts[i];
+				}
+			}
+
 			m_ActiveCommandBuffer = VK_NULL_HANDLE;
 		}
 

@@ -185,6 +185,7 @@ namespace flex
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
 		virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
 		virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
+		virtual void OnParticleSystemTemplateUpdated(StringID particleTemplateNameSID) = 0;
 
 		virtual void RecreateEverything() = 0;
 

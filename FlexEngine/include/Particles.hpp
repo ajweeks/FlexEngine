@@ -6,6 +6,7 @@
 namespace flex
 {
 	struct JSONObject;
+	struct ParticleSystemTemplate;
 
 	enum class ParticleSampleType
 	{
@@ -191,6 +192,7 @@ namespace flex
 	{
 	public:
 		ParticleSystem();
+		ParticleSystem(StringID templateNameSID, const ParticleParameters& params);
 		~ParticleSystem() = default;
 
 		ParticleSystem(const ParticleSystem& other) = delete;
@@ -198,7 +200,7 @@ namespace flex
 		ParticleSystem& operator=(const ParticleSystem& other) = delete;
 		ParticleSystem& operator=(ParticleSystem&& other) = delete;
 
-		void SetParameters(const ParticleParameters& params);
+		void OnTemplateUpdated(const ParticleSystemTemplate& newTemplate);
 		const ParticleParameters& GetParameters();
 
 		void Destroy();
@@ -217,6 +219,8 @@ namespace flex
 
 		std::string GetFilePath() const;
 
+		StringID GetParticleSystemTemplateNameSID() const;
+
 		std::string name;
 		ParticleSystemID ID = InvalidParticleSystemID;
 		bool bEnabled = true;
@@ -226,7 +230,11 @@ namespace flex
 
 		std::unordered_map<ParticleEmitterID, ParticleEmitterInstance> emitterInstances;
 		i32 m_ParticleCount = 0;
+
 	private:
+		void CacheParticleCount();
+
+		StringID m_TemplateNameSID = InvalidStringID;
 		ParticleParameters m_Parameters;
 		ParticleSpawnParams m_SpawnParams;
 
@@ -246,6 +254,7 @@ namespace flex
 		// Returns true when this template should be deleted
 		ImGuiResult DrawImGuiObjects();
 
+		StringID nameSID = InvalidStringID;
 		std::string filePath;
 		ParticleParameters params;
 		bool bDirty = false;

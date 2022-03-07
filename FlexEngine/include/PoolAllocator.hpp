@@ -35,6 +35,20 @@ namespace flex
 			return r;
 		}
 
+		template<typename...Vars>
+		T* Alloc(Vars&&...vars)
+		{
+			if (data.size() == 0 || data.back().second == PoolSize)
+			{
+				PushPool();
+			}
+
+			auto& arrPair = data.back();
+			void* result = (T*)arrPair.first + arrPair.second++;
+			T* r = new(result) T(std::forward<Vars>(vars)...);
+			return r;
+		}
+
 		void ReleaseAll()
 		{
 			for (auto& pair : data)

@@ -572,17 +572,18 @@ namespace flex
 			{
 				for (const std::string& filePath : filePaths)
 				{
+					std::string fileName = StripLeadingDirectories(StripFileType(filePath));
+
 					ParticleSystemTemplate particleTemplate = {};
 					particleTemplate.filePath = filePath;
+					particleTemplate.nameSID = SID(fileName.c_str());
 					if (!ParticleParameters::Deserialize(filePath, particleTemplate.params))
 					{
 						PrintError("Failed to read particle parameters file at %s\n", filePath.c_str());
 						continue;
 					}
 
-					std::string fileName = StripLeadingDirectories(StripFileType(filePath));
-					StringID particleNameSID = SID(fileName.c_str());
-					m_ParticleTemplates.emplace(particleNameSID, particleTemplate);
+					m_ParticleTemplates.emplace(particleTemplate.nameSID, particleTemplate);
 				}
 			}
 		}

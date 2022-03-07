@@ -13560,11 +13560,11 @@ namespace flex
 							m_MineTimer.Restart();
 							ComputeNewTargetPos();
 
-							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-							glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
-							glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
-							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+							//glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+							//glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
+							//glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
+							//ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							//m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
 						}
 					}
 
@@ -13572,9 +13572,9 @@ namespace flex
 					{
 						if (m_MineTimer.Update())
 						{
-							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
-							m_MiningSparksEmitterID = InvalidParticleEmitterID;
+							//ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							//m_MiningSparksEmitterID = InvalidParticleEmitterID;
 
 							m_MineCooldownTimer.Restart();
 

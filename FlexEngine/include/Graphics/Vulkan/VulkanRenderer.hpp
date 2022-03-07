@@ -120,6 +120,7 @@ namespace flex
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
 			virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
 			virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
+			virtual void OnParticleSystemTemplateUpdated(StringID particleTemplateNameSID) override;
 
 			virtual void RecreateEverything() override;
 
@@ -676,8 +677,8 @@ namespace flex
 				VkDrawIndirectCommand* indirectBufferCPU = nullptr;
 				VulkanBuffer* indirectBuffer = nullptr;
 
-				VulkanGPUBuffer* pointBufferGPU = nullptr;
-				VulkanGPUBuffer* vertexBufferGPU = nullptr;
+				GPUBuffer* pointBufferGPU = nullptr;
+				GPUBuffer* vertexBufferGPU = nullptr;
 				u32 maxChunkCount = 0;
 
 				VkFence fence = VK_NULL_HANDLE;

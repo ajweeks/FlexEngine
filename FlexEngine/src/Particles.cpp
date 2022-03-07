@@ -932,15 +932,23 @@ namespace flex
 	//
 
 	ParticleSystem::ParticleSystem() :
-		m_Parameters({})
+		m_Parameters({}),
+		m_SpawnParams({})
 	{
 	}
 
-	void ParticleSystem::SetParameters(const ParticleParameters& params)
+	ParticleSystem::ParticleSystem(StringID templateNameSID, const ParticleParameters& params) :
+		m_Parameters(params),
+		m_TemplateNameSID(templateNameSID)
 	{
-		m_Parameters = params;
-		ParticleParameterPack const* particleCount = m_Parameters.GetParam(SID("particle count"));
-		m_ParticleCount = particleCount != nullptr ? particleCount->GetInt() : 0;
+		CacheParticleCount();
+	}
+
+	void ParticleSystem::OnTemplateUpdated(const ParticleSystemTemplate& newTemplate)
+	{
+		m_Parameters = newTemplate.params;
+		m_TemplateNameSID = newTemplate.nameSID;
+		CacheParticleCount();
 	}
 
 	const ParticleParameters& ParticleSystem::GetParameters()
@@ -1014,8 +1022,7 @@ namespace flex
 	void ParticleSystem::Deserialize()
 	{
 		ParticleParameters::Deserialize(GetFilePath(), m_Parameters);
-		ParticleParameterPack const* particleCount = m_Parameters.GetParam(SID("particle count"));
-		m_ParticleCount = particleCount != nullptr ? particleCount->GetInt() : 0;
+		CacheParticleCount();
 	}
 
 	void ParticleSystem::Serialize()
@@ -1026,6 +1033,17 @@ namespace flex
 	std::string ParticleSystem::GetFilePath() const
 	{
 		return PARTICLE_SYSTEMS_DIRECTORY + name + ".json";
+	}
+
+	StringID ParticleSystem::GetParticleSystemTemplateNameSID() const
+	{
+		return m_TemplateNameSID;
+	}
+
+	void ParticleSystem::CacheParticleCount()
+	{
+		ParticleParameterPack const* particleCount = m_Parameters.GetParam(SID("particle count"));
+		m_ParticleCount = particleCount != nullptr ? particleCount->GetInt() : 0;
 	}
 
 	i32 ParticleSystem::GetEmitterInstanceCount() const
@@ -1130,8 +1148,9 @@ namespace flex
 					{
 						ParticleSystemTemplate particleTemplate = {};
 						std::string newNameStr(newParticleSystemNameBuff);
+						particleTemplate.nameSID = SID(newNameStr.c_str());
 						particleTemplate.filePath = PARTICLE_SYSTEMS_DIRECTORY + newNameStr + ".json";
-						g_ResourceManager->AddNewParticleTemplate(SID(newNameStr.c_str()), particleTemplate);
+						g_ResourceManager->AddNewParticleTemplate(particleTemplate.nameSID, particleTemplate);
 
 						ImGui::CloseCurrentPopup();
 					}
@@ -1168,10 +1187,8 @@ namespace flex
 			return InvalidParticleSystemID;
 		}
 
-		ParticleSystem* newParticleSystem = m_ParticleSystemAllocator.Alloc();
+		ParticleSystem* newParticleSystem = m_ParticleSystemAllocator.Alloc(particleTemplate.nameSID, particleTemplate.params);
 		newParticleSystem->name = name;
-
-		newParticleSystem->SetParameters(particleTemplate.params);
 
 		ParticleSystemID particleSystemID = g_Renderer->AddParticleSystem(name, newParticleSystem);
 		newParticleSystem->ID = particleSystemID;
@@ -1240,6 +1257,7 @@ namespace flex
 			if (ImGui::Button("Save"))
 			{
 				ParticleParameters::Serialize(filePath, params);
+				g_Renderer->OnParticleSystemTemplateUpdated(nameSID);
 				bDirty = false;
 			}
 

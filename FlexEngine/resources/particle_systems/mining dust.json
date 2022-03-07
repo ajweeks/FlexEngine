@@ -2,24 +2,30 @@
 	"enable spawning" : 
 	{
 		"type" : "constant",
-		"constant" : false
+		"constant" : true
 	},
-	"initial velocity" : 
+	"fade over lifetime" : 
+	{
+		"type" : "constant",
+		"constant" : true
+	},
+	"initial colour" : 
 	[
 		{
-			"type" : "random",
-			"random min" : -1.000000,
-			"random max" : 1.000000
+			"type" : "constant",
+			"constant" : 0.301254
 		},
 		{
-			"type" : "random",
-			"random min" : 0.500000,
-			"random max" : 2.500000
+			"type" : "constant",
+			"constant" : 0.305433
 		},
 		{
-			"type" : "random",
-			"random min" : -1.000000,
-			"random max" : 1.000000
+			"type" : "constant",
+			"constant" : 0.308824
+		},
+		{
+			"type" : "constant",
+			"constant" : 1.000000
 		}
 	],
 	"initial position" : 
@@ -40,39 +46,33 @@
 			"random max" : 0.200000
 		}
 	],
-	"initial colour" : 
+	"initial velocity" : 
 	[
 		{
-			"type" : "constant",
-			"constant" : 0.301254
+			"type" : "random",
+			"random min" : -1.000000,
+			"random max" : 1.000000
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.305433
+			"type" : "random",
+			"random min" : 0.500000,
+			"random max" : 2.500000
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.308824
-		},
-		{
-			"type" : "constant",
-			"constant" : 1.000000
+			"type" : "random",
+			"random min" : -1.000000,
+			"random max" : 1.000000
 		}
 	],
+	"lifetime" : 
+	{
+		"type" : "random",
+		"random min" : 0.010000,
+		"random max" : 0.500000
+	},
 	"particle count" : 
 	{
 		"type" : "constant",
 		"constant" : 256
-	},
-	"fade over lifetime" : 
-	{
-		"type" : "constant",
-		"constant" : true
-	},
-	"lifetime" : 
-	{
-		"type" : "random",
-		"random min" : 0.100000,
-		"random max" : 0.500000
 	}
 }
