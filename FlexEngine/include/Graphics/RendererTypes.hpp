@@ -726,7 +726,7 @@ namespace flex
 
 	struct GPUBuffer
 	{
-		GPUBuffer(GPUBufferType type);
+		GPUBuffer(GPUBufferType type, const std::string& debugName);
 		virtual ~GPUBuffer();
 
 		GPUBuffer(const GPUBuffer&) = delete;
@@ -740,6 +740,7 @@ namespace flex
 		GPUBufferID ID = InvalidGPUBufferID;
 		u32 fullDynamicBufferSize = 0;
 		UniformBufferObjectData data;
+		std::string debugName;
 
 		GPUBufferType type = GPUBufferType::_NONE;
 	};
@@ -755,7 +756,7 @@ namespace flex
 	{
 		~GPUBufferList();
 
-		void Add(GPUBufferType type);
+		void Add(GPUBufferType type, const std::string& debugName);
 		GPUBuffer* Get(GPUBufferType type);
 		const GPUBuffer* Get(GPUBufferType type) const;
 		bool Has(GPUBufferType type) const;

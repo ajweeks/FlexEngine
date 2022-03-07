@@ -863,23 +863,23 @@ namespace flex
 
 			if (shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT))
 			{
-				material->gpuBufferList.Add(GPUBufferType::STATIC);
+				material->gpuBufferList.Add(GPUBufferType::STATIC, material->name + " constant uniform buffer");
 			}
 			if (shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC))
 			{
-				material->gpuBufferList.Add(GPUBufferType::DYNAMIC);
+				material->gpuBufferList.Add(GPUBufferType::DYNAMIC, material->name + " dynamic uniform buffer");
 			}
 			if (shader->additionalBufferUniforms.HasUniform(&U_PARTICLE_BUFFER))
 			{
-				material->gpuBufferList.Add(GPUBufferType::PARTICLE_DATA);
+				material->gpuBufferList.Add(GPUBufferType::PARTICLE_DATA, material->name + " particle buffer");
 			}
 			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_POINT_BUFFER))
 			{
-				material->gpuBufferList.Add(GPUBufferType::TERRAIN_POINT_BUFFER);
+				material->gpuBufferList.Add(GPUBufferType::TERRAIN_POINT_BUFFER, material->name + " terrain point buffer");
 			}
 			if (shader->additionalBufferUniforms.HasUniform(&U_TERRAIN_VERTEX_BUFFER))
 			{
-				material->gpuBufferList.Add(GPUBufferType::TERRAIN_VERTEX_BUFFER);
+				material->gpuBufferList.Add(GPUBufferType::TERRAIN_VERTEX_BUFFER, material->name + " terrain vertex buffer");
 			}
 
 			material->normalTexturePath = createInfo->normalTexturePath;
@@ -1332,13 +1332,9 @@ namespace flex
 
 					constantBuffer->AllocHostMemory(constantBuffer->data.unitSize);
 
-					std::string bufferName = material->name + " constant uniform buffer";
 					CreateGPUBuffer(constantBuffer, constantBuffer->data.unitSize,
 						VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-						bufferName,
 						true);
-
-					SetBufferName(m_VulkanDevice, constantBuffer->buffer.m_Buffer, bufferName.c_str());
 				}
 			}
 		}
@@ -1374,13 +1370,9 @@ namespace flex
 					dynamicBuffer->fullDynamicBufferSize = dynamicBufferSize;
 					if (dynamicBufferSize > 0)
 					{
-						std::string bufferName = material->name + " dynamic uniform buffer";
 						CreateGPUBuffer(dynamicBuffer, dynamicBufferSize,
 							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-							bufferName,
 							true);
-
-						SetGPUBufferName(dynamicBuffer, bufferName.c_str());
 					}
 				}
 			}
@@ -1397,7 +1389,7 @@ namespace flex
 				delete m_Terrain->pointBufferGPU;
 			}
 
-			m_Terrain->pointBufferGPU = new VulkanGPUBuffer(m_VulkanDevice, GPUBufferType::TERRAIN_POINT_BUFFER);
+			m_Terrain->pointBufferGPU = AllocateGPUBuffer(GPUBufferType::TERRAIN_POINT_BUFFER, "Terrain point buffer");
 
 			u32 numPointsPerAxis = m_Terrain->constantData.numPointsPerAxis;
 			u32 numPointsPerChunk = numPointsPerAxis * numPointsPerAxis * numPointsPerAxis;
@@ -1412,9 +1404,7 @@ namespace flex
 			CreateGPUBuffer(m_Terrain->pointBufferGPU, pointBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				"Terrain point buffer",
 				false);
-			SetGPUBufferName(m_Terrain->pointBufferGPU, "Terrain point buffer");
 
 			// Vertex buffer
 
@@ -1423,7 +1413,7 @@ namespace flex
 				delete m_Terrain->vertexBufferGPU;
 			}
 
-			m_Terrain->vertexBufferGPU = new VulkanGPUBuffer(m_VulkanDevice, GPUBufferType::TERRAIN_VERTEX_BUFFER);
+			m_Terrain->vertexBufferGPU = AllocateGPUBuffer(GPUBufferType::TERRAIN_VERTEX_BUFFER, "");
 
 			// Many chunks will be empty, so only allocate room for 40% of max for now
 			// TODO: Support resizing when needed
@@ -1435,9 +1425,7 @@ namespace flex
 			CreateGPUBuffer(m_Terrain->vertexBufferGPU, vertBufferSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				"Terrain vertex buffer",
 				false);
-			SetGPUBufferName(m_Terrain->vertexBufferGPU, "Terrain vertex buffer");
 		}
 
 		void VulkanRenderer::CreatePostProcessingResources()
@@ -5290,21 +5278,20 @@ namespace flex
 			delete buffer;
 		}
 
-		GPUBuffer* VulkanRenderer::AllocateGPUBuffer(GPUBufferType type)
+		GPUBuffer* VulkanRenderer::AllocateGPUBuffer(GPUBufferType type, const std::string& debugName)
 		{
 			// TODO: Use pool
-			return new VulkanGPUBuffer(m_VulkanDevice, type);
+			return new VulkanGPUBuffer(m_VulkanDevice, type, debugName);
 		}
 
 		void VulkanRenderer::CreateGPUBuffer(GPUBuffer* buffer,
 			u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits,
 			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
-			const std::string& DEBUG_name,
 			bool bMap /* = true */)
 		{
 			VulkanGPUBuffer* vkBuffer = (VulkanGPUBuffer*)buffer;
-			vkBuffer->buffer.Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, DEBUG_name.c_str());
+			vkBuffer->buffer.Create(bufferSize, bufferUseageFlagBits, memoryPropertyHostFlagBits, buffer->debugName.c_str());
 
 			if (bMap)
 			{

@@ -223,10 +223,15 @@ namespace flex
 			}
 		}
 
-		VulkanGPUBuffer::VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type) :
-			GPUBuffer(type),
+		VulkanGPUBuffer::VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type, const std::string& debugName) :
+			GPUBuffer(type, debugName),
 			buffer(device)
 		{
+		}
+
+		VulkanGPUBuffer::~VulkanGPUBuffer()
+		{
+			buffer.Destroy();
 		}
 
 		void VertexIndexBufferPair::Destroy()

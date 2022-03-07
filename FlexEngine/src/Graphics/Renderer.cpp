@@ -3963,13 +3963,10 @@ namespace flex
 
 			particleBuffer->AllocHostMemory(particleBuffer->data.unitSize, m_DynamicAlignment);
 			// Will be copied into from staging buffer
-			PrepareGPUBuffer(particleBuffer, particleBuffer->data.unitSize,
+			CreateGPUBuffer(particleBuffer, particleBuffer->data.unitSize,
 				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-				"Particle buffer",
 				false);
-
-			SetGPUBufferName(particleBuffer, "Particle buffer");
 		}
 	}
 

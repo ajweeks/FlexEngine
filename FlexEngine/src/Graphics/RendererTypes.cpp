@@ -126,9 +126,9 @@ namespace flex
 		bufferList.clear();
 	}
 
-	void GPUBufferList::Add(GPUBufferType type)
+	void GPUBufferList::Add(GPUBufferType type, const std::string& debugName)
 	{
-		GPUBuffer* buffer = g_Renderer->AllocateGPUBuffer(type);
+		GPUBuffer* buffer = g_Renderer->AllocateGPUBuffer(type, debugName);
 		bufferList.emplace_back(buffer);
 	}
 
@@ -169,8 +169,9 @@ namespace flex
 		return nullptr;
 	}
 
-	GPUBuffer::GPUBuffer(GPUBufferType type) :
-		type(type)
+	GPUBuffer::GPUBuffer(GPUBufferType type, const std::string& debugName) :
+		type(type),
+		debugName(debugName)
 	{
 		ID = g_Renderer->RegisterGPUBuffer(this);
 	}

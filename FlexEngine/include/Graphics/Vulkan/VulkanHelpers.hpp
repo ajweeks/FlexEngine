@@ -147,8 +147,8 @@ namespace flex
 
 		struct VulkanGPUBuffer final : public GPUBuffer
 		{
-			VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type);
-			~VulkanGPUBuffer() = default;
+			VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type, const std::string& debugName);
+			~VulkanGPUBuffer();
 
 			VulkanGPUBuffer(const VulkanGPUBuffer&) = delete;
 			VulkanGPUBuffer(VulkanGPUBuffer&& other) = delete;

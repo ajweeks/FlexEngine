@@ -218,13 +218,12 @@ namespace flex
 		virtual void UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferSize, void* data, u32 dataSize) = 0;
 
 		virtual void FreeGPUBuffer(GPUBuffer*) = 0;
-		virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type) = 0;
+		virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type, const std::string& debugName) = 0;
 
-		virtual void PrepareGPUBuffer(GPUBuffer* buffer,
+		virtual void CreateGPUBuffer(GPUBuffer* buffer,
 			u32 bufferSize,
 			VkBufferUsageFlags bufferUseageFlagBits,
 			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
-			const std::string& DEBUG_name,
 			bool bMap = true) = 0;
 
 		virtual void SetGPUBufferName(GPUBuffer const* buffer, const char* name) = 0;
