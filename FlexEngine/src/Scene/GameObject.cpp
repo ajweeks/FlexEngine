@@ -13560,11 +13560,11 @@ namespace flex
 							m_MineTimer.Restart();
 							ComputeNewTargetPos();
 
-							//glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-							//glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
-							//glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
-							//ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							//m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+							glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
+							glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
+							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
 						}
 					}
 
@@ -13572,9 +13572,9 @@ namespace flex
 					{
 						if (m_MineTimer.Update())
 						{
-							//ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
-							//m_MiningSparksEmitterID = InvalidParticleEmitterID;
+							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							m_MiningSparksEmitterID = InvalidParticleEmitterID;
 
 							m_MineCooldownTimer.Restart();
 
@@ -13611,7 +13611,7 @@ namespace flex
 								}
 								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, ToVec3(posWS));
 								ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
-								dustParticleSystem->SpawnEmitterInstance(objectToWorld);
+								m_MiningDustEmitterID = dustParticleSystem->SpawnEmitterInstance(objectToWorld);
 							}
 
 							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
@@ -13668,6 +13668,21 @@ namespace flex
 			}
 		}
 
+		if (ImGui::Button("Clear inventory"))
+		{
+			for (GameObjectStack& stack : m_Inventory)
+			{
+				stack.Clear();
+			}
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Fill charge"))
+		{
+			m_Charge = m_MaxCharge;
+		}
+
 		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
 		{
 			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
@@ -13695,6 +13710,25 @@ namespace flex
 		newGameObject->m_Inventory = m_Inventory;
 
 		return newGameObject;
+	}
+
+	void Miner::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
+		if (particleManager != nullptr)
+		{
+			ParticleSystem* sparksParticleSystem = particleManager->GetParticleSystem(SID("laser sparks"));
+			if (sparksParticleSystem != nullptr)
+			{
+				sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+				m_MiningSparksEmitterID = InvalidParticleEmitterID;
+
+				sparksParticleSystem->ExtinguishEmitter(m_MiningDustEmitterID);
+				m_MiningDustEmitterID = InvalidParticleEmitterID;
+			}
+		}
 	}
 
 	i32 Miner::GetNextFreeInventorySlot()

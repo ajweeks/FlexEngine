@@ -1,6 +1,6 @@
 
-const int SAMPLE_TYPE_CONSTANT = 0;
-const int SAMPLE_TYPE_RANDOM = 1;
+const uint SAMPLE_TYPE_CONSTANT = 0;
+const uint SAMPLE_TYPE_RANDOM = 1;
 
 const int MAX_NUM_PARAMS = 8;
 

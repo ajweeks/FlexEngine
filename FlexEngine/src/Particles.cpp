@@ -104,6 +104,13 @@ namespace flex
 		return *this;
 	}
 
+	ParticleParameter ParticleParameter::GetDefault()
+	{
+		ParticleParameter result = {};
+		result.type = ParticleSampleType::CONSTANT;
+		return result;
+	}
+
 	real ParticleParameter::GetReal() const
 	{
 		switch (type)
@@ -439,18 +446,18 @@ namespace flex
 		case ParticleParamterValueType::BOOL:
 		case ParticleParamterValueType::FLOAT:
 		case ParticleParamterValueType::INT:
-			params.resize(1, {});
+			params.resize(1, ParticleParameter::GetDefault());
 			break;
 		case ParticleParamterValueType::VEC2:
-			params.resize(2, {});
+			params.resize(2, ParticleParameter::GetDefault());
 			break;
 		case ParticleParamterValueType::VEC3:
 		case ParticleParamterValueType::COL3:
-			params.resize(3, {});
+			params.resize(3, ParticleParameter::GetDefault());
 			break;
 		case ParticleParamterValueType::VEC4:
 		case ParticleParamterValueType::COL4:
-			params.resize(4, {});
+			params.resize(4, ParticleParameter::GetDefault());
 			break;
 		default:
 			ENSURE_NO_ENTRY();
@@ -969,12 +976,32 @@ namespace flex
 			return InvalidParticleEmitterID;
 		}
 
+		real emitterLifetime = FLT_MAX;
+		real particleMaxLifetime = 0.0f;
 		ParticleParameterPack const* lifetimeParam = m_Parameters.GetParam(SID("lifetime"));
-		real emitterLifetime = lifetimeParam != nullptr ? lifetimeParam->GetRealMax() : -1.0f;
-		if (emitterLifetime == -1.0f)
+		ParticleParameterPack const* enableSpawningParam = m_Parameters.GetParam(SID("enable spawning"));
+		if (lifetimeParam != nullptr)
 		{
-			emitterLifetime = 3.0f;
-			PrintWarn("Particle template doesn't specify emitter lifetime, using default value of %.2f\n", emitterLifetime);
+			particleMaxLifetime = lifetimeParam->GetRealMax();
+
+			if (enableSpawningParam != nullptr)
+			{
+				if (!enableSpawningParam->GetBool(0))
+				{
+					emitterLifetime = particleMaxLifetime;
+				}
+			}
+			else
+			{
+				emitterLifetime = particleMaxLifetime;
+
+				if (emitterLifetime == -1.0f)
+				{
+					emitterLifetime = 3.0f;
+					particleMaxLifetime = emitterLifetime;
+					PrintWarn("Particle template doesn't specify emitter lifetime, using default value of %.2f\n", emitterLifetime);
+				}
+			}
 		}
 
 		ParticleEmitterID emitterID = m_LastEmitterIndex;
@@ -988,11 +1015,19 @@ namespace flex
 			PrintWarn("No particle count set in particle system %s, using default value (%i)", name.c_str(), m_ParticleCount);
 		}
 		emitter.data.particleCount = m_ParticleCount;
-		ParticleParameterPack const* enableSpawningParam = m_Parameters.GetParam(SID("enable spawning"));
 		bool bEnableRespawning = enableSpawningParam != nullptr ? enableSpawningParam->GetBool() : false;
-		emitter.data.enableSpawning = bEnableRespawning ? 1 : 0;
+		// Always starts as 1 to initialize buffer, will get set to
+		// 0 after first dispatch if bEnableRespawning == false
+		emitter.data.enableSpawning = 1;
+		emitter.bEnableRespawning = bEnableRespawning;
+		if (!bEnableRespawning)
+		{
+			// Give two frames to
+			emitter.data.enableSpawning = 2;
+		}
 		emitter.objectToWorld = objectToWorld;
 		emitter.lifetimeRemaining = emitterLifetime;
+		emitter.particleMaxLifetime = particleMaxLifetime;
 		emitter.ID = emitterID;
 		emitter.bufferIndex = u32_max;
 
@@ -1057,6 +1092,22 @@ namespace flex
 		while (iter != emitterInstances.end())
 		{
 			ParticleEmitterInstance& emitter = iter->second;
+
+			if (emitter.data.enableSpawning != 0 && !emitter.bEnableRespawning)
+			{
+				// enableSpawning was just set for the first frame to initialize the buffer
+				// but it should be cleared now
+				--emitter.data.enableSpawning;
+			}
+
+			if (!emitter.data.enableSpawning)
+			{
+				if (emitter.lifetimeRemaining > emitter.particleMaxLifetime)
+				{
+					emitter.lifetimeRemaining = emitter.particleMaxLifetime;
+				}
+			}
+
 			emitter.lifetimeRemaining -= g_DeltaTime;
 			if (emitter.lifetimeRemaining <= 0.0f)
 			{
@@ -1194,6 +1245,17 @@ namespace flex
 		newParticleSystem->ID = particleSystemID;
 		m_ParticleSystems.emplace(particleTemplateNameSID, newParticleSystem);
 		return particleSystemID;
+	}
+
+	ParticleSystem* ParticleManager::GetParticleSystem(StringID particleTemplateNameSID)
+	{
+		auto iter = m_ParticleSystems.find(particleTemplateNameSID);
+		if (iter != m_ParticleSystems.end())
+		{
+			return iter->second;
+		}
+
+		return nullptr;
 	}
 
 	ParticleSystem* ParticleManager::GetOrCreateParticleSystem(StringID particleTemplateNameSID, const char* particleTemplateName)

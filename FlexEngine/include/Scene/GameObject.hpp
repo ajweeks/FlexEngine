@@ -1935,6 +1935,7 @@ namespace flex
 		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabID& prefabIDLoadedFrom = InvalidPrefabID, bool bIsPrefabTemplate = false);
 
 		virtual void Update() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void OnCharge(real chargeAmount) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
@@ -1979,6 +1980,7 @@ namespace flex
 		glm::vec4 laserColour;
 
 		ParticleEmitterID m_MiningSparksEmitterID = InvalidParticleEmitterID;
+		ParticleEmitterID m_MiningDustEmitterID = InvalidParticleEmitterID;
 	};
 
 	static constexpr StringID SpeakerSID = SID("speaker");

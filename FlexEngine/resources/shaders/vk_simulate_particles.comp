@@ -2,8 +2,6 @@
 
 #include "vk_particles_common.glsl"
 
-#define PI_DIV_TWO 1.57079632679489661923132169163975144
-
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 time;
@@ -36,11 +34,11 @@ void Write(uint emitterIndex, vec3 pos, vec3 vel, vec4 col, float lifetime)
 	particles[emitterIndex].data[10] = lifetime;
 }
 
-float RandomFloat(float minValue, float maxValue)
+float RandomFloat(float minValue, float maxValue, int seedOffset)
 {
-	float seed = uboConstant.time.x;
+	float seed = float(uboConstant.time.x + gl_GlobalInvocationID.x + uboDynamic.particleSimData.bufferOffset + seedOffset);
     float r = fract(seed * 17.0 * fract(seed * 0.3183099));
-    return minValue + mod(r, maxValue - minValue);
+    return minValue + r * (maxValue - minValue);
 }
 
 float SampleFloat(Param param)
@@ -50,8 +48,9 @@ float SampleFloat(Param param)
 		case SAMPLE_TYPE_CONSTANT:
 			return param.valueMin.x;
 		case SAMPLE_TYPE_RANDOM:
-			return RandomFloat(param.valueMin[0], param.valueMax[0]);
+			return RandomFloat(param.valueMin[0], param.valueMax[0], 0);
 	}
+	return 0.0;
 }
 
 vec2 SampleVec2(Param param)
@@ -62,9 +61,10 @@ vec2 SampleVec2(Param param)
 			return param.valueMin.xy;
 		case SAMPLE_TYPE_RANDOM:
 			return vec2(
-				RandomFloat(param.valueMin[0], param.valueMax[0]),
-				RandomFloat(param.valueMin[1], param.valueMax[1]));
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1));
 	}
+	return vec2(0, 0);
 }
 
 vec3 SampleVec3(Param param)
@@ -75,10 +75,11 @@ vec3 SampleVec3(Param param)
 			return param.valueMin.xyz;
 		case SAMPLE_TYPE_RANDOM:
 			return vec3(
-				RandomFloat(param.valueMin[0], param.valueMax[0]),
-				RandomFloat(param.valueMin[1], param.valueMax[1]),
-				RandomFloat(param.valueMin[2], param.valueMax[2]));
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1),
+				RandomFloat(param.valueMin[2], param.valueMax[2], 2));
 	}
+	return vec3(0, 0, 0);
 }
 
 vec4 SampleVec4(Param param)
@@ -89,18 +90,29 @@ vec4 SampleVec4(Param param)
 			return param.valueMin;
 		case SAMPLE_TYPE_RANDOM:
 			return vec4(
-				RandomFloat(param.valueMin[0], param.valueMax[0]),
-				RandomFloat(param.valueMin[1], param.valueMax[1]),
-				RandomFloat(param.valueMin[2], param.valueMax[2]),
-				RandomFloat(param.valueMin[3], param.valueMax[3]));
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1),
+				RandomFloat(param.valueMin[2], param.valueMax[2], 2),
+				RandomFloat(param.valueMin[3], param.valueMax[3], 3));
 	}
+	return vec4(0, 0, 0, 0);
 }
 
 void Spawn(uint emitterIndex)
 {
-	float lifetime = SampleFloat(uboDynamic.particleSimData.spawnParams[0]);
-	vec3 pos = SampleVec3(uboDynamic.particleSimData.spawnParams[1]);
-	vec3 vel = SampleVec3(uboDynamic.particleSimData.spawnParams[2]);
+	// Params: (alphabetized)
+	// 0: acceleration
+	// 1: enable respawning
+	// 2: fade over lifetime
+	// 3: initial colour
+	// 4: initial pos
+	// 5: initial velocity
+	// 6: lifetime
+	// 7: particle count
+
+	float lifetime = SampleFloat(uboDynamic.particleSimData.spawnParams[6]);
+	vec3 pos = SampleVec3(uboDynamic.particleSimData.spawnParams[4]);
+	vec3 vel = SampleVec3(uboDynamic.particleSimData.spawnParams[5]);
 	vec4 col = SampleVec4(uboDynamic.particleSimData.spawnParams[3]);
 
 	Write(emitterIndex, pos, vel, col, lifetime);
@@ -127,6 +139,8 @@ void main()
 		lifetime = particles[index].data[10];
 	}
 
+	vec3 acceleration = SampleVec3(uboDynamic.particleSimData.spawnParams[0]);
+
 	vec3 pos = vec3(particles[index].data[0], particles[index].data[1], particles[index].data[2]);
 	vec3 vel = vec3(particles[index].data[3], particles[index].data[4], particles[index].data[5]);
 	vec4 col = vec4(particles[index].data[6], particles[index].data[7], particles[index].data[8], particles[index].data[9]);
@@ -144,7 +158,7 @@ void main()
 	}
 	col.a = alpha;
 	vel.y -= dt * 0.2;
-	vel *= 1.0 - dt * 0.1;
+	vel += (1.0 - dt) * acceleration;
 
 	Write(index, pos, vel, col, lifetime);
 }

@@ -10,8 +10,8 @@ namespace flex
 
 	enum class ParticleSampleType
 	{
-		CONSTANT,
-		RANDOM,
+		CONSTANT = 0,
+		RANDOM = 1,
 
 		_NONE
 	};
@@ -86,6 +86,8 @@ namespace flex
 		ParticleParameter(ParticleParameter&& other);
 		ParticleParameter& operator=(const ParticleParameter& other);
 		ParticleParameter& operator=(ParticleParameter&& other);
+
+		static ParticleParameter GetDefault();
 
 		real GetReal() const;
 		real GetRealMin() const;
@@ -184,8 +186,10 @@ namespace flex
 		ParticleSimData data;
 		glm::mat4 objectToWorld;
 		real lifetimeRemaining = 0.0f;
+		real particleMaxLifetime = 0.0f;
 		ParticleEmitterID ID = InvalidParticleEmitterID;
 		u32 bufferIndex = u32_max;
+		bool bEnableRespawning = false;
 	};
 
 	class ParticleSystem final
@@ -279,6 +283,7 @@ namespace flex
 		virtual void DrawImGui() override;
 
 		ParticleSystemID CreateParticleSystem(StringID particleTemplateNameSID, const std::string& name);
+		ParticleSystem* GetParticleSystem(StringID particleTemplateNameSID);
 		ParticleSystem* GetOrCreateParticleSystem(StringID particleTemplateNameSID, const char* particleTemplateName);
 		void RemoveParticleSystem(StringID particleTemplateNameSID);
 

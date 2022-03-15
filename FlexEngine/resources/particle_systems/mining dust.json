@@ -1,8 +1,23 @@
 {
+	"acceleration" : 
+	[
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : -0.070000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
 	"enable spawning" : 
 	{
 		"type" : "constant",
-		"constant" : true
+		"constant" : false
 	},
 	"fade over lifetime" : 
 	{
@@ -13,15 +28,15 @@
 	[
 		{
 			"type" : "constant",
-			"constant" : 0.301254
+			"constant" : 0.375264
 		},
 		{
 			"type" : "constant",
-			"constant" : 0.305433
+			"constant" : 0.404745
 		},
 		{
 			"type" : "constant",
-			"constant" : 0.308824
+			"constant" : 0.475490
 		},
 		{
 			"type" : "constant",
@@ -55,8 +70,8 @@
 		},
 		{
 			"type" : "random",
-			"random min" : 0.500000,
-			"random max" : 2.500000
+			"random min" : 1.000000,
+			"random max" : 4.500000
 		},
 		{
 			"type" : "random",

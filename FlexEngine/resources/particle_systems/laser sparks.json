@@ -1,15 +1,48 @@
 {
-	"lifetime" : 
-	{
-		"type" : "random",
-		"random min" : 0.500000,
-		"random max" : 1.000000
-	},
+	"acceleration" : 
+	[
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
 	"enable spawning" : 
 	{
 		"type" : "constant",
 		"constant" : true
 	},
+	"fade over lifetime" : 
+	{
+		"type" : "constant",
+		"constant" : true
+	},
+	"initial colour" : 
+	[
+		{
+			"type" : "constant",
+			"constant" : 0.916667
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.022467
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.022467
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
 	"initial position" : 
 	[
 		{
@@ -29,47 +62,29 @@
 	[
 		{
 			"type" : "random",
-			"random min" : -0.500000,
-			"random max" : 0.500000
+			"random min" : -0.250000,
+			"random max" : 0.250000
 		},
 		{
 			"type" : "random",
-			"random min" : 1.000000,
-			"random max" : 1.200000
+			"random min" : 0.500000,
+			"random max" : 4.000000
 		},
 		{
 			"type" : "random",
-			"random min" : -0.500000,
-			"random max" : 0.500000
+			"random min" : -0.250000,
+			"random max" : 0.250000
 		}
 	],
+	"lifetime" : 
+	{
+		"type" : "random",
+		"random min" : 0.250000,
+		"random max" : 0.750000
+	},
 	"particle count" : 
 	{
 		"type" : "constant",
 		"constant" : 32
-	},
-	"initial colour" : 
-	[
-		{
-			"type" : "constant",
-			"constant" : 0.921569
-		},
-		{
-			"type" : "constant",
-			"constant" : 0.009035
-		},
-		{
-			"type" : "constant",
-			"constant" : 0.009035
-		},
-		{
-			"type" : "constant",
-			"constant" : 0.000000
-		}
-	],
-	"fade over lifetime" : 
-	{
-		"type" : "constant",
-		"constant" : true
 	}
 }
