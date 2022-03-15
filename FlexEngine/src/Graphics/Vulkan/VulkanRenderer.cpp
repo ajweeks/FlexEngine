@@ -7613,6 +7613,7 @@ namespace flex
 
 				static std::vector<RenderID> renderIDs;
 				renderIDs.reserve(m_RenderObjects.size());
+				renderIDs.clear();
 				for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
 				{
 					if (m_RenderObjects[renderID] != nullptr)
