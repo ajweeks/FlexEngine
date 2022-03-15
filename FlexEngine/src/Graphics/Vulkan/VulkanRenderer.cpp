@@ -1475,7 +1475,7 @@ namespace flex
 				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = taaResolveShaderID;
 				descSetCreateInfo.gpuBufferList = &taaResolveMaterial->gpuBufferList;
-				descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_GBufferDepthAttachment->view, m_SamplerDepth });
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0DepthAttachment->view, m_SamplerDepth });
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_SamplerLinearRepeat });
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_SamplerLinearRepeat });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
@@ -5775,23 +5775,20 @@ namespace flex
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_ForwardRenderPass);
 
-			m_PostProcessRenderPass->RegisterForColourAndDepth("Post Process render pass",
+			m_PostProcessRenderPass->RegisterForColourOnly("Post Process render pass",
 				m_OffscreenFB1ColourAttachment0->ID, // Target colour attachment
-				m_OffscreenFB1DepthAttachment->ID, // Target depth attachment
 				{ m_OffscreenFB0ColourAttachment0->ID } // Sampled attachments
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_PostProcessRenderPass);
 
-			m_GammaCorrectRenderPass->RegisterForColourAndDepth("Gamma correct render pass",
+			m_GammaCorrectRenderPass->RegisterForColourOnly("Gamma correct render pass",
 				m_OffscreenFB0ColourAttachment0->ID, // Target colour attachment
-				m_OffscreenFB0DepthAttachment->ID, // Target depth attachment
 				{ m_OffscreenFB1ColourAttachment0->ID } // Sampled attachments
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_GammaCorrectRenderPass);
 
-			m_TAAResolveRenderPass->RegisterForColourAndDepth("TAA Resolve render pass",
+			m_TAAResolveRenderPass->RegisterForColourOnly("TAA Resolve render pass",
 				m_OffscreenFB1ColourAttachment0->ID, // Target colour attachment
-				m_OffscreenFB1DepthAttachment->ID, // Target depth attachment
 				{ m_OffscreenFB0ColourAttachment0->ID, m_OffscreenFB0DepthAttachment->ID } // Sampled attachments
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_TAAResolveRenderPass);
@@ -5845,9 +5842,9 @@ namespace flex
 			m_SSAOBlurHRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
 			m_SSAOBlurVRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
 			m_DeferredCombineRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_ForwardRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			m_PostProcessRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
-			m_GammaCorrectRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
+			m_ForwardRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			m_PostProcessRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+			m_GammaCorrectRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 			m_TAAResolveRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 			m_UIRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 
@@ -8103,8 +8100,7 @@ namespace flex
 
 				m_DeferredRenderPass->End();
 
-				// NOTE: Only needed on the first frame
-				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue);
+				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, m_OffScreenCmdBuffer);
 
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 				PROFILE_END("");
@@ -8549,8 +8545,7 @@ namespace flex
 				EndGPUTimeStamp(commandBuffer, "Post Process");
 			}
 
-			// Post process render pass transitioned this to shader read only optimal
-			m_OffscreenFB1ColourAttachment0->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			m_OffscreenFB0DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 			{
 				PROFILE_AUTO("Gamma correct");
