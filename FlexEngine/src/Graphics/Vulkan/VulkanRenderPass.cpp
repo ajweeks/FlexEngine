@@ -84,8 +84,6 @@ namespace flex
 
 			VkAttachmentDescription depthAttachmentDesc = vks::attachmentDescription((bDepthAttachmentPresent && bCreateFrameBuffer) ? depthAttachment->format : m_DepthAttachmentFormat, m_TargetDepthAttachmentFinalLayout);
 
-			VkAttachmentReference depthAttachmentRef = { colourAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
 			if (m_TargetDepthAttachmentInitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
 			{
 				depthAttachmentDesc.initialLayout = m_TargetDepthAttachmentInitialLayout;
@@ -98,10 +96,13 @@ namespace flex
 				attachmentDescriptions[i] = colourAttachments[i];
 			}
 
+			u32 depthAttachmentIndex = attachmentCount - 1;
 			if (bDepthAttachmentPresent)
 			{
-				attachmentDescriptions[attachmentDescriptions.size() - 1] = depthAttachmentDesc;
+				attachmentDescriptions[depthAttachmentIndex] = depthAttachmentDesc;
 			}
+
+			VkAttachmentReference depthAttachmentRef = { depthAttachmentIndex , VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;

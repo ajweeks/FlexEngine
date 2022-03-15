@@ -5728,6 +5728,8 @@ namespace flex
 			// a detailed breakdown of render passes and their dependencies
 			//
 
+			// Offscreen cmd buffer
+
 			m_ShadowRenderPass->RegisterForDepthOnly("Shadow render pass",
 				SHADOW_CASCADE_DEPTH_ATTACHMENT_ID, // Target depth attachment
 				{} // Sampled attachments
@@ -5758,6 +5760,8 @@ namespace flex
 				{ m_SSAOBlurHFBColourAttachment0->ID } // Sampled attachments
 			);
 			m_AutoTransitionedRenderPasses.push_back(m_SSAOBlurVRenderPass);
+
+			// Forward cmd buffer
 
 			m_DeferredCombineRenderPass->RegisterForColourAndDepth("Deferred combine render pass",
 				m_OffscreenFB0ColourAttachment0->ID, // Target colour attachment
@@ -5835,12 +5839,18 @@ namespace flex
 			// --------------------------------------------
 
 			// TODO: Remove these at some point
+
+			// Offscreen cmd buffer
+
 			m_ShadowRenderPass->ManuallySpecifyLayouts({}, {}, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 			m_DeferredRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED);
 			m_SSAORenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
 			m_SSAOBlurHRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
 			m_SSAOBlurVRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
+
+			// Forward cmd buffer
+
 			m_DeferredCombineRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_UNDEFINED);
 			m_ForwardRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			m_PostProcessRenderPass->ManuallySpecifyLayouts({ VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, { VK_IMAGE_LAYOUT_UNDEFINED });
@@ -6848,7 +6858,9 @@ namespace flex
 				CHECK_EQ(m_SSAOBlurHFBColourAttachment0->height, m_SSAOBlurVFBColourAttachment0->height);
 
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurHFBColourAttachment0, "SSAO Blur Horizontal image", "SSAO Blur Horizontal image view");
+				// TODO: m_SSAOBlurHFBColourAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 				CreateAttachment(m_VulkanDevice, m_SSAOBlurVFBColourAttachment0, "SSAO Blur Vertical image", "SSAO Blur Vertical image view");
+				// TODO: m_SSAOBlurVFBColourAttachment0->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			}
 		}
 
@@ -8557,9 +8569,6 @@ namespace flex
 
 				EndDebugMarkerRegion(commandBuffer, "End Gamma Correct");
 			}
-
-			// TODO: Make RenderPass set attachment layout values automatically
-			//m_OffscreenFB0DepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, commandBuffer);
 
 			if (m_bEnableTAA)
 			{
