@@ -47,7 +47,7 @@ namespace flex
 
 		bool MeshFileNameConforms(const std::string& fileName);
 
-		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs);
+		void ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject);
 
 		JSONField SerializeMesh(Mesh* mesh);
 

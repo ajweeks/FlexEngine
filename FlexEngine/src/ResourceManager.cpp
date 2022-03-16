@@ -206,10 +206,8 @@ namespace flex
 		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
 	}
 
-	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
+	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject)
 	{
-		bool bCreateRenderObject = !parent->IsPrefabTemplate();
-
 		std::string meshFilePath;
 		if (meshObj.TryGetString("mesh", meshFilePath))
 		{
@@ -375,7 +373,12 @@ namespace flex
 
 					JSONObject prefabRootObject = prefabObject.GetObject("root");
 
-					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true);
+					using CopyFlags = GameObject::CopyFlags;
+
+					CopyFlags copyFlags = (CopyFlags)((u32)CopyFlags::ALL &
+						~(u32)CopyFlags::CREATE_RENDER_OBJECT &
+						~(u32)CopyFlags::ADD_TO_SCENE);
+					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true, copyFlags);
 					prefabTemplate->m_PrefabIDLoadedFrom = prefabID;
 
 					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);

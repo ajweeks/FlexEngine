@@ -1360,7 +1360,8 @@ namespace flex
 			Transform::ParseJSON(transformObj, m_Transform);
 		}
 
-		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs);
+		bool bCreateRenderObject = (copyFlags & (u32)CopyFlags::CREATE_RENDER_OBJECT) != 0;
+		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs, bCreateRenderObject);
 
 		JSONObject colliderObj;
 		if (obj.TryGetObject("collider", colliderObj))
