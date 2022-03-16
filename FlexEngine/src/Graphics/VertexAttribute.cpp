@@ -72,6 +72,10 @@ namespace flex
 		{
 			stride += sizeof(glm::vec3);
 		}
+		if (vertexAttributes & (u32)VertexAttribute::SCALE)
+		{
+			stride += sizeof(glm::vec3);
+		}
 		if (vertexAttributes & (u32)VertexAttribute::EXTRA_VEC4)
 		{
 			stride += sizeof(glm::vec4);

@@ -29,7 +29,7 @@ namespace flex
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 	static const u32 TERRAIN_THREAD_GROUP_SIZE = 4;
-	static const i32 MAX_NUM_PARTICLE_PARAMS = 8;
+	static const i32 MAX_NUM_PARTICLE_PARAMS = 16;
 
 	// 48 bytes
 	struct DirLightData
@@ -140,6 +140,7 @@ namespace flex
 		glm::vec3 pos;
 		glm::vec3 vel;
 		glm::vec4 colour;
+		glm::vec3 scale;
 		glm::vec4 extraVec4;
 	};
 #pragma pack(pop)
@@ -306,7 +307,7 @@ namespace flex
 
 #define UNIFORM(val) val, SID(val)
 
-	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4));
+	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4)); // TODO: Rename to OBJECT_TO_WORLD
 	static const Uniform U_VIEW(UNIFORM("view"), sizeof(glm::mat4));
 	static const Uniform U_VIEW_INV(UNIFORM("invView"), sizeof(glm::mat4));
 	static const Uniform U_VIEW_PROJECTION(UNIFORM("viewProjection"), sizeof(glm::mat4));

@@ -823,8 +823,11 @@ namespace flex
 
 	void ParticleParameters::AddParam(const ParticleParameterPack& paramPack)
 	{
-		m_Parameters.emplace_back(paramPack);
-		SortParams();
+		if (!HasParam(paramPack.nameSID))
+		{
+			m_Parameters.emplace_back(paramPack);
+			SortParams();
+		}
 	}
 
 	ParticleParameterPack const* ParticleParameters::GetParam(StringID paramNameSID) const
@@ -837,6 +840,11 @@ namespace flex
 			}
 		}
 		return nullptr;
+	}
+
+	bool ParticleParameters::HasParam(StringID paramNameSID) const
+	{
+		return GetParam(paramNameSID) != nullptr;
 	}
 
 	bool ParticleParameters::DrawImGuiObjects()
@@ -1333,19 +1341,46 @@ namespace flex
 
 			if (ImGui::BeginPopupModal(addParameterPopup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 			{
-				static i32 paramIndex = 0;
-				ImGui::Combo("Parameter", &paramIndex, [](void* data, i32 index, const char** outText)
+				static i32 selectedParamIndex = 0;
+				const std::vector<ParticleParameterType>& paramTypes = g_ResourceManager->particleParameterTypes;
+				if (ImGui::BeginCombo("Parameter", paramTypes[selectedParamIndex].name.c_str()))
 				{
-					ParticleParameterType* type = (((ParticleParameterType*)data) + index);
-					*outText = type->name.c_str();
-					return true;
-				}, g_ResourceManager->particleParameterTypes.data(), (i32)g_ResourceManager->particleParameterTypes.size());
+					for (i32 i = 0; i < (i32)paramTypes.size(); ++i)
+					{
+						bool bSelected = i == selectedParamIndex;
+						bool bValid = !params.HasParam(SID(paramTypes[i].name.c_str()));
+						if (!bValid)
+						{
+							// TODO: Use PushDisabled after next ImGui update
+							ImVec4 buttonCol = ImGui::GetStyle().Colors[ImGuiCol_Button];
+							ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(buttonCol.x * 0.5f, buttonCol.y * 0.5f, buttonCol.z * 0.5f, buttonCol.w));
+						}
+
+						if (ImGui::Selectable(paramTypes[i].name.c_str(), &bSelected))
+						{
+							selectedParamIndex = i;
+						}
+
+						if (!bValid)
+						{
+							ImGui::PopStyleColor();
+						}
+					}
+					ImGui::EndCombo();
+				}
 
 				if (ImGui::Button("Add"))
 				{
-					ParticleParameterType& paramType = g_ResourceManager->particleParameterTypes[paramIndex];
+					const ParticleParameterType& paramType = paramTypes[selectedParamIndex];
 					params.AddParam(ParticleParameterPack(paramType.name, paramType.valueType));
 					bDirty = true;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel"))
+				{
 					ImGui::CloseCurrentPopup();
 				}
 

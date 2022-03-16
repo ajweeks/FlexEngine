@@ -170,6 +170,7 @@ namespace flex
 
 		void AddParam(const ParticleParameterPack& paramPack);
 		ParticleParameterPack const* GetParam(StringID paramNameSID) const;
+		bool HasParam(StringID paramNameSID) const;
 
 		bool DrawImGuiObjects();
 

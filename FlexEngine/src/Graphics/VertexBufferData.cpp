@@ -368,6 +368,24 @@ namespace flex
 				src += 3;
 			}
 
+			if (usingAttributes & (u32)VertexAttribute::SCALE)
+			{
+				if (Attributes & (u32)VertexAttribute::SCALE)
+				{
+					memcpy(dst, src, sizeof(glm::vec3));
+				}
+				else
+				{
+					memcpy(dst, &VEC3_ONE, sizeof(glm::vec3));
+				}
+				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::SCALE)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
 				if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)

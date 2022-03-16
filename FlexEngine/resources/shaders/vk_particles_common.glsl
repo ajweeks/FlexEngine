@@ -2,17 +2,18 @@
 const uint SAMPLE_TYPE_CONSTANT = 0;
 const uint SAMPLE_TYPE_RANDOM = 1;
 
-const int MAX_NUM_PARAMS = 8;
+const int MAX_NUM_PARAMS = 16;
 
 struct Particle
 {
-	float data[14];
+	float data[17];
 	/*
 	vec3 pos;
 	vec3 vel;
 	vec4 col;
+	vec3 scale;
 	float lifetime;
-	float initial_lifetime;
+	float initialLifetime;
 	vec2 unused;
 	*/
 };

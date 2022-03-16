@@ -170,6 +170,19 @@ namespace flex
 				++location;
 			}
 
+			if (vertexAttributes & (u32)VertexAttribute::SCALE)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec3);
+				++location;
+			}
+
 			if (vertexAttributes & (u32)VertexAttribute::TANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};

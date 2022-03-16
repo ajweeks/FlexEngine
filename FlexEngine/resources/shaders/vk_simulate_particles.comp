@@ -19,7 +19,7 @@ layout (binding = 2) buffer ParticleBuffer
 
 layout (local_size_x = 256) in;
 
-void Write(uint emitterIndex, vec3 pos, vec3 vel, vec4 col, float lifetime)
+void Write(uint emitterIndex, vec3 pos, vec3 vel, vec4 col, vec3 scale, float lifetime)
 {
 	particles[emitterIndex].data[0] = pos[0];
 	particles[emitterIndex].data[1] = pos[1];
@@ -31,7 +31,11 @@ void Write(uint emitterIndex, vec3 pos, vec3 vel, vec4 col, float lifetime)
 	particles[emitterIndex].data[7] = col[1];
 	particles[emitterIndex].data[8] = col[2];
 	particles[emitterIndex].data[9] = col[3];
-	particles[emitterIndex].data[10] = lifetime;
+	particles[emitterIndex].data[10] = scale[0];
+	particles[emitterIndex].data[11] = scale[1];
+	particles[emitterIndex].data[12] = scale[2];
+	particles[emitterIndex].data[13] = lifetime;
+	// 14 = initial lifetime
 }
 
 float RandomFloat(float minValue, float maxValue, int seedOffset)
@@ -109,13 +113,30 @@ void Spawn(uint emitterIndex)
 	// 5: initial velocity
 	// 6: lifetime
 	// 7: particle count
+	// 8: scale
+	// 9: uniform scale
 
-	float lifetime = SampleFloat(uboDynamic.particleSimData.spawnParams[6]);
+	vec4 col = SampleVec4(uboDynamic.particleSimData.spawnParams[3]);
 	vec3 pos = SampleVec3(uboDynamic.particleSimData.spawnParams[4]);
 	vec3 vel = SampleVec3(uboDynamic.particleSimData.spawnParams[5]);
-	vec4 col = SampleVec4(uboDynamic.particleSimData.spawnParams[3]);
+	float lifetime = SampleFloat(uboDynamic.particleSimData.spawnParams[6]);
 
-	Write(emitterIndex, pos, vel, col, lifetime);
+	vec3 scale;
+	bool uniformScale =  uboDynamic.particleSimData.spawnParams[9].valueMin[0] != 0.0;
+	if (uniformScale)
+	{
+		scale.x = SampleFloat(uboDynamic.particleSimData.spawnParams[8]);
+		scale.y = scale.x;
+		scale.z = scale.x;
+	}
+	else
+	{
+		scale = SampleVec3(uboDynamic.particleSimData.spawnParams[8]);
+	}
+
+	//vel = (objectToWorld * vec4(vel, 0)).xyz;
+
+	Write(emitterIndex, pos, vel, col, scale, lifetime);
 }
 
 void main()
@@ -126,7 +147,7 @@ void main()
 		return;
 	}
 
-	float lifetime = particles[index].data[10];
+	float lifetime = particles[index].data[13];
 
 	if (lifetime <= 0.0) 
 	{
@@ -136,7 +157,7 @@ void main()
 		}
 
 		Spawn(index);
-		lifetime = particles[index].data[10];
+		lifetime = particles[index].data[13];
 	}
 
 	vec3 acceleration = SampleVec3(uboDynamic.particleSimData.spawnParams[0]);
@@ -144,12 +165,21 @@ void main()
 	vec3 pos = vec3(particles[index].data[0], particles[index].data[1], particles[index].data[2]);
 	vec3 vel = vec3(particles[index].data[3], particles[index].data[4], particles[index].data[5]);
 	vec4 col = vec4(particles[index].data[6], particles[index].data[7], particles[index].data[8], particles[index].data[9]);
-	float initial_lifetime = particles[index].data[11];
+	vec3 scale = vec3(particles[index].data[10], particles[index].data[11], particles[index].data[12]);
+	float initialLifetime = particles[index].data[11];
 
 	float dt = uboDynamic.particleSimData.dt;
 
+	bool fadeOverLife = uboDynamic.particleSimData.spawnParams[2].valueMin[0] != 0.0;
+
 	pos += vel * dt;
-	float alpha = clamp(lifetime / initial_lifetime, 0.0, 1.0);
+	float alpha = 1.0;
+	if (fadeOverLife)
+	{
+		float fadePower = 3.0;
+		alpha = 1.0 - pow(1.0 - clamp(lifetime / initialLifetime, 0.0, 1.0), fadePower);
+	}
+
 	lifetime -= dt;
 	if (lifetime <= 0.0) 
 	{
@@ -160,5 +190,5 @@ void main()
 	vel.y -= dt * 0.2;
 	vel += (1.0 - dt) * acceleration;
 
-	Write(index, pos, vel, col, lifetime);
+	Write(index, pos, vel, col, scale, lifetime);
 }

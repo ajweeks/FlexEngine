@@ -7,7 +7,7 @@
 		},
 		{
 			"type" : "constant",
-			"constant" : -0.070000
+			"constant" : -0.100000
 		},
 		{
 			"type" : "constant",
@@ -70,8 +70,8 @@
 		},
 		{
 			"type" : "random",
-			"random min" : 1.000000,
-			"random max" : 4.500000
+			"random min" : 3.000000,
+			"random max" : 6.000000
 		},
 		{
 			"type" : "random",
@@ -82,12 +82,33 @@
 	"lifetime" : 
 	{
 		"type" : "random",
-		"random min" : 0.010000,
-		"random max" : 0.500000
+		"random min" : 0.100000,
+		"random max" : 0.750000
 	},
 	"particle count" : 
 	{
 		"type" : "constant",
-		"constant" : 256
+		"constant" : 16
+	},
+	"scale" : 
+	[
+		{
+			"type" : "random",
+			"random min" : 0.500000,
+			"random max" : 1.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
+	"uniform scale" : 
+	{
+		"type" : "constant",
+		"constant" : true
 	}
 }

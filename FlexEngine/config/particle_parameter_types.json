@@ -36,6 +36,14 @@
 		{
 			"name" : "acceleration",
 			"type" : "vec3"
+		},
+		{
+			"name" : "scale",
+			"type" : "vec3"
+		},
+		{
+			"name" : "uniform scale",
+			"type" : "bool"
 		}
 	]
 }

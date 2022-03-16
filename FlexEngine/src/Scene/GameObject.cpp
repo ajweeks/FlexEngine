@@ -29,6 +29,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // for distance2
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/vector_angle.hpp> // for angle
+#include <glm/ext/matrix_transform.hpp> // for rotate
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
@@ -13544,6 +13545,10 @@ namespace flex
 				if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 				{
 					m_NearestMineralDepositID = InvalidGameObjectID;
+
+					ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+					sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+					m_MiningSparksEmitterID = InvalidParticleEmitterID;
 				}
 
 				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
@@ -13562,8 +13567,11 @@ namespace flex
 							ComputeNewTargetPos();
 
 							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-							glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
-							glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, laserEndWS);
+							glm::vec3 laserEndWS = laserOriginWS + m_LaserDirection + VEC3_UP * 0.2f;
+							glm::vec3 sparkDir = glm::reflect(m_LaserDirection, VEC3_UP);
+							glm::quat rot = glm::quatLookAt(glm::normalize(sparkDir), VEC3_UP) * glm::quat(glm::vec3(PI_DIV_TWO, 0.0f, 0.0f));
+							glm::mat4 objectToWorld = glm::mat4(rot);
+							objectToWorld[3] = glm::vec4(laserEndWS, 1.0f);
 							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
 							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
 						}
@@ -13597,7 +13605,7 @@ namespace flex
 								PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
 								glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-								glm::vec3 laserEndWS = laserOriginWS + m_LaserEndPoint + VEC3_UP * 0.2f;
+								glm::vec3 laserEndWS = laserOriginWS + m_LaserDirection + VEC3_UP * 0.2f;
 								btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
 								physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
 
@@ -13619,7 +13627,19 @@ namespace flex
 							{
 								m_MineTimer.Complete();
 								m_NearestMineralDepositID = InvalidGameObjectID;
+
+								sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+								m_MiningSparksEmitterID = InvalidParticleEmitterID;
 							}
+						}
+					}
+					else
+					{
+						if (m_MiningSparksEmitterID != InvalidParticleEmitterID)
+						{
+							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							m_MiningSparksEmitterID = InvalidParticleEmitterID;
 						}
 					}
 				}
@@ -13636,7 +13656,7 @@ namespace flex
 		{
 			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
 			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-			debugDrawer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserEndPoint), ToBtVec4(laserColour));
+			debugDrawer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserDirection), ToBtVec4(laserColour));
 		}
 	}
 
@@ -13747,7 +13767,7 @@ namespace flex
 	void Miner::ComputeNewTargetPos()
 	{
 		real radius = 3.0f;
-		m_LaserEndPoint = glm::vec3(
+		m_LaserDirection = glm::vec3(
 			RandomFloat(-radius, radius),
 			-m_LaserEmitterHeight,
 			RandomFloat(-radius, radius));

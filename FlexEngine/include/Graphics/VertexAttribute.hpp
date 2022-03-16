@@ -15,8 +15,9 @@ namespace flex
 		COLOUR_R32G32B32A32_SFLOAT	= (1 << 6),
 		TANGENT						= (1 << 7),
 		NORMAL						= (1 << 8),
-		EXTRA_VEC4					= (1 << 9),
-		EXTRA_INT					= (1 << 10),
+		SCALE						= (1 << 9),
+		EXTRA_VEC4					= (1 << 10),
+		EXTRA_INT					= (1 << 11),
 
 		_NONE						= 0,
 	};
@@ -39,6 +40,7 @@ namespace flex
 		{ "in_Colour", 4, typeid(glm::vec4) },
 		{ "in_Tangent", 3, typeid(glm::vec3) },
 		{ "in_Normal", 3, typeid(glm::vec3) },
+		{ "in_Scale", 3, typeid(glm::vec3) },
 		{ "in_ExtraVec4", 4, typeid(glm::vec4) },
 		{ "in_ExtraInt", 1, typeid(i32) },
 	};
