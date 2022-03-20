@@ -15,7 +15,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/transform.hpp> // For glm::scale overload
 
 #include <freetype/ftbitmap.h>
-
 #if COMPILE_IMGUI
 #include "imgui_internal.h" // For columns API
 
@@ -567,7 +566,6 @@ namespace flex
 
 			CreateSemaphores();
 
-			InitializeFreeType();
 			// Needs to be called prior to rendering fonts, call here just in case
 			UpdateConstantUniformBuffers();
 			g_ResourceManager->LoadFonts(false);
@@ -794,8 +792,6 @@ namespace flex
 
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
-
-			DestroyFreeType();
 
 			vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 
@@ -2886,31 +2882,6 @@ namespace flex
 					particleSystem->system->OnTemplateUpdated(particleTemplate);
 				}
 			}
-		}
-
-		bool VulkanRenderer::InitializeFreeType()
-		{
-			PROFILE_AUTO("InitializeFreeType");
-
-			if (FT_Init_FreeType(&m_FTLibrary) != FT_Err_Ok)
-			{
-				PrintError("Failed to initialize FreeType\n");
-				return false;
-			}
-
-			{
-				i32 maj, min, pat;
-				FT_Library_Version(m_FTLibrary, &maj, &min, &pat);
-
-				Print("Free type v%d.%d.%d\n", maj, min, pat);
-			}
-
-			return true;
-		}
-
-		void VulkanRenderer::DestroyFreeType()
-		{
-			FT_Done_FreeType(m_FTLibrary);
 		}
 
 		void VulkanRenderer::GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath)

@@ -463,6 +463,9 @@ namespace flex
 
 		void CreateParticleBuffer(Material* material);
 
+		bool InitializeFreeType();
+		void DestroyFreeType();
+
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
 		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer

@@ -206,9 +206,6 @@ namespace flex
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
 
-			bool InitializeFreeType();
-			void DestroyFreeType();
-
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);

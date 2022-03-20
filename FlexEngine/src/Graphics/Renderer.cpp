@@ -9,6 +9,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/transform.hpp> // for scale
 #include <glm/gtx/quaternion.hpp> // for rotate
+
+#include <freetype/ftbitmap.h>
 IGNORE_WARNINGS_POP
 
 #include <typeinfo>
@@ -128,6 +130,8 @@ namespace flex
 	{
 		PROFILE_AUTO("Renderer PostInitialize");
 
+		InitializeFreeType();
+
 		// TODO: Use MeshComponent for these objects?
 		m_UIMesh->Initialize();
 
@@ -242,6 +246,8 @@ namespace flex
 
 	void Renderer::Destroy()
 	{
+		DestroyFreeType();
+
 		for (GameObject* obj : m_PersistentObjects)
 		{
 			obj->Destroy();
@@ -3969,6 +3975,31 @@ namespace flex
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				false);
 		}
+	}
+
+	bool Renderer::InitializeFreeType()
+	{
+		PROFILE_AUTO("InitializeFreeType");
+
+		if (FT_Init_FreeType(&m_FTLibrary) != FT_Err_Ok)
+		{
+			PrintError("Failed to initialize FreeType\n");
+			return false;
+		}
+
+		{
+			i32 maj, min, pat;
+			FT_Library_Version(m_FTLibrary, &maj, &min, &pat);
+
+			Print("Free type v%d.%d.%d\n", maj, min, pat);
+		}
+
+		return true;
+	}
+
+	void Renderer::DestroyFreeType()
+	{
+		FT_Done_FreeType(m_FTLibrary);
 	}
 
 	void PhysicsDebugDrawBase::flushLines()

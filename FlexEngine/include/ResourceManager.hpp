@@ -75,7 +75,7 @@ namespace flex
 		void SetRenderedSDFFilePath(FontMetaData& metaData);
 
 		bool LoadFontMetrics(const std::vector<char>& fileMemory,
-			FT_Library& ft,
+			FT_Library ft,
 			FontMetaData& metaData,
 			std::map<i32, FontMetric*>* outCharacters,
 			std::array<glm::vec2i, 4>* outMaxPositions,
