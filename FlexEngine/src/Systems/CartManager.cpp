@@ -4,11 +4,10 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // For distance2
-
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -321,10 +320,10 @@ namespace flex
 				g_EngineInstance->IsRenderingEditorObjects();
 			if (bRenderBoundingSpheres)
 			{
-				auto debugDrawer = g_Renderer->GetDebugDrawer();
+				DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 				for (BaseCart* cart : m_Carts)
 				{
-					debugDrawer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
+					debugRenderer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
 				}
 			}
 

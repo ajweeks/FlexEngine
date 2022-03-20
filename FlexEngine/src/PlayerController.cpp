@@ -12,7 +12,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/vector_angle.hpp>
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
 #include <list>
@@ -22,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
@@ -100,7 +100,7 @@ namespace flex
 
 		// TODO: Make frame-rate-independent!
 
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 		auto GetObjectPointedAt = [this]() -> GameObject*
 		{
@@ -210,8 +210,8 @@ namespace flex
 					}
 
 					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
-					debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
-					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+					debugRenderer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
+					debugRenderer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 				}
 
 				if (m_Player->m_bEditingTrack)
@@ -266,8 +266,8 @@ namespace flex
 					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
 					static btVector3 ringColEditing(0.48f, 0.22f, 0.65f);
 					static btVector3 ringColEditingActive(0.6f, 0.4f, 0.85f);
-					debugDrawer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
-					debugDrawer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+					debugRenderer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+					debugRenderer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
 				}
 
 				if (m_bAttemptPickup)
@@ -723,9 +723,9 @@ namespace flex
 		if (bDrawLocalAxes)
 		{
 			const real lineLength = 4.0f;
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
-			debugDrawer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
+			debugRenderer->drawLine(rbPos, rbPos + ToBtVec3(up) * lineLength, btVector3(0.0f, 1.0f, 0.0f));
+			debugRenderer->drawLine(rbPos, rbPos + ToBtVec3(forward) * lineLength, btVector3(0.0f, 0.0f, 1.0f));
+			debugRenderer->drawLine(rbPos, rbPos + ToBtVec3(right) * lineLength, btVector3(1.0f, 0.0f, 0.0f));
 		}
 
 		m_bAttemptCompleteTrack = false;

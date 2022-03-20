@@ -15,6 +15,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Platform/Platform.hpp"
 #include "StringBuilder.hpp"
@@ -2335,9 +2336,9 @@ namespace flex
 
 	void AABB::DrawDebug(const btVector3& lineColour)
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
-		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
+		debugRenderer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
 	}
 
 	std::vector<PointTest> PointTest::ComputePointTests(

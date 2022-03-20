@@ -10,8 +10,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/intersect.hpp>
 #include <glm/gtx/common.hpp> // For fmod
 #include <glm/gtx/euler_angles.hpp>
-
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
@@ -19,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
@@ -135,7 +134,7 @@ namespace flex
 					glm::vec3 dir = axes[m_HoveringAxisIndex];
 					btVector3 p0 = ToBtVec3(pos + dir * 1000.0f);
 					btVector3 p1 = ToBtVec3(pos - dir * 1000.0f);
-					g_Renderer->GetDebugDrawer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
+					g_Renderer->GetDebugRenderer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
 				}
 			}
 		}
@@ -155,7 +154,7 @@ namespace flex
 		{
 			real x = sin(g_SecElapsedSinceProgramStart) + i * 0.25f;
 			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
-			g_Renderer->GetDebugDrawer()->drawLine(
+			g_Renderer->GetDebugRenderer()->drawLine(
 				btVector3(x, 0, z),
 				g_Editor->HasSelectedObject() ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
 				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),

@@ -4,13 +4,12 @@
 #include "Systems/TrackManager.hpp"
 
 IGNORE_WARNINGS_PUSH
-#include "LinearMath/btIDebugDraw.h"
-
 #include <glm/gtx/norm.hpp> // For distance2
 IGNORE_WARNINGS_POP
 
 #include "Systems/CartManager.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Helpers.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
@@ -176,7 +175,7 @@ namespace flex
 			tracks[i].DrawDebug(highlightColour, distAlongTrack);
 		}
 
-		btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 		for (i32 i = 0; i < (i32)junctions.size(); ++i)
 		{
@@ -189,7 +188,7 @@ namespace flex
 			{
 				sphereCol = btVector3(0.9f, 0.9f, 0.9f);
 			}
-			debugDrawer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
+			debugRenderer->drawSphere(ToBtVec3(pos), 0.5f, sphereCol);
 
 			for (i32 j = 0; j < junctions[i].trackCount; ++j)
 			{
@@ -210,7 +209,7 @@ namespace flex
 					glm::vec3 dir1 = glm::normalize(trackP1 - pos);
 					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir1, 0.1f);
 					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColPos);
-					debugDrawer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
+					debugRenderer->drawLine(start, ToBtVec3(pos + dir1 * 5.0f + VEC3_UP * 1.5f), lineCol);
 				}
 				if (curveIndex > 0)
 				{
@@ -218,7 +217,7 @@ namespace flex
 					glm::vec3 dir2 = glm::normalize(trackP2 - pos);
 					bool bDirsEqual = NearlyEquals(m_PreviewJunctionDir.dir, dir2, 0.1f);
 					btVector3 lineCol = ((m_PreviewJunctionDir.junctionIndex == i && bDirsEqual) ? lineColPreview : lineColNeg);
-					debugDrawer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
+					debugRenderer->drawLine(start, ToBtVec3(pos + dir2 * 5.0f + VEC3_UP * 1.5f), lineCol);
 				}
 			}
 		}

@@ -3,9 +3,9 @@
 
 #include <vector>
 
-#include "Graphics/Renderer.hpp"
+#include "Graphics/DebugRenderer.hpp"
+
 #include "Graphics/VertexBufferData.hpp"
-#include "Transform.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -14,15 +14,14 @@ namespace flex
 
 	namespace vk
 	{
-		class VulkanRenderer;
-
-		class VulkanPhysicsDebugDraw final : public PhysicsDebugDrawBase
+		class VulkanDebugRenderer final : public DebugRenderer
 		{
 		public:
-			VulkanPhysicsDebugDraw();
-			virtual ~VulkanPhysicsDebugDraw();
+			VulkanDebugRenderer();
+			virtual ~VulkanDebugRenderer();
 
 			virtual void Initialize() override;
+			virtual void PostInitialize() override;
 			virtual void Destroy() override;
 
 			virtual void OnPreSceneChange() override;
@@ -46,8 +45,6 @@ namespace flex
 			void CreateDebugObject();
 
 			void Clear();
-
-			VulkanRenderer* m_Renderer = nullptr;
 
 			MaterialID m_MaterialID = InvalidMaterialID;
 

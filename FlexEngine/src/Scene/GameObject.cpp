@@ -43,6 +43,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Inventory.hpp"
@@ -497,19 +498,19 @@ namespace flex
 
 		if (m_NearbyInteractable != nullptr)
 		{
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 			btVector3 pos = ToBtVec3(m_NearbyInteractable->GetTransform()->GetWorldPosition());
 			//real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
-			//debugDrawer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
+			//debugRenderer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
-			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
 
 		for (GameObject* child : m_Children)
@@ -3179,19 +3180,19 @@ namespace flex
 		}
 
 		btVector3 startPos = ToBtVec3(startingPos);
-		g_Renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugRenderer()->drawLine(
 			startPos,
 			startPos + ToBtVec3(moveAxis * maxDist),
 			btVector3(1, 1, 1));
 		if (minDist < 0.0f)
 		{
-			g_Renderer->GetDebugDrawer()->drawLine(
+			g_Renderer->GetDebugRenderer()->drawLine(
 				startPos,
 				startPos + ToBtVec3(moveAxis * minDist),
 				btVector3(0.99f, 0.6f, 0.6f));
 		}
 
-		g_Renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugRenderer()->drawLine(
 			startPos,
 			startPos + ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
@@ -3582,7 +3583,7 @@ namespace flex
 			{
 				// Debug lines
 				{
-					PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+					DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 					glm::vec3 forward = m_Transform.GetForward();
 					glm::vec3 right = m_Transform.GetRight();
@@ -3597,7 +3598,7 @@ namespace flex
 						glm::vec3 basePos = pos + offset * spacing;
 						btVector3 lightPos = ToBtVec3(basePos);
 						btVector3 lineEnd = ToBtVec3(basePos + scaledForward);
-						debugDrawer->drawLine(lightPos, lineEnd, lineColour);
+						debugRenderer->drawLine(lightPos, lineEnd, lineColour);
 					}
 				}
 
@@ -4268,7 +4269,7 @@ namespace flex
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+				DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 				btVector3 lineColour(0.1f, 0.8f, 0.1f);
 				btVector3 p0(ToBtVec3(data.points[0]));
@@ -4278,12 +4279,12 @@ namespace flex
 				btVector3 center(ToBtVec3((data.points[0] + data.points[1] + data.points[2] + data.points[3]) / 4.0f));
 				glm::vec3 dir = glm::normalize(glm::cross(glm::vec3(data.points[1]) - glm::vec3(data.points[0]), glm::vec3(data.points[2]) - glm::vec3(data.points[0])));
 				btVector3 dirBt = ToBtVec3(dir);
-				debugDrawer->drawLine(p0, p1, lineColour);
-				debugDrawer->drawLine(p1, p2, lineColour);
-				debugDrawer->drawLine(p2, p3, lineColour);
-				debugDrawer->drawLine(p3, p0, lineColour);
+				debugRenderer->drawLine(p0, p1, lineColour);
+				debugRenderer->drawLine(p1, p2, lineColour);
+				debugRenderer->drawLine(p2, p3, lineColour);
+				debugRenderer->drawLine(p3, p0, lineColour);
 
-				debugDrawer->drawLine(center, center + dirBt, lineColour);
+				debugRenderer->drawLine(center, center + dirBt, lineColour);
 
 				//BaseCamera* cam = g_CameraManager->CurrentCamera();
 				//
@@ -5153,7 +5154,7 @@ namespace flex
 			const glm::vec2i& chunkIndex = waveChunks[i].index;
 			for (u32 j = 0; j < i; ++j)
 			{
-				g_Renderer->GetDebugDrawer()->drawSphere(btVector3((chunkIndex.x) * size, 8.0f + 1.5f * j, (chunkIndex.y) * size), 0.5f, btVector4(1, 1, 1, 1));
+				g_Renderer->GetDebugRenderer()->drawSphere(btVector3((chunkIndex.x) * size, 8.0f + 1.5f * j, (chunkIndex.y) * size), 0.5f, btVector4(1, 1, 1, 1));
 			}
 		}
 #endif
@@ -5280,9 +5281,9 @@ namespace flex
 			{
 				glm::vec2 chunkCenter(x * size, z * size);
 
-				//if (g_Renderer->GetDebugDrawer() != nullptr)
+				//if (g_Renderer->GetDebugRenderer() != nullptr)
 				//{
-				//	g_Renderer->GetDebugDrawer()->drawSphere(btVector3(chunkCenter.x, 1.0f, chunkCenter.y), 0.5f, btVector3(0.75f, 0.5f, 0.6f));
+				//	g_Renderer->GetDebugRenderer()->drawSphere(btVector3(chunkCenter.x, 1.0f, chunkCenter.y), 0.5f, btVector3(0.75f, 0.5f, 0.6f));
 				//}
 
 				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
@@ -6912,14 +6913,14 @@ namespace flex
 		Transform* plug1Transform = plug1->GetTransform();
 		glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
 
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
-		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
-		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
-		debugDrawer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
 
-		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
-		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
-		debugDrawer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
 
 		glm::vec3 startToEnd = plug1Pos - plug0Pos;
 
@@ -7348,12 +7349,12 @@ namespace flex
 			glm::vec3 v1 = c + (right + forward) * scale;
 			glm::vec3 v2 = c + (-right + forward) * scale;
 			glm::vec3 v3 = c - (forward * scale);
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			debugRenderer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
-			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 			o = glm::vec3(0.0f, 2.0f, 0.0f);
-			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 		}
 
 		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
@@ -10955,7 +10956,7 @@ namespace flex
 		if (lookLen > 0.0001f)
 		{
 			static glm::quat offsetQuat = glm::quat(glm::vec3(PI_DIV_TWO, PI, 0.0f));
-			//g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
+			//g_Renderer->GetDebugRenderer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
 			glm::vec3 up = glm::abs(glm::angle(lookDirNorm, VEC3_UP)) < 0.01f ? VEC3_FORWARD : VEC3_UP;
 			glm::quat targetRot = glm::quatLookAt(lookDirNorm, up) * offsetQuat;
 			if (!glm::any(glm::isnan(targetRot)))
@@ -10967,7 +10968,7 @@ namespace flex
 
 		GameObject::Update();
 
-		g_Renderer->GetDebugDrawer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
+		g_Renderer->GetDebugRenderer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
 
 		m_SpringSim->Update();
 		m_Bobber->Update();
@@ -11476,10 +11477,10 @@ namespace flex
 
 	void SoftBody::Draw()
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 		for (Point* point : points)
 		{
-			debugDrawer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+			debugRenderer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
 		}
 
 		for (u32 i = 0; i < (u32)constraints.size(); ++i)
@@ -11491,7 +11492,7 @@ namespace flex
 			case Constraint::Type::DISTANCE:
 			{
 				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
-				debugDrawer->drawLine(
+				debugRenderer->drawLine(
 					ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos),
 					ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
 					btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
@@ -11514,18 +11515,18 @@ namespace flex
 					btVector3 colN = btVector3(0.9f, 0.1f, 0.1f);
 					real f = 0.01f;
 
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
 
 					glm::vec3 tri0Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[2]]->pos) / 3.0f;
 					glm::vec3 tri1Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[3]]->pos) / 3.0f;
 
-					debugDrawer->drawLine(ToBtVec3(tri0Mid), ToBtVec3(tri0Mid + normal0 * 1.0f), colN, colN);
-					debugDrawer->drawLine(ToBtVec3(tri1Mid), ToBtVec3(tri1Mid + normal1 * 1.0f), colN, colN);
+					debugRenderer->drawLine(ToBtVec3(tri0Mid), ToBtVec3(tri0Mid + normal0 * 1.0f), colN, colN);
+					debugRenderer->drawLine(ToBtVec3(tri1Mid), ToBtVec3(tri1Mid + normal1 * 1.0f), colN, colN);
 				}
 			} break;
 			}
@@ -12905,7 +12906,7 @@ namespace flex
 
 		const PhysicsDebuggingSettings& debuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 		if (!debuggingSettings.bDisableAll &&
-			g_Renderer->GetDebugDrawer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
+			g_Renderer->GetDebugRenderer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
 		{
 			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
 			{
@@ -13647,15 +13648,15 @@ namespace flex
 
 		if (g_Editor->IsObjectSelected(ID))
 		{
-			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
-			debugDrawer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			debugRenderer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
 		}
 
 		if (m_MineCooldownTimer.remaining == 0.0f && m_MineTimer.remaining > 0.0f)
 		{
-			PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-			debugDrawer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserDirection), ToBtVec4(laserColour));
+			debugRenderer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserDirection), ToBtVec4(laserColour));
 		}
 	}
 

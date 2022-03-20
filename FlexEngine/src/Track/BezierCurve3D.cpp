@@ -6,6 +6,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp>
 IGNORE_WARNINGS_POP
 
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 
@@ -29,7 +30,7 @@ namespace flex
 
 	void BezierCurve3D::DrawDebug(bool bHighlighted, const btVector4& baseColour, const btVector4& highlightColour) const
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 		btVector4 lineColour = bHighlighted ? highlightColour : baseColour;
 		btVector3 pPoint = ToBtVec3(points[0]);
@@ -38,22 +39,22 @@ namespace flex
 			real t = (real)i / (real)debug_SegmentCount;
 			btVector3 nPoint = ToBtVec3(GetPointOnCurve(t));
 
-			debugDrawer->DrawLineWithAlpha(pPoint, nPoint, lineColour);
+			debugRenderer->DrawLineWithAlpha(pPoint, nPoint, lineColour);
 
 			pPoint = nPoint;
 		}
 
 #define DRAW_HANDLES 1
 #if DRAW_HANDLES
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), s_PointColour);
-		debugDrawer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
+		debugRenderer->DrawLineWithAlpha(ToBtVec3(points[0]), ToBtVec3(points[1]), s_PointColour);
+		debugRenderer->DrawLineWithAlpha(ToBtVec3(points[2]), ToBtVec3(points[3]), s_PointColour);
 #endif
 
 		btVector3 pointColours[] = { btVector3(0.8f, 0.1f, 0.1f), btVector3(0.1f, 0.8f, 0.1f), btVector3(0.1f, 0.1f, 0.8f), btVector3(0.8f, 0.8f, 0.8f) };
 		for (u32 i = 0; i < 4; ++i)
 		{
 			const glm::vec3& point = points[i];
-			debugDrawer->drawSphere(ToBtVec3(point), 0.1f + i * 0.02f, pointColours[i]);
+			debugRenderer->drawSphere(ToBtVec3(point), 0.1f + i * 0.02f, pointColours[i]);
 		}
 	}
 

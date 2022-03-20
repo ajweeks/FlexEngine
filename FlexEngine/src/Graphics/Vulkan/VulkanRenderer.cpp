@@ -34,7 +34,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
-#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+#include "Graphics/Vulkan/VulkanDebugRenderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Scene/SceneManager.hpp"
@@ -419,6 +419,10 @@ namespace flex
 			m_LTCMatricesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_mat.hdr", &m_SamplerLinearClampToEdge, false, false, true);
 			m_LTCAmplitudesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_amp.hdr", &m_SamplerLinearClampToEdge, false, false, true);
 
+			CHECK_EQ(m_DebugRenderer, nullptr);
+			m_DebugRenderer = new VulkanDebugRenderer();
+			m_DebugRenderer->Initialize();
+
 			m_bInitialized = true;
 		}
 
@@ -428,6 +432,8 @@ namespace flex
 
 			Renderer::PostInitialize();
 
+			m_DebugRenderer->PostInitialize();
+
 			m_DescriptorPool = new VulkanDescriptorPool(m_VulkanDevice, "Descriptor pool");
 			m_DescriptorPoolPersistent = new VulkanDescriptorPool(m_VulkanDevice, "Persistent Descriptor pool");
 
@@ -435,14 +441,6 @@ namespace flex
 
 			const glm::vec2i windowSize = g_Window->GetFrameBufferSize();
 			OnWindowSizeChanged(windowSize.x, windowSize.y);
-
-			// TODO: Pull out into functions
-			CHECK_EQ(m_PhysicsDebugDrawer, nullptr);
-			m_PhysicsDebugDrawer = new VulkanPhysicsDebugDraw();
-			m_PhysicsDebugDrawer->Initialize();
-
-			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			world->setDebugDrawer(m_PhysicsDebugDrawer);
 
 			// Figure out largest shader uniform buffer to set m_DynamicAlignment correctly
 			{
@@ -1870,7 +1868,7 @@ namespace flex
 				CreateFullscreenBlitResources();
 			}
 
-			m_PhysicsDebugDrawer->UpdateDebugMode();
+			m_DebugRenderer->UpdateDebugMode();
 
 			{
 				VulkanMaterial* wireframeMat = (VulkanMaterial*)m_Materials[m_WireframeMatID];
@@ -2712,9 +2710,9 @@ namespace flex
 
 			Renderer::NewFrame();
 
-			if (m_PhysicsDebugDrawer != nullptr)
+			if (m_DebugRenderer != nullptr)
 			{
-				m_PhysicsDebugDrawer->ClearLines();
+				m_DebugRenderer->ClearLines();
 			}
 
 			if (g_Window->GetFrameBufferSize().x == 0)
@@ -2730,9 +2728,9 @@ namespace flex
 			}
 		}
 
-		PhysicsDebugDrawBase* VulkanRenderer::GetDebugDrawer()
+		DebugRenderer* VulkanRenderer::GetDebugRenderer()
 		{
-			return m_PhysicsDebugDrawer;
+			return m_DebugRenderer;
 		}
 
 		void VulkanRenderer::DrawStringSS(const std::string& str,

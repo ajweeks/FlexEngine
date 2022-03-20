@@ -1,7 +1,7 @@
 #include "stdafx.hpp"
 #if COMPILE_VULKAN
 
-#include "Graphics/Vulkan/VulkanPhysicsDebugDraw.hpp"
+#include "Graphics/Vulkan/VulkanDebugRenderer.hpp"
 
 #include "Cameras/BaseCamera.hpp"
 #include "Graphics/Renderer.hpp"
@@ -18,22 +18,21 @@ namespace flex
 {
 	namespace vk
 	{
-		VulkanPhysicsDebugDraw::VulkanPhysicsDebugDraw() :
+		VulkanDebugRenderer::VulkanDebugRenderer() :
 			m_VertexBufferCreateInfo({})
 		{
 		}
 
-		VulkanPhysicsDebugDraw::~VulkanPhysicsDebugDraw()
+		VulkanDebugRenderer::~VulkanDebugRenderer()
 		{
 		}
 
-		void VulkanPhysicsDebugDraw::Initialize()
+		void VulkanDebugRenderer::Initialize()
 		{
-			PROFILE_AUTO("VulkanPhysicsDebugDraw Initialize");
+			PROFILE_AUTO("VulkanDebugRenderer Initialize");
 
-			m_Renderer = (VulkanRenderer*)(g_Renderer);
 			const std::string debugMatName = "Debug";
-			if (!m_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
+			if (!g_Renderer->FindOrCreateMaterialByName(debugMatName, m_MaterialID))
 			{
 				MaterialCreateInfo debugMatCreateInfo = {};
 				debugMatCreateInfo.shaderName = "colour";
@@ -44,54 +43,59 @@ namespace flex
 				debugMatCreateInfo.bSerializable = false;
 				m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
 			}
+		}
+
+		void VulkanDebugRenderer::PostInitialize()
+		{
+			PROFILE_AUTO("VulkanDebugRenderer PostInitialize");
 
 			CreateDebugObject();
 		}
 
-		void VulkanPhysicsDebugDraw::Destroy()
+		void VulkanDebugRenderer::Destroy()
 		{
 			m_Object = nullptr;
 		}
 
-		void VulkanPhysicsDebugDraw::OnPreSceneChange()
+		void VulkanDebugRenderer::OnPreSceneChange()
 		{
 			m_Object = nullptr;
 		}
 
-		void VulkanPhysicsDebugDraw::OnPostSceneChange()
+		void VulkanDebugRenderer::OnPostSceneChange()
 		{
 			Clear();
 			CreateDebugObject();
 		}
 
-		void VulkanPhysicsDebugDraw::reportErrorWarning(const char* warningString)
+		void VulkanDebugRenderer::reportErrorWarning(const char* warningString)
 		{
-			PrintError("VulkanPhysicsDebugDraw: %s\n", warningString);
+			PrintError("VulkanDebugRenderer: %s\n", warningString);
 		}
 
-		void VulkanPhysicsDebugDraw::draw3dText(const btVector3& location, const char* textString)
+		void VulkanDebugRenderer::draw3dText(const btVector3& location, const char* textString)
 		{
 			FLEX_UNUSED(location);
 			FLEX_UNUSED(textString);
 		}
 
-		void VulkanPhysicsDebugDraw::setDebugMode(int debugMode)
+		void VulkanDebugRenderer::setDebugMode(int debugMode)
 		{
 			FLEX_UNUSED(debugMode);
 			// NOTE: Call UpdateDebugMode instead of this
 		}
 
-		int VulkanPhysicsDebugDraw::getDebugMode() const
+		int VulkanDebugRenderer::getDebugMode() const
 		{
 			return m_DebugMode;
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colour)
+		void VulkanDebugRenderer::drawLine(const btVector3& from, const btVector3& to, const btVector3& colour)
 		{
 			drawLine(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::drawLine(const btVector3& from, const btVector3& to, const btVector3& colourFrom, const btVector3& colourTo)
+		void VulkanDebugRenderer::drawLine(const btVector3& from, const btVector3& to, const btVector3& colourFrom, const btVector3& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
@@ -103,7 +107,7 @@ namespace flex
 			}
 		}
 
-		void VulkanPhysicsDebugDraw::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour)
+		void VulkanDebugRenderer::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour)
 		{
 			FLEX_UNUSED(PointOnB);
 			FLEX_UNUSED(normalOnB);
@@ -112,12 +116,12 @@ namespace flex
 			FLEX_UNUSED(colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour)
+		void VulkanDebugRenderer::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour)
 		{
 			DrawLineWithAlpha(from, to, colour, colour);
 		}
 
-		void VulkanPhysicsDebugDraw::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo)
+		void VulkanDebugRenderer::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo)
 		{
 			if (m_LineSegmentIndex < MAX_NUM_LINE_SEGMENTS)
 			{
@@ -130,7 +134,7 @@ namespace flex
 		}
 
 
-		void VulkanPhysicsDebugDraw::Draw()
+		void VulkanDebugRenderer::Draw()
 		{
 			const u32 lineCount = m_LineSegmentIndex;
 
@@ -194,7 +198,7 @@ namespace flex
 			}
 		}
 
-		void VulkanPhysicsDebugDraw::CreateDebugObject()
+		void VulkanDebugRenderer::CreateDebugObject()
 		{
 			PROFILE_AUTO("CreateDebugObject");
 
@@ -210,8 +214,8 @@ namespace flex
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);
 			Mesh* mesh = m_Object->SetMesh(new Mesh(m_Object));
-			Material* mat = m_Renderer->GetMaterial(m_MaterialID);
-			const VertexAttributes vertexAttributes = m_Renderer->GetShader(mat->shaderID)->vertexAttributes;
+			Material* mat = g_Renderer->GetMaterial(m_MaterialID);
+			const VertexAttributes vertexAttributes = g_Renderer->GetShader(mat->shaderID)->vertexAttributes;
 			if (!mesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
@@ -219,7 +223,7 @@ namespace flex
 			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
 		}
 
-		void VulkanPhysicsDebugDraw::Clear()
+		void VulkanDebugRenderer::Clear()
 		{
 			m_VertexBufferCreateInfo.positions_3D.clear();
 			m_VertexBufferCreateInfo.colours_R32G32B32A32.clear();

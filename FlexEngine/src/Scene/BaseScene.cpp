@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -144,7 +145,7 @@ namespace flex
 			rootObject->PostInitialize();
 		}
 
-		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugDrawer());
+		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugRenderer());
 	}
 
 	void BaseScene::Destroy()

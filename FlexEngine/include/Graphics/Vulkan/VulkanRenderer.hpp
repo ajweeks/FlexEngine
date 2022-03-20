@@ -18,10 +18,10 @@
 namespace flex
 {
 	struct ShaderBatchPair;
+	class DebugRenderer;
 
 	namespace vk
 	{
-		class VulkanPhysicsDebugDraw;
 		struct VulkanBuffer;
 		struct VulkanDevice;
 
@@ -93,7 +93,7 @@ namespace flex
 
 			virtual void NewFrame() override;
 
-			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
+			virtual DebugRenderer* GetDebugRenderer() override;
 
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& colour,
@@ -202,7 +202,7 @@ namespace flex
 			virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) override;
 
 		private:
-			friend VulkanPhysicsDebugDraw;
+			friend DebugRenderer;
 			friend VulkanRenderPass;
 			friend VulkanDescriptorPool;
 

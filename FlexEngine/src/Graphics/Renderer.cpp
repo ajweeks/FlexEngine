@@ -21,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/ShaderCompiler.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -287,11 +288,11 @@ namespace flex
 		DestroyRenderObject(m_Quad3DSSRenderID);
 		DestroyRenderObject(m_GBufferQuadRenderID);
 
-		if (m_PhysicsDebugDrawer != nullptr)
+		if (m_DebugRenderer != nullptr)
 		{
-			m_PhysicsDebugDrawer->Destroy();
-			delete m_PhysicsDebugDrawer;
-			m_PhysicsDebugDrawer = nullptr;
+			m_DebugRenderer->Destroy();
+			delete m_DebugRenderer;
+			m_DebugRenderer = nullptr;
 		}
 	}
 
@@ -1655,9 +1656,9 @@ namespace flex
 
 	void Renderer::OnPreSceneChange()
 	{
-		if (m_PhysicsDebugDrawer != nullptr)
+		if (m_DebugRenderer != nullptr)
 		{
-			m_PhysicsDebugDrawer->OnPreSceneChange();
+			m_DebugRenderer->OnPreSceneChange();
 		}
 	}
 
@@ -1665,9 +1666,9 @@ namespace flex
 	{
 		m_UIMesh->OnPostSceneChange();
 
-		if (m_PhysicsDebugDrawer != nullptr)
+		if (m_DebugRenderer != nullptr)
 		{
-			m_PhysicsDebugDrawer->OnPostSceneChange();
+			m_DebugRenderer->OnPostSceneChange();
 		}
 	}
 
@@ -4000,47 +4001,6 @@ namespace flex
 	void Renderer::DestroyFreeType()
 	{
 		FT_Done_FreeType(m_FTLibrary);
-	}
-
-	void PhysicsDebugDrawBase::flushLines()
-	{
-		Draw();
-	}
-
-	void PhysicsDebugDrawBase::DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale)
-	{
-		drawLine(origin, origin + quatRotate(orientation, btVector3(scale, 0.0f, 0.0f)), btVector3(0.9f, 0.1f, 0.1f));
-		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, scale, 0.0f)), btVector3(0.1f, 0.9f, 0.1f));
-		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, 0.0f, scale)), btVector3(0.1f, 0.1f, 0.9f));
-	}
-
-	void PhysicsDebugDrawBase::UpdateDebugMode()
-	{
-		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-
-		m_DebugMode =
-			(settings.bDisableAll ? DBG_NoDebug : 0) |
-			(settings.bDrawWireframe ? DBG_DrawWireframe : 0) |
-			(settings.bDrawAabb ? DBG_DrawAabb : 0) |
-			(settings.bDrawFeaturesText ? DBG_DrawFeaturesText : 0) |
-			(settings.bDrawContactPoints ? DBG_DrawContactPoints : 0) |
-			(settings.bNoDeactivation ? DBG_NoDeactivation : 0) |
-			(settings.bNoHelpText ? DBG_NoHelpText : 0) |
-			(settings.bDrawText ? DBG_DrawText : 0) |
-			(settings.bProfileTimings ? DBG_ProfileTimings : 0) |
-			(settings.bEnableSatComparison ? DBG_EnableSatComparison : 0) |
-			(settings.bDisableBulletLCP ? DBG_DisableBulletLCP : 0) |
-			(settings.bEnableCCD ? DBG_EnableCCD : 0) |
-			(settings.bDrawConstraints ? DBG_DrawConstraints : 0) |
-			(settings.bDrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
-			(settings.bFastWireframe ? DBG_FastWireframe : 0) |
-			(settings.bDrawNormals ? DBG_DrawNormals : 0) |
-			(settings.bDrawFrames ? DBG_DrawFrames : 0);
-	}
-
-	void PhysicsDebugDrawBase::ClearLines()
-	{
-		m_LineSegmentIndex = 0;
 	}
 
 	bool Renderer::DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader /* = nullptr */)

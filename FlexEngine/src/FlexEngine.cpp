@@ -871,7 +871,7 @@ namespace flex
 				}
 
 #if 0
-				btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+				btIDebugDraw* debugDrawer = g_Renderer->GetDebugRenderer();
 				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
 				{
 					m_TestSprings[i].Tick(g_DeltaTime);
