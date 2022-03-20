@@ -138,6 +138,8 @@ namespace flex
 
 			virtual void OnTextureReloaded(Texture* texture) override;
 
+			virtual Texture* CreateTexture(const std::string& textureName) override;
+
 			virtual VkSampler* GetSamplerLinearRepeat() override;
 			virtual VkSampler* GetSamplerLinearClampToEdge() override;
 			virtual VkSampler* GetSamplerLinearClampToBorder() override;

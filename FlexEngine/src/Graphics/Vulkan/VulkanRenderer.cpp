@@ -291,7 +291,7 @@ namespace flex
 				m_OffscreenFB1ColourAttachment0 = new FrameBufferAttachment(m_VulkanDevice, frameBufCreateInfo);
 				m_OffscreenFB1ColourAttachment0->bIsTransferedSrc = true;
 
-				m_HistoryBuffer = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "History buffer");
+				m_HistoryBuffer = (VulkanTexture*)CreateTexture("History buffer");
 				m_HistoryBuffer->width = m_SwapChainExtent.width;
 				m_HistoryBuffer->height = m_SwapChainExtent.height;
 				m_HistoryBuffer->imageFormat = m_OffscreenFrameBufferFormat;
@@ -338,11 +338,11 @@ namespace flex
 				PROFILE_AUTO("Load built-in textures");
 				{
 					u32 blankData = 0xFFFFFFFF;
-					m_BlankTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank");
+					m_BlankTexture = CreateTexture("blank");
 					((VulkanTexture*)m_BlankTexture)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, &m_SamplerLinearRepeat);
 					blankTextureID = g_ResourceManager->AddLoadedTexture(m_BlankTexture);
 
-					m_BlankTextureArr = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "blank_arr");
+					m_BlankTextureArr = CreateTexture("blank_arr");
 					m_BlankTextureArr->bIsArray = true;
 					((VulkanTexture*)m_BlankTextureArr)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, &m_SamplerLinearRepeat);
 					blankTextureArrID = g_ResourceManager->AddLoadedTexture(m_BlankTextureArr);
@@ -989,7 +989,7 @@ namespace flex
 
 					if (texture == nullptr)
 					{
-						texture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue);
+						texture = (VulkanTexture*)CreateTexture(std::string(textureInfo.textureUniform->DBG_name));
 						texture->bHDR = textureInfo.bHDR;
 						bool bGenerateMipChain = false;
 						VkDeviceSize createdTextureSize = texture->CreateFromFile(textureInfo.relativeFilePath, &m_SamplerLinearRepeat, textureInfo.format, bGenerateMipChain);
@@ -1031,7 +1031,7 @@ namespace flex
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 				u32 channelCount = 4;
-				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Cubemap");
+				VulkanTexture* cubemapTexture = (VulkanTexture*)CreateTexture("Cubemap");
 				cubemapTexture->CreateCubemapEmpty((u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y,
 					channelCount, VK_FORMAT_R8G8B8A8_UNORM, &m_SamplerLinearClampToEdge, mipLevels, createInfo->enableCubemapTrilinearFiltering);
 
@@ -1046,7 +1046,7 @@ namespace flex
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedCubemapSize.x))) + 1;
 				u32 channelCount = 4;
-				VulkanTexture* cubemapTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "HDR Cubemap");
+				VulkanTexture* cubemapTexture = (VulkanTexture*)CreateTexture("HDR Cubemap");
 				cubemapTexture->CreateCubemapEmpty((u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y,
 					channelCount, VK_FORMAT_R16G16B16A16_SFLOAT, &m_SamplerLinearClampToEdge, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(cubemapTexture);
@@ -1066,7 +1066,7 @@ namespace flex
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedIrradianceCubemapSize.x))) + 1;
 				u32 channelCount = 4;
-				VulkanTexture* irradianceTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Irradiance sampler");
+				VulkanTexture* irradianceTexture = (VulkanTexture*)CreateTexture("Irradiance sampler");
 				irradianceTexture->CreateCubemapEmpty(
 					(u32)createInfo->generatedIrradianceCubemapSize.x,
 					(u32)createInfo->generatedIrradianceCubemapSize.y,
@@ -1089,7 +1089,7 @@ namespace flex
 
 				const u32 mipLevels = static_cast<u32>(floor(log2(createInfo->generatedPrefilteredCubemapSize.x))) + 1;
 				u32 channelCount = 4;
-				VulkanTexture* prefilterTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "Prefiltered map");
+				VulkanTexture* prefilterTexture = (VulkanTexture*)CreateTexture("Prefiltered map");
 				prefilterTexture->CreateCubemapEmpty(
 					(u32)createInfo->generatedPrefilteredCubemapSize.x,
 					(u32)createInfo->generatedPrefilteredCubemapSize.y,
@@ -1113,7 +1113,7 @@ namespace flex
 					std::vector<glm::vec4> ssaoNoise;
 					GenerateSSAONoise(ssaoNoise);
 
-					m_NoiseTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "SSAO Noise");
+					m_NoiseTexture = CreateTexture("SSAO Noise");
 					void* buffer = ssaoNoise.data();
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
@@ -1138,7 +1138,7 @@ namespace flex
 			PROFILE_AUTO("InitializeTextureFromFile");
 
 			std::string textureName = StripLeadingDirectories(relativeFilePath);
-			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName);
+			VulkanTexture* newTex = (VulkanTexture*)CreateTexture(textureName);
 			newTex->bHDR = bHDR;
 			newTex->bFlipVertically = bFlipVertically;
 			VkDeviceSize newTexSize = newTex->CreateFromFile(relativeFilePath, inSampler, VK_FORMAT_UNDEFINED, bGenerateMipMaps);
@@ -1156,7 +1156,7 @@ namespace flex
 		{
 			PROFILE_AUTO("InitializeTextureFromMemory");
 
-			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, name);
+			VulkanTexture* newTex = (VulkanTexture*)CreateTexture(name);
 			newTex->CreateFromMemory(data, size, width, height, channelCount, inFormat, 1, inSampler, inFilter);
 			TextureID textureID = g_ResourceManager->AddLoadedTexture(newTex);
 
@@ -1167,7 +1167,7 @@ namespace flex
 		{
 			PROFILE_AUTO("InitializeTextureArrayFromMemory");
 
-			VulkanTexture* newTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, name);
+			VulkanTexture* newTex = (VulkanTexture*)CreateTexture(name);
 			newTex->bIsArray = true;
 			newTex->CreateFromMemory(data, size, width, height, channelCount, inFormat, 1, inSampler, layerCount);
 			TextureID textureID = g_ResourceManager->AddLoadedTexture(newTex);
@@ -4019,7 +4019,7 @@ namespace flex
 			{
 				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
-					VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName));
+					VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
 					if (fontTex->CreateFromFile(fontMetaData.renderedTextureFilePath, &m_SamplerLinearClampToEdge, fontTexFormat) != 0)
 					{
 						glm::vec2 fontTexSize((real)fontTex->width, (real)fontTex->height);
@@ -4063,7 +4063,7 @@ namespace flex
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 
-				VulkanTexture* fontTexColAttachment = (VulkanTexture*)newFont->SetTexture(new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName));
+				VulkanTexture* fontTexColAttachment = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
 				fontTexColAttachment->CreateEmpty(textureSize.x, textureSize.y, 4, fontTexFormat, &m_SamplerLinearClampToEdge, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
@@ -4164,7 +4164,7 @@ namespace flex
 
 					CHECK(width != 0 && height != 0);
 
-					VulkanTexture* highResTex = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "High res tex");
+					VulkanTexture* highResTex = (VulkanTexture*)CreateTexture("High res tex");
 					charTextures.push_back(highResTex);
 
 					++dynamicOffsetIndex;
@@ -4272,6 +4272,11 @@ namespace flex
 			}
 
 			CreateDescriptorSets();
+		}
+
+		Texture* VulkanRenderer::CreateTexture(const std::string& textureName)
+		{
+			return new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName);
 		}
 
 		VkSampler* VulkanRenderer::GetSamplerLinearRepeat()
@@ -5342,7 +5347,7 @@ namespace flex
 
 			if (m_BRDFTexture == nullptr)
 			{
-				m_BRDFTexture = new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, "BRDF");
+				m_BRDFTexture = (VulkanTexture*)CreateTexture("BRDF");
 				u32 channelCount = 2;
 				m_BRDFTexture->CreateEmpty(m_BRDFSize.x, m_BRDFSize.y, channelCount,
 					VK_FORMAT_R16G16_SFLOAT, &m_SamplerLinearRepeat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);

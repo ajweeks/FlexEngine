@@ -206,6 +206,8 @@ namespace flex
 
 		virtual void OnTextureReloaded(Texture* texture) = 0;
 
+		virtual Texture* CreateTexture(const std::string& textureName) = 0;
+
 		// TODO: Use render-agnostic handles
 		virtual VkSampler* GetSamplerLinearRepeat() = 0;
 		virtual VkSampler* GetSamplerLinearClampToEdge() = 0;
