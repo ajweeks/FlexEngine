@@ -13488,10 +13488,11 @@ namespace flex
 		m_MineTimer(1.0f),
 		m_MineCooldownTimer(0.2f)
 	{
-		// Ensure Update completes on first frame miner is active to begin mining
-		m_MineCooldownTimer.remaining = 0.001f;
+		CHECK_GT(m_MineCooldownTimer.duration, 0.0f);
+
 		m_bInteractable = true;
 		m_bItemizable = true;
+
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
 		m_LaserEmitterHeight = 5.0f;
 
@@ -13554,11 +13555,10 @@ namespace flex
 				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
 				if (minedMineralPrefabID != InvalidPrefabID)
 				{
-					if (m_MineCooldownTimer.Update())
+					if (!m_MineCooldownTimer.IsComplete() && m_MineCooldownTimer.Update())
 					{
 						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
 						{
-							m_MineTimer.Complete();
 							m_NearestMineralDepositID = InvalidGameObjectID;
 						}
 						else
@@ -13566,18 +13566,33 @@ namespace flex
 							m_MineTimer.Restart();
 							ComputeNewTargetPos();
 
+							PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
 							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
 							glm::vec3 laserEndWS = laserOriginWS + m_LaserDirection + VEC3_UP * 0.2f;
+							btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
+							physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
+
+							if (rayCallback.hasHit())
+							{
+								m_MineTargetLocation = ToVec3(rayCallback.m_hitPointWorld);
+							}
+							else
+							{
+								m_MineTargetLocation = laserEndWS;
+							}
+
 							glm::vec3 sparkDir = glm::reflect(m_LaserDirection, VEC3_UP);
 							glm::quat rot = glm::quatLookAt(glm::normalize(sparkDir), VEC3_UP) * glm::quat(glm::vec3(PI_DIV_TWO, 0.0f, 0.0f));
 							glm::mat4 objectToWorld = glm::mat4(rot);
-							objectToWorld[3] = glm::vec4(laserEndWS, 1.0f);
+							objectToWorld[3] = glm::vec4(m_MineTargetLocation, 1.0f);
 							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
 							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+							Print("Spawn\n");
 						}
 					}
 
-					if (m_Charge > m_PowerDraw && !IsInventoryFull())
+					if (m_MineCooldownTimer.IsComplete() && m_Charge > m_PowerDraw && !IsInventoryFull())
 					{
 						if (m_MineTimer.Update())
 						{
@@ -13602,23 +13617,7 @@ namespace flex
 									g_SceneManager->CurrentScene()->CreateDroppedItem(minedMineralPrefabID, extraItems, pos, VEC3_ZERO);
 								}
 
-								PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-								glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
-								glm::vec3 laserEndWS = laserOriginWS + m_LaserDirection + VEC3_UP * 0.2f;
-								btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
-								physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
-
-								btVector3 posWS;
-								if (rayCallback.hasHit())
-								{
-									posWS = rayCallback.m_hitPointWorld;
-								}
-								else
-								{
-									posWS = ToBtVec3(laserEndWS);
-								}
-								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, ToVec3(posWS));
+								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, m_MineTargetLocation);
 								ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
 								m_MiningDustEmitterID = dustParticleSystem->SpawnEmitterInstance(objectToWorld);
 							}

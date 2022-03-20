@@ -27,28 +27,32 @@
 	"initial colour" : 
 	[
 		{
-			"type" : "constant",
-			"constant" : 0.990196
+			"type" : "random",
+			"random min" : 0.470588,
+			"random max" : 0.894118
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.014562
+			"type" : "random",
+			"random min" : 0.039216,
+			"random max" : 0.054902
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.014562
+			"type" : "random",
+			"random min" : 0.039216,
+			"random max" : 0.054902
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.000000
+			"type" : "random",
+			"random min" : 1.000000,
+			"random max" : 1.000000
 		}
 	],
 	"initial position" : 
 	[
 		{
 			"type" : "random",
-			"random min" : -0.150000,
-			"random max" : 0.150000
+			"random min" : -0.050000,
+			"random max" : 0.050000
 		},
 		{
 			"type" : "constant",
@@ -56,8 +60,8 @@
 		},
 		{
 			"type" : "random",
-			"random min" : -0.150000,
-			"random max" : 0.150000
+			"random min" : -0.050000,
+			"random max" : 0.050000
 		}
 	],
 	"initial velocity" : 
@@ -69,8 +73,8 @@
 		},
 		{
 			"type" : "random",
-			"random min" : 10.000000,
-			"random max" : 14.000000
+			"random min" : 19.000000,
+			"random max" : 25.000000
 		},
 		{
 			"type" : "random",
@@ -81,8 +85,8 @@
 	"lifetime" : 
 	{
 		"type" : "random",
-		"random min" : 0.150000,
-		"random max" : 0.400000
+		"random min" : 0.075000,
+		"random max" : 0.250000
 	},
 	"particle count" : 
 	{
@@ -93,7 +97,7 @@
 	[
 		{
 			"type" : "random",
-			"random min" : 0.100000,
+			"random min" : 0.075000,
 			"random max" : 0.300000
 		},
 		{

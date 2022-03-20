@@ -221,6 +221,19 @@ namespace flex
 		}
 	}
 
+	void ParticleParameter::SetReal(real valueMin, real valueMax)
+	{
+		switch (type)
+		{
+		case ParticleSampleType::RANDOM:
+			randomRange.first = valueMin;
+			randomRange.second = valueMax;
+			break;
+		default:
+			ENSURE_NO_ENTRY();
+		}
+	}
+
 	void ParticleParameter::SetBool(bool bValue)
 	{
 		switch (type)
@@ -239,6 +252,19 @@ namespace flex
 		{
 		case ParticleSampleType::CONSTANT:
 			constantValue = (real)value;
+			break;
+		default:
+			ENSURE_NO_ENTRY();
+		}
+	}
+
+	void ParticleParameter::SetInt(i32 valueMin, i32 valueMax)
+	{
+		switch (type)
+		{
+		case ParticleSampleType::RANDOM:
+			randomRange.first = (real)valueMin;
+			randomRange.second = (real)valueMax;
 			break;
 		default:
 			ENSURE_NO_ENTRY();
@@ -680,15 +706,57 @@ namespace flex
 			}
 			else
 			{
-				glm::vec3 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal());
-				if (ImGui::ColorEdit3("", &col.x))
+				bool bValueChanged = false;
+
+				i32 typeInt = (i32)params[0].type;
+				if (ImGui::Combo("Type", &typeInt, ParticleSampleTypeStrings, ARRAY_LENGTH(ParticleSampleTypeStrings) - 1))
 				{
-					params[0].SetReal(col.x);
-					params[1].SetReal(col.y);
-					params[2].SetReal(col.z);
-					return true;
+					params[0].type = (ParticleSampleType)typeInt;
+					params[1].type = (ParticleSampleType)typeInt;
+					params[2].type = (ParticleSampleType)typeInt;
+					bValueChanged = true;
 				}
-				return false;
+
+				switch (params[0].type)
+				{
+				case ParticleSampleType::CONSTANT:
+				{
+					glm::vec3 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal());
+					if (ImGui::ColorEdit3("", &col.x))
+					{
+						params[0].SetReal(col.x);
+						params[1].SetReal(col.y);
+						params[2].SetReal(col.z);
+						bValueChanged = true;
+					}
+				} break;
+				case ParticleSampleType::RANDOM:
+				{
+					glm::vec3 colMin(params[0].GetRealMin(), params[1].GetRealMin(), params[2].GetRealMin());
+					if (ImGui::ColorEdit3("min", &colMin.x))
+					{
+						bValueChanged = true;
+					}
+
+					glm::vec3 colMax(params[0].GetRealMax(), params[1].GetRealMax(), params[2].GetRealMax());
+					if (ImGui::ColorEdit3("max", &colMax.x))
+					{
+						bValueChanged = true;
+					}
+
+					if (bValueChanged)
+					{
+						params[0].SetReal(colMin.x, colMax.x);
+						params[1].SetReal(colMin.y, colMax.y);
+						params[2].SetReal(colMin.z, colMax.z);
+					}
+				} break;
+				default:
+					ENSURE_NO_ENTRY();
+					break;
+				}
+
+				return bValueChanged;
 			}
 		}
 		else if (count == 4)
@@ -707,16 +775,61 @@ namespace flex
 			}
 			else
 			{
-				glm::vec4 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal(), params[3].GetReal());
-				if (ImGui::ColorEdit4("", &col.x))
+				bool bValueChanged = false;
+
+				i32 typeInt = (i32)params[0].type;
+				if (ImGui::Combo("Type", &typeInt, ParticleSampleTypeStrings, ARRAY_LENGTH(ParticleSampleTypeStrings) - 1))
 				{
-					params[0].SetReal(col.x);
-					params[1].SetReal(col.y);
-					params[2].SetReal(col.z);
-					params[3].SetReal(col.w);
-					return true;
+					params[0].type = (ParticleSampleType)typeInt;
+					params[1].type = (ParticleSampleType)typeInt;
+					params[2].type = (ParticleSampleType)typeInt;
+					params[3].type = (ParticleSampleType)typeInt;
+					bValueChanged = true;
 				}
-				return false;
+
+				switch (params[0].type)
+				{
+				case ParticleSampleType::CONSTANT:
+				{
+					glm::vec4 col(params[0].GetReal(), params[1].GetReal(), params[2].GetReal(), params[3].GetReal());
+					if (ImGui::ColorEdit4("", &col.x))
+					{
+						params[0].SetReal(col.x);
+						params[1].SetReal(col.y);
+						params[2].SetReal(col.z);
+						params[3].SetReal(col.w);
+						return true;
+					}
+					return false;
+				} break;
+				case ParticleSampleType::RANDOM:
+				{
+					glm::vec4 colMin(params[0].GetRealMin(), params[1].GetRealMin(), params[2].GetRealMin(), params[3].GetRealMin());
+					if (ImGui::ColorEdit4("min", &colMin.x))
+					{
+						bValueChanged = true;
+					}
+
+					glm::vec4 colMax(params[0].GetRealMax(), params[1].GetRealMax(), params[2].GetRealMax(), params[3].GetRealMax());
+					if (ImGui::ColorEdit4("max", &colMax.x))
+					{
+						bValueChanged = true;
+					}
+
+					if (bValueChanged)
+					{
+						params[0].SetReal(colMin.x, colMax.x);
+						params[1].SetReal(colMin.y, colMax.y);
+						params[2].SetReal(colMin.z, colMax.z);
+						params[3].SetReal(colMin.w, colMax.w);
+					}
+				} break;
+				default:
+					ENSURE_NO_ENTRY();
+					break;
+				}
+
+				return bValueChanged;
 			}
 		}
 		else
@@ -956,6 +1069,7 @@ namespace flex
 		m_Parameters(params),
 		m_TemplateNameSID(templateNameSID)
 	{
+		m_Parameters.FillOutGPUParams(m_SpawnParams);
 		CacheParticleCount();
 	}
 
@@ -963,6 +1077,7 @@ namespace flex
 	{
 		m_Parameters = newTemplate.params;
 		m_TemplateNameSID = newTemplate.nameSID;
+		m_Parameters.FillOutGPUParams(m_SpawnParams);
 		CacheParticleCount();
 	}
 
@@ -1039,7 +1154,6 @@ namespace flex
 		emitter.ID = emitterID;
 		emitter.bufferIndex = u32_max;
 
-		m_Parameters.FillOutGPUParams(m_SpawnParams);
 		memcpy(emitter.data.spawnParams.params, m_SpawnParams.params, sizeof(m_SpawnParams.params));
 
 		auto iter = emitterInstances.emplace(emitterID, emitter);

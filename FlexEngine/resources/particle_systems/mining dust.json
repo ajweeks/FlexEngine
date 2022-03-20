@@ -27,20 +27,24 @@
 	"initial colour" : 
 	[
 		{
-			"type" : "constant",
-			"constant" : 0.375264
+			"type" : "random",
+			"random min" : 0.463206,
+			"random max" : 0.501961
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.404745
+			"type" : "random",
+			"random min" : 0.463206,
+			"random max" : 0.505882
 		},
 		{
-			"type" : "constant",
-			"constant" : 0.475490
+			"type" : "random",
+			"random min" : 0.470588,
+			"random max" : 0.525490
 		},
 		{
-			"type" : "constant",
-			"constant" : 1.000000
+			"type" : "random",
+			"random min" : 1.000000,
+			"random max" : 1.000000
 		}
 	],
 	"initial position" : 

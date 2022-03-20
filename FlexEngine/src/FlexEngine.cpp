@@ -115,6 +115,10 @@ namespace flex
 		m_LogSaveTimer = Timer(5.0f);
 		m_UIWindowCacheSaveTimer = Timer(20.0f);
 
+#if COMPILE_RENDERDOC_API
+		m_RenderDocAPICheckTimer = Timer(3.0f);
+#endif
+
 #if COMPILE_VULKAN
 		m_RendererName = "Vulkan";
 #endif
@@ -271,7 +275,7 @@ namespace flex
 		{
 			// Common file doesn't exist or is corrupt, load first present scene
 			g_SceneManager->SetNextSceneActive();
-			// Set timer to max value so new config file will be immediately written to disk
+			// Ensure config file will be written to disk this frame
 			m_CommonSettingsSaveTimer.Complete();
 		}
 

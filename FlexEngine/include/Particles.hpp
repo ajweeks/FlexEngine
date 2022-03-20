@@ -97,8 +97,10 @@ namespace flex
 		i32 GetIntMin() const;
 		i32 GetIntMax() const;
 		void SetReal(real value);
+		void SetReal(real valueMin, real valueMax);
 		void SetBool(bool value);
 		void SetInt(i32 value);
+		void SetInt(i32 valueMin, i32 valueMax);
 
 		JSONObject Serialize(ParticleParamterValueType parentValueType);
 		static ParticleParameter Deserialize(const JSONObject& parentObject, ParticleParamterValueType parentValueType);

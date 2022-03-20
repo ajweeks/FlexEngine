@@ -1978,6 +1978,7 @@ namespace flex
 		Timer m_MineCooldownTimer;
 		glm::vec3 m_LaserDirection;
 		glm::vec4 laserColour;
+		glm::vec3 m_MineTargetLocation;
 
 		ParticleEmitterID m_MiningSparksEmitterID = InvalidParticleEmitterID;
 		ParticleEmitterID m_MiningDustEmitterID = InvalidParticleEmitterID;

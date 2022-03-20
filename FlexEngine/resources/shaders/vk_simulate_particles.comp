@@ -142,10 +142,6 @@ void Spawn(uint emitterIndex)
 void main()
 {
 	uint index = gl_GlobalInvocationID.x + uboDynamic.particleSimData.bufferOffset;
-	if (index >= uboDynamic.particleSimData.particleCount)
-	{
-		return;
-	}
 
 	float lifetime = particles[index].data[13];
 
