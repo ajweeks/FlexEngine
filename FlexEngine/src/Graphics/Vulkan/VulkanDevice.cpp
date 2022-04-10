@@ -67,7 +67,9 @@ namespace flex
 			}
 
 			VkPhysicalDeviceFeatures2 supportedFeatures2 = {};
+			supportedFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			VkPhysicalDeviceRayTracingPipelineFeaturesKHR supportedRayTracingFeatures = {};
+			supportedRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
 			supportedFeatures2.pNext = &supportedRayTracingFeatures;
 			vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supportedFeatures2);
 
