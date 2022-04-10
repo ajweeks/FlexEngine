@@ -27,13 +27,13 @@ Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-
 #### Requirements:
 - [GENie](https://github.com/bkaradzic/GENie)
 - Python 3
-- cmake 3.13+ (must be installed via https://cmake.org/download/, apt doesn't have latest versions)
+- cmake 3.13+
 
 ### Ubuntu 18.04
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo apt update`
-  - `sudo apt-get install dos2unix g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev`
+  - `sudo apt-get install cmake dos2unix g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev`
   - `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
   - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
 2. `cd scripts`
@@ -46,7 +46,7 @@ Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo eopkg upgrade`
-  - `sudo eopkg install dos2unix gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel openal-soft-devel libpng-devel bzip2-devel`
+  - `sudo eopkg install cmake dos2unix gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel openal-soft-devel libpng-devel bzip2-devel`
   - `sudo eopkg install -c system.devel uuid-dev`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
@@ -60,7 +60,7 @@ Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-
 #### Steps
 1. Run the following commands to install prerequisites:
   - `sudo dnf update`
-  - `sudo dnf install dos2unix gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib uuid-dev`
+  - `sudo dnf install cmake dos2unix gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib uuid-dev`
   - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
 2. `cd scripts`
 3. `git config --global init.defaultBranchName main`
