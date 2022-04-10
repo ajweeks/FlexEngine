@@ -54,6 +54,7 @@ namespace flex
 
 			for (const char* extName : *createInfo.requiredExtensions)
 			{
+				CHECK(ExtensionSupported(extName));
 				m_EnabledExtensions.push_back(extName);
 			}
 
@@ -65,7 +66,41 @@ namespace flex
 				}
 			}
 
+			VkPhysicalDeviceFeatures2 supportedFeatures2 = {};
+			VkPhysicalDeviceRayTracingPipelineFeaturesKHR supportedRayTracingFeatures = {};
+			supportedFeatures2.pNext = &supportedRayTracingFeatures;
+			vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supportedFeatures2);
+
+			if (createInfo.bTryEnableRayTracing)
+			{
+				m_bRayTracingSupported = supportedRayTracingFeatures.rayTracingPipeline != 0;
+			}
+			else
+			{
+				m_bRayTracingSupported = false;
+			}
+
+			if (m_bRayTracingSupported)
+			{
+				for (const char* extName : *createInfo.optionalExtensions)
+				{
+					if (ExtensionSupported(extName))
+					{
+						m_EnabledExtensions.push_back(extName);
+					}
+				}
+			}
+
 			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeatures();
+
+			VkPhysicalDeviceFeatures2 enabledFeatures2 = {};
+			enabledFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			enabledFeatures2.features = deviceFeatures;
+
+			if (m_bRayTracingSupported)
+			{
+				enabledFeatures2.pNext = &supportedRayTracingFeatures;
+			}
 
 			VkDeviceCreateInfo deviceCreateInfo = {};
 			deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -73,7 +108,7 @@ namespace flex
 			deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 			deviceCreateInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
 
-			deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+			deviceCreateInfo.pEnabledFeatures = nullptr; // Referenced in pNext chain
 
 			deviceCreateInfo.enabledExtensionCount = (u32)m_EnabledExtensions.size();
 			deviceCreateInfo.ppEnabledExtensionNames = m_EnabledExtensions.data();
@@ -87,6 +122,8 @@ namespace flex
 			{
 				deviceCreateInfo.enabledLayerCount = 0;
 			}
+
+			deviceCreateInfo.pNext = &enabledFeatures2;
 
 			{
 				// TODO: Call on separate thread? Takes 500ms!
@@ -198,6 +235,11 @@ namespace flex
 			}
 
 			return enabledFeatures;
+		}
+
+		bool VulkanDevice::IsRayTracingSupported() const
+		{
+			return m_bRayTracingSupported;
 		}
 
 		void VulkanDevice::DrawImGuiRendererInfo() const

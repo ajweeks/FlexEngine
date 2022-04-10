@@ -128,17 +128,21 @@ namespace flex
 					optionalDeviceExtensions.emplace_back(extensionPair.extensionName);
 				}
 			}
+			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
 
+			deviceCreateInfo.bTryEnableRayTracing = m_bTryEnableRayTracing;
+			
+			std::vector<const char*> rayTracingDeviceExtensions;
 			if (m_bTryEnableRayTracing)
 			{
-				optionalDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-				optionalDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-				optionalDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-				optionalDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-				optionalDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+				//rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+				//rayTracingDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+				//rayTracingDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 			}
 
-			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
+			deviceCreateInfo.rayTracingExtensions = &rayTracingDeviceExtensions;
 			// TODO: If device creation fails, try again without validation layers enabled
 			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
 			deviceCreateInfo.validationLayers = &m_ValidationLayers;

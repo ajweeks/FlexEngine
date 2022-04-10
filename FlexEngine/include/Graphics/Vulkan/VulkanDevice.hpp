@@ -18,7 +18,9 @@ namespace flex
 				VkSurfaceKHR surface;
 				const std::vector<const char*>* requiredExtensions;
 				const std::vector<const char*>* optionalExtensions;
+				const std::vector<const char*>* rayTracingExtensions;
 				bool bEnableValidationLayers;
+				bool bTryEnableRayTracing;
 				const std::vector<const char*>* validationLayers;
 			};
 
@@ -31,6 +33,8 @@ namespace flex
 
 			bool ExtensionSupported(const char* extensionName) const;
 			bool ExtensionEnabled(const char* extensionName) const;
+
+			bool IsRayTracingSupported() const;
 
 			VkPhysicalDeviceFeatures GetEnabledFeatures();
 
@@ -58,6 +62,7 @@ namespace flex
 			u64 m_vkAllocAmount = 0;
 			u64 m_vkAllocCount = 0;
 			u64 m_vkFreeCount = 0;
+			bool m_bRayTracingSupported = false;
 
 		};
 	} // namespace vk
