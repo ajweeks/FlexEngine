@@ -2122,17 +2122,20 @@ namespace flex
 
 	void FlexEngine::ParseUIWindowCache()
 	{
-		std::string fileContents;
-		if (ReadFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
+		if (FileExists(UI_WINDOW_CACHE_LOCATION))
 		{
-			JSONObject rootObject;
-			if (JSONParser::Parse(fileContents, rootObject))
+			std::string fileContents;
+			if (ReadFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
 			{
-				JSONObject uiWIndowsOpenObj = rootObject.GetObject("ui_windows_open");
-				for (const JSONField& field : uiWIndowsOpenObj.fields)
+				JSONObject rootObject;
+				if (JSONParser::Parse(fileContents, rootObject))
 				{
-					m_UIWindows[Hash(field.label.c_str())] = UIWindow{ field.value.AsBool(), field.label };
+					JSONObject uiWIndowsOpenObj = rootObject.GetObject("ui_windows_open");
+					for (const JSONField& field : uiWIndowsOpenObj.fields)
+					{
+						m_UIWindows[Hash(field.label.c_str())] = UIWindow{ field.value.AsBool(), field.label };
 
+					}
 				}
 			}
 		}
