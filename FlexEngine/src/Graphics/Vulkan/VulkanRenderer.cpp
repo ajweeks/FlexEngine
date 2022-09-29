@@ -5419,7 +5419,7 @@ namespace flex
 
 			CHECK_EQ(m_Instance, (VkInstance)VK_NULL_HANDLE);
 
-			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 2, 0);
+			const u32 requestedVkVersion = VK_MAKE_VERSION(1, 3, 0);
 
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
