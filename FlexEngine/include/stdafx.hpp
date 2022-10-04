@@ -153,10 +153,10 @@ IGNORE_WARNINGS_PUSH
 
 namespace flex
 {
-	extern ImVec4 g_WarningTextColour;
-	extern ImVec4 g_WarningButtonColour;
-	extern ImVec4 g_WarningButtonHoveredColour;
-	extern ImVec4 g_WarningButtonActiveColour;
+	extern const ImVec4 g_WarningTextColour;
+	extern const ImVec4 g_WarningButtonColour;
+	extern const ImVec4 g_WarningButtonHoveredColour;
+	extern const ImVec4 g_WarningButtonActiveColour;
 }
 
 #include "Types.hpp"
@@ -186,18 +186,13 @@ IGNORE_WARNINGS_POP
 #define THREE_PI_DIV_TWO (glm::three_over_two_pi<real>())
 #define EPSILON (glm::epsilon<real>())
 
-#define X_AXIS_IDX   0
-#define Y_AXIS_IDX   1
-#define Z_AXIS_IDX   2
-#define ALL_AXES_IDX 3
-
 #define TOKEN_PASTE2(x, y) x ## y
 #define TOKEN_PASTE(x, y) TOKEN_PASTE2(x, y)
 
 #if ENABLE_PROFILING
-#define PROFILE_BEGIN(blockName) plBegin(blockName);
-#define PROFILE_END(blockName) plEnd(blockName);
-#define PROFILE_AUTO(blockName) plScope(blockName);
+#define PROFILE_BEGIN(blockName) plBegin(blockName)
+#define PROFILE_END(blockName) plEnd(blockName)
+#define PROFILE_AUTO(blockName) plScope(blockName)
 #else
 #define PROFILE_BEGIN(blockName)
 #define PROFILE_END(blockName)
@@ -228,35 +223,40 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	// Constants
-	extern glm::vec3 VEC3_RIGHT;
-	extern glm::vec3 VEC3_UP;
-	extern glm::vec3 VEC3_FORWARD;
-	extern glm::vec2 VEC2_ONE;
-	extern glm::vec2 VEC2_NEG_ONE;
-	extern glm::vec2 VEC2_ZERO;
-	extern glm::vec3 VEC3_ONE;
-	extern glm::vec3 VEC3_NEG_ONE;
-	extern glm::vec3 VEC3_ZERO;
-	extern glm::vec3 VEC3_GAMMA;
-	extern glm::vec3 VEC3_GAMMA_INVERSE;
-	extern glm::vec4 VEC4_ONE;
-	extern glm::vec4 VEC4_NEG_ONE;
-	extern glm::vec4 VEC4_ZERO;
-	extern glm::vec4 VEC4_GAMMA;
-	extern glm::vec4 VEC4_GAMMA_INVERSE;
-	extern glm::quat QUAT_IDENTITY;
-	extern glm::mat2 MAT2_IDENTITY;
-	extern glm::mat3 MAT3_IDENTITY;
-	extern glm::mat4 MAT4_IDENTITY;
-	extern glm::mat4 MAT4_ZERO;
-	extern u32 COLOUR32U_WHITE;
-	extern u32 COLOUR32U_BLACK;
-	extern glm::vec4 COLOUR128F_WHITE;
-	extern glm::vec4 COLOUR128F_BLACK;
+	extern const glm::vec3 VEC3_RIGHT;
+	extern const glm::vec3 VEC3_UP;
+	extern const glm::vec3 VEC3_FORWARD;
+	extern const glm::vec2 VEC2_ONE;
+	extern const glm::vec2 VEC2_NEG_ONE;
+	extern const glm::vec2 VEC2_ZERO;
+	extern const glm::vec3 VEC3_ONE;
+	extern const glm::vec3 VEC3_NEG_ONE;
+	extern const glm::vec3 VEC3_ZERO;
+	extern const glm::vec3 VEC3_GAMMA;
+	extern const glm::vec3 VEC3_GAMMA_INVERSE;
+	extern const glm::vec4 VEC4_ONE;
+	extern const glm::vec4 VEC4_NEG_ONE;
+	extern const glm::vec4 VEC4_ZERO;
+	extern const glm::vec4 VEC4_GAMMA;
+	extern const glm::vec4 VEC4_GAMMA_INVERSE;
+	extern const glm::quat QUAT_IDENTITY;
+	extern const glm::mat2 MAT2_IDENTITY;
+	extern const glm::mat3 MAT3_IDENTITY;
+	extern const glm::mat4 MAT4_IDENTITY;
+	extern const glm::mat4 MAT4_ZERO;
+	extern const u32 COLOUR32U_WHITE;
+	extern const u32 COLOUR32U_BLACK;
+	extern const glm::vec4 COLOUR128F_WHITE;
+	extern const glm::vec4 COLOUR128F_BLACK;
 
-	extern std::string EMPTY_STRING;
+	extern const std::string EMPTY_STRING;
 
-	extern u32 MAX_TEXTURE_DIM;
+	extern const u32 MAX_TEXTURE_DIM;
+
+	const i32 X_AXIS_IDX = 0;
+	const i32 Y_AXIS_IDX = 1;
+	const i32 Z_AXIS_IDX = 2;
+	const i32 ALL_AXES_IDX = 3;
 
 	// Globals
 	extern class Window* g_Window;
@@ -273,7 +273,7 @@ namespace flex
 	extern class UIManager* g_UIManager;
 	extern class ConfigFileManager* g_ConfigFileManager;
 	extern class PropertyCollectionManager* g_PropertyCollectionManager;
-	extern bool g_bDebugBuild;
+	extern const bool g_bDebugBuild;
 
 	template<typename T>
 	T* GetSystem(SystemType systemType)
@@ -290,10 +290,10 @@ namespace flex
 	extern std::size_t g_TrackedAllocationCount;
 	extern std::size_t g_TrackedDeallocationCount;
 
-	extern bool g_bEnableLogging_Loading;
-	extern bool g_bEnableLogging_Shaders;
+	extern const bool g_bEnableLogging_Loading;
+	extern const bool g_bEnableLogging_Shaders;
 
-	extern bool g_bVulkanEnabled;
+	extern const bool g_bVulkanEnabled;
 }
 
 namespace glm
