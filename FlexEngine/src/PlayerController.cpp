@@ -542,18 +542,25 @@ namespace flex
 				if (gameObjectStack.prefabID.IsValid())
 				{
 					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-					Mesh* mesh = templateObject->GetMesh();
-					if (mesh != nullptr)
+					if (!templateObject->IsItemizable())
 					{
-						UpdateItemPlacementTransform();
+						m_bPreviewPlaceItemFromInventory = false;
+					}
+					else
+					{
+						Mesh* mesh = templateObject->GetMesh();
+						if (mesh != nullptr)
+						{
+							UpdateItemPlacementTransform();
 
-						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
-						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
-						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
-							m_TargetItemPlacementPosSmoothed,
-							m_TargetItemPlacementRotSmoothed,
-							VEC3_ONE,
-							m_bItemPlacementValid ? validColour : invalidColour);
+							static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
+							static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
+							g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
+								m_TargetItemPlacementPosSmoothed,
+								m_TargetItemPlacementRotSmoothed,
+								VEC3_ONE,
+								m_bItemPlacementValid ? validColour : invalidColour);
+						}
 					}
 				}
 				else
@@ -1230,17 +1237,6 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	glm::vec3 PlayerController::GetTargetItemPos()
-	{
-		real forwardOffset = 6.0f;
-		real upOffset = 1.0f;
-
-		Transform* playerTransform = m_Player->GetTransform();
-		return playerTransform->GetWorldPosition() +
-			playerTransform->GetForward() * forwardOffset +
-			playerTransform->GetUp() * upOffset;
-	}
-
 	void PlayerController::UpdateItemPlacementTransform()
 	{
 		if (m_ItemPlacementGroundedPos.x != FLT_MAX)
@@ -1260,5 +1256,16 @@ namespace flex
 			m_TargetItemPlacementRotSmoothed = m_TargetItemPlacementRot;
 		}
 
+	}
+
+	glm::vec3 PlayerController::GetTargetItemPos()
+	{
+		real forwardOffset = 6.0f;
+		real upOffset = 1.0f;
+
+		Transform* playerTransform = m_Player->GetTransform();
+		return playerTransform->GetWorldPosition() +
+			playerTransform->GetForward() * forwardOffset +
+			playerTransform->GetUp() * upOffset;
 	}
 } // namespace flex
