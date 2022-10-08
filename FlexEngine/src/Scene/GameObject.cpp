@@ -12334,22 +12334,26 @@ namespace flex
 
 		bool bBraking = m_BrakeForce > 0.0f;
 		bool bReversing = m_EngineForce < 0.0f;
-		if (bBraking)
-		{
-			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
-		}
-		else
-		{
-			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
-		}
 
-		if (bReversing)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
-		}
-		else
-		{
-			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
+			if (bBraking)
+			{
+				g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
+			}
+			else
+			{
+				g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
+			}
+
+			if (bReversing)
+			{
+				g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
+			}
+			else
+			{
+				g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
+			}
 		}
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
