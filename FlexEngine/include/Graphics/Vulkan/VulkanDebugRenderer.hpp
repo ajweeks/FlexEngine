@@ -38,6 +38,7 @@ namespace flex
 
 			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) override;
 			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) override;
+			virtual void DrawBasis(const btVector3& origin, const btVector3& right, const btVector3& up, const btVector3& forward) override;
 
 		private:
 			virtual void Draw() override;

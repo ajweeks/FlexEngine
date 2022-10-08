@@ -133,6 +133,12 @@ namespace flex
 			}
 		}
 
+		void VulkanDebugRenderer::DrawBasis(const btVector3& origin, const btVector3& right, const btVector3& up, const btVector3& forward)
+		{
+			drawLine(origin, origin + right, btVector3(1.0f, 0.0f, 0.0f));
+			drawLine(origin, origin + up, btVector3(0.0f, 1.0f, 0.0f));
+			drawLine(origin, origin + forward, btVector3(0.0f, 0.0f, 1.0f));
+		}
 
 		void VulkanDebugRenderer::Draw()
 		{

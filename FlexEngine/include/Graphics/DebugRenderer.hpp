@@ -18,6 +18,7 @@ namespace flex
 		virtual void Destroy() = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) = 0;
 		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) = 0;
+		virtual void DrawBasis(const btVector3& origin, const btVector3& right, const btVector3& up, const btVector3& forward) = 0;
 
 		virtual void OnPreSceneChange() = 0;
 		virtual void OnPostSceneChange() = 0;
