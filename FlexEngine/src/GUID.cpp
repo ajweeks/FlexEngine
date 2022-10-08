@@ -177,6 +177,11 @@ namespace flex
 	{
 	}
 
+	GameObjectID::GameObjectID(const GUID& guid) :
+		GUID(guid)
+	{
+	}
+
 	GameObject* GameObjectID::Get() const
 	{
 		if (!IsValid())
@@ -204,6 +209,11 @@ namespace flex
 
 	EditorObjectID::EditorObjectID(u64 data1, u64 data2) :
 		GUID(data1, data2)
+	{
+	}
+
+	EditorObjectID::EditorObjectID(const GUID& guid) :
+		GUID(guid)
 	{
 	}
 

@@ -122,11 +122,26 @@ namespace flex
 	{
 		m_bKinematic = bKinematic;
 
-		if (bKinematic && m_btRigidBody != nullptr)
+		if (m_btRigidBody != nullptr)
 		{
-			m_btRigidBody->clearForces();
-			m_btRigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-			m_btRigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			if (bKinematic)
+			{
+				m_btRigidBody->clearForces();
+				m_btRigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				m_btRigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			}
+
+			i32 flags = m_btRigidBody->getFlags();
+			if (m_bKinematic)
+			{
+				flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
+			}
+			else
+			{
+				flags &= ~btCollisionObject::CF_KINEMATIC_OBJECT;
+			}
+			m_btRigidBody->setFlags(flags);
+			m_btRigidBody->activate(true);
 		}
 	}
 
@@ -141,6 +156,35 @@ namespace flex
 		if (bStatic)
 		{
 			m_Mass = 0.0f;
+		}
+		else
+		{
+			if (m_Mass == 0.0f)
+			{
+				m_Mass = 1.0f;
+			}
+		}
+
+		if (m_btRigidBody != nullptr)
+		{
+			btVector3 localInertia(0, 0, 0);
+			if (!m_bStatic)
+			{
+				m_btRigidBody->getCollisionShape()->calculateLocalInertia(m_Mass, localInertia);
+			}
+			m_btRigidBody->setMassProps(m_Mass, localInertia);
+
+			i32 flags = m_btRigidBody->getFlags();
+			if (m_bStatic)
+			{
+				flags |= btCollisionObject::CF_STATIC_OBJECT;
+			}
+			else
+			{
+				flags &= ~btCollisionObject::CF_STATIC_OBJECT;
+			}
+			m_btRigidBody->setFlags(flags);
+			m_btRigidBody->activate(true);
 		}
 	}
 
@@ -349,5 +393,40 @@ namespace flex
 	u32 RigidBody::GetPhysicsFlags()
 	{
 		return m_Flags;
+	}
+
+	RigidBody* RigidBody::ParseFromJSON(const JSONObject& rigidBodyObj)
+	{
+		real mass = rigidBodyObj.GetFloat("mass");
+		bool bKinematic = rigidBodyObj.GetBool("kinematic");
+		bool bStatic = rigidBodyObj.GetBool("static");
+		u32 mask = rigidBodyObj.GetUInt("mask");
+		u32 group = rigidBodyObj.GetUInt("group");
+
+		RigidBody* rigidBody = new RigidBody(group, mask);
+		rigidBody->SetMass(mass);
+		rigidBody->SetKinematic(bKinematic);
+		rigidBody->SetStatic(bStatic);
+
+		return rigidBody;
+	}
+
+	JSONObject RigidBody::SerializeToJSON()
+	{
+		JSONObject rigidBodyObj = {};
+
+		real mass = GetMass();
+		bool bKinematic = IsKinematic();
+		bool bStatic = IsStatic();
+		u32 mask = GetMask();
+		u32 group = GetGroup();
+
+		rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
+		rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
+		rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
+		rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
+		rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+
+		return rigidBodyObj;
 	}
 } // namespace flex

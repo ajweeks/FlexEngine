@@ -1368,55 +1368,7 @@ namespace flex
 		JSONObject colliderObj;
 		if (obj.TryGetObject("collider", colliderObj))
 		{
-			std::string shapeStr = colliderObj.GetString("shape");
-			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents = colliderObj.GetVec3("half extents");
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-				SetCollisionShape(boxShape);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				btSphereShape* sphereShape = new btSphereShape(radius);
-
-				SetCollisionShape(sphereShape);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
-
-				SetCollisionShape(capsuleShape);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btConeShape* coneShape = new btConeShape(radius, height);
-
-				SetCollisionShape(coneShape);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents = colliderObj.GetVec3("half extents");
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				SetCollisionShape(cylinderShape);
-			} break;
-			default:
-			{
-				PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
-			} break;
-			}
+			SetCollisionShape(ParseCollider(colliderObj));
 		}
 
 		JSONObject rigidBodyObj;
@@ -1428,17 +1380,7 @@ namespace flex
 			}
 			else
 			{
-				real mass = rigidBodyObj.GetFloat("mass");
-				bool bKinematic = rigidBodyObj.GetBool("kinematic");
-				bool bStatic = rigidBodyObj.GetBool("static");
-				u32 mask = rigidBodyObj.GetUInt("mask");
-				u32 group = rigidBodyObj.GetUInt("group");
-
-				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
-				rigidBody->SetMass(mass);
-				rigidBody->SetKinematic(bKinematic);
-				// TODO: Use IsStatic() ?
-				rigidBody->SetStatic(bStatic);
+				SetRigidBody(RigidBody::ParseFromJSON(rigidBodyObj));
 			}
 		}
 
@@ -1462,7 +1404,7 @@ namespace flex
 		std::vector<JSONObject> children;
 		if (obj.TryGetObjectArray("children", children))
 		{
-			for (JSONObject& child : children)
+			for (const JSONObject& child : children)
 			{
 				// TODO: Handle nested prefabs
 				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, InvalidPrefabID, false, copyFlags));
@@ -1525,10 +1467,10 @@ namespace flex
 		bool bIsPrefabRoot = bSerializePrefabData && bIsRoot;
 		if (!bIsPrefabRoot)
 		{
-			JSONField transformField = m_Transform.Serialize();
-			if (!transformField.value.objectValue.fields.empty())
+			JSONObject transformObj = m_Transform.Serialize();
+			if (!transformObj.fields.empty())
 			{
-				object.fields.push_back(transformField);
+				object.fields.emplace_back("transform", JSONValue(transformObj));
 			}
 		}
 
@@ -1601,93 +1543,26 @@ namespace flex
 			}
 
 			btCollisionShape* collisionShape = GetCollisionShape();
-			if (collisionShape &&
-				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (collisionShape != nullptr && (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
 			{
 				JSONObject colliderObj;
-
-				i32 shapeType = collisionShape->getShapeType();
-				std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-				colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
-
-				glm::vec3 scaleWS = m_Transform.GetWorldScale();
-
-				switch (shapeType)
+				if (SerializeCollider(collisionShape, m_Transform.GetWorldScale(), colliderObj))
 				{
-				case BOX_SHAPE_PROXYTYPE:
-				{
-					btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
-					glm::vec3 halfExtents = ToVec3(btHalfExtents);
-					halfExtents /= scaleWS;
-					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtents, 3));
-				} break;
-				case SPHERE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
-					radius /= scaleWS.x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-				} break;
-				case CAPSULE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
-					real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
-					radius /= scaleWS.x;
-					height /= scaleWS.x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-					colliderObj.fields.emplace_back("height", JSONValue(height));
-				} break;
-				case CONE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
-					real height = static_cast<btConeShape*>(collisionShape)->getHeight();
-					radius /= scaleWS.x;
-					height /= scaleWS.x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-					colliderObj.fields.emplace_back("height", JSONValue(height));
-				} break;
-				case CYLINDER_SHAPE_PROXYTYPE:
-				{
-					btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
-					glm::vec3 halfExtents = ToVec3(btHalfExtents);
-					halfExtents /= scaleWS.x;
-					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtents, 3));
-				} break;
-				default:
-				{
-					PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
-						shapeType, m_Name.c_str(), scene->GetName().c_str());
-				} break;
+					object.fields.emplace_back("collider", JSONValue(colliderObj));
 				}
-
-				object.fields.emplace_back("collider", JSONValue(colliderObj));
 			}
 
 			RigidBody* rigidBody = GetRigidBody();
-			if (rigidBody &&
-				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (rigidBody != nullptr && (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
 			{
-				JSONObject rigidBodyObj = {};
-
 				if (collisionShape == nullptr)
 				{
 					PrintError("Attempted to serialize object (%s) which has a rigid body but no collider!\n", GetName().c_str());
 				}
 				else
 				{
-					real mass = rigidBody->GetMass();
-					bool bKinematic = rigidBody->IsKinematic();
-					bool bStatic = rigidBody->IsStatic();
-					u32 mask = m_RigidBody->GetMask();
-					u32 group = m_RigidBody->GetGroup();
-
-					rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
-					rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
-					rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
-					rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
-					rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+					object.fields.emplace_back("rigid body", JSONValue(rigidBody->SerializeToJSON()));
 				}
-
-				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
 		}
 

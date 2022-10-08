@@ -71,6 +71,9 @@ namespace flex
 		void SetPhysicsFlags(u32 flags);
 		u32 GetPhysicsFlags();
 
+		static RigidBody* ParseFromJSON(const JSONObject& rigidBodyObj);
+		JSONObject SerializeToJSON();
+
 	private:
 		btRigidBody* m_btRigidBody = nullptr;
 		btMotionState* m_btMotionState = nullptr;

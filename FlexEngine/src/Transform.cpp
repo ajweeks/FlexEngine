@@ -136,12 +136,12 @@ namespace flex
 		// NOTE: m_GameObject is not copied here
 	}
 
-	JSONField Transform::Serialize() const
+	JSONObject Transform::Serialize() const
 	{
 		return Serialize(localPosition, localRotation, localScale, m_GameObject->GetName().c_str());
 	}
 
-	JSONField Transform::Serialize(const glm::mat4 matrix, const char* objName)
+	JSONObject Transform::Serialize(const glm::mat4 matrix, const char* objName)
 	{
 		glm::vec3 pos;
 		glm::quat rot;
@@ -151,16 +151,13 @@ namespace flex
 		return Serialize(pos, rot, scale, objName);
 	}
 
-	JSONField Transform::Serialize(const glm::vec3& inPos, const glm::quat& inRot, const glm::vec3& inScale, const char* objName)
+	JSONObject Transform::Serialize(const glm::vec3& inPos, const glm::quat& inRot, const glm::vec3& inScale, const char* objName)
 	{
 		const i32 floatPrecision = 3;
 
 		glm::vec3 pos = inPos;
 		glm::quat rot = inRot;
 		glm::vec3 scale = inScale;
-
-		JSONField transformField = {};
-		transformField.label = "transform";
 
 		JSONObject transformObject = {};
 
@@ -202,9 +199,7 @@ namespace flex
 			transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
 		}
 
-		transformField.value = JSONValue(transformObject);
-
-		return transformField;
+		return transformObject;
 	}
 
 	void Transform::SetAsIdentity()

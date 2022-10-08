@@ -29,9 +29,9 @@ namespace flex
 		// Copies all fields (except game object reference) into this transform
 		void CloneFrom(const Transform& other);
 
-		JSONField Serialize() const;
-		static JSONField Serialize(const glm::mat4 matrix, const char* objName);
-		static JSONField Serialize(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& scale, const char* objName);
+		JSONObject Serialize() const;
+		static JSONObject Serialize(const glm::mat4 matrix, const char* objName);
+		static JSONObject Serialize(const glm::vec3& pos, const glm::quat& rot, const glm::vec3& scale, const char* objName);
 
 		void SetAsIdentity();
 

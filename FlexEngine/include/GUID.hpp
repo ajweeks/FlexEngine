@@ -4,6 +4,8 @@
 
 #include "Types.hpp"
 
+#undef GUID
+
 namespace flex
 {
 	struct GUID
@@ -37,6 +39,7 @@ namespace flex
 	{
 		GameObjectID();
 		GameObjectID(u64 data1, u64 data2);
+		GameObjectID(const GUID& guid);
 
 		GameObject* Get() const;
 
@@ -47,6 +50,7 @@ namespace flex
 	{
 		EditorObjectID();
 		EditorObjectID(u64 data1, u64 data2);
+		EditorObjectID(const GUID& guid);
 
 		GameObject* Get() const;
 

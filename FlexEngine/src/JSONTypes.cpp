@@ -221,9 +221,92 @@ namespace flex
 			return JSONValue(*(glm::mat4*)valuePtr, precision);
 		case ValueType::GUID:
 			return JSONValue(*(GUID*)valuePtr);
+		case ValueType::OBJECT:
+			return JSONValue(*(JSONObject*)valuePtr);
+		case ValueType::OBJECT_ARRAY:
+			return JSONValue(*(std::vector<JSONObject>*)valuePtr);
+		case ValueType::FIELD_ARRAY:
+			return JSONValue(*(std::vector<JSONField>*)valuePtr);
 		default:
 			PrintError("FromRawPtr was called with invalid type\n");
 			return JSONValue();
+		}
+	}
+
+	bool JSONValue::operator!=(const JSONValue& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONValue::operator==(const JSONValue& other)
+	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return AsString() == other.AsString();
+		case ValueType::INT:
+			return AsInt() == other.AsInt();
+		case ValueType::UINT:
+			return AsUInt() == other.AsUInt();
+		case ValueType::LONG:
+			return AsLong() == other.AsLong();
+		case ValueType::ULONG:
+			return AsULong() == other.AsULong();
+		case ValueType::FLOAT:
+			return AsFloat() == other.AsFloat();
+		case ValueType::BOOL:
+			return AsBool() == other.AsBool();
+		case ValueType::VEC2:
+			return AsVec2() == other.AsVec2();
+		case ValueType::VEC3:
+			return AsVec3() == other.AsVec3();
+		case ValueType::VEC4:
+			return AsVec4() == other.AsVec4();
+		case ValueType::QUAT:
+			return AsQuat() == other.AsQuat();
+		case ValueType::MAT4:
+			return AsMat4() == other.AsMat4();
+		case ValueType::GUID:
+			return AsGUID() == other.AsGUID();
+		case ValueType::OBJECT:
+			return objectValue == other.objectValue;
+		case ValueType::OBJECT_ARRAY:
+		{
+			if (objectArrayValue.size() != other.objectArrayValue.size())
+			{
+				return false;
+			}
+
+			for (u32 i = 0; i < (u32)objectArrayValue.size(); ++i)
+			{
+				if (objectArrayValue[i] != other.objectArrayValue[i])
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+		case ValueType::FIELD_ARRAY:
+		{
+			if (fieldArrayValue.size() != other.fieldArrayValue.size())
+			{
+				return false;
+			}
+
+			for (u32 i = 0; i < (u32)fieldArrayValue.size(); ++i)
+			{
+				if (fieldArrayValue[i] != other.fieldArrayValue[i])
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+		default:
+			PrintError("JSONValue::operator== was called with invalid type\n");
+			return false;
 		}
 	}
 
@@ -366,8 +449,74 @@ namespace flex
 		case ValueType::STRING:
 			return strValue;
 		default:
-			PrintError("AsFloat was called on non-string value\n");
-			return "";
+			PrintError("AsString was called on non-string value\n");
+			return EMPTY_STRING;
+		}
+	}
+
+	glm::vec2 JSONValue::AsVec2() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec2)vecValue;
+		default:
+			PrintError("AsVec2 was called on non-vec value\n");
+			return VEC2_ZERO;
+		}
+	}
+
+	glm::vec3 JSONValue::AsVec3() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec3)vecValue;
+		default:
+			PrintError("AsVec3 was called on non-vec value\n");
+			return VEC3_ZERO;
+		}
+	}
+
+	glm::vec4 JSONValue::AsVec4() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec4)vecValue;
+		default:
+			PrintError("AsVec4 was called on non-vec value\n");
+			return VEC4_ZERO;
+		}
+	}
+
+	glm::mat4 JSONValue::AsMat4() const
+	{
+		switch (type)
+		{
+		case ValueType::MAT4:
+			return matValue;
+		default:
+			PrintError("AsMat4 was called on non-matrix value\n");
+			return MAT4_IDENTITY;
+		}
+	}
+
+	glm::quat JSONValue::AsQuat() const
+	{
+		switch (type)
+		{
+		case ValueType::QUAT:
+			return (glm::quat)vecValue;
+		default:
+			PrintError("AsQuat was called on non-quat value\n");
+			return QUAT_IDENTITY;
 		}
 	}
 
@@ -375,11 +524,11 @@ namespace flex
 	{
 		switch (type)
 		{
-			case ValueType::GUID:
-				return guidValue;
-			default:
-				PrintError("AsGUID was called on non-GUID value\n");
-				return InvalidGUID;
+		case ValueType::GUID:
+			return guidValue;
+		default:
+			PrintError("AsGUID was called on non-GUID value\n");
+			return InvalidGUID;
 		}
 	}
 
@@ -848,6 +997,16 @@ namespace flex
 	{
 	}
 
+	bool JSONField::operator!=(const JSONField& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONField::operator==(const JSONField& other)
+	{
+		return label == other.label && value == other.value;
+	}
+
 	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
@@ -1052,4 +1211,26 @@ namespace flex
 		return result;
 	}
 
+	bool JSONObject::operator!=(const JSONObject& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONObject::operator==(const JSONObject& other)
+	{
+		if (fields.size() != other.fields.size())
+		{
+			return false;
+		}
+
+		for (u32 i = 0; i < (u32)fields.size(); ++i)
+		{
+			if (fields[i] != other.fields[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 } // namespace flex

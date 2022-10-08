@@ -98,6 +98,9 @@ namespace flex
 
 		std::string ToString(i32 tabCount = 0) const;
 
+		bool operator!=(const JSONObject& other);
+		bool operator==(const JSONObject& other);
+
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
 		static std::vector<JSONField> s_EmptyFieldArray;
@@ -133,6 +136,9 @@ namespace flex
 
 		static JSONValue FromRawPtr(void* valuePtr, ValueType type, u32 precision = DEFAULT_FLOAT_PRECISION);
 
+		bool operator!=(const JSONValue& other);
+		bool operator==(const JSONValue& other);
+
 		i32 AsInt() const;
 		u32 AsUInt() const;
 		i64 AsLong() const;
@@ -140,6 +146,11 @@ namespace flex
 		real AsFloat() const;
 		bool AsBool() const;
 		std::string AsString() const;
+		glm::vec2 AsVec2() const;
+		glm::vec3 AsVec3() const;
+		glm::vec4 AsVec4() const;
+		glm::mat4 AsMat4() const;
+		glm::quat AsQuat() const;
 		GUID AsGUID() const;
 
 		ValueType type = ValueType::UNINITIALIZED;
@@ -168,6 +179,9 @@ namespace flex
 	{
 		JSONField();
 		JSONField(const std::string& label, const JSONValue& value);
+
+		bool operator!=(const JSONField& other);
+		bool operator==(const JSONField& other);
 
 		std::string label;
 		JSONValue value;

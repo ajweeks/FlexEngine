@@ -74,4 +74,8 @@ namespace flex
 		float optionalHalfExtentsY = -1.0f,
 		float optionalHalfExtentsZ = -1.0f);
 	btCollisionShape* CloneCollisionShape(const glm::vec3& worldScale, btCollisionShape* originalShape);
+
+	bool SerializeCollider(btCollisionShape* collisionShape, const glm::vec3& scaleWS, JSONObject& outColliderObj);
+	btCollisionShape* ParseCollider(const JSONObject& colliderObj);
+
 } // namespace flex

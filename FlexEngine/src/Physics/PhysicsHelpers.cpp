@@ -11,6 +11,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 IGNORE_WARNINGS_POP
 
+#include <JSONTypes.hpp>
+
 namespace flex
 {
 	std::string CollisionShapeTypeToString(int shapeType)
@@ -123,5 +125,100 @@ namespace flex
 		// TODO: Copy constraints here too
 
 		return newCollisionShape;
+	}
+
+	bool SerializeCollider(btCollisionShape* collisionShape, const glm::vec3& scaleWS, JSONObject& outColliderObj)
+	{
+		i32 shapeType = collisionShape->getShapeType();
+		std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
+		outColliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
+
+		switch (shapeType)
+		{
+		case BOX_SHAPE_PROXYTYPE:
+		{
+			btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
+			glm::vec3 halfExtents = ToVec3(btHalfExtents);
+			halfExtents /= scaleWS;
+			outColliderObj.fields.emplace_back("half extents", JSONValue(halfExtents, 3));
+		} return true;
+		case SPHERE_SHAPE_PROXYTYPE:
+		{
+			real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
+			radius /= scaleWS.x;
+			outColliderObj.fields.emplace_back("radius", JSONValue(radius));
+		} return true;
+		case CAPSULE_SHAPE_PROXYTYPE:
+		{
+			real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
+			real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
+			radius /= scaleWS.x;
+			height /= scaleWS.x;
+			outColliderObj.fields.emplace_back("radius", JSONValue(radius));
+			outColliderObj.fields.emplace_back("height", JSONValue(height));
+		} return true;
+		case CONE_SHAPE_PROXYTYPE:
+		{
+			real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
+			real height = static_cast<btConeShape*>(collisionShape)->getHeight();
+			radius /= scaleWS.x;
+			height /= scaleWS.x;
+			outColliderObj.fields.emplace_back("radius", JSONValue(radius));
+			outColliderObj.fields.emplace_back("height", JSONValue(height));
+		} return true;
+		case CYLINDER_SHAPE_PROXYTYPE:
+		{
+			btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
+			glm::vec3 halfExtents = ToVec3(btHalfExtents);
+			halfExtents /= scaleWS.x;
+			outColliderObj.fields.emplace_back("half extents", JSONValue(halfExtents, 3));
+		} return true;
+		default:
+			return false;
+		}
+	}
+
+	btCollisionShape* ParseCollider(const JSONObject& colliderObj)
+	{
+		std::string shapeStr = colliderObj.GetString("shape");
+		BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
+
+		switch (shapeType)
+		{
+		case BOX_SHAPE_PROXYTYPE:
+		{
+			glm::vec3 halfExtents = colliderObj.GetVec3("half extents");
+			btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+			return new btBoxShape(btHalfExtents);
+		} break;
+		case SPHERE_SHAPE_PROXYTYPE:
+		{
+			real radius = colliderObj.GetFloat("radius");
+			return new btSphereShape(radius);
+		} break;
+		case CAPSULE_SHAPE_PROXYTYPE:
+		{
+			real radius = colliderObj.GetFloat("radius");
+			real height = colliderObj.GetFloat("height");
+			return new btCapsuleShapeZ(radius, height);
+		} break;
+		case CONE_SHAPE_PROXYTYPE:
+		{
+			real radius = colliderObj.GetFloat("radius");
+			real height = colliderObj.GetFloat("height");
+			return new btConeShape(radius, height);
+		} break;
+		case CYLINDER_SHAPE_PROXYTYPE:
+		{
+			glm::vec3 halfExtents = colliderObj.GetVec3("half extents");
+			btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
+			return new btCylinderShape(btHalfExtents);
+		} break;
+		default:
+		{
+			PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
+			return nullptr;
+		} break;
+		}
 	}
 } // namespace flex
