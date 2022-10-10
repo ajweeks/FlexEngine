@@ -378,7 +378,7 @@ namespace flex
 		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case MinerSID: return new Miner(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case SpeakerSID: return new Speaker(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID);
+		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
 		case PlayerSID:
 		{
 			PrintError("Player was serialized to scene file!\n");
