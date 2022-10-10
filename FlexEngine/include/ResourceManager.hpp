@@ -122,6 +122,8 @@ namespace flex
 
 		bool PrefabTemplateContainsChild(const PrefabID& prefabID, GameObject* child) const;
 
+		void SerializeAllPrefabTemplates();
+
 		AudioSourceID GetAudioSourceID(StringID audioFileSID);
 		AudioSourceID GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D);
 		void DestroyAudioSource(AudioSourceID audioSourceID);

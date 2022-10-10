@@ -1376,6 +1376,15 @@ namespace flex
 		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
 	}
 
+	void ResourceManager::SerializeAllPrefabTemplates()
+	{
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
+		{
+			CHECK(prefabTemplateInfo.templateObject->m_bIsTemplate);
+			WritePrefabToDisk(prefabTemplateInfo);
+		}
+	}
+
 	AudioSourceID ResourceManager::GetAudioSourceID(StringID audioFileSID)
 	{
 		return discoveredAudioFiles[audioFileSID].sourceID;
