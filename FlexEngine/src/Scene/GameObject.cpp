@@ -12394,20 +12394,32 @@ namespace flex
 			std::vector<JSONField> tireIDs;
 			if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
 			{
-				CHECK_EQ(m_TireCount, (i32)tireIDs.size());
-				for (i32 i = 0; i < m_TireCount; ++i)
+				if (m_TireCount == (i32)tireIDs.size())
 				{
-					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+					for (i32 i = 0; i < m_TireCount; ++i)
+					{
+						m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+					}
+				}
+				else
+				{
+					PrintError("Failed to parse tire IDs, incorrect number present (%i found, %i expected)", (i32)tireIDs.size(), m_TireCount);
 				}
 			}
 
 			std::vector<JSONField> brakeLightIDs;
 			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 			{
-				CHECK_EQ((i32)brakeLightIDs.size(), 2);
-				for (i32 i = 0; i < 2; ++i)
+				if ((i32)brakeLightIDs.size(), 2)
 				{
-					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+					for (i32 i = 0; i < 2; ++i)
+					{
+						m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+					}
+				}
+				else
+				{
+					PrintError("Failed to parse brake light IDs, incorrect number present (%i found, %i expected)", (i32)brakeLightIDs.size(), 2);
 				}
 			}
 
@@ -12432,31 +12444,27 @@ namespace flex
 
 		std::vector<JSONField> tireIDs;
 		tireIDs.reserve(m_TireCount);
-		for (i32 i = 0; i < m_TireCount; ++i)
+		for (GameObjectID& TireID : m_TireIDs)
 		{
-			JSONField tireIDField = {};
-			tireIDField.label = m_TireIDs[i].ToString();
-			tireIDs.push_back(tireIDField);
+			tireIDs.emplace_back("", JSONValue(TireID.ToString()));
 		}
 
 		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
 
 		std::vector<JSONField> brakeLightIDs;
 		brakeLightIDs.reserve(2);
-		for (i32 i = 0; i < 2; ++i)
+		for (GameObjectID& BrakeLightID : m_BrakeLightIDs)
 		{
-			JSONField brakeLightIDField = {};
-			brakeLightIDField.label = m_BrakeLightIDs[i].ToString();
-			brakeLightIDs.push_back(brakeLightIDField);
+			brakeLightIDs.emplace_back("", JSONValue(BrakeLightID.ToString()));
 		}
 
 		vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
 
 		std::vector<JSONField> soundEffectSIDs;
-		soundEffectSIDs.resize(m_SoundEffectSIDs.size());
-		for (i32 i = 0; i < (i32)m_SoundEffectSIDs.size(); ++i)
+		soundEffectSIDs.reserve(m_SoundEffectSIDs.size());
+		for (StringID SoundEffectSID : m_SoundEffectSIDs)
 		{
-			soundEffectSIDs[i].label = ULongToString(m_SoundEffectSIDs[i]);
+			soundEffectSIDs.emplace_back("", JSONValue(SoundEffectSID));
 		}
 		vehicleObj.fields.emplace_back("sound effect sids", JSONValue(soundEffectSIDs));
 
