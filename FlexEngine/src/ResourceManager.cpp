@@ -143,10 +143,10 @@ namespace flex
 		}
 		loadedTextures.clear();
 
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
 	}
@@ -163,10 +163,10 @@ namespace flex
 
 	void ResourceManager::PreSceneChange()
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
 	}
@@ -328,14 +328,67 @@ namespace flex
 		}
 	}
 
+	bool ParsePrefabTemplate(const std::string& filePath, std::map<PrefabID, std::string>& prefabNames, std::vector<ResourceManager::PrefabTemplateInfo>& templateInfos)
+	{
+		JSONObject prefabObject;
+		if (JSONParser::ParseFromFile(filePath, prefabObject))
+		{
+			const std::string fileName = StripLeadingDirectories(filePath);
+
+			i32 prefabVersion = prefabObject.GetInt("version");
+
+			i32 sceneVersion = 6;
+			// Added in prefab v3, older files use scene version 6
+			prefabObject.TryGetInt("scene version", sceneVersion);
+
+			PrefabID prefabID;
+			if (prefabVersion >= 2)
+			{
+				// Added in prefab v2
+				std::string idStr = prefabObject.GetString("prefab id");
+				prefabID = GUID::FromString(idStr);
+			}
+			else
+			{
+				prefabID = Platform::GenerateGUID();
+			}
+
+			std::string prefabName = StripFileType(fileName);
+			prefabNames.emplace(prefabID, prefabName);
+
+
+			JSONObject prefabRootObject = prefabObject.GetObject("root");
+
+			using CopyFlags = GameObject::CopyFlags;
+
+			CopyFlags copyFlags = (CopyFlags)(
+				(u32)CopyFlags::ALL &
+				~(u32)CopyFlags::CREATE_RENDER_OBJECT &
+				~(u32)CopyFlags::ADD_TO_SCENE);
+			GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true, copyFlags);
+
+			CHECK(prefabTemplate->IsPrefabTemplate());
+
+			templateInfos.emplace_back(prefabTemplate, prefabID, fileName, false);
+		}
+		else
+		{
+			PrintError("Failed to parse prefab file: %s, error: %s\n", filePath.c_str(), JSONParser::GetErrorString());
+			return false;
+		}
+
+		return true;
+	}
+
 	void ResourceManager::DiscoverPrefabs()
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
+		discoveredPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(PREFAB_DIRECTORY, foundFiles, ".json"))
@@ -351,37 +404,7 @@ namespace flex
 				JSONObject prefabObject;
 				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
 				{
-					const std::string fileName = StripLeadingDirectories(foundFilePath);
-
-					i32 prefabVersion = prefabObject.GetInt("version");
-
-					i32 sceneVersion = 6;
-					// Added in prefab v3, older files use scene version 6
-					prefabObject.TryGetInt("scene version", sceneVersion);
-
-					PrefabID prefabID;
-					if (prefabVersion >= 2)
-					{
-						// Added in prefab v2
-						std::string idStr = prefabObject.GetString("prefab id");
-						prefabID = GUID::FromString(idStr);
-					}
-					else
-					{
-						prefabID = Platform::GenerateGUID();
-					}
-
-					JSONObject prefabRootObject = prefabObject.GetObject("root");
-
-					using CopyFlags = GameObject::CopyFlags;
-
-					CopyFlags copyFlags = (CopyFlags)((u32)CopyFlags::ALL &
-						~(u32)CopyFlags::CREATE_RENDER_OBJECT &
-						~(u32)CopyFlags::ADD_TO_SCENE);
-					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true, copyFlags);
-					prefabTemplate->m_PrefabIDLoadedFrom = prefabID;
-
-					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);
+					ParsePrefabTemplate(foundFilePath, discoveredPrefabs, prefabTemplates);
 				}
 				else
 				{
@@ -1163,11 +1186,11 @@ namespace flex
 	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
 	GameObject* ResourceManager::GetPrefabTemplate(const char* prefabName) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplateInfo.templateObject->GetName().c_str(), prefabName) == 0)
 			{
-				return prefabTemplatePair.templateObject;
+				return prefabTemplateInfo.templateObject;
 			}
 		}
 
@@ -1176,11 +1199,11 @@ namespace flex
 
 	PrefabID ResourceManager::GetPrefabID(const char* prefabName) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplateInfo.templateObject->GetName().c_str(), prefabName) == 0)
 			{
-				return prefabTemplatePair.prefabID;
+				return prefabTemplateInfo.prefabID;
 			}
 		}
 
@@ -1190,11 +1213,11 @@ namespace flex
 	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID) const
 	{
 		// TODO: Use map
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.templateObject;
+				return prefabTemplateInfo.templateObject;
 			}
 		}
 
@@ -1203,11 +1226,11 @@ namespace flex
 
 	std::string ResourceManager::GetPrefabFileName(const PrefabID& prefabID) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.fileName;
+				return prefabTemplateInfo.fileName;
 			}
 		}
 
@@ -1216,11 +1239,11 @@ namespace flex
 
 	bool ResourceManager::IsPrefabDirty(const PrefabID& prefabID) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.bDirty;
+				return prefabTemplateInfo.bDirty;
 			}
 		}
 
@@ -1229,37 +1252,37 @@ namespace flex
 
 	void ResourceManager::SetPrefabDirty(const PrefabID& prefabID)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				prefabTemplatePair.bDirty = true;
+				prefabTemplateInfo.bDirty = true;
 			}
 		}
 	}
 
 	void ResourceManager::SetAllPrefabsDirty(bool bDirty)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.bDirty = bDirty;
+			prefabTemplateInfo.bDirty = bDirty;
 		}
 	}
 
 	void ResourceManager::UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabID == prefabTemplatePair.prefabID)
+			if (prefabID == prefabTemplateInfo.prefabID)
 			{
-				CHECK_NE(prefabTemplatePair.templateObject, prefabTemplate);
+				CHECK_NE(prefabTemplateInfo.templateObject, prefabTemplate);
 
-				prefabTemplatePair.templateObject->Destroy();
-				delete prefabTemplatePair.templateObject;
+				prefabTemplateInfo.templateObject->Destroy();
+				delete prefabTemplateInfo.templateObject;
 
-				prefabTemplatePair.templateObject = prefabTemplate;
+				prefabTemplateInfo.templateObject = prefabTemplate;
 
-				WritePrefabToDisk(prefabTemplatePair);
+				WritePrefabToDisk(prefabTemplateInfo);
 
 				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabID);
 
@@ -1277,9 +1300,9 @@ namespace flex
 		std::string prefabName = prefabTemplate->GetName();
 		PrefabID prefabID = GetPrefabID(prefabName.c_str());
 		std::string fileNameStr = prefabTemplate->GetName() + ".json";
-		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, prefabID, fileNameStr, false };
+		PrefabTemplateInfo prefabTemplateInfo = { prefabTemplate, prefabID, fileNameStr, false };
 		prefabTemplate->m_bIsTemplate = true;
-		bool bResult = WritePrefabToDisk(prefabTemplatePair);
+		bool bResult = WritePrefabToDisk(prefabTemplateInfo);
 		prefabTemplate->m_bIsTemplate = false;
 		return bResult;
 	}
@@ -1304,8 +1327,8 @@ namespace flex
 		// This object's GameObjectID will match that of the existing object in
 		// the scene, but that shouldn't pose any issues.
 		std::string fileNameStr = fileName != nullptr ? std::string(fileName) : (prefabTemplate->GetName() + ".json");
-		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newPrefabID, fileNameStr, false };
-		bool bResult = WritePrefabToDisk(prefabTemplatePair);
+		PrefabTemplateInfo prefabTemplateInfo = { prefabTemplate, newPrefabID, fileNameStr, false };
+		bool bResult = WritePrefabToDisk(prefabTemplateInfo);
 
 		if (!bResult)
 		{
@@ -1455,37 +1478,37 @@ namespace flex
 		return false;
 	}
 
-	bool ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair)
+	bool ResourceManager::WritePrefabToDisk(PrefabTemplateInfo& prefabTemplateInfo)
 	{
-		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplatePair.fileName);
+		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplateInfo.fileName);
 
 		JSONObject prefabJSON = {};
 		prefabJSON.fields.emplace_back("version", JSONValue(BaseScene::LATETST_PREFAB_FILE_VERSION));
 		// Added in prefab v3
 		prefabJSON.fields.emplace_back("scene version", JSONValue(BaseScene::LATEST_SCENE_FILE_VERSION));
 
-		if (!prefabTemplatePair.prefabID.IsValid())
+		if (!prefabTemplateInfo.prefabID.IsValid())
 		{
-			PrintError("Prefab %s has invalid prefabID!\n", prefabTemplatePair.fileName.c_str());
+			PrintError("Prefab %s has invalid prefabID!\n", prefabTemplateInfo.fileName.c_str());
 		}
 
 		// Added in prefab v2
-		std::string prefabIDStr = prefabTemplatePair.prefabID.ToString();
+		std::string prefabIDStr = prefabTemplateInfo.prefabID.ToString();
 		prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 
-		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
+		JSONObject objectSource = prefabTemplateInfo.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
 		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
 
 		std::string fileContents = prefabJSON.ToString();
 		if (WriteFile(path, fileContents, false))
 		{
-			prefabTemplatePair.bDirty = false;
+			prefabTemplateInfo.bDirty = false;
 			return true;
 		}
 		else
 		{
-			prefabTemplatePair.bDirty = true;
-			std::string prefabName = prefabTemplatePair.templateObject->GetName();
+			prefabTemplateInfo.bDirty = true;
+			std::string prefabName = prefabTemplateInfo.templateObject->GetName();
 			PrintError("Failed to write prefab to disk (%s, %s\n)", prefabName.c_str(), path.c_str());
 			return false;
 		}
@@ -1564,7 +1587,7 @@ namespace flex
 	void ResourceManager::DrawImGuiMenuItemizableItems()
 	{
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		for (PrefabTemplatePair& pair : prefabTemplates)
+		for (PrefabTemplateInfo& pair : prefabTemplates)
 		{
 			if (pair.templateObject->IsItemizable())
 			{
@@ -2654,8 +2677,8 @@ namespace flex
 				{
 					for (u32 i = 0; i < (u32)prefabTemplates.size(); ++i)
 					{
-						const PrefabTemplatePair& prefabTemplatePair = prefabTemplates[i];
-						std::string prefabNameStr = prefabTemplatePair.templateObject->GetName() + (prefabTemplatePair.bDirty ? "*" : "");
+						const PrefabTemplateInfo& prefabTemplateInfo = prefabTemplates[i];
+						std::string prefabNameStr = prefabTemplateInfo.templateObject->GetName() + (prefabTemplateInfo.bDirty ? "*" : "");
 						const char* prefabName = prefabNameStr.c_str();
 
 						if (prefabFilter.PassFilter(prefabName))
@@ -2672,7 +2695,7 @@ namespace flex
 							{
 								if (ImGui::BeginDragDropSource())
 								{
-									const void* data = (void*)&prefabTemplatePair.prefabID;
+									const void* data = (void*)&prefabTemplateInfo.prefabID;
 									size_t size = sizeof(PrefabID);
 
 									ImGui::SetDragDropPayload(Editor::PrefabPayloadCStr, data, size);
@@ -2688,7 +2711,7 @@ namespace flex
 
 				ImGui::EndChild();
 
-				PrefabTemplatePair& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
+				PrefabTemplateInfo& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
 				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
 				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "") + " (" + selectedPrefabTemplate.prefabID.ToString() + ")";
 				ImGui::Text("%s", prefabNameStr.c_str());

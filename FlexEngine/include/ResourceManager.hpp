@@ -159,9 +159,9 @@ namespace flex
 
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 
-		struct PrefabTemplatePair
+		struct PrefabTemplateInfo
 		{
-			PrefabTemplatePair(GameObject* templateObject, const PrefabID& prefabID, const std::string& fileName, bool bDirty) :
+			PrefabTemplateInfo(GameObject* templateObject, const PrefabID& prefabID, const std::string& fileName, bool bDirty) :
 				templateObject(templateObject),
 				prefabID(prefabID),
 				fileName(fileName),
@@ -174,7 +174,9 @@ namespace flex
 			std::string fileName;
 			bool bDirty = false;
 		};
-		std::vector<PrefabTemplatePair> prefabTemplates;
+		// TODO: Use map
+		std::vector<PrefabTemplateInfo> prefabTemplates;
+		std::map<PrefabID, std::string> discoveredPrefabs;
 
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
@@ -206,7 +208,7 @@ namespace flex
 		std::vector<ParticleParameterType> particleParameterTypes;
 
 	private:
-		bool WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair);
+		bool WritePrefabToDisk(PrefabTemplateInfo& prefabTemplateInfo);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
 
 		std::string m_FontsFilePathAbs;
