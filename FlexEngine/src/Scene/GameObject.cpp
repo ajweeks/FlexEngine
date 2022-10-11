@@ -12410,7 +12410,7 @@ namespace flex
 			std::vector<JSONField> brakeLightIDs;
 			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 			{
-				if ((i32)brakeLightIDs.size(), 2)
+				if ((i32)brakeLightIDs.size() == 2)
 				{
 					for (i32 i = 0; i < 2; ++i)
 					{
