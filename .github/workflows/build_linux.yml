@@ -28,8 +28,15 @@ jobs:
           submodules: recursive
 
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip libopenal-dev libc-bin g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev
-    
+        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip libopenal-dev g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev
+
+      - name: build-genie
+        run: |
+           git clone https://github.com/bkaradzic/genie; \
+           pushd genie; \
+           make; \
+           popd
+         
       - name: create-build-directories
         run: |
           mkdir -p \
@@ -116,9 +123,7 @@ jobs:
       - name: run-genie
         run: |
           cd scripts; \
-          sudo wget https://github.com/bkaradzic/bx/raw/master/tools/bin/linux/genie; \
-          sudo chmod +x genie; \
-          ./genie ninja; \
+          ./../genie/bin/linux/genie ninja; \
           cd ../
  
       - name: build
