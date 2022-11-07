@@ -1,11 +1,11 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 	"root" : 
 	{
-		"name" : "empty cart",
 		"id" : "CC6102DA5011249843BF11E3D64BBC8A",
+		"name" : "empty cart",
 		"type" : "empty cart",
 		"collider" : 
 		{
@@ -19,9 +19,6 @@
 			"static" : false,
 			"mask" : 1,
 			"group" : 1
-		},
-		"cart info" : 
-		{
 		}
 	}
 }

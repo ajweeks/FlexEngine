@@ -8,12 +8,14 @@ namespace flex
 {
 	class DirectoryWatcher;
 	struct JSONObject;
-	struct PropertyCollection;
 	class Road;
 	class Socket;
 	class Terminal;
 	class Wire;
 	class WirePlug;
+	enum class ValueType;
+	struct PropertyCollection;
+	struct PropertyValue;
 
 	struct SocketData
 	{
@@ -143,31 +145,48 @@ namespace flex
 
 	};
 
-	class PropertyCollectionManager
+	class PropertyCollectionManager : public System
 	{
 	public:
-		PropertyCollection* GetCollectionForObject(const GameObjectID& gameObjectID);
-		PropertyCollection* GetCollectionForPrefab(const PrefabID& prefabID);
+		virtual void Initialize() override;
+		virtual void Destroy() override;
+		virtual void Update() override;
 
-		PropertyCollection* RegisterObject(const GameObjectID& gameObjectID);
-		bool DeregisterObject(const GameObjectID& gameObjectID);
-		bool DeregisterObjectRecursive(const GameObjectID& gameObjectID);
+		virtual void DrawImGui() override;
 
-		PropertyCollection* RegisterPrefabTemplate(const PrefabID& prefabID);
-		bool DeregisterPrefabTemplate(const PrefabID& prefabID);
-		bool DeregisterPrefabTemplateRecursive(const PrefabID& prefabID);
+		void RegisterType(StringID gameObjectTypeID, PropertyCollection* collection);
 
-		bool SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject, bool bSerializePrefabData);
-		void DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject);
+		// Serializes fields which differ from the owning prefab's, if object is loaded from a prefab
+		bool SerializeGameObject(const GameObjectID& gameObjectID, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject, bool bSerializePrefabData);
+		void DeserializeGameObject(GameObject* gameObject, PropertyCollection* collection, const JSONObject& parentObject);
 
-		bool SerializePrefabTemplate(const PrefabID& prefabID, JSONObject& parentObject);
-		void DeserializePrefabTemplate(const PrefabID& prefabID, const JSONObject& parentObject);
+		bool SerializePrefabTemplate(const PrefabIDPair& prefabIDPair, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject);
+		void DeserializePrefabTemplate(GameObject* prefabTemplate, PropertyCollection* collection, const JSONObject& parentObject);
+
+		PropertyCollection* AllocateCollection(const char* collectionName);
+
+		// Serializes all the fields for the given object (does not check for fields a prefab may already define)
+		static void SerializeCollection(PropertyCollection* collection, GameObject* gameObject, JSONObject& parentObject);
+		static void SerializeCollectionUniqueFieldsOnly(PropertyCollection* collection, GameObject* gameObject, GameObject* prefabTemplate, JSONObject& parentObject);
+
+		PropertyCollection* GetCollectionForObjectType(StringID gameObjectTypeID) const;
 
 	private:
-		std::map<GameObjectID, PropertyCollection*> m_RegisteredObjects;
-		std::map<PrefabID, PropertyCollection*> m_RegisteredPrefabTemplates;
+		void Deserialize(PropertyCollection* collection, GameObject* gameObject, const JSONObject& parentObject);
 
-		PoolAllocator<PropertyCollection, 32> m_Allocator;
+		bool SerializeGameObjectFields(PropertyCollection* collection, JSONObject& parentObject, const GameObjectID& gameObjectID, bool bSerializePrefabData);
 
+		// GameObjectTypeID -> Collection for that class built at startup
+		std::map<StringID, PropertyCollection*> m_RegisteredObjectTypes;
+
+		PoolAllocator<PropertyCollection, 64> m_Allocator;
 	};
+
+	extern bool ValuesAreEqual(ValueType valueType, void* value0, void* value1);
+
+	extern void SerializeGameObjectField(JSONObject& parentObject, const char* label, void* valuePtr, ValueType valueType, GameObjectID gameObjectID, u32 precision = 2);
+	extern void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, void* templateValuePtr, ValueType valueType, u32 precision = 2);
+
+	extern bool IsDefaultValue(const PropertyValue& value, void* valuePtr);
+
 } // namespace flex

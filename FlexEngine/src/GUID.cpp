@@ -12,6 +12,7 @@ namespace flex
 	const GameObjectID InvalidGameObjectID = {};
 	const EditorObjectID InvalidEditorObjectID = {};
 	const GUID InvalidPrefabID = InvalidGUID;
+	const PrefabIDPair InvalidPrefabIDPair = { InvalidPrefabID, InvalidGameObjectID };
 
 	GUID::GUID()
 	{

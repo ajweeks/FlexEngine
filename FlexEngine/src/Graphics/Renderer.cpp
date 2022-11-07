@@ -48,16 +48,12 @@ namespace flex
 	{
 		m_Settings.RegisterProperty("enable v-sync", &m_bVSyncEnabled);
 		m_Settings.RegisterProperty("enable fxaa", &m_PostProcessSettings.bEnableFXAA);
-		m_Settings.RegisterProperty("brightness", &m_PostProcessSettings.brightness)
-			.Precision(3);
-		m_Settings.RegisterProperty("offset", &m_PostProcessSettings.offset)
-			.Precision(3);
+		m_Settings.RegisterProperty("brightness", &m_PostProcessSettings.brightness);
+		m_Settings.RegisterProperty("offset", &m_PostProcessSettings.offset);
 		m_Settings.RegisterProperty("saturation", &m_PostProcessSettings.saturation);
 
-		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount)
-			.VersionAdded(2);
-		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution)
-			.VersionAdded(2);
+		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount);
+		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution);
 
 		m_Settings.SetOnDeserialize([this]()
 		{

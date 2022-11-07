@@ -345,7 +345,7 @@ namespace flex
 
 	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* gameObject)
 	{
-		if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
 		{
 			GameObject* newGameObject = ReinstantiateFromPrefab(prefabID, gameObject);
 
@@ -471,7 +471,7 @@ namespace flex
 			using CopyFlags = GameObject::CopyFlags;
 
 			CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
-			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, InvalidPrefabID, false, copyFlags);
+			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, InvalidPrefabIDPair, false, copyFlags);
 			if (rootObj != nullptr)
 			{
 				AddRootObjectImmediate(rootObj);
@@ -1505,13 +1505,13 @@ namespace flex
 			ImGui::SetNextTreeNodeOpen(true);
 		}
 
-		const bool bPrefab = gameObject->m_PrefabIDLoadedFrom.IsValid();
+		const bool bPrefab = gameObject->m_SourcePrefabID.IsValid();
 		if (bPrefab)
 		{
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.75f, 0.98f, 1.0f));
 		}
 
-		bool bPrefabDirty = (gameObject->m_PrefabIDLoadedFrom.IsValid() ? g_ResourceManager->IsPrefabDirty(gameObject->m_PrefabIDLoadedFrom) : false);
+		bool bPrefabDirty = (gameObject->m_SourcePrefabID.m_PrefabID.IsValid() ? g_ResourceManager->IsPrefabDirty(gameObject->m_SourcePrefabID.m_PrefabID) : false);
 		const char* prefabDirtyStr = (bPrefabDirty ? "*" : "");
 		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s%s", objectName.c_str(), prefabDirtyStr);
 
@@ -1764,7 +1764,6 @@ namespace flex
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
 
 		CHECK(!previousInstance->m_bIsTemplate);
-		g_PropertyCollectionManager->DeregisterObjectRecursive(previousInstance->ID);
 
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousGameObjectID, &previousName, previousParent, nullptr, copyFlags);
 
@@ -1816,7 +1815,7 @@ namespace flex
 		std::vector<GameObject*> allObjects = GetAllObjects();
 		for (GameObject* gameObject : allObjects)
 		{
-			if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+			if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
 			{
 				++total;
 			}
@@ -1833,7 +1832,7 @@ namespace flex
 			GameObject* gameObject = gameObjectID.Get();
 			if (gameObject != nullptr)
 			{
-				if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+				if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
 				{
 					std::string objName = gameObject->GetName();
 					PrintWarn("Deleting prefab instance %s\n", objName.c_str());

@@ -162,7 +162,6 @@ namespace flex
 			i64 longValue;
 			u64 ulongValue;
 			real floatValue;
-			bool boolValue;
 			glm::vec4 vecValue;
 			glm::mat4 matValue;
 		};

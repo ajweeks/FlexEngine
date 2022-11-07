@@ -1,11 +1,11 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216",
 	"root" : 
 	{
-		"name" : "speaker",
 		"id" : "2C578FC66A3D63BC41269C6FCF9D014C",
+		"name" : "speaker",
 		"type" : "speaker",
 		"mesh" : "cube.glb",
 		"materials" : 
@@ -14,8 +14,8 @@
 		],
 		"speaker" : 
 		{
-			"audio source path" : "basic-stepping.wav",
-			"playing" : false
+			"playing" : false,
+			"audio source path" : "basic-stepping.wav"
 		}
 	}
 }

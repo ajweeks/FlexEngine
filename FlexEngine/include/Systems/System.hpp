@@ -4,6 +4,7 @@ namespace flex
 {
 	enum class SystemType
 	{
+		PROPERTY_COLLECTION_MANAGER,
 		PLUGGABLES,
 		ROAD_MANAGER,
 		TERMINAL_MANAGER,

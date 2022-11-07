@@ -5,7 +5,6 @@
 		"name" : "wood",
 		"shader" : "pbr",
 		"const albedo" : "0.170,0.142,0.103",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 1.000000
 	}
 }

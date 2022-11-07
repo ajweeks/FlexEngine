@@ -57,7 +57,6 @@ namespace flex
 	class ResourceManager* g_ResourceManager = nullptr;
 	class UIManager* g_UIManager = nullptr;
 	class ConfigFileManager* g_ConfigFileManager = nullptr;
-	class PropertyCollectionManager* g_PropertyCollectionManager = nullptr;
 
 #if DEBUG
 	const bool g_bDebugBuild = true;
@@ -82,4 +81,9 @@ namespace flex
 #else
 	const bool g_bVulkanEnabled = false;
 #endif
+
+	PropertyCollectionManager* GetPropertyCollectionManager()
+	{
+		return GetSystem<PropertyCollectionManager>(SystemType::PROPERTY_COLLECTION_MANAGER);
+	}
 } // namespace flex

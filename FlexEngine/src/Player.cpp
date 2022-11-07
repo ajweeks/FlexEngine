@@ -41,8 +41,8 @@ namespace flex
 {
 	const glm::vec3 Player::HeadlampMountingPos = glm::vec3(0.0f, 0.8f, 0.2f);
 
-	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
-		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID),
+	Player::Player(i32 index, GameObjectID gameObjectID) :
+		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID, InvalidPrefabIDPair, false),
 		m_Index(index),
 		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
 	{

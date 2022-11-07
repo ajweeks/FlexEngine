@@ -63,4 +63,18 @@ namespace flex
 	extern const GameObjectID InvalidGameObjectID;
 	extern const EditorObjectID InvalidEditorObjectID;
 	extern const GUID InvalidPrefabID;
+
+	struct PrefabIDPair
+	{
+		// References a source prefab object (global ID)
+		PrefabID m_PrefabID = InvalidPrefabID;
+		// References an object within the source prefab (file-local ID)
+		GameObjectID m_SubGameObjectID = InvalidGameObjectID;
+
+		bool IsValid() const { return m_PrefabID.IsValid() && m_SubGameObjectID.IsValid(); }
+		void Clear() { m_PrefabID = InvalidPrefabID; m_SubGameObjectID = InvalidGameObjectID; }
+	};
+
+	extern const PrefabIDPair InvalidPrefabIDPair;
+
 } // namespace flex

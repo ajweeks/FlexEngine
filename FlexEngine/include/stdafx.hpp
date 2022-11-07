@@ -272,7 +272,6 @@ namespace flex
 	extern class ResourceManager* g_ResourceManager;
 	extern class UIManager* g_UIManager;
 	extern class ConfigFileManager* g_ConfigFileManager;
-	extern class PropertyCollectionManager* g_PropertyCollectionManager;
 	extern const bool g_bDebugBuild;
 
 	template<typename T>
@@ -280,6 +279,8 @@ namespace flex
 	{
 		return (T*)g_Systems[(i32)systemType];
 	}
+
+	PropertyCollectionManager* GetPropertyCollectionManager();
 
 	extern sec g_SecElapsedSinceProgramStart;
 	extern sec g_DeltaTime;

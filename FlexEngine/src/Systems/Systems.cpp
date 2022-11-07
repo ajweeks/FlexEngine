@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp" // For DirectoryWatcher
 #include "Player.hpp"
+#include "PropertyCollection.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -884,148 +885,256 @@ namespace flex
 		return bSuccess;
 	}
 
-	PropertyCollection* PropertyCollectionManager::GetCollectionForObject(const GameObjectID& gameObjectID)
+	//
+	// PropertyCollectionManager
+	//
+
+	void PropertyCollectionManager::Initialize()
 	{
-		auto iter = m_RegisteredObjects.find(gameObjectID);
-		if (iter != m_RegisteredObjects.end())
+		GameObject::RegisterPropertyCollections();
+	}
+
+	void PropertyCollectionManager::Destroy()
+	{
+	}
+
+	void PropertyCollectionManager::Update()
+	{
+	}
+
+	void PropertyCollectionManager::DrawImGui()
+	{
+	}
+
+	void PropertyCollectionManager::RegisterType(StringID gameObjectTypeID, PropertyCollection* collection)
+	{
+		CHECK_EQ(m_RegisteredObjectTypes.find(gameObjectTypeID), m_RegisteredObjectTypes.end());
+
+		m_RegisteredObjectTypes.emplace(gameObjectTypeID, collection);
+	}
+
+	bool PropertyCollectionManager::SerializeGameObject(const GameObjectID& gameObjectID, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		GameObject* gameObject = gameObjectID.Get();
+		if (gameObject == nullptr)
+		{
+			char buffer[33];
+			gameObjectID.ToString(buffer);
+			PrintError("Failed to get object to be serialized (ID: %s, name: %s)\n", buffer, debugObjectName);
+			return false;
+		}
+
+		if (collection != nullptr)
+		{
+			const PrefabIDPair& sourcePrefabIDPair = gameObject->GetSourcePrefabIDPair();
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(sourcePrefabIDPair);
+
+			if (prefabTemplate == nullptr || bSerializePrefabData)
+			{
+				// No need to worry about inherited fields if this object isn't a prefab instance
+				SerializeCollection(collection, gameObject, parentObject);
+			}
+			else
+			{
+				SerializeCollectionUniqueFieldsOnly(collection, gameObject, prefabTemplate, parentObject);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializeGameObject(GameObject* gameObject, PropertyCollection* collection, const JSONObject& parentObject)
+	{
+		CHECK_NE(gameObject, nullptr);
+
+		if (collection != nullptr)
+		{
+			Deserialize(collection, gameObject, parentObject);
+		}
+	}
+
+	bool PropertyCollectionManager::SerializePrefabTemplate(const PrefabIDPair& prefabIDPair, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabIDPair);
+		if (prefabTemplate == nullptr)
+		{
+			char bufferPrefabID[33];
+			char bufferSubObjectID[33];
+			prefabIDPair.m_PrefabID.ToString(bufferPrefabID);
+			prefabIDPair.m_SubGameObjectID.ToString(bufferSubObjectID);
+			PrintError("Attempted to serialize collection for invalid prefab template (Prefab ID: %s, Sub-object ID: %s, name: %s)\n", bufferPrefabID, bufferSubObjectID, debugObjectName);
+			return false;
+		}
+
+		if (collection != nullptr)
+		{
+			// Nested prefabs not supported, so all fields can be serialized
+			// without checking for parent values.
+			SerializeCollection(collection, prefabTemplate, parentObject);
+			return true;
+		}
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializePrefabTemplate(GameObject* prefabTemplate, PropertyCollection* collection, const JSONObject& parentObject)
+	{
+		CHECK_NE(prefabTemplate, nullptr);
+
+		if (collection != nullptr)
+		{
+			Deserialize(collection, prefabTemplate, parentObject);
+		}
+	}
+
+	PropertyCollection* PropertyCollectionManager::AllocateCollection(const char* collectionName)
+	{
+		if (m_Allocator.GetPoolCount() > 2048)
+		{
+			char memSizeStrBuf[64];
+			ByteCountToString(memSizeStrBuf, ARRAY_LENGTH(memSizeStrBuf), m_Allocator.MemoryUsed());
+			PrintWarn("Property collection manager has %u allocation pools allocated, taking up %s!\n", m_Allocator.GetPoolCount(), memSizeStrBuf);
+		}
+
+		PropertyCollection* result = new (m_Allocator.Alloc()) PropertyCollection(collectionName);
+		return result;
+	}
+
+	PropertyCollection* PropertyCollectionManager::GetCollectionForObjectType(StringID gameObjectTypeID) const
+	{
+		auto iter = m_RegisteredObjectTypes.find(gameObjectTypeID);
+		if (iter != m_RegisteredObjectTypes.end())
 		{
 			return iter->second;
 		}
 		return nullptr;
 	}
 
-	PropertyCollection* PropertyCollectionManager::GetCollectionForPrefab(const PrefabID& prefabID)
+	void PropertyCollectionManager::SerializeCollection(PropertyCollection* collection, GameObject* gameObject, JSONObject& parentObject)
 	{
-		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
-		if (iter != m_RegisteredPrefabTemplates.end())
+		for (const auto& iter : collection->values)
 		{
-			return iter->second;
-		}
-		return nullptr;
-	}
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
 
-	PropertyCollection* PropertyCollectionManager::RegisterObject(const GameObjectID& gameObjectID)
-	{
-		CHECK(gameObjectID != InvalidGameObjectID);
-		auto iter = m_RegisteredObjects.find(gameObjectID);
-		if (iter != m_RegisteredObjects.end())
-		{
-			GameObject* gameObject = gameObjectID.Get();
-			std::string gameObjectName = gameObject != nullptr ? gameObject->GetName() : gameObjectID.ToString();
-			PrintWarn("Attempted to register object with PropertyCollectionManager multiple times! %s\n", gameObjectName.c_str());
-		}
+			CHECK_LT(value.offset, 1024u);
 
-		PropertyCollection* result = m_Allocator.Alloc();
-		m_RegisteredObjects.emplace(gameObjectID, result);
-		return result;
-	}
+			void* valuePtr = (u8*)gameObject + value.offset;
 
-	bool PropertyCollectionManager::DeregisterObject(const GameObjectID& gameObjectID)
-	{
-		auto iter = m_RegisteredObjects.find(gameObjectID);
-		if (iter != m_RegisteredObjects.end())
-		{
-			m_RegisteredObjects.erase(iter);
-			return true;
-		}
-		return false;
-	}
-
-	bool PropertyCollectionManager::DeregisterObjectRecursive(const GameObjectID& gameObjectID)
-	{
-		if (g_SceneManager->HasSceneLoaded())
-		{
-			GameObject* gameObject = gameObjectID.Get();
-			if (gameObject != nullptr)
+			if (!IsDefaultValue(value, valuePtr))
 			{
-				for (u32 i = 0; i < gameObject->GetChildCount(); ++i)
-				{
-					DeregisterObjectRecursive(gameObject->GetChild(i)->ID);
-				}
+				parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, value.type, value.GetPrecision()));
+			}
+		}
+	}
+
+	void PropertyCollectionManager::SerializeCollectionUniqueFieldsOnly(PropertyCollection* collection, GameObject* gameObject, GameObject* prefabTemplate, JSONObject& parentObject)
+	{
+		for (const auto& iter : collection->values)
+		{
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
+
+			CHECK_LT(value.offset, 1024u);
+			// Serialization may fail if class layouts don't match
+			CHECK(typeid(*gameObject) == typeid(*prefabTemplate));
+
+			void* fieldValuePtr = (u8*)gameObject + value.offset;
+			void* templateValuePtr = (u8*)prefabTemplate + value.offset;
+
+			SerializePrefabInstanceFieldIfUnique(parentObject, label, fieldValuePtr, templateValuePtr, value.type, value.GetPrecision());
+		}
+	}
+
+	void PropertyCollectionManager::Deserialize(PropertyCollection* collection, GameObject* gameObject, const JSONObject& parentObject)
+	{
+		for (const auto& iter : collection->values)
+		{
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
+
+			CHECK_LT(value.offset, 1024u);
+
+			void* valuePtr = (u8*)gameObject + value.offset;
+			parentObject.TryGetValueOfType(label, valuePtr, value.type);
+		}
+	}
+
+	bool ValuesAreEqual(ValueType valueType, void* value0, void* value1)
+	{
+		const real threshold = 0.0001f;
+
+		switch (valueType)
+		{
+		case ValueType::STRING:
+			return *(std::string*)value0 == *(std::string*)value1;
+		case ValueType::INT:
+			return *(i32*)value0 == *(i32*)value1;
+		case ValueType::UINT:
+			return *(u32*)value0 == *(u32*)value1;
+		case ValueType::LONG:
+			return *(i64*)value0 == *(i64*)value1;
+		case ValueType::ULONG:
+			return *(u64*)value0 == *(u64*)value1;
+		case ValueType::FLOAT:
+			return NearlyEquals(*(real*)value0, *(real*)value1, threshold);
+		case ValueType::BOOL:
+			return *(bool*)value0 == *(bool*)value1;
+		case ValueType::VEC2:
+			return NearlyEquals(*(glm::vec2*)value0, *(glm::vec2*)value1, threshold);
+		case ValueType::VEC3:
+			return NearlyEquals(*(glm::vec3*)value0, *(glm::vec3*)value1, threshold);
+		case ValueType::VEC4:
+			return NearlyEquals(*(glm::vec4*)value0, *(glm::vec4*)value1, threshold);
+		case ValueType::QUAT:
+			return NearlyEquals(*(glm::quat*)value0, *(glm::quat*)value1, threshold);
+		case ValueType::GUID:
+			return *(GUID*)value0 == *(GUID*)value1;
+		default:
+			ENSURE_NO_ENTRY();
+			return false;
+		}
+	}
+
+	void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, void* templateValuePtr, ValueType valueType, u32 precision /* = 2 */)
+	{
+		if (!ValuesAreEqual(valueType, valuePtr, templateValuePtr))
+		{
+			parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+		}
+	}
+
+	bool IsDefaultValue(const PropertyValue& value, void* valuePtr)
+	{
+		if (value.defaultValueSet != 0)
+		{
+			switch (value.type)
+			{
+			case ValueType::INT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.intValue);
+			case ValueType::UINT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.uintValue);
+			case ValueType::FLOAT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.realValue);
+			case ValueType::BOOL:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.boolValue);
+			case ValueType::GUID:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.guidValue);
+			case ValueType::VEC2:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec2Value);
+			case ValueType::VEC3:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec3Value);
+			case ValueType::VEC4:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec4Value);
+			case ValueType::QUAT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.quatValue);
+			default:
+				ENSURE_NO_ENTRY();
 			}
 		}
 
-		return DeregisterObject(gameObjectID);
-	}
-
-	PropertyCollection* PropertyCollectionManager::RegisterPrefabTemplate(const PrefabID& prefabID)
-	{
-		CHECK(prefabID != InvalidPrefabID);
-		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
-		if (iter != m_RegisteredPrefabTemplates.end())
-		{
-			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
-			std::string prefabTemplateName = prefabTemplate != nullptr ? prefabTemplate->GetName() : prefabID.ToString();
-			PrintWarn("Attempted to register prefab template with PropertyCollectionManager multiple times! %s\n", prefabTemplateName.c_str());
-		}
-
-		PropertyCollection* result = m_Allocator.Alloc();
-		m_RegisteredPrefabTemplates.emplace(prefabID, result);
-		return result;
-	}
-
-	bool PropertyCollectionManager::DeregisterPrefabTemplate(const PrefabID& prefabID)
-	{
-		auto iter = m_RegisteredPrefabTemplates.find(prefabID);
-		if (iter != m_RegisteredPrefabTemplates.end())
-		{
-			m_RegisteredPrefabTemplates.erase(iter);
-			return true;
-		}
 		return false;
 	}
 
-	bool PropertyCollectionManager::DeregisterPrefabTemplateRecursive(const PrefabID& prefabID)
-	{
-		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
-		if (prefabTemplate != nullptr)
-		{
-			for (u32 i = 0; i < prefabTemplate->GetChildCount(); ++i)
-			{
-				// Yeah or nah?
-				// TODO: Should prefab template children have m_bIsTemplate set?
-				DeregisterObjectRecursive(prefabTemplate->GetChild(i)->ID);
-			}
-		}
-
-		return DeregisterPrefabTemplate(prefabID);
-	}
-
-	void PropertyCollectionManager::DeserializeObjectIfPresent(const GameObjectID& gameObjectID, const JSONObject& parentObject)
-	{
-		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
-		if (collection != nullptr)
-		{
-			collection->Deserialize(parentObject);
-		}
-	}
-
-	bool PropertyCollectionManager::SerializeObjectIfPresent(const GameObjectID& gameObjectID, JSONObject& parentObject, bool bSerializePrefabData)
-	{
-		PropertyCollection* collection = GetCollectionForObject(gameObjectID);
-		if (collection != nullptr)
-		{
-			return collection->SerializeRegisteredGameObjectFields(parentObject, gameObjectID, bSerializePrefabData);
-		}
-		return false;
-	}
-
-	bool PropertyCollectionManager::SerializePrefabTemplate(const PrefabID& prefabID, JSONObject& parentObject)
-	{
-		PropertyCollection* collection = GetCollectionForPrefab(prefabID);
-		if (collection != nullptr)
-		{
-			return collection->SerializeRegisteredPrefabFields(parentObject, prefabID);
-		}
-		return false;
-	}
-
-	void PropertyCollectionManager::DeserializePrefabTemplate(const PrefabID& prefabID, const JSONObject& parentObject)
-	{
-		PropertyCollection* collection = GetCollectionForPrefab(prefabID);
-		if (collection != nullptr)
-		{
-			collection->Deserialize(parentObject);
-		}
-	}
 } // namespace flex

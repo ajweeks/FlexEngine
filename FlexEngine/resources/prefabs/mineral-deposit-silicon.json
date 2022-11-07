@@ -1,20 +1,16 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "8014F0FFA52C70B6467FE67C43C3363C",
 	"root" : 
 	{
-		"name" : "mineral deposit silicon",
 		"id" : "7BFFD7021B00B6B741FCCD1C25771ED9",
+		"name" : "mineral deposit silicon",
 		"type" : "mineral deposit",
-		"materials" : 
-		[
-			"mineral silicon"
-		],
 		"mineral deposit" : 
 		{
-			"type" : "silicon",
-			"mineral remaining" : 1000
+			"mineral remaining" : 1000,
+			"type" : "silicon"
 		}
 	}
 }

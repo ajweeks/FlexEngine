@@ -1,20 +1,16 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "56ADD055CA44E1BD4B9078348550E9BE",
 	"root" : 
 	{
-		"name" : "mineral deposit tin",
 		"id" : "48849104A8DD75BA493CAE8E391BCE01",
+		"name" : "mineral deposit tin",
 		"type" : "mineral deposit",
-		"materials" : 
-		[
-			"mineral tin"
-		],
 		"mineral deposit" : 
 		{
-			"type" : "tin",
-			"mineral remaining" : 1000
+			"mineral remaining" : 1000,
+			"type" : "tin"
 		}
 	}
 }

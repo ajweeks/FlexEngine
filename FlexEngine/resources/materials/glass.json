@@ -3,7 +3,6 @@
 	"material" : 
 	{
 		"name" : "glass",
-		"shader" : "pbr",
-		"const emissive" : "0.000,0.000,0.000"
+		"shader" : "pbr"
 	}
 }

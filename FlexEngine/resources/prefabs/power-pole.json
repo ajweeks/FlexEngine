@@ -4,8 +4,8 @@
 	"prefab id" : "FF518D129F74B1B442494D703055E816",
 	"root" : 
 	{
-		"name" : "power pole",
 		"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
+		"name" : "power pole",
 		"type" : "power pole",
 		"casts shadow" : false,
 		"mesh" : "power-pole.glb",
@@ -16,8 +16,8 @@
 		"children" : 
 		[
 			{
-				"name" : "socket_00",
 				"id" : "A7986B251EDE38924BFBD260F2A60CB9",
+				"name" : "socket_00",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -30,8 +30,8 @@
 				}
 			},
 			{
-				"name" : "socket_01",
 				"id" : "06E6BE1FD3F67CBB462BCB2BA26B0FA1",
+				"name" : "socket_01",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -44,8 +44,8 @@
 				}
 			},
 			{
-				"name" : "socket_02",
 				"id" : "936E91DF37B1EFB64CDE646ABB16559D",
+				"name" : "socket_02",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -58,8 +58,8 @@
 				}
 			},
 			{
-				"name" : "socket_03",
 				"id" : "60CA0AD449B6C1AF449C11BEE41DB6FE",
+				"name" : "socket_03",
 				"type" : "socket",
 				"transform" : 
 				{

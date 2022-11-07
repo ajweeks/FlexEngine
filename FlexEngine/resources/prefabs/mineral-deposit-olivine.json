@@ -1,20 +1,16 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "192082D7335E52AE4616BAF655239916",
 	"root" : 
 	{
-		"name" : "mineral deposit olivine",
 		"id" : "DDCC668742BE60804760AA4FD333B9EA",
+		"name" : "mineral deposit olivine",
 		"type" : "mineral deposit",
-		"materials" : 
-		[
-			"mineral olivine"
-		],
 		"mineral deposit" : 
 		{
-			"type" : "olivine",
-			"mineral remaining" : 1000
+			"mineral remaining" : 1000,
+			"type" : "olivine"
 		}
 	}
 }

@@ -210,7 +210,9 @@ namespace flex
 		Platform::Init();
 
 		g_ConfigFileManager = new ConfigFileManager();
-		g_PropertyCollectionManager = new PropertyCollectionManager();
+
+		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER] = new PropertyCollectionManager();
+		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER]->Initialize();
 
 		CreateWindow();
 
@@ -599,9 +601,6 @@ namespace flex
 
 		delete g_ConfigFileManager;
 		g_ConfigFileManager = nullptr;
-
-		delete g_PropertyCollectionManager;
-		g_PropertyCollectionManager = nullptr;
 
 		delete g_CameraManager;
 		g_CameraManager = nullptr;

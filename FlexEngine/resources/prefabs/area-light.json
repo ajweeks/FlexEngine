@@ -1,33 +1,27 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 	"root" : 
 	{
-		"name" : "area light",
 		"id" : "97EEC0DDDDE3C0B34FFC98B66497219A",
+		"name" : "area light",
 		"type" : "area light",
-		"visible" : true,
-		"casts shadow" : true,
 		"area light info" : 
 		{
-			"colour" : "1.00, 1.00, 1.00",
-			"enabled" : true,
 			"brightness" : 59.112999
 		},
 		"children" : 
 		[
 			{
-				"name" : "AreaLightPlane-1",
 				"id" : "3507C2F99B6411AE4877C18C7FF4B882",
+				"name" : "AreaLightPlane-1",
 				"type" : "object",
 				"transform" : 
 				{
 					"rot" : "-1.571, -0.000, 0.000",
 					"scale" : "2.000, 2.000, 2.000"
 				},
-				"visible" : true,
-				"casts shadow" : true,
 				"mesh" : "unit-plane.glb",
 				"materials" : 
 				[

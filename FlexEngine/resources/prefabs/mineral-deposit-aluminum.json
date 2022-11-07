@@ -1,20 +1,16 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "56FC31EDE61483A54F4B50971FC9DE27",
 	"root" : 
 	{
-		"name" : "mineral deposit aluminum",
 		"id" : "ACB634397342B3B148BE2E82650E3428",
+		"name" : "mineral deposit aluminum",
 		"type" : "mineral deposit",
-		"materials" : 
-		[
-			"mineral aluminum"
-		],
 		"mineral deposit" : 
 		{
-			"type" : "aluminum",
-			"mineral remaining" : 1000
+			"mineral remaining" : 1000,
+			"type" : "aluminum"
 		}
 	}
 }

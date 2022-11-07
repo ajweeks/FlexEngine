@@ -1,11 +1,11 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 	"root" : 
 	{
-		"name" : "engine cart",
 		"id" : "E6D4AD3A50446AA64E54F28DD2C4B83F",
+		"name" : "engine cart",
 		"type" : "engine cart",
 		"collider" : 
 		{
@@ -19,9 +19,6 @@
 			"static" : true,
 			"mask" : 1,
 			"group" : 1
-		},
-		"cart info" : 
-		{
 		}
 	}
 }

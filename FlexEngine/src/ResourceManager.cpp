@@ -365,7 +365,10 @@ namespace flex
 				(u32)CopyFlags::ALL &
 				~(u32)CopyFlags::CREATE_RENDER_OBJECT &
 				~(u32)CopyFlags::ADD_TO_SCENE);
-			GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabID, true, copyFlags);
+			PrefabIDPair prefabIDPair;
+			prefabIDPair.m_PrefabID = prefabID;
+			prefabIDPair.m_SubGameObjectID = prefabRootObject.GetGameObjectID("id");
+			GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabIDPair, true, copyFlags);
 
 			CHECK(prefabTemplate->IsPrefabTemplate());
 
@@ -401,16 +404,7 @@ namespace flex
 					Print("Parsing prefab: %s\n", fileName.c_str());
 				}
 
-				JSONObject prefabObject;
-				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
-				{
-					ParsePrefabTemplate(foundFilePath, discoveredPrefabs, prefabTemplates);
-				}
-				else
-				{
-					PrintError("Failed to parse prefab file: %s, error: %s\n", foundFilePath.c_str(), JSONParser::GetErrorString());
-					return;
-				}
+				ParsePrefabTemplate(foundFilePath, discoveredPrefabs, prefabTemplates);
 			}
 		}
 		else
@@ -1210,14 +1204,48 @@ namespace flex
 		return InvalidPrefabID;
 	}
 
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabIDPair& prefabIDPair) const
+	{
+		return GetPrefabTemplate(prefabIDPair.m_PrefabID, prefabIDPair.m_SubGameObjectID);
+	}
+
 	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID) const
+	{
+		return GetPrefabTemplate(prefabID, InvalidGameObjectID);
+	}
+
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID, const GameObjectID& subObjectID) const
 	{
 		// TODO: Use map
 		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
 			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplateInfo.templateObject;
+				if (!subObjectID.IsValid())
+				{
+					return prefabTemplateInfo.templateObject;
+				}
+
+				return GetPrefabSubObject(prefabTemplateInfo.templateObject, subObjectID);
+			}
+		}
+
+		return nullptr;
+	}
+
+	GameObject* ResourceManager::GetPrefabSubObject(GameObject* prefabTemplate, const GameObjectID& subObjectID) const
+	{
+		if (prefabTemplate->ID == subObjectID)
+		{
+			return prefabTemplate;
+		}
+
+		for (GameObject* gameObject : prefabTemplate->m_Children)
+		{
+			GameObject* subObject = GetPrefabSubObject(gameObject, subObjectID);
+			if (subObject != nullptr)
+			{
+				return subObject;
 			}
 		}
 
@@ -2791,7 +2819,7 @@ namespace flex
 				if (ImGui::Button("Duplicate"))
 				{
 					GameObject* newTemplateObject = selectedPrefabTemplate.templateObject->CopySelf();
-					newTemplateObject->m_PrefabIDLoadedFrom = InvalidPrefabID;
+					newTemplateObject->m_SourcePrefabID.Clear();
 					newTemplateObject->m_bIsTemplate = true;
 					std::string namePrefix = newTemplateObject->GetName();
 

@@ -128,7 +128,7 @@ namespace flex
 
 	JSONValue::JSONValue(bool inBoolValue) :
 		type(ValueType::BOOL),
-		boolValue(inBoolValue)
+		uintValue(inBoolValue ? 1 : 0)
 	{
 	}
 
@@ -325,7 +325,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return (i32)floatValue;
 		case ValueType::BOOL:
-			return boolValue ? 1 : 0;
+			return (i32)uintValue;
 		default:
 			PrintError("AsInt was called on non-integer value\n");
 			return i32_max;
@@ -347,7 +347,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return (u32)floatValue;
 		case ValueType::BOOL:
-			return boolValue;
+			return uintValue;
 		default:
 			PrintError("AsUInt was called on non-integer value\n");
 			return u32_max;
@@ -369,7 +369,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return (i64)floatValue;
 		case ValueType::BOOL:
-			return boolValue;
+			return (i64)uintValue;
 		default:
 			PrintError("AsLong was called on non-integer value\n");
 			return -1;
@@ -391,7 +391,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return (u64)floatValue;
 		case ValueType::BOOL:
-			return boolValue;
+			return (u64)uintValue;
 		default:
 			PrintError("AsULong was called on non-integer value\n");
 			return u64_max;
@@ -413,7 +413,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return floatValue;
 		case ValueType::BOOL:
-			return (boolValue != 0) ? 1.0f : 0.0f;
+			return (uintValue != 0) ? 1.0f : 0.0f;
 		default:
 			PrintError("AsFloat was called on non-floating point value\n");
 			return -1.0f;
@@ -435,7 +435,7 @@ namespace flex
 		case ValueType::FLOAT:
 			return (floatValue != 0.0f);
 		case ValueType::BOOL:
-			return (boolValue != 0);
+			return (uintValue != 0);
 		default:
 			PrintError("AsBool was called on non-bool value\n");
 			return false;
@@ -824,7 +824,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				return field.value.boolValue;
+				return field.value.uintValue;
 			}
 		}
 		return false;
@@ -1040,7 +1040,7 @@ namespace flex
 			result += FloatToString(value.floatValue, value.floatPrecision);
 			break;
 		case ValueType::BOOL:
-			result += (value.boolValue ? "true" : "false");
+			result += (value.uintValue ? "true" : "false");
 			break;
 		case ValueType::VEC2:
 			result += "\"";

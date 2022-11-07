@@ -26,6 +26,67 @@ namespace flex
 		g_ConfigFileManager->DeregisterConfigFile(this);
 	}
 
+	using EmplaceResult = std::pair<std::map<const char*, ConfigFile::ConfigValue>::iterator, bool>;
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, real* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::FLOAT));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, i32* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::INT));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, u32* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::UINT));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, bool* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::BOOL));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, glm::vec2* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::VEC2));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, glm::vec3* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::VEC3));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, glm::vec4* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::VEC4));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, glm::quat* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::QUAT));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, std::string* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::STRING));
+		return pair.first->second;
+	}
+
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, GUID* propertyValue)
+	{
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::GUID));
+		return pair.first->second;
+	}
 
 	bool ConfigFile::Serialize()
 	{
@@ -35,7 +96,12 @@ namespace flex
 
 		rootObject.fields.emplace_back("version", JSONValue(fileVersion));
 
-		propertyCollection.Serialize(rootObject);
+		for (std::pair<const char* const, ConfigValue>& valuePair : values)
+		{
+			CHECK_NE(valuePair.second.valuePtr, nullptr);
+
+			rootObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type));
+		}
 
 		std::string fileContents = rootObject.ToString();
 
@@ -63,9 +129,14 @@ namespace flex
 						fileVersion = currentFileVersion;
 					}
 
-					propertyCollection.Deserialize(rootObject);
+					for (std::pair<const char* const, ConfigValue>& valuePair : values)
+					{
+						CHECK_NE(valuePair.second.valuePtr, nullptr);
 
-					if (onDeserializeCallback)
+						rootObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type);
+					}
+
+					if (onDeserializeCallback != nullptr)
 					{
 						onDeserializeCallback();
 					}
@@ -87,6 +158,17 @@ namespace flex
 		onDeserializeCallback = callback;
 	}
 
+	ConfigFile::ConfigValue& ConfigFile::ConfigValue::SetRange(real rangeMin, real rangeMax)
+	{
+		CHECK(rangeMin < rangeMax);
+		valueMin = *(void**)&rangeMin;
+		valueMax = *(void**)&rangeMax;
+		valueMinSet = 1;
+		valueMaxSet = 1;
+
+		return *this;
+	}
+
 	ConfigFile::Request ConfigFile::DrawImGuiObjects()
 	{
 		Request result = Request::NONE;
@@ -95,13 +177,13 @@ namespace flex
 		{
 			ImGui::Text("Version: %i", fileVersion);
 
-			for (auto& valuePair : propertyCollection.values)
-			{
-				if (valuePair.second.DrawImGui())
-				{
-					bDirty = true;
-				}
-			}
+			//for (std::pair<const char* const, ConfigValue>& valuePair : values)
+			//{
+			//	if (valuePair.second.DrawImGui())
+			//	{
+			//		bDirty = true;
+			//	}
+			//}
 
 			if (ImGui::Button(bDirty ? "Save*" : "Save"))
 			{

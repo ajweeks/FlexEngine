@@ -453,7 +453,7 @@ namespace flex
 			EXPECT((u64)jsonObj.fields.size(), (u64)4u);
 			JSONField spawnPlayerField = jsonObj.fields[2];
 			EXPECT(spawnPlayerField.value.type, ValueType::BOOL);
-			EXPECT(spawnPlayerField.value.boolValue, false);
+			EXPECT(spawnPlayerField.value.uintValue, 0u);
 			JSONField objectArrayField = jsonObj.fields[3];
 			EXPECT(objectArrayField.value.type, ValueType::OBJECT_ARRAY);
 			EXPECT((u64)objectArrayField.value.objectArrayValue.size(), (u64)2u); // 2 objects

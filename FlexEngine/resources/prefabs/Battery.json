@@ -1,11 +1,11 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 	"root" : 
 	{
-		"name" : "battery",
 		"id" : "361FC57CDA633FB14CBAE8A233B42CC7",
+		"name" : "battery",
 		"type" : "battery",
 		"mesh" : "battery_cell_2.glb",
 		"materials" : 
@@ -27,15 +27,11 @@
 			"mask" : 1,
 			"group" : 1
 		},
-		"battery info" : 
-		{
-			"charge amount" : 0.000000
-		},
 		"children" : 
 		[
 			{
-				"name" : "socket_00",
 				"id" : "4CAC47CC4CED1AB44CA46A05140FF836",
+				"name" : "socket_00",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -48,8 +44,8 @@
 				}
 			},
 			{
-				"name" : "socket_01",
 				"id" : "680D9279586F2D9649EEF2E1A3A0014D",
+				"name" : "socket_01",
 				"type" : "socket",
 				"transform" : 
 				{

@@ -1,11 +1,11 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "A43DB14860BDDB8A406C48E105BD22BA",
 	"root" : 
 	{
-		"name" : "miner",
 		"id" : "A8E5A550A24421804190C323A5132FAD",
+		"name" : "miner",
 		"type" : "miner",
 		"mesh" : "miner.glb",
 		"materials" : 
@@ -28,12 +28,15 @@
 		},
 		"miner" : 
 		{
+			"max charge" : 10.000000,
+			"mine rate" : 1.000000,
+			"power draw" : 0.100000
 		},
 		"children" : 
 		[
 			{
-				"name" : "socket_00",
 				"id" : "9A1BD5DD5C25299A463A28C01115F847",
+				"name" : "socket_00",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -41,11 +44,12 @@
 				},
 				"socket" : 
 				{
+					"slotIdx" : 0
 				}
 			},
 			{
-				"name" : "socket_01",
 				"id" : "B53644B0C649F9A54B5AC9DC6B3D5007",
+				"name" : "socket_01",
 				"type" : "socket",
 				"transform" : 
 				{
@@ -53,6 +57,7 @@
 				},
 				"socket" : 
 				{
+					"slotIdx" : 0
 				}
 			}
 		]

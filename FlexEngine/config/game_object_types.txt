@@ -15,7 +15,6 @@ engine cart
 skybox
 terminal
 head lamp
-blocks
 battery
 area light
 glass pane

@@ -150,10 +150,23 @@ namespace flex
 		parentObject.TryGetFloat("user data", userData.floatVal);
 	}
 
-	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
+
+#define REGISTER_FIELD(collection, name, type, field) collection->RegisterProperty(name, offsetof(type, field), typeid(field))
+
+
+	//
+	// GameObject
+	//
+
+	GameObject::GameObject(const std::string& name, StringID typeID) :
+		 GameObject(name, typeID, InvalidGameObjectID, InvalidPrefabIDPair, false)
+	{
+	}
+
+	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate) :
 		m_Name(name),
 		m_TypeID(typeID),
-		m_PrefabIDLoadedFrom(prefabIDLoadedFrom),
+		m_SourcePrefabID(sourcePrefabID),
 		m_bSerializable(true),
 		m_bVisible(true),
 		m_bVisibleInSceneExplorer(true),
@@ -178,10 +191,6 @@ namespace flex
 		m_Transform.SetGameObject(this);
 	}
 
-	GameObject::~GameObject()
-	{
-	}
-
 	GameObject* GameObject::CopySelf(
 		GameObject* parent /* = nullptr */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */,
@@ -197,7 +206,9 @@ namespace flex
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
-		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID);
+		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+		// TODO:
+		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID, typeStr, m_SourcePrefabID, false);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
@@ -208,9 +219,9 @@ namespace flex
 		const JSONObject& obj,
 		BaseScene* scene,
 		i32 sceneFileVersion,
-		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
-		bool bIsPrefabTemplate /* = false */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */)
+		const PrefabIDPair& sourcePrefabIDPair,
+		bool bIsPrefabTemplate,
+		CopyFlags copyFlags)
 	{
 		std::string gameObjectTypeStr = obj.GetString("type");
 		std::string objectName = obj.GetString("name");
@@ -286,7 +297,10 @@ namespace flex
 				{
 					for (JSONObject& child : children)
 					{
-						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, InvalidPrefabID, copyFlags));
+						PrefabIDPair idPair;
+						idPair.m_PrefabID = sourcePrefabIDPair.m_PrefabID;
+						idPair.m_SubGameObjectID = child.GetGUID("id");
+						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, idPair, bIsPrefabTemplate, copyFlags));
 					}
 				}
 
@@ -301,7 +315,7 @@ namespace flex
 
 		StringID gameObjectTypeID = Hash(gameObjectTypeStr.c_str());
 
-		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str(), prefabIDLoadedFrom, bIsPrefabTemplate);
+		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str(), sourcePrefabIDPair, bIsPrefabTemplate);
 
 		if (newGameObject != nullptr)
 		{
@@ -323,12 +337,13 @@ namespace flex
 		if (prefabTemplate == nullptr)
 		{
 			std::string prefabTemplateIDStr = prefabID.ToString();
-			PrintError("Failed to create game objet from prefab template with ID %s\n", prefabTemplateIDStr.c_str());
+			PrintError("Failed to create game object from prefab template with ID %s\n", prefabTemplateIDStr.c_str());
 			return nullptr;
 		}
 		GameObject* prefabInstance = prefabTemplate->CopySelf(parent, copyFlags, optionalObjectName, gameObjectID);
 
-		prefabInstance->m_PrefabIDLoadedFrom = prefabID;
+		prefabInstance->m_SourcePrefabID.m_PrefabID = prefabID;
+		prefabInstance->m_SourcePrefabID.m_SubGameObjectID = prefabTemplate->ID;
 
 		if (optionalTransform != nullptr)
 		{
@@ -343,42 +358,41 @@ namespace flex
 		const std::string& objectName,
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		const char* optionalTypeStr /* = nullptr */,
-		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
+		const PrefabIDPair& sourcePrefabIDPair /* = InvalidPrefabIDPair */,
 		bool bIsPrefabTemplate /* = false */)
 	{
 		switch (gameObjectTypeID)
 		{
-		case SkyboxSID: return new Skybox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case ReflectionProbeSID: return new ReflectionProbe(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case ValveSID: return new Valve(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case RisingBlockSID: return new RisingBlock(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case GlassPaneSID: return new GlassPane(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case PointLightSID: return new PointLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SpotLightSID: return new SpotLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case AreaLightSID: return new AreaLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case DirectionalLightSID: return new DirectionalLight(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case EmptyCartSID: return new EmptyCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case EngineCartSID: return new EngineCart(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case MobileLiquidBoxSID: return new MobileLiquidBox(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case BatterySID: return new Battery(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case TerminalSID: return new Terminal(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case GerstnerWaveSID: return new GerstnerWave(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case BlocksSID: return new Blocks(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case TerrainGeneratorSID: return new TerrainGenerator(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case WireSID: return new Wire(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case WirePlugSID: return new WirePlug(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SocketSID: return new Socket(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SpringObjectSID: return new SpringObject(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SoftBodySID: return new SoftBody(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case VehicleSID: return new Vehicle(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case RoadSID: return new Road(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SolarPanelSID: return new SolarPanel(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case HeadLampSID: return new HeadLamp(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case PowerPoleSID: return new PowerPole(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case MinerSID: return new Miner(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case SpeakerSID: return new Speaker(objectName, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
-		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate);
+		case SkyboxSID: return new Skybox(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case ReflectionProbeSID: return new ReflectionProbe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case ValveSID: return new Valve(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case RisingBlockSID: return new RisingBlock(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case GlassPaneSID: return new GlassPane(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PointLightSID: return new PointLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpotLightSID: return new SpotLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case AreaLightSID: return new AreaLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case DirectionalLightSID: return new DirectionalLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case EmptyCartSID: return new EmptyCart(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case EngineCartSID: return new EngineCart(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MobileLiquidBoxSID: return new MobileLiquidBox(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case BatterySID: return new Battery(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case TerminalSID: return new Terminal(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case GerstnerWaveSID: return new GerstnerWave(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case TerrainGeneratorSID: return new TerrainGenerator(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case WireSID: return new Wire(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case WirePlugSID: return new WirePlug(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SocketSID: return new Socket(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpringObjectSID: return new SpringObject(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SoftBodySID: return new SoftBody(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case VehicleSID: return new Vehicle(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case RoadSID: return new Road(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SolarPanelSID: return new SolarPanel(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case HeadLampSID: return new HeadLamp(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PowerPoleSID: return new PowerPole(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MinerSID: return new Miner(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpeakerSID: return new Speaker(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PlayerSID:
 		{
 			PrintError("Player was serialized to scene file!\n");
@@ -390,7 +404,7 @@ namespace flex
 				"Creating placeholder base object.\n",
 				objectName.c_str(), (optionalTypeStr == nullptr ? "unknown" : optionalTypeStr));
 
-			return new GameObject(objectName, gameObjectTypeID, gameObjectID);
+			return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		} break;
 		}
 
@@ -488,8 +502,6 @@ namespace flex
 				g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
 			}
 		}
-
-		DeregisterPropertyCollection();
 	}
 
 	void GameObject::Update()
@@ -544,7 +556,7 @@ namespace flex
 		bool bAnyPropertyChanged = false;
 
 		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
-		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_PrefabIDLoadedFrom.IsValid() ? "(prefab)" : "");
+		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_SourcePrefabID.IsValid() ? "(prefab)" : "");
 
 		if (DoImGuiContextMenu(true))
 		{
@@ -560,10 +572,10 @@ namespace flex
 			ID.ToString(buffer);
 			ImGui::Text("%s", buffer);
 
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
-				std::string prefabIDStr = m_PrefabIDLoadedFrom.ToString();
-				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_PrefabIDLoadedFrom);
+				std::string prefabIDStr = m_SourcePrefabID.m_PrefabID.ToString();
+				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
 				ImGui::Text("Prefab source: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStr.c_str());
 			}
 
@@ -1019,9 +1031,12 @@ namespace flex
 		ImGui::Text("Parent: %s", parentName.c_str());
 		ImGui::Text("Num children: %u", (u32)m_Children.size());
 
-		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
+		PropertyCollection* propertyCollection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+		bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
+
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
 		{
-			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
 		}
 	}
 
@@ -1108,9 +1123,9 @@ namespace flex
 				}
 			}
 
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
-				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_PrefabIDLoadedFrom);
+				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
 				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
 			}
 
@@ -1125,7 +1140,7 @@ namespace flex
 
 				std::string name = m_Name;
 				GameObject* parent = m_Parent;
-				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID);
+				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID, typeStr, m_SourcePrefabID, m_bIsTemplate);
 				CopyGenericFields(newObject, parent, (CopyFlags)((i32)CopyFlags::ALL & ~(i32)CopyFlags::ADD_TO_SCENE));
 				newObject->m_TypeID = newTypeID; // Overwrite type ID again
 				currentScene->RemoveObjectImmediate(this, true);
@@ -1171,7 +1186,7 @@ namespace flex
 
 			if (ImGui::Button("Save as prefab (force new)"))
 			{
-				m_PrefabIDLoadedFrom = InvalidPrefabID;
+				m_SourcePrefabID.Clear();
 				SaveAsPrefab();
 				bDeletedOrDuplicated = true;
 
@@ -1196,7 +1211,7 @@ namespace flex
 			// Save a prefab over an existing prefab
 			return g_ResourceManager->WriteExistingPrefabToDisk(this);
 		}
-		else if (m_PrefabIDLoadedFrom.IsValid())
+		else if (m_SourcePrefabID.IsValid())
 		{
 			// Save an instance over an existing prefab
 
@@ -1205,9 +1220,8 @@ namespace flex
 					~CopyFlags::ADD_TO_SCENE &
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
-			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
+			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
 
-			g_PropertyCollectionManager->DeregisterObjectRecursive(ID);
 			currentScene->UnregisterGameObjectRecursive(ID);
 
 			std::string previousPrefabName = previousPrefabTemplate->GetName();
@@ -1218,7 +1232,7 @@ namespace flex
 			//OverwritePrefabIDs(previousPrefabTemplate, newPrefabTemplate);
 			//%previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
 
-			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_PrefabIDLoadedFrom);
+			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_SourcePrefabID.m_PrefabID);
 
 			return true;
 		}
@@ -1336,6 +1350,10 @@ namespace flex
 		MaterialID overriddenMatID /* = InvalidMaterialID */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		DeserializeRegisteredProperties(obj, collection);
+
 		bool bVisible = true;
 		obj.TryGetBool("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
@@ -1407,7 +1425,10 @@ namespace flex
 			for (const JSONObject& child : children)
 			{
 				// TODO: Handle nested prefabs
-				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, InvalidPrefabID, false, copyFlags));
+				PrefabIDPair idPair;
+				idPair.m_PrefabID = m_SourcePrefabID.m_PrefabID;
+				idPair.m_SubGameObjectID = child.GetGUID("id");
+				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, idPair, m_bIsTemplate, copyFlags));
 			}
 		}
 	}
@@ -1427,10 +1448,9 @@ namespace flex
 			return object;
 		}
 
-		object.fields.emplace_back("name", JSONValue(m_Name));
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		// Added in scene v5
-		object.fields.emplace_back("id", JSONValue(ID));
+		SerializeRegisteredProperties(object, collection, bSerializePrefabData);
 
 		if (bSerializePrefabData)
 		{
@@ -1443,13 +1463,13 @@ namespace flex
 		}
 		else
 		{
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
 				object.fields.emplace_back("type", JSONValue("prefab"));
-				std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom)->m_Name;
+				std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID)->m_Name;
 				object.fields.emplace_back("prefab type", JSONValue(prefabName)); // More of a convenience for source control, GUID is ground truth
 				// Added in scene v6
-				std::string prefabIDStr = m_PrefabIDLoadedFrom.ToString();
+				std::string prefabIDStr = m_SourcePrefabID.m_PrefabID.ToString();
 				object.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 			}
 			else
@@ -1475,7 +1495,7 @@ namespace flex
 		}
 
 		// TODO: Handle overrides
-		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
+		if (!m_SourcePrefabID.IsValid() || bSerializePrefabData)
 		{
 			if (!m_bVisible)
 			{
@@ -1500,7 +1520,7 @@ namespace flex
 			if (m_Mesh != nullptr)
 			{
 				bool bSerializeMesh = ShouldSerializeMesh();
-				if (bSerializeMesh && (!m_PrefabIDLoadedFrom.IsValid() || m_bIsTemplate))
+				if (bSerializeMesh && (!m_SourcePrefabID.IsValid() || m_bIsTemplate))
 				{
 					object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
 				}
@@ -1543,7 +1563,7 @@ namespace flex
 			}
 
 			btCollisionShape* collisionShape = GetCollisionShape();
-			if (collisionShape != nullptr && (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (collisionShape != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
 				JSONObject colliderObj;
 				if (SerializeCollider(collisionShape, m_Transform.GetWorldScale(), colliderObj))
@@ -1553,7 +1573,7 @@ namespace flex
 			}
 
 			RigidBody* rigidBody = GetRigidBody();
-			if (rigidBody != nullptr && (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (rigidBody != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
 				if (collisionShape == nullptr)
 				{
@@ -1576,11 +1596,11 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					if (m_PrefabIDLoadedFrom.IsValid() && !m_bIsTemplate)
+					if (m_SourcePrefabID.IsValid() && !m_bIsTemplate)
 					{
 						// Don't serialize children if this is a prefab instance and
 						// the children are present in the prefab definition
-						if (g_ResourceManager->PrefabTemplateContainsChild(m_PrefabIDLoadedFrom, child))
+						if (g_ResourceManager->PrefabTemplateContainsChild(m_SourcePrefabID.m_PrefabID, child))
 						{
 							continue;
 						}
@@ -1707,14 +1727,62 @@ namespace flex
 		return m_TypeID == HeadLampSID;
 	}
 
+	void GameObject::RegisterPropertyCollections()
+	{
+		PropertyCollectionManager* propertyCollectionManager = GetSystem<PropertyCollectionManager>(SystemType::PROPERTY_COLLECTION_MANAGER);
+
+		propertyCollectionManager->RegisterType(BaseObjectSID, GameObject::BuildPropertyCollection()); // TODO?
+		propertyCollectionManager->RegisterType(DirectionalLightSID, DirectionalLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PointLightSID,PointLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpotLightSID, SpotLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(AreaLightSID, AreaLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(ValveSID, Valve::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(RisingBlockSID, RisingBlock::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(GlassPaneSID, GlassPane::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(ReflectionProbeSID, ReflectionProbe::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SkyboxSID, Skybox::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(BaseCartSID, BaseCart::BuildTypeUniquePropertyCollection()); // TODO?
+		propertyCollectionManager->RegisterType(EmptyCartSID, EmptyCart::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(EngineCartSID, EngineCart::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MobileLiquidBoxSID, MobileLiquidBox::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(BatterySID, Battery::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(GerstnerWaveSID, GerstnerWave::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(WireSID, Wire::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(WirePlugSID, WirePlug::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SocketSID, Socket::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(TerminalSID, Terminal::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(TerrainGeneratorSID, TerrainGenerator::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpringObjectSID, SpringObject::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SoftBodySID, SoftBody::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(VehicleSID, Vehicle::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(RoadSID, Road::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SolarPanelSID, SolarPanel::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(HeadLampSID, HeadLamp::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PowerPoleSID, PowerPole::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MineralDepositSID, MineralDeposit::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MinerSID, Miner::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpeakerSID, Speaker::BuildTypeUniquePropertyCollection());
+	}
+
+	PropertyCollection* GameObject::BuildPropertyCollection()
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->AllocateCollection("base object");
+
+		REGISTER_FIELD(collection, "name", GameObject, m_Name);
+		// Added in scene v5
+		REGISTER_FIELD(collection, "id", GameObject, ID);
+
+		return collection;
+	}
+
 	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
 	{
 		m_NearbyInteractable = nearbyInteractable;
 	}
 
-	PrefabID GameObject::GetPrefabIDLoadedFrom() const
+	const PrefabIDPair& GameObject::GetSourcePrefabIDPair() const
 	{
-		return m_PrefabIDLoadedFrom;
+		return m_SourcePrefabID;
 	}
 
 	bool GameObject::IsPrefabTemplate() const
@@ -1794,7 +1862,7 @@ namespace flex
 
 	PrefabID GameObject::Itemize(GameObjectStack::UserData& outUserData)
 	{
-		PrefabID prefabID = m_PrefabIDLoadedFrom;
+		PrefabID prefabID = m_SourcePrefabID.m_PrefabID;
 
 		if (!prefabID.IsValid())
 		{
@@ -1825,7 +1893,7 @@ namespace flex
 	bool GameObject::IsItemizable() const
 	{
 		// Only prefabs are itemizable, we store the prefab ID
-		return m_bItemizable && (m_bIsTemplate || m_PrefabIDLoadedFrom.IsValid());
+		return m_bItemizable && (m_bIsTemplate || m_SourcePrefabID.IsValid());
 	}
 
 	bool GameObject::GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const
@@ -1858,42 +1926,6 @@ namespace flex
 		else
 		{
 			newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name, parent));
-		}
-	}
-
-	PropertyCollection* GameObject::RegisterPropertyCollection()
-	{
-		if (m_bIsTemplate)
-		{
-			return g_PropertyCollectionManager->RegisterPrefabTemplate(m_PrefabIDLoadedFrom);
-		}
-		else
-		{
-			return g_PropertyCollectionManager->RegisterObject(ID);
-		}
-	}
-
-	void GameObject::DeregisterPropertyCollection()
-	{
-		if (m_bIsTemplate)
-		{
-			g_PropertyCollectionManager->DeregisterPrefabTemplateRecursive(m_PrefabIDLoadedFrom);
-		}
-		else
-		{
-			g_PropertyCollectionManager->DeregisterObjectRecursive(ID);
-		}
-	}
-
-	PropertyCollection* GameObject::GetPropertyCollection()
-	{
-		if (m_bIsTemplate)
-		{
-			return g_PropertyCollectionManager->GetCollectionForPrefab(m_PrefabIDLoadedFrom);
-		}
-		else
-		{
-			return g_PropertyCollectionManager->GetCollectionForObject(ID);
 		}
 	}
 
@@ -1954,14 +1986,14 @@ namespace flex
 
 	void GameObject::SerializeField(JSONObject& parentObject, bool bSerializePrefabData, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision /* = 2 */)
 	{
-		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
+		if (!m_SourcePrefabID.IsValid() || bSerializePrefabData)
 		{
 			// Object isn't loaded from a prefab or we're saving it as a prefab template, ignore overrides
 			parentObject.fields.emplace_back(fieldLabel, JSONValue::FromRawPtr(valuePtr, valueType, precision));
 			return;
 		}
 
-		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
 		if (prefabTemplate == nullptr)
 		{
 			PrintWarn("Attempted to serialize prefab instance which wasn't loaded from a valid prefab in GameObject::SerializeField (%s)\n", m_Name.c_str());
@@ -1971,30 +2003,30 @@ namespace flex
 		u32 fieldOffset = (u32)((u64)valuePtr - (u64)this);
 		void* templateField = ((u8*)prefabTemplate + fieldOffset);
 
-		SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, valueType, templateField, precision);
+		SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, templateField, valueType, precision);
 	}
 
-	bool GameObject::SerializeRegisteredProperties(JSONObject& parentObject, bool bSerializePrefabData)
+	bool GameObject::SerializeRegisteredProperties(JSONObject& parentObject, PropertyCollection* collection, bool bSerializePrefabData)
 	{
 		if (m_bIsTemplate)
 		{
-			return g_PropertyCollectionManager->SerializePrefabTemplate(m_PrefabIDLoadedFrom, parentObject);
+			return GetPropertyCollectionManager()->SerializePrefabTemplate(m_SourcePrefabID, collection, m_Name.c_str(), parentObject);
 		}
 		else
 		{
-			return g_PropertyCollectionManager->SerializeObjectIfPresent(ID, parentObject, bSerializePrefabData);
+			return GetPropertyCollectionManager()->SerializeGameObject(ID, collection, m_Name.c_str(), parentObject, bSerializePrefabData);
 		}
 	}
 
-	void GameObject::DeserializeRegisteredProperties(JSONObject& parentObject)
+	void GameObject::DeserializeRegisteredProperties(const JSONObject& parentObject, PropertyCollection* collection)
 	{
 		if (m_bIsTemplate)
 		{
-			g_PropertyCollectionManager->DeserializePrefabTemplate(m_PrefabIDLoadedFrom, parentObject);
+			GetPropertyCollectionManager()->DeserializePrefabTemplate(this, collection, parentObject);
 		}
 		else
 		{
-			g_PropertyCollectionManager->DeserializeObjectIfPresent(ID, parentObject);
+			GetPropertyCollectionManager()->DeserializeGameObject(this, collection, parentObject);
 		}
 	}
 
@@ -2013,7 +2045,7 @@ namespace flex
 		newGameObject->m_bStatic = m_bStatic;
 		newGameObject->m_bTrigger = m_bTrigger;
 		newGameObject->m_bInteractable = m_bInteractable;
-		newGameObject->m_PrefabIDLoadedFrom = m_PrefabIDLoadedFrom;
+		newGameObject->m_SourcePrefabID = m_SourcePrefabID;
 		newGameObject->m_bCastsShadow = m_bCastsShadow;
 		newGameObject->m_bUniformScale = m_bUniformScale;
 		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
@@ -2762,8 +2794,8 @@ namespace flex
 		}
 	}
 
-	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, ValveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, ValveSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		if (!s_SqueakySounds.IsInitialized())
 		{
@@ -2773,11 +2805,19 @@ namespace flex
 		{
 			s_BunkSound = g_ResourceManager->GetOrLoadAudioSourceID(SID("bunk.wav"), true);
 		}
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("valve info", &valveRange)
+	PropertyCollection* Valve::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("valve info");
+
+		REGISTER_FIELD(collection->childCollection, "range", Valve, valveRange)
 			.VersionAdded(6)
 			.Precision(3);
+
+		return collection;
 	}
 
 	GameObject* Valve::CopySelf(
@@ -2807,7 +2847,9 @@ namespace flex
 		JSONObject valveInfo;
 		if (parentObject.TryGetObject("valve info", valveInfo))
 		{
-			DeserializeRegisteredProperties(valveInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(valveInfo, collection->childCollection);
 
 			if (glm::abs(valveRange.y - valveRange.x) <= 0.0001f)
 			{
@@ -2856,8 +2898,10 @@ namespace flex
 
 	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject valveInfo = {};
-		SerializeRegisteredProperties(valveInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(valveInfo, collection->childCollection, bSerializePrefabData);
 		if (!valveInfo.fields.empty())
 		{
 			parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
@@ -2969,17 +3013,25 @@ namespace flex
 		GameObject::Update();
 	}
 
-	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, RisingBlockSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, RisingBlockSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("move axis", &moveAxis)
+	PropertyCollection* RisingBlock::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("block info");
+
+		REGISTER_FIELD(collection->childCollection, "move axis", RisingBlock, moveAxis)
 			.VersionAdded(6)
 			.Precision(3);
-		collection->RegisterProperty("affected by gravity", &bAffectedByGravity)
+		REGISTER_FIELD(collection->childCollection, "affected by gravity", RisingBlock, bAffectedByGravity)
 			.VersionAdded(6);
+
+		return collection;
 	}
 
 	GameObject* RisingBlock::CopySelf(
@@ -3097,7 +3149,9 @@ namespace flex
 		JSONObject blockInfo;
 		if (parentObject.TryGetObject("block info", blockInfo))
 		{
-			DeserializeRegisteredProperties(blockInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(blockInfo, collection->childCollection);
 
 			valveName = blockInfo.GetString("valve name");
 		}
@@ -3127,8 +3181,10 @@ namespace flex
 
 	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject blockInfo = {};
-		SerializeRegisteredProperties(blockInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(blockInfo, collection->childCollection, bSerializePrefabData);
 		std::string valveName = valve->GetName();
 		SerializeField(blockInfo, bSerializePrefabData, "valve name", &valveName, ValueType::STRING);
 		if (!blockInfo.fields.empty())
@@ -3137,14 +3193,22 @@ namespace flex
 		}
 	}
 
-	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, GlassPaneSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, GlassPaneSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("broken", &bBroken)
+	PropertyCollection* GlassPane::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("window info");
+
+		REGISTER_FIELD(collection->childCollection, "broken", GlassPane, bBroken)
 			.VersionAdded(6);
+
+		return collection;
 	}
 
 	GameObject* GlassPane::CopySelf(
@@ -3170,7 +3234,9 @@ namespace flex
 		JSONObject glassInfo;
 		if (parentObject.TryGetObject("window info", glassInfo))
 		{
-			DeserializeRegisteredProperties(glassInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(glassInfo, collection->childCollection);
 
 			if (m_Mesh == nullptr)
 			{
@@ -3200,17 +3266,25 @@ namespace flex
 
 	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject windowInfo = {};
-		SerializeRegisteredProperties(windowInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(windowInfo, collection->childCollection, bSerializePrefabData);
 		if (!windowInfo.fields.empty())
 		{
 			parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
 		}
 	}
 
-	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, ReflectionProbeSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, ReflectionProbeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
+	}
+
+	PropertyCollection* ReflectionProbe::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	GameObject* ReflectionProbe::CopySelf(
@@ -3238,10 +3312,16 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SkyboxSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SkyboxSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		SetCastsShadow(false);
+	}
+
+	PropertyCollection* Skybox::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Skybox::ProcedurallyInitialize(MaterialID matID)
@@ -3293,18 +3373,24 @@ namespace flex
 	}
 
 	DroppedItem::DroppedItem(const PrefabID& prefabID, i32 stackSize) :
-		GameObject("", DroppedItemSID, InvalidGameObjectID),
+		GameObject("", DroppedItemSID),
 		prefabID(prefabID),
 		stackSize(stackSize)
 	{
 		m_bSerializable = false;
 	}
 
+	PropertyCollection* DroppedItem::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
 	void DroppedItem::Initialize()
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
-		GameObject* child = new GameObject("dropped item child", BaseObjectSID, InvalidGameObjectID);
+		GameObject* child = new GameObject("dropped item child", BaseObjectSID);
 		child->SetSerializable(false);
 
 		if (prefabTemplate->GetMesh() != nullptr)
@@ -3386,8 +3472,8 @@ namespace flex
 	{
 	}
 
-	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, DirectionalLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, DirectionalLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = m_bVisible ? 1 : 0;
 		data.dir = VEC3_RIGHT;
@@ -3396,23 +3482,31 @@ namespace flex
 		data.castShadows = 1;
 		data.shadowDarkness = 1.0f;
 		data.pad[0] = data.pad[1] = 0;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("colour", &data.colour)
+	PropertyCollection* DirectionalLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("directional light info");
+
+		REGISTER_FIELD(collection->childCollection, "colour", DirectionalLight, data.colour)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		collection->RegisterProperty("brightness", &data.brightness)
+		REGISTER_FIELD(collection->childCollection, "brightness", DirectionalLight, data.brightness)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(1.0f);
-		collection->RegisterProperty("cast shadows", &data.castShadows)
+		REGISTER_FIELD(collection->childCollection, "cast shadows", DirectionalLight, data.castShadows)
 			.VersionAdded(2)
 			.DefaultValue(1);
-		collection->RegisterProperty("shadow darkness", &data.shadowDarkness)
+		REGISTER_FIELD(collection->childCollection, "shadow darkness", DirectionalLight, data.shadowDarkness)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(1.0f);
+
+		return collection;
 	}
 
 	void DirectionalLight::Initialize()
@@ -3556,7 +3650,9 @@ namespace flex
 		JSONObject directionalLightObj;
 		if (parentObject.TryGetObject("directional light info", directionalLightObj))
 		{
-			DeserializeRegisteredProperties(directionalLightObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(directionalLightObj, collection->childCollection);
 
 			if (fileVersion < 2)
 			{
@@ -3582,8 +3678,10 @@ namespace flex
 
 	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject dirLightObj = {};
-		SerializeRegisteredProperties(dirLightObj, bSerializePrefabData);
+		SerializeRegisteredProperties(dirLightObj, collection->childCollection, bSerializePrefabData);
 		if (!dirLightObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
@@ -3604,26 +3702,34 @@ namespace flex
 	{
 	}
 
-	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, PointLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PointLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
 		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("colour", &data.colour)
+	PropertyCollection* PointLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("point light info");
+
+		REGISTER_FIELD(collection->childCollection, "colour", PointLight, data.colour)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		collection->RegisterProperty("brightness", &data.brightness)
+		REGISTER_FIELD(collection->childCollection, "brightness", PointLight, data.brightness)
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(1.0f);
-		collection->RegisterProperty("enabled", &data.enabled)
+		REGISTER_FIELD(collection->childCollection, "enabled", PointLight, data.enabled)
 			.VersionAdded(2)
 			.DefaultValue(1);
+
+		return collection;
 	}
 
 	GameObject* PointLight::CopySelf(
@@ -3794,14 +3900,18 @@ namespace flex
 		JSONObject pointLightObj;
 		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
-			DeserializeRegisteredProperties(pointLightObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(pointLightObj, collection->childCollection);
 		}
 	}
 
 	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject pointLightObj = {};
-		SerializeRegisteredProperties(pointLightObj, bSerializePrefabData);
+		SerializeRegisteredProperties(pointLightObj, collection->childCollection, bSerializePrefabData);
 		if (!pointLightObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
@@ -3821,8 +3931,8 @@ namespace flex
 	{
 	}
 
-	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SpotLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpotLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
@@ -3830,23 +3940,31 @@ namespace flex
 		data.brightness = 500.0f;
 		data.dir = VEC3_RIGHT;
 		data.angle = 0.0f;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("colour", &data.colour)
+	PropertyCollection* SpotLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spot light info");
+
+		REGISTER_FIELD(collection->childCollection, "colour", SpotLight, data.colour)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		collection->RegisterProperty("brightness", &data.brightness)
+		REGISTER_FIELD(collection->childCollection, "brightness", SpotLight, data.brightness)
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(1.0f);
-		collection->RegisterProperty("enabled", &data.enabled)
+		REGISTER_FIELD(collection->childCollection, "enabled", SpotLight, data.enabled)
 			.VersionAdded(2)
 			.DefaultValue(1);
-		collection->RegisterProperty("angle", &data.angle)
+		REGISTER_FIELD(collection->childCollection, "angle", SpotLight, data.angle)
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(0.0f);
+
+		return collection;
 	}
 
 	GameObject* SpotLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
@@ -4025,14 +4143,18 @@ namespace flex
 		JSONObject spotLightObj;
 		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
-			DeserializeRegisteredProperties(spotLightObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(spotLightObj, collection->childCollection);
 		}
 	}
 
 	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject spotLightObj = {};
-		SerializeRegisteredProperties(spotLightObj, bSerializePrefabData);
+		SerializeRegisteredProperties(spotLightObj, collection->childCollection, bSerializePrefabData);
 		if (!spotLightObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
@@ -4044,25 +4166,33 @@ namespace flex
 	{
 	}
 
-	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, AreaLightSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, AreaLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
 		UpdatePoints();
+}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("colour", &data.colour)
+	PropertyCollection* AreaLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("area light info");
+
+		REGISTER_FIELD(collection->childCollection, "colour", AreaLight, data.colour)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		collection->RegisterProperty("brightness", &data.brightness)
+		REGISTER_FIELD(collection->childCollection, "brightness", AreaLight, data.brightness)
 			.VersionAdded(2)
 			.DefaultValue(500.0f);
-		collection->RegisterProperty("enabled", &data.enabled)
+		REGISTER_FIELD(collection->childCollection, "enabled", AreaLight, data.enabled)
 			.VersionAdded(2)
 			.DefaultValue(1);
+
+		return collection;
 	}
 
 	GameObject* AreaLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
@@ -4258,14 +4388,18 @@ namespace flex
 		JSONObject areaLightObj;
 		if (parentObject.TryGetObject("area light info", areaLightObj))
 		{
-			DeserializeRegisteredProperties(areaLightObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(areaLightObj, collection->childCollection);
 		}
 	}
 
 	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject areaLightObj = {};
-		SerializeRegisteredProperties(areaLightObj, bSerializePrefabData);
+		SerializeRegisteredProperties(areaLightObj, collection->childCollection, bSerializePrefabData);
 		if (!areaLightObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
@@ -4283,11 +4417,11 @@ namespace flex
 
 	BaseCart::BaseCart(const std::string& name,
 		StringID typeID,
-		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		const char* meshName /* = emptyCartMeshName */,
-		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
-		bool bPrefabTemplate /* = false */) :
-		GameObject(name, typeID, gameObjectID, prefabIDLoadedFrom, bPrefabTemplate)
+		const GameObjectID& gameObjectID,
+		const char* meshName,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		GameObject(name, typeID, gameObjectID, sourcePrefabID, bPrefabTemplate)
 	{
 		m_bItemizable = true;
 
@@ -4309,14 +4443,22 @@ namespace flex
 		}
 
 		m_TSpringToCartAhead.DR = 1.0f;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("track ID", &currentTrackID)
+	PropertyCollection* BaseCart::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("cart info");
+
+		REGISTER_FIELD(collection->childCollection, "track ID", BaseCart, currentTrackID)
 			.VersionAdded(6)
 			.DefaultValue(InvalidTrackID);
-		collection->RegisterProperty("dist along track", &distAlongTrack)
+		REGISTER_FIELD(collection->childCollection, "dist along track", BaseCart, distAlongTrack)
 			.VersionAdded(6)
 			.DefaultValue(-1.0f);
+
+		return collection;
 	}
 
 	void BaseCart::Initialize()
@@ -4536,14 +4678,18 @@ namespace flex
 		JSONObject cartInfo;
 		if (parentObject.TryGetObject("cart info", cartInfo))
 		{
-			DeserializeRegisteredProperties(cartInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(cartInfo, collection->childCollection);
 		}
 	}
 
 	void BaseCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject cartInfo = {};
-		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(cartInfo, collection->childCollection, bSerializePrefabData);
 		if (!cartInfo.fields.empty())
 		{
 			parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
@@ -4551,11 +4697,16 @@ namespace flex
 	}
 
 	EmptyCart::EmptyCart(const std::string& name,
-		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
-		bool bPrefabTemplate /* = false */) :
-		BaseCart(name, EmptyCartSID, gameObjectID, BaseCart::emptyCartMeshName, prefabIDLoadedFrom, bPrefabTemplate)
+		const GameObjectID& gameObjectID,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		BaseCart(name, EmptyCartSID, gameObjectID, BaseCart::emptyCartMeshName, sourcePrefabID, bPrefabTemplate)
 	{
+	}
+
+	PropertyCollection* EmptyCart::BuildTypeUniquePropertyCollection()
+	{
+		return BaseCart::BuildTypeUniquePropertyCollection();
 	}
 
 	GameObject* EmptyCart::CopySelf(
@@ -4570,7 +4721,7 @@ namespace flex
 
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
 		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
-		EmptyCart* newGameObject = new EmptyCart(newObjectName, newGameObjectID, m_PrefabIDLoadedFrom, bCopyingToPrefabTemplate);
+		EmptyCart* newGameObject = new EmptyCart(newObjectName, newGameObjectID, m_SourcePrefabID, bCopyingToPrefabTemplate);
 
 		newGameObject->currentTrackID = currentTrackID;
 		newGameObject->distAlongTrack = distAlongTrack;
@@ -4582,24 +4733,31 @@ namespace flex
 	}
 
 	EngineCart::EngineCart(const std::string& name,
-		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */,
-		bool bPrefabTemplate /* = false */) :
-		BaseCart(name, EngineCartSID, gameObjectID, engineMeshName, prefabIDLoadedFrom, bPrefabTemplate)
+		const GameObjectID& gameObjectID,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		BaseCart(name, EngineCartSID, gameObjectID, engineMeshName, sourcePrefabID, bPrefabTemplate)
 	{
 		// TODO: Serialize and expose in ImGui
 		m_bItemizable = true;
+	}
 
-		// Base class should have already registered us
-		PropertyCollection* collection = GetPropertyCollection();
+	PropertyCollection* EngineCart::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = BaseCart::BuildTypeUniquePropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("engine cart info");
+
 		// BaseCart already registered trackID & dist along track fields
-		collection->RegisterProperty("move direction", &moveDirection)
+		REGISTER_FIELD(collection->childCollection, "move direction", EngineCart, moveDirection)
 			.VersionAdded(6)
 			.Precision(1)
 			.DefaultValue(1.0f);
-		collection->RegisterProperty("power remaining", &powerRemaining)
+		REGISTER_FIELD(collection->childCollection, "power remaining", EngineCart, powerRemaining)
 			.VersionAdded(6)
 			.DefaultValue(1.0f);
+
+		return collection;
 	}
 
 	GameObject* EngineCart::CopySelf(
@@ -4614,7 +4772,7 @@ namespace flex
 
 		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		EngineCart* newGameObject = new EngineCart(newObjectName, newGameObjectID, m_PrefabIDLoadedFrom, bCopyingToPrefabTemplate);
+		EngineCart* newGameObject = new EngineCart(newObjectName, newGameObjectID, m_SourcePrefabID, bCopyingToPrefabTemplate);
 
 		newGameObject->powerRemaining = powerRemaining;
 
@@ -4691,19 +4849,25 @@ namespace flex
 		FLEX_UNUSED(matIDs);
 
 		JSONObject cartInfo;
-		if (parentObject.TryGetObject("cart info", cartInfo))
+		// TODO: Also call BaseCart::PartTypeUniqueFields?
+		if (parentObject.TryGetObject("engine cart info", cartInfo))
 		{
-			DeserializeRegisteredProperties(cartInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(cartInfo, collection->childCollection);
 		}
 	}
 
 	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject cartInfo = {};
-		SerializeRegisteredProperties(cartInfo, bSerializePrefabData);
+		// TODO: Also call BaseCart::SerializeTypeUniqueFields?
+		SerializeRegisteredProperties(cartInfo, collection->childCollection, bSerializePrefabData);
 		if (!cartInfo.fields.empty())
 		{
-			parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+			parentObject.fields.emplace_back("engine cart info", JSONValue(cartInfo));
 		}
 	}
 
@@ -4713,8 +4877,8 @@ namespace flex
 	{
 	}
 
-	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, MobileLiquidBoxSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MobileLiquidBoxSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
@@ -4727,6 +4891,12 @@ namespace flex
 		{
 			PrintWarn("Failed to load mobile-liquid-box mesh!\n");
 		}
+	}
+
+	PropertyCollection* MobileLiquidBox::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	GameObject* MobileLiquidBox::CopySelf(
@@ -4797,16 +4967,24 @@ namespace flex
 	{
 	}
 
-	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, BatterySID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, BatterySID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("charge amount", &chargeAmount)
+	PropertyCollection* Battery::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("battery info");
+
+		REGISTER_FIELD(collection->childCollection, "charge amount", Battery, chargeAmount)
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(0.0f);
+
+		return collection;
 	}
 
 	void Battery::Update()
@@ -4882,22 +5060,26 @@ namespace flex
 		JSONObject batteryInfo;
 		if (parentObject.TryGetObject("battery info", batteryInfo))
 		{
-			DeserializeRegisteredProperties(batteryInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(batteryInfo, collection->childCollection);
 		}
 	}
 
 	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject batteryInfo = {};
-		SerializeRegisteredProperties(batteryInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(batteryInfo, collection->childCollection, bSerializePrefabData);
 		if (!batteryInfo.fields.empty())
 		{
 			parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
 		}
 	}
 
-	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, GerstnerWaveSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, GerstnerWaveSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		wave_workQueue = new ThreadSafeArray<WaveGenData>(32);
 
@@ -4946,23 +5128,31 @@ namespace flex
 			PrintError("Failed to load bobber mesh\n");
 		}
 		g_SceneManager->CurrentScene()->AddRootObject(bobber);
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("fresnel factor", &oceanData.fresnelFactor)
+	PropertyCollection* GerstnerWave::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("gerstner wave");
+
+		REGISTER_FIELD(collection->childCollection, "fresnel factor", GerstnerWave, oceanData.fresnelFactor)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("fresnel power", &oceanData.fresnelPower)
+		REGISTER_FIELD(collection->childCollection, "fresnel power", GerstnerWave, oceanData.fresnelPower)
 			.VersionAdded(2)
 			.Precision(2);
-		collection->RegisterProperty("sky reflection factor", &oceanData.skyReflectionFactor)
+		REGISTER_FIELD(collection->childCollection, "sky reflection factor", GerstnerWave, oceanData.skyReflectionFactor)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("fog falloff", &oceanData.fogFalloff)
+		REGISTER_FIELD(collection->childCollection, "fog falloff", GerstnerWave, oceanData.fogFalloff)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("fog density", &oceanData.fogDensity)
+		REGISTER_FIELD(collection->childCollection, "fog density", GerstnerWave, oceanData.fogDensity)
 			.VersionAdded(6)
 			.Precision(2);
+
+		return collection;
 	}
 
 	void GerstnerWave::Initialize()
@@ -6287,6 +6477,8 @@ namespace flex
 
 	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject gerstnerWaveObj = {};
 
 		std::vector<JSONObject> waveObjs;
@@ -6336,7 +6528,7 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)), 2));
 		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)), 2));
 
-		SerializeRegisteredProperties(gerstnerWaveObj, bSerializePrefabData);
+		SerializeRegisteredProperties(gerstnerWaveObj, collection->childCollection, bSerializePrefabData);
 
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
@@ -6430,55 +6622,27 @@ namespace flex
 		return 0.0f;
 	}
 
-	Blocks::Blocks(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, BlocksSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
-	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bSerializable = false;
-
-		std::vector<MaterialID> matIDs;
-		for (i32 i = 0; i < 10; ++i)
-		{
-			matCreateInfo.name = "block " + IntToString(i, 2);
-			matCreateInfo.constAlbedo = glm::vec4(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f), 1.0f);
-			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
-			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
-		}
-
-		real blockSize = 1.5f;
-		i32 count = 18;
-		for (i32 x = 0; x < count; ++x)
-		{
-			for (i32 z = 0; z < count; ++z)
-			{
-				GameObject* obj = new GameObject("block", BaseObjectSID);
-				obj->SetMesh(new Mesh(obj));
-				obj->GetMesh()->LoadFromFile(MESH_DIRECTORY "cube.glb", PickRandomFrom(matIDs));
-				AddChild(obj);
-				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
-				obj->GetTransform()->SetLocalPosition(glm::vec3(
-					((real)x / (real)count - 0.5f) * (blockSize * count),
-					RandomFloat(0.0f, 1.2f),
-					((real)z / (real)count - 0.5f) * (blockSize * count)));
-			}
-		}
-	}
-
-	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, WireSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, WireSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		if (!m_bIsTemplate)
 		{
 			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterWire(this);
 		}
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("plug 0 id", &plug0ID)
+	PropertyCollection* Wire::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire");
+
+		REGISTER_FIELD(collection->childCollection, "plug 0 id", Wire, plug0ID)
 			.VersionAdded(6);
-		collection->RegisterProperty("plug 1 id", &plug1ID)
+		REGISTER_FIELD(collection->childCollection, "plug 1 id", Wire, plug1ID)
 			.VersionAdded(6);
+
+		return collection;
 	}
 
 	void Wire::Initialize()
@@ -6629,14 +6793,18 @@ namespace flex
 		JSONObject wireInfo;
 		if (parentObject.TryGetObject("wire", wireInfo))
 		{
-			DeserializeRegisteredProperties(wireInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(wireInfo, collection->childCollection);
 		}
 	}
 
 	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject wireInfo = {};
-		SerializeRegisteredProperties(wireInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(wireInfo, collection->childCollection, bSerializePrefabData);
 		if (!wireInfo.fields.empty())
 		{
 			parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
@@ -6875,8 +7043,8 @@ namespace flex
 		}
 	}
 
-	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, WirePlugSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, WirePlugSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 
@@ -6884,18 +7052,26 @@ namespace flex
 		{
 			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterWirePlug(this);
 		}
-
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("wire id", &wireID)
-			.VersionAdded(6)
-			.DefaultValue(InvalidGameObjectID);
-		collection->RegisterProperty("socket id", &socketID)
-			.VersionAdded(6)
-			.DefaultValue(InvalidGameObjectID);
 	}
 
-	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		WirePlug(name, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	PropertyCollection* WirePlug::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire plug");
+
+		REGISTER_FIELD(collection->childCollection, "wire id", WirePlug, wireID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+		REGISTER_FIELD(collection->childCollection, "socket id", WirePlug, socketID)
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+
+		return collection;
+	}
+
+	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		WirePlug(name, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		wireID = owningWire->ID;
 	}
@@ -6941,22 +7117,26 @@ namespace flex
 		JSONObject wireObj;
 		if (parentObject.TryGetObject("wire plug", wireObj))
 		{
-			DeserializeRegisteredProperties(wireObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(wireObj, collection->childCollection);
 		}
 	}
 
 	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject wirePlugObj = {};
-		SerializeRegisteredProperties(wirePlugObj, bSerializePrefabData);
+		SerializeRegisteredProperties(wirePlugObj, collection->childCollection, bSerializePrefabData);
 		if (!wirePlugObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("wire plug", JSONValue(wirePlugObj));
 		}
 	}
 
-	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SocketSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SocketSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 
@@ -6964,14 +7144,28 @@ namespace flex
 		{
 			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterSocket(this);
 		}
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("slotIdx", &slotIdx)
-			.VersionAdded(6)
-			.DefaultValue(0);
-		collection->RegisterProperty("connected plug id", &connectedPlugID)
+	PropertyCollection* Socket::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("socket");
+
+		REGISTER_FIELD(collection->childCollection, "slotIdx", Socket, slotIdx)
+			.VersionAdded(6);
+		//	.CustomSerializeCallback([](SerializationContext& context, u32 value)
+		//{
+		//	if (value > 0)
+		//	{
+		//		context.Write("foo", value);
+		//	}
+		//});
+		REGISTER_FIELD(collection->childCollection, "connected plug id", Socket, connectedPlugID)
 			.VersionAdded(6)
 			.DefaultValue(InvalidGameObjectID);
+
+		return collection;
 	}
 
 	void Socket::Destroy(bool bDetachFromParent /* = true */)
@@ -6991,14 +7185,18 @@ namespace flex
 		JSONObject socketObj;
 		if (parentObject.TryGetObject("socket", socketObj))
 		{
-			DeserializeRegisteredProperties(socketObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(socketObj, collection->childCollection);
 		}
 	}
 
 	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject socketObj = {};
-		SerializeRegisteredProperties(socketObj, bSerializePrefabData);
+		SerializeRegisteredProperties(socketObj, collection->childCollection, bSerializePrefabData);
 		if (!socketObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("socket", JSONValue(socketObj));
@@ -7034,8 +7232,8 @@ namespace flex
 	{
 	}
 
-	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, TerminalSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, TerminalSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
 		cursor(0, 0)
 	{
@@ -7055,6 +7253,12 @@ namespace flex
 		}
 
 		m_VM = new VM::VirtualMachine();
+	}
+
+	PropertyCollection* Terminal::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Terminal::Initialize()
@@ -8418,8 +8622,8 @@ namespace flex
 		return result;
 	}
 
-	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, TerrainGeneratorSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, TerrainGeneratorSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
@@ -8429,50 +8633,58 @@ namespace flex
 		{
 			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
 		}
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("vert count per chunk axis", &m_VertCountPerChunkAxis)
-			.VersionAdded(6);
-		collection->RegisterProperty("chunk size", &m_ChunkSize)
-			.VersionAdded(6);
-		collection->RegisterProperty("max height", &m_MaxHeight)
-			.VersionAdded(6);
-		collection->RegisterProperty("use manual seed", &m_UseManualSeed)
-			.VersionAdded(6);
-		collection->RegisterProperty("manual seed", &m_ManualSeed);
+	PropertyCollection* TerrainGenerator::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
 
-		collection->RegisterProperty("loaded chunk radius", &m_LoadedChunkRadius)
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("chunk generator info");
+
+		REGISTER_FIELD(collection->childCollection, "vert count per chunk axis", TerrainGenerator, m_VertCountPerChunkAxis)
+			.VersionAdded(6);
+		REGISTER_FIELD(collection->childCollection, "chunk size", TerrainGenerator, m_ChunkSize)
+			.VersionAdded(6);
+		REGISTER_FIELD(collection->childCollection, "max height", TerrainGenerator, m_MaxHeight)
+			.VersionAdded(6);
+		REGISTER_FIELD(collection->childCollection, "use manual seed", TerrainGenerator, m_UseManualSeed)
+			.VersionAdded(6);
+		REGISTER_FIELD(collection->childCollection, "manual seed", TerrainGenerator, m_ManualSeed);
+
+		REGISTER_FIELD(collection->childCollection, "loaded chunk radius", TerrainGenerator, m_LoadedChunkRadius)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("loaded chunk rigid body square radius", &m_LoadedChunkRigidBodyRadius2)
+		REGISTER_FIELD(collection->childCollection, "loaded chunk rigid body square radius", TerrainGenerator, m_LoadedChunkRigidBodyRadius2)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("base table width", &m_BasePerlinTableWidth)
+		REGISTER_FIELD(collection->childCollection, "base table width", TerrainGenerator, m_BasePerlinTableWidth)
 			.VersionAdded(6);
 
-		collection->RegisterProperty("isolate noise layer", &m_IsolateNoiseLayer)
+		REGISTER_FIELD(collection->childCollection, "isolate noise layer", TerrainGenerator, m_IsolateNoiseLayer)
 			.VersionAdded(6);
 
-		collection->RegisterProperty("num points per axis", &m_NumPointsPerAxis)
+		REGISTER_FIELD(collection->childCollection, "num points per axis", TerrainGenerator, m_NumPointsPerAxis)
 			.VersionAdded(6);
-		collection->RegisterProperty("max chunk count", &m_MaxChunkCount)
+		REGISTER_FIELD(collection->childCollection, "max chunk count", TerrainGenerator, m_MaxChunkCount)
 			.VersionAdded(6);
 
-		collection->RegisterProperty("low colour", &m_LowCol)
+		REGISTER_FIELD(collection->childCollection, "low colour", TerrainGenerator, m_LowCol)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("mid colour", &m_MidCol)
+		REGISTER_FIELD(collection->childCollection, "mid colour", TerrainGenerator, m_MidCol)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("high colour", &m_HighCol)
+		REGISTER_FIELD(collection->childCollection, "high colour", TerrainGenerator, m_HighCol)
 			.VersionAdded(6)
 			.Precision(2);
 
-		collection->RegisterProperty("pin center", &m_bPinCenter)
+		REGISTER_FIELD(collection->childCollection, "pin center", TerrainGenerator, m_bPinCenter)
 			.VersionAdded(6);
-		collection->RegisterProperty("pinned center", &m_PinnedPos)
+		REGISTER_FIELD(collection->childCollection, "pinned center", TerrainGenerator, m_PinnedPos)
 			.VersionAdded(6)
 			.Precision(2);
+
+		return collection;
 	}
 
 	void TerrainGenerator::Initialize()
@@ -9277,7 +9489,9 @@ namespace flex
 		JSONObject chunkGenInfo;
 		if (parentObject.TryGetObject("chunk generator info", chunkGenInfo))
 		{
-			DeserializeRegisteredProperties(chunkGenInfo);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(chunkGenInfo, collection->childCollection);
 
 			std::vector<JSONObject> biomesArr;
 			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
@@ -9321,9 +9535,11 @@ namespace flex
 
 	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject chunkGenInfo = {};
 
-		SerializeRegisteredProperties(chunkGenInfo, bSerializePrefabData);
+		SerializeRegisteredProperties(chunkGenInfo, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> biomesArr;
 		for (const Biome& biome : m_Biomes)
@@ -10650,14 +10866,23 @@ namespace flex
 
 	// ---
 
-	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SpringObjectSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpringObjectSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("end point", &m_TargetPos)
+	}
+
+	PropertyCollection* SpringObject::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spring");
+
+		REGISTER_FIELD(collection->childCollection, "end point", SpringObject, m_TargetPos)
 			.VersionAdded(6)
 			.Precision(2)
 			.DefaultValue(VEC3_ZERO);
+
+		return collection;
 	}
 
 	GameObject* SpringObject::CopySelf(
@@ -10895,16 +11120,20 @@ namespace flex
 		JSONObject springObj;
 		if (parentObject.TryGetObject("spring", springObj))
 		{
-			DeserializeRegisteredProperties(springObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(springObj, collection->childCollection);
 		}
 	}
 
 	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject springObj = {};
 
 		m_TargetPos = m_SpringSim->points[1]->pos;
-		SerializeRegisteredProperties(springObj, bSerializePrefabData);
+		SerializeRegisteredProperties(springObj, collection->childCollection, bSerializePrefabData);
 		if (!springObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("spring", JSONValue(springObj));
@@ -10973,24 +11202,33 @@ namespace flex
 		pointIndices[2] = pointIndex2;
 	}
 
-	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SoftBodySID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SoftBodySID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("solver iteration count", &m_SolverIterationCount)
+	}
+
+	PropertyCollection* SoftBody::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("soft body");
+
+		REGISTER_FIELD(collection->childCollection, "solver iteration count", SoftBody, m_SolverIterationCount)
 			.VersionAdded(6);
-		collection->RegisterProperty("render wireframe", &m_bRenderWireframe)
+		REGISTER_FIELD(collection->childCollection, "render wireframe", SoftBody, m_bRenderWireframe)
 			.VersionAdded(6);
-		collection->RegisterProperty("damping", &m_Damping)
+		REGISTER_FIELD(collection->childCollection, "damping", SoftBody, m_Damping)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("stiffness", &m_Stiffness)
+		REGISTER_FIELD(collection->childCollection, "stiffness", SoftBody, m_Stiffness)
 			.VersionAdded(6)
 			.Precision(2);
-		collection->RegisterProperty("bending stiffness", &m_BendingStiffness)
+		REGISTER_FIELD(collection->childCollection, "bending stiffness", SoftBody, m_BendingStiffness)
 			.VersionAdded(6)
 			.Precision(2);
+
+		return collection;
 	}
 
 	GameObject* SoftBody::CopySelf(
@@ -11668,7 +11906,9 @@ namespace flex
 		JSONObject softBodyObject;
 		if (parentObject.TryGetObject("soft body", softBodyObject))
 		{
-			DeserializeRegisteredProperties(softBodyObject);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(softBodyObject, collection->childCollection);
 
 			std::vector<JSONObject> pointsArr;
 			if (softBodyObject.TryGetObjectArray("points", pointsArr))
@@ -11762,9 +12002,11 @@ namespace flex
 
 	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject softBodyObject = {};
 
-		SerializeRegisteredProperties(softBodyObject, bSerializePrefabData);
+		SerializeRegisteredProperties(softBodyObject, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> pointsArr(points.size());
 		{
@@ -11961,8 +12203,8 @@ namespace flex
 		m_bRenderWireframe = bRenderWireframe;
 	}
 
-	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, VehicleSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, VehicleSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
 	{
 		m_bInteractable = true;
@@ -11972,6 +12214,12 @@ namespace flex
 			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID, false);
 			m_SoundEffectSIDs[i] = InvalidStringID;
 		}
+	}
+
+	PropertyCollection* Vehicle::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	GameObject* Vehicle::CopySelf(
@@ -12743,10 +12991,16 @@ namespace flex
 		}
 	}
 
-	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, RoadSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, RoadSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		AddTag("road");
+	}
+
+	PropertyCollection* Road::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Road::Initialize()
@@ -13115,10 +13369,28 @@ namespace flex
 		m_RigidBodies[meshIndex] = rigidBody;
 	}
 
-	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SolarPanelSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SolarPanelSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
+
+	PropertyCollection* SolarPanel::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
+	PropertyCollection* MineralDeposit::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("mineral deposit");
+
+		REGISTER_FIELD(collection->childCollection, "mineral remaining", MineralDeposit, m_MineralRemaining)
+			.VersionAdded(6);
+
+		return collection;
 	}
 
 	void SolarPanel::Update()
@@ -13144,15 +13416,27 @@ namespace flex
 		GameObject::Update();
 	}
 
-	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, HeadLampSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, HeadLampSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 	}
 
-	PowerPole::PowerPole(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, PowerPoleSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	PropertyCollection* HeadLamp::BuildTypeUniquePropertyCollection()
 	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
+	PowerPole::PowerPole(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PowerPoleSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+	}
+
+	PropertyCollection* PowerPole::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void PowerPole::OnCharge(real chargeAmount)
@@ -13194,14 +13478,10 @@ namespace flex
 		return MineralType::_NONE;
 	}
 
-	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, MineralDepositSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MineralDepositSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
-
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("mineral remaining", &m_MineralRemaining)
-			.VersionAdded(6);
 	}
 
 	void MineralDeposit::Initialize()
@@ -13243,9 +13523,9 @@ namespace flex
 			ImGui::EndCombo();
 		}
 
-		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
 		{
-			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
 		}
 
 		ImGui::Text("Mineral remaining: %u", m_MineralRemaining);
@@ -13298,7 +13578,9 @@ namespace flex
 		JSONObject mineralDepositObj;
 		if (parentObject.TryGetObject("mineral deposit", mineralDepositObj))
 		{
-			DeserializeRegisteredProperties(mineralDepositObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(mineralDepositObj, collection->childCollection);
 
 			std::string typeStr = mineralDepositObj.GetString("type");
 			m_Type = MineralTypeFromString(typeStr.c_str());
@@ -13307,9 +13589,11 @@ namespace flex
 
 	void MineralDeposit::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject mineralDepositObj = {};
 
-		SerializeRegisteredProperties(mineralDepositObj, bSerializePrefabData);
+		SerializeRegisteredProperties(mineralDepositObj, collection->childCollection, bSerializePrefabData);
 
 		const char* typeStr = MineralTypeToString(m_Type);
 		mineralDepositObj.fields.emplace_back("type", JSONValue(typeStr));
@@ -13371,8 +13655,8 @@ namespace flex
 		}
 	}
 
-	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, MinerSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate),
+	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MinerSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_MineTimer(1.0f),
 		m_MineCooldownTimer(0.2f)
 	{
@@ -13384,21 +13668,29 @@ namespace flex
 		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
 		m_LaserEmitterHeight = 5.0f;
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("charge", &m_Charge)
+		ComputeNewTargetPos();
+	}
+
+	PropertyCollection* Miner::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("miner");
+
+		REGISTER_FIELD(collection->childCollection, "charge", Miner, m_Charge)
 			.VersionAdded(6)
 			.DefaultValue(0.0f);
-		collection->RegisterProperty("max charge", &m_MaxCharge)
+		REGISTER_FIELD(collection->childCollection, "max charge", Miner, m_MaxCharge)
 			.VersionAdded(6)
 			.Range(0.0f, 100.0f);
-		collection->RegisterProperty("mine rate", &m_MineRate)
+		REGISTER_FIELD(collection->childCollection, "mine rate", Miner, m_MineRate)
 			.VersionAdded(6)
 			.Range(0.0f, 100.0f);
-		collection->RegisterProperty("power draw", &m_PowerDraw)
+		REGISTER_FIELD(collection->childCollection, "power draw", Miner, m_PowerDraw)
 			.VersionAdded(6)
 			.Range(0.0f, 10.0f);
 
-		ComputeNewTargetPos();
+		return collection;
 	}
 
 	void Miner::Update()
@@ -13558,9 +13850,9 @@ namespace flex
 
 		bool bAnyPropertyChanged = false;
 
-		PropertyCollection* collection = GetPropertyCollection();
-		CHECK_NE(collection, nullptr);
-		bAnyPropertyChanged = collection->DrawImGuiObjects();
+		//PropertyCollection* collection = GetPropertyCollection();
+		//CHECK_NE(collection, nullptr);
+		//bAnyPropertyChanged = collection->DrawImGuiObjects();
 
 		ImGui::Text("Inventory");
 		for (const GameObjectStack& stack : m_Inventory)
@@ -13591,9 +13883,9 @@ namespace flex
 			m_Charge = m_MaxCharge;
 		}
 
-		if (bAnyPropertyChanged && m_PrefabIDLoadedFrom.IsValid())
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
 		{
-			g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
 		}
 	}
 
@@ -13729,7 +14021,9 @@ namespace flex
 		JSONObject minerObj;
 		if (parentObject.TryGetObject("miner", minerObj))
 		{
-			DeserializeRegisteredProperties(minerObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(minerObj, collection->childCollection);
 
 			std::vector<JSONObject> inventory;
 			if (minerObj.TryGetObjectArray("inventory", inventory))
@@ -13742,9 +14036,11 @@ namespace flex
 
 	void Miner::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject minerObj = {};
 
-		SerializeRegisteredProperties(minerObj, bSerializePrefabData);
+		SerializeRegisteredProperties(minerObj, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> inventory;
 		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory))
@@ -13758,16 +14054,24 @@ namespace flex
 		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
 	}
 
-	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabID& prefabIDLoadedFrom /* = InvalidPrefabID */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, SpeakerSID, gameObjectID, prefabIDLoadedFrom, bIsPrefabTemplate)
+	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpeakerSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
+	}
 
-		PropertyCollection* collection = RegisterPropertyCollection();
-		collection->RegisterProperty("playing", &m_bPlaying)
+	PropertyCollection* Speaker::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("speaker");
+
+		REGISTER_FIELD(collection->childCollection, "playing", Speaker, m_bPlaying)
 			.VersionAdded(6);
-		collection->RegisterProperty("audio source path", &m_AudioSourceFileName)
+		REGISTER_FIELD(collection->childCollection, "audio source path", Speaker, m_AudioSourceFileName)
 			.VersionAdded(6);
+
+		return collection;
 	}
 
 	void Speaker::Initialize()
@@ -13941,14 +14245,18 @@ namespace flex
 		JSONObject speakerObj;
 		if (parentObject.TryGetObject("speaker", speakerObj))
 		{
-			DeserializeRegisteredProperties(speakerObj);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(speakerObj, collection->childCollection);
 		}
 	}
 
 	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject speakerObj = {};
-		SerializeRegisteredProperties(speakerObj, bSerializePrefabData);
+		SerializeRegisteredProperties(speakerObj, collection->childCollection, bSerializePrefabData);
 		if (!speakerObj.fields.empty())
 		{
 			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));

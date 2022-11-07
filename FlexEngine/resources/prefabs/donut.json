@@ -1,14 +1,12 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "7B3E0280A3052287447666E389F36D9A",
 	"root" : 
 	{
-		"name" : "donut",
 		"id" : "5E9A55A8C4295A984D267F5A84471AA1",
+		"name" : "donut",
 		"type" : "object",
-		"visible" : true,
-		"casts shadow" : true,
 		"mesh" : "donut.glb",
 		"materials" : 
 		[
@@ -19,7 +17,7 @@
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.000, 1.000, 1.000"
+			"half extents" : "1.000,1.000,1.000"
 		},
 		"rigid body" : 
 		{

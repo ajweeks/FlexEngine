@@ -52,9 +52,9 @@ namespace flex
 		m_ConfigFile.RegisterProperty("rotate h speed third person", &m_RotateHSpeedThirdPerson);
 		m_ConfigFile.RegisterProperty("rotate v speed", &m_RotateVSpeed);
 		m_ConfigFile.RegisterProperty("mouse rotate h speed", &m_MouseRotateHSpeed)
-			.Range(0.01f, 10.0f);
+			.SetRange(0.01f, 10.0f);
 		m_ConfigFile.RegisterProperty("mouse rotate v speed", &m_MouseRotateVSpeed)
-			.Range(0.01f, 10.0f);
+			.SetRange(0.01f, 10.0f);
 		m_ConfigFile.RegisterProperty("invert move v", &m_bInvertMouseV);
 	}
 
