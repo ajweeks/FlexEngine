@@ -12677,8 +12677,7 @@ namespace flex
 				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
 				for (i32 i = 0; i < count; ++i)
 				{
-					// TODO: Store as ints now that that's supported
-					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].value.AsString());
+					m_SoundEffectSIDs[i] = soundEffectSIDs[i].value.AsULong();
 				}
 			}
 		}
