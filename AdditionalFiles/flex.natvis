@@ -39,7 +39,7 @@
     <DisplayString Condition="type == flex::ValueType::LONG">{longValue}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::ULONG">{ulongValue}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::FLOAT">{floatValue}</DisplayString>
-    <DisplayString Condition="type == flex::ValueType::BOOL">{boolValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::BOOL">{uintValue}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::VEC2">{vecValue}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::VEC3">{vecValue}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::VEC4">{vecValue}</DisplayString>
