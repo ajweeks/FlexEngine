@@ -360,8 +360,6 @@ namespace flex
 		bool ShouldSerializeMesh() const;
 		bool ShouldSerializeMaterial() const;
 
-		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
-
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;

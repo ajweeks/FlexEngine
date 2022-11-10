@@ -151,7 +151,7 @@ namespace flex
 	}
 
 
-#define REGISTER_FIELD(collection, name, type, field) collection->RegisterProperty(name, offsetof(type, field), typeid(field))
+#define FIELD_OFFSET_AND_TYPE(type, field) offsetof(type, field), typeid(decltype(field))
 
 
 	//
@@ -1768,9 +1768,10 @@ namespace flex
 	{
 		PropertyCollection* collection = GetPropertyCollectionManager()->AllocateCollection("base object");
 
-		REGISTER_FIELD(collection, "name", GameObject, m_Name);
+		collection->RegisterProperty("name", FIELD_OFFSET_AND_TYPE(GameObject, m_Name));
+
 		// Added in scene v5
-		REGISTER_FIELD(collection, "id", GameObject, ID);
+		collection->RegisterProperty("id", FIELD_OFFSET_AND_TYPE(GameObject, ID));
 
 		return collection;
 	}
@@ -2812,7 +2813,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("valve info");
 
-		REGISTER_FIELD(collection->childCollection, "range", Valve, valveRange)
+		collection->childCollection->RegisterProperty("range", FIELD_OFFSET_AND_TYPE(Valve, valveRange))
 			.VersionAdded(6)
 			.Precision(3);
 
@@ -3024,10 +3025,10 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("block info");
 
-		REGISTER_FIELD(collection->childCollection, "move axis", RisingBlock, moveAxis)
+		collection->childCollection->RegisterProperty("move axis", FIELD_OFFSET_AND_TYPE(RisingBlock, moveAxis))
 			.VersionAdded(6)
 			.Precision(3);
-		REGISTER_FIELD(collection->childCollection, "affected by gravity", RisingBlock, bAffectedByGravity)
+		collection->childCollection->RegisterProperty("affected by gravity", FIELD_OFFSET_AND_TYPE(RisingBlock, bAffectedByGravity))
 			.VersionAdded(6);
 
 		return collection;
@@ -3204,7 +3205,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("window info");
 
-		REGISTER_FIELD(collection->childCollection, "broken", GlassPane, bBroken)
+		collection->childCollection->RegisterProperty("broken", FIELD_OFFSET_AND_TYPE(GlassPane, bBroken))
 			.VersionAdded(6);
 
 		return collection;
@@ -3489,18 +3490,18 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("directional light info");
 
-		REGISTER_FIELD(collection->childCollection, "colour", DirectionalLight, data.colour)
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.colour))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		REGISTER_FIELD(collection->childCollection, "brightness", DirectionalLight, data.brightness)
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.brightness))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(1.0f);
-		REGISTER_FIELD(collection->childCollection, "cast shadows", DirectionalLight, data.castShadows)
+		collection->childCollection->RegisterProperty("cast shadows", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.castShadows))
 			.VersionAdded(2)
 			.DefaultValue(1);
-		REGISTER_FIELD(collection->childCollection, "shadow darkness", DirectionalLight, data.shadowDarkness)
+		collection->childCollection->RegisterProperty("shadow darkness", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.shadowDarkness))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(1.0f);
@@ -3716,15 +3717,15 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("point light info");
 
-		REGISTER_FIELD(collection->childCollection, "colour", PointLight, data.colour)
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(PointLight, data.colour))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		REGISTER_FIELD(collection->childCollection, "brightness", PointLight, data.brightness)
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(PointLight, data.brightness))
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(1.0f);
-		REGISTER_FIELD(collection->childCollection, "enabled", PointLight, data.enabled)
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(PointLight, data.enabled))
 			.VersionAdded(2)
 			.DefaultValue(1);
 
@@ -3947,18 +3948,18 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spot light info");
 
-		REGISTER_FIELD(collection->childCollection, "colour", SpotLight, data.colour)
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(SpotLight, data.colour))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		REGISTER_FIELD(collection->childCollection, "brightness", SpotLight, data.brightness)
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(SpotLight, data.brightness))
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(1.0f);
-		REGISTER_FIELD(collection->childCollection, "enabled", SpotLight, data.enabled)
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(SpotLight, data.enabled))
 			.VersionAdded(2)
 			.DefaultValue(1);
-		REGISTER_FIELD(collection->childCollection, "angle", SpotLight, data.angle)
+		collection->childCollection->RegisterProperty("angle", FIELD_OFFSET_AND_TYPE(SpotLight, data.angle))
 			.VersionAdded(2)
 			.Precision(3)
 			.DefaultValue(0.0f);
@@ -4180,14 +4181,14 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("area light info");
 
-		REGISTER_FIELD(collection->childCollection, "colour", AreaLight, data.colour)
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(AreaLight, data.colour))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		REGISTER_FIELD(collection->childCollection, "brightness", AreaLight, data.brightness)
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(AreaLight, data.brightness))
 			.VersionAdded(2)
 			.DefaultValue(500.0f);
-		REGISTER_FIELD(collection->childCollection, "enabled", AreaLight, data.enabled)
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(AreaLight, data.enabled))
 			.VersionAdded(2)
 			.DefaultValue(1);
 
@@ -4450,10 +4451,10 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("cart info");
 
-		REGISTER_FIELD(collection->childCollection, "track ID", BaseCart, currentTrackID)
+		collection->childCollection->RegisterProperty("track ID", FIELD_OFFSET_AND_TYPE(BaseCart, currentTrackID))
 			.VersionAdded(6)
 			.DefaultValue(InvalidTrackID);
-		REGISTER_FIELD(collection->childCollection, "dist along track", BaseCart, distAlongTrack)
+		collection->childCollection->RegisterProperty("dist along track", FIELD_OFFSET_AND_TYPE(BaseCart, distAlongTrack))
 			.VersionAdded(6)
 			.DefaultValue(-1.0f);
 
@@ -4748,11 +4749,11 @@ namespace flex
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("engine cart info");
 
 		// BaseCart already registered trackID & dist along track fields
-		REGISTER_FIELD(collection->childCollection, "move direction", EngineCart, moveDirection)
+		collection->childCollection->RegisterProperty("move direction", FIELD_OFFSET_AND_TYPE(EngineCart, moveDirection))
 			.VersionAdded(6)
 			.Precision(1)
 			.DefaultValue(1.0f);
-		REGISTER_FIELD(collection->childCollection, "power remaining", EngineCart, powerRemaining)
+		collection->childCollection->RegisterProperty("power remaining", FIELD_OFFSET_AND_TYPE(EngineCart, powerRemaining))
 			.VersionAdded(6)
 			.DefaultValue(1.0f);
 
@@ -4978,7 +4979,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("battery info");
 
-		REGISTER_FIELD(collection->childCollection, "charge amount", Battery, chargeAmount)
+		collection->childCollection->RegisterProperty("charge amount", FIELD_OFFSET_AND_TYPE(Battery, chargeAmount))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(0.0f);
@@ -5135,19 +5136,19 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("gerstner wave");
 
-		REGISTER_FIELD(collection->childCollection, "fresnel factor", GerstnerWave, oceanData.fresnelFactor)
+		collection->childCollection->RegisterProperty("fresnel factor", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fresnelFactor))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "fresnel power", GerstnerWave, oceanData.fresnelPower)
+		collection->childCollection->RegisterProperty("fresnel power", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fresnelPower))
 			.VersionAdded(2)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "sky reflection factor", GerstnerWave, oceanData.skyReflectionFactor)
+		collection->childCollection->RegisterProperty("sky reflection factor", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.skyReflectionFactor))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "fog falloff", GerstnerWave, oceanData.fogFalloff)
+		collection->childCollection->RegisterProperty("fog falloff", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fogFalloff))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "fog density", GerstnerWave, oceanData.fogDensity)
+		collection->childCollection->RegisterProperty("fog density", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fogDensity))
 			.VersionAdded(6)
 			.Precision(2);
 
@@ -6636,9 +6637,9 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire");
 
-		REGISTER_FIELD(collection->childCollection, "plug 0 id", Wire, plug0ID)
+		collection->childCollection->RegisterProperty("plug 0 id", FIELD_OFFSET_AND_TYPE(Wire, plug0ID))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "plug 1 id", Wire, plug1ID)
+		collection->childCollection->RegisterProperty("plug 1 id", FIELD_OFFSET_AND_TYPE(Wire, plug1ID))
 			.VersionAdded(6);
 
 		return collection;
@@ -7059,10 +7060,10 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire plug");
 
-		REGISTER_FIELD(collection->childCollection, "wire id", WirePlug, wireID)
+		collection->childCollection->RegisterProperty("wire id", FIELD_OFFSET_AND_TYPE(WirePlug, wireID))
 			.VersionAdded(6)
 			.DefaultValue(InvalidGameObjectID);
-		REGISTER_FIELD(collection->childCollection, "socket id", WirePlug, socketID)
+		collection->childCollection->RegisterProperty("socket id", FIELD_OFFSET_AND_TYPE(WirePlug, socketID))
 			.VersionAdded(6)
 			.DefaultValue(InvalidGameObjectID);
 
@@ -7151,7 +7152,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("socket");
 
-		REGISTER_FIELD(collection->childCollection, "slotIdx", Socket, slotIdx)
+		collection->childCollection->RegisterProperty("slotIdx", FIELD_OFFSET_AND_TYPE(Socket, slotIdx))
 			.VersionAdded(6);
 		//	.CustomSerializeCallback([](SerializationContext& context, u32 value)
 		//{
@@ -7160,7 +7161,7 @@ namespace flex
 		//		context.Write("foo", value);
 		//	}
 		//});
-		REGISTER_FIELD(collection->childCollection, "connected plug id", Socket, connectedPlugID)
+		collection->childCollection->RegisterProperty("connected plug id", FIELD_OFFSET_AND_TYPE(Socket, connectedPlugID))
 			.VersionAdded(6)
 			.DefaultValue(InvalidGameObjectID);
 
@@ -8640,46 +8641,46 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("chunk generator info");
 
-		REGISTER_FIELD(collection->childCollection, "vert count per chunk axis", TerrainGenerator, m_VertCountPerChunkAxis)
+		collection->childCollection->RegisterProperty("vert count per chunk axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_VertCountPerChunkAxis))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "chunk size", TerrainGenerator, m_ChunkSize)
+		collection->childCollection->RegisterProperty("chunk size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ChunkSize))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "max height", TerrainGenerator, m_MaxHeight)
+		collection->childCollection->RegisterProperty("max height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxHeight))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "use manual seed", TerrainGenerator, m_UseManualSeed)
+		collection->childCollection->RegisterProperty("use manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_UseManualSeed))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "manual seed", TerrainGenerator, m_ManualSeed);
+		collection->childCollection->RegisterProperty("manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ManualSeed));
 
-		REGISTER_FIELD(collection->childCollection, "loaded chunk radius", TerrainGenerator, m_LoadedChunkRadius)
+		collection->childCollection->RegisterProperty("loaded chunk radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRadius))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "loaded chunk rigid body square radius", TerrainGenerator, m_LoadedChunkRigidBodyRadius2)
+		collection->childCollection->RegisterProperty("loaded chunk rigid body square radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRigidBodyRadius2))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "base table width", TerrainGenerator, m_BasePerlinTableWidth)
+		collection->childCollection->RegisterProperty("base table width", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_BasePerlinTableWidth))
 			.VersionAdded(6);
 
-		REGISTER_FIELD(collection->childCollection, "isolate noise layer", TerrainGenerator, m_IsolateNoiseLayer)
+		collection->childCollection->RegisterProperty("isolate noise layer", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_IsolateNoiseLayer))
 			.VersionAdded(6);
 
-		REGISTER_FIELD(collection->childCollection, "num points per axis", TerrainGenerator, m_NumPointsPerAxis)
+		collection->childCollection->RegisterProperty("num points per axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_NumPointsPerAxis))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "max chunk count", TerrainGenerator, m_MaxChunkCount)
+		collection->childCollection->RegisterProperty("max chunk count", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxChunkCount))
 			.VersionAdded(6);
 
-		REGISTER_FIELD(collection->childCollection, "low colour", TerrainGenerator, m_LowCol)
+		collection->childCollection->RegisterProperty("low colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LowCol))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "mid colour", TerrainGenerator, m_MidCol)
+		collection->childCollection->RegisterProperty("mid colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MidCol))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "high colour", TerrainGenerator, m_HighCol)
+		collection->childCollection->RegisterProperty("high colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_HighCol))
 			.VersionAdded(6)
 			.Precision(2);
 
-		REGISTER_FIELD(collection->childCollection, "pin center", TerrainGenerator, m_bPinCenter)
+		collection->childCollection->RegisterProperty("pin center", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_bPinCenter))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "pinned center", TerrainGenerator, m_PinnedPos)
+		collection->childCollection->RegisterProperty("pinned center", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_PinnedPos))
 			.VersionAdded(6)
 			.Precision(2);
 
@@ -10876,7 +10877,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spring");
 
-		REGISTER_FIELD(collection->childCollection, "end point", SpringObject, m_TargetPos)
+		collection->childCollection->RegisterProperty("end point", FIELD_OFFSET_AND_TYPE(SpringObject, m_TargetPos))
 			.VersionAdded(6)
 			.Precision(2)
 			.DefaultValue(VEC3_ZERO);
@@ -11213,17 +11214,17 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("soft body");
 
-		REGISTER_FIELD(collection->childCollection, "solver iteration count", SoftBody, m_SolverIterationCount)
+		collection->childCollection->RegisterProperty("solver iteration count", FIELD_OFFSET_AND_TYPE(SoftBody, m_SolverIterationCount))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "render wireframe", SoftBody, m_bRenderWireframe)
+		collection->childCollection->RegisterProperty("render wireframe", FIELD_OFFSET_AND_TYPE(SoftBody, m_bRenderWireframe))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "damping", SoftBody, m_Damping)
+		collection->childCollection->RegisterProperty("damping", FIELD_OFFSET_AND_TYPE(SoftBody, m_Damping))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "stiffness", SoftBody, m_Stiffness)
+		collection->childCollection->RegisterProperty("stiffness", FIELD_OFFSET_AND_TYPE(SoftBody, m_Stiffness))
 			.VersionAdded(6)
 			.Precision(2);
-		REGISTER_FIELD(collection->childCollection, "bending stiffness", SoftBody, m_BendingStiffness)
+		collection->childCollection->RegisterProperty("bending stiffness", FIELD_OFFSET_AND_TYPE(SoftBody, m_BendingStiffness))
 			.VersionAdded(6)
 			.Precision(2);
 
@@ -13385,7 +13386,7 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("mineral deposit");
 
-		REGISTER_FIELD(collection->childCollection, "mineral remaining", MineralDeposit, m_MineralRemaining)
+		collection->childCollection->RegisterProperty("mineral remaining", FIELD_OFFSET_AND_TYPE(MineralDeposit, m_MineralRemaining))
 			.VersionAdded(6);
 
 		return collection;
@@ -13675,16 +13676,16 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("miner");
 
-		REGISTER_FIELD(collection->childCollection, "charge", Miner, m_Charge)
+		collection->childCollection->RegisterProperty("charge", FIELD_OFFSET_AND_TYPE(Miner, m_Charge))
 			.VersionAdded(6)
 			.DefaultValue(0.0f);
-		REGISTER_FIELD(collection->childCollection, "max charge", Miner, m_MaxCharge)
+		collection->childCollection->RegisterProperty("max charge", FIELD_OFFSET_AND_TYPE(Miner, m_MaxCharge))
 			.VersionAdded(6)
 			.Range(0.0f, 100.0f);
-		REGISTER_FIELD(collection->childCollection, "mine rate", Miner, m_MineRate)
+		collection->childCollection->RegisterProperty("mine rate", FIELD_OFFSET_AND_TYPE(Miner, m_MineRate))
 			.VersionAdded(6)
 			.Range(0.0f, 100.0f);
-		REGISTER_FIELD(collection->childCollection, "power draw", Miner, m_PowerDraw)
+		collection->childCollection->RegisterProperty("power draw", FIELD_OFFSET_AND_TYPE(Miner, m_PowerDraw))
 			.VersionAdded(6)
 			.Range(0.0f, 10.0f);
 
@@ -14064,9 +14065,9 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("speaker");
 
-		REGISTER_FIELD(collection->childCollection, "playing", Speaker, m_bPlaying)
+		collection->childCollection->RegisterProperty("playing", FIELD_OFFSET_AND_TYPE(Speaker, m_bPlaying))
 			.VersionAdded(6);
-		REGISTER_FIELD(collection->childCollection, "audio source path", Speaker, m_AudioSourceFileName)
+		collection->childCollection->RegisterProperty("audio source path", FIELD_OFFSET_AND_TYPE(Speaker, m_AudioSourceFileName))
 			.VersionAdded(6);
 
 		return collection;
