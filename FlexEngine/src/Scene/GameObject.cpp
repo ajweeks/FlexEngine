@@ -1934,7 +1934,6 @@ namespace flex
 		switch (m_TypeID)
 		{
 		case MineralDepositSID:
-		case VehicleSID:
 		case SkyboxSID:
 		case GerstnerWaveSID:
 		case BaseCartSID:
