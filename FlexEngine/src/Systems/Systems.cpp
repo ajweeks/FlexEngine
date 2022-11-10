@@ -908,7 +908,12 @@ namespace flex
 
 	void PropertyCollectionManager::RegisterType(StringID gameObjectTypeID, PropertyCollection* collection)
 	{
-		CHECK_EQ(m_RegisteredObjectTypes.find(gameObjectTypeID), m_RegisteredObjectTypes.end());
+		if (m_RegisteredObjectTypes.find(gameObjectTypeID) != m_RegisteredObjectTypes.end())
+		{
+			// Game Object Type registered multiple times
+			ENSURE_NO_ENTRY();
+			return;
+		}
 
 		m_RegisteredObjectTypes.emplace(gameObjectTypeID, collection);
 	}
@@ -1018,7 +1023,7 @@ namespace flex
 			const char* label = iter.first;
 			const PropertyValue& value = iter.second;
 
-			CHECK_LT(value.offset, 1024u);
+			CHECK_LT(value.offset, 65536u);
 
 			void* valuePtr = (u8*)gameObject + value.offset;
 
@@ -1036,7 +1041,7 @@ namespace flex
 			const char* label = iter.first;
 			const PropertyValue& value = iter.second;
 
-			CHECK_LT(value.offset, 1024u);
+			CHECK_LT(value.offset, 65536u);
 			// Serialization may fail if class layouts don't match
 			CHECK(typeid(*gameObject) == typeid(*prefabTemplate));
 
@@ -1054,7 +1059,7 @@ namespace flex
 			const char* label = iter.first;
 			const PropertyValue& value = iter.second;
 
-			CHECK_LT(value.offset, 1024u);
+			CHECK_LT(value.offset, 65536u);
 
 			void* valuePtr = (u8*)gameObject + value.offset;
 			parentObject.TryGetValueOfType(label, valuePtr, value.type);
