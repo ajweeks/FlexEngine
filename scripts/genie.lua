@@ -188,7 +188,8 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-sign-compare",
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess", "-Wno-unused-but-set-variable",
+			"-Wno-unused-variable", "-Wno-sign-compare","-Wno-invalid-offsetof",
 			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {
