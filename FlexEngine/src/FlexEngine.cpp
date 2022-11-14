@@ -2299,22 +2299,6 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_R)
-			{
-				if (bControlDown)
-				{
-					g_Renderer->RecompileShaders(false);
-					return EventReply::CONSUMED;
-				}
-				else
-				{
-					g_InputManager->ClearAllInputs();
-
-					g_SceneManager->ReloadCurrentScene();
-					return EventReply::CONSUMED;
-				}
-			}
-
 			if (keyCode == KeyCode::KEY_P)
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
