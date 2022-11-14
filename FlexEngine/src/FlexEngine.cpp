@@ -205,7 +205,7 @@ namespace flex
 
 		g_EngineInstance = this;
 
-		m_FrameTimes.resize(256);
+		m_FrameTimes = RollingAverage<real>(256);
 
 		Platform::Init();
 
@@ -751,11 +751,7 @@ namespace flex
 
 			if (!m_bSimulationPaused)
 			{
-				for (i32 i = 1; i < (i32)m_FrameTimes.size(); ++i)
-				{
-					m_FrameTimes[i - 1] = m_FrameTimes[i];
-				}
-				m_FrameTimes[m_FrameTimes.size() - 1] = g_UnpausedDeltaTime * 1000.0f;
+				m_FrameTimes.AddValue(g_UnpausedDeltaTime * 1000.0f);
 			}
 
 			{
@@ -1332,6 +1328,7 @@ namespace flex
 		{
 			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
 			ImGui::Text("Show hide UI: Shift + 1");
+			ImGui::Text("");
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Cameras");
 			ImGui::PopStyleColor();
@@ -1418,32 +1415,43 @@ namespace flex
 
 				if (ImGui::TreeNode("Stats"))
 				{
-					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-					static const char* renderNameStr = rendererNameStringStr.c_str();
-					ImGui::TextUnformatted(renderNameStr);
-					static ms latestFrameTime;
+					ImGui::Text("%s", titleString.c_str());
+
+					ImGui::Text("Current renderer: %s", m_RendererName.c_str());
+					static ms frameTimeMean = 0.0f;
+					static ms frameTimeVariance = 0.0f;
 					static u32 framesSinceUpdate = 0;
-					if (framesSinceUpdate++ % 10 == 0)
+					const u32 updateFrequency = 20;
+					const u32 framesToAverage = 20;
+					// Update variables only periodically to avoid being unreadable
+					if ((framesSinceUpdate++ % updateFrequency) == 0)
 					{
-						latestFrameTime = m_FrameTimes[m_FrameTimes.size() - 1];
+						frameTimeMean = m_FrameTimes.ComputeMean(framesToAverage);
+						frameTimeVariance = m_FrameTimes.ComputeVariance(framesToAverage, frameTimeMean);
 					}
-					ImGui::Text("Frames time: %.1fms (%d FPS)", latestFrameTime, (u32)((1.0f / latestFrameTime) * 1000));
-					ImGui::NewLine();
-					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
-					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
 					real width = 300.0f;
 					real height = 100.0f;
 					real minMS = 0.0f;
 					real maxMS = 100.0f;
-					ImGui::PlotLines("", m_FrameTimes.data(), (u32)m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+					ImGui::PlotLines("", m_FrameTimes.GetData(), m_FrameTimes.GetNumSamples(), m_FrameTimes.currentIndex, 0, minMS, maxMS, ImVec2(width, height));
 					real targetFrameRate = 60.0f;
 					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
+					ImGui::Text("Frame time: %.1fms (variance: %.2f)", frameTimeMean, frameTimeVariance);
+					ImGui::Text("FPS: %u", (u32)((1.0f / frameTimeMean) * 1000));
+					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
+					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
+
+					ImGui::NewLine();
+
 					g_Renderer->DrawImGuiRendererInfo();
+
+					ImGui::NewLine();
+
+					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
 
 					ImGui::TreePop();
 				}

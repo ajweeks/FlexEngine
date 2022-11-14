@@ -4,6 +4,7 @@
 
 namespace flex
 {
+	// TODO: Template on array length
 	template <class T>
 	struct RollingAverage
 	{
@@ -58,7 +59,7 @@ namespace flex
 				sampleCount += (i32)sampleWeight;
 			}
 
-			// TODO: Somehow make this frame-rate independent even when added to every frame!
+			// TODO: Somehow make this frame-rate independent even when added to every frame
 			if (sampleCount > 0)
 			{
 				currentAverage /= sampleCount;
@@ -79,6 +80,56 @@ namespace flex
 			currentAverage = resetValue;
 		}
 
+		// TODO: Expose iterator
+
+		u32 GetNumSamples() const
+		{
+			return (u32)prevValues.size();
+		}
+
+		T ComputeMean() const
+		{
+			return ComputeMean(GetNumSamples());
+		}
+
+		T ComputeMean(u32 frameCount) const
+		{
+			CHECK_GT(frameCount, 0u);
+			CHECK_LE(frameCount, GetNumSamples());
+			T sum = (T)0;
+			for (u32 i = 0; i < frameCount; ++i)
+			{
+				u32 index = (currentIndex - i + GetNumSamples()) % GetNumSamples();
+				sum += prevValues[index];
+			}
+			return sum / frameCount;
+		}
+
+		T ComputeVariance(u32 frameCount) const
+		{
+			T mean = ComputeMean(frameCount);
+			return ComputeVariance(frameCount, mean);
+		}
+
+		T ComputeVariance(u32 frameCount, T mean) const
+		{
+			CHECK_GT(frameCount, 0u);
+			CHECK_LE(frameCount, GetNumSamples());
+			T sumOfSquares = (T)0;
+			for (u32 i = 0; i < frameCount; ++i)
+			{
+				u32 index = (currentIndex - i + GetNumSamples()) % GetNumSamples();
+				sumOfSquares += Square(prevValues[index] - mean);
+			}
+			return sumOfSquares / frameCount;
+		}
+
+		const T* GetData() const
+		{
+			return prevValues.data();
+		}
+
+		// TODO: Remove
 		T currentAverage;
 		std::vector<T> prevValues;
 

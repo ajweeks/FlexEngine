@@ -1325,6 +1325,16 @@ namespace flex
 		return x + 1;
 	}
 
+	real Square(real x)
+	{
+		return x * x;
+	}
+
+	real Cube(real x)
+	{
+		return x * x * x;
+	}
+
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
 	{
 		if (namePrefix.empty())

@@ -234,7 +234,7 @@ namespace flex
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;
 
-		std::vector<real> m_FrameTimes;
+		RollingAverage<real> m_FrameTimes;
 
 #if COMPILE_RENDERDOC_API
 		RENDERDOC_API_1_4_0* m_RenderDocAPI = nullptr;

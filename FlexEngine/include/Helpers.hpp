@@ -161,6 +161,9 @@ namespace flex
 	FLEX_NO_DISCARD u64 NextPowerOfTwo(u64 x);
 	FLEX_NO_DISCARD u32 NextPowerOfTwo(u32 x);
 
+	FLEX_NO_DISCARD real Square(real x);
+	FLEX_NO_DISCARD real Cube(real x);
+
 	FLEX_NO_DISCARD std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
 	void PadEnd(std::string& str, i32 minLen, char pad);
