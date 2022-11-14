@@ -124,7 +124,9 @@ namespace flex
 		for (size_t i = 0; i < m_Scenes.size(); ++i)
 		{
 			// TODO: Give scenes GUIDs to prevent name clashes
-			if (m_Scenes[i]->GetFileName().compare(sceneNameClean) == 0)
+			if (m_Scenes[i]->GetFileName().compare(sceneNameClean) == 0 ||
+				// Allow "scene_" prefix to be excluded
+				m_Scenes[i]->GetFileName().substr(strlen("scene_")).compare(sceneNameClean) == 0)
 			{
 				return SetCurrentScene((u32)i, bPrintErrorOnFailure);
 			}
