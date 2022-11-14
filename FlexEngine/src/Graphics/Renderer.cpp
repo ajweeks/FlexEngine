@@ -813,6 +813,7 @@ namespace flex
 
 	void Renderer::AddEditorString(const std::string& str)
 	{
+		// TODO: Append to list of messages each with lifetime
 		m_EditorMessage = str;
 		if (str.empty())
 		{

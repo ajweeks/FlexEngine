@@ -38,6 +38,7 @@ namespace flex
 				if ((bConfigDirectoryChanged && Contains(m_ConfigDirectoryWatch.modifiedFilePaths, configFile->filePath)) ||
 					(bSavedDirectoryChanged && Contains(m_SavedDirectoryWatch.modifiedFilePaths, configFile->filePath)))
 				{
+					Print("Reloading config file at %s\n", configFile->filePath.c_str());
 					configFile->Deserialize();
 				}
 			}

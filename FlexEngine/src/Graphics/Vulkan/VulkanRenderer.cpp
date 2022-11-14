@@ -9355,6 +9355,10 @@ namespace flex
 				{
 					secondBestMode = availablePresentMode;
 				}
+				else if (availablePresentMode == VK_PRESENT_MODE_FIFO_KHR)
+				{
+					secondBestMode = availablePresentMode;
+				}
 			}
 
 			return secondBestMode;

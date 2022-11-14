@@ -50,10 +50,13 @@ void main()
 	//}
 
 	float sphereRadius = chunkSize; // + noise(posWS) * 0.45
-	float distToSurface = length(posWS + vec3(-sphereRadius, 0.0, 0.0)) - sphereRadius;
-	distToSurface = min(distToSurface, length(posWS + vec3(sphereRadius, 0.0, 0.0)) - sphereRadius);
-	distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0, -sphereRadius)) - sphereRadius);
-	distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0,  sphereRadius)) - sphereRadius);
+	//float distToSurface = length(posWS + vec3(-sphereRadius, 0.0, 0.0)) - sphereRadius;
+	//distToSurface = min(distToSurface, length(posWS + vec3(sphereRadius, 0.0, 0.0)) - sphereRadius);
+	//distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0, -sphereRadius)) - sphereRadius);
+	//distToSurface = min(distToSurface, length(posWS + vec3(0.0, 0.0,  sphereRadius)) - sphereRadius);
+
+	float distToSurface = posWS.y - 0.0;
+	distToSurface += noise(posWS.xz * 0.003) * 80;
 
 	// vec3 normal;
 	// vec4 terrainSample = SampleTerrain(uboConstant.terrainGenConstantData, randomTables,

@@ -3,8 +3,11 @@
 // TODO: Rename folder to data
 #define ROOT_LOCATION								"../../../FlexEngine/"
 
+// Game resource files
 #define RESOURCE_DIRECTORY							ROOT_LOCATION "resources/"
+// Config files which are included in shipping builds
 #define CONFIG_DIRECTORY							ROOT_LOCATION "config/"
+// Cached files which are not shipped in builds
 #define SAVED_DIRECTORY								ROOT_LOCATION "saved/"
 
 #define MESH_DIRECTORY								RESOURCE_DIRECTORY "meshes/"

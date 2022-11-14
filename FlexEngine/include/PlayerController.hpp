@@ -48,12 +48,12 @@ namespace flex
 		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
 
 
-		real m_MaxMoveSpeed = 20.0f;
-		real m_RotateHSpeedFirstPerson = 1.5f;
+		real m_MaxMoveSpeed = 5.0f;
+		real m_RotateHSpeedFirstPerson = 3.0f;
 		real m_RotateHSpeedThirdPerson = 4.0f;
 		real m_RotateVSpeed = 1.0f;
-		real m_MouseRotateHSpeed = 0.0013f;
-		real m_MouseRotateVSpeed = 0.0013f;
+		real m_MouseRotateHSpeed = 1.0f;
+		real m_MouseRotateVSpeed = 1.0f;
 		bool m_bInvertMouseV = false;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0
