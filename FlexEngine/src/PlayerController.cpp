@@ -1028,12 +1028,19 @@ namespace flex
 
 	void PlayerController::LoadConfigFile()
 	{
-		m_ConfigFile.Deserialize();
+		if (!m_ConfigFile.Deserialize())
+		{
+			// If file wasn't found we should write the defaults out now
+			SerializeConfigFile();
+		}
 	}
 
 	void PlayerController::SerializeConfigFile()
 	{
-		m_ConfigFile.Serialize();
+		if (!m_ConfigFile.Serialize())
+		{
+			PrintError("Failed to serialize player settings file\n");
+		}
 	}
 
 	void PlayerController::UpdateMode()
