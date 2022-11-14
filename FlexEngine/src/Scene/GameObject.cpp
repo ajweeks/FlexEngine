@@ -13583,6 +13583,12 @@ namespace flex
 
 			std::string typeStr = mineralDepositObj.GetString("type");
 			m_Type = MineralTypeFromString(typeStr.c_str());
+			if (m_Type == MineralType::_NONE)
+			{
+				char buff[33];
+				ID.ToString(buff);
+				PrintError("Failed to parse mineral's type: %s (for object: %s, ID: %s)\n", typeStr.c_str(), m_Name.c_str(), buff);
+			}
 		}
 	}
 
