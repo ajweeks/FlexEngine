@@ -1019,6 +1019,8 @@ namespace flex
 			ImGui::ShowDemoWindow(bImGuiDemoWindowShowing);
 		}
 
+		static bool bShowHelpWindow = false;
+
 		if (ImGui::BeginMainMenuBar())
 		{
 			if (ImGui::BeginMenu("File"))
@@ -1310,10 +1312,52 @@ namespace flex
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
 
+				if (ImGui::MenuItem("Help (?)", nullptr, &bShowHelpWindow))
+				{
+					bShowHelpWindow = true;
+				}
+
 				ImGui::EndMenu();
 			}
 
 			ImGui::EndMainMenuBar();
+		}
+
+		if (bShowHelpWindow)
+		{
+			ImGui::OpenPopup("Help");
+		}
+
+		if (ImGui::BeginPopupModal("Help", &bShowHelpWindow))
+		{
+			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
+			ImGui::Text("Show hide UI: Shift + 1");
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Cameras");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tCycle active camera: -/+");
+			ImGui::Text("\tCycle active scene: [/]");
+			ImGui::Text("");
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Editor");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tMove camera (debug camera): WASD + QE");
+			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
+			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
+			ImGui::Text("\tPause/release mouse capture: Esc");
+			ImGui::Text("");
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Player controls (first/third person camera)");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tCycle inventory: scroll wheel");
+			ImGui::Text("\tInteract: E");
+			ImGui::Text("\tView inventory: Tab");
+			ImGui::Text("\tRun: Shift");
+			ImGui::Text("\tPickup item: Click and hold");
+			ImGui::Text("\tPlace item: Space");
+
+
+			ImGui::EndPopup();
 		}
 
 		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
