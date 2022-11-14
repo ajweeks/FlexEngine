@@ -2181,14 +2181,14 @@ namespace flex
 	{
 		PROFILE_AUTO("CreateCameraInstances");
 
-		FirstPersonCamera* fpCamera = new FirstPersonCamera();
-		g_CameraManager->AddCamera(fpCamera, true);
-
 		DebugCamera* debugCamera = new DebugCamera();
 		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
 		debugCamera->yaw = glm::radians(130.0f);
 		debugCamera->pitch = glm::radians(-10.0f);
-		g_CameraManager->AddCamera(debugCamera, false);
+		g_CameraManager->AddCamera(debugCamera, /* switchTo: */ true);
+
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
 		g_CameraManager->AddCamera(overheadCamera, false);
