@@ -13648,8 +13648,8 @@ namespace flex
 			}
 
 			const char* mineralTypeStr = MineralTypeToString(m_Type);
-			MaterialID matID = g_Renderer->GetMaterialID("mineral " + std::string(mineralTypeStr));
-			if (matID == InvalidMaterialID)
+			MaterialID matID;
+			if (!g_Renderer->FindOrCreateMaterialByName("mineral " + std::string(mineralTypeStr), matID))
 			{
 				PrintWarn("No mineral material found for mineral %s, using placeholder\n", mineralTypeStr);
 				matID = g_Renderer->GetPlaceholderMaterialID();
