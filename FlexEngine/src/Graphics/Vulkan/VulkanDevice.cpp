@@ -246,7 +246,7 @@ namespace flex
 
 		void VulkanDevice::DrawImGuiRendererInfo() const
 		{
-			if (ImGui::TreeNode("Enabled device extensions"))
+			if (ImGui::TreeNode("enabled-device-ext", "Enabled device extensions (%u)", (u32)m_EnabledExtensions.size()))
 			{
 				for (const char* extension : m_EnabledExtensions)
 				{
@@ -255,7 +255,7 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("Supported device extensions"))
+			if (ImGui::TreeNode("supported-device-ext", "Supported device extensions(% u)", (u32)m_SupportedExtensions.size()))
 			{
 				for (const VkExtensionProperties& extension : m_SupportedExtensions)
 				{

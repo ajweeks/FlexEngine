@@ -131,7 +131,7 @@ namespace flex
 			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
 
 			deviceCreateInfo.bTryEnableRayTracing = m_bTryEnableRayTracing;
-			
+
 			std::vector<const char*> rayTracingDeviceExtensions;
 			if (m_bTryEnableRayTracing)
 			{
@@ -2065,11 +2065,11 @@ namespace flex
 
 		void VulkanRenderer::DrawImGuiRendererInfo()
 		{
-			ImGui::Text("Instance version: %i.%i.%i", m_InstanceVersion.maj, m_InstanceVersion.min, m_InstanceVersion.patch);
-			ImGui::Text("Device version: %i.%i.%i", m_DeviceVersion.maj, m_DeviceVersion.min, m_DeviceVersion.patch);
-			ImGui::Text("Driver version: %i.%i.%i", m_DriverVersion.maj, m_DriverVersion.min, m_DriverVersion.patch);
+			ImGui::Text("Vk Instance version: %i.%i.%i", m_InstanceVersion.maj, m_InstanceVersion.min, m_InstanceVersion.patch);
+			ImGui::Text("Vk Device version: %i.%i.%i", m_DeviceVersion.maj, m_DeviceVersion.min, m_DeviceVersion.patch);
+			ImGui::Text("Vk Driver version: %i.%i.%i", m_DriverVersion.maj, m_DriverVersion.min, m_DriverVersion.patch);
 
-			if (ImGui::TreeNode("Enabled instance extensions"))
+			if (ImGui::TreeNode("enabled-instance-ext", "Enabled instance extensions (%u)", (u32)m_EnabledInstanceExtensions.size()))
 			{
 				for (const char* extension : m_EnabledInstanceExtensions)
 				{
@@ -2078,7 +2078,7 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("Supported instance extensions"))
+			if (ImGui::TreeNode("supported-instance-ext", "Supported instance extensions (%u)", (u32)m_SupportedInstanceExtensions.size()))
 			{
 				for (const VkExtensionProperties& extension : m_SupportedInstanceExtensions)
 				{
