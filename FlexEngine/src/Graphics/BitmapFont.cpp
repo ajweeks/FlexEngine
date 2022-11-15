@@ -24,7 +24,7 @@ namespace flex
 
 	bool BitmapFont::IsCharValid(wchar_t character)
 	{
-		return (character >= 0 && character < CHAR_COUNT);
+		return character < CHAR_COUNT;
 	}
 
 	void BitmapFont::SetMetric(const FontMetric& metric, wchar_t character)

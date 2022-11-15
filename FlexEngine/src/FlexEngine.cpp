@@ -1328,13 +1328,13 @@ namespace flex
 		{
 			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
 			ImGui::Text("Show hide UI: Shift + 1");
-			ImGui::Text("");
+			ImGui::NewLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Cameras");
 			ImGui::PopStyleColor();
 			ImGui::Text("\tCycle active camera: -/+");
 			ImGui::Text("\tCycle active scene: [/]");
-			ImGui::Text("");
+			ImGui::NewLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Editor");
 			ImGui::PopStyleColor();
@@ -1342,7 +1342,7 @@ namespace flex
 			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
 			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
 			ImGui::Text("\tPause/release mouse capture: Esc");
-			ImGui::Text("");
+			ImGui::NewLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Player controls (first/third person camera)");
 			ImGui::PopStyleColor();

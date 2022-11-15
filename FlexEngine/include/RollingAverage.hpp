@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Types.hpp"
+#include "Helpers.hpp" // For Square
 
 namespace flex
 {

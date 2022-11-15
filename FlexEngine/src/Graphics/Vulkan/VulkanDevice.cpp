@@ -255,7 +255,7 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("supported-device-ext", "Supported device extensions(% u)", (u32)m_SupportedExtensions.size()))
+			if (ImGui::TreeNode("supported-device-ext", "Supported device extensions(%u)", (u32)m_SupportedExtensions.size()))
 			{
 				for (const VkExtensionProperties& extension : m_SupportedExtensions)
 				{
