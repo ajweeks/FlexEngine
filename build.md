@@ -17,10 +17,9 @@ Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-
 
 #### Steps
 1. `cd scripts`
-2. `python build_dependencies.py windows vs2019 Debug`
+2. `python build_dependencies.py windows vs2019 Debug` (or any newer version)
 3. Open `build/Flex.sln`
-4. Change configuration to Debug x64
-5. Build and run!
+4. Build and run!
 
 
 ## Linux

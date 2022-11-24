@@ -19,7 +19,7 @@ solution "Flex"
 		"Release_WithSymbols"
 	}
 
-	platforms { "x32", "x64" }
+	platforms { "x64" }
 
 	language "C++"
 
@@ -83,7 +83,6 @@ function windowsPlatformPostBuild()
 				--copy dlls and resources after build
 				local cfgStr = configName(cfgs[i])
 				postbuildcommands {
-					-- TODO: Copy into x32 & x64 build dirs
 					"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. p[j] .. "\\" .. cfgStr .. "\\openal32.dll\" \"$(OutDir)\\\""
 				}
 		end
@@ -107,8 +106,6 @@ configuration "Release"
 configuration "Release_WithSymbols"
 	defines { "RELEASE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
-configuration "x32"
-	defines "FLEX_32"
 configuration "x64"
 	defines "FLEX_64"
 configuration {}
@@ -139,13 +136,8 @@ configuration {}
 configuration "vs*"
 	defines { "PLATFORM_Win", "_WINDOWS" }
 	linkoptions { "/ignore:4221", "/NODEFAULTLIB:LIBCMTD" }
-configuration { "vs*", "x32" }
-	flags { "EnableSSE2" }
-	defines { "WIN32" }
 configuration { "vs*", "DEBUG" }
 	links { "Dbghelp" }
-configuration { "x32" }
-	defines { "PLATFORM_x32" }
 configuration "linux*"
 	defines { "linux", "__linux", "__linux__" }
 configuration {}
