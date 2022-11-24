@@ -297,9 +297,7 @@ namespace flex
 
 		StringID id;
 		u32 size;
-#if DEBUG
 		const char* DBG_name;
-#endif
 	};
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);

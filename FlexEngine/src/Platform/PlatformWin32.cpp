@@ -539,6 +539,7 @@ namespace flex
 
 	void Platform::PrintStackTrace()
 	{
+#ifdef DBGHELP_TRANSLATE_TCHAR
 		// https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
 		void* stack[32];
 		constexpr i32 maxNameLength = 1024;
@@ -567,6 +568,7 @@ namespace flex
 					symbol->Name);
 			}
 		}
+#endif
 	}
 
 	void Platform::RetrieveCPUInfo()
