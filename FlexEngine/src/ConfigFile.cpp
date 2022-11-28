@@ -111,6 +111,8 @@ namespace flex
 			return false;
 		}
 
+		bDirty = false;
+
 		return true;
 	}
 
@@ -140,6 +142,8 @@ namespace flex
 					{
 						onDeserializeCallback();
 					}
+
+					bDirty = false;
 
 					return true;
 				}
@@ -177,13 +181,13 @@ namespace flex
 		{
 			ImGui::Text("Version: %i", fileVersion);
 
-			//for (std::pair<const char* const, ConfigValue>& valuePair : values)
-			//{
-			//	if (valuePair.second.DrawImGui())
-			//	{
-			//		bDirty = true;
-			//	}
-			//}
+			for (std::pair<const char* const, ConfigValue>& valuePair : values)
+			{
+				if (valuePair.second.DrawImGui())
+				{
+					bDirty = true;
+				}
+			}
 
 			if (ImGui::Button(bDirty ? "Save*" : "Save"))
 			{
@@ -202,4 +206,14 @@ namespace flex
 
 		return result;
 	}
+
+	//
+	// ConfigValue
+	//
+
+	bool ConfigFile::ConfigValue::DrawImGui()
+	{
+		return DrawImGuiForValueType(valuePtr, label, type, valueMinSet, valueMaxSet, valueMin, valueMax);
+	}
+
 } // namespace flex

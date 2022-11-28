@@ -187,4 +187,7 @@ namespace flex
 
 		std::string ToString(i32 tabCount) const;
 	};
+
+	bool DrawImGuiForValueType(void* valuePtr, const char* label, ValueType type, bool valueMinSet, bool valueMaxSet, void* valueMin, void* valueMax);
+
 } // namespace flex

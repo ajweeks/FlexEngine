@@ -1233,4 +1233,116 @@ namespace flex
 
 		return true;
 	}
+
+	bool DrawImGuiForValueType(void* valuePtr, const char* label, ValueType type, bool valueMinSet, bool valueMaxSet, void* valueMin, void* valueMax)
+	{
+		bool bValueChanged = false;
+
+		switch (type)
+		{
+		case ValueType::FLOAT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat(label, (real*)valuePtr, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat(label, (real*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::INT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderInt(label, (i32*)valuePtr, *(i32*)&valueMin, *(i32*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragInt(label, (i32*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::UINT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGuiExt::SliderUInt(label, (u32*)valuePtr, *(u32*)&valueMin, *(u32*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGuiExt::DragUInt(label, (u32*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::BOOL:
+		{
+			bValueChanged = ImGui::Checkbox(label, (bool*)valuePtr) || bValueChanged;
+		} break;
+		case ValueType::VEC2:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat2(label, &((glm::vec2*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat2(label, &((glm::vec2*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::VEC3:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat3(label, &((glm::vec3*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat3(label, &((glm::vec3*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::VEC4:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat4(label, &((glm::vec4*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat4(label, &((glm::vec4*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::QUAT:
+		{
+			glm::vec3 rotEuler = glm::eulerAngles(*(glm::quat*)valuePtr);
+
+			real valueMinReal = -TWO_PI;
+			real valueMaxReal = TWO_PI;
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				valueMinReal = *(real*)&valueMin;
+				valueMaxReal = *(real*)&valueMax;
+			}
+
+			if (ImGui::SliderFloat3(label, &rotEuler.x, valueMinReal, valueMaxReal))
+			{
+				*(glm::quat*)valuePtr = glm::quat(rotEuler);
+				bValueChanged = true;
+			}
+		} break;
+		case ValueType::STRING:
+		{
+			ImGui::Text("%s: %s", label, ((std::string*)valuePtr)->c_str());
+		} break;
+		case ValueType::GUID:
+		{
+			std::string guidStr = ((GUID*)valuePtr)->ToString();
+			ImGui::Text("%s: %s", label, guidStr.c_str());
+		} break;
+		default:
+		{
+			PrintError("Unhandled value type in DrawImGuiForValueType: %u\n", (u32)type);
+		} break;
+		}
+
+		return bValueChanged;
+	}
 } // namespace flex

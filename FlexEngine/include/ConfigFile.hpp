@@ -44,6 +44,8 @@ namespace flex
 
 			ConfigValue& SetRange(real rangeMin, real rangeMax);
 
+			bool DrawImGui();
+
 			const char* label = nullptr;
 			void* valuePtr = nullptr;
 			void* valueMin = nullptr;
