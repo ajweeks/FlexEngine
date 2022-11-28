@@ -1134,133 +1134,142 @@ namespace flex
 		{
 			if (ImGui::BeginTabItem("Game Objects"))
 			{
-				bGameObjectTabActive = true;
-
-				// Dropping objects onto this text makes them root objects
-				if (ImGui::BeginDragDropTarget())
+				if (ImGui::BeginChild("##go_scroll_region", ImVec2(0.0f, 400.0f)))
 				{
-					const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-					if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+					bGameObjectTabActive = true;
+
+					// Dropping objects onto this text makes them root objects
+					if (ImGui::BeginDragDropTarget())
 					{
-						i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
-
-						std::vector<GameObjectID> draggedGameObjectsIDs;
-						draggedGameObjectsIDs.reserve(draggedObjectCount);
-						for (i32 i = 0; i < draggedObjectCount; ++i)
+						const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+						if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
 						{
-							draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
-						}
+							i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
 
-						if (!draggedGameObjectsIDs.empty())
-						{
-							for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
+							std::vector<GameObjectID> draggedGameObjectsIDs;
+							draggedGameObjectsIDs.reserve(draggedObjectCount);
+							for (i32 i = 0; i < draggedObjectCount; ++i)
 							{
-								GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
-								GameObject* parent = draggedGameObject->GetParent();
-								GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
-								bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
-								// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
-								if (!bParentInSelection && parent)
+								draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
+							}
+
+							if (!draggedGameObjectsIDs.empty())
+							{
+								for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
 								{
-									parent->RemoveChildImmediate(draggedGameObject->ID, false);
-									g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+									GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+									GameObject* parent = draggedGameObject->GetParent();
+									GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
+									bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
+									// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
+									if (!bParentInSelection && parent)
+									{
+										parent->RemoveChildImmediate(draggedGameObject->ID, false);
+										g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+									}
 								}
 							}
 						}
+
+						const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+						if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+						{
+							PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+							InstantiatePrefab(prefabID);
+						}
+
+						ImGui::EndDragDropTarget();
 					}
 
-					const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
-					if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+					for (GameObject* rootObject : m_RootObjects)
 					{
-						PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
-						InstantiatePrefab(prefabID);
+						if (DrawImGuiGameObjectNameAndChildren(rootObject, false))
+						{
+							break;
+						}
 					}
 
-					ImGui::EndDragDropTarget();
-				}
+					DoCreateGameObjectButton("Add object...", "Add object");
 
-				for (GameObject* rootObject : m_RootObjects)
-				{
-					if (DrawImGuiGameObjectNameAndChildren(rootObject, false))
-					{
-						break;
-					}
-				}
-
-				DoCreateGameObjectButton("Add object...", "Add object");
-
-				const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
-				if (bShowAddPointLightBtn)
-				{
-					if (ImGui::Button("Add point light"))
-					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
-						PointLight* newPointLight = new PointLight(scene);
-						scene->AddRootObject(newPointLight);
-						newPointLight->Initialize();
-						newPointLight->PostInitialize();
-
-						g_Editor->SetSelectedObject(newPointLight->ID);
-					}
-
-					ImGui::SameLine();
-
-					if (ImGui::Button("Add spot light"))
-					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
-						SpotLight* newSpotLight = new SpotLight(scene);
-						scene->AddRootObject(newSpotLight);
-						newSpotLight->Initialize();
-						newSpotLight->PostInitialize();
-
-						g_Editor->SetSelectedObject(newSpotLight->ID);
-					}
-
-					if (ImGui::Button("Add area light"))
-					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
-						AreaLight* newAreaLight = new AreaLight(scene);
-						scene->AddRootObject(newAreaLight);
-						newAreaLight->Initialize();
-						newAreaLight->PostInitialize();
-
-						g_Editor->SetSelectedObject(newAreaLight->ID);
-					}
-				}
-
-				const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
-				if (bShowAddDirLightBtn)
-				{
+					const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
 					if (bShowAddPointLightBtn)
 					{
+						if (ImGui::Button("Add point light"))
+						{
+							BaseScene* scene = g_SceneManager->CurrentScene();
+							PointLight* newPointLight = new PointLight(scene);
+							scene->AddRootObject(newPointLight);
+							newPointLight->Initialize();
+							newPointLight->PostInitialize();
+
+							g_Editor->SetSelectedObject(newPointLight->ID);
+						}
+
 						ImGui::SameLine();
+
+						if (ImGui::Button("Add spot light"))
+						{
+							BaseScene* scene = g_SceneManager->CurrentScene();
+							SpotLight* newSpotLight = new SpotLight(scene);
+							scene->AddRootObject(newSpotLight);
+							newSpotLight->Initialize();
+							newSpotLight->PostInitialize();
+
+							g_Editor->SetSelectedObject(newSpotLight->ID);
+						}
+
+						if (ImGui::Button("Add area light"))
+						{
+							BaseScene* scene = g_SceneManager->CurrentScene();
+							AreaLight* newAreaLight = new AreaLight(scene);
+							scene->AddRootObject(newAreaLight);
+							newAreaLight->Initialize();
+							newAreaLight->PostInitialize();
+
+							g_Editor->SetSelectedObject(newAreaLight->ID);
+						}
 					}
 
-					if (ImGui::Button("Add directional light"))
+					const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
+					if (bShowAddDirLightBtn)
 					{
-						BaseScene* scene = g_SceneManager->CurrentScene();
-						DirectionalLight* newDiright = new DirectionalLight();
-						scene->AddRootObject(newDiright);
-						newDiright->Initialize();
-						newDiright->PostInitialize();
+						if (bShowAddPointLightBtn)
+						{
+							ImGui::SameLine();
+						}
 
-						g_Editor->SetSelectedObject(newDiright->ID);
+						if (ImGui::Button("Add directional light"))
+						{
+							BaseScene* scene = g_SceneManager->CurrentScene();
+							DirectionalLight* newDiright = new DirectionalLight();
+							scene->AddRootObject(newDiright);
+							newDiright->Initialize();
+							newDiright->PostInitialize();
+
+							g_Editor->SetSelectedObject(newDiright->ID);
+						}
 					}
 				}
+				ImGui::EndChild();
 
 				ImGui::EndTabItem();
 			}
+
 			if (ImGui::BeginTabItem("Editor Objects"))
 			{
-				bGameObjectTabActive = false;
-
-				for (GameObject* editorObject : m_EditorObjects)
+				if (ImGui::BeginChild("##editor_scroll_region", ImVec2(0.0f, 400.0f)))
 				{
-					if (DrawImGuiGameObjectNameAndChildren(editorObject, true))
+					bGameObjectTabActive = false;
+
+					for (GameObject* editorObject : m_EditorObjects)
 					{
-						break;
+						if (DrawImGuiGameObjectNameAndChildren(editorObject, true))
+						{
+							break;
+						}
 					}
 				}
+				ImGui::EndChild();
 
 				ImGui::EndTabItem();
 			}
