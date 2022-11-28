@@ -28,6 +28,8 @@ namespace flex
 	public:
 		explicit Player(i32 index, GameObjectID gameObjectID);
 
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Update() override;

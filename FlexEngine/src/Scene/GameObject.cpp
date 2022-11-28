@@ -1762,6 +1762,7 @@ namespace flex
 		propertyCollectionManager->RegisterType(MineralDepositSID, MineralDeposit::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(MinerSID, Miner::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(SpeakerSID, Speaker::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PlayerSID, Player::BuildTypeUniquePropertyCollection());
 	}
 
 	PropertyCollection* GameObject::BuildPropertyCollection()

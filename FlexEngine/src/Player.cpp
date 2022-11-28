@@ -48,6 +48,13 @@ namespace flex
 	{
 	}
 
+	PropertyCollection* Player::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		return collection;
+	}
+
 	void Player::Initialize()
 	{
 		m_SoundPlaceTrackNodeID = g_ResourceManager->GetOrLoadAudioSourceID(SID("click-02.wav"), true);
