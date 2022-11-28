@@ -108,7 +108,7 @@ namespace flex
 	class TerminalManager final : public System
 	{
 	public:
-		TerminalManager();
+		TerminalManager(bool bInstallDirectoryWatch);
 		~TerminalManager();
 
 		virtual void Initialize() override;
@@ -121,6 +121,8 @@ namespace flex
 
 		void RegisterTerminal(Terminal* terminal);
 		void DeregisterTerminal(Terminal* terminal);
+
+		void SetInstallDirectoryWatch(bool bInstallDirectoryWatch);
 
 		bool LoadScript(const std::string& fileName, std::vector<std::string>& outFileLines);
 		bool SaveScript(const std::string& fileName, const std::vector<std::string>& fileLines);

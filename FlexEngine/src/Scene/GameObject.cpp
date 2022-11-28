@@ -599,6 +599,9 @@ namespace flex
 			SetStatic(bStatic);
 		}
 
+		PropertyCollection* propertyCollection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+		bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
+
 		// Transform
 		ImGui::Text("Transform");
 		{
@@ -1030,9 +1033,6 @@ namespace flex
 		}
 		ImGui::Text("Parent: %s", parentName.c_str());
 		ImGui::Text("Num children: %u", (u32)m_Children.size());
-
-		PropertyCollection* propertyCollection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
-		bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
 
 		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
 		{
@@ -7507,6 +7507,15 @@ namespace flex
 				ImGui::PopStyleColor(3);
 			}
 
+			ImGui::SameLine();
+
+			bool bInstallTerminalWatch = g_EngineInstance->GetInstallTerminalWatch();
+			if (ImGui::Checkbox("Auto-reload from disk", &bInstallTerminalWatch))
+			{
+				g_EngineInstance->SetInstallTerminalWatch(bInstallTerminalWatch);
+
+			}
+
 			ImGui::Separator();
 
 			//ImGui::DragFloat("Line height", &m_LineHeight, 0.01f);
@@ -8272,8 +8281,10 @@ namespace flex
 		{
 			OnScriptChanged();
 		}
-
-		PrintError("Failed to reload terminal script, file name not set\n");
+		else
+		{
+			PrintError("Failed to reload terminal script, file name not set\n");
+		}
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)

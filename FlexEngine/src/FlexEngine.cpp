@@ -257,7 +257,7 @@ namespace flex
 		g_Systems[(i32)SystemType::ROAD_MANAGER] = new RoadManager();
 		g_Systems[(i32)SystemType::ROAD_MANAGER]->Initialize();
 
-		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager();
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager(m_bInstallTerminalDirectoryWatch);
 		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Initialize();
 
 		g_Systems[(i32)SystemType::TRACK_MANAGER] = new TrackManager();
@@ -2076,6 +2076,8 @@ namespace flex
 					m_ShaderEditorPath = shaderEditorPath;
 				}
 
+				rootObject.TryGetBool("install terminal directory watch", m_bInstallTerminalDirectoryWatch);
+
 				return true;
 			}
 			else
@@ -2108,6 +2110,7 @@ namespace flex
 		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
 
 		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
+		rootObject.fields.emplace_back("install terminal directory watch", JSONValue(m_bInstallTerminalDirectoryWatch));
 
 		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
@@ -2215,6 +2218,18 @@ namespace flex
 		{
 			PrintError("Failed to serialize ui window cache to %s\n", UI_WINDOW_CACHE_LOCATION);
 		}
+	}
+
+	bool FlexEngine::GetInstallTerminalWatch() const
+	{
+		return m_bInstallTerminalDirectoryWatch;
+	}
+
+	void FlexEngine::SetInstallTerminalWatch(bool bInstallTerminalWatch)
+	{
+		m_bInstallTerminalDirectoryWatch = bInstallTerminalWatch;
+
+		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->SetInstallDirectoryWatch(m_bInstallTerminalDirectoryWatch);
 	}
 
 	std::string FlexEngine::EngineVersionString()

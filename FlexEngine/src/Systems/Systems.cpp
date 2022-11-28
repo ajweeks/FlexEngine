@@ -625,14 +625,18 @@ namespace flex
 		}
 	}
 
-	TerminalManager::TerminalManager()
+	TerminalManager::TerminalManager(bool bInstallDirectoryWatch)
 	{
-		m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+		if (bInstallDirectoryWatch)
+		{
+			m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+		}
 	}
 
 	TerminalManager::~TerminalManager()
 	{
 		delete m_ScriptDirectoryWatch;
+		m_ScriptDirectoryWatch = nullptr;
 	}
 
 	void TerminalManager::Initialize()
@@ -698,7 +702,7 @@ namespace flex
 			--m_ScriptSaveTimer;
 		}
 
-		if (m_ScriptDirectoryWatch->Update())
+		if (m_ScriptDirectoryWatch != nullptr && m_ScriptDirectoryWatch->Update())
 		{
 			std::vector<std::string> modifiedFiles;
 			UpdateScriptHashes(modifiedFiles);
@@ -829,6 +833,25 @@ namespace flex
 			{
 				m_Terminals.erase(m_Terminals.begin() + i);
 				break;
+			}
+		}
+	}
+
+	void TerminalManager::SetInstallDirectoryWatch(bool bInstallDirectoryWatch)
+	{
+		if (bInstallDirectoryWatch)
+		{
+			if (m_ScriptDirectoryWatch == nullptr)
+			{
+				m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+			}
+		}
+		else
+		{
+			if (m_ScriptDirectoryWatch != nullptr)
+			{
+				delete m_ScriptDirectoryWatch;
+				m_ScriptDirectoryWatch = nullptr;
 			}
 		}
 	}

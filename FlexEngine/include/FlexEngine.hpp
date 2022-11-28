@@ -58,6 +58,9 @@ namespace flex
 		void ParseUIWindowCache();
 		void SerializeUIWindowCache();
 
+		bool GetInstallTerminalWatch() const;
+		void SetInstallTerminalWatch(bool bInstallTerminalWatch);
+
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
 
@@ -230,6 +233,7 @@ namespace flex
 		bool m_bShouldFocusKeyboardOnConsole = false;
 
 		bool m_bInstallShaderDirectoryWatch = true;
+		bool m_bInstallTerminalDirectoryWatch = true;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;
