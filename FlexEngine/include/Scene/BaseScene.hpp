@@ -236,8 +236,8 @@ namespace flex
 
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
-		void UnregisterGameObject(const GameObjectID& gameObjectID);
-		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID);
+		void UnregisterGameObject(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
+		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
 
 		void RegisterEditorGameObject(GameObject* gameObject);
 		void UnregisterEditorGameObject(EditorObjectID* editorObjectID);

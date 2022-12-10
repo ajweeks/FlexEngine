@@ -1134,12 +1134,14 @@ namespace flex
 		{
 			if (ImGui::BeginTabItem("Game Objects"))
 			{
+				bool bGameObjectTabDragDropTarget = ImGui::BeginDragDropTarget();
+
 				if (ImGui::BeginChild("##go_scroll_region", ImVec2(0.0f, 400.0f)))
 				{
 					bGameObjectTabActive = true;
 
 					// Dropping objects onto this text makes them root objects
-					if (ImGui::BeginDragDropTarget())
+					if (bGameObjectTabDragDropTarget)
 					{
 						const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
 						if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
@@ -2264,25 +2266,33 @@ namespace flex
 		}
 	}
 
-	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID)
+	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID, bool bAssertSuccess /* = false */)
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
 		if (iter != m_GameObjectLUT.end())
 		{
 			m_GameObjectLUT.erase(iter);
+			return;
+		}
+
+		if (bAssertSuccess)
+		{
+			char gameObjectIDStr[33];
+			gameObjectID.ToString(gameObjectIDStr);
+			PrintError("Failed to unregister game object with ID %s\n", gameObjectIDStr);
 		}
 	}
 
-	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID)
+	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID, bool bAssertSuccess /* = false */)
 	{
 		GameObject* gameObject = GetGameObject(gameObjectID);
-		UnregisterGameObject(gameObjectID);
+		UnregisterGameObject(gameObjectID, bAssertSuccess);
 
 		if (gameObject != nullptr)
 		{
 			for (GameObject* child : gameObject->m_Children)
 			{
-				UnregisterGameObject(child->ID);
+				UnregisterGameObject(child->ID, bAssertSuccess);
 			}
 		}
 	}

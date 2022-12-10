@@ -1540,6 +1540,8 @@ namespace flex
 		if (WriteFile(path, fileContents, false))
 		{
 			prefabTemplateInfo.bDirty = false;
+			std::string prefabName = prefabTemplateInfo.templateObject->GetName();
+			Print("Successfully serialized prefab \"%s\"\n", prefabName.c_str());
 			return true;
 		}
 		else
@@ -2780,10 +2782,13 @@ namespace flex
 				ImGui::SetNextWindowSize(ImVec2(650, 180), ImGuiCond_FirstUseEver);
 				if (ImGui::BeginPopupModal(deletePrefabPopupModalName, &bShowDeletePrefabPopup))
 				{
-					std::string message = "Are you sure you want to delete the prefab " + selectedPrefabTemplate.fileName + "?";
-					ImGui::TextWrapped("%s", message.c_str());
-					std::string prefabIDStr = selectedPrefabTemplate.prefabID.ToString();
-					ImGui::TextWrapped("(%s)", prefabIDStr.c_str());
+					char prefabIDStrBuff[33];
+					selectedPrefabTemplate.prefabID.ToString(prefabIDStrBuff);
+					char confirmStrBuff[256];
+					snprintf(confirmStrBuff, ARRAY_LENGTH(confirmStrBuff),
+						"Are you sure you want to delete the prefab %s? (%s)",
+						selectedPrefabTemplate.fileName.c_str(), prefabIDStrBuff);
+					ImGui::TextWrapped("%s", confirmStrBuff);
 
 					if (bTemplateUsagesInScene > 0)
 					{
@@ -2837,6 +2842,13 @@ namespace flex
 					newTemplateObject->SaveAsPrefab();
 				}
 
+				ImGui::SameLine();
+
+				if (ImGui::Button("Instantiate in scene"))
+				{
+					GameObject* newInstance = selectedPrefabTemplate.templateObject->CopySelf();
+					g_SceneManager->CurrentScene()->AddRootObject(newInstance);
+				}
 
 				if (ImGui::BeginPopupContextItem(contextMenuID))
 				{

@@ -208,7 +208,8 @@ namespace flex
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
 		// TODO:
-		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID, typeStr, m_SourcePrefabID, false);
+		bool bPrefabTemplate = (copyFlags & CopyFlags::COPYING_TO_PREFAB);
+		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID, typeStr, m_SourcePrefabID, bPrefabTemplate);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
@@ -281,7 +282,8 @@ namespace flex
 					Transform::ParseJSON(transformObj, transform);
 				}
 
-				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
+				std::string* optionalObjectName = objectName.length() > 0 ? &objectName : nullptr;
+				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, optionalObjectName, nullptr, &transform, copyFlags);
 
 				std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(obj, sceneFileVersion);
 				if (matIDs.empty())
@@ -499,7 +501,7 @@ namespace flex
 
 			if (g_SceneManager->HasSceneLoaded())
 			{
-				g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
+				g_SceneManager->CurrentScene()->UnregisterGameObject(ID, /* bAssertSuccess: */ true);
 			}
 		}
 	}
@@ -558,6 +560,14 @@ namespace flex
 		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
 		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_SourcePrefabID.IsValid() ? "(prefab)" : "");
 
+		if (m_SourcePrefabID.IsValid())
+		{
+			char prefabIDStrBuff[33];
+			m_SourcePrefabID.m_PrefabID.ToString(prefabIDStrBuff);
+			std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
+			ImGui::Text("Source prefab: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStrBuff);
+		}
+
 		if (DoImGuiContextMenu(true))
 		{
 			// Early return if object was just deleted
@@ -574,9 +584,10 @@ namespace flex
 
 			if (m_SourcePrefabID.IsValid())
 			{
-				std::string prefabIDStr = m_SourcePrefabID.m_PrefabID.ToString();
+				char prefabIDStrBuff[33];
+				m_SourcePrefabID.m_PrefabID.ToString(prefabIDStrBuff);
 				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
-				ImGui::Text("Prefab source: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStr.c_str());
+				ImGui::Text("Prefab source: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStrBuff);
 			}
 
 			ImGui::EndTooltip();
@@ -1215,22 +1226,26 @@ namespace flex
 		{
 			// Save an instance over an existing prefab
 
+			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
+			if (previousPrefabTemplate == nullptr)
+			{
+				PrintError("Failed to find source prefab for object %s!\n", m_Name.c_str());
+				return false;
+			}
+
+			currentScene->UnregisterGameObjectRecursive(ID, /* bAssertSuccess: */ true);
+
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
-			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
 
-			currentScene->UnregisterGameObjectRecursive(ID);
+			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags);
 
-			std::string previousPrefabName = previousPrefabTemplate->GetName();
-			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
-			newPrefabTemplate->m_bIsTemplate = true;
-			newPrefabTemplate->m_Name = previousPrefabName;
 			// Use previous game object IDs where possible to prevent unnecessary changes in file
-			//OverwritePrefabIDs(previousPrefabTemplate, newPrefabTemplate);
-			//%previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
+			OverwritePrefabIDs(previousPrefabTemplate, newPrefabTemplate);
+			previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
 
 			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_SourcePrefabID.m_PrefabID);
 
@@ -2051,7 +2066,7 @@ namespace flex
 		newGameObject->m_bUniformScale = m_bUniformScale;
 		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
 		{
-			newGameObject->m_bIsTemplate = m_bIsTemplate;
+			newGameObject->m_bIsTemplate = true;
 		}
 
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
@@ -12263,15 +12278,7 @@ namespace flex
 		UpdateSiblingIndices(0);
 		newGameObject->UpdateSiblingIndices(0);
 
-		for (i32 i = 0; i < m_TireCount; ++i)
-		{
-			MatchCorrespondingID(m_TireIDs[i], newGameObject, TireNames[i], newGameObject->m_TireIDs[i]);
-		}
-
-		for (i32 i = 0; i < 2; ++i)
-		{
-			MatchCorrespondingID(m_BrakeLightIDs[i], newGameObject, BrakeLightNames[i], newGameObject->m_BrakeLightIDs[i]);
-		}
+		FixupPrefabTemplateIDs(newGameObject);
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
@@ -12413,6 +12420,11 @@ namespace flex
 		}
 
 		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+		if (rb == nullptr)
+		{
+			return;
+		}
+
 		const btVector3 linearVel = rb->getLinearVelocity();
 		const btVector3 linearAccel = (linearVel - m_pLinearVelocity) / g_DeltaTime;
 		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
@@ -12651,45 +12663,55 @@ namespace flex
 		JSONObject vehicleObj;
 		if (parentObject.TryGetObject("vehicle", vehicleObj))
 		{
-			std::vector<JSONField> tireIDs;
-			if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
+			// If this object was copied from a prefab, it will already have filled out IDs
+			if (!m_TireIDs[0].IsValid())
 			{
-				if (m_TireCount == (i32)tireIDs.size())
+				std::vector<JSONField> tireIDs;
+				if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
 				{
-					for (i32 i = 0; i < m_TireCount; ++i)
+					if (m_TireCount == (i32)tireIDs.size())
 					{
-						m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+						for (i32 i = 0; i < m_TireCount; ++i)
+						{
+							m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+						}
 					}
-				}
-				else
-				{
-					PrintError("Failed to parse tire IDs, incorrect number present (%i found, %i expected)", (i32)tireIDs.size(), m_TireCount);
+					else
+					{
+						PrintError("Failed to parse tire IDs, incorrect number present (%i found, %i expected)", (i32)tireIDs.size(), m_TireCount);
+					}
 				}
 			}
 
-			std::vector<JSONField> brakeLightIDs;
-			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
+			if (!m_BrakeLightIDs[0].IsValid())
 			{
-				if ((i32)brakeLightIDs.size() == 2)
+				std::vector<JSONField> brakeLightIDs;
+				if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 				{
-					for (i32 i = 0; i < 2; ++i)
+					if ((i32)brakeLightIDs.size() == 2)
 					{
-						m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+						for (i32 i = 0; i < 2; ++i)
+						{
+							m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+						}
 					}
-				}
-				else
-				{
-					PrintError("Failed to parse brake light IDs, incorrect number present (%i found, %i expected)", (i32)brakeLightIDs.size(), 2);
+					else
+					{
+						PrintError("Failed to parse brake light IDs, incorrect number present (%i found, %i expected)", (i32)brakeLightIDs.size(), 2);
+					}
 				}
 			}
 
-			std::vector<JSONField> soundEffectSIDs;
-			if (vehicleObj.TryGetFieldArray("sound effect sids", soundEffectSIDs))
+			if (m_SoundEffectSIDs[0] != InvalidStringID)
 			{
-				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
-				for (i32 i = 0; i < count; ++i)
+				std::vector<JSONField> soundEffectSIDs;
+				if (vehicleObj.TryGetFieldArray("sound effect sids", soundEffectSIDs))
 				{
-					m_SoundEffectSIDs[i] = soundEffectSIDs[i].value.AsULong();
+					i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
+					for (i32 i = 0; i < count; ++i)
+					{
+						m_SoundEffectSIDs[i] = soundEffectSIDs[i].value.AsULong();
+					}
 				}
 			}
 		}

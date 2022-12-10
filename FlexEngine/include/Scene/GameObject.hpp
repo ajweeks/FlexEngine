@@ -395,7 +395,7 @@ namespace flex
 
 		bool m_bCastsShadow : 1;
 
-		// If true, this object will never live in the real world and will only be instantiated
+		// If true, this object will never be added to a scene, but will only be instantiated (copied from)
 		bool m_bIsTemplate : 1;
 
 		// Bitfield 1
