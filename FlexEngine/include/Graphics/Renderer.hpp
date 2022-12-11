@@ -294,7 +294,7 @@ namespace flex
 
 		void SetDirtyFlags(RenderBatchDirtyFlags flags);
 
-		bool SerializeLoadedMaterials();
+		const std::map<MaterialID, Material*>& GetLoadedMaterials();
 
 		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
 		void SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex);

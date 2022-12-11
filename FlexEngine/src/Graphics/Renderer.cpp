@@ -981,29 +981,9 @@ namespace flex
 		m_bRebatchRenderObjects = true;
 	}
 
-	bool Renderer::SerializeLoadedMaterials()
+	const std::map<MaterialID, Material*>& Renderer::GetLoadedMaterials()
 	{
-		bool bAllSucceeded = true;
-
-		for (auto& matPair : m_Materials)
-		{
-			Material* material = matPair.second;
-			if (material->bSerializable)
-			{
-				JSONObject materialObj = material->Serialize();
-				std::string fileContents = materialObj.ToString();
-
-				std::string hypenatedName = Replace(material->name, ' ', '-');
-				const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
-				if (!WriteFile(fileName, fileContents, false))
-				{
-					PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
-					bAllSucceeded = false;
-				}
-			}
-		}
-
-		return bAllSucceeded;
+		return m_Materials;
 	}
 
 	void Renderer::SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex)

@@ -805,7 +805,29 @@ namespace flex
 
 	bool ResourceManager::SerializeLoadedMaterials() const
 	{
-		return g_Renderer->SerializeLoadedMaterials();
+		const std::map<MaterialID, Material*>& materials = g_Renderer->GetLoadedMaterials();
+
+		bool bAllSucceeded = true;
+
+		for (auto& matPair : materials)
+		{
+			Material* material = matPair.second;
+			if (material->bSerializable)
+			{
+				JSONObject materialObj = material->Serialize();
+				std::string fileContents = materialObj.ToString();
+
+				std::string hypenatedName = Replace(material->name, ' ', '-');
+				const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
+				if (!WriteFile(fileName, fileContents, false))
+				{
+					PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
+					bAllSucceeded = false;
+				}
+			}
+		}
+
+		return bAllSucceeded;
 	}
 
 	void ResourceManager::ParseDebugOverlayNamesFile()
