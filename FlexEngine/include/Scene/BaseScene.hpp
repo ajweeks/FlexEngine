@@ -82,6 +82,8 @@ namespace flex
 		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
 		GameObject* AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling);
 
+		void SetRootObjectIndex(GameObject* rootObject, i32 newIndex);
+
 		// Editor objects are objects not normally shown in the scene hierarchy, or searched by standard functions
 		GameObject* AddEditorObjectImmediate(GameObject* editorObject);
 		void RemoveEditorObjectImmediate(GameObject* editorObject);

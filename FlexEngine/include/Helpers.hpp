@@ -438,6 +438,38 @@ namespace flex
 	}
 
 	template<typename T>
+	void ReorderItemInList(std::vector<T*>& list, T* child, i32 previousIndex, i32 newIndex)
+	{
+		if (previousIndex == newIndex)
+		{
+			return;
+		}
+
+		CHECK_LT(newIndex, (i32)list.size());
+
+		list.erase(list.begin() + previousIndex);
+
+		if (newIndex > previousIndex)
+		{
+			// 0  1  2  3  4
+			// A _B_ C  D  E
+			// Move B -> 3
+			// A  C  D _B_ E
+
+			list.insert(list.begin() + newIndex - 1, child);
+		}
+		else
+		{
+			// 0  1  2  3  4
+			// A  B  C _D_ E
+			// Move D -> 1
+			// A _D_ B  C  E
+
+			list.insert(list.begin() + newIndex, child);
+		}
+	}
+
+	template<typename T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
 		return vec[RandomInt(0, (i32)vec.size())];

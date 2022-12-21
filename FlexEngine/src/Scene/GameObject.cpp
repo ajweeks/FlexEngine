@@ -1255,17 +1255,45 @@ namespace flex
 		{
 			// Save as a new prefab
 
-			PrefabID newPrefabID = g_ResourceManager->WriteNewPrefabToDisk(this);
+			char fileNameStrBuff[256];
+			snprintf(fileNameStrBuff, ARRAY_LENGTH(fileNameStrBuff), "%s.json", m_Name.c_str());
+
+			PrefabID newPrefabID = g_ResourceManager->CreateNewPrefab(this, fileNameStrBuff);
 			if (!newPrefabID.IsValid())
+			{
+				PrintError("Failed to create new prefab from object %s\n", m_Name.c_str());
+				return false;
+			}
+
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(newPrefabID);
+			CHECK_NE(prefabTemplate, nullptr);
+
+			// This object's GameObjectID will match that of the existing object in
+			// the scene, but that shouldn't pose any issues.
+
+			ResourceManager::PrefabTemplateInfo prefabTemplateInfo(prefabTemplate, newPrefabID, std::string(fileNameStrBuff));
+			bool bResult = g_ResourceManager->WritePrefabToDisk(prefabTemplateInfo);
+
+			if (!bResult)
 			{
 				return false;
 			}
 
+			std::string name = m_Name;
+			i32 siblingIndex = GetSiblingIndex();
+
+			GameObject* newInstance = prefabTemplate->CopySelf(m_Parent, CopyFlags::ALL);
+			CHECK_NE(newInstance, nullptr);
+
+			//g_SceneManager->CurrentScene()->RemoveObjectImmediate(this, true);
+
 			g_ResourceManager->DiscoverPrefabs();
-			if (!m_bIsTemplate)
-			{
-				currentScene->ReinstantiateFromPrefab(newPrefabID, this);
-			}
+
+			currentScene->ReinstantiateFromPrefab(newPrefabID, this);
+			// NOTE: !! At this point, `this` is deleted, proceed with caution! !!
+
+			newInstance->SetName(name);
+			newInstance->SetSiblingIndex(siblingIndex);
 
 			return true;
 		}
@@ -2280,8 +2308,7 @@ namespace flex
 
 	bool GameObject::RemoveChildImmediate(GameObjectID childID, bool bDestroy)
 	{
-		GameObject* child = g_SceneManager->CurrentScene()->GetGameObject(childID);
-		return RemoveChildImmediate(child, bDestroy);
+		return RemoveChildImmediate(childID.Get(), bDestroy);
 	}
 
 	bool GameObject::RemoveChildImmediate(GameObject* child, bool bDestroy)
@@ -2324,6 +2351,17 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void GameObject::MoveChild(GameObjectID childID, i32 newSiblingIndex)
+	{
+		MoveChild(childID.Get(), newSiblingIndex);
+	}
+
+	void GameObject::MoveChild(GameObject* child, i32 newSiblingIndex)
+	{
+		i32 previousSiblingIndex = child->GetSiblingIndex();
+		ReorderItemInList(m_Children, child, previousSiblingIndex, newSiblingIndex);
 	}
 
 	const std::vector<GameObject*>& GameObject::GetChildren() const
@@ -2409,13 +2447,30 @@ namespace flex
 		return nullptr;
 	}
 
-	void GameObject::UpdateSiblingIndices(i32 myIndex)
+	void GameObject::UpdateSiblingIndices(i32 newIndex)
 	{
-		m_SiblingIndex = myIndex;
+		m_SiblingIndex = newIndex;
 
 		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
 		{
 			m_Children[i]->UpdateSiblingIndices(i);
+		}
+	}
+
+	void GameObject::SetSiblingIndex(i32 newIndex)
+	{
+		if (m_SiblingIndex == newIndex)
+		{
+			return;
+		}
+
+		if (m_Parent != nullptr)
+		{
+			m_Parent->MoveChild(this, newIndex);
+		}
+		else
+		{
+			g_SceneManager->CurrentScene()->SetRootObjectIndex(this, newIndex);
 		}
 	}
 

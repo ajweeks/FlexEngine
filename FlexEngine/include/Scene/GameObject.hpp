@@ -206,6 +206,8 @@ namespace flex
 		GameObject* AddChildImmediate(GameObject* child);
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
+		void MoveChild(GameObjectID childID, i32 newSiblingIndex);
+		void MoveChild(GameObject* child, i32 newSiblingIndex);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(StringID objTypeID, bool bRecurse);
 		u32 GetChildCount() const;
@@ -242,7 +244,8 @@ namespace flex
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 		GameObject* GetChild(u32 childIndex);
 
-		void UpdateSiblingIndices(i32 myIndex);
+		// Moves this object to the given index in its parents list of children
+		void SetSiblingIndex(i32 newIndex);
 		i32 GetSiblingIndex() const;
 
 		// Returns all objects who share our parent
@@ -350,6 +353,9 @@ namespace flex
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
 
+		// Internal - used to update indices recursively
+		void UpdateSiblingIndices(i32 newIndex);
+
 		void SetOutputSignal(i32 slotIdx, i32 value);
 
 		bool GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const;
@@ -405,11 +411,13 @@ namespace flex
 		bool m_bUniformScale : 1;
 		bool m_bItemizable : 1;
 
+		// The prefab ID pair corresponding to the prefab this object was loaded from
 		PrefabIDPair m_SourcePrefabID;
 
 		// TODO: Remove?
 		GameObject* m_NearbyInteractable = nullptr;
 
+		// Index into list of siblings in parent
 		i32 m_SiblingIndex = 0;
 
 		btCollisionShape* m_CollisionShape = nullptr;

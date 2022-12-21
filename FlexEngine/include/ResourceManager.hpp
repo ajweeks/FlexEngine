@@ -29,6 +29,8 @@ namespace flex
 	class ResourceManager
 	{
 	public:
+		struct PrefabTemplateInfo;
+
 		ResourceManager();
 		~ResourceManager();
 
@@ -118,7 +120,9 @@ namespace flex
 		void SetAllPrefabsDirty(bool bDirty);
 		void UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID);
 		bool WriteExistingPrefabToDisk(GameObject* prefabTemplate);
-		PrefabID WriteNewPrefabToDisk(GameObject* prefabInstance, const char* fileName = nullptr);
+		// Creates and registers a new prefab template from the given object, but does not write it to disk
+		PrefabID CreateNewPrefab(GameObject* sourceObject, const char* fileName);
+		bool WritePrefabToDisk(PrefabTemplateInfo& prefabTemplateInfo);
 		bool IsPrefabIDValid(const PrefabID& prefabID);
 
 		void DeletePrefabTemplate(const PrefabID& prefabID);
@@ -166,11 +170,11 @@ namespace flex
 
 		struct PrefabTemplateInfo
 		{
-			PrefabTemplateInfo(GameObject* templateObject, const PrefabID& prefabID, const std::string& fileName, bool bDirty) :
+			PrefabTemplateInfo(GameObject* templateObject, const PrefabID& prefabID, const std::string& fileName) :
 				templateObject(templateObject),
 				prefabID(prefabID),
 				fileName(fileName),
-				bDirty(bDirty)
+				bDirty(false)
 			{
 			}
 
@@ -213,7 +217,6 @@ namespace flex
 		std::vector<ParticleParameterType> particleParameterTypes;
 
 	private:
-		bool WritePrefabToDisk(PrefabTemplateInfo& prefabTemplateInfo);
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
 
 		std::string m_FontsFilePathAbs;

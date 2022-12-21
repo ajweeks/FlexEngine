@@ -2399,6 +2399,12 @@ namespace flex
 		return newSibling;
 	}
 
+	void BaseScene::SetRootObjectIndex(GameObject* rootObject, i32 newIndex)
+	{
+		i32 previousIndex = rootObject->GetSiblingIndex();
+		ReorderItemInList(m_RootObjects, rootObject, previousIndex, newIndex);
+	}
+
 	GameObject* BaseScene::AddEditorObjectImmediate(GameObject* editorObject)
 	{
 		m_EditorObjects.push_back(editorObject);

@@ -372,7 +372,7 @@ namespace flex
 
 			CHECK(prefabTemplate->IsPrefabTemplate());
 
-			templateInfos.emplace_back(prefabTemplate, prefabID, fileName, false);
+			templateInfos.emplace_back(prefabTemplate, prefabID, fileName);
 		}
 		else
 		{
@@ -1340,28 +1340,29 @@ namespace flex
 			}
 		}
 
-		std::string prefabIDStr = prefabID.ToString();
+		char prefabIDStrBuf[33];
+		prefabID.ToString(prefabIDStrBuf);
 		std::string prefabName = prefabTemplate->GetName();
-		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
+		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStrBuf, prefabName.c_str());
 	}
 
 	bool ResourceManager::WriteExistingPrefabToDisk(GameObject* prefabTemplate)
 	{
 		std::string prefabName = prefabTemplate->GetName();
 		PrefabID prefabID = GetPrefabID(prefabName.c_str());
-		std::string fileNameStr = prefabTemplate->GetName() + ".json";
-		PrefabTemplateInfo prefabTemplateInfo = { prefabTemplate, prefabID, fileNameStr, false };
+		char fileNameStrBuff[256];
+		snprintf(fileNameStrBuff, ARRAY_LENGTH(fileNameStrBuff), "%s.json", prefabName.c_str());
+		PrefabTemplateInfo prefabTemplateInfo(prefabTemplate, prefabID, std::string(fileNameStrBuff));
+
 		prefabTemplate->m_bIsTemplate = true;
 		bool bResult = WritePrefabToDisk(prefabTemplateInfo);
 		prefabTemplate->m_bIsTemplate = false;
 		return bResult;
 	}
 
-	PrefabID ResourceManager::WriteNewPrefabToDisk(GameObject* prefabInstance, const char* fileName /* = nullptr */)
+	PrefabID ResourceManager::CreateNewPrefab(GameObject* sourceObject, const char* fileName)
 	{
 		using CopyFlags = GameObject::CopyFlags;
-
-		GameObject* prevParent = prefabInstance->GetParent();
 
 		PrefabID newPrefabID = Platform::GenerateGUID();
 
@@ -1370,24 +1371,16 @@ namespace flex
 				~CopyFlags::ADD_TO_SCENE &
 				~CopyFlags::CREATE_RENDER_OBJECT)
 			| CopyFlags::COPYING_TO_PREFAB);
-		GameObject* prefabTemplate = prefabInstance->CopySelf(nullptr, copyFlags);
+		std::string templateName = sourceObject->GetName();
+		GameObject* prefabTemplate = sourceObject->CopySelf(nullptr, copyFlags, &templateName);
+
 		// Give all objects new IDs so they don't conflict with the instance's
 		prefabTemplate->ChangeAllIDs();
 
-		// This object's GameObjectID will match that of the existing object in
-		// the scene, but that shouldn't pose any issues.
-		std::string fileNameStr = fileName != nullptr ? std::string(fileName) : (prefabTemplate->GetName() + ".json");
-		PrefabTemplateInfo prefabTemplateInfo = { prefabTemplate, newPrefabID, fileNameStr, false };
-		bool bResult = WritePrefabToDisk(prefabTemplateInfo);
+		prefabTemplate->m_SourcePrefabID.m_PrefabID = newPrefabID;
+		prefabTemplate->m_SourcePrefabID.m_SubGameObjectID = prefabTemplate->ID;
 
-		if (!bResult)
-		{
-			return InvalidPrefabID;
-		}
-
-		g_SceneManager->CurrentScene()->RemoveObjectImmediate(prefabInstance, true);
-		GameObject* newInstance = prefabTemplate->CopySelf(prevParent, CopyFlags::ALL);
-		FLEX_UNUSED(newInstance);
+		prefabTemplates.emplace_back(prefabTemplate, newPrefabID, fileName);
 
 		return newPrefabID;
 	}
@@ -1570,7 +1563,7 @@ namespace flex
 		{
 			prefabTemplateInfo.bDirty = true;
 			std::string prefabName = prefabTemplateInfo.templateObject->GetName();
-			PrintError("Failed to write prefab to disk (%s, %s\n)", prefabName.c_str(), path.c_str());
+			PrintError("Failed to serialize prefab %s to %s\n", prefabName.c_str(), path.c_str());
 			return false;
 		}
 	}
