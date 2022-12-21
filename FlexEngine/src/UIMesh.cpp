@@ -344,6 +344,7 @@ namespace flex
 		}
 
 		m_Object = new GameObject("UI Mesh", BaseObjectSID);
+		m_Object->ID = InvalidGameObjectID;
 		m_Object->SetSerializable(false);
 		m_Object->SetVisibleInSceneExplorer(false);
 		m_Object->SetCastsShadow(false);

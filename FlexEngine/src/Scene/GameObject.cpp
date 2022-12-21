@@ -344,8 +344,8 @@ namespace flex
 		}
 		GameObject* prefabInstance = prefabTemplate->CopySelf(parent, copyFlags, optionalObjectName, gameObjectID);
 
-		prefabInstance->m_SourcePrefabID.m_PrefabID = prefabID;
-		prefabInstance->m_SourcePrefabID.m_SubGameObjectID = prefabTemplate->ID;
+		CHECK(prefabInstance->m_SourcePrefabID.m_PrefabID.IsValid());
+		CHECK(prefabInstance->m_SourcePrefabID.m_SubGameObjectID.IsValid());
 
 		if (optionalTransform != nullptr)
 		{
@@ -499,7 +499,8 @@ namespace flex
 				g_Editor->DeselectObject(ID);
 			}
 
-			if (g_SceneManager->HasSceneLoaded())
+			// ID will not be valid on objects that are being saved as a prefab template
+			if (g_SceneManager->HasSceneLoaded() && ID.IsValid())
 			{
 				g_SceneManager->CurrentScene()->UnregisterGameObject(ID, /* bAssertSuccess: */ true);
 			}
@@ -611,7 +612,10 @@ namespace flex
 		}
 
 		PropertyCollection* propertyCollection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
-		bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
+		if (propertyCollection != nullptr)
+		{
+			bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
+		}
 
 		// Transform
 		ImGui::Text("Transform");
@@ -1279,21 +1283,21 @@ namespace flex
 				return false;
 			}
 
-			std::string name = m_Name;
-			i32 siblingIndex = GetSiblingIndex();
+			//i32 siblingIndex = GetSiblingIndex();
 
-			GameObject* newInstance = prefabTemplate->CopySelf(m_Parent, CopyFlags::ALL);
-			CHECK_NE(newInstance, nullptr);
+			//currentScene->UnregisterGameObjectRecursive(ID, true);
+
+			//GameObject* newInstance = CreateObjectFromPrefabTemplate(newPrefabID, ID, &m_Name, m_Parent, &m_Transform, CopyFlags::ALL);
+			//CHECK_NE(newInstance, nullptr);
 
 			//g_SceneManager->CurrentScene()->RemoveObjectImmediate(this, true);
 
-			g_ResourceManager->DiscoverPrefabs();
+			//g_ResourceManager->DiscoverPrefabs();
 
 			currentScene->ReinstantiateFromPrefab(newPrefabID, this);
 			// NOTE: !! At this point, `this` is deleted, proceed with caution! !!
 
-			newInstance->SetName(name);
-			newInstance->SetSiblingIndex(siblingIndex);
+			//newInstance->SetSiblingIndex(siblingIndex);
 
 			return true;
 		}
@@ -2117,6 +2121,13 @@ namespace flex
 				}
 			}
 		}
+		else
+		{
+			if (parent != nullptr)
+			{
+				parent->AddChildImmediate(newGameObject, /* bRegisterChild: */ false);
+			}
+		}
 
 		for (const std::string& tag : m_Tags)
 		{
@@ -2243,7 +2254,42 @@ namespace flex
 		return g_SceneManager->CurrentScene()->AddChildObject(this, child);
 	}
 
-	GameObject* GameObject::AddChildImmediate(GameObject* child)
+	GameObject* GameObject::AddChildImmediate(GameObject* child, bool bRegisterChild /* = true */)
+	{
+		AddChildImmediateCommon(child);
+
+		// Prefab templates aren't registered in the scene
+		if (bRegisterChild && !m_bIsTemplate)
+		{
+			g_SceneManager->CurrentScene()->RegisterGameObject(child);
+		}
+
+		if (g_SceneManager->HasSceneLoaded())
+		{
+			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+		}
+
+		if (!m_bIsTemplate)
+		{
+			if (child->GetTypeID() == SocketSID)
+			{
+				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child->ID);
+			}
+		}
+
+		return child;
+	}
+
+	EditorObject* GameObject::AddEditorChildImmediate(EditorObject* child)
+	{
+		AddChildImmediateCommon(child);
+
+		g_SceneManager->CurrentScene()->RegisterEditorObject(child);
+
+		return child;
+	}
+
+	GameObject* GameObject::AddChildImmediateCommon(GameObject* child)
 	{
 		if (child == nullptr)
 		{
@@ -2279,28 +2325,9 @@ namespace flex
 		child->SetParent(this);
 		child->GetTransform()->MarkDirty();
 
-		// Prefab templates aren't registered in the scene
-		if (!m_bIsTemplate)
-		{
-			g_SceneManager->CurrentScene()->RegisterGameObject(child);
-		}
-
 		if (childPrevParent != nullptr)
 		{
 			childTransform->SetWorldTransform(childWorldTransform);
-		}
-
-		if (!m_bIsTemplate)
-		{
-			if (child->GetTypeID() == SocketSID)
-			{
-				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child->ID);
-			}
-		}
-
-		if (g_SceneManager->HasSceneLoaded())
-		{
-			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 		}
 
 		return child;
@@ -2360,7 +2387,10 @@ namespace flex
 
 	void GameObject::MoveChild(GameObject* child, i32 newSiblingIndex)
 	{
+		CHECK(Contains(m_Children, child));
 		i32 previousSiblingIndex = child->GetSiblingIndex();
+		CHECK_LT(previousSiblingIndex, (i32)m_Children.size());
+		CHECK_EQ(m_Children[previousSiblingIndex], child);
 		ReorderItemInList(m_Children, child, previousSiblingIndex, newSiblingIndex);
 	}
 
@@ -3442,6 +3472,53 @@ namespace flex
 
 		g_Renderer->SetSkyboxMesh(m_Mesh);
 	}
+
+	//
+	// EditorObject
+	//
+
+	EditorObject::EditorObject(const std::string& name) :
+		GameObject(name, EditorObjectSID, InvalidGameObjectID, InvalidPrefabIDPair, false)
+	{
+	}
+
+	void EditorObject::Destroy(bool bDetachFromParent /* = true */)
+	{
+		if (bDetachFromParent)
+		{
+			DetachFromParent();
+		}
+
+		// Handle m_Children being modified during loop (from call to DetachFromParent)
+		for (GameObject* child : m_Children)
+		{
+			child->Destroy(false);
+			delete child;
+		}
+		m_Children.clear();
+
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
+		}
+
+		if (g_Editor->IsObjectSelected(ID))
+		{
+			g_Editor->DeselectObject(ID);
+		}
+
+		// ID will not be valid on objects that are being saved as a prefab template
+		if (g_SceneManager->HasSceneLoaded() && ID.IsValid())
+		{
+			g_SceneManager->CurrentScene()->UnregisterEditorObject((EditorObjectID*)&ID);
+		}
+	}
+
+	//
+	// DroppedItem
+	//
 
 	DroppedItem::DroppedItem(const PrefabID& prefabID, i32 stackSize) :
 		GameObject("", DroppedItemSID),

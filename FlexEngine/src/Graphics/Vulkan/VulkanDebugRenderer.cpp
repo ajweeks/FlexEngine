@@ -54,12 +54,20 @@ namespace flex
 
 		void VulkanDebugRenderer::Destroy()
 		{
+			// There is no active scene at this point in shutdown flow, just destroy the
+			// object directly rather than RemoveEditorObjectImmediate
+			m_Object->Destroy();
+			delete m_Object;
 			m_Object = nullptr;
 		}
 
 		void VulkanDebugRenderer::OnPreSceneChange()
 		{
-			m_Object = nullptr;
+			if (m_Object != nullptr && g_SceneManager->CurrentScene() != nullptr)
+			{
+				g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_Object);
+				m_Object = nullptr;
+			}
 		}
 
 		void VulkanDebugRenderer::OnPostSceneChange()
@@ -210,23 +218,23 @@ namespace flex
 
 			CHECK_EQ(m_Object, nullptr);
 
-			RenderObjectCreateInfo createInfo = {};
-			createInfo.materialID = m_MaterialID;
-			createInfo.bEditorObject = true;
-			createInfo.bIndexed = true;
-			createInfo.indices = &indexBuffer;
-			m_Object = new GameObject("Vk Physics Debug Draw", BaseObjectSID);
+			m_Object = new EditorObject("Vk Physics Debug Draw");
 			m_Object->SetSerializable(false);
 			m_Object->SetVisibleInSceneExplorer(false);
 			m_Object->SetCastsShadow(false);
 			Mesh* mesh = m_Object->SetMesh(new Mesh(m_Object));
 			Material* mat = g_Renderer->GetMaterial(m_MaterialID);
 			const VertexAttributes vertexAttributes = g_Renderer->GetShader(mat->shaderID)->vertexAttributes;
+			RenderObjectCreateInfo createInfo = {};
+			createInfo.materialID = m_MaterialID;
+			createInfo.bEditorObject = true;
+			createInfo.bIndexed = true;
+			createInfo.indices = &indexBuffer;
 			if (!mesh->CreateProcedural(8912, vertexAttributes, m_MaterialID, TopologyMode::LINE_LIST, &createInfo))
 			{
 				PrintWarn("Vulkan physics debug renderer failed to initialize vertex buffer\n");
 			}
-			g_SceneManager->CurrentScene()->AddRootObject(m_Object);
+			g_SceneManager->CurrentScene()->AddEditorObjectImmediate(m_Object);
 		}
 
 		void VulkanDebugRenderer::Clear()

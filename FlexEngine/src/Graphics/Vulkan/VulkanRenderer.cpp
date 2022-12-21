@@ -785,13 +785,6 @@ namespace flex
 			m_BlankTextureArr = nullptr;
 			m_BlankTexture = nullptr;
 
-			for (GameObject* editorObject : m_EditorObjects)
-			{
-				editorObject->Destroy();
-				delete editorObject;
-			}
-			m_EditorObjects.clear();
-
 			m_SwapChain.replace();
 			m_SwapChainImageViews.clear();
 

@@ -1086,7 +1086,7 @@ namespace flex
 				if (fileType == "glb" || fileType == "gltf")
 				{
 					BaseScene* scene = g_SceneManager->CurrentScene();
-					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), BaseObjectSID);
+					EditorObject* newObj = new EditorObject(scene->GetUniqueObjectName("New mesh ", 1));
 
 					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
 
@@ -1431,7 +1431,7 @@ namespace flex
 		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
-		m_GridObject = new GameObject("Grid", BaseObjectSID);
+		m_GridObject = new EditorObject("Grid");
 		Mesh* gridMesh = m_GridObject->SetMesh(new Mesh(m_GridObject));
 		RenderObjectCreateInfo gridCreateInfo = {};
 		gridCreateInfo.bEditorObject = true;
@@ -1442,7 +1442,7 @@ namespace flex
 
 		currentScene->AddEditorObjectImmediate(m_GridObject);
 
-		m_TransformGizmo = new GameObject("Transform gizmo", BaseObjectSID);
+		m_TransformGizmo = new EditorObject("Transform gizmo");
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
 		u32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
@@ -1457,7 +1457,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", BaseObjectSID);
+			EditorObject* translateXAxis = new EditorObject("Translation gizmo x axis");
 			translateXAxis->AddTag(m_TranslationGizmoTag);
 			translateXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
 			translateXAxis->GetTransform()->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0), true);
@@ -1476,7 +1476,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Y Axis
-			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", BaseObjectSID);
+			EditorObject* translateYAxis = new EditorObject("Translation gizmo y axis");
 			translateYAxis->AddTag(m_TranslationGizmoTag);
 			translateYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
 
@@ -1494,7 +1494,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Z Axis
-			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", BaseObjectSID);
+			EditorObject* translateZAxis = new EditorObject("Translation gizmo z axis");
 			translateZAxis->AddTag(m_TranslationGizmoTag);
 			translateZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
 			translateZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
@@ -1513,13 +1513,13 @@ namespace flex
 			zAxisMesh->LoadFromFile(meshCreateInfo);
 
 
-			m_TranslationGizmo = new GameObject("Translation gizmo", BaseObjectSID);
+			m_TranslationGizmo = new EditorObject("Translation gizmo");
 
-			m_TranslationGizmo->AddChildImmediate(translateXAxis);
-			m_TranslationGizmo->AddChildImmediate(translateYAxis);
-			m_TranslationGizmo->AddChildImmediate(translateZAxis);
+			m_TranslationGizmo->AddEditorChildImmediate(translateXAxis);
+			m_TranslationGizmo->AddEditorChildImmediate(translateYAxis);
+			m_TranslationGizmo->AddEditorChildImmediate(translateZAxis);
 
-			m_TransformGizmo->AddChildImmediate(m_TranslationGizmo);
+			m_TransformGizmo->AddEditorChildImmediate(m_TranslationGizmo);
 		}
 
 		// Rotation gizmo
@@ -1528,7 +1528,7 @@ namespace flex
 			real cylinderHeight = 0.2f;
 
 			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", BaseObjectSID);
+			EditorObject* rotationXAxis = new EditorObject("Rotation gizmo x axis");
 			rotationXAxis->AddTag(m_RotationGizmoTag);
 			rotationXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
 			rotationXAxis->GetTransform()->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0), true);
@@ -1547,7 +1547,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", BaseObjectSID);
+			EditorObject* rotationYAxis = new EditorObject("Rotation gizmo y axis");
 			rotationYAxis->AddTag(m_RotationGizmoTag);
 			rotationYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
 
@@ -1565,7 +1565,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", BaseObjectSID);
+			EditorObject* rotationZAxis = new EditorObject("Rotation gizmo z axis");
 			rotationZAxis->AddTag(m_RotationGizmoTag);
 			rotationZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
 			rotationZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
@@ -1584,13 +1584,13 @@ namespace flex
 			zAxisMesh->LoadFromFile(meshCreateInfo);
 
 
-			m_RotationGizmo = new GameObject("Rotation gizmo", BaseObjectSID);
+			m_RotationGizmo = new EditorObject("Rotation gizmo");
 
-			m_RotationGizmo->AddChildImmediate(rotationXAxis);
-			m_RotationGizmo->AddChildImmediate(rotationYAxis);
-			m_RotationGizmo->AddChildImmediate(rotationZAxis);
+			m_RotationGizmo->AddEditorChildImmediate(rotationXAxis);
+			m_RotationGizmo->AddEditorChildImmediate(rotationYAxis);
+			m_RotationGizmo->AddEditorChildImmediate(rotationZAxis);
 
-			m_TransformGizmo->AddChildImmediate(m_RotationGizmo);
+			m_TransformGizmo->AddEditorChildImmediate(m_RotationGizmo);
 
 			m_RotationGizmo->SetVisible(false);
 		}
@@ -1602,7 +1602,7 @@ namespace flex
 			real cylinderHeight = 1.8f;
 
 			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", BaseObjectSID);
+			EditorObject* scaleXAxis = new EditorObject("Scale gizmo x axis");
 			scaleXAxis->AddTag(m_ScaleGizmoTag);
 			scaleXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
 			scaleXAxis->GetTransform()->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0), true);
@@ -1621,7 +1621,7 @@ namespace flex
 			xAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", BaseObjectSID);
+			EditorObject* scaleYAxis = new EditorObject("Scale gizmo y axis");
 			scaleYAxis->AddTag(m_ScaleGizmoTag);
 			scaleYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
 
@@ -1639,7 +1639,7 @@ namespace flex
 			yAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", BaseObjectSID);
+			EditorObject* scaleZAxis = new EditorObject("Scale gizmo z axis");
 			scaleZAxis->AddTag(m_ScaleGizmoTag);
 			scaleZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
 			scaleZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
@@ -1658,7 +1658,7 @@ namespace flex
 			zAxisMesh->LoadFromFile(meshCreateInfo);
 
 			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", BaseObjectSID);
+			EditorObject* scaleAllAxes = new EditorObject("Scale gizmo all axes");
 			scaleAllAxes->AddTag(m_ScaleGizmoTag);
 
 			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
@@ -1675,14 +1675,14 @@ namespace flex
 			allAxesMesh->LoadFromFile(meshCreateInfo);
 
 
-			m_ScaleGizmo = new GameObject("Scale gizmo", BaseObjectSID);
+			m_ScaleGizmo = new EditorObject("Scale gizmo");
 
-			m_ScaleGizmo->AddChildImmediate(scaleXAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleYAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleZAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleAllAxes);
+			m_ScaleGizmo->AddEditorChildImmediate(scaleXAxis);
+			m_ScaleGizmo->AddEditorChildImmediate(scaleYAxis);
+			m_ScaleGizmo->AddEditorChildImmediate(scaleZAxis);
+			m_ScaleGizmo->AddEditorChildImmediate(scaleAllAxes);
 
-			m_TransformGizmo->AddChildImmediate(m_ScaleGizmo);
+			m_TransformGizmo->AddEditorChildImmediate(m_ScaleGizmo);
 
 			m_ScaleGizmo->SetVisible(false);
 		}

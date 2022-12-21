@@ -23,6 +23,7 @@ class btTriangleIndexVertexArray;
 
 namespace flex
 {
+	class EditorObject;
 	class BaseScene;
 	class BezierCurveList;
 	class Mesh;
@@ -203,7 +204,8 @@ namespace flex
 		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
-		GameObject* AddChildImmediate(GameObject* child);
+		GameObject* AddChildImmediate(GameObject* child, bool bRegisterChild = true);
+		EditorObject* AddEditorChildImmediate(EditorObject* child);
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
 		void MoveChild(GameObjectID childID, i32 newSiblingIndex);
@@ -366,6 +368,8 @@ namespace flex
 		bool ShouldSerializeMesh() const;
 		bool ShouldSerializeMaterial() const;
 
+		GameObject* AddChildImmediateCommon(GameObject* child);
+
 		std::string m_Name;
 
 		std::vector<std::string> m_Tags;
@@ -436,6 +440,18 @@ namespace flex
 	//
 	// Child classes
 	//
+
+	static constexpr StringID EditorObjectSID = SID("editor object");
+	class EditorObject final : public GameObject
+	{
+	public:
+		EditorObject(const std::string& name);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Destroy(bool bDetachFromParent = true) override;
+
+	};
 
 	static constexpr StringID DroppedItemSID = SID("dropped item");
 	class DroppedItem final : public GameObject

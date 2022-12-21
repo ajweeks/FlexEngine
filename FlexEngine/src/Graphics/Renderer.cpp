@@ -121,6 +121,8 @@ namespace flex
 		m_ShadowSamplingData.baseBias = 0.002f;
 
 		m_UIMesh = new UIMesh();
+
+		m_QueuedHologramData = {};
 	}
 
 	void Renderer::PostInitialize()
@@ -167,6 +169,7 @@ namespace flex
 
 
 			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", BaseObjectSID);
+			fullScreenTriGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(fullScreenTriGameObject);
 			fullScreenTriGameObject->SetVisible(false);
 			fullScreenTriGameObject->SetCastsShadow(false);
@@ -213,6 +216,7 @@ namespace flex
 
 
 			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", BaseObjectSID);
+			quad3DGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(quad3DGameObject);
 			quad3DGameObject->SetVisible(false);
 			quad3DGameObject->SetCastsShadow(false);
@@ -235,7 +239,7 @@ namespace flex
 
 			// Hologram
 			m_HologramMatID = g_Renderer->GetMaterialID("Selection Hologram");
-			m_HologramProxyObject = new GameObject("Proxy hologram object", InvalidStringID);
+			m_HologramProxyObject = new EditorObject("Proxy hologram object");
 			// Initialize with empty mesh
 			m_HologramProxyObject->SetMesh(new Mesh(m_HologramProxyObject));
 		}
@@ -323,15 +327,6 @@ namespace flex
 	void Renderer::SetRenderGrid(bool bRenderGrid)
 	{
 		m_bRenderGrid = bRenderGrid;
-
-		if (m_Grid != nullptr)
-		{
-			m_Grid->SetVisible(bRenderGrid);
-		}
-		if (m_WorldOrigin != nullptr)
-		{
-			m_WorldOrigin->SetVisible(bRenderGrid);
-		}
 	}
 
 	bool Renderer::IsRenderingGrid() const
@@ -1250,12 +1245,12 @@ namespace flex
 				Material* hologramMat = GetMaterial(m_HologramMatID);
 				if (hologramMat != nullptr)
 				{
-					hologramMat->constEmissive = m_QueuedHologramColour;
+					hologramMat->constEmissive = m_QueuedHologramData.colour;
 
 					Transform* transform = m_HologramProxyObject->GetTransform();
-					transform->SetWorldPosition(m_QueuedHologramPosWS, false);
-					transform->SetWorldRotation(m_QueuedHologramRotWS, false);
-					transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+					transform->SetWorldPosition(m_QueuedHologramData.posWS, false);
+					transform->SetWorldRotation(m_QueuedHologramData.rotWS, false);
+					transform->SetWorldScale(m_QueuedHologramData.scaleWS, true);
 				}
 			}
 			else
@@ -1269,6 +1264,7 @@ namespace flex
 			}
 
 			m_QueuedHologramPrefabID = InvalidPrefabID;
+			m_QueuedHologramData = {};
 		}
 	}
 
@@ -1625,10 +1621,10 @@ namespace flex
 	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour)
 	{
 		m_QueuedHologramPrefabID = prefabID;
-		m_QueuedHologramPosWS = posWS;
-		m_QueuedHologramRotWS = rotWS;
-		m_QueuedHologramScaleWS = scaleWS;
-		m_QueuedHologramColour = colour;
+		m_QueuedHologramData.posWS = posWS;
+		m_QueuedHologramData.rotWS = rotWS;
+		m_QueuedHologramData.scaleWS = scaleWS;
+		m_QueuedHologramData.colour = colour;
 	}
 
 	void Renderer::OnPreSceneChange()
@@ -2643,7 +2639,7 @@ namespace flex
 				{
 					gameObject->Destroy();
 					delete gameObject;
-					m_PersistentObjects.erase(iter);
+					iter = m_PersistentObjects.erase(iter);
 					break;
 				}
 			}
@@ -2672,6 +2668,7 @@ namespace flex
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
 			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, BaseObjectSID);
+			gBufferQuadGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// NOTE: G-buffer isn't rendered normally, it is handled separately
 			gBufferQuadGameObject->SetVisible(false);

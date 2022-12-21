@@ -15,6 +15,7 @@ namespace flex
 	class DirectoryWatcher;
 	class DebugRenderer;
 	class GameObject;
+	class EditorObject;
 	class MeshComponent;
 	class Mesh;
 	class ParticleSystem;
@@ -342,13 +343,18 @@ namespace flex
 
 		MaterialID m_HologramMatID = InvalidMaterialID;
 		//RenderID m_HologramProxyRenderID = InvalidRenderID;
-		GameObject* m_HologramProxyObject = nullptr;
+		EditorObject* m_HologramProxyObject = nullptr;
 
-		PrefabID m_QueuedHologramPrefabID;
-		glm::vec3 m_QueuedHologramPosWS;
-		glm::quat m_QueuedHologramRotWS;
-		glm::vec3 m_QueuedHologramScaleWS;
-		glm::vec4 m_QueuedHologramColour;
+		struct HologramMetaData
+		{
+			glm::vec3 posWS;
+			glm::quat rotWS;
+			glm::vec3 scaleWS;
+			glm::vec4 colour;
+		};
+		// Stores data about the queued hologram (if any)
+		HologramMetaData m_QueuedHologramData;
+		PrefabID m_QueuedHologramPrefabID = InvalidPrefabID;
 
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;
@@ -466,8 +472,6 @@ namespace flex
 		RenderID m_FullScreenTriRenderID = InvalidRenderID;
 
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
-		// Any editor objects which also require a game object wrapper
-		std::vector<GameObject*> m_EditorObjects;
 
 		bool m_bVSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
@@ -504,11 +508,6 @@ namespace flex
 
 		i32 m_ShaderQualityLevel = 1;
 		const i32 MAX_SHADER_QUALITY_LEVEL = 3;
-
-		GameObject* m_Grid = nullptr;
-		GameObject* m_WorldOrigin = nullptr;
-		MaterialID m_GridMaterialID = InvalidMaterialID;
-		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 		sec m_EditorStrSecRemaining = 0.0f;
 		sec m_EditorStrSecDuration = 1.5f;

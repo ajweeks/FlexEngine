@@ -11,6 +11,7 @@
 namespace flex
 {
 	class Mesh;
+	class EditorObject;
 
 	namespace vk
 	{
@@ -49,11 +50,12 @@ namespace flex
 
 			MaterialID m_MaterialID = InvalidMaterialID;
 
+			EditorObject* m_Object = nullptr;
+
 			// Per-frame data
 			std::vector<u32> indexBuffer;
 			VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 
-			GameObject* m_Object = nullptr;
 		};
 	} // namespace vk
 } // namespace flex

@@ -1263,7 +1263,7 @@ namespace flex
 				{
 					bGameObjectTabActive = false;
 
-					for (GameObject* editorObject : m_EditorObjects)
+					for (EditorObject* editorObject : m_EditorObjects)
 					{
 						if (DrawImGuiGameObjectNameAndChildren(editorObject, true))
 						{
@@ -1737,7 +1737,7 @@ namespace flex
 					{
 						// If parent-child tree changed then early out
 						bParentChildTreeDirty = true;
-						return true;
+						break;
 					}
 				}
 				ImGui::Unindent();
@@ -1773,6 +1773,7 @@ namespace flex
 		GameObject* previousParent = previousInstance->m_Parent;
 		std::string previousName = previousInstance->m_Name;
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
+		i32 siblingIndex = previousInstance->GetSiblingIndex();
 
 		CHECK(!previousInstance->m_bIsTemplate);
 
@@ -1805,7 +1806,7 @@ namespace flex
 
 		// Clear out old instance's ID to prevent it from unregistering
 		// the new object from various systems on destruction
-		previousInstance->ID = InvalidGameObjectID;
+		//previousInstance->ID = InvalidGameObjectID;
 		previousInstance->Destroy(true);
 		delete previousInstance;
 		previousInstance = nullptr;
@@ -1813,8 +1814,11 @@ namespace flex
 		// Destroy will have removed our ID from the LUT
 		RegisterGameObject(newPrefabInstance);
 
+		g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+
 		newPrefabInstance->Initialize();
 		newPrefabInstance->PostInitialize();
+		newPrefabInstance->SetSiblingIndex(siblingIndex);
 
 		return newPrefabInstance;
 	}
@@ -1865,8 +1869,8 @@ namespace flex
 
 	GameObject* BaseScene::GetEditorObject(const EditorObjectID& editorObjectID) const
 	{
-		auto iter = m_EditorGameObjectLUT.find(editorObjectID);
-		if (iter != m_EditorGameObjectLUT.end())
+		auto iter = m_EditorObjectLUT.find(editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
 		{
 			return iter->second;
 		}
@@ -2297,41 +2301,46 @@ namespace flex
 		}
 	}
 
-	void BaseScene::RegisterEditorGameObject(GameObject* gameObject)
+	void BaseScene::RegisterEditorObject(EditorObject* editorObject)
 	{
-		EditorObjectID* editorObjectID = (EditorObjectID*)&gameObject->ID;
-		auto iter = m_EditorGameObjectLUT.find(*editorObjectID);
-		if (iter != m_EditorGameObjectLUT.end())
+		EditorObjectID* editorObjectID = (EditorObjectID*)&editorObject->ID;
+		auto iter = m_EditorObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
 		{
-			CHECK_EQ(iter->second, gameObject);
+			CHECK_EQ(iter->second, editorObject);
 		}
-		m_EditorGameObjectLUT[*editorObjectID] = gameObject;
+		m_EditorObjectLUT[*editorObjectID] = editorObject;
 
-		for (GameObject* child : gameObject->m_Children)
+		for (GameObject* child : editorObject->m_Children)
 		{
-			RegisterEditorGameObject(child);
+			RegisterEditorObject((EditorObject*)child);
 		}
 	}
 
-	void BaseScene::UnregisterEditorGameObject(EditorObjectID* editorObjectID)
+	void BaseScene::UnregisterEditorObject(EditorObjectID* editorObjectID)
 	{
-		auto iter =		m_EditorGameObjectLUT.find(*editorObjectID);
-		if (iter != m_EditorGameObjectLUT.end())
+		auto iter =	m_EditorObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
 		{
-			m_EditorGameObjectLUT.erase(iter);
+			m_EditorObjectLUT.erase(iter);
+			return;
 		}
+
+		char editorObjectIDStr[33];
+		editorObjectID->ToString(editorObjectIDStr);
+		PrintError("Failed to unregister editor object with ID %s\n", editorObjectIDStr);
 	}
 
 	void BaseScene::UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID)
 	{
 		GameObject* gameObject = GetEditorObject(*editorObjectID);
-		UnregisterEditorGameObject(editorObjectID);
+		UnregisterEditorObject(editorObjectID);
 
 		if (gameObject != nullptr)
 		{
 			for (GameObject* child : gameObject->m_Children)
 			{
-				UnregisterEditorGameObject((EditorObjectID*)&child->ID);
+				UnregisterEditorObject((EditorObjectID*)&child->ID);
 			}
 		}
 	}
@@ -2401,28 +2410,29 @@ namespace flex
 
 	void BaseScene::SetRootObjectIndex(GameObject* rootObject, i32 newIndex)
 	{
+		CHECK(Contains(m_RootObjects, rootObject));
 		i32 previousIndex = rootObject->GetSiblingIndex();
+		CHECK_LT(previousIndex, (i32)m_RootObjects.size());
+		CHECK_EQ(m_RootObjects[previousIndex], rootObject);
 		ReorderItemInList(m_RootObjects, rootObject, previousIndex, newIndex);
 	}
 
-	GameObject* BaseScene::AddEditorObjectImmediate(GameObject* editorObject)
+	EditorObject* BaseScene::AddEditorObjectImmediate(EditorObject* editorObject)
 	{
 		m_EditorObjects.push_back(editorObject);
 
-		RegisterEditorGameObject(editorObject);
+		RegisterEditorObject(editorObject);
 
 		return editorObject;
 	}
 
-	void BaseScene::RemoveEditorObjectImmediate(GameObject* editorObject)
+	void BaseScene::RemoveEditorObjectImmediate(EditorObject* editorObject)
 	{
 		for (auto iter = m_EditorObjects.begin(); iter != m_EditorObjects.end(); ++iter)
 		{
 			if ((*iter)->ID == editorObject->ID)
 			{
-				GameObject* gameObject = *iter;
-
-				UnregisterEditorGameObject((EditorObjectID*)&gameObject->ID);
+				EditorObject* gameObject = *iter;
 
 				gameObject->Destroy();
 				delete gameObject;
@@ -2466,9 +2476,7 @@ namespace flex
 		auto iter = m_EditorObjects.begin();
 		while (iter != m_EditorObjects.end())
 		{
-			GameObject* gameObject = *iter;
-
-			UnregisterEditorGameObject((EditorObjectID*)&gameObject->ID);
+			EditorObject* gameObject = *iter;
 
 			// Recurses down child hierarchy
 			gameObject->Destroy();
@@ -2698,11 +2706,6 @@ namespace flex
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
 		return m_RootObjects;
-	}
-
-	std::vector<GameObject*>& BaseScene::GetEditorObjects()
-	{
-		return m_EditorObjects;
 	}
 
 	void BaseScene::GetInteractableObjects(std::vector<GameObject*>& interactableObjects)

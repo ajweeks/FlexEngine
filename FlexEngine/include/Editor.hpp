@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	class GameObject;
+	class EditorObject;
 
 	class Editor
 	{
@@ -85,13 +85,13 @@ namespace flex
 		btVector3 GetAxisColour(i32 axisIndex) const;
 
 		// Parent of translation, rotation, and scale gizmo objects
-		GameObject* m_TransformGizmo = nullptr;
+		EditorObject* m_TransformGizmo = nullptr;
 		// Children of m_TransformGizmo
-		GameObject* m_TranslationGizmo = nullptr;
-		GameObject* m_RotationGizmo = nullptr;
-		GameObject* m_ScaleGizmo = nullptr;
+		EditorObject* m_TranslationGizmo = nullptr;
+		EditorObject* m_RotationGizmo = nullptr;
+		EditorObject* m_ScaleGizmo = nullptr;
 
-		GameObject* m_GridObject = nullptr;
+		EditorObject* m_GridObject = nullptr;
 
 		MaterialID m_TransformGizmoMatXID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;

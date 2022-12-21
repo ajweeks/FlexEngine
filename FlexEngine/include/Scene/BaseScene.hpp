@@ -73,7 +73,6 @@ namespace flex
 		void DeleteSaveFiles();
 
 		std::vector<GameObject*>& GetRootObjects();
-		std::vector<GameObject*>& GetEditorObjects();
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
 
 		GameObject* AddRootObject(GameObject* gameObject);
@@ -85,8 +84,8 @@ namespace flex
 		void SetRootObjectIndex(GameObject* rootObject, i32 newIndex);
 
 		// Editor objects are objects not normally shown in the scene hierarchy, or searched by standard functions
-		GameObject* AddEditorObjectImmediate(GameObject* editorObject);
-		void RemoveEditorObjectImmediate(GameObject* editorObject);
+		EditorObject* AddEditorObjectImmediate(EditorObject* editorObject);
+		void RemoveEditorObjectImmediate(EditorObject* editorObject);
 
 		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
 		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
@@ -232,6 +231,7 @@ namespace flex
 
 	protected:
 		friend GameObject;
+		friend EditorObject;
 		friend SceneManager;
 
 		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
@@ -241,8 +241,8 @@ namespace flex
 		void UnregisterGameObject(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
 		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
 
-		void RegisterEditorGameObject(GameObject* gameObject);
-		void UnregisterEditorGameObject(EditorObjectID* editorObjectID);
+		void RegisterEditorObject(EditorObject* editorObject);
+		void UnregisterEditorObject(EditorObjectID* editorObjectID);
 		void UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID);
 
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
@@ -260,8 +260,8 @@ namespace flex
 
 		std::map<GameObjectID, GameObject*> m_GameObjectLUT;
 		std::vector<GameObject*> m_RootObjects;
-		std::map<EditorObjectID, GameObject*> m_EditorGameObjectLUT;
-		std::vector<GameObject*> m_EditorObjects;
+		std::map<EditorObjectID, EditorObject*> m_EditorObjectLUT;
+		std::vector<EditorObject*> m_EditorObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
