@@ -2410,11 +2410,10 @@ namespace flex
 
 	void BaseScene::SetRootObjectIndex(GameObject* rootObject, i32 newIndex)
 	{
-		CHECK(Contains(m_RootObjects, rootObject));
 		i32 previousIndex = rootObject->GetSiblingIndex();
-		CHECK_LT(previousIndex, (i32)m_RootObjects.size());
-		CHECK_EQ(m_RootObjects[previousIndex], rootObject);
-		ReorderItemInList(m_RootObjects, rootObject, previousIndex, newIndex);
+		ReorderItemInList(m_RootObjects, previousIndex, newIndex);
+
+		UpdateRootObjectSiblingIndices();
 	}
 
 	EditorObject* BaseScene::AddEditorObjectImmediate(EditorObject* editorObject)

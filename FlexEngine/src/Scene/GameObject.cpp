@@ -2387,11 +2387,13 @@ namespace flex
 
 	void GameObject::MoveChild(GameObject* child, i32 newSiblingIndex)
 	{
-		CHECK(Contains(m_Children, child));
 		i32 previousSiblingIndex = child->GetSiblingIndex();
-		CHECK_LT(previousSiblingIndex, (i32)m_Children.size());
-		CHECK_EQ(m_Children[previousSiblingIndex], child);
-		ReorderItemInList(m_Children, child, previousSiblingIndex, newSiblingIndex);
+		ReorderItemInList(m_Children, previousSiblingIndex, newSiblingIndex);
+
+		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
+		{
+			m_Children[i]->UpdateSiblingIndices(i);
+		}
 	}
 
 	const std::vector<GameObject*>& GameObject::GetChildren() const

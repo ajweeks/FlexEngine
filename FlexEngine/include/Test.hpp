@@ -2338,17 +2338,41 @@ namespace flex
 			i32 five = 5;
 			std::vector<i32*> list{&one, &two, &three, &four, &five};
 
-			EXPECT(list[0], &one);
-			EXPECT(list[1], &two);
-			EXPECT(list[2], &three);
-			EXPECT(list[3], &four);
-			EXPECT(list[4], &five);
-			ReorderItemInList(list, &two, 1, 3);
-			EXPECT(list[0], &one);
-			EXPECT(list[1], &three);
-			EXPECT(list[2], &four);
-			EXPECT(list[3], &two);
-			EXPECT(list[4], &five);
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], two);
+			EXPECT(*list[2], three);
+			EXPECT(*list[3], four);
+			EXPECT(*list[4], five);
+			ReorderItemInList(list, 1, 3);
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], three);
+			EXPECT(*list[2], four);
+			EXPECT(*list[3], two);
+			EXPECT(*list[4], five);
+			EXPECT((u32)list.size(), 5u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestReorderItemInList1)
+		{
+			i32 one = 1;
+			i32 two = 2;
+			i32 three = 3;
+			i32 four = 4;
+			i32 five = 5;
+			std::vector<i32*> list{ &one, &two, &three, &four, &five };
+
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], two);
+			EXPECT(*list[2], three);
+			EXPECT(*list[3], four);
+			EXPECT(*list[4], five);
+			ReorderItemInList(list, 3, 1);
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], four);
+			EXPECT(*list[2], two);
+			EXPECT(*list[3], three);
+			EXPECT(*list[4], five);
 			EXPECT((u32)list.size(), 5u);
 		}
 		UNIT_TEST_END;
@@ -2405,7 +2429,7 @@ namespace flex
 
 				TestContainsVector0, TestContainsVector1, TestContainsArray0, TestContainsMap0, TestContainsSet0,
 
-				TestReorderItemInList0,
+				TestReorderItemInList0, TestReorderItemInList1,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
