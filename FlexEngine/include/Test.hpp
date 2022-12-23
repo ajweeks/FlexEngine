@@ -2282,6 +2282,77 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(TestContainsVector0)
+		{
+			std::vector<i32> list{1, 2, 3, 4, 5};
+
+			EXPECT(Contains(list, 2), true);
+			EXPECT(Contains(list, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsVector1)
+		{
+			std::vector<const char*> list{"A", "B", "C", "D", "E"};
+
+			EXPECT(Contains(list, "C"), true);
+			EXPECT(Contains(list, "F"), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsArray0)
+		{
+			std::array<i32, 5> list{1, 2, 3, 4, 5};
+
+			EXPECT(Contains(list, 2), true);
+			EXPECT(Contains(list, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsMap0)
+		{
+			std::map<i32, i32> map{ { 0, 1}, { 1, 2 }, {2, 3 } };
+
+			EXPECT(Contains(map, 1), true);
+			EXPECT(Contains(map, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsSet0)
+		{
+			std::set<i32> set{ { 1, 2, 3, 4, 5 } };
+
+			EXPECT(Contains(set, 2), true);
+			EXPECT(Contains(set, 6), false);
+		}
+		UNIT_TEST_END;
+
+		// TODO: Test Erase & IndexOf
+
+		UNIT_TEST(TestReorderItemInList0)
+		{
+			i32 one = 1;
+			i32 two = 2;
+			i32 three = 3;
+			i32 four = 4;
+			i32 five = 5;
+			std::vector<i32*> list{&one, &two, &three, &four, &five};
+
+			EXPECT(list[0], &one);
+			EXPECT(list[1], &two);
+			EXPECT(list[2], &three);
+			EXPECT(list[3], &four);
+			EXPECT(list[4], &five);
+			ReorderItemInList(list, &two, 1, 3);
+			EXPECT(list[0], &one);
+			EXPECT(list[1], &three);
+			EXPECT(list[2], &four);
+			EXPECT(list[3], &two);
+			EXPECT(list[4], &five);
+			EXPECT((u32)list.size(), 5u);
+		}
+		UNIT_TEST_END;
+
 	public:
 		static i32 Run()
 		{
@@ -2331,6 +2402,10 @@ namespace flex
 				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
 
 				TestPrettifyNumbers0, TestPrettifyNumbers1, TestPrettifyNumbers2, TestPrettifyNumbers3, TestPrettifyNumbers4, TestPrettifyNumbers5, TestPrettifyNumbers6,
+
+				TestContainsVector0, TestContainsVector1, TestContainsArray0, TestContainsMap0, TestContainsSet0,
+
+				TestReorderItemInList0,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
