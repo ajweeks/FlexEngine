@@ -73,7 +73,11 @@
 
 #define FLEX_VERSION(major, minor, patch) (((major) << 22) | ((minor) << 12) | (patch))
 
+#if defined(_MSC_VER) && _MSVC_LANG >= 201703L // C++17
 #define FLEX_NO_DISCARD [[nodiscard]]
+#else
+#define FLEX_NO_DISCARD
+#endif
 
 #include "FlexPreprocessors.hpp"
 #include "AssertHelpers.hpp"
