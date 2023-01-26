@@ -60,7 +60,7 @@ namespace flex
 
 		void CacheGameObjectSockets(const GameObjectID& gameObjectID);
 		void RemoveGameObjectSockets(const GameObjectID& gameObjectID);
-		void OnSocketChildAdded(const GameObjectID& parentObjectID, const GameObjectID& childObjectID);
+		void OnSocketChildAdded(const GameObjectID& parentObjectID, GameObject* childObject);
 		std::vector<SocketData> const* GetGameObjectSockets(const GameObjectID& gameObjectID);
 
 		void SetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx, i32 value);

@@ -501,7 +501,7 @@ namespace flex
 		}
 	}
 
-	void PluggablesSystem::OnSocketChildAdded(const GameObjectID& parentObjectID, const GameObjectID& childObjectID)
+	void PluggablesSystem::OnSocketChildAdded(const GameObjectID& parentObjectID, GameObject* childObject)
 	{
 		std::vector<SocketData>* sockets;
 
@@ -516,7 +516,7 @@ namespace flex
 			sockets = &gameObjectSockets[parentObjectID];
 		}
 
-		Socket* socket = (Socket*)childObjectID.Get();
+		Socket* socket = (Socket*)childObject;
 		socket->slotIdx = (i32)sockets->size();
 		(*sockets).emplace_back(socket->ID);
 	}

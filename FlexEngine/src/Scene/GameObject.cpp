@@ -2273,7 +2273,7 @@ namespace flex
 		{
 			if (child->GetTypeID() == SocketSID)
 			{
-				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child->ID);
+				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child);
 			}
 		}
 
