@@ -1038,6 +1038,11 @@ namespace flex
 					g_ResourceManager->SerializeAllPrefabTemplates();
 				}
 
+				if (ImGui::MenuItem("Save all materials"))
+				{
+					g_ResourceManager->SerializeAllMaterials();
+				}
+
 				if (ImGui::BeginMenu("Reload"))
 				{
 					if (ImGui::MenuItem("Scene", "R"))

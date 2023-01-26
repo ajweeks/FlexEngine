@@ -803,6 +803,25 @@ namespace flex
 		}
 	}
 
+	bool ResourceManager::SerializeAllMaterials() const
+	{
+		bool bAllSucceeded = true;
+
+		for (const MaterialCreateInfo& materialInfo : parsedMaterialInfos)
+		{
+			MaterialID matID;
+			if (g_Renderer->FindOrCreateMaterialByName(materialInfo.name, matID))
+			{
+				if (!SerializeMaterial(g_Renderer->GetMaterial(matID)))
+				{
+					bAllSucceeded = false;
+				}
+			}
+		}
+
+		return bAllSucceeded;
+	}
+
 	bool ResourceManager::SerializeLoadedMaterials() const
 	{
 		const std::map<MaterialID, Material*>& materials = g_Renderer->GetLoadedMaterials();
@@ -812,22 +831,31 @@ namespace flex
 		for (auto& matPair : materials)
 		{
 			Material* material = matPair.second;
-			if (material->bSerializable)
+			if (!SerializeMaterial(material))
 			{
-				JSONObject materialObj = material->Serialize();
-				std::string fileContents = materialObj.ToString();
-
-				std::string hypenatedName = Replace(material->name, ' ', '-');
-				const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
-				if (!WriteFile(fileName, fileContents, false))
-				{
-					PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
-					bAllSucceeded = false;
-				}
+				bAllSucceeded = false;
 			}
 		}
 
 		return bAllSucceeded;
+	}
+
+	bool ResourceManager::SerializeMaterial(Material* material) const
+	{
+		if (material->bSerializable)
+		{
+			JSONObject materialObj = material->Serialize();
+			std::string fileContents = materialObj.ToString();
+
+			std::string hypenatedName = Replace(material->name, ' ', '-');
+			const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
+			if (!WriteFile(fileName, fileContents, false))
+			{
+				PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
+				return false;
+			}
+		}
+		return true;
 	}
 
 	void ResourceManager::ParseDebugOverlayNamesFile()

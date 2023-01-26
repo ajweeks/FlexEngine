@@ -70,6 +70,7 @@ namespace flex
 		void SerializeFontFile();
 
 		void ParseMaterialsFiles();
+		bool SerializeAllMaterials() const;
 		bool SerializeLoadedMaterials() const;
 
 		void ParseDebugOverlayNamesFile();
@@ -166,6 +167,7 @@ namespace flex
 		std::vector<Pair<StringID, IconMetaData>> discoveredIcons;
 		TextureID tofuIconID = InvalidTextureID;
 
+		// Creation info for all discovered materials
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 
 		struct PrefabTemplateInfo
@@ -218,6 +220,7 @@ namespace flex
 
 	private:
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
+		bool SerializeMaterial(Material* material) const;
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";
