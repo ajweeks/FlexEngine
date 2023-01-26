@@ -15,8 +15,8 @@
 				"type" : "spot light",
 				"spot light info" : 
 				{
-					"brightness" : 500.000,
-					"angle" : 0.818
+					"angle" : 0.818,
+					"brightness" : 500.000
 				}
 			}
 		]

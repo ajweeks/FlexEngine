@@ -1327,7 +1327,8 @@ namespace flex
 		if (ImGui::BeginPopupModal("Help", &bShowHelpWindow))
 		{
 			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
-			ImGui::Text("Show hide UI: Shift + 1");
+			ImGui::Text("Show hide debug UI: Shift + 1 (after closing this window)");
+			ImGui::Text("Pause/regain mouse control: ESC");
 			ImGui::NewLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Cameras");
@@ -1341,7 +1342,6 @@ namespace flex
 			ImGui::Text("\tMove camera (debug camera): WASD + QE");
 			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
 			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
-			ImGui::Text("\tPause/release mouse capture: Esc");
 			ImGui::NewLine();
 			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
 			ImGui::Text("Player controls (first/third person camera)");

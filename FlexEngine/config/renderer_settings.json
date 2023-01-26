@@ -5,6 +5,6 @@
 	"enable fxaa" : true,
 	"brightness" : "1.000,1.100,1.200",
 	"saturation" : 1.000000,
-	"shadow cascade count" : 1,
+	"shadow cascade count" : 4,
 	"shadow cascade base resolution" : 1024
 }
