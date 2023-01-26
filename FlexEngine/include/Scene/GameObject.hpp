@@ -184,6 +184,8 @@ namespace flex
 		// Gives this object and all its children new GameObjectIDs
 		void ChangeAllIDs();
 
+		void SetSourcePrefabID(PrefabID sourcePrefabID);
+
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);

@@ -1311,9 +1311,24 @@ namespace flex
 
 		ID = newID;
 
+		if (m_bIsTemplate)
+		{
+			m_SourcePrefabID.m_SubGameObjectID = newID;
+		}
+
 		for (GameObject* child : m_Children)
 		{
 			child->ChangeAllIDs();
+		}
+	}
+
+	void GameObject::SetSourcePrefabID(PrefabID sourcePrefabID)
+	{
+		m_SourcePrefabID.m_PrefabID = sourcePrefabID;
+
+		for (GameObject* child : m_Children)
+		{
+			child->SetSourcePrefabID(sourcePrefabID);
 		}
 	}
 

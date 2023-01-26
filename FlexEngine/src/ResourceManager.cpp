@@ -1405,8 +1405,7 @@ namespace flex
 		// Give all objects new IDs so they don't conflict with the instance's
 		prefabTemplate->ChangeAllIDs();
 
-		prefabTemplate->m_SourcePrefabID.m_PrefabID = newPrefabID;
-		prefabTemplate->m_SourcePrefabID.m_SubGameObjectID = prefabTemplate->ID;
+		prefabTemplate->SetSourcePrefabID(newPrefabID);
 
 		prefabTemplates.emplace_back(prefabTemplate, newPrefabID, fileName);
 
