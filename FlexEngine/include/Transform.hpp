@@ -87,6 +87,10 @@ namespace flex
 	private:
 		friend struct MotionState;
 
+		void Recompute();
+
+		void UpdateRigidBody();
+
 		// Callback from physics system
 		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
 

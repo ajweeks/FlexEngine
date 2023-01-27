@@ -281,16 +281,34 @@ namespace flex
 	{
 		localPosition = position;
 
+		MarkDirty();
+
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force rigid body to update to new position
-				rigidBody->SetWorldPosition(GetWorldPosition());
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
+	}
+
+	void Transform::UpdateRigidBody()
+	{
+		RigidBody* rigidBody = m_GameObject->GetRigidBody();
+		if (rigidBody != nullptr)
+		{
+			glm::vec3 worldScale = GetWorldScale();
+			if (!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
+			{
+				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
+			}
+			rigidBody->SetWorldPositionAndRotation(GetWorldPosition(), GetWorldRotation());
+		}
+
+		u32 childCount = m_GameObject->GetChildCount();
+		for (u32 i = 0; i < childCount; ++i)
+		{
+			m_GameObject->GetChild(i)->GetTransform()->UpdateRigidBody();
+		}
 	}
 
 	void Transform::SetWorldPosition(const glm::vec3& position, bool bUpdateChain /* = true */)
@@ -303,35 +321,30 @@ namespace flex
 		else
 		{
 			localPosition = position;
-			// NOTE: World position will be set in ComputeValues
 		}
+
+		MarkDirty();
 
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force rigid body to update to new position
-				rigidBody->SetWorldPosition(position);
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
 	}
 
 	void Transform::SetLocalRotation(const glm::quat& rotation, bool bUpdateChain /* = true */)
 	{
 		localRotation = rotation;
 
+		MarkDirty();
+
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force rigid body to update to new rotation
-				rigidBody->SetWorldRotation(GetWorldRotation());
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
 	}
 
 	void Transform::SetWorldRotation(const glm::quat& rotation, bool bUpdateChain /* = true */)
@@ -344,35 +357,30 @@ namespace flex
 		else
 		{
 			localRotation = rotation;
-			// World rotation will be set in ComputeValues
 		}
+
+		MarkDirty();
 
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force rigid body to update to new rotation
-				rigidBody->SetWorldRotation(rotation);
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
 	}
 
 	void Transform::SetLocalScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
 	{
 		localScale = scale;
 
+		MarkDirty();
+
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force collision shape to update to new scale
-				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(GetWorldScale()));
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
 	}
 
 	void Transform::SetWorldScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
@@ -385,19 +393,16 @@ namespace flex
 		else
 		{
 			localScale = scale;
-			// World scale will be set in ComputeValues
 		}
+
+		MarkDirty();
 
 		if (bUpdateChain)
 		{
-			RigidBody* rigidBody = m_GameObject->GetRigidBody();
-			if (rigidBody != nullptr)
-			{
-				// Force collision shape to update to new scale
-				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(GetWorldScale()));
-			}
+			Recompute();
+
+			UpdateRigidBody();
 		}
-		MarkDirty();
 	}
 
 	void Transform::SetWorldFromMatrix(const glm::mat4& mat, bool bUpdateChain /* = true */)
@@ -517,6 +522,15 @@ namespace flex
 			return cachedWorldTransform;
 		}
 
+		Recompute();
+
+		return cachedWorldTransform;
+	}
+
+	void Transform::Recompute()
+	{
+		CHECK_EQ(bDirty, true);
+
 		glm::mat4 localTransform = glm::mat4(localRotation) *
 			glm::diagonal4x4(glm::vec4(localScale, 1.0f));
 		localTransform[3] = glm::vec4(localPosition, 1.0f);
@@ -532,8 +546,6 @@ namespace flex
 		}
 
 		bDirty = false;
-
-		return cachedWorldTransform;
 	}
 
 	void Transform::MarkDirty()
@@ -593,16 +605,26 @@ namespace flex
 	void Transform::OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation)
 	{
 		GameObject* parent = m_GameObject->GetParent();
+		glm::vec3 newPosition;
+		glm::quat newRotation;
 		if (parent != nullptr)
 		{
-			localPosition = position - parent->GetTransform()->GetWorldPosition();
-			localRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * rotation;
+			newPosition = position - parent->GetTransform()->GetWorldPosition();
+			newRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * rotation;
+
 		}
 		else
 		{
-			localPosition = position;
-			localRotation = rotation;
+			newPosition = position;
+			newRotation = rotation;
 		}
-		MarkDirty();
+
+		if (!NearlyEquals(localPosition, newPosition, 0.00001f) ||
+			!NearlyEquals(localRotation, newRotation, 0.00001f))
+		{
+			localPosition = newPosition;
+			localRotation = newRotation;
+			MarkDirty();
+		}
 	}
 } // namespace flex
