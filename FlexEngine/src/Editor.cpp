@@ -1451,241 +1451,158 @@ namespace flex
 		Mesh::CreateInfo meshCreateInfo = {};
 		meshCreateInfo.optionalRenderObjectCreateInfo = &gizmoCreateInfo;
 
-		// Translation gizmo
+		m_TranslationGizmo = new EditorObject("Translation gizmo");
+		m_RotationGizmo = new EditorObject("Rotation gizmo");
+		m_ScaleGizmo = new EditorObject("Scale gizmo");
+
+		btVector3 translationShapeSize = btVector3(0.35f, 1.8f, 0.35f);
+		btVector3 rotationShapeSize = btVector3(3.4f, 0.2f, 3.4f);
+		btVector3 scaleShapeSize = btVector3(0.35f, 1.8f, 0.35f);
+		btVector3 scaleAllShapeSize = btVector3(0.5f, 0.5f, 0.5f);
+
+		struct MeshCreateInfo
 		{
-			real cylinderRadius = 0.35f;
-			real cylinderHeight = 1.8f;
+			const char* name;
+			const char* meshName;
+			glm::quat orientation;
+			glm::vec3 offset;
+			btCollisionShape* collisionShape;
+			MaterialID matID;
+			const std::string* tag;
+			EditorObject* parent;
+		};
 
-			// X Axis
-			EditorObject* translateXAxis = new EditorObject("Translation gizmo x axis");
-			translateXAxis->AddTag(m_TranslationGizmoTag);
-			translateXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
-			translateXAxis->GetTransform()->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0), true);
+		MeshCreateInfo translationCreateInfos[] = {
+			{
+				"Translation gizmo x axis",
+				MESH_DIRECTORY "translation-gizmo-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(translationShapeSize.y(), 0, 0),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatXID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
+			{
+				"Translation gizmo y axis",
+				MESH_DIRECTORY "translation-gizmo-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, translationShapeSize.y(), 0),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatYID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
+			{
+				"Translation gizmo z axis",
+				MESH_DIRECTORY "translation-gizmo-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, translationShapeSize.y()),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatZID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
 
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateXAxis->SetCollisionShape(xAxisShape);
+			{
+				"Rotation gizmo x axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(rotationShapeSize.y(), 0, 0),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatXID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
+			{
+				"Rotation gizmo y axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, rotationShapeSize.y(), 0),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatYID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
+			{
+				"Rotation gizmo z axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, rotationShapeSize.y()),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatZID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
 
-			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
+			{
+				"Scale gizmo x axis",
+				MESH_DIRECTORY "scale-gizmo-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(scaleShapeSize.y(), 0, 0),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatXID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo y axis",
+				MESH_DIRECTORY "scale-gizmo-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, scaleShapeSize.y(), 0),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatYID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo x axis",
+				MESH_DIRECTORY "scale-gizmo-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, scaleShapeSize.y()),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatZID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo all axes",
+				MESH_DIRECTORY "scale-gizmo-all.glb",
+				QUAT_IDENTITY,
+				VEC3_ZERO,
+				new btBoxShape(scaleAllShapeSize),
+				m_TransformGizmoMatAllID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+		};
 
-			Mesh* xAxisMesh = translateXAxis->SetMesh(new Mesh(translateXAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "translation-gizmo-x.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatXID };
-			xAxisMesh->LoadFromFile(meshCreateInfo);
+		for (MeshCreateInfo& createInfo : translationCreateInfos)
+		{
+			EditorObject* editorObject = new EditorObject(createInfo.name);
+			editorObject->AddTag(*createInfo.tag);
+			editorObject->GetTransform()->SetLocalRotation(createInfo.orientation, false);
+			editorObject->GetTransform()->SetLocalPosition(createInfo.offset, true);
 
-			// Y Axis
-			EditorObject* translateYAxis = new EditorObject("Translation gizmo y axis");
-			translateYAxis->AddTag(m_TranslationGizmoTag);
-			translateYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
+			editorObject->SetCollisionShape(createInfo.collisionShape);
 
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateYAxis->SetCollisionShape(yAxisShape);
+			RigidBody* rigidBody = editorObject->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			rigidBody->SetMass(0.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetPhysicsFlags(gizmoRBFlags);
 
-			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
+			Mesh* subMesh = editorObject->SetMesh(new Mesh(editorObject));
+			meshCreateInfo.relativeFilePath = createInfo.meshName;
+			meshCreateInfo.materialIDs = { createInfo.matID };
+			subMesh->LoadFromFile(meshCreateInfo);
 
-			Mesh* yAxisMesh = translateYAxis->SetMesh(new Mesh(translateYAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "translation-gizmo-y.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatYID };
-			yAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Z Axis
-			EditorObject* translateZAxis = new EditorObject("Translation gizmo z axis");
-			translateZAxis->AddTag(m_TranslationGizmoTag);
-			translateZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
-			translateZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* zAxisMesh = translateZAxis->SetMesh(new Mesh(translateZAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "translation-gizmo-z.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatZID };
-			zAxisMesh->LoadFromFile(meshCreateInfo);
-
-
-			m_TranslationGizmo = new EditorObject("Translation gizmo");
-
-			m_TranslationGizmo->AddEditorChildImmediate(translateXAxis);
-			m_TranslationGizmo->AddEditorChildImmediate(translateYAxis);
-			m_TranslationGizmo->AddEditorChildImmediate(translateZAxis);
-
-			m_TransformGizmo->AddEditorChildImmediate(m_TranslationGizmo);
+			createInfo.parent->AddEditorChildImmediate(editorObject);
 		}
 
-		// Rotation gizmo
-		{
-			real cylinderRadius = 3.4f;
-			real cylinderHeight = 0.2f;
+		m_TransformGizmo->AddEditorChildImmediate(m_TranslationGizmo);
+		m_TransformGizmo->AddEditorChildImmediate(m_RotationGizmo);
+		m_TransformGizmo->AddEditorChildImmediate(m_ScaleGizmo);
 
-			// X Axis
-			EditorObject* rotationXAxis = new EditorObject("Rotation gizmo x axis");
-			rotationXAxis->AddTag(m_RotationGizmoTag);
-			rotationXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
-			rotationXAxis->GetTransform()->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0), true);
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* xAxisMesh = rotationXAxis->SetMesh(new Mesh(rotationXAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "rotation-gizmo-flat-x.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatXID };
-			xAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Y Axis
-			EditorObject* rotationYAxis = new EditorObject("Rotation gizmo y axis");
-			rotationYAxis->AddTag(m_RotationGizmoTag);
-			rotationYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* yAxisMesh = rotationYAxis->SetMesh(new Mesh(rotationYAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "rotation-gizmo-flat-y.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatYID };
-			yAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Z Axis
-			EditorObject* rotationZAxis = new EditorObject("Rotation gizmo z axis");
-			rotationZAxis->AddTag(m_RotationGizmoTag);
-			rotationZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
-			rotationZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* zAxisMesh = rotationZAxis->SetMesh(new Mesh(rotationZAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "rotation-gizmo-flat-z.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatZID };
-			zAxisMesh->LoadFromFile(meshCreateInfo);
-
-
-			m_RotationGizmo = new EditorObject("Rotation gizmo");
-
-			m_RotationGizmo->AddEditorChildImmediate(rotationXAxis);
-			m_RotationGizmo->AddEditorChildImmediate(rotationYAxis);
-			m_RotationGizmo->AddEditorChildImmediate(rotationZAxis);
-
-			m_TransformGizmo->AddEditorChildImmediate(m_RotationGizmo);
-
-			m_RotationGizmo->SetVisible(false);
-		}
-
-		// Scale gizmo
-		{
-			real boxScale = 0.5f;
-			real cylinderRadius = 0.35f;
-			real cylinderHeight = 1.8f;
-
-			// X Axis
-			EditorObject* scaleXAxis = new EditorObject("Scale gizmo x axis");
-			scaleXAxis->AddTag(m_ScaleGizmoTag);
-			scaleXAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)), false);
-			scaleXAxis->GetTransform()->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0), true);
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* xAxisMesh = scaleXAxis->SetMesh(new Mesh(scaleXAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "scale-gizmo-x.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatXID };
-			xAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Y Axis
-			EditorObject* scaleYAxis = new EditorObject("Scale gizmo y axis");
-			scaleYAxis->AddTag(m_ScaleGizmoTag);
-			scaleYAxis->GetTransform()->SetLocalPosition(glm::vec3(0, cylinderHeight, 0), true);
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* yAxisMesh = scaleYAxis->SetMesh(new Mesh(scaleYAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "scale-gizmo-y.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatYID };
-			yAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Z Axis
-			EditorObject* scaleZAxis = new EditorObject("Scale gizmo z axis");
-			scaleZAxis->AddTag(m_ScaleGizmoTag);
-			scaleZAxis->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)), false);
-			scaleZAxis->GetTransform()->SetLocalPosition(glm::vec3(0, 0, cylinderHeight), true);
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* zAxisMesh = scaleZAxis->SetMesh(new Mesh(scaleZAxis));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "scale-gizmo-z.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatZID };
-			zAxisMesh->LoadFromFile(meshCreateInfo);
-
-			// Center (all axes)
-			EditorObject* scaleAllAxes = new EditorObject("Scale gizmo all axes");
-			scaleAllAxes->AddTag(m_ScaleGizmoTag);
-
-			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
-			scaleAllAxes->SetCollisionShape(allAxesShape);
-
-			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoAllAxesRB->SetMass(0.0f);
-			gizmoAllAxesRB->SetKinematic(true);
-			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
-
-			Mesh* allAxesMesh = scaleAllAxes->SetMesh(new Mesh(scaleAllAxes));
-			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "scale-gizmo-all.glb";
-			meshCreateInfo.materialIDs = { m_TransformGizmoMatAllID };
-			allAxesMesh->LoadFromFile(meshCreateInfo);
-
-
-			m_ScaleGizmo = new EditorObject("Scale gizmo");
-
-			m_ScaleGizmo->AddEditorChildImmediate(scaleXAxis);
-			m_ScaleGizmo->AddEditorChildImmediate(scaleYAxis);
-			m_ScaleGizmo->AddEditorChildImmediate(scaleZAxis);
-			m_ScaleGizmo->AddEditorChildImmediate(scaleAllAxes);
-
-			m_TransformGizmo->AddEditorChildImmediate(m_ScaleGizmo);
-
-			m_ScaleGizmo->SetVisible(false);
-		}
 
 		m_TransformGizmo->Initialize();
 		m_TransformGizmo->PostInitialize();
@@ -1693,6 +1610,7 @@ namespace flex
 		currentScene->AddEditorObjectImmediate(m_TransformGizmo);
 
 		m_CurrentTransformGizmoState = TransformState::TRANSLATE;
+		UpdateGizmoVisibility();
 	}
 
 	void Editor::FadeOutHeadOnGizmos()
