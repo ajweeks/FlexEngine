@@ -48,8 +48,8 @@ namespace flex
 		m_MouseMovedCallback(this, &Editor::OnMouseMovedEvent),
 		m_KeyEventCallback(this, &Editor::OnKeyEvent),
 		m_ActionCallback(this, &Editor::OnActionEvent),
-		m_StartPointOnPlane(0.0f),
-		m_PreviousIntersectionPoint(0.0f),
+		m_StartPointOnPlane(VEC3_ZERO),
+		m_PreviousIntersectionPoint(VEC3_ZERO),
 		m_AngleSnap(glm::radians(45.0f))
 	{
 		SelectNone();
@@ -379,6 +379,7 @@ namespace flex
 		m_DraggingGizmoScaleLast1 = VEC3_ZERO;
 		m_DraggingGizmoScaleLast2 = VEC3_ZERO;
 		m_DraggingGizmoOffset = 0.0f;
+		m_DraggingGizmoOffset2D = VEC2_ZERO;
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
@@ -535,6 +536,24 @@ namespace flex
 					m_HoveringAxisIndex = Z_AXIS_IDX;
 					zMat->colourMultiplier = hoverColour;
 				}
+
+				std::vector<GameObject*> translationPlanes = m_TranslationGizmoPlanes->GetChildren();
+
+				if (pickedTransformGizmo == translationPlanes[X_AXIS_IDX] && xMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = YZ_AXIS_IDX;
+					xMat->colourMultiplier = hoverColour;
+				}
+				else if (pickedTransformGizmo == translationPlanes[Y_AXIS_IDX] && yMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = XZ_AXIS_IDX;
+					yMat->colourMultiplier = hoverColour;
+				}
+				else if (pickedTransformGizmo == translationPlanes[Z_AXIS_IDX] && zMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = XY_AXIS_IDX;
+					zMat->colourMultiplier = hoverColour;
+				}
 			} break;
 			case TransformState::ROTATE:
 			{
@@ -633,15 +652,15 @@ namespace flex
 		{
 		case TransformState::TRANSLATE:
 		{
-			if (m_HoveringAxisIndex == X_AXIS_IDX)
+			if (m_HoveringAxisIndex == X_AXIS_IDX || m_HoveringAxisIndex == YZ_AXIS_IDX)
 			{
 				xMat->colourMultiplier = selectedColour;
 			}
-			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
+			else if (m_HoveringAxisIndex == Y_AXIS_IDX || m_HoveringAxisIndex == XZ_AXIS_IDX)
 			{
 				yMat->colourMultiplier = selectedColour;
 			}
-			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
+			else if (m_HoveringAxisIndex == Z_AXIS_IDX || m_HoveringAxisIndex == XY_AXIS_IDX)
 			{
 				zMat->colourMultiplier = selectedColour;
 			}
@@ -737,8 +756,51 @@ namespace flex
 		{
 		case TransformState::TRANSLATE:
 		{
-			auto CalculateRayPlaneIntersection = [&](const glm::vec3& axis, const glm::vec3& planeN) {
-				return FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
+			// Axes for translating along X, Y, and Z respectively
+			const glm::vec3* axes[] = { &gizmoRight, &gizmoUp, &gizmoForward };
+
+			const bool bDraggingPlane = m_DraggingAxisIndex > Z_AXIS_IDX;
+
+			glm::vec3 deltaPosWS;
+
+			if (bDraggingPlane)
+			{
+				u32 axisIdx = m_DraggingAxisIndex - YZ_AXIS_IDX;
+
+				glm::vec3 planeN = *axes[axisIdx];
+				glm::vec3 planeT = *axes[(axisIdx + 1) % 3];
+				glm::vec3 planeB = *axes[(axisIdx + 2) % 3];
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersection(
+					rayStart,
+					rayEnd,
+					planeOrigin,
+					planeN,
+					planeT,
+					planeB,
+					m_SelectedObjectDragStartPos,
+					camForward,
+					m_DraggingGizmoOffset2D,
+					m_DraggingGizmoOffsetNeedsRecalculation,
+					m_PreviousIntersectionPoint);
+
+				// Dragging along plane
+				deltaPosWS = (intersectionPont - planeOrigin);
+			}
+			else
+			{
+				const glm::vec3* altAxes[] = { &gizmoUp, &gizmoForward, &gizmoRight };
+				const glm::vec3* planeNormals[] = { &gizmoForward, &gizmoRight, &gizmoUp };
+
+				// Dragging along single axis
+				u32 axisIdx = m_DraggingAxisIndex;
+				glm::vec3 axis = *axes[axisIdx];
+				glm::vec3 planeN = *planeNormals[axisIdx];
+				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+				{
+					planeN = *altAxes[axisIdx];
+				}
+
+				glm::vec3 constrainedIntersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
 					axis,
 					rayStart,
 					rayEnd,
@@ -749,22 +811,10 @@ namespace flex
 					m_DraggingGizmoOffset,
 					m_DraggingGizmoOffsetNeedsRecalculation,
 					m_PreviousIntersectionPoint);
-			};
-
-			// Axes for translating along X, Y, and Z respectively
-			const glm::vec3* axes[] = { &gizmoRight, &gizmoUp, &gizmoForward };
-			const glm::vec3* altAxes[] = { &gizmoUp, &gizmoForward, &gizmoRight };
-			const glm::vec3* planeNormals[] = { &gizmoForward, &gizmoRight, &gizmoUp };
-
-			glm::vec3 axis = *axes[m_DraggingAxisIndex];
-			glm::vec3 planeN = *planeNormals[m_DraggingAxisIndex];
-			if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-			{
-				planeN = *altAxes[m_DraggingAxisIndex];
+				deltaPosWS = (constrainedIntersectionPont - planeOrigin);
 			}
-			glm::vec3 intersectionPont = CalculateRayPlaneIntersection(axis, planeN);
-			glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
-			glm::vec3 dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
+
+			glm::vec3 deltaPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 
 			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 			{
@@ -773,7 +823,7 @@ namespace flex
 				bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
 				if (bObjectIsntChild)
 				{
-					gameObject->GetTransform()->Translate(dPos);
+					gameObject->GetTransform()->Translate(deltaPos);
 				}
 			}
 		} break;
@@ -1174,6 +1224,7 @@ namespace flex
 					m_DraggingGizmoScaleLast1 = VEC3_ZERO;
 					m_DraggingGizmoScaleLast2 = VEC3_ZERO;
 					m_DraggingGizmoOffset = 0.0f;
+					m_DraggingGizmoOffset2D = VEC2_ZERO;
 				}
 
 				if (m_LMBDownPos != glm::vec2i(-1))
@@ -1452,10 +1503,13 @@ namespace flex
 		meshCreateInfo.optionalRenderObjectCreateInfo = &gizmoCreateInfo;
 
 		m_TranslationGizmo = new EditorObject("Translation gizmo");
+		m_TranslationGizmoPlanes = new EditorObject("Translation gizmo planes");
 		m_RotationGizmo = new EditorObject("Rotation gizmo");
 		m_ScaleGizmo = new EditorObject("Scale gizmo");
 
 		btVector3 translationShapeSize = btVector3(0.35f, 1.8f, 0.35f);
+		btVector3 translationPlaneShapeSize = btVector3(0.75f, 0.75f, 0.05f);
+		real translationPlaneOffset = 3.0f;
 		btVector3 rotationShapeSize = btVector3(3.4f, 0.2f, 3.4f);
 		btVector3 scaleShapeSize = btVector3(0.35f, 1.8f, 0.35f);
 		btVector3 scaleAllShapeSize = btVector3(0.5f, 0.5f, 0.5f);
@@ -1502,6 +1556,37 @@ namespace flex
 				m_TransformGizmoMatZID,
 				&m_TranslationGizmoTag,
 				m_TranslationGizmo
+			},
+
+			{
+				"Translation gizmo plane yz",
+				MESH_DIRECTORY "translation-gizmo-plane-yz.glb",
+				glm::quat(glm::vec3(0, PI_DIV_TWO, 0)),
+				glm::vec3(0, translationPlaneOffset, translationPlaneOffset),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatXID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
+			},
+			{
+				"Translation gizmo plane xz",
+				MESH_DIRECTORY "translation-gizmo-plane-xz.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(translationPlaneOffset, 0, translationPlaneOffset),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatYID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
+			},
+			{
+				"Translation gizmo plane xy",
+				MESH_DIRECTORY "translation-gizmo-plane-xy.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(translationPlaneOffset, translationPlaneOffset, 0),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatZID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
 			},
 
 			{
@@ -1581,8 +1666,6 @@ namespace flex
 		{
 			EditorObject* editorObject = new EditorObject(createInfo.name);
 			editorObject->AddTag(*createInfo.tag);
-			editorObject->GetTransform()->SetLocalRotation(createInfo.orientation, false);
-			editorObject->GetTransform()->SetLocalPosition(createInfo.offset, true);
 
 			editorObject->SetCollisionShape(createInfo.collisionShape);
 
@@ -1594,11 +1677,22 @@ namespace flex
 			Mesh* subMesh = editorObject->SetMesh(new Mesh(editorObject));
 			meshCreateInfo.relativeFilePath = createInfo.meshName;
 			meshCreateInfo.materialIDs = { createInfo.matID };
+			RenderObjectCreateInfo renderObjCreateInfo = {};
+			if (createInfo.parent == m_TranslationGizmoPlanes)
+			{
+				renderObjCreateInfo.cullFace = CullFace::NONE;
+			}
+			meshCreateInfo.optionalRenderObjectCreateInfo = &renderObjCreateInfo;
+
 			subMesh->LoadFromFile(meshCreateInfo);
+
+			editorObject->GetTransform()->SetLocalRotation(createInfo.orientation, false);
+			editorObject->GetTransform()->SetLocalPosition(createInfo.offset, true);
 
 			createInfo.parent->AddEditorChildImmediate(editorObject);
 		}
 
+		m_TranslationGizmo->AddEditorChildImmediate(m_TranslationGizmoPlanes);
 		m_TransformGizmo->AddEditorChildImmediate(m_TranslationGizmo);
 		m_TransformGizmo->AddEditorChildImmediate(m_RotationGizmo);
 		m_TransformGizmo->AddEditorChildImmediate(m_ScaleGizmo);

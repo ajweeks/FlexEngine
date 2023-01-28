@@ -2604,15 +2604,12 @@ namespace flex
 		bool bRecalculateOffset,
 		glm::vec3& inOutPrevIntersectionPoint)
 	{
-		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 planeN = planeNorm;
-		if (glm::dot(planeN, cameraForward) > 0.0f)
+		real intersectionDistance = CalculateRayPlaneIntersection(rayOrigin, rayEnd, planeOrigin, planeNorm, cameraForward);
+
+		if (intersectionDistance >= 0.0f)
 		{
-			planeN = -planeN;
-		}
-		real intersectionDistance;
-		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
-		{
+			glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+
 			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
 
 			if (bRecalculateOffset) // Mouse was clicked or wrapped
@@ -2626,6 +2623,66 @@ namespace flex
 		}
 
 		return VEC3_ZERO;
+	}
+
+	glm::vec3 FlexEngine::CalculateRayPlaneIntersection(
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm,
+		const glm::vec3& planeTan,
+		const glm::vec3& planeBitan,
+		const glm::vec3& startPos,
+		const glm::vec3& cameraForward,
+		glm::vec2& inOutOffset2D,
+		bool bRecalculateOffset,
+		glm::vec3& inOutPrevIntersectionPoint)
+	{
+		real intersectionDistance = CalculateRayPlaneIntersection(rayOrigin, rayEnd, planeOrigin, planeNorm, cameraForward);
+
+		if (intersectionDistance >= 0.0f)
+		{
+			glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+
+			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+
+			if (bRecalculateOffset) // Mouse was clicked or wrapped
+			{
+				inOutOffset2D = glm::vec2(
+					glm::dot(intersectionPoint - startPos, planeTan),
+					glm::dot(intersectionPoint - startPos, planeBitan));
+			}
+			inOutPrevIntersectionPoint = intersectionPoint;
+
+			return planeOrigin +
+				(glm::dot(intersectionPoint - planeOrigin, planeTan) - inOutOffset2D.x) * planeTan +
+				(glm::dot(intersectionPoint - planeOrigin, planeBitan) - inOutOffset2D.y) * planeBitan;
+		}
+
+		return VEC3_ZERO;
+	}
+
+	real FlexEngine::CalculateRayPlaneIntersection(
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm,
+		const glm::vec3& cameraForward)
+	{
+		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+		glm::vec3 planeN = planeNorm;
+		if (glm::dot(planeN, cameraForward) > 0.0f)
+		{
+			planeN = -planeN;
+		}
+
+		real intersectionDistance;
+		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
+		{
+			return intersectionDistance;
+		}
+
+		return -1.0f;
 	}
 
 	void FlexEngine::GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd)

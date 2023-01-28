@@ -88,6 +88,7 @@ namespace flex
 		EditorObject* m_TransformGizmo = nullptr;
 		// Children of m_TransformGizmo
 		EditorObject* m_TranslationGizmo = nullptr;
+		EditorObject* m_TranslationGizmoPlanes = nullptr;
 		EditorObject* m_RotationGizmo = nullptr;
 		EditorObject* m_ScaleGizmo = nullptr;
 
@@ -110,6 +111,7 @@ namespace flex
 		glm::vec3 m_DraggingGizmoScaleLast1;
 		glm::vec3 m_DraggingGizmoScaleLast2;
 		real m_DraggingGizmoOffset = 0.0f; // How far along the axis the cursor was when pressed
+		glm::vec2 m_DraggingGizmoOffset2D; // How far along the axis the cursor was when pressed (when dragging a plane)
 		glm::vec3 m_PreviousIntersectionPoint;
 		bool m_DraggingGizmoOffsetNeedsRecalculation = true;
 		bool m_bFirstFrameDraggingRotationGizmo = false;

@@ -77,6 +77,28 @@ namespace flex
 			bool bRecalculateOffset,
 			glm::vec3& inOutPrevIntersectionPoint);
 
+		// Returns the intersection point of the given ray & plane
+		static glm::vec3 CalculateRayPlaneIntersection(
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeOrigin,
+			const glm::vec3& planeNorm,
+			const glm::vec3& planeTan,
+			const glm::vec3& planeBitan,
+			const glm::vec3& startPos,
+			const glm::vec3& cameraForward,
+			glm::vec2& inOutOffset2D,
+			bool bRecalculateOffset,
+			glm::vec3& inOutPrevIntersectionPoint);
+
+		// Returns the intersection point of the given ray & plane
+		static real CalculateRayPlaneIntersection(
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeOrigin,
+			const glm::vec3& planeNorm,
+			const glm::vec3& cameraForward);
+
 		static const u32 EngineVersionMajor;
 		static const u32 EngineVersionMinor;
 		static const u32 EngineVersionPatch;

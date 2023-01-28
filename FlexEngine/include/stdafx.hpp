@@ -261,6 +261,9 @@ namespace flex
 	const i32 Y_AXIS_IDX = 1;
 	const i32 Z_AXIS_IDX = 2;
 	const i32 ALL_AXES_IDX = 3;
+	const i32 YZ_AXIS_IDX = 4;
+	const i32 XZ_AXIS_IDX = 5;
+	const i32 XY_AXIS_IDX = 6;
 
 	// Globals
 	extern class Window* g_Window;
