@@ -98,6 +98,9 @@ namespace flex
 		MaterialID m_TransformGizmoMatYID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatZID = InvalidMaterialID;
 		MaterialID m_TransformGizmoMatAllID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatYZID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatXZID = InvalidMaterialID;
+		MaterialID m_TransformGizmoMatXYID = InvalidMaterialID;
 
 		TransformState m_CurrentTransformGizmoState = TransformState::TRANSLATE;
 

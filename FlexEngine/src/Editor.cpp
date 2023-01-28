@@ -77,6 +77,12 @@ namespace flex
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			matCreateInfo.name = "transform all";
 			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform yz";
+			m_TransformGizmoMatYZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform xz";
+			m_TransformGizmoMatXZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform xy";
+			m_TransformGizmoMatXYID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 95);
@@ -507,6 +513,9 @@ namespace flex
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 		glm::vec4 white(1.0f);
 
 		static const real gizmoHoverMultiplier = 0.6f;
@@ -539,20 +548,20 @@ namespace flex
 
 				std::vector<GameObject*> translationPlanes = m_TranslationGizmoPlanes->GetChildren();
 
-				if (pickedTransformGizmo == translationPlanes[X_AXIS_IDX] && xMat->colourMultiplier.a > alphaThreshold)
+				if (pickedTransformGizmo == translationPlanes[X_AXIS_IDX] && yzMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = YZ_AXIS_IDX;
-					xMat->colourMultiplier = hoverColour;
+					yzMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationPlanes[Y_AXIS_IDX] && yMat->colourMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationPlanes[Y_AXIS_IDX] && xzMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = XZ_AXIS_IDX;
-					yMat->colourMultiplier = hoverColour;
+					xzMat->colourMultiplier = hoverColour;
 				}
-				else if (pickedTransformGizmo == translationPlanes[Z_AXIS_IDX] && zMat->colourMultiplier.a > alphaThreshold)
+				else if (pickedTransformGizmo == translationPlanes[Z_AXIS_IDX] && xyMat->colourMultiplier.a > alphaThreshold)
 				{
 					m_HoveringAxisIndex = XY_AXIS_IDX;
-					zMat->colourMultiplier = hoverColour;
+					xyMat->colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::ROTATE:
@@ -627,6 +636,18 @@ namespace flex
 		{
 			allMat->colourMultiplier = white;
 		}
+		if (m_DraggingAxisIndex != YZ_AXIS_IDX && m_HoveringAxisIndex != YZ_AXIS_IDX)
+		{
+			yzMat->colourMultiplier = white;
+		}
+		if (m_DraggingAxisIndex != XZ_AXIS_IDX && m_HoveringAxisIndex != XZ_AXIS_IDX)
+		{
+			xzMat->colourMultiplier = white;
+		}
+		if (m_DraggingAxisIndex != XY_AXIS_IDX && m_HoveringAxisIndex != XY_AXIS_IDX)
+		{
+			xyMat->colourMultiplier = white;
+		}
 
 		return m_HoveringAxisIndex != -1;
 	}
@@ -647,22 +668,37 @@ namespace flex
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 
 		switch (m_CurrentTransformGizmoState)
 		{
 		case TransformState::TRANSLATE:
 		{
-			if (m_HoveringAxisIndex == X_AXIS_IDX || m_HoveringAxisIndex == YZ_AXIS_IDX)
+			if (m_HoveringAxisIndex == X_AXIS_IDX)
 			{
 				xMat->colourMultiplier = selectedColour;
 			}
-			else if (m_HoveringAxisIndex == Y_AXIS_IDX || m_HoveringAxisIndex == XZ_AXIS_IDX)
+			else if (m_HoveringAxisIndex == Y_AXIS_IDX)
 			{
 				yMat->colourMultiplier = selectedColour;
 			}
-			else if (m_HoveringAxisIndex == Z_AXIS_IDX || m_HoveringAxisIndex == XY_AXIS_IDX)
+			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
 				zMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == YZ_AXIS_IDX)
+			{
+				yzMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == XZ_AXIS_IDX)
+			{
+				xzMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == XY_AXIS_IDX)
+			{
+				xyMat->colourMultiplier = selectedColour;
 			}
 			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
@@ -1564,7 +1600,7 @@ namespace flex
 				glm::quat(glm::vec3(0, PI_DIV_TWO, 0)),
 				glm::vec3(0, translationPlaneOffset, translationPlaneOffset),
 				new btBoxShape(translationPlaneShapeSize),
-				m_TransformGizmoMatXID,
+				m_TransformGizmoMatYZID,
 				&m_TranslationGizmoTag,
 				m_TranslationGizmoPlanes
 			},
@@ -1574,7 +1610,7 @@ namespace flex
 				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
 				glm::vec3(translationPlaneOffset, 0, translationPlaneOffset),
 				new btBoxShape(translationPlaneShapeSize),
-				m_TransformGizmoMatYID,
+				m_TransformGizmoMatXZID,
 				&m_TranslationGizmoTag,
 				m_TranslationGizmoPlanes
 			},
@@ -1584,7 +1620,7 @@ namespace flex
 				glm::quat(glm::vec3(0, 0, 0)),
 				glm::vec3(translationPlaneOffset, translationPlaneOffset, 0),
 				new btBoxShape(translationPlaneShapeSize),
-				m_TransformGizmoMatZID,
+				m_TransformGizmoMatXYID,
 				&m_TranslationGizmoTag,
 				m_TranslationGizmoPlanes
 			},
@@ -1715,68 +1751,64 @@ namespace flex
 		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 
 		real camViewXAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetRight()));
 		real camViewYAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetUp()));
 		real camViewZAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetForward()));
 
+		auto CalcAlpha = [](real threshold, real camViewAlignment, real power, bool invert)
+		{
+			if (invert)
+			{
+				if (camViewAlignment <= threshold)
+				{
+					return Lerp(1.0f, 0.0f, glm::pow((threshold - camViewAlignment) / threshold, power));
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+			else
+			{
+				if (camViewAlignment >= threshold)
+				{
+					return Lerp(1.0f, 0.0f, glm::pow((camViewAlignment - threshold) / (1.0f - threshold), power));
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+		};
+
 		if (m_CurrentTransformGizmoState == TransformState::ROTATE)
 		{
-			real threshold = 0.1f;
-			real power = 0.05f;
-			if (camViewXAlignment <= threshold)
-			{
-				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
-			}
-			else
-			{
-				xMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewYAlignment <= threshold)
-			{
-				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
-			}
-			else
-			{
-				yMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewZAlignment <= threshold)
-			{
-				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
-			}
-			else
-			{
-				zMat->colourMultiplier.a = 1.0f;
-			}
+			const real threshold = 0.1f;
+			const real power = 0.05f;
+			xMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, true);
+			yMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, true);
+			zMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, true);
 		}
 		else
 		{
-			// TODO: Use different scheme for rotating when facing head-on (screen-space rather than world-space)
-			real threshold = 0.95f;
-			real power = 0.2f;
-			if (camViewXAlignment >= threshold)
 			{
-				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
+				const real threshold = 0.95f;
+				const real power = 0.2f;
+				xMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, false);
+				yMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, false);
+				zMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, false);
 			}
-			else
+
 			{
-				xMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewYAlignment >= threshold)
-			{
-				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
-			}
-			else
-			{
-				yMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewZAlignment >= threshold)
-			{
-				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
-			}
-			else
-			{
-				zMat->colourMultiplier.a = 1.0f;
+				const real threshold = 0.1f;
+				const real power = 0.1f;
+				yzMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, true);
+				xzMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, true);
+				xyMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, true);
 			}
 		}
 	}
