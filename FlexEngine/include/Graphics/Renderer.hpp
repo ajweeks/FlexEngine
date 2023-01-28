@@ -34,9 +34,9 @@ namespace flex
 		virtual void Destroy();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
-		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, VkSampler* inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
-		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkSampler* inSampler, VkFilter inFilter) = 0;
-		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkSampler* inSampler) = 0;
+		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
+		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) = 0;
+		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
@@ -147,11 +147,10 @@ namespace flex
 
 		virtual Texture* CreateTexture(const std::string& textureName) = 0;
 
-		// TODO: Use render-agnostic handles
-		virtual VkSampler* GetSamplerLinearRepeat() = 0;
-		virtual VkSampler* GetSamplerLinearClampToEdge() = 0;
-		virtual VkSampler* GetSamplerLinearClampToBorder() = 0;
-		virtual VkSampler* GetSamplerNearestClampToEdge() = 0;
+		virtual HTextureSampler GetSamplerLinearRepeat() = 0;
+		virtual HTextureSampler GetSamplerLinearClampToEdge() = 0;
+		virtual HTextureSampler GetSamplerLinearClampToBorder() = 0;
+		virtual HTextureSampler GetSamplerNearestClampToEdge() = 0;
 
 		virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) = 0;
 		virtual void UnregisterGPUBuffer(GPUBufferID bufferID) = 0;

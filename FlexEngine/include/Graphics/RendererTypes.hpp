@@ -610,6 +610,8 @@ namespace flex
 		bool bIsArray = false;
 	};
 
+	using HTextureSampler = void*;
+
 	template<typename UniformType>
 	struct ShaderUniformContainer
 	{

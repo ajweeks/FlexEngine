@@ -230,7 +230,7 @@ namespace flex
 
 			struct SamplerCreateInfo
 			{
-				VkSampler* sampler = nullptr;
+				HTextureSampler* sampler = nullptr;
 
 				real maxAnisotropy = 16.0f;
 				real minLod = 0.0f;
@@ -280,7 +280,7 @@ namespace flex
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-				VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, i32 layerCount = 1);
+				VkFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount = 1);
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
@@ -291,25 +291,25 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at relativeFilePath
 			 * Returns size of image in bytes
 			 */
-			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, VkSampler* inSampler, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
+			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, VkSampler* inSampler, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, HTextureSampler inSampler, bool bEnableTrilinearFiltering);
 
 			void GenerateMipmaps();
 
@@ -320,7 +320,7 @@ namespace flex
 			VDeleter<VkImageView> imageView;
 
 			// References sampler being used (owned by renderer)
-			VkSampler* sampler;
+			HTextureSampler sampler;
 
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
@@ -584,7 +584,7 @@ namespace flex
 		struct ImageDescriptorInfo
 		{
 			VkImageView imageView = VK_NULL_HANDLE;
-			VkSampler imageSampler = VK_NULL_HANDLE;
+			HTextureSampler imageSampler = nullptr;
 		};
 
 		struct DescriptorSetCreateInfo

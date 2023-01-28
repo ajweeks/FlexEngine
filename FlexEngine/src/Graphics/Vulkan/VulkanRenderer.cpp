@@ -343,16 +343,16 @@ namespace flex
 				{
 					u32 blankData = 0xFFFFFFFF;
 					m_BlankTexture = CreateTexture("blank");
-					((VulkanTexture*)m_BlankTexture)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, &m_SamplerLinearRepeat);
+					((VulkanTexture*)m_BlankTexture)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, m_SamplerLinearRepeat);
 					blankTextureID = g_ResourceManager->AddLoadedTexture(m_BlankTexture);
 
 					m_BlankTextureArr = CreateTexture("blank_arr");
 					m_BlankTextureArr->bIsArray = true;
-					((VulkanTexture*)m_BlankTextureArr)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, &m_SamplerLinearRepeat);
+					((VulkanTexture*)m_BlankTextureArr)->CreateFromMemory(&blankData, sizeof(blankData), 1, 1, 4, VK_FORMAT_R8G8B8A8_UNORM, 1, m_SamplerLinearRepeat);
 					blankTextureArrID = g_ResourceManager->AddLoadedTexture(m_BlankTextureArr);
 				}
 
-				alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", &m_SamplerLinearRepeat, false, false, false);
+				alphaBGTextureID = InitializeTextureFromFile(TEXTURE_DIRECTORY "alpha-bg.png", m_SamplerLinearRepeat, false, false, false);
 				pointLightIconID = g_ResourceManager->GetOrLoadIcon(PointLightSID, 256);
 				spotLightIconID = g_ResourceManager->GetOrLoadIcon(SpotLightSID, 256);
 				areaLightIconID = g_ResourceManager->GetOrLoadIcon(AreaLightSID, 256);
@@ -420,8 +420,8 @@ namespace flex
 
 			CreateAllDynamicVertexAndIndexBuffers();
 
-			m_LTCMatricesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_mat.hdr", &m_SamplerLinearClampToEdge, false, false, true);
-			m_LTCAmplitudesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_amp.hdr", &m_SamplerLinearClampToEdge, false, false, true);
+			m_LTCMatricesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_mat.hdr", m_SamplerLinearClampToEdge, false, false, true);
+			m_LTCAmplitudesID = InitializeTextureFromFile(TEXTURE_DIRECTORY "ltc_amp.hdr", m_SamplerLinearClampToEdge, false, false, true);
 
 			CHECK_EQ(m_DebugRenderer, nullptr);
 			m_DebugRenderer = new VulkanDebugRenderer();
@@ -987,7 +987,7 @@ namespace flex
 						texture = (VulkanTexture*)CreateTexture(std::string(textureInfo.textureUniform->DBG_name));
 						texture->bHDR = textureInfo.bHDR;
 						bool bGenerateMipChain = false;
-						VkDeviceSize createdTextureSize = texture->CreateFromFile(textureInfo.relativeFilePath, &m_SamplerLinearRepeat, textureInfo.format, bGenerateMipChain);
+						VkDeviceSize createdTextureSize = texture->CreateFromFile(textureInfo.relativeFilePath, m_SamplerLinearRepeat, textureInfo.format, bGenerateMipChain);
 
 						if (createdTextureSize != 0)
 						{
@@ -1028,7 +1028,7 @@ namespace flex
 				u32 channelCount = 4;
 				VulkanTexture* cubemapTexture = (VulkanTexture*)CreateTexture("Cubemap");
 				cubemapTexture->CreateCubemapEmpty((u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y,
-					channelCount, VK_FORMAT_R8G8B8A8_UNORM, &m_SamplerLinearClampToEdge, mipLevels, createInfo->enableCubemapTrilinearFiltering);
+					channelCount, VK_FORMAT_R8G8B8A8_UNORM, m_SamplerLinearClampToEdge, mipLevels, createInfo->enableCubemapTrilinearFiltering);
 
 				//texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED; // TODO:Set this in creation function?
 
@@ -1043,7 +1043,7 @@ namespace flex
 				u32 channelCount = 4;
 				VulkanTexture* cubemapTexture = (VulkanTexture*)CreateTexture("HDR Cubemap");
 				cubemapTexture->CreateCubemapEmpty((u32)createInfo->generatedCubemapSize.x, (u32)createInfo->generatedCubemapSize.y,
-					channelCount, VK_FORMAT_R16G16B16A16_SFLOAT, &m_SamplerLinearClampToEdge, mipLevels, false);
+					channelCount, VK_FORMAT_R16G16B16A16_SFLOAT, m_SamplerLinearClampToEdge, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(cubemapTexture);
 				material->textures.SetUniform(&U_CUBEMAP_SAMPLER, cubemapTexture);
 			}
@@ -1066,7 +1066,7 @@ namespace flex
 					(u32)createInfo->generatedIrradianceCubemapSize.x,
 					(u32)createInfo->generatedIrradianceCubemapSize.y,
 					channelCount,
-					VK_FORMAT_R16G16B16A16_SFLOAT, &m_SamplerLinearClampToEdge, mipLevels, false);
+					VK_FORMAT_R16G16B16A16_SFLOAT, m_SamplerLinearClampToEdge, mipLevels, false);
 				g_ResourceManager->AddLoadedTexture(irradianceTexture);
 				material->textures.SetUniform(&U_IRRADIANCE_SAMPLER, irradianceTexture);
 			}
@@ -1089,7 +1089,7 @@ namespace flex
 					(u32)createInfo->generatedPrefilteredCubemapSize.x,
 					(u32)createInfo->generatedPrefilteredCubemapSize.y,
 					channelCount,
-					VK_FORMAT_R16G16B16A16_SFLOAT, &m_SamplerLinearClampToEdge, mipLevels, true);
+					VK_FORMAT_R16G16B16A16_SFLOAT, m_SamplerLinearClampToEdge, mipLevels, true);
 				g_ResourceManager->AddLoadedTexture(prefilterTexture);
 				material->textures.SetUniform(&U_PREFILTER_MAP, prefilterTexture);
 			}
@@ -1113,7 +1113,7 @@ namespace flex
 					u32 bufferSize = (u32)ssaoNoise.size() * sizeof(glm::vec4);
 					u32 channelCount = 1;
 					((VulkanTexture*)m_NoiseTexture)->CreateFromMemory(buffer, bufferSize, SSAO_NOISE_DIM, SSAO_NOISE_DIM, channelCount,
-						VK_FORMAT_R32G32B32A32_SFLOAT, 1, &m_SamplerLinearRepeat);
+						VK_FORMAT_R32G32B32A32_SFLOAT, 1, m_SamplerLinearRepeat);
 					g_ResourceManager->AddLoadedTexture(m_NoiseTexture);
 				}
 
@@ -1128,7 +1128,7 @@ namespace flex
 			return matID;
 		}
 
-		TextureID VulkanRenderer::InitializeTextureFromFile(const std::string& relativeFilePath, VkSampler* inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
+		TextureID VulkanRenderer::InitializeTextureFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR)
 		{
 			PROFILE_AUTO("InitializeTextureFromFile");
 
@@ -1147,7 +1147,7 @@ namespace flex
 			return textureID;
 		}
 
-		TextureID VulkanRenderer::InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkSampler* inSampler, VkFilter inFilter)
+		TextureID VulkanRenderer::InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter)
 		{
 			PROFILE_AUTO("InitializeTextureFromMemory");
 
@@ -1158,7 +1158,7 @@ namespace flex
 			return textureID;
 		}
 
-		TextureID VulkanRenderer::InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkSampler* inSampler)
+		TextureID VulkanRenderer::InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler)
 		{
 			PROFILE_AUTO("InitializeTextureArrayFromMemory");
 
@@ -4015,7 +4015,7 @@ namespace flex
 				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
 					VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
-					if (fontTex->CreateFromFile(fontMetaData.renderedTextureFilePath, &m_SamplerLinearClampToEdge, fontTexFormat) != 0)
+					if (fontTex->CreateFromFile(fontMetaData.renderedTextureFilePath, m_SamplerLinearClampToEdge, fontTexFormat) != 0)
 					{
 						glm::vec2 fontTexSize((real)fontTex->width, (real)fontTex->height);
 						bUsingPreRenderedTexture = true;
@@ -4059,7 +4059,7 @@ namespace flex
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
 
 				VulkanTexture* fontTexColAttachment = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
-				fontTexColAttachment->CreateEmpty(textureSize.x, textureSize.y, 4, fontTexFormat, &m_SamplerLinearClampToEdge, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+				fontTexColAttachment->CreateEmpty(textureSize.x, textureSize.y, 4, fontTexFormat, m_SamplerLinearClampToEdge, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 				VulkanMaterial* computeSDFMaterial = (VulkanMaterial*)m_Materials[m_ComputeSDFMatID];
@@ -4165,7 +4165,7 @@ namespace flex
 					++dynamicOffsetIndex;
 
 					// TODO: Pass in command buffer to avoid temporary?
-					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), width, height, 1, VK_FORMAT_R8_UNORM, 1, &m_SamplerLinearClampToBorder);
+					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), width, height, 1, VK_FORMAT_R8_UNORM, 1, m_SamplerLinearClampToBorder);
 
 					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
 					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
@@ -4192,7 +4192,7 @@ namespace flex
 					descSetCreateInfo.descriptorSetLayout = descSetLayout;
 					descSetCreateInfo.shaderID = computeSDFShaderID;
 					descSetCreateInfo.gpuBufferList = &computeSDFMaterial->gpuBufferList;
-					descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, *highResTex->sampler });
+					descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
 					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 					// TODO: Allocate from temporary pool
 					VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
@@ -4274,24 +4274,24 @@ namespace flex
 			return new VulkanTexture(m_VulkanDevice, m_GraphicsQueue, textureName);
 		}
 
-		VkSampler* VulkanRenderer::GetSamplerLinearRepeat()
+		HTextureSampler VulkanRenderer::GetSamplerLinearRepeat()
 		{
-			return &m_SamplerLinearRepeat;
+			return m_SamplerLinearRepeat;
 		}
 
-		VkSampler* VulkanRenderer::GetSamplerLinearClampToEdge()
+		HTextureSampler VulkanRenderer::GetSamplerLinearClampToEdge()
 		{
-			return &m_SamplerLinearClampToEdge;
+			return m_SamplerLinearClampToEdge;
 		}
 
-		VkSampler* VulkanRenderer::GetSamplerLinearClampToBorder()
+		HTextureSampler VulkanRenderer::GetSamplerLinearClampToBorder()
 		{
-			return &m_SamplerLinearClampToBorder;
+			return m_SamplerLinearClampToBorder;
 		}
 
-		VkSampler* VulkanRenderer::GetSamplerNearestClampToEdge()
+		HTextureSampler VulkanRenderer::GetSamplerNearestClampToEdge()
 		{
-			return &m_SamplerNearestClampToEdge;
+			return m_SamplerNearestClampToEdge;
 		}
 
 		GPUBufferID VulkanRenderer::RegisterGPUBuffer(GPUBuffer* uniformBuffer)
@@ -4738,7 +4738,7 @@ namespace flex
 						info.descriptorSetLayout = descSetLayout;
 						info.shaderID = fontMaterial->shaderID;
 						info.gpuBufferList = &fontMaterial->gpuBufferList;
-						info.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, *fontTex->sampler });
+						info.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ fontTex->imageView, fontTex->sampler });
 						FillOutBufferDescriptorInfos(&info.bufferDescriptors, info.gpuBufferList, info.shaderID);
 						VkDescriptorSet* descSet = (VkDescriptorSet*)&font->userData;
 						*descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&info);
@@ -5144,7 +5144,7 @@ namespace flex
 			else
 			{
 				VulkanTexture* texture = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(textureID);
-				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, *texture->sampler });
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 			VkDescriptorSet descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
@@ -5345,7 +5345,7 @@ namespace flex
 				m_BRDFTexture = (VulkanTexture*)CreateTexture("BRDF");
 				u32 channelCount = 2;
 				m_BRDFTexture->CreateEmpty(m_BRDFSize.x, m_BRDFSize.y, channelCount,
-					VK_FORMAT_R16G16_SFLOAT, &m_SamplerLinearRepeat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+					VK_FORMAT_R16G16_SFLOAT, m_SamplerLinearRepeat, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 				g_ResourceManager->AddLoadedTexture(m_BRDFTexture);
 			}
 		}
@@ -6127,11 +6127,11 @@ namespace flex
 					VulkanTexture* texture = (VulkanTexture*)texturePair.object;
 					if (texture != nullptr)
 					{
-						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ texture->imageView, *texture->sampler });
+						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 					}
 					else
 					{
-						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ ((VulkanTexture*)m_BlankTexture)->imageView, *((VulkanTexture*)m_BlankTexture)->sampler });
+						imageDescriptors->SetUniform(texturePair.uniform, ImageDescriptorInfo{ ((VulkanTexture*)m_BlankTexture)->imageView, ((VulkanTexture*)m_BlankTexture)->sampler });
 						PrintWarn("Invalid texture passed to FillOutTextureDescriptorInfos\n");
 					}
 				}
@@ -6181,8 +6181,8 @@ namespace flex
 				CHECK(shader->textureUniforms.HasUniform(&U_LTC_AMPLITUDES_SAMPLER));
 				VulkanTexture* ltcMatrices = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCMatricesID);
 				VulkanTexture* ltcAmplitudes = (VulkanTexture*)g_ResourceManager->GetLoadedTexture(m_LTCAmplitudesID);
-				imageDescriptors->SetUniform(&U_LTC_MATRICES_SAMPLER, ImageDescriptorInfo{ ltcMatrices->imageView, *ltcMatrices->sampler });
-				imageDescriptors->SetUniform(&U_LTC_AMPLITUDES_SAMPLER, ImageDescriptorInfo{ ltcAmplitudes->imageView, *ltcAmplitudes->sampler });
+				imageDescriptors->SetUniform(&U_LTC_MATRICES_SAMPLER, ImageDescriptorInfo{ ltcMatrices->imageView, ltcMatrices->sampler });
+				imageDescriptors->SetUniform(&U_LTC_AMPLITUDES_SAMPLER, ImageDescriptorInfo{ ltcAmplitudes->imageView, ltcAmplitudes->sampler });
 			}
 
 			if (shader->textureUniforms.HasUniform(&U_RANDOM_TABLES))
@@ -6193,7 +6193,7 @@ namespace flex
 					PrintError("Terrain random tables texture is not set!\n");
 					texture = (VulkanTexture*)m_BlankTextureArr;
 				}
-				imageDescriptors->SetUniform(&U_RANDOM_TABLES, ImageDescriptorInfo{ texture->imageView, *texture->sampler });
+				imageDescriptors->SetUniform(&U_RANDOM_TABLES, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
 		}
 
@@ -6841,58 +6841,58 @@ namespace flex
 
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = m_SamplerDepth.replace();
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerDepth.replace();
+				samplerCreateInfo.DBG_Name = "Depth sampler";
 				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 				samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
-				SetSamplerName(m_VulkanDevice, m_SamplerDepth, "Depth sampler");
 			}
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = m_SamplerLinearRepeat.replace();
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerLinearRepeat.replace();
+				samplerCreateInfo.DBG_Name = "Linear repeat sampler";
 				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
-				SetSamplerName(m_VulkanDevice, m_SamplerLinearRepeat, "Linear repeat sampler");
 
 			}
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = m_SamplerLinearClampToEdge.replace();
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerLinearClampToEdge.replace();
+				samplerCreateInfo.DBG_Name = "Linear clamp to edge sampler";
 				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
-				SetSamplerName(m_VulkanDevice, m_SamplerLinearClampToEdge, "Linear clamp to edge sampler");
 
 			}
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = m_SamplerLinearClampToBorder.replace();
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerLinearClampToBorder.replace();
+				samplerCreateInfo.DBG_Name = "Linear clamp to border sampler";
 				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 				samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
-				SetSamplerName(m_VulkanDevice, m_SamplerLinearClampToBorder, "Linear clamp to border sampler");
 
 			}
 			{
 				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
-				samplerCreateInfo.sampler = m_SamplerNearestClampToEdge.replace();
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerNearestClampToEdge.replace();
+				samplerCreateInfo.DBG_Name = "Nearest clamp sampler";
 				samplerCreateInfo.magFilter = VK_FILTER_NEAREST;
 				samplerCreateInfo.minFilter = VK_FILTER_NEAREST;
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
-				SetSamplerName(m_VulkanDevice, m_SamplerNearestClampToEdge, "Nearest clamp sampler");
 			}
 		}
 

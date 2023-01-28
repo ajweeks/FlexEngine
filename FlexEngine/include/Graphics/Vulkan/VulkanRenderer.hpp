@@ -42,9 +42,9 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, VkSampler* inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
-			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkSampler* inSampler, VkFilter inFilter) override;
-			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkSampler* inSampler) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
+			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) override;
+			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 			virtual void OnTextureDestroyed(TextureID textureID) override;
@@ -140,10 +140,10 @@ namespace flex
 
 			virtual Texture* CreateTexture(const std::string& textureName) override;
 
-			virtual VkSampler* GetSamplerLinearRepeat() override;
-			virtual VkSampler* GetSamplerLinearClampToEdge() override;
-			virtual VkSampler* GetSamplerLinearClampToBorder() override;
-			virtual VkSampler* GetSamplerNearestClampToEdge() override;
+			virtual HTextureSampler GetSamplerLinearRepeat() override;
+			virtual HTextureSampler GetSamplerLinearClampToEdge() override;
+			virtual HTextureSampler GetSamplerLinearClampToBorder() override;
+			virtual HTextureSampler GetSamplerNearestClampToEdge() override;
 
 			virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) override;
 			virtual void UnregisterGPUBuffer(GPUBufferID bufferID) override;

@@ -306,7 +306,7 @@ namespace flex
 		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-			VkFormat inFormat, i32 inMipLevels, VkSampler* inSampler, i32 layerCount /* = 1 */)
+			VkFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount /* = 1 */)
 		{
 			CHECK(inWidth != 0u && inHeight != 0u);
 			CHECK_NE(buffer, nullptr);
@@ -388,7 +388,7 @@ namespace flex
 			height = inHeight;
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels /* = 1 */, VkImageUsageFlags inUsage /* = VK_IMAGE_USAGE_SAMPLED_BIT */)
+		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels /* = 1 */, VkImageUsageFlags inUsage /* = VK_IMAGE_USAGE_SAMPLED_BIT */)
 		{
 			PROFILE_AUTO("VulkanTexture CreateEmpty");
 
@@ -476,7 +476,7 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, VkSampler* inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
 
@@ -511,7 +511,7 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, VkSampler* inSampler, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, HTextureSampler inSampler, bool bEnableTrilinearFiltering)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
 
@@ -876,7 +876,7 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateFromFile(
 			const std::string& inRelativeFilePath,
-			VkSampler* inSampler,
+			HTextureSampler inSampler,
 			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
 			bool bGenerateFullMipChain /* = false */)
 		{
@@ -1102,8 +1102,8 @@ namespace flex
 			samplerInfo.borderColor = createInfo.borderColor;
 			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, createInfo.sampler));
-			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
+			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, (VkSampler*)createInfo.sampler));
+			VulkanRenderer::SetSamplerName(device, *(VkSampler*)createInfo.sampler, createInfo.DBG_Name);
 		}
 
 		bool VulkanTexture::SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat)
@@ -2578,7 +2578,7 @@ namespace flex
 					imageInfo.imageView = imageDescInfo.imageView;
 					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
 					{
-						imageInfo.sampler = imageDescInfo.imageSampler;
+						imageInfo.sampler = (VkSampler)imageDescInfo.imageSampler;
 					}
 					else
 					{
@@ -2589,7 +2589,7 @@ namespace flex
 				{
 					VulkanTexture* blankTexture = ((VulkanTexture*)g_Renderer->m_BlankTexture);
 					imageInfo.imageView = blankTexture->imageView;
-					imageInfo.sampler = *blankTexture->sampler;
+					imageInfo.sampler = (VkSampler)blankTexture->sampler;
 				}
 				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
 
