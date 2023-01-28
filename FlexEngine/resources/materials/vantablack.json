@@ -5,7 +5,6 @@
 		"name" : "vantablack",
 		"shader" : "colour",
 		"const albedo" : "0.000,0.000,0.000",
-		"const emissive" : "0.000,0.000,0.000",
 		"colour multiplier" : "0.000,0.000,0.000,1.000"
 	}
 }

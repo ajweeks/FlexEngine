@@ -3,7 +3,6 @@
 	"material" : 
 	{
 		"name" : "cloud",
-		"shader" : "cloud",
-		"const emissive" : "0.000,0.000,0.000"
+		"shader" : "cloud"
 	}
 }

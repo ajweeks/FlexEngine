@@ -4,7 +4,6 @@
 	{
 		"name" : "stripes",
 		"shader" : "pbr",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 1.000000,
 		"enable albedo sampler" : true,
 		"albedo texture filepath" : "v-stripes.png"

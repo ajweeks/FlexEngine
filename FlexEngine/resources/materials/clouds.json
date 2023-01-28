@@ -4,7 +4,6 @@
 	{
 		"name" : "clouds",
 		"shader" : "pbr",
-		"const emissive" : "0.000,0.000,0.000",
 		"const roughness" : 0.890000,
 		"enable albedo sampler" : true,
 		"albedo texture filepath" : "clouds1.png"
