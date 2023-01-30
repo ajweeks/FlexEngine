@@ -6,6 +6,10 @@
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include "stb_image.h"
+IGNORE_WARNINGS_POP
+
 namespace flex
 {
 	bool operator==(const RoadSegment_GPU& lhs, const RoadSegment_GPU& rhs)
@@ -768,6 +772,60 @@ namespace flex
 	Texture::Texture(const std::string& name) :
 		name(name)
 	{
+	}
+
+	bool Texture::LoadData(i32 requestedChannelCount)
+	{
+		PROFILE_AUTO("Load texture data");
+
+		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
+
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Loading texture %s\n", fileName.c_str());
+		}
+
+		stbi_set_flip_vertically_on_load(bFlipVertically);
+
+		i32 tempW, tempH, tempC;
+		if (bHDR)
+		{
+			pixels = (u8*)stbi_loadf(relativeFilePath.c_str(),
+				&tempW,
+				&tempH,
+				&tempC,
+				(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+		}
+		else
+		{
+			pixels = stbi_load(relativeFilePath.c_str(),
+				&tempW,
+				&tempH,
+				&tempC,
+				(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+
+		}
+
+		if (pixels == nullptr)
+		{
+			return false;
+		}
+
+		width = (u32)tempW;
+		height = (u32)tempH;
+
+		channelCount = 4;
+
+		CHECK_LE(width, MAX_TEXTURE_DIM);
+		CHECK_LE(height, MAX_TEXTURE_DIM);
+
+		return true;
+	}
+
+	void Texture::FreeData()
+	{
+		stbi_image_free(pixels);
+		pixels = nullptr;
 	}
 
 	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)

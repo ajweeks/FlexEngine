@@ -299,7 +299,17 @@ namespace flex
 		{
 			if (!fileName.empty())
 			{
-				CreateFromFile(relativeFilePath, sampler, imageFormat, mipLevels > 1);
+				if (!LoadFromFile(relativeFilePath, sampler, imageFormat))
+				{
+					PrintError("Failed to reload texture at %s\n", relativeFilePath.c_str());
+					return;
+				}
+
+				if (Create(mipLevels > 1) == 0)
+				{
+					PrintError("Failed to reload texture resources at %s\n", relativeFilePath.c_str());
+					return;
+				}
 
 				g_Renderer->OnTextureReloaded(this);
 			}
@@ -511,7 +521,7 @@ namespace flex
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, HTextureSampler inSampler, bool bEnableTrilinearFiltering)
+		bool VulkanTexture::LoadCubemapFromTextures(const std::array<std::string, 6>& filePaths, HTextureSampler inSampler)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
 
@@ -533,7 +543,7 @@ namespace flex
 			if (fileName.empty())
 			{
 				PrintError("CreateCubemapFromTextures was given an empty filepath!\n");
-				return 0;
+				return false;
 			}
 
 			if (name.empty())
@@ -543,15 +553,16 @@ namespace flex
 
 			if (g_bEnableLogging_Loading)
 			{
-				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
+				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n",
+					filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
 			}
 
 			images.reserve(filePaths.size());
 			for (const std::string& path : filePaths)
 			{
 				int w, h, c;
-				unsigned char* pixels = stbi_load(path.c_str(), &w, &h, &c, STBI_rgb_alpha);
-				if (!pixels)
+				unsigned char* imagePixels = stbi_load(path.c_str(), &w, &h, &c, STBI_rgb_alpha);
+				if (imagePixels != nullptr)
 				{
 					const char* failureReasonStr = stbi_failure_reason();
 					PrintError("CreateCubemapFromTextures failed to load image %s, failure reason: %s\n", path.c_str(), failureReasonStr);
@@ -565,22 +576,27 @@ namespace flex
 				channelCount = (u32)c;
 
 				i32 size = width * height * channelCount * sizeof(unsigned char);
-				images.push_back({ pixels, (i32)width, (i32)height, (i32)channelCount, size });
+				images.push_back({ imagePixels, (i32)width, (i32)height, (i32)channelCount, size });
 				totalSize += size;
 			}
 
 			if (totalSize == 0)
 			{
 				PrintError("CreateCubemapFromTextures failed to load cubemap textures (%s)\n", fileName.c_str());
-				return 0;
+				return false;
 			}
 
-			unsigned char* pixels = (unsigned char*)malloc(totalSize);
+			pixels = (unsigned char*)malloc(totalSize);
 			if (pixels == nullptr)
 			{
 				PrintError("CreateCubemapFromTextures Failed to allocate %u bytes\n", totalSize);
-				// NOTE: Leak of all pixel data
-				return 0;
+
+				for (Image& cubeImage : images)
+				{
+					stbi_image_free(cubeImage.pixels);
+				}
+
+				return false;
 			}
 
 			unsigned char* pixelData = pixels;
@@ -591,6 +607,14 @@ namespace flex
 				pixelData += (cubeImage.size / sizeof(unsigned char));
 				stbi_image_free(cubeImage.pixels);
 			}
+
+			return true;
+		}
+
+
+		VkDeviceSize VulkanTexture::CreateCubemap(VkFormat inFormat, bool bEnableTrilinearFiltering)
+		{
+			u32 totalSize = width * height * channelCount * sizeof(unsigned char) * 6;
 
 			// Create a host-visible staging buffer that contains the raw image data
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
@@ -609,7 +633,6 @@ namespace flex
 			createInfo.imageView = &imageView;
 			createInfo.totalSize = totalSize;
 			createInfo.format = inFormat;
-			createInfo.filePaths = filePaths;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
 			createInfo.DBG_Name = name.c_str();
 
@@ -874,15 +897,12 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromFile(
+		bool VulkanTexture::LoadFromFile(
 			const std::string& inRelativeFilePath,
 			HTextureSampler inSampler,
-			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
-			bool bGenerateFullMipChain /* = false */)
+			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */)
 		{
-			PROFILE_AUTO("VulkanTexture CreateFromFile");
-
-			PROFILE_BEGIN("Load");
+			PROFILE_AUTO("VulkanTexture LoadFromFile");
 
 			sampler = inSampler;
 
@@ -900,41 +920,14 @@ namespace flex
 
 			width = height = channelCount = 0;
 
-			// TODO: Make HDRImage subclass of Image class to unify code paths here
-			HDRImage hdrImage;
-			unsigned char* pixels = nullptr;
-
-			// TODO: Unify hdr path with non-hdr & cubemap paths
-			if (bHDR)
-			{
-				if (hdrImage.Load(relativeFilePath, 4, false))
-				{
-					width = hdrImage.width;
-					height = hdrImage.height;
-					channelCount = hdrImage.channelCount;
-				}
-			}
-			else
-			{
-				int w, h, c;
-				pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
-
-				if (pixels != nullptr)
-				{
-					width = (u32)w;
-					height = (u32)h;
-					channelCount = (u32)c;
-				}
-			}
-
-			PROFILE_END("Load");
+			LoadData(4);
 
 			if (width == 0 || height == 0 || channelCount == 0 ||
-				((bHDR && hdrImage.pixels == nullptr) || (!bHDR && pixels == nullptr)))
+				pixels == nullptr)
 			{
 				const char* failureReasonStr = stbi_failure_reason();
 				PrintError("Failed to load texture data from %s error: %s\n", relativeFilePath.c_str(), failureReasonStr);
-				return 0;
+				return false;
 			}
 
 			channelCount = 4; // ??
@@ -945,6 +938,11 @@ namespace flex
 			}
 			imageFormat = inFormat;
 
+			return true;
+		}
+
+		VkDeviceSize VulkanTexture::Create(bool bGenerateFullMipChain /* = false */)
+		{
 			if (bGenerateFullMipChain)
 			{
 				bool bFormatSupportsBlit = true;
@@ -1012,23 +1010,8 @@ namespace flex
 
 			void* data = nullptr;
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
-			if (bHDR)
-			{
-				memcpy(data, hdrImage.pixels, (size_t)pixelBufSize);
-			}
-			else
-			{
-				memcpy(data, pixels, (size_t)pixelBufSize);
-			}
-
-			if (bHDR)
-			{
-				hdrImage.Free();
-			}
-			else
-			{
-				stbi_image_free(pixels);
-			}
+			memcpy(data, pixels, (size_t)pixelBufSize);
+			FreeData();
 
 			// Upload data via staging buffer
 			{

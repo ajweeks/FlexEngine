@@ -596,9 +596,13 @@ namespace flex
 
 		virtual void Reload() = 0;
 
+		bool LoadData(i32 requestedChannelCount);
+		void FreeData();
+
 		u32 width = 0;
 		u32 height = 0;
 		u32 channelCount = 0;
+		u8* pixels = nullptr; // Only valid in between load and creation
 		std::string name;
 		std::string relativeFilePath;
 		std::string fileName;

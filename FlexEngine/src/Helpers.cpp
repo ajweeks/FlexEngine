@@ -116,49 +116,6 @@ namespace flex
 		image.pixels = nullptr;
 	}
 
-	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
-	{
-		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
-
-		filePath = hdrFilePath;
-
-		if (g_bEnableLogging_Loading)
-		{
-			const std::string fileName = StripLeadingDirectories(hdrFilePath);
-			Print("Loading HDR texture %s\n", fileName.c_str());
-		}
-
-		stbi_set_flip_vertically_on_load(bFlipVertically);
-
-		i32 tempW, tempH, tempC;
-		pixels = stbi_loadf(filePath.c_str(),
-			&tempW,
-			&tempH,
-			&tempC,
-			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
-
-		if (!pixels)
-		{
-			return false;
-		}
-
-		width = (u32)tempW;
-		height = (u32)tempH;
-
-		channelCount = 4;
-
-		CHECK_LE(width, MAX_TEXTURE_DIM);
-		CHECK_LE(height, MAX_TEXTURE_DIM);
-
-		return true;
-	}
-
-	void HDRImage::Free()
-	{
-		STBI_FREE(pixels);
-		pixels = nullptr;
-	}
-
 	std::string FloatToString(real f, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
 		std::stringstream stream;

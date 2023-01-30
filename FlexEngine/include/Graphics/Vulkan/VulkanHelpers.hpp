@@ -178,7 +178,7 @@ namespace flex
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
-		struct VulkanTexture final : Texture
+		struct VulkanTexture final : public Texture
 		{
 			VulkanTexture(VulkanDevice* device, VkQueue queue);
 			VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name);
@@ -261,9 +261,6 @@ namespace flex
 				bool bGenerateMipMaps = false;
 				bool bEnableTrilinearFiltering = true;
 
-				// Leave following field empty to generate uninitialized cubemap
-				std::array<std::string, 6> filePaths;
-
 				const char* DBG_Name = nullptr;
 			};
 
@@ -289,9 +286,16 @@ namespace flex
 
 			/*
 			 * Creates image, image view, and sampler based on the texture at relativeFilePath
-			 * Returns size of image in bytes
+			 * Returns true if load completed successfully
 			 */
-			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
+			bool LoadFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, VkFormat inFormat = VK_FORMAT_UNDEFINED);
+
+			/*
+			* Creates this texture's rendering resources
+			* Requires data to have been loaded already
+			* Returns the size of the image
+			*/
+			VkDeviceSize Create(bool bGenerateFullMipChain = false);
 
 			/*
 			 * Creates image, image view, and sampler
@@ -307,9 +311,16 @@ namespace flex
 
 			/*
 			 * Creates a cubemap from the given 6 textures
+			 * Returns true if load completed successfully
+			 */
+			bool LoadCubemapFromTextures(const std::array<std::string, 6>& filePaths, HTextureSampler inSampler);
+
+			/*
+			 * Creates a cubemap from the given 6 textures
+			 * Requires data to have been loaded already
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, HTextureSampler inSampler, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemap(VkFormat inFormat, bool bEnableTrilinearFiltering);
 
 			void GenerateMipmaps();
 

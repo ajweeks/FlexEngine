@@ -987,17 +987,20 @@ namespace flex
 						texture = (VulkanTexture*)CreateTexture(std::string(textureInfo.textureUniform->DBG_name));
 						texture->bHDR = textureInfo.bHDR;
 						bool bGenerateMipChain = false;
-						VkDeviceSize createdTextureSize = texture->CreateFromFile(textureInfo.relativeFilePath, m_SamplerLinearRepeat, textureInfo.format, bGenerateMipChain);
+						if (texture->LoadFromFile(textureInfo.relativeFilePath, m_SamplerLinearRepeat, textureInfo.format))
+						{
+							VkDeviceSize createdTextureSize = texture->Create(bGenerateMipChain);
 
-						if (createdTextureSize != 0)
-						{
-							texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-							g_ResourceManager->AddLoadedTexture(texture);
-						}
-						else
-						{
-							delete texture;
-							texture = nullptr;
+							if (createdTextureSize != 0)
+							{
+								texture->imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+								g_ResourceManager->AddLoadedTexture(texture);
+							}
+							else
+							{
+								delete texture;
+								texture = nullptr;
+							}
 						}
 					}
 
@@ -1136,11 +1139,14 @@ namespace flex
 			VulkanTexture* newTex = (VulkanTexture*)CreateTexture(textureName);
 			newTex->bHDR = bHDR;
 			newTex->bFlipVertically = bFlipVertically;
-			VkDeviceSize newTexSize = newTex->CreateFromFile(relativeFilePath, inSampler, VK_FORMAT_UNDEFINED, bGenerateMipMaps);
-			if (newTexSize == 0)
+			if (newTex->LoadFromFile(relativeFilePath, inSampler, VK_FORMAT_UNDEFINED))
 			{
-				delete newTex;
-				return InvalidTextureID;
+				VkDeviceSize newTexSize = newTex->Create(bGenerateMipMaps);
+				if (newTexSize == 0)
+				{
+					delete newTex;
+					return InvalidTextureID;
+				}
 			}
 
 			TextureID textureID = g_ResourceManager->AddLoadedTexture(newTex);
@@ -4015,8 +4021,14 @@ namespace flex
 				if (FileExists(fontMetaData.renderedTextureFilePath))
 				{
 					VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
-					if (fontTex->CreateFromFile(fontMetaData.renderedTextureFilePath, m_SamplerLinearClampToEdge, fontTexFormat) != 0)
+					if (fontTex->LoadFromFile(fontMetaData.renderedTextureFilePath, m_SamplerLinearClampToEdge, fontTexFormat))
 					{
+						if (fontTex->Create(false) == 0)
+						{
+							PrintError("Failed to create font texture\n");
+							return false;
+						}
+
 						glm::vec2 fontTexSize((real)fontTex->width, (real)fontTex->height);
 						bUsingPreRenderedTexture = true;
 

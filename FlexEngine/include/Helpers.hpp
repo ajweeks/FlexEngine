@@ -478,18 +478,6 @@ namespace flex
 
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically = false);
 
-	struct HDRImage
-	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically);
-		void Free();
-
-		u32 width;
-		u32 height;
-		u32 channelCount;
-		std::string filePath;
-		real* pixels;
-	};
-
 	// Stores text render commands issued during the
 	// frame to later be converted to "TextVertex"s
 	struct TextCache
