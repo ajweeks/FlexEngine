@@ -20,30 +20,43 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	const Transform Transform::Identity = Transform(VEC3_ZERO, QUAT_IDENTITY, VEC3_ONE);
+	const float Transform::DirtyThreshold = 1.0e-6f;
 
 	Transform::Transform()
 	{
 		SetAsIdentity();
+		bDirtyPos = true;
+		bDirtyRot = true;
+		bDirtyScale = true;
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(scale)
+		localScale(scale),
+		bDirtyPos(true),
+		bDirtyRot(true),
+		bDirtyScale(true)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation) :
 		localPosition(position),
 		localRotation(rotation),
-		localScale(VEC3_ONE)
+		localScale(VEC3_ONE),
+		bDirtyPos(true),
+		bDirtyRot(true),
+		bDirtyScale(true)
 	{
 	}
 
 	Transform::Transform(const glm::vec3& position) :
 		localPosition(position),
 		localRotation(QUAT_IDENTITY),
-		localScale(VEC3_ONE)
+		localScale(VEC3_ONE),
+		bDirtyPos(true),
+		bDirtyRot(true),
+		bDirtyScale(true)
 	{
 	}
 
@@ -51,7 +64,10 @@ namespace flex
 		localPosition(other.localPosition),
 		localRotation(other.localRotation),
 		localScale(other.localScale),
-		m_GameObject(other.m_GameObject)
+		m_GameObject(other.m_GameObject),
+		bDirtyPos(true),
+		bDirtyRot(true),
+		bDirtyScale(true)
 	{
 	}
 
@@ -59,7 +75,10 @@ namespace flex
 		localPosition(other.localPosition),
 		localRotation(other.localRotation),
 		localScale(other.localScale),
-		m_GameObject(other.m_GameObject)
+		m_GameObject(other.m_GameObject),
+		bDirtyPos(true),
+		bDirtyRot(true),
+		bDirtyScale(true)
 	{
 	}
 
@@ -131,7 +150,9 @@ namespace flex
 		localRotation = other.localRotation;
 		localScale = other.localScale;
 		cachedWorldTransform = other.cachedWorldTransform;
-		bDirty = other.bDirty;
+		bDirtyPos = other.bDirtyPos;
+		bDirtyRot = other.bDirtyRot;
+		bDirtyScale = other.bDirtyScale;
 
 		// NOTE: m_GameObject is not copied here
 	}
@@ -161,39 +182,43 @@ namespace flex
 
 		JSONObject transformObject = {};
 
+		static const glm::vec3 default_pos = VEC3_ZERO;
+		static const glm::quat default_rot = QUAT_IDENTITY;
+		static const glm::vec3 default_scale = VEC3_ONE;
+
 		if (IsNanOrInf(pos))
 		{
 			PrintError("Attempted to serialize garbage value for position of %s, writing default value\n", objName);
-			pos = VEC3_ZERO;
+			pos = default_pos;
 		}
 
 		if (IsNanOrInf(rot))
 		{
 			PrintError("Attempted to serialize garbage value for rotation of %s, writing default value\n", objName);
-			rot = glm::quat();
+			rot = default_rot;
 		}
 
 		if (IsNanOrInf(scale))
 		{
 			PrintError("Attempted to serialize garbage value for scale of %s, writing default value\n", objName);
-			scale = VEC3_ONE;
+			scale = default_scale;
 		}
 
 
-		if (pos != VEC3_ZERO)
+		if (!NearlyEquals(pos, default_pos, DirtyThreshold))
 		{
 			std::string posStr = VecToString(pos, floatPrecision);
 			transformObject.fields.emplace_back("pos", JSONValue(posStr));
 		}
 
-		if (rot != QUAT_IDENTITY)
+		if (!NearlyEquals(rot, default_rot, DirtyThreshold))
 		{
 			glm::vec3 rotEuler = glm::eulerAngles(rot);
 			std::string rotStr = VecToString(rotEuler, floatPrecision);
 			transformObject.fields.emplace_back("rot", JSONValue(rotStr));
 		}
 
-		if (scale != VEC3_ONE)
+		if (!NearlyEquals(scale, default_scale, DirtyThreshold))
 		{
 			std::string scaleStr = VecToString(scale, floatPrecision);
 			transformObject.fields.emplace_back("scale", JSONValue(scaleStr));
@@ -279,35 +304,11 @@ namespace flex
 
 	void Transform::SetLocalPosition(const glm::vec3& position, bool bUpdateChain /* = true */)
 	{
-		localPosition = position;
-
-		MarkDirty();
+		SetLocalPositionInternal(position);
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
-		}
-	}
-
-	void Transform::UpdateRigidBody()
-	{
-		RigidBody* rigidBody = m_GameObject->GetRigidBody();
-		if (rigidBody != nullptr)
-		{
-			glm::vec3 worldScale = GetWorldScale();
-			if (!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
-			{
-				rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
-			}
-			rigidBody->SetWorldPositionAndRotation(GetWorldPosition(), GetWorldRotation());
-		}
-
-		u32 childCount = m_GameObject->GetChildCount();
-		for (u32 i = 0; i < childCount; ++i)
-		{
-			m_GameObject->GetChild(i)->GetTransform()->UpdateRigidBody();
 		}
 	}
 
@@ -316,34 +317,26 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			localPosition = position - parent->GetTransform()->GetWorldPosition();
+			SetLocalPositionInternal(position - parent->GetTransform()->GetWorldPosition());
 		}
 		else
 		{
-			localPosition = position;
+			SetLocalPositionInternal(position);
 		}
-
-		MarkDirty();
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
 		}
 	}
 
 	void Transform::SetLocalRotation(const glm::quat& rotation, bool bUpdateChain /* = true */)
 	{
-		localRotation = rotation;
-
-		MarkDirty();
+		SetLocalRotationInternal(rotation);
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
 		}
 	}
 
@@ -352,34 +345,26 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			localRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * rotation;
+			SetLocalRotationInternal(glm::inverse(parent->GetTransform()->GetWorldRotation()) * rotation);
 		}
 		else
 		{
-			localRotation = rotation;
+			SetLocalRotationInternal(rotation);
 		}
-
-		MarkDirty();
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
 		}
 	}
 
 	void Transform::SetLocalScale(const glm::vec3& scale, bool bUpdateChain /* = true */)
 	{
-		localScale = scale;
-
-		MarkDirty();
+		SetLocalScaleInternal(scale);
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
 		}
 	}
 
@@ -388,20 +373,16 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			localScale = scale / parent->GetTransform()->GetWorldScale();
+			SetLocalScaleInternal(scale / parent->GetTransform()->GetWorldScale());
 		}
 		else
 		{
-			localScale = scale;
+			SetLocalScaleInternal(scale);
 		}
-
-		MarkDirty();
 
 		if (bUpdateChain)
 		{
 			Recompute();
-
-			UpdateRigidBody();
 		}
 	}
 
@@ -415,20 +396,11 @@ namespace flex
 		SetWorldPosition(pos, false);
 		SetWorldRotation(rot, false);
 		SetWorldScale(scale, bUpdateChain);
-		cachedWorldTransform = mat;
-		bDirty = false;
 	}
 
 	void Transform::Translate(const glm::vec3& deltaPosition)
 	{
-		Translate(deltaPosition.x, deltaPosition.y, deltaPosition.z);
-	}
-
-	void Transform::Translate(real deltaX, real deltaY, real deltaZ)
-	{
-		localPosition.x += deltaX;
-		localPosition.y += deltaY;
-		localPosition.z += deltaZ;
+		SetLocalScaleInternal(localPosition + deltaPosition);
 
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
 		if (rigidBody != nullptr)
@@ -443,12 +415,16 @@ namespace flex
 			Transform* childTransform = child->GetTransform();
 			childTransform->SetLocalPosition(childTransform->GetLocalPosition());
 		}
-		MarkDirty();
+	}
+
+	void Transform::Translate(real deltaX, real deltaY, real deltaZ)
+	{
+		Translate(glm::vec3(deltaX, deltaY, deltaZ));
 	}
 
 	void Transform::Rotate(const glm::quat& deltaRotation)
 	{
-		localRotation *= deltaRotation;
+		SetLocalRotationInternal(localRotation * deltaRotation);
 
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
 		if (rigidBody != nullptr)
@@ -463,13 +439,11 @@ namespace flex
 			Transform* childTransform = m_GameObject->GetChild(i)->GetTransform();
 			childTransform->SetLocalRotation(childTransform->GetLocalRotation());
 		}
-		MarkDirty();
 	}
 
 	void Transform::Scale(const glm::vec3& deltaScale)
 	{
-		localScale *= deltaScale;
-		MarkDirty();
+		SetLocalScaleInternal(localScale * deltaScale);
 	}
 
 	void Transform::Scale(real deltaScale)
@@ -497,7 +471,10 @@ namespace flex
 
 		Decompose(localTransform, localPosition, localRotation, localScale);
 		cachedWorldTransform = desiredWorldTransform;
-		bDirty = false;
+
+		bDirtyPos = false;
+		bDirtyScale = false;
+		bDirtyRot = false;
 	}
 
 	void Transform::SetFromBtTransform(const btTransform& transform)
@@ -517,7 +494,7 @@ namespace flex
 
 	glm::mat4 Transform::GetWorldTransform()
 	{
-		if (!bDirty)
+		if (!bDirtyPos && !bDirtyRot && !bDirtyScale)
 		{
 			return cachedWorldTransform;
 		}
@@ -529,7 +506,10 @@ namespace flex
 
 	void Transform::Recompute()
 	{
-		CHECK_EQ(bDirty, true);
+		if (!bDirtyPos && !bDirtyRot && !bDirtyScale)
+		{
+			return;
+		}
 
 		glm::mat4 localTransform = glm::mat4(localRotation) *
 			glm::diagonal4x4(glm::vec4(localScale, 1.0f));
@@ -545,18 +525,68 @@ namespace flex
 			cachedWorldTransform = localTransform;
 		}
 
-		bDirty = false;
+		UpdateRigidBody();
+
+		ClearDirtyFlags();
+	}
+	
+	void Transform::ClearDirtyFlags()
+	{
+		bDirtyPos = false;
+		bDirtyRot = false;
+		bDirtyScale = false;
 	}
 
-	void Transform::MarkDirty()
+	void Transform::UpdateRigidBody()
 	{
-		bDirty = true;
+		RigidBody* rigidBody = m_GameObject->GetRigidBody();
+		if (rigidBody != nullptr)
+		{
+			if (bDirtyScale)
+			{
+				glm::vec3 worldScale = GetWorldScale();
+				if (!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
+				{
+					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
+				}
+			}
+			if (bDirtyPos && bDirtyRot)
+			{
+				rigidBody->SetWorldPositionAndRotation(GetWorldPosition(), GetWorldRotation());
+			}
+			else if (bDirtyPos)
+			{
+				rigidBody->SetWorldPosition(GetWorldPosition());
+			}
+			else if (bDirtyRot)
+			{
+				rigidBody->SetWorldRotation(GetWorldRotation());
+			}
+		}
+	}
+
+	void Transform::UpdateRigidBodyRecursive()
+	{
+		UpdateRigidBody();
+
+		u32 childCount = m_GameObject->GetChildCount();
+		for (u32 i = 0; i < childCount; ++i)
+		{
+			m_GameObject->GetChild(i)->GetTransform()->UpdateRigidBodyRecursive();
+		}
+	}
+
+	void Transform::MarkDirty(bool bPos, bool bRot, bool bScale)
+	{
+		bDirtyPos = bPos;
+		bDirtyRot = bRot;
+		bDirtyScale = bScale;
 
 		u32 childCount = m_GameObject->GetChildCount();
 		for (u32 i = 0; i < childCount; ++i)
 		{
 			Transform* childTransform = m_GameObject->GetChild(i)->GetTransform();
-			childTransform->MarkDirty();
+			childTransform->MarkDirty(bPos, bRot, bScale);
 		}
 	}
 
@@ -602,6 +632,33 @@ namespace flex
 		}
 	}
 
+	void Transform::SetLocalPositionInternal(const glm::vec3& newLocalPos)
+	{
+		if (!NearlyEquals(localPosition, newLocalPos, DirtyThreshold))
+		{
+			localPosition = newLocalPos;
+			MarkDirty(true, false, false);
+		}
+	}
+
+	void Transform::SetLocalRotationInternal(const glm::quat& newLocalRot)
+	{
+		if (!NearlyEquals(localRotation, newLocalRot, DirtyThreshold))
+		{
+			localRotation = newLocalRot;
+			MarkDirty(false, true, false);
+		}
+	}
+	
+	void Transform::SetLocalScaleInternal(const glm::vec3& newLocalScale)
+	{
+		if (!NearlyEquals(localScale, newLocalScale, DirtyThreshold))
+		{
+			localScale = newLocalScale;
+			MarkDirty(false, false, true);
+		}
+	}
+
 	void Transform::OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation)
 	{
 		GameObject* parent = m_GameObject->GetParent();
@@ -619,12 +676,15 @@ namespace flex
 			newRotation = rotation;
 		}
 
-		if (!NearlyEquals(localPosition, newPosition, 0.00001f) ||
-			!NearlyEquals(localRotation, newRotation, 0.00001f))
+		bool bNewPosDirty = !NearlyEquals(localPosition, newPosition, DirtyThreshold);
+		bool bNewRotDirty = !NearlyEquals(localRotation, newRotation, DirtyThreshold);
+
+		if (bNewPosDirty || bNewRotDirty)
 		{
 			localPosition = newPosition;
 			localRotation = newRotation;
-			MarkDirty();
+
+			MarkDirty(bNewPosDirty, bNewRotDirty, false);
 		}
 	}
 } // namespace flex

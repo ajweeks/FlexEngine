@@ -2338,7 +2338,7 @@ namespace flex
 		m_Children.push_back(child);
 
 		child->SetParent(this);
-		child->GetTransform()->MarkDirty();
+		child->GetTransform()->MarkDirty(true, true, true);
 
 		if (childPrevParent != nullptr)
 		{
@@ -2374,7 +2374,7 @@ namespace flex
 					glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
 
 					child->SetParent(nullptr);
-					child->GetTransform()->MarkDirty();
+					child->GetTransform()->MarkDirty(true, true, true);
 
 					Transform* childTransform = child->GetTransform();
 

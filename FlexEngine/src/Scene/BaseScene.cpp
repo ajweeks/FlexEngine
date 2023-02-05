@@ -265,6 +265,14 @@ namespace flex
 			}
 		}
 
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			if (rootObject != nullptr)
+			{
+				rootObject->GetTransform()->UpdateRigidBodyRecursive();
+			}
+		}
+
 		g_CameraManager->CurrentCamera()->FixedUpdate();
 
 		g_Editor->FixedUpdate();
@@ -2377,7 +2385,6 @@ namespace flex
 		}
 
 		parent->AddChildImmediate(child);
-		child->GetTransform()->MarkDirty();
 
 		return child;
 	}

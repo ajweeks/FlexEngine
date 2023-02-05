@@ -78,17 +78,24 @@ namespace flex
 
 		glm::mat4 GetWorldTransform();
 
-		void MarkDirty();
+		void MarkDirty(bool bPos, bool bRot, bool bScale);
+
+		void UpdateRigidBodyRecursive();
 
 		static void Decompose(const glm::mat4& mat, glm::vec3& outPos, glm::quat& outRot, glm::vec3& outScale);
 
 		static const Transform Identity;
+		static const float DirtyThreshold;
 
 	private:
 		friend struct MotionState;
 
-		void Recompute();
+		void SetLocalPositionInternal(const glm::vec3& newLocalPos);
+		void SetLocalRotationInternal(const glm::quat& newLocalRot);
+		void SetLocalScaleInternal(const glm::vec3& newLocalScale);
 
+		void Recompute();
+		void ClearDirtyFlags();
 		void UpdateRigidBody();
 
 		// Callback from physics system
@@ -103,7 +110,9 @@ namespace flex
 
 		GameObject* m_GameObject = nullptr;
 
-		bool bDirty = true;
+		bool bDirtyPos : 1;
+		bool bDirtyRot : 1;
+		bool bDirtyScale : 1;
 
 	};
 } // namespace flex
