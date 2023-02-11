@@ -1,31 +1,31 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene_track_test",
 	"spawn player" : true,
 	"player 0 guid" : "7AEEDF8930C49B91485A828EECCF8F74",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "first-person",
 		"near plane" : 0.500000,
-		"far plane" : 836.500000,
-		"fov" : 1.216494,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
 		"aperture" : 1.000000,
 		"shutter speed" : 0.125000,
 		"light sensitivity" : 800.000000,
 		"exposure" : 1.200000,
-		"move speed" : 18.582001,
+		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-59.272, 14.125, 57.779",
-			"pitch" : -0.413587,
-			"yaw" : 5.376094
+			"position" : "30.126, 2.390, 27.064",
+			"pitch" : -0.233333,
+			"yaw" : 1.770786
 		}
 	},
 	"objects" : 
 	[
 		{
-			"name" : "Environment",
 			"id" : "D1C17D9806B2E0BD446CA71DF5F6F251",
+			"name" : "Environment",
 			"type" : "object",
 			"transform" : 
 			{
@@ -34,8 +34,8 @@
 			"children" : 
 			[
 				{
-					"name" : "Earth",
 					"id" : "C0BD5F48DEFAA9BC40CE60F493BDFC45",
+					"name" : "Earth",
 					"type" : "object",
 					"transform" : 
 					{
@@ -61,8 +61,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_03",
 					"id" : "FD81C9C54421CABB4EDD34608613AC13",
+					"name" : "New_Object_03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -89,8 +89,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_10",
 					"id" : "C890FF8D640EC8A44C77E10CA01FEFA1",
+					"name" : "New_Object_10",
 					"type" : "object",
 					"transform" : 
 					{
@@ -117,8 +117,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_14",
 					"id" : "BA8D7EB9657A549447E28AF5098190C3",
+					"name" : "New_Object_14",
 					"type" : "object",
 					"transform" : 
 					{
@@ -145,8 +145,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_04",
 					"id" : "A2F8CBEDF47192B34BD48B157ECE85E8",
+					"name" : "New_Object_04",
 					"type" : "object",
 					"transform" : 
 					{
@@ -173,8 +173,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_05",
 					"id" : "C267719094D053994C75F33059AF019C",
+					"name" : "New_Object_05",
 					"type" : "object",
 					"transform" : 
 					{
@@ -201,8 +201,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_06",
 					"id" : "2B7E01311482B7AD4E2C7297D05988F9",
+					"name" : "New_Object_06",
 					"type" : "object",
 					"transform" : 
 					{
@@ -229,8 +229,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_07",
 					"id" : "D34693FD7FEBF5904551D5C376EA0322",
+					"name" : "New_Object_07",
 					"type" : "object",
 					"transform" : 
 					{
@@ -257,8 +257,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_08",
 					"id" : "0A3870ACD493C5AD4FA2A89F45B07CBD",
+					"name" : "New_Object_08",
 					"type" : "object",
 					"transform" : 
 					{
@@ -285,8 +285,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_09",
 					"id" : "100039F9C3AF5D82469EB632CCA8568E",
+					"name" : "New_Object_09",
 					"type" : "object",
 					"transform" : 
 					{
@@ -313,8 +313,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_11",
 					"id" : "A396864ADF8EBFBC4469CE1907ACB111",
+					"name" : "New_Object_11",
 					"type" : "object",
 					"transform" : 
 					{
@@ -341,8 +341,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_12",
 					"id" : "824FF8AF248A7CB847F23A40EE8F7B6D",
+					"name" : "New_Object_12",
 					"type" : "object",
 					"transform" : 
 					{
@@ -369,8 +369,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_01",
 					"id" : "B70D8C9884CA29814C3576C576331E21",
+					"name" : "New_Object_01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -397,8 +397,8 @@
 					}
 				},
 				{
-					"name" : "New_Object_00",
 					"id" : "D99D9A4770710A9A4DDB5E8AEB02BD1B",
+					"name" : "New_Object_00",
 					"type" : "object",
 					"transform" : 
 					{
@@ -425,8 +425,8 @@
 					}
 				},
 				{
-					"name" : "ground plane",
 					"id" : "7D92564760AED1A2477DDB74BA5AAD8D",
+					"name" : "ground plane",
 					"type" : "object",
 					"transform" : 
 					{
@@ -452,8 +452,8 @@
 					}
 				},
 				{
-					"name" : "cloud box",
 					"id" : "E2E5C7798927568445E021E48717C387",
+					"name" : "cloud box",
 					"type" : "object",
 					"transform" : 
 					{
@@ -480,8 +480,8 @@
 					}
 				},
 				{
-					"name" : "noise box",
 					"id" : "14F4DA1D77CAE0A042BB9F52F3A39174",
+					"name" : "noise box",
 					"type" : "object",
 					"transform" : 
 					{
@@ -508,8 +508,8 @@
 					}
 				},
 				{
-					"name" : "cerebus box",
 					"id" : "9F956A825C1715A14998158FC079A2A7",
+					"name" : "cerebus box",
 					"type" : "object",
 					"transform" : 
 					{
@@ -536,8 +536,8 @@
 					}
 				},
 				{
-					"name" : "grid box",
 					"id" : "4A53D97386C850924D31D2A84BA36E9C",
+					"name" : "grid box",
 					"type" : "object",
 					"transform" : 
 					{
@@ -564,8 +564,8 @@
 					}
 				},
 				{
-					"name" : "capsule",
 					"id" : "A318D6A9DA389EB94FA17E6373AE9BD1",
+					"name" : "capsule",
 					"type" : "object",
 					"transform" : 
 					{
@@ -592,8 +592,8 @@
 					}
 				},
 				{
-					"name" : "striped box",
 					"id" : "0DA9CA1F9C20ECB54DFC81AC3906ABA0",
+					"name" : "striped box",
 					"type" : "object",
 					"transform" : 
 					{
@@ -620,8 +620,8 @@
 					}
 				},
 				{
-					"name" : "striped box2",
 					"id" : "6631CF9217CCCD9847D8761E6FF27177",
+					"name" : "striped box2",
 					"type" : "object",
 					"transform" : 
 					{
@@ -648,8 +648,8 @@
 					}
 				},
 				{
-					"name" : "striped box3",
 					"id" : "98D7739A0D2F3E8C424E6FB0DB52F81B",
+					"name" : "striped box3",
 					"type" : "object",
 					"transform" : 
 					{
@@ -676,8 +676,8 @@
 					}
 				},
 				{
-					"name" : "striped box4",
 					"id" : "0DDA2CA76F1FBBA8483F0E9A5540D11B",
+					"name" : "striped box4",
 					"type" : "object",
 					"transform" : 
 					{
@@ -704,8 +704,8 @@
 					}
 				},
 				{
-					"name" : "reshelfector",
 					"id" : "865640E3E17905864D3BBA70E6AFECF3",
+					"name" : "reshelfector",
 					"type" : "object",
 					"transform" : 
 					{
@@ -722,47 +722,40 @@
 			]
 		},
 		{
-			"name" : "Lighting",
 			"id" : "FF3D758A3CFF1CBB44D914D97AEC5CC7",
+			"name" : "Lighting",
 			"type" : "object",
 			"children" : 
 			[
 				{
-					"name" : "Directional Light",
 					"id" : "DF601E29BA1A519F417286D52E23F10B",
+					"name" : "Directional Light",
 					"type" : "directional light",
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.571, -0.000, 0.000"
+						"rot" : "1.578, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.707,0.000,0.000,0.707",
-						"pos" : "0.000,15.000,0.000",
 						"colour" : "0.99,1.00,0.84",
-						"enabled" : true,
-						"brightness" : 4.063000,
-						"cast shadows" : true,
-						"shadow darkness" : 0.911000
+						"brightness" : 4.06,
+						"shadow darkness" : 0.91
 					}
 				},
 				{
-					"name" : "Skybox 1",
 					"id" : "7998D883AC4DF690424D68AEA58BA9FE",
+					"name" : "Skybox 1",
 					"type" : "skybox",
 					"casts shadow" : false,
 					"materials" : 
 					[
 						"skybox 02"
-					],
-					"skybox info" : 
-					{
-					}
+					]
 				},
 				{
-					"name" : "Reflection Probe 01",
 					"id" : "129687E7C1D554BD48999CE4A83AF15B",
+					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"transform" : 
 					{
@@ -771,8 +764,8 @@
 					"visible" : false
 				},
 				{
-					"name" : "PointLight_03",
 					"id" : "AB1439D6CF22C29B46ACF9E549D0A2AC",
+					"name" : "PointLight_03",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -780,15 +773,12 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "-22.547,9.283,-11.692",
-						"colour" : "1.00,1.00,1.00",
-						"enabled" : true,
-						"brightness" : 812.500000
+						"brightness" : 812.500
 					}
 				},
 				{
-					"name" : "PointLight_00",
 					"id" : "2FB79A55F21C23B54773475F5EB5CDE2",
+					"name" : "PointLight_00",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -796,15 +786,13 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "-14.163,6.757,14.795",
 						"colour" : "0.97,0.97,0.70",
-						"enabled" : true,
-						"brightness" : 145.832993
+						"brightness" : 145.833
 					}
 				},
 				{
-					"name" : "PointLight_01",
 					"id" : "C8946F3A5F859BA84E5FC9C5F0687847",
+					"name" : "PointLight_01",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -812,15 +800,12 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "3.100,4.737,-25.251",
-						"colour" : "1.00,1.00,1.00",
-						"enabled" : true,
-						"brightness" : 270.936005
+						"brightness" : 270.936
 					}
 				},
 				{
-					"name" : "PointLight_02",
 					"id" : "BE9595E280FBF29D42B77BF59FF08A29",
+					"name" : "PointLight_02",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -828,15 +813,13 @@
 					},
 					"point light info" : 
 					{
-						"pos" : "10.065,7.522,14.100",
 						"colour" : "0.60,0.67,1.00",
-						"enabled" : true,
-						"brightness" : 723.958008
+						"brightness" : 723.958
 					}
 				},
 				{
-					"name" : "Reflection Probe 02",
 					"id" : "B3033D15C4A583994672E8899F961738",
+					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"transform" : 
 					{
@@ -846,14 +829,14 @@
 			]
 		},
 		{
-			"name" : "New_Game_Object_00",
 			"id" : "51896520B029E7BC444AD5F54FE5F095",
+			"name" : "New_Game_Object_00",
 			"type" : "object",
 			"children" : 
 			[
 				{
-					"name" : "Reflection Probe 02",
 					"id" : "F112AC20F41459B8426AB90FC3C81E78",
+					"name" : "Reflection Probe 02",
 					"type" : "reflection probe",
 					"transform" : 
 					{
@@ -877,7 +860,7 @@
 			"track" : 
 			{
 				"curve" : "35.00000, 0.00000, 10.00000, 37.00000, 0.00000, 17.00000, 25.00000, 0.00000, 16.00000, 22.00000, 0.00000, 19.00000",
-				"curve" : "22.00000, 0.00000, 19.00000, 19.00000, 0.00000, 22.00000, 13.00000, 0.00000, 22.00000, 11.00000, 0.00000, 25.00000"
+				"curve" : "22.00000, 0.00000, 19.00000, 19.00000, 0.00000, 22.00000, 16.00000, 0.00000, 23.00000, 14.00000, 0.00000, 26.00000"
 			},
 			"track" : 
 			{

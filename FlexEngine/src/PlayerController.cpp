@@ -141,42 +141,11 @@ namespace flex
 
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-
-				if (m_Player->m_bPlacingTrack)
+				if (m_Player->IsPlacingTrack())
 				{
-					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(1.0f);
-
 					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 					{
-						// Place new node
-						m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = reticlePos;
-						if (m_Player->m_CurveNodesPlaced == 4)
-						{
-							AudioManager::PlaySource(m_Player->m_SoundPlaceFinalTrackNodeID);
-
-							m_Player->m_CurvePlacing.CalculateLength();
-							m_Player->m_TrackPlacing.curves.push_back(m_Player->m_CurvePlacing);
-
-							glm::vec3 prevHandlePos = m_Player->m_CurvePlacing.points[2];
-
-							m_Player->m_CurveNodesPlaced = 0;
-							m_Player->m_CurvePlacing.points[0] = m_Player->m_CurvePlacing.points[1] = m_Player->m_CurvePlacing.points[2] = m_Player->m_CurvePlacing.points[3] = VEC3_ZERO;
-
-							glm::vec3 controlPointPos = reticlePos;
-							glm::vec3 nextHandlePos = controlPointPos + (controlPointPos - prevHandlePos);
-							m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = controlPointPos;
-							m_Player->m_CurvePlacing.points[m_Player->m_CurveNodesPlaced++] = nextHandlePos;
-						}
-						else
-						{
-							AudioManager::PlaySource(m_Player->m_SoundPlaceTrackNodeID);
-						}
-
-						for (i32 i = 3; i > m_Player->m_CurveNodesPlaced - 1; --i)
-						{
-							m_Player->m_CurvePlacing.points[i] = reticlePos;
-						}
+						m_Player->PlaceNewTrackNode();
 
 						m_bAttemptInteractLeftHand = false;
 						m_bAttemptInteractRightHand = false;
@@ -184,91 +153,34 @@ namespace flex
 
 					if (m_bAttemptCompleteTrack)
 					{
+						m_Player->AttemptCompleteTrack();
+
 						m_bAttemptCompleteTrack = false;
-
-						m_Player->m_CurveNodesPlaced = 0;
-						m_Player->m_CurvePlacing.points[0] = m_Player->m_CurvePlacing.points[1] = m_Player->m_CurvePlacing.points[2] = m_Player->m_CurvePlacing.points[3] = VEC3_ZERO;
-
-						if (!m_Player->m_TrackPlacing.curves.empty())
-						{
-							trackManager->AddTrack(m_Player->m_TrackPlacing);
-							trackManager->FindJunctions();
-							m_Player->m_TrackPlacing.curves.clear();
-						}
 					}
-
-					static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
-					static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
-					for (const BezierCurve3D& curve : m_Player->m_TrackPlacing.curves)
-					{
-						curve.DrawDebug(false, placedCurveCol, placedCurveCol);
-
-					}
-					if (m_Player->m_CurveNodesPlaced > 0)
-					{
-						m_Player->m_CurvePlacing.DrawDebug(false, placingCurveCol, placingCurveCol);
-					}
-
-					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
-					debugRenderer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
-					debugRenderer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, btVector3(0.18f, 0.22f, 0.35f));
 				}
 
-				if (m_Player->m_bEditingTrack)
+				if (m_Player->IsEditingTrack())
 				{
-					// TODO: Snap to points other than the one we are editing
-					glm::vec3 reticlePos = m_Player->GetTrackPlacementReticlePosWS(m_Player->m_TrackEditingID == InvalidTrackID ? 1.0f : 0.0f, true);
 					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 					{
-						if (m_Player->m_TrackEditingCurveIdx == -1)
+						// TODO: Check TrackEditingID instead?
+						if (m_Player->GetTrackEditingCurveIdx() == -1)
 						{
-							// Select node
-							TrackID trackID = InvalidTrackID;
-							i32 curveIndex = -1;
-							i32 pointIndex = -1;
-							if (trackManager->GetPointInRange(reticlePos, 0.1f, &trackID, &curveIndex, &pointIndex))
-							{
-								m_Player->m_TrackEditingID = trackID;
-								m_Player->m_TrackEditingCurveIdx = curveIndex;
-								m_Player->m_TrackEditingPointIdx = pointIndex;
-							}
+							m_Player->SelectNearestTrackCurve();
 						}
 						else
 						{
-							// Select none
-							m_Player->m_TrackEditingID = InvalidTrackID;
-							m_Player->m_TrackEditingCurveIdx = -1;
-							m_Player->m_TrackEditingPointIdx = -1;
+							m_Player->DeselectTrackCurve();
 						}
 
 						m_bAttemptInteractLeftHand = false;
 						m_bAttemptInteractRightHand = false;
 					}
 
-					if (m_Player->m_TrackEditingID != InvalidTrackID)
-					{
-						BezierCurveList* trackEditing = trackManager->GetTrack(m_Player->m_TrackEditingID);
-						glm::vec3 point = trackEditing->GetPointOnCurve(m_Player->m_TrackEditingCurveIdx, m_Player->m_TrackEditingPointIdx);
-
-						glm::vec3 newPoint(reticlePos.x, point.y, reticlePos.z);
-						trackEditing->SetPointPosAtIndex(m_Player->m_TrackEditingCurveIdx, m_Player->m_TrackEditingPointIdx, newPoint, true);
-
-						static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
-						static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
-						for (const BezierCurve3D& curve : trackEditing->curves)
-						{
-							curve.DrawDebug(false, editedCurveCol, editingCurveCol);
-						}
-
-						trackManager->FindJunctions();
-					}
-
-					btTransform cylinderTransform(ToBtQuaternion(m_Player->m_Transform.GetWorldRotation()), ToBtVec3(reticlePos));
-					static btVector3 ringColEditing(0.48f, 0.22f, 0.65f);
-					static btVector3 ringColEditingActive(0.6f, 0.4f, 0.85f);
-					debugRenderer->drawCylinder(0.6f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
-					debugRenderer->drawCylinder(1.1f, 0.001f, 1, cylinderTransform, m_Player->m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive);
+					m_Player->UpdateTrackEditing();
 				}
+			
+				m_Player->DrawTrackDebug();
 
 				if (m_bAttemptPickup)
 				{
@@ -406,10 +318,12 @@ namespace flex
 							if (bPlaceWireLeft)
 							{
 								m_Player->heldItemLeftHand = InvalidGameObjectID;
+								m_bAttemptInteractLeftHand = false;
 							}
 							else
 							{
 								m_Player->heldItemRightHand = InvalidGameObjectID;
+								m_bAttemptInteractRightHand = false;
 							}
 
 							heldItemLeftHand = m_Player->heldItemLeftHand.Get();
@@ -417,7 +331,7 @@ namespace flex
 							if ((heldItemLeftHand == nullptr || heldItemLeftHand->GetTypeID() != WirePlugSID) &&
 								(heldItemRightHand == nullptr || heldItemRightHand->GetTypeID() != WirePlugSID))
 							{
-								m_PlacingWire = nullptr;
+								m_Player->m_PlacingWire = nullptr;
 							}
 						}
 					}
@@ -474,10 +388,12 @@ namespace flex
 									if (bPickupItemLeft)
 									{
 										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
+										m_bAttemptInteractLeftHand = false;
 									}
 									else if (bPickupItemRight)
 									{
 										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
+										m_bAttemptInteractRightHand = false;
 									}
 								}
 								else
@@ -487,10 +403,12 @@ namespace flex
 									if (bPickupItemLeft)
 									{
 										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
+										m_bAttemptInteractLeftHand = false;
 									}
 									else if (bPickupItemRight)
 									{
 										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
+										m_bAttemptInteractRightHand = false;
 									}
 								}
 							}
@@ -517,9 +435,6 @@ namespace flex
 						++nearbyInteractableIter;
 					}
 				}
-
-				m_bAttemptInteractLeftHand = false;
-				m_bAttemptInteractRightHand = false;
 			}
 		}
 
@@ -632,10 +547,10 @@ namespace flex
 		{
 			m_bCancelPlaceWire = false;
 
-			if (m_PlacingWire != nullptr)
+			if (m_Player->m_PlacingWire != nullptr)
 			{
-				g_SceneManager->CurrentScene()->RemoveObject(m_PlacingWire, true);
-				m_PlacingWire = nullptr;
+				g_SceneManager->CurrentScene()->RemoveObject(m_Player->m_PlacingWire, true);
+				m_Player->m_PlacingWire = nullptr;
 			}
 		}
 
@@ -643,13 +558,13 @@ namespace flex
 		{
 			m_bSpawnWire = false;
 
-			if (m_PlacingWire == nullptr)
+			if (m_Player->m_PlacingWire == nullptr)
 			{
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
-				m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
+				m_Player->m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
 
 				Transform* playerTransform = m_Player->GetTransform();
-				Transform* wireTransform = m_PlacingWire->GetTransform();
+				Transform* wireTransform = m_Player->m_PlacingWire->GetTransform();
 
 				glm::vec3 targetPos = playerTransform->GetWorldPosition() + playerTransform->GetForward() * 2.0f;
 				glm::quat targetRot = playerTransform->GetWorldRotation();
@@ -657,13 +572,13 @@ namespace flex
 				wireTransform->SetWorldPosition(targetPos, false);
 				wireTransform->SetWorldRotation(targetRot, true);
 
-				currentScene->AddRootObject(m_PlacingWire);
+				currentScene->AddRootObject(m_Player->m_PlacingWire);
 
 				CHECK(!m_Player->heldItemLeftHand.IsValid());
 				CHECK(!m_Player->heldItemRightHand.IsValid());
 
-				m_Player->heldItemLeftHand = m_PlacingWire->plug0ID;
-				m_Player->heldItemRightHand = m_PlacingWire->plug1ID;
+				m_Player->heldItemLeftHand = m_Player->m_PlacingWire->plug0ID;
+				m_Player->heldItemRightHand = m_Player->m_PlacingWire->plug1ID;
 			}
 		}
 
@@ -703,7 +618,7 @@ namespace flex
 				return;
 			}
 
-			if (m_bAttemptInteractLeftHand)
+			if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 			{
 				if (m_Player->m_TrackRidingID == InvalidTrackID)
 				{
@@ -712,6 +627,7 @@ namespace flex
 					if (trackInRangeIndex != InvalidTrackID)
 					{
 						m_bAttemptInteractLeftHand = false;
+						m_bAttemptInteractRightHand = false;
 
 						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
@@ -721,6 +637,7 @@ namespace flex
 				else
 				{
 					m_bAttemptInteractLeftHand = false;
+					m_bAttemptInteractRightHand = false;
 					m_Player->DetachFromTrack();
 				}
 			}
@@ -879,12 +796,12 @@ namespace flex
 
 				real move = moveFB;
 
-				const bool bReversing = (move < 0.0f);
-
-				if (!m_Player->IsFacingDownTrack())
+				if (m_Player->IsFacingDownTrack())
 				{
 					move = -move;
 				}
+
+				const bool bReversing = (move < 0.0f);
 
 				real targetDDist = move * m_Player->m_TrackMoveSpeed * g_FixedDeltaTime;
 				real pDist = m_Player->m_DistAlongTrack;
@@ -1070,7 +987,7 @@ namespace flex
 				m_bCancelPlaceItemFromInventory = true;
 				return EventReply::CONSUMED;
 			}
-			if (m_PlacingWire != nullptr)
+			if (m_Player->m_PlacingWire != nullptr)
 			{
 				m_bCancelPlaceWire = true;
 				return EventReply::CONSUMED;
@@ -1145,8 +1062,7 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				m_Player->m_bPlacingTrack = !m_Player->m_bPlacingTrack;
-				m_Player->m_bEditingTrack = false;
+				m_Player->TogglePlacingTrack();
 				return EventReply::CONSUMED;
 			}
 		}
@@ -1155,8 +1071,7 @@ namespace flex
 		{
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				m_Player->m_bEditingTrack = !m_Player->m_bEditingTrack;
-				m_Player->m_bPlacingTrack = false;
+				m_Player->ToggleEditingTrack();
 				return EventReply::CONSUMED;
 			}
 		}

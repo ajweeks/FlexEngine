@@ -93,8 +93,6 @@ namespace flex
 		glm::vec3 m_ItemPlacementGroundedPos; // Position on ground below to-be-placed item location
 		bool m_bItemPlacementValid = false;
 
-		Wire* m_PlacingWire = nullptr;
-
 		AudioSourceID m_PlaceItemAudioID = InvalidAudioSourceID;
 		AudioSourceID m_PlaceItemFailureAudioID = InvalidAudioSourceID;
 

@@ -545,7 +545,8 @@ namespace flex
 			if (bDirtyScale)
 			{
 				glm::vec3 worldScale = GetWorldScale();
-				if (!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
+				if (rigidBody->GetRigidBodyInternal() != nullptr &&
+					!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
 				{
 					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
 				}

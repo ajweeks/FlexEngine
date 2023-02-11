@@ -56,7 +56,7 @@ namespace flex
 		void ClampPitch();
 		void UpdateIsGrounded();
 
-		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false);
+		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
 
 		void AttachToTrack(TrackID trackID, real distAlongTrack);
 		void DetachFromTrack();
@@ -148,6 +148,20 @@ namespace flex
 
 		bool IsInventoryShowing() const;
 
+		// Tracks
+		bool IsPlacingTrack() const { return m_TrackBuildingContext.m_bPlacingTrack; }
+		bool IsEditingTrack() const { return m_TrackBuildingContext.m_bEditingTrack; }
+		i32 GetTrackEditingCurveIdx() const { return m_TrackBuildingContext.m_TrackEditingCurveIdx; }
+		TrackID GetTrackEditingID() const { return m_TrackBuildingContext.m_TrackEditingID; }
+		bool PlaceNewTrackNode();
+		bool AttemptCompleteTrack();
+		void DrawTrackDebug() const;
+		void SelectNearestTrackCurve();
+		void DeselectTrackCurve();
+		void UpdateTrackEditing();
+		void TogglePlacingTrack();
+		void ToggleEditingTrack();
+
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
 
@@ -164,15 +178,24 @@ namespace flex
 
 		real m_Pitch = 0.0f;
 
-		i32 m_CurveNodesPlaced = 0;
-		BezierCurveList m_TrackPlacing;
-		BezierCurve3D m_CurvePlacing;
-		bool m_bPlacingTrack = false;
-		TrackID m_TrackEditingID = InvalidTrackID;
-		i32 m_TrackEditingCurveIdx = -1;
-		i32 m_TrackEditingPointIdx = -1;
-		bool m_bEditingTrack = false;
-		glm::vec3 m_TrackPlacementReticlePos; // Local offset
+		struct TrackBuildingContext
+		{
+			i32 m_CurveNodesPlaced = 0;
+			BezierCurveList m_TrackPlacing; // List of curves making up the track we're placing
+			BezierCurve3D m_CurvePlacing; // The specific curve being placed currently
+			bool m_bPlacingTrack = false; // Placing a new track
+			bool m_bEditingTrack = false; // Editing an existing track
+			TrackID m_TrackEditingID = InvalidTrackID;
+			i32 m_TrackEditingCurveIdx = -1;
+			i32 m_TrackEditingPointIdx = -1;
+			glm::vec3 m_TrackPlacementReticlePos; // Local offset
+			// Config vars
+			real m_SnapThreshold = 1.0f;
+		};
+
+		TrackBuildingContext m_TrackBuildingContext;
+
+		Wire* m_PlacingWire = nullptr;
 
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;
@@ -222,8 +245,7 @@ namespace flex
 		GameObjectID terminalInteractingWithID = InvalidGameObjectID;
 		GameObjectID objectInteractingWithID = InvalidGameObjectID;
 
-		const real m_TurnToFaceDownTrackInvSpeed = 25.0f;
-		const real m_FlipTrackDirInvSpeed = 45.0f;
+		const real m_TurnToFaceDownTrackInvSpeed = 1.0f / 0.1f;
 
 	private:
 		friend class PlayerController;
