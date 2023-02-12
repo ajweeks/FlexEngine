@@ -5,6 +5,7 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "InputManager.hpp"
+#include "StringBuilder.hpp"
 
 namespace flex
 {
@@ -224,7 +225,17 @@ namespace flex
 
 			if (cameraCount > 1) // Only show arrows if other cameras exist
 			{
-				if (ImGui::Button("<"))
+				bool cycleLeft = ImGui::Button("<");
+				if (ImGui::IsItemHovered())
+				{
+					static StringBuilder actionBindingBuff;
+					actionBindingBuff.Clear();
+					if (g_InputManager->GetActionBindingName(Action::DBG_SWITCH_TO_PREV_CAM, actionBindingBuff))
+					{
+						ImGui::SetTooltip("Shortcut: %s", actionBindingBuff.ToCString());
+					}
+				}
+				if (cycleLeft)
 				{
 					CycleCamera(-1, false);
 				}
@@ -232,11 +243,21 @@ namespace flex
 				ImGui::SameLine();
 
 				std::string cameraNameStr = currentCamera->GetName();
-				ImGui::TextUnformatted(cameraNameStr.c_str());
+				ImGui::Text("%12s", cameraNameStr.c_str());
 
 				ImGui::SameLine();
 
-				if (ImGui::Button(">"))
+				bool cycleRight = ImGui::Button(">");
+				if (ImGui::IsItemHovered())
+				{
+					static StringBuilder actionBindingBuff;
+					actionBindingBuff.Clear();
+					if (g_InputManager->GetActionBindingName(Action::DBG_SWITCH_TO_NEXT_CAM, actionBindingBuff))
+					{
+						ImGui::SetTooltip("Shortcut: %s", actionBindingBuff.ToCString());
+					}
+				}
+				if (cycleRight)
 				{
 					CycleCamera(1, false);
 				}

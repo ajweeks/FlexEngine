@@ -7,6 +7,7 @@
 #include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
+#include "StringBuilder.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -619,6 +620,44 @@ namespace flex
 			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] <= threshold &&
 				m_pGamepadStates[gamepadIndex].axes[(i32)axis] > threshold);
 		}
+	}
+	
+	bool InputManager::GetActionBindingName(Action action, StringBuilder& outStrBuff) const
+	{
+		bool bBound = false;
+
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
+		{
+			outStrBuff.Append(KeyCodeStrings[(u32)binding.keyCode]);
+			bBound = true;
+		}
+		if (binding.mouseButton != MouseButton::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(MouseButtonStrings[(u32)binding.mouseButton]);
+			bBound = true;
+		}
+		if (binding.mouseAxis != MouseAxis::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(MouseAxisStrings[(u32)binding.mouseAxis]);
+			bBound = true;
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(GamepadButtonStrings[(u32)binding.gamepadButton]);
+			bBound = true;
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(GamepadAxisStrings[(u32)binding.gamepadAxis]);
+			bBound = true;
+		}
+
+		return bBound;
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
