@@ -16,6 +16,8 @@ IGNORE_WARNINGS_PUSH
 #include <Rpc.h> // For UuidCreate
 
 #include <dbghelp.h> // For SymInitialize
+
+#include <stringapiset.h> // For MultiByteToWideChar
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -466,6 +468,26 @@ namespace flex
 		{
 			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
 		}
+	}
+
+	bool Platform::SetFlexThreadAffinityMask(void* threadHandle, u64 threadID)
+	{
+		u64 affinityMask = 1ull << threadID;
+		u64 affinityResult = SetThreadAffinityMask(threadHandle, affinityMask);
+		return affinityResult != 0;
+	}
+
+	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
+	{
+		const int strLength = MultiByteToWideChar(0 /*: CP_ACP*/, 0, threadName, -1, NULL, 0);
+		// TODO: Stack allocate
+		const WCHAR* strWide = new WCHAR[strLength];
+		MultiByteToWideChar(0 /*: CP_ACP*/, 0, threadName, -1, (LPWSTR)strWide, strLength);
+
+		HRESULT hr = SetThreadDescription(threadHandle, strWide);
+		delete[] strWide;
+
+		return SUCCEEDED(hr);
 	}
 
 	void Platform::YieldProcessor()

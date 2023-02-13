@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#ifdef linux
+#ifdef __linux__
 
 #include "Platform/Platform.hpp"
 
@@ -559,6 +559,24 @@ namespace flex
 	void Platform::YieldProcessor()
 	{
 		sched_yield();
+	}
+
+	bool Platform::SetFlexThreadAffinityMask(void* threadHandle, u64 threadID)
+	{
+		int ret;
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		size_t cpusetsize = sizeof(cpuset);
+
+		CPU_SET(threadID, &cpuset);
+		ret = pthread_setaffinity_np(threadHandle, cpusetsize, &cpuset);
+		return ret != 0;
+	}
+
+	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
+	{
+		ret = pthread_setname_np(threadHandle, threadName);
+		return ret != 0;
 	}
 
 	void* Platform::InitCriticalSection()

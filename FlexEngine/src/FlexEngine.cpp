@@ -211,6 +211,8 @@ namespace flex
 
 		g_ConfigFileManager = new ConfigFileManager();
 
+		JobSystem::Initialize();
+
 		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER] = new PropertyCollectionManager();
 		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER]->Initialize();
 

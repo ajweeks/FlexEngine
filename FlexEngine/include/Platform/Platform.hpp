@@ -127,6 +127,8 @@ namespace flex
 		static void JoinThreads();
 		static void SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData);
 		static void YieldProcessor();
+		static bool SetFlexThreadAffinityMask(void* threadHandle, u64 threadID);
+		static bool SetFlexThreadName(void* threadHandle, const char* threadName);
 
 		static void* InitCriticalSection();
 		static void FreeCriticalSection(void* criticalSection);
