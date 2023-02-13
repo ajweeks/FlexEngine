@@ -332,6 +332,19 @@ namespace flex
 		}
 	}
 
+	void BaseScene::Render()
+	{
+		PROFILE_AUTO("BaseScene Render");
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			if (rootObject != nullptr)
+			{
+				rootObject->Render();
+			}
+		}
+	}
+
 	bool BaseScene::IsInitialized() const
 	{
 		return m_bInitialized;

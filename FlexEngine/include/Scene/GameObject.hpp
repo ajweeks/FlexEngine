@@ -151,6 +151,7 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true);
 		virtual void Update();
 		virtual void FixedUpdate();
+		virtual void Render();
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
@@ -1200,6 +1201,7 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
+		virtual void Render() override;
 
 		bool IsInteractable(Player* player);
 		void SetBeingInteractedWith(Player* player);

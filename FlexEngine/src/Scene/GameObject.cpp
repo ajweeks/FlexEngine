@@ -538,6 +538,10 @@ namespace flex
 	{
 	}
 
+	void GameObject::Render()
+	{
+	}
+
 	void GameObject::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		if (!IsVisibleInSceneExplorer())
@@ -7464,6 +7468,53 @@ namespace flex
 
 		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 
+		if (m_NearbyInteractable != nullptr)
+		{
+			const real scale = 2.0f;
+			const glm::vec3 right = m_Transform.GetRight();
+			const glm::vec3 forward = m_Transform.GetForward();
+			glm::vec3 c = m_Transform.GetWorldPosition();
+			glm::vec3 v1 = c + (right + forward) * scale;
+			glm::vec3 v2 = c + (-right + forward) * scale;
+			glm::vec3 v3 = c - (forward * scale);
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			debugRenderer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			o = glm::vec3(0.0f, 2.0f, 0.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+		}
+
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		u32 socketCount = sockets != nullptr ? (u32)sockets->size() : 0;
+
+		if (m_VM != nullptr && m_VM->IsExecuting())
+		{
+			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), socketCount);
+			for (u32 i = 0; i < outputCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, m_VM->terminalOutputs[i].valInt);
+			}
+			for (u32 i = outputCount; i < socketCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < socketCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void Terminal::Render()
+	{
+		PROFILE_AUTO("Terminal Render");
+
 		if (m_DisplayReloadTimeRemaining != -1.0f)
 		{
 			m_DisplayReloadTimeRemaining -= g_DeltaTime;
@@ -7590,48 +7641,6 @@ namespace flex
 				}
 			}
 		}
-
-		if (m_NearbyInteractable != nullptr)
-		{
-			const real scale = 2.0f;
-			const glm::vec3 right = m_Transform.GetRight();
-			const glm::vec3 forward = m_Transform.GetForward();
-			glm::vec3 c = m_Transform.GetWorldPosition();
-			glm::vec3 v1 = c + (right + forward) * scale;
-			glm::vec3 v2 = c + (-right + forward) * scale;
-			glm::vec3 v3 = c - (forward * scale);
-			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-			debugRenderer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
-			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-			o = glm::vec3(0.0f, 2.0f, 0.0f);
-			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-		}
-
-		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
-		u32 socketCount = sockets != nullptr ? (u32)sockets->size() : 0;
-
-		if (m_VM != nullptr && m_VM->IsExecuting())
-		{
-			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), socketCount);
-			for (u32 i = 0; i < outputCount; ++i)
-			{
-				pluggablesSystem->SetGameObjectOutputSignal(ID, i, m_VM->terminalOutputs[i].valInt);
-			}
-			for (u32 i = outputCount; i < socketCount; ++i)
-			{
-				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
-			}
-		}
-		else
-		{
-			for (u32 i = 0; i < socketCount; ++i)
-			{
-				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
-			}
-		}
-
-		GameObject::Update();
 	}
 
 	void Terminal::DrawImGuiWindow()

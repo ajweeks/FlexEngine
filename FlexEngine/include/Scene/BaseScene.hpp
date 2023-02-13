@@ -35,6 +35,7 @@ namespace flex
 		void FixedUpdate();
 		void Update();
 		void LateUpdate();
+		void Render();
 
 		bool IsInitialized() const;
 

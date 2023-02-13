@@ -870,6 +870,8 @@ namespace flex
 					}
 				}
 
+				currentScene->Render();
+
 #if 0
 				btIDebugDraw* debugDrawer = g_Renderer->GetDebugRenderer();
 				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
