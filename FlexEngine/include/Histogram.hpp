@@ -4,9 +4,7 @@ namespace flex
 {
 	struct Histogram
 	{
-		Histogram()
-		{
-		}
+		Histogram() = default;
 
 		explicit Histogram(i32 count)
 		{

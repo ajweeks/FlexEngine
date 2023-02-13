@@ -26,6 +26,15 @@ namespace flex
 	class StringBuilder;
 	struct Texture;
 
+	struct TextureLoadInfo
+	{
+		std::string relativeFilePath;
+		HTextureSampler sampler;
+		bool bFlipVertically;
+		bool bGenerateMipMaps;
+		bool bHDR;
+	};
+
 	class ResourceManager
 	{
 	public:
@@ -97,14 +106,24 @@ namespace flex
 		// Returns a pointer into loadedTextures if a texture has been loaded from that file path, otherwise returns nullptr
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
 		Texture* FindLoadedTextureWithName(const std::string& fileName);
+		bool IsTextureLoading(TextureID textureID) const;
 		Texture* GetLoadedTexture(TextureID textureID);
-		TextureID GetOrLoadTexture(const std::string& textureFilePath);
+		TextureID GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler = nullptr);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
 		TextureID GetOrLoadIcon(StringID prefabNameSID, i32 resolution = -1);
 
 		TextureID GetNextAvailableTextureID();
-		TextureID AddLoadedTexture(Texture* texture);
+		TextureID QueueTextureLoad(const std::string& relativeFilePath,
+			HTextureSampler inSampler,
+			bool bFlipVertically,
+			bool bGenerateMipMaps,
+			bool bHDR);
+		TextureID QueueTextureLoad(const TextureLoadInfo& loadInfo);
+		TextureID LoadTextureImmediate(const TextureLoadInfo& loadInfo);
+		bool GetQueuedTextureLoadInfo(TextureID textureID, TextureLoadInfo& outLoadInfo);
+		TextureID AddLoadedTexture(Texture* texture, TextureID existingTextureID = InvalidTextureID);
+		TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler);
 
 		MaterialCreateInfo* GetMaterialInfo(const char* materialName);
 		// DEPRECATED (see cpp)
@@ -166,6 +185,10 @@ namespace flex
 		// Texture ID will be invalid until texture is loaded
 		std::vector<Pair<StringID, IconMetaData>> discoveredIcons;
 		TextureID tofuIconID = InvalidTextureID;
+
+		JobSystem::Context m_TextureLoadingContext;
+		std::mutex m_QueuedTextureLoadInfoMutex;
+		std::vector<Pair<TextureID, TextureLoadInfo>> m_QueuedTextureLoadInfos;
 
 		// Creation info for all discovered materials
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;

@@ -34,9 +34,15 @@ namespace flex
 		virtual void Destroy();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
-		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
-		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) = 0;
-		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) = 0;
+		virtual TextureID InitializeLoadedTexture(TextureID textureID) = 0;
+		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath,
+			HTextureSampler inSampler,
+			bool bFlipVertically,
+			bool bGenerateMipMaps,
+			bool bHDR,
+			TextureID existingTextureID = InvalidTextureID) = 0;
+		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) = 0;
+		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
@@ -327,6 +333,7 @@ namespace flex
 		// TODO: Store in map (string name -> TextureID)
 		TextureID blankTextureID = InvalidTextureID; // 1x1 white pixel texture
 		TextureID blankTextureArrID = InvalidTextureID; // 1x1 white pixel with texture array with one layer
+		TextureID pinkTextureID = InvalidTextureID; // 1x1 pink (magenta) texture
 		TextureID alphaBGTextureID = InvalidTextureID;
 
 		TextureID pointLightIconID = InvalidTextureID;
@@ -358,6 +365,7 @@ namespace flex
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;
 		Texture* m_NoiseTexture = nullptr;
+		Texture* m_PinkTexture = nullptr;
 
 	protected:
 		struct ShaderMetaData

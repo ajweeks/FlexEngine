@@ -9858,8 +9858,8 @@ namespace flex
 
 		// TODO: Upload as two channel texture
 		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
-		m_RandomTableTextureID = g_Renderer->InitializeTextureArrayFromMemory(textureMem.data(),
-			(u32)(textureMem.size() * sizeof(u32) * 4), VK_FORMAT_R32G32B32A32_SFLOAT,
+		m_RandomTableTextureID = g_ResourceManager->InitializeTextureArrayFromMemory(textureMem.data(),
+			(u32)(textureMem.size() * sizeof(u32) * 4), TextureFormat::R32G32B32A32_SFLOAT,
 			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
 			g_Renderer->GetSamplerNearestClampToEdge());
 	}

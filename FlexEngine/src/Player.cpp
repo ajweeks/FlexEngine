@@ -126,7 +126,11 @@ namespace flex
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", g_Renderer->GetSamplerLinearClampToEdge(), false, false, false);
+		TextureLoadInfo loadInfo = {
+			TEXTURE_DIRECTORY "cross-hair-01.png",
+			g_Renderer->GetSamplerLinearClampToEdge()
+		};
+		m_CrosshairTextureID = g_ResourceManager->QueueTextureLoad(loadInfo);
 
 		ParseInventoryFile();
 

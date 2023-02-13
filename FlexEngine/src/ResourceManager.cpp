@@ -111,6 +111,42 @@ namespace flex
 		{
 			DiscoverTextures();
 		}
+
+		{
+			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+
+			if (!m_QueuedTextureLoadInfos.empty())
+			{
+				// TODO: Kick off at other points in the frame?
+				auto iter = m_QueuedTextureLoadInfos.begin();
+				while (iter != m_QueuedTextureLoadInfos.end())
+				{
+					TextureID textureID = iter->first;
+					TextureLoadInfo& loadInfo = iter->second;
+
+					bool bIsLoading = loadedTextures[textureID]->IsLoading();
+					if (bIsLoading)
+					{
+						++iter;
+						continue;
+					}
+
+					Texture* texture = GetLoadedTexture(textureID);
+
+					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
+					Print("[TEXTURE] Created texture: %s\n", loadInfo.relativeFilePath.c_str());
+
+					if (newTexSize == 0)
+					{
+						delete texture;
+						++iter;
+						continue;
+					}
+
+					iter = m_QueuedTextureLoadInfos.erase(iter);
+				}
+			}
+		}
 	}
 
 	void ResourceManager::Destroy()
@@ -562,12 +598,13 @@ namespace flex
 				{
 					if (Contains(m_TextureDirectoryWatcher->modifiedFilePaths, foundFilePath))
 					{
-						for (Texture* tex : loadedTextures)
+						for (Texture* texture : loadedTextures)
 						{
 							// File has been modified externally, reload its contents
-							if (tex->relativeFilePath == foundFilePath)
+							if (texture != nullptr &&
+								texture->relativeFilePath == foundFilePath)
 							{
-								tex->Reload();
+								texture->Reload();
 								++modifiedTextureCount;
 							}
 						}
@@ -1101,7 +1138,8 @@ namespace flex
 	{
 		for (Texture* texture : loadedTextures)
 		{
-			if (texture && !filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
+			if (texture != nullptr &&
+				!filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
 			{
 				return texture;
 			}
@@ -1114,7 +1152,8 @@ namespace flex
 	{
 		for (Texture* texture : loadedTextures)
 		{
-			if (texture && fileName.compare(texture->fileName) == 0)
+			if (texture != nullptr &&
+				fileName.compare(texture->fileName) == 0)
 			{
 				return texture;
 			}
@@ -1123,28 +1162,49 @@ namespace flex
 		return nullptr;
 	}
 
+	bool ResourceManager::IsTextureLoading(TextureID textureID) const
+	{
+		if (textureID < loadedTextures.size())
+		{
+			return loadedTextures[textureID] != nullptr && loadedTextures[textureID]->IsLoading();
+		}
+		return false;
+	}
+
 	Texture* ResourceManager::GetLoadedTexture(TextureID textureID)
 	{
 		if (textureID < loadedTextures.size())
 		{
-			return loadedTextures[textureID];
+			Texture* result = loadedTextures[textureID];
+			if (result->IsLoading())
+			{
+				// Show pink texture until this one has loaded
+				return GetLoadedTexture(g_Renderer->pinkTextureID);
+			}
+			return result;
 		}
 		return nullptr;
 	}
 
-	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath)
+	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler /* = nullptr */)
 	{
 		for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 		{
 			Texture* texture = loadedTextures[i];
-			if (texture && texture->relativeFilePath.compare(textureFilePath) == 0)
+			if (texture != nullptr &&
+				texture->relativeFilePath.compare(textureFilePath) == 0)
 			{
+				// TODO: Fallback on pink texture when requested texture is still loading?
 				return (TextureID)i;
 			}
 		}
 
-		// TODO: Support other samplers
-		TextureID texID = g_Renderer->InitializeTextureFromFile(textureFilePath, g_Renderer->GetSamplerLinearRepeat(), false, false, false);
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = textureFilePath;
+		loadInfo.sampler = sampler != nullptr ? sampler : g_Renderer->GetSamplerLinearRepeat();
+		loadInfo.relativeFilePath = textureFilePath;
+		TextureID texID = g_ResourceManager->QueueTextureLoad(loadInfo);
+
 		return texID;
 	}
 
@@ -1209,11 +1269,117 @@ namespace flex
 		return (TextureID)(loadedTextures.size() - 1);
 	}
 
-	TextureID ResourceManager::AddLoadedTexture(Texture* texture)
+	TextureID ResourceManager::QueueTextureLoad(const std::string& relativeFilePath,
+		HTextureSampler inSampler,
+		bool bFlipVertically,
+		bool bGenerateMipMaps,
+		bool bHDR)
+	{
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = relativeFilePath;
+		loadInfo.sampler = inSampler;
+		loadInfo.bFlipVertically = bFlipVertically;
+		loadInfo.bGenerateMipMaps = bGenerateMipMaps;
+		loadInfo.bHDR = bHDR;
+		return QueueTextureLoad(loadInfo);
+	}
+
+	TextureID ResourceManager::QueueTextureLoad(const TextureLoadInfo& loadInfo)
 	{
 		TextureID textureID = GetNextAvailableTextureID();
+
+		{
+			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+
+			m_QueuedTextureLoadInfos.emplace_back(textureID, loadInfo);
+			Print("[TEXTURE] Queued texture load: %s\n", loadInfo.relativeFilePath.c_str());
+
+			std::string textureName = StripLeadingDirectories(loadInfo.relativeFilePath);
+			Texture* newTex = g_Renderer->CreateTexture(textureName);
+			newTex->bIsLoading = 1;
+			newTex->bFlipVertically = loadInfo.bFlipVertically;
+			newTex->bGenerateMipMaps = loadInfo.bGenerateMipMaps;
+			newTex->bHDR = loadInfo.bHDR;
+
+			loadedTextures[textureID] = newTex;
+		}
+
+		WRITE_BARRIER;
+
+		JobSystem::Execute(m_TextureLoadingContext, [](JobSystem::JobArgs args)
+		{
+			// Load texture from disk
+			TextureLoadInfo loadInfo;
+			if (g_ResourceManager->GetQueuedTextureLoadInfo((TextureID)args.payload, loadInfo))
+			{
+				Texture* texture = g_ResourceManager->GetLoadedTexture((TextureID)args.payload);
+
+				if (texture->LoadFromFile(loadInfo.relativeFilePath, loadInfo.sampler, TextureFormat::UNDEFINED))
+				{
+					u32 expected = 1u;
+					texture->bIsLoading.compare_exchange_strong(expected, 0u, std::memory_order_release, std::memory_order_relaxed);
+					Print("[TEXTURE] Texture load complete: %s\n", loadInfo.relativeFilePath.c_str());
+				}
+				else
+				{
+					PrintError("Failed to load texture from file %s (TextureID: %u)\n", loadInfo.relativeFilePath.c_str(), (TextureID)args.payload);
+				}
+			}
+			else
+			{
+				PrintError("Failed to get queued texture load info! (TextureID: %u)\n", (TextureID)args.payload);
+			}
+		}, (u64)textureID);
+
+		return textureID;
+	}
+
+	TextureID ResourceManager::LoadTextureImmediate(const TextureLoadInfo& loadInfo)
+	{
+		return g_Renderer->InitializeTextureFromFile(loadInfo.relativeFilePath, loadInfo.sampler,
+			loadInfo.bFlipVertically, loadInfo.bGenerateMipMaps, loadInfo.bHDR);
+	}
+
+	bool ResourceManager::GetQueuedTextureLoadInfo(TextureID textureID, TextureLoadInfo& outLoadInfo)
+	{
+		const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+
+		for (const Pair<TextureID, TextureLoadInfo>& pair : m_QueuedTextureLoadInfos)
+		{
+			if (pair.first == textureID)
+			{
+				outLoadInfo = pair.second;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	TextureID ResourceManager::AddLoadedTexture(Texture* texture, TextureID existingTextureID /* = InvalidTextureID */)
+	{
+		TextureID textureID = existingTextureID;
+		if (textureID == InvalidTextureID)
+		{
+			textureID = GetNextAvailableTextureID();
+		}
+		CHECK_LT(textureID, loadedTextures.size());
+
 		loadedTextures[textureID] = texture;
 		return textureID;
+	}
+
+	TextureID ResourceManager::InitializeTextureArrayFromMemory(void* data,
+		u32 size,
+		TextureFormat inFormat,
+		const std::string& name,
+		u32 width,
+		u32 height,
+		u32 layerCount,
+		u32 channelCount,
+		HTextureSampler inSampler)
+	{
+		return g_Renderer->InitializeTextureArrayFromMemory(data, size, inFormat, name, width, height, layerCount, channelCount, inSampler);
 	}
 
 	MaterialCreateInfo* ResourceManager::GetMaterialInfo(const char* materialName)
@@ -2224,8 +2390,14 @@ namespace flex
 					i32 i = 0;
 					for (Texture* texture : loadedTextures)
 					{
+						if (texture == nullptr)
+						{
+							continue;
+						}
+
 						std::string texturePath = texture->relativeFilePath;
 						std::string textureName = StripLeadingDirectories(texturePath);
+						// TODO:
 
 						++i;
 					}
@@ -2577,7 +2749,8 @@ namespace flex
 						bool bTextureAlreadyImported = false;
 						for (Texture* texture : loadedTextures)
 						{
-							if (texture->relativeFilePath.compare(relativeFilePath) == 0)
+							if (texture != nullptr &&
+								texture->relativeFilePath.compare(relativeFilePath) == 0)
 							{
 								bTextureAlreadyImported = true;
 								break;
@@ -2590,9 +2763,13 @@ namespace flex
 						}
 						else
 						{
-							// TODO: Support other samplers
 							Print("Importing texture: %s\n", relativeFilePath.c_str());
-							g_Renderer->InitializeTextureFromFile(relativeFilePath, g_Renderer->GetSamplerLinearRepeat(), false, false, false);
+
+							TextureLoadInfo loadInfo = {};
+							loadInfo.relativeFilePath = relativeFilePath;
+							// TODO: Support other samplers
+							loadInfo.sampler = g_Renderer->GetSamplerLinearRepeat();
+							LoadTextureImmediate(loadInfo);
 						}
 
 						ImGui::CloseCurrentPopup();

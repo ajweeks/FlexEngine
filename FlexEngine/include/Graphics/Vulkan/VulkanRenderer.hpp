@@ -42,9 +42,15 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
-			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) override;
-			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath,
+				HTextureSampler inSampler,
+				bool bFlipVertically,
+				bool bGenerateMipMaps,
+				bool bHDR,
+				TextureID existingTextureID = InvalidTextureID) override;
+			virtual TextureID InitializeLoadedTexture(TextureID textureID) override;
+			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) override;
+			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 			virtual void OnTextureDestroyed(TextureID textureID) override;
@@ -382,7 +388,7 @@ namespace flex
 			void DrawParticles(VkCommandBuffer commandBuffer);
 			void DrawTerrain(VkCommandBuffer commandBuffer);
 
-			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
+			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer, bool bCacheResult);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 

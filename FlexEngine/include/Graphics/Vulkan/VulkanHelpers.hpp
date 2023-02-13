@@ -277,7 +277,7 @@ namespace flex
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-				VkFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount = 1);
+				TextureFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount = 1) override;
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
@@ -288,14 +288,14 @@ namespace flex
 			 * Creates image, image view, and sampler based on the texture at relativeFilePath
 			 * Returns true if load completed successfully
 			 */
-			bool LoadFromFile(const std::string& relativeFilePath, HTextureSampler inSampler, VkFormat inFormat = VK_FORMAT_UNDEFINED);
+			bool LoadFromFile(const std::string& inRelativeFilePath, HTextureSampler inSampler, TextureFormat inFormat = TextureFormat::UNDEFINED) override;
 
 			/*
 			* Creates this texture's rendering resources
 			* Requires data to have been loaded already
 			* Returns the size of the image
 			*/
-			VkDeviceSize Create(bool bGenerateFullMipChain = false);
+			u64 Create(bool bGenerateFullMipChain = false) override;
 
 			/*
 			 * Creates image, image view, and sampler

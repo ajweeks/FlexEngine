@@ -299,7 +299,7 @@ namespace flex
 		{
 			if (!fileName.empty())
 			{
-				if (!LoadFromFile(relativeFilePath, sampler, imageFormat))
+				if (!LoadFromFile(relativeFilePath, sampler, (TextureFormat)imageFormat))
 				{
 					PrintError("Failed to reload texture at %s\n", relativeFilePath.c_str());
 					return;
@@ -316,7 +316,7 @@ namespace flex
 		}
 
 		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-			VkFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount /* = 1 */)
+			TextureFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount /* = 1 */)
 		{
 			CHECK(inWidth != 0u && inHeight != 0u);
 			CHECK_NE(buffer, nullptr);
@@ -326,14 +326,14 @@ namespace flex
 			width = inWidth;
 			height = inHeight;
 			channelCount = inChannelCount;
-			imageFormat = inFormat;
+			imageFormat = (VkFormat)inFormat;
 			sampler = inSampler;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.DBG_Name = name.c_str();
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
-			imageCreateInfo.format = inFormat;
+			imageCreateInfo.format = (VkFormat)inFormat;
 			imageCreateInfo.width = inWidth;
 			imageCreateInfo.height = inHeight;
 			imageCreateInfo.arrayLayers = layerCount;
@@ -372,7 +372,7 @@ namespace flex
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.DBG_Name = name.c_str();
 			viewCreateInfo.viewType = (bIsArray ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D);
-			viewCreateInfo.format = inFormat;
+			viewCreateInfo.format = (VkFormat)inFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = inMipLevels;
@@ -897,10 +897,9 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		bool VulkanTexture::LoadFromFile(
-			const std::string& inRelativeFilePath,
+		bool VulkanTexture::LoadFromFile(const std::string& inRelativeFilePath,
 			HTextureSampler inSampler,
-			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */)
+			TextureFormat inFormat /* = TextureFormat::UNDEFINED */)
 		{
 			PROFILE_AUTO("VulkanTexture LoadFromFile");
 
@@ -932,16 +931,16 @@ namespace flex
 
 			channelCount = 4; // ??
 
-			if (inFormat == VK_FORMAT_UNDEFINED)
+			imageFormat = (VkFormat)inFormat;
+			if (imageFormat == VK_FORMAT_UNDEFINED)
 			{
-				inFormat = CalculateFormat();
+				imageFormat = CalculateFormat();
 			}
-			imageFormat = inFormat;
 
 			return true;
 		}
 
-		VkDeviceSize VulkanTexture::Create(bool bGenerateFullMipChain /* = false */)
+		u64 VulkanTexture::Create(bool bGenerateFullMipChain /* = false */)
 		{
 			if (bGenerateFullMipChain)
 			{
@@ -1046,7 +1045,7 @@ namespace flex
 				GenerateMipmaps();
 			}
 
-			return imageSize;
+			return (u64)imageSize;
 		}
 
 		void VulkanTexture::CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo)

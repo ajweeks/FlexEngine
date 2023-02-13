@@ -828,6 +828,11 @@ namespace flex
 		pixels = nullptr;
 	}
 
+	bool Texture::IsLoading() const
+	{
+		return bIsLoading;
+	}
+
 	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
 	{
 		PROFILE_AUTO("UniformOverrides AddUniform");
