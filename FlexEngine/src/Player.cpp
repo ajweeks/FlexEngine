@@ -126,10 +126,9 @@ namespace flex
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		TextureLoadInfo loadInfo = {
-			TEXTURE_DIRECTORY "cross-hair-01.png",
-			g_Renderer->GetSamplerLinearClampToEdge()
-		};
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = TEXTURE_DIRECTORY "cross-hair-01.png";
+		loadInfo.sampler = g_Renderer->GetSamplerLinearClampToEdge();
 		m_CrosshairTextureID = g_ResourceManager->QueueTextureLoad(loadInfo);
 
 		ParseInventoryFile();
@@ -1323,7 +1322,7 @@ namespace flex
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
 		CHECK(ctx.m_bPlacingTrack);
-		
+
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
 		ctx.m_CurveNodesPlaced = 0;
@@ -1341,7 +1340,7 @@ namespace flex
 
 		return true;
 	}
-	
+
 	void Player::DrawTrackDebug() const
 	{
 		const TrackBuildingContext& ctx = m_TrackBuildingContext;
@@ -1380,7 +1379,7 @@ namespace flex
 			static btVector3 ringColEditingActive(0.4f, 0.2f, 0.85f);
 			static btVector3 placingCol(0.18f, 0.22f, 0.35f);
 
-			btVector3 col = ctx.m_bPlacingTrack ? placingCol : 
+			btVector3 col = ctx.m_bPlacingTrack ? placingCol :
 				ctx.m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive;
 
 			debugRenderer->drawCylinder(0.6f, 0.01f, 1, cylinderTransform, col);
