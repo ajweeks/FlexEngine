@@ -1171,12 +1171,12 @@ namespace flex
 		return false;
 	}
 
-	Texture* ResourceManager::GetLoadedTexture(TextureID textureID)
+	Texture* ResourceManager::GetLoadedTexture(TextureID textureID, bool bProvideFallbackWhileLoading /* = true */)
 	{
 		if (textureID < loadedTextures.size())
 		{
 			Texture* result = loadedTextures[textureID];
-			if (result->IsLoading())
+			if (bProvideFallbackWhileLoading && result->IsLoading())
 			{
 				// Show pink texture until this one has loaded
 				return GetLoadedTexture(g_Renderer->pinkTextureID);
@@ -1312,7 +1312,7 @@ namespace flex
 			TextureLoadInfo loadInfo;
 			if (g_ResourceManager->GetQueuedTextureLoadInfo((TextureID)args.payload, loadInfo))
 			{
-				Texture* texture = g_ResourceManager->GetLoadedTexture((TextureID)args.payload);
+				Texture* texture = g_ResourceManager->GetLoadedTexture((TextureID)args.payload, false);
 
 				if (texture->LoadFromFile(loadInfo.relativeFilePath, loadInfo.sampler, TextureFormat::UNDEFINED))
 				{
