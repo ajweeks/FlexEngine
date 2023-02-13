@@ -226,30 +226,7 @@ namespace flex
 
 		if (!m_bPauseTimeOfDay)
 		{
-			m_TimeOfDay = glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f);
-		}
-
-		i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
-		i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
-		real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
-
-		alpha = SmootherStep01(alpha);
-		alpha = SmootherStep01(alpha);
-		alpha = SmootherStep01(alpha);
-		m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
-		m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
-		m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
-		m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
-
-		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
-		if (dirLight != nullptr)
-		{
-			real azimuth = 0.0f;
-			real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
-			glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
-			rot = glm::rotate(rot, elevation, VEC3_RIGHT);
-			dirLight->GetTransform()->SetWorldRotation(rot);
-			dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+			SetTimeOfDay(glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f));
 		}
 	}
 
@@ -630,9 +607,10 @@ namespace flex
 		{
 			m_SecondsPerDay = glm::clamp(m_SecondsPerDay, 0.001f, 6000.0f);
 		}
-		if (ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f))
+		real timeOfDay = m_TimeOfDay;
+		if (ImGui::SliderFloat("Time of day", &timeOfDay, 0.0f, 0.999f))
 		{
-			m_TimeOfDay = glm::clamp(m_TimeOfDay, 0.0f, 0.999f);
+			SetTimeOfDay(glm::clamp(timeOfDay, 0.0f, 0.999f));
 		}
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
@@ -1966,7 +1944,35 @@ namespace flex
 
 	void BaseScene::SetTimeOfDay(real time)
 	{
-		m_TimeOfDay = glm::clamp(time, 0.0f, 1.0f);
+		time = glm::clamp(time, 0.0f, 1.0f);
+
+		if (!NearlyEquals(m_TimeOfDay, time, 1.0e-7f))
+		{
+			m_TimeOfDay = time;
+
+			i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
+			i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
+			real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
+
+			alpha = SmootherStep01(alpha);
+			alpha = SmootherStep01(alpha);
+			alpha = SmootherStep01(alpha);
+			m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
+			m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
+			m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
+			m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
+
+			DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+			if (dirLight != nullptr)
+			{
+				real azimuth = 0.0f;
+				real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
+				glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
+				rot = glm::rotate(rot, elevation, VEC3_RIGHT);
+				dirLight->GetTransform()->SetWorldRotation(rot);
+				dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+			}
+		}
 	}
 
 	real BaseScene::GetTimeOfDay() const
