@@ -1395,6 +1395,8 @@ namespace flex
 
 	void UIManager::Initialize()
 	{
+		PROFILE_AUTO("UIManager Initialize");
+
 		Deserialize();
 	}
 

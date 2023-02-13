@@ -253,11 +253,13 @@ namespace flex
 			return nullptr;
 		}
 
-		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
+		PROFILE_AUTO("MeshComponent LoadFromCGLTFInternal");
+
+		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID, /*bSetRequiredAttributesFromMat: */true);
 
 		if (newMeshComponent->m_RequiredAttributes == 0)
 		{
-			PrintError("Attempted to load mesh without anyrequired attributes!\n");
+			PrintError("Attempted to load mesh without any required attributes!\n");
 			return nullptr;
 		}
 
@@ -547,6 +549,8 @@ namespace flex
 		bool bCreateRenderObject,
 		i32* outSubmeshIndex)
 	{
+		PROFILE_AUTO("MeshComponent LoadFromMemoryInternal");
+
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
@@ -607,6 +611,8 @@ namespace flex
 			PrintError("Attempted to load mesh after already initialized! If reloading, first call Destroy\n");
 			return false;
 		}
+
+		PROFILE_AUTO("MeshComponent LoadPrefabShape");
 
 		m_Shape = shape;
 
@@ -1345,6 +1351,8 @@ namespace flex
 
 	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
 	{
+		PROFILE_AUTO("MeshComponent CalculateTangents");
+
 		// TODO:
 		FLEX_UNUSED(indices);
 
@@ -1504,6 +1512,8 @@ namespace flex
 
 	void MeshComponent::CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions)
 	{
+		PROFILE_AUTO("MeshComponent CalculateBoundingSphereRadius");
+
 		if (!positions.empty())
 		{
 			m_MinPoint = glm::vec3(FLT_MAX);
@@ -1535,7 +1545,6 @@ namespace flex
 				m_BoundingSphereRadius = std::sqrt(sqrBoundingSphereRadius);
 			}
 		}
-
 	}
 
 	void MeshComponent::CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides)

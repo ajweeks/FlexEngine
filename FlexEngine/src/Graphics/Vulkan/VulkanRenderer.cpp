@@ -473,9 +473,13 @@ namespace flex
 				CreateUniformBuffers((VulkanMaterial*)matPair.second);
 			}
 
+			{
+				PROFILE_AUTO("CreateGraphicsPipelines");
+
 			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
 			{
 				CreateGraphicsPipeline(i);
+			}
 			}
 
 
@@ -1377,7 +1381,7 @@ namespace flex
 
 		void VulkanRenderer::CreateTerrainBuffers()
 		{
-			PROFILE_BEGIN("CreateTerrainBuffers");
+			PROFILE_AUTO("CreateTerrainBuffers");
 
 			// Point buffer
 
@@ -2985,7 +2989,11 @@ namespace flex
 				VK_IMAGE_ASPECT_COLOR_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			{
+				PROFILE_AUTO("FlushCommandBuffer");
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
+			}
 
 
 			ShaderID equirectangularToCubeShaderID = equirectangularToCubeMat->shaderID;
@@ -3165,7 +3173,10 @@ namespace flex
 
 			EndDebugMarkerRegion(cmdBuf, "End Generate Cubemap from HDR");
 
+			{
+				PROFILE_AUTO("FlushCommandBuffer");
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
+			}
 
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
@@ -3262,7 +3273,11 @@ namespace flex
 				VK_IMAGE_ASPECT_COLOR_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			{
+				PROFILE_AUTO("FlushCommandBuffer");
 			m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
+			}
 
 			VulkanMaterial* irradianceMaterial = (VulkanMaterial*)m_Materials[m_IrradianceMaterialID];
 			VulkanShader* irradianceShader = (VulkanShader*)m_Shaders[irradianceMaterial->shaderID];
@@ -3440,7 +3455,11 @@ namespace flex
 
 			EndDebugMarkerRegion(cmdBuf, "End Generate Irradiance");
 
+
+			{
+				PROFILE_AUTO("FlushCommandBuffer");
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
+			}
 
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
@@ -3538,7 +3557,10 @@ namespace flex
 					VK_IMAGE_ASPECT_COLOR_BIT,
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				{
+					PROFILE_AUTO("FlushCommandBuffer");
 				m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
+			}
 			}
 
 			VulkanMaterial* prefilterMaterial = (VulkanMaterial*)m_Materials[m_PrefilterMaterialID];
@@ -3649,6 +3671,9 @@ namespace flex
 
 					VkDeviceSize offsets[1] = { 0 };
 
+					{
+						PROFILE_AUTO("vkCmdDraw");
+
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &m_StaticVertexBuffers[m_Shaders[skyboxMat->shaderID]->staticVertexBufferIndex].second->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
@@ -3658,6 +3683,7 @@ namespace flex
 					else
 					{
 						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, skyboxRenderObject->vertexOffset, 0);
+					}
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -3719,11 +3745,14 @@ namespace flex
 
 			m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 
+			{
+				PROFILE_AUTO("Cleanup");
 			vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, offscreen.framebuffer, nullptr);
 			m_VulkanDevice->FreeMemory(offscreen.memory, nullptr);
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
+			}
 
 			PROFILE_END("Render");
 		}
@@ -3991,7 +4020,7 @@ namespace flex
 
 		bool VulkanRenderer::LoadFont(FontMetaData& fontMetaData, bool bForceRender)
 		{
-			PROFILE_BEGIN("LoadFont");
+			PROFILE_AUTO("LoadFont");
 
 			std::vector<char> fileMemory;
 			ReadFile(fontMetaData.filePath, fileMemory, true);
@@ -6246,6 +6275,8 @@ namespace flex
 
 		void VulkanRenderer::CreateDescriptorSets()
 		{
+			PROFILE_AUTO("CreateDescriptorSets");
+
 			// TODO: Don't create desc sets for every object
 			for (auto iter = m_Materials.begin(); iter != m_Materials.end(); ++iter)
 			{

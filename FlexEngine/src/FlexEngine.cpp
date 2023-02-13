@@ -283,7 +283,10 @@ namespace flex
 
 		g_UIManager->Initialize();
 
+		{
+			PROFILE_AUTO("ImGui CreateContext");
 		ImGui::CreateContext();
+		}
 		SetupImGuiStyles();
 
 		g_ResourceManager->PostInitialize();
@@ -341,16 +344,6 @@ namespace flex
 			m_TestSprings.emplace_back(Spring<glm::vec3>());
 			m_TestSprings[i].DR = 0.9f;
 			m_TestSprings[i].UAF = 15.0f;
-		}
-
-		sec durationSec = Time::CurrentSeconds() - startTime;
-		PROFILE_END("FlexEngine Initialize");
-
-		ms blockDuration = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
-		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
-		{
-			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
-			AppendToBootupTimesFile(bootupTimesEntry);
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -540,6 +533,16 @@ namespace flex
 		}, Variant::Type::FLOAT, Variant::Type::FLOAT));
 
 		ParseUIWindowCache();
+
+		sec durationSec = Time::CurrentSeconds() - startTime;
+		PROFILE_END("FlexEngine Initialize");
+
+		ms blockDuration = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
+		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
+		{
+			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+			AppendToBootupTimesFile(bootupTimesEntry);
+		}
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
@@ -1001,7 +1004,7 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		PROFILE_AUTO("DrawImGuiObjects");
+		PROFILE_AUTO("FlexEngine DrawImGuiObjects");
 
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
@@ -2098,6 +2101,8 @@ namespace flex
 	// TODO: EZ: Add config window to set common settings
 	void FlexEngine::SaveCommonSettingsToDisk(bool bAddEditorStr)
 	{
+		PROFILE_AUTO("SaveCommonSettingsToDisk");
+
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
 			PrintError("Failed to save common settings to disk: file path is not set!\n");
@@ -2188,6 +2193,8 @@ namespace flex
 
 	void FlexEngine::ParseUIWindowCache()
 	{
+		PROFILE_AUTO("ParseUIWindowCache");
+
 		if (FileExists(UI_WINDOW_CACHE_LOCATION))
 		{
 			std::string fileContents;
@@ -2209,6 +2216,8 @@ namespace flex
 
 	void FlexEngine::SerializeUIWindowCache()
 	{
+		PROFILE_AUTO("ParseUIWindowCache");
+
 		JSONObject uiWindowsOpenObj = {};
 		for (auto& pair : m_UIWindows)
 		{

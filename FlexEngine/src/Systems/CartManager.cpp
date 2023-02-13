@@ -113,6 +113,7 @@ namespace flex
 
 	void CartManager::Initialize()
 	{
+		PROFILE_AUTO("CartManager CreateContext");
 		g_SceneManager->CurrentScene()->BindOnGameObjectDestroyedCallback(&m_OnGameObjectDestroyedCallback);
 	}
 

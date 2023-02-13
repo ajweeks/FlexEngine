@@ -59,7 +59,7 @@ namespace flex
 
 	void Editor::Initialize()
 	{
-		PROFILE_AUTO("Editor Initialize(");
+		PROFILE_AUTO("Editor Initialize");
 
 		// Transform gizmo materials
 		{
@@ -93,6 +93,8 @@ namespace flex
 
 	void Editor::PostInitialize()
 	{
+		PROFILE_AUTO("Editor PostInitialize");
+
 		CreateObjects();
 	}
 

@@ -69,6 +69,8 @@ namespace flex
 
 	void ResourceManager::PostInitialize()
 	{
+		PROFILE_AUTO("ResourceManager PostInitialize");
+
 		tofuIconID = GetOrLoadTexture(ICON_DIRECTORY "tofu-icon-256.png");
 	}
 
@@ -901,7 +903,7 @@ namespace flex
 		std::array<glm::vec2i, 4>* outMaxPositions,
 		FT_Face* outFace)
 	{
-		PROFILE_BEGIN("LoadFontMetrics");
+		PROFILE_AUTO("LoadFontMetrics");
 
 		CHECK_EQ(metaData.bitmapFont, nullptr);
 

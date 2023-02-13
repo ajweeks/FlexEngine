@@ -25,6 +25,7 @@ namespace flex
 
 	void PluggablesSystem::Initialize()
 	{
+		PROFILE_AUTO("PluggablesSystem CreateContext");
 		m_PlugInAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-open-19.wav"), true);
 		m_UnplugAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-closing-09.wav"), true);
 	}
@@ -641,6 +642,7 @@ namespace flex
 
 	void TerminalManager::Initialize()
 	{
+		PROFILE_AUTO("TerminalManager CreateContext");
 		std::vector<std::string> modifiedFiles;
 		UpdateScriptHashes(modifiedFiles);
 	}
@@ -914,6 +916,7 @@ namespace flex
 
 	void PropertyCollectionManager::Initialize()
 	{
+		PROFILE_AUTO("PropertyCollectionManager Initialize");
 		GameObject::RegisterPropertyCollections();
 	}
 

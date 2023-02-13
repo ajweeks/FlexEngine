@@ -2465,6 +2465,8 @@ namespace flex
 
 		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
 		{
+			PROFILE_AUTO("CreateDescriptorSet");
+
 			VkDescriptorSetLayout layouts[] = { createInfo->descriptorSetLayout };
 			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(pool, layouts, 1);
 
@@ -2590,6 +2592,8 @@ namespace flex
 
 		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
 		{
+			PROFILE_AUTO("CreateDescriptorSet");
+
 			DescriptorSetCreateInfo createInfo = {};
 			createInfo.DBG_Name = DBG_Name;
 

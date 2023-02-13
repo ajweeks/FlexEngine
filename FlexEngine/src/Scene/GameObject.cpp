@@ -3601,6 +3601,8 @@ namespace flex
 
 	void DroppedItem::Update()
 	{
+		PROFILE_AUTO("DroppedItem Update");
+
 		secondsAlive += g_DeltaTime;
 
 		GameObject* child = GetChild(0);
@@ -5154,6 +5156,8 @@ namespace flex
 
 	void Battery::Update()
 	{
+		PROFILE_AUTO("Battery Update");
+
 		if (flashTimer > 0.0f)
 		{
 			flashTimer = glm::max(flashTimer - g_DeltaTime, 0.0f);
@@ -5367,7 +5371,6 @@ namespace flex
 			return;
 		}
 
-		PROFILE_AUTO("Gerstner update");
 		PROFILE_AUTO("GerstnerWave Update");
 
 		for (WaveInfo& waveInfo : waveContributions)
@@ -6881,6 +6884,8 @@ namespace flex
 
 	void Wire::Update()
 	{
+		PROFILE_AUTO("Wire Update");
+
 		UpdateIndices();
 		UpdateMesh();
 
@@ -6890,6 +6895,8 @@ namespace flex
 			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
 			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
 		}
+
+		GameObject::Update();
 	}
 
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
@@ -13883,6 +13890,8 @@ namespace flex
 
 	void Miner::Update()
 	{
+		PROFILE_AUTO("Miner Update");
+
 		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
 
 		if (!m_NearestMineralDepositID.IsValid())
@@ -14025,6 +14034,8 @@ namespace flex
 			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
 			debugRenderer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserDirection), ToBtVec4(laserColour));
 		}
+
+		GameObject::Update();
 	}
 
 	void Miner::OnCharge(real chargeAmount)
@@ -14294,6 +14305,8 @@ namespace flex
 
 	void Speaker::Update()
 	{
+		PROFILE_AUTO("Speaker Update");
+
 		if (m_SourceID != InvalidAudioSourceID && m_bPlaying)
 		{
 			if (AudioManager::IsSourcePlaying(m_SourceID))
@@ -14306,6 +14319,8 @@ namespace flex
 				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
 			}
 		}
+
+		GameObject::Update();
 	}
 
 	void Speaker::DrawImGuiObjects(bool bDrawingEditorObjects)
