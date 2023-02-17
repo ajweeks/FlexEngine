@@ -1,6 +1,6 @@
 // NOTE: These defines must be above the stdafx include
 #define PL_IMPLEMENTATION 1
-#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 25'000'000
+#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 50'000'000
 
 #include "stdafx.hpp"
 
@@ -287,7 +287,7 @@ namespace flex
 
 		{
 			PROFILE_AUTO("ImGui CreateContext");
-		ImGui::CreateContext();
+			ImGui::CreateContext();
 		}
 		SetupImGuiStyles();
 
