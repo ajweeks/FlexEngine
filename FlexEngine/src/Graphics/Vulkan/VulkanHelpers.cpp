@@ -378,6 +378,8 @@ namespace flex
 			viewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
 
+			bIsCreated = 1u;
+
 			return imageSize;
 		}
 
@@ -431,6 +433,8 @@ namespace flex
 			imageViewCreateInfo.format = inFormat;
 			imageViewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, imageViewCreateInfo);
+
+			bIsCreated = 1u;
 
 			return imageSize;
 		}
@@ -517,6 +521,8 @@ namespace flex
 			// Retrieve out variables
 			imageLayout = createInfo.imageLayoutOut;
 			imageFormat = inFormat;
+
+			bIsCreated = 1u;
 
 			return imageSize;
 		}
@@ -1044,6 +1050,8 @@ namespace flex
 			{
 				GenerateMipmaps();
 			}
+
+			bIsCreated = 1u;
 
 			return (u64)imageSize;
 		}

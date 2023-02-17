@@ -131,7 +131,7 @@ namespace flex
 						continue;
 					}
 
-					Texture* texture = GetLoadedTexture(textureID);
+					Texture* texture = GetLoadedTexture(textureID, false);
 
 					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
 					Print("[TEXTURE] Created texture: %s\n", loadInfo.relativeFilePath.c_str());
@@ -1171,12 +1171,21 @@ namespace flex
 		return false;
 	}
 
+	bool ResourceManager::IsTextureCreated(TextureID textureID) const
+	{
+		if (textureID < loadedTextures.size())
+		{
+			return loadedTextures[textureID] != nullptr && loadedTextures[textureID]->IsCreated();
+		}
+		return false;
+	}
+
 	Texture* ResourceManager::GetLoadedTexture(TextureID textureID, bool bProvideFallbackWhileLoading /* = true */)
 	{
 		if (textureID < loadedTextures.size())
 		{
 			Texture* result = loadedTextures[textureID];
-			if (bProvideFallbackWhileLoading && result->IsLoading())
+			if (bProvideFallbackWhileLoading && !result->IsCreated())
 			{
 				// Show pink texture until this one has loaded
 				return GetLoadedTexture(g_Renderer->pinkTextureID);
@@ -1296,7 +1305,7 @@ namespace flex
 
 			std::string textureName = StripLeadingDirectories(loadInfo.relativeFilePath);
 			Texture* newTex = g_Renderer->CreateTexture(textureName);
-			newTex->bIsLoading = 1;
+			newTex->bIsLoading = 1u;
 			newTex->bFlipVertically = loadInfo.bFlipVertically;
 			newTex->bGenerateMipMaps = loadInfo.bGenerateMipMaps;
 			newTex->bHDR = loadInfo.bHDR;

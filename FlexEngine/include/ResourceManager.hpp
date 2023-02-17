@@ -107,6 +107,7 @@ namespace flex
 		Texture* FindLoadedTextureWithPath(const std::string& filePath);
 		Texture* FindLoadedTextureWithName(const std::string& fileName);
 		bool IsTextureLoading(TextureID textureID) const;
+		bool IsTextureCreated(TextureID textureID) const;
 		Texture* GetLoadedTexture(TextureID textureID, bool bProvideFallbackWhileLoading = true);
 		TextureID GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler = nullptr);
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);

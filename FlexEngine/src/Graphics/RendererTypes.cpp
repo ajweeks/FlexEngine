@@ -833,6 +833,11 @@ namespace flex
 		return bIsLoading;
 	}
 
+	bool Texture::IsCreated() const
+	{
+		return bIsCreated;
+	}
+
 	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
 	{
 		PROFILE_AUTO("UniformOverrides AddUniform");

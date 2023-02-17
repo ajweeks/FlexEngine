@@ -5217,7 +5217,7 @@ namespace flex
 			}
 			else
 			{
-				if (g_ResourceManager->IsTextureLoading(textureID))
+				if (!g_ResourceManager->IsTextureCreated(textureID))
 				{
 					return VK_NULL_HANDLE;
 				}

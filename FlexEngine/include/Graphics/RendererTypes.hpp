@@ -905,6 +905,7 @@ namespace flex
 		virtual bool LoadFromFile(const std::string& inRelativeFilePath, HTextureSampler inSampler, TextureFormat inFormat = TextureFormat::UNDEFINED) = 0;
 
 		bool IsLoading() const;
+		bool IsCreated() const;
 
 		u32 width = 0;
 		u32 height = 0;
@@ -920,6 +921,7 @@ namespace flex
 		bool bHDR = false;
 		bool bIsArray = false;
 		std::atomic_uint32_t bIsLoading = 0;
+		std::atomic_uint32_t bIsCreated = 0;
 	};
 
 	template<typename UniformType>
