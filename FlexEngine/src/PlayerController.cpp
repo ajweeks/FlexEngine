@@ -249,11 +249,14 @@ namespace flex
 
 			if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 			{
-				bool bPlaceItemLeft = m_bAttemptInteractLeftHand && m_Player->GetHeldItem(Hand::LEFT).IsValid();
-				bool bPlaceItemRight = m_bAttemptInteractRightHand && m_Player->GetHeldItem(Hand::RIGHT).IsValid();
+				const bool bLeftHandFilled = m_Player->GetHeldItem(Hand::LEFT).IsValid();
+				const bool bRightHandFilled = m_Player->GetHeldItem(Hand::RIGHT).IsValid();
 
-				bool bPickupItemLeft = m_bAttemptInteractLeftHand && !m_Player->GetHeldItem(Hand::LEFT).IsValid();
-				bool bPickupItemRight = m_bAttemptInteractRightHand && !m_Player->GetHeldItem(Hand::RIGHT).IsValid();
+				const bool bPlaceItemLeft = m_bAttemptInteractLeftHand && bLeftHandFilled;
+				const bool bPlaceItemRight = m_bAttemptInteractRightHand && bRightHandFilled;
+
+				const bool bPickupItemLeft = m_bAttemptInteractLeftHand && !bLeftHandFilled;
+				const bool bPickupItemRight = m_bAttemptInteractRightHand && !bRightHandFilled;
 
 				if (bPlaceItemLeft || bPlaceItemRight)
 				{
@@ -280,12 +283,6 @@ namespace flex
 		{
 			m_bAttemptPlaceItemFromInventory = false;
 			AttemptPlaceItemFromInventory();
-		}
-
-		if (m_bCancelPlaceWire)
-		{
-			m_bCancelPlaceWire = false;
-			m_Player->CancelPlaceWire();
 		}
 
 		if (m_bSpawnWire)
@@ -696,11 +693,6 @@ namespace flex
 				m_bCancelPlaceItemFromInventory = true;
 				return EventReply::CONSUMED;
 			}
-			if (m_Player->m_PlacingWire != nullptr)
-			{
-				m_bCancelPlaceWire = true;
-				return EventReply::CONSUMED;
-			}
 		}
 
 		if (action == Action::SHOW_INVENTORY &&
@@ -748,13 +740,34 @@ namespace flex
 			}
 		}
 
-		if (action == Action::PLACE_WIRE && !m_bPreviewPlaceItemFromInventory
-			&& !m_Player->GetHeldItem(Hand::LEFT).IsValid() && !m_Player->GetHeldItem(Hand::RIGHT).IsValid())
+		if (action == Action::PLACE_WIRE && !m_bPreviewPlaceItemFromInventory)
 		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
-				m_bSpawnWire = true;
-				return EventReply::CONSUMED;
+				const bool bLeftHandFilled = m_Player->GetHeldItem(Hand::LEFT).IsValid();
+				const bool bRightHandFilled = m_Player->GetHeldItem(Hand::RIGHT).IsValid();
+				if (!bLeftHandFilled && !bRightHandFilled)
+				{
+					m_bSpawnWire = true;
+					return EventReply::CONSUMED;
+				}
+				else
+				{
+					if (m_Player->GetHeldItem(Hand::LEFT).IsValid() &&
+						m_Player->GetHeldItem(Hand::LEFT).Get()->GetTypeID() == WirePlugSID &&
+						m_Player->GetHeldItem(Hand::RIGHT).IsValid() &&
+						m_Player->GetHeldItem(Hand::RIGHT).Get()->GetTypeID() == WirePlugSID)
+					{
+						WirePlug* wirePlug0 = (WirePlug*)m_Player->GetHeldItem(Hand::LEFT).Get();
+						Wire* wire = (Wire*)wirePlug0->wireID.Get();
+						g_SceneManager->CurrentScene()->RemoveObject(m_Player->GetHeldItem(Hand::LEFT).Get(), true);
+						g_SceneManager->CurrentScene()->RemoveObject(m_Player->GetHeldItem(Hand::RIGHT).Get(), true);
+						g_SceneManager->CurrentScene()->RemoveObject(wire, true);
+						m_Player->SetHeldItem(Hand::LEFT, InvalidGameObjectID);
+						m_Player->SetHeldItem(Hand::RIGHT, InvalidGameObjectID);
+						return EventReply::CONSUMED;
+					}
+				}
 			}
 		}
 
@@ -1000,34 +1013,25 @@ namespace flex
 		bool bUseItemLeft = m_bAttemptInteractLeftHand && m_Player->GetHeldItem(Hand::LEFT).IsValid();
 		bool bUseItemRight = m_bAttemptInteractRightHand && m_Player->GetHeldItem(Hand::RIGHT).IsValid();
 
-		// Toggle interaction when already interacting
-		GameObject* m_HeldItemLeftHand = m_Player->GetHeldItem(Hand::LEFT).Get();
-		GameObject* m_HeldItemRightHand = m_Player->GetHeldItem(Hand::RIGHT).Get();
-		bool bPlaceWireLeft = bUseItemLeft && m_HeldItemLeftHand->GetTypeID() == WirePlugSID;
-		bool bPlaceWireRight = bUseItemRight && m_HeldItemRightHand->GetTypeID() == WirePlugSID;
+		GameObject* heldItemLeftHand = m_Player->GetHeldItem(Hand::LEFT).Get();
+		GameObject* heldItemRightHand = m_Player->GetHeldItem(Hand::RIGHT).Get();
+		bool bPlaceWireLeft = bUseItemLeft && heldItemLeftHand->GetTypeID() == WirePlugSID;
+		bool bPlaceWireRight = bUseItemRight && heldItemRightHand->GetTypeID() == WirePlugSID;
 		if (bPlaceWireLeft || bPlaceWireRight)
 		{
-			WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? m_HeldItemLeftHand : m_HeldItemRightHand);
+			WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? heldItemLeftHand : heldItemRightHand);
 			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 			if (pluggablesSystem->PlugInToNearbySocket(wirePlug, WirePlug::nearbyThreshold))
 			{
 				if (bPlaceWireLeft)
 				{
-					m_Player->m_HeldItemLeftHand = InvalidGameObjectID;
+					m_Player->SetHeldItem(Hand::LEFT, InvalidGameObjectID);
 					m_bAttemptInteractLeftHand = false;
 				}
 				else
 				{
-					m_Player->m_HeldItemRightHand = InvalidGameObjectID;
+					m_Player->SetHeldItem(Hand::RIGHT, InvalidGameObjectID);
 					m_bAttemptInteractRightHand = false;
-				}
-
-				m_HeldItemLeftHand = m_Player->GetHeldItem(Hand::LEFT).Get();
-				m_HeldItemRightHand = m_Player->GetHeldItem(Hand::RIGHT).Get();
-				if ((m_HeldItemLeftHand == nullptr || m_HeldItemLeftHand->GetTypeID() != WirePlugSID) &&
-					(m_HeldItemRightHand == nullptr || m_HeldItemRightHand->GetTypeID() != WirePlugSID))
-				{
-					m_Player->m_PlacingWire = nullptr;
 				}
 			}
 		}

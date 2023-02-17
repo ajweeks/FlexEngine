@@ -137,7 +137,6 @@ namespace flex
 		GameObjectID GetHeldItem(Hand hand) { if (hand == Hand::LEFT) return m_HeldItemLeftHand; return m_HeldItemRightHand; }
 		void SetHeldItem(Hand hand, GameObjectID gameObjectID);
 
-		void CancelPlaceWire();
 		void SpawnWire();
 
 		bool AbleToInteract() const;
@@ -201,8 +200,6 @@ namespace flex
 		real m_Pitch = 0.0f;
 
 		TrackBuildingContext m_TrackBuildingContext;
-
-		Wire* m_PlacingWire = nullptr;
 
 		bool m_bGrounded = false;
 		bool m_bPossessed = false;

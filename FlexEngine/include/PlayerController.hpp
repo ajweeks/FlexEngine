@@ -85,7 +85,6 @@ namespace flex
 		bool m_bAttemptInteractRightHand = false;
 		bool m_bAttemptPickup = false;
 
-		bool m_bCancelPlaceWire = false;
 		bool m_bSpawnWire = false;
 		bool m_bDropItem = false;
 

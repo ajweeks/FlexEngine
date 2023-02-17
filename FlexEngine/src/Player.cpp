@@ -357,7 +357,31 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item slot: %i", m_SelectedQuickAccessItemSlot);
+			ImGui::Text("Selected slot: %i", m_SelectedQuickAccessItemSlot);
+
+			{
+				char idBuff[33];
+
+				if (m_HeldItemLeftHand.IsValid())
+				{
+					m_HeldItemLeftHand.ToString(idBuff);
+					ImGui::TextWrapped("Held item (L):\n  %s (%s)", idBuff, m_HeldItemLeftHand.Get()->GetName().c_str());
+				}
+				else
+				{
+					ImGui::TextWrapped("Held item (L): Empty");
+				}
+
+				if (m_HeldItemRightHand.IsValid())
+				{
+					m_HeldItemRightHand.ToString(idBuff);
+					ImGui::TextWrapped("Held item (R):\n  %s (%s)", idBuff, m_HeldItemRightHand.Get()->GetName().c_str());
+				}
+				else
+				{
+					ImGui::TextWrapped("Held item (R): Empty");
+				}
+			}
 
 			DrawInventoryImGui("Inventory", -1, m_Inventory);
 			DrawInventoryImGui("Quick access inventory", m_SelectedQuickAccessItemSlot, m_QuickAccessInventory);
@@ -1527,39 +1551,28 @@ namespace flex
 		}
 	}
 
-	void Player::CancelPlaceWire()
-	{
-		if (m_PlacingWire != nullptr)
-		{
-			g_SceneManager->CurrentScene()->RemoveObject(m_PlacingWire, true);
-			m_PlacingWire = nullptr;
-		}
-	}
-
 	void Player::SpawnWire()
 	{
-		if (m_PlacingWire == nullptr)
+		if (!m_HeldItemLeftHand.IsValid() && !m_HeldItemRightHand.IsValid())
 		{
 			BaseScene* currentScene = g_SceneManager->CurrentScene();
-			m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
+			Wire* wire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
 
-			Transform* wireTransform = m_PlacingWire->GetTransform();
+			Transform* wireTransform = wire->GetTransform();
 
 			glm::vec3 targetPos = m_Transform.GetWorldPosition() +
 				GetLookDirection() * 5.0f +
 				m_Transform.GetUp() * -0.75f;
-			glm::quat targetRot = m_Transform.GetWorldRotation();
 
 			wireTransform->SetWorldPosition(targetPos, false);
-			wireTransform->SetWorldRotation(targetRot, true);
 
-			currentScene->AddRootObject(m_PlacingWire);
+			currentScene->AddRootObject(wire);
 
 			CHECK(!GetHeldItem(Hand::LEFT).IsValid());
 			CHECK(!GetHeldItem(Hand::RIGHT).IsValid());
 
-			SetHeldItem(Hand::LEFT, m_PlacingWire->plug0ID);
-			SetHeldItem(Hand::RIGHT, m_PlacingWire->plug1ID);
+			SetHeldItem(Hand::LEFT, wire->plug0ID);
+			SetHeldItem(Hand::RIGHT, wire->plug1ID);
 		}
 	}
 
