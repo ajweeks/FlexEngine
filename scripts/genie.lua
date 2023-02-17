@@ -111,7 +111,6 @@ configuration "x64"
 configuration {}
 
 configuration {}
-	flags { "NoIncrementalLink", "NoEditAndContinue" }
 	includedirs { path.join(SOURCE_DIR, "include") }
 
 	-- Files to include that shouldn't get warnings reported on

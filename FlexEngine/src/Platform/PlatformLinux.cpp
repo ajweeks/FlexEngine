@@ -575,7 +575,7 @@ namespace flex
 
 	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
 	{
-		ret = pthread_setname_np(threadHandle, threadName);
+		int ret = pthread_setname_np((pthread_t)threadHandle, threadName);
 		return ret != 0;
 	}
 
