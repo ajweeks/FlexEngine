@@ -854,14 +854,17 @@ namespace flex
 
 			glm::vec3 deltaPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
 
-			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+			if (deltaPos != VEC3_ZERO)
 			{
-				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
-				if (bObjectIsntChild)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
-					gameObject->GetTransform()->Translate(deltaPos);
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					GameObject* parent = gameObject->GetParent();
+					bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
+					if (bObjectIsntChild)
+					{
+						gameObject->GetTransform()->Translate(deltaPos);
+					}
 				}
 			}
 		} break;
@@ -1096,17 +1099,20 @@ namespace flex
 
 			dLocalScale = glm::clamp(dLocalScale, 0.001f, 10.0f);
 
-			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+			if (dLocalScale != VEC3_ONE)
 			{
-				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
-				if (bObjectIsntChild)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
-					gameObject->GetTransform()->Scale(dLocalScale);
-					if (gameObject->HasUniformScale())
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					GameObject* parent = gameObject->GetParent();
+					bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
+					if (bObjectIsntChild)
 					{
-						gameObject->EnforceUniformScale();
+						gameObject->GetTransform()->Scale(dLocalScale);
+						if (gameObject->HasUniformScale())
+						{
+							gameObject->EnforceUniformScale();
+						}
 					}
 				}
 			}

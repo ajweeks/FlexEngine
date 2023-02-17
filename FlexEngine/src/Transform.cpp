@@ -400,7 +400,7 @@ namespace flex
 
 	void Transform::Translate(const glm::vec3& deltaPosition)
 	{
-		SetLocalScaleInternal(localPosition + deltaPosition);
+		SetLocalPositionInternal(localPosition + deltaPosition);
 
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
 		if (rigidBody != nullptr)
@@ -529,7 +529,7 @@ namespace flex
 
 		ClearDirtyFlags();
 	}
-	
+
 	void Transform::ClearDirtyFlags()
 	{
 		bDirtyPos = false;
@@ -579,9 +579,9 @@ namespace flex
 
 	void Transform::MarkDirty(bool bPos, bool bRot, bool bScale)
 	{
-		bDirtyPos = bPos;
-		bDirtyRot = bRot;
-		bDirtyScale = bScale;
+		if (bPos) bDirtyPos = true;
+		if (bRot) bDirtyRot = true;
+		if (bScale) bDirtyScale = true;
 
 		u32 childCount = m_GameObject->GetChildCount();
 		for (u32 i = 0; i < childCount; ++i)
@@ -650,7 +650,7 @@ namespace flex
 			MarkDirty(false, true, false);
 		}
 	}
-	
+
 	void Transform::SetLocalScaleInternal(const glm::vec3& newLocalScale)
 	{
 		if (!NearlyEquals(localScale, newLocalScale, DirtyThreshold))

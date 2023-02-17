@@ -222,6 +222,14 @@ namespace flex
 					rootObject->Update();
 				}
 			}
+
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				if (editorObject != nullptr)
+				{
+					editorObject->Update();
+				}
+			}
 		}
 
 		if (!m_bPauseTimeOfDay)
@@ -247,6 +255,22 @@ namespace flex
 			if (rootObject != nullptr)
 			{
 				rootObject->GetTransform()->UpdateRigidBodyRecursive();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->FixedUpdate();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->GetTransform()->UpdateRigidBodyRecursive();
 			}
 		}
 
@@ -318,6 +342,14 @@ namespace flex
 			if (rootObject != nullptr)
 			{
 				rootObject->Render();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->Render();
 			}
 		}
 	}
@@ -1190,66 +1222,66 @@ namespace flex
 						}
 					}
 
-					DoCreateGameObjectButton("Add object...", "Add object");
+				DoCreateGameObjectButton("Add object...", "Add object");
 
-					const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
+				const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
+				if (bShowAddPointLightBtn)
+				{
+					if (ImGui::Button("Add point light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						PointLight* newPointLight = new PointLight(scene);
+						scene->AddRootObject(newPointLight);
+						newPointLight->Initialize();
+						newPointLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newPointLight->ID);
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Add spot light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						SpotLight* newSpotLight = new SpotLight(scene);
+						scene->AddRootObject(newSpotLight);
+						newSpotLight->Initialize();
+						newSpotLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newSpotLight->ID);
+					}
+
+					if (ImGui::Button("Add area light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						AreaLight* newAreaLight = new AreaLight(scene);
+						scene->AddRootObject(newAreaLight);
+						newAreaLight->Initialize();
+						newAreaLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newAreaLight->ID);
+					}
+				}
+
+				const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
+				if (bShowAddDirLightBtn)
+				{
 					if (bShowAddPointLightBtn)
 					{
-						if (ImGui::Button("Add point light"))
-						{
-							BaseScene* scene = g_SceneManager->CurrentScene();
-							PointLight* newPointLight = new PointLight(scene);
-							scene->AddRootObject(newPointLight);
-							newPointLight->Initialize();
-							newPointLight->PostInitialize();
-
-							g_Editor->SetSelectedObject(newPointLight->ID);
-						}
-
 						ImGui::SameLine();
-
-						if (ImGui::Button("Add spot light"))
-						{
-							BaseScene* scene = g_SceneManager->CurrentScene();
-							SpotLight* newSpotLight = new SpotLight(scene);
-							scene->AddRootObject(newSpotLight);
-							newSpotLight->Initialize();
-							newSpotLight->PostInitialize();
-
-							g_Editor->SetSelectedObject(newSpotLight->ID);
-						}
-
-						if (ImGui::Button("Add area light"))
-						{
-							BaseScene* scene = g_SceneManager->CurrentScene();
-							AreaLight* newAreaLight = new AreaLight(scene);
-							scene->AddRootObject(newAreaLight);
-							newAreaLight->Initialize();
-							newAreaLight->PostInitialize();
-
-							g_Editor->SetSelectedObject(newAreaLight->ID);
-						}
 					}
 
-					const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
-					if (bShowAddDirLightBtn)
+					if (ImGui::Button("Add directional light"))
 					{
-						if (bShowAddPointLightBtn)
-						{
-							ImGui::SameLine();
-						}
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						DirectionalLight* newDiright = new DirectionalLight();
+						scene->AddRootObject(newDiright);
+						newDiright->Initialize();
+						newDiright->PostInitialize();
 
-						if (ImGui::Button("Add directional light"))
-						{
-							BaseScene* scene = g_SceneManager->CurrentScene();
-							DirectionalLight* newDiright = new DirectionalLight();
-							scene->AddRootObject(newDiright);
-							newDiright->Initialize();
-							newDiright->PostInitialize();
-
-							g_Editor->SetSelectedObject(newDiright->ID);
-						}
+						g_Editor->SetSelectedObject(newDiright->ID);
 					}
+				}
 				}
 				ImGui::EndChild();
 
