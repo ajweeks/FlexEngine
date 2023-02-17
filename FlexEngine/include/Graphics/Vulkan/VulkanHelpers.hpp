@@ -687,7 +687,7 @@ namespace flex
 			VkDescriptorPool GetPool() const;
 
 			// TODO: Monitor number of used desc sets to set this value intelligently
-			u32 maxNumDescSets = 1024;
+			u32 maxNumDescSets = 4096;
 			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 8;
 			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
 			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 2;
