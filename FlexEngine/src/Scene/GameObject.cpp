@@ -746,6 +746,21 @@ namespace flex
 				Mesh* mesh = SetMesh(new Mesh(this));
 				mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MeshPayloadCStr);
+
+				if (payload != nullptr && payload->Data != nullptr)
+				{
+					bAnyPropertyChanged = true;
+					Mesh* mesh = SetMesh(new Mesh(this));
+					std::string relativeFilePath = std::string((const char*)payload->Data, payload->DataSize);
+					mesh->LoadFromFile(MESH_DIRECTORY + relativeFilePath, g_Renderer->GetPlaceholderMaterialID());
+
+					ImGui::EndDragDropTarget();
+				}
+			}
 		}
 
 		if (m_RigidBody != nullptr)

@@ -1221,6 +1221,8 @@ namespace flex
 							break;
 						}
 					}
+				}
+				ImGui::EndChild(); // Scroll region
 
 				DoCreateGameObjectButton("Add object...", "Add object");
 
@@ -1282,8 +1284,6 @@ namespace flex
 						g_Editor->SetSelectedObject(newDiright->ID);
 					}
 				}
-				}
-				ImGui::EndChild();
 
 				ImGui::EndTabItem();
 			}
