@@ -35,6 +35,12 @@ namespace flex
 		bool bHDR;
 	};
 
+	struct MeshLoadInfo
+	{
+		std::string relativeFilePath;
+		std::vector<MaterialID> matIDs;
+	};
+
 	class ResourceManager
 	{
 	public:
@@ -52,9 +58,9 @@ namespace flex
 		void PreSceneChange();
 		void OnSceneChanged();
 
-		// Returns true if found and *loadedMesh was set
-		bool FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh);
-		LoadedMesh* FindOrLoadMesh(const std::string& relativeFilePath, bool bForceReload = false);
+		MeshID LoadMesh(const MeshLoadInfo& loadInfo, bool bAllowAsync = true);
+		bool GetQueuedMeshLoadInfo(TextureID textureID, MeshLoadInfo& outLoadInfo);
+		Mesh* GetLoadedMesh(MeshID meshID, bool bProvideFallbackWhileLoading = true);
 
 		bool MeshFileNameConforms(const std::string& fileName);
 
@@ -112,6 +118,8 @@ namespace flex
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
 		TextureID GetOrLoadIcon(StringID prefabNameSID, i32 resolution = -1);
+
+		MeshID GetNextAvailableMeshID();
 
 		TextureID GetNextAvailableTextureID();
 		TextureID QueueTextureLoad(const std::string& relativeFilePath,
@@ -190,6 +198,10 @@ namespace flex
 		std::mutex m_QueuedTextureLoadInfoMutex;
 		std::vector<Pair<TextureID, TextureLoadInfo>> m_QueuedTextureLoadInfos;
 
+		JobSystem::Context m_MeshLoadingContext;
+		std::mutex m_QueuedMeshLoadInfosMutex;
+		std::vector<Pair<MeshID, MeshLoadInfo>> m_QueuedMeshLoadInfos;
+
 		// Creation info for all discovered materials
 		std::vector<MaterialCreateInfo> parsedMaterialInfos;
 
@@ -214,8 +226,8 @@ namespace flex
 
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
-		std::map<std::string, LoadedMesh*> loadedMeshes;
-		std::vector<std::string> discoveredMeshes;
+		std::map<MeshID, Mesh*> loadedMeshes;
+		std::map<std::string, MeshID> discoveredMeshes;
 
 		struct AudioFileMetaData
 		{

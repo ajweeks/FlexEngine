@@ -32,6 +32,7 @@ namespace flex
 	using ShaderID = u32;
 	using MaterialID = u32;
 	using TextureID = u32;
+	using MeshID = u32;
 	using FrameBufferAttachmentID = u32;
 	using GraphicsPipelineID = u32;
 	using PointLightID = u32;
@@ -78,6 +79,7 @@ namespace flex
 	static constexpr auto InvalidShaderID = ((ShaderID)u32_max);
 	static constexpr auto InvalidMaterialID = ((MaterialID)u32_max);
 	static constexpr auto InvalidTextureID = ((TextureID)u32_max);
+	static constexpr auto InvalidMeshID = ((MeshID)u32_max);
 	static constexpr auto InvalidFrameBufferAttachmentID = ((FrameBufferAttachmentID)u32_max);
 	static constexpr auto InvalidGraphicsPipelineID = ((GraphicsPipelineID)u32_max);
 	static constexpr auto InvalidPointLightID = ((PointLightID)u32_max);

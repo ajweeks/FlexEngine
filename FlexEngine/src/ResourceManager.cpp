@@ -147,6 +147,34 @@ namespace flex
 				}
 			}
 		}
+
+		{
+			const std::lock_guard<std::mutex> lock(m_QueuedMeshLoadInfosMutex);
+
+			if (!m_QueuedMeshLoadInfos.empty())
+			{
+				// TODO: Kick off at other points in the frame?
+				auto iter = m_QueuedMeshLoadInfos.begin();
+				while (iter != m_QueuedMeshLoadInfos.end())
+				{
+					MeshID meshID = iter->first;
+					MeshLoadInfo& loadInfo = iter->second;
+
+					bool bIsLoading = loadedMeshes[meshID]->IsLoading();
+					if (bIsLoading)
+					{
+						++iter;
+						continue;
+					}
+
+					Mesh* mesh = GetLoadedMesh(meshID, false);
+
+					Print("[MESH] Loaded mesh: %s\n", loadInfo.relativeFilePath.c_str());
+
+					iter = m_QueuedMeshLoadInfos.erase(iter);
+				}
+			}
+		}
 	}
 
 	void ResourceManager::Destroy()
@@ -214,29 +242,88 @@ namespace flex
 		DiscoverMeshes();
 	}
 
-	bool ResourceManager::FindPreLoadedMesh(const std::string& relativeFilePath, LoadedMesh** loadedMesh)
+	MeshID ResourceManager::LoadMesh(const MeshLoadInfo& loadInfo, bool bAllowAsync /* = true */)
 	{
-		auto iter = loadedMeshes.find(relativeFilePath);
-		if (iter == loadedMeshes.end())
+		MeshID meshID = GetNextAvailableTextureID();
+		Mesh* newMesh = new Mesh(nullptr);
+
+		if (!bAllowAsync)
 		{
-			return false;
+			return newMesh->LoadFromFile(loadInfo.relativeFilePath, loadInfo.matIDs);
 		}
-		else
+
 		{
-			*loadedMesh = iter->second;
-			return true;
+			const std::lock_guard<std::mutex> lock(m_QueuedMeshLoadInfosMutex);
+
+			m_QueuedMeshLoadInfos.emplace_back(meshID, loadInfo);
+			Print("[MESH] Queued mesh load: %s\n", loadInfo.relativeFilePath.c_str());
+
+			Mesh* newMesh = new Mesh(nullptr);
+			newMesh->m_bIsLoading = 1;
+
+			loadedMeshes[meshID] = newMesh;
 		}
+
+		WRITE_BARRIER;
+
+		JobSystem::Execute(m_MeshLoadingContext, [](JobSystem::JobArgs args)
+		{
+			// Load mesh from disk
+			MeshLoadInfo loadInfo;
+			if (g_ResourceManager->GetQueuedMeshLoadInfo((MeshID)args.payload, loadInfo))
+			{
+				Mesh* mesh = g_ResourceManager->GetLoadedMesh((MeshID)args.payload, false);
+
+				if (mesh->LoadFromFile(loadInfo.relativeFilePath, loadInfo.matIDs))
+				{
+					u32 expected = 1u;
+					mesh->m_bIsLoading.compare_exchange_strong(expected, 0u, std::memory_order_release, std::memory_order_relaxed);
+					Print("[MESH] Mesh load complete: %s\n", loadInfo.relativeFilePath.c_str());
+				}
+				else
+				{
+					PrintError("Failed to load mesh from file %s (MeshID: %u)\n", loadInfo.relativeFilePath.c_str(), (MeshID)args.payload);
+				}
+			}
+			else
+			{
+				PrintError("Failed to get queued mesh load info! (MeshID: %u)\n", (MeshID)args.payload);
+			}
+		}, (u64)meshID);
+
+		return meshID;
 	}
 
-	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath, bool bForceReload /* = false */)
+	bool ResourceManager::GetQueuedMeshLoadInfo(TextureID textureID, MeshLoadInfo& outLoadInfo)
 	{
-		LoadedMesh* result = nullptr;
-		if (bForceReload || !FindPreLoadedMesh(relativeFilePath, &result))
+		const std::lock_guard<std::mutex> lock(m_QueuedMeshLoadInfosMutex);
+
+		for (const Pair<MeshID, MeshLoadInfo>& pair : m_QueuedMeshLoadInfos)
 		{
-			// Mesh hasn't been loaded before, load it now
-			result = Mesh::LoadMesh(relativeFilePath);
+			if (pair.first == textureID)
+			{
+				outLoadInfo = pair.second;
+				return true;
+			}
 		}
-		return result;
+
+		return false;
+	}
+
+	Mesh* ResourceManager::GetLoadedMesh(MeshID meshID, bool bProvideFallbackWhileLoading /* = true */)
+	{
+		if (meshID < loadedMeshes.size())
+		{
+			Mesh* result = loadedMeshes[meshID];
+			if (bProvideFallbackWhileLoading && result->IsLoading())
+			{
+				// Show pink texture until this one has loaded
+				// TODO:
+				//return GetLoadedTexture(g_Renderer->pinkTextureID);
+			}
+			return result;
+		}
+		return nullptr;
 	}
 
 	bool ResourceManager::MeshFileNameConforms(const std::string& fileName)
@@ -257,8 +344,10 @@ namespace flex
 			{
 				// "file" field stored mesh name without extension in versions <= 3, try to guess it
 				bool bMatched = false;
-				for (const std::string& path : discoveredMeshes)
+				for (auto iter = discoveredMeshes.begin(); iter != discoveredMeshes.end(); ++iter)
 				{
+					const std::string& path = iter->first;
+
 					std::string discoveredMeshName = StripFileType(path);
 					if (discoveredMeshName.compare(meshFilePath) == 0)
 					{
@@ -354,7 +443,8 @@ namespace flex
 						// Newly discovered mesh
 
 						// TODO: Support storing meshes in child directories
-						discoveredMeshes.push_back(fileName);
+						MeshID meshID = GetNextAvailableMeshID();
+						discoveredMeshes.emplace_back(fileName, meshID);
 					}
 				}
 			}
@@ -1254,6 +1344,20 @@ namespace flex
 		}
 
 		return InvalidTextureID;
+	}
+
+	MeshID ResourceManager::GetNextAvailableMeshID()
+	{
+		for (u32 i = 0; i < loadedMeshes.size(); ++i)
+		{
+			if (loadedMeshes[i] == nullptr)
+			{
+				return (MeshID)i;
+			}
+		}
+		MeshID result = (MeshID)(loadedMeshes.size());
+		loadedMeshes.emplace(result, nullptr);
+		return result;
 	}
 
 	TextureID ResourceManager::GetNextAvailableTextureID()
@@ -2847,7 +2951,7 @@ namespace flex
 							bool bMeshAlreadyImported = false;
 							for (const auto& meshPair : loadedMeshes)
 							{
-								if (meshPair.first.compare(selectedRelativeFilePath) == 0)
+								if (meshPair.second->m_FileName.compare(selectedRelativeFilePath) == 0)
 								{
 									bMeshAlreadyImported = true;
 									break;
@@ -2862,13 +2966,15 @@ namespace flex
 							{
 								Print("Importing mesh: %s\n", selectedAbsFilePath.c_str());
 
-								LoadedMesh* existingMesh = nullptr;
-								if (FindPreLoadedMesh(selectedRelativeFilePath, &existingMesh))
+								MeshLoadInfo loadInfo = {};
+								loadInfo.relativeFilePath = selectedRelativeFilePath;
+								MeshID meshID = LoadMesh(loadInfo);
+								if ()
 								{
 									i32 j = 0;
 									for (const auto& meshPair : loadedMeshes)
 									{
-										if (meshPair.first.compare(selectedRelativeFilePath) == 0)
+										if (meshPair.second->m_FileName.compare(selectedRelativeFilePath) == 0)
 										{
 											selectedMeshIndex = j;
 											break;

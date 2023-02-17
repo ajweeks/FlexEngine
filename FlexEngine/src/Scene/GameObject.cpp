@@ -13823,6 +13823,7 @@ namespace flex
 			newMeshFileName = meshes[2];
 		}
 
+		const bool bAllowAsync = true;
 		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
 		{
 			std::string meshFileName = m_Mesh->GetFileName();
@@ -13836,7 +13837,7 @@ namespace flex
 				MaterialID matID = m_Mesh->GetSubMesh(0)->GetMaterialID();
 				m_Mesh->Destroy();
 				m_Mesh->SetOwner(this);
-				m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+				g_ResourceManager->LoadMesh(m_Mesh, MESH_DIRECTORY + std::string(newMeshFileName), matID, bAllowAsync);
 			}
 		}
 		else
@@ -13855,7 +13856,7 @@ namespace flex
 			}
 			m_Mesh->Destroy();
 			m_Mesh->SetOwner(this);
-			m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+			g_ResourceManager->LoadMesh(m_Mesh, MESH_DIRECTORY + std::string(newMeshFileName), matID, bAllowAsync);
 		}
 	}
 

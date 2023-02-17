@@ -50,6 +50,8 @@ namespace flex
 		void DestroyAllSubmeshes();
 		void Reload();
 
+		bool IsLoading() const;
+
 		Mesh* CloneSelf(GameObject* newOwner, bool bCreateRenderObject);
 
 		void RemoveSubmesh(u32 index);
@@ -114,6 +116,8 @@ namespace flex
 
 		std::vector<MeshComponent*> m_Meshes;
 	private:
+		friend class ResourceManager;
+
 		void CalculateBounds();
 
 		Type m_Type = Type::_NONE;
@@ -122,6 +126,7 @@ namespace flex
 		std::string m_FileName;
 
 		bool m_bInitialized = false;
+		std::atomic_uint32_t m_bIsLoading = false;
 
 		GameObject* m_OwningGameObject = nullptr;
 

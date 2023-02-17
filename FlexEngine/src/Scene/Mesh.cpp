@@ -115,6 +115,11 @@ namespace flex
 		g_Renderer->RenderObjectStateChanged();
 	}
 
+	bool Mesh::IsLoading() const
+	{
+		return m_bIsLoading;
+	}
+
 	Mesh* Mesh::CloneSelf(GameObject* newOwner, bool bCreateRenderObject)
 	{
 		std::vector<MaterialID> matIDs = GetMaterialIDs();
@@ -152,6 +157,8 @@ namespace flex
 
 	bool Mesh::LoadFromFile(CreateInfo& createInfo)
 	{
+		PROFILE_AUTO("Mesh LoadFromFile");
+
 		CHECK_NE(m_OwningGameObject, nullptr);
 
 		// TODO: Call SetRequiredAttributesFromMaterialID for each mesh with each matID?
