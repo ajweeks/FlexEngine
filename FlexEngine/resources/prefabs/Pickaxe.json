@@ -1,0 +1,34 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "07F5D8C7F068B2804EAB0770F53DF477",
+	"root" : 
+	{
+		"id" : "46991C4F8A38098545133387B7607D84",
+		"name" : "Pickaxe",
+		"type" : "pickaxe",
+		"mesh" : "../../../FlexEngine/resources/meshes/pickaxe.glb",
+		"materials" : 
+		[
+			"Blue paint"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.110,1.090,0.870"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		},
+		"pickaxe" : 
+		{
+			"usage remaining" : 0.000000,
+			"material" : "iron"
+		}
+	}
+}

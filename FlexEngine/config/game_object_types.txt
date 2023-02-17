@@ -30,3 +30,4 @@ terrain generator
 solar panel
 vehicle
 speaker
+pickaxe

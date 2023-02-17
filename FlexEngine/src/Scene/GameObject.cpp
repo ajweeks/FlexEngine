@@ -394,6 +394,7 @@ namespace flex
 		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case MinerSID: return new Miner(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case SpeakerSID: return new Speaker(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PickAxeSID: return new PickAxe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PlayerSID:
 		{
@@ -1828,6 +1829,7 @@ namespace flex
 		propertyCollectionManager->RegisterType(MineralDepositSID, MineralDeposit::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(MinerSID, Miner::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(SpeakerSID, Speaker::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PickAxeSID, PickAxe::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(PlayerSID, Player::BuildTypeUniquePropertyCollection());
 	}
 
@@ -14473,5 +14475,136 @@ namespace flex
 		{
 			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
 		}
+	}
+
+	//
+	// PickAxe
+	//
+	PickAxe::PickAxe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PickAxeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bInteractable = true;
+		m_bItemizable = true;
+	}
+
+	PropertyCollection* PickAxe::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("pickaxe");
+
+		collection->childCollection->RegisterProperty("usage remaining", FIELD_OFFSET_AND_TYPE(PickAxe, m_UsageRemaining))
+			.VersionAdded(6);
+
+		return collection;
+	}
+
+	void PickAxe::Update()
+	{
+		PROFILE_AUTO("PickAxe Update");
+
+		GameObject::Update();
+	}
+
+	void PickAxe::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		ImGui::Text("Usage remaining: %.3f", m_UsageRemaining);
+
+		const char* mineralTypeStr = MineralTypeToString(m_Material);
+		if (ImGui::BeginCombo("Material", mineralTypeStr))
+		{
+			for (u32 i = 0; i < (u32)MineralType::_NONE; ++i)
+			{
+				bool bSelected = (u32)m_Material == i;
+				if (ImGui::Selectable(MineralTypeToString((MineralType)i), &bSelected))
+				{
+					m_Material = (MineralType)i;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+	}
+
+	GameObject* PickAxe::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		PickAxe* newGameObject = new PickAxe(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_UsageRemaining = m_UsageRemaining;
+		newGameObject->m_Material = m_Material;
+		// Leave m_SourceID as invalid so the new object creates its own audio source
+
+		return newGameObject;
+	}
+
+	void PickAxe::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject pickaxeObj;
+		if (parentObject.TryGetObject("pickaxe", pickaxeObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(pickaxeObj, collection->childCollection);
+
+			std::string materialStr = pickaxeObj.GetString("material");
+			m_Material = MineralTypeFromString(materialStr.c_str());
+			if (m_Material == MineralType::_NONE)
+			{
+				PrintError("Failed to parse material from pickaxe: \"%s\", falling back to IRON", materialStr.c_str());
+				m_Material = MineralType::IRON;
+			}
+		}
+	}
+
+	void PickAxe::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject pickaxeObj = {};
+		SerializeRegisteredProperties(pickaxeObj, collection->childCollection, bSerializePrefabData);
+
+		if (m_Material == MineralType::_NONE)
+		{
+			PrintError("Can not save pickaxe with no material set! Falling back to IRON\n");
+			m_Material = MineralType::IRON;
+		}
+		pickaxeObj.fields.emplace_back("material", JSONValue(MineralTypeToString(m_Material)));
+
+		parentObject.fields.emplace_back("pickaxe", JSONValue(pickaxeObj));
+	}
+
+	real PickAxe::GetMineSpeed(MineralType material)
+	{
+		switch (material)
+		{
+			// Elements
+		case MineralType::IRON:
+		case MineralType::SILICON:
+		case MineralType::ALUMINUM:
+			return 1.0f;
+		case MineralType::TIN:
+			return 0.5f;
+
+			// Minerals
+		case MineralType::STONE:
+		case MineralType::QUARTZ:
+		case MineralType::OLIVINE:
+			return 0.5f;
+		}
+		ENSURE_NO_ENTRY(); // Unhandled material for mining
+		return -1.0f;
 	}
 } // namespace flex

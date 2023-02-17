@@ -2092,4 +2092,35 @@ namespace flex
 
 	};
 
+	static constexpr StringID PickAxeSID = SID("pickaxe");
+	class PickAxe : public GameObject
+	{
+	public:
+		PickAxe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Update() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		real m_UsageRemaining = 1.0f;
+		MineralType m_Material = MineralType::_NONE;
+
+		static real GetMineSpeed(MineralType material);
+
+		// Non-serialized fields
+		AudioSourceID m_SourceID = InvalidAudioSourceID;
+
+	};
 } // namespace flex
