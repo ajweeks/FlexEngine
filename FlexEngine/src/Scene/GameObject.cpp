@@ -1211,7 +1211,22 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			if (ImGui::Button("Save as prefab"))
+			bool bDisableSaveAsPrefab = !IsStringLower(m_Name);
+			if (bDisableSaveAsPrefab)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.1f, 0.1f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			}
+			bool bDoSaveAsPrefab = ImGui::Button("Save as prefab");
+			bool bDoForceSaveAsPrefab = ImGui::Button("Save as prefab (force new)");
+			if (bDisableSaveAsPrefab)
+			{
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Prefab names must be all lowercase");
+				ImGui::PopStyleColor(3);
+			}
+
+			if (bDoSaveAsPrefab && !bDisableSaveAsPrefab)
 			{
 				SaveAsPrefab();
 				bDeletedOrDuplicated = true;
@@ -1219,7 +1234,7 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			if (ImGui::Button("Save as prefab (force new)"))
+			if (bDoForceSaveAsPrefab && !bDisableSaveAsPrefab)
 			{
 				m_SourcePrefabID.Clear();
 				SaveAsPrefab();
@@ -1240,6 +1255,12 @@ namespace flex
 	bool GameObject::SaveAsPrefab()
 	{
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+		if (!IsStringLower(m_Name))
+		{
+			PrintError("Prefab names must be all lowercase, given name is not: %s\n", m_Name.c_str());
+			return false;
+		}
 
 		if (m_bIsTemplate)
 		{

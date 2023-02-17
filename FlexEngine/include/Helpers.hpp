@@ -213,6 +213,8 @@ namespace flex
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
 	std::string& ToUpper(std::string& str);
+	FLEX_NO_DISCARD bool IsStringLower(const std::string& str);
+	FLEX_NO_DISCARD bool IsStringUpper(const std::string& str);
 
 	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
 	FLEX_NO_DISCARD bool StartsWith(const char* str, const char* start);

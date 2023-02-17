@@ -1572,6 +1572,30 @@ namespace flex
 		return str;
 	}
 
+	bool IsStringLower(const std::string& str)
+	{
+		for (char c : str)
+		{
+			if (isalpha(c) && !islower(c))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool IsStringUpper(const std::string& str)
+	{
+		for (char c : str)
+		{
+			if (isalpha(c) && !isupper(c))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
 	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2)
 	{
 		auto sign = [](const glm::vec2& p0, const glm::vec2& p1, const glm::vec2& p2)
