@@ -569,7 +569,7 @@ namespace flex
 		size_t cpusetsize = sizeof(cpuset);
 
 		CPU_SET(threadID, &cpuset);
-		ret = pthread_setaffinity_np(threadHandle, cpusetsize, &cpuset);
+		ret = pthread_setaffinity_np((pthread_t)threadHandle, cpusetsize, &cpuset);
 		return ret != 0;
 	}
 
