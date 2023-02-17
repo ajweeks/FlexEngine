@@ -42,11 +42,14 @@ namespace flex
 		EventReply OnMouseMovedEvent(const glm::vec2& dMousePos);
 		MouseMovedCallback<PlayerController> m_MouseMovedCallback;
 
+		void PreviewPlaceItemFromInventory();
 		void UpdateItemPlacementTransform();
+		void AttemptPlaceItemFromInventory();
+		void AttemptToIteractUsingHeldItem();
+		void AttemptToPickUpItem(std::list<Pair<GameObject*, real>>& nearbyInteractables);
 		glm::vec3 GetTargetItemPos();
 
 		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
-
 
 		real m_MaxMoveSpeed = 5.0f;
 		real m_RotateHSpeedFirstPerson = 3.0f;

@@ -54,7 +54,7 @@ namespace flex
 			Transform* playerTransform = player->GetTransform();
 
 			glm::vec3 playerWorldPos = playerTransform->GetWorldPosition();
-			glm::vec3 playerForward = playerTransform->GetForward();
+			glm::vec3 playerForward = player->GetLookDirection();
 			glm::vec3 playerUp = playerTransform->GetUp();
 			glm::vec3 playerRight = playerTransform->GetRight();
 			glm::vec3 wireHoldingOffset = playerForward * 5.0f + playerUp * -0.75f;
@@ -116,7 +116,7 @@ namespace flex
 				else if (player->IsHolding(plug0))
 				{
 					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					bool bLeftHand = player->heldItemLeftHand == plug0->ID;
+					bool bLeftHand = player->GetHeldItem(Hand::LEFT) == plug0->ID;
 					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
 					nearbySocket0 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true);
 					if (nearbySocket0 != nullptr)
@@ -154,7 +154,7 @@ namespace flex
 				else if (player->IsHolding(plug1))
 				{
 					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					bool bLeftHand = player->heldItemLeftHand == plug1->ID;
+					bool bLeftHand = player->GetHeldItem(Hand::LEFT) == plug1->ID;
 					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
 					nearbySocket1 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
 					if (nearbySocket1 != nullptr)

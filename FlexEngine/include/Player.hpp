@@ -20,6 +20,12 @@ namespace flex
 		NONE
 	};
 
+	enum class Hand
+	{
+		LEFT,
+		RIGHT
+	};
+
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
 	static constexpr StringID PlayerSID = SID("player");
@@ -89,47 +95,7 @@ namespace flex
 		// Adds the given items to the specified inventory, returns number of items that weren't added
 		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType);
 
-		u32 MoveToInventory(GameObjectStack* inventory, u32 inventorySize, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
-		{
-			i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
-
-			// Fill up any existing slots
-			for (u32 i = 0; i < inventorySize; ++i)
-			{
-				if (inventory[i].prefabID == prefabID && (inventory[i].count + 1) <= maxStackSize)
-				{
-					i32 deposit = glm::min((maxStackSize - inventory[i].count), count);
-					count -= deposit;
-					inventory[i].count += deposit;
-					// TODO: Merge user data here
-				}
-
-				if (count == 0)
-				{
-					return 0;
-				}
-			}
-
-			// Fill empty slots
-			for (u32 i = 0; i < inventorySize; ++i)
-			{
-				if (inventory[i].count == 0)
-				{
-					i32 deposit = glm::min(maxStackSize, count);
-					count -= deposit;
-					inventory[i].prefabID = prefabID;
-					inventory[i].count = deposit;
-					inventory[i].userData = userData;
-				}
-
-				if (count == 0)
-				{
-					return 0;
-				}
-			}
-
-			return count;
-		}
+		u32 MoveToInventory(GameObjectStack* inventory, u32 inventorySize, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
 
 		void ClearInventory();
 		void ParseInventoryFile();
@@ -146,7 +112,11 @@ namespace flex
 		void OnWearableEquipped(GameObjectStack const* wearableStack);
 		void OnWearableUnequipped(GameObjectStack const* wearableStack);
 
+		bool IsAnyInventoryShowing() const;
 		bool IsInventoryShowing() const;
+		bool IsMinerInventoryShowing() const;
+
+		i32 GetSelectedQuickAccessItemSlot() const { return m_SelectedQuickAccessItemSlot; }
 
 		// Tracks
 		bool IsPlacingTrack() const { return m_TrackBuildingContext.m_bPlacingTrack; }
@@ -161,6 +131,58 @@ namespace flex
 		void UpdateTrackEditing();
 		void TogglePlacingTrack();
 		void ToggleEditingTrack();
+
+		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
+
+		GameObjectID GetHeldItem(Hand hand) { if (hand == Hand::LEFT) return m_HeldItemLeftHand; return m_HeldItemRightHand; }
+		void SetHeldItem(Hand hand, GameObjectID gameObjectID);
+
+		void CancelPlaceWire();
+		void SpawnWire();
+
+		bool AbleToInteract() const;
+
+		TrackID GetTrackRidingID() const { return m_TrackRidingID; }
+		real GetTrackAttachMinDist() const { return m_TrackAttachMinDist; }
+
+		static const u32 WEARABLES_ITEM_COUNT = 3;
+		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
+		static const u32 INVENTORY_ITEM_ROW_COUNT = 5;
+		static const u32 INVENTORY_ITEM_COL_COUNT = 7;
+		static const u32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
+
+	private:
+		friend class PlayerController;
+
+		void CreateDroppedItemFromStack(GameObjectStack* stack);
+
+		struct TrackBuildingContext
+		{
+			i32 m_CurveNodesPlaced = 0;
+			BezierCurveList m_TrackPlacing; // List of curves making up the track we're placing
+			BezierCurve3D m_CurvePlacing; // The specific curve being placed currently
+			bool m_bPlacingTrack = false; // Placing a new track
+			bool m_bEditingTrack = false; // Editing an existing track
+			TrackID m_TrackEditingID = InvalidTrackID;
+			i32 m_TrackEditingCurveIdx = -1;
+			i32 m_TrackEditingPointIdx = -1;
+			glm::vec3 m_TrackPlacementReticlePos; // Local offset
+			// Config vars
+			real m_SnapThreshold = 1.0f;
+		};
+
+		static const glm::vec3 HEADLAMP_MOUNT_POS;
+
+		static const u32 INVENTORY_MIN = 0;
+		static const u32 INVENTORY_MAX = 999;
+		static const u32 INVENTORY_QUICK_ACCESS_MIN = 1000;
+		static const u32 INVENTORY_QUICK_ACCESS_MAX = 1999;
+		static const u32 INVENTORY_WEARABLES_MIN = 2000;
+		static const u32 INVENTORY_WEARABLES_MAX = 2999;
+		static const u32 INVENTORY_MINER_MIN = 3000;
+		static const u32 INVENTORY_MINER_MAX = 3999;
+
+		const real m_TurnToFaceDownTrackInvSpeed = 1.0f / 0.1f;
 
 		PlayerController* m_Controller = nullptr;
 		i32 m_Index = 0;
@@ -177,21 +199,6 @@ namespace flex
 		real m_Height = 4.0f;
 
 		real m_Pitch = 0.0f;
-
-		struct TrackBuildingContext
-		{
-			i32 m_CurveNodesPlaced = 0;
-			BezierCurveList m_TrackPlacing; // List of curves making up the track we're placing
-			BezierCurve3D m_CurvePlacing; // The specific curve being placed currently
-			bool m_bPlacingTrack = false; // Placing a new track
-			bool m_bEditingTrack = false; // Editing an existing track
-			TrackID m_TrackEditingID = InvalidTrackID;
-			i32 m_TrackEditingCurveIdx = -1;
-			i32 m_TrackEditingPointIdx = -1;
-			glm::vec3 m_TrackPlacementReticlePos; // Local offset
-			// Config vars
-			real m_SnapThreshold = 1.0f;
-		};
 
 		TrackBuildingContext m_TrackBuildingContext;
 
@@ -213,44 +220,20 @@ namespace flex
 
 		TrackState m_TrackState;
 
-		static const glm::vec3 HeadlampMountingPos;
-
-		static const u32 WEARABLES_ITEM_COUNT = 3;
-		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
-		static const u32 INVENTORY_ITEM_ROW_COUNT = 5;
-		static const u32 INVENTORY_ITEM_COL_COUNT = 7;
-		static const u32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
-
-		static const u32 INVENTORY_MIN = 0;
-		static const u32 INVENTORY_MAX = 999;
-		static const u32 INVENTORY_QUICK_ACCESS_MIN = 1000;
-		static const u32 INVENTORY_QUICK_ACCESS_MAX = 1999;
-		static const u32 INVENTORY_WEARABLES_MIN = 2000;
-		static const u32 INVENTORY_WEARABLES_MAX = 2999;
-		static const u32 INVENTORY_MINER_MIN = 3000;
-		static const u32 INVENTORY_MINER_MAX = 3999;
-
 		std::array<GameObjectStack, INVENTORY_ITEM_COUNT> m_Inventory;
 		std::array<GameObjectStack, QUICK_ACCESS_ITEM_COUNT> m_QuickAccessInventory;
 		std::array<GameObjectStack, WEARABLES_ITEM_COUNT> m_WearablesInventory;
-		bool bInventoryShowing = false;
-		bool bMinerInventoryShowing = false;
-		i32 selectedQuickAccessItemSlot = 0;
+		bool m_bInventoryShowing = false;
+		bool m_bMinerInventoryShowing = false;
+		i32 m_SelectedQuickAccessItemSlot = 0;
 
-		GameObjectID heldItemLeftHand = InvalidGameObjectID;
-		GameObjectID heldItemRightHand = InvalidGameObjectID;
+		GameObjectID m_HeldItemLeftHand = InvalidGameObjectID;
+		GameObjectID m_HeldItemRightHand = InvalidGameObjectID;
 
-		GameObjectID ridingVehicleID = InvalidGameObjectID;
+		GameObjectID m_RidingVehicleID = InvalidGameObjectID;
 		// TODO: Merge these two?
-		GameObjectID terminalInteractingWithID = InvalidGameObjectID;
-		GameObjectID objectInteractingWithID = InvalidGameObjectID;
-
-		const real m_TurnToFaceDownTrackInvSpeed = 1.0f / 0.1f;
-
-	private:
-		friend class PlayerController;
-
-		void CreateDroppedItemFromStack(GameObjectStack* stack);
+		GameObjectID m_TerminalInteractingWithID = InvalidGameObjectID;
+		GameObjectID m_ObjectInteractingWithID = InvalidGameObjectID;
 
 		AudioSourceID m_SoundPlaceTrackNodeID = InvalidAudioSourceID;
 		AudioSourceID m_SoundPlaceFinalTrackNodeID = InvalidAudioSourceID;

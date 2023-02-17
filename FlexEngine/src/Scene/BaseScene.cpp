@@ -2777,6 +2777,30 @@ namespace flex
 		}
 	}
 
+	void BaseScene::GetNearbyInteractableObjects(std::list<Pair<GameObject*, real>>& sortedInteractableObjects,
+		const glm::vec3& posWS,
+		real sqDistThreshold,
+		GameObjectID excludeGameObjectID)
+	{
+		std::vector<GameObject*> allObjects = GetAllObjects();
+		for (GameObject* object : allObjects)
+		{
+			if (object->m_bInteractable && object->ID != excludeGameObjectID)
+			{
+				real dist2 = glm::distance2(object->GetTransform()->GetWorldPosition(), posWS);
+				if (dist2 <= sqDistThreshold)
+				{
+					sortedInteractableObjects.emplace_back(object, dist2);
+				}
+			}
+		}
+
+		sortedInteractableObjects.sort([](const Pair<GameObject*, real>& a, const Pair<GameObject*, real>& b)
+		{
+			return a.second < b.second;
+		});
+	}
+
 	void BaseScene::BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
 	{
 		if (std::find(m_OnGameObjectDestroyedCallbacks.begin(), m_OnGameObjectDestroyedCallbacks.end(), callback) != m_OnGameObjectDestroyedCallbacks.end())

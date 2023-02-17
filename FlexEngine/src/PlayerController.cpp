@@ -42,10 +42,12 @@ namespace flex
 	PlayerController::PlayerController() :
 		m_ActionCallback(this, &PlayerController::OnActionEvent),
 		m_MouseMovedCallback(this, &PlayerController::OnMouseMovedEvent),
-		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION),
+		m_TargetItemPlacementPos(FLT_MAX),
 		m_TargetItemPlacementPosSmoothed(FLT_MAX),
+		m_TargetItemPlacementRot(glm::vec3(FLT_MAX)),
 		m_TargetItemPlacementRotSmoothed(glm::vec3(FLT_MAX)),
-		m_ItemPlacementGroundedPos(FLT_MAX)
+		m_ItemPlacementGroundedPos(FLT_MAX),
+		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION)
 	{
 		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed);
 		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
@@ -95,7 +97,7 @@ namespace flex
 			g_Window->HasFocus() &&
 			!g_EngineInstance->IsSimulationPaused())
 		{
-			g_Window->SetCursorMode(m_Player->IsInventoryShowing() ? CursorMode::NORMAL : CursorMode::DISABLED);
+			g_Window->SetCursorMode(m_Player->IsAnyInventoryShowing() ? CursorMode::NORMAL : CursorMode::DISABLED);
 		}
 
 		// TODO: Make frame-rate-independent!
@@ -131,11 +133,11 @@ namespace flex
 			{
 				if (cycleItemAxis > 0.0f)
 				{
-					m_Player->selectedQuickAccessItemSlot = (m_Player->selectedQuickAccessItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->m_SelectedQuickAccessItemSlot = (m_Player->m_SelectedQuickAccessItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 				else if (cycleItemAxis < 0.0f)
 				{
-					m_Player->selectedQuickAccessItemSlot = (m_Player->selectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->m_SelectedQuickAccessItemSlot = (m_Player->m_SelectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
 				}
 			}
 
@@ -179,7 +181,7 @@ namespace flex
 
 					m_Player->UpdateTrackEditing();
 				}
-			
+
 				m_Player->DrawTrackDebug();
 
 				if (m_bAttemptPickup)
@@ -224,216 +226,42 @@ namespace flex
 				}
 			}
 
-#if 0 // Arc & rect tests
-			real startAngle = PI_DIV_TWO;
-			real endAngle = PI_DIV_TWO - TWO_PI - 0.1f;
-			g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
-
-			startAngle = PI - 0.1f;
-			endAngle = PI + PI_DIV_TWO;
-			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
-
-			startAngle = -PI_DIV_TWO;
-			endAngle = 0.1f;
-			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.0f), startAngle, endAngle, 0.05f, 0.03f, 32, glm::vec4(0.9f, 0.92f, 0.97f, 1.0f));
-
-			startAngle = (sin(g_SecElapsedSinceProgramStart) * 0.5f + 0.5f) * TWO_PI;
-			endAngle = startAngle + (sin(g_SecElapsedSinceProgramStart * 0.5f + 1.0f) * 0.5f + 0.51f) * TWO_PI;
-			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.0f, -0.2f), startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
-
-			startAngle = 0.0f;
-			endAngle = TWO_PI;
-			g_Renderer->GetUIMesh()->DrawArc(glm::vec2(0.2f, 0.2f), startAngle, endAngle, 0.07f, 0.035f, 32, VEC4_ONE);
-
-			glm::vec2 rectPos(sin(g_SecElapsedSinceProgramStart) * 0.05f - 0.3f, 0.0f);
-			glm::vec2 halfRectSize(sin(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f, cos(g_SecElapsedSinceProgramStart * 0.5f) * 0.01f + 0.2f);
-			g_Renderer->GetUIMesh()->DrawRect(rectPos - halfRectSize, rectPos + halfRectSize, VEC4_ONE, 0.0f);
-#endif
-
+			// List of objects sorted by square dist (closest to farthest)
 			std::list<Pair<GameObject*, real>> nearbyInteractables;
 
 			GameObject* nearestInteractable = nullptr;
-			if (!m_Player->ridingVehicleID.IsValid() &&
-				!m_Player->terminalInteractingWithID.IsValid())
+			if (m_Player->AbleToInteract())
 			{
-				std::vector<GameObject*> allInteractableObjects;
-				g_SceneManager->CurrentScene()->GetInteractableObjects(allInteractableObjects);
+				// TODO: Move to All.variables
+				const real maxDistSqr = 7.0f * 7.0f;
+				const glm::vec3 posWS = m_Player->m_Transform.GetWorldPosition();
+				GameObjectID excludeGameObjectID = m_Player->ID;
+				g_SceneManager->CurrentScene()->GetNearbyInteractableObjects(nearbyInteractables,
+					posWS, maxDistSqr, excludeGameObjectID);
 
-				if (!allInteractableObjects.empty())
+				if (!nearbyInteractables.empty())
 				{
-					// List of objects sorted by sqr dist (closest to farthest)
-
-					// TODO: Move to All.variables
-					real maxDistSqr = 7.0f * 7.0f;
-					const glm::vec3 pos = m_Player->m_Transform.GetWorldPosition();
-					for (GameObject* obj : allInteractableObjects)
-					{
-						if (obj != m_Player)
-						{
-							// TODO: Also check player is facing towards this object
-							real dist2 = glm::distance2(obj->GetTransform()->GetWorldPosition(), pos);
-							if (dist2 <= maxDistSqr)
-							{
-								nearbyInteractables.emplace_back(obj, dist2);
-							}
-						}
-					}
-
-					if (!nearbyInteractables.empty())
-					{
-						nearbyInteractables.sort([](const Pair<GameObject*, real>& a, const Pair<GameObject*, real>& b)
-						{
-							return a.second < b.second;
-						});
-
-						nearestInteractable = nearbyInteractables.front().first;
-						nearestInteractable->SetNearbyInteractable(m_Player);
-						m_Player->SetNearbyInteractable(nearestInteractable);
-					}
+					nearestInteractable = nearbyInteractables.front().first;
+					nearestInteractable->SetNearbyInteractable(m_Player);
+					m_Player->SetNearbyInteractable(nearestInteractable);
 				}
 			}
 
 			if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
 			{
-				bool bPlaceItemLeft = m_bAttemptInteractLeftHand && m_Player->heldItemLeftHand.IsValid();
-				bool bPlaceItemRight = m_bAttemptInteractRightHand && m_Player->heldItemRightHand.IsValid();
+				bool bPlaceItemLeft = m_bAttemptInteractLeftHand && m_Player->GetHeldItem(Hand::LEFT).IsValid();
+				bool bPlaceItemRight = m_bAttemptInteractRightHand && m_Player->GetHeldItem(Hand::RIGHT).IsValid();
 
-				bool bPickupItemLeft = m_bAttemptInteractLeftHand && !m_Player->heldItemLeftHand.IsValid();
-				bool bPickupItemRight = m_bAttemptInteractRightHand && !m_Player->heldItemRightHand.IsValid();
+				bool bPickupItemLeft = m_bAttemptInteractLeftHand && !m_Player->GetHeldItem(Hand::LEFT).IsValid();
+				bool bPickupItemRight = m_bAttemptInteractRightHand && !m_Player->GetHeldItem(Hand::RIGHT).IsValid();
 
 				if (bPlaceItemLeft || bPlaceItemRight)
 				{
-					// Toggle interaction when already interacting
-					GameObject* heldItemLeftHand = m_Player->heldItemLeftHand.Get();
-					GameObject* heldItemRightHand = m_Player->heldItemRightHand.Get();
-					bool bPlaceWireLeft = bPlaceItemLeft && heldItemLeftHand->GetTypeID() == WirePlugSID;
-					bool bPlaceWireRight = bPlaceItemRight && heldItemRightHand->GetTypeID() == WirePlugSID;
-					if (bPlaceWireLeft || bPlaceWireRight)
-					{
-						WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? heldItemLeftHand : heldItemRightHand);
-						// Plug in wire!
-						PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-						if (pluggablesSystem->PlugInToNearbySocket(wirePlug, WirePlug::nearbyThreshold))
-						{
-							if (bPlaceWireLeft)
-							{
-								m_Player->heldItemLeftHand = InvalidGameObjectID;
-								m_bAttemptInteractLeftHand = false;
-							}
-							else
-							{
-								m_Player->heldItemRightHand = InvalidGameObjectID;
-								m_bAttemptInteractRightHand = false;
-							}
-
-							heldItemLeftHand = m_Player->heldItemLeftHand.Get();
-							heldItemRightHand = m_Player->heldItemRightHand.Get();
-							if ((heldItemLeftHand == nullptr || heldItemLeftHand->GetTypeID() != WirePlugSID) &&
-								(heldItemRightHand == nullptr || heldItemRightHand->GetTypeID() != WirePlugSID))
-							{
-								m_Player->m_PlacingWire = nullptr;
-							}
-						}
-					}
+					AttemptToIteractUsingHeldItem();
 				}
 				else if (bPickupItemLeft || bPickupItemRight)
 				{
-					auto nearbyInteractableIter = nearbyInteractables.begin();
-					bool bInteracted = false;
-					// TODO: Run this loop every frame to indicate to player what each hand will interact with
-					while (!bInteracted && nearbyInteractableIter != nearbyInteractables.end())
-					{
-						GameObject* nearbyInteractable = nearbyInteractableIter->first;
-
-						switch (nearbyInteractable->GetTypeID())
-						{
-						case SocketSID:
-						case WirePlugSID:
-						{
-							WirePlug* wirePlugInteractingWith = nullptr;
-
-							if (nearbyInteractable->GetTypeID() == SocketSID)
-							{
-								// Interacting with full socket, unplug wire
-								Socket* socket = (Socket*)nearbyInteractable;
-								wirePlugInteractingWith = (WirePlug*)socket->connectedPlugID.Get();
-
-								if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
-								{
-									// Can't interact with plug player is already holding
-									// TODO: Call generic `IsInteractable` on plug
-									break;
-								}
-							}
-							else
-							{
-								wirePlugInteractingWith = (WirePlug*)nearbyInteractable;
-								if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
-								{
-
-									// Can't interact with plug player is already holding
-									break;
-								}
-							}
-
-							if (wirePlugInteractingWith != nullptr)
-							{
-								PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-
-								if (wirePlugInteractingWith->socketID.IsValid())
-								{
-									// Plug is plugged in, try unplugging
-									pluggablesSystem->UnplugFromSocket(wirePlugInteractingWith);
-									bInteracted = true;
-									if (bPickupItemLeft)
-									{
-										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
-										m_bAttemptInteractLeftHand = false;
-									}
-									else if (bPickupItemRight)
-									{
-										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
-										m_bAttemptInteractRightHand = false;
-									}
-								}
-								else
-								{
-									// Plug is not plugged in, grab plug
-									bInteracted = true;
-									if (bPickupItemLeft)
-									{
-										m_Player->heldItemLeftHand = wirePlugInteractingWith->ID;
-										m_bAttemptInteractLeftHand = false;
-									}
-									else if (bPickupItemRight)
-									{
-										m_Player->heldItemRightHand = wirePlugInteractingWith->ID;
-										m_bAttemptInteractRightHand = false;
-									}
-								}
-							}
-						} break;
-						case TerminalSID:
-						{
-							Terminal* terminal = (Terminal*)nearbyInteractable;
-							m_Player->SetInteractingWithTerminal(terminal);
-						} break;
-						case SpeakerSID:
-						{
-							Speaker* speaker = (Speaker*)nearbyInteractable;
-							speaker->TogglePlaying();
-						} break;
-						case MinerSID:
-						{
-							if (!m_Player->bInventoryShowing)
-							{
-								m_Player->bMinerInventoryShowing = !m_Player->bMinerInventoryShowing;
-							}
-						} break;
-						}
-
-						++nearbyInteractableIter;
-					}
+					AttemptToPickUpItem(nearbyInteractables);
 				}
 			}
 		}
@@ -445,153 +273,36 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->selectedQuickAccessItemSlot == -1)
-			{
-				m_Player->selectedQuickAccessItemSlot = 0;
-			}
-
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
-
-			if (gameObjectStack.count >= 1)
-			{
-				if (gameObjectStack.prefabID.IsValid())
-				{
-					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-					if (!templateObject->IsItemizable())
-					{
-						m_bPreviewPlaceItemFromInventory = false;
-					}
-					else
-					{
-						Mesh* mesh = templateObject->GetMesh();
-						if (mesh != nullptr)
-						{
-							UpdateItemPlacementTransform();
-
-							static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
-							static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
-							g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
-								m_TargetItemPlacementPosSmoothed,
-								m_TargetItemPlacementRotSmoothed,
-								VEC3_ONE,
-								m_bItemPlacementValid ? validColour : invalidColour);
-						}
-					}
-				}
-				else
-				{
-					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
-				}
-			}
+			PreviewPlaceItemFromInventory();
 		}
 
 		if (m_bAttemptPlaceItemFromInventory)
 		{
 			m_bAttemptPlaceItemFromInventory = false;
-
-			if (m_Player->selectedQuickAccessItemSlot == -1)
-			{
-				m_Player->selectedQuickAccessItemSlot = 0;
-			}
-
-			if (m_bItemPlacementValid)
-			{
-				GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
-
-				if (gameObjectStack.count >= 1)
-				{
-					if (gameObjectStack.prefabID.IsValid())
-					{
-						UpdateItemPlacementTransform();
-
-						GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot, gameObjectStack.userData);
-
-						m_TargetItemPlacementPosSmoothed = glm::vec3(FLT_MAX);
-						m_TargetItemPlacementRotSmoothed = glm::quat(glm::vec3(FLT_MAX));
-						m_ItemPlacementGroundedPos = glm::vec3(FLT_MAX);
-
-						if (gameObject != nullptr)
-						{
-							// Add non-immediate
-							g_SceneManager->CurrentScene()->AddRootObject(gameObject);
-							gameObjectStack.count--;
-
-							if (gameObjectStack.count == 0)
-							{
-								gameObjectStack.Clear();
-							}
-
-							AudioManager::PlaySource(m_PlaceItemAudioID);
-						}
-						else
-						{
-							std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-							PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
-						}
-					}
-					else
-					{
-						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
-						PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
-					}
-				}
-			}
-			else
-			{
-				AudioManager::PlaySource(m_PlaceItemFailureAudioID);
-			}
+			AttemptPlaceItemFromInventory();
 		}
 
 		if (m_bCancelPlaceWire)
 		{
 			m_bCancelPlaceWire = false;
-
-			if (m_Player->m_PlacingWire != nullptr)
-			{
-				g_SceneManager->CurrentScene()->RemoveObject(m_Player->m_PlacingWire, true);
-				m_Player->m_PlacingWire = nullptr;
-			}
+			m_Player->CancelPlaceWire();
 		}
 
 		if (m_bSpawnWire)
 		{
 			m_bSpawnWire = false;
-
-			if (m_Player->m_PlacingWire == nullptr)
-			{
-				BaseScene* currentScene = g_SceneManager->CurrentScene();
-				m_Player->m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
-
-				Transform* playerTransform = m_Player->GetTransform();
-				Transform* wireTransform = m_Player->m_PlacingWire->GetTransform();
-
-				glm::vec3 targetPos = playerTransform->GetWorldPosition() + playerTransform->GetForward() * 2.0f;
-				glm::quat targetRot = playerTransform->GetWorldRotation();
-
-				wireTransform->SetWorldPosition(targetPos, false);
-				wireTransform->SetWorldRotation(targetRot, true);
-
-				currentScene->AddRootObject(m_Player->m_PlacingWire);
-
-				CHECK(!m_Player->heldItemLeftHand.IsValid());
-				CHECK(!m_Player->heldItemRightHand.IsValid());
-
-				m_Player->heldItemLeftHand = m_Player->m_PlacingWire->plug0ID;
-				m_Player->heldItemRightHand = m_Player->m_PlacingWire->plug1ID;
-			}
+			m_Player->SpawnWire();
 		}
 
 		if (m_bDropItem)
 		{
 			m_bDropItem = false;
-
 			m_Player->DropSelectedItem();
 		}
 
-		if (m_Player->objectInteractingWithID.IsValid())
+		if (m_Player->m_ObjectInteractingWithID.IsValid())
 		{
-			GameObject* objectInteractingWith = m_Player->objectInteractingWithID.Get();
+			GameObject* objectInteractingWith = m_Player->m_ObjectInteractingWithID.Get();
 			if (objectInteractingWith->GetTypeID() == ValveSID)
 			{
 				Valve* valve = (Valve*)objectInteractingWith;
@@ -655,6 +366,7 @@ namespace flex
 		m_bAttemptCompleteTrack = false;
 		m_bAttemptPlaceItemFromInventory = false;
 		m_bAttemptInteractLeftHand = false;
+		m_bAttemptInteractRightHand = false;
 		m_bAttemptPickup = false;
 	}
 
@@ -687,12 +399,12 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->selectedQuickAccessItemSlot == -1)
+			if (m_Player->m_SelectedQuickAccessItemSlot == -1)
 			{
-				m_Player->selectedQuickAccessItemSlot = 0;
+				m_Player->m_SelectedQuickAccessItemSlot = 0;
 			}
 
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->selectedQuickAccessItemSlot];
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
 
 			if (gameObjectStack.count >= 1)
 			{
@@ -765,9 +477,7 @@ namespace flex
 			}
 		}
 
-		if (m_Player->m_bPossessed &&
-			!m_Player->terminalInteractingWithID.IsValid() &&
-			!m_Player->ridingVehicleID.IsValid() &&
+		if (m_Player->AbleToInteract() &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
 			real lookH = lookLR;
@@ -820,9 +530,8 @@ namespace flex
 			}
 			else
 			{
-				if (!m_Player->terminalInteractingWithID.IsValid() &&
-					!m_Player->ridingVehicleID.IsValid() &&
-					!m_Player->IsInventoryShowing())
+				if (m_Player->AbleToInteract() &&
+					!m_Player->IsAnyInventoryShowing())
 				{
 					real moveAcceleration = TWEAKABLE(80000.0f);
 
@@ -995,11 +704,11 @@ namespace flex
 		}
 
 		if (action == Action::SHOW_INVENTORY &&
-			!m_Player->bMinerInventoryShowing &&
+			!m_Player->m_bMinerInventoryShowing &&
 			actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
-			m_Player->bInventoryShowing = !m_Player->bInventoryShowing;
-			g_Window->SetCursorMode(m_Player->bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
+			m_Player->m_bInventoryShowing = !m_Player->m_bInventoryShowing;
+			g_Window->SetCursorMode(m_Player->m_bInventoryShowing ? CursorMode::NORMAL : CursorMode::DISABLED);
 			return EventReply::CONSUMED;
 		}
 
@@ -1018,7 +727,7 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
-		if (m_Player->IsInventoryShowing())
+		if (m_Player->IsAnyInventoryShowing())
 		{
 			return EventReply::UNCONSUMED;
 		}
@@ -1040,7 +749,7 @@ namespace flex
 		}
 
 		if (action == Action::PLACE_WIRE && !m_bPreviewPlaceItemFromInventory
-			&& !m_Player->heldItemLeftHand.IsValid() && !m_Player->heldItemRightHand.IsValid())
+			&& !m_Player->GetHeldItem(Hand::LEFT).IsValid() && !m_Player->GetHeldItem(Hand::RIGHT).IsValid())
 		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
@@ -1132,12 +841,10 @@ namespace flex
 
 	EventReply PlayerController::OnMouseMovedEvent(const glm::vec2& dMousePos)
 	{
-		if (m_Player != nullptr && !m_Player->IsInventoryShowing() &&
+		if (m_Player != nullptr && !m_Player->IsAnyInventoryShowing() &&
 			g_Window->HasFocus() && !g_EngineInstance->IsSimulationPaused())
 		{
-			if (m_Player->m_bPossessed &&
-				!m_Player->terminalInteractingWithID.IsValid() &&
-				!m_Player->ridingVehicleID.IsValid() &&
+			if (m_Player->AbleToInteract() &&
 				m_Player->m_TrackRidingID == InvalidTrackID)
 			{
 				real lookH = dMousePos.x;
@@ -1159,6 +866,49 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
+	void PlayerController::PreviewPlaceItemFromInventory()
+	{
+		if (m_Player->m_SelectedQuickAccessItemSlot == -1)
+		{
+			m_Player->m_SelectedQuickAccessItemSlot = 0;
+		}
+
+		GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
+
+		if (gameObjectStack.count >= 1)
+		{
+			if (gameObjectStack.prefabID.IsValid())
+			{
+				GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+				if (!templateObject->IsItemizable())
+				{
+					m_bPreviewPlaceItemFromInventory = false;
+				}
+				else
+				{
+					Mesh* mesh = templateObject->GetMesh();
+					if (mesh != nullptr)
+					{
+						UpdateItemPlacementTransform();
+
+						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
+						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
+						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
+							m_TargetItemPlacementPosSmoothed,
+							m_TargetItemPlacementRotSmoothed,
+							VEC3_ONE,
+							m_bItemPlacementValid ? validColour : invalidColour);
+					}
+				}
+			}
+			else
+			{
+				std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+				PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
+			}
+		}
+	}
+
 	void PlayerController::UpdateItemPlacementTransform()
 	{
 		if (m_ItemPlacementGroundedPos.x != FLT_MAX)
@@ -1177,7 +927,6 @@ namespace flex
 			m_TargetItemPlacementPosSmoothed = m_TargetItemPlacementPos;
 			m_TargetItemPlacementRotSmoothed = m_TargetItemPlacementRot;
 		}
-
 	}
 
 	glm::vec3 PlayerController::GetTargetItemPos()
@@ -1189,5 +938,210 @@ namespace flex
 		return playerTransform->GetWorldPosition() +
 			playerTransform->GetForward() * forwardOffset +
 			playerTransform->GetUp() * upOffset;
+	}
+
+	void PlayerController::AttemptPlaceItemFromInventory()
+	{
+		if (m_Player->m_SelectedQuickAccessItemSlot == -1)
+		{
+			m_Player->m_SelectedQuickAccessItemSlot = 0;
+		}
+
+		if (m_bItemPlacementValid)
+		{
+			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
+
+			if (gameObjectStack.count >= 1)
+			{
+				if (gameObjectStack.prefabID.IsValid())
+				{
+					UpdateItemPlacementTransform();
+
+					GameObject* gameObject = GameObject::Deitemize(gameObjectStack.prefabID, m_TargetItemPlacementPos, m_TargetItemPlacementRot, gameObjectStack.userData);
+
+					m_TargetItemPlacementPosSmoothed = glm::vec3(FLT_MAX);
+					m_TargetItemPlacementRotSmoothed = glm::quat(glm::vec3(FLT_MAX));
+					m_ItemPlacementGroundedPos = glm::vec3(FLT_MAX);
+
+					if (gameObject != nullptr)
+					{
+						// Add non-immediate
+						g_SceneManager->CurrentScene()->AddRootObject(gameObject);
+						gameObjectStack.count--;
+
+						if (gameObjectStack.count == 0)
+						{
+							gameObjectStack.Clear();
+						}
+
+						AudioManager::PlaySource(m_PlaceItemAudioID);
+					}
+					else
+					{
+						std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+						PrintError("Failed to de-itemize item with prefab ID %s from player inventory\n", prefabIDStr.c_str());
+					}
+				}
+				else
+				{
+					std::string prefabIDStr = gameObjectStack.prefabID.ToString();
+					PrintError("Failed to de-itemize item from player inventory, invalid prefab ID: %s\n", prefabIDStr.c_str());
+				}
+			}
+		}
+		else
+		{
+			AudioManager::PlaySource(m_PlaceItemFailureAudioID);
+		}
+	}
+
+	void PlayerController::AttemptToIteractUsingHeldItem()
+	{
+		bool bUseItemLeft = m_bAttemptInteractLeftHand && m_Player->GetHeldItem(Hand::LEFT).IsValid();
+		bool bUseItemRight = m_bAttemptInteractRightHand && m_Player->GetHeldItem(Hand::RIGHT).IsValid();
+
+		// Toggle interaction when already interacting
+		GameObject* m_HeldItemLeftHand = m_Player->GetHeldItem(Hand::LEFT).Get();
+		GameObject* m_HeldItemRightHand = m_Player->GetHeldItem(Hand::RIGHT).Get();
+		bool bPlaceWireLeft = bUseItemLeft && m_HeldItemLeftHand->GetTypeID() == WirePlugSID;
+		bool bPlaceWireRight = bUseItemRight && m_HeldItemRightHand->GetTypeID() == WirePlugSID;
+		if (bPlaceWireLeft || bPlaceWireRight)
+		{
+			WirePlug* wirePlug = (WirePlug*)(bPlaceWireLeft ? m_HeldItemLeftHand : m_HeldItemRightHand);
+			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+			if (pluggablesSystem->PlugInToNearbySocket(wirePlug, WirePlug::nearbyThreshold))
+			{
+				if (bPlaceWireLeft)
+				{
+					m_Player->m_HeldItemLeftHand = InvalidGameObjectID;
+					m_bAttemptInteractLeftHand = false;
+				}
+				else
+				{
+					m_Player->m_HeldItemRightHand = InvalidGameObjectID;
+					m_bAttemptInteractRightHand = false;
+				}
+
+				m_HeldItemLeftHand = m_Player->GetHeldItem(Hand::LEFT).Get();
+				m_HeldItemRightHand = m_Player->GetHeldItem(Hand::RIGHT).Get();
+				if ((m_HeldItemLeftHand == nullptr || m_HeldItemLeftHand->GetTypeID() != WirePlugSID) &&
+					(m_HeldItemRightHand == nullptr || m_HeldItemRightHand->GetTypeID() != WirePlugSID))
+				{
+					m_Player->m_PlacingWire = nullptr;
+				}
+			}
+		}
+	}
+
+	void PlayerController::AttemptToPickUpItem(std::list<Pair<GameObject*, real>>& nearbyInteractables)
+	{
+		auto nearbyInteractableIter = nearbyInteractables.begin();
+		bool bInteracted = false;
+		// TODO: Run this loop every frame to indicate to player what each hand will interact with
+		while (!bInteracted && nearbyInteractableIter != nearbyInteractables.end())
+		{
+			GameObject* nearbyInteractable = nearbyInteractableIter->first;
+
+			bool bPickupItemLeft = m_bAttemptInteractLeftHand && !m_Player->GetHeldItem(Hand::LEFT).IsValid();
+			bool bPickupItemRight = m_bAttemptInteractRightHand && !m_Player->GetHeldItem(Hand::RIGHT).IsValid();
+
+			switch (nearbyInteractable->GetTypeID())
+			{
+			case SocketSID:
+			case WirePlugSID:
+			{
+				WirePlug* wirePlugInteractingWith = nullptr;
+
+				if (nearbyInteractable->GetTypeID() == SocketSID)
+				{
+					// Interacting with full socket, unplug wire
+					Socket* socket = (Socket*)nearbyInteractable;
+					wirePlugInteractingWith = (WirePlug*)socket->connectedPlugID.Get();
+
+					if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
+					{
+						// Can't interact with plug player is already holding
+						// TODO: Call generic `IsInteractable` on plug
+						break;
+					}
+				}
+				else
+				{
+					wirePlugInteractingWith = (WirePlug*)nearbyInteractable;
+					if (wirePlugInteractingWith != nullptr && m_Player->IsHolding(wirePlugInteractingWith))
+					{
+
+						// Can't interact with plug player is already holding
+						break;
+					}
+				}
+
+				if (wirePlugInteractingWith != nullptr)
+				{
+					PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+
+					if (wirePlugInteractingWith->socketID.IsValid())
+					{
+						// Plug is plugged in, try unplugging
+						pluggablesSystem->UnplugFromSocket(wirePlugInteractingWith);
+						bInteracted = true;
+						if (bPickupItemLeft)
+						{
+							m_Player->SetHeldItem(Hand::LEFT, wirePlugInteractingWith->ID);
+							m_bAttemptInteractLeftHand = false;
+						}
+						else if (bPickupItemRight)
+						{
+							m_Player->SetHeldItem(Hand::RIGHT, wirePlugInteractingWith->ID);
+							m_bAttemptInteractRightHand = false;
+						}
+					}
+					else
+					{
+						// Plug is not plugged in, grab plug
+						bInteracted = true;
+						if (bPickupItemLeft)
+						{
+							m_Player->SetHeldItem(Hand::LEFT, wirePlugInteractingWith->ID);
+							m_bAttemptInteractLeftHand = false;
+						}
+						else if (bPickupItemRight)
+						{
+							m_Player->SetHeldItem(Hand::RIGHT, wirePlugInteractingWith->ID);
+							m_bAttemptInteractRightHand = false;
+						}
+					}
+				}
+			} break;
+			case TerminalSID:
+			{
+				Terminal* terminal = (Terminal*)nearbyInteractable;
+				m_Player->SetInteractingWithTerminal(terminal);
+				m_bAttemptInteractLeftHand = false;
+				m_bAttemptInteractRightHand = false;
+				bInteracted = true;
+			} break;
+			case SpeakerSID:
+			{
+				Speaker* speaker = (Speaker*)nearbyInteractable;
+				speaker->TogglePlaying();
+				m_bAttemptInteractLeftHand = false;
+				m_bAttemptInteractRightHand = false;
+				bInteracted = true;
+			} break;
+			case MinerSID:
+			{
+				if (!m_Player->m_bInventoryShowing)
+				{
+					m_Player->m_bMinerInventoryShowing = !m_Player->m_bMinerInventoryShowing;
+					m_bAttemptInteractLeftHand = false;
+					m_bAttemptInteractRightHand = false;
+					bInteracted = true;
+				}
+			} break;
+			}
+
+			++nearbyInteractableIter;
+		}
 	}
 } // namespace flex

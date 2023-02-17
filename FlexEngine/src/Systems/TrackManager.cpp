@@ -146,13 +146,13 @@ namespace flex
 
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		BezierCurveList* trackRiding = nullptr;
-		if (player0 != nullptr && player0->m_TrackRidingID != InvalidTrackID)
+		if (player0 != nullptr && player0->GetTrackRidingID() != InvalidTrackID)
 		{
-			trackRiding = &tracks[(i32)player0->m_TrackRidingID];
+			trackRiding = &tracks[(i32)player0->GetTrackRidingID()];
 		}
 		real distAlongClosestTrack = -1.0f;
 		TrackID closestTrackID = (player0 == nullptr ? 0 : GetTrackInRangeID(player0->GetTransform()->GetWorldPosition(),
-			player0->m_TrackAttachMinDist, &distAlongClosestTrack));
+			player0->GetTrackAttachMinDist(), &distAlongClosestTrack));
 		for (i32 i = 0; i < (i32)tracks.size(); ++i)
 		{
 			btVector4 highlightColour(0.8f, 0.84f, 0.22f, 1.0f);

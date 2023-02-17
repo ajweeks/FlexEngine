@@ -75,6 +75,10 @@ namespace flex
 
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
+		void GetNearbyInteractableObjects(std::list<Pair<GameObject*, real>>& sortedInteractableObjects,
+			const glm::vec3& posWS,
+			real sqDistThreshold,
+			GameObjectID excludeGameObjectID);
 
 		GameObject* AddRootObject(GameObject* gameObject);
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);

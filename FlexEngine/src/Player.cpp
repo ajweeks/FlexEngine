@@ -40,7 +40,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	const glm::vec3 Player::HeadlampMountingPos = glm::vec3(0.0f, 0.8f, 0.2f);
+	const glm::vec3 Player::HEADLAMP_MOUNT_POS = glm::vec3(0.0f, 0.8f, 0.2f);
 
 	Player::Player(i32 index, GameObjectID gameObjectID) :
 		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID, InvalidPrefabIDPair, false),
@@ -200,15 +200,15 @@ namespace flex
 		}
 		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
-		if (terminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
+		if (m_TerminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
 		{
-			Terminal* terminal = (Terminal*)terminalInteractingWithID.Get();
+			Terminal* terminal = (Terminal*)m_TerminalInteractingWithID.Get();
 			terminal->DrawImGuiWindow();
 		}
 
-		if (ridingVehicleID.IsValid())
+		if (m_RidingVehicleID.IsValid())
 		{
-			Vehicle* vehicle = (Vehicle*)ridingVehicleID.Get();
+			Vehicle* vehicle = (Vehicle*)m_RidingVehicleID.Get();
 
 			const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
 
@@ -357,10 +357,10 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item slot: %i", selectedQuickAccessItemSlot);
+			ImGui::Text("Held item slot: %i", m_SelectedQuickAccessItemSlot);
 
 			DrawInventoryImGui("Inventory", -1, m_Inventory);
-			DrawInventoryImGui("Quick access inventory", selectedQuickAccessItemSlot, m_QuickAccessInventory);
+			DrawInventoryImGui("Quick access inventory", m_SelectedQuickAccessItemSlot, m_QuickAccessInventory);
 			DrawInventoryImGui("Wearables inventory", -1, m_WearablesInventory);
 
 			m_Controller->DrawImGuiObjects();
@@ -490,12 +490,12 @@ namespace flex
 
 	void Player::DropSelectedItem()
 	{
-		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(selectedQuickAccessItemSlot), false);
+		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(m_SelectedQuickAccessItemSlot), false);
 	}
 
 	bool Player::HasFullSelectedInventorySlot()
 	{
-		return m_QuickAccessInventory[selectedQuickAccessItemSlot].count > 0;
+		return m_QuickAccessInventory[m_SelectedQuickAccessItemSlot].count > 0;
 	}
 
 	i32 Player::GetNextFreeInventorySlot()
@@ -971,6 +971,48 @@ namespace flex
 		return count;
 	}
 
+	u32 Player::MoveToInventory(GameObjectStack* inventory, u32 inventorySize, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+	{
+		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
+
+		// Fill up any existing slots
+		for (u32 i = 0; i < inventorySize; ++i)
+		{
+			if (inventory[i].prefabID == prefabID && (inventory[i].count + 1) <= maxStackSize)
+			{
+				i32 deposit = glm::min((maxStackSize - inventory[i].count), count);
+				count -= deposit;
+				inventory[i].count += deposit;
+				// TODO: Merge user data here
+			}
+
+			if (count == 0)
+			{
+				return 0;
+			}
+		}
+
+		// Fill empty slots
+		for (u32 i = 0; i < inventorySize; ++i)
+		{
+			if (inventory[i].count == 0)
+			{
+				i32 deposit = glm::min(maxStackSize, count);
+				count -= deposit;
+				inventory[i].prefabID = prefabID;
+				inventory[i].count = deposit;
+				inventory[i].userData = userData;
+			}
+
+			if (count == 0)
+			{
+				return 0;
+			}
+		}
+
+		return count;
+	}
+
 	void Player::ClearInventory()
 	{
 		m_Inventory.fill({});
@@ -1112,7 +1154,7 @@ namespace flex
 	{
 		if (terminal != nullptr)
 		{
-			CHECK(!terminalInteractingWithID.IsValid());
+			CHECK(!m_TerminalInteractingWithID.IsValid());
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			TerminalCamera* terminalCam = nullptr;
@@ -1127,13 +1169,13 @@ namespace flex
 			}
 			terminalCam->SetTerminal(terminal);
 
-			terminalInteractingWithID = terminal->ID;
+			m_TerminalInteractingWithID = terminal->ID;
 			terminal->SetBeingInteractedWith(this);
 		}
 		else
 		{
-			CHECK(terminalInteractingWithID.IsValid());
-			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
+			CHECK(m_TerminalInteractingWithID.IsValid());
+			Terminal* terminalInteractingWith = (Terminal*)m_TerminalInteractingWithID.Get();
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			CHECK_EQ((u32)cam->type, (u32)CameraType::TERMINAL);
@@ -1141,7 +1183,7 @@ namespace flex
 			terminalCam->SetTerminal(nullptr);
 
 			terminalInteractingWith->SetBeingInteractedWith(nullptr);
-			terminalInteractingWithID = InvalidGameObjectID;
+			m_TerminalInteractingWithID = InvalidGameObjectID;
 		}
 	}
 
@@ -1149,11 +1191,11 @@ namespace flex
 	{
 		if (vehicle != nullptr)
 		{
-			CHECK(!ridingVehicleID.IsValid());
+			CHECK(!m_RidingVehicleID.IsValid());
 
 			vehicle->OnPlayerEnter();
 
-			ridingVehicleID = vehicle->ID;
+			m_RidingVehicleID = vehicle->ID;
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			VehicleCamera* vehicleCamera = nullptr;
@@ -1168,10 +1210,10 @@ namespace flex
 		}
 		else
 		{
-			Vehicle* ridingVehicle = (Vehicle*)ridingVehicleID.Get();
+			Vehicle* ridingVehicle = (Vehicle*)m_RidingVehicleID.Get();
 			ridingVehicle->OnPlayerExit();
 
-			ridingVehicleID = InvalidGameObjectID;
+			m_RidingVehicleID = InvalidGameObjectID;
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (cam->type == CameraType::VEHICLE)
@@ -1185,14 +1227,14 @@ namespace flex
 
 	bool Player::PickupWithFreeHand(GameObject* object)
 	{
-		if (!heldItemLeftHand.IsValid())
+		if (!m_HeldItemLeftHand.IsValid())
 		{
-			heldItemLeftHand = object->ID;
+			m_HeldItemLeftHand = object->ID;
 			return true;
 		}
-		if (!heldItemRightHand.IsValid())
+		if (!m_HeldItemRightHand.IsValid())
 		{
-			heldItemRightHand = object->ID;
+			m_HeldItemRightHand = object->ID;
 			return true;
 		}
 		return false;
@@ -1200,27 +1242,27 @@ namespace flex
 
 	bool Player::IsHolding(GameObject* object)
 	{
-		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
+		return m_HeldItemLeftHand == object->ID || m_HeldItemRightHand == object->ID;
 	}
 
 	void Player::DropIfHolding(GameObject* object)
 	{
 		if (object != nullptr)
 		{
-			if (heldItemLeftHand == object->ID)
+			if (m_HeldItemLeftHand == object->ID)
 			{
-				heldItemLeftHand = InvalidGameObjectID;
+				m_HeldItemLeftHand = InvalidGameObjectID;
 			}
-			if (heldItemRightHand == object->ID)
+			if (m_HeldItemRightHand == object->ID)
 			{
-				heldItemRightHand = InvalidGameObjectID;
+				m_HeldItemRightHand = InvalidGameObjectID;
 			}
 		}
 	}
 
 	bool Player::HasFreeHand() const
 	{
-		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
+		return !m_HeldItemLeftHand.IsValid() || !m_HeldItemRightHand.IsValid();
 	}
 
 	void Player::OnWearableEquipped(GameObjectStack const* wearableStack)
@@ -1233,7 +1275,7 @@ namespace flex
 		case HeadLampSID:
 		{
 			GameObject* headLamp = prefabTemplate->CopySelf(this, GameObject::ALL);
-			headLamp->GetTransform()->SetLocalPosition(HeadlampMountingPos);
+			headLamp->GetTransform()->SetLocalPosition(HEADLAMP_MOUNT_POS);
 		} break;
 		default:
 		{
@@ -1272,9 +1314,19 @@ namespace flex
 		}
 	}
 
+	bool Player::IsAnyInventoryShowing() const
+	{
+		return m_bInventoryShowing || m_bMinerInventoryShowing;
+	}
+
 	bool Player::IsInventoryShowing() const
 	{
-		return bInventoryShowing || bMinerInventoryShowing;
+		return m_bInventoryShowing;
+	}
+
+	bool Player::IsMinerInventoryShowing() const
+	{
+		return m_bMinerInventoryShowing;
 	}
 
 	bool Player::PlaceNewTrackNode()
@@ -1462,4 +1514,60 @@ namespace flex
 		ctx.m_bPlacingTrack = !ctx.m_bPlacingTrack;
 		ctx.m_bEditingTrack = false;
 	}
+
+	void Player::SetHeldItem(Hand hand, GameObjectID gameObjectID)
+	{
+		if (hand == Hand::LEFT)
+		{
+			m_HeldItemLeftHand = gameObjectID;
+		}
+		else
+		{
+			m_HeldItemRightHand = gameObjectID;
+		}
+	}
+
+	void Player::CancelPlaceWire()
+	{
+		if (m_PlacingWire != nullptr)
+		{
+			g_SceneManager->CurrentScene()->RemoveObject(m_PlacingWire, true);
+			m_PlacingWire = nullptr;
+		}
+	}
+
+	void Player::SpawnWire()
+	{
+		if (m_PlacingWire == nullptr)
+		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			m_PlacingWire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
+
+			Transform* wireTransform = m_PlacingWire->GetTransform();
+
+			glm::vec3 targetPos = m_Transform.GetWorldPosition() +
+				GetLookDirection() * 5.0f +
+				m_Transform.GetUp() * -0.75f;
+			glm::quat targetRot = m_Transform.GetWorldRotation();
+
+			wireTransform->SetWorldPosition(targetPos, false);
+			wireTransform->SetWorldRotation(targetRot, true);
+
+			currentScene->AddRootObject(m_PlacingWire);
+
+			CHECK(!GetHeldItem(Hand::LEFT).IsValid());
+			CHECK(!GetHeldItem(Hand::RIGHT).IsValid());
+
+			SetHeldItem(Hand::LEFT, m_PlacingWire->plug0ID);
+			SetHeldItem(Hand::RIGHT, m_PlacingWire->plug1ID);
+		}
+	}
+
+	bool Player::AbleToInteract() const
+	{
+		return m_bPossessed  &&
+			!m_RidingVehicleID.IsValid() &&
+			!m_TerminalInteractingWithID.IsValid();
+	}
+
 } // namespace flex

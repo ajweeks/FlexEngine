@@ -200,7 +200,7 @@ namespace flex
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player0 != nullptr)
 		{
-			m_TrackedVehicle = (Vehicle*)player0->ridingVehicleID.Get();
+			m_TrackedVehicle = (Vehicle*)player0->GetRidingVehicleID().Get();
 		}
 	}
 

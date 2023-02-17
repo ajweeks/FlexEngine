@@ -908,11 +908,11 @@ namespace flex
 			{
 			case Type::PLAYER_INVENTORY:
 			{
-				bDisplay = player->bInventoryShowing;
+				bDisplay = player->IsInventoryShowing();
 			} break;
 			case Type::MINER_INVENTORY:
 			{
-				bDisplay = player->bMinerInventoryShowing;
+				bDisplay = player->IsMinerInventoryShowing();
 			} break;
 			}
 
@@ -1163,10 +1163,10 @@ namespace flex
 			{
 				for (i32 n = 0; n < Player::QUICK_ACCESS_ITEM_COUNT; ++n)
 				{
-					itemContainers[n]->bHighlighted = (n == player->selectedQuickAccessItemSlot);
+					itemContainers[n]->bHighlighted = (n == player->GetSelectedQuickAccessItemSlot());
 				}
 
-				if (player->IsInventoryShowing() && !ImGui::GetIO().WantCaptureMouse)
+				if (player->IsAnyInventoryShowing() && !ImGui::GetIO().WantCaptureMouse)
 				{
 					glm::vec2i windowSize = g_Window->GetSize();
 					glm::vec2 mousePos = g_InputManager->GetMousePosition();
@@ -1332,7 +1332,7 @@ namespace flex
 					itemContainers[n]->bHighlighted = false;
 				}
 
-				if (player->bInventoryShowing && !ImGui::GetIO().WantCaptureMouse)
+				if (player->IsInventoryShowing() && !ImGui::GetIO().WantCaptureMouse)
 				{
 					if ((i32)itemContainers.size() == Player::WEARABLES_ITEM_COUNT)
 					{
@@ -1436,7 +1436,7 @@ namespace flex
 					playerQuickAccessUI->Draw();
 				}
 
-				if (player->bInventoryShowing)
+				if (player->IsInventoryShowing())
 				{
 					{
 						Rect rect{ -x, -y, x, y, VEC4_ONE };
@@ -1451,7 +1451,7 @@ namespace flex
 					}
 				}
 
-				if (player->bMinerInventoryShowing)
+				if (player->IsMinerInventoryShowing())
 				{
 					{
 						Rect rect{ -x, -y, x, y, VEC4_ONE };
@@ -1953,7 +1953,7 @@ namespace flex
 		{
 			InventoryType sourceInventoryType;
 			player->GetGameObjectStackFromInventory(itemStack->stackID, sourceInventoryType);
-			if (player->bMinerInventoryShowing)
+			if (player->IsMinerInventoryShowing())
 			{
 				if (sourceInventoryType == InventoryType::MINER_INVENTORY)
 				{
