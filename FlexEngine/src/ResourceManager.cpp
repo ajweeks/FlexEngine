@@ -1343,9 +1343,19 @@ namespace flex
 		return textureID;
 	}
 
+	TextureID ResourceManager::LoadTextureImmediate(const std::string& relativeFilePath,
+		HTextureSampler inSampler,
+		bool bFlipVertically,
+		bool bGenerateMipMaps,
+		bool bHDR)
+	{
+		return g_Renderer->InitializeTextureFromFile(relativeFilePath, inSampler,
+			bFlipVertically, bGenerateMipMaps, bHDR);
+	}
+
 	TextureID ResourceManager::LoadTextureImmediate(const TextureLoadInfo& loadInfo)
 	{
-		return g_Renderer->InitializeTextureFromFile(loadInfo.relativeFilePath, loadInfo.sampler,
+		return LoadTextureImmediate(loadInfo.relativeFilePath, loadInfo.sampler,
 			loadInfo.bFlipVertically, loadInfo.bGenerateMipMaps, loadInfo.bHDR);
 	}
 

@@ -121,6 +121,11 @@ namespace flex
 			bool bGenerateMipMaps,
 			bool bHDR);
 		TextureID QueueTextureLoad(const TextureLoadInfo& loadInfo);
+		TextureID LoadTextureImmediate(const std::string& relativeFilePath,
+			HTextureSampler inSampler,
+			bool bFlipVertically,
+			bool bGenerateMipMaps,
+			bool bHDR);
 		TextureID LoadTextureImmediate(const TextureLoadInfo& loadInfo);
 		bool GetQueuedTextureLoadInfo(TextureID textureID, TextureLoadInfo& outLoadInfo);
 		TextureID AddLoadedTexture(Texture* texture, TextureID existingTextureID = InvalidTextureID);

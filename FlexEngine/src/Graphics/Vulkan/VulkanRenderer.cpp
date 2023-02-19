@@ -996,8 +996,8 @@ namespace flex
 						texture = CreateTexture(std::string(textureInfo.textureUniform->DBG_name));
 						texture->bHDR = textureInfo.bHDR;
 						bool bGenerateMipChain = false;
+						// TODO: Fix race condition bug
 						g_ResourceManager->QueueTextureLoad(textureInfo.relativeFilePath, m_SamplerLinearRepeat, false, bGenerateMipChain, textureInfo.bHDR);
-						// ,(TextureFormat)textureInfo.format);
 					}
 
 					if (texture != nullptr)
