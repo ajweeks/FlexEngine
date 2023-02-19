@@ -233,6 +233,16 @@ namespace flex
 			}
 		}
 
+		if (m_HeldItemLeftHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemLeftHand);
+		}
+
+		if (m_HeldItemRightHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemRightHand);
+		}
+
 		GameObject::Update();
 	}
 
@@ -274,13 +284,24 @@ namespace flex
 		m_Pitch = 0.0f;
 	}
 
-	glm::vec3 Player::GetLookDirection()
+	glm::vec3 Player::GetLookDirection() const
 	{
 		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
 		glm::vec3 lookDir = rotMat[2];
 		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
 
 		return glm::normalize(lookDir);
+	}
+
+	glm::vec3 Player::GetHeldItemPosWS(Hand hand) const
+	{
+		glm::vec3 right = m_Transform.GetRight();
+
+		glm::vec3 offset = m_Transform.GetWorldPosition() +
+			GetLookDirection() * 5.0f +
+			m_Transform.GetUp() * -0.75f +
+			((hand == Hand::LEFT) ? -right : right);
+		return offset;
 	}
 
 	i32 Player::GetIndex() const
@@ -550,9 +571,9 @@ namespace flex
 
 	i32 Player::GetNextFreeMinerInventorySlot()
 	{
-		if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
+		if (m_NearbyInteractableID.IsValid() && m_NearbyInteractableID.Get()->GetTypeID() == MinerSID)
 		{
-			Miner* miner = (Miner*)m_NearbyInteractable;
+			Miner* miner = (Miner*)m_NearbyInteractableID.Get();
 			return miner->GetNextFreeInventorySlot();
 		}
 		else
@@ -586,9 +607,9 @@ namespace flex
 		}
 		if ((i32)stackID < INVENTORY_MINER_MAX)
 		{
-			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
+			if (m_NearbyInteractableID.IsValid() && m_NearbyInteractableID.Get()->GetTypeID() == MinerSID)
 			{
-				Miner* miner = (Miner*)m_NearbyInteractable;
+				Miner* miner = (Miner*)m_NearbyInteractableID.Get();
 				outInventoryType = InventoryType::MINER_INVENTORY;
 				return miner->GetStackFromInventory((i32)stackID - INVENTORY_MINER_MIN);
 			}
@@ -984,10 +1005,14 @@ namespace flex
 			return MoveToInventory(&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), prefabID, count, userData);
 		case InventoryType::MINER_INVENTORY:
 		{
-			if (m_NearbyInteractable != nullptr && m_NearbyInteractable->GetTypeID() == MinerSID)
+			if (m_NearbyInteractableID.IsValid())
 			{
-				Miner* miner = (Miner*)m_NearbyInteractable;
-				return miner->AddToInventory(prefabID, count, userData);
+				GameObject* nearbyInteractable = m_NearbyInteractableID.Get();
+				if (nearbyInteractable->GetTypeID() == MinerSID)
+				{
+					Miner* miner = (Miner*)nearbyInteractable;
+					return miner->AddToInventory(prefabID, count, userData);
+				}
 			}
 		} break;
 		}

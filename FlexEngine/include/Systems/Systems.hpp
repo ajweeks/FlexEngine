@@ -58,6 +58,8 @@ namespace flex
 		void PlugInToSocket(WirePlug* plug, Socket* socket);
 		void UnplugFromSocket(WirePlug* plug);
 
+		void UpdatePlugTransform(WirePlug* wirePlug);
+
 		void CacheGameObjectSockets(const GameObjectID& gameObjectID);
 		void RemoveGameObjectSockets(const GameObjectID& gameObjectID);
 		void OnSocketChildAdded(const GameObjectID& parentObjectID, GameObject* childObject);

@@ -40,6 +40,67 @@ namespace flex
 		registeredWires.clear();
 	}
 
+	void PluggablesSystem::UpdatePlugTransform(WirePlug* wirePlug)
+	{
+		Transform* plugTransform = wirePlug->GetTransform();
+		Wire* wire = (Wire*)wirePlug->wireID.Get();
+		Socket* socket = (Socket*)wirePlug->socketID.Get();
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+
+		Socket* nearbySocket = nullptr;
+
+		if (socket != nullptr)
+		{
+			// Plugged in, stick to socket
+			glm::vec3 socketPos = socket->GetTransform()->GetWorldPosition();
+			plugTransform->SetWorldPosition(socketPos);
+
+			glm::quat plugRot = socket->GetTransform()->GetWorldRotation();
+			plugTransform->SetWorldRotation(plugRot);
+			wire->SetStartTangent(-(plugRot * VEC3_FORWARD));
+		}
+		else if (player->IsHolding(wirePlug))
+		{
+			const real hoverAmount = TWEAKABLE(0.2f);
+
+			// Plug is being carried, stick to player but look for nearby sockets to snap to
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == wirePlug->ID;
+			CHECK(bLeftHand || (player->GetHeldItem(Hand::RIGHT) == wirePlug->ID));
+			glm::vec3 plugDefaultPos = player->GetHeldItemPosWS(bLeftHand ? Hand::LEFT : Hand::RIGHT);
+			nearbySocket = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true);
+			if (nearbySocket != nullptr)
+			{
+				// Found nearby socket
+				glm::vec3 nearbySocketPos = nearbySocket->GetTransform()->GetWorldPosition();
+				glm::quat nearbySocketRot = nearbySocket->GetTransform()->GetWorldRotation();
+				glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
+				plugTransform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
+
+				plugTransform->SetWorldRotation(nearbySocketRot, true);
+				wire->SetStartTangent(tangent);
+			}
+			else
+			{
+				// Stick to player
+				plugTransform->SetWorldPosition(plugDefaultPos);
+			}
+		}
+		else
+		{
+			// Plug isn't being held, and isn't plugged in.
+		}
+
+		if (socket == nullptr && nearbySocket == nullptr)
+		{
+			// Update socket based on wire tangent
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == wirePlug->ID;
+			CHECK(bLeftHand || (player->GetHeldItem(Hand::RIGHT) == wirePlug->ID));
+			glm::vec3 tangent = wire->CalculateTangentAtPoint(bLeftHand ? 0.0f : 1.0f);
+			plugTransform->SetWorldRotation(SafeQuatLookAt(bLeftHand ? -tangent : tangent));
+			wire->ClearStartTangent();
+		}
+	}
+
 	void PluggablesSystem::Update()
 	{
 		if (!registeredWires.empty())
@@ -49,20 +110,6 @@ namespace flex
 			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
 			static const btVector3 wireColPluggedIn(0.05f, 0.6f, 0.1f);
 			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
-
-			Player* player = scene->GetPlayer(0);
-			Transform* playerTransform = player->GetTransform();
-
-			glm::vec3 playerWorldPos = playerTransform->GetWorldPosition();
-			glm::vec3 playerForward = player->GetLookDirection();
-			glm::vec3 playerUp = playerTransform->GetUp();
-			glm::vec3 playerRight = playerTransform->GetRight();
-			glm::vec3 wireHoldingOffset = playerForward * 5.0f + playerUp * -0.75f;
-
-			glm::vec3 plugLDefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
-			glm::vec3 plugRDefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
-
-			const real hoverAmount = TWEAKABLE(0.1f);
 
 			// Handle plugging/unplugging events
 			for (Wire* wire : registeredWires)
@@ -100,101 +147,14 @@ namespace flex
 				Socket* socket0 = (Socket*)plug0->socketID.Get();
 				Socket* socket1 = (Socket*)plug1->socketID.Get();
 
-				Socket* nearbySocket0 = nullptr;
-				Socket* nearbySocket1 = nullptr;
-
+				// Only update plug positions when plugged in, when held the player will update
 				if (socket0 != nullptr)
 				{
-					// Plugged in, stick to socket
-					glm::vec3 socketPos = socket0->GetTransform()->GetWorldPosition();
-					plug0Transform->SetWorldPosition(socketPos);
-
-					glm::quat plug0Rot = socket0->GetTransform()->GetWorldRotation();
-					plug0Transform->SetWorldRotation(plug0Rot);
-					wire->SetStartTangent(-(plug0Rot * VEC3_FORWARD));
+					UpdatePlugTransform(plug0);
 				}
-				else if (player->IsHolding(plug0))
-				{
-					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					bool bLeftHand = player->GetHeldItem(Hand::LEFT) == plug0->ID;
-					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
-					nearbySocket0 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true);
-					if (nearbySocket0 != nullptr)
-					{
-						// Found nearby socket
-						glm::vec3 nearbySocketPos = nearbySocket0->GetTransform()->GetWorldPosition();
-						glm::quat nearbySocketRot = nearbySocket0->GetTransform()->GetWorldRotation();
-						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
-						plug0Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
-
-						plug0Transform->SetWorldRotation(nearbySocketRot);
-						wire->SetStartTangent(tangent);
-					}
-					else
-					{
-						// Stick to player
-						plug0Transform->SetWorldPosition(plugDefaultPos);
-					}
-				}
-				else
-				{
-					// Plug isn't being held, and isn't plugged in. Rest.
-				}
-
 				if (socket1 != nullptr)
 				{
-					// Plugged in, stick to socket
-					glm::vec3 socketPos = socket1->GetTransform()->GetWorldPosition();
-					plug1Transform->SetWorldPosition(socketPos, false);
-
-					glm::quat plug1Rot = socket1->GetTransform()->GetWorldRotation();
-					plug1Transform->SetWorldRotation(plug1Rot);
-					wire->SetEndTangent(-(plug1Rot * VEC3_FORWARD));
-				}
-				else if (player->IsHolding(plug1))
-				{
-					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					bool bLeftHand = player->GetHeldItem(Hand::LEFT) == plug1->ID;
-					glm::vec3 plugDefaultPos = bLeftHand ? plugLDefaultPos : plugRDefaultPos;
-					nearbySocket1 = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
-					if (nearbySocket1 != nullptr)
-					{
-						// Found nearby socket
-						glm::vec3 nearbySocketPos = nearbySocket1->GetTransform()->GetWorldPosition();
-						glm::quat nearbySocketRot = nearbySocket1->GetTransform()->GetWorldRotation();
-						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
-						plug1Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
-
-						plug1Transform->SetWorldRotation(nearbySocketRot);
-						wire->SetStartTangent(tangent);
-					}
-					else
-					{
-						// Stick to player
-						plug1Transform->SetWorldPosition(plugDefaultPos);
-					}
-				}
-				else
-				{
-					// Plug isn't being held, and isn't plugged in. Rest.
-				}
-
-				if (socket0 == nullptr && nearbySocket0 == nullptr)
-				{
-					// Update socket based on wire tangent
-					glm::vec3 wireStartTangent;
-					wire->CalculateTangentAtPoint(0.0f, wireStartTangent);
-					plug0Transform->SetWorldRotation(SafeQuatLookAt(-wireStartTangent));
-					wire->ClearStartTangent();
-				}
-
-				if (socket1 == nullptr && nearbySocket1 == nullptr)
-				{
-					// Update socket based on wire tangent
-					glm::vec3 wireEndTangent;
-					wire->CalculateTangentAtPoint(1.0f, wireEndTangent);
-					plug1Transform->SetWorldRotation(SafeQuatLookAt(wireEndTangent));
-					wire->ClearEndTangent();
+					UpdatePlugTransform(plug1);
 				}
 
 				wire->UpdateWireMesh();
@@ -209,6 +169,8 @@ namespace flex
 
 				if (glm::distance2(plug0Pos, plug1Pos) > maxDistBeforeSnapSq)
 				{
+					Player* player = scene->GetPlayer(0);
+
 					bool plug0PluggedIn = plug0->socketID.IsValid();
 					bool plug1PluggedIn = plug1->socketID.IsValid();
 
@@ -246,13 +208,16 @@ namespace flex
 				}
 
 #if 0
+				Socket* socket0 = (Socket*)plug0->socketID.Get();
+				Socket* socket1 = (Socket*)plug1->socketID.Get();
+
 				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
 				btVector3 plug1PosBt = ToBtVec3(plug1Pos);
 
 				bool bWire0PluggedIn = socket0 != nullptr;
 				bool bWire1PluggedIn = socket1 != nullptr;
-				bool bWire0On = bWire0PluggedIn && (socket0->GetParent()->outputSignals[socket0->slotIdx] != -1);
-				bool bWire1On = bWire1PluggedIn && (socket1->GetParent()->outputSignals[socket1->slotIdx] != -1);
+				bool bWire0On = bWire0PluggedIn && (socket0->GetParent()->GetOutputSignal(socket0->slotIdx) != -1);
+				bool bWire1On = bWire1PluggedIn && (socket1->GetParent()->GetOutputSignal(socket1->slotIdx) != -1);
 				debugDrawer->drawSphere(plug0PosBt, 0.2f, bWire0PluggedIn ? wireColPluggedIn : (bWire0On ? wireColOn : wireColOff));
 				debugDrawer->drawSphere(plug1PosBt, 0.2f, bWire1PluggedIn ? wireColPluggedIn : (bWire1On ? wireColOn : wireColOff));
 #endif

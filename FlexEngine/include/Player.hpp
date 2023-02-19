@@ -49,7 +49,8 @@ namespace flex
 
 		void Reset();
 
-		glm::vec3 GetLookDirection();
+		glm::vec3 GetLookDirection() const;
+		glm::vec3 GetHeldItemPosWS(Hand hand) const;
 
 		i32 GetIndex() const;
 		real GetHeight() const;

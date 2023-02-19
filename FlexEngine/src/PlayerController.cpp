@@ -242,8 +242,8 @@ namespace flex
 				if (!nearbyInteractables.empty())
 				{
 					nearestInteractable = nearbyInteractables.front().first;
-					nearestInteractable->SetNearbyInteractable(m_Player);
-					m_Player->SetNearbyInteractable(nearestInteractable);
+					nearestInteractable->SetNearbyInteractable(m_Player->ID);
+					m_Player->SetNearbyInteractable(nearestInteractable->ID);
 				}
 			}
 

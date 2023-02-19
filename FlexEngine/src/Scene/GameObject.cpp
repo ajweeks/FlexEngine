@@ -512,10 +512,10 @@ namespace flex
 	{
 		PROFILE_AUTO("GameObject Update");
 
-		if (m_NearbyInteractable != nullptr)
+		if (m_NearbyInteractableID.IsValid())
 		{
 			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-			btVector3 pos = ToBtVec3(m_NearbyInteractable->GetTransform()->GetWorldPosition());
+			btVector3 pos = ToBtVec3(m_NearbyInteractableID.Get()->GetTransform()->GetWorldPosition());
 			//real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
 			//debugRenderer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
 			debugRenderer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
@@ -1054,9 +1054,9 @@ namespace flex
 		ImGui::Text("Trigger: %s", m_bTrigger ? "true" : "false"); // TODO: Make checkbox
 
 		std::string nearbyInteractibleName;
-		if (m_NearbyInteractable != nullptr)
+		if (m_NearbyInteractableID.IsValid())
 		{
-			nearbyInteractibleName = m_NearbyInteractable->GetName();
+			nearbyInteractibleName = m_NearbyInteractableID.Get()->GetName();
 		}
 		ImGui::Text("NearbyInteractible: %s", nearbyInteractibleName.c_str());
 		ImGui::Text("Sibling index: %i", m_SiblingIndex);
@@ -1869,6 +1869,34 @@ namespace flex
 		propertyCollectionManager->RegisterType(PlayerSID, Player::BuildTypeUniquePropertyCollection());
 	}
 
+	void GameObject::UpdateHeldItem(GameObjectID heldItemID)
+	{
+		GameObject* gameObject = heldItemID.Get();
+		if (!gameObject) return;
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		CHECK(player->GetHeldItem(Hand::LEFT) == heldItemID ||
+			player->GetHeldItem(Hand::RIGHT) == heldItemID);
+
+		switch (gameObject->GetTypeID())
+		{
+		case WirePlugSID:
+		{
+			WirePlug* wirePlug = (WirePlug*)gameObject;
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UpdatePlugTransform(wirePlug);
+		} break;
+		default:
+		{
+			Transform* playerTransform = player->GetTransform();
+
+			glm::vec3 playerRight = playerTransform->GetRight();
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == heldItemID;
+			glm::vec3 newPos = player->GetHeldItemPosWS(bLeftHand ? Hand::LEFT : Hand::RIGHT);
+			gameObject->GetTransform()->SetWorldPosition(newPos);
+		} break;
+		}
+	}
+
 	PropertyCollection* GameObject::BuildPropertyCollection()
 	{
 		PropertyCollection* collection = GetPropertyCollectionManager()->AllocateCollection("base object");
@@ -1881,9 +1909,9 @@ namespace flex
 		return collection;
 	}
 
-	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
+	void GameObject::SetNearbyInteractable(GameObjectID nearbyInteractableID)
 	{
-		m_NearbyInteractable = nearbyInteractable;
+		m_NearbyInteractableID = nearbyInteractableID;
 	}
 
 	const PrefabIDPair& GameObject::GetSourcePrefabIDPair() const
@@ -1898,7 +1926,7 @@ namespace flex
 
 	void GameObject::ClearNearbyInteractable()
 	{
-		m_NearbyInteractable = nullptr;
+		m_NearbyInteractableID = InvalidGameObjectID;
 
 		for (GameObject* child : m_Children)
 		{
@@ -2232,6 +2260,11 @@ namespace flex
 	void GameObject::SetOutputSignal(i32 slotIdx, i32 value)
 	{
 		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->SetGameObjectOutputSignal(ID, slotIdx, value);
+	}
+
+	i32 GameObject::GetOutputSignal(i32 slotIdx)
+	{
+		return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectOutputSignal(ID, slotIdx);
 	}
 
 	GameObject* GameObject::GetParent()
@@ -7077,19 +7110,19 @@ namespace flex
 		m_SoftBody->Update();
 	}
 
-	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
+	glm::vec3 Wire::CalculateTangentAtPoint(real t)
 	{
 		CHECK_NE(m_SoftBody, nullptr);
 		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
-			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+			return glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
 		}
 		else
 		{
 			u32 i0 = (u32)(t * numPoints);
 			u32 i1 = (u32)(t * numPoints + 1.0f);
-			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+			return glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
 		}
 	}
 
@@ -7506,7 +7539,7 @@ namespace flex
 
 		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 
-		if (m_NearbyInteractable != nullptr)
+		if (m_NearbyInteractableID.IsValid())
 		{
 			const real scale = 2.0f;
 			const glm::vec3 right = m_Transform.GetRight();
@@ -14012,7 +14045,6 @@ namespace flex
 							objectToWorld[3] = glm::vec4(m_MineTargetLocation, 1.0f);
 							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
 							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
-							Print("Spawn\n");
 						}
 					}
 

@@ -138,6 +138,8 @@ namespace flex
 
 		static void RegisterPropertyCollections();
 
+		static void UpdateHeldItem(GameObjectID heldItemID);
+
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
 		virtual GameObject* CopySelf(
@@ -318,7 +320,7 @@ namespace flex
 		bool SelfOrChildIsSelected() const;
 
 		void ClearNearbyInteractable();
-		void SetNearbyInteractable(GameObject* nearbyInteractable);
+		void SetNearbyInteractable(GameObjectID nearbyInteractableID);
 
 		const PrefabIDPair& GetSourcePrefabIDPair() const;
 		bool IsPrefabTemplate() const;
@@ -334,6 +336,8 @@ namespace flex
 
 		bool IsItemizable() const;
 		bool IsWearable() const;
+
+		i32 GetOutputSignal(i32 slotIdx);
 
 		static const size_t MaxNameLength = 256;
 
@@ -421,8 +425,7 @@ namespace flex
 		// The prefab ID pair corresponding to the prefab this object was loaded from
 		PrefabIDPair m_SourcePrefabID;
 
-		// TODO: Remove?
-		GameObject* m_NearbyInteractable = nullptr;
+		GameObjectID m_NearbyInteractableID = InvalidGameObjectID;
 
 		// Index into list of siblings in parent
 		i32 m_SiblingIndex = 0;
@@ -1114,7 +1117,7 @@ namespace flex
 
 		void UpdateWireMesh();
 
-		void CalculateTangentAtPoint(real t, glm::vec3& outTangent);
+		glm::vec3 CalculateTangentAtPoint(real t);
 		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);
 
 		static const real DEFAULT_LENGTH;
