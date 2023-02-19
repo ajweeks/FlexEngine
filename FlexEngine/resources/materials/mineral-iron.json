@@ -4,7 +4,8 @@
 	{
 		"name" : "mineral iron",
 		"shader" : "pbr",
-		"const albedo" : "0.041,0.041,0.041",
+		"const albedo" : "0.084,0.084,0.084",
+		"const metallic" : 1.000000,
 		"const roughness" : 0.640000,
 		"colour multiplier" : "0.000,0.000,0.000,1.000"
 	}

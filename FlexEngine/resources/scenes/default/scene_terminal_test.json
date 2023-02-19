@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "debug",
+		"type" : "first-person",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-8.652, 7.783, -10.187",
-			"pitch" : -0.218866,
-			"yaw" : -0.268888
+			"position" : "-34.362, 2.500, -38.657",
+			"pitch" : -0.174000,
+			"yaw" : 1.313795
 		}
 	},
 	"objects" : 
@@ -729,175 +729,6 @@
 			{
 				"pos" : "11.303, 3.500, -30.371",
 				"rot" : "-3.141, 0.577, -3.141"
-			}
-		},
-		{
-			"name" : "wire plug",
-			"id" : "0C8119B7D8C14F934F292ED197F49611",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "13.120, 1.751, -29.970",
-				"rot" : "-0.437, 1.026, -0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC",
-				"socket id" : "410B80DE1822B9BD4789158B71521A24"
-			}
-		},
-		{
-			"name" : "wire plug",
-			"id" : "DFE2C56963EAE98744B640F4E67E5D5C",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "10.692, 4.220, -31.441",
-				"rot" : "1.909, -1.026, 3.142"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC",
-				"socket id" : "B6529BC9C46870A74A50F8D4853E52F9"
-			}
-		},
-		{
-			"name" : "wire_000",
-			"id" : "9A67BC4372E37FBA45C5FA890110E8EC",
-			"type" : "wire",
-			"transform" : 
-			{
-				"pos" : "11.906, 2.985, -30.705",
-				"rot" : "-3.141, 0.577, -3.141"
-			},
-			"wire" : 
-			{
-				"plug 0 id" : "0C8119B7D8C14F934F292ED197F49611",
-				"plug 1 id" : "DFE2C56963EAE98744B640F4E67E5D5C"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "F6DBE6350B96BAA64229D2C6B7E0B5AC",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "-1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "0F251F450D6B6F92444507E148A1361F",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "449FCB679D80859F4060B3DD2B432013",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "-1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "0AF00FA8D36B1FB24D0DC02258D2881F",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "EB4A1926E49D3A9347E063B6DC0AEF0C",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "-1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "790E69541396559144F6D51A3C8F24DB",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "3CC150710FF6288049F54E9BDB5885A3",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "-1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
-			}
-		},
-		{
-			"name" : "wire plug00",
-			"id" : "22EDF3A56FE3EF8940117B11326C58B9",
-			"type" : "prefab",
-			"prefab type" : "wire plug",
-			"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
-			"transform" : 
-			{
-				"pos" : "1.000, 0.000, 0.000"
-			},
-			"wire plug" : 
-			{
-				"wire id" : "9A67BC4372E37FBA45C5FA890110E8EC"
 			}
 		}
 	]

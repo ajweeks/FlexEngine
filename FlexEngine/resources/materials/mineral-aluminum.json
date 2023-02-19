@@ -4,7 +4,8 @@
 	{
 		"name" : "mineral aluminum",
 		"shader" : "pbr",
-		"const albedo" : "0.692,0.692,0.692",
-		"const roughness" : 0.240000
+		"const albedo" : "0.226,0.226,0.226",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.630000
 	}
 }

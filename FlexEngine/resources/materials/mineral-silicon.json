@@ -5,6 +5,7 @@
 		"name" : "mineral silicon",
 		"shader" : "pbr",
 		"const albedo" : "0.101,0.153,0.242",
+		"const metallic" : 1.000000,
 		"const roughness" : 0.320000
 	}
 }
