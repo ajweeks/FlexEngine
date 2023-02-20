@@ -187,6 +187,8 @@ namespace flex
 			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
+
+		JobSystem::Wait(m_TextureLoadingContext);
 	}
 
 	void ResourceManager::DestroyAllLoadedMeshes()

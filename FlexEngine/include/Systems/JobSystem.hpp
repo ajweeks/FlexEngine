@@ -9,6 +9,7 @@ namespace flex
 	namespace JobSystem
 	{
 		void Initialize(u32 maxThreadCount = ~0u);
+		void Destroy();
 
 		struct JobArgs
 		{

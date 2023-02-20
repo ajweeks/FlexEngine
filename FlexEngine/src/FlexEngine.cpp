@@ -572,6 +572,8 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
+		JobSystem::Destroy();
+
 		g_Editor->Destroy();
 		g_CameraManager->Destroy();
 		g_ResourceManager->Destroy();

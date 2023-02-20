@@ -85,16 +85,16 @@ namespace flex
 			std::vector<std::thread> threads;
 
 		};
-		static InternalState internal_state;
+		static InternalState s_InternalState;
 
 		// Start working on a job queue
 		// After the job queue is finished, it can switch to an other queue and steal jobs from there
 		inline void RunJobs(u32 startingQueue)
 		{
 			Job job;
-			for (u32 i = 0; i < internal_state.numThreads; ++i)
+			for (u32 i = 0; i < s_InternalState.numThreads; ++i)
 			{
-				JobQueue& job_queue = internal_state.jobQueuePerThread[startingQueue % internal_state.numThreads];
+				JobQueue& job_queue = s_InternalState.jobQueuePerThread[startingQueue % s_InternalState.numThreads];
 				while (job_queue.pop_front(job))
 				{
 					JobArgs args;
@@ -125,34 +125,34 @@ namespace flex
 
 		void Initialize(u32 maxThreadCount)
 		{
-			if (internal_state.numThreads > 0)
+			if (s_InternalState.numThreads > 0)
 				return;
 			maxThreadCount = std::max(1u, maxThreadCount);
 
 			// Retrieve the number of hardware threads in this system:
-			internal_state.numCores = std::thread::hardware_concurrency();
+			s_InternalState.numCores = std::thread::hardware_concurrency();
 
 			// Calculate the actual number of worker threads we want (-1 main thread):
-			internal_state.numThreads = std::min(maxThreadCount, std::max(1u, internal_state.numCores - 1));
-			internal_state.jobQueuePerThread.reset(new JobQueue[internal_state.numThreads]);
-			internal_state.threads.reserve(internal_state.numThreads);
+			s_InternalState.numThreads = std::min(maxThreadCount, std::max(1u, s_InternalState.numCores - 1));
+			s_InternalState.jobQueuePerThread = std::make_unique<JobQueue[]>(s_InternalState.numThreads);
+			s_InternalState.threads.reserve(s_InternalState.numThreads);
 
 			StringBuilder stringBuilder(24);
-			for (u32 threadID = 0; threadID < internal_state.numThreads; ++threadID)
+			for (u32 threadID = 0; threadID < s_InternalState.numThreads; ++threadID)
 			{
-				internal_state.threads.emplace_back([threadID]
+				s_InternalState.threads.emplace_back([threadID]
 				{
-					while (internal_state.alive.load())
+					while (s_InternalState.alive.load())
 					{
 						RunJobs(threadID);
 
 						// Finished with jobs, put to sleep
-						std::unique_lock<std::mutex> lock(internal_state.wakeMutex);
-						internal_state.wakeCondition.wait(lock);
+						std::unique_lock<std::mutex> lock(s_InternalState.wakeMutex);
+						s_InternalState.wakeCondition.wait(lock);
 					}
 				});
 
-				std::thread& worker = internal_state.threads.back();
+				std::thread& worker = s_InternalState.threads.back();
 
 				// Place each thread on a separate core
 				bool bResult = Platform::SetFlexThreadAffinityMask((void*)worker.native_handle(), threadID);
@@ -165,12 +165,18 @@ namespace flex
 				CHECK(bResult);
 			}
 
-			Print("Initialized JobSystem with %u threads (%u cores)", internal_state.numThreads, internal_state.numCores);
+			Print("Initialized JobSystem with %u threads (%u cores)", s_InternalState.numThreads, s_InternalState.numCores);
+		}
+
+		void Destroy()
+		{
+			s_InternalState.alive = false;
+			// TODO: Join all threads?
 		}
 
 		u32 GetThreadCount()
 		{
-			return internal_state.numThreads;
+			return s_InternalState.numThreads;
 		}
 
 		void Execute(Context& ctx, const std::function<void(JobArgs)>& task, u64 payload)
@@ -186,8 +192,8 @@ namespace flex
 			job.sharedMemorySize = 0;
 			job.payload = payload;
 
-			internal_state.jobQueuePerThread[internal_state.nextQueue.fetch_add(1) % internal_state.numThreads].push_back(job);
-			internal_state.wakeCondition.notify_one();
+			s_InternalState.jobQueuePerThread[s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads].push_back(job);
+			s_InternalState.wakeCondition.notify_one();
 		}
 
 		bool IsBusy(const Context& ctx)
@@ -201,10 +207,10 @@ namespace flex
 			if (IsBusy(ctx))
 			{
 				// Wake any threads that might be sleeping:
-				internal_state.wakeCondition.notify_all();
+				s_InternalState.wakeCondition.notify_all();
 
 				// work() will pick up any jobs that are on stand by and execute them on this thread:
-				RunJobs(internal_state.nextQueue.fetch_add(1) % internal_state.numThreads);
+				RunJobs(s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads);
 
 				while (IsBusy(ctx))
 				{
