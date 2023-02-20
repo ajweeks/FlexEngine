@@ -151,6 +151,43 @@ namespace flex
 	}
 
 
+	void ActiveItem::Create(PrefabID sourcePrefabID)
+	{
+		m_SourcePrefabID = sourcePrefabID;
+
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(sourcePrefabID);
+		m_TypeID = prefabTemplate->GetTypeID();
+
+		m_ItemProxyObject = GameObject::CreateObjectOfType(BaseObjectSID, "Active item");
+		m_ItemProxyObject->SetSerializable(false);
+		m_ItemProxyObject->SetVisibleInSceneExplorer(false);
+		m_ItemProxyObject->GetTransform()->Scale(0.5f);
+
+		if (prefabTemplate->GetMesh() != nullptr)
+		{
+			prefabTemplate->GetMesh()->CloneSelf(m_ItemProxyObject, true);
+		}
+		else
+		{
+			Mesh* mesh = m_ItemProxyObject->SetMesh(new Mesh(m_ItemProxyObject));
+			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+		}
+
+		g_SceneManager->CurrentScene()->AddRootObject(m_ItemProxyObject);
+	}
+
+	void ActiveItem::Clear()
+	{
+		if (m_ItemProxyObject != nullptr)
+		{
+			g_SceneManager->CurrentScene()->RemoveObject(m_ItemProxyObject, true);
+			m_ItemProxyObject = nullptr;
+		}
+		m_TypeID = InvalidID;
+		m_SourcePrefabID = InvalidPrefabID;
+	}
+
+
 #define FIELD_OFFSET_AND_TYPE(type, field) offsetof(type, field), typeid(decltype(field))
 
 
@@ -1897,7 +1934,7 @@ namespace flex
 		}
 	}
 
-	void GameObject::UpdateActiveItem(GameObject* gameObject)
+	void GameObject::UpdateActiveItem(const ActiveItem& activeItem)
 	{
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		Transform* playerTransform = player->GetTransform();
@@ -1907,11 +1944,19 @@ namespace flex
 			playerTransform->GetRight() * 1.0f;
 		glm::quat rotWS = player->GetLookRotation();
 
-		switch (gameObject->GetTypeID())
+		switch (activeItem.m_TypeID)
 		{
 		case PickAxeSID:
 		{
-
+			real timer = player->GetItemPickingTimer();
+			if (timer >= 0.0f)
+			{
+				// Bias so first frame
+				real timerAdjusted = timer + (PI - player->GetItemPickingDuration());
+				const real mineAnimSpeed = 20.0f;
+				const real mineAnimArc = glm::radians(30.0f);
+				rotWS = glm::angleAxis(-sin(timerAdjusted * mineAnimSpeed) * mineAnimArc, playerTransform->GetRight()) * rotWS;
+			}
 		} break;
 		default:
 		{
@@ -1919,8 +1964,8 @@ namespace flex
 		} break;
 		}
 
-		gameObject->GetTransform()->SetWorldPosition(posWS, false);
-		gameObject->GetTransform()->SetWorldRotation(rotWS, true);
+		activeItem.m_ItemProxyObject->GetTransform()->SetWorldPosition(posWS, false);
+		activeItem.m_ItemProxyObject->GetTransform()->SetWorldRotation(rotWS, true);
 	}
 
 	PropertyCollection* GameObject::BuildPropertyCollection()

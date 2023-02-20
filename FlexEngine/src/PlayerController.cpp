@@ -104,28 +104,6 @@ namespace flex
 
 		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
-		auto GetObjectPointedAt = [this]() -> GameObject*
-		{
-			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-			btVector3 rayStart, rayEnd;
-			FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, m_ItemPickupMaxDist);
-
-			const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
-
-			if (pickedBody != nullptr)
-			{
-				GameObject* gameObject = static_cast<GameObject*>(pickedBody->getUserPointer());
-				real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Player->m_Transform.GetWorldPosition());
-				if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
-				{
-					return gameObject;
-				}
-			}
-
-			return nullptr;
-		};
-
 		if (m_Player->m_bPossessed)
 		{
 			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_SELECTED_ITEM_FORWARD);
@@ -189,40 +167,10 @@ namespace flex
 				{
 					m_bAttemptPickup = false;
 
-					GameObject* pickedItem = GetObjectPointedAt();
+					GameObject* pickedItem = m_Player->GetObjectPointedAt();
 					if (pickedItem != nullptr)
 					{
-						m_ItemPickingUp = pickedItem;
-						m_ItemPickingTimer = m_ItemPickingDuration;
-					}
-				}
-			}
-
-			if (m_ItemPickingTimer != -1.0f)
-			{
-				m_ItemPickingTimer -= g_DeltaTime;
-
-				if (m_ItemPickingTimer <= 0.0f)
-				{
-					m_ItemPickingTimer = -1.0f;
-
-					GameObjectStack::UserData itemUserData = {};
-					PrefabID itemID = m_ItemPickingUp->Itemize(itemUserData);
-					m_Player->AddToInventory(itemID, 1, itemUserData);
-				}
-				else
-				{
-					GameObject* pickedItem = GetObjectPointedAt();
-					if (pickedItem == nullptr || pickedItem != m_ItemPickingUp)
-					{
-						m_ItemPickingUp = nullptr;
-						m_ItemPickingTimer = -1.0f;
-					}
-					else
-					{
-						real startAngle = PI_DIV_TWO - (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
-						real endAngle = PI_DIV_TWO;
-						g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+						m_Player->SetItemPickingUp(pickedItem);
 					}
 				}
 			}
@@ -272,10 +220,10 @@ namespace flex
 
 		if (m_bCancelPlaceItemFromInventory)
 		{
-			m_bPreviewPlaceItemFromInventory = false;
+			m_Player->m_bPreviewPlaceItemFromInventory = false;
 		}
 
-		if (m_bPreviewPlaceItemFromInventory)
+		if (m_Player->m_bPreviewPlaceItemFromInventory)
 		{
 			PreviewPlaceItemFromInventory();
 		}
@@ -471,7 +419,7 @@ namespace flex
 
 		m_Player->UpdateIsGrounded();
 
-		if (m_bPreviewPlaceItemFromInventory)
+		if (m_Player->m_bPreviewPlaceItemFromInventory)
 		{
 			UpdatePreviewPlacementItem();
 		}
@@ -690,7 +638,7 @@ namespace flex
 
 		if (action == Action::PAUSE)
 		{
-			if (m_bPreviewPlaceItemFromInventory)
+			if (m_Player->m_bPreviewPlaceItemFromInventory)
 			{
 				m_bCancelPlaceItemFromInventory = true;
 				return EventReply::CONSUMED;
@@ -731,18 +679,18 @@ namespace flex
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
 				m_bItemPlacementValid = false;
-				m_bPreviewPlaceItemFromInventory = true;
+				m_Player->m_bPreviewPlaceItemFromInventory = true;
 				return EventReply::CONSUMED;
 			}
 			else if (actionEvent == ActionEvent::ACTION_RELEASE)
 			{
-				m_bPreviewPlaceItemFromInventory = false;
+				m_Player->m_bPreviewPlaceItemFromInventory = false;
 				m_bAttemptPlaceItemFromInventory = true;
 				return EventReply::CONSUMED;
 			}
 		}
 
-		if (action == Action::PLACE_WIRE && !m_bPreviewPlaceItemFromInventory)
+		if (action == Action::PLACE_WIRE && !m_Player->m_bPreviewPlaceItemFromInventory)
 		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
@@ -821,9 +769,9 @@ namespace flex
 			}
 			else if (actionEvent == ActionEvent::ACTION_RELEASE)
 			{
-				if (m_ItemPickingTimer != -1.0f)
+				if (m_Player->m_ItemPickingTimer != -1.0f)
 				{
-					m_ItemPickingTimer = -1.0f;
+					m_Player->SetItemPickingUp(nullptr);
 					return EventReply::CONSUMED;
 				}
 			}
@@ -893,7 +841,7 @@ namespace flex
 				GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 				if (!templateObject->IsItemizable())
 				{
-					m_bPreviewPlaceItemFromInventory = false;
+					m_Player->m_bPreviewPlaceItemFromInventory = false;
 				}
 				else
 				{

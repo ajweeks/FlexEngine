@@ -148,17 +148,24 @@ namespace flex
 
 		void SetSelectedQuickAccessItemSlot(i32 selectedQuickAccessItemSlot);
 
+		void ResetItemPickingTimer();
+
+		GameObject* GetObjectPointedAt() const;
+
 		static const u32 WEARABLES_ITEM_COUNT = 3;
 		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
 		static const u32 INVENTORY_ITEM_ROW_COUNT = 5;
 		static const u32 INVENTORY_ITEM_COL_COUNT = 7;
 		static const u32 INVENTORY_ITEM_COUNT = INVENTORY_ITEM_ROW_COUNT * INVENTORY_ITEM_COL_COUNT;
 
+		void SetItemPickingUp(GameObject* pickedItem);
+		real GetItemPickingTimer() const { return m_ItemPickingTimer; }
+		real GetItemPickingDuration() const { return m_ItemPickingDuration; }
+
 	private:
 		friend class PlayerController;
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
-		void UpdateActiveItem();
 
 		struct TrackBuildingContext
 		{
@@ -230,7 +237,14 @@ namespace flex
 		i32 m_SelectedQuickAccessItemSlot = 0;
 
 		// The itemized item the player can interact using (based on selected quick access item slot)
-		GameObject* m_ActiveItem = nullptr;
+		ActiveItem m_ActiveItem;
+
+		bool m_bPreviewPlaceItemFromInventory = false;
+
+		real m_ItemPickupMaxDist = 100.0f;
+		GameObject* m_ItemPickingUp = nullptr;
+		const real m_ItemPickingDuration = 0.5f;
+		real m_ItemPickingTimer = -1.0f;
 
 		// TODO: Remove? References objects the player is holding onto (but are not itemized)
 		GameObjectID m_HeldItemLeftHand = InvalidGameObjectID;

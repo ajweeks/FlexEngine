@@ -244,12 +244,56 @@ namespace flex
 			GameObject::UpdateHeldItem(m_HeldItemRightHand);
 		}
 
-		if (m_QuickAccessInventory[m_SelectedQuickAccessItemSlot].count > 0)
+		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		if (stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory))
 		{
-			UpdateActiveItem();
-			if (m_ActiveItem != nullptr)
+			if (m_ActiveItem.IsValid())
 			{
-				GameObject::UpdateActiveItem(m_ActiveItem);
+				if (m_ActiveItem.m_SourcePrefabID != stack.prefabID)
+				{
+					m_ActiveItem.Clear();
+				}
+			}
+			else
+			{
+				m_ActiveItem.Create(stack.prefabID);
+			}
+		}
+		else
+		{
+			m_ActiveItem.Clear();
+		}
+
+		if (m_ActiveItem.IsValid())
+		{
+			GameObject::UpdateActiveItem(m_ActiveItem);
+		}
+
+		if (m_ItemPickingTimer != -1.0f)
+		{
+			m_ItemPickingTimer -= g_DeltaTime;
+
+			if (m_ItemPickingTimer <= 0.0f)
+			{
+				GameObjectStack::UserData itemUserData = {};
+				PrefabID itemID = m_ItemPickingUp->Itemize(itemUserData);
+				AddToInventory(itemID, 1, itemUserData);
+
+				SetItemPickingUp(nullptr);
+			}
+			else
+			{
+				GameObject* pickedItem = GetObjectPointedAt();
+				if (pickedItem == nullptr || pickedItem != m_ItemPickingUp)
+				{
+					SetItemPickingUp(nullptr);
+				}
+				else
+				{
+					real startAngle = PI_DIV_TWO - (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+					real endAngle = PI_DIV_TWO;
+					g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+				}
 			}
 		}
 
@@ -1633,52 +1677,52 @@ namespace flex
 		}
 
 		m_SelectedQuickAccessItemSlot = selectedQuickAccessItemSlot;
-		UpdateActiveItem();
 	}
 
-	void Player::UpdateActiveItem()
+	void Player::ResetItemPickingTimer()
 	{
-		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
-		if (stack.count > 0)
+		m_ItemPickingTimer = -1.0f;
+	}
+
+	GameObject* Player::GetObjectPointedAt() const
+	{
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+		btVector3 rayStart, rayEnd;
+		FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, m_ItemPickupMaxDist);
+
+		const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+
+		if (pickedBody != nullptr)
 		{
-			if (m_ActiveItem != nullptr)
+			GameObject* gameObject = static_cast<GameObject*>(pickedBody->getUserPointer());
+			real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Transform.GetWorldPosition());
+			if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
 			{
-				if (m_ActiveItem->GetSourcePrefabIDPair().m_PrefabID == stack.prefabID)
-				{
-					return;
-				}
-
-				g_SceneManager->CurrentScene()->RemoveObject(m_ActiveItem, true);
-				m_ActiveItem = nullptr;
+				return gameObject;
 			}
-
-			m_ActiveItem = CreateObjectOfType(BaseObjectSID, "Active item");
-			m_ActiveItem->GetTransform()->Scale(0.5f);
-
-			m_ActiveItem->SetSourcePrefabID(stack.prefabID); // Hmmm... what could go wrong here?
-
-			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack.prefabID);
-			if (prefabTemplate->GetMesh() != nullptr)
-			{
-				prefabTemplate->GetMesh()->CloneSelf(m_ActiveItem, true);
-			}
-			else
-			{
-				Mesh* mesh = SetMesh(new Mesh(m_ActiveItem));
-				mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
-			}
-
-			g_SceneManager->CurrentScene()->AddRootObject(m_ActiveItem);
 		}
-		else
+
+		return nullptr;
+	}
+
+	void Player::SetItemPickingUp(GameObject* pickedItem)
+	{
+		if (pickedItem == nullptr)
 		{
-			if (m_ActiveItem != nullptr)
-			{
-				g_SceneManager->CurrentScene()->RemoveObject(m_ActiveItem, true);
-			}
-
-			m_ActiveItem = nullptr;
+			m_ItemPickingUp = nullptr;
+			ResetItemPickingTimer();
+			return;
 		}
+
+		if (m_ItemPickingUp != nullptr)
+		{
+			PrintError("Attempted to pick up item while m_ItemPickingUp was non-null, ignoring additional requests\n");
+			return;
+		}
+
+		m_ItemPickingUp = pickedItem;
+		m_ItemPickingTimer = m_ItemPickingDuration;
 	}
 
 } // namespace flex

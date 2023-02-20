@@ -64,11 +64,6 @@ namespace flex
 		// TODO: Use again
 		//real m_MaxSlowDownRotationSpeedVel = 10.0f;
 
-		real m_ItemPickupMaxDist = 100.0f;
-		GameObject* m_ItemPickingUp = nullptr;
-		const real m_ItemPickingDuration = 0.5f;
-		real m_ItemPickingTimer = -1.0f;
-
 		sec m_SecondsAttemptingToTurn = 0.0f;
 		// How large the joystick x value must be to enter a turning state
 		const real m_TurnStartStickXThreshold = 0.7f;
@@ -79,7 +74,6 @@ namespace flex
 		TurningDir m_DirTurning = TurningDir::NONE;
 
 		bool m_bAttemptCompleteTrack = false;
-		bool m_bPreviewPlaceItemFromInventory = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
 		bool m_bCancelPlaceItemFromInventory = false;
 		bool m_bAttemptInteractLeftHand = false;

@@ -69,6 +69,18 @@ namespace flex
 		std::list<u32> siblingIndices;
 	};
 
+	struct ActiveItem
+	{
+		void Create(PrefabID sourcePrefabID);
+		void Clear();
+
+		bool IsValid() const { return m_ItemProxyObject != nullptr; }
+
+		GameObject* m_ItemProxyObject = nullptr; // Just the mesh representation of the object
+		StringID m_TypeID = InvalidID;
+		PrefabID m_SourcePrefabID = InvalidPrefabID;
+	};
+
 	extern ChildIndex InvalidChildIndex;
 
 	struct GameObjectStack
@@ -139,7 +151,7 @@ namespace flex
 		static void RegisterPropertyCollections();
 
 		static void UpdateHeldItem(GameObjectID heldItemID);
-		static void UpdateActiveItem(GameObject* gameObject);
+		static void UpdateActiveItem(const ActiveItem& activeItem);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
