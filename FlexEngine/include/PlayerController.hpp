@@ -48,6 +48,7 @@ namespace flex
 		void AttemptToIteractUsingHeldItem();
 		void AttemptToPickUpItem(std::list<Pair<GameObject*, real>>& nearbyInteractables);
 		glm::vec3 GetTargetItemPos();
+		void UpdatePreviewPlacementItem();
 
 		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
 

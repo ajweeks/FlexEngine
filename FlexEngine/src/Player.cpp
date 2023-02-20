@@ -35,6 +35,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 
@@ -243,6 +244,15 @@ namespace flex
 			GameObject::UpdateHeldItem(m_HeldItemRightHand);
 		}
 
+		if (m_QuickAccessInventory[m_SelectedQuickAccessItemSlot].count > 0)
+		{
+			UpdateActiveItem();
+			if (m_ActiveItem != nullptr)
+			{
+				GameObject::UpdateActiveItem(m_ActiveItem);
+			}
+		}
+
 		GameObject::Update();
 	}
 
@@ -291,6 +301,13 @@ namespace flex
 		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
 
 		return glm::normalize(lookDir);
+	}
+
+	glm::quat Player::GetLookRotation() const
+	{
+		glm::quat rotWS = glm::rotate(QUAT_IDENTITY, m_Pitch, m_Transform.GetRight());
+		rotWS *= m_Transform.GetWorldRotation();
+		return rotWS;
 	}
 
 	glm::vec3 Player::GetHeldItemPosWS(Hand hand) const
@@ -1606,6 +1623,62 @@ namespace flex
 		return m_bPossessed  &&
 			!m_RidingVehicleID.IsValid() &&
 			!m_TerminalInteractingWithID.IsValid();
+	}
+
+	void Player::SetSelectedQuickAccessItemSlot(i32 selectedQuickAccessItemSlot)
+	{
+		if (m_SelectedQuickAccessItemSlot == selectedQuickAccessItemSlot)
+		{
+			return;
+		}
+
+		m_SelectedQuickAccessItemSlot = selectedQuickAccessItemSlot;
+		UpdateActiveItem();
+	}
+
+	void Player::UpdateActiveItem()
+	{
+		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		if (stack.count > 0)
+		{
+			if (m_ActiveItem != nullptr)
+			{
+				if (m_ActiveItem->GetSourcePrefabIDPair().m_PrefabID == stack.prefabID)
+				{
+					return;
+				}
+
+				g_SceneManager->CurrentScene()->RemoveObject(m_ActiveItem, true);
+				m_ActiveItem = nullptr;
+			}
+
+			m_ActiveItem = CreateObjectOfType(BaseObjectSID, "Active item");
+			m_ActiveItem->GetTransform()->Scale(0.5f);
+
+			m_ActiveItem->SetSourcePrefabID(stack.prefabID); // Hmmm... what could go wrong here?
+
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack.prefabID);
+			if (prefabTemplate->GetMesh() != nullptr)
+			{
+				prefabTemplate->GetMesh()->CloneSelf(m_ActiveItem, true);
+			}
+			else
+			{
+				Mesh* mesh = SetMesh(new Mesh(m_ActiveItem));
+				mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+			}
+
+			g_SceneManager->CurrentScene()->AddRootObject(m_ActiveItem);
+		}
+		else
+		{
+			if (m_ActiveItem != nullptr)
+			{
+				g_SceneManager->CurrentScene()->RemoveObject(m_ActiveItem, true);
+			}
+
+			m_ActiveItem = nullptr;
+		}
 	}
 
 } // namespace flex

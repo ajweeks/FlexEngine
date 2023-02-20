@@ -309,8 +309,9 @@ namespace flex
 		{
 		case Mesh::Type::FILE:
 		{
-			std::string prefixStr = MESH_DIRECTORY;
-			std::string meshFilepath = mesh->GetRelativeFilePath().substr(prefixStr.length());
+			const size_t prefixLen = strlen(MESH_DIRECTORY);
+			std::string meshFilepath = mesh->GetRelativeFilePath();
+			meshFilepath = meshFilepath.substr(prefixLen);
 			meshObject = JSONField("mesh", JSONValue(meshFilepath));
 		} break;
 		case Mesh::Type::PREFAB:

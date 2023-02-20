@@ -139,6 +139,7 @@ namespace flex
 		static void RegisterPropertyCollections();
 
 		static void UpdateHeldItem(GameObjectID heldItemID);
+		static void UpdateActiveItem(GameObject* gameObject);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object

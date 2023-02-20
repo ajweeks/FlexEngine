@@ -50,6 +50,7 @@ namespace flex
 		void Reset();
 
 		glm::vec3 GetLookDirection() const;
+		glm::quat GetLookRotation() const;
 		glm::vec3 GetHeldItemPosWS(Hand hand) const;
 
 		i32 GetIndex() const;
@@ -145,6 +146,8 @@ namespace flex
 		TrackID GetTrackRidingID() const { return m_TrackRidingID; }
 		real GetTrackAttachMinDist() const { return m_TrackAttachMinDist; }
 
+		void SetSelectedQuickAccessItemSlot(i32 selectedQuickAccessItemSlot);
+
 		static const u32 WEARABLES_ITEM_COUNT = 3;
 		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
 		static const u32 INVENTORY_ITEM_ROW_COUNT = 5;
@@ -155,6 +158,7 @@ namespace flex
 		friend class PlayerController;
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
+		void UpdateActiveItem();
 
 		struct TrackBuildingContext
 		{
@@ -225,6 +229,10 @@ namespace flex
 		bool m_bMinerInventoryShowing = false;
 		i32 m_SelectedQuickAccessItemSlot = 0;
 
+		// The itemized item the player can interact using (based on selected quick access item slot)
+		GameObject* m_ActiveItem = nullptr;
+
+		// TODO: Remove? References objects the player is holding onto (but are not itemized)
 		GameObjectID m_HeldItemLeftHand = InvalidGameObjectID;
 		GameObjectID m_HeldItemRightHand = InvalidGameObjectID;
 

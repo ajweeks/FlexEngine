@@ -133,12 +133,13 @@ namespace flex
 			{
 				if (cycleItemAxis > 0.0f)
 				{
-					m_Player->m_SelectedQuickAccessItemSlot = (m_Player->m_SelectedQuickAccessItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->SetSelectedQuickAccessItemSlot((m_Player->m_SelectedQuickAccessItemSlot + 1) % Player::QUICK_ACCESS_ITEM_COUNT);
 				}
 				else if (cycleItemAxis < 0.0f)
 				{
-					m_Player->m_SelectedQuickAccessItemSlot = (m_Player->m_SelectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT;
+					m_Player->SetSelectedQuickAccessItemSlot((m_Player->m_SelectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT);
 				}
+				CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
 			}
 
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
@@ -367,6 +368,82 @@ namespace flex
 		m_bAttemptPickup = false;
 	}
 
+	void PlayerController::UpdatePreviewPlacementItem()
+	{
+		CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
+		GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
+
+		if (gameObjectStack.count >= 1)
+		{
+			if (gameObjectStack.prefabID.IsValid())
+			{
+				UpdateItemPlacementTransform();
+
+				real posInterpolateSpeed = 60.0f;
+				real rotInterpolateSpeed = 25.0f;
+				if (NearlyEquals(m_TargetItemPlacementPosSmoothed.y, m_TargetItemPlacementPos.y, 0.001f))
+				{
+					m_TargetItemPlacementPosSmoothed = m_TargetItemPlacementPos;
+				}
+				else
+				{
+					// Only interpolate position when changing height
+					m_TargetItemPlacementPosSmoothed = MoveTowards(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementPos, posInterpolateSpeed);
+				}
+				m_TargetItemPlacementRotSmoothed = MoveTowards(m_TargetItemPlacementRotSmoothed, m_TargetItemPlacementRot, g_DeltaTime * rotInterpolateSpeed);
+
+				GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+				Mesh* mesh = templateObject->GetMesh();
+
+				if (mesh != nullptr)
+				{
+					PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+					if (m_ItemPlacementBoundingBoxShape == nullptr)
+					{
+						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
+						m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
+					}
+
+					{
+						// Un-smoothed, un-snapped target pos
+						glm::vec3 targetItemPlacementPos = GetTargetItemPos();
+						real maxDrop = 5.0f;
+
+						btTransform floatingTargetTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(targetItemPlacementPos));
+
+						btTransform sweepEndTransform(floatingTargetTransform.getRotation(), ToBtVec3(targetItemPlacementPos + (-VEC3_UP) * maxDrop));
+						glm::vec3 groundPos, groundNormal;
+						if (physicsWorld->GetPointOnGround(m_ItemPlacementBoundingBoxShape, floatingTargetTransform, sweepEndTransform, groundPos, groundNormal))
+						{
+							m_ItemPlacementGroundedPos.x = targetItemPlacementPos.x;
+							m_ItemPlacementGroundedPos.y = groundPos.y +
+								((mesh->m_MaxPoint.y - mesh->m_MinPoint.y) * 0.5f);
+							m_ItemPlacementGroundedPos.z = targetItemPlacementPos.z;
+
+							m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
+						}
+					}
+
+					btTransform transform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
+
+					btPairCachingGhostObject pairCache;
+					pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
+					pairCache.setWorldTransform(transform);
+					i32 mask = (u32)CollisionType::NOTHING;
+					pairCache.setCollisionFlags(mask);
+
+					CustomContactResultCallback resultCallback;
+					resultCallback.m_collisionFilterGroup = mask;
+					resultCallback.m_collisionFilterMask = mask;
+					physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
+
+					m_bItemPlacementValid = !resultCallback.bHit;
+				}
+			}
+		}
+	}
+
 	void PlayerController::FixedUpdate()
 	{
 		btVector3 force(0.0f, 0.0f, 0.0f);
@@ -396,82 +473,7 @@ namespace flex
 
 		if (m_bPreviewPlaceItemFromInventory)
 		{
-			if (m_Player->m_SelectedQuickAccessItemSlot == -1)
-			{
-				m_Player->m_SelectedQuickAccessItemSlot = 0;
-			}
-
-			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
-
-			if (gameObjectStack.count >= 1)
-			{
-				if (gameObjectStack.prefabID.IsValid())
-				{
-					UpdateItemPlacementTransform();
-
-					real posInterpolateSpeed = 60.0f;
-					real rotInterpolateSpeed = 25.0f;
-					if (NearlyEquals(m_TargetItemPlacementPosSmoothed.y, m_TargetItemPlacementPos.y, 0.001f))
-					{
-						m_TargetItemPlacementPosSmoothed = m_TargetItemPlacementPos;
-					}
-					else
-					{
-						// Only interpolate position when changing height
-						m_TargetItemPlacementPosSmoothed = MoveTowards(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementPos, posInterpolateSpeed);
-					}
-					m_TargetItemPlacementRotSmoothed = MoveTowards(m_TargetItemPlacementRotSmoothed, m_TargetItemPlacementRot, g_DeltaTime * rotInterpolateSpeed);
-
-					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-					Mesh* mesh = templateObject->GetMesh();
-
-					if (mesh != nullptr)
-					{
-						PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
-
-						if (m_ItemPlacementBoundingBoxShape == nullptr)
-						{
-							btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
-							m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
-						}
-
-						{
-							// Un-smoothed, un-snapped target pos
-							glm::vec3 targetItemPlacementPos = GetTargetItemPos();
-							real maxDrop = 5.0f;
-
-							btTransform floatingTargetTransform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(targetItemPlacementPos));
-
-							btTransform sweepEndTransform(floatingTargetTransform.getRotation(), ToBtVec3(targetItemPlacementPos + (-VEC3_UP) * maxDrop));
-							glm::vec3 groundPos, groundNormal;
-							if (physicsWorld->GetPointOnGround(m_ItemPlacementBoundingBoxShape, floatingTargetTransform, sweepEndTransform, groundPos, groundNormal))
-							{
-								m_ItemPlacementGroundedPos.x = targetItemPlacementPos.x;
-								m_ItemPlacementGroundedPos.y = groundPos.y +
-									((mesh->m_MaxPoint.y - mesh->m_MinPoint.y) * 0.5f);
-								m_ItemPlacementGroundedPos.z = targetItemPlacementPos.z;
-
-								m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
-							}
-						}
-
-						btTransform transform(ToBtQuaternion(m_TargetItemPlacementRot), ToBtVec3(m_TargetItemPlacementPos));
-
-						btPairCachingGhostObject pairCache;
-						pairCache.setCollisionShape(m_ItemPlacementBoundingBoxShape);
-						pairCache.setWorldTransform(transform);
-						i32 mask = (u32)CollisionType::NOTHING;
-						pairCache.setCollisionFlags(mask);
-
-						CustomContactResultCallback resultCallback;
-						resultCallback.m_collisionFilterGroup = mask;
-						resultCallback.m_collisionFilterMask = mask;
-						physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
-
-						m_bItemPlacementValid = !resultCallback.bHit;
-					}
-				}
-			}
+			UpdatePreviewPlacementItem();
 		}
 
 		if (m_Player->AbleToInteract() &&
@@ -881,11 +883,7 @@ namespace flex
 
 	void PlayerController::PreviewPlaceItemFromInventory()
 	{
-		if (m_Player->m_SelectedQuickAccessItemSlot == -1)
-		{
-			m_Player->m_SelectedQuickAccessItemSlot = 0;
-		}
-
+		CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
 		GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
 
 		if (gameObjectStack.count >= 1)
@@ -955,13 +953,9 @@ namespace flex
 
 	void PlayerController::AttemptPlaceItemFromInventory()
 	{
-		if (m_Player->m_SelectedQuickAccessItemSlot == -1)
-		{
-			m_Player->m_SelectedQuickAccessItemSlot = 0;
-		}
-
 		if (m_bItemPlacementValid)
 		{
+			CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
 			GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
 
 			if (gameObjectStack.count >= 1)

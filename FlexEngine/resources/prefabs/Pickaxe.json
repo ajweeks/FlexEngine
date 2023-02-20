@@ -7,7 +7,7 @@
 		"id" : "46991C4F8A38098545133387B7607D84",
 		"name" : "pickaxe",
 		"type" : "pickaxe",
-		"mesh" : "../../../FlexEngine/resources/meshes/pickaxe.glb",
+		"mesh" : "pickaxe.glb",
 		"materials" : 
 		[
 			"Blue paint"

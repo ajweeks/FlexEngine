@@ -1897,6 +1897,32 @@ namespace flex
 		}
 	}
 
+	void GameObject::UpdateActiveItem(GameObject* gameObject)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		Transform* playerTransform = player->GetTransform();
+
+		glm::vec3 posWS = playerTransform->GetWorldPosition() +
+			player->GetLookDirection() * 2.0f +
+			playerTransform->GetRight() * 1.0f;
+		glm::quat rotWS = player->GetLookRotation();
+
+		switch (gameObject->GetTypeID())
+		{
+		case PickAxeSID:
+		{
+
+		} break;
+		default:
+		{
+			// Nothing additional
+		} break;
+		}
+
+		gameObject->GetTransform()->SetWorldPosition(posWS, false);
+		gameObject->GetTransform()->SetWorldRotation(rotWS, true);
+	}
+
 	PropertyCollection* GameObject::BuildPropertyCollection()
 	{
 		PropertyCollection* collection = GetPropertyCollectionManager()->AllocateCollection("base object");
