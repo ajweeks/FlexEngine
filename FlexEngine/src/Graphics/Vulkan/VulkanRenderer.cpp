@@ -830,7 +830,7 @@ namespace flex
 				VulkanMaterial* prevMat = (VulkanMaterial*)GetMaterial(matToReplace);
 				delete prevMat;
 
-				m_Materials[matID] = new VulkanMaterial();
+				m_Materials.emplace(matID, new VulkanMaterial());
 			}
 			else
 			{
@@ -842,7 +842,8 @@ namespace flex
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
 			material->name = createInfo->name;
 
-			if (!GetShaderID(createInfo->shaderName, material->shaderID))
+			ShaderID shaderID = InvalidShaderID;
+			if (!GetShaderID(createInfo->shaderName, shaderID))
 			{
 				if (createInfo->shaderName.empty())
 				{
@@ -855,8 +856,11 @@ namespace flex
 
 				return m_PlaceholderMaterialID;
 			}
+			CHECK_NE(shaderID, InvalidShaderID);
 
-			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
+			material->shaderID = shaderID;
+
+			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
 
 			material->bDynamic = createInfo->bDynamic;
 			material->bSerializable = createInfo->bSerializable;
@@ -1450,7 +1454,7 @@ namespace flex
 
 			// Post process descriptor set
 			{
-				VulkanMaterial* postProcessMaterial = (VulkanMaterial*)m_Materials[m_PostProcessMatID];
+				VulkanMaterial* postProcessMaterial = (VulkanMaterial*)m_Materials.at(m_PostProcessMatID);
 				ShaderID postProcessShaderID = postProcessMaterial->shaderID;
 				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(postProcessShaderID);
 
@@ -1466,7 +1470,7 @@ namespace flex
 
 			// Gamma Correct descriptor set
 			{
-				VulkanMaterial* gammaCorrectMaterial = (VulkanMaterial*)m_Materials[m_GammaCorrectMaterialID];
+				VulkanMaterial* gammaCorrectMaterial = (VulkanMaterial*)m_Materials.at(m_GammaCorrectMaterialID);
 				ShaderID gammaCorrectShaderID = gammaCorrectMaterial->shaderID;
 				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(gammaCorrectShaderID);
 
@@ -1482,7 +1486,7 @@ namespace flex
 
 			// TAA Resolve descriptor set
 			{
-				VulkanMaterial* taaResolveMaterial = (VulkanMaterial*)m_Materials[m_TAAResolveMaterialID];
+				VulkanMaterial* taaResolveMaterial = (VulkanMaterial*)m_Materials.at(m_TAAResolveMaterialID);
 				ShaderID taaResolveShaderID = taaResolveMaterial->shaderID;
 				VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(taaResolveShaderID);
 
@@ -1500,7 +1504,7 @@ namespace flex
 
 			// Sprite array pipeline
 			{
-				VulkanMaterial* spriteArrMat = (VulkanMaterial*)m_Materials[m_SpriteArrMatID];
+				VulkanMaterial* spriteArrMat = (VulkanMaterial*)m_Materials.at(m_SpriteArrMatID);
 				VulkanShader* spriteArrShader = (VulkanShader*)m_Shaders[spriteArrMat->shaderID];
 
 				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -1524,7 +1528,7 @@ namespace flex
 
 			// Post process pipeline
 			{
-				VulkanMaterial* postProcessMat = (VulkanMaterial*)m_Materials[m_PostProcessMatID];
+				VulkanMaterial* postProcessMat = (VulkanMaterial*)m_Materials.at(m_PostProcessMatID);
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Post Process pipeline";
@@ -1540,7 +1544,7 @@ namespace flex
 
 			// Gamma Correct pipeline
 			{
-				VulkanMaterial* gammaCorrectMat = (VulkanMaterial*)m_Materials[m_GammaCorrectMaterialID];
+				VulkanMaterial* gammaCorrectMat = (VulkanMaterial*)m_Materials.at(m_GammaCorrectMaterialID);
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Gamma Correct pipeline";
@@ -1556,7 +1560,7 @@ namespace flex
 
 			// TAA Resolve pipeline
 			{
-				VulkanMaterial* taaResolveMat = (VulkanMaterial*)m_Materials[m_TAAResolveMaterialID];
+				VulkanMaterial* taaResolveMat = (VulkanMaterial*)m_Materials.at(m_TAAResolveMaterialID);
 				VulkanShader* taaResolveShader = (VulkanShader*)m_Shaders[taaResolveMat->shaderID];
 
 				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
@@ -1628,7 +1632,7 @@ namespace flex
 
 		void VulkanRenderer::CreateFullscreenBlitResources()
 		{
-			VulkanMaterial* fullscreenBlitMat = (VulkanMaterial*)m_Materials[m_FullscreenBlitMatID];
+			VulkanMaterial* fullscreenBlitMat = (VulkanMaterial*)m_Materials.at(m_FullscreenBlitMatID);
 			ShaderID fullscreenShaderID = fullscreenBlitMat->shaderID;
 			VulkanShader* fullscreenShader = (VulkanShader*)m_Shaders[fullscreenShaderID];
 
@@ -1893,7 +1897,7 @@ namespace flex
 			m_DebugRenderer->UpdateDebugMode();
 
 			{
-				VulkanMaterial* wireframeMat = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+				VulkanMaterial* wireframeMat = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
 				real f = glm::clamp(sin(g_SecElapsedSinceProgramStart * 4.0f) * 0.2f + 0.55f, 0.0f, 1.0f);
 				wireframeMat->colourMultiplier = glm::vec4(f, f * 0.25f, f * 0.75f, 1.0f);
 			}
@@ -2233,7 +2237,7 @@ namespace flex
 						{
 							for (VulkanParticleSystem* system : m_ParticleSystems)
 							{
-								VulkanMaterial* simMat = (VulkanMaterial*)m_Materials[system->system->simMaterialID];
+								VulkanMaterial* simMat = (VulkanMaterial*)m_Materials.at(system->system->simMaterialID);
 								if (simMat->gpuBufferList.Has(GPUBufferType::PARTICLE_DATA))
 								{
 									GPUBuffer* particleBuffer = simMat->gpuBufferList.Get(GPUBufferType::PARTICLE_DATA);
@@ -3294,7 +3298,7 @@ namespace flex
 				m_CommandBufferManager.FlushCommandBuffer(layoutCmd, m_GraphicsQueue, true);
 			}
 
-			VulkanMaterial* irradianceMaterial = (VulkanMaterial*)m_Materials[m_IrradianceMaterialID];
+			VulkanMaterial* irradianceMaterial = (VulkanMaterial*)m_Materials.at(m_IrradianceMaterialID);
 			VulkanShader* irradianceShader = (VulkanShader*)m_Shaders[irradianceMaterial->shaderID];
 
 			DescriptorSetCreateInfo irradianceDescriptorCreateInfo = {};
@@ -3578,7 +3582,7 @@ namespace flex
 				}
 			}
 
-			VulkanMaterial* prefilterMaterial = (VulkanMaterial*)m_Materials[m_PrefilterMaterialID];
+			VulkanMaterial* prefilterMaterial = (VulkanMaterial*)m_Materials.at(m_PrefilterMaterialID);
 			VulkanShader* prefilterShader = (VulkanShader*)m_Shaders[prefilterMaterial->shaderID];
 
 			DescriptorSetCreateInfo prefilterDescriptorCreateInfo = {};
@@ -3808,7 +3812,7 @@ namespace flex
 				VkFramebuffer framebuffer = VK_NULL_HANDLE;
 				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufferCreateInfo, nullptr, &framebuffer));
 
-				VulkanMaterial* brdfMaterial = (VulkanMaterial*)m_Materials[m_BRDFMaterialID];
+				VulkanMaterial* brdfMaterial = (VulkanMaterial*)m_Materials.at(m_BRDFMaterialID);
 				VulkanShader* brdfShader = (VulkanShader*)m_Shaders[brdfMaterial->shaderID];
 
 				GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
@@ -3887,7 +3891,7 @@ namespace flex
 			ssaoMatCreateInfo.bSerializable = false;
 			m_SSAOMatID = InitializeMaterial(&ssaoMatCreateInfo, m_SSAOMatID);
 			CHECK_NE(m_SSAOMatID, InvalidMaterialID);
-			m_SSAOShaderID = m_Materials[m_SSAOMatID]->shaderID;
+			m_SSAOShaderID = m_Materials.at(m_SSAOMatID)->shaderID;
 
 			MaterialCreateInfo ssaoBlurMatCreateInfo = {};
 			ssaoBlurMatCreateInfo.name = "ssao blur";
@@ -3897,7 +3901,7 @@ namespace flex
 			ssaoBlurMatCreateInfo.bSerializable = false;
 			m_SSAOBlurMatID = InitializeMaterial(&ssaoBlurMatCreateInfo, m_SSAOBlurMatID);
 			CHECK_NE(m_SSAOBlurMatID, InvalidMaterialID);
-			m_SSAOBlurShaderID = m_Materials[m_SSAOBlurMatID]->shaderID;
+			m_SSAOBlurShaderID = m_Materials.at(m_SSAOBlurMatID)->shaderID;
 		}
 
 		void VulkanRenderer::CreateSSAOPipelines()
@@ -3911,7 +3915,7 @@ namespace flex
 			pipelineCreateInfo.bEnableColourBlending = false;
 			pipelineCreateInfo.bPersistent = true;
 
-			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials[m_SSAOMatID];
+			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials.at(m_SSAOMatID);
 			VulkanShader* ssaoShader = (VulkanShader*)m_Shaders[ssaoMaterial->shaderID];
 
 			pipelineCreateInfo.DBG_Name = "SSAO pipeline";
@@ -3929,7 +3933,7 @@ namespace flex
 			}
 			CreateGraphicsPipeline(&pipelineCreateInfo, m_SSAOGraphicsPipelineID);
 
-			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
+			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials.at(m_SSAOBlurMatID);
 			VulkanShader* ssaoBlurShader = (VulkanShader*)m_Shaders[ssaoBlurMaterial->shaderID];
 
 			pipelineCreateInfo.DBG_Name = "SSAO Blur Horizontal pipeline";
@@ -3961,7 +3965,7 @@ namespace flex
 
 		void VulkanRenderer::CreateSSAODescriptorSets()
 		{
-			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials[m_SSAOMatID];
+			VulkanMaterial* ssaoMaterial = (VulkanMaterial*)m_Materials.at(m_SSAOMatID);
 
 			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(ssaoMaterial->shaderID);
 
@@ -3977,7 +3981,7 @@ namespace flex
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 			m_SSAODescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
-			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
+			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials.at(m_SSAOBlurMatID);
 
 			descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(ssaoBlurMaterial->shaderID);
 
@@ -4011,7 +4015,7 @@ namespace flex
 				m_DescriptorPoolPersistent->FreeSet(m_WireframeDescSet);
 			}
 
-			VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+			VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
 
 			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(wireframeMaterial->shaderID);
 
@@ -4122,7 +4126,7 @@ namespace flex
 				fontTexColAttachment->CreateEmpty(textureSize.x, textureSize.y, 4, fontTexFormat, m_SamplerLinearClampToEdge, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-				VulkanMaterial* computeSDFMaterial = (VulkanMaterial*)m_Materials[m_ComputeSDFMatID];
+				VulkanMaterial* computeSDFMaterial = (VulkanMaterial*)m_Materials.at(m_ComputeSDFMatID);
 				ShaderID computeSDFShaderID = computeSDFMaterial->shaderID;
 				VulkanShader* computeSDFShader = (VulkanShader*)m_Shaders[computeSDFShaderID];
 
@@ -4702,7 +4706,7 @@ namespace flex
 
 			PROFILE_AUTO("DrawText");
 
-			const VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials[matID];
+			const VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials.at(matID);
 			const VulkanShader* fontShader = (VulkanShader*)m_Shaders[fontMaterial->shaderID];
 
 			VulkanBuffer* fontVertexBuffer = nullptr;
@@ -5159,7 +5163,7 @@ namespace flex
 		void VulkanRenderer::CreateShadowResources()
 		{
 			// Shadow map pipeline
-			VulkanMaterial* shadowMaterial = (VulkanMaterial*)m_Materials[m_ShadowMaterialID];
+			VulkanMaterial* shadowMaterial = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
 			VulkanShader* shadowShader = (VulkanShader*)m_Shaders[shadowMaterial->shaderID];
 
 			VkPushConstantRange pushConstantRange = {};
@@ -7155,7 +7159,7 @@ namespace flex
 			{
 				return renderObject != nullptr &&
 					renderObject->vertexBufferData != nullptr &&
-					!m_Materials[renderObject->materialID]->bDynamic &&
+					!m_Materials.at(renderObject->materialID)->bDynamic &&
 					m_Shaders[m_Materials.at(renderObject->materialID)->shaderID]->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
 
@@ -7362,7 +7366,7 @@ namespace flex
 			{
 				if (renderObject &&
 					renderObject->bIndexed &&
-					!m_Materials[renderObject->materialID]->bDynamic)
+					!m_Materials.at(renderObject->materialID)->bDynamic)
 				{
 					renderObject->indexOffset = (u32)indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
@@ -7382,7 +7386,7 @@ namespace flex
 		{
 			PROFILE_AUTO("CreateShadowVertexBuffer");
 
-			VulkanMaterial* shadowMat = (VulkanMaterial*)m_Materials[m_ShadowMaterialID];
+			VulkanMaterial* shadowMat = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
 			VulkanShader* shadowShader = (VulkanShader*)m_Shaders[shadowMat->shaderID];
 
 			u32 vertexStride = CalculateVertexStride(shadowShader->vertexAttributes);
@@ -7561,7 +7565,7 @@ namespace flex
 					renderObject->materialID == matID);
 			};
 
-			VulkanMaterial* material = (VulkanMaterial*)m_Materials[matID];
+			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
 			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
 			const GPUBuffer* dynamicBuffer = material->gpuBufferList.Get(GPUBufferType::DYNAMIC);
@@ -7885,7 +7889,7 @@ namespace flex
 						}
 						if (drawCallInfo->bWireframe)
 						{
-							VulkanMaterial* objectMaterial = (VulkanMaterial*)m_Materials[matBatch.materialID];
+							VulkanMaterial* objectMaterial = (VulkanMaterial*)m_Materials.at(matBatch.materialID);
 							VulkanShader* objectShader = (VulkanShader*)m_Shaders[objectMaterial->shaderID];
 
 							auto pipelineIter = m_WireframeGraphicsPipelines.find(objectShader->vertexAttributes);
@@ -7897,7 +7901,7 @@ namespace flex
 							else
 							{
 								// Create wireframe pipeline for given vertex attributes
-								VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+								VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
 								VulkanShader* wireframeShader = (VulkanShader*)m_Shaders[wireframeMaterial->shaderID];
 
 								GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
@@ -8212,7 +8216,7 @@ namespace flex
 
 						BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "SSAO Blur");
 
-						VulkanMaterial* ssaoBlurMat = (VulkanMaterial*)m_Materials[m_SSAOBlurMatID];
+						VulkanMaterial* ssaoBlurMat = (VulkanMaterial*)m_Materials.at(m_SSAOBlurMatID);
 
 						// Horizontal pass
 						m_SSAOBlurHRenderPass->Begin(m_OffScreenCmdBuffer, (VkClearValue*)&m_ClearColour, 1);
@@ -8394,7 +8398,7 @@ namespace flex
 						{
 							// All objects wireframe
 
-							VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+							VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
 							const GPUBuffer* wireframeDynamicBuffer = wireframeMaterial->gpuBufferList.Get(GPUBufferType::DYNAMIC);
 
 							ShaderBatch* batches[] = { &m_ForwardObjectBatches, &m_DeferredObjectBatches };
@@ -8523,7 +8527,7 @@ namespace flex
 								}
 							}
 
-							VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials[m_WireframeMatID];
+							VulkanMaterial* wireframeMaterial = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
 							const GPUBuffer* wireframeDynamicBuffer = wireframeMaterial->gpuBufferList.Get(GPUBufferType::DYNAMIC);
 							u32 dynamicUBOOffset = 0;
 							for (const ShaderBatchPair& shaderBatch : selectedObjectBatch.batches)
@@ -8630,7 +8634,7 @@ namespace flex
 
 				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
-				VulkanMaterial* TAAMat = (VulkanMaterial*)m_Materials[m_TAAResolveMaterialID];
+				VulkanMaterial* TAAMat = (VulkanMaterial*)m_Materials.at(m_TAAResolveMaterialID);
 				TAAMat->pushConstantBlock->SetData(m_TAA_ks, sizeof(real) * 2);
 
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(m_TAAResolveGraphicsPipelineID)->pipeline;
@@ -9913,7 +9917,7 @@ namespace flex
 
 			if (m_FontSSGraphicsPipelineID == InvalidGraphicsPipelineID)
 			{
-				VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials[m_FontMatSSID];
+				VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials.at(m_FontMatSSID);
 				VulkanShader* fontShader = (VulkanShader*)m_Shaders[fontMaterial->shaderID];
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -9936,7 +9940,7 @@ namespace flex
 
 			if (m_FontWSGraphicsPipelineID == InvalidGraphicsPipelineID)
 			{
-				VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials[m_FontMatWSID];
+				VulkanMaterial* fontMaterial = (VulkanMaterial*)m_Materials.at(m_FontMatWSID);
 				VulkanShader* fontShader = (VulkanShader*)m_Shaders[fontMaterial->shaderID];
 
 				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
@@ -10013,10 +10017,10 @@ namespace flex
 			CreateRenderPasses();
 			RecreateShadowFrameBuffers();
 
-			for (u32 i = 0; i < m_Shaders.size(); ++i)
+			for (Shader* shader : m_Shaders)
 			{
-				VulkanShader* shader = (VulkanShader*)m_Shaders[i];
-				shader->renderPass = ResolveRenderPassType(shader->renderPassType, shader->name.c_str());
+				VulkanShader* vkShader = (VulkanShader*)shader;
+				vkShader->renderPass = ResolveRenderPassType(vkShader->renderPassType, vkShader->name.c_str());
 			}
 
 			for (auto& materialPair : m_Materials)
