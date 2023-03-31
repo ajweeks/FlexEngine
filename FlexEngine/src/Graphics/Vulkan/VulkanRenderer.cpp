@@ -7561,8 +7561,8 @@ namespace flex
 			auto RenderObjectFilter = [this, matID](VulkanRenderObject* renderObject) -> bool
 			{
 				return (renderObject != nullptr &&
-					IsGraphicsPipelineValid(renderObject->graphicsPipelineID) &&
-					renderObject->materialID == matID);
+					renderObject->materialID == matID &&
+					IsGraphicsPipelineValid(renderObject->graphicsPipelineID));
 			};
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
