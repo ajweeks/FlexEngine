@@ -7558,13 +7558,6 @@ namespace flex
 		{
 			PROFILE_AUTO("FillOutShaderBatches");
 
-			auto RenderObjectFilter = [this, matID](VulkanRenderObject* renderObject) -> bool
-			{
-				return (renderObject != nullptr &&
-					renderObject->materialID == matID &&
-					IsGraphicsPipelineValid(renderObject->graphicsPipelineID));
-			};
-
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
 			VulkanShader* shader = (VulkanShader*)m_Shaders[material->shaderID];
 
@@ -7577,7 +7570,7 @@ namespace flex
 			{
 				VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-				if (RenderObjectFilter(renderObject))
+				if (renderObject != nullptr && renderObject->materialID == matID)
 				{
 					if (dynamicBuffer != nullptr)
 					{
@@ -7631,7 +7624,7 @@ namespace flex
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
-					if (RenderObjectFilter(renderObject))
+					if (renderObject != nullptr && renderObject->materialID == matID)
 					{
 						// TODO: Move down
 						renderObject->dynamicUBOOffset = *inOutDynamicUBOOffset;
