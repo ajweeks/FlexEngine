@@ -469,6 +469,7 @@ namespace flex
 
 		std::map<MaterialID, Material*> m_Materials;
 		std::vector<Shader*> m_Shaders;
+		std::map<ShaderID, std::vector<MaterialID>> m_ShaderUsedMaterials; // Stores all materials used by each shader
 		std::map<std::string, ShaderMetaData> m_ShaderMetaData;
 
 		// TODO: Use a mesh prefab here

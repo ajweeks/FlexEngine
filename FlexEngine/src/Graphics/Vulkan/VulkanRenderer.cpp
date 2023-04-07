@@ -699,6 +699,7 @@ namespace flex
 				delete vkMaterial;
 			}
 			m_Materials.clear();
+			m_ShaderUsedMaterials.clear();
 
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
@@ -859,6 +860,8 @@ namespace flex
 			CHECK_NE(shaderID, InvalidShaderID);
 
 			material->shaderID = shaderID;
+
+			m_ShaderUsedMaterials[shaderID].push_back(matID);
 
 			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
 
@@ -7688,6 +7691,15 @@ namespace flex
 						continue;
 					}
 
+					auto iter = m_ShaderUsedMaterials.find(shaderID);
+					if (iter == m_ShaderUsedMaterials.end())
+					{
+						// Skip checking for usages of shaders that have no materials registered
+						continue;
+					}
+
+					const std::vector<MaterialID>& usedMaterials = iter->second;
+
 					for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
 					{
 						ShaderBatchPair shaderBatchPair = {};
@@ -7704,12 +7716,11 @@ namespace flex
 
 						i32 dynamicUBOOffset = 0;
 
-						for (const auto& matPair : m_Materials)
+						for (MaterialID matID : usedMaterials)
 						{
-							MaterialID matID = matPair.first;
-							const VulkanMaterial* material = (VulkanMaterial*)matPair.second;
+							const VulkanMaterial* material = (VulkanMaterial*)GetMaterial(matID);
 
-							if (material->shaderID == shaderID && ((u32)material->bDynamic) == dynamic)
+							if ((u32)material->bDynamic == dynamic)
 							{
 								MaterialBatchPair matBatchPair = {};
 								matBatchPair.materialID = matID;
@@ -8456,6 +8467,14 @@ namespace flex
 							ShaderBatch selectedObjectBatch = {};
 							for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
 							{
+								auto iter = m_ShaderUsedMaterials.find(shaderID);
+								if (iter == m_ShaderUsedMaterials.end())
+								{
+									continue;
+								}
+
+								const std::vector<MaterialID>& usedMaterials = iter->second;
+
 								for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
 								{
 									ShaderBatchPair shaderBatchPair = {};
@@ -8472,10 +8491,9 @@ namespace flex
 
 									i32 inOutDynamicUBOOffset = 0;
 
-									for (const auto& matPair : m_Materials)
+									for (MaterialID matID : usedMaterials)
 									{
-										MaterialID matID = matPair.first;
-										const VulkanMaterial* material = (VulkanMaterial*)matPair.second;
+										const VulkanMaterial* material = (VulkanMaterial*)GetMaterial(matID);
 
 										if (material->shaderID == shaderID && ((u32)material->bDynamic) == dynamic)
 										{
