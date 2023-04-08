@@ -420,7 +420,10 @@ namespace flex
 
 	void SoundClip_LoopingSimple::SetGainMultiplier(real gainMultiplier)
 	{
-		AudioManager::SetSourceGainMultiplier(loop, gainMultiplier);
+		if (loop != InvalidAudioSourceID)
+		{
+			AudioManager::SetSourceGainMultiplier(loop, gainMultiplier);
+		}
 	}
 
 	bool SoundClip_LoopingSimple::DrawImGui()
