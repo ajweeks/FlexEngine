@@ -289,7 +289,7 @@ namespace flex
 
 	struct Uniform
 	{
-		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
+		explicit Uniform(const char* uniformName, StringID id, u64 size, u32 index);
 
 		Uniform(const Uniform&) = delete;
 		Uniform(Uniform&&) = delete;
@@ -298,90 +298,98 @@ namespace flex
 
 		StringID id;
 		u32 size;
+		u32 index;
 		const char* DBG_name;
 	};
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);
 	Uniform const* UniformFromStringID(StringID uniformNameSID);
 
-#define UNIFORM(val) val, SID(val)
+#define UNIFORMS_START static constexpr u32 s_UniformsStart = __LINE__;
+#define DECL_UNIFORM(var, name, size) \
+	static constexpr StringID var##_ID = SID(name); \
+	static const Uniform var(name, var##_ID, size, __LINE__ - s_UniformsStart - 1)
 
-	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4)); // TODO: Rename to OBJECT_TO_WORLD
-	static const Uniform U_VIEW(UNIFORM("view"), sizeof(glm::mat4));
-	static const Uniform U_VIEW_INV(UNIFORM("invView"), sizeof(glm::mat4));
-	static const Uniform U_VIEW_PROJECTION(UNIFORM("viewProjection"), sizeof(glm::mat4));
-	static const Uniform U_PROJECTION(UNIFORM("projection"), sizeof(glm::mat4));
-	static const Uniform U_PROJECTION_INV(UNIFORM("invProj"), sizeof(glm::mat4));
-	static const Uniform U_BLEND_SHARPNESS(UNIFORM("blendSharpness"), sizeof(real));
-	static const Uniform U_COLOUR_MULTIPLIER(UNIFORM("colourMultiplier"), sizeof(glm::vec4));
-	static const Uniform U_CAM_POS(UNIFORM("camPos"), sizeof(glm::vec4));
-	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
-	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
-	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
-	static const Uniform U_DIR_LIGHT(UNIFORM("dirLight"), (u32)sizeof(DirLightData));
-	static const Uniform U_ALBEDO_SAMPLER(UNIFORM("albedoSampler"));
-	static const Uniform U_CONST_ALBEDO(UNIFORM("constAlbedo"), (u32)sizeof(glm::vec4));
-	static const Uniform U_METALLIC_SAMPLER(UNIFORM("metallicSampler"));
-	static const Uniform U_CONST_METALLIC(UNIFORM("constMetallic"), sizeof(real));
-	static const Uniform U_ROUGHNESS_SAMPLER(UNIFORM("roughnessSampler"));
-	static const Uniform U_CONST_ROUGHNESS(UNIFORM("constRoughness"), sizeof(real));
-	static const Uniform U_CONST_EMISSIVE(UNIFORM("constEmissive"), sizeof(glm::vec4));
-	static const Uniform U_NORMAL_SAMPLER(UNIFORM("normalSampler"));
-	static const Uniform U_ENABLE_ALBEDO_SAMPLER(UNIFORM("enableAlbedoSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_METALLIC_SAMPLER(UNIFORM("enableMetallicSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_ROUGHNESS_SAMPLER(UNIFORM("enableRoughnessSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_NORMAL_SAMPLER(UNIFORM("enableNormalSampler"), sizeof(i32));
-	static const Uniform U_EMISSIVE_SAMPLER(UNIFORM("emissiveSampler"));
-	static const Uniform U_CUBEMAP_SAMPLER(UNIFORM("cubemapSampler"));
-	static const Uniform U_IRRADIANCE_SAMPLER(UNIFORM("irradianceSampler"));
-	static const Uniform U_FB_0_SAMPLER(UNIFORM("normalRoughnessSampler"));
-	static const Uniform U_FB_1_SAMPLER(UNIFORM("albedoMetallicSampler"));
-	static const Uniform U_ENABLE_EMISSIVE_SAMPLER(UNIFORM("enableEmissiveSampler"), sizeof(i32));
-	static const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(UNIFORM("hdrEquirectangular"));
-	static const Uniform U_BRDF_LUT_SAMPLER(UNIFORM("brdfLUT"));
-	static const Uniform U_PREFILTER_MAP(UNIFORM("prefilterMap"));
-	static const Uniform U_EXPOSURE(UNIFORM("exposure"), sizeof(real));
-	static const Uniform U_FONT_CHAR_DATA(UNIFORM("fontCharData"), sizeof(glm::vec4));
-	static const Uniform U_TEX_SIZE(UNIFORM("texSize"), sizeof(glm::vec2));
-	static const Uniform U_TEXTURE_SCALE(UNIFORM("textureScale"), sizeof(real));
-	static const Uniform U_TEX_CHANNEL(UNIFORM("texChannel"), sizeof(i32));
-	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant")); // TODO: Infer this
-	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic")); // TODO: Infer this
-	static const Uniform U_TIME(UNIFORM("time"), sizeof(glm::vec4));
-	static const Uniform U_SDF_DATA(UNIFORM("sdfData"), sizeof(glm::vec4));
-	static const Uniform U_HIGH_RES_TEX(UNIFORM("highResTex"));
-	static const Uniform U_DEPTH_SAMPLER(UNIFORM("depthSampler"));
-	static const Uniform U_NOISE_SAMPLER(UNIFORM("noiseSampler"));
-	static const Uniform U_SSAO_RAW_SAMPLER(UNIFORM("ssaoRawSampler"));
-	static const Uniform U_SSAO_FINAL_SAMPLER(UNIFORM("ssaoFinalSampler"));
-	static const Uniform U_SSAO_NORMAL_SAMPLER(UNIFORM("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
-	static const Uniform U_SSAO_GEN_DATA(UNIFORM("ssaoGenData"), sizeof(SSAOGenData));
-	static const Uniform U_SSAO_BLUR_DATA_DYNAMIC(UNIFORM("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
-	static const Uniform U_SSAO_BLUR_DATA_CONSTANT(UNIFORM("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
-	static const Uniform U_SSAO_SAMPLING_DATA(UNIFORM("ssaoData"), sizeof(SSAOSamplingData));
-	static const Uniform U_LTC_MATRICES_SAMPLER(UNIFORM("ltcMatricesSampler"));
-	static const Uniform U_LTC_AMPLITUDES_SAMPLER(UNIFORM("ltcAmplitudesSampler"));
-	static const Uniform U_SHADOW_CASCADES_SAMPLER(UNIFORM("shadowCascadeSampler"));
-	static const Uniform U_SHADOW_SAMPLING_DATA(UNIFORM("shadowSamplingData"), sizeof(ShadowSamplingData));
-	static const Uniform U_NEAR_FAR_PLANES(UNIFORM("nearFarPlanes"), sizeof(glm::vec2));
-	static const Uniform U_POST_PROCESS_MAT(UNIFORM("postProcessMatrix"), sizeof(glm::mat4));
-	static const Uniform U_SCENE_SAMPLER(UNIFORM("sceneSampler"));
-	static const Uniform U_HISTORY_SAMPLER(UNIFORM("historySampler"));
-	static const Uniform U_LAST_FRAME_VIEWPROJ(UNIFORM("lastFrameViewProj"), sizeof(glm::mat4));
-	static const Uniform U_PARTICLE_BUFFER(UNIFORM("particleBuffer"), sizeof(ParticleBufferData));
-	static const Uniform U_PARTICLE_SIM_DATA(UNIFORM("particleSimData"), sizeof(ParticleSimData));
-	static const Uniform U_OCEAN_DATA(UNIFORM("oceanData"), sizeof(OceanData));
-	static const Uniform U_SKYBOX_DATA(UNIFORM("skyboxData"), sizeof(SkyboxData));
-	static const Uniform U_UV_BLEND_AMOUNT(UNIFORM("uvBlendAmount"), sizeof(glm::vec2));
-	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
-	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
-	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
-	static const Uniform U_TERRAIN_POINT_BUFFER(UNIFORM("terrainPointBuffer"));
-	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"));
-	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
-	static const Uniform U_CHARGE_AMOUNT(UNIFORM("chargeAmount"), sizeof(real));
+	UNIFORMS_START;
+	// NOTE: The order of variables here must match the order used in shaders
+	DECL_UNIFORM(U_MODEL, "model", sizeof(glm::mat4)); // TODO: Rename to OBJECT_TO_WORLD
+	DECL_UNIFORM(U_CAM_POS, "camPos", sizeof(glm::vec4));
+	DECL_UNIFORM(U_VIEW, "view", sizeof(glm::mat4));
+	DECL_UNIFORM(U_VIEW_INV, "invView", sizeof(glm::mat4));
+	DECL_UNIFORM(U_VIEW_PROJECTION, "viewProjection", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PROJECTION, "projection", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PROJECTION_INV, "invProj", sizeof(glm::mat4));
+	DECL_UNIFORM(U_COLOUR_MULTIPLIER, "colourMultiplier", sizeof(glm::vec4));
+	DECL_UNIFORM(U_DIR_LIGHT, "dirLight", (u32)sizeof(DirLightData));
+	DECL_UNIFORM(U_POINT_LIGHTS, "pointLights", sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
+	DECL_UNIFORM(U_SPOT_LIGHTS, "spotLights", sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
+	DECL_UNIFORM(U_AREA_LIGHTS, "areaLights", sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
+	DECL_UNIFORM(U_CONST_ALBEDO, "constAlbedo", (u32)sizeof(glm::vec4));
+	DECL_UNIFORM(U_CONST_METALLIC, "constMetallic", sizeof(real));
+	DECL_UNIFORM(U_CONST_ROUGHNESS, "constRoughness", sizeof(real));
+	DECL_UNIFORM(U_CONST_EMISSIVE, "constEmissive", sizeof(glm::vec4));
+	DECL_UNIFORM(U_ENABLE_ALBEDO_SAMPLER, "enableAlbedoSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_METALLIC_SAMPLER, "enableMetallicSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_ROUGHNESS_SAMPLER, "enableRoughnessSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_NORMAL_SAMPLER, "enableNormalSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_EMISSIVE_SAMPLER, "enableEmissiveSampler", sizeof(i32));
+	DECL_UNIFORM(U_EXPOSURE, "exposure", sizeof(real));
+	DECL_UNIFORM(U_FONT_CHAR_DATA, "fontCharData", sizeof(glm::vec4));
+	DECL_UNIFORM(U_SDF_DATA, "sdfData", sizeof(glm::vec4));
+	DECL_UNIFORM(U_TEX_SIZE, "texSize", sizeof(glm::vec2));
+	DECL_UNIFORM(U_TEX_CHANNEL, "texChannel", sizeof(i32));
+	DECL_UNIFORM(U_OCEAN_DATA, "oceanData", sizeof(OceanData));
+	DECL_UNIFORM(U_SKYBOX_DATA, "skyboxData", sizeof(SkyboxData));
+	DECL_UNIFORM(U_TIME, "time", sizeof(glm::vec4));
+	DECL_UNIFORM(U_SHADOW_SAMPLING_DATA, "shadowSamplingData", sizeof(ShadowSamplingData));
+	DECL_UNIFORM(U_SSAO_GEN_DATA, "ssaoGenData", sizeof(SSAOGenData));
+	DECL_UNIFORM(U_SSAO_BLUR_DATA_DYNAMIC, "ssaoBlurDataDynamic", sizeof(SSAOBlurDataDynamic));
+	DECL_UNIFORM(U_SSAO_BLUR_DATA_CONSTANT, "ssaoBlurDataConstant", sizeof(SSAOBlurDataConstant));
+	DECL_UNIFORM(U_SSAO_SAMPLING_DATA, "ssaoData", sizeof(SSAOSamplingData));
+	DECL_UNIFORM(U_NEAR_FAR_PLANES, "nearFarPlanes", sizeof(glm::vec2));
+	DECL_UNIFORM(U_POST_PROCESS_MAT, "postProcessMatrix", sizeof(glm::mat4));
+	DECL_UNIFORM(U_LAST_FRAME_VIEWPROJ, "lastFrameViewProj", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PARTICLE_BUFFER, "particleBuffer", sizeof(ParticleBufferData));
+	DECL_UNIFORM(U_PARTICLE_SIM_DATA, "particleSimData", sizeof(ParticleSimData));
+	DECL_UNIFORM(U_UV_BLEND_AMOUNT, "uvBlendAmount", sizeof(glm::vec2));
+	DECL_UNIFORM(U_SCREEN_SIZE, "screenSize", sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+	DECL_UNIFORM(U_BLEND_SHARPNESS, "blendSharpness", sizeof(real));
+	DECL_UNIFORM(U_TEXTURE_SCALE, "textureScale", sizeof(real));
+	DECL_UNIFORM(U_TERRAIN_GEN_CONSTANT_DATA, "terrainGenConstantData", sizeof(TerrainGenConstantData));
+	DECL_UNIFORM(U_TERRAIN_GEN_DYNAMIC_DATA, "terrainGenDynamicData", sizeof(TerrainGenDynamicData));
+	DECL_UNIFORM(U_CHARGE_AMOUNT, "chargeAmount", sizeof(real));
+	// Textures & buffers (0-sized)
+	DECL_UNIFORM(U_ALBEDO_SAMPLER, "albedoSampler", 0);
+	DECL_UNIFORM(U_METALLIC_SAMPLER, "metallicSampler", 0);
+	DECL_UNIFORM(U_ROUGHNESS_SAMPLER, "roughnessSampler", 0);
+	DECL_UNIFORM(U_NORMAL_SAMPLER, "normalSampler", 0);
+	DECL_UNIFORM(U_EMISSIVE_SAMPLER, "emissiveSampler", 0);
+	DECL_UNIFORM(U_CUBEMAP_SAMPLER, "cubemapSampler", 0);
+	DECL_UNIFORM(U_IRRADIANCE_SAMPLER, "irradianceSampler", 0);
+	DECL_UNIFORM(U_FB_0_SAMPLER, "normalRoughnessSampler", 0);
+	DECL_UNIFORM(U_FB_1_SAMPLER, "albedoMetallicSampler", 0);
+	DECL_UNIFORM(U_HDR_EQUIRECTANGULAR_SAMPLER, "hdrEquirectangular", 0);
+	DECL_UNIFORM(U_BRDF_LUT_SAMPLER, "brdfLUT", 0);
+	DECL_UNIFORM(U_DEPTH_SAMPLER, "depthSampler", 0);
+	DECL_UNIFORM(U_NOISE_SAMPLER, "noiseSampler", 0);
+	DECL_UNIFORM(U_SSAO_RAW_SAMPLER, "ssaoRawSampler", 0);
+	DECL_UNIFORM(U_SSAO_FINAL_SAMPLER, "ssaoFinalSampler", 0);
+	DECL_UNIFORM(U_SSAO_NORMAL_SAMPLER, "ssaoNormalSampler", 0); // TODO: Use normalSampler uniform?
+	DECL_UNIFORM(U_LTC_MATRICES_SAMPLER, "ltcMatricesSampler", 0);
+	DECL_UNIFORM(U_LTC_AMPLITUDES_SAMPLER, "ltcAmplitudesSampler", 0);
+	DECL_UNIFORM(U_SHADOW_CASCADES_SAMPLER, "shadowCascadeSampler", 0);
+	DECL_UNIFORM(U_SCENE_SAMPLER, "sceneSampler", 0);
+	DECL_UNIFORM(U_HISTORY_SAMPLER, "historySampler", 0);
+	DECL_UNIFORM(U_PREFILTER_MAP, "prefilterMap", 0);
+	DECL_UNIFORM(U_HIGH_RES_TEX, "highResTex", 0);
+	DECL_UNIFORM(U_TERRAIN_POINT_BUFFER, "terrainPointBuffer", 0);
+	DECL_UNIFORM(U_TERRAIN_VERTEX_BUFFER, "terrainVertexBuffer", 0);
+	DECL_UNIFORM(U_RANDOM_TABLES, "randomTables", 0);
+	DECL_UNIFORM(U_UNIFORM_BUFFER_CONSTANT, "uniformBufferConstant", 0); // TODO: Infer this
+	DECL_UNIFORM(U_UNIFORM_BUFFER_DYNAMIC, "uniformBufferDynamic", 0); // TODO: Infer this
 
-#undef UNIFORM
+#undef DECL_UNIFORM
+#undef UNIFORMS_START
 
 	enum class ClearFlag
 	{
@@ -1149,8 +1157,8 @@ namespace flex
 		using UniformPair = Pair<Uniform const*, MaterialPropertyOverride>;
 
 		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride);
-		bool HasUniform(Uniform const* uniform) const;
-		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const;
+		bool HasUniform(StringID uniformID) const;
+		bool HasUniform(StringID uniformID, MaterialPropertyOverride& outPropertyOverride) const;
 
 		void Clear();
 
@@ -1202,16 +1210,15 @@ namespace flex
 		glm::vec2 prefilteredMapSize = VEC2_ZERO;
 		glm::vec4 colourMultiplier = VEC4_ONE;
 
-		bool enableNormalSampler = false;
-
 		bool generateCubemapSampler = false;
 		bool enableCubemapSampler = false;
 
 		// PBR samplers
 		bool enableAlbedoSampler = false;
-		bool enableEmissiveSampler = false;
 		bool enableMetallicSampler = false;
 		bool enableRoughnessSampler = false;
+		bool enableNormalSampler = false;
+		bool enableEmissiveSampler = false;
 
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;

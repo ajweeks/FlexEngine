@@ -17,17 +17,13 @@ namespace flex
 		return memcmp(&lhs, &rhs, sizeof(RoadSegment_GPU)) == 0;
 	}
 
-	Uniform::Uniform(const char* uniformName, StringID id, u64 size) :
+	Uniform::Uniform(const char* uniformName, StringID id, u64 size, u32 index) :
 		id(id),
-		size((u32)size)
+		size((u32)size),
+		DBG_name(uniformName),
+		index(index)
 	{
 		RegisterUniform(id, this);
-
-#if DEBUG
-		DBG_name = uniformName;
-#else
-		FLEX_UNUSED(uniformName);
-#endif
 	}
 
 	static std::vector<Uniform const*>& GetAllUniforms()
@@ -111,7 +107,22 @@ namespace flex
 
 		if (!HasUniform(uniform))
 		{
-			uniforms.emplace_back(uniform);
+			// Insert while maintaining order by uniform index
+			bool bFoundSlot = false;
+			for (auto iter = uniforms.begin(); iter != uniforms.end(); ++iter)
+			{
+				if (uniform->index < (*iter)->index)
+				{
+					uniforms.emplace(iter, uniform);
+					bFoundSlot = true;
+					break;
+				}
+			}
+			if (!bFoundSlot)
+			{
+				uniforms.emplace_back(uniform);
+			}
+
 			totalSizeInBytes += (u32)uniform->size;
 		}
 	}
@@ -845,18 +856,18 @@ namespace flex
 		overrides[uniform->id] = UniformPair(uniform, propertyOverride);
 	}
 
-	bool UniformOverrides::HasUniform(Uniform const* uniform) const
+	bool UniformOverrides::HasUniform(StringID uniformID) const
 	{
 		PROFILE_AUTO("UniformOverrides HasUniform");
 
-		return Contains(overrides, uniform->id);
+		return Contains(overrides, uniformID);
 	}
 
-	bool UniformOverrides::HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
+	bool UniformOverrides::HasUniform(StringID uniformID, MaterialPropertyOverride& outPropertyOverride) const
 	{
 		PROFILE_AUTO("UniformOverrides HasUniform outPropertyOverride");
 
-		auto iter = overrides.find(uniform->id);
+		auto iter = overrides.find(uniformID);
 		if (iter != overrides.end())
 		{
 			outPropertyOverride = iter->second.second;

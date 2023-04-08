@@ -902,10 +902,6 @@ namespace flex
 			material->albedoTexturePath = createInfo->albedoTexturePath;
 			material->enableAlbedoSampler = createInfo->enableAlbedoSampler;
 
-			material->constEmissive = createInfo->constEmissive;
-			material->emissiveTexturePath = createInfo->emissiveTexturePath;
-			material->enableEmissiveSampler = createInfo->enableEmissiveSampler;
-
 			material->constMetallic = createInfo->constMetallic;
 			material->metallicTexturePath = createInfo->metallicTexturePath;
 			material->enableMetallicSampler = createInfo->enableMetallicSampler;
@@ -913,6 +909,10 @@ namespace flex
 			material->constRoughness = createInfo->constRoughness;
 			material->roughnessTexturePath = createInfo->roughnessTexturePath;
 			material->enableRoughnessSampler = createInfo->enableRoughnessSampler;
+
+			material->constEmissive = createInfo->constEmissive;
+			material->emissiveTexturePath = createInfo->emissiveTexturePath;
+			material->enableEmissiveSampler = createInfo->enableEmissiveSampler;
 
 			material->colourMultiplier = createInfo->colourMultiplier;
 
@@ -9620,39 +9620,54 @@ namespace flex
 			viewInv = glm::inverse(view);
 			projectionInv = glm::inverse(projection);
 
-			UniformInfo uniformInfos[] = {
-				{ &U_CAM_POS, (void*)&camPos },
-				{ &U_VIEW, (void*)&view },
-				{ &U_VIEW_INV, (void*)&viewInv },
-				{ &U_VIEW_PROJECTION, (void*)&viewProjection },
-				{ &U_PROJECTION, (void*)&projection },
-				{ &U_PROJECTION_INV, (void*)&projectionInv },
-				{ &U_LAST_FRAME_VIEWPROJ, (void*)&m_LastFrameViewProj },
-				{ &U_DIR_LIGHT, (void*)dirLightData },
-				{ &U_POINT_LIGHTS, (void*)m_PointLightData },
-				{ &U_SPOT_LIGHTS, (void*)m_SpotLightData },
-				{ &U_AREA_LIGHTS, (void*)m_AreaLightData },
-				{ &U_OCEAN_DATA, (void*)&defaultOceanData },
-				{ &U_SKYBOX_DATA, (void*)&skyboxData },
-				{ &U_TIME, (void*)&time },
-				{ &U_SHADOW_SAMPLING_DATA, (void*)&m_ShadowSamplingData },
-				{ &U_SSAO_GEN_DATA, (void*)&m_SSAOGenData },
-				{ &U_SSAO_BLUR_DATA_CONSTANT, (void*)&m_SSAOBlurDataConstant },
-				{ &U_SSAO_SAMPLING_DATA, (void*)&m_SSAOSamplingData },
-				{ &U_EXPOSURE, (void*)&exposure },
-				{ &U_NEAR_FAR_PLANES, (void*)&nearFarPlanes },
-				{ &U_SCREEN_SIZE, (void*)&screenSize },
-				{ &U_TERRAIN_GEN_CONSTANT_DATA, (void*)terrainGenConstantData },
-			};
-
-			for (UniformInfo& info : uniformInfos)
+			auto GetUniformValue = [&](Uniform const* uniform, u8* dst, u32& index, VulkanMaterial* material)
 			{
-				auto iter = m_GlobalUserUniforms.find(info.uniform->id);
-				if (iter != m_GlobalUserUniforms.end())
+				void* dataStart = nullptr;
+
+				switch (uniform->id)
 				{
-					info.dataStart = iter->second.first;
+				case U_CAM_POS_ID: dataStart = (void*)&camPos; break;
+				case U_VIEW_ID: dataStart = (void*)&view; break;
+				case U_VIEW_INV_ID: dataStart = (void*)&viewInv; break;
+				case U_VIEW_PROJECTION_ID: dataStart = (void*)&viewProjection; break;
+				case U_PROJECTION_ID: dataStart = (void*)&projection; break;
+				case U_PROJECTION_INV_ID: dataStart = (void*)&projectionInv; break;
+				case U_DIR_LIGHT_ID: dataStart = (void*)dirLightData; break;
+				case U_POINT_LIGHTS_ID: dataStart = (void*)m_PointLightData; break;
+				case U_SPOT_LIGHTS_ID: dataStart = (void*)m_SpotLightData; break;
+				case U_AREA_LIGHTS_ID: dataStart = (void*)m_AreaLightData; break;
+				case U_EXPOSURE_ID: dataStart = (void*)&exposure; break;
+				case U_TIME_ID: dataStart = (void*)&time; break;
+				case U_OCEAN_DATA_ID: dataStart = (void*)&defaultOceanData; break;
+				case U_SKYBOX_DATA_ID: dataStart = (void*)&skyboxData; break;
+				case U_SHADOW_SAMPLING_DATA_ID: dataStart = (void*)&m_ShadowSamplingData; break;
+				case U_NEAR_FAR_PLANES_ID: dataStart = (void*)&nearFarPlanes; break;
+				case U_SSAO_GEN_DATA_ID: dataStart = (void*)&m_SSAOGenData; break;
+				case U_SSAO_BLUR_DATA_CONSTANT_ID: dataStart = (void*)&m_SSAOBlurDataConstant; break;
+				case U_SSAO_SAMPLING_DATA_ID: dataStart = (void*)&m_SSAOSamplingData; break;
+				case U_LAST_FRAME_VIEWPROJ_ID: dataStart = (void*)&m_LastFrameViewProj; break;
+				case U_SCREEN_SIZE_ID: dataStart = (void*)&screenSize; break;
+				case U_TERRAIN_GEN_CONSTANT_DATA_ID: dataStart = (void*)terrainGenConstantData; break;
 				}
-			}
+
+				if (dataStart != nullptr)
+				{
+					auto iter = m_GlobalUserUniforms.find(uniform->id);
+					if (iter != m_GlobalUserUniforms.end())
+					{
+						dataStart = iter->second.first;
+					}
+					MaterialPropertyOverride uniformOverride;
+					if (material->uniformOverrides.HasUniform(uniform->id, uniformOverride))
+					{
+						dataStart = uniformOverride.GetDataPointer();
+					}
+
+					memcpy(dst, dataStart, uniform->size);
+				}
+
+				index += uniform->size;
+			};
 
 			for (auto& MaterialPair : m_Materials)
 			{
@@ -9670,23 +9685,9 @@ namespace flex
 
 					u32 index = 0;
 					memset(constantBuffer->data.data, 0, constantBuffer->data.unitSize);
-					for (UniformInfo& uniformInfo : uniformInfos)
+					for (Uniform const* uniform : constantUniforms.uniforms)
 					{
-						if (constantUniforms.HasUniform(uniformInfo.uniform))
-						{
-							void* dataStart = uniformInfo.dataStart;
-
-							MaterialPropertyOverride uniformOverride;
-							if (material->uniformOverrides.HasUniform(uniformInfo.uniform, uniformOverride))
-							{
-								dataStart = uniformOverride.GetDataPointer();
-							}
-
-							CHECK_NE(uniformInfo.uniform->size, 0u);
-
-							memcpy(constantBuffer->data.data + index, dataStart, uniformInfo.uniform->size);
-							index += uniformInfo.uniform->size;
-						}
+						GetUniformValue(uniform, constantBuffer->data.data + index, index, material);
 					}
 
 					u32 bufferUnitSize = constantBuffer->data.unitSize;
@@ -9722,7 +9723,7 @@ namespace flex
 			u32 dynamicOffset,
 			// TODO: Rename to objectToWorld
 			const glm::mat4& model,
-			UniformOverrides const* uniformOverrides /* = nullptr */)
+			UniformOverrides const* userUniformOverrides /* = nullptr */)
 		{
 			PROFILE_AUTO("UpdateDynamicUniformBuffer");
 
@@ -9759,155 +9760,78 @@ namespace flex
 			TerrainGenDynamicData terrainGenDynamicData = {};
 			real chargeAmount = 0.0f;
 
-			auto ApplyOverrides = [&](UniformOverrides const* overrides)
+			auto GetUniformValue = [&](Uniform const* uniform, VulkanMaterial* material,
+				UniformOverrides const* userUniformOverrides, u8* dst, u32& index, u32 dynamicOffset, u32 fullDynamicBufferSize)
 			{
-				MaterialPropertyOverride propertyOverride;
-				if (overrides->HasUniform(&U_ENABLE_ALBEDO_SAMPLER, propertyOverride))
-				{
-					enableAlbedoSampler = propertyOverride.boolValue;
-				}
-				if (overrides->HasUniform(&U_ENABLE_METALLIC_SAMPLER, propertyOverride))
-				{
-					enableMetallicSampler = propertyOverride.boolValue;
-				}
-				if (overrides->HasUniform(&U_ENABLE_ROUGHNESS_SAMPLER, propertyOverride))
-				{
-					enableRoughnessSampler = propertyOverride.boolValue;
-				}
-				if (overrides->HasUniform(&U_ENABLE_NORMAL_SAMPLER, propertyOverride))
-				{
-					enableNormalSampler = propertyOverride.boolValue;
-				}
-				if (overrides->HasUniform(&U_CONST_ALBEDO, propertyOverride))
-				{
-					constAlbedo = propertyOverride.vec4Value;
-				}
-				if (overrides->HasUniform(&U_CONST_EMISSIVE, propertyOverride))
-				{
-					constEmissive = propertyOverride.vec4Value;
-				}
-				if (overrides->HasUniform(&U_CONST_METALLIC, propertyOverride))
-				{
-					constMetallic = propertyOverride.realValue;
-				}
-				if (overrides->HasUniform(&U_CONST_ROUGHNESS, propertyOverride))
-				{
-					constRoughness = propertyOverride.realValue;
-				}
-				if (overrides->HasUniform(&U_SDF_DATA, propertyOverride))
-				{
-					sdfData = propertyOverride.vec4Value;
-				}
-				if (overrides->HasUniform(&U_TEX_SIZE, propertyOverride))
-				{
-					texSize = propertyOverride.vec2Value;
-				}
-				if (overrides->HasUniform(&U_FONT_CHAR_DATA, propertyOverride))
-				{
-					fontCharData = propertyOverride.vec4Value;
-				}
-				if (overrides->HasUniform(&U_TEX_CHANNEL, propertyOverride))
-				{
-					texChannel = propertyOverride.i32Value;
-				}
-				if (overrides->HasUniform(&U_SSAO_BLUR_DATA_DYNAMIC, propertyOverride))
-				{
-					m_SSAOBlurDataDynamic.ssaoTexelOffset = propertyOverride.vec2Value;
-				}
-				if (overrides->HasUniform(&U_COLOUR_MULTIPLIER, propertyOverride))
-				{
-					colourMultiplier = propertyOverride.vec4Value;
-				}
-				if (overrides->HasUniform(&U_PARTICLE_SIM_DATA, propertyOverride))
-				{
-					particleSimData = *(ParticleSimData*)propertyOverride.pointerValue;
-				}
-				if (overrides->HasUniform(&U_UV_BLEND_AMOUNT, propertyOverride))
-				{
-					uvBlendAmount = propertyOverride.vec2Value;
-				}
-				if (overrides->HasUniform(&U_TERRAIN_GEN_DYNAMIC_DATA, propertyOverride))
-				{
-					terrainGenDynamicData = *(TerrainGenDynamicData*)propertyOverride.pointerValue;
-				}
-				if (overrides->HasUniform(&U_CHARGE_AMOUNT, propertyOverride))
-				{
-					chargeAmount = propertyOverride.realValue;
-				}
-			};
-
-			if (uniformOverrides != nullptr)
-			{
-				ApplyOverrides(uniformOverrides);
-			}
-
-			struct UniformInfo
-			{
-				Uniform const* uniform;
 				void* dataStart = nullptr;
-			};
-			UniformInfo uniformInfos[] = {
-				{ &U_MODEL, (void*)&model },
-				{ &U_COLOUR_MULTIPLIER, (void*)&colourMultiplier },
-				{ &U_CONST_ALBEDO, (void*)&constAlbedo },
-				{ &U_CONST_EMISSIVE, (void*)&constEmissive },
-				{ &U_CONST_METALLIC, (void*)&constMetallic },
-				{ &U_CONST_ROUGHNESS, (void*)&constRoughness },
-				{ &U_ENABLE_ALBEDO_SAMPLER, (void*)&enableAlbedoSampler },
-				{ &U_ENABLE_EMISSIVE_SAMPLER, (void*)&enableEmissiveSampler },
-				{ &U_ENABLE_METALLIC_SAMPLER, (void*)&enableMetallicSampler },
-				{ &U_ENABLE_ROUGHNESS_SAMPLER, (void*)&enableRoughnessSampler },
-				{ &U_ENABLE_NORMAL_SAMPLER, (void*)&enableNormalSampler },
-				{ &U_BLEND_SHARPNESS, (void*)&blendSharpness },
-				{ &U_TEXTURE_SCALE, (void*)&textureScale },
-				{ &U_FONT_CHAR_DATA, (void*)&fontCharData },
-				{ &U_TEX_SIZE, (void*)&texSize  },
-				{ &U_SDF_DATA, (void*)&sdfData },
-				{ &U_TEX_CHANNEL, (void*)&texChannel },
-				{ &U_SSAO_BLUR_DATA_DYNAMIC, (void*)&m_SSAOBlurDataDynamic },
-				{ &U_POST_PROCESS_MAT, (void*)&postProcessMatrix },
-				{ &U_PARTICLE_SIM_DATA, (void*)&particleSimData },
-				{ &U_UV_BLEND_AMOUNT, (void*)&uvBlendAmount },
-				{ &U_TERRAIN_GEN_DYNAMIC_DATA, (void*)&terrainGenDynamicData },
-				{ &U_CHARGE_AMOUNT, (void*)&chargeAmount },
-			};
 
-			u32 index = 0;
-			const UniformList& dynamicUniforms = shader->dynamicBufferUniforms;
-			for (const UniformInfo& uniformInfo : uniformInfos)
-			{
-				if (dynamicUniforms.HasUniform(uniformInfo.uniform))
+				switch (uniform->id)
 				{
-					CHECK_NE(uniformInfo.uniform->size, 0u);
+				case U_MODEL_ID: dataStart = (void*)&model; break;
+				case U_COLOUR_MULTIPLIER_ID: dataStart = (void*)&colourMultiplier; break;
+				case U_CONST_ALBEDO_ID: dataStart = (void*)&constAlbedo; break;
+				case U_CONST_EMISSIVE_ID: dataStart = (void*)&constEmissive; break;
+				case U_CONST_METALLIC_ID: dataStart = (void*)&constMetallic; break;
+				case U_CONST_ROUGHNESS_ID: dataStart = (void*)&constRoughness; break;
+				case U_ENABLE_ALBEDO_SAMPLER_ID: dataStart = (void*)&enableAlbedoSampler; break;
+				case U_ENABLE_METALLIC_SAMPLER_ID: dataStart = (void*)&enableMetallicSampler; break;
+				case U_ENABLE_ROUGHNESS_SAMPLER_ID: dataStart = (void*)&enableRoughnessSampler; break;
+				case U_ENABLE_NORMAL_SAMPLER_ID: dataStart = (void*)&enableNormalSampler; break;
+				case U_ENABLE_EMISSIVE_SAMPLER_ID: dataStart = (void*)&enableEmissiveSampler; break;
+				case U_BLEND_SHARPNESS_ID: dataStart = (void*)&blendSharpness; break;
+				case U_TEXTURE_SCALE_ID: dataStart = (void*)&textureScale; break;
+				case U_FONT_CHAR_DATA_ID: dataStart = (void*)&fontCharData; break;
+				case U_TEX_SIZE_ID: dataStart = (void*)&texSize; break;
+				case U_SDF_DATA_ID: dataStart = (void*)&sdfData; break;
+				case U_TEX_CHANNEL_ID: dataStart = (void*)&texChannel; break;
+				case U_SSAO_BLUR_DATA_DYNAMIC_ID: dataStart = (void*)&m_SSAOBlurDataDynamic; break;
+				case U_POST_PROCESS_MAT_ID: dataStart = (void*)&postProcessMatrix; break;
+				case U_PARTICLE_SIM_DATA_ID: dataStart = (void*)&particleSimData; break;
+				case U_UV_BLEND_AMOUNT_ID: dataStart = (void*)&uvBlendAmount; break;
+				case U_TERRAIN_GEN_DYNAMIC_DATA_ID: dataStart = (void*)&terrainGenDynamicData; break;
+				case U_CHARGE_AMOUNT_ID: dataStart = (void*)&chargeAmount; break;
+				}
 
-					// Resize buffer is not large enough
-					if (dynamicOffset + index + uniformInfo.uniform->size > dynamicBuffer->fullDynamicBufferSize)
-					{
-						VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-						VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
-
-						// TODO: Untested path! May need GPU flush/dynamic UBO update here
-						real growthRate = 1.5f;
-						u32 newUsedSize = (u32)(glm::max(dynamicBuffer->fullDynamicBufferSize, 2u) * growthRate);
-						i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment);
-						UpdateShaderMaxObjectCount(material->shaderID, newMax);
-					}
-
-					void* dataStart = uniformInfo.dataStart;
-
+				if (dataStart != nullptr)
+				{
 					MaterialPropertyOverride uniformOverride;
-					if (material->uniformOverrides.HasUniform(uniformInfo.uniform, uniformOverride) &&
-						uniformOverrides != nullptr &&
-						!uniformOverrides->HasUniform(uniformInfo.uniform))
+					if (userUniformOverrides != nullptr && userUniformOverrides->HasUniform(uniform->id, uniformOverride))
+					{
+						dataStart = &uniformOverride;
+					}
+					else if (material->uniformOverrides.HasUniform(uniform->id, uniformOverride))
 					{
 						// Material overrides only apply when not overridden explicitly by caller
 						dataStart = &uniformOverride;
 					}
 
-					CHECK_LE((dynamicOffset + index + uniformInfo.uniform->size), dynamicBuffer->fullDynamicBufferSize);
-					memcpy(&dynamicBuffer->data.data[dynamicOffset + index], uniformInfo.dataStart, uniformInfo.uniform->size);
-					index += uniformInfo.uniform->size;
+					CHECK_LE((dynamicOffset + index + uniform->size), fullDynamicBufferSize);
+					memcpy(dst, dataStart, uniform->size);
 				}
+
+				index += uniform->size;
+			};
+
+			u32 index = 0;
+			const UniformList& dynamicUniforms = shader->dynamicBufferUniforms;
+			for (Uniform const* uniform : dynamicUniforms.uniforms)
+			{
+				// Resize buffer is not large enough (TODO: Only check on initialization)
+				if (dynamicOffset + index + uniform->size > dynamicBuffer->fullDynamicBufferSize)
+				{
+					VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+					VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
+
+					// TODO: Untested path! May need GPU flush/dynamic UBO update here
+					real growthRate = 1.5f;
+					u32 newUsedSize = (u32)(glm::max(dynamicBuffer->fullDynamicBufferSize, 2u) * growthRate);
+					i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment);
+					UpdateShaderMaxObjectCount(material->shaderID, newMax);
+				}
+
+				GetUniformValue(uniform, material, userUniformOverrides,
+					&dynamicBuffer->data.data[dynamicOffset + index], index, dynamicOffset,
+					dynamicBuffer->fullDynamicBufferSize);
 			}
 
 			u32 bufferUnitSize = dynamicBuffer->data.unitSize;
