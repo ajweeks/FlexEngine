@@ -280,8 +280,8 @@ namespace flex
 		struct PostProcessSettings
 		{
 			real saturation = 1.0f;
-			glm::vec3 brightness;
-			glm::vec3 offset;
+			glm::vec3 brightness = VEC3_ONE;
+			glm::vec3 offset = VEC3_ZERO;
 			bool bEnableFXAA = true;
 			bool bEnableFXAADEBUGShowEdges = false;
 		};

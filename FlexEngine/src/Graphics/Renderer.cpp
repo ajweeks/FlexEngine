@@ -2167,7 +2167,6 @@ namespace flex
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_POST_PROCESS_MAT);
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);

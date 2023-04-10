@@ -1,11 +1,5 @@
 #version 450
 
-layout (binding = 0) uniform UBODynamic
-{
-	vec4 colourMultiplier;
-	mat4 contrastBrightnessSaturation;
-} uboDynamic;
-
 layout (location = 0) in vec2 in_Position2D;
 layout (location = 1) in vec2 in_TexCoord;
 
