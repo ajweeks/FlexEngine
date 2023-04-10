@@ -116,19 +116,18 @@ namespace flex
 
 		bool IsLoaded() const;
 
-		std::vector<GameObject*> GetAllObjects() const;
-		std::vector<GameObjectID> GetAllObjectIDs() const;
-
 		template<class T>
-		T* GetObjectOfType(StringID typeID)
+		T* GetFirstObjectOfType(StringID typeID)
 		{
-			std::vector<GameObject*> gameObjects = GetAllObjects();
-
-			for (GameObject* gameObject : gameObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (gameObject->GetTypeID() == typeID)
+				GameObject* result = rootObject->FilterFirst([&typeID](GameObject* gameObject)
 				{
-					return (T*)gameObject;
+					return (gameObject->GetTypeID() == typeID);
+				});
+				if (result != nullptr)
+				{
+					return (T*)result;
 				}
 			}
 
@@ -138,15 +137,14 @@ namespace flex
 		template<class T>
 		std::vector<T*> GetObjectsOfType(StringID typeID)
 		{
-			std::vector<GameObject*> gameObjects = GetAllObjects();
 			std::vector<T*> result;
 
-			for (GameObject* gameObject : gameObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (gameObject->GetTypeID() == typeID)
+				rootObject->FilterType([&typeID](GameObject* gameObject)
 				{
-					result.push_back((T*)gameObject);
-				}
+					return (gameObject->GetTypeID() == typeID);
+				}, result);
 			}
 
 			return result;
@@ -238,6 +236,9 @@ namespace flex
 		friend GameObject;
 		friend EditorObject;
 		friend SceneManager;
+
+		void FindNextAvailableUniqueName(GameObject* gameObject, i32& highestNoNameObj, i16& maxNumChars, const char* defaultNewNameBase);
+		void DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject);
 
 		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
 

@@ -469,11 +469,18 @@ namespace flex
 
 	void Editor::SelectAll()
 	{
-		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-		for (GameObject* gameObject : allObjects)
+		std::vector<GameObject*> nearbyInteractables;
+
+		m_CurrentlySelectedObjectIDs.clear();
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		for (GameObject* rootObject : currentScene->GetRootObjects())
 		{
-			m_CurrentlySelectedObjectIDs.push_back(gameObject->ID);
+			rootObject->FilterID([](GameObject*)
+			{
+				return true;
+			}, m_CurrentlySelectedObjectIDs);
 		}
+
 		CalculateSelectedObjectsCenter();
 	}
 

@@ -983,30 +983,6 @@ namespace flex
 		return m_bLoaded;
 	}
 
-	std::vector<GameObject*> BaseScene::GetAllObjects() const
-	{
-		std::vector<GameObject*> result;
-
-		for (GameObject* obj : m_RootObjects)
-		{
-			obj->AddSelfAndChildrenToVec(result);
-		}
-
-		return result;
-	}
-
-	std::vector<GameObjectID> BaseScene::GetAllObjectIDs() const
-	{
-		std::vector<GameObjectID> result;
-
-		for (GameObject* obj : m_RootObjects)
-		{
-			obj->AddSelfIDAndChildrenToVec(result);
-		}
-
-		return result;
-	}
-
 	bool BaseScene::FindConflictingObjectsWithName(GameObject* parent, const std::string& name, const std::vector<GameObject*>& objects)
 	{
 		for (const GameObject* gameObject : objects)
@@ -1345,6 +1321,25 @@ namespace flex
 		return bChanged;
 	}
 
+	void BaseScene::FindNextAvailableUniqueName(GameObject* gameObject, i32& highestNoNameObj, i16& maxNumChars, const char* defaultNewNameBase)
+	{
+		if (StartsWith(gameObject->GetName(), defaultNewNameBase))
+		{
+			i16 numChars;
+			i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
+			if (num != -1)
+			{
+				highestNoNameObj = glm::max(highestNoNameObj, num);
+				maxNumChars = glm::max(maxNumChars, maxNumChars);
+			}
+		}
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			FindNextAvailableUniqueName(child, highestNoNameObj, maxNumChars, defaultNewNameBase);
+		}
+	}
+
 	void BaseScene::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
 	{
 		static const char* defaultNewNameBase = "New_Object_";
@@ -1360,19 +1355,9 @@ namespace flex
 
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
-			const std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-			for (GameObject* gameObject : allObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (StartsWith(gameObject->GetName(), defaultNewNameBase))
-				{
-					i16 numChars;
-					i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
-					if (num != -1)
-					{
-						highestNoNameObj = glm::max(highestNoNameObj, num);
-						maxNumChars = glm::max(maxNumChars, maxNumChars);
-					}
-				}
+				FindNextAvailableUniqueName(rootObject, highestNoNameObj, maxNumChars, defaultNewNameBase);
 			}
 			newObjectName = defaultNewNameBase + IntToString(highestNoNameObj + 1, maxNumChars);
 		}
@@ -1858,13 +1843,12 @@ namespace flex
 	{
 		u32 total = 0;
 
-		std::vector<GameObject*> allObjects = GetAllObjects();
-		for (GameObject* gameObject : allObjects)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
+			total += rootObject->FilterCount([&prefabID](GameObject* gameObject)
 			{
-				++total;
-			}
+				return (gameObject->m_SourcePrefabID.m_PrefabID == prefabID);
+			});
 		}
 
 		return total;
@@ -1872,19 +1856,22 @@ namespace flex
 
 	void BaseScene::DeleteInstancesOfPrefab(const PrefabID& prefabID)
 	{
-		std::vector<GameObjectID> allGameObjectIDs = GetAllObjectIDs();
-		for (const GameObjectID& gameObjectID : allGameObjectIDs)
+		for (GameObject* rootGameObject : m_RootObjects)
 		{
-			GameObject* gameObject = gameObjectID.Get();
-			if (gameObject != nullptr)
-			{
-				if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
-				{
-					std::string objName = gameObject->GetName();
-					PrintWarn("Deleting prefab instance %s\n", objName.c_str());
-					RemoveObjectImmediate(gameObject, true);
-				}
-			}
+			DeleteInstancesOfPrefabRecursive(prefabID, rootGameObject);
+		}
+	}
+
+	void BaseScene::DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject)
+	{
+		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
+		{
+			RemoveObjectImmediate(gameObject, true);
+		}
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			DeleteInstancesOfPrefabRecursive(prefabID, child);
 		}
 	}
 
@@ -2044,7 +2031,7 @@ namespace flex
 
 	void BaseScene::RegenerateTerrain()
 	{
-		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(TerrainGeneratorSID);
+		TerrainGenerator* terrainGenerator = GetFirstObjectOfType<TerrainGenerator>(TerrainGeneratorSID);
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->Regenerate();
@@ -2767,13 +2754,12 @@ namespace flex
 
 	void BaseScene::GetInteractableObjects(std::vector<GameObject*>& interactableObjects)
 	{
-		std::vector<GameObject*> allObjects = GetAllObjects();
-		for (GameObject* object : allObjects)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (object->m_bInteractable)
+			rootObject->Filter([](GameObject* gameObject)
 			{
-				interactableObjects.push_back(object);
-			}
+				return gameObject->m_bInteractable;
+			}, interactableObjects);
 		}
 	}
 
@@ -2782,8 +2768,25 @@ namespace flex
 		real sqDistThreshold,
 		GameObjectID excludeGameObjectID)
 	{
-		std::vector<GameObject*> allObjects = GetAllObjects();
-		for (GameObject* object : allObjects)
+		std::vector<GameObject*> nearbyInteractables;
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			rootObject->Filter([excludeGameObjectID, &posWS, &sqDistThreshold](GameObject* gameObject)
+			{
+				if (gameObject->m_bInteractable && gameObject->ID != excludeGameObjectID)
+				{
+					real dist2 = glm::distance2(gameObject->GetTransform()->GetWorldPosition(), posWS);
+					if (dist2 <= sqDistThreshold)
+					{
+						return true;
+					}
+				}
+				return false;
+			}, nearbyInteractables);
+		}
+
+		for (GameObject* object : nearbyInteractables)
 		{
 			if (object->m_bInteractable && object->ID != excludeGameObjectID)
 			{

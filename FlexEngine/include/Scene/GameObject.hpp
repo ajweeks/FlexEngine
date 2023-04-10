@@ -211,6 +211,31 @@ namespace flex
 
 		void RemoveRigidBody();
 
+		// Fills the given vector with game objects that pass the filter
+		template<typename T>
+		void FilterType(std::function<bool(GameObject*)> callback, std::vector<T*> list)
+		{
+			if (callback(this))
+			{
+				list.emplace_back((T*)this);
+			}
+
+			for (GameObject* child : m_Children)
+			{
+				child->FilterType(callback, list);
+			}
+		}
+
+		// Fills the given vector with game objects that pass the filter
+		void Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*> list);
+		// Fills the given vector with game object IDs that pass the filter
+		void FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID> list);
+		// Returns the number of objects which pass the filter
+		u32 FilterCount(std::function<bool(GameObject*)> callback);
+		u32 FilterCountInternal(std::function<bool(GameObject*)> callback, u32 count);
+		// Returns the first found object that passes the filter
+		GameObject* FilterFirst(std::function<bool(GameObject*)> callback);
+
 		void SetParent(GameObject* parent);
 		GameObject* GetParent();
 		void DetachFromParent();

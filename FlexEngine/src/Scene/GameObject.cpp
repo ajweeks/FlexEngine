@@ -1455,6 +1455,70 @@ namespace flex
 		}
 	}
 
+	void GameObject::Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*> list)
+	{
+		if (callback(this))
+		{
+			list.emplace_back(this);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			child->Filter(callback, list);
+		}
+	}
+
+	void GameObject::FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID> list)
+	{
+		if (callback(this))
+		{
+			list.emplace_back(ID);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			child->FilterID(callback, list);
+		}
+	}
+
+	u32 GameObject::FilterCount(std::function<bool(GameObject*)> callback)
+	{
+		return FilterCountInternal(callback, 0);
+	}
+
+	u32 GameObject::FilterCountInternal(std::function<bool(GameObject*)> callback, u32 count)
+	{
+		if (callback(this))
+		{
+			++count;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			count += child->FilterCountInternal(callback, count);
+		}
+
+		return count;
+	}
+
+	GameObject* GameObject::FilterFirst(std::function<bool(GameObject*)> callback)
+	{
+		if (callback(this))
+		{
+			return this;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			GameObject* result = child->FilterFirst(callback);
+			if (result != nullptr)
+			{
+				return result;
+			}
+		}
+
+		return nullptr;
+	}
 	void GameObject::FixupPrefabTemplateIDs(GameObject* newGameObject)
 	{
 		FLEX_UNUSED(newGameObject);
