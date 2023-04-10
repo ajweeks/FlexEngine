@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_vehicle_test",
 	"spawn player" : true,
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
@@ -16,9 +16,9 @@
 		"move speed" : 78.362000,
 		"transform" : 
 		{
-			"position" : "-168.602, 876.351, 142.816",
-			"pitch" : -0.549132,
-			"yaw" : -0.572664
+			"position" : "16.462, 4.494, -4.196",
+			"pitch" : -0.259685,
+			"yaw" : -3.394108
 		}
 	},
 	"objects" : 
@@ -31,10 +31,7 @@
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
 			"name" : "Directional Light",
@@ -43,17 +40,12 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "1.594, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
 				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 0.887000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 0.89
 			}
 		},
 		{
@@ -68,21 +60,21 @@
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 16,
 				"chunk size" : 922.375000,
+				"pin center" : true,
+				"vert count per chunk axis" : 16,
 				"max height" : 500.000000,
 				"use manual seed" : true,
 				"manual seed" : 6,
+				"loaded chunk radius" : 2408.23,
+				"loaded chunk rigid body square radius" : 10000.00,
+				"base table width" : 256,
 				"isolate noise layer" : 0,
 				"num points per axis" : 17,
 				"max chunk count" : 142,
-				"loaded chunk radius" : 2408.229004,
-				"loaded chunk rigid body square radius" : 10000.000000,
-				"base table width" : 256,
 				"low colour" : "0.33,0.41,0.33",
 				"mid colour" : "0.51,0.58,0.37",
 				"high colour" : "0.65,0.70,0.43",
-				"pin center" : true,
 				"pinned center" : "0.03,10.43,-0.00",
 				"biomes" : 
 				[
@@ -190,7 +182,6 @@
 			]
 		},
 		{
-			"name" : "lamp",
 			"id" : "2A481CAE02CB868D420EE3C8CCEE4421",
 			"type" : "prefab",
 			"prefab type" : "lamp",
@@ -254,8 +245,28 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "2.884, 1.667, -0.553",
-				"rot" : "-0.012, 0.809, -0.004"
+				"pos" : "2.885, 1.616, -0.554",
+				"rot" : "-0.012, 0.809, -0.006"
+			},
+			"vehicle" : 
+			{
+				"tire ids" : 
+				[
+					"87314E39D0BC7E994F9E31E5840173F3",
+					"8B2675755B3E2A95470090E9DAF9160B",
+					"1BC1BC8A1EFAC59244D218D932BC1A0E",
+					"EC0182FDE76A7AB44DE0CCB5F3BC7137"
+				],
+				"brake light ids" : 
+				[
+					"80F9807373CF76B94AE741F3DE667F7F",
+					"7605410A753768A04606CC02A24DBDAF"
+				],
+				"sound effect sids" : 
+				[
+					18446744073709551615,
+					18446744073709551615
+				]
 			}
 		}
 	]
