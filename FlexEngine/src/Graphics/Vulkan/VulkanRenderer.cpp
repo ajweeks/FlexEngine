@@ -9797,12 +9797,12 @@ namespace flex
 					MaterialPropertyOverride uniformOverride;
 					if (userUniformOverrides != nullptr && userUniformOverrides->HasUniform(uniform->id, uniformOverride))
 					{
-						dataStart = &uniformOverride;
+						dataStart = uniformOverride.GetDataPointer();
 					}
 					else if (material->uniformOverrides.HasUniform(uniform->id, uniformOverride))
 					{
 						// Material overrides only apply when not overridden explicitly by caller
-						dataStart = &uniformOverride;
+						dataStart = uniformOverride.GetDataPointer();
 					}
 
 					CHECK_LE((dynamicOffset + index + uniform->size), fullDynamicBufferSize);
