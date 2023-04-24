@@ -1455,29 +1455,29 @@ namespace flex
 		}
 	}
 
-	void GameObject::Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*> list)
+	void GameObject::Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*>& outList)
 	{
 		if (callback(this))
 		{
-			list.emplace_back(this);
+			outList.emplace_back(this);
 		}
 
 		for (GameObject* child : m_Children)
 		{
-			child->Filter(callback, list);
+			child->Filter(callback, outList);
 		}
 	}
 
-	void GameObject::FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID> list)
+	void GameObject::FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID>& outList)
 	{
 		if (callback(this))
 		{
-			list.emplace_back(ID);
+			outList.emplace_back(ID);
 		}
 
 		for (GameObject* child : m_Children)
 		{
-			child->FilterID(callback, list);
+			child->FilterID(callback, outList);
 		}
 	}
 

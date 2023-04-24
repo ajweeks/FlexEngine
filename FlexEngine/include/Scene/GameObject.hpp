@@ -213,23 +213,23 @@ namespace flex
 
 		// Fills the given vector with game objects that pass the filter
 		template<typename T>
-		void FilterType(std::function<bool(GameObject*)> callback, std::vector<T*> list)
+		void FilterType(std::function<bool(GameObject*)> callback, std::vector<T*>& outList)
 		{
 			if (callback(this))
 			{
-				list.emplace_back((T*)this);
+				outList.emplace_back((T*)this);
 			}
 
 			for (GameObject* child : m_Children)
 			{
-				child->FilterType(callback, list);
+				child->FilterType(callback, outList);
 			}
 		}
 
 		// Fills the given vector with game objects that pass the filter
-		void Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*> list);
+		void Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*>& outList);
 		// Fills the given vector with game object IDs that pass the filter
-		void FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID> list);
+		void FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID>& outList);
 		// Returns the number of objects which pass the filter
 		u32 FilterCount(std::function<bool(GameObject*)> callback);
 		u32 FilterCountInternal(std::function<bool(GameObject*)> callback, u32 count);
