@@ -7172,6 +7172,8 @@ namespace flex
 					m_Shaders[m_Materials.at(renderObject->materialID)->shaderID]->staticVertexBufferIndex == staticVertexBufferIndex;
 			};
 
+			static std::vector<VulkanRenderObject*> usedObjects;
+
 			auto iter = m_DirtyStaticVertexBufferIndices.begin();
 			while (iter != m_DirtyStaticVertexBufferIndices.end())
 			{
@@ -7183,11 +7185,14 @@ namespace flex
 
 				u32 requiredMemory = 0;
 
+				// TODO: Store persistent list of render object IDs per vertex buffer index?
+				usedObjects.clear();
 				for (VulkanRenderObject* renderObject : m_RenderObjects)
 				{
 					if (RenderObjectUsesStaticBuffer(renderObject, staticVertexBufferIndex))
 					{
 						requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
+						usedObjects.push_back(renderObject);
 					}
 				}
 
@@ -7201,9 +7206,7 @@ namespace flex
 						void* vertexBufferData = vertexDataStart;
 
 						u32 vertexCount = 0;
-						for (VulkanRenderObject* renderObject : m_RenderObjects)
-						{
-							if (RenderObjectUsesStaticBuffer(renderObject, staticVertexBufferIndex))
+						for (VulkanRenderObject* renderObject : usedObjects)
 							{
 								renderObject->vertexOffset = vertexCount;
 
@@ -7213,7 +7216,6 @@ namespace flex
 
 								vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
 							}
-						}
 
 						if (vertexBufferSize > 0 && vertexCount > 0)
 						{
