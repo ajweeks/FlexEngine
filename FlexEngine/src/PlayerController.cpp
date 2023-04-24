@@ -49,7 +49,8 @@ namespace flex
 		m_ItemPlacementGroundedPos(FLT_MAX),
 		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION)
 	{
-		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed);
+		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed)
+			.SetRange(0.001f, 100.0f);
 		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
 		m_ConfigFile.RegisterProperty("rotate h speed third person", &m_RotateHSpeedThirdPerson);
 		m_ConfigFile.RegisterProperty("rotate v speed", &m_RotateVSpeed);
@@ -412,9 +413,16 @@ namespace flex
 		if (xzVelMagnitude > m_MaxMoveSpeed)
 		{
 			// Limit maximum velocity
+			if (m_MaxMoveSpeed > 1.0e-5f)
+			{
 			btVector3 xzVelNorm = xzVel.normalized();
 			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
 			rb->setLinearVelocity(newVel);
+		}
+			else
+			{
+				rb->setLinearVelocity(btVector3(0, 0, 0));
+			}
 		}
 
 		m_Player->UpdateIsGrounded();
