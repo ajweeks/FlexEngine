@@ -5,7 +5,7 @@
   </Type>
 
   <Type Name="flex::Uniform">
-    <DisplayString>{DBG_name,na}, id: {id} (size: {size})</DisplayString>
+    <DisplayString>{DBG_name,na}, id: {id}, size: {size}</DisplayString>
   </Type>
 
   <Type Name="flex::BaseScene">

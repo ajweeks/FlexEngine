@@ -393,10 +393,10 @@
     </Expand>
   </Type>
 
-  <Type Name="glm::mat&lt;3,2*,*&gt;">
+  <!--<Type Name="glm::mat&lt;3,2*,*&gt;">
     <DisplayString>[{value[0]} {value[1]} {value[2]}]</DisplayString>
     <Expand HideRawView="1">
-      <!-- display matrix in row major order - it makes more sense -->
+      --><!-- display matrix in row major order - it makes more sense --><!--
       <Synthetic Name="row 1">
         <DisplayString>[{value[0].x,g} {value[1].x,g} {value[2].x,g}]</DisplayString>
       </Synthetic>
@@ -411,7 +411,7 @@
         </Expand>
       </Synthetic>
     </Expand>
-  </Type>
+  </Type>-->
 
   <Type Name="glm::mat&lt;3,3,*,*&gt;">
     <DisplayString>[{value[0]} {value[1]} {value[2]}]</DisplayString>
