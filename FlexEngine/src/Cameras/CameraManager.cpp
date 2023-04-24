@@ -181,7 +181,7 @@ namespace flex
 		return PushCamera(cam, bAlignWithPrevious, bInitialize);
 	}
 
-	void CameraManager::PopCamera()
+	void CameraManager::PopCamera(bool bAlignWithCurrent /* = false */)
 	{
 		if (m_CameraStack.size() <= 1)
 		{
@@ -194,12 +194,18 @@ namespace flex
 		BaseCamera* currentCamera = CurrentCamera();
 		currentCamera->OnDepossess();
 		currentCamera->Destroy();
+		BaseCamera* prevCamera = currentCamera;
 
 		m_CameraStack.pop();
 
 		currentCamera = CurrentCamera();
 		currentCamera->OnPossess();
 		currentCamera->Initialize();
+
+		if (bAlignWithCurrent)
+		{
+			AlignCameras(prevCamera, currentCamera);
+		}
 	}
 
 	BaseCamera* CameraManager::GetCameraByName(const std::string& name)

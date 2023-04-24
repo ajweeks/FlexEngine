@@ -103,6 +103,7 @@ namespace flex
 	FLEX_NO_DISCARD glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	FLEX_NO_DISCARD glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	FLEX_NO_DISCARD glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
+	FLEX_NO_DISCARD glm::quat Slerp(const glm::quat& a, const glm::quat& b, real t);
 
 	FLEX_NO_DISCARD u32 Pack2FloatToU32(real f1, real f2);
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);

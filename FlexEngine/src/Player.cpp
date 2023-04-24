@@ -1266,34 +1266,37 @@ namespace flex
 		{
 			CHECK(!m_TerminalInteractingWithID.IsValid());
 
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			BaseCamera* currCam = g_CameraManager->CurrentCamera();
 			TerminalCamera* terminalCam = nullptr;
-			if (cam->type == CameraType::TERMINAL)
+			if (currCam->type == CameraType::TERMINAL)
 			{
-				terminalCam = static_cast<TerminalCamera*>(cam);
+				terminalCam = static_cast<TerminalCamera*>(currCam);
+				terminalCam->SetTerminal(terminal);
 			}
 			else
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
+				g_CameraManager->AlignCameras(currCam, terminalCam);
+				terminalCam->SetTerminal(terminal);
 				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
-			terminalCam->SetTerminal(terminal);
 
 			m_TerminalInteractingWithID = terminal->ID;
 			terminal->SetBeingInteractedWith(this);
 		}
 		else
 		{
-			CHECK(m_TerminalInteractingWithID.IsValid());
 			Terminal* terminalInteractingWith = (Terminal*)m_TerminalInteractingWithID.Get();
+			if (terminalInteractingWith != nullptr)
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				CHECK_EQ((u32)cam->type, (u32)CameraType::TERMINAL);
+				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
+				terminalCam->SetTerminal(nullptr);
 
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			CHECK_EQ((u32)cam->type, (u32)CameraType::TERMINAL);
-			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
-			terminalCam->SetTerminal(nullptr);
-
-			terminalInteractingWith->SetBeingInteractedWith(nullptr);
-			m_TerminalInteractingWithID = InvalidGameObjectID;
+				terminalInteractingWith->SetBeingInteractedWith(nullptr);
+				m_TerminalInteractingWithID = InvalidGameObjectID;
+			}
 		}
 	}
 

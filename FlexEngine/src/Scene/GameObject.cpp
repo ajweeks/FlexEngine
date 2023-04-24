@@ -8677,6 +8677,12 @@ namespace flex
 	{
 		if (m_Camera != nullptr)
 		{
+			if (m_Camera->IsTransitioningOut())
+			{
+				// Don't respond to input while camera is transitioning out
+				return EventReply::UNCONSUMED;
+			}
+
 			if (action == KeyAction::KEY_PRESS || action == KeyAction::KEY_REPEAT)
 			{
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
@@ -8756,6 +8762,7 @@ namespace flex
 					return EventReply::CONSUMED;
 				}
 
+				// Most letters, numbers, & characters
 				if ((i32)keyCode >= (i32)KeyCode::KEY_APOSTROPHE && (i32)keyCode <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];

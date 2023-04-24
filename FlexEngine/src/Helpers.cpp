@@ -971,6 +971,11 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
+	glm::quat Slerp(const glm::quat& a, const glm::quat& b, real t)
+	{
+		return glm::slerp(a, b, t);
+	}
+
 	u32 Pack2FloatToU32(real f1, real f2)
 	{
 #ifdef DEBUG
