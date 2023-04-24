@@ -835,6 +835,13 @@ namespace flex
 		auto iter = m_Materials.find(materialID);
 		if (iter != m_Materials.end())
 		{
+			ShaderID shaderID = GetMaterial(materialID)->shaderID;
+			auto shaderIter = m_ShaderUsedMaterials.find(shaderID);
+			if (shaderIter != m_ShaderUsedMaterials.end())
+			{
+				Erase(shaderIter->second, materialID);
+			}
+
 			delete iter->second;
 			m_Materials.erase(iter);
 		}
