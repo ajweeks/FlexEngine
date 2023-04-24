@@ -1371,6 +1371,8 @@ namespace flex
 				return;
 			}
 
+			PROFILE_AUTO("TransitionImageLayout");
+
 			VkCommandBuffer commandBuffer = optCmdBuf;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1564,6 +1566,8 @@ namespace flex
 		void CopyImage(VulkanDevice* device, VkQueue queue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, VkImageAspectFlags aspectMask /* = VK_IMAGE_ASPECT_COLOR_BIT */)
 		{
+			PROFILE_AUTO("CopyImage");
+
 			VkCommandBuffer commandBuffer = optCmdBuf;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1597,6 +1601,8 @@ namespace flex
 		void CopyBufferToImage(VulkanDevice* device, VkQueue queue, VkBuffer buffer, VkImage image,
 			u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
+			PROFILE_AUTO("CopyBufferToImage");
+
 			VkCommandBuffer commandBuffer = optCommandBuffer;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1628,6 +1634,8 @@ namespace flex
 
 		void CopyBuffer(VulkanDevice* device, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 		{
+			PROFILE_AUTO("CopyBuffer");
+
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
 
 			VkBufferCopy copyRegion = {};

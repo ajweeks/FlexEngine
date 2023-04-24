@@ -7158,6 +7158,8 @@ namespace flex
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
 		{
+			PROFILE_AUTO("CreateStaticVertexBuffers");
+
 			auto RenderObjectUsesStaticBuffer = [this](VulkanRenderObject* renderObject, u32 staticVertexBufferIndex) -> bool
 			{
 				return renderObject != nullptr &&
@@ -7169,6 +7171,8 @@ namespace flex
 			auto iter = m_DirtyStaticVertexBufferIndices.begin();
 			while (iter != m_DirtyStaticVertexBufferIndices.end())
 			{
+				PROFILE_AUTO("CreateStaticVertexBuffer Iteration");
+
 				u32 staticVertexBufferIndex = *iter;
 				const std::pair<u32, VulkanBuffer*>& vertexBufferPair = m_StaticVertexBuffers[staticVertexBufferIndex];
 				VulkanBuffer* vertexBuffer = vertexBufferPair.second;
