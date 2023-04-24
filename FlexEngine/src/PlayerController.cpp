@@ -183,7 +183,7 @@ namespace flex
 			if (m_Player->AbleToInteract())
 			{
 				// TODO: Move to All.variables
-				const real maxDistSqr = 7.0f * 7.0f;
+				const real maxDistSqr = 9.0f * 9.0f;
 				const glm::vec3 posWS = m_Player->m_Transform.GetWorldPosition();
 				GameObjectID excludeGameObjectID = m_Player->ID;
 				g_SceneManager->CurrentScene()->GetNearbyInteractableObjects(nearbyInteractables,
@@ -415,10 +415,10 @@ namespace flex
 			// Limit maximum velocity
 			if (m_MaxMoveSpeed > 1.0e-5f)
 			{
-			btVector3 xzVelNorm = xzVel.normalized();
-			btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
-			rb->setLinearVelocity(newVel);
-		}
+				btVector3 xzVelNorm = xzVel.normalized();
+				btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
+				rb->setLinearVelocity(newVel);
+			}
 			else
 			{
 				rb->setLinearVelocity(btVector3(0, 0, 0));
