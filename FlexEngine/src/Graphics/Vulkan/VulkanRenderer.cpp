@@ -861,7 +861,11 @@ namespace flex
 
 			material->shaderID = shaderID;
 
-			m_ShaderUsedMaterials[shaderID].push_back(matID);
+			std::vector<MaterialID>& shaderUsedMaterials = m_ShaderUsedMaterials[shaderID];
+			if (!Contains(shaderUsedMaterials, matID))
+			{
+				shaderUsedMaterials.push_back(matID);
+			}
 
 			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
 
