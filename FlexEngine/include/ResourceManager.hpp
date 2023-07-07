@@ -180,6 +180,7 @@ namespace flex
 		std::vector<BitmapFont*> fontsWorldSpace;
 
 		std::vector<Texture*> loadedTextures;
+		std::mutex m_LoadedTexturesMutex;
 		std::vector<std::string> discoveredTextures; // Stores relative file paths to all textures in textures directory
 		struct IconMetaData
 		{
@@ -217,7 +218,6 @@ namespace flex
 		// TODO: Use map
 		std::vector<PrefabTemplateInfo> prefabTemplates;
 		std::map<PrefabID, std::string> discoveredPrefabs;
-
 
 		// Relative file path (e.g. MESH_DIRECTORY "cube.glb") -> LoadedMesh
 		std::map<std::string, LoadedMesh*> loadedMeshes;

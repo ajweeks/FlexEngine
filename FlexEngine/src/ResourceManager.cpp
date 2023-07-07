@@ -175,11 +175,15 @@ namespace flex
 		}
 		fontsWorldSpace.clear();
 
-		for (Texture* loadedTexture : loadedTextures)
 		{
-			delete loadedTexture;
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+			for (Texture* loadedTexture : loadedTextures)
+			{
+				delete loadedTexture;
+			}
+			loadedTextures.clear();
 		}
-		loadedTextures.clear();
 
 		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
@@ -596,6 +600,8 @@ namespace flex
 			std::vector<std::string> foundFiles;
 			if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
 			{
+				FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 				i32 modifiedTextureCount = 0;
 				for (const std::string& foundFilePath : foundFiles)
 				{
@@ -1139,6 +1145,8 @@ namespace flex
 
 	Texture* ResourceManager::FindLoadedTextureWithPath(const std::string& filePath)
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (Texture* texture : loadedTextures)
 		{
 			if (texture != nullptr &&
@@ -1153,6 +1161,8 @@ namespace flex
 
 	Texture* ResourceManager::FindLoadedTextureWithName(const std::string& fileName)
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (Texture* texture : loadedTextures)
 		{
 			if (texture != nullptr &&
@@ -1185,13 +1195,15 @@ namespace flex
 
 	Texture* ResourceManager::GetLoadedTexture(TextureID textureID, bool bProvideFallbackWhileLoading /* = true */)
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		if (textureID < loadedTextures.size())
 		{
 			Texture* result = loadedTextures[textureID];
 			if (bProvideFallbackWhileLoading && !result->IsCreated())
 			{
 				// Show pink texture until this one has loaded
-				return GetLoadedTexture(g_Renderer->pinkTextureID);
+				return loadedTextures[g_Renderer->pinkTextureID];
 			}
 			return result;
 		}
@@ -1200,14 +1212,18 @@ namespace flex
 
 	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler /* = nullptr */)
 	{
-		for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 		{
-			Texture* texture = loadedTextures[i];
-			if (texture != nullptr &&
-				texture->relativeFilePath.compare(textureFilePath) == 0)
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+			for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 			{
-				// TODO: Fallback on pink texture when requested texture is still loading?
-				return (TextureID)i;
+				Texture* texture = loadedTextures[i];
+				if (texture != nullptr &&
+					texture->relativeFilePath.compare(textureFilePath) == 0)
+				{
+					// TODO: Fallback on pink texture when requested texture is still loading?
+					return (TextureID)i;
+				}
 			}
 		}
 
@@ -1231,6 +1247,8 @@ namespace flex
 		{
 			return false;
 		}
+
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
 		for (auto iter = loadedTextures.begin(); iter != loadedTextures.end(); ++iter)
 		{
@@ -1270,6 +1288,8 @@ namespace flex
 
 	TextureID ResourceManager::GetNextAvailableTextureID()
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (u32 i = 0; i < loadedTextures.size(); ++i)
 		{
 			if (loadedTextures[i] == nullptr)
@@ -1301,7 +1321,8 @@ namespace flex
 		TextureID textureID = GetNextAvailableTextureID();
 
 		{
-			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+			FLEX_MUTEX_LOCK(m_QueuedTextureLoadInfoMutex);
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
 			m_QueuedTextureLoadInfos.emplace_back(textureID, loadInfo);
 			Print("[TEXTURE] Queued texture load: %s\n", loadInfo.relativeFilePath.c_str());
@@ -1385,7 +1406,11 @@ namespace flex
 		{
 			textureID = GetNextAvailableTextureID();
 		}
+
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		CHECK_LT(textureID, loadedTextures.size());
+
 
 		loadedTextures[textureID] = texture;
 		return textureID;
@@ -2410,7 +2435,7 @@ namespace flex
 					}
 
 					i32 i = 0;
-					for (Texture* texture : loadedTextures)
+					for (const Texture* texture : loadedTextures)
 					{
 						if (texture == nullptr)
 						{
@@ -2769,7 +2794,7 @@ namespace flex
 						std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 						bool bTextureAlreadyImported = false;
-						for (Texture* texture : loadedTextures)
+						for (const Texture* texture : loadedTextures)
 						{
 							if (texture != nullptr &&
 								texture->relativeFilePath.compare(relativeFilePath) == 0)

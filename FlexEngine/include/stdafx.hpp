@@ -220,6 +220,10 @@ IGNORE_WARNINGS_POP
 #define ENSURE(condition)
 #endif
 
+#define CONCAT_INNER(a, b) a ## b
+#define CONCAT(a, b) CONCAT_INNER(a, b)
+#define FLEX_MUTEX_LOCK(lock) std::lock_guard<std::mutex> CONCAT(_mutexLock_, __LINE__)(lock);
+
 // Turns a const char* into a StringID and const char* pair of params
 #define SID_PAIR(str) SID(str), str
 
