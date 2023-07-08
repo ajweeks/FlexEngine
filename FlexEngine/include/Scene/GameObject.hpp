@@ -1369,6 +1369,14 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(NoiseFunctionTypeNames) == (u32)NoiseFunction::Type::_NONE + 1, "NoiseFunctionTypeNames length must match NoiseFunction::Type enum");
 
+	enum class TerrainGenMode
+	{
+		LEGACY,
+		MARCHING_CUBES,
+
+		_COUNT
+	};
+
 	static constexpr StringID TerrainGeneratorSID = SID("terrain generator");
 	class TerrainGenerator final : public GameObject
 	{
@@ -1399,6 +1407,7 @@ namespace flex
 			// General info
 			real chunkSize;
 			real maxHeight;
+			real radius;
 			real roadBlendDist;
 			real roadBlendThreshold;
 			u32 vertCountPerChunkAxis;
@@ -1411,14 +1420,21 @@ namespace flex
 			std::vector<std::vector<glm::vec2>>* randomTables;
 			std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments;
 
-			// Per chunk inputs
+			// Per-chunk inputs
 			volatile glm::ivec3 chunkIndex;
 
 			// Per chunk outputs
+			volatile u32 maxVertexCount;
 			volatile glm::vec3* positions;
 			volatile glm::vec4* colours;
 			volatile glm::vec2* uvs;
+			volatile glm::vec3* normals;
+			volatile glm::vec3* tangents;
+			volatile u32 maxIndexCount;
 			volatile u32* indices;
+			volatile u32 vertexCount;
+			volatile u32 indexCount;
+			volatile u8 ranOutOfRoom;
 		};
 
 		void FillInTerrainChunkData(volatile TerrainChunkData& outChunkData);
@@ -1451,6 +1467,8 @@ namespace flex
 
 		NoiseFunction ParseNoiseFunction(const JSONObject& noiseFunctionObj);
 		JSONObject SerializeNoiseFunction(const NoiseFunction& noiseFunction);
+
+		TerrainGenMode m_Mode = TerrainGenMode::MARCHING_CUBES;
 
 		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 
@@ -1490,7 +1508,9 @@ namespace flex
 		bool m_bHighlightGrid = false;
 		bool m_bDisplayRandomTables = false;
 
-		bool m_bUseAsyncCompute = true;
+		bool m_bUseAsyncCompute = false;
+
+		bool m_bShadeFlat = false;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
@@ -1513,7 +1533,9 @@ namespace flex
 
 		i32 m_IsolateNoiseLayer = -1;
 
-		u32 m_VertCountPerChunkAxis = 8;
+		u32 m_MaxVertCountPerChunk = 1024;
+		u32 m_MaxTriCountPerChunk = 4096;
+		u32 m_NumGridCellsPerChunk = 8;
 		real m_ChunkSize = 512.0f;
 		real m_MaxHeight = 3.0f;
 
@@ -1534,6 +1556,8 @@ namespace flex
 	void* TerrainThreadUpdate(void* inData);
 
 	real SampleBiomeTerrain(const TerrainGenerator::Biome& biome, const glm::vec2& pos);
+	// Returns a signed distance to the terrain object (< 0: below surface, > 0: above surface)
+	real SampleTerrain3D(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec3& pos);
 	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
 	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);

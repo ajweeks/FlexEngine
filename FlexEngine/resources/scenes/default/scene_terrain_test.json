@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_terrain_test",
 	"spawn player" : false,
 	"camera" : 
@@ -15,29 +15,26 @@
 		"move speed" : 514.398987,
 		"transform" : 
 		{
-			"position" : "-1707.309, 2132.941, -3207.031",
-			"pitch" : -0.363457,
-			"yaw" : -11.438183
+			"position" : "-3055.016, 281.443, 177.275",
+			"pitch" : -0.287401,
+			"yaw" : -0.110838
 		}
 	},
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "7336F9FE6DDF8E9742B01481AEFD83E1",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "A63DF4AA4D639FB447EB4F5073F7FB1B",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -45,47 +42,42 @@
 			}
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "D38F03C3DEDF55A8459E5F7BFBAFB069",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "2.598, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"colour" : "0.14,0.19,0.27",
+				"brightness" : 5.00
 			}
 		},
 		{
-			"name" : "Terrain",
 			"id" : "D747202C0AE085AF4FF5E4A4815437FA",
+			"name" : "Terrain",
 			"type" : "terrain generator",
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
-				"vert count per chunk axis" : 16,
-				"chunk size" : 1024.000000,
+				"loaded chunk radius" : 3000.00,
+				"loaded chunk rigid body square radius" : 10000.00,
+				"chunk size" : 743.541992,
+				"radius" : 1593.576050,
+				"pin center" : true,
 				"max height" : 768.000000,
 				"use manual seed" : true,
 				"manual seed" : 1234124,
-				"isolate noise layer" : -1,
-				"num points per axis" : 12,
-				"max chunk count" : 64,
-				"loaded chunk radius" : 2469.753906,
-				"loaded chunk rigid body square radius" : 10000.000000,
 				"base table width" : 32,
+				"isolate noise layer" : -1,
+				"num points per axis" : 23,
+				"max chunk count" : 64,
 				"low colour" : "0.20,0.30,0.45",
 				"mid colour" : "0.45,0.55,0.25",
 				"high colour" : "0.65,0.67,0.69",
-				"pin center" : true,
 				"pinned center" : "0.30,5.18,-0.22",
 				"biomes" : 
 				[
@@ -95,12 +87,12 @@
 						[
 							{
 								"type" : "FBM",
-								"feature size" : 150.000000,
-								"num octaves" : 6,
+								"feature size" : 125.875000,
+								"num octaves" : 2,
 								"h" : 0.800000,
-								"height scale" : 1.000000,
-								"lacunarity" : 1.000000,
-								"wavelength" : 100.000000
+								"height scale" : 406.250000,
+								"lacunarity" : 0.557000,
+								"wavelength" : 833.500000
 							}
 						]
 					}
@@ -109,7 +101,7 @@
 				{
 					"type" : "Voronoi",
 					"feature size" : 150.000000,
-					"num octaves" : 6,
+					"num octaves" : 1,
 					"height scale" : 1.000000,
 					"lacunarity" : 1.000000,
 					"wavelength" : 100.000000,
@@ -118,8 +110,8 @@
 			}
 		},
 		{
-			"name" : "cube",
 			"id" : "FBBD8A10B6C4E5B942E87958914E03AA",
+			"name" : "cube",
 			"type" : "object",
 			"transform" : 
 			{

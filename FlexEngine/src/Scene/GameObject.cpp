@@ -42,8 +42,9 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
-#include "Graphics/Renderer.hpp"
 #include "Graphics/DebugRenderer.hpp"
+#include "Graphics/MarchingCubes.hpp"
+#include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Inventory.hpp"
@@ -9046,8 +9047,6 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("chunk generator info");
 
-		collection->childCollection->RegisterProperty("vert count per chunk axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_VertCountPerChunkAxis))
-			.VersionAdded(6);
 		collection->childCollection->RegisterProperty("chunk size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ChunkSize))
 			.VersionAdded(6);
 		collection->childCollection->RegisterProperty("max height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxHeight))
@@ -9145,6 +9144,7 @@ namespace flex
 				threadUserData = {};
 				threadUserData.running = true;
 				threadUserData.criticalSection = criticalSection;
+				threadUserData.mode = (u8)m_Mode;
 				Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
 			}
 
@@ -9164,7 +9164,7 @@ namespace flex
 		constantData.maxHeight = m_MaxHeight;
 		constantData.roadBlendDist = m_RoadBlendDist;
 		constantData.roadBlendThreshold = m_RoadBlendThreshold;
-		constantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		constantData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
 		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
 		constantData.numPointsPerAxis = m_NumPointsPerAxis;
 		constantData.isoLevel = m_IsoLevel;
@@ -9430,7 +9430,7 @@ namespace flex
 				bValueChanged = true;
 			}
 			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -10.0f, 10.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -1000.0f, 1000.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 1000.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
@@ -9777,22 +9777,18 @@ namespace flex
 			}
 			else
 			{
-				if (m_NumPointsPerAxis != previousPointsPerAxis)
-				{
+				m_Meshes.clear();
+				m_ChunksToDestroy.clear();
+				m_ChunksToLoad.clear();
+
+				m_PreviousLoadedChunkRadius = 0.0f;
+
 					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
 					{
 						FreeWorkQueueEntry(i);
 						AllocWorkQueueEntry(i);
 					}
 				}
-				else
-				{
-					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-					{
-						FillInTerrainChunkData((*terrain_workQueue)[i]);
-					}
-				}
-			}
 		}
 
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 10.0f, 3000.0f);
@@ -9992,7 +9988,7 @@ namespace flex
 		outChunkData.maxHeight = m_MaxHeight;
 		outChunkData.roadBlendDist = m_RoadBlendDist;
 		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		outChunkData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		outChunkData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
 		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
 		outChunkData.numPointsPerAxis = m_NumPointsPerAxis;
 
@@ -10330,10 +10326,6 @@ namespace flex
 
 			if (!m_ChunksToLoad.empty())
 			{
-				const u32 vertexCount = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
-				const u32 triCount = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
-				const u32 indexCount = triCount * 3;
-
 				// TODO: Spread creation across multiple frames
 
 				static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
@@ -10341,29 +10333,47 @@ namespace flex
 				vertexBufferCreateInfo.texCoords_UV.clear();
 				vertexBufferCreateInfo.colours_R32G32B32A32.clear();
 				vertexBufferCreateInfo.normals.clear();
-
-				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
-				vertexBufferCreateInfo.positions_3D.resize(vertexCount);
-				vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
-				vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
-				vertexBufferCreateInfo.normals.resize(vertexCount);
+				vertexBufferCreateInfo.tangents.clear();
+				vertexBufferCreateInfo.normals.clear();
 
 				static std::vector<u32> indices;
-				indices.resize(indexCount);
 
-				real quadSize = m_ChunkSize / (m_VertCountPerChunkAxis - 1);
+				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
 
 				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
 				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
-				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
+				u32 emptyChunkCount = 0;
+				for (const glm::ivec3& chunkIndex : m_ChunksToLoad)
 				{
-					const glm::ivec3& chunkIndex = *chunkToLoadIter;
-
 					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+
+					const u32 vertexCount = terrainChunkData->vertexCount;
+					const u32 triCount = terrainChunkData->indexCount;
+					const u32 indexCount = triCount * 3;
+
+					if (vertexCount == 0)
+					{
+						++emptyChunkCount;
+						continue;
+					}
+
+					if (terrainChunkData->ranOutOfRoom)
+					{
+						PrintError("Ran out of room! Increase max vertex or index count (%u/%u, %u/%u)\n", vertexCount, m_MaxVertCountPerChunk, indexCount, m_MaxTriCountPerChunk);
+					}
+
+					vertexBufferCreateInfo.positions_3D.resize(vertexCount);
+					vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
+					vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
+					vertexBufferCreateInfo.normals.resize(vertexCount);
+					vertexBufferCreateInfo.tangents.resize(vertexCount);
+					indices.resize(indexCount);
 
 					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.normals.data(), (void*)terrainChunkData->normals, sizeof(glm::vec3) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.tangents.data(), (void*)terrainChunkData->tangents, sizeof(glm::vec3) * vertexCount);
 					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
 
 					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
@@ -10373,71 +10383,8 @@ namespace flex
 						overlappingRoadSegments = &roadSegmentIter->second;
 					}
 
-					glm::vec4 colour; // Throwaway
-					u32 vertIndex = 0;
-					for (u32 z = 0; z < m_VertCountPerChunkAxis; ++z)
-					{
-						for (u32 x = 0; x < m_VertCountPerChunkAxis; ++x)
-						{
-							glm::vec2 uv(x / (real)(m_VertCountPerChunkAxis - 1), z / (real)(m_VertCountPerChunkAxis - 1));
-
-							glm::vec2 vertPosOS = glm::vec2(uv.x * m_ChunkSize, uv.y * m_ChunkSize);
-							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * m_ChunkSize, chunkIndex.y * m_ChunkSize);
-
-							real left = 0.0f;
-							if (x > 0)
-							{
-								left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
-							}
-							else
-							{
-								left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
-							}
-
-							real right = 0.0f;
-							if (x < m_VertCountPerChunkAxis - 1)
-							{
-								right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
-							}
-							else
-							{
-								right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
-							}
-
-							real back = 0.0f;
-							if (z > 0)
-							{
-								back = vertexBufferCreateInfo.positions_3D[vertIndex - m_VertCountPerChunkAxis].y;
-							}
-							else
-							{
-								back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
-							}
-
-							real forward = 0.0f;
-							if (z < m_VertCountPerChunkAxis - 1)
-							{
-								forward = vertexBufferCreateInfo.positions_3D[vertIndex + m_VertCountPerChunkAxis].y;
-							}
-							else
-							{
-								forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
-							}
-
-							real dX = left - right;
-							real dZ = back - forward;
-							vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f, dZ));
-							//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
-
-							++vertIndex;
-						}
-					}
-
 					RenderObjectCreateInfo renderObjectCreateInfo = {};
+					renderObjectCreateInfo.cullFace = CullFace::NONE;
 					i32 submeshIndex;
 					MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
 					if (meshComponent != nullptr)
@@ -10447,7 +10394,7 @@ namespace flex
 					}
 				}
 
-				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				Print("Loaded %d chunks (total: %d, empty: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size(), emptyChunkCount);
 				m_ChunksToLoad.clear();
 			}
 		}
@@ -10520,21 +10467,30 @@ namespace flex
 
 	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
 	{
-		const u32 vertCountPerChunk = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
-		const u32 triCountPerChunk = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
-		const u32 indexCountPerChunk = triCountPerChunk * 3;
+		const u32 maxVertCountPerChunk = m_MaxVertCountPerChunk;
+		const u32 triCountPerChunk = m_MaxTriCountPerChunk;
+		const u32 maxIndexCountPerChunk = triCountPerChunk * 3;
 
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
 
-		chunkData.positions = (glm::vec3*)malloc(vertCountPerChunk * sizeof(glm::vec3));
+		chunkData.maxVertexCount = maxVertCountPerChunk;
+		chunkData.positions = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
 		CHECK_NE(chunkData.positions, nullptr);
-		chunkData.colours = (glm::vec4*)malloc(vertCountPerChunk * sizeof(glm::vec4));
+		chunkData.colours = (glm::vec4*)malloc(maxVertCountPerChunk * sizeof(glm::vec4));
 		CHECK_NE(chunkData.colours, nullptr);
-		chunkData.uvs = (glm::vec2*)malloc(vertCountPerChunk * sizeof(glm::vec2));
+		chunkData.uvs = (glm::vec2*)malloc(maxVertCountPerChunk * sizeof(glm::vec2));
 		CHECK_NE(chunkData.uvs, nullptr);
+		chunkData.normals = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
+		CHECK_NE(chunkData.normals, nullptr);
+		chunkData.tangents = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
+		CHECK_NE(chunkData.tangents, nullptr);
 
-		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
+		chunkData.maxIndexCount = maxIndexCountPerChunk;
+		chunkData.indices = (u32*)malloc(maxIndexCountPerChunk * sizeof(u32));
 		CHECK_NE(chunkData.indices, nullptr);
+
+		chunkData.vertexCount = 0;
+		chunkData.indexCount = 0;
 
 		FillInTerrainChunkData(chunkData);
 	}
@@ -10555,9 +10511,20 @@ namespace flex
 		free((void*)chunkData.uvs);
 		chunkData.uvs = nullptr;
 
+		CHECK_NE(chunkData.normals, nullptr);
+		free((void*)chunkData.normals);
+		chunkData.normals = nullptr;
+
+		CHECK_NE(chunkData.tangents, nullptr);
+		free((void*)chunkData.tangents);
+		chunkData.tangents = nullptr;
+
 		CHECK_NE(chunkData.indices, nullptr);
 		free((void*)chunkData.indices);
 		chunkData.indices = nullptr;
+
+		chunkData.vertexCount = 0;
+		chunkData.indexCount = 0;
 	}
 
 	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
@@ -10671,62 +10638,172 @@ namespace flex
 
 			if (work != nullptr)
 			{
-				// Inputs
 				glm::ivec3 chunkIndex = glm::ivec3(work->chunkIndex.x, work->chunkIndex.y, work->chunkIndex.z);
-				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
-				std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
-
-				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
-				auto roadSegmentIter = roadSegments->find(chunkIndex);
-				if (roadSegmentIter != roadSegments->end())
-				{
-					overlappingRoadSegments = &roadSegmentIter->second;
-				}
 
 				// Outputs
 				volatile glm::vec3* positions = work->positions;
 				volatile glm::vec4* colours = work->colours;
 				volatile glm::vec2* uvs = work->uvs;
+				volatile glm::vec3* normals = work->normals;
+				volatile glm::vec3* tangents = work->tangents;
 				volatile u32* indices = work->indices;
+				volatile u32* outVertexCount = &work->vertexCount;
+				volatile u32* outIndexCount = &work->indexCount;
 
-				u32 posIndex = 0;
-				for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
+				switch ((TerrainGenMode)threadData->mode)
 				{
-					for (u32 x = 0; x < vertCountPerChunkAxis; ++x)
-					{
-						glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
-
-						glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
-						glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
-
-						glm::vec4 colour;
-						glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
-
-						memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
-						memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
-						memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
-
-						++posIndex;
-					}
-				}
-
-				for (u32 z = 0; z < vertCountPerChunkAxis - 1; ++z)
+				case TerrainGenMode::LEGACY:
 				{
-					for (u32 x = 0; x < vertCountPerChunkAxis - 1; ++x)
+					// Inputs
+					std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
+					u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
+
+					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
+					auto roadSegmentIter = roadSegments->find(chunkIndex);
+					if (roadSegmentIter != roadSegments->end())
 					{
-						u32 vertIdx = z * (vertCountPerChunkAxis - 1) + x;
-						u32 i = z * vertCountPerChunkAxis + x;
-						indices[vertIdx * 6 + 0] = i;
-						indices[vertIdx * 6 + 1] = i + 1 + vertCountPerChunkAxis;
-						indices[vertIdx * 6 + 2] = i + 1;
-
-						indices[vertIdx * 6 + 3] = i;
-						indices[vertIdx * 6 + 4] = i + vertCountPerChunkAxis;
-						indices[vertIdx * 6 + 5] = i + 1 + vertCountPerChunkAxis;
+						overlappingRoadSegments = &roadSegmentIter->second;
 					}
-				}
 
+					u32 posIndex = 0;
+					for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
+					{
+						for (u32 x = 0; x < vertCountPerChunkAxis; ++x)
+						{
+							glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
+
+							glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
+							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
+
+							glm::vec4 colour;
+							glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
+
+							memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
+							memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
+							memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
+
+							++posIndex;
+						}
+					}
+
+					for (u32 z = 0; z < vertCountPerChunkAxis - 1; ++z)
+					{
+						for (u32 x = 0; x < vertCountPerChunkAxis - 1; ++x)
+						{
+							u32 vertIdx = z * (vertCountPerChunkAxis - 1) + x;
+							u32 i = z * vertCountPerChunkAxis + x;
+							indices[vertIdx * 6 + 0] = i;
+							indices[vertIdx * 6 + 1] = i + 1 + vertCountPerChunkAxis;
+							indices[vertIdx * 6 + 2] = i + 1;
+
+							indices[vertIdx * 6 + 3] = i;
+							indices[vertIdx * 6 + 4] = i + vertCountPerChunkAxis;
+							indices[vertIdx * 6 + 5] = i + 1 + vertCountPerChunkAxis;
+						}
+					}
+
+				} break;
+				case TerrainGenMode::MARCHING_CUBES:
+				{
+					u32 gridCellCountPerAxis = work->vertCountPerChunkAxis;
+					u32 maxVertexCount = work->maxVertexCount;
+					u32 maxIndexCount = work->maxIndexCount;
+					volatile u8* outRanOutOfRoom = &work->ranOutOfRoom;
+
+					TriMeshFace trianglesTemp[10];
+					memset(trianglesTemp, 0, sizeof(trianglesTemp));
+					glm::vec3 verticesTemp[15];
+					memset(verticesTemp, 0, sizeof(verticesTemp));
+
+					u32 posIndex = 0;
+					u32 indexIndex = 0;
+					u8 ranOutOfRoom = 0;
+					real gridCellSize = 1.0f / gridCellCountPerAxis;
+					for (u32 z = 0; z < gridCellCountPerAxis && !ranOutOfRoom; ++z)
+					{
+						for (u32 y = 0; y < gridCellCountPerAxis && !ranOutOfRoom; ++y)
+						{
+							for (u32 x = 0; x < gridCellCountPerAxis; ++x)
+							{
+								glm::vec3 uvw(
+									x / (real)(gridCellCountPerAxis),
+									y / (real)(gridCellCountPerAxis),
+									z / (real)(gridCellCountPerAxis));
+
+								glm::vec3 vertPosOS = uvw * chunkSize;
+								glm::vec3 sampleCenter = vertPosOS + glm::vec3(chunkIndex) * chunkSize;
+
+								real c = gridCellSize * chunkSize;
+								GridCell gridCell;
+								gridCell.pos[0] = sampleCenter;
+								gridCell.pos[1] = sampleCenter + glm::vec3(c, 0.0f, 0.0f);
+								gridCell.pos[2] = sampleCenter + glm::vec3(c, c, 0.0f);
+								gridCell.pos[3] = sampleCenter + glm::vec3(0.0f, c, 0.0f);
+								gridCell.pos[4] = sampleCenter + glm::vec3(0.0f, 0.0f, c);
+								gridCell.pos[5] = sampleCenter + glm::vec3(c, 0.0f, c);
+								gridCell.pos[6] = sampleCenter + glm::vec3(c, c, c);
+								gridCell.pos[7] = sampleCenter + glm::vec3(0.0f, c, c);
+
+								// TODO: Cache results cleverly to avoid duplicate work ("top" and "bottom" cells, swap)
+								gridCell.val[0] = SampleTerrain3D(work, gridCell.pos[0]);
+								gridCell.val[1] = SampleTerrain3D(work, gridCell.pos[1]);
+								gridCell.val[2] = SampleTerrain3D(work, gridCell.pos[2]);
+								gridCell.val[3] = SampleTerrain3D(work, gridCell.pos[3]);
+								gridCell.val[4] = SampleTerrain3D(work, gridCell.pos[4]);
+								gridCell.val[5] = SampleTerrain3D(work, gridCell.pos[5]);
+								gridCell.val[6] = SampleTerrain3D(work, gridCell.pos[6]);
+								gridCell.val[7] = SampleTerrain3D(work, gridCell.pos[7]);
+
+								u8 numVertsGenerated;
+								i32 numTrisGenerated = Polygonize(gridCell, trianglesTemp, numVertsGenerated, verticesTemp);
+								if (numTrisGenerated > 0)
+								{
+									if ((indexIndex + numTrisGenerated * 3 >= maxIndexCount - 3) ||
+										posIndex + numVertsGenerated >= maxVertexCount)
+									{
+										ranOutOfRoom = 1;
+										break;
+									}
+
+									i16 indexOffset = (i16)posIndex;
+									for (i32 triIndex = 0; triIndex < numTrisGenerated; triIndex++)
+									{
+										indices[indexIndex++] = trianglesTemp[triIndex].i[0] + indexOffset;
+										indices[indexIndex++] = trianglesTemp[triIndex].i[2] + indexOffset;
+										indices[indexIndex++] = trianglesTemp[triIndex].i[1] + indexOffset;
+
+										glm::vec3 a = verticesTemp[trianglesTemp[triIndex].i[1]] - verticesTemp[trianglesTemp[triIndex].i[0]];
+										glm::vec3 b = verticesTemp[trianglesTemp[triIndex].i[2]] - verticesTemp[trianglesTemp[triIndex].i[0]];
+										glm::vec3 normal = glm::normalize(glm::cross(b, a));
+										glm::vec3 tangent = glm::normalize(glm::cross(normal, a));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 0], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 1], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 2], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 0], (void*)&tangent, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 1], (void*)&tangent, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 2], (void*)&tangent, sizeof(glm::vec3));
+									}
+									for (u8 vertexIndex = 0; vertexIndex < numVertsGenerated; vertexIndex++)
+									{
+										glm::vec4 colour(1.0f);
+										glm::vec2 uv(0.0f);
+										memcpy((void*)&positions[posIndex], (void*)&verticesTemp[vertexIndex], sizeof(glm::vec3));
+										memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
+										memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
+
+										++posIndex;
+									}
+								}
+							}
+						}
+					}
+
+					*outVertexCount = posIndex;
+					*outIndexCount = indexIndex;
+					*outRanOutOfRoom = ranOutOfRoom;
+				} break;
+				}
 				WRITE_BARRIER;
 
 				Platform::AtomicIncrement(&terrain_workQueueEntriesCompleted);
@@ -11221,6 +11298,36 @@ namespace flex
 		CHECK(biome0Index >= 0 && biome0Index < 65536);
 
 		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
+	}
+
+	real SampleTerrain3D(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec3& pos)
+	{
+		// Sphere:
+		//real density = glm::length(pos) - chunkData->radius;
+
+		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
+		{
+			i32 biome0Index = 0;
+			glm::vec2 biome0CellCoord;
+
+			const glm::vec2 pos2DScaled = glm::vec2(pos.x, pos.z) / chunkData->biomeNoise->wavelength;
+			const i32 biomeCount = (i32)chunkData->biomes->size();
+
+			if (biomeCount > 1)
+			{
+				VoronoiDistance(pos2DScaled, biome0CellCoord);
+				biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
+			}
+			else
+			{
+				biome0Index = 0;
+			}
+
+			real terrainHeight = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], glm::vec2(pos.x, pos.z));;
+			return pos.y - terrainHeight;
+		}
+
+		return 0.0f;
 	}
 
 	// Returns a value in [-1, 1]
