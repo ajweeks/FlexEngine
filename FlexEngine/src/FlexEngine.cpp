@@ -77,7 +77,7 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 8;
+	const u32 FlexEngine::EngineVersionPatch = 9;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::string FlexEngine::s_ExecutablePath;
