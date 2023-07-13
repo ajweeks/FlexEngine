@@ -4,6 +4,8 @@
 
 #include "Types.hpp"
 
+#undef GUID
+
 namespace flex
 {
 	struct GUID
@@ -37,14 +39,42 @@ namespace flex
 	{
 		GameObjectID();
 		GameObjectID(u64 data1, u64 data2);
+		GameObjectID(const GUID& guid);
 
-		GameObject* Get();
+		GameObject* Get() const;
 
 		static GameObjectID FromString(const std::string& str);
 	};
+
+	struct EditorObjectID : public GUID
+	{
+		EditorObjectID();
+		EditorObjectID(u64 data1, u64 data2);
+		EditorObjectID(const GUID& guid);
+
+		GameObject* Get() const;
+
+		static EditorObjectID FromString(const std::string& str);
+	};
+
 	using PrefabID = GUID;
 
 	extern const GUID InvalidGUID;
 	extern const GameObjectID InvalidGameObjectID;
+	extern const EditorObjectID InvalidEditorObjectID;
 	extern const GUID InvalidPrefabID;
+
+	struct PrefabIDPair
+	{
+		// References a source prefab object (global ID)
+		PrefabID m_PrefabID = InvalidPrefabID;
+		// References an object within the source prefab (file-local ID)
+		GameObjectID m_SubGameObjectID = InvalidGameObjectID;
+
+		bool IsValid() const { return m_PrefabID.IsValid() && m_SubGameObjectID.IsValid(); }
+		void Clear() { m_PrefabID = InvalidPrefabID; m_SubGameObjectID = InvalidGameObjectID; }
+	};
+
+	extern const PrefabIDPair InvalidPrefabIDPair;
+
 } // namespace flex

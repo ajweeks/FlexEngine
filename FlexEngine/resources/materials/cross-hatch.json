@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "cross hatch",
+		"shader" : "pbr",
+		"enable albedo sampler" : true,
+		"albedo texture filepath" : "cross-hatch.png"
+	}
+}

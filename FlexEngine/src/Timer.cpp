@@ -22,11 +22,10 @@ namespace flex
 			if (remaining <= 0.0f)
 			{
 				remaining = 0.0f;
-				return true;
 			}
 		}
 
-		return (remaining == 0.0f);
+		return remaining == 0.0f;
 	}
 
 	void Timer::Restart()
@@ -37,5 +36,10 @@ namespace flex
 	void Timer::Complete()
 	{
 		remaining = 0.0f;
+	}
+
+	bool Timer::IsComplete() const
+	{
+		return remaining == 0.0f;
 	}
 } // namespace flex

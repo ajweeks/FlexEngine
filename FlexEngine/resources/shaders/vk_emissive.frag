@@ -51,12 +51,12 @@ layout (binding = 1) uniform UBODynamic
 	mat4 model;
 
 	vec4 constAlbedo;
-	vec4 constEmissive;
 	float constRoughness;
+	vec4 constEmissive;
 
 	bool enableAlbedoSampler;
-	bool enableEmissiveSampler;
 	bool enableNormalSampler;
+	bool enableEmissiveSampler;
 } uboDynamic;
 
 layout (location = 0) in vec2 ex_TexCoord;
@@ -64,8 +64,8 @@ layout (location = 1) in vec4 ex_Colour;
 layout (location = 2) in mat3 ex_TBN;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
-layout (binding = 3) uniform sampler2D emissiveSampler;
-layout (binding = 4) uniform sampler2D normalSampler;
+layout (binding = 3) uniform sampler2D normalSampler;
+layout (binding = 4) uniform sampler2D emissiveSampler;
 
 layout (location = 0) out vec4 outColour;
 

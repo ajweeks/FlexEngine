@@ -10,7 +10,9 @@ namespace flex
 {
 	const GUID InvalidGUID = {};
 	const GameObjectID InvalidGameObjectID = {};
+	const EditorObjectID InvalidEditorObjectID = {};
 	const GUID InvalidPrefabID = InvalidGUID;
+	const PrefabIDPair InvalidPrefabIDPair = { InvalidPrefabID, InvalidGameObjectID };
 
 	GUID::GUID()
 	{
@@ -176,7 +178,12 @@ namespace flex
 	{
 	}
 
-	GameObject* GameObjectID::Get()
+	GameObjectID::GameObjectID(const GUID& guid) :
+		GUID(guid)
+	{
+	}
+
+	GameObject* GameObjectID::Get() const
 	{
 		if (!IsValid())
 		{
@@ -192,8 +199,42 @@ namespace flex
 
 	GameObjectID GameObjectID::FromString(const std::string& str)
 	{
-		// TODO: Avoid copy
 		GUID guid = GUID::FromString(str);
 		return *(GameObjectID*)&guid;
+	}
+
+	EditorObjectID::EditorObjectID() :
+		GUID()
+	{
+	}
+
+	EditorObjectID::EditorObjectID(u64 data1, u64 data2) :
+		GUID(data1, data2)
+	{
+	}
+
+	EditorObjectID::EditorObjectID(const GUID& guid) :
+		GUID(guid)
+	{
+	}
+
+	GameObject* EditorObjectID::Get() const
+	{
+		if (!IsValid())
+		{
+			return nullptr;
+		}
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (scene != nullptr)
+		{
+			return scene->GetEditorObject(*this);
+		}
+		return nullptr;
+	}
+
+	EditorObjectID EditorObjectID::FromString(const std::string& str)
+	{
+		GUID guid = GUID::FromString(str);
+		return *(EditorObjectID*)&guid;
 	}
 } // namespace flex

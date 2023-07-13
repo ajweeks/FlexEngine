@@ -54,6 +54,11 @@ namespace flex
 	// Removes all chars before first '.' occurrence
 	FLEX_NO_DISCARD std::string ExtractFileType(const std::string& filePath);
 
+	FLEX_NO_DISCARD bool IsSpace(char c);
+	FLEX_NO_DISCARD bool IsNewLine(char c);
+	FLEX_NO_DISCARD bool IsDigit(char c);
+	FLEX_NO_DISCARD bool IsLetter(char c);
+
 	// Strips leading and trailing whitespace
 	FLEX_NO_DISCARD std::string Trim(const std::string& str);
 
@@ -98,6 +103,7 @@ namespace flex
 	FLEX_NO_DISCARD glm::vec2 Lerp(const glm::vec2& a, const glm::vec2& b, real t);
 	FLEX_NO_DISCARD glm::vec3 Lerp(const glm::vec3& a, const glm::vec3& b, real t);
 	FLEX_NO_DISCARD glm::vec4 Lerp(const glm::vec4& a, const glm::vec4& b, real t);
+	FLEX_NO_DISCARD glm::quat Slerp(const glm::quat& a, const glm::quat& b, real t);
 
 	FLEX_NO_DISCARD u32 Pack2FloatToU32(real f1, real f2);
 	void UnpackU32To2Float(u32 u1, real* outF1, real* outF2);
@@ -127,19 +133,22 @@ namespace flex
 
 	/* Parses a comma separated list of 2 floats */
 	FLEX_NO_DISCARD glm::vec2 ParseVec2(const std::string& vecStr);
+	bool TryParseVec2(const std::string& vecStr, glm::vec2& outVecValue);
 
 	/* Parses a comma separated list of 3 floats */
 	FLEX_NO_DISCARD glm::vec3 ParseVec3(const std::string& vecStr);
+	bool TryParseVec3(const std::string& vecStr, glm::vec3& outVecValue);
 
 	/*
 	* Parses a comma separated list of 3 or 4 floats
 	* If defaultW is non-negative and no w component exists in the string defaultW will be used
-	* If defaultW is negative then an error will be generated if the string doesn't
-	* contain 4 components
+	* If defaultW is negative then an error will be generated if the string doesn't have 4 numbers
 	*/
 	FLEX_NO_DISCARD glm::vec4 ParseVec4(const std::string& vecStr, real defaultW = 1.0f);
+	bool TryParseVec4(const std::string& vecStr, glm::vec4& outVecValue, real defaultW = 1.0f);
 
 	FLEX_NO_DISCARD glm::quat ParseQuat(const std::string& quatStr);
+	bool TryParseQuat(const std::string& quatStr, glm::quat& outQuatVal);
 
 	FLEX_NO_DISCARD u32 CountSetBits(u32 bits);
 
@@ -152,6 +161,9 @@ namespace flex
 	FLEX_NO_DISCARD real RoundToNearestPowerOfTwo(real num);
 	FLEX_NO_DISCARD u64 NextPowerOfTwo(u64 x);
 	FLEX_NO_DISCARD u32 NextPowerOfTwo(u32 x);
+
+	FLEX_NO_DISCARD real Square(real x);
+	FLEX_NO_DISCARD real Cube(real x);
 
 	FLEX_NO_DISCARD std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName);
 
@@ -202,6 +214,8 @@ namespace flex
 	FLEX_NO_DISCARD char* ToLower(char* str);
 	std::string& ToLower(std::string& str);
 	std::string& ToUpper(std::string& str);
+	FLEX_NO_DISCARD bool IsStringLower(const std::string& str);
+	FLEX_NO_DISCARD bool IsStringUpper(const std::string& str);
 
 	FLEX_NO_DISCARD bool StartsWith(const std::string& str, const std::string& start);
 	FLEX_NO_DISCARD bool StartsWith(const char* str, const char* start);
@@ -231,7 +245,7 @@ namespace flex
 	bool Base64Encode(const u8* src, char* dst, size_t len);
 	bool Base64Decode(const void* src, u8* dst, const size_t len);
 
-	void ByteCountToString(char buf[], u32 bufSize, u32 bytes);
+	void ByteCountToString(char buf[], u32 bufSize, u64 bytes, u32 precision = 1);
 
 	FLEX_NO_DISCARD real MinComponent(const glm::vec2& vec);
 	FLEX_NO_DISCARD real MinComponent(const glm::vec3& vec);
@@ -368,6 +382,13 @@ namespace flex
 		return iter != map.end();
 	}
 
+	template<typename Key, typename Value>
+	inline bool Contains(const std::unordered_map<Key, Value>& map, const Key& key)
+	{
+		auto iter = map.find(key);
+		return iter != map.end();
+	}
+
 	template<typename Value, typename Comp>
 	inline bool Contains(const std::set<Value, Comp>& set, const Value& val)
 	{
@@ -420,6 +441,23 @@ namespace flex
 	}
 
 	template<typename T>
+	void ReorderItemInList(std::vector<T*>& list, i32 previousIndex, i32 newIndex)
+	{
+		if (previousIndex == newIndex)
+		{
+			return;
+		}
+
+		CHECK_LT(previousIndex, (i32)list.size());
+		CHECK_LT(newIndex, (i32)list.size());
+
+		T* child = list[previousIndex];
+
+		list.erase(list.begin() + previousIndex);
+		list.insert(list.begin() + newIndex, child);
+	}
+
+	template<typename T>
 	const T& PickRandomFrom(const std::vector<T>& vec)
 	{
 		return vec[RandomInt(0, (i32)vec.size())];
@@ -442,18 +480,6 @@ namespace flex
 	};
 
 	bool SaveImage(const std::string& absoluteFilePath, ImageFormat imageFormat, i32 width, i32 height, i32 channelCount, u8* data, bool bFlipVertically = false);
-
-	struct HDRImage
-	{
-		bool Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically);
-		void Free();
-
-		u32 width;
-		u32 height;
-		u32 channelCount;
-		std::string filePath;
-		real* pixels;
-	};
 
 	// Stores text render commands issued during the
 	// frame to later be converted to "TextVertex"s
@@ -539,7 +565,7 @@ namespace flex
 	{
 		void* criticalSection = nullptr;
 		volatile bool running = true;
-
+		u8 mode = 1; // TerrainGenMode::MARCHING_CUBES
 	};
 
 	struct ShaderThreadData

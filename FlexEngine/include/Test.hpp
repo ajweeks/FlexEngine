@@ -119,7 +119,7 @@ namespace flex
 			return true;
 		}
 
-		static bool Expect(const char* funcName, int lineNumber, JSONValue::Type val, JSONValue::Type exp, const char* msg)
+		static bool Expect(const char* funcName, int lineNumber, ValueType val, ValueType exp, const char* msg)
 		{
 			return Expect(funcName, lineNumber, (u32)val, (u32)exp, msg);
 		}
@@ -159,7 +159,7 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::STRING);
 			EXPECT(jsonObj.fields[0].value.strValue.c_str(), "strValue");
 		}
 		JSON_UNIT_TEST_END;
@@ -189,10 +189,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::OBJECT);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::OBJECT);
 			EXPECT((u64)jsonObj.fields[0].value.objectValue.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].label.c_str(), "sublabel");
-			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.type, ValueType::STRING);
 			EXPECT(jsonObj.fields[0].value.objectValue.fields[0].value.strValue.c_str(), "childValue1");
 		}
 		JSON_UNIT_TEST_END;
@@ -273,9 +273,9 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)4u);
-			EXPECT(fields[0].value.type, JSONValue::Type::STRING);
+			EXPECT(fields[0].value.type, ValueType::STRING);
 			EXPECT(fields[0].value.strValue.c_str(), "pristine");
 		}
 		JSON_UNIT_TEST_END;
@@ -299,10 +299,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)5u);
 			// Smallest possible integer type that can store all values
-			EXPECT(fields[0].value.type, JSONValue::Type::INT);
+			EXPECT(fields[0].value.type, ValueType::INT);
 			EXPECT(fields[0].value.AsInt(), 12345);
 			EXPECT(fields[1].value.AsInt(), 6789);
 			EXPECT(fields[2].value.AsInt(), 9999);
@@ -330,10 +330,10 @@ namespace flex
 			EXPECT(bSuccess, true);
 			const JSONField& arrayField = jsonObj.fields[0];
 			const std::vector<JSONField>& fields = arrayField.value.fieldArrayValue;
-			EXPECT(arrayField.value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(arrayField.value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)fields.size(), (u64)5u);
 			// Smallest possible integer type that can store all values
-			EXPECT(fields[0].value.type, JSONValue::Type::LONG);
+			EXPECT(fields[0].value.type, ValueType::LONG);
 			EXPECT(fields[0].value.AsLong(), (i64)2147483649);
 			EXPECT(fields[1].value.AsLong(), (i64)6789);
 			EXPECT(fields[2].value.AsLong(), (i64)9999);
@@ -375,11 +375,11 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].label.c_str(), "label");
-			EXPECT(jsonObj.fields[0].value.type, JSONValue::Type::FIELD_ARRAY);
+			EXPECT(jsonObj.fields[0].value.type, ValueType::FIELD_ARRAY);
 			EXPECT((u64)jsonObj.fields[0].value.fieldArrayValue.size(), (u64)1u);
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].label.c_str(), "");
 			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.strValue.c_str(), "array elem 0");
-			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, JSONValue::Type::STRING);
+			EXPECT(jsonObj.fields[0].value.fieldArrayValue[0].value.type, ValueType::STRING);
 		}
 		JSON_UNIT_TEST_END;
 
@@ -452,23 +452,23 @@ namespace flex
 			EXPECT(bSuccess, true);
 			EXPECT((u64)jsonObj.fields.size(), (u64)4u);
 			JSONField spawnPlayerField = jsonObj.fields[2];
-			EXPECT(spawnPlayerField.value.type, JSONValue::Type::BOOL);
-			EXPECT(spawnPlayerField.value.boolValue, false);
+			EXPECT(spawnPlayerField.value.type, ValueType::BOOL);
+			EXPECT(spawnPlayerField.value.uintValue, 0u);
 			JSONField objectArrayField = jsonObj.fields[3];
-			EXPECT(objectArrayField.value.type, JSONValue::Type::OBJECT_ARRAY);
+			EXPECT(objectArrayField.value.type, ValueType::OBJECT_ARRAY);
 			EXPECT((u64)objectArrayField.value.objectArrayValue.size(), (u64)2u); // 2 objects
 
 			const JSONObject& skyboxObj = objectArrayField.value.objectArrayValue[0];
 			EXPECT((u64)skyboxObj.fields.size(), (u64)6u);
 			const JSONField& materialsField = skyboxObj.fields[4];
-			EXPECT(materialsField.value.type, JSONValue::Type::FIELD_ARRAY); // skybox materials array
+			EXPECT(materialsField.value.type, ValueType::FIELD_ARRAY); // skybox materials array
 			EXPECT((u64)materialsField.value.fieldArrayValue.size(), (u64)1u); // 1 material in materials array
 
 			const JSONObject& directionalLightObj = objectArrayField.value.objectArrayValue[1];
 			const JSONField& directionalLightInfoField = directionalLightObj.fields[4];
 			EXPECT(directionalLightInfoField.label.c_str(), "directional light info");
 			const JSONField& brightnessField = directionalLightInfoField.value.objectValue.fields[4];
-			EXPECT(brightnessField.value.type, JSONValue::Type::FLOAT);
+			EXPECT(brightnessField.value.type, ValueType::FLOAT);
 			EXPECT(brightnessField.value.floatValue, 3.047f);
 		}
 		JSON_UNIT_TEST_END;
@@ -2282,6 +2282,101 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(TestContainsVector0)
+		{
+			std::vector<i32> list{1, 2, 3, 4, 5};
+
+			EXPECT(Contains(list, 2), true);
+			EXPECT(Contains(list, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsVector1)
+		{
+			std::vector<const char*> list{"A", "B", "C", "D", "E"};
+
+			EXPECT(Contains(list, "C"), true);
+			EXPECT(Contains(list, "F"), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsArray0)
+		{
+			std::array<i32, 5> list{1, 2, 3, 4, 5};
+
+			EXPECT(Contains(list, 2), true);
+			EXPECT(Contains(list, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsMap0)
+		{
+			std::map<i32, i32> map{ { 0, 1}, { 1, 2 }, {2, 3 } };
+
+			EXPECT(Contains(map, 1), true);
+			EXPECT(Contains(map, 6), false);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestContainsSet0)
+		{
+			std::set<i32> set{ { 1, 2, 3, 4, 5 } };
+
+			EXPECT(Contains(set, 2), true);
+			EXPECT(Contains(set, 6), false);
+		}
+		UNIT_TEST_END;
+
+		// TODO: Test Erase & IndexOf
+
+		UNIT_TEST(TestReorderItemInList0)
+		{
+			i32 one = 1;
+			i32 two = 2;
+			i32 three = 3;
+			i32 four = 4;
+			i32 five = 5;
+			std::vector<i32*> list{&one, &two, &three, &four, &five};
+
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], two);
+			EXPECT(*list[2], three);
+			EXPECT(*list[3], four);
+			EXPECT(*list[4], five);
+			ReorderItemInList(list, 1, 3);
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], three);
+			EXPECT(*list[2], four);
+			EXPECT(*list[3], two);
+			EXPECT(*list[4], five);
+			EXPECT((u32)list.size(), 5u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TestReorderItemInList1)
+		{
+			i32 one = 1;
+			i32 two = 2;
+			i32 three = 3;
+			i32 four = 4;
+			i32 five = 5;
+			std::vector<i32*> list{ &one, &two, &three, &four, &five };
+
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], two);
+			EXPECT(*list[2], three);
+			EXPECT(*list[3], four);
+			EXPECT(*list[4], five);
+			ReorderItemInList(list, 3, 1);
+			EXPECT(*list[0], one);
+			EXPECT(*list[1], four);
+			EXPECT(*list[2], two);
+			EXPECT(*list[3], three);
+			EXPECT(*list[4], five);
+			EXPECT((u32)list.size(), 5u);
+		}
+		UNIT_TEST_END;
+
 	public:
 		static i32 Run()
 		{
@@ -2331,6 +2426,10 @@ namespace flex
 				SignedDistanceToTriangle0, SignedDistanceToTriangle1, SignedDistanceToTriangle2, SignedDistanceToTriangle3,
 
 				TestPrettifyNumbers0, TestPrettifyNumbers1, TestPrettifyNumbers2, TestPrettifyNumbers3, TestPrettifyNumbers4, TestPrettifyNumbers5, TestPrettifyNumbers6,
+
+				TestContainsVector0, TestContainsVector1, TestContainsArray0, TestContainsMap0, TestContainsSet0,
+
+				TestReorderItemInList0, TestReorderItemInList1,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));

@@ -24,6 +24,24 @@ namespace flex
 			_NONE
 		};
 
+		struct CreateInfo
+		{
+			// Common fields
+			std::vector<MaterialID> materialIDs;
+			bool bDynamic = false;
+			bool bCreateRenderObject = true;
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr;
+
+			// Load from file fields
+			bool bForceLoadMesh = false;
+			std::string relativeFilePath;
+
+			// Load from memory fields
+			VertexBufferDataCreateInfo* vertexBufferCreateInfo = nullptr;
+			u32 initialMaxVertexCount = 0;
+			std::vector<u32> indices;
+		};
+
 		Mesh(GameObject* owner);
 
 		void PostInitialize();
@@ -32,45 +50,26 @@ namespace flex
 		void DestroyAllSubmeshes();
 		void Reload();
 
+		Mesh* CloneSelf(GameObject* newOwner, bool bCreateRenderObject);
+
 		void RemoveSubmesh(u32 index);
 
-		bool LoadFromFile(
-			const std::string& relativeFilePath,
-			MaterialID materialID,
-			bool bDynamic = false,
-			bool bCreateRenderObject = true,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+		bool LoadFromFile(CreateInfo& createInfo);
+		bool LoadFromFile(const std::string& filePath, MaterialID matID);
+		bool LoadFromFile(const std::string& filePath, const std::vector<MaterialID>& matIDs);
 
-		bool LoadFromFile(
-			const std::string& relativeFilePath,
-			const std::vector<MaterialID>& inMaterialIDs,
-			bool bDynamic = false,
-			bool bCreateRenderObject = true,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
-
-		bool LoadFromMemory(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
-			MaterialID matID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
-			bool bCreateRenderObject = true);
-
-		bool LoadFromMemoryDynamic(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
-			MaterialID matID,
-			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
-			bool bCreateRenderObject = true);
+		bool LoadFromMemory(const CreateInfo& createInfo);
 
 		bool LoadPrefabShape(PrefabShape shape,
 			MaterialID materialID,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr,
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr,
 			bool bCreateRenderObject = true);
 
 		bool CreateProcedural(u32 initialMaxVertCount,
 			VertexAttributes attributes,
 			MaterialID materialID,
 			TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST,
-			RenderObjectCreateInfo* optionalCreateInfo = nullptr);
+			RenderObjectCreateInfo* optionalRenderObjectCreateInfo = nullptr);
 
 		i32 AddSubMesh(MeshComponent* meshComponent);
 
@@ -102,6 +101,9 @@ namespace flex
 
 		GameObject* GetOwningGameObject() const;
 
+		// Gets called when any mesh file gets modified
+		void OnExternalMeshChange(const std::string& meshFilePath);
+
 		static LoadedMesh* LoadMesh(const std::string& relativeFilePath);
 
 		glm::vec3 m_MinPoint;
@@ -113,15 +115,6 @@ namespace flex
 		std::vector<MeshComponent*> m_Meshes;
 	private:
 		void CalculateBounds();
-
-		bool LoadFromMemoryInternal(const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
-			const std::vector<u32>& indices,
-			MaterialID matID,
-			bool bDynamic,
-			u32 initialMaxVertexCount,
-			RenderObjectCreateInfo* optionalCreateInfo,
-			bool bCreateRenderObject);
-
 
 		Type m_Type = Type::_NONE;
 

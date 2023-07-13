@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "gold",
+		"shader" : "pbr",
+		"const albedo" : "0.860,0.739,0.264",
+		"const metallic" : 0.560000,
+		"const roughness" : 0.320000
+	}
+}

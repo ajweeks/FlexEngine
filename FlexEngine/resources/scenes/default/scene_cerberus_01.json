@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 7,
 	"name" : "Cerberus Scene",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -21,9 +15,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-33.099, 9.124, 3.486",
-			"pitch" : -0.079180,
-			"yaw" : 0.121123
+			"position" : "-50.478, 13.727, 30.943",
+			"pitch" : -0.351288,
+			"yaw" : -0.483041
 		}
 	},
 	"objects" : 
@@ -32,8 +26,6 @@
 			"name" : "Cerberus",
 			"id" : "C417A01C363097A646195AFA309EA645",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 7.800, -5.900",
@@ -49,29 +41,47 @@
 			"name" : "Skybox",
 			"id" : "CAAF535C1C1605A24E7588B29ECB689C",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
 			"name" : "Reflection Probe 01",
 			"id" : "68814E7182BDE89E40124F19E49EDF44",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "3.100, 18.920, 1.978",
 				"rot" : "0.037, -0.000, 0.000"
+			}
+		},
+		{
+			"name" : "Directional Light",
+			"id" : "974E70E7919AB29449EFAE98168B299F",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 21.176, 9.032",
+				"rot" : "1.988, -0.000, 0.000"
+			},
+			"directional light info" : 
+			{
+				"colour" : "0.99,1.00,0.84"
+			}
+		},
+		{
+			"name" : "PointLight_00",
+			"id" : "2284DA22ED4469904B7B1D5FCEB44FEC",
+			"type" : "point light",
+			"transform" : 
+			{
+				"pos" : "-18.950, 3.089, -13.162"
+			},
+			"point light info" : 
+			{
+				"brightness" : 500.000
 			}
 		}
 	]

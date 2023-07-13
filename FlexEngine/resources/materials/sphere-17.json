@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "sphere 17",
+		"shader" : "pbr",
+		"const albedo" : "0.388,0.349,0.322",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.400000
+	}
+}

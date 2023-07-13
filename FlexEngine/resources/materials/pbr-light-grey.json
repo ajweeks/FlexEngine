@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr light grey",
+		"shader" : "pbr",
+		"const albedo" : "0.230,0.250,0.290",
+		"const roughness" : 0.450000
+	}
+}

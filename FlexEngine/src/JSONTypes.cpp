@@ -10,30 +10,30 @@ namespace flex
 	std::vector<JSONObject> JSONObject::s_EmptyObjectArray;
 	std::vector<JSONField> JSONObject::s_EmptyFieldArray;
 
-	JSONValue::Type JSONValue::TypeFromChar(char c, const std::string& stringAfter)
+	ValueType JSONValue::TypeFromChar(char c, const std::string& stringAfter)
 	{
 		switch (c)
 		{
 		case '{':
-			return Type::OBJECT;
+			return ValueType::OBJECT;
 		case '[':
 			if (stringAfter[0] == '{')
 			{
-				return Type::OBJECT_ARRAY;
+				return ValueType::OBJECT_ARRAY;
 			}
 			else
 			{
 				// Arrays of strings are not supported
-				return Type::FIELD_ARRAY;
+				return ValueType::FIELD_ARRAY;
 			}
 		case '\"':
-			return Type::STRING;
+			return ValueType::STRING;
 		case 't':
 		case 'f':
 			if (c == 't' && stringAfter.size() >= 3 && stringAfter.substr(0, 3).compare("rue") == 0)
-				return Type::BOOL;
+				return ValueType::BOOL;
 			if (c == 'f' && stringAfter.size() >= 4 && stringAfter.substr(0, 4).compare("alse") == 0)
-				return Type::BOOL;
+				return ValueType::BOOL;
 			// Fall through
 		default:
 		{
@@ -47,7 +47,7 @@ namespace flex
 				i32 nextNonAlphaNumeric = NextNonAlphaNumeric(stringAfter, 0);
 				if (isDecimal || (nextNonAlphaNumeric != -1 && !stringAfter.empty() && stringAfter[nextNonAlphaNumeric] == '.'))
 				{
-					return Type::FLOAT;
+					return ValueType::FLOAT;
 				}
 				else
 				{
@@ -57,58 +57,58 @@ namespace flex
 					{
 						i64 result = strtoll(numberStr.c_str(), nullptr, 10);
 
-						return (result < -INT_MAX || result > INT_MAX) ? Type::LONG : Type::INT;
+						return (result < -INT_MAX || result > INT_MAX) ? ValueType::LONG : ValueType::INT;
 					}
 					else
 					{
 						u64 result = strtoull(numberStr.c_str(), nullptr, 10);
 
-						return (result > INT_MAX) ? Type::ULONG : Type::UINT;
+						return (result > INT_MAX) ? ValueType::ULONG : ValueType::UINT;
 					}
 				}
 			}
-		} return Type::STRING;
+		} return ValueType::STRING;
 		}
 	}
 
 	JSONValue::JSONValue() :
-		type(Type::UNINITIALIZED)
+		type(ValueType::UNINITIALIZED)
 	{
 	}
 
 	JSONValue::JSONValue(const std::string& inStrValue) :
-		type(Type::STRING),
+		type(ValueType::STRING),
 		strValue(inStrValue)
 	{
 	}
 
 	JSONValue::JSONValue(const char* inStrValue) :
-		type(Type::STRING),
+		type(ValueType::STRING),
 		strValue(inStrValue)
 	{
 	}
 
 	JSONValue::JSONValue(i32 inIntValue) :
-		type(Type::INT),
+		type(ValueType::INT),
 		intValue(inIntValue)
 	{
 		ENSURE(!IsNanOrInf((real)inIntValue));
 	}
 
 	JSONValue::JSONValue(u32 inUIntValue) :
-		type(Type::UINT),
+		type(ValueType::UINT),
 		uintValue(inUIntValue)
 	{
 	}
 
 	JSONValue::JSONValue(i64 inLongValue) :
-		type(Type::LONG),
+		type(ValueType::LONG),
 		longValue(inLongValue)
 	{
 	}
 
 	JSONValue::JSONValue(u64 inULongValue) :
-		type(Type::ULONG),
+		type(ValueType::ULONG),
 		ulongValue(inULongValue)
 	{
 	}
@@ -119,7 +119,7 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(real inFloatValue, u32 inFloatPrecision) :
-		type(Type::FLOAT),
+		type(ValueType::FLOAT),
 		floatValue(inFloatValue),
 		floatPrecision(inFloatPrecision)
 	{
@@ -127,53 +127,207 @@ namespace flex
 	}
 
 	JSONValue::JSONValue(bool inBoolValue) :
-		type(Type::BOOL),
-		boolValue(inBoolValue)
+		type(ValueType::BOOL),
+		uintValue(inBoolValue ? 1 : 0)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::vec2& inVec2Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC2),
+		vecValue(inVec2Value, 0.0f, 0.0f),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC3),
+		vecValue(inVec3Value, 0.0f),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::VEC4),
+		vecValue(inVec4Value),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::QUAT),
+		vecValue(inQuatValue.x, inQuatValue.y, inQuatValue.z, inQuatValue.w),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const glm::mat4& inMatValue, u32 inFloatPrecision /* = DEFAULT_FLOAT_PRECISION */) :
+		type(ValueType::MAT4),
+		matValue(inMatValue),
+		floatPrecision(inFloatPrecision)
+	{
+	}
+
+	JSONValue::JSONValue(const GUID& inGUIDValue) :
+		type(ValueType::GUID),
+		guidValue(inGUIDValue)
 	{
 	}
 
 	JSONValue::JSONValue(const JSONObject& inObjectValue) :
-		type(Type::OBJECT),
+		type(ValueType::OBJECT),
 		objectValue(inObjectValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONObject>& inObjectArrayValue) :
-		type(Type::OBJECT_ARRAY),
+		type(ValueType::OBJECT_ARRAY),
 		objectArrayValue(inObjectArrayValue)
 	{
 	}
 
 	JSONValue::JSONValue(const std::vector<JSONField>& inFieldArrayValue) :
-		type(Type::FIELD_ARRAY),
+		type(ValueType::FIELD_ARRAY),
 		fieldArrayValue(inFieldArrayValue)
 	{
 	}
 
-	JSONValue::JSONValue(const GUID& inGUIDValue) :
-		type(Type::STRING),
-		strValue(inGUIDValue.ToString())
+	JSONValue JSONValue::FromRawPtr(void* valuePtr, ValueType type, u32 precision /* = DEFAULT_FLOAT_PRECISION */)
 	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return JSONValue(*(std::string*)valuePtr);
+		case ValueType::INT:
+			return JSONValue(*(i32*)valuePtr);
+		case ValueType::UINT:
+			return JSONValue(*(u32*)valuePtr);
+		case ValueType::LONG:
+			return JSONValue(*(i64*)valuePtr);
+		case ValueType::ULONG:
+			return JSONValue(*(u64*)valuePtr);
+		case ValueType::FLOAT:
+			return JSONValue(*(real*)valuePtr, precision);
+		case ValueType::BOOL:
+			return JSONValue(*(bool*)valuePtr);
+		case ValueType::VEC2:
+			return JSONValue(*(glm::vec2*)valuePtr, precision);
+		case ValueType::VEC3:
+			return JSONValue(*(glm::vec3*)valuePtr, precision);
+		case ValueType::VEC4:
+			return JSONValue(*(glm::vec4*)valuePtr, precision);
+		case ValueType::QUAT:
+			return JSONValue(*(glm::quat*)valuePtr, precision);
+		case ValueType::MAT4:
+			return JSONValue(*(glm::mat4*)valuePtr, precision);
+		case ValueType::GUID:
+			return JSONValue(*(GUID*)valuePtr);
+		case ValueType::OBJECT:
+			return JSONValue(*(JSONObject*)valuePtr);
+		case ValueType::OBJECT_ARRAY:
+			return JSONValue(*(std::vector<JSONObject>*)valuePtr);
+		case ValueType::FIELD_ARRAY:
+			return JSONValue(*(std::vector<JSONField>*)valuePtr);
+		default:
+			PrintError("FromRawPtr was called with invalid type\n");
+			return JSONValue();
+		}
+	}
+
+	bool JSONValue::operator!=(const JSONValue& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONValue::operator==(const JSONValue& other)
+	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return AsString() == other.AsString();
+		case ValueType::INT:
+			return AsInt() == other.AsInt();
+		case ValueType::UINT:
+			return AsUInt() == other.AsUInt();
+		case ValueType::LONG:
+			return AsLong() == other.AsLong();
+		case ValueType::ULONG:
+			return AsULong() == other.AsULong();
+		case ValueType::FLOAT:
+			return AsFloat() == other.AsFloat();
+		case ValueType::BOOL:
+			return AsBool() == other.AsBool();
+		case ValueType::VEC2:
+			return AsVec2() == other.AsVec2();
+		case ValueType::VEC3:
+			return AsVec3() == other.AsVec3();
+		case ValueType::VEC4:
+			return AsVec4() == other.AsVec4();
+		case ValueType::QUAT:
+			return AsQuat() == other.AsQuat();
+		case ValueType::MAT4:
+			return AsMat4() == other.AsMat4();
+		case ValueType::GUID:
+			return AsGUID() == other.AsGUID();
+		case ValueType::OBJECT:
+			return objectValue == other.objectValue;
+		case ValueType::OBJECT_ARRAY:
+		{
+			if (objectArrayValue.size() != other.objectArrayValue.size())
+			{
+				return false;
+			}
+
+			for (u32 i = 0; i < (u32)objectArrayValue.size(); ++i)
+			{
+				if (objectArrayValue[i] != other.objectArrayValue[i])
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+		case ValueType::FIELD_ARRAY:
+		{
+			if (fieldArrayValue.size() != other.fieldArrayValue.size())
+			{
+				return false;
+			}
+
+			for (u32 i = 0; i < (u32)fieldArrayValue.size(); ++i)
+			{
+				if (fieldArrayValue[i] != other.fieldArrayValue[i])
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+		default:
+			PrintError("JSONValue::operator== was called with invalid type\n");
+			return false;
+		}
 	}
 
 	i32 JSONValue::AsInt() const
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (i32)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (i32)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (i32)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (i32)floatValue;
-		case Type::BOOL:
-			return boolValue ? 1 : 0;
+		case ValueType::BOOL:
+			return (i32)uintValue;
 		default:
-			PrintError("AsInt was called on non-integer value\\n");
+			PrintError("AsInt was called on non-integer value\n");
 			return i32_max;
 		}
 	}
@@ -182,20 +336,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (u32)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (u32)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (u32)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (u32)floatValue;
-		case Type::BOOL:
-			return boolValue;
+		case ValueType::BOOL:
+			return uintValue;
 		default:
-			PrintError("AsUInt was called on non-integer value\\n");
+			PrintError("AsUInt was called on non-integer value\n");
 			return u32_max;
 		}
 	}
@@ -204,20 +358,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (i64)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (i64)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (i64)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (i64)floatValue;
-		case Type::BOOL:
-			return boolValue;
+		case ValueType::BOOL:
+			return (i64)uintValue;
 		default:
-			PrintError("AsLong was called on non-integer value\\n");
+			PrintError("AsLong was called on non-integer value\n");
 			return -1;
 		}
 	}
@@ -226,20 +380,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (u64)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (u64)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (u64)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return (u64)floatValue;
-		case Type::BOOL:
-			return boolValue;
+		case ValueType::BOOL:
+			return (u64)uintValue;
 		default:
-			PrintError("AsULong was called on non-integer value\\n");
+			PrintError("AsULong was called on non-integer value\n");
 			return u64_max;
 		}
 	}
@@ -248,18 +402,18 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
+		case ValueType::INT:
 			return (real)intValue;
-		case Type::UINT:
+		case ValueType::UINT:
 			return (real)uintValue;
-		case Type::LONG:
+		case ValueType::LONG:
 			return (real)longValue;
-		case Type::ULONG:
+		case ValueType::ULONG:
 			return (real)ulongValue;
-		case Type::FLOAT:
+		case ValueType::FLOAT:
 			return floatValue;
-		case Type::BOOL:
-			return (boolValue != 0) ? 1.0f : 0.0f;
+		case ValueType::BOOL:
+			return (uintValue != 0) ? 1.0f : 0.0f;
 		default:
 			PrintError("AsFloat was called on non-floating point value\n");
 			return -1.0f;
@@ -270,20 +424,20 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::INT:
-			return (intValue != 0) ? 1 : 0;
-		case Type::UINT:
-			return (uintValue != 0) ? 1 : 0;
-		case Type::LONG:
-			return (longValue != 0) ? 1 : 0;
-		case Type::ULONG:
-			return (ulongValue != 0) ? 1 : 0;
-		case Type::FLOAT:
-			return (floatValue != 0.0f ? 1 : 0);
-		case Type::BOOL:
-			return (boolValue != 0 ? 1 : 0);
+		case ValueType::INT:
+			return (intValue != 0);
+		case ValueType::UINT:
+			return (uintValue != 0);
+		case ValueType::LONG:
+			return (longValue != 0);
+		case ValueType::ULONG:
+			return (ulongValue != 0);
+		case ValueType::FLOAT:
+			return (floatValue != 0.0f);
+		case ValueType::BOOL:
+			return (uintValue != 0);
 		default:
-			PrintError("AsBool was called on non-bool value\\n");
+			PrintError("AsBool was called on non-bool value\n");
 			return false;
 		}
 	}
@@ -292,16 +446,96 @@ namespace flex
 	{
 		switch (type)
 		{
-		case Type::STRING:
+		case ValueType::STRING:
 			return strValue;
 		default:
-			PrintError("AsFloat was called on non-string value\\n");
-			return "";
+			PrintError("AsString was called on non-string value\n");
+			return EMPTY_STRING;
+		}
+	}
+
+	glm::vec2 JSONValue::AsVec2() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec2)vecValue;
+		default:
+			PrintError("AsVec2 was called on non-vec value\n");
+			return VEC2_ZERO;
+		}
+	}
+
+	glm::vec3 JSONValue::AsVec3() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec3)vecValue;
+		default:
+			PrintError("AsVec3 was called on non-vec value\n");
+			return VEC3_ZERO;
+		}
+	}
+
+	glm::vec4 JSONValue::AsVec4() const
+	{
+		switch (type)
+		{
+		case ValueType::VEC2:
+		case ValueType::VEC3:
+		case ValueType::VEC4:
+			return (glm::vec4)vecValue;
+		default:
+			PrintError("AsVec4 was called on non-vec value\n");
+			return VEC4_ZERO;
+		}
+	}
+
+	glm::mat4 JSONValue::AsMat4() const
+	{
+		switch (type)
+		{
+		case ValueType::MAT4:
+			return matValue;
+		default:
+			PrintError("AsMat4 was called on non-matrix value\n");
+			return MAT4_IDENTITY;
+		}
+	}
+
+	glm::quat JSONValue::AsQuat() const
+	{
+		switch (type)
+		{
+		case ValueType::QUAT:
+			return (glm::quat)vecValue;
+		default:
+			PrintError("AsQuat was called on non-quat value\n");
+			return QUAT_IDENTITY;
+		}
+	}
+
+	GUID JSONValue::AsGUID() const
+	{
+		switch (type)
+		{
+		case ValueType::GUID:
+			return guidValue;
+		default:
+			PrintError("AsGUID was called on non-GUID value\n");
+			return InvalidGUID;
 		}
 	}
 
 	bool JSONObject::HasField(const std::string& label) const
 	{
+		PROFILE_AUTO("JSONObject HasField");
+
 		for (const JSONField& field : fields)
 		{
 			if (field.label == label)
@@ -355,70 +589,114 @@ namespace flex
 		return false;
 	}
 
+	glm::vec2 JSONObject::GetVec2(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return (glm::vec2)field.value.vecValue;
+			}
+		}
+		return VEC2_ZERO;
+	}
+
 	bool JSONObject::TryGetVec2(const std::string& label, glm::vec2& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec2(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec2(label);
 			return true;
 		}
 		return false;
+	}
+
+	glm::vec3 JSONObject::GetVec3(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return (glm::vec3)field.value.vecValue;
+			}
+		}
+		return VEC3_ZERO;
 	}
 
 	bool JSONObject::TryGetVec3(const std::string& label, glm::vec3& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec3(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec3(label);
 			return true;
 		}
 		return false;
+	}
+
+	glm::vec4 JSONObject::GetVec4(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.vecValue;
+			}
+		}
+		return VEC4_ZERO;
 	}
 
 	bool JSONObject::TryGetVec4(const std::string& label, glm::vec4& value) const
 	{
 		if (HasField(label))
 		{
-			value = ParseVec4(GetString(label));
-			ENSURE(!IsNanOrInf(value));
+			value = GetVec4(label);
 			return true;
 		}
 		return false;
 	}
 
-	glm::vec2 JSONObject::GetVec2(const std::string& label) const
+	glm::quat JSONObject::GetQuat(const std::string& label) const
 	{
-		if (HasField(label))
+		for (const JSONField& field : fields)
 		{
-			glm::vec2 value = ParseVec2(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
+			if (field.label == label)
+			{
+				return (glm::quat)field.value.vecValue;
+			}
 		}
-		return VEC2_ZERO;
+		return QUAT_IDENTITY;
 	}
 
-	glm::vec3 JSONObject::GetVec3(const std::string& label) const
+	bool JSONObject::TryGetQuat(const std::string& label, glm::quat& value) const
 	{
 		if (HasField(label))
 		{
-			glm::vec3 value = ParseVec3(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
+			value = GetQuat(label);
+			return true;
 		}
-		return VEC3_ZERO;
+		return false;
 	}
 
-	glm::vec4 JSONObject::GetVec4(const std::string& label) const
+	glm::mat4 JSONObject::GetMat4(const std::string& label) const
+	{
+		for (const JSONField& field : fields)
+		{
+			if (field.label == label)
+			{
+				return field.value.matValue;
+			}
+		}
+		return MAT4_IDENTITY;
+	}
+
+	bool JSONObject::TryGetMat4(const std::string& label, glm::mat4& value) const
 	{
 		if (HasField(label))
 		{
-			glm::vec4 value = ParseVec4(GetString(label));
-			ENSURE(!IsNanOrInf(value));
-			return value;
+			value = GetMat4(label);
+			return true;
 		}
-		return VEC4_ZERO;
+		return false;
 	}
 
 	i32 JSONObject::GetInt(const std::string& label) const
@@ -546,7 +824,7 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				return field.value.boolValue;
+				return field.value.uintValue;
 			}
 		}
 		return false;
@@ -672,6 +950,42 @@ namespace flex
 		return false;
 	}
 
+	bool JSONObject::TryGetValueOfType(const char* label, void* valuePtr, ValueType type) const
+	{
+		switch (type)
+		{
+		case ValueType::STRING:
+			return TryGetString(label, *(std::string*)valuePtr);
+		case ValueType::INT:
+			return TryGetInt(label, *(i32*)valuePtr);
+		case ValueType::UINT:
+			return TryGetUInt(label, *(u32*)valuePtr);
+		case ValueType::LONG:
+			return TryGetLong(label, *(i64*)valuePtr);
+		case ValueType::ULONG:
+			return TryGetULong(label, *(u64*)valuePtr);
+		case ValueType::FLOAT:
+			return TryGetFloat(label, *(real*)valuePtr);
+		case ValueType::BOOL:
+			return TryGetBool(label, *(bool*)valuePtr);
+		case ValueType::VEC2:
+			return TryGetVec2(label, *(glm::vec2*)valuePtr);
+		case ValueType::VEC3:
+			return TryGetVec3(label, *(glm::vec3*)valuePtr);
+		case ValueType::VEC4:
+			return TryGetVec4(label, *(glm::vec4*)valuePtr);
+		case ValueType::QUAT:
+			return TryGetQuat(label, *(glm::quat*)valuePtr);
+		case ValueType::MAT4:
+			return TryGetMat4(label, *(glm::mat4*)valuePtr);
+		case ValueType::GUID:
+			return TryGetGUID(label, *(GUID*)valuePtr);
+		default:
+			PrintError("Unhandled type passed to JSONObject::TryGetValueOfType\n");
+			return false;
+		}
+	}
+
 
 	JSONField::JSONField()
 	{
@@ -683,9 +997,21 @@ namespace flex
 	{
 	}
 
+	bool JSONField::operator!=(const JSONField& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONField::operator==(const JSONField& other)
+	{
+		return label == other.label && value == other.value;
+	}
+
 	std::string JSONField::ToString(i32 tabCount) const
 	{
 		const std::string tabs(tabCount, '\t');
+
+		// TODO: Use StringBuilder
 		std::string result(tabs);
 
 		if (!label.empty())
@@ -695,28 +1021,109 @@ namespace flex
 
 		switch (value.type)
 		{
-		case JSONValue::Type::STRING:
+		case ValueType::STRING:
 			result += '\"' + value.strValue + '\"';
 			break;
-		case JSONValue::Type::INT:
+		case ValueType::INT:
 			result += IntToString(value.intValue);
 			break;
-		case JSONValue::Type::UINT:
+		case ValueType::UINT:
 			result += UIntToString(value.uintValue);
 			break;
-		case JSONValue::Type::LONG:
+		case ValueType::LONG:
 			result += LongToString(value.longValue);
 			break;
-		case JSONValue::Type::ULONG:
+		case ValueType::ULONG:
 			result += ULongToString(value.ulongValue);
 			break;
-		case JSONValue::Type::FLOAT:
+		case ValueType::FLOAT:
 			result += FloatToString(value.floatValue, value.floatPrecision);
 			break;
-		case JSONValue::Type::BOOL:
-			result += (value.boolValue ? "true" : "false");
+		case ValueType::BOOL:
+			result += (value.uintValue ? "true" : "false");
 			break;
-		case JSONValue::Type::OBJECT:
+		case ValueType::VEC2:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::VEC3:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::VEC4:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[3], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::QUAT:
+			result += "\"";
+			result += FloatToString(value.vecValue[0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.vecValue[3], value.floatPrecision);
+			result += "\"";
+			break;
+		case ValueType::MAT4:
+			result += "\"(";
+			result += FloatToString(value.matValue[0][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[0][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[1][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[1][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[2][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[2][3], value.floatPrecision);
+			result += "), (";
+
+			result += FloatToString(value.matValue[3][0], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][1], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][2], value.floatPrecision);
+			result += ",";
+			result += FloatToString(value.matValue[3][3], value.floatPrecision);
+			result += ")\"";
+			break;
+		case ValueType::GUID:
+			result += "\"";
+			result += value.guidValue.ToString();
+			result += "\"";
+			break;
+		case ValueType::OBJECT:
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
@@ -732,7 +1139,7 @@ namespace flex
 			}
 			result += tabs + "}";
 			break;
-		case JSONValue::Type::OBJECT_ARRAY:
+		case ValueType::OBJECT_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.objectArrayValue.size(); ++i)
 			{
@@ -748,7 +1155,7 @@ namespace flex
 			}
 			result += tabs + "]";
 			break;
-		case JSONValue::Type::FIELD_ARRAY:
+		case ValueType::FIELD_ARRAY:
 			result += '\n' + tabs + "[\n";
 			for (u32 i = 0; i < value.fieldArrayValue.size(); ++i)
 			{
@@ -765,11 +1172,15 @@ namespace flex
 			}
 			result += tabs + "]";
 			break;
-		case JSONValue::Type::UNINITIALIZED:
+		case ValueType::UNINITIALIZED:
 			result += "UNINITIALIZED TYPE\n";
+			DEBUG_BREAK();
+			PrintError("Uninitialized type in JSONField::ToString()\n");
 			break;
 		default:
 			result += "UNHANDLED TYPE\n";
+			DEBUG_BREAK();
+			PrintError("Unhandled type in JSONField::ToString()\n");
 			break;
 		}
 
@@ -800,4 +1211,138 @@ namespace flex
 		return result;
 	}
 
+	bool JSONObject::operator!=(const JSONObject& other)
+	{
+		return !(*this == other);
+	}
+
+	bool JSONObject::operator==(const JSONObject& other)
+	{
+		if (fields.size() != other.fields.size())
+		{
+			return false;
+		}
+
+		for (u32 i = 0; i < (u32)fields.size(); ++i)
+		{
+			if (fields[i] != other.fields[i])
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	bool DrawImGuiForValueType(void* valuePtr, const char* label, ValueType type, bool valueMinSet, bool valueMaxSet, void* valueMin, void* valueMax)
+	{
+		bool bValueChanged = false;
+
+		switch (type)
+		{
+		case ValueType::FLOAT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat(label, (real*)valuePtr, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat(label, (real*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::INT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderInt(label, (i32*)valuePtr, *(i32*)&valueMin, *(i32*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragInt(label, (i32*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::UINT:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGuiExt::SliderUInt(label, (u32*)valuePtr, *(u32*)&valueMin, *(u32*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGuiExt::DragUInt(label, (u32*)valuePtr) || bValueChanged;
+			}
+		} break;
+		case ValueType::BOOL:
+		{
+			bValueChanged = ImGui::Checkbox(label, (bool*)valuePtr) || bValueChanged;
+		} break;
+		case ValueType::VEC2:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat2(label, &((glm::vec2*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat2(label, &((glm::vec2*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::VEC3:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat3(label, &((glm::vec3*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat3(label, &((glm::vec3*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::VEC4:
+		{
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				bValueChanged = ImGui::SliderFloat4(label, &((glm::vec4*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+			}
+			else
+			{
+				bValueChanged = ImGui::DragFloat4(label, &((glm::vec4*)valuePtr)->x) || bValueChanged;
+			}
+		} break;
+		case ValueType::QUAT:
+		{
+			glm::vec3 rotEuler = glm::eulerAngles(*(glm::quat*)valuePtr);
+
+			real valueMinReal = -TWO_PI;
+			real valueMaxReal = TWO_PI;
+			if (valueMinSet != 0 && valueMaxSet != 0)
+			{
+				valueMinReal = *(real*)&valueMin;
+				valueMaxReal = *(real*)&valueMax;
+			}
+
+			if (ImGui::SliderFloat3(label, &rotEuler.x, valueMinReal, valueMaxReal))
+			{
+				*(glm::quat*)valuePtr = glm::quat(rotEuler);
+				bValueChanged = true;
+			}
+		} break;
+		case ValueType::STRING:
+		{
+			ImGui::Text("%s: %s", label, ((std::string*)valuePtr)->c_str());
+		} break;
+		case ValueType::GUID:
+		{
+			std::string guidStr = ((GUID*)valuePtr)->ToString();
+			ImGui::Text("%s: %s", label, guidStr.c_str());
+		} break;
+		default:
+		{
+			PrintError("Unhandled value type in DrawImGuiForValueType: %u\n", (u32)type);
+		} break;
+		}
+
+		return bValueChanged;
+	}
 } // namespace flex

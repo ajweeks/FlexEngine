@@ -1,0 +1,117 @@
+{
+	"acceleration" : 
+	[
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
+	"enable spawning" : 
+	{
+		"type" : "constant",
+		"constant" : true
+	},
+	"fade over lifetime" : 
+	{
+		"type" : "constant",
+		"constant" : true
+	},
+	"initial colour" : 
+	[
+		{
+			"type" : "random",
+			"random min" : 0.470588,
+			"random max" : 0.894118
+		},
+		{
+			"type" : "random",
+			"random min" : 0.039216,
+			"random max" : 0.054902
+		},
+		{
+			"type" : "random",
+			"random min" : 0.039216,
+			"random max" : 0.054902
+		},
+		{
+			"type" : "random",
+			"random min" : 1.000000,
+			"random max" : 1.000000
+		}
+	],
+	"initial position" : 
+	[
+		{
+			"type" : "random",
+			"random min" : -0.050000,
+			"random max" : 0.050000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "random",
+			"random min" : -0.050000,
+			"random max" : 0.050000
+		}
+	],
+	"initial velocity" : 
+	[
+		{
+			"type" : "random",
+			"random min" : -0.500000,
+			"random max" : 0.500000
+		},
+		{
+			"type" : "random",
+			"random min" : 19.000000,
+			"random max" : 25.000000
+		},
+		{
+			"type" : "random",
+			"random min" : -0.500000,
+			"random max" : 0.500000
+		}
+	],
+	"lifetime" : 
+	{
+		"type" : "random",
+		"random min" : 0.075000,
+		"random max" : 0.250000
+	},
+	"particle count" : 
+	{
+		"type" : "constant",
+		"constant" : 64
+	},
+	"scale" : 
+	[
+		{
+			"type" : "random",
+			"random min" : 0.075000,
+			"random max" : 0.300000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		},
+		{
+			"type" : "constant",
+			"constant" : 0.000000
+		}
+	],
+	"uniform scale" : 
+	{
+		"type" : "constant",
+		"constant" : true
+	}
+}

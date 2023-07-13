@@ -8,33 +8,25 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/ConstraintSolver/btFixedConstraint.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
-#include <LinearMath/btDefaultMotionState.h>
-
 #include <glm/gtc/matrix_transform.hpp>
 IGNORE_WARNINGS_POP
 
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/MotionState.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Transform.hpp"
 
 namespace flex
 {
-	RigidBody::RigidBody(i32 group, i32 mask) :
-		m_LocalPosition(0.0f),
-		m_LocalRotation(QUAT_IDENTITY),
-		m_LocalScale(1.0f),
+	RigidBody::RigidBody(u32 group, u32 mask) :
 		m_Group(group),
 		m_Mask(mask)
 	{
 	}
 
 	RigidBody::RigidBody(const RigidBody& other) :
-		m_ParentTransform(nullptr),
-		m_LocalPosition(other.m_LocalPosition),
-		m_LocalRotation(other.m_LocalRotation),
-		m_LocalScale(other.m_LocalScale),
 		m_Mass(other.m_Mass),
 		m_bStatic(other.m_bStatic),
 		m_bKinematic(other.m_bKinematic),
@@ -49,12 +41,10 @@ namespace flex
 	{
 	}
 
-	void RigidBody::Initialize(btCollisionShape* collisionShape, Transform* parentTransform)
+	void RigidBody::Initialize(btCollisionShape* collisionShape, Transform* transform)
 	{
-		assert(m_RigidBody == nullptr);
-		assert(m_MotionState == nullptr);
-
-		m_ParentTransform = parentTransform;
+		CHECK_EQ(m_btRigidBody, nullptr);
+		CHECK_EQ(m_btMotionState, nullptr);
 
 		btVector3 localInertia(0, 0, 0);
 		if (!m_bStatic)
@@ -64,15 +54,14 @@ namespace flex
 
 		if (m_bStatic)
 		{
-			assert(m_Mass == 0); // Static objects must have a mass of 0!
+			CHECK_EQ(m_Mass, 0.0f); // Static objects must have a mass of 0!
 		}
 
-		btTransform startingTransform = ToBtTransform(*parentTransform);
-		m_MotionState = new btDefaultMotionState(startingTransform);
-		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_MotionState, collisionShape, localInertia);
-		m_RigidBody = new btRigidBody(info);
+		m_btMotionState = new MotionState(transform);
+		btRigidBody::btRigidBodyConstructionInfo info(m_Mass, m_btMotionState, collisionShape, localInertia);
+		m_btRigidBody = new btRigidBody(info);
 
-		i32 flags = m_RigidBody->getFlags();
+		i32 flags = m_btRigidBody->getFlags();
 		if (m_bKinematic)
 		{
 			flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
@@ -81,20 +70,20 @@ namespace flex
 		{
 			flags |= btCollisionObject::CF_STATIC_OBJECT;
 		}
-		m_RigidBody->setFlags(flags);
+		m_btRigidBody->setFlags(flags);
 
-		m_RigidBody->setDamping(m_LinearDamping, m_AngularDamping);
-		m_RigidBody->setFriction(m_Friction);
+		m_btRigidBody->setDamping(m_LinearDamping, m_AngularDamping);
+		m_btRigidBody->setFriction(m_Friction);
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+		world->addRigidBody(m_btRigidBody, (i32)m_Group, (i32)m_Mask);
 
-		m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(parentTransform->GetWorldScale()));
+		m_btRigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(transform->GetWorldScale()));
 	}
 
 	void RigidBody::Destroy()
 	{
-		if (m_RigidBody)
+		if (m_btRigidBody != nullptr)
 		{
 			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			for (btTypedConstraint* constraint : m_Constraints)
@@ -103,17 +92,17 @@ namespace flex
 				delete constraint;
 			}
 
-			world->removeRigidBody(m_RigidBody);
-			//delete m_RigidBody->getMotionState(); // ?
-			delete m_RigidBody;
+			world->removeRigidBody(m_btRigidBody);
+			//delete m_btRigidBody->getMotionState(); // ?
+			delete m_btRigidBody;
 		}
 
-		delete m_MotionState;
+		delete m_btMotionState;
 	}
 
 	void RigidBody::AddConstraint(btTypedConstraint* constraint)
 	{
-		m_RigidBody->addConstraintRef(constraint);
+		m_btRigidBody->addConstraintRef(constraint);
 		m_Constraints.push_back(constraint);
 
 		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->addConstraint(constraint, true);
@@ -133,11 +122,26 @@ namespace flex
 	{
 		m_bKinematic = bKinematic;
 
-		if (bKinematic && m_RigidBody)
+		if (m_btRigidBody != nullptr)
 		{
-			m_RigidBody->clearForces();
-			m_RigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-			m_RigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			if (bKinematic)
+			{
+				m_btRigidBody->clearForces();
+				m_btRigidBody->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				m_btRigidBody->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			}
+
+			i32 flags = m_btRigidBody->getFlags();
+			if (m_bKinematic)
+			{
+				flags |= btCollisionObject::CF_KINEMATIC_OBJECT;
+			}
+			else
+			{
+				flags &= ~btCollisionObject::CF_KINEMATIC_OBJECT;
+			}
+			m_btRigidBody->setFlags(flags);
+			m_btRigidBody->activate(true);
 		}
 	}
 
@@ -153,6 +157,35 @@ namespace flex
 		{
 			m_Mass = 0.0f;
 		}
+		else
+		{
+			if (m_Mass == 0.0f)
+			{
+				m_Mass = 1.0f;
+			}
+		}
+
+		if (m_btRigidBody != nullptr)
+		{
+			btVector3 localInertia(0, 0, 0);
+			if (!m_bStatic)
+			{
+				m_btRigidBody->getCollisionShape()->calculateLocalInertia(m_Mass, localInertia);
+			}
+			m_btRigidBody->setMassProps(m_Mass, localInertia);
+
+			i32 flags = m_btRigidBody->getFlags();
+			if (m_bStatic)
+			{
+				flags |= btCollisionObject::CF_STATIC_OBJECT;
+			}
+			else
+			{
+				flags &= ~btCollisionObject::CF_STATIC_OBJECT;
+			}
+			m_btRigidBody->setFlags(flags);
+			m_btRigidBody->activate(true);
+		}
 	}
 
 	bool RigidBody::IsStatic() const
@@ -164,9 +197,9 @@ namespace flex
 	{
 		m_Friction = friction;
 
-		if (m_RigidBody)
+		if (m_btRigidBody != nullptr)
 		{
-			m_RigidBody->setFriction(friction);
+			m_btRigidBody->setFriction(friction);
 		}
 	}
 
@@ -185,147 +218,161 @@ namespace flex
 		m_AngularDamping = angularDamping;
 	}
 
+	void RigidBody::SetLinearFactor(const btVector3& factor)
+	{
+		m_btRigidBody->setLinearFactor(factor);
+	}
+
+	void RigidBody::SetAngularFactor(const btVector3& factor)
+	{
+		m_btRigidBody->setAngularFactor(factor);
+	}
+
 	void RigidBody::SetOrientationConstraint(const btVector3& axis)
 	{
-		m_RigidBody->setAngularFactor(axis);
+		m_btRigidBody->setAngularFactor(axis);
 	}
 
 	void RigidBody::SetPositionalConstraint(const btVector3& axis)
 	{
-		m_RigidBody->setLinearFactor(axis);
+		m_btRigidBody->setLinearFactor(axis);
 	}
 
-	void RigidBody::SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos)
+	void RigidBody::SetWorldPosition(const glm::vec3& worldPos)
 	{
-		m_LocalPosition = pos;
-		m_LocalRotation = rot;
-		m_LocalScale = scale;
-
-		MatchParentTransform();
+		if (m_btRigidBody != nullptr)
+		{
+			m_btRigidBody->setCenterOfMassTransform(btTransform(m_btRigidBody->getCenterOfMassTransform().getRotation(), ToBtVec3(worldPos)));
+			m_btRigidBody->activate(false);
+		}
 	}
 
-	void RigidBody::SetLocalPosition(const glm::vec3& pos)
+	void RigidBody::SetWorldRotation(const glm::quat& worldRot)
 	{
-		m_LocalPosition = pos;
-
-		MatchParentTransform();
+		if (m_btRigidBody != nullptr)
+		{
+			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), m_btRigidBody->getCenterOfMassPosition()));
+			m_btRigidBody->activate(false);
+		}
 	}
 
-	void RigidBody::SetLocalRotation(const glm::quat& rot)
+	void RigidBody::SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot)
 	{
-		m_LocalRotation = rot;
-
-		MatchParentTransform();
+		if (m_btRigidBody != nullptr)
+		{
+			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), ToBtVec3(worldPos)));
+			m_btRigidBody->activate(false);
+		}
 	}
 
-	void RigidBody::SetLocalScale(const glm::vec3& scale)
-	{
-		m_LocalScale = scale;
-
-		MatchParentTransform();
-	}
-
-	i32 RigidBody::GetGroup() const
+	u32 RigidBody::GetGroup() const
 	{
 		return m_Group;
 	}
 
-	void RigidBody::SetGroup(i32 group)
+	void RigidBody::SetGroup(u32 group)
 	{
 		m_Group = group;
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		if (m_RigidBody)
+		if (m_btRigidBody != nullptr)
 		{
-			world->removeRigidBody(m_RigidBody);
-			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+			world->removeRigidBody(m_btRigidBody);
+			world->addRigidBody(m_btRigidBody, (i32)m_Group, (i32)m_Mask);
 		}
 	}
 
-	i32 RigidBody::GetMask() const
+	u32 RigidBody::GetMask() const
 	{
 		return m_Mask;
 	}
 
-	void RigidBody::SetMask(i32 mask)
+	void RigidBody::SetMask(u32 mask)
 	{
 		m_Mask = mask;
 
 		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		if (m_RigidBody)
+		if (m_btRigidBody != nullptr)
 		{
-			world->removeRigidBody(m_RigidBody);
-			world->addRigidBody(m_RigidBody, m_Group, m_Mask);
+			world->removeRigidBody(m_btRigidBody);
+			world->addRigidBody(m_btRigidBody, m_Group, m_Mask);
 		}
 	}
 
-	glm::vec3 RigidBody::GetLocalPosition() const
-	{
-		return m_LocalPosition;
-	}
+	//glm::vec3 RigidBody::GetLocalPosition() const
+	//{
+	//	return m_LocalPosition;
+	//}
 
-	glm::quat RigidBody::GetLocalRotation() const
-	{
-		return m_LocalRotation;
-	}
+	//glm::quat RigidBody::GetLocalRotation() const
+	//{
+	//	return m_LocalRotation;
+	//}
 
-	glm::vec3 RigidBody::GetLocalScale() const
-	{
-		return m_LocalScale;
-	}
+	//glm::vec3 RigidBody::GetLocalScale() const
+	//{
+	//	return m_LocalScale;
+	//}
 
-	void RigidBody::UpdateParentTransform()
-	{
-		assert(m_ParentTransform);
+	//void RigidBody::UpdateTransform()
+	//{
+	//	CHECK_NE(m_Transform, nullptr);
 
-		btTransform transform = m_RigidBody->getWorldTransform();
+	//	btTransform transform = m_btRigidBody->getWorldTransform();
 
-		glm::mat4 worldTransformMat = glm::translate(MAT4_IDENTITY, ToVec3(transform.getOrigin())) *
-			glm::mat4(ToQuaternion(transform.getRotation())) *
-			glm::scale(MAT4_IDENTITY, ToVec3(m_RigidBody->getCollisionShape()->getLocalScaling()));
+	//	glm::mat4 worldTransformMat = glm::translate(MAT4_IDENTITY, ToVec3(transform.getOrigin())) *
+	//		glm::mat4(ToQuaternion(transform.getRotation())) *
+	//		glm::scale(MAT4_IDENTITY, ToVec3(m_btRigidBody->getCollisionShape()->getLocalScaling()));
 
-		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
-			glm::mat4(m_LocalRotation) *
-			glm::scale(MAT4_IDENTITY, m_LocalScale);
-		glm::mat4 invChildTransformMat = glm::inverse(childTransformMat);
+	//	glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition) *
+	//		glm::mat4(m_LocalRotation) *
+	//		glm::scale(MAT4_IDENTITY, m_LocalScale);
+	//	glm::mat4 invChildTransformMat = glm::inverse(childTransformMat);
 
-		glm::mat4 finalTransformMat = worldTransformMat * invChildTransformMat;
+	//	glm::mat4 finalTransformMat = worldTransformMat * invChildTransformMat;
 
-		m_ParentTransform->SetWorldFromMatrix(finalTransformMat);
-	}
+	//	m_Transform->SetWorldFromMatrix(finalTransformMat);
+	//}
 
-	void RigidBody::MatchParentTransform()
-	{
-		if (!m_ParentTransform)
-		{
-			// NOTE: This should only be true before the first frame
-			return;
-		}
+	//void RigidBody::MatchTransform()
+	//{
+	//	if (!m_Transform)
+	//	{
+	//		// NOTE: This should only be true before the first frame
+	//		return;
+	//	}
 
-		glm::mat4 parentTransformMat = glm::translate(MAT4_IDENTITY, m_ParentTransform->GetWorldPosition())
-			* glm::mat4(m_ParentTransform->GetWorldRotation());
+	//	glm::mat4 transformMat = glm::translate(MAT4_IDENTITY, m_Transform->GetWorldPosition())
+	//		* glm::mat4(m_Transform->GetWorldRotation());
 
-		glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition * m_ParentTransform->GetWorldScale()) *
-			glm::mat4(m_LocalRotation);
+	//	glm::mat4 childTransformMat = glm::translate(MAT4_IDENTITY, m_LocalPosition * m_Transform->GetWorldScale()) *
+	//		glm::mat4(m_LocalRotation);
 
-		glm::mat4 finalTransformMat = parentTransformMat * childTransformMat;
+	//	btTransform interpolatedWorldTransform;
+	//	m_btRigidBody->getMotionState()->getWorldTransform(interpolatedWorldTransform);
 
-		btTransform transform = btTransform::getIdentity();
 
-		transform.setFromOpenGLMatrix(&finalTransformMat[0][0]);
-		m_RigidBody->setWorldTransform(transform);
+	//	btMatrix3x3 basis = interpolatedWorldTransform.getBasis();
+	//	glm::mat4 finalTransformMat = glm::translate(BtMat3ToMat4(basis), ToVec3(interpolatedWorldTransform.getOrigin()));
 
-		if (m_RigidBody->getCollisionShape())
-		{
-			m_RigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(m_LocalScale * m_ParentTransform->GetWorldScale()));
-		}
+	//	//= transformMat * childTransformMat;
 
-		m_RigidBody->activate();
-	}
+	//	btTransform transform = btTransform::getIdentity();
+
+	//	//transform.setFromOpenGLMatrix(&finalTransformMat[0][0]);
+	//	//m_btRigidBody->setWorldTransform(transform);
+
+	//	if (m_btRigidBody->getCollisionShape())
+	//	{
+	//		m_btRigidBody->getCollisionShape()->setLocalScaling(ToBtVec3(m_LocalScale * m_Transform->GetWorldScale()));
+	//	}
+
+	//	m_btRigidBody->activate();
+	//}
 
 	void RigidBody::GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward)
 	{
-		const btTransform& transform = m_RigidBody->getWorldTransform();
+		const btTransform& transform = m_btRigidBody->getWorldTransform();
 		btQuaternion rot = transform.getRotation();
 		btMatrix3x3 rotMat = btMatrix3x3(rot).transpose();
 		right = rotMat[0];
@@ -335,7 +382,7 @@ namespace flex
 
 	btRigidBody* RigidBody::GetRigidBodyInternal()
 	{
-		return m_RigidBody;
+		return m_btRigidBody;
 	}
 
 	void RigidBody::SetPhysicsFlags(u32 flags)
@@ -346,5 +393,40 @@ namespace flex
 	u32 RigidBody::GetPhysicsFlags()
 	{
 		return m_Flags;
+	}
+
+	RigidBody* RigidBody::ParseFromJSON(const JSONObject& rigidBodyObj)
+	{
+		real mass = rigidBodyObj.GetFloat("mass");
+		bool bKinematic = rigidBodyObj.GetBool("kinematic");
+		bool bStatic = rigidBodyObj.GetBool("static");
+		u32 mask = rigidBodyObj.GetUInt("mask");
+		u32 group = rigidBodyObj.GetUInt("group");
+
+		RigidBody* rigidBody = new RigidBody(group, mask);
+		rigidBody->SetMass(mass);
+		rigidBody->SetKinematic(bKinematic);
+		rigidBody->SetStatic(bStatic);
+
+		return rigidBody;
+	}
+
+	JSONObject RigidBody::SerializeToJSON()
+	{
+		JSONObject rigidBodyObj = {};
+
+		real mass = GetMass();
+		bool bKinematic = IsKinematic();
+		bool bStatic = IsStatic();
+		u32 mask = GetMask();
+		u32 group = GetGroup();
+
+		rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
+		rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
+		rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
+		rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
+		rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+
+		return rigidBodyObj;
 	}
 } // namespace flex

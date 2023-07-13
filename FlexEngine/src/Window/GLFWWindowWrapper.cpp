@@ -4,9 +4,6 @@
 
 #include "FlexEngine.hpp"
 #include "Editor.hpp"
-#if COMPILE_OPEN_GL
-#include "Graphics/GL/GLHelpers.hpp"
-#endif
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -107,20 +104,7 @@ namespace flex
 		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
 		glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
 
-		if (g_bOpenGLEnabled)
-		{
-#if COMPILE_OPEN_GL && DEBUG
-			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
-#endif // DEBUG
-
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-
-			glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-			glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
-		}
-		else if (g_bVulkanEnabled)
+		if (g_bVulkanEnabled)
 		{
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		}
@@ -205,7 +189,7 @@ namespace flex
 			return;
 		}
 
-		assert(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
+		CHECK(g_Monitor); // Monitor must be created before calling RetrieveMonitorInfo!
 		g_Monitor->width = vidMode->width;
 		g_Monitor->height = vidMode->height;
 		g_Monitor->redBits = vidMode->redBits;
@@ -375,7 +359,7 @@ namespace flex
 			} break;
 			case WindowMode::WINDOWED:
 			{
-				assert(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
+				CHECK(m_LastWindowedSize.x != 0 && m_LastWindowedSize.y != 0);
 
 				if (m_LastWindowedPos.y == 0)
 				{
@@ -401,7 +385,7 @@ namespace flex
 	{
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
 		{
-			assert(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
+			CHECK(m_LastNonFullscreenWindowMode == WindowMode::WINDOWED || m_LastNonFullscreenWindowMode == WindowMode::WINDOWED_FULLSCREEN);
 
 			SetWindowMode(m_LastNonFullscreenWindowMode, bForce);
 		}
@@ -796,57 +780,4 @@ namespace flex
 
 		return inputMouseButton;
 	}
-
-#if defined(_WINDOWS) && COMPILE_OPEN_GL
-	void WINAPI glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
-		const GLchar* message, const void* userParam)
-	{
-		FLEX_UNUSED(userParam);
-		FLEX_UNUSED(length);
-
-		// Ignore insignificant error/warning codes and notification messages
-		if (id == 131169 || id == 131185 || id == 131218 || id == 131204 ||
-			severity == GL_DEBUG_SEVERITY_NOTIFICATION)
-		{
-			return;
-		}
-
-		PrintError("-----------------------------------------\n");
-		PrintError("GL Debug message (%u): %s\n", id, message);
-
-		switch (source)
-		{
-		case GL_DEBUG_SOURCE_API:             PrintError("Source: API"); break;
-		case GL_DEBUG_SOURCE_WINDOW_SYSTEM:   PrintError("Source: Window System"); break;
-		case GL_DEBUG_SOURCE_SHADER_COMPILER: PrintError("Source: Shader Compiler"); break;
-		case GL_DEBUG_SOURCE_THIRD_PARTY:     PrintError("Source: Third Party"); break;
-		case GL_DEBUG_SOURCE_APPLICATION:     PrintError("Source: Application"); break;
-		case GL_DEBUG_SOURCE_OTHER:           PrintError("Source: Other"); break;
-		}
-		PrintError("\n");
-
-		switch (type)
-		{
-		case GL_DEBUG_TYPE_ERROR:               PrintError("Type: Error"); break;
-		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: PrintError("Type: Deprecated Behaviour"); break;
-		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:  PrintError("Type: Undefined Behaviour"); break;
-		case GL_DEBUG_TYPE_PORTABILITY:         PrintError("Type: Portability"); break;
-		case GL_DEBUG_TYPE_PERFORMANCE:         PrintError("Type: Performance"); break;
-		case GL_DEBUG_TYPE_MARKER:              PrintError("Type: Marker"); break;
-		case GL_DEBUG_TYPE_PUSH_GROUP:          PrintError("Type: Push Group"); break;
-		case GL_DEBUG_TYPE_POP_GROUP:           PrintError("Type: Pop Group"); break;
-		case GL_DEBUG_TYPE_OTHER:               PrintError("Type: Other"); break;
-		}
-		PrintError("\n");
-
-		switch (severity)
-		{
-		case GL_DEBUG_SEVERITY_HIGH:         PrintError("Severity: high"); break;
-		case GL_DEBUG_SEVERITY_MEDIUM:       PrintError("Severity: medium"); break;
-		case GL_DEBUG_SEVERITY_LOW:          PrintError("Severity: low"); break;
-			//case GL_DEBUG_SEVERITY_NOTIFICATION: PrintError("Severity: notification"); break;
-		}
-		PrintError("\n-----------------------------------------\n");
-	}
-#endif
 } // namespace flex

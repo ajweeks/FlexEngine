@@ -15,6 +15,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp" // For FlexEngine::s_CurrentWorkingDirectory
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp" // For MAX_TEXTURE_DIM
 #include "Platform/Platform.hpp"
 #include "StringBuilder.hpp"
@@ -70,7 +71,7 @@ namespace flex
 
 	GLFWimage LoadGLFWimage(const std::string& filePath, i32 requestedChannelCount, bool bFlipVertically, u32* outChannelCount /* = nullptr */)
 	{
-		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
+		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
 
 		GLFWimage result = {};
 
@@ -96,8 +97,8 @@ namespace flex
 			return result;
 		}
 
-		assert((u32)result.width <= MAX_TEXTURE_DIM);
-		assert((u32)result.height <= MAX_TEXTURE_DIM);
+		CHECK_LE((u32)result.width, MAX_TEXTURE_DIM);
+		CHECK_LE((u32)result.height, MAX_TEXTURE_DIM);
 
 		result.pixels = static_cast<unsigned char*>(data);
 
@@ -113,49 +114,6 @@ namespace flex
 	{
 		STBI_FREE(image.pixels);
 		image.pixels = nullptr;
-	}
-
-	bool HDRImage::Load(const std::string& hdrFilePath, i32 requestedChannelCount, bool bFlipVertically)
-	{
-		assert(requestedChannelCount == 3 || requestedChannelCount == 4);
-
-		filePath = hdrFilePath;
-
-		if (g_bEnableLogging_Loading)
-		{
-			const std::string fileName = StripLeadingDirectories(hdrFilePath);
-			Print("Loading HDR texture %s\n", fileName.c_str());
-		}
-
-		stbi_set_flip_vertically_on_load(bFlipVertically);
-
-		i32 tempW, tempH, tempC;
-		pixels = stbi_loadf(filePath.c_str(),
-			&tempW,
-			&tempH,
-			&tempC,
-			(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
-
-		if (!pixels)
-		{
-			return false;
-		}
-
-		width = (u32)tempW;
-		height = (u32)tempH;
-
-		channelCount = 4;
-
-		assert(width <= MAX_TEXTURE_DIM);
-		assert(height <= MAX_TEXTURE_DIM);
-
-		return true;
-	}
-
-	void HDRImage::Free()
-	{
-		STBI_FREE(pixels);
-		pixels = nullptr;
 	}
 
 	std::string FloatToString(real f, i32 precision /* = DEFAULT_FLOAT_PRECISION */)
@@ -624,6 +582,30 @@ namespace flex
 		return "";
 	}
 
+	bool IsSpace(char c)
+	{
+		i32 m0 = (i32)(c == '\r');
+		i32 m1 = (i32)(c == '\n');
+		i32 m2 = (i32)(c == ' ');
+		i32 m3 = (i32)(c == '\t');
+		return (m0 | m1 | m2 | m3) != 0;
+	}
+
+	bool IsNewLine(char c)
+	{
+		return c == '\n' || c == '\r';
+	}
+
+	bool IsDigit(char c)
+	{
+		return c >= '0' && c <= '9';
+	}
+
+	bool IsLetter(char c)
+	{
+		return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+	}
+
 	std::string Trim(const std::string& str)
 	{
 		if (str.empty())
@@ -633,12 +615,12 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (iter != riter && isspace(*iter))
+		while (iter != riter && IsSpace(*iter))
 		{
 			++iter;
 		}
 
-		while (riter != iter && isspace(*riter))
+		while (riter != iter && IsSpace(*riter))
 		{
 			--riter;
 		}
@@ -655,7 +637,7 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (iter != riter && isspace(*iter))
+		while (iter != riter && IsSpace(*iter))
 		{
 			++iter;
 		}
@@ -672,7 +654,7 @@ namespace flex
 
 		auto iter = str.begin();
 		auto riter = str.end() - 1;
-		while (riter != iter && isspace(*riter))
+		while (riter != iter && IsSpace(*riter))
 		{
 			--riter;
 		}
@@ -989,6 +971,11 @@ namespace flex
 		return a * (1.0f - t) + b * t;
 	}
 
+	glm::quat Slerp(const glm::quat& a, const glm::quat& b, real t)
+	{
+		return glm::slerp(a, b, t);
+	}
+
 	u32 Pack2FloatToU32(real f1, real f2)
 	{
 #ifdef DEBUG
@@ -1091,59 +1078,95 @@ namespace flex
 
 	glm::vec2 ParseVec2(const std::string& vecStr)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec2 result;
 
-		if (parts.size() != 2)
+		if (!TryParseVec2(vecStr, result))
 		{
 			PrintError("Invalid vec2 field: %s\n", vecStr.c_str());
 			return glm::vec2(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec2(const std::string& vecStr, glm::vec2& outVecValue)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		if (parts.size() != 2)
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec2 result(
+			outVecValue = glm::vec2(
 				strtof(parts[0].c_str(), NULL),
 				strtof(parts[1].c_str(), NULL));
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::vec3 ParseVec3(const std::string& vecStr)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec3 result;
 
-		if (parts.size() != 3 && parts.size() != 4)
+		if (!TryParseVec3(vecStr, result))
 		{
 			PrintError("Invalid vec3 field: %s\n", vecStr.c_str());
 			return glm::vec3(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec3(const std::string& vecStr, glm::vec3& outVecValue)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		i32 numParts = (i32)parts.size();
+		if (numParts != 3 && numParts != 4)
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec3 result(
+			outVecValue = glm::vec3(
 				strtof(parts[0].c_str(), NULL),
 				strtof(parts[1].c_str(), NULL),
 				strtof(parts[2].c_str(), NULL));
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::vec4 ParseVec4(const std::string& vecStr, real defaultW)
 	{
-		std::vector<std::string> parts = Split(vecStr, ',');
+		glm::vec4 result;
 
-		if ((parts.size() != 4 && parts.size() != 3) || (defaultW < 0 && parts.size() != 4))
+		if (!TryParseVec4(vecStr, result, defaultW))
 		{
 			PrintError("Invalid vec4 field: %s\n", vecStr.c_str());
 			return glm::vec4(-1);
 		}
+
+		return result;
+	}
+
+	bool TryParseVec4(const std::string& vecStr, glm::vec4& outVecValue, real defaultW /* = 1.0f */)
+	{
+		std::vector<std::string> parts = Split(vecStr, ',');
+
+		i32 numParts = (i32)parts.size();
+		if ((numParts != 4 && numParts != 3) || (defaultW < 0 && numParts != 4))
+		{
+			return false;
+		}
 		else
 		{
-			glm::vec4 result;
-
-			if (parts.size() == 4)
+			if (numParts == 4)
 			{
-				result = glm::vec4(
+				outVecValue = glm::vec4(
 					strtof(parts[0].c_str(), NULL),
 					strtof(parts[1].c_str(), NULL),
 					strtof(parts[2].c_str(), NULL),
@@ -1151,26 +1174,43 @@ namespace flex
 			}
 			else
 			{
-				result = glm::vec4(
+				outVecValue = glm::vec4(
 					strtof(parts[0].c_str(), NULL),
 					strtof(parts[1].c_str(), NULL),
 					strtof(parts[2].c_str(), NULL),
 					defaultW);
 			}
 
-			return result;
+			return true;
 		}
 	}
 
 	glm::quat ParseQuat(const std::string& quatStr)
 	{
-		std::vector<std::string> parts = Split(quatStr, ',');
 		glm::quat result;
-		result.x = strtof(parts[0].c_str(), NULL);
-		result.y = strtof(parts[1].c_str(), NULL);
-		result.z = strtof(parts[2].c_str(), NULL);
-		result.w = strtof(parts[3].c_str(), NULL);
+		if (!TryParseQuat(quatStr, result))
+		{
+			PrintError("Invalid quaternion field: %s\n", quatStr.c_str());
+			return QUAT_IDENTITY;
+		}
+
 		return result;
+	}
+
+	bool TryParseQuat(const std::string& quatStr, glm::quat& outQuatVal)
+	{
+		std::vector<std::string> parts = Split(quatStr, ',');
+		if (parts.size() != 4)
+		{
+			return false;
+		}
+
+		outQuatVal.x = strtof(parts[0].c_str(), NULL);
+		outQuatVal.y = strtof(parts[1].c_str(), NULL);
+		outQuatVal.z = strtof(parts[2].c_str(), NULL);
+		outQuatVal.w = strtof(parts[3].c_str(), NULL);
+
+		return true;
 	}
 
 	u32 CountSetBits(u32 bits)
@@ -1224,7 +1264,7 @@ namespace flex
 
 	u32 NextPowerOfTwo(u32 x)
 	{
-		assert(x != 0);
+		CHECK_NE(x, 0u);
 		x--;
 		x |= x >> 1;
 		x |= x >> 2;
@@ -1236,7 +1276,7 @@ namespace flex
 
 	u64 NextPowerOfTwo(u64 x)
 	{
-		assert(x != 0);
+		CHECK_NE(x, 0u);
 		x--;
 		x |= x >> 1;
 		x |= x >> 2;
@@ -1245,6 +1285,16 @@ namespace flex
 		x |= x >> 16;
 		x |= x >> 32;
 		return x + 1;
+	}
+
+	real Square(real x)
+	{
+		return x * x;
+	}
+
+	real Cube(real x)
+	{
+		return x * x * x;
 	}
 
 	std::string GetIncrementedPostFixedStr(const std::string& namePrefix, const std::string& defaultName)
@@ -1525,6 +1575,30 @@ namespace flex
 			str[i] = (char)tolower(str[i]);
 		}
 		return str;
+	}
+
+	bool IsStringLower(const std::string& str)
+	{
+		for (char c : str)
+		{
+			if (isalpha(c) && !islower(c))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	bool IsStringUpper(const std::string& str)
+	{
+		for (char c : str)
+		{
+			if (isalpha(c) && !isupper(c))
+			{
+				return false;
+			}
+		}
+		return true;
 	}
 
 	bool PointOverlapsTriangle(const glm::vec2& point, const glm::vec2& tri0, const glm::vec2& tri1, const glm::vec2& tri2)
@@ -2002,11 +2076,12 @@ namespace flex
 		return true;
 	}
 
-	void ByteCountToString(char buf[], u32 bufSize, u32 bytes)
+	void ByteCountToString(char buf[], u32 bufSize, u64 bytes, u32 precision /* = 1 */)
 	{
+		CHECK_LE(precision, 9u);
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
-		double count = bytes;
+		double count = (double)bytes;
 		while (count >= 1024 && s < 6)
 		{
 			s++;
@@ -2019,7 +2094,10 @@ namespace flex
 		}
 		else
 		{
-			snprintf(buf, bufSize, "%.1f%s", count, suffixes[s]);
+			static char formatBuf[7];
+			strcpy(formatBuf, "%.Xf%s");
+			formatBuf[2] = (char)precision + '0';
+			snprintf(buf, bufSize, formatBuf, count, suffixes[s]);
 		}
 	}
 
@@ -2254,9 +2332,9 @@ namespace flex
 
 	void AABB::DrawDebug(const btVector3& lineColour)
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
-		debugDrawer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
+		debugRenderer->drawBox(btVector3(minX, minY, minZ), btVector3(maxX, maxY, maxZ), lineColour);
 	}
 
 	std::vector<PointTest> PointTest::ComputePointTests(

@@ -1,5 +1,7 @@
 #version 450
 
+#include "vk_particles_common.glsl"
+
 layout(points, invocations = 1) in;
 layout(triangle_strip, max_vertices = 4) out;
 
@@ -7,7 +9,7 @@ layout (location = 0) in VSO
 {
     vec3 position;
     vec4 colour;
-    float size;
+    vec3 size;
 } inputs[];
 
 layout (location = 0) out GSO
@@ -26,7 +28,7 @@ void main()
 {
 	vec3 pos = inputs[0].position;
 	vec4 col = inputs[0].colour;
-	float size = inputs[0].size;
+	vec3 size = inputs[0].size;
 	vec3 normal = normalize(uboConstant.camPos - pos);
 	vec3 bitangent = vec3(0.0, 1.0, 0.0);
 	vec3 tangent = normalize(cross(bitangent, normal));

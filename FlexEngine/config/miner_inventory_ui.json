@@ -1,0 +1,710 @@
+{
+	"type" : "Miner Inventory",
+	"cut type" : "Top",
+	"amount" : 1.000000,
+	"visible" : false,
+	"relative" : true,
+	"children" : 
+	[
+		{
+			"type" : "Base",
+			"cut type" : "Bottom",
+			"amount" : 0.096000,
+			"visible" : false,
+			"relative" : true
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Top",
+			"amount" : 0.120000,
+			"visible" : false,
+			"relative" : true
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Right",
+			"amount" : 0.298000,
+			"visible" : false,
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Right",
+					"amount" : 0.868000,
+					"visible" : false,
+					"relative" : true,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Left",
+							"amount" : 0.881000,
+							"visible" : false,
+							"relative" : true,
+							"tag" : 16067572051775909605,
+							"children" : 
+							[
+								{
+									"type" : "Image",
+									"cut type" : "Top",
+									"amount" : 0.500000,
+									"visible" : true,
+									"relative" : true,
+									"tag source string" : "drop",
+									"tag" : 17411663169601231788,
+									"image" : 
+									{
+										"icon name" : "drop"
+									}
+								},
+								{
+									"type" : "Image",
+									"cut type" : "Right",
+									"amount" : 1.000000,
+									"visible" : true,
+									"relative" : true,
+									"tag source string" : "trash",
+									"tag" : 16067572051775909605,
+									"image" : 
+									{
+										"icon name" : "trash"
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Left",
+			"amount" : 0.401000,
+			"visible" : false,
+			"relative" : true
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Top",
+			"amount" : 0.202000,
+			"visible" : false,
+			"relative" : false,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Top",
+					"amount" : 0.512000,
+					"visible" : false,
+					"relative" : true,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Left",
+							"amount" : 0.433000,
+							"visible" : false,
+							"relative" : false,
+							"children" : 
+							[
+								{
+									"type" : "Base",
+									"cut type" : "Left",
+									"amount" : 0.050000,
+									"visible" : false,
+									"relative" : false
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"tag source string" : "miner-row-0",
+									"tag" : 3375175944003802980,
+									"item" : 
+									{
+										"index" : 0
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 1
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 2
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 3
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Left",
+									"amount" : 0.064000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 4
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"type" : "Base",
+			"cut type" : "Bottom",
+			"amount" : 1.000000,
+			"visible" : false,
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column0",
+							"tag" : 9663373554028997877,
+							"item" : 
+							{
+								"index" : 0
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 1
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 2
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 3
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 4
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column1",
+							"tag" : 9663372454517369666,
+							"item" : 
+							{
+								"index" : 5
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 6
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 7
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 8
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 9
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column2",
+							"tag" : 9663371355005741455,
+							"item" : 
+							{
+								"index" : 10
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 11
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 12
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 13
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 14
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column3",
+							"tag" : 9663370255494113244,
+							"item" : 
+							{
+								"index" : 15
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 16
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 17
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 18
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 19
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column4",
+							"tag" : 9663369155982485033,
+							"item" : 
+							{
+								"index" : 20
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 21
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 22
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 23
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 24
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column5",
+							"tag" : 9663368056470856822,
+							"item" : 
+							{
+								"index" : 25
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 26
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 27
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 28
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 29
+							}
+						}
+					]
+				},
+				{
+					"type" : "Base",
+					"cut type" : "Left",
+					"amount" : 0.060000,
+					"visible" : false,
+					"relative" : false,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Top",
+							"amount" : 0.010000,
+							"visible" : false,
+							"relative" : false
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"tag source string" : "column6",
+							"tag" : 9663366956959228611,
+							"item" : 
+							{
+								"index" : 30
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 31
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 32
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 33
+							}
+						},
+						{
+							"type" : "Item",
+							"cut type" : "Top",
+							"amount" : 0.093000,
+							"visible" : true,
+							"relative" : false,
+							"item" : 
+							{
+								"index" : 34
+							}
+						}
+					]
+				}
+			]
+		}
+	]
+}

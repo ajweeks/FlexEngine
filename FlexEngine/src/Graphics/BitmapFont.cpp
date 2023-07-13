@@ -12,8 +12,8 @@ namespace flex
 		metaData(inMetaData)
 	{
 		metaData.bitmapFont = this;
-		assert(metaData.size > 0);
-		assert(charCount > 0);
+		CHECK_GT(metaData.size, 0);
+		CHECK_GT(charCount, 0);
 	}
 
 	BitmapFont::~BitmapFont()
@@ -24,7 +24,7 @@ namespace flex
 
 	bool BitmapFont::IsCharValid(wchar_t character)
 	{
-		return (character >= 0 && character < CHAR_COUNT);
+		return character < CHAR_COUNT;
 	}
 
 	void BitmapFont::SetMetric(const FontMetric& metric, wchar_t character)

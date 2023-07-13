@@ -1,0 +1,49 @@
+{
+	"particle parameter types" : 
+	[
+		{
+			"name" : "initial velocity",
+			"type" : "vec3"
+		},
+		{
+			"name" : "initial position",
+			"type" : "vec3"
+		},
+		{
+			"name" : "initial colour",
+			"type" : "col4"
+		},
+		{
+			"name" : "final colour",
+			"type" : "col4"
+		},
+		{
+			"name" : "lifetime",
+			"type" : "float"
+		},
+		{
+			"name" : "fade over lifetime",
+			"type" : "bool"
+		},
+		{
+			"name" : "particle count",
+			"type" : "int"
+		},
+		{
+			"name" : "enable spawning",
+			"type" : "bool"
+		},
+		{
+			"name" : "acceleration",
+			"type" : "vec3"
+		},
+		{
+			"name" : "scale",
+			"type" : "vec3"
+		},
+		{
+			"name" : "uniform scale",
+			"type" : "bool"
+		}
+	]
+}

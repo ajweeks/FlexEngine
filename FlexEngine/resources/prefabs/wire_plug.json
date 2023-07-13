@@ -1,22 +1,17 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "8B903A6FEEEFEBA74AD0144B9E63A22C",
 	"root" : 
 	{
-		"name" : "wire plug",
 		"id" : "18541458449A59B043726D2275B0E54E",
+		"name" : "wire plug",
 		"type" : "wire plug",
-		"visible" : true,
-		"casts shadow" : true,
 		"mesh" : "wire-plug.glb",
 		"materials" : 
 		[
 			"pbr chrome",
 			"pbr white"
-		],
-		"wire plug" : 
-		{
-		}
+		]
 	}
 }

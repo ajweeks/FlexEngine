@@ -16,12 +16,14 @@ IGNORE_WARNINGS_POP
 #include "Track/BezierCurve3D.hpp"
 #include "Transform.hpp"
 #include "Time.hpp"
+#include "Timer.hpp"
 
 class btCollisionShape;
 class btTriangleIndexVertexArray;
 
 namespace flex
 {
+	class EditorObject;
 	class BaseScene;
 	class BezierCurveList;
 	class Mesh;
@@ -67,14 +69,40 @@ namespace flex
 		std::list<u32> siblingIndices;
 	};
 
+	struct ActiveItem
+	{
+		void Create(PrefabID sourcePrefabID);
+		void Clear();
+
+		bool IsValid() const { return m_ItemProxyObject != nullptr; }
+
+		GameObject* m_ItemProxyObject = nullptr; // Just the mesh representation of the object
+		StringID m_TypeID = InvalidID;
+		PrefabID m_SourcePrefabID = InvalidPrefabID;
+	};
+
 	extern ChildIndex InvalidChildIndex;
 
 	struct GameObjectStack
 	{
-		PrefabID prefabID = InvalidPrefabID;
-		i32 count = 0;
+		GameObjectStack();
+		GameObjectStack(const PrefabID& prefabID, i32 count);
+
+		void Clear();
+
+		void SerializeToJSON(JSONObject& parentObject) const;
+		void ParseFromJSON(const JSONObject& parentObject);
+
+		PrefabID prefabID;
+		i32 count;
+
+		union UserData
+		{
+			real floatVal;
+		} userData;
 	};
 
+	static constexpr StringID BaseObjectSID = SID("object");
 	class GameObject
 	{
 	public:
@@ -92,15 +120,17 @@ namespace flex
 			_NONE = 0
 		};
 
-		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID = InvalidGameObjectID);
-		virtual ~GameObject();
+		GameObject(const std::string& name, StringID typeID);
+		GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate);
+		virtual ~GameObject() = default;
 
 		static GameObject* CreateObjectFromJSON(
 			const JSONObject& obj,
 			BaseScene* scene,
 			i32 sceneFileVersion,
-			bool bIsPrefabTemplate = false,
-			CopyFlags copyFlags = CopyFlags::ALL);
+			const PrefabIDPair& sourcePrefabIDPair,
+			bool bIsPrefabTemplate,
+			CopyFlags copyFlags);
 
 		static GameObject* CreateObjectFromPrefabTemplate(
 			const PrefabID& prefabID,
@@ -111,11 +141,17 @@ namespace flex
 			CopyFlags copyFlags = CopyFlags::ALL);
 
 		static GameObject* CreateObjectOfType(
-			StringID typeID,
+			StringID gameObjectTypeID,
 			const std::string& objectName,
 			const GameObjectID& gameObjectID = InvalidGameObjectID,
 			const char* optionalTypeStr = nullptr,
+			const PrefabIDPair& sourcePrefabIDPair = InvalidPrefabIDPair,
 			bool bIsPrefabTemplate = false);
+
+		static void RegisterPropertyCollections();
+
+		static void UpdateHeldItem(GameObjectID heldItemID);
+		static void UpdateActiveItem(const ActiveItem& activeItem);
 
 		// Returns a new game object which is a direct copy of this object, parented to parent
 		// If parent == nullptr then new object will have same parent as this object
@@ -129,22 +165,26 @@ namespace flex
 		virtual void PostInitialize();
 		virtual void Destroy(bool bDetachFromParent = true);
 		virtual void Update();
+		virtual void FixedUpdate();
+		virtual void Render();
 
-		virtual void DrawImGuiObjects();
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects);
 
-		virtual void OnTransformChanged();
-
-		virtual void ParseJSON(
+		// TODO: Rename to Deserialize
+		void ParseJSON(
 			const JSONObject& obj,
 			BaseScene* scene,
 			i32 fileVersion,
 			MaterialID overriddenMatID = InvalidMaterialID,
-			bool bIsPrefabTemplate = false,
 			CopyFlags copyFlags = CopyFlags::ALL);
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject);
+		virtual void OnIDChanged(const GameObjectID& oldID, const GameObjectID& newID);
 
 		virtual bool ShouldSerialize();
+
+		virtual void OnItemize(GameObjectStack::UserData& outUserData);
+		virtual void OnDeItemize(const GameObjectStack::UserData& userData);
 
 		// Returns true if this object was deleted or duplicated
 		bool DoImGuiContextMenu(bool bActive);
@@ -153,16 +193,48 @@ namespace flex
 		const Transform* GetTransform() const;
 
 		bool DrawImGuiDuplicateGameObjectButton();
-		void SaveAsPrefab();
+
+		// Create new/overwrite existing prefab from this object
+		bool SaveAsPrefab();
+
+		// Gives this object and all its children new GameObjectIDs
+		void ChangeAllIDs();
+
+		void SetSourcePrefabID(PrefabID sourcePrefabID);
+
 		// Overwrite new object's children's IDs with matching previous IDs
 		// Child hierarchy is assumed to match exactly
 		void OverwritePrefabIDs(GameObject* previousGameObject, GameObject* newGameObject);
 
-		JSONObject Serialize(const BaseScene* scene,
-			bool bIsRoot = false,
-			bool bSerializePrefabData = false);
+		// If bSerializePrefabData is true, we are serializing a prefab template object
+		JSONObject Serialize(const BaseScene* scene, bool bIsRoot, bool bSerializePrefabData);
 
 		void RemoveRigidBody();
+
+		// Fills the given vector with game objects that pass the filter
+		template<typename T>
+		void FilterType(std::function<bool(GameObject*)> callback, std::vector<T*>& outList)
+		{
+			if (callback(this))
+			{
+				outList.emplace_back((T*)this);
+			}
+
+			for (GameObject* child : m_Children)
+			{
+				child->FilterType(callback, outList);
+			}
+		}
+
+		// Fills the given vector with game objects that pass the filter
+		void Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*>& outList);
+		// Fills the given vector with game object IDs that pass the filter
+		void FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID>& outList);
+		// Returns the number of objects which pass the filter
+		u32 FilterCount(std::function<bool(GameObject*)> callback);
+		u32 FilterCountInternal(std::function<bool(GameObject*)> callback, u32 count);
+		// Returns the first found object that passes the filter
+		GameObject* FilterFirst(std::function<bool(GameObject*)> callback);
 
 		void SetParent(GameObject* parent);
 		GameObject* GetParent();
@@ -175,17 +247,30 @@ namespace flex
 		GameObject* GetRootParent();
 
 		GameObject* AddChild(GameObject* child);
-		GameObject* AddChildImmediate(GameObject* child);
+		GameObject* AddChildImmediate(GameObject* child, bool bRegisterChild = true);
+		EditorObject* AddEditorChildImmediate(EditorObject* child);
 		bool RemoveChildImmediate(GameObjectID childID, bool bDestroy);
 		bool RemoveChildImmediate(GameObject* child, bool bDestroy);
+		void MoveChild(GameObjectID childID, i32 newSiblingIndex);
+		void MoveChild(GameObject* child, i32 newSiblingIndex);
 		const std::vector<GameObject*>& GetChildren() const;
 		u32 GetChildCountOfType(StringID objTypeID, bool bRecurse);
+		u32 GetChildCount() const;
 
 		GameObject* AddSibling(GameObject* child);
 		GameObject* AddSiblingImmediate(GameObject* child);
 
 		template<class T>
 		void GetChildrenOfType(StringID objTypeID, bool bRecurse, std::vector<T*>& children)
+		{
+			for (GameObject* child : m_Children)
+			{
+				child->GetChildrenOfTypeInternal(objTypeID, bRecurse, children);
+			}
+		}
+
+		template<class T>
+		void GetChildrenOfTypeInternal(StringID objTypeID, bool bRecurse, std::vector<T*>& children)
 		{
 			if (m_TypeID == objTypeID)
 			{
@@ -201,11 +286,11 @@ namespace flex
 			}
 		}
 
-
 		bool HasChild(GameObject* child, bool bCheckChildrensChildren);
 		GameObject* GetChild(u32 childIndex);
 
-		void UpdateSiblingIndices(i32 myIndex);
+		// Moves this object to the given index in its parents list of children
+		void SetSiblingIndex(i32 newIndex);
 		i32 GetSiblingIndex() const;
 
 		// Returns all objects who share our parent
@@ -222,6 +307,8 @@ namespace flex
 		std::string GetName() const;
 		void SetName(const std::string& newName);
 
+		void GetFullyPathedName(StringBuilder& stringBuilder);
+
 		bool IsSerializable() const;
 		void SetSerializable(bool bSerializable);
 
@@ -237,15 +324,20 @@ namespace flex
 
 		bool HasUniformScale() const;
 		void SetUseUniformScale(bool bUseUniformScale, bool bEnforceImmediately);
+		void EnforceUniformScale();
 
 		btCollisionShape* SetCollisionShape(btCollisionShape* collisionShape);
 		btCollisionShape* GetCollisionShape() const;
+		bool GetCollisionAABB(AABB& outAABB);
 
 		RigidBody* SetRigidBody(RigidBody* rigidBody);
 		RigidBody* GetRigidBody() const;
 
 		Mesh* GetMesh();
 		Mesh* SetMesh(Mesh* mesh);
+
+		// Editor-only
+		void OnExternalMeshChange(const std::string& meshFilePath);
 
 		bool CastsShadow() const;
 		void SetCastsShadow(bool bCastsShadow);
@@ -257,17 +349,19 @@ namespace flex
 
 		StringID GetTypeID() const;
 
-		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec);
-		void RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec);
+		void AddSelfAndChildrenToVec(std::vector<GameObject*>& vec) const;
+		void RemoveSelfAndChildrenFromVec(std::vector<GameObject*>& vec) const;
 
-		void AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
-		void RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec);
+		void AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec) const;
+		void RemoveSelfIDAndChildrenFromVec(std::vector<GameObjectID>& vec) const;
 
 		bool SelfOrChildIsSelected() const;
 
-		void SetNearbyInteractable(GameObject* nearbyInteractable);
+		void ClearNearbyInteractable();
+		void SetNearbyInteractable(GameObjectID nearbyInteractableID);
 
-		bool IsTemplate() const;
+		const PrefabIDPair& GetSourcePrefabIDPair() const;
+		bool IsPrefabTemplate() const;
 
 		virtual void OnCharge(real chargeAmount);
 
@@ -275,17 +369,18 @@ namespace flex
 		ChildIndex GetChildIndexWithID(const GameObjectID& gameObjectID) const;
 		GameObjectID GetIDAtChildIndex(const ChildIndex& childIndex) const;
 
-		PrefabID Itemize();
-		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS);
+		PrefabID Itemize(GameObjectStack::UserData& outUserData);
+		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData);
 
 		bool IsItemizable() const;
+		bool IsWearable() const;
+
+		i32 GetOutputSignal(i32 slotIdx);
+
+		static const size_t MaxNameLength = 256;
 
 		// Filled if this object is a trigger
 		std::vector<GameObject*> overlappingObjects;
-
-		// Signals that connected objects get sent
-		std::vector<i32> outputSignals;
-		std::vector<Socket*> sockets;
 
 		GameObjectID ID;
 
@@ -295,25 +390,30 @@ namespace flex
 
 		static const char* s_DefaultNewGameObjectName;
 
-		static AudioCue s_SqueakySounds;
-		static AudioSourceID s_BunkSound;
+		static PropertyCollection* BuildPropertyCollection();
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
-		virtual void ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs);
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject);
-		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs);
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData);
+		void SerializeField(JSONObject& parentObject, bool bSerializePrefabData, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision = 2);
+		bool SerializeRegisteredProperties(JSONObject& parentObject, PropertyCollection* collection, bool bSerializePrefabData);
+		void DeserializeRegisteredProperties(const JSONObject& parentObject, PropertyCollection* collection);
 
 		void CopyGenericFields(GameObject* newGameObject, GameObject* parent = nullptr, CopyFlags copyFlags = CopyFlags::ALL);
+
+		// Internal - used to update indices recursively
+		void UpdateSiblingIndices(i32 newIndex);
 
 		void SetOutputSignal(i32 slotIdx, i32 value);
 
 		bool GetChildIndexWithIDRecursive(const GameObjectID& gameObjectID, ChildIndex& outChildIndex) const;
 		bool GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const;
 
-		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID);
+		void GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, GameObject* parent, std::string& newObjectName, GameObjectID& newGameObjectID);
 
+		bool ShouldSerializeMesh() const;
+		bool ShouldSerializeMaterial() const;
 
-		// Returns a string containing our name with a "_xx" post-fix where xx is the next highest index or 00
+		GameObject* AddChildImmediateCommon(GameObject* child);
 
 		std::string m_Name;
 
@@ -323,62 +423,49 @@ namespace flex
 
 		StringID m_TypeID = InvalidStringID;
 
-		// TODO: Store as bitfield
+		// Bitfield 0
+		// If true, this object will be written out to file
+		// NOTE: If false, children will also not be serialized
+		bool m_bSerializable : 1;
 
-		/*
-		* If true, this object will be written out to file
-		* NOTE: If false, children will also not be serialized
-		*/
-		bool m_bSerializable = true;
+		// Whether or not this object should be rendered
+		// NOTE: Does *not* effect childrens' visibility
+		bool m_bVisible : 1;
 
-		/*
-		* Whether or not this object should be rendered
-		* NOTE: Does *not* effect childrens' visibility
-		*/
-		bool m_bVisible = true;
+		// Whether or not this object should be shown in the scene explorer UI
+		// NOTE: Children are also hidden when this if false!
+		bool m_bVisibleInSceneExplorer : 1;
 
-		/*
-		* Whether or not this object should be shown in the scene explorer UI
-		* NOTE: Children are also hidden when this if false!
-		*/
-		bool m_bVisibleInSceneExplorer = true;
+		// True if and only if this object will never move
+		// NOTE: If true, this object will be rendered to reflection probes
+		bool m_bStatic : 1;
 
-		/*
-		* True if and only if this object will never move
-		* If true, this object will be rendered to reflection probes
-		*/
-		bool m_bStatic = false;
+		// If true this object will not collide with other game objects
+		// Overlapping objects will cause OnOverlapBegin/End to be called
+		bool m_bTrigger : 1;
 
-		/*
-		* If true this object will not collide with other game objects
-		* Overlapping objects will cause OnOverlapBegin/End to be called
-		*/
-		bool m_bTrigger = false;
+		// True if this object can currently be interacted with (can be based on
+		// player proximity, among other things)
+		bool m_bInteractable : 1;
 
-		/*
-		* True if this object can currently be interacted with (can be based on
-		* player proximity, among other things)
-		*/
-		bool m_bInteractable = false;
+		bool m_bCastsShadow : 1;
 
-		bool m_bCastsShadow = true;
+		// If true, this object will never be added to a scene, but will only be instantiated (copied from)
+		bool m_bIsTemplate : 1;
 
-		// If true, this object will never live in the real world and will only be duplicated
-		bool m_bIsTemplate = false;
+		// Bitfield 1
+		bool m_bSerializeMaterial : 1;
 
-		bool m_bSerializeMesh = true;
-		bool m_bSerializeMaterial = true;
+		// Editor only fields
+		bool m_bUniformScale : 1;
+		bool m_bItemizable : 1;
 
-		// Editor only
-		bool m_bUniformScale = false;
+		// The prefab ID pair corresponding to the prefab this object was loaded from
+		PrefabIDPair m_SourcePrefabID;
 
-		bool m_bItemizable = false;
+		GameObjectID m_NearbyInteractableID = InvalidGameObjectID;
 
-		PrefabID m_PrefabIDLoadedFrom = InvalidPrefabID;
-
-		// TODO: Remove?
-		GameObject* m_NearbyInteractable = nullptr;
-
+		// Index into list of siblings in parent
 		i32 m_SiblingIndex = 0;
 
 		btCollisionShape* m_CollisionShape = nullptr;
@@ -390,25 +477,67 @@ namespace flex
 		Mesh* m_Mesh = nullptr;
 
 	private:
-		void DrawImGuiForSelfInternal();
+		void DrawImGuiForSelfInternal(bool bDrawingEditorObjects);
 
 	};
 
+	//
 	// Child classes
+	//
 
+	static constexpr StringID EditorObjectSID = SID("editor object");
+	class EditorObject final : public GameObject
+	{
+	public:
+		EditorObject(const std::string& name);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Destroy(bool bDetachFromParent = true) override;
+
+	};
+
+	static constexpr StringID DroppedItemSID = SID("dropped item");
+	class DroppedItem final : public GameObject
+	{
+	public:
+		DroppedItem(const PrefabID& prefabID, i32 stackSize);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+
+		virtual void Update() override;
+
+		bool CanBePickedUp() const;
+		void OnPickedUp();
+
+		PrefabID prefabID = InvalidPrefabID;
+		i32 stackSize = 0;
+		real secondsAlive = 0.0f;
+		real bobAmount = 0.0f;
+		real turnSpeed = 6.0f;
+		glm::vec3 initialVel = VEC3_ZERO;
+
+		static const real MIN_TIME_BEFORE_PICKUP;
+
+	};
+
+	static constexpr StringID DirectionalLightSID = SID("directional light");
 	class DirectionalLight final : public GameObject
 	{
 	public:
 		DirectionalLight();
-		DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation);
-		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit DirectionalLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const DirectionalLight& other);
 
@@ -418,15 +547,18 @@ namespace flex
 		glm::vec3 pos = VEC3_ZERO;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID PointLightSID = SID("point light");
 	class PointLight final : public GameObject
 	{
 	public:
 		explicit PointLight(BaseScene* scene);
-		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit PointLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -437,9 +569,8 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const PointLight& other);
 
@@ -447,15 +578,18 @@ namespace flex
 		PointLightID pointLightID = InvalidPointLightID;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID SpotLightSID = SID("spot light");
 	class SpotLight final : public GameObject
 	{
 	public:
 		explicit SpotLight(BaseScene* scene);
-		explicit SpotLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit SpotLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -466,9 +600,8 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const SpotLight& other);
 
@@ -476,15 +609,18 @@ namespace flex
 		SpotLightID spotLightID = InvalidSpotLightID;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 	};
 
+	static constexpr StringID AreaLightSID = SID("area light");
 	class AreaLight final : public GameObject
 	{
 	public:
 		explicit AreaLight(BaseScene* scene);
-		explicit AreaLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit AreaLight(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -495,9 +631,8 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual void SetVisible(bool bVisible, bool bEffectChildren /* = true */) override;
-		virtual void OnTransformChanged() override;
 
 		bool operator==(const AreaLight& other);
 
@@ -505,17 +640,20 @@ namespace flex
 		AreaLightID areaLightID = InvalidAreaLightID;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void UpdatePoints();
 
 	};
 
+	static constexpr StringID ValveSID = SID("valve");
 	class Valve final : public GameObject
 	{
 	public:
-		explicit Valve(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Valve(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -527,8 +665,7 @@ namespace flex
 		virtual void Update() override;
 
 		// Serialized fields
-		real minRotation = 0.0f;
-		real maxRotation = 0.0f;
+		glm::vec2 valveRange;
 
 		// Non-serialized fields
 		// Multiplied with value retrieved from input manager
@@ -545,16 +682,22 @@ namespace flex
 
 		bool m_bBeingInteractedWith = false;
 
+		static AudioCue s_SqueakySounds;
+		static AudioSourceID s_BunkSound;
+
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
+	static constexpr StringID RisingBlockSID = SID("rising block");
 	class RisingBlock final : public GameObject
 	{
 	public:
-		explicit RisingBlock(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit RisingBlock(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -580,15 +723,18 @@ namespace flex
 		real pdDistBlockMoved = 0.0f;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
+	static constexpr StringID GlassPaneSID = SID("glass pane");
 	class GlassPane final : public GameObject
 	{
 	public:
-		explicit GlassPane(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit GlassPane(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -599,15 +745,18 @@ namespace flex
 		bool bBroken = false;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
+	static constexpr StringID ReflectionProbeSID = SID("reflection probe");
 	class ReflectionProbe final : public GameObject
 	{
 	public:
-		explicit ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -618,47 +767,41 @@ namespace flex
 		virtual void PostInitialize() override;
 
 		MaterialID captureMatID = 0;
-
-	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-
 	};
 
+	static constexpr StringID SkyboxSID = SID("skybox");
 	class Skybox final : public GameObject
 	{
 	public:
-		explicit Skybox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Skybox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		void ProcedurallyInitialize(MaterialID matID);
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void InternalInit(MaterialID matID);
 	};
 
-	class EngineCart;
-
-	class Cart : public GameObject
+	static constexpr StringID BaseCartSID = SID("base cart");
+	class BaseCart : public GameObject
 	{
 	public:
-		Cart(CartID cartID);
-		Cart(CartID cartID,
-			const std::string& name,
-			const GameObjectID& gameObjectID = InvalidGameObjectID,
-			StringID typeID = SID("cart"),
-			const char* meshName = emptyCartMeshName,
-			bool bPrefabTemplate = false);
+		BaseCart(const std::string& name,
+			StringID typeID,
+			const GameObjectID& gameObjectID,
+			const char* meshName,
+			const PrefabIDPair& sourcePrefabID,
+			bool bPrefabTemplate);
 
-		virtual GameObject* CopySelf(
-			GameObject* parent = nullptr,
-			CopyFlags copyFlags = CopyFlags::ALL,
-			std::string* optionalName = nullptr,
-			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
-		virtual void DrawImGuiObjects() override;
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent /* = true */) override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const;
 
 		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
@@ -691,19 +834,40 @@ namespace flex
 		static const char* emptyCartMeshName;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
-	class EngineCart : public Cart
+	static constexpr StringID EmptyCartSID = SID("empty cart");
+	class EmptyCart : public BaseCart
 	{
 	public:
-		explicit EngineCart(CartID cartID);
-		EngineCart(CartID cartID,
-			const std::string& name,
-			const GameObjectID& gameObjectID = InvalidGameObjectID,
-			bool bPrefabTemplate = false);
+		EmptyCart(const std::string& name,
+			const GameObjectID& gameObjectID,
+			const PrefabIDPair& sourcePrefabID,
+			bool bPrefabTemplate);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	};
+
+	static constexpr StringID EngineCartSID = SID("engine cart");
+	class EngineCart : public BaseCart
+	{
+	public:
+		EngineCart(const std::string& name,
+			const GameObjectID& gameObjectID,
+			const PrefabIDPair& sourcePrefabID,
+			bool bPrefabTemplate);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -712,7 +876,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const override;
 
 
@@ -725,16 +889,19 @@ namespace flex
 		static const char* engineMeshName;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
+	static constexpr StringID MobileLiquidBoxSID = SID("mobile liquid box");
 	class MobileLiquidBox final : public GameObject
 	{
 	public:
 		MobileLiquidBox();
-		explicit MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -744,22 +911,21 @@ namespace flex
 
 		virtual void Initialize() override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		bool bInCart = false;
 		real liquidAmount = 0.0f;
 
-	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-
 	};
 
+	static constexpr StringID BatterySID = SID("battery");
 	class Battery final : public GameObject
 	{
 	public:
 		Battery();
-		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Battery(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Update() override;
 		virtual void OnCharge(real amount) override;
@@ -770,27 +936,36 @@ namespace flex
 			std::string* optionalName = nullptr,
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
+		virtual void OnItemize(GameObjectStack::UserData& outUserData) override;
+		virtual void OnDeItemize(const GameObjectStack::UserData& userData) override;
+
 		real chargeAmount = 0.0f;
 		real chargeCapacity = 100.0f;
+		real flashTimer = 0.0f;
+		static const real flashDuration;
 
 	protected:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	};
 
+	static constexpr StringID GerstnerWaveSID = SID("gerstner wave");
 	class GerstnerWave final : public GameObject
 	{
 	public:
-		explicit GerstnerWave(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit GerstnerWave(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
+
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
 		void AddWave();
 		void RemoveWave(i32 index);
-
-		virtual void DrawImGuiObjects() override;
 
 		struct WaveInfo
 		{
@@ -887,8 +1062,8 @@ namespace flex
 		//};
 
 	private:
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void UpdateDependentVariables(i32 waveIndex);
 
@@ -955,29 +1130,21 @@ namespace flex
 	GerstnerWave::WaveTessellationLOD const* GetTessellationLOD(u32 lodLevel, const std::vector<GerstnerWave::WaveTessellationLOD>& waveTessellationLODs);
 	u32 MapVertIndexAcrossLODs(u32 vertIndex, GerstnerWave::WaveTessellationLOD const* lod0, GerstnerWave::WaveTessellationLOD const* lod1);
 
-	class Blocks final : public GameObject
-	{
-	public:
-		explicit Blocks(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-
-	protected:
-
-	};
-
 	// Connects together devices to transmit information & power
+	static constexpr StringID WireSID = SID("wire");
 	class Wire final : public GameObject
 	{
 	public:
-		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Wire(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
+		virtual void PostInitialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual bool ShouldSerialize() override;
-
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
 
 		GameObjectID GetOtherPlug(WirePlug* plug);
 
@@ -986,9 +1153,9 @@ namespace flex
 		void SetEndTangent(const glm::vec3& tangent);
 		void ClearEndTangent();
 
-		void StepSimulation();
+		void UpdateWireMesh();
 
-		void CalculateTangentAtPoint(real t, glm::vec3& outTangent);
+		glm::vec3 CalculateTangentAtPoint(real t);
 		void CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent);
 
 		static const real DEFAULT_LENGTH;
@@ -1005,6 +1172,9 @@ namespace flex
 		SoftBody* m_SoftBody = nullptr;
 
 	private:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
 		void DestroyPoints();
 		void GeneratePoints();
 		void UpdateMesh();
@@ -1016,14 +1186,19 @@ namespace flex
 	};
 
 	// End of wire - the part you actually interact with
+	static constexpr StringID WirePlugSID = SID("wire plug");
 	class WirePlug final : public GameObject
 	{
 	public:
-		WirePlug(const std::string& name, const GameObjectID& gameObjectID);
-		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID);
+		WirePlug(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+		WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Destroy(bool bDetachFromParent /* = true */) override;
+
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void PlugIn(Socket* socket);
 		void Unplug();
@@ -1036,35 +1211,38 @@ namespace flex
 	};
 
 	// Connect wires to objects
+	static constexpr StringID SocketSID = SID("socket");
 	class Socket final : public GameObject
 	{
 	public:
-		Socket(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Socket(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Destroy(bool bDetachFromParent = true) override;
-
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void OnPlugIn(WirePlug* plug);
 		void OnUnPlug();
-
-		GameObject* parent = nullptr;
 
 		GameObjectID connectedPlugID = InvalidGameObjectID;
 		i32 slotIdx = 0;
 	};
 
+	static constexpr StringID TerminalSID = SID("terminal");
 	class Terminal final : public GameObject
 	{
 	public:
 		Terminal();
-		explicit Terminal(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit Terminal(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
-		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
+		virtual void Render() override;
 
 		bool IsInteractable(Player* player);
 		void SetBeingInteractedWith(Player* player);
@@ -1096,8 +1274,8 @@ namespace flex
 
 		void ClampCursorX();
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
 		friend TerminalCamera;
@@ -1114,6 +1292,7 @@ namespace flex
 		void EvaluateCode();
 
 		bool SaveScript();
+		void ReloadScript();
 
 		std::string m_ScriptFileName;
 
@@ -1143,39 +1322,6 @@ namespace flex
 
 		const sec m_CursorBlinkRate = 0.6f;
 		sec m_CursorBlinkTimer = 0.0f;
-
-	};
-
-	class ParticleSystem final : public GameObject
-	{
-	public:
-		explicit ParticleSystem(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
-
-		virtual GameObject* CopySelf(
-			GameObject* parent = nullptr,
-			CopyFlags copyFlags = CopyFlags::ALL,
-			std::string* optionalName = nullptr,
-			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
-
-		virtual void Destroy(bool bDetachFromParent = true) override;
-
-		virtual void DrawImGuiObjects() override;
-
-		virtual void OnTransformChanged() override;
-
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-
-		glm::mat4 model;
-		real scale;
-		ParticleSimData data;
-		bool bEnabled;
-		MaterialID simMaterialID = InvalidMaterialID;
-		MaterialID renderingMaterialID = InvalidMaterialID;
-		ParticleSystemID particleSystemID = InvalidParticleSystemID;
-
-	private:
-		void UpdateModelMatrix();
 
 	};
 
@@ -1223,19 +1369,30 @@ namespace flex
 
 	static_assert(ARRAY_LENGTH(NoiseFunctionTypeNames) == (u32)NoiseFunction::Type::_NONE + 1, "NoiseFunctionTypeNames length must match NoiseFunction::Type enum");
 
+	enum class TerrainGenMode
+	{
+		LEGACY,
+		MARCHING_CUBES,
+
+		_COUNT
+	};
+
+	static constexpr StringID TerrainGeneratorSID = SID("terrain generator");
 	class TerrainGenerator final : public GameObject
 	{
 	public:
-		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		explicit TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 		void Regenerate();
 
@@ -1250,6 +1407,7 @@ namespace flex
 			// General info
 			real chunkSize;
 			real maxHeight;
+			real radius;
 			real roadBlendDist;
 			real roadBlendThreshold;
 			u32 vertCountPerChunkAxis;
@@ -1262,14 +1420,21 @@ namespace flex
 			std::vector<std::vector<glm::vec2>>* randomTables;
 			std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments;
 
-			// Per chunk inputs
+			// Per-chunk inputs
 			volatile glm::ivec3 chunkIndex;
 
 			// Per chunk outputs
+			volatile u32 maxVertexCount;
 			volatile glm::vec3* positions;
 			volatile glm::vec4* colours;
 			volatile glm::vec2* uvs;
+			volatile glm::vec3* normals;
+			volatile glm::vec3* tangents;
+			volatile u32 maxIndexCount;
 			volatile u32* indices;
+			volatile u32 vertexCount;
+			volatile u32 indexCount;
+			volatile u8 ranOutOfRoom;
 		};
 
 		void FillInTerrainChunkData(volatile TerrainChunkData& outChunkData);
@@ -1302,6 +1467,8 @@ namespace flex
 
 		NoiseFunction ParseNoiseFunction(const JSONObject& noiseFunctionObj);
 		JSONObject SerializeNoiseFunction(const NoiseFunction& noiseFunction);
+
+		TerrainGenMode m_Mode = TerrainGenMode::MARCHING_CUBES;
 
 		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 
@@ -1341,7 +1508,9 @@ namespace flex
 		bool m_bHighlightGrid = false;
 		bool m_bDisplayRandomTables = false;
 
-		bool m_bUseAsyncCompute = true;
+		bool m_bUseAsyncCompute = false;
+
+		bool m_bShadeFlat = false;
 
 		bool m_bPinCenter = false;
 		glm::vec3 m_PinnedPos;
@@ -1364,7 +1533,9 @@ namespace flex
 
 		i32 m_IsolateNoiseLayer = -1;
 
-		u32 m_VertCountPerChunkAxis = 8;
+		u32 m_MaxVertCountPerChunk = 1024;
+		u32 m_MaxTriCountPerChunk = 4096;
+		u32 m_NumGridCellsPerChunk = 8;
 		real m_ChunkSize = 512.0f;
 		real m_MaxHeight = 3.0f;
 
@@ -1385,14 +1556,19 @@ namespace flex
 	void* TerrainThreadUpdate(void* inData);
 
 	real SampleBiomeTerrain(const TerrainGenerator::Biome& biome, const glm::vec2& pos);
+	// Returns a signed distance to the terrain object (< 0: below surface, > 0: above surface)
+	real SampleTerrain3D(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec3& pos);
 	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos);
 	real SampleNoiseFunction(volatile TerrainGenerator::TerrainChunkData const* chunkData, const NoiseFunction& noiseFunction, const glm::vec2& pos);
 	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave);
 
+	static constexpr StringID SpringObjectSID = SID("spring");
 	class SpringObject final : public GameObject
 	{
 	public:
-		SpringObject(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SpringObject(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1404,20 +1580,12 @@ namespace flex
 		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 
-		virtual void DrawImGuiObjects() override;
-
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-
-		virtual void ParseJSON(
-			const JSONObject& obj,
-			BaseScene* scene,
-			i32 fileVersion,
-			MaterialID overriddenMatID = InvalidMaterialID,
-			bool bIsPrefabTemplate = false,
-			CopyFlags copyFlags = CopyFlags::ALL) override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 	private:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
 		static void CreateMaterials();
 
 		static const char* s_ExtendedMeshFilePath;
@@ -1519,10 +1687,13 @@ namespace flex
 		i32 pointIndices[3];
 	};
 
+	static constexpr StringID SoftBodySID = SID("soft body");
 	class SoftBody final : public GameObject
 	{
 	public:
-		SoftBody(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SoftBody(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1534,10 +1705,7 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		void SetStiffness(real stiffness);
 		void SetDamping(real damping);
@@ -1558,6 +1726,9 @@ namespace flex
 		std::vector<Triangle*> triangles;
 
 	private:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
 		void Draw();
 
 		void LoadFromMesh();
@@ -1592,10 +1763,13 @@ namespace flex
 
 	};
 
+	static constexpr StringID VehicleSID = SID("vehicle");
 	class Vehicle final : public GameObject
 	{
 	public:
-		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Vehicle(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1608,12 +1782,7 @@ namespace flex
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
 
-		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs) override;
-		virtual void SerializeTypeUniqueFields(JSONObject& parentObject) override;
-		virtual void SerializeInstanceUniqueFields(JSONObject& parentObject) const override;
-
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual void FixupPrefabTemplateIDs(GameObject* newGameObject) override;
 
@@ -1640,6 +1809,9 @@ namespace flex
 		};
 
 	private:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
 		static const i32 m_TireCount = 4;
 
 		void CreateRigidBody();
@@ -1735,16 +1907,19 @@ namespace flex
 		void ComputeAABB();
 	};
 
+	static constexpr StringID RoadSID = SID("road");
 	class Road : public GameObject
 	{
 	public:
-		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		Road(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
 		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
-		virtual void DrawImGuiObjects() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
 		virtual GameObject* CopySelf(
 			GameObject* parent = nullptr,
@@ -1778,19 +1953,239 @@ namespace flex
 
 	};
 
+	static constexpr StringID SolarPanelSID = SID("solar panel");
 	class SolarPanel : public GameObject
 	{
 	public:
-		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID);
+		SolarPanel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
 
-		virtual void Initialize() override;
-		virtual void PostInitialize() override;
-		virtual void Destroy(bool bDetachFromParent = true) override;
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
 		virtual void Update() override;
 
 	private:
 		real m_ChargeRate = 10.0f;
 		real m_Efficiency = 1.0f;
+
+	};
+
+	static constexpr StringID HeadLampSID = SID("head lamp");
+	class HeadLamp : public GameObject
+	{
+	public:
+		HeadLamp(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+	};
+
+	static constexpr StringID PowerPoleSID = SID("power pole");
+	class PowerPole : public GameObject
+	{
+	public:
+		PowerPole(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void OnCharge(real chargeAmount) override;
+
+	private:
+
+	};
+
+	enum class MineralType
+	{
+		// Elements
+		IRON, // Fe - Atomic no. 26 (most common element by mass on Earth)
+		SILICON, // Si - Atomic no. 14
+		ALUMINUM, // Al - Atomic no. 13
+		TIN, // Sn - Atomic no. 50
+
+		// Minerals
+		STONE,
+		QUARTZ, // SiO2 - second most abundant mineral in Earth's crust
+		OLIVINE, // Magnesium iron silicate 2SiO 4
+
+		_NONE
+	};
+
+	static const char* MineralTypeStrings[] =
+	{
+		"iron",
+		"silicon",
+		"aluminum",
+		"tin",
+
+		"stone",
+		"quartz",
+		"olivine",
+
+		"NONE",
+	};
+
+	static_assert(ARRAY_LENGTH(MineralTypeStrings) == (u32)MineralType::_NONE + 1, "MineralTypeStrings length must match MineralType enum");
+
+
+	const char* MineralTypeToString(MineralType type);
+	MineralType MineralTypeFromString(const char* typeStr);
+
+	static constexpr StringID MineralDepositSID = SID("mineral deposit");
+	class MineralDeposit : public GameObject
+	{
+	public:
+		MineralDeposit(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Initialize() override;
+
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		u32 GetMineralRemaining() const;
+		PrefabID GetMineralPrefabID();
+
+		// Returns the actual amount of mineral mined
+		u32 OnMine(real mineAmount);
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		void UpdateMesh();
+
+		u32 m_MineralRemaining = 100;
+		MineralType m_Type = MineralType::_NONE;
+
+	};
+
+	static constexpr StringID MinerSID = SID("miner");
+	class Miner : public GameObject
+	{
+	public:
+		Miner(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Update() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void OnCharge(real chargeAmount) override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		GameObjectStack* GetStackFromInventory(i32 slotIndex);
+		i32 GetNextFreeInventorySlot();
+
+		bool IsInventoryFull() const;
+
+		// Returns the number of items which didn't fit
+		u32 AddToInventory(const PrefabID& prefabID, i32 stackSize, const GameObjectStack::UserData& userData);
+		u32 AddToInventory(GameObjectStack* stack);
+
+		static const u32 INVENTORY_SIZE = 5;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		void ComputeNewTargetPos();
+
+		real m_Charge = 0.0f;
+		real m_MaxCharge = 10.0f;
+		real m_MineRate = 1.0f;
+		real m_PowerDraw = 0.1f;
+		real m_MineRadius = 2.0f;
+		std::array<GameObjectStack, INVENTORY_SIZE> m_Inventory;
+
+		// Non-serialized fields
+		GameObjectID m_NearestMineralDepositID = InvalidGameObjectID;
+
+		real m_LaserEmitterHeight;
+		Timer m_MineTimer;
+		Timer m_MineCooldownTimer;
+		glm::vec3 m_LaserDirection;
+		glm::vec4 laserColour;
+		glm::vec3 m_MineTargetLocation;
+
+		ParticleEmitterID m_MiningSparksEmitterID = InvalidParticleEmitterID;
+		ParticleEmitterID m_MiningDustEmitterID = InvalidParticleEmitterID;
+	};
+
+	static constexpr StringID SpeakerSID = SID("speaker");
+	class Speaker : public GameObject
+	{
+	public:
+		Speaker(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Initialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+		void TogglePlaying();
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		std::string m_AudioSourceFileName;
+		bool m_bPlaying = true;
+
+		// Non-serialized fields
+		AudioSourceID m_SourceID = InvalidAudioSourceID;
+
+	};
+
+	static constexpr StringID PickAxeSID = SID("pickaxe");
+	class PickAxe : public GameObject
+	{
+	public:
+		PickAxe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Update() override;
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		real m_UsageRemaining = 1.0f;
+		MineralType m_Material = MineralType::_NONE;
+
+		static real GetMineSpeed(MineralType material);
+
+		// Non-serialized fields
+		AudioSourceID m_SourceID = InvalidAudioSourceID;
 
 	};
 } // namespace flex

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "InputTypes.hpp"
+
 namespace flex
 {
 	struct JSONObject;
@@ -125,8 +127,11 @@ namespace flex
 	{
 		BASE,
 		ITEM,
-		INVENTORY,
+		IMAGE,
+		PLAYER_INVENTORY,
+		MINER_INVENTORY,
 		QUICK_ACCESS,
+		WEARABLES,
 
 		_NONE
 	};
@@ -135,8 +140,11 @@ namespace flex
 	{
 		"Base",
 		"Item",
-		"Inventory",
+		"Image",
+		"Player Inventory",
+		"Miner Inventory",
 		"Quick Access",
+		"Wearables",
 
 		"NONE"
 	};
@@ -157,11 +165,11 @@ namespace flex
 		UIContainer& operator=(const UIContainer&) = delete;
 		UIContainer& operator=(const UIContainer&&) = delete;
 
+		virtual UIContainer* Duplicate();
 		virtual void Initialize();
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false);
 		virtual void Draw();
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr);
-		virtual UIContainer* Duplicate();
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr);
 
 		void SerializeCommon(JSONObject& object);
 		static UIContainer* DeserializeCommon(const JSONObject& object);
@@ -170,6 +178,8 @@ namespace flex
 
 		Rect Cut(Rect* rect);
 		glm::vec4 GetColour() const;
+
+		void ClearDirty();
 
 		static const glm::vec4 baseColour;
 		static const glm::vec4 hoveredColour;
@@ -190,6 +200,10 @@ namespace flex
 
 		std::vector<UIContainer*> children;
 
+	protected:
+		RectCutResult DrawImGuiBase(bool bTreeOpen);
+		void DrawImGuiChildren();
+
 	private:
 		virtual void Serialize(JSONObject& rootObject);
 		virtual void Deserialize(const JSONObject& rootObject);
@@ -205,16 +219,39 @@ namespace flex
 		~ItemUIContainer();
 
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 		virtual void Serialize(JSONObject& rootObject) override;
 		virtual void Deserialize(const JSONObject& rootObject) override;
 		virtual UIContainer* Duplicate() override;
 
 		ImageUIElement* imageElement = nullptr;
-		u64 lastImageUpdatedStackTypeID = InvalidID;
+		u64 lastImageUpdatedPrefabNameSID = InvalidID;
 		TextUIElement* textElement = nullptr;
 		i32 lastTextElementUpdateCount = -1;
+
+		GameObjectStackID stackID = InvalidID;
+		i32 index = -1;
+	private:
+
+	};
+
+	class ImageUIContainer : public UIContainer
+	{
+	public:
+		ImageUIContainer();
+		~ImageUIContainer();
+
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
+		virtual void Serialize(JSONObject& rootObject) override;
+		virtual void Deserialize(const JSONObject& rootObject) override;
+		virtual UIContainer* Duplicate() override;
+
+		const static u32 iconNameBufLen = 64;
+		char iconNameBuffer[iconNameBufLen];
+		bool bUpdateIconNameBuf = true;
+		std::string iconName;
+		ImageUIElement* imageElement = nullptr;
 
 		GameObjectStackID stackID = InvalidID;
 		i32 index = -1;
@@ -225,19 +262,28 @@ namespace flex
 	class InventoryUIContainer : public UIContainer
 	{
 	public:
-		InventoryUIContainer();
+		enum class Type
+		{
+			PLAYER_INVENTORY,
+			MINER_INVENTORY,
+
+			_NONE
+		};
+
+		InventoryUIContainer(Type type);
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 
 		std::vector<ItemUIContainer*> itemContainers;
+		std::vector<ItemUIContainer*> itemContainersSecondary;
+		ItemUIContainer* dropContainer = nullptr;
+		ItemUIContainer* trashContainer = nullptr;
 
 	private:
-		virtual void Serialize(JSONObject& rootObject) override;
-		virtual void Deserialize(const JSONObject& rootObject) override;
 		void OnLayoutChanged();
+		Type m_Type;
 
 	};
 
@@ -248,14 +294,27 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
-		virtual void Draw() override;
-		virtual RectCutResult DrawImGui(const char* optionalTreeNodeName = nullptr) override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
 
-		std::vector<ItemUIContainer*> itemSlotContainers;
+		std::vector<ItemUIContainer*> itemContainers;
 
 	private:
-		virtual void Serialize(JSONObject& rootObject) override;
-		virtual void Deserialize(const JSONObject& rootObject) override;
+		void OnLayoutChanged();
+
+	};
+
+	class WearablesItemUIContainer : public UIContainer
+	{
+	public:
+		WearablesItemUIContainer();
+
+		virtual void Initialize() override;
+		virtual void Update(Rect& parentRect, bool bIgnoreCut = false) override;
+		virtual RectCutResult DrawImGui(const char* optionalName = nullptr) override;
+
+		std::vector<ItemUIContainer*> itemContainers;
+
+	private:
 		void OnLayoutChanged();
 
 	};
@@ -273,15 +332,29 @@ namespace flex
 		void Deserialize();
 		void Serialize();
 
-		bool MoveItem(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveItemStack(ItemUIContainer* from, ItemUIContainer* to);
+		bool MoveItemStack(GameObjectStackID fromStackID, GameObjectStackID toStackID);
+		bool MoveSingleItemFromStack(ItemUIContainer* from, ItemUIContainer* to);
+		bool DropItemStack(ItemUIContainer* stack, bool bDestroyItem);
+		bool DropSingleItemFromStack(ItemUIContainer* stack, bool bDestroyItem);
 
-		void BeginItemDrag(ItemUIContainer* draggedItem);
+		void HandleBeginStackDrag(ItemUIContainer* itemContainer, GameObjectStack* stack);
+		void BeginItemDrag(ItemUIContainer* draggedItem, MouseButton buttonDown);
 		void EndItemDrag();
+		// Attempts to transfer stack to an alternate inventory if present
+		bool TransferStack(ItemUIContainer* itemStack, i32 countToMove);
+		// Attempts to transfer one item from the given stack to an alternate inventory if present
+		bool TransferSingleItemFromStack(ItemUIContainer* itemStack);
+
+		void EnqueueImageSprite(TextureID textureID, Rect lastCutRect);
 
 		InventoryUIContainer* playerInventoryUI = nullptr;
 		QuickAccessItemUIContainer* playerQuickAccessUI = nullptr;
+		WearablesItemUIContainer* wearablesInventoryUI = nullptr;
+		InventoryUIContainer* minerInventoryUI = nullptr;
 
 		ItemUIContainer* draggedUIContainer = nullptr;
+		MouseButton mouseButtonDragging = MouseButton::_NONE;
 
 	private:
 		bool SerializeUIConfig(const char* filePath, UIContainer* uiContainer);
@@ -291,9 +364,8 @@ namespace flex
 
 		StringID m_ItemPickupSoundSID = InvalidStringID;
 		StringID m_ItemDropSoundSID = InvalidStringID;
+		StringID m_ItemTrashSoundSID = InvalidStringID;
 		real m_ItemSoundGain = 0.5f;
-
-		//i32 m_PlayerInventorySlotIndexHovered = -1;
 
 	};
 

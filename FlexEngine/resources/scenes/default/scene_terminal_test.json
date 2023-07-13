@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene_terminal_test",
 	"spawn player" : true,
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "0.000, 1.347, 0.000",
-			"pitch" : 0.000000,
-			"yaw" : 1.570796
+			"position" : "-34.362, 2.500, -38.657",
+			"pitch" : -0.174000,
+			"yaw" : 1.313795
 		}
 	},
 	"objects" : 
@@ -29,11 +29,9 @@
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "-2.400, -0.653, 0.000",
+				"pos" : "-2.400, 0.000, 0.000",
 				"scale" : "100.000, 1.000, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "unit-plane.glb",
 			"materials" : 
 			[
@@ -42,8 +40,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500, 0.500, 0.500",
-				"offset pos" : "0.000, -0.500, 0.000"
+				"half extents" : "0.500,0.500,0.500"
 			},
 			"rigid body" : 
 			{
@@ -58,23 +55,17 @@
 			"name" : "Lighting",
 			"id" : "33BF534E4C5D72AC4A02E827589D0CDE",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"children" : 
 			[
 				{
 					"name" : "Skybox",
 					"id" : "3C40C6CCE0DAA3914AAD5DBE31B94281",
 					"type" : "skybox",
-					"visible" : true,
 					"casts shadow" : false,
 					"materials" : 
 					[
 						"skybox 01"
-					],
-					"skybox info" : 
-					{
-					}
+					]
 				},
 				{
 					"name" : "Reflection Probe 01",
@@ -83,9 +74,7 @@
 					"transform" : 
 					{
 						"pos" : "-2.045, 14.562, 0.000"
-					},
-					"visible" : true,
-					"casts shadow" : true
+					}
 				},
 				{
 					"name" : "Directional Light",
@@ -94,19 +83,12 @@
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.591, -0.000, 0.000"
+						"rot" : "1.575, -0.000, 0.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"directional light info" : 
 					{
-						"rotation" : "0.714, 0.000, 0.000, 0.700",
-						"pos" : "0.000, 15.000, 0.000",
-						"colour" : "0.99, 1.00, 0.84",
-						"enabled" : true,
-						"brightness" : 0.703000,
-						"cast shadows" : true,
-						"shadow darkness" : 1.000000
+						"colour" : "0.99,1.00,0.84",
+						"brightness" : 0.70
 					}
 				},
 				{
@@ -117,27 +99,17 @@
 					{
 						"pos" : "-20.950, 3.565, 5.352"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-20.950, 3.565, 5.352",
-						"colour" : "0.49, 0.78, 0.91",
-						"enabled" : true,
-						"brightness" : 31.250000
+						"colour" : "0.49,0.78,0.91",
+						"brightness" : 31.250
 					},
 					"children" : 
 					[
 						{
 							"name" : "socket_005",
 							"id" : "D2B4586102FEFE87433539B90CB0227C",
-							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
-							"socket" : 
-							{
-								"slotIdx" : 0
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -149,27 +121,17 @@
 					{
 						"pos" : "18.486, 7.943, -3.520"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "18.486, 7.943, -3.520",
-						"colour" : "0.94, 0.80, 0.57",
-						"enabled" : true,
-						"brightness" : 395.833008
+						"colour" : "0.94,0.80,0.57",
+						"brightness" : 395.833
 					},
 					"children" : 
 					[
 						{
 							"name" : "socket_004",
 							"id" : "564F997157E832B04E56B9B3C26BF4BB",
-							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
-							"socket" : 
-							{
-								"slotIdx" : 0
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -181,27 +143,16 @@
 					{
 						"pos" : "2.159, 0.938, 17.654"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "2.159, 0.938, 17.654",
-						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : true,
-						"brightness" : 135.417007
+						"brightness" : 135.417
 					},
 					"children" : 
 					[
 						{
 							"name" : "socket_006",
 							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
-							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
-							"socket" : 
-							{
-								"slotIdx" : 0
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -213,27 +164,16 @@
 					{
 						"pos" : "9.644, 4.930, 29.718"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "9.644, 4.930, 29.718",
-						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : true,
-						"brightness" : 827.585999
+						"brightness" : 827.586
 					},
 					"children" : 
 					[
 						{
 							"name" : "socket_007",
 							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
-							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
-							"socket" : 
-							{
-								"slotIdx" : 0
-							}
+							"type" : "socket"
 						}
 					]
 				},
@@ -247,12 +187,8 @@
 						"rot" : "-0.696, 0.000, 0.000",
 						"scale" : "3.923, 1.840, 3.923"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"area light info" : 
 					{
-						"colour" : "1.00, 1.00, 1.00",
-						"enabled" : true,
 						"brightness" : 41.667000
 					},
 					"children" : 
@@ -266,8 +202,6 @@
 								"rot" : "3.141, 1.569, 3.141",
 								"scale" : "0.010, 2.000, 2.000"
 							},
-							"visible" : true,
-							"casts shadow" : true,
 							"mesh" : "cube.glb",
 							"materials" : 
 							[
@@ -284,27 +218,17 @@
 					{
 						"pos" : "-32.370, 2.848, 21.634"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"point light info" : 
 					{
-						"pos" : "-32.370, 2.848, 21.634",
-						"colour" : "0.95, 0.96, 0.84",
-						"enabled" : true,
-						"brightness" : 31.250000
+						"colour" : "0.95,0.96,0.84",
+						"brightness" : 31.250
 					},
 					"children" : 
 					[
 						{
 							"name" : "socket_008",
 							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
-							"type" : "socket",
-							"visible" : true,
-							"casts shadow" : true,
-							"socket" : 
-							{
-								"slotIdx" : 0
-							}
+							"type" : "socket"
 						}
 					]
 				}
@@ -316,16 +240,13 @@
 			"type" : "terminal",
 			"transform" : 
 			{
-				"pos" : "-3.227, 0.000, 9.288",
+				"pos" : "-3.229, 0.670, 9.284",
 				"rot" : "3.141, 0.567, 3.141"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.300, 1.000",
-				"offset pos" : "0.000, 0.700, 0.000"
+				"half extents" : "1.000,1.300,1.000"
 			},
 			"rigid body" : 
 			{
@@ -350,8 +271,6 @@
 						"pos" : "0.000, 0.933, 0.484",
 						"scale" : "1.760, 1.790, 1.000"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"mesh" : "cube.glb",
 					"materials" : 
 					[
@@ -366,12 +285,6 @@
 					{
 						"pos" : "-0.755, -0.362, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
-					},
-					"visible" : true,
-					"casts shadow" : true,
-					"socket" : 
-					{
-						"slotIdx" : 0
 					}
 				},
 				{
@@ -383,8 +296,6 @@
 						"pos" : "-0.247, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 1
@@ -399,8 +310,6 @@
 						"pos" : "0.279, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 2
@@ -415,8 +324,6 @@
 						"pos" : "0.802, -0.409, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
 					},
-					"visible" : true,
-					"casts shadow" : true,
 					"socket" : 
 					{
 						"slotIdx" : 3
@@ -434,8 +341,6 @@
 				"rot" : "0.000, -1.070, 0.000",
 				"scale" : "11.430, 11.430, 11.430"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "moka.glb",
 			"materials" : 
 			[
@@ -453,8 +358,6 @@
 				"rot" : "0.000, -1.059, 0.000",
 				"scale" : "3.450, 3.450, 3.450"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "dragon_mid.glb",
 			"materials" : 
 			[
@@ -462,32 +365,43 @@
 			]
 		},
 		{
-			"name" : "New_Object_00",
+			"name" : "Dragon stand",
 			"id" : "3214B079039EE582499DBB446FEE87CB",
 			"type" : "object",
 			"transform" : 
 			{
-				"pos" : "12.025, 0.979, 27.633",
-				"rot" : "0.000, 0.630, 0.000",
+				"pos" : "12.025, 1.000, 27.635",
+				"rot" : "0.000, 0.629, -0.002",
 				"scale" : "4.500, 2.000, 2.330"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
 				"pbr white"
-			]
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500,0.500,0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
 		},
 		{
-			"name" : "Cart_00",
+			"name" : "Cart",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
 			"type" : "prefab",
-			"prefab type" : "cart",
+			"prefab type" : "empty cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
-				"pos" : "-9.387, 0.410, 10.428",
+				"pos" : "-9.387, 1.800, 10.428",
 				"rot" : "0.000, 0.605, 0.000"
 			}
 		},
@@ -499,9 +413,8 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.898, 1.348, -1.925",
-				"rot" : "0.000, -0.676, -3.142",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-20.980, 2.501, -1.965",
+				"rot" : "0.000, -0.676, -3.142"
 			}
 		},
 		{
@@ -512,20 +425,23 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.457, 1.348, -1.190",
-				"rot" : "-0.000, -0.006, -0.000",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-25.457, 2.501, -1.190",
+				"rot" : "-0.000, -0.006, -0.000"
 			}
 		},
 		{
 			"name" : "EngineCart-1",
 			"id" : "C54A90F938F82C944622007A9EDCFB70",
 			"type" : "prefab",
-			"prefab type" : "engine-cart",
+			"prefab type" : "engine cart",
 			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 			"transform" : 
 			{
 				"pos" : "12.505, 1.347, 0.161"
+			},
+			"cart info" : 
+			{
+				"power remaining" : 0.000000
 			}
 		},
 		{
@@ -536,9 +452,8 @@
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-28.614, 0.347, -1.554",
-				"rot" : "0.192, 0.000, 1.571",
-				"scale" : "1.000, 1.000, 1.000"
+				"pos" : "-28.614, 1.500, -1.553",
+				"rot" : "0.192, 0.000, 1.571"
 			}
 		},
 		{
@@ -550,8 +465,6 @@
 				"pos" : "-26.777, 3.115, 15.404",
 				"rot" : "-0.712, 0.037, 0.780"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -567,8 +480,6 @@
 				"pos" : "-26.921, 3.353, 11.325",
 				"rot" : "0.629, 0.332, -1.486"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -584,8 +495,6 @@
 				"pos" : "-27.303, 3.335, 6.916",
 				"rot" : "-1.893, 0.460, 1.137"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "rock-cube-01.glb",
 			"materials" : 
 			[
@@ -593,16 +502,233 @@
 			]
 		},
 		{
-			"name" : "solar_panel",
-			"id" : "2D243FB411A1C1A947E0CE3315BB487D",
+			"name" : "New_Object_03",
+			"id" : "0A2BF0E45D5535924D6CC22846414DAF",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "27.413, 9.162, 0.000",
+				"rot" : "0.426, 0.121, -0.964"
+			},
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"pbr red"
+			],
+			"children" : 
+			[
+				{
+					"name" : "New_Object_04",
+					"id" : "037E892AD70154B84C302F17089E9788",
+					"type" : "object",
+					"transform" : 
+					{
+						"pos" : "-0.320, -0.327, -0.596",
+						"rot" : "2.376, 0.258, -0.811",
+						"scale" : "0.755, 0.755, 0.755"
+					},
+					"mesh" : "cube.glb",
+					"materials" : 
+					[
+						"pbr grey"
+					],
+					"children" : 
+					[
+						{
+							"name" : "New_Object_05",
+							"id" : "0285496278CFE6BC4D26F513369E21AC",
+							"type" : "object",
+							"transform" : 
+							{
+								"pos" : "0.263, 0.448, 0.416",
+								"rot" : "2.549, -1.088, -2.862",
+								"scale" : "0.590, 0.590, 0.590"
+							},
+							"mesh" : "cube.glb",
+							"materials" : 
+							[
+								"pbr light grey"
+							]
+						}
+					]
+				}
+			]
+		},
+		{
+			"name" : "power_pole",
+			"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
 			"type" : "prefab",
-			"prefab type" : "solar-panel",
+			"prefab type" : "power pole",
+			"prefab id" : "FF518D129F74B1B442494D703055E816",
+			"transform" : 
+			{
+				"pos" : "6.003, 0.000, -3.670"
+			}
+		},
+		{
+			"name" : "miner",
+			"id" : "7C58E205F327AF8E4C60CA2570CA0190",
+			"type" : "prefab",
+			"prefab type" : "miner",
+			"prefab id" : "A43DB14860BDDB8A406C48E105BD22BA",
+			"transform" : 
+			{
+				"pos" : "20.346, 0.000, -22.753",
+				"rot" : "0.000, 0.786, 0.000"
+			},
+			"miner" : 
+			{
+				"charge" : 5.199995,
+				"inventory" : 
+				[
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 0
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 1
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 32,
+						"index" : 2
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 21,
+						"index" : 3
+					}
+				]
+			}
+		},
+		{
+			"name" : "mineral deposit iron",
+			"id" : "D43AD3B3CE84169249BD470C2E36A181",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit iron",
+			"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+			"transform" : 
+			{
+				"pos" : "21.306, 0.000, -22.254"
+			},
+			"mineral deposit" : 
+			{
+				"mineral remaining" : 883,
+				"type" : "iron"
+			}
+		},
+		{
+			"name" : "mineral deposit silicon",
+			"id" : "5F3FE1997191F6A7438AB8EC96A2EC1C",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit silicon",
+			"prefab id" : "8014F0FFA52C70B6467FE67C43C3363C",
+			"transform" : 
+			{
+				"pos" : "-5.641, 0.000, -27.813"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "silicon"
+			}
+		},
+		{
+			"name" : "mineral deposit stone",
+			"id" : "343ACE72646E29974D777F594FBFCD5C",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit stone",
+			"prefab id" : "18DC46A7569BA0844A8721C36FF54D77",
+			"transform" : 
+			{
+				"pos" : "31.388, 0.000, 3.247",
+				"rot" : "-3.141, -0.810, -3.141"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "stone"
+			}
+		},
+		{
+			"name" : "mineral deposit aluminum",
+			"id" : "B3CB7220A21F0FA64B8E0024647DFCDB",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit aluminum",
+			"prefab id" : "56FC31EDE61483A54F4B50971FC9DE27",
+			"transform" : 
+			{
+				"pos" : "-31.337, 0.000, -24.014"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "aluminum"
+			}
+		},
+		{
+			"name" : "mineral deposit tin",
+			"id" : "6DA88CF19762FC904F0B75183E0F04B4",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit tin",
+			"prefab id" : "56ADD055CA44E1BD4B9078348550E9BE",
+			"transform" : 
+			{
+				"pos" : "29.872, 0.000, 29.101"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "tin"
+			}
+		},
+		{
+			"name" : "mineral deposit quartz",
+			"id" : "62852C11369C898649D4F7AB5A425583",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit quartz",
+			"prefab id" : "B4EF3520650297A242AE680526C8DA8E",
+			"transform" : 
+			{
+				"pos" : "0.000, 0.000, 35.000"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "quartz"
+			}
+		},
+		{
+			"name" : "mineral deposit olivine",
+			"id" : "E53A36741709F0B64F7127674B74B664",
+			"type" : "prefab",
+			"prefab type" : "mineral deposit olivine",
+			"prefab id" : "192082D7335E52AE4616BAF655239916",
+			"transform" : 
+			{
+				"pos" : "-27.420, 0.000, 33.582",
+				"rot" : "0.000, 1.345, 0.000"
+			},
+			"mineral deposit" : 
+			{
+				"type" : "olivine"
+			}
+		},
+		{
+			"name" : "speaker",
+			"id" : "85B0A92857622390432E7511AECB345B",
+			"type" : "prefab",
+			"prefab type" : "speaker",
+			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216"
+		},
+		{
+			"name" : "solar panel",
+			"id" : "F51EF76A4718D5954ACC8B30A73824DD",
+			"type" : "prefab",
+			"prefab type" : "solar panel",
 			"prefab id" : "23B087CB64E3E39447696D9FE56F1849",
 			"transform" : 
 			{
-				"pos" : "0.000, -0.533, -7.224",
-				"rot" : "-1.571, -0.000, -0.000",
-				"scale" : "1.000, 0.998, 0.998"
+				"pos" : "11.303, 3.500, -30.371",
+				"rot" : "-3.141, 0.577, -3.141"
 			}
 		}
 	]

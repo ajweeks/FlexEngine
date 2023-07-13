@@ -6,10 +6,9 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
-
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -58,9 +57,9 @@ namespace flex
 		}
 	}
 
-	void VehicleCamera::OnSceneChanged()
+	void VehicleCamera::OnPostSceneChange()
 	{
-		BaseCamera::OnSceneChanged();
+		BaseCamera::OnPostSceneChange();
 
 		m_TrackedVehicle = nullptr;
 		FindActiveVehicle();
@@ -112,7 +111,7 @@ namespace flex
 				Transform* targetTransform = m_TrackedVehicle->GetTransform();
 				glm::vec3 start = targetTransform->GetWorldPosition();
 				glm::vec3 end = start + m_TargetForwardRollingAvg.currentAverage * 10.0f;
-				g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
+				g_Renderer->GetDebugRenderer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
 				ImGui::Text("Avg target forward: %s", VecToString(m_TargetForwardRollingAvg.currentAverage, 2).c_str());
 				ImGui::Text("For: %s", VecToString(forward, 2).c_str());
@@ -201,7 +200,7 @@ namespace flex
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player0 != nullptr)
 		{
-			m_TrackedVehicle = (Vehicle*)player0->ridingVehicleID.Get();
+			m_TrackedVehicle = (Vehicle*)player0->GetRidingVehicleID().Get();
 		}
 	}
 

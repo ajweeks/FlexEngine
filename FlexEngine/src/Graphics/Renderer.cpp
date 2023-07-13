@@ -9,6 +9,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <glm/gtx/transform.hpp> // for scale
 #include <glm/gtx/quaternion.hpp> // for rotate
+
+#include <freetype/ftbitmap.h>
 IGNORE_WARNINGS_POP
 
 #include <typeinfo>
@@ -19,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/ShaderCompiler.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -41,8 +44,21 @@ namespace flex
 	std::array<glm::mat4, 6> Renderer::s_CaptureViews;
 
 	Renderer::Renderer() :
-		m_RendererSettingsFilePathAbs(RelativePathToAbsolute(RENDERER_SETTINGS_LOCATION))
+		m_Settings("Renderer settings", RENDERER_SETTINGS_LOCATION, CURRENT_RENDERER_SETTINGS_FILE_VERSION)
 	{
+		m_Settings.RegisterProperty("enable v-sync", &m_bVSyncEnabled);
+		m_Settings.RegisterProperty("enable fxaa", &m_PostProcessSettings.bEnableFXAA);
+		m_Settings.RegisterProperty("brightness", &m_PostProcessSettings.brightness);
+		m_Settings.RegisterProperty("offset", &m_PostProcessSettings.offset);
+		m_Settings.RegisterProperty("saturation", &m_PostProcessSettings.saturation);
+
+		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount);
+		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution);
+
+		m_Settings.SetOnDeserialize([this]()
+		{
+			OnSettingsReloaded();
+		});
 	}
 
 	Renderer::~Renderer()
@@ -53,12 +69,6 @@ namespace flex
 	{
 		PROFILE_AUTO("Renderer Initialize");
 
-		std::string hdriPath = TEXTURE_DIRECTORY "hdri/";
-		if (!Platform::FindFilesInDirectory(hdriPath, m_AvailableHDRIs, "hdr"))
-		{
-			PrintWarn("Unable to find hdri directory at %s\n", hdriPath.c_str());
-		}
-
 #if COMPILE_SHADER_COMPILER
 		{
 			PROFILE_AUTO("Start shader compilation");
@@ -68,24 +78,24 @@ namespace flex
 #endif
 
 		m_LightData = (u8*)malloc(MAX_POINT_LIGHT_COUNT * sizeof(PointLightData) + MAX_SPOT_LIGHT_COUNT * sizeof(SpotLightData) + MAX_AREA_LIGHT_COUNT * sizeof(AreaLightData));
-		assert(m_LightData != nullptr);
+		CHECK_NE(m_LightData, nullptr);
 		m_PointLightData = (PointLightData*)m_LightData;
 		m_SpotLightData = (SpotLightData*)(m_PointLightData + MAX_POINT_LIGHT_COUNT);
 		m_AreaLightData = (AreaLightData*)(m_SpotLightData + MAX_SPOT_LIGHT_COUNT);
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
+			memset(&m_PointLightData[i], 0, sizeof(PointLightData));
 			m_PointLightData[i].colour = VEC3_NEG_ONE;
-			m_PointLightData[i].enabled = 0;
 		}
 		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
 		{
+			memset(&m_SpotLightData[i], 0, sizeof(SpotLightData));
 			m_SpotLightData[i].colour = VEC3_NEG_ONE;
-			m_SpotLightData[i].enabled = 0;
 		}
 		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
 		{
+			memset(&m_AreaLightData[i], 0, sizeof(AreaLightData));
 			m_AreaLightData[i].colour = VEC3_NEG_ONE;
-			m_AreaLightData[i].enabled = 0;
 		}
 
 		// TODO: Move these defaults to config file
@@ -99,22 +109,27 @@ namespace flex
 			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
 			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
 		}
-		m_SSAOGenData.radius = 8.0f;
+		m_SSAOGenData.radius = 1.0f;
 
-		m_SSAOBlurDataConstant.radius = 4;
+		m_SSAOBlurDataConstant.radius = 3;
 		m_SSAOBlurSamplePixelOffset = 2;
 
 		m_SSAOSamplingData.enabled = 1;
-		m_SSAOSamplingData.powExp = 2.0f;
+		m_SSAOSamplingData.powExp = 3.0f;
 
 		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
+		m_ShadowSamplingData.baseBias = 0.002f;
 
 		m_UIMesh = new UIMesh();
+
+		m_QueuedHologramData = {};
 	}
 
 	void Renderer::PostInitialize()
 	{
 		PROFILE_AUTO("Renderer PostInitialize");
+
+		InitializeFreeType();
 
 		// TODO: Use MeshComponent for these objects?
 		m_UIMesh->Initialize();
@@ -153,7 +168,8 @@ namespace flex
 			m_FullScreenTriVertexBufferData.Initialize(triVertexBufferDataCreateInfo);
 
 
-			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", SID("object"));
+			GameObject* fullScreenTriGameObject = new GameObject("Full screen triangle", BaseObjectSID);
+			fullScreenTriGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(fullScreenTriGameObject);
 			fullScreenTriGameObject->SetVisible(false);
 			fullScreenTriGameObject->SetCastsShadow(false);
@@ -199,7 +215,8 @@ namespace flex
 			m_Quad3DVertexBufferData.Initialize(quad3DVertexBufferDataCreateInfo);
 
 
-			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", SID("object"));
+			GameObject* quad3DGameObject = new GameObject("Sprite Quad 3D", BaseObjectSID);
+			quad3DGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(quad3DGameObject);
 			quad3DGameObject->SetVisible(false);
 			quad3DGameObject->SetCastsShadow(false);
@@ -222,24 +239,23 @@ namespace flex
 
 			// Hologram
 			m_HologramMatID = g_Renderer->GetMaterialID("Selection Hologram");
-			m_HologramProxyObject = new GameObject("Proxy hologram object", InvalidStringID);
+			m_HologramProxyObject = new EditorObject("Proxy hologram object");
 			// Initialize with empty mesh
 			m_HologramProxyObject->SetMesh(new Mesh(m_HologramProxyObject));
 		}
 	}
 
-	void Renderer::DestroyPersistentObjects()
+	void Renderer::Destroy()
 	{
+		DestroyFreeType();
+
 		for (GameObject* obj : m_PersistentObjects)
 		{
 			obj->Destroy();
 			delete obj;
 		}
 		m_PersistentObjects.clear();
-	}
 
-	void Renderer::Destroy()
-	{
 #if COMPILE_SHADER_COMPILER
 		if (m_ShaderCompiler != nullptr)
 		{
@@ -272,11 +288,11 @@ namespace flex
 		DestroyRenderObject(m_Quad3DSSRenderID);
 		DestroyRenderObject(m_GBufferQuadRenderID);
 
-		if (m_PhysicsDebugDrawer)
+		if (m_DebugRenderer != nullptr)
 		{
-			m_PhysicsDebugDrawer->Destroy();
-			delete m_PhysicsDebugDrawer;
-			m_PhysicsDebugDrawer = nullptr;
+			m_DebugRenderer->Destroy();
+			delete m_DebugRenderer;
+			m_DebugRenderer = nullptr;
 		}
 	}
 
@@ -285,6 +301,17 @@ namespace flex
 		m_UIMesh->EndFrame();
 
 		m_HologramProxyObject->SetVisible(false);
+	}
+
+	u32 Renderer::GetAlignedUBOSize(u32 unalignedSize)
+	{
+		u32 alignedSize = unalignedSize;
+		const u32 nCAS = GetNonCoherentAtomSize();
+		if (unalignedSize % nCAS != 0)
+		{
+			alignedSize += nCAS - (alignedSize % nCAS);
+		}
+		return alignedSize;
 	}
 
 	void Renderer::SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID)
@@ -300,15 +327,6 @@ namespace flex
 	void Renderer::SetRenderGrid(bool bRenderGrid)
 	{
 		m_bRenderGrid = bRenderGrid;
-
-		if (m_Grid != nullptr)
-		{
-			m_Grid->SetVisible(bRenderGrid);
-		}
-		if (m_WorldOrigin != nullptr)
-		{
-			m_WorldOrigin->SetVisible(bRenderGrid);
-		}
 	}
 
 	bool Renderer::IsRenderingGrid() const
@@ -318,38 +336,12 @@ namespace flex
 
 	void Renderer::SaveSettingsToDisk(bool bAddEditorStr /* = true */)
 	{
-		if (FileExists(m_RendererSettingsFilePathAbs))
-		{
-			Platform::DeleteFile(m_RendererSettingsFilePathAbs);
-		}
-
-		JSONObject rootObject = {};
-		rootObject.fields.emplace_back("version", JSONValue(m_RendererSettingsFileVersion));
-		rootObject.fields.emplace_back("enable v-sync", JSONValue(m_bVSyncEnabled));
-		rootObject.fields.emplace_back("enable fxaa", JSONValue(m_PostProcessSettings.bEnableFXAA));
-		rootObject.fields.emplace_back("brightness", JSONValue(VecToString(m_PostProcessSettings.brightness, 3)));
-		rootObject.fields.emplace_back("offset", JSONValue(VecToString(m_PostProcessSettings.offset, 3)));
-		rootObject.fields.emplace_back("saturation", JSONValue(m_PostProcessSettings.saturation));
-
-		rootObject.fields.emplace_back("shadow cascade count", JSONValue(m_ShadowCascadeCount));
-		rootObject.fields.emplace_back("shadow cascade base resolution", JSONValue(m_ShadowMapBaseResolution));
-
-		BaseCamera* cam = g_CameraManager->CurrentCamera();
-		rootObject.fields.emplace_back("aperture", JSONValue(cam->aperture));
-		rootObject.fields.emplace_back("shutter speed", JSONValue(cam->shutterSpeed));
-		rootObject.fields.emplace_back("light sensitivity", JSONValue(cam->lightSensitivity));
-		std::string fileContents = rootObject.ToString();
-
-		if (WriteFile(m_RendererSettingsFilePathAbs, fileContents, false))
+		if (m_Settings.Serialize())
 		{
 			if (bAddEditorStr)
 			{
 				AddEditorString("Saved renderer settings");
 			}
-		}
-		else
-		{
-			PrintError("Failed to write render settings to %s\n", m_RendererSettingsFilePathAbs.c_str());
 		}
 	}
 
@@ -357,29 +349,9 @@ namespace flex
 	{
 		PROFILE_AUTO("Renderer LoadSettingsFromDisk");
 
-		JSONObject rootObject;
-		if (JSONParser::ParseFromFile(m_RendererSettingsFilePathAbs, rootObject))
+		if (m_Settings.Deserialize())
 		{
-			if (rootObject.HasField("version"))
-			{
-				m_RendererSettingsFileVersion = rootObject.GetInt("version");
-			}
-
-			SetVSyncEnabled(rootObject.GetBool("enable v-sync"));
-			m_PostProcessSettings.bEnableFXAA = rootObject.GetBool("enable fxaa");
-			m_PostProcessSettings.brightness = ParseVec3(rootObject.GetString("brightness"));
-			m_PostProcessSettings.offset = ParseVec3(rootObject.GetString("offset"));
-			m_PostProcessSettings.saturation = rootObject.GetFloat("saturation");
-
-			rootObject.TryGetInt("shadow cascade count", m_ShadowCascadeCount);
-			rootObject.TryGetUInt("shadow cascade base resolution", m_ShadowMapBaseResolution);
-
-			// Done loading
-			m_RendererSettingsFileVersion = LATEST_RENDERER_SETTINGS_FILE_VERSION;
-		}
-		else
-		{
-			PrintError("Failed to parse renderer settings file %s\n\terror: %s\n", m_RendererSettingsFilePathAbs.c_str(), JSONParser::GetErrorString());
+			OnSettingsReloaded();
 		}
 	}
 
@@ -585,6 +557,11 @@ namespace flex
 		return true;
 	}
 
+	void Renderer::RemoveDirectionalLight()
+	{
+		m_DirectionalLight = nullptr;
+	}
+
 	PointLightID Renderer::RegisterPointLight(PointLightData* pointLightData)
 	{
 		if (m_NumPointLightsEnabled < MAX_POINT_LIGHT_COUNT)
@@ -600,21 +577,65 @@ namespace flex
 					break;
 				}
 			}
-			assert(newPointLightID != InvalidPointLightID);
 
-			memcpy(m_PointLightData + newPointLightID, pointLightData, sizeof(PointLightData));
+			if (newPointLightID == InvalidPointLightID)
+			{
+				return InvalidPointLightID;
+			}
+
+			UpdatePointLightData(newPointLightID, pointLightData);
+
 			m_NumPointLightsEnabled++;
 			return newPointLightID;
 		}
 		return InvalidPointLightID;
 	}
 
+	void Renderer::RemovePointLight(PointLightID ID)
+	{
+		if (ID != InvalidPointLightID)
+		{
+			if (m_PointLightData[ID].colour.x != -1.0f)
+			{
+				m_PointLightData[ID].colour = VEC4_NEG_ONE;
+				m_PointLightData[ID].enabled = 0;
+				m_NumPointLightsEnabled--;
+				CHECK_GE(m_NumPointLightsEnabled, 0);
+				UpdatePointLightData(ID, nullptr);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllPointLights()
+	{
+		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+		{
+			m_PointLightData[i].colour = VEC4_NEG_ONE;
+			m_PointLightData[i].enabled = 0;
+			UpdatePointLightData(i, nullptr);
+		}
+		m_NumPointLightsEnabled = 0;
+	}
+
 	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)
 	{
-		assert(ID < MAX_POINT_LIGHT_COUNT);
-		assert(data != nullptr);
+		if (ID < MAX_POINT_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_PointLightData + ID, data, sizeof(PointLightData));
+			}
+			else
+			{
+				memset(&m_PointLightData[ID], 0, sizeof(PointLightData));
+				m_PointLightData[ID].colour = VEC3_NEG_ONE;
+			}
+		}
+	}
 
-		memcpy(m_PointLightData + ID, data, sizeof(PointLightData));
+	i32 Renderer::GetNumPointLights()
+	{
+		return m_NumPointLightsEnabled;
 	}
 
 	SpotLightID Renderer::RegisterSpotLight(SpotLightData* spotLightData)
@@ -632,21 +653,63 @@ namespace flex
 					break;
 				}
 			}
-			assert(newSpotLightID != InvalidSpotLightID);
 
-			memcpy(m_SpotLightData + newSpotLightID, spotLightData, sizeof(SpotLightData));
+			if (newSpotLightID == InvalidSpotLightID)
+			{
+				return InvalidSpotLightID;
+			}
+
+			UpdateSpotLightData(newSpotLightID, spotLightData);
+
 			m_NumSpotLightsEnabled++;
 			return newSpotLightID;
 		}
 		return InvalidSpotLightID;
 	}
 
+	void Renderer::RemoveSpotLight(SpotLightID ID)
+	{
+		if (ID != InvalidSpotLightID)
+		{
+			if (m_SpotLightData[ID].colour.x != -1.0f)
+			{
+				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
+				m_SpotLightData[ID].enabled = 0;
+				m_NumSpotLightsEnabled--;
+				CHECK_GE(m_NumSpotLightsEnabled, 0);
+				UpdateSpotLightData(ID, nullptr);
+			}
+		}
+	}
+
+	void Renderer::RemoveAllSpotLights()
+	{
+		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
+		{
+			UpdateSpotLightData(i, nullptr);
+		}
+		m_NumSpotLightsEnabled = 0;
+	}
+
 	void Renderer::UpdateSpotLightData(SpotLightID ID, SpotLightData* data)
 	{
-		assert(ID < MAX_SPOT_LIGHT_COUNT);
-		assert(data != nullptr);
+		if (ID < MAX_SPOT_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
+			}
+			else
+			{
+				memset(&m_SpotLightData[ID], 0, sizeof(SpotLightData));
+				m_SpotLightData[ID].colour = VEC3_NEG_ONE;
+			}
+		}
+	}
 
-		memcpy(m_SpotLightData + ID, data, sizeof(SpotLightData));
+	i32 Renderer::GetNumSpotLights()
+	{
+		return m_NumSpotLightsEnabled;
 	}
 
 	AreaLightID Renderer::RegisterAreaLight(AreaLightData* areaLightData)
@@ -664,75 +727,18 @@ namespace flex
 					break;
 				}
 			}
-			assert(newAreaLightID != InvalidAreaLightID);
 
-			memcpy(m_AreaLightData + newAreaLightID, areaLightData, sizeof(AreaLightData));
+			if (newAreaLightID == InvalidAreaLightID)
+			{
+				return InvalidAreaLightID;
+			}
+
+			UpdateAreaLightData(newAreaLightID, areaLightData);
+
 			m_NumAreaLightsEnabled++;
 			return newAreaLightID;
 		}
 		return InvalidAreaLightID;
-	}
-
-	void Renderer::UpdateAreaLightData(AreaLightID ID, AreaLightData* data)
-	{
-		assert(ID < MAX_AREA_LIGHT_COUNT);
-		assert(data != nullptr);
-
-		memcpy(m_AreaLightData + ID, data, sizeof(AreaLightData));
-
-	}
-
-	void Renderer::RemoveDirectionalLight()
-	{
-		m_DirectionalLight = nullptr;
-	}
-
-	void Renderer::RemovePointLight(PointLightID ID)
-	{
-		if (ID != InvalidPointLightID)
-		{
-			if (m_PointLightData[ID].colour.x != -1.0f)
-			{
-				m_PointLightData[ID].colour = VEC4_NEG_ONE;
-				m_PointLightData[ID].enabled = 0;
-				m_NumPointLightsEnabled--;
-				assert(m_NumPointLightsEnabled >= 0);
-			}
-		}
-	}
-
-	void Renderer::RemoveAllPointLights()
-	{
-		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
-		{
-			m_PointLightData[i].colour = VEC4_NEG_ONE;
-			m_PointLightData[i].enabled = 0;
-		}
-		m_NumPointLightsEnabled = 0;
-	}
-
-	void Renderer::RemoveSpotLight(SpotLightID ID)
-	{
-		if (ID != InvalidSpotLightID)
-		{
-			if (m_SpotLightData[ID].colour.x != -1.0f)
-			{
-				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
-				m_SpotLightData[ID].enabled = 0;
-				m_NumSpotLightsEnabled--;
-				assert(m_NumSpotLightsEnabled >= 0);
-			}
-		}
-	}
-
-	void Renderer::RemoveAllSpotLights()
-	{
-		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
-		{
-			m_SpotLightData[i].colour = VEC4_NEG_ONE;
-			m_SpotLightData[i].enabled = 0;
-		}
-		m_NumSpotLightsEnabled = 0;
 	}
 
 	void Renderer::RemoveAreaLight(AreaLightID ID)
@@ -744,7 +750,8 @@ namespace flex
 				m_AreaLightData[ID].colour = VEC4_NEG_ONE;
 				m_AreaLightData[ID].enabled = 0;
 				m_NumAreaLightsEnabled--;
-				assert(m_NumAreaLightsEnabled >= 0);
+				CHECK_GE(m_NumAreaLightsEnabled, 0);
+				UpdateAreaLightData(ID, nullptr);
 			}
 		}
 	}
@@ -753,10 +760,25 @@ namespace flex
 	{
 		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
 		{
-			m_AreaLightData[i].colour = VEC4_NEG_ONE;
-			m_AreaLightData[i].enabled = 0;
+			UpdateAreaLightData(i, nullptr);
 		}
 		m_NumAreaLightsEnabled = 0;
+	}
+
+	void Renderer::UpdateAreaLightData(AreaLightID ID, AreaLightData* data)
+	{
+		if (ID < MAX_AREA_LIGHT_COUNT)
+		{
+			if (data != nullptr)
+			{
+				memcpy(m_AreaLightData + ID, data, sizeof(AreaLightData));
+			}
+			else
+			{
+				memset(&m_AreaLightData[ID], 0, sizeof(AreaLightData));
+				m_AreaLightData[ID].colour = VEC3_NEG_ONE;
+			}
+		}
 	}
 
 	DirectionalLight* Renderer::GetDirectionalLight()
@@ -766,16 +788,6 @@ namespace flex
 			return m_DirectionalLight;
 		}
 		return nullptr;
-	}
-
-	i32 Renderer::GetNumPointLights()
-	{
-		return m_NumPointLightsEnabled;
-	}
-
-	i32 Renderer::GetNumSpotLights()
-	{
-		return m_NumSpotLightsEnabled;
 	}
 
 	i32 Renderer::GetNumAreaLights()
@@ -796,6 +808,7 @@ namespace flex
 
 	void Renderer::AddEditorString(const std::string& str)
 	{
+		// TODO: Append to list of messages each with lifetime
 		m_EditorMessage = str;
 		if (str.empty())
 		{
@@ -822,6 +835,13 @@ namespace flex
 		auto iter = m_Materials.find(materialID);
 		if (iter != m_Materials.end())
 		{
+			ShaderID shaderID = GetMaterial(materialID)->shaderID;
+			auto shaderIter = m_ShaderUsedMaterials.find(shaderID);
+			if (shaderIter != m_ShaderUsedMaterials.end())
+			{
+				Erase(shaderIter->second, materialID);
+			}
+
 			delete iter->second;
 			m_Materials.erase(iter);
 		}
@@ -859,6 +879,7 @@ namespace flex
 
 	bool Renderer::MaterialWithNameExists(const std::string& matName)
 	{
+		// Search through loaded materials
 		for (const auto& matPair : m_Materials)
 		{
 			if (matPair.second->name.compare(matName) == 0)
@@ -867,10 +888,19 @@ namespace flex
 			}
 		}
 
+		// Search through unloaded materials
+		for (const MaterialCreateInfo& matCreateInfo : g_ResourceManager->parsedMaterialInfos)
+		{
+			if (matCreateInfo.name.compare(matName) == 0)
+			{
+				return true;
+			}
+		}
+
 		return false;
 	}
 
-	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID)
+	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& outMaterialID)
 	{
 		const char* matNameCStr = materialName.c_str();
 		for (u32 i = 0; i < (u32)m_Materials.size(); ++i)
@@ -878,7 +908,7 @@ namespace flex
 			auto matIter = m_Materials.find(i);
 			if (matIter != m_Materials.end() && matIter->second->name.compare(matNameCStr) == 0)
 			{
-				materialID = i;
+				outMaterialID = i;
 				return true;
 			}
 		}
@@ -886,7 +916,7 @@ namespace flex
 		MaterialCreateInfo* matCreateInfo = g_ResourceManager->GetMaterialInfo(matNameCStr);
 		if (matCreateInfo != nullptr)
 		{
-			materialID = InitializeMaterial(matCreateInfo);
+			outMaterialID = InitializeMaterial(matCreateInfo);
 			return true;
 		}
 
@@ -953,21 +983,9 @@ namespace flex
 		m_bRebatchRenderObjects = true;
 	}
 
-	std::vector<JSONObject> Renderer::SerializeAllMaterialsToJSON()
+	const std::map<MaterialID, Material*>& Renderer::GetLoadedMaterials()
 	{
-		std::vector<JSONObject> result;
-
-		result.reserve(m_Materials.size());
-		for (auto& matPair : m_Materials)
-		{
-			Material* material = matPair.second;
-			if (material->bSerializable)
-			{
-				result.emplace_back(material->Serialize());
-			}
-		}
-
-		return result;
+		return m_Materials;
 	}
 
 	void Renderer::SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex)
@@ -1084,6 +1102,11 @@ namespace flex
 					m_ShaderCompiler->WasShaderRecompiled("terrain_generate_mesh"))
 				{
 					g_SceneManager->CurrentScene()->RegenerateTerrain();
+				}
+				if (m_ShaderCompiler->WasShaderRecompiled("ssao") ||
+					m_ShaderCompiler->WasShaderRecompiled("ssao_blur"))
+				{
+					m_bSSAOStateChanged = true;
 				}
 			}
 			else
@@ -1211,6 +1234,11 @@ namespace flex
 				}
 			}
 
+			if (m_HologramMatID == InvalidMaterialID)
+			{
+				g_Renderer->FindOrCreateMaterialByName("Selection Hologram", m_HologramMatID);
+			}
+
 			if (!bValid)
 			{
 				bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
@@ -1221,12 +1249,16 @@ namespace flex
 			{
 				m_HologramProxyObject->SetVisible(true);
 
-				GetMaterial(m_HologramMatID)->constEmissive = m_QueuedHologramColour;
+				Material* hologramMat = GetMaterial(m_HologramMatID);
+				if (hologramMat != nullptr)
+				{
+					hologramMat->constEmissive = m_QueuedHologramData.colour;
 
-				Transform* transform = m_HologramProxyObject->GetTransform();
-				transform->SetWorldPosition(m_QueuedHologramPosWS, false);
-				transform->SetWorldRotation(m_QueuedHologramRotWS, false);
-				transform->SetWorldScale(m_QueuedHologramScaleWS, true);
+					Transform* transform = m_HologramProxyObject->GetTransform();
+					transform->SetWorldPosition(m_QueuedHologramData.posWS, false);
+					transform->SetWorldRotation(m_QueuedHologramData.rotWS, false);
+					transform->SetWorldScale(m_QueuedHologramData.scaleWS, true);
+				}
 			}
 			else
 			{
@@ -1239,6 +1271,7 @@ namespace flex
 			}
 
 			m_QueuedHologramPrefabID = InvalidPrefabID;
+			m_QueuedHologramData = {};
 		}
 	}
 
@@ -1254,22 +1287,43 @@ namespace flex
 #endif
 	}
 
-	static ImGuiTextFilter materialFilter;
-
 	i32 Renderer::GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials)
 	{
 		i32 matShortIndex = 0;
 		for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 		{
 			auto matIter = m_Materials.find(i);
-			if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->visibleInEditor))
+			if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
 			{
 				continue;
 			}
 
 			Material* material = matIter->second;
 
-			if (!materialFilter.PassFilter(material->name.c_str()))
+			if (!m_MaterialFilter.PassFilter(material->name.c_str()))
+			{
+				continue;
+			}
+
+			if (materialID == (MaterialID)i)
+			{
+				break;
+			}
+
+			++matShortIndex;
+		}
+
+		for (i32 i = 0; i < (i32)g_ResourceManager->parsedMaterialInfos.size(); ++i)
+		{
+			auto matIter = m_Materials.find(i);
+			if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
+			{
+				continue;
+			}
+
+			Material* material = matIter->second;
+
+			if (!m_MaterialFilter.PassFilter(material->name.c_str()))
 			{
 				continue;
 			}
@@ -1285,50 +1339,51 @@ namespace flex
 		return matShortIndex;
 	}
 
-	bool Renderer::DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected)
+	bool Renderer::DrawImGuiMaterialList(MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected)
 	{
 		bool bMaterialSelectionChanged = false;
 
-		materialFilter.Draw("##material-filter");
+		m_MaterialFilter.Draw("##material-filter");
 
 		ImGui::SameLine();
 		if (ImGui::Button("x"))
 		{
-			materialFilter.Clear();
+			m_MaterialFilter.Clear();
 		}
 
 		if (ImGui::BeginChild("material list", ImVec2(0.0f, 120.0f), true))
 		{
+			i32 selectedMaterialShortIndex = g_Renderer->GetShortMaterialIndex(*selectedMaterialID, bShowEditorMaterials);
 			i32 matShortIndex = 0;
 			for (i32 i = 0; i < (i32)m_Materials.size(); ++i)
 			{
 				auto matIter = m_Materials.find(i);
-				if (matIter == m_Materials.end() || (!bShowEditorMaterials && !matIter->second->visibleInEditor))
+				if (matIter == m_Materials.end() || (!bShowEditorMaterials && matIter->second->bEditorMaterial))
 				{
 					continue;
 				}
 
 				Material* material = matIter->second;
 
-				if (!materialFilter.PassFilter(material->name.c_str()))
+				if (!m_MaterialFilter.PassFilter(material->name.c_str()))
 				{
 					continue;
 				}
 
 				ImGui::PushID(i);
 
-				bool bSelected = (matShortIndex == *selectedMaterialIndexShort);
-				const bool bWasMatVisibleInEditor = material->visibleInEditor;
-				if (!bWasMatVisibleInEditor)
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+				const bool bWasEditorMat = material->bEditorMaterial;
+				if (bWasEditorMat)
 				{
 					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 				}
 
 				if (ImGui::Selectable(material->name.c_str(), &bSelected))
 				{
-					if (*selectedMaterialIndexShort != matShortIndex)
+					if (selectedMaterialShortIndex != matShortIndex)
 					{
-						*selectedMaterialIndexShort = matShortIndex;
+						selectedMaterialShortIndex = matShortIndex;
 						*selectedMaterialID = (MaterialID)i;
 						bMaterialSelectionChanged = true;
 					}
@@ -1339,7 +1394,7 @@ namespace flex
 					ImGui::SetScrollHereY();
 				}
 
-				if (!bWasMatVisibleInEditor)
+				if (bWasEditorMat)
 				{
 					ImGui::PopStyleColor();
 				}
@@ -1443,6 +1498,49 @@ namespace flex
 
 				ImGui::PopID();
 			}
+
+			ImGui::Separator();
+
+			// Display unloaded materials
+			for (u32 i = 0; i < (u32)g_ResourceManager->parsedMaterialInfos.size(); ++i)
+			{
+				const MaterialCreateInfo& matCreateInfo = g_ResourceManager->parsedMaterialInfos[i];
+
+				bool bMaterialLoaded = g_Renderer->GetMaterialID(matCreateInfo.name) != InvalidMaterialID;
+				if (bMaterialLoaded || !m_MaterialFilter.PassFilter(matCreateInfo.name.c_str()))
+				{
+					continue;
+				}
+
+				ImGui::PushID(i);
+
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+
+				ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+				if (ImGui::Selectable(matCreateInfo.name.c_str(), &bSelected))
+				{
+					if (selectedMaterialShortIndex != matShortIndex)
+					{
+						// Immediately load unloaded materials upon selection
+						MaterialID newMatID = InvalidMaterialID;
+						if (g_Renderer->FindOrCreateMaterialByName(matCreateInfo.name, newMatID))
+						{
+							selectedMaterialShortIndex = matShortIndex;
+							*selectedMaterialID = newMatID;
+							bMaterialSelectionChanged = true;
+						}
+						else
+						{
+							PrintError("Failed to create material from create info %s\n", matCreateInfo.name.c_str());
+						}
+					}
+				}
+				ImGui::PopStyleColor();
+
+				++matShortIndex;
+
+				ImGui::PopID();
+			}
 		}
 		ImGui::EndChild(); // Material list
 
@@ -1473,7 +1571,7 @@ namespace flex
 		ImGui::EndTooltip();
 	}
 
-	bool Renderer::DrawImGuiForGameObject(GameObject* gameObject)
+	bool Renderer::DrawImGuiForGameObject(GameObject* gameObject, bool bDrawingEditorObjects)
 	{
 		Mesh* mesh = gameObject->GetMesh();
 		bool bAnyPropertyChanged = false;
@@ -1491,11 +1589,7 @@ namespace flex
 			real windowHeight = glm::min(subMeshes.size() * maxWindowHeight / maxItemCount + verticalPad, maxWindowHeight);
 			if (ImGui::BeginChild("materials", ImVec2(windowWidth - 4.0f, windowHeight), true))
 			{
-				// TODO: Obliterate!
-				std::vector<Pair<std::string, MaterialID>> validMaterialNames = GetValidMaterialNames();
-
-				bool bMatChanged = false;
-				for (u32 slotIndex = 0; !bMatChanged && slotIndex < subMeshes.size(); ++slotIndex)
+				for (u32 slotIndex = 0; slotIndex < subMeshes.size(); ++slotIndex)
 				{
 					MeshComponent* meshComponent = subMeshes[slotIndex];
 
@@ -1504,61 +1598,10 @@ namespace flex
 						continue;
 					}
 
-					MaterialID matID = GetRenderObjectMaterialID(meshComponent->renderID);
-
-					i32 selectedMaterialShortIndex = 0;
-					std::string currentMaterialName = "NONE";
-					i32 matShortIndex = 0;
-					for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+					if (meshComponent->DrawImGui(slotIndex, bDrawingEditorObjects))
 					{
-						if (matPair.second == matID)
-						{
-							selectedMaterialShortIndex = matShortIndex;
-							currentMaterialName = matPair.first;
-							break;
-						}
-
-						++matShortIndex;
-					}
-
-					std::string comboStrID = std::to_string(slotIndex);
-					if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
-					{
-						matShortIndex = 0;
-						for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
-						{
-							bool bSelected = (matShortIndex == selectedMaterialShortIndex);
-							std::string materialName = matPair.first;
-							if (ImGui::Selectable(materialName.c_str(), &bSelected))
-							{
-								bAnyPropertyChanged = true;
-								meshComponent->SetMaterialID(matPair.second);
-								selectedMaterialShortIndex = matShortIndex;
-								bMatChanged = true;
-							}
-
-							++matShortIndex;
-						}
-
-						ImGui::EndCombo();
-					}
-
-					if (ImGui::BeginDragDropTarget())
-					{
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
-
-						if (payload && payload->Data)
-						{
-							MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
-							if (draggedMaterialID)
-							{
-								bAnyPropertyChanged = true;
-								meshComponent->SetMaterialID(*draggedMaterialID);
-								bMatChanged = true;
-							}
-						}
-
-						ImGui::EndDragDropTarget();
+						bAnyPropertyChanged = true;
+						break;
 					}
 				}
 			}
@@ -1577,7 +1620,7 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
-	void Renderer::QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour)
+	void Renderer::QueueHologramMesh(PrefabID prefabID, Transform& transform, const glm::vec4& colour)
 	{
 		QueueHologramMesh(prefabID, transform.GetWorldPosition(), transform.GetWorldRotation(), transform.GetWorldScale(), colour);
 	}
@@ -1585,19 +1628,27 @@ namespace flex
 	void Renderer::QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour)
 	{
 		m_QueuedHologramPrefabID = prefabID;
-		m_QueuedHologramPosWS = posWS;
-		m_QueuedHologramRotWS = rotWS;
-		m_QueuedHologramScaleWS = scaleWS;
-		m_QueuedHologramColour = colour;
+		m_QueuedHologramData.posWS = posWS;
+		m_QueuedHologramData.rotWS = rotWS;
+		m_QueuedHologramData.scaleWS = scaleWS;
+		m_QueuedHologramData.colour = colour;
+	}
+
+	void Renderer::OnPreSceneChange()
+	{
+		if (m_DebugRenderer != nullptr)
+		{
+			m_DebugRenderer->OnPreSceneChange();
+		}
 	}
 
 	void Renderer::OnPostSceneChange()
 	{
 		m_UIMesh->OnPostSceneChange();
 
-		if (m_PhysicsDebugDrawer != nullptr)
+		if (m_DebugRenderer != nullptr)
 		{
-			m_PhysicsDebugDrawer->OnPostSceneChange();
+			m_DebugRenderer->OnPostSceneChange();
 		}
 	}
 
@@ -1797,32 +1848,6 @@ namespace flex
 #endif
 		std::vector<ShaderInfo> shaderInfos;
 		SUPPRESS_WARN_BEGIN;
-#if COMPILE_OPEN_GL
-		shaderInfos = {
-			{ "deferred_combine", "deferred_combine.vert", "deferred_combine.frag" },
-			{ "colour", "colour.vert", "colour.frag" },
-			{ "pbr", "pbr.vert", "pbr.frag" },
-			{ "pbr_ws", "pbr_ws.vert", "pbr_ws.frag" },
-			{ "skybox", "skybox.vert", "skybox.frag" },
-			{ "equirectangular_to_cube", "skybox.vert", "equirectangular_to_cube.frag" },
-			{ "irradiance", "skybox.vert", "irradiance.frag" },
-			{ "prefilter", "skybox.vert", "prefilter.frag" },
-			{ "brdf", "brdf.vert", "brdf.frag" },
-			{ "sprite", "sprite.vert", "sprite.frag" },
-			{ "sprite_arr", "sprite.vert", "sprite_arr.frag" },
-			{ "post_process", "post_process.vert", "post_process.frag" },
-			{ "post_fxaa", "post_fxaa.vert", "post_fxaa.frag" },
-			{ "compute_sdf", "compute_sdf.vert", "compute_sdf.frag" },
-			{ "font_ss", "font_ss.vert", "font_ss.frag", "font_ss.geom" },
-			{ "font_ws", "font_ws.vert", "font_ws.frag", "font_ws.geom" },
-			{ "shadow", "shadow.vert" },
-			{ "ssao", "ssao.vert", "ssao.frag" },
-			{ "ssao_blur", "ssao_blur.vert", "ssao_blur.frag" },
-			{ "taa_resolve", "post_process.vert", "taa_resolve.frag" },
-			{ "gamma_correct", "post_process.vert", "gamma_correct.frag" },
-			{ "blit", "blit.vert", "blit.frag" },
-		};
-#elif COMPILE_VULKAN
 		shaderInfos = {
 			{ "deferred_combine", "vk_deferred_combine_vert.spv", "vk_deferred_combine_frag.spv", "", "" },
 			{ "colour", "vk_colour_vert.spv","vk_colour_frag.spv", "", "" },
@@ -1847,8 +1872,7 @@ namespace flex
 			{ "taa_resolve", "vk_barebones_pos2_uv_vert.spv", "vk_taa_resolve_frag.spv", "", "" },
 			{ "gamma_correct", "vk_barebones_pos2_uv_vert.spv", "vk_gamma_correct_frag.spv", "", "" },
 			{ "blit", "vk_barebones_pos2_uv_vert.spv", "vk_blit_frag.spv", "", "" },
-			// TODO: Rename to .geom or move to compute slot?
-			{ "particle_sim", "", "", "vk_simulate_particles_comp.spv", "" },
+			{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
@@ -1860,7 +1884,6 @@ namespace flex
 			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
 			{ "hologram", "vk_hologram_vert.spv", "vk_hologram_frag.spv", "", "" },
 		};
-#endif
 		SUPPRESS_WARN_END;
 
 		InitializeShaders(shaderInfos);
@@ -1955,7 +1978,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->bTranslucent = true;
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 16; // (1835008) TODO: FIXME:
 		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -1972,7 +1995,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 4 * 28; // (1835008) TODO: FIXME:
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 16; // (1835008) TODO: FIXME:
 		m_Shaders[shaderID]->maxObjectCount = 64;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
@@ -1988,7 +2011,7 @@ namespace flex
 		// PBR
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2; // TODO: Work out automatically from samplers?
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 10 * 1024 * 1024; // 10MB
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // 10MB
 		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
@@ -2020,7 +2043,7 @@ namespace flex
 		// PBR - WORLD SPACE
 		m_Shaders[shaderID]->renderPassType = RenderPassType::DEFERRED;
 		m_Shaders[shaderID]->numAttachments = 2;
-		m_Shaders[shaderID]->maxObjectCount = 8;
+		m_Shaders[shaderID]->maxObjectCount = 32;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -2151,7 +2174,6 @@ namespace flex
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_COLOUR_MULTIPLIER);
-		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_ENABLE_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_POST_PROCESS_MAT);
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SCENE_SAMPLER);
@@ -2265,7 +2287,7 @@ namespace flex
 		// SSAO Blur
 		m_Shaders[shaderID]->renderPassType = RenderPassType::SSAO_BLUR;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
-		m_Shaders[shaderID]->maxObjectCount = 1;
+		m_Shaders[shaderID]->maxObjectCount = 2;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV;
@@ -2326,6 +2348,9 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::COMPUTE_PARTICLES;
 		m_Shaders[shaderID]->bCompute = true;
 
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_PARTICLE_SIM_DATA);
 
@@ -2334,11 +2359,13 @@ namespace flex
 
 		// Particles
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
-		m_Shaders[shaderID]->bDepthWriteEnable = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::VELOCITY3 |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::SCALE |
 			(u32)VertexAttribute::EXTRA_VEC4;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
@@ -2354,7 +2381,7 @@ namespace flex
 		// Terrain
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->maxObjectCount = 4096 * 8; // TODO: -1
+		m_Shaders[shaderID]->maxObjectCount = 4096; // TODO: -1
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
@@ -2530,7 +2557,7 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
 		++shaderID;
 
-		assert(shaderID == m_Shaders.size());
+		CHECK_EQ(shaderID, m_Shaders.size());
 #endif // USE_SHADER_REFLECTION
 
 		for (shaderID = 0; shaderID < (ShaderID)m_Shaders.size(); ++shaderID)
@@ -2541,20 +2568,20 @@ namespace flex
 
 			// Sanity checks
 			{
-				assert(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
-				assert(!shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT));
+				CHECK(!shader->constantBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_DYNAMIC));
+				CHECK(!shader->dynamicBufferUniforms.HasUniform(&U_UNIFORM_BUFFER_CONSTANT));
 
-				assert((shader->bNeedPushConstantBlock && shader->pushConstantBlockSize != 0) ||
+				CHECK((shader->bNeedPushConstantBlock && shader->pushConstantBlockSize != 0) ||
 					(!shader->bNeedPushConstantBlock && shader->pushConstantBlockSize == 0));
 
 
 				if (shader->textureUniforms.HasUniform(&U_HIGH_RES_TEX))
 				{
-					assert(!shader->textureUniforms.HasUniform(&U_ALBEDO_SAMPLER));
+					CHECK(!shader->textureUniforms.HasUniform(&U_ALBEDO_SAMPLER));
 				}
 
 				// -1 means allocate max, anything else must be > 0
-				assert(shader->maxObjectCount != 0);
+				CHECK_NE(shader->maxObjectCount, 0);
 			}
 
 			if (!LoadShaderCode(shaderID))
@@ -2589,8 +2616,8 @@ namespace flex
 	{
 		PROFILE_AUTO("GenerateGBuffer");
 
-		assert(m_SkyBoxMesh != nullptr);
-		assert(m_SkyboxShaderID != InvalidShaderID);
+		CHECK_NE(m_SkyBoxMesh, nullptr);
+		CHECK_NE(m_SkyboxShaderID, InvalidShaderID);
 		MaterialID skyboxMaterialID = m_SkyBoxMesh->GetSubMesh(0)->GetMaterialID();
 
 		const std::string gBufferMatName = "GBuffer material";
@@ -2618,7 +2645,7 @@ namespace flex
 				{
 					gameObject->Destroy();
 					delete gameObject;
-					m_PersistentObjects.erase(iter);
+					iter = m_PersistentObjects.erase(iter);
 					break;
 				}
 			}
@@ -2640,13 +2667,14 @@ namespace flex
 			gBufferMaterialCreateInfo.enableBRDFLUT = true;
 			gBufferMaterialCreateInfo.renderToCubemap = false;
 			gBufferMaterialCreateInfo.persistent = true;
-			gBufferMaterialCreateInfo.visibleInEditor = false;
+			gBufferMaterialCreateInfo.bEditorMaterial = true;
 			gBufferMaterialCreateInfo.bSerializable = false;
 			FillOutGBufferFrameBufferAttachments(gBufferMaterialCreateInfo.sampledFrameBuffers);
 
 			MaterialID gBufferMatID = InitializeMaterial(&gBufferMaterialCreateInfo);
 
-			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, SID("object"));
+			GameObject* gBufferQuadGameObject = new GameObject(gBufferQuadName, BaseObjectSID);
+			gBufferQuadGameObject->ID = InvalidGameObjectID;
 			m_PersistentObjects.push_back(gBufferQuadGameObject);
 			// NOTE: G-buffer isn't rendered normally, it is handled separately
 			gBufferQuadGameObject->SetVisible(false);
@@ -2674,7 +2702,7 @@ namespace flex
 		//	gBufferCubemapMaterialCreateInfo.enableBRDFLUT = true;
 		//	gBufferCubemapMaterialCreateInfo.renderToCubemap = false;
 		//	gBufferCubemapMaterialCreateInfo.persistent = true;
-		//	gBufferCubemapMaterialCreateInfo.visibleInEditor = false;
+		//	gBufferCubemapMaterialCreateInfo.bEditorMaterial = true;
 		//	FillOutGBufferFrameBufferAttachments(gBufferCubemapMaterialCreateInfo.sampledFrameBuffers);
 		//
 		//	m_CubemapGBufferMaterialID = InitializeMaterial(&gBufferCubemapMaterialCreateInfo);
@@ -2730,7 +2758,7 @@ namespace flex
 		if (previewedFont != InvalidStringID)
 		{
 			SetFont(previewedFont);
-			DrawStringSS("Preview text... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
+			DrawStringSS("PREVIEW TEXT... 123 -*!~? ", VEC4_ONE, AnchorPoint::CENTER, VEC2_ZERO, 3);
 		}
 	}
 
@@ -2757,7 +2785,7 @@ namespace flex
 		spriteMatSSCreateInfo.name = "Sprite SS material";
 		spriteMatSSCreateInfo.shaderName = "sprite";
 		spriteMatSSCreateInfo.persistent = true;
-		spriteMatSSCreateInfo.visibleInEditor = false;
+		spriteMatSSCreateInfo.bEditorMaterial = true;
 		spriteMatSSCreateInfo.enableAlbedoSampler = true;
 		spriteMatSSCreateInfo.bDynamic = false;
 		spriteMatSSCreateInfo.bSerializable = false;
@@ -2767,7 +2795,7 @@ namespace flex
 		spriteMatWSCreateInfo.name = "Sprite WS material";
 		spriteMatWSCreateInfo.shaderName = "sprite";
 		spriteMatWSCreateInfo.persistent = true;
-		spriteMatWSCreateInfo.visibleInEditor = false;
+		spriteMatWSCreateInfo.bEditorMaterial = true;
 		spriteMatWSCreateInfo.enableAlbedoSampler = true;
 		spriteMatWSCreateInfo.bDynamic = false;
 		spriteMatWSCreateInfo.bSerializable = false;
@@ -2777,7 +2805,7 @@ namespace flex
 		spriteArrMatCreateInfo.name = "Sprite Texture Array material";
 		spriteArrMatCreateInfo.shaderName = "sprite_arr";
 		spriteArrMatCreateInfo.persistent = true;
-		spriteArrMatCreateInfo.visibleInEditor = false;
+		spriteArrMatCreateInfo.bEditorMaterial = true;
 		spriteArrMatCreateInfo.enableAlbedoSampler = true;
 		spriteArrMatCreateInfo.bDynamic = false;
 		spriteArrMatCreateInfo.bSerializable = false;
@@ -2787,7 +2815,7 @@ namespace flex
 		fontSSMatCreateInfo.name = "font ss";
 		fontSSMatCreateInfo.shaderName = "font_ss";
 		fontSSMatCreateInfo.persistent = true;
-		fontSSMatCreateInfo.visibleInEditor = false;
+		fontSSMatCreateInfo.bEditorMaterial = true;
 		fontSSMatCreateInfo.bDynamic = false;
 		fontSSMatCreateInfo.bSerializable = false;
 		m_FontMatSSID = InitializeMaterial(&fontSSMatCreateInfo);
@@ -2796,7 +2824,7 @@ namespace flex
 		fontWSMatCreateInfo.name = "font ws";
 		fontWSMatCreateInfo.shaderName = "font_ws";
 		fontWSMatCreateInfo.persistent = true;
-		fontWSMatCreateInfo.visibleInEditor = false;
+		fontWSMatCreateInfo.bEditorMaterial = true;
 		fontWSMatCreateInfo.bDynamic = false;
 		fontWSMatCreateInfo.bSerializable = false;
 		m_FontMatWSID = InitializeMaterial(&fontWSMatCreateInfo);
@@ -2805,7 +2833,7 @@ namespace flex
 		shadowMatCreateInfo.name = "shadow";
 		shadowMatCreateInfo.shaderName = "shadow";
 		shadowMatCreateInfo.persistent = true;
-		shadowMatCreateInfo.visibleInEditor = false;
+		shadowMatCreateInfo.bEditorMaterial = true;
 		shadowMatCreateInfo.bSerializable = false;
 		m_ShadowMaterialID = InitializeMaterial(&shadowMatCreateInfo);
 
@@ -2813,7 +2841,7 @@ namespace flex
 		postProcessMatCreateInfo.name = "Post process material";
 		postProcessMatCreateInfo.shaderName = "post_process";
 		postProcessMatCreateInfo.persistent = true;
-		postProcessMatCreateInfo.visibleInEditor = false;
+		postProcessMatCreateInfo.bEditorMaterial = true;
 		postProcessMatCreateInfo.bSerializable = false;
 		m_PostProcessMatID = InitializeMaterial(&postProcessMatCreateInfo);
 
@@ -2821,7 +2849,7 @@ namespace flex
 		//postFXAAMatCreateInfo.name = "fxaa";
 		//postFXAAMatCreateInfo.shaderName = "post_fxaa";
 		//postFXAAMatCreateInfo.persistent = true;
-		//postFXAAMatCreateInfo.visibleInEditor = false;
+		//postFXAAMatCreateInfo.bEditorMaterial = true;
 		//postFXAAMatCreateInfo.bSerializable = false;
 		//m_PostFXAAMatID = InitializeMaterial(&postFXAAMatCreateInfo);
 
@@ -2829,7 +2857,7 @@ namespace flex
 		selectedObjectMatCreateInfo.name = "Selected Object";
 		selectedObjectMatCreateInfo.shaderName = "colour";
 		selectedObjectMatCreateInfo.persistent = true;
-		selectedObjectMatCreateInfo.visibleInEditor = false;
+		selectedObjectMatCreateInfo.bEditorMaterial = true;
 		selectedObjectMatCreateInfo.colourMultiplier = VEC4_ONE;
 		selectedObjectMatCreateInfo.bSerializable = false;
 		m_SelectedObjectMatID = InitializeMaterial(&selectedObjectMatCreateInfo);
@@ -2838,7 +2866,7 @@ namespace flex
 		taaMatCreateInfo.name = "TAA Resolve";
 		taaMatCreateInfo.shaderName = "taa_resolve";
 		taaMatCreateInfo.persistent = true;
-		taaMatCreateInfo.visibleInEditor = false;
+		taaMatCreateInfo.bEditorMaterial = true;
 		taaMatCreateInfo.colourMultiplier = VEC4_ONE;
 		taaMatCreateInfo.bSerializable = false;
 		m_TAAResolveMaterialID = InitializeMaterial(&taaMatCreateInfo);
@@ -2847,7 +2875,7 @@ namespace flex
 		gammaCorrectMatCreateInfo.name = "Gamma Correct";
 		gammaCorrectMatCreateInfo.shaderName = "gamma_correct";
 		gammaCorrectMatCreateInfo.persistent = true;
-		gammaCorrectMatCreateInfo.visibleInEditor = false;
+		gammaCorrectMatCreateInfo.bEditorMaterial = true;
 		gammaCorrectMatCreateInfo.colourMultiplier = VEC4_ONE;
 		gammaCorrectMatCreateInfo.bSerializable = false;
 		m_GammaCorrectMaterialID = InitializeMaterial(&gammaCorrectMatCreateInfo);
@@ -2856,7 +2884,7 @@ namespace flex
 		fullscreenBlitMatCreateInfo.name = "fullscreen blit";
 		fullscreenBlitMatCreateInfo.shaderName = "blit";
 		fullscreenBlitMatCreateInfo.persistent = true;
-		fullscreenBlitMatCreateInfo.visibleInEditor = false;
+		fullscreenBlitMatCreateInfo.bEditorMaterial = true;
 		fullscreenBlitMatCreateInfo.enableAlbedoSampler = true;
 		fullscreenBlitMatCreateInfo.bSerializable = false;
 		m_FullscreenBlitMatID = InitializeMaterial(&fullscreenBlitMatCreateInfo);
@@ -2865,7 +2893,7 @@ namespace flex
 		computeSDFMatCreateInfo.name = "compute SDF";
 		computeSDFMatCreateInfo.shaderName = "compute_sdf";
 		computeSDFMatCreateInfo.persistent = true;
-		computeSDFMatCreateInfo.visibleInEditor = false;
+		computeSDFMatCreateInfo.bEditorMaterial = true;
 		computeSDFMatCreateInfo.bSerializable = false;
 		m_ComputeSDFMatID = InitializeMaterial(&computeSDFMatCreateInfo);
 
@@ -2873,7 +2901,7 @@ namespace flex
 		irradianceCreateInfo.name = "irradiance";
 		irradianceCreateInfo.shaderName = "irradiance";
 		irradianceCreateInfo.persistent = true;
-		irradianceCreateInfo.visibleInEditor = false;
+		irradianceCreateInfo.bEditorMaterial = true;
 		irradianceCreateInfo.bSerializable = false;
 		m_IrradianceMaterialID = InitializeMaterial(&irradianceCreateInfo);
 
@@ -2881,7 +2909,7 @@ namespace flex
 		prefilterCreateInfo.name = "prefilter";
 		prefilterCreateInfo.shaderName = "prefilter";
 		prefilterCreateInfo.persistent = true;
-		prefilterCreateInfo.visibleInEditor = false;
+		prefilterCreateInfo.bEditorMaterial = true;
 		prefilterCreateInfo.bSerializable = false;
 		m_PrefilterMaterialID = InitializeMaterial(&prefilterCreateInfo);
 
@@ -2889,7 +2917,7 @@ namespace flex
 		brdfCreateInfo.name = "brdf";
 		brdfCreateInfo.shaderName = "brdf";
 		brdfCreateInfo.persistent = true;
-		brdfCreateInfo.visibleInEditor = false;
+		brdfCreateInfo.bEditorMaterial = true;
 		brdfCreateInfo.bSerializable = false;
 		m_BRDFMaterialID = InitializeMaterial(&brdfCreateInfo);
 
@@ -2897,7 +2925,7 @@ namespace flex
 		wireframeCreateInfo.name = "wireframe";
 		wireframeCreateInfo.shaderName = "wireframe";
 		wireframeCreateInfo.persistent = true;
-		wireframeCreateInfo.visibleInEditor = false;
+		wireframeCreateInfo.bEditorMaterial = true;
 		wireframeCreateInfo.bSerializable = false;
 		m_WireframeMatID = InitializeMaterial(&wireframeCreateInfo);
 
@@ -2905,29 +2933,10 @@ namespace flex
 		placeholderMatCreateInfo.name = "placeholder";
 		placeholderMatCreateInfo.shaderName = "pbr";
 		placeholderMatCreateInfo.persistent = true;
-		placeholderMatCreateInfo.visibleInEditor = false;
+		placeholderMatCreateInfo.bEditorMaterial = true;
 		placeholderMatCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 1.0f, 1.0f);
 		placeholderMatCreateInfo.bSerializable = false;
 		m_PlaceholderMaterialID = InitializeMaterial(&placeholderMatCreateInfo);
-	}
-
-	std::string Renderer::PickRandomSkyboxTexture()
-	{
-		i32 matIdx = -1;
-		i32 attemptCount = 0;
-		do
-		{
-			matIdx = RandomInt(0, (i32)m_AvailableHDRIs.size());
-			++attemptCount;
-		} while (!FileExists(m_AvailableHDRIs[matIdx]) && attemptCount < 15);
-
-		if (matIdx == -1)
-		{
-			PrintWarn("Unable to open any available HDRIs!\n");
-			return EMPTY_STRING;
-		}
-
-		return m_AvailableHDRIs[matIdx];
 	}
 
 	void Renderer::AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant)
@@ -3202,14 +3211,18 @@ namespace flex
 			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
 			{
 				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, 4);
-				RecreateShadowFrameBuffers();
+				// TODO: Recreate less
+				RecreateEverything();
 			}
 
 			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
 			{
 				m_ShadowMapBaseResolution = NextPowerOfTwo(glm::clamp(m_ShadowMapBaseResolution, 128u, 4096u));
-				RecreateShadowFrameBuffers();
+				// TODO: Recreate less
+				RecreateEverything();
 			}
+
+			ImGui::SliderFloat("Shadow bias", &m_ShadowSamplingData.baseBias, 0.0f, 0.02f);
 
 			SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
 			if (ImGui::SliderInt("Shader quality level", &specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL))
@@ -3774,7 +3787,7 @@ namespace flex
 		createInfo.name = name;
 		createInfo.shaderName = "particle_sim";
 		createInfo.persistent = true;
-		createInfo.visibleInEditor = false;
+		createInfo.bEditorMaterial = true;
 		createInfo.bSerializable = false;
 		return InitializeMaterial(&createInfo);
 	}
@@ -3785,7 +3798,7 @@ namespace flex
 		createInfo.name = name;
 		createInfo.shaderName = "particles";
 		createInfo.persistent = true;
-		createInfo.visibleInEditor = false;
+		createInfo.bEditorMaterial = true;
 		createInfo.bSerializable = false;
 		return InitializeMaterial(&createInfo);
 	}
@@ -3923,45 +3936,51 @@ namespace flex
 		}
 	}
 
-	void PhysicsDebugDrawBase::flushLines()
+	void Renderer::CreateParticleBuffer(Material* material)
 	{
-		Draw();
+		Shader* shader = m_Shaders[material->shaderID];
+
+		if (shader->additionalBufferUniforms.HasUniform(&U_PARTICLE_BUFFER))
+		{
+			PROFILE_AUTO("CreateParticleBuffer");
+
+			GPUBuffer* particleBuffer = material->gpuBufferList.Get(GPUBufferType::PARTICLE_DATA);
+			particleBuffer->FreeHostMemory();
+
+			particleBuffer->data.unitSize = GetAlignedUBOSize(MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM * MAX_PARTICLE_COUNT_PER_INSTANCE * sizeof(ParticleBufferData));
+
+			particleBuffer->AllocHostMemory(particleBuffer->data.unitSize, m_DynamicAlignment);
+			// Will be copied into from staging buffer
+			CreateGPUBuffer(particleBuffer, particleBuffer->data.unitSize,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+				false);
+		}
 	}
 
-	void PhysicsDebugDrawBase::DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale)
+	bool Renderer::InitializeFreeType()
 	{
-		drawLine(origin, origin + quatRotate(orientation, btVector3(scale, 0.0f, 0.0f)), btVector3(0.9f, 0.1f, 0.1f));
-		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, scale, 0.0f)), btVector3(0.1f, 0.9f, 0.1f));
-		drawLine(origin, origin + quatRotate(orientation, btVector3(0.0f, 0.0f, scale)), btVector3(0.1f, 0.1f, 0.9f));
+		PROFILE_AUTO("InitializeFreeType");
+
+		if (FT_Init_FreeType(&m_FTLibrary) != FT_Err_Ok)
+		{
+			PrintError("Failed to initialize FreeType\n");
+			return false;
+		}
+
+		{
+			i32 maj, min, pat;
+			FT_Library_Version(m_FTLibrary, &maj, &min, &pat);
+
+			Print("Free type v%d.%d.%d\n", maj, min, pat);
+		}
+
+		return true;
 	}
 
-	void PhysicsDebugDrawBase::UpdateDebugMode()
+	void Renderer::DestroyFreeType()
 	{
-		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
-
-		m_DebugMode =
-			(settings.bDisableAll ? DBG_NoDebug : 0) |
-			(settings.bDrawWireframe ? DBG_DrawWireframe : 0) |
-			(settings.bDrawAabb ? DBG_DrawAabb : 0) |
-			(settings.bDrawFeaturesText ? DBG_DrawFeaturesText : 0) |
-			(settings.bDrawContactPoints ? DBG_DrawContactPoints : 0) |
-			(settings.bNoDeactivation ? DBG_NoDeactivation : 0) |
-			(settings.bNoHelpText ? DBG_NoHelpText : 0) |
-			(settings.bDrawText ? DBG_DrawText : 0) |
-			(settings.bProfileTimings ? DBG_ProfileTimings : 0) |
-			(settings.bEnableSatComparison ? DBG_EnableSatComparison : 0) |
-			(settings.bDisableBulletLCP ? DBG_DisableBulletLCP : 0) |
-			(settings.bEnableCCD ? DBG_EnableCCD : 0) |
-			(settings.bDrawConstraints ? DBG_DrawConstraints : 0) |
-			(settings.bDrawConstraintLimits ? DBG_DrawConstraintLimits : 0) |
-			(settings.bFastWireframe ? DBG_FastWireframe : 0) |
-			(settings.bDrawNormals ? DBG_DrawNormals : 0) |
-			(settings.bDrawFrames ? DBG_DrawFrames : 0);
-	}
-
-	void PhysicsDebugDrawBase::ClearLines()
-	{
-		m_LineSegmentIndex = 0;
+		FT_Done_FreeType(m_FTLibrary);
 	}
 
 	bool Renderer::DrawImGuiShadersDropdown(i32* selectedShaderID, Shader** outSelectedShader /* = nullptr */)

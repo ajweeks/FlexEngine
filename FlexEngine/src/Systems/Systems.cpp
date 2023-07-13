@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp" // For DirectoryWatcher
 #include "Player.hpp"
+#include "PropertyCollection.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -22,22 +23,87 @@ namespace flex
 	GameObjectID TerminalManager::m_TerminalSavingID = InvalidGameObjectID;
 	bool TerminalManager::m_bOpenSavePopup = false;
 
-	void System::DrawImGui()
-	{
-	}
-
 	void PluggablesSystem::Initialize()
 	{
+		PROFILE_AUTO("PluggablesSystem CreateContext");
+		m_PlugInAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-open-19.wav"), true);
+		m_UnplugAudioSourceID = g_ResourceManager->GetOrLoadAudioSourceID(SID("latch-closing-09.wav"), true);
 	}
 
 	void PluggablesSystem::Destroy()
 	{
-		wires.clear();
+		registeredWires.clear();
+	}
+
+	void PluggablesSystem::OnPreSceneChange()
+	{
+		registeredWires.clear();
+	}
+
+	void PluggablesSystem::UpdatePlugTransform(WirePlug* wirePlug)
+	{
+		Transform* plugTransform = wirePlug->GetTransform();
+		Wire* wire = (Wire*)wirePlug->wireID.Get();
+		Socket* socket = (Socket*)wirePlug->socketID.Get();
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+
+		Socket* nearbySocket = nullptr;
+
+		if (socket != nullptr)
+		{
+			// Plugged in, stick to socket
+			glm::vec3 socketPos = socket->GetTransform()->GetWorldPosition();
+			plugTransform->SetWorldPosition(socketPos);
+
+			glm::quat plugRot = socket->GetTransform()->GetWorldRotation();
+			plugTransform->SetWorldRotation(plugRot);
+			wire->SetStartTangent(-(plugRot * VEC3_FORWARD));
+		}
+		else if (player->IsHolding(wirePlug))
+		{
+			const real hoverAmount = TWEAKABLE(0.2f);
+
+			// Plug is being carried, stick to player but look for nearby sockets to snap to
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == wirePlug->ID;
+			CHECK(bLeftHand || (player->GetHeldItem(Hand::RIGHT) == wirePlug->ID));
+			glm::vec3 plugDefaultPos = player->GetHeldItemPosWS(bLeftHand ? Hand::LEFT : Hand::RIGHT);
+			nearbySocket = GetNearbySocket(plugDefaultPos, WirePlug::nearbyThreshold, true);
+			if (nearbySocket != nullptr)
+			{
+				// Found nearby socket
+				glm::vec3 nearbySocketPos = nearbySocket->GetTransform()->GetWorldPosition();
+				glm::quat nearbySocketRot = nearbySocket->GetTransform()->GetWorldRotation();
+				glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
+				plugTransform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
+
+				plugTransform->SetWorldRotation(nearbySocketRot, true);
+				wire->SetStartTangent(tangent);
+			}
+			else
+			{
+				// Stick to player
+				plugTransform->SetWorldPosition(plugDefaultPos);
+			}
+		}
+		else
+		{
+			// Plug isn't being held, and isn't plugged in.
+		}
+
+		if (socket == nullptr && nearbySocket == nullptr)
+		{
+			// Update socket based on wire tangent
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == wirePlug->ID;
+			CHECK(bLeftHand || (player->GetHeldItem(Hand::RIGHT) == wirePlug->ID));
+			glm::vec3 tangent = wire->CalculateTangentAtPoint(bLeftHand ? 0.0f : 1.0f);
+			plugTransform->SetWorldRotation(SafeQuatLookAt(bLeftHand ? -tangent : tangent));
+			wire->ClearStartTangent();
+		}
 	}
 
 	void PluggablesSystem::Update()
 	{
-		if (!wires.empty())
+		if (!registeredWires.empty())
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
 
@@ -45,21 +111,8 @@ namespace flex
 			static const btVector3 wireColPluggedIn(0.05f, 0.6f, 0.1f);
 			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
 
-			Player* player = scene->GetPlayer(0);
-			Transform* playerTransform = player->GetTransform();
-
-			glm::vec3 playerWorldPos = playerTransform->GetWorldPosition();
-			glm::vec3 playerForward = playerTransform->GetForward();
-			glm::vec3 playerUp = playerTransform->GetUp();
-			glm::vec3 playerRight = playerTransform->GetRight();
-			glm::vec3 wireHoldingOffset = playerForward * 5.0f + playerUp * -0.75f;
-
-			glm::vec3 plug0DefaultPos = playerWorldPos + wireHoldingOffset - (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
-			glm::vec3 plug1DefaultPos = playerWorldPos + wireHoldingOffset + (Wire::DEFAULT_LENGTH * 0.5f) * playerRight;
-
-			const real hoverAmount = TWEAKABLE(0.1f);
-
-			for (Wire* wire : wires)
+			// Handle plugging/unplugging events
+			for (Wire* wire : registeredWires)
 			{
 				Transform* wireTransform = wire->GetTransform();
 
@@ -94,100 +147,17 @@ namespace flex
 				Socket* socket0 = (Socket*)plug0->socketID.Get();
 				Socket* socket1 = (Socket*)plug1->socketID.Get();
 
-				Socket* nearbySocket0 = nullptr;
-				Socket* nearbySocket1 = nullptr;
-
+				// Only update plug positions when plugged in, when held the player will update
 				if (socket0 != nullptr)
 				{
-					// Plugged in, stick to socket
-					glm::vec3 socketPos = socket0->GetTransform()->GetWorldPosition();
-					plug0Transform->SetWorldPosition(socketPos);
-
-					glm::quat plug0Rot = socket0->GetTransform()->GetWorldRotation();
-					plug0Transform->SetWorldRotation(plug0Rot);
-					wire->SetStartTangent(-(plug0Rot * VEC3_FORWARD));
+					UpdatePlugTransform(plug0);
 				}
-				else if (player->IsHolding(plug0))
-				{
-					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					nearbySocket0 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true);
-					if (nearbySocket0 != nullptr)
-					{
-						// Found nearby socket
-						glm::vec3 nearbySocketPos = nearbySocket0->GetTransform()->GetWorldPosition();
-						glm::quat nearbySocketRot = nearbySocket0->GetTransform()->GetWorldRotation();
-						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
-						plug0Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
-
-						plug0Transform->SetWorldRotation(nearbySocketRot);
-						wire->SetStartTangent(tangent);
-					}
-					else
-					{
-						// Stick to player
-						plug0Transform->SetWorldPosition(plug0DefaultPos);
-					}
-				}
-				else
-				{
-					// Plug isn't being held, and isn't plugged in. Rest.
-				}
-
 				if (socket1 != nullptr)
 				{
-					// Plugged in, stick to socket
-					glm::vec3 socketPos = socket1->GetTransform()->GetWorldPosition();
-					plug1Transform->SetWorldPosition(socketPos, false);
-
-					glm::quat plug1Rot = socket1->GetTransform()->GetWorldRotation();
-					plug1Transform->SetWorldRotation(plug1Rot);
-					wire->SetEndTangent(-(plug1Rot * VEC3_FORWARD));
-				}
-				else if (player->IsHolding(plug1))
-				{
-					// Plug is being carried, stick to player but look for nearby sockets to snap to
-					nearbySocket1 = GetNearbySocket(plug0DefaultPos, WirePlug::nearbyThreshold, true, nearbySocket0);
-					if (nearbySocket1 != nullptr)
-					{
-						// Found nearby socket
-						glm::vec3 nearbySocketPos = nearbySocket1->GetTransform()->GetWorldPosition();
-						glm::quat nearbySocketRot = nearbySocket1->GetTransform()->GetWorldRotation();
-						glm::vec3 tangent = -(nearbySocketRot * VEC3_FORWARD);
-						plug1Transform->SetWorldPosition(nearbySocketPos + tangent * hoverAmount, false);
-
-						plug1Transform->SetWorldRotation(nearbySocketRot);
-						wire->SetStartTangent(tangent);
-					}
-					else
-					{
-						// Stick to player
-						plug1Transform->SetWorldPosition(plug1DefaultPos);
-					}
-				}
-				else
-				{
-					// Plug isn't being held, and isn't plugged in. Rest.
+					UpdatePlugTransform(plug1);
 				}
 
-				if (socket0 == nullptr && nearbySocket0 == nullptr)
-				{
-					// Update socket based on wire tangent
-					glm::vec3 wireStartTangent;
-					wire->CalculateTangentAtPoint(0.0f, wireStartTangent);
-					plug0Transform->SetWorldRotation(SafeQuatLookAt(-wireStartTangent));
-					wire->ClearStartTangent();
-				}
-
-				if (socket1 == nullptr && nearbySocket1 == nullptr)
-				{
-					// Update socket based on wire tangent
-					glm::vec3 wireEndTangent;
-					wire->CalculateTangentAtPoint(1.0f, wireEndTangent);
-					plug1Transform->SetWorldRotation(SafeQuatLookAt(wireEndTangent));
-					wire->ClearEndTangent();
-				}
-
-				wire->StepSimulation();
+				wire->UpdateWireMesh();
 
 				glm::vec3 plug0Pos = plug0Transform->GetWorldPosition();
 				glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
@@ -199,6 +169,8 @@ namespace flex
 
 				if (glm::distance2(plug0Pos, plug1Pos) > maxDistBeforeSnapSq)
 				{
+					Player* player = scene->GetPlayer(0);
+
 					bool plug0PluggedIn = plug0->socketID.IsValid();
 					bool plug1PluggedIn = plug1->socketID.IsValid();
 
@@ -236,13 +208,16 @@ namespace flex
 				}
 
 #if 0
+				Socket* socket0 = (Socket*)plug0->socketID.Get();
+				Socket* socket1 = (Socket*)plug1->socketID.Get();
+
 				btVector3 plug0PosBt = ToBtVec3(plug0Pos);
 				btVector3 plug1PosBt = ToBtVec3(plug1Pos);
 
 				bool bWire0PluggedIn = socket0 != nullptr;
 				bool bWire1PluggedIn = socket1 != nullptr;
-				bool bWire0On = bWire0PluggedIn && (socket0->parent->outputSignals[socket0->slotIdx] != -1);
-				bool bWire1On = bWire1PluggedIn && (socket1->parent->outputSignals[socket1->slotIdx] != -1);
+				bool bWire0On = bWire0PluggedIn && (socket0->GetParent()->GetOutputSignal(socket0->slotIdx) != -1);
+				bool bWire1On = bWire1PluggedIn && (socket1->GetParent()->GetOutputSignal(socket1->slotIdx) != -1);
 				debugDrawer->drawSphere(plug0PosBt, 0.2f, bWire0PluggedIn ? wireColPluggedIn : (bWire0On ? wireColOn : wireColOff));
 				debugDrawer->drawSphere(plug1PosBt, 0.2f, bWire1PluggedIn ? wireColPluggedIn : (bWire1On ? wireColOn : wireColOff));
 #endif
@@ -253,7 +228,8 @@ namespace flex
 	i32 PluggablesSystem::GetReceivedSignal(Socket* socket)
 	{
 		i32 result = -1;
-		for (Wire* wire : wires)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		for (Wire* wire : registeredWires)
 		{
 			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
@@ -263,7 +239,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket1 = (Socket*)plug1->socketID.Get();
-					i32 sendSignal = socket1->parent->outputSignals[socket1->slotIdx];
+					i32 sendSignal = pluggablesSystem->GetGameObjectOutputSignal(socket1->GetParent()->ID, socket1->slotIdx);
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -272,7 +248,7 @@ namespace flex
 				if (plug1->socketID.IsValid())
 				{
 					Socket* socket0 = (Socket*)plug0->socketID.Get();
-					i32 sendSignal = socket0->parent->outputSignals[socket0->slotIdx];
+					i32 sendSignal = pluggablesSystem->GetGameObjectOutputSignal(socket0->GetParent()->ID, socket0->slotIdx);
 					result = glm::max(result, sendSignal);
 				}
 			}
@@ -280,10 +256,8 @@ namespace flex
 		return result;
 	}
 
-	Wire* PluggablesSystem::AddWire(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	Wire* PluggablesSystem::RegisterWire(Wire* wire)
 	{
-		Wire* newWire = new Wire(g_SceneManager->CurrentScene()->GetUniqueObjectName("wire_", 3), gameObjectID);
-
 		// Plugs were not found, create new ones
 		PrefabID wirePlugID = g_ResourceManager->GetPrefabID("wire plug");
 		GameObject* wirePlugTemplate = g_ResourceManager->GetPrefabTemplate(wirePlugID);
@@ -291,64 +265,24 @@ namespace flex
 		WirePlug* plug0 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
 		WirePlug* plug1 = (WirePlug*)wirePlugTemplate->CopySelf(nullptr, copyFlags);
 
-		plug0->wireID = newWire->ID;
-		plug1->wireID = newWire->ID;
+		plug0->wireID = wire->ID;
+		plug1->wireID = wire->ID;
 
-		newWire->plug0ID = plug0->ID;
-		newWire->plug1ID = plug1->ID;
+		wire->plug0ID = plug0->ID;
+		wire->plug1ID = plug1->ID;
 
-		newWire->AddSibling(plug0);
-		newWire->AddSibling(plug1);
+		wire->AddSibling(plug0);
+		wire->AddSibling(plug1);
 
 		plug0->GetTransform()->SetLocalPosition(glm::vec3(-1.0f, 0.0f, 0.0f));
 		plug1->GetTransform()->SetLocalPosition(glm::vec3(1.0f, 0.0f, 0.0f));
 
-		wires.push_back(newWire);
+		registeredWires.push_back(wire);
 
-		return newWire;
+		return wire;
 	}
 
-	bool PluggablesSystem::DestroySocket(Socket* socket)
-	{
-		// Unplug any wire plugs plugged into this socket before removing it
-		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
-		{
-			Wire* wire = *iter;
-			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
-			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
-
-			if (plug0->socketID == socket->ID)
-			{
-				UnplugFromSocket(plug0);
-				RemoveSocket(plug0->socketID);
-				return true;
-			}
-
-			if (plug1->socketID == socket->ID)
-			{
-				UnplugFromSocket(plug1);
-				RemoveSocket(plug1->socketID);
-				return true;
-			}
-		}
-
-		return RemoveSocket(socket->ID);
-	}
-
-	bool PluggablesSystem::RemoveSocket(const GameObjectID& socketID)
-	{
-		for (auto iter = sockets.begin(); iter != sockets.end(); ++iter)
-		{
-			if ((*iter)->ID == socketID)
-			{
-				sockets.erase(iter);
-				return true;
-			}
-		}
-		return false;
-	}
-
-	bool PluggablesSystem::DestroyWire(Wire* wire)
+	bool PluggablesSystem::UnregisterWire(Wire* wire)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		Player* player = scene->GetPlayer(0);
@@ -356,7 +290,7 @@ namespace flex
 		WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 		WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
 
-		for (auto iter = wires.begin(); iter != wires.end(); ++iter)
+		for (auto iter = registeredWires.begin(); iter != registeredWires.end(); ++iter)
 		{
 			if ((*iter)->ID == wire->ID)
 			{
@@ -369,7 +303,6 @@ namespace flex
 					{
 						UnplugFromSocket(plug0);
 					}
-					scene->RemoveObject(plug0, true);
 				}
 				if (plug1 != nullptr)
 				{
@@ -377,11 +310,9 @@ namespace flex
 					{
 						UnplugFromSocket(plug1);
 					}
-					scene->RemoveObject(plug1, true);
 				}
-				scene->RemoveObject(wire, true);
 
-				wires.erase(iter);
+				registeredWires.erase(iter);
 
 				return true;
 			}
@@ -389,41 +320,44 @@ namespace flex
 		return false;
 	}
 
-	WirePlug* PluggablesSystem::AddWirePlug(const GameObjectID& gameObjectID /* = InvalidGameObjectID */)
+	WirePlug* PluggablesSystem::RegisterWirePlug(WirePlug* wirePlug)
 	{
-		WirePlug* plug = new WirePlug("wire plug", gameObjectID);
-		wirePlugs.push_back(plug);
-		return plug;
+		registeredWirePlugs.push_back(wirePlug);
+		return wirePlug;
 	}
 
-	bool PluggablesSystem::DestroyWirePlug(WirePlug* wirePlug)
+	bool PluggablesSystem::UnregisterWirePlug(WirePlug* wirePlug)
 	{
-		for (auto iter = wirePlugs.begin(); iter != wirePlugs.end(); ++iter)
+		for (auto iter = registeredWirePlugs.begin(); iter != registeredWirePlugs.end(); ++iter)
 		{
 			if ((*iter)->ID == wirePlug->ID)
 			{
 				// TODO: Check for wires/sockets interacting with plug
-				wirePlugs.erase(iter);
+				registeredWirePlugs.erase(iter);
 				return true;
 			}
 		}
 		return false;
 	}
 
-	Socket* PluggablesSystem::AddSocket(const std::string& name, const GameObjectID& gameObjectID)
-	{
-		Socket* newSocket = new Socket(name, gameObjectID);
-		sockets.push_back(newSocket);
-
-		return newSocket;
-	}
-
-	Socket* PluggablesSystem::AddSocket(Socket* socket, i32 slotIdx /* = 0 */)
+	Socket* PluggablesSystem::RegisterSocket(Socket* socket, i32 slotIdx /* = 0 */)
 	{
 		socket->slotIdx = slotIdx;
-		sockets.push_back(socket);
-
+		registeredSockets.push_back(socket);
 		return socket;
+	}
+
+	bool PluggablesSystem::UnregisterSocket(Socket* socket)
+	{
+		for (auto iter = registeredSockets.begin(); iter != registeredSockets.end(); ++iter)
+		{
+			if ((*iter)->ID == socket->ID)
+			{
+				registeredSockets.erase(iter);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	Socket* PluggablesSystem::GetSocketAtOtherEnd(Socket* socket)
@@ -432,6 +366,11 @@ namespace flex
 		if (plug != nullptr)
 		{
 			Wire* wire = (Wire*)plug->wireID.Get();
+			if (wire == nullptr)
+			{
+				PrintWarn("Plug lost reference to its wire\n");
+				return nullptr;
+			}
 			WirePlug* otherPlug = (WirePlug*)wire->GetOtherPlug(plug).Get();
 			return (Socket*)otherPlug->socketID.Get();
 		}
@@ -444,7 +383,7 @@ namespace flex
 		real threshold2 = threshold * threshold;
 		real closestDist2 = threshold2;
 		Socket* closestSocket = nullptr;
-		for (Socket* socket : sockets)
+		for (Socket* socket : registeredSockets)
 		{
 			if (socket != excludeSocket && (!bExcludeFilled || !socket->connectedPlugID.IsValid()))
 			{
@@ -470,17 +409,118 @@ namespace flex
 		Socket* nearbySocket = GetNearbySocket(plug->GetTransform()->GetWorldPosition(), nearbyThreshold, true);
 		if (nearbySocket != nullptr)
 		{
-			plug->PlugIn(nearbySocket);
-			nearbySocket->OnPlugIn(plug);
+			PlugInToSocket(plug, nearbySocket);
 			return true;
 		}
 		return false;
 	}
 
+	void PluggablesSystem::PlugInToSocket(WirePlug* plug, Socket* socket)
+	{
+		plug->PlugIn(socket);
+		socket->OnPlugIn(plug);
+
+		AudioManager::PlaySource(m_PlugInAudioSourceID);
+	}
+
 	void PluggablesSystem::UnplugFromSocket(WirePlug* plug)
 	{
-		((Socket*)plug->socketID.Get())->OnUnPlug();
+		Socket* socket = (Socket*)plug->socketID.Get();
+		if (socket != nullptr)
+		{
+			socket->OnUnPlug();
+		}
 		plug->Unplug();
+
+		AudioManager::PlaySource(m_UnplugAudioSourceID);
+	}
+
+	void PluggablesSystem::CacheGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		GameObject* gameObject = gameObjectID.Get();
+		if (gameObject == nullptr)
+		{
+			// TODO: Print errors here (once editor objects can be ignored)
+			return;
+		}
+
+		std::vector<Socket*> sockets;
+		gameObject->GetChildrenOfType(SocketSID, false, sockets);
+		if (!sockets.empty())
+		{
+			std::vector<SocketData> socketData;
+			socketData.reserve(sockets.size());
+			for (Socket* socket : sockets)
+			{
+				socketData.emplace_back(socket->ID);
+			}
+			gameObjectSockets[gameObjectID] = socketData;
+		}
+	}
+
+	void PluggablesSystem::RemoveGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			gameObjectSockets.erase(iter);
+		}
+	}
+
+	void PluggablesSystem::OnSocketChildAdded(const GameObjectID& parentObjectID, GameObject* childObject)
+	{
+		std::vector<SocketData>* sockets;
+
+		auto iter = gameObjectSockets.find(parentObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			sockets = &iter->second;
+		}
+		else
+		{
+			gameObjectSockets[parentObjectID] = {};
+			sockets = &gameObjectSockets[parentObjectID];
+		}
+
+		Socket* socket = (Socket*)childObject;
+		socket->slotIdx = (i32)sockets->size();
+		(*sockets).emplace_back(socket->ID);
+	}
+
+	std::vector<SocketData> const* PluggablesSystem::GetGameObjectSockets(const GameObjectID& gameObjectID)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			return &iter->second;
+		}
+		return nullptr;
+	}
+
+	void PluggablesSystem::SetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx, i32 value)
+	{
+		auto iter = gameObjectSockets.find(gameObjectID);
+		if (iter != gameObjectSockets.end())
+		{
+			std::vector<SocketData>* sockets = &iter->second;
+			if (slotIdx < (i32)sockets->size())
+			{
+				(*sockets)[slotIdx].outputSignal = value;
+			}
+		}
+	}
+
+	i32 PluggablesSystem::GetGameObjectOutputSignal(const GameObjectID& gameObjectID, i32 slotIdx)
+	{
+		std::vector<SocketData> const* sockets = GetGameObjectSockets(gameObjectID);
+		if (sockets != nullptr)
+		{
+			if (slotIdx < (i32)sockets->size())
+			{
+				return (*sockets)[slotIdx].outputSignal;
+			}
+		}
+		return -1;
 	}
 
 	void RoadManager::Initialize()
@@ -494,6 +534,11 @@ namespace flex
 
 	void RoadManager::Update()
 	{
+	}
+
+	void RoadManager::OnPreSceneChange()
+	{
+		m_RoadIDs.clear();
 	}
 
 	void RoadManager::DrawImGui()
@@ -546,18 +591,23 @@ namespace flex
 		}
 	}
 
-	TerminalManager::TerminalManager()
+	TerminalManager::TerminalManager(bool bInstallDirectoryWatch)
 	{
-		m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+		if (bInstallDirectoryWatch)
+		{
+			m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+		}
 	}
 
 	TerminalManager::~TerminalManager()
 	{
 		delete m_ScriptDirectoryWatch;
+		m_ScriptDirectoryWatch = nullptr;
 	}
 
 	void TerminalManager::Initialize()
 	{
+		PROFILE_AUTO("TerminalManager CreateContext");
 		std::vector<std::string> modifiedFiles;
 		UpdateScriptHashes(modifiedFiles);
 	}
@@ -619,7 +669,7 @@ namespace flex
 			--m_ScriptSaveTimer;
 		}
 
-		if (m_ScriptDirectoryWatch->Update())
+		if (m_ScriptDirectoryWatch != nullptr && m_ScriptDirectoryWatch->Update())
 		{
 			std::vector<std::string> modifiedFiles;
 			UpdateScriptHashes(modifiedFiles);
@@ -754,6 +804,25 @@ namespace flex
 		}
 	}
 
+	void TerminalManager::SetInstallDirectoryWatch(bool bInstallDirectoryWatch)
+	{
+		if (bInstallDirectoryWatch)
+		{
+			if (m_ScriptDirectoryWatch == nullptr)
+			{
+				m_ScriptDirectoryWatch = new DirectoryWatcher(SCRIPTS_DIRECTORY, true);
+			}
+		}
+		else
+		{
+			if (m_ScriptDirectoryWatch != nullptr)
+			{
+				delete m_ScriptDirectoryWatch;
+				m_ScriptDirectoryWatch = nullptr;
+			}
+		}
+	}
+
 	bool TerminalManager::LoadScript(const std::string& fileName, std::vector<std::string>& outFileLines)
 	{
 		std::string filePath = SCRIPTS_DIRECTORY + fileName;
@@ -785,13 +854,9 @@ namespace flex
 			if (!fileLines[i].empty())
 			{
 				stringBuilder.Append(fileLines[i]);
-
-				if (i < (i32)fileLines.size() - 1)
-				{
-					stringBuilder.Append('\n');
-				}
 			}
-			else
+
+			if (i < (i32)fileLines.size() - 1)
 			{
 				stringBuilder.Append('\n');
 			}
@@ -809,4 +874,263 @@ namespace flex
 
 		return bSuccess;
 	}
+
+	//
+	// PropertyCollectionManager
+	//
+
+	void PropertyCollectionManager::Initialize()
+	{
+		PROFILE_AUTO("PropertyCollectionManager Initialize");
+		GameObject::RegisterPropertyCollections();
+	}
+
+	void PropertyCollectionManager::Destroy()
+	{
+	}
+
+	void PropertyCollectionManager::Update()
+	{
+	}
+
+	void PropertyCollectionManager::DrawImGui()
+	{
+	}
+
+	void PropertyCollectionManager::RegisterType(StringID gameObjectTypeID, PropertyCollection* collection)
+	{
+		if (m_RegisteredObjectTypes.find(gameObjectTypeID) != m_RegisteredObjectTypes.end())
+		{
+			// Game Object Type registered multiple times
+			ENSURE_NO_ENTRY();
+			return;
+		}
+
+		m_RegisteredObjectTypes.emplace(gameObjectTypeID, collection);
+	}
+
+	bool PropertyCollectionManager::SerializeGameObject(const GameObjectID& gameObjectID, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		GameObject* gameObject = gameObjectID.Get();
+		if (gameObject == nullptr)
+		{
+			char buffer[33];
+			gameObjectID.ToString(buffer);
+			PrintError("Failed to get object to be serialized (ID: %s, name: %s)\n", buffer, debugObjectName);
+			return false;
+		}
+
+		if (collection != nullptr)
+		{
+			const PrefabIDPair& sourcePrefabIDPair = gameObject->GetSourcePrefabIDPair();
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(sourcePrefabIDPair);
+
+			if (prefabTemplate == nullptr || bSerializePrefabData)
+			{
+				// No need to worry about inherited fields if this object isn't a prefab instance
+				SerializeCollection(collection, gameObject, parentObject);
+			}
+			else
+			{
+				SerializeCollectionUniqueFieldsOnly(collection, gameObject, prefabTemplate, parentObject);
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializeGameObject(GameObject* gameObject, PropertyCollection* collection, const JSONObject& parentObject)
+	{
+		CHECK_NE(gameObject, nullptr);
+
+		if (collection != nullptr)
+		{
+			Deserialize(collection, gameObject, parentObject);
+		}
+	}
+
+	bool PropertyCollectionManager::SerializePrefabTemplate(const PrefabIDPair& prefabIDPair, PropertyCollection* collection, const char* debugObjectName, JSONObject& parentObject)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabIDPair);
+		if (prefabTemplate == nullptr)
+		{
+			char bufferPrefabID[33];
+			char bufferSubObjectID[33];
+			prefabIDPair.m_PrefabID.ToString(bufferPrefabID);
+			prefabIDPair.m_SubGameObjectID.ToString(bufferSubObjectID);
+			PrintError("Attempted to serialize collection for invalid prefab template (Prefab ID: %s, Sub-object ID: %s, name: %s)\n", bufferPrefabID, bufferSubObjectID, debugObjectName);
+			return false;
+		}
+
+		if (collection != nullptr)
+		{
+			// Nested prefabs not supported, so all fields can be serialized
+			// without checking for parent values.
+			SerializeCollection(collection, prefabTemplate, parentObject);
+			return true;
+		}
+		return false;
+	}
+
+	void PropertyCollectionManager::DeserializePrefabTemplate(GameObject* prefabTemplate, PropertyCollection* collection, const JSONObject& parentObject)
+	{
+		CHECK_NE(prefabTemplate, nullptr);
+
+		if (collection != nullptr)
+		{
+			Deserialize(collection, prefabTemplate, parentObject);
+		}
+	}
+
+	PropertyCollection* PropertyCollectionManager::AllocateCollection(const char* collectionName)
+	{
+		if (m_Allocator.GetPoolCount() > 2048)
+		{
+			char memSizeStrBuf[64];
+			ByteCountToString(memSizeStrBuf, ARRAY_LENGTH(memSizeStrBuf), m_Allocator.MemoryUsed());
+			PrintWarn("Property collection manager has %u allocation pools allocated, taking up %s!\n", m_Allocator.GetPoolCount(), memSizeStrBuf);
+		}
+
+		PropertyCollection* result = new (m_Allocator.Alloc()) PropertyCollection(collectionName);
+		return result;
+	}
+
+	PropertyCollection* PropertyCollectionManager::GetCollectionForObjectType(StringID gameObjectTypeID) const
+	{
+		auto iter = m_RegisteredObjectTypes.find(gameObjectTypeID);
+		if (iter != m_RegisteredObjectTypes.end())
+		{
+			return iter->second;
+		}
+		return nullptr;
+	}
+
+	void PropertyCollectionManager::SerializeCollection(PropertyCollection* collection, GameObject* gameObject, JSONObject& parentObject)
+	{
+		for (const auto& iter : collection->values)
+		{
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
+
+			CHECK_LT(value.offset, 65536u);
+
+			void* valuePtr = (u8*)gameObject + value.offset;
+
+			if (!IsDefaultValue(value, valuePtr))
+			{
+				parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, value.type, value.GetPrecision()));
+			}
+		}
+	}
+
+	void PropertyCollectionManager::SerializeCollectionUniqueFieldsOnly(PropertyCollection* collection, GameObject* gameObject, GameObject* prefabTemplate, JSONObject& parentObject)
+	{
+		for (const auto& iter : collection->values)
+		{
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
+
+			CHECK_LT(value.offset, 65536u);
+			// Serialization may fail if class layouts don't match
+			CHECK(typeid(*gameObject) == typeid(*prefabTemplate));
+
+			void* fieldValuePtr = (u8*)gameObject + value.offset;
+			void* templateValuePtr = (u8*)prefabTemplate + value.offset;
+
+			SerializePrefabInstanceFieldIfUnique(parentObject, label, fieldValuePtr, templateValuePtr, value.type, value.GetPrecision());
+		}
+	}
+
+	void PropertyCollectionManager::Deserialize(PropertyCollection* collection, GameObject* gameObject, const JSONObject& parentObject)
+	{
+		for (const auto& iter : collection->values)
+		{
+			const char* label = iter.first;
+			const PropertyValue& value = iter.second;
+
+			CHECK_LT(value.offset, 65536u);
+
+			void* valuePtr = (u8*)gameObject + value.offset;
+			parentObject.TryGetValueOfType(label, valuePtr, value.type);
+		}
+	}
+
+	bool ValuesAreEqual(ValueType valueType, void* value0, void* value1)
+	{
+		const real threshold = 0.0001f;
+
+		switch (valueType)
+		{
+		case ValueType::STRING:
+			return *(std::string*)value0 == *(std::string*)value1;
+		case ValueType::INT:
+			return *(i32*)value0 == *(i32*)value1;
+		case ValueType::UINT:
+			return *(u32*)value0 == *(u32*)value1;
+		case ValueType::LONG:
+			return *(i64*)value0 == *(i64*)value1;
+		case ValueType::ULONG:
+			return *(u64*)value0 == *(u64*)value1;
+		case ValueType::FLOAT:
+			return NearlyEquals(*(real*)value0, *(real*)value1, threshold);
+		case ValueType::BOOL:
+			return *(bool*)value0 == *(bool*)value1;
+		case ValueType::VEC2:
+			return NearlyEquals(*(glm::vec2*)value0, *(glm::vec2*)value1, threshold);
+		case ValueType::VEC3:
+			return NearlyEquals(*(glm::vec3*)value0, *(glm::vec3*)value1, threshold);
+		case ValueType::VEC4:
+			return NearlyEquals(*(glm::vec4*)value0, *(glm::vec4*)value1, threshold);
+		case ValueType::QUAT:
+			return NearlyEquals(*(glm::quat*)value0, *(glm::quat*)value1, threshold);
+		case ValueType::GUID:
+			return *(GUID*)value0 == *(GUID*)value1;
+		default:
+			ENSURE_NO_ENTRY();
+			return false;
+		}
+	}
+
+	void SerializePrefabInstanceFieldIfUnique(JSONObject& parentObject, const char* label, void* valuePtr, void* templateValuePtr, ValueType valueType, u32 precision /* = 2 */)
+	{
+		if (!ValuesAreEqual(valueType, valuePtr, templateValuePtr))
+		{
+			parentObject.fields.emplace_back(label, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+		}
+	}
+
+	bool IsDefaultValue(const PropertyValue& value, void* valuePtr)
+	{
+		if (value.defaultValueSet != 0)
+		{
+			switch (value.type)
+			{
+			case ValueType::INT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.intValue);
+			case ValueType::UINT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.uintValue);
+			case ValueType::FLOAT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.realValue);
+			case ValueType::BOOL:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.boolValue);
+			case ValueType::GUID:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.guidValue);
+			case ValueType::VEC2:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec2Value);
+			case ValueType::VEC3:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec3Value);
+			case ValueType::VEC4:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.vec4Value);
+			case ValueType::QUAT:
+				return ValuesAreEqual(value.type, valuePtr, (void*)&value.defaultValue.quatValue);
+			default:
+				ENSURE_NO_ENTRY();
+			}
+		}
+
+		return false;
+	}
+
 } // namespace flex

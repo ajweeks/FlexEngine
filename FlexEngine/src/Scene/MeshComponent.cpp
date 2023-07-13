@@ -20,6 +20,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Colours.hpp"
+#include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
@@ -85,7 +86,9 @@ namespace flex
 
 	void MeshComponent::UpdateDynamicVertexData(const VertexBufferDataCreateInfo& newData, const std::vector<u32>& indexData)
 	{
-		assert(renderID != InvalidRenderID);
+		CHECK_NE(renderID, InvalidRenderID);
+		CHECK(!newData.positions_3D.empty() || !newData.positions_2D.empty());
+
 		m_VertexBufferData.UpdateData(newData);
 		m_VertexBufferData.ShrinkIfExcessGreaterThan(0.5f);
 		m_Indices = indexData;
@@ -109,6 +112,71 @@ namespace flex
 	void MeshComponent::SetOwner(Mesh* owner)
 	{
 		m_OwningMesh = owner;
+	}
+
+	bool MeshComponent::DrawImGui(i32 slotIndex, bool bDrawingEditorObjects)
+	{
+		bool bAnyPropertyChanged = false;
+
+		MaterialID matID = g_Renderer->GetRenderObjectMaterialID(renderID);
+
+		// TODO: Obliterate!
+		std::vector<Pair<std::string, MaterialID>> validMaterialNames = g_Renderer->GetValidMaterialNames(bDrawingEditorObjects);
+
+		i32 selectedMaterialShortIndex = 0;
+		std::string currentMaterialName = "NONE";
+		i32 matShortIndex = 0;
+		for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+		{
+			if (matPair.second == matID)
+			{
+				selectedMaterialShortIndex = matShortIndex;
+				currentMaterialName = matPair.first;
+				break;
+			}
+
+			++matShortIndex;
+		}
+
+		std::string comboStrID = std::to_string(slotIndex);
+		if (ImGui::BeginCombo(comboStrID.c_str(), currentMaterialName.c_str()))
+		{
+			matShortIndex = 0;
+			for (const Pair<std::string, MaterialID>& matPair : validMaterialNames)
+			{
+				bool bSelected = (matShortIndex == selectedMaterialShortIndex);
+				std::string materialName = matPair.first;
+				if (ImGui::Selectable(materialName.c_str(), &bSelected))
+				{
+					bAnyPropertyChanged = true;
+					SetMaterialID(matPair.second);
+					selectedMaterialShortIndex = matShortIndex;
+				}
+
+				++matShortIndex;
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MaterialPayloadCStr);
+
+			if (payload && payload->Data)
+			{
+				MaterialID* draggedMaterialID = (MaterialID*)payload->Data;
+				if (draggedMaterialID)
+				{
+					bAnyPropertyChanged = true;
+					SetMaterialID(*draggedMaterialID);
+				}
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+
+		return bAnyPropertyChanged;
 	}
 
 	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape)
@@ -153,10 +221,10 @@ namespace flex
 		Mesh* owningMesh,
 		cgltf_primitive* primitive,
 		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, false, 0, optionalRenderObjectCreateInfo, bCreateRenderObject);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFDynamic(
@@ -164,10 +232,10 @@ namespace flex
 		cgltf_primitive* primitive,
 		MaterialID materialID,
 		u32 initialMaxVertexCount /* = u32_max */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
-		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject);
+		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalRenderObjectCreateInfo, bCreateRenderObject);
 	}
 
 	MeshComponent* MeshComponent::LoadFromCGLTFInternal(
@@ -176,7 +244,7 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 		bool bCreateRenderObject)
 	{
 		if (primitive->indices == nullptr)
@@ -185,11 +253,13 @@ namespace flex
 			return nullptr;
 		}
 
-		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
+		PROFILE_AUTO("MeshComponent LoadFromCGLTFInternal");
+
+		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID, /*bSetRequiredAttributesFromMat: */true);
 
 		if (newMeshComponent->m_RequiredAttributes == 0)
 		{
-			PrintError("Attempted to load mesh without anyrequired attributes!\n");
+			PrintError("Attempted to load mesh without any required attributes!\n");
 			return nullptr;
 		}
 
@@ -235,17 +305,17 @@ namespace flex
 			}
 		}
 
-		assert(posAttribIndex != -1);
+		CHECK_NE(posAttribIndex, -1);
 		cgltf_accessor* posAccessor = primitive->attributes[posAttribIndex].data;
-		assert(primitive->attributes[posAttribIndex].type == cgltf_attribute_type_position);
-		assert(posAccessor->component_type == cgltf_component_type_r_32f);
-		assert(posAccessor->type == cgltf_type_vec3);
+		CHECK_EQ(primitive->attributes[posAttribIndex].type, cgltf_attribute_type_position);
+		CHECK_EQ(posAccessor->component_type, cgltf_component_type_r_32f);
+		CHECK_EQ(posAccessor->type, cgltf_type_vec3);
 		u32 vertCount = (u32)posAccessor->count;
 
 		vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::POSITION;
 
-		assert(posAccessor->has_min);
-		assert(posAccessor->has_max);
+		CHECK(posAccessor->has_min);
+		CHECK(posAccessor->has_max);
 		glm::vec3 posMin = glm::make_vec3(&posAccessor->min[0]);
 		glm::vec3 posMax = glm::make_vec3(&posAccessor->max[0]);
 
@@ -295,9 +365,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* normAccessor = primitive->attributes[normAttribIndex].data;
-					assert(primitive->attributes[normAttribIndex].type == cgltf_attribute_type_normal);
-					assert(normAccessor->component_type == cgltf_component_type_r_32f);
-					assert(normAccessor->type == cgltf_type_vec3);
+					CHECK_EQ(primitive->attributes[normAttribIndex].type, cgltf_attribute_type_normal);
+					CHECK_EQ(normAccessor->component_type, cgltf_component_type_r_32f);
+					CHECK_EQ(normAccessor->type, cgltf_type_vec3);
 
 					glm::vec3 norm;
 					cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
@@ -317,9 +387,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* tanAccessor = primitive->attributes[tanAttribIndex].data;
-					assert(primitive->attributes[tanAttribIndex].type == cgltf_attribute_type_tangent);
-					assert(tanAccessor->component_type == cgltf_component_type_r_32f);
-					//assert(tanAccessor->type == cgltf_type_vec3);
+					CHECK_EQ(primitive->attributes[tanAttribIndex].type, cgltf_attribute_type_tangent);
+					CHECK_EQ(tanAccessor->component_type, cgltf_component_type_r_32f);
+					//CHECK_EQ(tanAccessor->type, cgltf_type_vec3);
 
 					glm::vec4 tangent;
 					cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
@@ -339,8 +409,8 @@ namespace flex
 				else
 				{
 					cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
-					assert(primitive->attributes[colAttribIndex].type == cgltf_attribute_type_color);
-					assert(colAccessor->type == cgltf_type_vec4);
+					CHECK_EQ(primitive->attributes[colAttribIndex].type, cgltf_attribute_type_color);
+					CHECK_EQ(colAccessor->type, cgltf_type_vec4);
 
 					glm::vec4 col;
 					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
@@ -360,9 +430,9 @@ namespace flex
 				else
 				{
 					cgltf_accessor* uvAccessor = primitive->attributes[uvAttribIndex].data;
-					assert(primitive->attributes[uvAttribIndex].type == cgltf_attribute_type_texcoord);
-					assert(uvAccessor->component_type == cgltf_component_type_r_32f);
-					assert(uvAccessor->type == cgltf_type_vec2);
+					CHECK_EQ(primitive->attributes[uvAttribIndex].type, cgltf_attribute_type_texcoord);
+					CHECK_EQ(uvAccessor->component_type, cgltf_component_type_r_32f);
+					CHECK_EQ(uvAccessor->type, cgltf_type_vec2);
 
 					glm::vec2 uv0;
 					cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
@@ -375,12 +445,12 @@ namespace flex
 
 		// Indices
 		{
-			assert(primitive->indices->type == cgltf_type_scalar);
+			CHECK_EQ(primitive->indices->type, cgltf_type_scalar);
 			const i32 indexCount = (i32)primitive->indices->count;
 			newMeshComponent->m_Indices.resize(newMeshComponent->m_Indices.size() + indexCount);
 
-			//assert(primitive->indices->buffer_view->type == cgltf_buffer_view_type_indices);
-			assert(primitive->indices->component_type == cgltf_component_type_r_8u ||
+			//CHECK_EQ(primitive->indices->buffer_view->type, cgltf_buffer_view_type_indices);
+			CHECK(primitive->indices->component_type == cgltf_component_type_r_8u ||
 				primitive->indices->component_type == cgltf_component_type_r_16u ||
 				primitive->indices->component_type == cgltf_component_type_r_32u);
 
@@ -416,15 +486,16 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
+		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		if (bCreateRenderObject)
 		{
@@ -435,7 +506,6 @@ namespace flex
 
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
 
-			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -448,11 +518,11 @@ namespace flex
 		const VertexBufferDataCreateInfo& vertexBufferCreateInfo,
 		const std::vector<u32>& indices,
 		MaterialID materialID,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */,
 		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, false, 0, optionalRenderObjectCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryDynamic(
@@ -461,11 +531,11 @@ namespace flex
 		const std::vector<u32>& indices,
 		MaterialID materialID,
 		u32 initialMaxVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */,
 		i32* outSubmeshIndex /* = nullptr */)
 	{
-		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalCreateInfo, bCreateRenderObject, outSubmeshIndex);
+		return LoadFromMemoryInternal(owningMesh, vertexBufferCreateInfo, indices, materialID, true, initialMaxVertexCount, optionalRenderObjectCreateInfo, bCreateRenderObject, outSubmeshIndex);
 	}
 
 	MeshComponent* MeshComponent::LoadFromMemoryInternal(
@@ -475,10 +545,12 @@ namespace flex
 		MaterialID materialID,
 		bool bDynamic,
 		u32 initialMaxDynamicVertexCount,
-		RenderObjectCreateInfo* optionalCreateInfo,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo,
 		bool bCreateRenderObject,
 		i32* outSubmeshIndex)
 	{
+		PROFILE_AUTO("MeshComponent LoadFromMemoryInternal");
+
 		MeshComponent* newMeshComponent = new MeshComponent(owningMesh, materialID);
 
 		newMeshComponent->CalculateBoundingSphereRadius(vertexBufferCreateInfo.positions_3D);
@@ -494,15 +566,16 @@ namespace flex
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			newMeshComponent->CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = (owningMesh != nullptr ? owningMesh->GetOwningGameObject() : nullptr);
 		renderObjectCreateInfo.vertexBufferData = &newMeshComponent->m_VertexBufferData;
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
+		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		if (bCreateRenderObject)
 		{
@@ -512,8 +585,6 @@ namespace flex
 			}
 
 			newMeshComponent->renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-			g_Renderer->SetTopologyMode(newMeshComponent->renderID, TopologyMode::TRIANGLE_LIST);
 		}
 
 		newMeshComponent->m_bInitialized = true;
@@ -532,7 +603,7 @@ namespace flex
 
 	bool MeshComponent::LoadPrefabShape(
 		PrefabShape shape,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */,
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */,
 		bool bCreateRenderObject /* = true */)
 	{
 		if (m_bInitialized)
@@ -541,15 +612,17 @@ namespace flex
 			return false;
 		}
 
+		PROFILE_AUTO("MeshComponent LoadPrefabShape");
+
 		m_Shape = shape;
 
 		m_VertexBufferData.Destroy();
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningMesh->GetOwningGameObject();
@@ -792,8 +865,10 @@ namespace flex
 			}
 
 			// Make sure we didn't allocate too much data
-			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.positions_3D.capacity(),
+				vertexBufferDataCreateInfo.positions_3D.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity(),
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -841,8 +916,10 @@ namespace flex
 			vertexBufferDataCreateInfo.colours_R32G32B32A32.push_back(colourEnds);
 
 			// Make sure we didn't allocate too much data
-			assert(vertexBufferDataCreateInfo.positions_3D.capacity() == vertexBufferDataCreateInfo.positions_3D.size());
-			assert(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity() == vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.positions_3D.capacity(),
+				vertexBufferDataCreateInfo.positions_3D.size());
+			CHECK_EQ(vertexBufferDataCreateInfo.colours_R32G32B32A32.capacity(),
+				vertexBufferDataCreateInfo.colours_R32G32B32A32.size());
 
 			topologyMode = TopologyMode::LINE_LIST;
 		} break;
@@ -1076,12 +1153,11 @@ namespace flex
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
+		renderObjectCreateInfo.topologyMode = topologyMode;
 
 		if (bCreateRenderObject)
 		{
 			renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-			g_Renderer->SetTopologyMode(renderID, topologyMode);
 		}
 
 		m_bInitialized = true;
@@ -1092,27 +1168,26 @@ namespace flex
 	bool MeshComponent::CreateProcedural(u32 initialMaxVertCount,
 		VertexAttributes attributes,
 		TopologyMode topologyMode /* = TopologyMode::TRIANGLE_LIST */,
-		RenderObjectCreateInfo* optionalCreateInfo /* = nullptr */)
+		RenderObjectCreateInfo* optionalRenderObjectCreateInfo /* = nullptr */)
 	{
-		assert(m_VertexBufferData.vertexData == nullptr);
+		CHECK_EQ(m_VertexBufferData.vertexData, nullptr);
 
 		m_VertexBufferData.InitializeDynamic(attributes, initialMaxVertCount);
 
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 
-		if (optionalCreateInfo != nullptr)
+		if (optionalRenderObjectCreateInfo != nullptr)
 		{
-			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalCreateInfo);
+			CopyInOptionalCreateInfo(renderObjectCreateInfo, *optionalRenderObjectCreateInfo);
 		}
 
 		renderObjectCreateInfo.gameObject = m_OwningMesh->GetOwningGameObject();
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
 		renderObjectCreateInfo.indices = &m_Indices;
 		renderObjectCreateInfo.materialID = m_MaterialID;
+		renderObjectCreateInfo.topologyMode = topologyMode;
 
 		renderID = g_Renderer->InitializeRenderObject(&renderObjectCreateInfo);
-
-		g_Renderer->SetTopologyMode(renderID, topologyMode);
 
 		m_bInitialized = true;
 
@@ -1276,6 +1351,8 @@ namespace flex
 
 	bool MeshComponent::CalculateTangents(VertexBufferDataCreateInfo& createInfo, const std::vector<u32>& indices)
 	{
+		PROFILE_AUTO("MeshComponent CalculateTangents");
+
 		// TODO:
 		FLEX_UNUSED(indices);
 
@@ -1435,6 +1512,8 @@ namespace flex
 
 	void MeshComponent::CalculateBoundingSphereRadius(const std::vector<glm::vec3>& positions)
 	{
+		PROFILE_AUTO("MeshComponent CalculateBoundingSphereRadius");
+
 		if (!positions.empty())
 		{
 			m_MinPoint = glm::vec3(FLT_MAX);
@@ -1466,7 +1545,6 @@ namespace flex
 				m_BoundingSphereRadius = std::sqrt(sqrBoundingSphereRadius);
 			}
 		}
-
 	}
 
 	void MeshComponent::CopyInOptionalCreateInfo(RenderObjectCreateInfo& createInfo, const RenderObjectCreateInfo& overrides)

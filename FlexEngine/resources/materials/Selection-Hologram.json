@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Selection Hologram",
+		"shader" : "hologram",
+		"const emissive" : "2.000,4.000,2.500"
+	}
+}

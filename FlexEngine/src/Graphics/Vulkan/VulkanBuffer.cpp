@@ -14,7 +14,7 @@ namespace flex
 		VulkanBuffer::VulkanBuffer(VulkanDevice* device) :
 			m_Device(device),
 			m_Buffer(VDeleter<VkBuffer>(device->m_LogicalDevice, vkDestroyBuffer)),
-			m_Memory(VDeleter<VkDeviceMemory>(device->m_LogicalDevice, vkFreeMemory))
+			m_Memory(VDeleter<VkDeviceMemory>(device->m_LogicalDevice, deviceFreeMemory))
 		{
 		}
 
@@ -23,7 +23,7 @@ namespace flex
 			VkMemoryPropertyFlags properties,
 			const char* DEBUG_name /* = nullptr */)
 		{
-			assert(size != 0);
+			CHECK_NE(size, 0);
 
 			VkBufferCreateInfo bufferInfo = vks::bufferCreateInfo(usage, size);
 			bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -44,7 +44,8 @@ namespace flex
 			VkMemoryAllocateInfo allocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			allocInfo.memoryTypeIndex = FindMemoryType(m_Device, memRequirements.memoryTypeBits, properties);
 
-			VK_CHECK_RESULT(vkAllocateMemory(m_Device->m_LogicalDevice, &allocInfo, nullptr, m_Memory.replace()));
+			std::string debugName = DEBUG_name != nullptr ? DEBUG_name : "";
+			VK_CHECK_RESULT(m_Device->AllocateMemory(debugName, &allocInfo, nullptr, m_Memory.replace()));
 
 			// Create the memory backing up the buffer handle
 			m_Alignment = memRequirements.alignment;
@@ -65,6 +66,10 @@ namespace flex
 		{
 			m_Buffer.replace();
 			m_Memory.replace();
+			allocations.clear();
+			m_Size = 0;
+			m_Alignment = 0;
+			m_Mapped = nullptr;
 		}
 
 		VkResult VulkanBuffer::Bind()

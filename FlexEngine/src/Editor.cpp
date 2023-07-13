@@ -8,9 +8,8 @@ IGNORE_WARNINGS_PUSH
 
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <glm/gtx/intersect.hpp>
+#include <glm/gtx/common.hpp> // For fmod
 #include <glm/gtx/euler_angles.hpp>
-
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
@@ -18,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Cameras/DebugCamera.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/RendererTypes.hpp"
 #include "Helpers.hpp"
@@ -26,6 +26,7 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
+#include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
@@ -47,10 +48,9 @@ namespace flex
 		m_MouseMovedCallback(this, &Editor::OnMouseMovedEvent),
 		m_KeyEventCallback(this, &Editor::OnKeyEvent),
 		m_ActionCallback(this, &Editor::OnActionEvent),
-		m_StartPointOnPlane(0.0f),
-		m_LatestRayPlaneIntersection(0.0f),
-		m_PlaneN(0.0f),
-		m_PreviousIntersectionPoint(0.0f)
+		m_StartPointOnPlane(VEC3_ZERO),
+		m_PreviousIntersectionPoint(VEC3_ZERO),
+		m_AngleSnap(glm::radians(45.0f))
 	{
 		SelectNone();
 
@@ -59,7 +59,7 @@ namespace flex
 
 	void Editor::Initialize()
 	{
-		PROFILE_AUTO("Editor Initialize(");
+		PROFILE_AUTO("Editor Initialize");
 
 		// Transform gizmo materials
 		{
@@ -67,7 +67,7 @@ namespace flex
 			matCreateInfo.shaderName = "colour";
 			matCreateInfo.constAlbedo = VEC4_ONE;
 			matCreateInfo.persistent = true;
-			matCreateInfo.visibleInEditor = false;
+			matCreateInfo.bEditorMaterial = true;
 			matCreateInfo.bSerializable = false;
 			matCreateInfo.name = "transform x";
 			m_TransformGizmoMatXID = g_Renderer->InitializeMaterial(&matCreateInfo);
@@ -77,6 +77,12 @@ namespace flex
 			m_TransformGizmoMatZID = g_Renderer->InitializeMaterial(&matCreateInfo);
 			matCreateInfo.name = "transform all";
 			m_TransformGizmoMatAllID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform yz";
+			m_TransformGizmoMatYZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform xz";
+			m_TransformGizmoMatXZID = g_Renderer->InitializeMaterial(&matCreateInfo);
+			matCreateInfo.name = "transform xy";
+			m_TransformGizmoMatXYID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
 		g_InputManager->BindMouseButtonCallback(&m_MouseButtonCallback, 95);
@@ -87,6 +93,8 @@ namespace flex
 
 	void Editor::PostInitialize()
 	{
+		PROFILE_AUTO("Editor PostInitialize");
+
 		CreateObjects();
 	}
 
@@ -96,23 +104,14 @@ namespace flex
 
 		if (m_TransformGizmo != nullptr)
 		{
-			m_TransformGizmo->Destroy();
-			delete m_TransformGizmo;
+			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_TransformGizmo);
 			m_TransformGizmo = nullptr;
 		}
 
 		if (m_GridObject != nullptr)
 		{
-			m_GridObject->Destroy();
-			delete m_GridObject;
+			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_GridObject);
 			m_GridObject = nullptr;
-		}
-
-		if (m_TestShape)
-		{
-			m_TestShape->Destroy();
-			delete m_TestShape;
-			m_TestShape = nullptr;
 		}
 
 		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
@@ -143,7 +142,7 @@ namespace flex
 					glm::vec3 dir = axes[m_HoveringAxisIndex];
 					btVector3 p0 = ToBtVec3(pos + dir * 1000.0f);
 					btVector3 p1 = ToBtVec3(pos - dir * 1000.0f);
-					g_Renderer->GetDebugDrawer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
+					g_Renderer->GetDebugRenderer()->DrawLineWithAlpha(p0, p1, colours[m_HoveringAxisIndex], colours[m_HoveringAxisIndex]);
 				}
 			}
 		}
@@ -163,7 +162,7 @@ namespace flex
 		{
 			real x = sin(g_SecElapsedSinceProgramStart) + i * 0.25f;
 			real z = cos(g_SecElapsedSinceProgramStart + i / 10.0f);
-			g_Renderer->GetDebugDrawer()->drawLine(
+			g_Renderer->GetDebugRenderer()->drawLine(
 				btVector3(x, 0, z),
 				g_Editor->HasSelectedObject() ? ToBtVec3(g_Editor->GetSelectedObjectsCenter()) : btVector3(x, 10, z),
 				btVector3(sin(g_SecElapsedSinceProgramStart * 5.0f) * 0.5f + 0.5f, cos(g_SecElapsedSinceProgramStart * 2.5f) * 0.5f + 0.5f, 1.0f),
@@ -179,12 +178,21 @@ namespace flex
 			UpdateGizmoVisibility();
 			CalculateSelectedObjectsCenter();
 			Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-			gizmoTransform->SetWorldPosition(m_SelectedObjectsCenterPos, false);
-			gizmoTransform->SetWorldRotation(m_SelectedObjectRotation, true);
+			if (!NearlyEquals(gizmoTransform->GetLocalPosition(), m_SelectedObjectsCenterPos, 0.0001f))
+			{
+				gizmoTransform->SetLocalPosition(m_SelectedObjectsCenterPos, true);
+			}
+			if (!NearlyEquals(gizmoTransform->GetLocalRotation(), m_SelectedObjectRotation, 0.0001f))
+			{
+				gizmoTransform->SetLocalRotation(m_SelectedObjectRotation, true);
+			}
 
 			glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
-			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 50.0f, 0.2f);
-			gizmoTransform->SetWorldScale(glm::vec3(scale));
+			real scale = glm::max(glm::distance(gizmoTransform->GetWorldPosition(), camPos) / 80.0f + 0.5f, 0.1f);
+			if (!NearlyEquals(scale, gizmoTransform->GetLocalScale().x, 0.0001f))
+			{
+				gizmoTransform->SetWorldScale(glm::vec3(scale));
+			}
 		}
 		else
 		{
@@ -206,19 +214,22 @@ namespace flex
 		}
 	}
 
+	void Editor::FixedUpdate()
+	{
+		m_JitterDetector.FixedUpdate();
+	}
+
 	void Editor::PreSceneChange()
 	{
-		if (m_TransformGizmo)
+		if (m_TransformGizmo != nullptr)
 		{
-			m_TransformGizmo->Destroy();
-			delete m_TransformGizmo;
+			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_TransformGizmo);
 			m_TransformGizmo = nullptr;
 		}
 
-		if (m_GridObject)
+		if (m_GridObject != nullptr)
 		{
-			m_GridObject->Destroy();
-			delete m_GridObject;
+			g_SceneManager->CurrentScene()->RemoveEditorObjectImmediate(m_GridObject);
 			m_GridObject = nullptr;
 		}
 
@@ -230,9 +241,19 @@ namespace flex
 		CreateObjects();
 	}
 
+	void Editor::DrawImGuiObjects()
+	{
+		m_JitterDetector.DrawImGuiObjects();
+	}
+
 	bool Editor::HasSelectedObject() const
 	{
 		return !m_CurrentlySelectedObjectIDs.empty();
+	}
+
+	bool Editor::HasSelectedEditorObject() const
+	{
+		return m_CurrentlySelectedEditorObjectID != InvalidEditorObjectID;
 	}
 
 	std::vector<GameObjectID> Editor::GetSelectedObjectIDs(bool bForceIncludeChildren) const
@@ -332,10 +353,15 @@ namespace flex
 				GameObject* gameObject = g_SceneManager->CurrentScene()->GetGameObject(gameObjectID);
 				if (gameObject != nullptr)
 				{
-					gameObject->RemoveSelfIDAndChildrenToVec(m_CurrentlySelectedObjectIDs);
+					gameObject->RemoveSelfIDAndChildrenFromVec(m_CurrentlySelectedObjectIDs);
 					CalculateSelectedObjectsCenter();
-					return;
 				}
+				else
+				{
+					Erase(m_CurrentlySelectedObjectIDs, gameObjectID);
+				}
+
+				return;
 			}
 		}
 
@@ -358,108 +384,27 @@ namespace flex
 		m_CurrentlySelectedObjectIDs.clear();
 		m_SelectedObjectsCenterPos = VEC3_ZERO;
 		m_SelectedObjectDragStartPos = VEC3_ZERO;
-		m_DraggingGizmoScaleLast = VEC3_ZERO;
+		m_DraggingGizmoScaleLast1 = VEC3_ZERO;
+		m_DraggingGizmoScaleLast2 = VEC3_ZERO;
 		m_DraggingGizmoOffset = 0.0f;
+		m_DraggingGizmoOffset2D = VEC2_ZERO;
 		m_DraggingAxisIndex = -1;
 		m_bDraggingGizmo = false;
 	}
 
-	real Editor::CalculateDeltaRotationFromGizmoDrag(
-		const glm::vec3& axis,
-		const glm::vec3& rayOrigin,
-		const glm::vec3& rayEnd,
-		glm::vec3* outIntersectionPoint)
+	void Editor::SetSelectedEditorObject(EditorObjectID* editorObjectID)
 	{
-		FLEX_UNUSED(axis);
+		m_CurrentlySelectedEditorObjectID = *editorObjectID;
+	}
 
-		glm::vec3 intersectionPoint(0.0f);
+	bool Editor::IsEditorObjectSelected(EditorObjectID* editorObjectID)
+	{
+		return m_CurrentlySelectedEditorObjectID == *editorObjectID;
+	}
 
-		Transform* gizmoTransform = m_TransformGizmo->GetTransform();
-		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 planeOrigin = gizmoTransform->GetWorldPosition();
-		glm::vec3 cameraForward = g_CameraManager->CurrentCamera()->forward;
-		glm::vec3 planeN = m_PlaneN;
-		if (glm::dot(planeN, cameraForward) > 0.0f)
-		{
-			planeN = -planeN;
-		}
-		real intersectionDistance;
-		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
-		{
-			intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (outIntersectionPoint)
-			{
-				*outIntersectionPoint = intersectionPoint;
-			}
-			if (m_DraggingGizmoOffset == -1.0f)
-			{
-				m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, m_AxisProjectedOnto);
-			}
-
-			if (m_bFirstFrameDraggingRotationGizmo)
-			{
-				m_StartPointOnPlane = intersectionPoint;
-			}
-
-			m_LatestRayPlaneIntersection = intersectionPoint;
-		}
-
-		glm::vec3 startVec = glm::normalize(m_StartPointOnPlane - planeOrigin);
-		glm::vec3 intersectVec = glm::normalize(intersectionPoint - planeOrigin);
-
-		glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, startVec);
-
-		// NOTE: This dot product somehow results in values > 1 occasionally, causing acos to return NaN below; clamp it
-		real projectedDiff = glm::clamp(glm::dot(startVec, intersectVec), -1.0f, 1.0f);
-		bool intersectVecOnSameHalfAsPerp = (glm::dot(intersectVec, vecPerp) > 0.0f);
-		bool intersectVecOnSameHalfAsStartVec = (projectedDiff > 0.0f);
-
-		// __Increment/decrement wrap count on quadrant changes__
-		// The cross product above gives us a perpendicular vector to startVec
-		// to project onto so we can monitor when the intersection vector
-		// (from plane origin to mouse cursor on plane) crosses over 180
-		// degree marks to properly negate angle returned from acos below.
-		if (intersectVecOnSameHalfAsPerp && !m_bLastDotPos)
-		{
-			if (intersectVecOnSameHalfAsStartVec)
-			{
-				m_RotationGizmoWrapCount++;
-			}
-			else
-			{
-				m_RotationGizmoWrapCount--;
-			}
-		}
-		else if (!intersectVecOnSameHalfAsPerp && m_bLastDotPos)
-		{
-			if (intersectVecOnSameHalfAsStartVec)
-			{
-				m_RotationGizmoWrapCount--;
-			}
-			else
-			{
-				m_RotationGizmoWrapCount++;
-			}
-		}
-		// We only care if this is even or odd
-		m_RotationGizmoWrapCount %= 2;
-
-		m_bLastDotPos = intersectVecOnSameHalfAsPerp;
-
-		real angleRaw = acos(projectedDiff);
-		real angle = (m_RotationGizmoWrapCount % 2 == 0 ? angleRaw : -angleRaw);
-
-		if (m_bFirstFrameDraggingRotationGizmo)
-		{
-			m_bFirstFrameDraggingRotationGizmo = false;
-			m_LastAngle = angle;
-		}
-
-		real dAngle = m_LastAngle - angle;
-
-		m_LastAngle = angle;
-
-		return dAngle;
+	EditorObjectID Editor::GetSelectedEditorObject() const
+	{
+		return m_CurrentlySelectedEditorObjectID;
 	}
 
 	void Editor::UpdateGizmoVisibility()
@@ -524,11 +469,18 @@ namespace flex
 
 	void Editor::SelectAll()
 	{
-		std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-		for (GameObject* gameObject : allObjects)
+		std::vector<GameObject*> nearbyInteractables;
+
+		m_CurrentlySelectedObjectIDs.clear();
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		for (GameObject* rootObject : currentScene->GetRootObjects())
 		{
-			m_CurrentlySelectedObjectIDs.push_back(gameObject->ID);
+			rootObject->FilterID([](GameObject*)
+			{
+				return true;
+			}, m_CurrentlySelectedObjectIDs);
 		}
+
 		CalculateSelectedObjectsCenter();
 	}
 
@@ -564,12 +516,15 @@ namespace flex
 			m_CurrentTransformGizmoState == TransformState::TRANSLATE ? m_TranslationGizmoTag :
 			(m_CurrentTransformGizmoState == TransformState::ROTATE ? m_RotationGizmoTag :
 				m_ScaleGizmoTag));
-		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag, (i32)CollisionType::EDITOR_OBJECT);
+		GameObject* pickedTransformGizmo = physicsWorld->PickTaggedBody(rayStart, rayEnd, gizmoTag, (u32)CollisionType::EDITOR_OBJECT);
 
 		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 		glm::vec4 white(1.0f);
 
 		static const real gizmoHoverMultiplier = 0.6f;
@@ -598,6 +553,24 @@ namespace flex
 				{
 					m_HoveringAxisIndex = Z_AXIS_IDX;
 					zMat->colourMultiplier = hoverColour;
+				}
+
+				std::vector<GameObject*> translationPlanes = m_TranslationGizmoPlanes->GetChildren();
+
+				if (pickedTransformGizmo == translationPlanes[X_AXIS_IDX] && yzMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = YZ_AXIS_IDX;
+					yzMat->colourMultiplier = hoverColour;
+				}
+				else if (pickedTransformGizmo == translationPlanes[Y_AXIS_IDX] && xzMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = XZ_AXIS_IDX;
+					xzMat->colourMultiplier = hoverColour;
+				}
+				else if (pickedTransformGizmo == translationPlanes[Z_AXIS_IDX] && xyMat->colourMultiplier.a > alphaThreshold)
+				{
+					m_HoveringAxisIndex = XY_AXIS_IDX;
+					xyMat->colourMultiplier = hoverColour;
 				}
 			} break;
 			case TransformState::ROTATE:
@@ -672,19 +645,30 @@ namespace flex
 		{
 			allMat->colourMultiplier = white;
 		}
+		if (m_DraggingAxisIndex != YZ_AXIS_IDX && m_HoveringAxisIndex != YZ_AXIS_IDX)
+		{
+			yzMat->colourMultiplier = white;
+		}
+		if (m_DraggingAxisIndex != XZ_AXIS_IDX && m_HoveringAxisIndex != XZ_AXIS_IDX)
+		{
+			xzMat->colourMultiplier = white;
+		}
+		if (m_DraggingAxisIndex != XY_AXIS_IDX && m_HoveringAxisIndex != XY_AXIS_IDX)
+		{
+			xyMat->colourMultiplier = white;
+		}
 
 		return m_HoveringAxisIndex != -1;
 	}
 
 	void Editor::HandleGizmoClick()
 	{
-		assert(m_bDraggingGizmo == false);
-		assert(m_HoveringAxisIndex != -1);
+		CHECK_EQ(m_bDraggingGizmo, false);
+		CHECK_NE(m_HoveringAxisIndex, -1);
 
 		m_DraggingAxisIndex = m_HoveringAxisIndex;
 		m_bDraggingGizmo = true;
 		m_SelectedObjectDragStartPos = m_TransformGizmo->GetTransform()->GetWorldPosition();
-		m_SelectedObjectDragStartRot = m_TransformGizmo->GetTransform()->GetWorldRotation();
 
 		real gizmoSelectedMultiplier = 0.4f;
 		glm::vec4 selectedColour(gizmoSelectedMultiplier, gizmoSelectedMultiplier, gizmoSelectedMultiplier, 1.0f);
@@ -693,6 +677,9 @@ namespace flex
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
 		Material* allMat = g_Renderer->GetMaterial(m_TransformGizmoMatAllID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 
 		switch (m_CurrentTransformGizmoState)
 		{
@@ -709,6 +696,18 @@ namespace flex
 			else if (m_HoveringAxisIndex == Z_AXIS_IDX)
 			{
 				zMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == YZ_AXIS_IDX)
+			{
+				yzMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == XZ_AXIS_IDX)
+			{
+				xzMat->colourMultiplier = selectedColour;
+			}
+			else if (m_HoveringAxisIndex == XY_AXIS_IDX)
+			{
+				xyMat->colourMultiplier = selectedColour;
 			}
 			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
@@ -728,6 +727,7 @@ namespace flex
 			{
 				zMat->colourMultiplier = selectedColour;
 			}
+			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
 		case TransformState::SCALE:
 		{
@@ -747,6 +747,7 @@ namespace flex
 			{
 				allMat->colourMultiplier = selectedColour;
 			}
+			m_DraggingGizmoOffsetNeedsRecalculation = true;
 		} break;
 		default:
 		{
@@ -757,9 +758,9 @@ namespace flex
 
 	void Editor::HandleGizmoMovement()
 	{
-		assert(m_HoveringAxisIndex != -1);
-		assert(m_DraggingAxisIndex != -1);
-		assert(m_bDraggingGizmo);
+		CHECK_NE(m_HoveringAxisIndex, -1);
+		CHECK_NE(m_DraggingAxisIndex, -1);
+		CHECK(m_bDraggingGizmo);
 		if (m_CurrentlySelectedObjectIDs.empty())
 		{
 			SelectNone();
@@ -772,25 +773,11 @@ namespace flex
 		const glm::vec3 gizmoRight = gizmoTransform->GetRight();
 		const glm::vec3 gizmoForward = gizmoTransform->GetForward();
 
-		switch (m_CurrentTransformGizmoState)
-		{
-		case TransformState::TRANSLATE:
-		{
-			if (g_InputManager->DidMouseWrap())
-			{
-				m_DraggingGizmoOffsetNeedsRecalculation = true;
-			}
-		} break;
-		default:
-		{
-		} break;
-		}
+		btVector3 btRayStart, btRayEnd;
+		FlexEngine::GenerateRayAtMousePos(btRayStart, btRayEnd);
 
-		btVector3 rayStart, rayEnd;
-		FlexEngine::GenerateRayAtMousePos(rayStart, rayEnd);
-
-		glm::vec3 rayStartG = ToVec3(rayStart);
-		glm::vec3 rayEndG = ToVec3(rayEnd);
+		glm::vec3 rayStart = ToVec3(btRayStart);
+		glm::vec3 rayEnd = ToVec3(btRayEnd);
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		glm::vec3 camForward = cam->forward;
 		glm::vec3 camRight = cam->right;
@@ -799,160 +786,224 @@ namespace flex
 		BaseScene* currentScene = g_SceneManager->CurrentScene();
 		Transform* transform = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0])->GetTransform();
 
+		if (g_InputManager->DidMouseWrap())
+		{
+			m_DraggingGizmoOffsetNeedsRecalculation = true; // Signal to recalculate offset in CalculateRayPlaneIntersectionAlongAxis
+
+			m_SelectedObjectDragStartPos = gizmoTransform->GetWorldPosition();
+			if (m_CurrentTransformGizmoState == TransformState::ROTATE)
+			{
+				m_bFirstFrameDraggingRotationGizmo = true;
+			}
+		}
+
 		switch (m_CurrentTransformGizmoState)
 		{
 		case TransformState::TRANSLATE:
 		{
-			glm::vec3 dPos(0.0f);
+			// Axes for translating along X, Y, and Z respectively
+			const glm::vec3* axes[] = { &gizmoRight, &gizmoUp, &gizmoForward };
 
-			if (g_InputManager->DidMouseWrap())
+			const bool bDraggingPlane = m_DraggingAxisIndex > Z_AXIS_IDX;
+
+			glm::vec3 deltaPosWS;
+
+			if (bDraggingPlane)
 			{
-				m_DraggingGizmoOffsetNeedsRecalculation = true; // Signal to recalculate offset in CalculateRayPlaneIntersectionAlongAxis
-				////m_MouseDragDistX += g_InputManager->GetMouseWrapXInPixels();
-				//m_MouseDragDistY += g_InputManager->GetMouseWrapYInPixels();
-				//g_InputManager->GetMouseDragDistance()
-				Print("warp\n");
+				u32 axisIdx = m_DraggingAxisIndex - YZ_AXIS_IDX;
+
+				glm::vec3 planeN = *axes[axisIdx];
+				glm::vec3 planeT = *axes[(axisIdx + 1) % 3];
+				glm::vec3 planeB = *axes[(axisIdx + 2) % 3];
+				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersection(
+					rayStart,
+					rayEnd,
+					planeOrigin,
+					planeN,
+					planeT,
+					planeB,
+					m_SelectedObjectDragStartPos,
+					camForward,
+					m_DraggingGizmoOffset2D,
+					m_DraggingGizmoOffsetNeedsRecalculation,
+					m_PreviousIntersectionPoint);
+
+				// Dragging along plane
+				deltaPosWS = (intersectionPont - planeOrigin);
 			}
-
-			if (m_DraggingAxisIndex == X_AXIS_IDX)
+			else
 			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
+				const glm::vec3* altAxes[] = { &gizmoUp, &gizmoForward, &gizmoRight };
+				const glm::vec3* planeNormals[] = { &gizmoForward, &gizmoRight, &gizmoUp };
+
+				// Dragging along single axis
+				u32 axisIdx = m_DraggingAxisIndex;
+				glm::vec3 axis = *axes[axisIdx];
+				glm::vec3 planeN = *planeNormals[axisIdx];
 				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
 				{
-					planeN = gizmoUp;
+					planeN = *altAxes[axisIdx];
 				}
-				glm::vec3 p;
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint, &p);
-				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
 
-				m_TestShape->GetTransform()->SetWorldPosition(p);
-
-				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
-			}
-			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
-			{
-				glm::vec3 axis = gizmoUp;
-				glm::vec3 planeN = gizmoRight;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoForward;
-				}
-				glm::vec3 p;
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint, &p);
-				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
-
-				m_TestShape->GetTransform()->SetWorldPosition(p);
-
-				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
-			}
-			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
-			{
-				glm::vec3 axis = gizmoForward;
-				glm::vec3 planeN = gizmoUp;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoRight;
-				}
-				glm::vec3 p;
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint, &p);
-				glm::vec3 deltaPosWS = (intersectionPont - planeOrigin);
-
-				m_TestShape->GetTransform()->SetWorldPosition(p);
-
-				dPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
+				glm::vec3 constrainedIntersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
+					axis,
+					rayStart,
+					rayEnd,
+					planeOrigin,
+					planeN,
+					m_SelectedObjectDragStartPos,
+					camForward,
+					m_DraggingGizmoOffset,
+					m_DraggingGizmoOffsetNeedsRecalculation,
+					m_PreviousIntersectionPoint);
+				deltaPosWS = (constrainedIntersectionPont - planeOrigin);
 			}
 
-			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+			glm::vec3 deltaPos = transform->GetLocalRotation() * glm::inverse(transform->GetWorldRotation()) * deltaPosWS;
+
+			if (deltaPos != VEC3_ZERO)
 			{
-				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
-				if (bObjectIsntChild)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
-					gameObject->GetTransform()->Translate(dPos);
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					GameObject* parent = gameObject->GetParent();
+					bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
+					if (bObjectIsntChild)
+					{
+						gameObject->GetTransform()->Translate(deltaPos);
+					}
 				}
 			}
 		} break;
 		case TransformState::ROTATE:
 		{
-			glm::quat dRotWS(VEC3_ZERO);
+			// Axes for rotating about X, Y, and Z respectively
+			const glm::vec3* axesProjectedOnto[] = { &gizmoUp, &gizmoRight, &gizmoUp };
+			const glm::vec3* axesOfRotation[] = { &gizmoRight, &gizmoUp, &gizmoForward };
+			static glm::vec3 planeN = VEC3_UP;
 
-#if 0
-			glm::quat lRot = transform->GetLocalRotation();
-			glm::vec3 lEuler = glm::eulerAngles(transform->GetLocalRotation());
-			glm::quat wRot = transform->GetWorldRotation();
-			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f - Wrap: %d\n", lRot.x, lRot.y, lRot.z, lRot.w, lEuler.x, lEuler.y, lEuler.z, m_RotationGizmoWrapCount);
-			Print("Local: %5.2f,%5.2f,%5.2f,%5.2f  -  Global: %5.2f,%5.2f,%5.2f,%5.2f  -  L Euler: %5.2f,%5.2f,%5.2f\n", lRot.x, lRot.y, lRot.z, lRot.w, wRot.x, wRot.y, wRot.z, wRot.w, lEuler.x, lEuler.y, lEuler.z);
-#endif
+			static bool bCtrlWasDown = false;
+			bool bCtrlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
 
-			if (m_DraggingAxisIndex == X_AXIS_IDX)
+			if (m_bFirstFrameDraggingRotationGizmo)
 			{
-				if (m_bFirstFrameDraggingRotationGizmo)
+				m_AxisProjectedOnto = *axesProjectedOnto[m_DraggingAxisIndex];
+				m_AxisOfRotation = *axesOfRotation[m_DraggingAxisIndex];
+				planeN = m_AxisOfRotation;
+				if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
 				{
-					m_AxisProjectedOnto = gizmoUp;
-					m_AxisOfRotation = gizmoRight;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-					}
+					m_AxisProjectedOnto = gizmoForward;
 				}
-
-				glm::vec3 p;
-				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
-				if (dAngle != 0.0f)
-				{
-					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
-				}
-
-				m_TestShape->GetTransform()->SetWorldPosition(p);
-			}
-			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
-			{
-				if (m_bFirstFrameDraggingRotationGizmo)
-				{
-					m_AxisProjectedOnto = gizmoRight;
-					m_AxisOfRotation = gizmoUp;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-					}
-				}
-
-				glm::vec3 p;
-				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
-				if (dAngle != 0.0f)
-				{
-					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
-				}
-
-				m_TestShape->GetTransform()->SetWorldPosition(p);
-			}
-			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
-			{
-				if (m_bFirstFrameDraggingRotationGizmo)
-				{
-					m_AxisProjectedOnto = gizmoUp;
-					m_AxisOfRotation = gizmoForward;
-					m_PlaneN = m_AxisOfRotation;
-					if (glm::abs(glm::dot(m_AxisProjectedOnto, camForward)) > 0.5f)
-					{
-						m_AxisProjectedOnto = gizmoForward;
-					}
-				}
-
-				glm::vec3 p;
-				real dAngle = CalculateDeltaRotationFromGizmoDrag(m_AxisOfRotation, rayStartG, rayEndG, &p);
-				if (dAngle != 0.0f)
-				{
-					dRotWS = glm::angleAxis(dAngle, m_AxisOfRotation);
-				}
-				m_TestShape->GetTransform()->SetWorldPosition(p);
 			}
 
-			if (dRotWS != QUAT_IDENTITY)
+			glm::vec3 intersectionPoint(0.0f);
+
+			glm::vec3 rayDir = glm::normalize(rayEnd - rayStart);
+			if (glm::dot(planeN, camForward) > 0.0f)
+			{
+				planeN = -planeN;
+			}
+			real intersectionDistance;
+			if (glm::intersectRayPlane(rayStart, rayDir, planeOrigin, planeN, intersectionDistance))
+			{
+				intersectionPoint = rayStart + rayDir * intersectionDistance;
+				if (m_DraggingGizmoOffset == -1.0f)
+				{
+					m_DraggingGizmoOffset = glm::dot(intersectionPoint - m_SelectedObjectDragStartPos, m_AxisProjectedOnto);
+				}
+
+				if (m_bFirstFrameDraggingRotationGizmo)
+				{
+					m_StartPointOnPlane = intersectionPoint;
+				}
+			}
+
+			glm::vec3 startVec = glm::normalize(m_StartPointOnPlane - planeOrigin);
+			glm::vec3 intersectVec = glm::normalize(intersectionPoint - planeOrigin);
+
+			glm::vec3 vecPerp = glm::cross(m_AxisOfRotation, startVec);
+
+			// NOTE: This dot product somehow results in values > 1 occasionally, causing acos to return NaN below; clamp it
+			real projectedDiff = glm::clamp(glm::dot(startVec, intersectVec), -1.0f, 1.0f);
+			bool intersectVecOnSameHalfAsPerp = (glm::dot(intersectVec, vecPerp) > 0.0f);
+			bool intersectVecOnSameHalfAsStartVec = (projectedDiff > 0.0f);
+
+			// __Increment/decrement wrap count on quadrant changes__
+			// The cross product above gives us a perpendicular vector to startVec
+			// to project onto so we can monitor when the intersection vector
+			// (from plane origin to mouse cursor on plane) crosses over 180
+			// degree marks to properly negate angle returned from acos below.
+			if (intersectVecOnSameHalfAsPerp && !m_bLastDotPos)
+			{
+				if (intersectVecOnSameHalfAsStartVec)
+				{
+					m_RotationGizmoWrapCount++;
+				}
+				else
+				{
+					m_RotationGizmoWrapCount--;
+				}
+			}
+			else if (!intersectVecOnSameHalfAsPerp && m_bLastDotPos)
+			{
+				if (intersectVecOnSameHalfAsStartVec)
+				{
+					m_RotationGizmoWrapCount--;
+				}
+				else
+				{
+					m_RotationGizmoWrapCount++;
+				}
+			}
+			// We only care if this is even or odd
+			m_RotationGizmoWrapCount %= 2;
+
+			m_bLastDotPos = intersectVecOnSameHalfAsPerp;
+
+			real angleAbs = acos(projectedDiff);
+			real angle = (m_RotationGizmoWrapCount % 2 == 0) ? -angleAbs : angleAbs;
+
+			if (m_bFirstFrameDraggingRotationGizmo)
+			{
+				m_LastAngle = angle;
+			}
+
+			static real currentAngleExtra = 0.0f;
+			if (bCtrlDown)
+			{
+				//Print("## extra: %.2f, angle: %.2f\n", glm::degrees(currentAngleExtra), glm::degrees(angle));
+
+				Transform* objTransform = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0])->GetTransform();
+				glm::quat firstSelectedObjRotOS = objTransform->GetLocalRotation();
+				real objAngle = glm::eulerAngles(firstSelectedObjRotOS)[m_DraggingAxisIndex];
+
+				if (!bCtrlWasDown || m_bFirstFrameDraggingRotationGizmo)
+				{
+					// TODO: This doesn't properly handle all cases, figure out why
+					currentAngleExtra = glm::round((objAngle) / m_AngleSnap) * m_AngleSnap - objAngle;
+					//Print("-- cur: %.2f, extra: %.2f, angle: %.2f, last: %.2f\n", glm::degrees(objAngle), glm::degrees(currentAngleExtra), glm::degrees(angle), glm::degrees(m_LastAngle));
+				}
+
+				angle = glm::round(angle / m_AngleSnap) * m_AngleSnap;
+				angle += currentAngleExtra;
+
+				//real dAngle = (angle - m_LastAngle);
+				//Print("   cur: %.2f, extra: %.2f, angle: %.2f, dAngle: %.2f\n", glm::degrees(objAngle), glm::degrees(currentAngleExtra), glm::degrees(angle), glm::degrees(dAngle));
+			}
+			else
+			{
+				currentAngleExtra = 0.0f;
+			}
+
+			if (m_bFirstFrameDraggingRotationGizmo)
+			{
+				m_bFirstFrameDraggingRotationGizmo = false;
+			}
+
+			real dAngle = angle - m_LastAngle;
+			m_LastAngle = angle;
+
+			if (dAngle != 0.0f)
 			{
 				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
@@ -962,94 +1013,114 @@ namespace flex
 					if (bObjectIsntChild)
 					{
 						Transform* t = gameObject->GetTransform();
-						t->SetWorldRotation(dRotWS * t->GetWorldRotation());
+						glm::vec3 axis = parent != nullptr ? (glm::inverse(parent->GetTransform()->GetWorldRotation()) * m_AxisOfRotation) : m_AxisOfRotation;
+						glm::quat dRot = glm::angleAxis(dAngle, axis);
+						t->SetLocalRotation(dRot* t->GetLocalRotation());
 					}
 				}
 			}
+
+			bCtrlWasDown = bCtrlDown;
 		} break;
 		case TransformState::SCALE:
 		{
+			auto CalculateRayPlaneIntersection = [&](const glm::vec3& axis, const glm::vec3& planeN) {
+				return FlexEngine::CalculateRayPlaneIntersectionAlongAxis(
+					axis,
+					rayStart,
+					rayEnd,
+					planeOrigin,
+					planeN,
+					m_SelectedObjectDragStartPos,
+					camForward,
+					m_DraggingGizmoOffset,
+					m_DraggingGizmoOffsetNeedsRecalculation,
+					m_PreviousIntersectionPoint);
+			};
+
 			glm::vec3 dLocalScale(1.0f);
 			bool bControlDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL);
 			bool bShiftDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT);
 			real dragSpeed = m_ScaleDragSpeed * (bControlDown ? m_ScaleSlowDragSpeedMultiplier : bShiftDown ? m_ScaleFastDragSpeedMultiplier : 1.0f);
-
-			if (m_DraggingAxisIndex == X_AXIS_IDX)
-			{
-				glm::vec3 axis = gizmoRight;
-				glm::vec3 planeN = gizmoForward;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoUp;
-				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
-				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == Y_AXIS_IDX)
-			{
-				glm::vec3 axis = gizmoUp;
-				glm::vec3 planeN = gizmoRight;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoForward;
-				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
-				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == Z_AXIS_IDX)
-			{
-				glm::vec3 axis = gizmoForward;
-				glm::vec3 planeN = gizmoUp;
-				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
-				{
-					planeN = gizmoRight;
-				}
-				glm::vec3 intersectionPont = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 scaleNow = (intersectionPont - planeOrigin);
-				glm::vec3 scaleVecGlobal = (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
-				dLocalScale += glm::vec3(glm::inverse(gizmoTransform->GetWorldTransform()) * glm::vec4(scaleVecGlobal, 0.0f));
-
-				m_DraggingGizmoScaleLast = scaleNow;
-			}
-			else if (m_DraggingAxisIndex == ALL_AXES_IDX)
+			if (m_DraggingAxisIndex == ALL_AXES_IDX)
 			{
 				glm::vec3 axis1 = -camRight;
 				glm::vec3 axis2 = camUp;
 				glm::vec3 planeN = -camForward;
-				glm::vec3 intersectionPont1 = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis1, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 intersectionPont2 = FlexEngine::CalculateRayPlaneIntersectionAlongAxis(axis2, rayStartG, rayEndG, planeOrigin, planeN, m_SelectedObjectDragStartPos, camForward, m_DraggingGizmoOffset, m_DraggingGizmoOffsetNeedsRecalculation, m_PreviousIntersectionPoint);
-				glm::vec3 intersectionRay1 = (intersectionPont1 - planeOrigin);
-				glm::vec3 intersectionRay2 = (intersectionPont2 - planeOrigin);
-				if (glm::length(intersectionRay1) > 0.0f && glm::length(intersectionRay2) > 0.0f)
-				{
-					real dotResult1 = glm::length(intersectionRay1) * glm::dot(intersectionRay1, axis1);
-					real dotResult2 = glm::length(intersectionRay2) * glm::dot(intersectionRay2, axis2);
-					real largerDot = abs(dotResult1) > abs(dotResult2) ? dotResult1 : dotResult2;
-					glm::vec3 scaleNow = glm::vec3(glm::clamp(largerDot, -9999.0f, 9999.0f));
-					dLocalScale += (scaleNow - m_DraggingGizmoScaleLast) * dragSpeed;
 
-					m_DraggingGizmoScaleLast = scaleNow;
+				glm::vec3 intersectionPont1 = CalculateRayPlaneIntersection(axis1, planeN);
+				glm::vec3 intersectionPont2 = CalculateRayPlaneIntersection(axis2, planeN);
+				real dotResult1 = glm::dot(intersectionPont1 - planeOrigin, axis1);
+				real dotResult2 = glm::dot(intersectionPont2 - planeOrigin, axis2);
+
+				glm::vec3 absoluteScale = glm::vec3(glm::clamp(dotResult1, -9999.0f, 9999.0f));
+
+				if (m_DraggingGizmoOffsetNeedsRecalculation)
+				{
+					m_DraggingGizmoScaleLast1 = absoluteScale;
 				}
+
+				glm::vec3 deltaScale = glm::sign(dotResult1) * (glm::abs(absoluteScale) - glm::abs(m_DraggingGizmoScaleLast1)) * dragSpeed;
+				dLocalScale += glm::vec3(glm::vec4(deltaScale, 0.0f));
+				m_DraggingGizmoScaleLast1 = absoluteScale;
+
+				absoluteScale = glm::vec3(glm::clamp(dotResult2, -9999.0f, 9999.0f));
+
+				if (m_DraggingGizmoOffsetNeedsRecalculation)
+				{
+					m_DraggingGizmoScaleLast2 = absoluteScale;
+				}
+
+				deltaScale = glm::sign(dotResult2) * (glm::abs(absoluteScale) - glm::abs(m_DraggingGizmoScaleLast2)) * dragSpeed;
+				dLocalScale += glm::vec3(glm::vec4(deltaScale, 0.0f));
+				m_DraggingGizmoScaleLast2 = absoluteScale;
+			}
+			else
+			{
+				// Axes for scaling along X, Y, and Z respectively
+				const glm::vec3* axes[] = { &gizmoRight, &gizmoUp, &gizmoForward };
+				const glm::vec3* altAxes[] = { &gizmoUp, &gizmoForward, &gizmoRight };
+				const glm::vec3* planeNormals[] = { &gizmoForward, &gizmoRight, &gizmoUp };
+
+				glm::mat4 inverseTransform = glm::inverse(gizmoTransform->GetWorldTransform());
+
+				glm::vec3 axis = *axes[m_DraggingAxisIndex];
+				glm::vec3 planeN = *planeNormals[m_DraggingAxisIndex];
+				if (glm::abs(glm::dot(planeN, camForward)) < 0.5f)
+				{
+					planeN = *altAxes[m_DraggingAxisIndex];
+				}
+				glm::vec3 intersectionPont = CalculateRayPlaneIntersection(axis, planeN);
+				glm::vec3 absoluteScale = (intersectionPont - planeOrigin);
+
+				if (m_DraggingGizmoOffsetNeedsRecalculation)
+				{
+					m_DraggingGizmoScaleLast1 = absoluteScale;
+				}
+
+				glm::vec3 deltaScale = (absoluteScale - m_DraggingGizmoScaleLast1) * dragSpeed;
+				dLocalScale += glm::vec3(inverseTransform * glm::vec4(deltaScale, 0.0f));
+
+				m_DraggingGizmoScaleLast1 = absoluteScale;
 			}
 
-			dLocalScale = glm::clamp(dLocalScale, 0.01f, 10.0f);
+			dLocalScale = glm::clamp(dLocalScale, 0.001f, 10.0f);
 
-			for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+			if (dLocalScale != VEC3_ONE)
 			{
-				GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
-				GameObject* parent = gameObject->GetParent();
-				bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
-				if (bObjectIsntChild)
+				for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
 				{
-					gameObject->GetTransform()->Scale(dLocalScale);
+					GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+					GameObject* parent = gameObject->GetParent();
+					bool bObjectIsntChild = (parent == nullptr) || (!Contains(m_CurrentlySelectedObjectIDs, parent->ID));
+					if (bObjectIsntChild)
+					{
+						gameObject->GetTransform()->Scale(dLocalScale);
+						if (gameObject->HasUniformScale())
+						{
+							gameObject->EnforceUniformScale();
+						}
+					}
 				}
 			}
 		} break;
@@ -1116,7 +1187,7 @@ namespace flex
 				if (fileType == "glb" || fileType == "gltf")
 				{
 					BaseScene* scene = g_SceneManager->CurrentScene();
-					GameObject* newObj = new GameObject(scene->GetUniqueObjectName("New mesh ", 1), SID("object"));
+					EditorObject* newObj = new EditorObject(scene->GetUniqueObjectName("New mesh ", 1));
 
 					std::string absoluteMeshDir = RelativePathToAbsolute(MESH_DIRECTORY);
 
@@ -1201,8 +1272,10 @@ namespace flex
 
 					m_bDraggingGizmo = false;
 					m_DraggingAxisIndex = -1;
-					m_DraggingGizmoScaleLast = VEC3_ZERO;
+					m_DraggingGizmoScaleLast1 = VEC3_ZERO;
+					m_DraggingGizmoScaleLast2 = VEC3_ZERO;
 					m_DraggingGizmoOffset = 0.0f;
+					m_DraggingGizmoOffset2D = VEC2_ZERO;
 				}
 
 				if (m_LMBDownPos != glm::vec2i(-1))
@@ -1307,6 +1380,42 @@ namespace flex
 			if (bControlDown && keyCode == KeyCode::KEY_A)
 			{
 				SelectAll();
+				return EventReply::CONSUMED;
+			}
+
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_END) && !m_CurrentlySelectedObjectIDs.empty())
+			{
+				BaseScene* currentScene = g_SceneManager->CurrentScene();
+				GameObject* firstObject = currentScene->GetGameObject(m_CurrentlySelectedObjectIDs[0]);
+
+				btCollisionShape* collisionShape = firstObject->GetCollisionShape();
+				if (collisionShape != nullptr && collisionShape->isConvex())
+				{
+					btTransform from(ToBtQuaternion(m_SelectedObjectRotation), ToBtVec3(m_SelectedObjectsCenterPos));
+					btTransform to(ToBtQuaternion(m_SelectedObjectRotation), ToBtVec3(m_SelectedObjectsCenterPos - VEC3_UP * 10000.0f));
+					glm::vec3 pointOnGround, groundNormal;
+					if (currentScene->GetPhysicsWorld()->GetPointOnGround((btConvexShape*)collisionShape, from, to, pointOnGround, groundNormal))
+					{
+						AABB collisionAABB;
+						if (firstObject->GetCollisionAABB(collisionAABB))
+						{
+							real dPosY = pointOnGround.y - (firstObject->GetTransform()->GetWorldPosition().y + collisionAABB.minY);
+							glm::vec3 dPos(0.0f, dPosY, 0.0f);
+
+							for (const GameObjectID& gameObjectID : m_CurrentlySelectedObjectIDs)
+							{
+								GameObject* gameObject = currentScene->GetGameObject(gameObjectID);
+								GameObject* parent = gameObject->GetParent();
+								bool bObjectIsntChild = (parent == nullptr) || !Contains(m_CurrentlySelectedObjectIDs, parent->ID);
+								if (bObjectIsntChild)
+								{
+									gameObject->GetTransform()->Translate(dPos);
+								}
+							}
+						}
+					}
+				}
+
 				return EventReply::CONSUMED;
 			}
 		}
@@ -1416,23 +1525,15 @@ namespace flex
 			return;
 		}
 
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
 		RenderObjectCreateInfo gizmoCreateInfo = {};
 		gizmoCreateInfo.depthTestReadFunc = DepthTestFunc::ALWAYS;
 		gizmoCreateInfo.bEditorObject = true;
 		gizmoCreateInfo.bSetDynamicStates = true;
 		gizmoCreateInfo.cullFace = CullFace::BACK;
 
-		if (m_TestShape == nullptr)
-		{
-			m_TestShape = new GameObject("Test Shape", SID("object"));
-			Mesh* mesh = m_TestShape->SetMesh(new Mesh(m_TestShape));
-			mesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", m_TransformGizmoMatXID);
-			m_TestShape->GetTransform()->Scale(0.5f);
-
-			m_TestShape->SetVisible(false);
-		}
-
-		m_GridObject = new GameObject("Grid", SID("object"));
+		m_GridObject = new EditorObject("Grid");
 		Mesh* gridMesh = m_GridObject->SetMesh(new Mesh(m_GridObject));
 		RenderObjectCreateInfo gridCreateInfo = {};
 		gridCreateInfo.bEditorObject = true;
@@ -1441,244 +1542,220 @@ namespace flex
 		m_GridObject->PostInitialize();
 		m_GridObject->SetVisible(m_bShowGrid);
 
-		m_TransformGizmo = new GameObject("Transform gizmo", SID("object"));
+		currentScene->AddEditorObjectImmediate(m_GridObject);
+
+		m_TransformGizmo = new EditorObject("Transform gizmo");
 
 		u32 gizmoRBFlags = ((u32)PhysicsFlag::TRIGGER) | ((u32)PhysicsFlag::UNSELECTABLE);
-		i32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
-		i32 gizmoRBMask = (i32)CollisionType::EDITOR_OBJECT;
+		u32 gizmoRBGroup = (u32)CollisionType::EDITOR_OBJECT;
+		u32 gizmoRBMask = (u32)CollisionType::EDITOR_OBJECT;
 
-		// Translation gizmo
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.optionalRenderObjectCreateInfo = &gizmoCreateInfo;
+
+		m_TranslationGizmo = new EditorObject("Translation gizmo");
+		m_TranslationGizmoPlanes = new EditorObject("Translation gizmo planes");
+		m_RotationGizmo = new EditorObject("Rotation gizmo");
+		m_ScaleGizmo = new EditorObject("Scale gizmo");
+
+		btVector3 translationShapeSize = btVector3(0.35f, 1.8f, 0.35f);
+		btVector3 translationPlaneShapeSize = btVector3(0.75f, 0.75f, 0.05f);
+		real translationPlaneOffset = 3.0f;
+		btVector3 rotationShapeSize = btVector3(3.4f, 0.2f, 3.4f);
+		btVector3 scaleShapeSize = btVector3(0.35f, 1.8f, 0.35f);
+		btVector3 scaleAllShapeSize = btVector3(0.5f, 0.5f, 0.5f);
+
+		struct MeshCreateInfo
 		{
-			real cylinderRadius = 0.35f;
-			real cylinderHeight = 1.8f;
+			const char* name;
+			const char* meshName;
+			glm::quat orientation;
+			glm::vec3 offset;
+			btCollisionShape* collisionShape;
+			MaterialID matID;
+			const std::string* tag;
+			EditorObject* parent;
+		};
 
-			// X Axis
-			GameObject* translateXAxis = new GameObject("Translation gizmo x axis", SID("object"));
-			translateXAxis->AddTag(m_TranslationGizmoTag);
-			Mesh* xAxisMesh = translateXAxis->SetMesh(new Mesh(translateXAxis));
+		MeshCreateInfo translationCreateInfos[] = {
+			{
+				"Translation gizmo x axis",
+				MESH_DIRECTORY "translation-gizmo-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(translationShapeSize.y(), 0, 0),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatXID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
+			{
+				"Translation gizmo y axis",
+				MESH_DIRECTORY "translation-gizmo-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, translationShapeSize.y(), 0),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatYID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
+			{
+				"Translation gizmo z axis",
+				MESH_DIRECTORY "translation-gizmo-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, translationShapeSize.y()),
+				new btCylinderShape(translationShapeSize),
+				m_TransformGizmoMatZID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmo
+			},
 
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateXAxis->SetCollisionShape(xAxisShape);
+			{
+				"Translation gizmo plane yz",
+				MESH_DIRECTORY "translation-gizmo-plane-yz.glb",
+				glm::quat(glm::vec3(0, PI_DIV_TWO, 0)),
+				glm::vec3(0, translationPlaneOffset, translationPlaneOffset),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatYZID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
+			},
+			{
+				"Translation gizmo plane xz",
+				MESH_DIRECTORY "translation-gizmo-plane-xz.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(translationPlaneOffset, 0, translationPlaneOffset),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatXZID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
+			},
+			{
+				"Translation gizmo plane xy",
+				MESH_DIRECTORY "translation-gizmo-plane-xy.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(translationPlaneOffset, translationPlaneOffset, 0),
+				new btBoxShape(translationPlaneShapeSize),
+				m_TransformGizmoMatXYID,
+				&m_TranslationGizmoTag,
+				m_TranslationGizmoPlanes
+			},
 
-			RigidBody* gizmoXAxisRB = translateXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
+			{
+				"Rotation gizmo x axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(rotationShapeSize.y(), 0, 0),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatXID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
+			{
+				"Rotation gizmo y axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, rotationShapeSize.y(), 0),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatYID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
+			{
+				"Rotation gizmo z axis",
+				MESH_DIRECTORY "rotation-gizmo-flat-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, rotationShapeSize.y()),
+				new btCylinderShape(rotationShapeSize),
+				m_TransformGizmoMatZID,
+				&m_RotationGizmoTag,
+				m_RotationGizmo
+			},
 
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
+			{
+				"Scale gizmo x axis",
+				MESH_DIRECTORY "scale-gizmo-x.glb",
+				glm::quat(glm::vec3(0, 0, -PI_DIV_TWO)),
+				glm::vec3(scaleShapeSize.y(), 0, 0),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatXID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo y axis",
+				MESH_DIRECTORY "scale-gizmo-y.glb",
+				glm::quat(glm::vec3(0, 0, 0)),
+				glm::vec3(0, scaleShapeSize.y(), 0),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatYID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo x axis",
+				MESH_DIRECTORY "scale-gizmo-z.glb",
+				glm::quat(glm::vec3(PI_DIV_TWO, 0, 0)),
+				glm::vec3(0, 0, scaleShapeSize.y()),
+				new btCylinderShape(scaleShapeSize),
+				m_TransformGizmoMatZID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+			{
+				"Scale gizmo all axes",
+				MESH_DIRECTORY "scale-gizmo-all.glb",
+				QUAT_IDENTITY,
+				VEC3_ZERO,
+				new btBoxShape(scaleAllShapeSize),
+				m_TransformGizmoMatAllID,
+				&m_ScaleGizmoTag,
+				m_ScaleGizmo
+			},
+		};
 
-			// Y Axis
-			GameObject* translateYAxis = new GameObject("Translation gizmo y axis", SID("object"));
-			translateYAxis->AddTag(m_TranslationGizmoTag);
-			Mesh* yAxisMesh = translateYAxis->SetMesh(new Mesh(translateYAxis));
+		for (MeshCreateInfo& createInfo : translationCreateInfos)
+		{
+			EditorObject* editorObject = new EditorObject(createInfo.name);
+			editorObject->AddTag(*createInfo.tag);
 
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateYAxis->SetCollisionShape(yAxisShape);
+			editorObject->SetCollisionShape(createInfo.collisionShape);
 
-			RigidBody* gizmoYAxisRB = translateYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
+			RigidBody* rigidBody = editorObject->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
+			rigidBody->SetMass(0.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetPhysicsFlags(gizmoRBFlags);
 
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
+			Mesh* subMesh = editorObject->SetMesh(new Mesh(editorObject));
+			meshCreateInfo.relativeFilePath = createInfo.meshName;
+			meshCreateInfo.materialIDs = { createInfo.matID };
+			RenderObjectCreateInfo renderObjCreateInfo = {};
+			if (createInfo.parent == m_TranslationGizmoPlanes)
+			{
+				renderObjCreateInfo.cullFace = CullFace::NONE;
+			}
+			meshCreateInfo.optionalRenderObjectCreateInfo = &renderObjCreateInfo;
 
-			// Z Axis
-			GameObject* translateZAxis = new GameObject("Translation gizmo z axis", SID("object"));
-			translateZAxis->AddTag(m_TranslationGizmoTag);
-			Mesh* zAxisMesh = translateZAxis->SetMesh(new Mesh(translateZAxis));
+			subMesh->LoadFromFile(meshCreateInfo);
 
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			translateZAxis->SetCollisionShape(zAxisShape);
+			editorObject->GetTransform()->SetLocalRotation(createInfo.orientation, false);
+			editorObject->GetTransform()->SetLocalPosition(createInfo.offset, true);
 
-			RigidBody* gizmoZAxisRB = translateZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "translation-gizmo-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
-
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_TranslationGizmo = new GameObject("Translation gizmo", SID("object"));
-
-			m_TranslationGizmo->AddChildImmediate(translateXAxis);
-			m_TranslationGizmo->AddChildImmediate(translateYAxis);
-			m_TranslationGizmo->AddChildImmediate(translateZAxis);
-
-			m_TransformGizmo->AddChildImmediate(m_TranslationGizmo);
+			createInfo.parent->AddEditorChildImmediate(editorObject);
 		}
 
-		// Rotation gizmo
-		{
-			real cylinderRadius = 3.4f;
-			real cylinderHeight = 0.2f;
+		m_TranslationGizmo->AddEditorChildImmediate(m_TranslationGizmoPlanes);
+		m_TransformGizmo->AddEditorChildImmediate(m_TranslationGizmo);
+		m_TransformGizmo->AddEditorChildImmediate(m_RotationGizmo);
+		m_TransformGizmo->AddEditorChildImmediate(m_ScaleGizmo);
 
-			// X Axis
-			GameObject* rotationXAxis = new GameObject("Rotation gizmo x axis", SID("object"));
-			rotationXAxis->AddTag(m_RotationGizmoTag);
-			Mesh* xAxisMesh = rotationXAxis->SetMesh(new Mesh(rotationXAxis));
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = rotationXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
-
-			// Y Axis
-			GameObject* rotationYAxis = new GameObject("Rotation gizmo y axis", SID("object"));
-			rotationYAxis->AddTag(m_RotationGizmoTag);
-			Mesh* yAxisMesh = rotationYAxis->SetMesh(new Mesh(rotationYAxis));
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = rotationYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
-
-			// Z Axis
-			GameObject* rotationZAxis = new GameObject("Rotation gizmo z axis", SID("object"));
-			rotationZAxis->AddTag(m_RotationGizmoTag);
-			Mesh* zAxisMesh = rotationZAxis->SetMesh(new Mesh(rotationZAxis));
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			rotationZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = rotationZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "rotation-gizmo-flat-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(-cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_RotationGizmo = new GameObject("Rotation gizmo", SID("object"));
-
-			m_RotationGizmo->AddChildImmediate(rotationXAxis);
-			m_RotationGizmo->AddChildImmediate(rotationYAxis);
-			m_RotationGizmo->AddChildImmediate(rotationZAxis);
-
-			m_TransformGizmo->AddChildImmediate(m_RotationGizmo);
-
-			m_RotationGizmo->SetVisible(false);
-		}
-
-		// Scale gizmo
-		{
-			real boxScale = 0.5f;
-			real cylinderRadius = 0.35f;
-			real cylinderHeight = 1.8f;
-
-			// X Axis
-			GameObject* scaleXAxis = new GameObject("Scale gizmo x axis", SID("object"));
-			scaleXAxis->AddTag(m_ScaleGizmoTag);
-			Mesh* xAxisMesh = scaleXAxis->SetMesh(new Mesh(scaleXAxis));
-
-			btCylinderShape* xAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleXAxis->SetCollisionShape(xAxisShape);
-
-			RigidBody* gizmoXAxisRB = scaleXAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoXAxisRB->SetMass(0.0f);
-			gizmoXAxisRB->SetKinematic(true);
-			gizmoXAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			xAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-x.glb", m_TransformGizmoMatXID, false, true, &gizmoCreateInfo);
-
-			// Y Axis
-			GameObject* scaleYAxis = new GameObject("Scale gizmo y axis", SID("object"));
-			scaleYAxis->AddTag(m_ScaleGizmoTag);
-			Mesh* yAxisMesh = scaleYAxis->SetMesh(new Mesh(scaleYAxis));
-
-			btCylinderShape* yAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleYAxis->SetCollisionShape(yAxisShape);
-
-			RigidBody* gizmoYAxisRB = scaleYAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoYAxisRB->SetMass(0.0f);
-			gizmoYAxisRB->SetKinematic(true);
-			gizmoYAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			yAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-y.glb", m_TransformGizmoMatYID, false, true, &gizmoCreateInfo);
-
-			// Z Axis
-			GameObject* scaleZAxis = new GameObject("Scale gizmo z axis", SID("object"));
-			scaleZAxis->AddTag(m_ScaleGizmoTag);
-			Mesh* zAxisMesh = scaleZAxis->SetMesh(new Mesh(scaleZAxis));
-
-			btCylinderShape* zAxisShape = new btCylinderShape(btVector3(cylinderRadius, cylinderHeight, cylinderRadius));
-			scaleZAxis->SetCollisionShape(zAxisShape);
-
-			RigidBody* gizmoZAxisRB = scaleZAxis->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoZAxisRB->SetMass(0.0f);
-			gizmoZAxisRB->SetKinematic(true);
-			gizmoZAxisRB->SetPhysicsFlags(gizmoRBFlags);
-
-			zAxisMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-z.glb", m_TransformGizmoMatZID, false, true, &gizmoCreateInfo);
-
-			// Center (all axes)
-			GameObject* scaleAllAxes = new GameObject("Scale gizmo all axes", SID("object"));
-			scaleAllAxes->AddTag(m_ScaleGizmoTag);
-			Mesh* allAxesMesh = scaleAllAxes->SetMesh(new Mesh(scaleAllAxes));
-
-			btBoxShape* allAxesShape = new btBoxShape(btVector3(boxScale, boxScale, boxScale));
-			scaleAllAxes->SetCollisionShape(allAxesShape);
-
-			RigidBody* gizmoAllAxesRB = scaleAllAxes->SetRigidBody(new RigidBody(gizmoRBGroup, gizmoRBMask));
-			gizmoAllAxesRB->SetMass(0.0f);
-			gizmoAllAxesRB->SetKinematic(true);
-			gizmoAllAxesRB->SetPhysicsFlags(gizmoRBFlags);
-
-			allAxesMesh->LoadFromFile(MESH_DIRECTORY "scale-gizmo-all.glb", m_TransformGizmoMatAllID, false, true, &gizmoCreateInfo);
-
-
-			gizmoXAxisRB->SetLocalRotation(glm::quat(glm::vec3(0, 0, PI / 2.0f)));
-			gizmoXAxisRB->SetLocalPosition(glm::vec3(cylinderHeight, 0, 0));
-
-			gizmoYAxisRB->SetLocalPosition(glm::vec3(0, cylinderHeight, 0));
-
-			gizmoZAxisRB->SetLocalRotation(glm::quat(glm::vec3(PI / 2.0f, 0, 0)));
-			gizmoZAxisRB->SetLocalPosition(glm::vec3(0, 0, cylinderHeight));
-
-
-			m_ScaleGizmo = new GameObject("Scale gizmo", SID("object"));
-
-			m_ScaleGizmo->AddChildImmediate(scaleXAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleYAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleZAxis);
-			m_ScaleGizmo->AddChildImmediate(scaleAllAxes);
-
-			m_TransformGizmo->AddChildImmediate(m_ScaleGizmo);
-
-			m_ScaleGizmo->SetVisible(false);
-		}
 
 		m_TransformGizmo->Initialize();
-
 		m_TransformGizmo->PostInitialize();
 
+		currentScene->AddEditorObjectImmediate(m_TransformGizmo);
+
 		m_CurrentTransformGizmoState = TransformState::TRANSLATE;
+		UpdateGizmoVisibility();
 	}
 
 	void Editor::FadeOutHeadOnGizmos()
@@ -1689,68 +1766,64 @@ namespace flex
 		Material* xMat = g_Renderer->GetMaterial(m_TransformGizmoMatXID);
 		Material* yMat = g_Renderer->GetMaterial(m_TransformGizmoMatYID);
 		Material* zMat = g_Renderer->GetMaterial(m_TransformGizmoMatZID);
+		Material* yzMat = g_Renderer->GetMaterial(m_TransformGizmoMatYZID);
+		Material* xzMat = g_Renderer->GetMaterial(m_TransformGizmoMatXZID);
+		Material* xyMat = g_Renderer->GetMaterial(m_TransformGizmoMatXYID);
 
 		real camViewXAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetRight()));
 		real camViewYAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetUp()));
 		real camViewZAlignment = glm::abs(glm::dot(centerToCam, gizmoTransform->GetForward()));
 
+		auto CalcAlpha = [](real threshold, real camViewAlignment, real power, bool invert)
+		{
+			if (invert)
+			{
+				if (camViewAlignment <= threshold)
+				{
+					return Lerp(1.0f, 0.0f, glm::pow((threshold - camViewAlignment) / threshold, power));
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+			else
+			{
+				if (camViewAlignment >= threshold)
+				{
+					return Lerp(1.0f, 0.0f, glm::pow((camViewAlignment - threshold) / (1.0f - threshold), power));
+				}
+				else
+				{
+					return 1.0f;
+				}
+			}
+		};
+
 		if (m_CurrentTransformGizmoState == TransformState::ROTATE)
 		{
-			real threshold = 0.1f;
-			real power = 0.05f;
-			if (camViewXAlignment <= threshold)
-			{
-				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewXAlignment) / threshold, power));
-			}
-			else
-			{
-				xMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewYAlignment <= threshold)
-			{
-				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewYAlignment) / threshold, power));
-			}
-			else
-			{
-				yMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewZAlignment <= threshold)
-			{
-				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((threshold - camViewZAlignment) / threshold, power));
-			}
-			else
-			{
-				zMat->colourMultiplier.a = 1.0f;
-			}
+			const real threshold = 0.1f;
+			const real power = 0.05f;
+			xMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, true);
+			yMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, true);
+			zMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, true);
 		}
 		else
 		{
-			// TODO: Use different scheme for rotating when facing head-on (screen-space rather than world-space)
-			real threshold = 0.95f;
-			real power = 0.2f;
-			if (camViewXAlignment >= threshold)
 			{
-				xMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewXAlignment - threshold) / (1.0f - threshold), power));
+				const real threshold = 0.95f;
+				const real power = 0.2f;
+				xMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, false);
+				yMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, false);
+				zMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, false);
 			}
-			else
+
 			{
-				xMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewYAlignment >= threshold)
-			{
-				yMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewYAlignment - threshold) / (1.0f - threshold), power));
-			}
-			else
-			{
-				yMat->colourMultiplier.a = 1.0f;
-			}
-			if (camViewZAlignment >= threshold)
-			{
-				zMat->colourMultiplier.a = Lerp(1.0f, 0.0f, glm::pow((camViewZAlignment - threshold) / (1.0f - threshold), power));
-			}
-			else
-			{
-				zMat->colourMultiplier.a = 1.0f;
+				const real threshold = 0.1f;
+				const real power = 0.1f;
+				yzMat->colourMultiplier.a = CalcAlpha(threshold, camViewXAlignment, power, true);
+				xzMat->colourMultiplier.a = CalcAlpha(threshold, camViewYAlignment, power, true);
+				xyMat->colourMultiplier.a = CalcAlpha(threshold, camViewZAlignment, power, true);
 			}
 		}
 	}
@@ -1758,5 +1831,100 @@ namespace flex
 	btVector3 Editor::GetAxisColour(i32 axisIndex) const
 	{
 		return axisIndex == X_AXIS_IDX ? btVector3(1.0f, 0.0f, 0.0f) : axisIndex == Y_AXIS_IDX ? btVector3(0.0f, 1.0f, 0.0f) : btVector3(0.1f, 0.1f, 1.0f);
+	}
+
+	Editor::JitterDetector::JitterDetector() :
+		m_PositionXHisto(m_HistoLength),
+		m_PositionZHisto(m_HistoLength),
+		m_VelocityXHisto(m_HistoLength),
+		m_VelocityZHisto(m_HistoLength),
+		m_CamXHisto(m_HistoLength),
+		m_CamZHisto(m_HistoLength),
+		m_CamPosDiffXHisto(m_HistoLength),
+		m_CamPosDiffZHisto(m_HistoLength)
+	{
+		real posRange = 14.0f;
+		m_PositionXHisto.overrideMin = -posRange;
+		m_PositionXHisto.overrideMax = posRange;
+		m_PositionZHisto.overrideMin = -posRange;
+		m_PositionZHisto.overrideMax = posRange;
+
+		m_CamXHisto.overrideMin = -posRange;
+		m_CamXHisto.overrideMax = posRange;
+		m_CamZHisto.overrideMin = -posRange;
+		m_CamZHisto.overrideMax = posRange;
+
+		real velRange = 15.0f;
+		m_VelocityXHisto.overrideMin = -velRange;
+		m_VelocityXHisto.overrideMax = velRange;
+		m_VelocityZHisto.overrideMin = -velRange;
+		m_VelocityZHisto.overrideMax = velRange;
+	}
+
+	void Editor::JitterDetector::FixedUpdate()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+
+		if (player == nullptr || player->GetRigidBody() == nullptr)
+		{
+			return;
+		}
+
+		glm::vec3 posWS = player->GetTransform()->GetWorldPosition();
+		btVector3 velWS = player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity();
+
+		m_PositionXHisto.AddElement(posWS.x);
+		m_PositionZHisto.AddElement(posWS.z);
+
+		m_VelocityXHisto.overrideMin = glm::min(m_VelocityXHisto.overrideMin, glm::min(velWS.x(), velWS.z()));
+		m_VelocityXHisto.overrideMax = glm::max(m_VelocityXHisto.overrideMax, glm::max(velWS.x(), velWS.z()));
+		m_VelocityZHisto.overrideMin = m_VelocityXHisto.overrideMin;
+		m_VelocityZHisto.overrideMax = m_VelocityXHisto.overrideMax;
+
+		m_VelocityXHisto.AddElement(velWS.x());
+		m_VelocityZHisto.AddElement(velWS.z());
+
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+
+		m_CamXHisto.AddElement(cam->position.x);
+		m_CamZHisto.AddElement(cam->position.z);
+
+		m_CamPosDiffXHisto.AddElement(posWS.x - cam->position.x);
+		m_CamPosDiffZHisto.AddElement(posWS.z - cam->position.z);
+	}
+
+	void Editor::JitterDetector::DrawImGuiObjects()
+	{
+		bool* bWindowShowing = g_EngineInstance->GetUIWindowOpen(SID_PAIR("jitter detector"));
+		if (*bWindowShowing)
+		{
+			if (ImGui::Begin("Jitter Detector", bWindowShowing))
+			{
+				ImGui::Text("Pos");
+				m_PositionXHisto.DrawImGui();
+				m_PositionZHisto.DrawImGui();
+
+				ImGui::Text("Vel");
+				m_VelocityXHisto.DrawImGui();
+				m_VelocityZHisto.DrawImGui();
+
+				ImGui::Text("Cam");
+				m_CamXHisto.DrawImGui();
+				m_CamZHisto.DrawImGui();
+
+				real lowestMin = FLT_MAX;
+				real highestMax = FLT_MIN;
+				for (real element : m_CamPosDiffXHisto.data)
+				{
+					lowestMin = glm::min(lowestMin, element);
+					highestMax = glm::max(highestMax, element);
+				}
+
+				ImGui::Text("Cam-pos diff [%.1f - %.1f]", lowestMin, highestMax);
+				m_CamPosDiffXHisto.DrawImGui();
+				m_CamPosDiffZHisto.DrawImGui();
+			}
+			ImGui::End();
+		}
 	}
 } // namespace flex

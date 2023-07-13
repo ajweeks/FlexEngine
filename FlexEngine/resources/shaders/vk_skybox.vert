@@ -25,5 +25,5 @@ void main()
 	gl_Position = pos;
 
 	// Push to far clip plane
-	gl_Position.z = 1.0e-9f;
+	gl_Position.z = 0.0f;
 }

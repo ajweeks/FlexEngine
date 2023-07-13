@@ -28,6 +28,28 @@ namespace flex
 		}
 	}
 
+	void StringBuilder::Append(u32 val)
+	{
+		const u32 BUF_SIZE = 200;
+		char charBuff[BUF_SIZE];
+
+		// TODO: Use snsprintf_s on windows
+		sprintf(charBuff, "%u", val);
+		if ((length + (u32)strlen(charBuff)) >= (u32)buffer.size())
+		{
+			Resize((length + (u32)strlen(charBuff)) * 2);
+		}
+
+		for (char c : charBuff)
+		{
+			if (c == '\0')
+			{
+				break;
+			}
+			buffer[length++] = c;
+		}
+	}
+
 	void StringBuilder::Append(char c)
 	{
 		if ((length + 1) >= (u32)buffer.size())

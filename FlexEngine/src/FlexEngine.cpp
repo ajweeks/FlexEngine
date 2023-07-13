@@ -1,6 +1,6 @@
 // NOTE: These defines must be above the stdafx include
 #define PL_IMPLEMENTATION 1
-#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 25'000'000
+#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 50'000'000
 
 #include "stdafx.hpp"
 
@@ -29,12 +29,14 @@ IGNORE_WARNINGS_POP
 #include "Cameras/OverheadCamera.hpp"
 #include "Cameras/TerminalCamera.hpp"
 #include "Cameras/VehicleCamera.hpp"
+#include "ConfigFileManager.hpp"
 #include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "JSONTypes.hpp"
+#include "Particles.hpp"
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -54,10 +56,6 @@ IGNORE_WARNINGS_POP
 #include "Window/GLFWWindowWrapper.hpp"
 #include "Window/Monitor.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
-
-#if COMPILE_OPEN_GL
-#include "Graphics/GL/GLRenderer.hpp"
-#endif
 
 #if COMPILE_VULKAN
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
@@ -79,7 +77,7 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 7;
+	const u32 FlexEngine::EngineVersionPatch = 8;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::string FlexEngine::s_ExecutablePath;
@@ -117,9 +115,11 @@ namespace flex
 		m_LogSaveTimer = Timer(5.0f);
 		m_UIWindowCacheSaveTimer = Timer(20.0f);
 
-#if COMPILE_OPEN_GL
-		m_RendererName = "Open GL";
-#elif COMPILE_VULKAN
+#if COMPILE_RENDERDOC_API
+		m_RenderDocAPICheckTimer = Timer(3.0f);
+#endif
+
+#if COMPILE_VULKAN
 		m_RendererName = "Vulkan";
 #endif
 
@@ -183,6 +183,10 @@ namespace flex
 #endif
 
 		Print("FlexEngine v%u.%u.%u - Config: [%s %s, %s] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, targetStr, platformStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
+
+#if USE_PL
+		Print("Connected to palanteer\n");
+#endif
 	}
 
 	FlexEngine::~FlexEngine()
@@ -201,21 +205,32 @@ namespace flex
 
 		g_EngineInstance = this;
 
-		m_FrameTimes.resize(256);
+		m_FrameTimes = RollingAverage<real>(256);
 
 		Platform::Init();
 
-		CreateWindowAndRenderer();
+		g_ConfigFileManager = new ConfigFileManager();
+
+		JobSystem::Initialize();
+
+		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER] = new PropertyCollectionManager();
+		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER]->Initialize();
+
+		CreateWindow();
+
+#if COMPILE_VULKAN
+		{
+			PROFILE_AUTO("Create Renderer");
+			g_Renderer = new vk::VulkanRenderer();
+		}
+#endif
 
 		g_ResourceManager = new ResourceManager();
 		g_ResourceManager->Initialize();
 
 		g_UIManager = new UIManager();
-
 		g_Editor = new Editor();
-
 		g_InputManager = new InputManager();
-
 		g_CameraManager = new CameraManager();
 
 		InitializeWindowAndRenderer();
@@ -229,8 +244,7 @@ namespace flex
 			m_RenderDocAutoCaptureFrameCount != -1 &&
 			m_RenderDocAutoCaptureFrameOffset == 0)
 		{
-			m_bRenderDocCapturingFrame = true;
-			m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+			RenderDocStartCapture();
 		}
 #endif
 
@@ -245,31 +259,36 @@ namespace flex
 		g_Systems[(i32)SystemType::ROAD_MANAGER] = new RoadManager();
 		g_Systems[(i32)SystemType::ROAD_MANAGER]->Initialize();
 
-		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager();
+		g_Systems[(i32)SystemType::TERMINAL_MANAGER] = new TerminalManager(m_bInstallTerminalDirectoryWatch);
 		g_Systems[(i32)SystemType::TERMINAL_MANAGER]->Initialize();
 
 		g_Systems[(i32)SystemType::TRACK_MANAGER] = new TrackManager();
 
 		g_Systems[(i32)SystemType::CART_MANAGER] = new CartManager();
 
+		g_Systems[(i32)SystemType::PARTICLE_MANAGER] = new ParticleManager();
+		g_Systems[(i32)SystemType::PARTICLE_MANAGER]->Initialize();
+
 		g_ResourceManager->DiscoverMeshes();
-		g_ResourceManager->ParseMaterialsFile();
+		g_ResourceManager->ParseMaterialsFiles();
 		g_ResourceManager->ParseFontFile();
 
 		g_SceneManager = new SceneManager();
-		g_SceneManager->AddFoundScenes();
 
 		if (!LoadCommonSettingsFromDisk())
 		{
 			// Common file doesn't exist or is corrupt, load first present scene
 			g_SceneManager->SetNextSceneActive();
-			// Set timer to max value so new config file will be immediately written to disk
+			// Ensure config file will be written to disk this frame
 			m_CommonSettingsSaveTimer.Complete();
 		}
 
 		g_UIManager->Initialize();
 
-		ImGui::CreateContext();
+		{
+			PROFILE_AUTO("ImGui CreateContext");
+			ImGui::CreateContext();
+		}
 		SetupImGuiStyles();
 
 		g_ResourceManager->PostInitialize();
@@ -292,9 +311,9 @@ namespace flex
 		{
 			PROFILE_AUTO("Initialize audio sources");
 
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "dud_dud_dud_dud.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "drmapan.wav"));
-			s_AudioSourceIDs.push_back(AudioManager::AddAudioSource(SFX_DIRECTORY "blip.wav"));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("dud_dud_dud_dud.wav"), true));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("drmapan.wav"), true));
+			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("blip.wav"), true));
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 523.25f)); // C5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 587.33f)); // D5
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeSound(0.5f, 659.25f)); // E5
@@ -327,16 +346,6 @@ namespace flex
 			m_TestSprings.emplace_back(Spring<glm::vec3>());
 			m_TestSprings[i].DR = 0.9f;
 			m_TestSprings[i].UAF = 15.0f;
-		}
-
-		sec durationSec = Time::CurrentSeconds() - startTime;
-		PROFILE_END("FlexEngine Initialize");
-
-		ms blockDuration = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
-		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
-		{
-			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
-			AppendToBootupTimesFile(bootupTimesEntry);
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -489,9 +498,7 @@ namespace flex
 					const char* itemName = item.AsString();
 					PrefabID prefabID = g_ResourceManager->GetPrefabID(itemName);
 
-					bool bCountValid = countInt > 0 && countInt < (Player::MAX_STACK_SIZE * Player::INVENTORY_ITEM_COUNT);
-
-					if (prefabID.IsValid() && bCountValid)
+					if (prefabID.IsValid())
 					{
 						Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 						if (player != nullptr)
@@ -501,14 +508,7 @@ namespace flex
 					}
 					else
 					{
-						if (!prefabID.IsValid())
-						{
-							PrintError("Invalid prefab name \"%s\"\n", itemName);
-						}
-						if (!bCountValid)
-						{
-							PrintError("Invalid count %i\n", countInt);
-						}
+						PrintError("Invalid prefab name \"%s\"\n", itemName);
 					}
 				}
 		}, Variant::Type::STRING, Variant::Type::INT));
@@ -516,7 +516,10 @@ namespace flex
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("open",
 			[](const Variant& windowName)
 		{
-			g_EngineInstance->ToggleUIWindow(windowName.AsString());
+			if (!g_EngineInstance->ToggleUIWindow(windowName.AsString()))
+			{
+				PrintError("Failed to find UI window with name %s\n", windowName.AsString());
+			}
 		}, Variant::Type::STRING));
 
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindV("audio.toggle_muted",
@@ -532,12 +535,22 @@ namespace flex
 		}, Variant::Type::FLOAT, Variant::Type::FLOAT));
 
 		ParseUIWindowCache();
+
+		sec durationSec = Time::CurrentSeconds() - startTime;
+		PROFILE_END("FlexEngine Initialize");
+
+		ms blockDuration = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
+		if (blockDuration != -1.0f && blockDuration < 20000) // Exceptionally long times are almost always due to hitting breakpoints
+		{
+			std::string bootupTimesEntry = Platform::GetDateString_YMDHMS() + "," + FloatToString(blockDuration, 2);
+			AppendToBootupTimesFile(bootupTimesEntry);
+		}
 	}
 
 	AudioSourceID FlexEngine::GetAudioSourceID(SoundEffect effect)
 	{
-		assert((i32)effect >= 0);
-		assert((i32)effect < (i32)SoundEffect::LAST_ELEMENT);
+		CHECK_GE((i32)effect, 0);
+		CHECK_LT((i32)effect, (i32)SoundEffect::LAST_ELEMENT);
 
 		return s_AudioSourceIDs[(i32)effect];
 	}
@@ -559,13 +572,14 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
+		JobSystem::Destroy();
+
 		g_Editor->Destroy();
-		g_Renderer->DestroyPersistentObjects();
-		g_SceneManager->DestroyAllScenes();
 		g_CameraManager->Destroy();
-		g_PhysicsManager->Destroy();
 		g_ResourceManager->Destroy();
 		g_UIManager->Destroy();
+		g_SceneManager->Destroy();
+		g_PhysicsManager->Destroy();
 		DestroyWindowAndRenderer();
 		g_ResourceManager->DestroyAllLoadedMeshes();
 
@@ -592,6 +606,9 @@ namespace flex
 		delete g_ResourceManager;
 		g_ResourceManager = nullptr;
 
+		delete g_ConfigFileManager;
+		g_ConfigFileManager = nullptr;
+
 		delete g_CameraManager;
 		g_CameraManager = nullptr;
 
@@ -610,12 +627,12 @@ namespace flex
 		Print("\n");
 	}
 
-	void FlexEngine::CreateWindowAndRenderer()
+	void FlexEngine::CreateWindow()
 	{
-		PROFILE_AUTO("FlexEngine CreateWindowAndRenderer");
+		PROFILE_AUTO("CreateWindow");
 
-		assert(g_Window == nullptr);
-		assert(g_Renderer == nullptr);
+		CHECK_EQ(g_Window, nullptr);
+		CHECK_EQ(g_Renderer, nullptr);
 
 		const std::string titleString = "Flex Engine v" + EngineVersionString();
 
@@ -634,29 +651,23 @@ namespace flex
 		g_Window->RetrieveMonitorInfo();
 
 		real desiredAspectRatio = 16.0f / 9.0f;
-		real desiredWindowSizeScreenPercetange = 0.85f;
+		real desiredWindowSizeScreenPercentange = 0.85f;
 
 		// What kind of monitor has different scales along each axis?
-		assert(g_Monitor->contentScaleX == g_Monitor->contentScaleY);
+		CHECK_EQ(g_Monitor->contentScaleX, g_Monitor->contentScaleY);
 
-		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercetange * g_Monitor->contentScaleY);
+		i32 newWindowSizeY = i32(g_Monitor->height * desiredWindowSizeScreenPercentange * glm::max(g_Monitor->contentScaleY, 1.0f))	;
 		i32 newWindowSizeX = i32(newWindowSizeY * desiredAspectRatio);
 
 		i32 newWindowPosX = i32(newWindowSizeX * 0.1f);
 		i32 newWindowPosY = i32(newWindowSizeY * 0.1f);
 
 		g_Window->Create(glm::vec2i(newWindowSizeX, newWindowSizeY), glm::vec2i(newWindowPosX, newWindowPosY));
-
-#if COMPILE_OPEN_GL
-		g_Renderer = new gl::GLRenderer();
-#elif COMPILE_VULKAN
-		g_Renderer = new vk::VulkanRenderer();
-#endif
 	}
 
 	void FlexEngine::InitializeWindowAndRenderer()
 	{
-		PROFILE_AUTO("FlexEngine InitializeWindowAndRenderer");
+		PROFILE_AUTO("InitializeWindowAndRenderer");
 
 		g_Window->SetUpdateWindowTitleFrequency(0.5f);
 		g_Window->PostInitialize();
@@ -666,16 +677,18 @@ namespace flex
 
 	void FlexEngine::DestroyWindowAndRenderer()
 	{
-		if (g_Renderer)
+		if (g_Renderer != nullptr)
 		{
 			g_Renderer->Destroy();
 			delete g_Renderer;
+			g_Renderer = nullptr;
 		}
 
-		if (g_Window)
+		if (g_Window != nullptr)
 		{
 			g_Window->Destroy();
 			delete g_Window;
+			g_Window = nullptr;
 		}
 	}
 
@@ -745,17 +758,15 @@ namespace flex
 
 			if (!m_bSimulationPaused)
 			{
-				for (i32 i = 1; i < (i32)m_FrameTimes.size(); ++i)
-				{
-					m_FrameTimes[i - 1] = m_FrameTimes[i];
-				}
-				m_FrameTimes[m_FrameTimes.size() - 1] = g_UnpausedDeltaTime * 1000.0f;
+				m_FrameTimes.AddValue(g_UnpausedDeltaTime * 1000.0f);
 			}
 
 			{
 				PROFILE_AUTO("Update");
 
 				UPDATE_TWEAKABLES();
+
+				g_ConfigFileManager->Update();
 
 				const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 				if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
@@ -782,8 +793,7 @@ namespace flex
 					if (m_bRenderDocTriggerCaptureNextFrame)
 					{
 						m_bRenderDocTriggerCaptureNextFrame = false;
-						m_bRenderDocCapturingFrame = true;
-						m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+						RenderDocStartCapture();
 					}
 				}
 #endif
@@ -823,6 +833,9 @@ namespace flex
 					currentCamera->Update();
 
 					currentScene->Update();
+
+					currentCamera->LateUpdate();
+
 					Player* player = currentScene->GetPlayer(0);
 					if (player)
 					{
@@ -859,8 +872,10 @@ namespace flex
 					}
 				}
 
+				currentScene->Render();
+
 #if 0
-				btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+				btIDebugDraw* debugDrawer = g_Renderer->GetDebugRenderer();
 				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
 				{
 					m_TestSprings[i].Tick(g_DeltaTime);
@@ -903,28 +918,7 @@ namespace flex
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
 			{
-				PROFILE_AUTO("Capture RenderDoc frame");
-
-				m_bRenderDocCapturingFrame = false;
-				Print("Capturing RenderDoc frame...\n");
-				m_RenderDocAPI->EndFrameCapture(NULL, NULL);
-
-				std::string captureFilePath;
-				if (GetLatestRenderDocCaptureFilePath(captureFilePath))
-				{
-					g_Renderer->AddEditorString("Captured RenderDoc frame");
-
-					const std::string captureFileName = StripLeadingDirectories(captureFilePath);
-					Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
-
-					CheckForRenderDocUIRunning();
-
-					if (m_RenderDocUIPID == -1)
-					{
-						const std::string& cmdLineArgs = captureFilePath;
-						m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
-					}
-				}
+				RenderDocEndCapture();
 			}
 #endif
 
@@ -1016,7 +1010,7 @@ namespace flex
 
 	void FlexEngine::DrawImGuiObjects()
 	{
-		PROFILE_AUTO("DrawImGuiObjects");
+		PROFILE_AUTO("FlexEngine DrawImGuiObjects");
 
 		glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
 		if (frameBufferSize.x == 0 || frameBufferSize.y == 0)
@@ -1024,11 +1018,13 @@ namespace flex
 			return;
 		}
 
-		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID("imgui demo"));
+		bool* bImGuiDemoWindowShowing = GetUIWindowOpen(SID_PAIR("imgui demo"));
 		if (*bImGuiDemoWindowShowing)
 		{
 			ImGui::ShowDemoWindow(bImGuiDemoWindowShowing);
 		}
+
+		static bool bShowHelpWindow = false;
 
 		if (ImGui::BeginMainMenuBar())
 		{
@@ -1044,6 +1040,16 @@ namespace flex
 				if (ImGui::MenuItem("Save scene", "Ctrl+S"))
 				{
 					g_SceneManager->CurrentScene()->SerializeToFile(false);
+				}
+
+				if (ImGui::MenuItem("Save all prefabs"))
+				{
+					g_ResourceManager->SerializeAllPrefabTemplates();
+				}
+
+				if (ImGui::MenuItem("Save all materials"))
+				{
+					g_ResourceManager->SerializeAllMaterials();
 				}
 
 				if (ImGui::BeginMenu("Reload"))
@@ -1282,18 +1288,20 @@ namespace flex
 			if (ImGui::BeginMenu("Window"))
 			{
 				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")].bOpen);
-				ImGui::MenuItem("GPU Timings", nullptr, &g_Renderer->bGPUTimingsWindowShowing);
+				ImGui::MenuItem("GPU Timings", nullptr, &m_UIWindows[SID("gpu timings")].bOpen);
 				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")].bOpen);
 				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")].bOpen);
-				ImGui::MenuItem("Uniform Buffers", nullptr, &g_Renderer->bUniformBufferWindowShowing);
+				ImGui::MenuItem("Uniform Buffers", nullptr, &m_UIWindows[SID("uniform buffers")].bOpen);
 				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
+				ImGui::MenuItem("Jitter Detector", nullptr, &m_UIWindows[SID("jitter detector")].bOpen);
+				ImGui::MenuItem("Particle manager", nullptr, &m_UIWindows[SID("particle manager")].bOpen);
 				ImGui::Separator();
 				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")].bOpen);
 				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")].bOpen);
 				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")].bOpen);
 				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")].bOpen);
 				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")].bOpen);
-				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("sounds")].bOpen);
+				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("audio")].bOpen);
 				ImGui::Separator();
 				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")].bOpen);
 				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")].bOpen);
@@ -1314,10 +1322,53 @@ namespace flex
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
 
+				if (ImGui::MenuItem("Help (?)", nullptr, &bShowHelpWindow))
+				{
+					bShowHelpWindow = true;
+				}
+
 				ImGui::EndMenu();
 			}
 
 			ImGui::EndMainMenuBar();
+		}
+
+		if (bShowHelpWindow)
+		{
+			ImGui::OpenPopup("Help");
+		}
+
+		if (ImGui::BeginPopupModal("Help", &bShowHelpWindow))
+		{
+			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
+			ImGui::Text("Show hide debug UI: Shift + 1 (after closing this window)");
+			ImGui::Text("Pause/regain mouse control: ESC");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Cameras");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tCycle active camera: -/+");
+			ImGui::Text("\tCycle active scene: [/]");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Editor");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tMove camera (debug camera): WASD + QE");
+			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
+			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Player controls (first/third person camera)");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tCycle inventory: scroll wheel");
+			ImGui::Text("\tInteract: E");
+			ImGui::Text("\tView inventory: Tab");
+			ImGui::Text("\tRun: Shift");
+			ImGui::Text("\tPickup item: Click and hold");
+			ImGui::Text("\tPlace item: Space");
+
+
+			ImGui::EndPopup();
 		}
 
 		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
@@ -1333,7 +1384,7 @@ namespace flex
 		bool bIsMainWindowCollapsed = true;
 
 		m_ImGuiMainWindowWidthMax = frameBufferSize.x - 100.0f;
-		bool* bShowMainWindow = GetUIWindowOpen(SID("main"));
+		bool* bShowMainWindow = GetUIWindowOpen(SID_PAIR("main"));
 		if (*bShowMainWindow)
 		{
 			static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
@@ -1378,32 +1429,43 @@ namespace flex
 
 				if (ImGui::TreeNode("Stats"))
 				{
-					static const std::string rendererNameStringStr = std::string("Current renderer: " + m_RendererName);
-					static const char* renderNameStr = rendererNameStringStr.c_str();
-					ImGui::TextUnformatted(renderNameStr);
-					static ms latestFrameTime;
+					ImGui::Text("%s", titleString.c_str());
+
+					ImGui::Text("Current renderer: %s", m_RendererName.c_str());
+					static ms frameTimeMean = 0.0f;
+					static ms frameTimeVariance = 0.0f;
 					static u32 framesSinceUpdate = 0;
-					if (framesSinceUpdate++ % 10 == 0)
+					const u32 updateFrequency = 20;
+					const u32 framesToAverage = 20;
+					// Update variables only periodically to avoid being unreadable
+					if ((framesSinceUpdate++ % updateFrequency) == 0)
 					{
-						latestFrameTime = m_FrameTimes[m_FrameTimes.size() - 1];
+						frameTimeMean = m_FrameTimes.ComputeMean(framesToAverage);
+						frameTimeVariance = m_FrameTimes.ComputeVariance(framesToAverage, frameTimeMean);
 					}
-					ImGui::Text("Frames time: %.1fms (%d FPS)", latestFrameTime, (u32)((1.0f / latestFrameTime) * 1000));
-					ImGui::NewLine();
-					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
-					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
 
 					ImVec2 p = ImGui::GetCursorScreenPos();
 					real width = 300.0f;
 					real height = 100.0f;
 					real minMS = 0.0f;
 					real maxMS = 100.0f;
-					ImGui::PlotLines("", m_FrameTimes.data(), (u32)m_FrameTimes.size(), 0, 0, minMS, maxMS, ImVec2(width, height));
+					ImGui::PlotLines("", m_FrameTimes.GetData(), m_FrameTimes.GetNumSamples(), m_FrameTimes.currentIndex, 0, minMS, maxMS, ImVec2(width, height));
 					real targetFrameRate = 60.0f;
 					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
 					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
 
+					ImGui::Text("Frame time: %.1fms (variance: %.2f)", frameTimeMean, frameTimeVariance);
+					ImGui::Text("FPS: %u", (u32)((1.0f / frameTimeMean) * 1000));
+					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
+					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
+
+					ImGui::NewLine();
+
 					g_Renderer->DrawImGuiRendererInfo();
+
+					ImGui::NewLine();
+
+					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
 
 					ImGui::TreePop();
 				}
@@ -1419,6 +1481,7 @@ namespace flex
 				g_CameraManager->DrawImGuiObjects();
 				g_SceneManager->DrawImGuiObjects();
 				AudioManager::DrawImGuiObjects();
+				g_Editor->DrawImGuiObjects();
 
 				if (ImGui::RadioButton("Translate", g_Editor->GetTransformState() == TransformState::TRANSLATE))
 				{
@@ -1437,8 +1500,7 @@ namespace flex
 
 				BaseScene* currentScene = g_SceneManager->CurrentScene();
 
-				currentScene->DrawImGuiForSelectedObjects();
-				currentScene->DrawImGuiForRenderObjectsList();
+				currentScene->DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
 				ImGui::Spacing();
 				ImGui::Spacing();
@@ -1477,7 +1539,7 @@ namespace flex
 
 		g_ResourceManager->DrawImGuiWindows();
 
-		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID("input bindings"));
+		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID_PAIR("input bindings"));
 		if (*bShowInputBindingsWindow)
 		{
 			g_InputManager->DrawImGuiBindings(bShowInputBindingsWindow);
@@ -1563,28 +1625,28 @@ namespace flex
 										}
 
 										// TODO: Do some type checking using func->argTypes
-										JSONValue::Type argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
+										ValueType argType = JSONValue::TypeFromChar(argStr[0], argStr.substr(1));
 										switch (argType)
 										{
-										case JSONValue::Type::INT:
+										case ValueType::INT:
 											args.emplace_back(Variant(ParseInt(argStr)));
 											break;
-										case JSONValue::Type::UINT:
+										case ValueType::UINT:
 											args.emplace_back(Variant(ParseUInt(argStr)));
 											break;
-										case JSONValue::Type::LONG:
+										case ValueType::LONG:
 											args.emplace_back(Variant(ParseLong(argStr)));
 											break;
-										case JSONValue::Type::ULONG:
+										case ValueType::ULONG:
 											args.emplace_back(Variant(ParseULong(argStr)));
 											break;
-										case JSONValue::Type::FLOAT:
+										case ValueType::FLOAT:
 											args.emplace_back(Variant(ParseFloat(argStr)));
 											break;
-										case JSONValue::Type::BOOL:
+										case ValueType::BOOL:
 											args.emplace_back(Variant(ParseBool(argStr)));
 											break;
-										case JSONValue::Type::STRING:
+										case ValueType::STRING:
 											argStr = Erase(argStr, '\"');
 											if (argStr.empty())
 											{
@@ -1650,7 +1712,7 @@ namespace flex
 		}
 
 #if COMPILE_RENDERDOC_API
-		bool* bShowRenderDocWindow = GetUIWindowOpen(SID("render doc"));
+		bool* bShowRenderDocWindow = GetUIWindowOpen(SID_PAIR("render doc"));
 		if (*bShowRenderDocWindow)
 		{
 			if (ImGui::Begin("RenderDoc", bShowRenderDocWindow))
@@ -1697,7 +1759,7 @@ namespace flex
 		}
 #endif
 
-		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID("memory stats"));
+		bool* bShowMemoryStatsWindow = GetUIWindowOpen(SID_PAIR("memory stats"));
 		if (*bShowMemoryStatsWindow)
 		{
 			if (ImGui::Begin("Memory", bShowMemoryStatsWindow))
@@ -1708,7 +1770,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID("cpu stats"));
+		bool* bShowCPUStatsWindow = GetUIWindowOpen(SID_PAIR("cpu stats"));
 		if (*bShowCPUStatsWindow)
 		{
 			if (ImGui::Begin("CPU Stats", bShowCPUStatsWindow))
@@ -1723,14 +1785,14 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShowUIEditorWindow = GetUIWindowOpen(SID("ui editor"));
+		bool* bShowUIEditorWindow = GetUIWindowOpen(SID_PAIR("ui editor"));
 		if (*bShowUIEditorWindow)
 		{
 			g_UIManager->DrawImGui(bShowUIEditorWindow);
 		}
 	}
 
-	void FlexEngine::ToggleUIWindow(const std::string& windowName)
+	bool FlexEngine::ToggleUIWindow(const std::string& windowName)
 	{
 		std::string nameLower = windowName;
 		ToLower(nameLower);
@@ -1739,7 +1801,9 @@ namespace flex
 		if (iter != m_UIWindows.end())
 		{
 			iter->second.bOpen = !iter->second.bOpen;
+			return true;
 		}
+		return false;
 	}
 
 	i32 FlexEngine::ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data)
@@ -1971,7 +2035,7 @@ namespace flex
 
 	bool FlexEngine::LoadCommonSettingsFromDisk()
 	{
-		PROFILE_AUTO("FlexEngine LoadCommonSettingsFromDisk");
+		PROFILE_AUTO("LoadCommonSettingsFromDisk");
 
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
@@ -2026,6 +2090,8 @@ namespace flex
 					m_ShaderEditorPath = shaderEditorPath;
 				}
 
+				rootObject.TryGetBool("install terminal directory watch", m_bInstallTerminalDirectoryWatch);
+
 				return true;
 			}
 			else
@@ -2041,6 +2107,8 @@ namespace flex
 	// TODO: EZ: Add config window to set common settings
 	void FlexEngine::SaveCommonSettingsToDisk(bool bAddEditorStr)
 	{
+		PROFILE_AUTO("SaveCommonSettingsToDisk");
+
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
 			PrintError("Failed to save common settings to disk: file path is not set!\n");
@@ -2058,6 +2126,7 @@ namespace flex
 		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
 
 		rootObject.fields.emplace_back("install shader directory watch", JSONValue(m_bInstallShaderDirectoryWatch));
+		rootObject.fields.emplace_back("install terminal directory watch", JSONValue(m_bInstallTerminalDirectoryWatch));
 
 		rootObject.fields.emplace_back("shader editor path", JSONValue(m_ShaderEditorPath));
 
@@ -2115,24 +2184,37 @@ namespace flex
 		m_bSimulateNextFrame = true;
 	}
 
-	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID)
+	bool* FlexEngine::GetUIWindowOpen(StringID windowNameSID, const char* windowName)
 	{
-		return &m_UIWindows[windowNameSID].bOpen;
+		auto iter = m_UIWindows.find(windowNameSID);
+		if (iter == m_UIWindows.end())
+		{
+			// Default main window to being open
+			bool bOpen = windowNameSID == SID("main");
+			m_UIWindows[windowNameSID] = UIWindow{ bOpen, std::string(windowName) };
+			return &m_UIWindows[windowNameSID].bOpen;
+		}
+		return &iter->second.bOpen;
 	}
 
 	void FlexEngine::ParseUIWindowCache()
 	{
-		std::string fileContents;
-		if (ReadFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
-		{
-			JSONObject rootObject;
-			if (JSONParser::Parse(fileContents, rootObject))
-			{
-				JSONObject uiWIndowsOpenObj = rootObject.GetObject("ui_windows_open");
-				for (const JSONField& field : uiWIndowsOpenObj.fields)
-				{
-					m_UIWindows[Hash(field.label.c_str())] = UIWindow{ field.value.AsBool(), field.label };
+		PROFILE_AUTO("ParseUIWindowCache");
 
+		if (FileExists(UI_WINDOW_CACHE_LOCATION))
+		{
+			std::string fileContents;
+			if (ReadFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
+			{
+				JSONObject rootObject;
+				if (JSONParser::Parse(fileContents, rootObject))
+				{
+					JSONObject uiWIndowsOpenObj = rootObject.GetObject("ui_windows_open");
+					for (const JSONField& field : uiWIndowsOpenObj.fields)
+					{
+						m_UIWindows[Hash(field.label.c_str())] = UIWindow{ field.value.AsBool(), field.label };
+
+					}
 				}
 			}
 		}
@@ -2140,6 +2222,8 @@ namespace flex
 
 	void FlexEngine::SerializeUIWindowCache()
 	{
+		PROFILE_AUTO("ParseUIWindowCache");
+
 		JSONObject uiWindowsOpenObj = {};
 		for (auto& pair : m_UIWindows)
 		{
@@ -2156,6 +2240,18 @@ namespace flex
 		}
 	}
 
+	bool FlexEngine::GetInstallTerminalWatch() const
+	{
+		return m_bInstallTerminalDirectoryWatch;
+	}
+
+	void FlexEngine::SetInstallTerminalWatch(bool bInstallTerminalWatch)
+	{
+		m_bInstallTerminalDirectoryWatch = bInstallTerminalWatch;
+
+		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->SetInstallDirectoryWatch(m_bInstallTerminalDirectoryWatch);
+	}
+
 	std::string FlexEngine::EngineVersionString()
 	{
 		return IntToString(EngineVersionMajor) + "." +
@@ -2170,14 +2266,16 @@ namespace flex
 
 	void FlexEngine::CreateCameraInstances()
 	{
-		FirstPersonCamera* fpCamera = new FirstPersonCamera();
-		g_CameraManager->AddCamera(fpCamera, true);
+		PROFILE_AUTO("CreateCameraInstances");
 
 		DebugCamera* debugCamera = new DebugCamera();
 		debugCamera->position = glm::vec3(20.0f, 8.0f, -16.0f);
 		debugCamera->yaw = glm::radians(130.0f);
 		debugCamera->pitch = glm::radians(-10.0f);
-		g_CameraManager->AddCamera(debugCamera, false);
+		g_CameraManager->AddCamera(debugCamera, /* switchTo: */ true);
+
+		FirstPersonCamera* fpCamera = new FirstPersonCamera();
+		g_CameraManager->AddCamera(fpCamera, false);
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
 		g_CameraManager->AddCamera(overheadCamera, false);
@@ -2188,6 +2286,48 @@ namespace flex
 		VehicleCamera* vehicleCamera = new VehicleCamera();
 		g_CameraManager->AddCamera(vehicleCamera, false);
 	}
+
+#if COMPILE_RENDERDOC_API
+	void FlexEngine::RenderDocStartCapture()
+	{
+		PROFILE_AUTO("RenderDocStartCapture");
+
+		Print("Capturing RenderDoc frame...\n");
+		m_RenderDocAPI->StartFrameCapture(NULL, NULL);
+		m_bRenderDocCapturingFrame = true;
+	}
+
+	void FlexEngine::RenderDocEndCapture()
+	{
+		PROFILE_AUTO("RenderDocEndCapture");
+
+		m_RenderDocAPI->EndFrameCapture(NULL, NULL);
+		m_bRenderDocCapturingFrame = false;
+
+		std::string captureFilePath;
+		if (GetLatestRenderDocCaptureFilePath(captureFilePath))
+		{
+			g_Renderer->AddEditorString("Captured RenderDoc frame");
+
+			const std::string captureFileName = StripLeadingDirectories(captureFilePath);
+			Print("Captured RenderDoc frame to %s\n", captureFileName.c_str());
+
+			CheckForRenderDocUIRunning();
+
+			if (m_RenderDocUIPID == -1)
+			{
+				const std::string& cmdLineArgs = captureFilePath;
+				// Auto open RenderDoc UI if not already running
+				m_RenderDocUIPID = m_RenderDocAPI->LaunchReplayUI(1, cmdLineArgs.c_str());
+			}
+		}
+	}
+
+	void FlexEngine::TriggerRenderDocCaptureOnNextFrame()
+	{
+		m_bRenderDocTriggerCaptureNextFrame = true;
+	}
+#endif
 
 	EventReply FlexEngine::OnMouseButtonEvent(MouseButton button, KeyAction action)
 	{
@@ -2246,22 +2386,6 @@ namespace flex
 			{
 				m_bToggleRenderImGui = true;
 				return EventReply::CONSUMED;
-			}
-
-			if (keyCode == KeyCode::KEY_R)
-			{
-				if (bControlDown)
-				{
-					g_Renderer->RecompileShaders(false);
-					return EventReply::CONSUMED;
-				}
-				else
-				{
-					g_InputManager->ClearAllInputs();
-
-					g_SceneManager->ReloadCurrentScene();
-					return EventReply::CONSUMED;
-				}
 			}
 
 			if (keyCode == KeyCode::KEY_P)
@@ -2353,15 +2477,11 @@ namespace flex
 			if (action == Action::DBG_ENTER_NEXT_SCENE)
 			{
 				g_SceneManager->SetNextSceneActive();
-				g_SceneManager->InitializeCurrentScene();
-				g_SceneManager->PostInitializeCurrentScene();
 				return EventReply::CONSUMED;
 			}
 			else if (action == Action::DBG_ENTER_PREV_SCENE)
 			{
 				g_SceneManager->SetPreviousSceneActive();
-				g_SceneManager->InitializeCurrentScene();
-				g_SceneManager->PostInitializeCurrentScene();
 				return EventReply::CONSUMED;
 			}
 		}
@@ -2405,8 +2525,8 @@ namespace flex
 			}
 
 			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(m_RenderDocModule, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
-			assert(ret == 1);
+			i32 ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&m_RenderDocAPI);
+			CHECK_EQ(ret, 1);
 
 			m_RenderDocAPI->GetAPIVersion(&m_RenderDocAPIVerionMajor, &m_RenderDocAPIVerionMinor, &m_RenderDocAPIVerionPatch);
 			Print("### RenderDoc API v%i.%i.%i connected, F9 to capture ###\n", m_RenderDocAPIVerionMajor, m_RenderDocAPIVerionMinor, m_RenderDocAPIVerionPatch);
@@ -2496,25 +2616,18 @@ namespace flex
 		const glm::vec3& startPos,
 		const glm::vec3& cameraForward,
 		real& inOutOffset,
-		bool recalculateOffset,
-		glm::vec3& inOutPrevIntersectionPoint,
-		glm::vec3* outTrueIntersectionPoint)
+		bool bRecalculateOffset,
+		glm::vec3& inOutPrevIntersectionPoint)
 	{
-		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
-		glm::vec3 planeN = planeNorm;
-		if (glm::dot(planeN, cameraForward) > 0.0f)
+		real intersectionDistance = CalculateRayPlaneIntersection(rayOrigin, rayEnd, planeOrigin, planeNorm, cameraForward);
+
+		if (intersectionDistance >= 0.0f)
 		{
-			planeN = -planeN;
-		}
-		real intersectionDistance;
-		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
-		{
+			glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+
 			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
-			if (outTrueIntersectionPoint)
-			{
-				*outTrueIntersectionPoint = intersectionPoint;
-			}
-			if (recalculateOffset) // Mouse was clicked or wrapped
+
+			if (bRecalculateOffset) // Mouse was clicked or wrapped
 			{
 				inOutOffset = glm::dot(intersectionPoint - startPos, axis);
 			}
@@ -2525,6 +2638,66 @@ namespace flex
 		}
 
 		return VEC3_ZERO;
+	}
+
+	glm::vec3 FlexEngine::CalculateRayPlaneIntersection(
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm,
+		const glm::vec3& planeTan,
+		const glm::vec3& planeBitan,
+		const glm::vec3& startPos,
+		const glm::vec3& cameraForward,
+		glm::vec2& inOutOffset2D,
+		bool bRecalculateOffset,
+		glm::vec3& inOutPrevIntersectionPoint)
+	{
+		real intersectionDistance = CalculateRayPlaneIntersection(rayOrigin, rayEnd, planeOrigin, planeNorm, cameraForward);
+
+		if (intersectionDistance >= 0.0f)
+		{
+			glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+
+			glm::vec3 intersectionPoint = rayOrigin + rayDir * intersectionDistance;
+
+			if (bRecalculateOffset) // Mouse was clicked or wrapped
+			{
+				inOutOffset2D = glm::vec2(
+					glm::dot(intersectionPoint - startPos, planeTan),
+					glm::dot(intersectionPoint - startPos, planeBitan));
+			}
+			inOutPrevIntersectionPoint = intersectionPoint;
+
+			return planeOrigin +
+				(glm::dot(intersectionPoint - planeOrigin, planeTan) - inOutOffset2D.x) * planeTan +
+				(glm::dot(intersectionPoint - planeOrigin, planeBitan) - inOutOffset2D.y) * planeBitan;
+		}
+
+		return VEC3_ZERO;
+	}
+
+	real FlexEngine::CalculateRayPlaneIntersection(
+		const glm::vec3& rayOrigin,
+		const glm::vec3& rayEnd,
+		const glm::vec3& planeOrigin,
+		const glm::vec3& planeNorm,
+		const glm::vec3& cameraForward)
+	{
+		glm::vec3 rayDir = glm::normalize(rayEnd - rayOrigin);
+		glm::vec3 planeN = planeNorm;
+		if (glm::dot(planeN, cameraForward) > 0.0f)
+		{
+			planeN = -planeN;
+		}
+
+		real intersectionDistance;
+		if (glm::intersectRayPlane(rayOrigin, rayDir, planeOrigin, planeN, intersectionDistance))
+		{
+			return intersectionDistance;
+		}
+
+		return -1.0f;
 	}
 
 	void FlexEngine::GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd)

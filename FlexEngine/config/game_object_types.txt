@@ -1,3 +1,5 @@
+power pole
+wire plug
 spring
 socket
 soft body
@@ -8,21 +10,24 @@ directional light
 point light
 reflection probe
 rising block
+empty cart
 engine cart
 skybox
 terminal
-blocks
+head lamp
 battery
 area light
 glass pane
 valve
+miner
+mineral deposit
 mobile liquid box
 object
 road
 wire
-wire plug
-cart
 particle system
 terrain generator
-vehicle
 solar panel
+vehicle
+speaker
+pickaxe

@@ -4,6 +4,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/BroadphaseCollision/btBroadphaseProxy.h>
 IGNORE_WARNINGS_POP
 
+class btCollisionShape;
+
 namespace flex
 {
 	static BroadphaseNativeTypes g_CollisionTypes[] =
@@ -49,13 +51,14 @@ namespace flex
 	std::string CollisionShapeTypeToString(int shapeType);
 	BroadphaseNativeTypes StringToCollisionShapeType(const std::string& str);
 
-	enum class CollisionType
+	enum class CollisionType : u32
 	{
 		NOTHING = 0,
 		DEFAULT = 1 << 0,
 		EDITOR_OBJECT = 1 << 1,
 		STATIC = 1 << 2,
-		EVERYTHING = ~0
+		DROPPED_ITEM = 1 << 3,
+		EVERYTHING = ~(u32)0
 	};
 
 	enum class PhysicsFlag : u32
@@ -65,5 +68,14 @@ namespace flex
 
 		MAX_FLAG = (1 << 30)
 	};
+
+	btCollisionShape* CreateCollisionShape(BroadphaseNativeTypes collisionShapeType,
+		float optionalHalfExtentsX = -1.0f,
+		float optionalHalfExtentsY = -1.0f,
+		float optionalHalfExtentsZ = -1.0f);
+	btCollisionShape* CloneCollisionShape(const glm::vec3& worldScale, btCollisionShape* originalShape);
+
+	bool SerializeCollider(btCollisionShape* collisionShape, const glm::vec3& scaleWS, JSONObject& outColliderObj);
+	btCollisionShape* ParseCollider(const JSONObject& colliderObj);
 
 } // namespace flex

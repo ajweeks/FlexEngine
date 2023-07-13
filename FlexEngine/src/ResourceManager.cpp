@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
+#include "Particles.hpp"
 #include "Player.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/LoadedMesh.hpp"
@@ -52,14 +53,24 @@ namespace flex
 		PROFILE_AUTO("ResourceManager Initialize");
 
 		m_AudioDirectoryWatcher = new DirectoryWatcher(SFX_DIRECTORY, false);
+		m_PrefabDirectoryWatcher = new DirectoryWatcher(PREFAB_DIRECTORY, false);
+		m_MeshDirectoryWatcher = new DirectoryWatcher(MESH_DIRECTORY, false);
+		m_TextureDirectoryWatcher = new DirectoryWatcher(TEXTURE_DIRECTORY, true);
 
 		DiscoverTextures();
 		DiscoverAudioFiles();
 		ParseDebugOverlayNamesFile();
+		ParseGameObjectTypesFile();
+		DiscoverParticleParameterTypes();
+		DiscoverParticleSystemTemplates();
+
+		m_NonDefaultStackSizes[SID("battery")] = 1;
 	}
 
 	void ResourceManager::PostInitialize()
 	{
+		PROFILE_AUTO("ResourceManager PostInitialize");
+
 		tofuIconID = GetOrLoadTexture(ICON_DIRECTORY "tofu-icon-256.png");
 	}
 
@@ -85,12 +96,72 @@ namespace flex
 			// to "file.wav". This delay prevents us from trying to load the temporary file.
 			m_AudioRefreshFrameCountdown = 1;
 		}
+
+		if (m_PrefabDirectoryWatcher->Update())
+		{
+			DiscoverPrefabs();
+		}
+
+		if (m_MeshDirectoryWatcher->Update())
+		{
+			DiscoverMeshes();
+		}
+
+		if (m_TextureDirectoryWatcher->Update())
+		{
+			DiscoverTextures();
+		}
+
+		{
+			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+
+			if (!m_QueuedTextureLoadInfos.empty())
+			{
+				// TODO: Kick off at other points in the frame?
+				auto iter = m_QueuedTextureLoadInfos.begin();
+				while (iter != m_QueuedTextureLoadInfos.end())
+				{
+					TextureID textureID = iter->first;
+					TextureLoadInfo& loadInfo = iter->second;
+
+					bool bIsLoading = loadedTextures[textureID]->IsLoading();
+					if (bIsLoading)
+					{
+						++iter;
+						continue;
+					}
+
+					Texture* texture = GetLoadedTexture(textureID, false);
+
+					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
+					Print("[TEXTURE] Created texture: %s\n", loadInfo.relativeFilePath.c_str());
+
+					if (newTexSize == 0)
+					{
+						delete texture;
+						++iter;
+						continue;
+					}
+
+					iter = m_QueuedTextureLoadInfos.erase(iter);
+				}
+			}
+		}
 	}
 
 	void ResourceManager::Destroy()
 	{
 		delete m_AudioDirectoryWatcher;
 		m_AudioDirectoryWatcher = nullptr;
+
+		delete m_PrefabDirectoryWatcher;
+		m_PrefabDirectoryWatcher = nullptr;
+
+		delete m_MeshDirectoryWatcher;
+		m_MeshDirectoryWatcher = nullptr;
+
+		delete m_TextureDirectoryWatcher;
+		m_TextureDirectoryWatcher = nullptr;
 
 		for (BitmapFont* font : fontsScreenSpace)
 		{
@@ -104,18 +175,24 @@ namespace flex
 		}
 		fontsWorldSpace.clear();
 
-		for (Texture* loadedTexture : loadedTextures)
 		{
-			delete loadedTexture;
-		}
-		loadedTextures.clear();
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+			for (Texture* loadedTexture : loadedTextures)
+			{
+				delete loadedTexture;
+			}
+			loadedTextures.clear();
+		}
+
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
+
+		JobSystem::Wait(m_TextureLoadingContext);
 	}
 
 	void ResourceManager::DestroyAllLoadedMeshes()
@@ -130,10 +207,10 @@ namespace flex
 
 	void ResourceManager::PreSceneChange()
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
 	}
@@ -157,10 +234,10 @@ namespace flex
 		}
 	}
 
-	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath)
+	LoadedMesh* ResourceManager::FindOrLoadMesh(const std::string& relativeFilePath, bool bForceReload /* = false */)
 	{
 		LoadedMesh* result = nullptr;
-		if (!FindPreLoadedMesh(relativeFilePath, &result))
+		if (bForceReload || !FindPreLoadedMesh(relativeFilePath, &result))
 		{
 			// Mesh hasn't been loaded before, load it now
 			result = Mesh::LoadMesh(relativeFilePath);
@@ -173,31 +250,193 @@ namespace flex
 		return EndsWith(fileName, "glb") || EndsWith(fileName, "gltf");
 	}
 
+	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs, bool bCreateRenderObject)
+	{
+		std::string meshFilePath;
+		if (meshObj.TryGetString("mesh", meshFilePath))
+		{
+			if (sceneFileVersion >= 4)
+			{
+				meshFilePath = MESH_DIRECTORY + meshFilePath;
+			}
+			else
+			{
+				// "file" field stored mesh name without extension in versions <= 3, try to guess it
+				bool bMatched = false;
+				for (const std::string& path : discoveredMeshes)
+				{
+					std::string discoveredMeshName = StripFileType(path);
+					if (discoveredMeshName.compare(meshFilePath) == 0)
+					{
+						meshFilePath = MESH_DIRECTORY + path;
+						bMatched = true;
+						break;
+					}
+				}
+
+				if (!bMatched)
+				{
+					std::string glbFilePath = MESH_DIRECTORY + meshFilePath + ".glb";
+					std::string gltfFilePath = MESH_DIRECTORY + meshFilePath + ".gltf";
+					if (FileExists(glbFilePath))
+					{
+						meshFilePath = glbFilePath;
+					}
+					else if (FileExists(glbFilePath))
+					{
+						meshFilePath = gltfFilePath;
+					}
+				}
+
+				if (!FileExists(meshFilePath))
+				{
+					PrintError("Failed to upgrade scene file, unable to find path of mesh with name %s\n", meshFilePath.c_str());
+					return;
+				}
+			}
+
+			Mesh::ImportFromFile(meshFilePath, parent, materialIDs, bCreateRenderObject);
+			return;
+		}
+
+		std::string prefabName;
+		if (meshObj.TryGetString("prefab", prefabName))
+		{
+			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
+			return;
+		}
+	}
+
+	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
+	{
+		JSONField meshObject = {};
+
+		switch (mesh->GetType())
+		{
+		case Mesh::Type::FILE:
+		{
+			const size_t prefixLen = strlen(MESH_DIRECTORY);
+			std::string meshFilepath = mesh->GetRelativeFilePath();
+			meshFilepath = meshFilepath.substr(prefixLen);
+			meshObject = JSONField("mesh", JSONValue(meshFilepath));
+		} break;
+		case Mesh::Type::PREFAB:
+		{
+			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(mesh->GetSubMesh(0)->GetShape());
+			meshObject = JSONField("prefab", JSONValue(prefabShapeStr));
+		} break;
+		default:
+		{
+			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
+		} break;
+		}
+
+		return meshObject;
+	}
+
 	void ResourceManager::DiscoverMeshes()
 	{
 		std::vector<std::string> filePaths;
 		if (Platform::FindFilesInDirectory(MESH_DIRECTORY, filePaths, "*"))
 		{
+			i32 modifiedFileCount = 0;
 			for (const std::string& filePath : filePaths)
 			{
 				std::string fileName = StripLeadingDirectories(filePath);
-				if (MeshFileNameConforms(filePath) && !Contains(discoveredMeshes, fileName))
+				if (MeshFileNameConforms(filePath))
 				{
-					// TODO: Support storing meshes in child directories
-					discoveredMeshes.push_back(fileName);
+					if (Contains(discoveredMeshes, fileName))
+					{
+						// Existing mesh
+
+						if (Contains(m_MeshDirectoryWatcher->modifiedFilePaths, filePath))
+						{
+							// File has been modified, update all usages
+							g_SceneManager->CurrentScene()->OnExternalMeshChange(filePath);
+							++modifiedFileCount;
+						}
+					}
+					else
+					{
+						// Newly discovered mesh
+
+						// TODO: Support storing meshes in child directories
+						discoveredMeshes.push_back(fileName);
+					}
 				}
+			}
+
+			if (modifiedFileCount > 0)
+			{
+				Print("Found and re-imported %d modified mesh%s\n", modifiedFileCount, modifiedFileCount > 1 ? "es" : "");
 			}
 		}
 	}
 
+	bool ParsePrefabTemplate(const std::string& filePath, std::map<PrefabID, std::string>& prefabNames, std::vector<ResourceManager::PrefabTemplateInfo>& templateInfos)
+	{
+		JSONObject prefabObject;
+		if (JSONParser::ParseFromFile(filePath, prefabObject))
+		{
+			const std::string fileName = StripLeadingDirectories(filePath);
+
+			i32 prefabVersion = prefabObject.GetInt("version");
+
+			i32 sceneVersion = 6;
+			// Added in prefab v3, older files use scene version 6
+			prefabObject.TryGetInt("scene version", sceneVersion);
+
+			PrefabID prefabID;
+			if (prefabVersion >= 2)
+			{
+				// Added in prefab v2
+				std::string idStr = prefabObject.GetString("prefab id");
+				prefabID = GUID::FromString(idStr);
+			}
+			else
+			{
+				prefabID = Platform::GenerateGUID();
+			}
+
+			std::string prefabName = StripFileType(fileName);
+			prefabNames.emplace(prefabID, prefabName);
+
+
+			JSONObject prefabRootObject = prefabObject.GetObject("root");
+
+			using CopyFlags = GameObject::CopyFlags;
+
+			CopyFlags copyFlags = (CopyFlags)(
+				(u32)CopyFlags::ALL &
+				~(u32)CopyFlags::CREATE_RENDER_OBJECT &
+				~(u32)CopyFlags::ADD_TO_SCENE);
+			PrefabIDPair prefabIDPair;
+			prefabIDPair.m_PrefabID = prefabID;
+			prefabIDPair.m_SubGameObjectID = prefabRootObject.GetGameObjectID("id");
+			GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, prefabIDPair, true, copyFlags);
+
+			CHECK(prefabTemplate->IsPrefabTemplate());
+
+			templateInfos.emplace_back(prefabTemplate, prefabID, fileName);
+		}
+		else
+		{
+			PrintError("Failed to parse prefab file: %s, error: %s\n", filePath.c_str(), JSONParser::GetErrorString());
+			return false;
+		}
+
+		return true;
+	}
+
 	void ResourceManager::DiscoverPrefabs()
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.templateObject->Destroy();
-			delete prefabTemplatePair.templateObject;
+			prefabTemplateInfo.templateObject->Destroy();
+			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
+		discoveredPrefabs.clear();
 
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(PREFAB_DIRECTORY, foundFiles, ".json"))
@@ -210,40 +449,7 @@ namespace flex
 					Print("Parsing prefab: %s\n", fileName.c_str());
 				}
 
-				JSONObject prefabObject;
-				if (JSONParser::ParseFromFile(foundFilePath, prefabObject))
-				{
-					const std::string fileName = StripLeadingDirectories(foundFilePath);
-
-					i32 prefabVersion = prefabObject.GetInt("version");
-
-					i32 sceneVersion = 6;
-					// Added in prefab v3, older files use scene version 6
-					prefabObject.TryGetInt("scene version", sceneVersion);
-
-					PrefabID prefabID;
-					if (prefabVersion >= 2)
-					{
-						// Added in prefab v2
-						std::string idStr = prefabObject.GetString("prefab id");
-						prefabID = GUID::FromString(idStr);
-					}
-					else
-					{
-						prefabID = Platform::GenerateGUID();
-					}
-
-					JSONObject prefabRootObject = prefabObject.GetObject("root");
-
-					GameObject* prefabTemplate = GameObject::CreateObjectFromJSON(prefabRootObject, nullptr, sceneVersion, true);
-
-					prefabTemplates.emplace_back(prefabTemplate, prefabID, fileName, false);
-				}
-				else
-				{
-					PrintError("Failed to parse prefab file: %s, error: %s\n", foundFilePath.c_str(), JSONParser::GetErrorString());
-					return;
-				}
+				ParsePrefabTemplate(foundFilePath, discoveredPrefabs, prefabTemplates);
 			}
 		}
 		else
@@ -261,14 +467,11 @@ namespace flex
 	void ResourceManager::DiscoverAudioFiles()
 	{
 		std::map<StringID, AudioFileMetaData> newDiscoveredAudioFiles;
-		i32 unchangedCount = 0;
 		i32 modifiedCount = 0;
 		i32 addedCount = 0;
 		i32 removedCount = 0;
-		i32 failedCount = 0;
 
 		StringBuilder errorStringBuilder;
-
 		std::vector<std::string> foundFiles;
 		if (Platform::FindFilesInDirectory(SFX_DIRECTORY, foundFiles, ".wav"))
 		{
@@ -277,58 +480,41 @@ namespace flex
 				std::string relativeFilePath = foundFilePath.substr(strlen(SFX_DIRECTORY));
 				StringID stringID = SID(relativeFilePath.c_str());
 				AudioFileMetaData metaData(relativeFilePath);
-				if (Platform::GetFileModifcationTime(foundFilePath.c_str(), metaData.fileModifiedDate))
+				auto iter = discoveredAudioFiles.find(stringID);
+				if (iter != discoveredAudioFiles.end())
 				{
-					auto iter = discoveredAudioFiles.find(stringID);
-					if (iter != discoveredAudioFiles.end())
+					// Existing file
+					auto modifiedIter = std::find(m_AudioDirectoryWatcher->modifiedFilePaths.begin(), m_AudioDirectoryWatcher->modifiedFilePaths.end(), foundFilePath);
+					if (modifiedIter != m_AudioDirectoryWatcher->modifiedFilePaths.end())
 					{
-						// Existing file
-						if (iter->second.fileModifiedDate != metaData.fileModifiedDate)
+						++modifiedCount;
+						if (iter->second.sourceID != InvalidAudioSourceID)
 						{
-							++modifiedCount;
-							if (iter->second.sourceID != InvalidAudioSourceID)
+							// Reload existing audio file if already loaded, it's out of date
+							errorStringBuilder.Clear();
+							if (AudioManager::ReplaceAudioSource(foundFilePath, iter->second.sourceID, &errorStringBuilder) != InvalidAudioSourceID)
 							{
-								// Reload existing audio file if already loaded, it's out of date
-								errorStringBuilder.Clear();
-								if (AudioManager::ReplaceAudioSource(foundFilePath, iter->second.sourceID, &errorStringBuilder) != InvalidAudioSourceID)
-								{
-									metaData.bInvalid = false;
-								}
-								else
-								{
-									// Failed to replace
-									metaData.bInvalid = true;
-									newDiscoveredAudioFiles.emplace(stringID, metaData);
-									++failedCount;
-									continue;
-								}
+								metaData.bInvalid = false;
+							}
+							else
+							{
+								// Failed to replace
+								metaData.bInvalid = true;
+								newDiscoveredAudioFiles.emplace(stringID, metaData);
+								continue;
 							}
 						}
-						else
-						{
-							++unchangedCount;
-						}
+					}
 
-						metaData.sourceID = discoveredAudioFiles[stringID].sourceID;
-					}
-					else
-					{
-						// Newly discovered file
-						++addedCount;
-					}
-					newDiscoveredAudioFiles.emplace(stringID, metaData);
+					metaData.sourceID = discoveredAudioFiles[stringID].sourceID;
 				}
 				else
 				{
-					PrintError("Failed to get file modification time for %s\n", relativeFilePath.c_str());
-					newDiscoveredAudioFiles.emplace(stringID, metaData);
+					// Newly discovered file
+					++addedCount;
 				}
+				newDiscoveredAudioFiles.emplace(stringID, metaData);
 			}
-		}
-		else
-		{
-			PrintError("Failed to find sound files in \"" SFX_DIRECTORY "\"!\n");
-			return;
 		}
 
 		removedCount = (i32)discoveredAudioFiles.size() - (i32)(newDiscoveredAudioFiles.size() - addedCount);
@@ -338,9 +524,20 @@ namespace flex
 
 		if (g_bEnableLogging_Loading)
 		{
-			Print("unchanged: %d, mod: %d, add: %d, removed: %d, failed: %d\n", unchangedCount, modifiedCount, addedCount, removedCount, failedCount);
+			if (modifiedCount != 0)
+			{
+				Print("%d audio file%s modified\n", modifiedCount, modifiedCount > 1 ? "s" : "");
+			}
 
-			Print("Discovered %u audio files\n", (u32)discoveredAudioFiles.size());
+			if (addedCount != 0)
+			{
+				Print("%d audio file%s added\n", addedCount, addedCount > 1 ? "s" : "");
+			}
+
+			if (removedCount != 0)
+			{
+				Print("%d audio file%s removed\n", removedCount, removedCount > 1 ? "s" : "");
+			}
 		}
 	}
 
@@ -372,25 +569,155 @@ namespace flex
 		}
 
 		{
-			icons.clear();
+			discoveredIcons.clear();
 
-			std::vector<std::string> foundFiles;
-			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats)))
+			std::vector<std::string> foundIconFiles;
+			if (Platform::FindFilesInDirectory(ICON_DIRECTORY, foundIconFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
 			{
-				for (const std::string& foundFilePath : foundFiles)
+				for (const std::string& foundFilePath : foundIconFiles)
 				{
 					std::string trimmedFileName = RelativePathToAbsolute(foundFilePath);
 					trimmedFileName = StripLeadingDirectories(StripFileType(foundFilePath));
-					if (EndsWith(trimmedFileName, "-icon-256"))
+					i32 resolution = 0;
+					size_t iconEnd = trimmedFileName.find_last_of("-icon-");
+					if (iconEnd != std::string::npos)
 					{
-						trimmedFileName = RemoveEndIfPresent(trimmedFileName, "-icon-256");
+						resolution = ParseInt(trimmedFileName.substr(iconEnd + 1));
+						trimmedFileName = trimmedFileName.substr(0, iconEnd - 6 + 1);
 					}
 					trimmedFileName = Replace(trimmedFileName, '-', ' ');
-					StringID gameObjectTypeID = Hash(trimmedFileName.c_str());
-					icons.emplace_back(Pair<StringID, Pair<std::string, TextureID>>{ gameObjectTypeID, { foundFilePath, InvalidTextureID } });
+					StringID prefabNameSID = Hash(trimmedFileName.c_str());
+					IconMetaData iconMetaData = {};
+					iconMetaData.relativeFilePath = foundFilePath;
+					iconMetaData.resolution = resolution;
+					discoveredIcons.emplace_back(prefabNameSID, iconMetaData);
 				}
 			}
 		}
+
+		// Check for modified files to reload
+		{
+			std::vector<std::string> foundFiles;
+			if (Platform::FindFilesInDirectory(TEXTURE_DIRECTORY, foundFiles, s_SupportedTextureFormats, ARRAY_LENGTH(s_SupportedTextureFormats), true))
+			{
+				FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+				i32 modifiedTextureCount = 0;
+				for (const std::string& foundFilePath : foundFiles)
+				{
+					if (Contains(m_TextureDirectoryWatcher->modifiedFilePaths, foundFilePath))
+					{
+						for (Texture* texture : loadedTextures)
+						{
+							// File has been modified externally, reload its contents
+							if (texture != nullptr &&
+								texture->relativeFilePath == foundFilePath)
+							{
+								texture->Reload();
+								++modifiedTextureCount;
+							}
+						}
+					}
+				}
+
+				if (modifiedTextureCount > 0)
+				{
+					Print("Found and re-imported %d modified texture%s\n", modifiedTextureCount, modifiedTextureCount > 1 ? "s" : "");
+				}
+			}
+		}
+	}
+
+	void ResourceManager::DiscoverParticleSystemTemplates()
+	{
+		m_ParticleTemplates.clear();
+
+		std::string absoluteDirectory = RelativePathToAbsolute(PARTICLE_SYSTEMS_DIRECTORY);
+		if (Platform::DirectoryExists(absoluteDirectory))
+		{
+			std::vector<std::string> filePaths;
+			if (Platform::FindFilesInDirectory(absoluteDirectory, filePaths, ".json"))
+			{
+				for (const std::string& filePath : filePaths)
+				{
+					std::string fileName = StripLeadingDirectories(StripFileType(filePath));
+
+					ParticleSystemTemplate particleTemplate = {};
+					particleTemplate.filePath = filePath;
+					particleTemplate.nameSID = SID(fileName.c_str());
+					if (!ParticleParameters::Deserialize(filePath, particleTemplate.params))
+					{
+						PrintError("Failed to read particle parameters file at %s\n", filePath.c_str());
+						continue;
+					}
+
+					m_ParticleTemplates.emplace(particleTemplate.nameSID, particleTemplate);
+				}
+			}
+		}
+	}
+
+	void ResourceManager::SerializeAllParticleSystemTemplates()
+	{
+		for (auto& pair : m_ParticleTemplates)
+		{
+			ParticleParameters::Serialize(pair.second.filePath, pair.second.params);
+		}
+	}
+
+	void ResourceManager::ParseGameObjectTypesFile()
+	{
+		gameObjectTypeStringIDPairs.clear();
+		std::string fileContents;
+		// TODO: Gather this info from reflection?
+		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
+		{
+			std::vector<std::string> lines = Split(fileContents, '\n');
+			for (const std::string& line : lines)
+			{
+				if (!line.empty())
+				{
+					const char* lineCStr = line.c_str();
+					StringID typeID = Hash(lineCStr);
+					if (gameObjectTypeStringIDPairs.find(typeID) != gameObjectTypeStringIDPairs.end())
+					{
+						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
+					}
+					gameObjectTypeStringIDPairs.emplace(typeID, line);
+				}
+			}
+		}
+		else
+		{
+			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	void ResourceManager::SerializeGameObjectTypesFile()
+	{
+		StringBuilder fileContents;
+
+		for (auto iter = gameObjectTypeStringIDPairs.begin(); iter != gameObjectTypeStringIDPairs.end(); ++iter)
+		{
+			fileContents.AppendLine(iter->second);
+		}
+
+		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
+		{
+			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
+		}
+	}
+
+	const char* ResourceManager::TypeIDToString(StringID typeID)
+	{
+		for (const auto& pair : gameObjectTypeStringIDPairs)
+		{
+			if (pair.first == typeID)
+			{
+				return pair.second.c_str();
+			}
+		}
+		return "Unknown";
 	}
 
 	void ResourceManager::ParseFontFile()
@@ -484,43 +811,37 @@ namespace flex
 		}
 	}
 
-	void ResourceManager::ParseMaterialsFile()
+	void ResourceManager::ParseMaterialsFiles()
 	{
-		PROFILE_AUTO("ResourceManager ParseMaterialsFile");
+		PROFILE_AUTO("ResourceManager ParseMaterialsFiles");
 
 		parsedMaterialInfos.clear();
 
-		if (FileExists(MATERIALS_FILE_LOCATION))
+		std::vector<std::string> filePaths;
+		if (Platform::FindFilesInDirectory(MATERIALS_DIRECTORY, filePaths, "*", false))
 		{
-			if (g_bEnableLogging_Loading)
+			for (const std::string& filePath : filePaths)
 			{
-				const std::string cleanedFilePath = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
-				Print("Parsing materials file at %s\n", cleanedFilePath.c_str());
-			}
-
-			JSONObject obj;
-			if (JSONParser::ParseFromFile(MATERIALS_FILE_LOCATION, obj))
-			{
-				std::vector<JSONObject> materialObjects = obj.GetObjectArray("materials");
-				for (const JSONObject& materialObject : materialObjects)
+				JSONObject parentObj;
+				if (JSONParser::ParseFromFile(filePath, parentObj))
 				{
+					i32 fileVersion = parentObj.GetInt("version");
+
 					MaterialCreateInfo matCreateInfo = {};
-					Material::ParseJSONObject(materialObject, matCreateInfo);
+					JSONObject materialObj = parentObj.GetObject("material");
+					Material::ParseJSONObject(materialObj, matCreateInfo, fileVersion);
 
 					parsedMaterialInfos.push_back(matCreateInfo);
-
-					g_Renderer->InitializeMaterial(&matCreateInfo);
 				}
-			}
-			else
-			{
-				PrintError("Failed to parse materials file: %s\n\terror: %s\n", MATERIALS_FILE_LOCATION, JSONParser::GetErrorString());
-				return;
+				else
+				{
+					PrintError("Failed to parse material file at %s\n\terror: %s\n", filePath.c_str(), JSONParser::GetErrorString());
+				}
 			}
 		}
 		else
 		{
-			PrintError("Failed to parse materials file at %s\n", MATERIALS_FILE_LOCATION);
+			PrintError("Failed to find any material files in %s\n", MATERIALS_DIRECTORY);
 			return;
 		}
 
@@ -530,30 +851,58 @@ namespace flex
 		}
 	}
 
-	bool ResourceManager::SerializeMaterialFile() const
+	bool ResourceManager::SerializeAllMaterials() const
 	{
-		JSONObject materialsObj = {};
+		bool bAllSucceeded = true;
 
-		materialsObj.fields.emplace_back("version", JSONValue(BaseScene::LATEST_MATERIALS_FILE_VERSION));
-
-		// Overwrite all materials in current scene in case any values were tweaked
-		std::vector<JSONObject> materialJSONObjects = g_Renderer->SerializeAllMaterialsToJSON();
-
-		materialsObj.fields.emplace_back("materials", JSONValue(materialJSONObjects));
-
-		std::string fileContents = materialsObj.ToString();
-
-		const std::string fileName = StripLeadingDirectories(MATERIALS_FILE_LOCATION);
-		if (WriteFile(MATERIALS_FILE_LOCATION, fileContents, false))
+		for (const MaterialCreateInfo& materialInfo : parsedMaterialInfos)
 		{
-			Print("Serialized materials file to: %s\n", fileName.c_str());
-		}
-		else
-		{
-			PrintWarn("Failed to serialize materials file to: %s\n", fileName.c_str());
-			return false;
+			MaterialID matID;
+			if (g_Renderer->FindOrCreateMaterialByName(materialInfo.name, matID))
+			{
+				if (!SerializeMaterial(g_Renderer->GetMaterial(matID)))
+				{
+					bAllSucceeded = false;
+				}
+			}
 		}
 
+		return bAllSucceeded;
+	}
+
+	bool ResourceManager::SerializeLoadedMaterials() const
+	{
+		const std::map<MaterialID, Material*>& materials = g_Renderer->GetLoadedMaterials();
+
+		bool bAllSucceeded = true;
+
+		for (auto& matPair : materials)
+		{
+			Material* material = matPair.second;
+			if (!SerializeMaterial(material))
+			{
+				bAllSucceeded = false;
+			}
+		}
+
+		return bAllSucceeded;
+	}
+
+	bool ResourceManager::SerializeMaterial(Material* material) const
+	{
+		if (material->bSerializable)
+		{
+			JSONObject materialObj = material->Serialize();
+			std::string fileContents = materialObj.ToString();
+
+			std::string hypenatedName = Replace(material->name, ' ', '-');
+			const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
+			if (!WriteFile(fileName, fileContents, false))
+			{
+				PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
+				return false;
+			}
+		}
 		return true;
 	}
 
@@ -584,91 +933,6 @@ namespace flex
 		}
 	}
 
-	JSONField ResourceManager::SerializeMesh(Mesh* mesh)
-	{
-		JSONField meshObject = {};
-
-		switch (mesh->GetType())
-		{
-		case Mesh::Type::FILE:
-		{
-			std::string prefixStr = MESH_DIRECTORY;
-			std::string meshFilepath = mesh->GetRelativeFilePath().substr(prefixStr.length());
-			meshObject = JSONField("mesh", JSONValue(meshFilepath));
-		} break;
-		case Mesh::Type::PREFAB:
-		{
-			std::string prefabShapeStr = MeshComponent::PrefabShapeToString(mesh->GetSubMesh(0)->GetShape());
-			meshObject = JSONField("prefab", JSONValue(prefabShapeStr));
-		} break;
-		default:
-		{
-			PrintError("Unhandled mesh prefab type when attempting to serialize scene!\n");
-		} break;
-		}
-
-		return meshObject;
-	}
-
-	void ResourceManager::ParseMeshJSON(i32 sceneFileVersion, GameObject* parent, const JSONObject& meshObj, const std::vector<MaterialID>& materialIDs)
-	{
-		bool bCreateRenderObject = !parent->IsTemplate();
-
-		std::string meshFilePath;
-		if (meshObj.TryGetString("mesh", meshFilePath))
-		{
-			if (sceneFileVersion >= 4)
-			{
-				meshFilePath = MESH_DIRECTORY + meshFilePath;
-			}
-			else
-			{
-				// "file" field stored mesh name without extension in versions <= 3, try to guess it
-				bool bMatched = false;
-				for (const std::string& path : discoveredMeshes)
-				{
-					std::string discoveredMeshName = StripFileType(path);
-					if (discoveredMeshName.compare(meshFilePath) == 0)
-					{
-						meshFilePath = MESH_DIRECTORY + path;
-						bMatched = true;
-						break;
-					}
-				}
-
-				if (!bMatched)
-				{
-					std::string glbFilePath = MESH_DIRECTORY + meshFilePath + ".glb";
-					std::string gltfFilePath = MESH_DIRECTORY + meshFilePath + ".gltf";
-					if (FileExists(glbFilePath))
-					{
-						meshFilePath = glbFilePath;
-					}
-					else if (FileExists(glbFilePath))
-					{
-						meshFilePath = gltfFilePath;
-					}
-				}
-
-				if (!FileExists(meshFilePath))
-				{
-					PrintError("Failed to upgrade scene file, unable to find path of mesh with name %s\n", meshFilePath.c_str());
-					return;
-				}
-			}
-
-			Mesh::ImportFromFile(meshFilePath, parent, materialIDs, bCreateRenderObject);
-			return;
-		}
-
-		std::string prefabName;
-		if (meshObj.TryGetString("prefab", prefabName))
-		{
-			Mesh::ImportFromPrefab(prefabName, parent, materialIDs, bCreateRenderObject);
-			return;
-		}
-	}
-
 	void ResourceManager::SetRenderedSDFFilePath(FontMetaData& metaData)
 	{
 		static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
@@ -679,13 +943,15 @@ namespace flex
 	}
 
 	bool ResourceManager::LoadFontMetrics(const std::vector<char>& fileMemory,
-		FT_Library& ft,
+		FT_Library ft,
 		FontMetaData& metaData,
 		std::map<i32, FontMetric*>* outCharacters,
 		std::array<glm::vec2i, 4>* outMaxPositions,
 		FT_Face* outFace)
 	{
-		assert(metaData.bitmapFont == nullptr);
+		PROFILE_AUTO("LoadFontMetrics");
+
+		CHECK_EQ(metaData.bitmapFont, nullptr);
 
 		// TODO: Save in common place
 		u32 sampleDensity = 32;
@@ -879,9 +1145,12 @@ namespace flex
 
 	Texture* ResourceManager::FindLoadedTextureWithPath(const std::string& filePath)
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (Texture* texture : loadedTextures)
 		{
-			if (texture && !filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
+			if (texture != nullptr &&
+				!filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
 			{
 				return texture;
 			}
@@ -892,9 +1161,12 @@ namespace flex
 
 	Texture* ResourceManager::FindLoadedTextureWithName(const std::string& fileName)
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (Texture* texture : loadedTextures)
 		{
-			if (texture && fileName.compare(texture->fileName) == 0)
+			if (texture != nullptr &&
+				fileName.compare(texture->fileName) == 0)
 			{
 				return texture;
 			}
@@ -903,27 +1175,64 @@ namespace flex
 		return nullptr;
 	}
 
-	Texture* ResourceManager::GetLoadedTexture(TextureID textureID)
+	bool ResourceManager::IsTextureLoading(TextureID textureID) const
 	{
 		if (textureID < loadedTextures.size())
 		{
-			return loadedTextures[textureID];
+			return loadedTextures[textureID] != nullptr && loadedTextures[textureID]->IsLoading();
+		}
+		return false;
+	}
+
+	bool ResourceManager::IsTextureCreated(TextureID textureID) const
+	{
+		if (textureID < loadedTextures.size())
+		{
+			return loadedTextures[textureID] != nullptr && loadedTextures[textureID]->IsCreated();
+		}
+		return false;
+	}
+
+	Texture* ResourceManager::GetLoadedTexture(TextureID textureID, bool bProvideFallbackWhileLoading /* = true */)
+	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+		if (textureID < loadedTextures.size())
+		{
+			Texture* result = loadedTextures[textureID];
+			if (bProvideFallbackWhileLoading && !result->IsCreated())
+			{
+				// Show pink texture until this one has loaded
+				return loadedTextures[g_Renderer->pinkTextureID];
+			}
+			return result;
 		}
 		return nullptr;
 	}
 
-	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath)
+	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler /* = nullptr */)
 	{
-		for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 		{
-			Texture* texture = loadedTextures[i];
-			if (texture && texture->relativeFilePath.compare(textureFilePath) == 0)
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+			for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 			{
-				return (TextureID)i;
+				Texture* texture = loadedTextures[i];
+				if (texture != nullptr &&
+					texture->relativeFilePath.compare(textureFilePath) == 0)
+				{
+					// TODO: Fallback on pink texture when requested texture is still loading?
+					return (TextureID)i;
+				}
 			}
 		}
 
-		TextureID texID = g_Renderer->InitializeTextureFromFile(textureFilePath, false, false, false);
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = textureFilePath;
+		loadInfo.sampler = sampler != nullptr ? sampler : g_Renderer->GetSamplerLinearRepeat();
+		loadInfo.relativeFilePath = textureFilePath;
+		TextureID texID = g_ResourceManager->QueueTextureLoad(loadInfo);
+
 		return texID;
 	}
 
@@ -938,6 +1247,8 @@ namespace flex
 		{
 			return false;
 		}
+
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
 		for (auto iter = loadedTextures.begin(); iter != loadedTextures.end(); ++iter)
 		{
@@ -957,17 +1268,18 @@ namespace flex
 		return false;
 	}
 
-	TextureID ResourceManager::GetOrLoadIcon(StringID gameObjectTypeID)
+	TextureID ResourceManager::GetOrLoadIcon(StringID prefabNameSID, i32 resolution /* = -1 */)
 	{
-		for (Pair<StringID, Pair<std::string, TextureID>>& pair : icons)
+		for (Pair<StringID, IconMetaData>& pair : discoveredIcons)
 		{
-			if (pair.first == gameObjectTypeID)
+			if (pair.first == prefabNameSID &&
+				(resolution == -1 || pair.second.resolution == resolution))
 			{
-				if (pair.second.second == InvalidTextureID)
+				if (pair.second.textureID == InvalidTextureID)
 				{
-					pair.second.second = GetOrLoadTexture(pair.second.first);
+					pair.second.textureID = GetOrLoadTexture(pair.second.relativeFilePath);
 				}
-				return pair.second.second;
+				return pair.second.textureID;
 			}
 		}
 
@@ -976,6 +1288,8 @@ namespace flex
 
 	TextureID ResourceManager::GetNextAvailableTextureID()
 	{
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
 		for (u32 i = 0; i < loadedTextures.size(); ++i)
 		{
 			if (loadedTextures[i] == nullptr)
@@ -987,11 +1301,132 @@ namespace flex
 		return (TextureID)(loadedTextures.size() - 1);
 	}
 
-	TextureID ResourceManager::AddLoadedTexture(Texture* texture)
+	TextureID ResourceManager::QueueTextureLoad(const std::string& relativeFilePath,
+		HTextureSampler inSampler,
+		bool bFlipVertically,
+		bool bGenerateMipMaps,
+		bool bHDR)
+	{
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = relativeFilePath;
+		loadInfo.sampler = inSampler;
+		loadInfo.bFlipVertically = bFlipVertically;
+		loadInfo.bGenerateMipMaps = bGenerateMipMaps;
+		loadInfo.bHDR = bHDR;
+		return QueueTextureLoad(loadInfo);
+	}
+
+	TextureID ResourceManager::QueueTextureLoad(const TextureLoadInfo& loadInfo)
 	{
 		TextureID textureID = GetNextAvailableTextureID();
+
+		{
+			FLEX_MUTEX_LOCK(m_QueuedTextureLoadInfoMutex);
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+			m_QueuedTextureLoadInfos.emplace_back(textureID, loadInfo);
+			Print("[TEXTURE] Queued texture load: %s\n", loadInfo.relativeFilePath.c_str());
+
+			std::string textureName = StripLeadingDirectories(loadInfo.relativeFilePath);
+			Texture* newTex = g_Renderer->CreateTexture(textureName);
+			newTex->bIsLoading = 1u;
+			newTex->bFlipVertically = loadInfo.bFlipVertically;
+			newTex->bGenerateMipMaps = loadInfo.bGenerateMipMaps;
+			newTex->bHDR = loadInfo.bHDR;
+
+			loadedTextures[textureID] = newTex;
+		}
+
+		WRITE_BARRIER;
+
+		JobSystem::Execute(m_TextureLoadingContext, [](JobSystem::JobArgs args)
+		{
+			// Load texture from disk
+			TextureLoadInfo loadInfo;
+			if (g_ResourceManager->GetQueuedTextureLoadInfo((TextureID)args.payload, loadInfo))
+			{
+				Texture* texture = g_ResourceManager->GetLoadedTexture((TextureID)args.payload, false);
+
+				if (texture->LoadFromFile(loadInfo.relativeFilePath, loadInfo.sampler, TextureFormat::UNDEFINED))
+				{
+					u32 expected = 1u;
+					texture->bIsLoading.compare_exchange_strong(expected, 0u, std::memory_order_release, std::memory_order_relaxed);
+					Print("[TEXTURE] Texture load complete: %s\n", loadInfo.relativeFilePath.c_str());
+				}
+				else
+				{
+					PrintError("Failed to load texture from file %s (TextureID: %u)\n", loadInfo.relativeFilePath.c_str(), (TextureID)args.payload);
+				}
+			}
+			else
+			{
+				PrintError("Failed to get queued texture load info! (TextureID: %u)\n", (TextureID)args.payload);
+			}
+		}, (u64)textureID);
+
+		return textureID;
+	}
+
+	TextureID ResourceManager::LoadTextureImmediate(const std::string& relativeFilePath,
+		HTextureSampler inSampler,
+		bool bFlipVertically,
+		bool bGenerateMipMaps,
+		bool bHDR)
+	{
+		return g_Renderer->InitializeTextureFromFile(relativeFilePath, inSampler,
+			bFlipVertically, bGenerateMipMaps, bHDR);
+	}
+
+	TextureID ResourceManager::LoadTextureImmediate(const TextureLoadInfo& loadInfo)
+	{
+		return LoadTextureImmediate(loadInfo.relativeFilePath, loadInfo.sampler,
+			loadInfo.bFlipVertically, loadInfo.bGenerateMipMaps, loadInfo.bHDR);
+	}
+
+	bool ResourceManager::GetQueuedTextureLoadInfo(TextureID textureID, TextureLoadInfo& outLoadInfo)
+	{
+		const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+
+		for (const Pair<TextureID, TextureLoadInfo>& pair : m_QueuedTextureLoadInfos)
+		{
+			if (pair.first == textureID)
+			{
+				outLoadInfo = pair.second;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	TextureID ResourceManager::AddLoadedTexture(Texture* texture, TextureID existingTextureID /* = InvalidTextureID */)
+	{
+		TextureID textureID = existingTextureID;
+		if (textureID == InvalidTextureID)
+		{
+			textureID = GetNextAvailableTextureID();
+		}
+
+		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+		CHECK_LT(textureID, loadedTextures.size());
+
+
 		loadedTextures[textureID] = texture;
 		return textureID;
+	}
+
+	TextureID ResourceManager::InitializeTextureArrayFromMemory(void* data,
+		u32 size,
+		TextureFormat inFormat,
+		const std::string& name,
+		u32 width,
+		u32 height,
+		u32 layerCount,
+		u32 channelCount,
+		HTextureSampler inSampler)
+	{
+		return g_Renderer->InitializeTextureArrayFromMemory(data, size, inFormat, name, width, height, layerCount, channelCount, inSampler);
 	}
 
 	MaterialCreateInfo* ResourceManager::GetMaterialInfo(const char* materialName)
@@ -1010,11 +1445,11 @@ namespace flex
 	// DEPRECATED: Use PrefabID overload instead. This function should only be used for scene files <= v5
 	GameObject* ResourceManager::GetPrefabTemplate(const char* prefabName) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplateInfo.templateObject->GetName().c_str(), prefabName) == 0)
 			{
-				return prefabTemplatePair.templateObject;
+				return prefabTemplateInfo.templateObject;
 			}
 		}
 
@@ -1023,25 +1458,59 @@ namespace flex
 
 	PrefabID ResourceManager::GetPrefabID(const char* prefabName) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (StrCmpCaseInsensitive(prefabTemplatePair.templateObject->GetName().c_str(), prefabName) == 0)
+			if (StrCmpCaseInsensitive(prefabTemplateInfo.templateObject->GetName().c_str(), prefabName) == 0)
 			{
-				return prefabTemplatePair.prefabID;
+				return prefabTemplateInfo.prefabID;
 			}
 		}
 
 		return InvalidPrefabID;
 	}
 
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabIDPair& prefabIDPair) const
+	{
+		return GetPrefabTemplate(prefabIDPair.m_PrefabID, prefabIDPair.m_SubGameObjectID);
+	}
+
 	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID) const
 	{
+		return GetPrefabTemplate(prefabID, InvalidGameObjectID);
+	}
+
+	GameObject* ResourceManager::GetPrefabTemplate(const PrefabID& prefabID, const GameObjectID& subObjectID) const
+	{
 		// TODO: Use map
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.templateObject;
+				if (!subObjectID.IsValid())
+				{
+					return prefabTemplateInfo.templateObject;
+				}
+
+				return GetPrefabSubObject(prefabTemplateInfo.templateObject, subObjectID);
+			}
+		}
+
+		return nullptr;
+	}
+
+	GameObject* ResourceManager::GetPrefabSubObject(GameObject* prefabTemplate, const GameObjectID& subObjectID) const
+	{
+		if (prefabTemplate->ID == subObjectID)
+		{
+			return prefabTemplate;
+		}
+
+		for (GameObject* gameObject : prefabTemplate->m_Children)
+		{
+			GameObject* subObject = GetPrefabSubObject(gameObject, subObjectID);
+			if (subObject != nullptr)
+			{
+				return subObject;
 			}
 		}
 
@@ -1050,11 +1519,11 @@ namespace flex
 
 	std::string ResourceManager::GetPrefabFileName(const PrefabID& prefabID) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.fileName;
+				return prefabTemplateInfo.fileName;
 			}
 		}
 
@@ -1063,11 +1532,11 @@ namespace flex
 
 	bool ResourceManager::IsPrefabDirty(const PrefabID& prefabID) const
 	{
-		for (const PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				return prefabTemplatePair.bDirty;
+				return prefabTemplateInfo.bDirty;
 			}
 		}
 
@@ -1076,35 +1545,37 @@ namespace flex
 
 	void ResourceManager::SetPrefabDirty(const PrefabID& prefabID)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabTemplatePair.prefabID == prefabID)
+			if (prefabTemplateInfo.prefabID == prefabID)
 			{
-				prefabTemplatePair.bDirty = true;
+				prefabTemplateInfo.bDirty = true;
 			}
 		}
 	}
 
 	void ResourceManager::SetAllPrefabsDirty(bool bDirty)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			prefabTemplatePair.bDirty = bDirty;
+			prefabTemplateInfo.bDirty = bDirty;
 		}
 	}
 
 	void ResourceManager::UpdatePrefabData(GameObject* prefabTemplate, const PrefabID& prefabID)
 	{
-		for (PrefabTemplatePair& prefabTemplatePair : prefabTemplates)
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
 		{
-			if (prefabID == prefabTemplatePair.prefabID)
+			if (prefabID == prefabTemplateInfo.prefabID)
 			{
-				prefabTemplatePair.templateObject->Destroy();
-				delete prefabTemplatePair.templateObject;
+				CHECK_NE(prefabTemplateInfo.templateObject, prefabTemplate);
 
-				prefabTemplatePair.templateObject = prefabTemplate;
+				prefabTemplateInfo.templateObject->Destroy();
+				delete prefabTemplateInfo.templateObject;
 
-				WritePrefabToDisk(prefabTemplatePair, prefabID);
+				prefabTemplateInfo.templateObject = prefabTemplate;
+
+				WritePrefabToDisk(prefabTemplateInfo);
 
 				g_SceneManager->CurrentScene()->OnPrefabChanged(prefabID);
 
@@ -1112,33 +1583,48 @@ namespace flex
 			}
 		}
 
-		std::string prefabIDStr = prefabID.ToString();
+		char prefabIDStrBuf[33];
+		prefabID.ToString(prefabIDStrBuf);
 		std::string prefabName = prefabTemplate->GetName();
-		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
+		PrintError("Attempted to update prefab template but no previous prefabs with PrefabID %s exist (name: %s)\n", prefabIDStrBuf, prefabName.c_str());
 	}
 
-	PrefabID ResourceManager::AddNewPrefab(GameObject* prefabTemplate, const char* fileName /* = nullptr */)
+	bool ResourceManager::WriteExistingPrefabToDisk(GameObject* prefabTemplate)
 	{
-		PrefabID newID = Platform::GenerateGUID();
+		std::string prefabName = prefabTemplate->GetName();
+		PrefabID prefabID = GetPrefabID(prefabName.c_str());
+		char fileNameStrBuff[256];
+		snprintf(fileNameStrBuff, ARRAY_LENGTH(fileNameStrBuff), "%s.json", prefabName.c_str());
+		PrefabTemplateInfo prefabTemplateInfo(prefabTemplate, prefabID, std::string(fileNameStrBuff));
 
-		std::string fileNameStr;
+		prefabTemplate->m_bIsTemplate = true;
+		bool bResult = WritePrefabToDisk(prefabTemplateInfo);
+		prefabTemplate->m_bIsTemplate = false;
+		return bResult;
+	}
 
-		if (fileName != nullptr)
-		{
-			fileNameStr = std::string(fileName);
-		}
-		else
-		{
-			fileNameStr = prefabTemplate->GetName() + ".json";
-		}
+	PrefabID ResourceManager::CreateNewPrefab(GameObject* sourceObject, const char* fileName)
+	{
+		using CopyFlags = GameObject::CopyFlags;
 
-		PrefabTemplatePair prefabTemplatePair = { prefabTemplate, newID, fileNameStr, false };
+		PrefabID newPrefabID = Platform::GenerateGUID();
 
-		prefabTemplates.emplace_back(prefabTemplatePair);
+		CopyFlags copyFlags = (CopyFlags)(
+			(CopyFlags::ALL &
+				~CopyFlags::ADD_TO_SCENE &
+				~CopyFlags::CREATE_RENDER_OBJECT)
+			| CopyFlags::COPYING_TO_PREFAB);
+		std::string templateName = sourceObject->GetName();
+		GameObject* prefabTemplate = sourceObject->CopySelf(nullptr, copyFlags, &templateName);
 
-		WritePrefabToDisk(prefabTemplatePair, newID);
+		// Give all objects new IDs so they don't conflict with the instance's
+		prefabTemplate->ChangeAllIDs();
 
-		return newID;
+		prefabTemplate->SetSourcePrefabID(newPrefabID);
+
+		prefabTemplates.emplace_back(prefabTemplate, newPrefabID, fileName);
+
+		return newPrefabID;
 	}
 
 	bool ResourceManager::IsPrefabIDValid(const PrefabID& prefabID)
@@ -1147,15 +1633,22 @@ namespace flex
 		return prefabTemplate != nullptr;
 	}
 
-	void ResourceManager::RemovePrefabTemplate(const PrefabID& prefabID)
+	void ResourceManager::DeletePrefabTemplate(const PrefabID& prefabID)
 	{
 		for (auto iter = prefabTemplates.begin(); iter != prefabTemplates.end(); ++iter)
 		{
 			if (iter->prefabID == prefabID)
 			{
+				g_SceneManager->CurrentScene()->DeleteInstancesOfPrefab(prefabID);
+
+				if (!Platform::DeleteFile(PREFAB_DIRECTORY + iter->fileName))
+				{
+					PrintError("Failed to delete prefab template at %s\n", iter->fileName.c_str());
+				}
 				iter->templateObject->Destroy();
 				delete iter->templateObject;
 				prefabTemplates.erase(iter);
+
 				break;
 			}
 		}
@@ -1168,26 +1661,95 @@ namespace flex
 		return PrefabTemplateContainsChildRecursive(prefabTemplate, child);
 	}
 
-	AudioSourceID ResourceManager::GetAudioID(StringID audioFileSID)
+	void ResourceManager::SerializeAllPrefabTemplates()
+	{
+		for (PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
+		{
+			CHECK(prefabTemplateInfo.templateObject->m_bIsTemplate);
+			WritePrefabToDisk(prefabTemplateInfo);
+		}
+	}
+
+	AudioSourceID ResourceManager::GetAudioSourceID(StringID audioFileSID)
 	{
 		return discoveredAudioFiles[audioFileSID].sourceID;
 	}
 
-	AudioSourceID ResourceManager::GetOrLoadAudioID(StringID audioFileSID)
+	AudioSourceID ResourceManager::GetOrLoadAudioSourceID(StringID audioFileSID, bool b2D)
 	{
-		if (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID)
+		auto iter = discoveredAudioFiles.find(audioFileSID);
+		if (iter == discoveredAudioFiles.end())
 		{
-			LoadAudioFile(audioFileSID, nullptr);
+			PrintError("Attempted to get undiscovered audio file with SID %lu", audioFileSID);
+			return InvalidAudioSourceID;
+		}
+
+		if (iter->second.sourceID == InvalidAudioSourceID)
+		{
+			LoadAudioFile(audioFileSID, nullptr, b2D);
 		}
 
 		return discoveredAudioFiles[audioFileSID].sourceID;
 	}
 
-	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder)
+	void ResourceManager::DestroyAudioSource(AudioSourceID audioSourceID)
+	{
+		for (auto& pair : discoveredAudioFiles)
+		{
+			if (pair.second.sourceID == audioSourceID)
+			{
+				AudioManager::DestroyAudioSource(pair.second.sourceID);
+				pair.second.sourceID = InvalidAudioSourceID;
+				break;
+			}
+		}
+	}
+
+	void ResourceManager::LoadAudioFile(StringID audioFileSID, StringBuilder* errorStringBuilder, bool b2D)
 	{
 		std::string filePath = SFX_DIRECTORY + discoveredAudioFiles[audioFileSID].name;
-		discoveredAudioFiles[audioFileSID].sourceID = AudioManager::AddAudioSource(filePath, errorStringBuilder);
+		discoveredAudioFiles[audioFileSID].sourceID = AudioManager::AddAudioSource(filePath, errorStringBuilder, b2D);
 		discoveredAudioFiles[audioFileSID].bInvalid = (discoveredAudioFiles[audioFileSID].sourceID == InvalidAudioSourceID);
+	}
+
+	u32 ResourceManager::GetMaxStackSize(const PrefabID& prefabID)
+	{
+		GameObject* templateObject = GetPrefabTemplate(prefabID);
+		if (templateObject != nullptr)
+		{
+			auto iter = m_NonDefaultStackSizes.find(templateObject->GetTypeID());
+			if (iter != m_NonDefaultStackSizes.end())
+			{
+				return iter->second;
+			}
+		}
+		return DEFAULT_MAX_STACK_SIZE;
+	}
+
+	void ResourceManager::AddNewGameObjectType(const char* newType)
+	{
+		StringID newTypeID = Hash(newType);
+		gameObjectTypeStringIDPairs.emplace(newTypeID, std::string(newType));
+
+		SerializeGameObjectTypesFile();
+	}
+
+	void ResourceManager::AddNewParticleTemplate(StringID particleTemplateNameSID, const ParticleSystemTemplate particleTemplate)
+	{
+		m_ParticleTemplates.emplace(particleTemplateNameSID, particleTemplate);
+	}
+
+	bool ResourceManager::GetParticleTemplate(StringID particleTemplateNameSID, ParticleSystemTemplate& outParticleTemplate)
+	{
+		for (auto& pair : m_ParticleTemplates)
+		{
+			if (pair.first == particleTemplateNameSID)
+			{
+				outParticleTemplate = pair.second;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	bool ResourceManager::PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const
@@ -1210,32 +1772,41 @@ namespace flex
 		return false;
 	}
 
-	void ResourceManager::WritePrefabToDisk(PrefabTemplatePair& prefabTemplatePair, const PrefabID& prefabID)
+	bool ResourceManager::WritePrefabToDisk(PrefabTemplateInfo& prefabTemplateInfo)
 	{
-		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplatePair.fileName);
+		std::string path = RelativePathToAbsolute(PREFAB_DIRECTORY + prefabTemplateInfo.fileName);
 
 		JSONObject prefabJSON = {};
 		prefabJSON.fields.emplace_back("version", JSONValue(BaseScene::LATETST_PREFAB_FILE_VERSION));
 		// Added in prefab v3
 		prefabJSON.fields.emplace_back("scene version", JSONValue(BaseScene::LATEST_SCENE_FILE_VERSION));
 
+		if (!prefabTemplateInfo.prefabID.IsValid())
+		{
+			PrintError("Prefab %s has invalid prefabID!\n", prefabTemplateInfo.fileName.c_str());
+		}
+
 		// Added in prefab v2
-		std::string prefabIDStr = prefabID.ToString();
+		std::string prefabIDStr = prefabTemplateInfo.prefabID.ToString();
 		prefabJSON.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 
-		JSONObject objectSource = prefabTemplatePair.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
+		JSONObject objectSource = prefabTemplateInfo.templateObject->Serialize(g_SceneManager->CurrentScene(), true, true);
 		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
 
 		std::string fileContents = prefabJSON.ToString();
 		if (WriteFile(path, fileContents, false))
 		{
-			prefabTemplatePair.bDirty = false;
+			prefabTemplateInfo.bDirty = false;
+			std::string prefabName = prefabTemplateInfo.templateObject->GetName();
+			Print("Successfully serialized prefab \"%s\"\n", prefabName.c_str());
+			return true;
 		}
 		else
 		{
-			prefabTemplatePair.bDirty = true;
-			std::string prefabName = prefabTemplatePair.templateObject->GetName();
-			PrintError("Failed to write prefab to disk (%s, %s\n)", prefabName.c_str(), path.c_str());
+			prefabTemplateInfo.bDirty = true;
+			std::string prefabName = prefabTemplateInfo.templateObject->GetName();
+			PrintError("Failed to serialize prefab %s to %s\n", prefabName.c_str(), path.c_str());
+			return false;
 		}
 	}
 
@@ -1312,7 +1883,7 @@ namespace flex
 	void ResourceManager::DrawImGuiMenuItemizableItems()
 	{
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		for (PrefabTemplatePair& pair : prefabTemplates)
+		for (PrefabTemplateInfo& pair : prefabTemplates)
 		{
 			if (pair.templateObject->IsItemizable())
 			{
@@ -1329,17 +1900,14 @@ namespace flex
 
 				ImGui::SameLine();
 
-				static char maxStackSizeBuff[6];
-				static bool bMaxStackSizeBuffInitialized = false;
-				if (!bMaxStackSizeBuffInitialized)
-				{
-					snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%d", Player::MAX_STACK_SIZE);
-					bMaxStackSizeBuffInitialized = true;
-				}
+				u32 maxStackSize = g_ResourceManager->GetMaxStackSize(pair.prefabID);
+
+				char maxStackSizeBuff[6];
+				snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%u", maxStackSize);
 
 				if (ImGui::Button(maxStackSizeBuff))
 				{
-					player->AddToInventory(pair.prefabID, Player::MAX_STACK_SIZE);
+					player->AddToInventory(pair.prefabID, maxStackSize);
 				}
 
 				ImGui::PopID();
@@ -1427,9 +1995,183 @@ namespace flex
 		return bValuesChanged;
 	}
 
+	void ResourceManager::DrawParticleSystemTemplateImGuiObjects()
+	{
+		if (ImGui::TreeNode("Templates"))
+		{
+			for (auto iter = m_ParticleTemplates.begin(); iter != m_ParticleTemplates.end(); ++iter)
+			{
+				ParticleSystemTemplate::ImGuiResult result = iter->second.DrawImGuiObjects();
+				switch (result)
+				{
+				case ParticleSystemTemplate::ImGuiResult::REMOVED:
+				{
+					Platform::DeleteFile(iter->second.filePath);
+					m_ParticleTemplates.erase(iter);
+				} break;
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	void ResourceManager::DrawParticleParameterTypesImGui()
+	{
+		if (ImGui::TreeNode("Parameter types"))
+		{
+			if (ImGui::Button(m_bParticleParameterTypesDirty ? "Save to file*" : "Save to file"))
+			{
+				SerializeParticleParameterTypes();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reload from file"))
+			{
+				DiscoverParticleParameterTypes();
+			}
+
+			for (auto iter = particleParameterTypes.begin(); iter != particleParameterTypes.end(); ++iter)
+			{
+				const char* typeName = iter->name.c_str();
+				ImGui::PushID(typeName);
+
+				ImGui::Text("%s", typeName);
+
+				i32 valueTypeIndex = (i32)iter->valueType;
+				if (ImGui::Combo("", &valueTypeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1))
+				{
+					iter->valueType = (ParticleParamterValueType)valueTypeIndex;
+					m_bParticleParameterTypesDirty = true;
+				}
+
+				bool bRemoved = false;
+				if (ImGui::Button("Remove type"))
+				{
+					particleParameterTypes.erase(iter);
+					m_bParticleParameterTypesDirty = true;
+					bRemoved = true;
+				}
+
+				ImGui::PopID();
+
+				if (bRemoved)
+				{
+					break;
+				}
+			}
+
+			static const char* addNewTypePopup = "New particle parameter type";
+			if (ImGui::Button("Add new type"))
+			{
+				ImGui::OpenPopup(addNewTypePopup);
+			}
+
+			if (ImGui::BeginPopupModal(addNewTypePopup, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+			{
+				static char typeNameBuff[256];
+				bool bCreateNewType = ImGui::InputText("Name", typeNameBuff, 256, ImGuiInputTextFlags_EnterReturnsTrue);
+
+				static i32 typeIndex = (i32)ParticleParamterValueType::FLOAT;
+				ImGui::Combo("Type", &typeIndex, ParticleParamterValueTypeStrings, ARRAY_LENGTH(ParticleParamterValueTypeStrings) - 1);
+
+				bCreateNewType = ImGui::Button("Create") || bCreateNewType;
+
+				if (bCreateNewType && typeIndex != (i32)ParticleParamterValueType::_NONE)
+				{
+					std::string typeNameStr(typeNameBuff);
+					particleParameterTypes.emplace_back(typeNameStr, (ParticleParamterValueType)typeIndex);
+					m_bParticleParameterTypesDirty = true;
+					ImGui::CloseCurrentPopup();
+				}
+
+				ImGui::EndPopup();
+			}
+
+			ImGui::TreePop();
+		}
+	}
+
+	void ResourceManager::DiscoverParticleParameterTypes()
+	{
+		particleParameterTypes.clear();
+
+		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
+		if (FileExists(filePath))
+		{
+			std::string fileContents;
+			if (!ReadFile(filePath, fileContents, false))
+			{
+				PrintError("Failed to read particle parameter types file at %s\n", filePath);
+				return;
+			}
+
+			JSONObject rootObj;
+			if (!JSONParser::Parse(fileContents, rootObj))
+			{
+				PrintError("Failed to parse particle parameter types file at %s\n", filePath);
+				return;
+			}
+
+			std::vector<JSONObject> typeObjs = rootObj.GetObjectArray("particle parameter types");
+			for (const JSONObject& typeObj : typeObjs)
+			{
+				std::string name = typeObj.GetString("name");
+				std::string typeStr = typeObj.GetString("type");
+				ParticleParamterValueType type = ParticleParamterValueTypeFromString(typeStr.c_str());
+
+				if (type != ParticleParamterValueType::_NONE)
+				{
+					particleParameterTypes.emplace_back(name, type);
+				}
+			}
+
+			m_bParticleParameterTypesDirty = false;
+		}
+	}
+
+	void ResourceManager::SerializeParticleParameterTypes()
+	{
+		std::vector<JSONObject> parameterTypeObjs;
+		for (ParticleParameterType& type : particleParameterTypes)
+		{
+			JSONObject obj = {};
+			const char* valueTypeStr = ParticleParamterValueTypeToString(type.valueType);
+			obj.fields.emplace_back("name", JSONValue(type.name));
+			obj.fields.emplace_back("type", JSONValue(valueTypeStr));
+			parameterTypeObjs.emplace_back(obj);
+		}
+
+		JSONObject particleParameterTypesObj = {};
+		particleParameterTypesObj.fields.emplace_back("particle parameter types", JSONValue(parameterTypeObjs));
+		std::string fileContents = particleParameterTypesObj.ToString();
+
+		const char* filePath = PARTICLE_PARAMETER_TYPES_LOCATION;
+		if (!WriteFile(filePath, fileContents, false))
+		{
+			PrintError("Failed to write particle parameter types to %s\n", filePath);
+		}
+		else
+		{
+			m_bParticleParameterTypesDirty = false;
+		}
+	}
+
+	ParticleParamterValueType ResourceManager::GetParticleParameterValueType(const char* paramName)
+	{
+		for (const ParticleParameterType& type : particleParameterTypes)
+		{
+			if (strcmp(type.name.c_str(), paramName) == 0)
+			{
+				return type.valueType;
+			}
+		}
+		return ParticleParamterValueType::_NONE;
+	}
+
 	void ResourceManager::DrawImGuiWindows()
 	{
-		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("fonts"));
+		bool* bFontsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("fonts"));
 		if (*bFontsWindowOpen)
 		{
 			if (ImGui::Begin("Fonts", bFontsWindowOpen))
@@ -1475,19 +2217,39 @@ namespace flex
 						//ImGui::Image((void*)&tex->image, texSize, uv0, uv1);
 
 						ImGui::NextColumn();
-						if (ImGui::Button("Re-bake"))
+						bool bRebake = false;
+						bRebake = ImGui::Button("Re-bake");
+
+#if COMPILE_RENDERDOC_API
+						bool bCaptureRenderDocFrame = false;
+						ImGui::SameLine();
+						if (ImGui::Button("Re-bake (trigger render doc capture)"))
 						{
+							bRebake = true;
+							bCaptureRenderDocFrame = true;
+						}
+#endif
+
+						if (bRebake)
+						{
+#if COMPILE_RENDERDOC_API
+							if (bCaptureRenderDocFrame)
+							{
+								g_EngineInstance->RenderDocStartCapture();
+							}
+#endif
+
 							if (metaData.bScreenSpace)
 							{
 								auto vecIterSS = std::find(fontsScreenSpace.begin(), fontsScreenSpace.end(), metaData.bitmapFont);
-								assert(vecIterSS != fontsScreenSpace.end());
+								CHECK(vecIterSS != fontsScreenSpace.end());
 
 								fontsScreenSpace.erase(vecIterSS);
 							}
 							else
 							{
 								auto vecIterWS = std::find(fontsWorldSpace.begin(), fontsWorldSpace.end(), metaData.bitmapFont);
-								assert(vecIterWS != fontsWorldSpace.end());
+								CHECK(vecIterWS != fontsWorldSpace.end());
 
 								fontsWorldSpace.erase(vecIterWS);
 							}
@@ -1499,6 +2261,13 @@ namespace flex
 							SetRenderedSDFFilePath(metaData);
 
 							g_Renderer->LoadFont(metaData, true);
+
+#if COMPILE_RENDERDOC_API
+							if (bCaptureRenderDocFrame)
+							{
+								g_EngineInstance->RenderDocEndCapture();
+							}
+#endif
 						}
 						if (ImGui::Button("View SDF"))
 						{
@@ -1558,7 +2327,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("materials"));
+		bool* bMaterialsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("materials"));
 		if (*bMaterialsWindowOpen)
 		{
 			if (ImGui::Begin("Materials", bMaterialsWindowOpen))
@@ -1567,18 +2336,21 @@ namespace flex
 				static bool bMaterialSelectionChanged = true;
 				static bool bScrollToSelected = true;
 				const i32 MAX_NAME_LEN = 128;
-				static i32 selectedMaterialIndexShort = 0; // Index into shortened array
 				static MaterialID selectedMaterialID = 0;
 
-				// Skip by any editor materials in case bShowEditorMaterials was set to false while we had one selected
-				if (!bShowEditorMaterials)
+				u32 matCount = (u32)g_Renderer->GetMaterialCount();
+				while (selectedMaterialID < (matCount - 1) &&
+					(!g_Renderer->MaterialExists(selectedMaterialID) ||
+						(!bShowEditorMaterials && g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial)))
 				{
-					i32 matCount = g_Renderer->GetMaterialCount();
-					while (!g_Renderer->MaterialExists(selectedMaterialID) ||
-						(!g_Renderer->GetMaterial(selectedMaterialID)->visibleInEditor && selectedMaterialID < (u32)(matCount - 1)))
-					{
-						++selectedMaterialID;
-					}
+					++selectedMaterialID;
+				}
+
+				while (selectedMaterialID > 0 &&
+					(!g_Renderer->MaterialExists(selectedMaterialID) ||
+						(!bShowEditorMaterials && g_Renderer->GetMaterial(selectedMaterialID)->bEditorMaterial)))
+				{
+					--selectedMaterialID;
 				}
 
 				Material* material = g_Renderer->GetMaterial(selectedMaterialID);
@@ -1663,10 +2435,16 @@ namespace flex
 					}
 
 					i32 i = 0;
-					for (Texture* texture : loadedTextures)
+					for (const Texture* texture : loadedTextures)
 					{
+						if (texture == nullptr)
+						{
+							continue;
+						}
+
 						std::string texturePath = texture->relativeFilePath;
 						std::string textureName = StripLeadingDirectories(texturePath);
+						// TODO:
 
 						++i;
 					}
@@ -1730,7 +2508,7 @@ namespace flex
 
 				ImGui::Checkbox("Dynamic", &material->bDynamic);
 				ImGui::Checkbox("Persistent", &material->persistent);
-				ImGui::Checkbox("Visible in editor", &material->visibleInEditor);
+				ImGui::Checkbox("Visible in editor", &material->bEditorMaterial);
 
 				ImGui::NextColumn();
 
@@ -1769,7 +2547,7 @@ namespace flex
 
 				ImGui::EndColumns();
 
-				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialIndexShort, &selectedMaterialID, bShowEditorMaterials, bScrollToSelected);
+				bMaterialSelectionChanged |= g_Renderer->DrawImGuiMaterialList(&selectedMaterialID, bShowEditorMaterials, bScrollToSelected);
 				bScrollToSelected = false;
 
 				const i32 MAX_MAT_NAME_LEN = 128;
@@ -1816,7 +2594,6 @@ namespace flex
 						createInfo.name = newMaterialName;
 						createInfo.shaderName = newMatShader->name;
 						selectedMaterialID = g_Renderer->InitializeMaterial(&createInfo);
-						selectedMaterialIndexShort = g_Renderer->GetShortMaterialIndex(selectedMaterialID, bShowEditorMaterials);
 
 						bMaterialSelectionChanged = true;
 						bScrollToSelected = true;
@@ -1833,7 +2610,7 @@ namespace flex
 				}
 
 				// Only non-editor materials can be deleted
-				if (material->visibleInEditor)
+				if (material->bEditorMaterial)
 				{
 					ImGui::SameLine();
 
@@ -1847,9 +2624,7 @@ namespace flex
 						selectedMaterialID = 0;
 						bMaterialSelectionChanged = true;
 					}
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
-					ImGui::PopStyleColor();
+					ImGui::PopStyleColor(3);
 				}
 
 				if (ImGui::Checkbox("Show editor materials", &bShowEditorMaterials))
@@ -1861,7 +2636,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("shaders"));
+		bool* bShadersWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("shaders"));
 		if (*bShadersWindowOpen)
 		{
 			if (ImGui::Begin("Shaders", bShadersWindowOpen))
@@ -1913,7 +2688,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("textures"));
+		bool* bTexturesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("textures"));
 		if (*bTexturesWindowOpen)
 		{
 			if (ImGui::Begin("Textures", bTexturesWindowOpen))
@@ -1983,11 +2758,27 @@ namespace flex
 				}
 				ImGui::EndChild();
 
+				if (ImGui::Button("Open externally"))
+				{
+					std::string absFilePath = RelativePathToAbsolute(discoveredTextures[selectedTextureIndex]);
+					Platform::OpenFileWithDefaultApplication(absFilePath);
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Open in explorer"))
+				{
+					std::string absFilePath = RelativePathToAbsolute(ExtractDirectoryString(discoveredTextures[selectedTextureIndex]));
+					Platform::OpenFileExplorer(absFilePath.c_str());
+				}
+
 				// TODO: Hook up DirectoryWatcher here
 				if (ImGui::Button("Refresh"))
 				{
 					DiscoverTextures();
 				}
+
+				ImGui::SameLine();
 
 				if (ImGui::Button("Import Texture"))
 				{
@@ -1997,13 +2788,16 @@ namespace flex
 					std::string selectedAbsFilePath;
 					if (Platform::OpenFileDialog("Import texture", absoluteDirectoryStr, selectedAbsFilePath))
 					{
+						// TODO: Copy texture into Textures directory if not already there
+
 						const std::string fileNameAndExtension = StripLeadingDirectories(selectedAbsFilePath);
 						std::string relativeFilePath = relativeDirPath + fileNameAndExtension;
 
 						bool bTextureAlreadyImported = false;
-						for (Texture* texture : loadedTextures)
+						for (const Texture* texture : loadedTextures)
 						{
-							if (texture->relativeFilePath.compare(relativeFilePath) == 0)
+							if (texture != nullptr &&
+								texture->relativeFilePath.compare(relativeFilePath) == 0)
 							{
 								bTextureAlreadyImported = true;
 								break;
@@ -2017,7 +2811,12 @@ namespace flex
 						else
 						{
 							Print("Importing texture: %s\n", relativeFilePath.c_str());
-							g_Renderer->InitializeTextureFromFile(relativeFilePath, false, false, false);
+
+							TextureLoadInfo loadInfo = {};
+							loadInfo.relativeFilePath = relativeFilePath;
+							// TODO: Support other samplers
+							loadInfo.sampler = g_Renderer->GetSamplerLinearRepeat();
+							LoadTextureImmediate(loadInfo);
 						}
 
 						ImGui::CloseCurrentPopup();
@@ -2028,7 +2827,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("meshes"));
+		bool* bMeshesWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("meshes"));
 		if (*bMeshesWindowOpen)
 		{
 			if (ImGui::Begin("Meshes", bMeshesWindowOpen))
@@ -2159,7 +2958,7 @@ namespace flex
 			ImGui::End();
 		}
 
-		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("prefabs"));
+		bool* bPrefabsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("prefabs"));
 		if (*bPrefabsWindowOpen)
 		{
 			if (ImGui::Begin("Prefabs", bPrefabsWindowOpen))
@@ -2185,8 +2984,8 @@ namespace flex
 				{
 					for (u32 i = 0; i < (u32)prefabTemplates.size(); ++i)
 					{
-						const PrefabTemplatePair& prefabTemplatePair = prefabTemplates[i];
-						std::string prefabNameStr = prefabTemplatePair.templateObject->GetName() + (prefabTemplatePair.bDirty ? "*" : "");
+						const PrefabTemplateInfo& prefabTemplateInfo = prefabTemplates[i];
+						std::string prefabNameStr = prefabTemplateInfo.templateObject->GetName() + (prefabTemplateInfo.bDirty ? "*" : "");
 						const char* prefabName = prefabNameStr.c_str();
 
 						if (prefabFilter.PassFilter(prefabName))
@@ -2203,7 +3002,7 @@ namespace flex
 							{
 								if (ImGui::BeginDragDropSource())
 								{
-									const void* data = (void*)&prefabTemplatePair.prefabID;
+									const void* data = (void*)&prefabTemplateInfo.prefabID;
 									size_t size = sizeof(PrefabID);
 
 									ImGui::SetDragDropPayload(Editor::PrefabPayloadCStr, data, size);
@@ -2219,30 +3018,187 @@ namespace flex
 
 				ImGui::EndChild();
 
-				PrefabTemplatePair& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
+				PrefabTemplateInfo& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
 				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
-				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "");
+				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "") + " (" + selectedPrefabTemplate.prefabID.ToString() + ")";
 				ImGui::Text("%s", prefabNameStr.c_str());
+
+				const char* contextMenuID = "game object context window";
+				static std::string newObjectName = selectedPrefabTemplate.templateObject->GetName();
+				const size_t maxStrLen = 256;
+
+				if (ImGui::Button("Rename") || g_Editor->GetWantRenameActiveElement())
+				{
+					ImGui::OpenPopup(contextMenuID);
+					g_Editor->ClearWantRenameActiveElement();
+				}
+
+				ImGui::SameLine();
+
+				static const char* deletePrefabPopupModalName = "Are you sure?";
+				static bool bShowDeletePrefabPopup = false;
+				static u32 bTemplateUsagesInScene = 0;
 
 				if (ImGui::Button("Delete"))
 				{
-					RemovePrefabTemplate(selectedPrefabTemplate.prefabID);
+					bTemplateUsagesInScene = g_SceneManager->CurrentScene()->NumObjectsLoadedFromPrefabID(selectedPrefabTemplate.prefabID);
+
+					ImGui::OpenPopup(deletePrefabPopupModalName);
+					bShowDeletePrefabPopup = true;
 				}
+
+				ImGui::SetNextWindowSize(ImVec2(650, 180), ImGuiCond_FirstUseEver);
+				if (ImGui::BeginPopupModal(deletePrefabPopupModalName, &bShowDeletePrefabPopup))
+				{
+					char prefabIDStrBuff[33];
+					selectedPrefabTemplate.prefabID.ToString(prefabIDStrBuff);
+					char confirmStrBuff[256];
+					snprintf(confirmStrBuff, ARRAY_LENGTH(confirmStrBuff),
+						"Are you sure you want to delete the prefab %s? (%s)",
+						selectedPrefabTemplate.fileName.c_str(), prefabIDStrBuff);
+					ImGui::TextWrapped("%s", confirmStrBuff);
+
+					if (bTemplateUsagesInScene > 0)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, g_WarningTextColour);
+						ImGui::TextWrapped("This prefab is used %d times in the current scene! Deleting it will destroy those instances.\n", bTemplateUsagesInScene);
+						ImGui::PopStyleColor();
+					}
+
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+					if (ImGui::Button("Delete"))
+					{
+						DeletePrefabTemplate(selectedPrefabTemplate.prefabID);
+						bShowDeletePrefabPopup = false;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::PopStyleColor(3);
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Cancel") || g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
+					{
+						bShowDeletePrefabPopup = false;
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
+
+				ImGui::SameLine();
 
 				if (ImGui::Button("Duplicate"))
 				{
-					// TODO: Implement
-					PrintError("Unimplemented!\n");
+					GameObject* newTemplateObject = selectedPrefabTemplate.templateObject->CopySelf();
+					newTemplateObject->m_SourcePrefabID.Clear();
+					newTemplateObject->m_bIsTemplate = true;
+					std::string namePrefix = newTemplateObject->GetName();
+
+					i16 numChars;
+					i32 numEndingWith = GetNumberEndingWith(namePrefix, numChars);
+
+					std::string newName = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
+					while (GetPrefabID(newName.c_str()).IsValid())
+					{
+						++numEndingWith;
+						newName = namePrefix.substr(0, namePrefix.size() - numChars) + IntToString(numEndingWith + 1, numChars);
+					}
+
+					newTemplateObject->SetName(newName);
+					newTemplateObject->SaveAsPrefab();
+				}
+
+				ImGui::SameLine();
+
+				if (ImGui::Button("Instantiate in scene"))
+				{
+					GameObject* newInstance = selectedPrefabTemplate.templateObject->CopySelf();
+					g_SceneManager->CurrentScene()->AddRootObject(newInstance);
+				}
+
+				if (ImGui::BeginPopupContextItem(contextMenuID))
+				{
+					if (ImGui::IsWindowAppearing())
+					{
+						ImGui::SetKeyboardFocusHere();
+						newObjectName = selectedPrefabTemplate.templateObject->GetName();
+					}
+
+					bool bRename = ImGui::InputText("##rename-game-object",
+						(char*)newObjectName.data(),
+						maxStrLen,
+						ImGuiInputTextFlags_EnterReturnsTrue);
+
+					ImGui::SameLine();
+
+					bRename |= ImGui::Button("Rename");
+
+					bool bInvalidName = std::string(newObjectName.c_str()).empty();
+
+					if (bRename && !bInvalidName)
+					{
+						// Remove excess trailing \0 chars
+						newObjectName = std::string(newObjectName.c_str());
+
+						std::string prevName = selectedPrefabTemplate.templateObject->GetName();
+						std::string prevFilePath = PREFAB_DIRECTORY + selectedPrefabTemplate.fileName;
+
+						selectedPrefabTemplate.templateObject->SetName(newObjectName);
+						if (selectedPrefabTemplate.templateObject->SaveAsPrefab())
+						{
+							// NOTE: At this point selectedPrefabTemplate is invalid because DiscoverPrefabs has been called
+							// and thus all prefab templates have been recreated.
+							if (!Platform::DeleteFile(prevFilePath))
+							{
+								PrintError("Failed to delete previous prefab file at %s\n", prevFilePath.c_str());
+							}
+						}
+
+						ImGui::CloseCurrentPopup();
+					}
+
+					// ID
+					{
+						char buffer[33];
+						selectedPrefabTemplate.prefabID.ToString(buffer);
+						char data0Buffer[17];
+						char data1Buffer[17];
+						memcpy(data0Buffer, buffer, 16);
+						data0Buffer[16] = 0;
+						memcpy(data1Buffer, buffer + 16, 16);
+						data1Buffer[16] = 0;
+						ImGui::Text("GUID: %s-%s", data0Buffer, data1Buffer);
+
+						if (ImGui::IsItemHovered())
+						{
+							ImGui::BeginTooltip();
+
+							ImGui::Text("Data1, Data2: %lu, %lu", selectedPrefabTemplate.prefabID.Data1, selectedPrefabTemplate.prefabID.Data2);
+
+							ImGui::EndTooltip();
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Copy"))
+						{
+							g_Window->SetClipboardText(buffer);
+						}
+					}
+
+					ImGui::EndPopup();
 				}
 			}
 
 			ImGui::End();
 		}
 
-		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID("sounds"));
+		bool* bSoundsWindowOpen = g_EngineInstance->GetUIWindowOpen(SID_PAIR("audio"));
 		if (*bSoundsWindowOpen)
 		{
-			if (ImGui::Begin("Sound clips", bSoundsWindowOpen))
+			if (ImGui::Begin("Audio", bSoundsWindowOpen))
 			{
 				// TODO: Add tickbox/env var somewhere to disable this
 				static bool bAutoPlay = true;
@@ -2347,7 +3303,7 @@ namespace flex
 						if (bLoadSound)
 						{
 							errorStringBuilder.Clear();
-							LoadAudioFile(selectedAudioFileID, &errorStringBuilder);
+							LoadAudioFile(selectedAudioFileID, &errorStringBuilder, true);
 							sourceID = discoveredAudioFiles[selectedAudioFileID].sourceID;
 							bValuesChanged = true;
 						}
@@ -2423,7 +3379,7 @@ namespace flex
 							{
 								free(valsFloat);
 								valsFloat = (real*)malloc(sizeof(real) * valsCount);
-								assert(valsFloat != nullptr);
+								CHECK_NE(valsFloat, nullptr);
 								valsFloatLen = valsCount;
 								bValuesChanged = true;
 							}
@@ -2536,6 +3492,227 @@ namespace flex
 						}
 					}
 				}
+
+				ImGui::Text("Effects");
+
+				for (AudioEffect& effect : AudioManager::s_Effects)
+				{
+					if (ImGui::Combo("Type", (i32*)&effect.type, AudioEffectTypeStrings, ARRAY_LENGTH(AudioEffectTypeStrings)))
+					{
+
+					}
+
+					if (effect.type == AudioEffect::Type::EAX_REVERB)
+					{
+						bool bChanged = false;
+
+						static const Pair<const char*, EFXEAXREVERBPROPERTIES> presets[] =
+						{
+							/* Default Presets */
+
+							{ "Generic", EFX_REVERB_PRESET_GENERIC },
+							{ "Padded cell",  EFX_REVERB_PRESET_PADDEDCELL },
+							{ "Room",  EFX_REVERB_PRESET_ROOM },
+							{ "Bathroom",  EFX_REVERB_PRESET_BATHROOM },
+							{ "Livingroom",  EFX_REVERB_PRESET_LIVINGROOM },
+							{ "Stoneroom",  EFX_REVERB_PRESET_STONEROOM },
+							{ "Auditorium",  EFX_REVERB_PRESET_AUDITORIUM },
+							{ "Concerthall",  EFX_REVERB_PRESET_CONCERTHALL },
+							{ "Cave",  EFX_REVERB_PRESET_CAVE },
+							{ "Arena",  EFX_REVERB_PRESET_ARENA },
+							{ "Hangar",  EFX_REVERB_PRESET_HANGAR },
+							{ "Carpted hallway",  EFX_REVERB_PRESET_CARPETEDHALLWAY },
+							{ "Hallway",  EFX_REVERB_PRESET_HALLWAY },
+							{ "Stone corridor",  EFX_REVERB_PRESET_STONECORRIDOR },
+							{ "Alley",  EFX_REVERB_PRESET_ALLEY },
+							{ "Forest",  EFX_REVERB_PRESET_FOREST },
+							{ "City",  EFX_REVERB_PRESET_CITY },
+							{ "Mountains",  EFX_REVERB_PRESET_MOUNTAINS },
+							{ "Quarry",  EFX_REVERB_PRESET_QUARRY },
+							{ "Plain",  EFX_REVERB_PRESET_PLAIN },
+							{ "Parking lot",  EFX_REVERB_PRESET_PARKINGLOT },
+							{ "Sewer pipe",  EFX_REVERB_PRESET_SEWERPIPE },
+							{ "Underwater",  EFX_REVERB_PRESET_UNDERWATER },
+							{ "Drugged",  EFX_REVERB_PRESET_DRUGGED },
+							{ "Dizzy",  EFX_REVERB_PRESET_DIZZY },
+							{ "Psychotic",  EFX_REVERB_PRESET_PSYCHOTIC },
+
+							/* Castle Presets */
+
+							{ "Small room",  EFX_REVERB_PRESET_CASTLE_SMALLROOM },
+							{ "Short passage",  EFX_REVERB_PRESET_CASTLE_SHORTPASSAGE },
+							{ "Medium room",  EFX_REVERB_PRESET_CASTLE_MEDIUMROOM },
+							{ "Large room",  EFX_REVERB_PRESET_CASTLE_LARGEROOM },
+							{ "Long passage",  EFX_REVERB_PRESET_CASTLE_LONGPASSAGE },
+							{ "Castle hall",  EFX_REVERB_PRESET_CASTLE_HALL },
+							{ "Castle cupboard",  EFX_REVERB_PRESET_CASTLE_CUPBOARD },
+							{ "Courtyard",  EFX_REVERB_PRESET_CASTLE_COURTYARD },
+							{ "Alcove",  EFX_REVERB_PRESET_CASTLE_ALCOVE },
+
+							/* Factory Presets */
+
+							{ "Factory Smallroom",  EFX_REVERB_PRESET_FACTORY_SMALLROOM },
+							{ "Factory short passage",  EFX_REVERB_PRESET_FACTORY_SHORTPASSAGE },
+							{ "Factory medium room",  EFX_REVERB_PRESET_FACTORY_MEDIUMROOM },
+							{ "Factory large room",  EFX_REVERB_PRESET_FACTORY_LARGEROOM },
+							{ "Factory long passage",  EFX_REVERB_PRESET_FACTORY_LONGPASSAGE },
+							{ "Factory hall",  EFX_REVERB_PRESET_FACTORY_HALL },
+							{ "Factory cupboard",  EFX_REVERB_PRESET_FACTORY_CUPBOARD },
+							{ "Factory courtyard",  EFX_REVERB_PRESET_FACTORY_COURTYARD },
+							{ "Factory alcove",  EFX_REVERB_PRESET_FACTORY_ALCOVE },
+
+							/* Ice Palace Presets */
+
+							{ "Ice Palace small room",  EFX_REVERB_PRESET_ICEPALACE_SMALLROOM },
+							{ "Ice Palace short passage",  EFX_REVERB_PRESET_ICEPALACE_SHORTPASSAGE },
+							{ "Ice Palace mediumroom",  EFX_REVERB_PRESET_ICEPALACE_MEDIUMROOM },
+							{ "Ice Palace large room",  EFX_REVERB_PRESET_ICEPALACE_LARGEROOM },
+							{ "Ice Palace long passage",  EFX_REVERB_PRESET_ICEPALACE_LONGPASSAGE },
+							{ "Ice Palace hall",  EFX_REVERB_PRESET_ICEPALACE_HALL },
+							{ "Ice Palace cupboard",  EFX_REVERB_PRESET_ICEPALACE_CUPBOARD },
+							{ "Ice Palace courtyard",  EFX_REVERB_PRESET_ICEPALACE_COURTYARD },
+							{ "Ice Palace alcove",  EFX_REVERB_PRESET_ICEPALACE_ALCOVE },
+
+							/* Space Station Presets */
+
+							{ "Space Station small room",  EFX_REVERB_PRESET_SPACESTATION_SMALLROOM },
+							{ "Space Station short passage",  EFX_REVERB_PRESET_SPACESTATION_SHORTPASSAGE },
+							{ "Space Station medium room",  EFX_REVERB_PRESET_SPACESTATION_MEDIUMROOM },
+							{ "Space Station large room",  EFX_REVERB_PRESET_SPACESTATION_LARGEROOM },
+							{ "Space Station long passage",  EFX_REVERB_PRESET_SPACESTATION_LONGPASSAGE },
+							{ "Space Station hall",  EFX_REVERB_PRESET_SPACESTATION_HALL },
+							{ "Space Station cupboard",  EFX_REVERB_PRESET_SPACESTATION_CUPBOARD },
+							{ "Space Station alcove",  EFX_REVERB_PRESET_SPACESTATION_ALCOVE },
+
+							/* Wooden Galleon Presets */
+
+							{ "Wooden small room",  EFX_REVERB_PRESET_WOODEN_SMALLROOM },
+							{ "Wooden short passage",  EFX_REVERB_PRESET_WOODEN_SHORTPASSAGE },
+							{ "Wooden medium room",  EFX_REVERB_PRESET_WOODEN_MEDIUMROOM },
+							{ "Wooden large room",  EFX_REVERB_PRESET_WOODEN_LARGEROOM },
+							{ "Wooden long passage",  EFX_REVERB_PRESET_WOODEN_LONGPASSAGE },
+							{ "Wooden hall",  EFX_REVERB_PRESET_WOODEN_HALL },
+							{ "Wooden cupboard",  EFX_REVERB_PRESET_WOODEN_CUPBOARD },
+							{ "Wooden courtyard",  EFX_REVERB_PRESET_WOODEN_COURTYARD },
+							{ "Wooden alcove",  EFX_REVERB_PRESET_WOODEN_ALCOVE },
+
+							/* Sports Presets */
+
+							{ "Sport empty stadium",  EFX_REVERB_PRESET_SPORT_EMPTYSTADIUM },
+							{ "Sport squash court",  EFX_REVERB_PRESET_SPORT_SQUASHCOURT },
+							{ "Sport small swimming pool",  EFX_REVERB_PRESET_SPORT_SMALLSWIMMINGPOOL },
+							{ "Sport large swimming pool",  EFX_REVERB_PRESET_SPORT_LARGESWIMMINGPOOL },
+							{ "Sport gymnasium",  EFX_REVERB_PRESET_SPORT_GYMNASIUM },
+							{ "Sport full stadium",  EFX_REVERB_PRESET_SPORT_FULLSTADIUM },
+							{ "Sport staduym tannoy",  EFX_REVERB_PRESET_SPORT_STADIUMTANNOY },
+
+							/* Prefab Presets */
+
+							{ "Prefab workshop",  EFX_REVERB_PRESET_PREFAB_WORKSHOP },
+							{ "Prefab school room",  EFX_REVERB_PRESET_PREFAB_SCHOOLROOM },
+							{ "Prefab practice room",  EFX_REVERB_PRESET_PREFAB_PRACTISEROOM },
+							{ "Prefab outhouse",  EFX_REVERB_PRESET_PREFAB_OUTHOUSE },
+							{ "Prefab caravan",  EFX_REVERB_PRESET_PREFAB_CARAVAN },
+
+							/* Dome and Pipe Presets */
+
+							{ "Dome tomb",  EFX_REVERB_PRESET_DOME_TOMB },
+							{ "Dome pipe small",  EFX_REVERB_PRESET_PIPE_SMALL },
+							{ "Dome Saint Pauls",  EFX_REVERB_PRESET_DOME_SAINTPAULS },
+							{ "Pipe long thin",  EFX_REVERB_PRESET_PIPE_LONGTHIN },
+							{ "Pipe large",  EFX_REVERB_PRESET_PIPE_LARGE },
+							{ "Pipe resonant",  EFX_REVERB_PRESET_PIPE_RESONANT },
+
+							/* Outdoors Presets */
+
+							{ "Outdoors backyard",  EFX_REVERB_PRESET_OUTDOORS_BACKYARD },
+							{ "Outdoors rolling plains",  EFX_REVERB_PRESET_OUTDOORS_ROLLINGPLAINS },
+							{ "Outdoors deep canyon",  EFX_REVERB_PRESET_OUTDOORS_DEEPCANYON },
+							{ "Outdoors creek",  EFX_REVERB_PRESET_OUTDOORS_CREEK },
+							{ "Outdoors valley",  EFX_REVERB_PRESET_OUTDOORS_VALLEY },
+
+							/* Mood Presets */
+
+							{ "Mood heaven",  EFX_REVERB_PRESET_MOOD_HEAVEN },
+							{ "Mood hell",  EFX_REVERB_PRESET_MOOD_HELL },
+							{ "Mood memory",  EFX_REVERB_PRESET_MOOD_MEMORY },
+
+							/* Driving Presets */
+
+							{ "Driving commentator",  EFX_REVERB_PRESET_DRIVING_COMMENTATOR },
+							{ "Driving pit garage",  EFX_REVERB_PRESET_DRIVING_PITGARAGE },
+							{ "Driving in car racer",  EFX_REVERB_PRESET_DRIVING_INCAR_RACER },
+							{ "Driving in car sports",  EFX_REVERB_PRESET_DRIVING_INCAR_SPORTS },
+							{ "Driving in car luxury",  EFX_REVERB_PRESET_DRIVING_INCAR_LUXURY },
+							{ "Driving full grand stand",  EFX_REVERB_PRESET_DRIVING_FULLGRANDSTAND },
+							{ "Driving empty grand stand",  EFX_REVERB_PRESET_DRIVING_EMPTYGRANDSTAND },
+							{ "Driving driving tunnel",  EFX_REVERB_PRESET_DRIVING_TUNNEL },
+
+							/* City Presets */
+
+							{ "City streets",  EFX_REVERB_PRESET_CITY_STREETS },
+							{ "City subway",  EFX_REVERB_PRESET_CITY_SUBWAY },
+							{ "City museum",  EFX_REVERB_PRESET_CITY_MUSEUM },
+							{ "City library",  EFX_REVERB_PRESET_CITY_LIBRARY },
+							{ "City underpass",  EFX_REVERB_PRESET_CITY_UNDERPASS },
+							{ "City abandoned",  EFX_REVERB_PRESET_CITY_ABANDONED },
+
+							/* Misc. Presets */
+
+							{ "Dusty room",  EFX_REVERB_PRESET_DUSTYROOM },
+							{ "Chapel",  EFX_REVERB_PRESET_CHAPEL },
+							{ "Small water room",  EFX_REVERB_PRESET_SMALLWATERROOM },
+						};
+
+						if (ImGui::BeginCombo("Preset", effect.presetIndex != -1 ? presets[effect.presetIndex].first : ""))
+						{
+							for (i32 i = 0; i < (i32)ARRAY_LENGTH(presets); ++i)
+							{
+								if (ImGui::Selectable(presets[i].first))
+								{
+									effect.presetIndex = i;
+									effect.reverbProperties = presets[i].second;
+									bChanged = true;
+								}
+							}
+
+							ImGui::EndCombo();
+						}
+
+						real speed = 0.02f;
+
+						bChanged = ImGui::DragFloat("Density", &effect.reverbProperties.flDensity, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Diffusion", &effect.reverbProperties.flDiffusion, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain", &effect.reverbProperties.flGain, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain HF", &effect.reverbProperties.flGainHF, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Gain LF", &effect.reverbProperties.flGainLF, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay time", &effect.reverbProperties.flDecayTime, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay HF Ratio", &effect.reverbProperties.flDecayHFRatio, speed, 0.1f, 2.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Decay LF Ratio", &effect.reverbProperties.flDecayLFRatio, speed, 0.1f, 2.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Reflections gain", &effect.reverbProperties.flReflectionsGain, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Reflections delay", &effect.reverbProperties.flReflectionsDelay, 0.001f, 0.0f, 0.3f) || bChanged;
+						bChanged = ImGui::DragFloat3("Reflections pan", effect.reverbProperties.flReflectionsPan, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Late reverb gain", &effect.reverbProperties.flLateReverbGain, speed, 0.0f, 5.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Late reverb delay", &effect.reverbProperties.flLateReverbDelay, 0.001f, 0.0f, 0.1f) || bChanged;
+						bChanged = ImGui::DragFloat3("Late reverb pan", effect.reverbProperties.flLateReverbPan, speed, -1.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Echo time", &effect.reverbProperties.flEchoTime, 0.0005f, 0.1f, 0.25f) || bChanged;
+						bChanged = ImGui::DragFloat("Echo depth", &effect.reverbProperties.flEchoDepth, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Modulation time", &effect.reverbProperties.flModulationTime, speed, 0.25f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Modulation depth", &effect.reverbProperties.flModulationDepth, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Air absorption gain HF", &effect.reverbProperties.flAirAbsorptionGainHF, 0.0001f, 0.9920f, 0.9943f) || bChanged;
+						bChanged = ImGui::DragFloat("HF Reference", &effect.reverbProperties.flHFReference, 10.0f, 0.0f, 10000.0f) || bChanged;
+						bChanged = ImGui::DragFloat("LF Reference", &effect.reverbProperties.flLFReference, 5.0f, 0.0f, 5000.0f) || bChanged;
+						bChanged = ImGui::DragFloat("Room Rolloff Factor", &effect.reverbProperties.flRoomRolloffFactor, speed, 0.0f, 1.0f) || bChanged;
+						bChanged = ImGui::DragInt("Decay HF Limit", &effect.reverbProperties.iDecayHFLimit, speed, 0, 1) || bChanged;
+
+						if (bChanged)
+						{
+							AudioManager::SetupReverbEffect(&effect.reverbProperties, effect.effectID);
+							AudioManager::UpdateReverbEffect(AudioManager::SLOT_DEFAULT_3D, (i32)effect.effectID);
+						}
+					}
+				}
+
 				ImGui::EndChild();
 				ImGui::PopStyleVar();
 			}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <atomic> // For atomic_uint32_t
 #include <map>
 
 IGNORE_WARNINGS_PUSH
@@ -29,6 +30,7 @@ namespace flex
 	static const u32 BIOME_NOISE_FUNCTION_INT4_COUNT = MAX_BIOME_COUNT / 16;
 	static const i32 MAX_NUM_NOISE_FUNCTIONS_PER_BIOME = 4;
 	static const u32 TERRAIN_THREAD_GROUP_SIZE = 4;
+	static const i32 MAX_NUM_PARTICLE_PARAMS = 16;
 
 	// 48 bytes
 	struct DirLightData
@@ -111,11 +113,13 @@ namespace flex
 		i32 bDEBUGShowEdges;   // 28
 	};
 
-	// 272 bytes
+	// 288 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
-		glm::vec4 cascadeDepthSplits;								// 256
+		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];
+		glm::vec4 cascadeDepthSplits;
+		real pad[3];
+		real baseBias;
 	};
 
 	// 112 bytes
@@ -134,21 +138,34 @@ namespace flex
 	// 56 bytes
 	struct ParticleBufferData
 	{
-		glm::vec3 pos;		// 0
-		glm::vec4 colour;	// 12
-		glm::vec3 vel;		// 28
-		glm::vec4 extraVec4;// 40
+		glm::vec3 pos;
+		glm::vec3 vel;
+		glm::vec4 colour;
+		glm::vec3 scale;
+		glm::vec4 extraVec4;
 	};
 #pragma pack(pop)
 
-	// 44 bytes
+	struct ParticleParamGPU
+	{
+		glm::vec4 valueMin;
+		glm::vec4 valueMax;
+		u32 sampleType;
+		u32 pad0, pad1, pad2;
+	};
+
+	struct ParticleSpawnParams
+	{
+		ParticleParamGPU params[MAX_NUM_PARTICLE_PARAMS];
+	};
+
 	struct ParticleSimData
 	{
-		glm::vec4 colour0;	// 0
-		glm::vec4 colour1;	// 16
-		real dt;			// 32
-		real speed;			// 36
-		u32 particleCount;	// 40
+		u32 bufferOffset;
+		u32 particleCount;
+		real dt;
+		u32 enableSpawning;
+		ParticleSpawnParams spawnParams;
 	};
 
 	// 80 bytes
@@ -272,101 +289,107 @@ namespace flex
 
 	struct Uniform
 	{
-		explicit Uniform(const char* uniformName, StringID id, u64 size = 0);
+		explicit Uniform(const char* uniformName, StringID id, u64 size, u32 index);
 
-		Uniform(Uniform&) = delete;
+		Uniform(const Uniform&) = delete;
 		Uniform(Uniform&&) = delete;
-		Uniform& operator=(Uniform&) = delete;
+		Uniform& operator=(const Uniform&) = delete;
 		Uniform& operator=(Uniform&&) = delete;
 
 		StringID id;
 		u32 size;
-#if DEBUG
+		u32 index;
 		const char* DBG_name;
-#endif
 	};
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform);
-	Uniform* UniformFromStringID(StringID uniformNameSID);
+	Uniform const* UniformFromStringID(StringID uniformNameSID);
 
-#define UNIFORM(val) val, SID(val)
+#define UNIFORMS_START static constexpr u32 s_UniformsStart = __LINE__;
+#define DECL_UNIFORM(var, name, size) \
+	static constexpr StringID var##_ID = SID(name); \
+	static const Uniform var(name, var##_ID, size, __LINE__ - s_UniformsStart - 1)
 
-	static const Uniform U_MODEL(UNIFORM("model"), sizeof(glm::mat4));
-	static const Uniform U_VIEW(UNIFORM("view"), sizeof(glm::mat4));
-	static const Uniform U_VIEW_INV(UNIFORM("invView"), sizeof(glm::mat4));
-	static const Uniform U_VIEW_PROJECTION(UNIFORM("viewProjection"), sizeof(glm::mat4));
-	static const Uniform U_PROJECTION(UNIFORM("projection"), sizeof(glm::mat4));
-	static const Uniform U_PROJECTION_INV(UNIFORM("invProj"), sizeof(glm::mat4));
-	static const Uniform U_BLEND_SHARPNESS(UNIFORM("blendSharpness"), sizeof(real));
-	static const Uniform U_COLOUR_MULTIPLIER(UNIFORM("colourMultiplier"), sizeof(glm::vec4));
-	static const Uniform U_CAM_POS(UNIFORM("camPos"), sizeof(glm::vec4));
-	static const Uniform U_POINT_LIGHTS(UNIFORM("pointLights"), sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
-	static const Uniform U_SPOT_LIGHTS(UNIFORM("spotLights"), sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
-	static const Uniform U_AREA_LIGHTS(UNIFORM("areaLights"), sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
-	static const Uniform U_DIR_LIGHT(UNIFORM("dirLight"), (u32)sizeof(DirLightData));
-	static const Uniform U_ALBEDO_SAMPLER(UNIFORM("albedoSampler"));
-	static const Uniform U_CONST_ALBEDO(UNIFORM("constAlbedo"), (u32)sizeof(glm::vec4));
-	static const Uniform U_METALLIC_SAMPLER(UNIFORM("metallicSampler"));
-	static const Uniform U_CONST_METALLIC(UNIFORM("constMetallic"), sizeof(real));
-	static const Uniform U_ROUGHNESS_SAMPLER(UNIFORM("roughnessSampler"));
-	static const Uniform U_CONST_ROUGHNESS(UNIFORM("constRoughness"), sizeof(real));
-	static const Uniform U_CONST_EMISSIVE(UNIFORM("constEmissive"), sizeof(glm::vec4));
-	static const Uniform U_NORMAL_SAMPLER(UNIFORM("normalSampler"));
-	static const Uniform U_ENABLE_ALBEDO_SAMPLER(UNIFORM("enableAlbedoSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_METALLIC_SAMPLER(UNIFORM("enableMetallicSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_ROUGHNESS_SAMPLER(UNIFORM("enableRoughnessSampler"), sizeof(i32));
-	static const Uniform U_ENABLE_NORMAL_SAMPLER(UNIFORM("enableNormalSampler"), sizeof(i32));
-	static const Uniform U_EMISSIVE_SAMPLER(UNIFORM("emissiveSampler"));
-	static const Uniform U_CUBEMAP_SAMPLER(UNIFORM("cubemapSampler"));
-	static const Uniform U_IRRADIANCE_SAMPLER(UNIFORM("irradianceSampler"));
-	static const Uniform U_FB_0_SAMPLER(UNIFORM("normalRoughnessSampler"));
-	static const Uniform U_FB_1_SAMPLER(UNIFORM("albedoMetallicSampler"));
-	static const Uniform U_ENABLE_EMISSIVE_SAMPLER(UNIFORM("enableEmissiveSampler"), sizeof(i32));
-	static const Uniform U_HDR_EQUIRECTANGULAR_SAMPLER(UNIFORM("hdrEquirectangular"));
-	static const Uniform U_BRDF_LUT_SAMPLER(UNIFORM("brdfLUT"));
-	static const Uniform U_PREFILTER_MAP(UNIFORM("prefilterMap"));
-	static const Uniform U_EXPOSURE(UNIFORM("exposure"), sizeof(real));
-	static const Uniform U_FONT_CHAR_DATA(UNIFORM("fontCharData"), sizeof(glm::vec4));
-	static const Uniform U_TEX_SIZE(UNIFORM("texSize"), sizeof(glm::vec2));
-	static const Uniform U_TEXTURE_SCALE(UNIFORM("textureScale"), sizeof(real));
-	static const Uniform U_TEX_CHANNEL(UNIFORM("texChannel"), sizeof(i32));
-	static const Uniform U_UNIFORM_BUFFER_CONSTANT(UNIFORM("uniformBufferConstant")); // TODO: Infer this
-	static const Uniform U_UNIFORM_BUFFER_DYNAMIC(UNIFORM("uniformBufferDynamic")); // TODO: Infer this
-	static const Uniform U_TIME(UNIFORM("time"), sizeof(glm::vec4));
-	static const Uniform U_SDF_DATA(UNIFORM("sdfData"), sizeof(glm::vec4));
-	static const Uniform U_HIGH_RES_TEX(UNIFORM("highResTex"));
-	static const Uniform U_DEPTH_SAMPLER(UNIFORM("depthSampler"));
-	static const Uniform U_NOISE_SAMPLER(UNIFORM("noiseSampler"));
-	static const Uniform U_SSAO_RAW_SAMPLER(UNIFORM("ssaoRawSampler"));
-	static const Uniform U_SSAO_FINAL_SAMPLER(UNIFORM("ssaoFinalSampler"));
-	static const Uniform U_SSAO_NORMAL_SAMPLER(UNIFORM("ssaoNormalSampler")); // TODO: Use normalSampler uniform?
-	static const Uniform U_SSAO_GEN_DATA(UNIFORM("ssaoGenData"), sizeof(SSAOGenData));
-	static const Uniform U_SSAO_BLUR_DATA_DYNAMIC(UNIFORM("ssaoBlurDataDynamic"), sizeof(SSAOBlurDataDynamic));
-	static const Uniform U_SSAO_BLUR_DATA_CONSTANT(UNIFORM("ssaoBlurDataConstant"), sizeof(SSAOBlurDataConstant));
-	static const Uniform U_SSAO_SAMPLING_DATA(UNIFORM("ssaoData"), sizeof(SSAOSamplingData));
-	static const Uniform U_LTC_MATRICES_SAMPLER(UNIFORM("ltcMatricesSampler"));
-	static const Uniform U_LTC_AMPLITUDES_SAMPLER(UNIFORM("ltcAmplitudesSampler"));
-	static const Uniform U_SHADOW_CASCADES_SAMPLER(UNIFORM("shadowCascadeSampler"));
-	static const Uniform U_SHADOW_SAMPLING_DATA(UNIFORM("shadowSamplingData"), sizeof(ShadowSamplingData));
-	static const Uniform U_NEAR_FAR_PLANES(UNIFORM("nearFarPlanes"), sizeof(glm::vec2));
-	static const Uniform U_POST_PROCESS_MAT(UNIFORM("postProcessMatrix"), sizeof(glm::mat4));
-	static const Uniform U_SCENE_SAMPLER(UNIFORM("sceneSampler"));
-	static const Uniform U_HISTORY_SAMPLER(UNIFORM("historySampler"));
-	static const Uniform U_LAST_FRAME_VIEWPROJ(UNIFORM("lastFrameViewProj"), sizeof(glm::mat4));
-	static const Uniform U_PARTICLE_BUFFER(UNIFORM("particleBuffer"), sizeof(ParticleBufferData));
-	static const Uniform U_PARTICLE_SIM_DATA(UNIFORM("particleSimData"), sizeof(ParticleSimData));
-	static const Uniform U_OCEAN_DATA(UNIFORM("oceanData"), sizeof(OceanData));
-	static const Uniform U_SKYBOX_DATA(UNIFORM("skyboxData"), sizeof(SkyboxData));
-	static const Uniform U_UV_BLEND_AMOUNT(UNIFORM("uvBlendAmount"), sizeof(glm::vec2));
-	static const Uniform U_SCREEN_SIZE(UNIFORM("screenSize"), sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
-	static const Uniform U_TERRAIN_GEN_CONSTANT_DATA(UNIFORM("terrainGenConstantData"), sizeof(TerrainGenConstantData));
-	static const Uniform U_TERRAIN_GEN_DYNAMIC_DATA(UNIFORM("terrainGenDynamicData"), sizeof(TerrainGenDynamicData));
-	static const Uniform U_TERRAIN_POINT_BUFFER(UNIFORM("terrainPointBuffer"));
-	static const Uniform U_TERRAIN_VERTEX_BUFFER(UNIFORM("terrainVertexBuffer"));
-	static const Uniform U_RANDOM_TABLES(UNIFORM("randomTables"));
-	static const Uniform U_CHARGE_AMOUNT(UNIFORM("chargeAmount"), sizeof(real));
+	UNIFORMS_START;
+	// NOTE: The order of variables here must match the order used in shaders
+	DECL_UNIFORM(U_MODEL, "model", sizeof(glm::mat4)); // TODO: Rename to OBJECT_TO_WORLD
+	DECL_UNIFORM(U_CAM_POS, "camPos", sizeof(glm::vec4));
+	DECL_UNIFORM(U_VIEW, "view", sizeof(glm::mat4));
+	DECL_UNIFORM(U_VIEW_INV, "invView", sizeof(glm::mat4));
+	DECL_UNIFORM(U_VIEW_PROJECTION, "viewProjection", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PROJECTION, "projection", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PROJECTION_INV, "invProj", sizeof(glm::mat4));
+	DECL_UNIFORM(U_COLOUR_MULTIPLIER, "colourMultiplier", sizeof(glm::vec4));
+	DECL_UNIFORM(U_DIR_LIGHT, "dirLight", (u32)sizeof(DirLightData));
+	DECL_UNIFORM(U_POINT_LIGHTS, "pointLights", sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
+	DECL_UNIFORM(U_SPOT_LIGHTS, "spotLights", sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
+	DECL_UNIFORM(U_AREA_LIGHTS, "areaLights", sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
+	DECL_UNIFORM(U_CONST_ALBEDO, "constAlbedo", (u32)sizeof(glm::vec4));
+	DECL_UNIFORM(U_CONST_METALLIC, "constMetallic", sizeof(real));
+	DECL_UNIFORM(U_CONST_ROUGHNESS, "constRoughness", sizeof(real));
+	DECL_UNIFORM(U_CONST_EMISSIVE, "constEmissive", sizeof(glm::vec4));
+	DECL_UNIFORM(U_ENABLE_ALBEDO_SAMPLER, "enableAlbedoSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_METALLIC_SAMPLER, "enableMetallicSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_ROUGHNESS_SAMPLER, "enableRoughnessSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_NORMAL_SAMPLER, "enableNormalSampler", sizeof(i32));
+	DECL_UNIFORM(U_ENABLE_EMISSIVE_SAMPLER, "enableEmissiveSampler", sizeof(i32));
+	DECL_UNIFORM(U_EXPOSURE, "exposure", sizeof(real));
+	DECL_UNIFORM(U_FONT_CHAR_DATA, "fontCharData", sizeof(glm::vec4));
+	DECL_UNIFORM(U_SDF_DATA, "sdfData", sizeof(glm::vec4));
+	DECL_UNIFORM(U_TEX_SIZE, "texSize", sizeof(glm::vec2));
+	DECL_UNIFORM(U_TEX_CHANNEL, "texChannel", sizeof(i32));
+	DECL_UNIFORM(U_OCEAN_DATA, "oceanData", sizeof(OceanData));
+	DECL_UNIFORM(U_SKYBOX_DATA, "skyboxData", sizeof(SkyboxData));
+	DECL_UNIFORM(U_TIME, "time", sizeof(glm::vec4));
+	DECL_UNIFORM(U_SHADOW_SAMPLING_DATA, "shadowSamplingData", sizeof(ShadowSamplingData));
+	DECL_UNIFORM(U_SSAO_GEN_DATA, "ssaoGenData", sizeof(SSAOGenData));
+	DECL_UNIFORM(U_SSAO_BLUR_DATA_DYNAMIC, "ssaoBlurDataDynamic", sizeof(SSAOBlurDataDynamic));
+	DECL_UNIFORM(U_SSAO_BLUR_DATA_CONSTANT, "ssaoBlurDataConstant", sizeof(SSAOBlurDataConstant));
+	DECL_UNIFORM(U_SSAO_SAMPLING_DATA, "ssaoData", sizeof(SSAOSamplingData));
+	DECL_UNIFORM(U_NEAR_FAR_PLANES, "nearFarPlanes", sizeof(glm::vec2));
+	DECL_UNIFORM(U_POST_PROCESS_MAT, "postProcessMatrix", sizeof(glm::mat4));
+	DECL_UNIFORM(U_LAST_FRAME_VIEWPROJ, "lastFrameViewProj", sizeof(glm::mat4));
+	DECL_UNIFORM(U_PARTICLE_BUFFER, "particleBuffer", sizeof(ParticleBufferData));
+	DECL_UNIFORM(U_PARTICLE_SIM_DATA, "particleSimData", sizeof(ParticleSimData));
+	DECL_UNIFORM(U_UV_BLEND_AMOUNT, "uvBlendAmount", sizeof(glm::vec2));
+	DECL_UNIFORM(U_SCREEN_SIZE, "screenSize", sizeof(glm::vec4)); // window (w, h, 1/w, 1/h)
+	DECL_UNIFORM(U_BLEND_SHARPNESS, "blendSharpness", sizeof(real));
+	DECL_UNIFORM(U_TEXTURE_SCALE, "textureScale", sizeof(real));
+	DECL_UNIFORM(U_TERRAIN_GEN_CONSTANT_DATA, "terrainGenConstantData", sizeof(TerrainGenConstantData));
+	DECL_UNIFORM(U_TERRAIN_GEN_DYNAMIC_DATA, "terrainGenDynamicData", sizeof(TerrainGenDynamicData));
+	DECL_UNIFORM(U_CHARGE_AMOUNT, "chargeAmount", sizeof(real));
+	// Textures & buffers (0-sized)
+	DECL_UNIFORM(U_ALBEDO_SAMPLER, "albedoSampler", 0);
+	DECL_UNIFORM(U_METALLIC_SAMPLER, "metallicSampler", 0);
+	DECL_UNIFORM(U_ROUGHNESS_SAMPLER, "roughnessSampler", 0);
+	DECL_UNIFORM(U_NORMAL_SAMPLER, "normalSampler", 0);
+	DECL_UNIFORM(U_EMISSIVE_SAMPLER, "emissiveSampler", 0);
+	DECL_UNIFORM(U_CUBEMAP_SAMPLER, "cubemapSampler", 0);
+	DECL_UNIFORM(U_IRRADIANCE_SAMPLER, "irradianceSampler", 0);
+	DECL_UNIFORM(U_FB_0_SAMPLER, "normalRoughnessSampler", 0);
+	DECL_UNIFORM(U_FB_1_SAMPLER, "albedoMetallicSampler", 0);
+	DECL_UNIFORM(U_HDR_EQUIRECTANGULAR_SAMPLER, "hdrEquirectangular", 0);
+	DECL_UNIFORM(U_BRDF_LUT_SAMPLER, "brdfLUT", 0);
+	DECL_UNIFORM(U_DEPTH_SAMPLER, "depthSampler", 0);
+	DECL_UNIFORM(U_NOISE_SAMPLER, "noiseSampler", 0);
+	DECL_UNIFORM(U_SSAO_RAW_SAMPLER, "ssaoRawSampler", 0);
+	DECL_UNIFORM(U_SSAO_FINAL_SAMPLER, "ssaoFinalSampler", 0);
+	DECL_UNIFORM(U_SSAO_NORMAL_SAMPLER, "ssaoNormalSampler", 0); // TODO: Use normalSampler uniform?
+	DECL_UNIFORM(U_LTC_MATRICES_SAMPLER, "ltcMatricesSampler", 0);
+	DECL_UNIFORM(U_LTC_AMPLITUDES_SAMPLER, "ltcAmplitudesSampler", 0);
+	DECL_UNIFORM(U_SHADOW_CASCADES_SAMPLER, "shadowCascadeSampler", 0);
+	DECL_UNIFORM(U_SCENE_SAMPLER, "sceneSampler", 0);
+	DECL_UNIFORM(U_HISTORY_SAMPLER, "historySampler", 0);
+	DECL_UNIFORM(U_PREFILTER_MAP, "prefilterMap", 0);
+	DECL_UNIFORM(U_HIGH_RES_TEX, "highResTex", 0);
+	DECL_UNIFORM(U_TERRAIN_POINT_BUFFER, "terrainPointBuffer", 0);
+	DECL_UNIFORM(U_TERRAIN_VERTEX_BUFFER, "terrainVertexBuffer", 0);
+	DECL_UNIFORM(U_RANDOM_TABLES, "randomTables", 0);
+	DECL_UNIFORM(U_UNIFORM_BUFFER_CONSTANT, "uniformBufferConstant", 0); // TODO: Infer this
+	DECL_UNIFORM(U_UNIFORM_BUFFER_DYNAMIC, "uniformBufferDynamic", 0); // TODO: Infer this
 
-#undef UNIFORM
+#undef DECL_UNIFORM
+#undef UNIFORMS_START
 
 	enum class ClearFlag
 	{
@@ -506,6 +529,292 @@ namespace flex
 
 	using RenderBatchDirtyFlags = u32;
 
+	enum TextureFormat : u32
+	{
+		UNDEFINED = 0,
+		R4G4_UNORM_PACK8 = 1,
+		R4G4B4A4_UNORM_PACK16 = 2,
+		B4G4R4A4_UNORM_PACK16 = 3,
+		R5G6B5_UNORM_PACK16 = 4,
+		B5G6R5_UNORM_PACK16 = 5,
+		R5G5B5A1_UNORM_PACK16 = 6,
+		B5G5R5A1_UNORM_PACK16 = 7,
+		A1R5G5B5_UNORM_PACK16 = 8,
+		R8_UNORM = 9,
+		R8_SNORM = 10,
+		R8_USCALED = 11,
+		R8_SSCALED = 12,
+		R8_UINT = 13,
+		R8_SINT = 14,
+		R8_SRGB = 15,
+		R8G8_UNORM = 16,
+		R8G8_SNORM = 17,
+		R8G8_USCALED = 18,
+		R8G8_SSCALED = 19,
+		R8G8_UINT = 20,
+		R8G8_SINT = 21,
+		R8G8_SRGB = 22,
+		R8G8B8_UNORM = 23,
+		R8G8B8_SNORM = 24,
+		R8G8B8_USCALED = 25,
+		R8G8B8_SSCALED = 26,
+		R8G8B8_UINT = 27,
+		R8G8B8_SINT = 28,
+		R8G8B8_SRGB = 29,
+		B8G8R8_UNORM = 30,
+		B8G8R8_SNORM = 31,
+		B8G8R8_USCALED = 32,
+		B8G8R8_SSCALED = 33,
+		B8G8R8_UINT = 34,
+		B8G8R8_SINT = 35,
+		B8G8R8_SRGB = 36,
+		R8G8B8A8_UNORM = 37,
+		R8G8B8A8_SNORM = 38,
+		R8G8B8A8_USCALED = 39,
+		R8G8B8A8_SSCALED = 40,
+		R8G8B8A8_UINT = 41,
+		R8G8B8A8_SINT = 42,
+		R8G8B8A8_SRGB = 43,
+		B8G8R8A8_UNORM = 44,
+		B8G8R8A8_SNORM = 45,
+		B8G8R8A8_USCALED = 46,
+		B8G8R8A8_SSCALED = 47,
+		B8G8R8A8_UINT = 48,
+		B8G8R8A8_SINT = 49,
+		B8G8R8A8_SRGB = 50,
+		A8B8G8R8_UNORM_PACK32 = 51,
+		A8B8G8R8_SNORM_PACK32 = 52,
+		A8B8G8R8_USCALED_PACK32 = 53,
+		A8B8G8R8_SSCALED_PACK32 = 54,
+		A8B8G8R8_UINT_PACK32 = 55,
+		A8B8G8R8_SINT_PACK32 = 56,
+		A8B8G8R8_SRGB_PACK32 = 57,
+		A2R10G10B10_UNORM_PACK32 = 58,
+		A2R10G10B10_SNORM_PACK32 = 59,
+		A2R10G10B10_USCALED_PACK32 = 60,
+		A2R10G10B10_SSCALED_PACK32 = 61,
+		A2R10G10B10_UINT_PACK32 = 62,
+		A2R10G10B10_SINT_PACK32 = 63,
+		A2B10G10R10_UNORM_PACK32 = 64,
+		A2B10G10R10_SNORM_PACK32 = 65,
+		A2B10G10R10_USCALED_PACK32 = 66,
+		A2B10G10R10_SSCALED_PACK32 = 67,
+		A2B10G10R10_UINT_PACK32 = 68,
+		A2B10G10R10_SINT_PACK32 = 69,
+		R16_UNORM = 70,
+		R16_SNORM = 71,
+		R16_USCALED = 72,
+		R16_SSCALED = 73,
+		R16_UINT = 74,
+		R16_SINT = 75,
+		R16_SFLOAT = 76,
+		R16G16_UNORM = 77,
+		R16G16_SNORM = 78,
+		R16G16_USCALED = 79,
+		R16G16_SSCALED = 80,
+		R16G16_UINT = 81,
+		R16G16_SINT = 82,
+		R16G16_SFLOAT = 83,
+		R16G16B16_UNORM = 84,
+		R16G16B16_SNORM = 85,
+		R16G16B16_USCALED = 86,
+		R16G16B16_SSCALED = 87,
+		R16G16B16_UINT = 88,
+		R16G16B16_SINT = 89,
+		R16G16B16_SFLOAT = 90,
+		R16G16B16A16_UNORM = 91,
+		R16G16B16A16_SNORM = 92,
+		R16G16B16A16_USCALED = 93,
+		R16G16B16A16_SSCALED = 94,
+		R16G16B16A16_UINT = 95,
+		R16G16B16A16_SINT = 96,
+		R16G16B16A16_SFLOAT = 97,
+		R32_UINT = 98,
+		R32_SINT = 99,
+		R32_SFLOAT = 100,
+		R32G32_UINT = 101,
+		R32G32_SINT = 102,
+		R32G32_SFLOAT = 103,
+		R32G32B32_UINT = 104,
+		R32G32B32_SINT = 105,
+		R32G32B32_SFLOAT = 106,
+		R32G32B32A32_UINT = 107,
+		R32G32B32A32_SINT = 108,
+		R32G32B32A32_SFLOAT = 109,
+		R64_UINT = 110,
+		R64_SINT = 111,
+		R64_SFLOAT = 112,
+		R64G64_UINT = 113,
+		R64G64_SINT = 114,
+		R64G64_SFLOAT = 115,
+		R64G64B64_UINT = 116,
+		R64G64B64_SINT = 117,
+		R64G64B64_SFLOAT = 118,
+		R64G64B64A64_UINT = 119,
+		R64G64B64A64_SINT = 120,
+		R64G64B64A64_SFLOAT = 121,
+		B10G11R11_UFLOAT_PACK32 = 122,
+		E5B9G9R9_UFLOAT_PACK32 = 123,
+		D16_UNORM = 124,
+		X8_D24_UNORM_PACK32 = 125,
+		D32_SFLOAT = 126,
+		S8_UINT = 127,
+		D16_UNORM_S8_UINT = 128,
+		D24_UNORM_S8_UINT = 129,
+		D32_SFLOAT_S8_UINT = 130,
+		BC1_RGB_UNORM_BLOCK = 131,
+		BC1_RGB_SRGB_BLOCK = 132,
+		BC1_RGBA_UNORM_BLOCK = 133,
+		BC1_RGBA_SRGB_BLOCK = 134,
+		BC2_UNORM_BLOCK = 135,
+		BC2_SRGB_BLOCK = 136,
+		BC3_UNORM_BLOCK = 137,
+		BC3_SRGB_BLOCK = 138,
+		BC4_UNORM_BLOCK = 139,
+		BC4_SNORM_BLOCK = 140,
+		BC5_UNORM_BLOCK = 141,
+		BC5_SNORM_BLOCK = 142,
+		BC6H_UFLOAT_BLOCK = 143,
+		BC6H_SFLOAT_BLOCK = 144,
+		BC7_UNORM_BLOCK = 145,
+		BC7_SRGB_BLOCK = 146,
+		ETC2_R8G8B8_UNORM_BLOCK = 147,
+		ETC2_R8G8B8_SRGB_BLOCK = 148,
+		ETC2_R8G8B8A1_UNORM_BLOCK = 149,
+		ETC2_R8G8B8A1_SRGB_BLOCK = 150,
+		ETC2_R8G8B8A8_UNORM_BLOCK = 151,
+		ETC2_R8G8B8A8_SRGB_BLOCK = 152,
+		EAC_R11_UNORM_BLOCK = 153,
+		EAC_R11_SNORM_BLOCK = 154,
+		EAC_R11G11_UNORM_BLOCK = 155,
+		EAC_R11G11_SNORM_BLOCK = 156,
+		ASTC_4x4_UNORM_BLOCK = 157,
+		ASTC_4x4_SRGB_BLOCK = 158,
+		ASTC_5x4_UNORM_BLOCK = 159,
+		ASTC_5x4_SRGB_BLOCK = 160,
+		ASTC_5x5_UNORM_BLOCK = 161,
+		ASTC_5x5_SRGB_BLOCK = 162,
+		ASTC_6x5_UNORM_BLOCK = 163,
+		ASTC_6x5_SRGB_BLOCK = 164,
+		ASTC_6x6_UNORM_BLOCK = 165,
+		ASTC_6x6_SRGB_BLOCK = 166,
+		ASTC_8x5_UNORM_BLOCK = 167,
+		ASTC_8x5_SRGB_BLOCK = 168,
+		ASTC_8x6_UNORM_BLOCK = 169,
+		ASTC_8x6_SRGB_BLOCK = 170,
+		ASTC_8x8_UNORM_BLOCK = 171,
+		ASTC_8x8_SRGB_BLOCK = 172,
+		ASTC_10x5_UNORM_BLOCK = 173,
+		ASTC_10x5_SRGB_BLOCK = 174,
+		ASTC_10x6_UNORM_BLOCK = 175,
+		ASTC_10x6_SRGB_BLOCK = 176,
+		ASTC_10x8_UNORM_BLOCK = 177,
+		ASTC_10x8_SRGB_BLOCK = 178,
+		ASTC_10x10_UNORM_BLOCK = 179,
+		ASTC_10x10_SRGB_BLOCK = 180,
+		ASTC_12x10_UNORM_BLOCK = 181,
+		ASTC_12x10_SRGB_BLOCK = 182,
+		ASTC_12x12_UNORM_BLOCK = 183,
+		ASTC_12x12_SRGB_BLOCK = 184,
+		G8B8G8R8_422_UNORM = 1000156000,
+		B8G8R8G8_422_UNORM = 1000156001,
+		G8_B8_R8_3PLANE_420_UNORM = 1000156002,
+		G8_B8R8_2PLANE_420_UNORM = 1000156003,
+		G8_B8_R8_3PLANE_422_UNORM = 1000156004,
+		G8_B8R8_2PLANE_422_UNORM = 1000156005,
+		G8_B8_R8_3PLANE_444_UNORM = 1000156006,
+		R10X6_UNORM_PACK16 = 1000156007,
+		R10X6G10X6_UNORM_2PACK16 = 1000156008,
+		R10X6G10X6B10X6A10X6_UNORM_4PACK16 = 1000156009,
+		G10X6B10X6G10X6R10X6_422_UNORM_4PACK16 = 1000156010,
+		B10X6G10X6R10X6G10X6_422_UNORM_4PACK16 = 1000156011,
+		G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16 = 1000156012,
+		G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16 = 1000156013,
+		G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16 = 1000156014,
+		G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16 = 1000156015,
+		G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16 = 1000156016,
+		R12X4_UNORM_PACK16 = 1000156017,
+		R12X4G12X4_UNORM_2PACK16 = 1000156018,
+		R12X4G12X4B12X4A12X4_UNORM_4PACK16 = 1000156019,
+		G12X4B12X4G12X4R12X4_422_UNORM_4PACK16 = 1000156020,
+		B12X4G12X4R12X4G12X4_422_UNORM_4PACK16 = 1000156021,
+		G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16 = 1000156022,
+		G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16 = 1000156023,
+		G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16 = 1000156024,
+		G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16 = 1000156025,
+		G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16 = 1000156026,
+		G16B16G16R16_422_UNORM = 1000156027,
+		B16G16R16G16_422_UNORM = 1000156028,
+		G16_B16_R16_3PLANE_420_UNORM = 1000156029,
+		G16_B16R16_2PLANE_420_UNORM = 1000156030,
+		G16_B16_R16_3PLANE_422_UNORM = 1000156031,
+		G16_B16R16_2PLANE_422_UNORM = 1000156032,
+		G16_B16_R16_3PLANE_444_UNORM = 1000156033,
+		PVRTC1_2BPP_UNORM_BLOCK_IMG = 1000054000,
+		PVRTC1_4BPP_UNORM_BLOCK_IMG = 1000054001,
+		PVRTC2_2BPP_UNORM_BLOCK_IMG = 1000054002,
+		PVRTC2_4BPP_UNORM_BLOCK_IMG = 1000054003,
+		PVRTC1_2BPP_SRGB_BLOCK_IMG = 1000054004,
+		PVRTC1_4BPP_SRGB_BLOCK_IMG = 1000054005,
+		PVRTC2_2BPP_SRGB_BLOCK_IMG = 1000054006,
+		PVRTC2_4BPP_SRGB_BLOCK_IMG = 1000054007,
+		ASTC_4x4_SFLOAT_BLOCK_EXT = 1000066000,
+		ASTC_5x4_SFLOAT_BLOCK_EXT = 1000066001,
+		ASTC_5x5_SFLOAT_BLOCK_EXT = 1000066002,
+		ASTC_6x5_SFLOAT_BLOCK_EXT = 1000066003,
+		ASTC_6x6_SFLOAT_BLOCK_EXT = 1000066004,
+		ASTC_8x5_SFLOAT_BLOCK_EXT = 1000066005,
+		ASTC_8x6_SFLOAT_BLOCK_EXT = 1000066006,
+		ASTC_8x8_SFLOAT_BLOCK_EXT = 1000066007,
+		ASTC_10x5_SFLOAT_BLOCK_EXT = 1000066008,
+		ASTC_10x6_SFLOAT_BLOCK_EXT = 1000066009,
+		ASTC_10x8_SFLOAT_BLOCK_EXT = 1000066010,
+		ASTC_10x10_SFLOAT_BLOCK_EXT = 1000066011,
+		ASTC_12x10_SFLOAT_BLOCK_EXT = 1000066012,
+		ASTC_12x12_SFLOAT_BLOCK_EXT = 1000066013,
+		G8_B8R8_2PLANE_444_UNORM_EXT = 1000330000,
+		G10X6_B10X6R10X6_2PLANE_444_UNORM_3PACK16_EXT = 1000330001,
+		G12X4_B12X4R12X4_2PLANE_444_UNORM_3PACK16_EXT = 1000330002,
+		G16_B16R16_2PLANE_444_UNORM_EXT = 1000330003,
+		A4R4G4B4_UNORM_PACK16_EXT = 1000340000,
+		A4B4G4R4_UNORM_PACK16_EXT = 1000340001,
+		G8B8G8R8_422_UNORM_KHR = G8B8G8R8_422_UNORM,
+		B8G8R8G8_422_UNORM_KHR = B8G8R8G8_422_UNORM,
+		G8_B8_R8_3PLANE_420_UNORM_KHR = G8_B8_R8_3PLANE_420_UNORM,
+		G8_B8R8_2PLANE_420_UNORM_KHR = G8_B8R8_2PLANE_420_UNORM,
+		G8_B8_R8_3PLANE_422_UNORM_KHR = G8_B8_R8_3PLANE_422_UNORM,
+		G8_B8R8_2PLANE_422_UNORM_KHR = G8_B8R8_2PLANE_422_UNORM,
+		G8_B8_R8_3PLANE_444_UNORM_KHR = G8_B8_R8_3PLANE_444_UNORM,
+		R10X6_UNORM_PACK16_KHR = R10X6_UNORM_PACK16,
+		R10X6G10X6_UNORM_2PACK16_KHR = R10X6G10X6_UNORM_2PACK16,
+		R10X6G10X6B10X6A10X6_UNORM_4PACK16_KHR = R10X6G10X6B10X6A10X6_UNORM_4PACK16,
+		G10X6B10X6G10X6R10X6_422_UNORM_4PACK16_KHR = G10X6B10X6G10X6R10X6_422_UNORM_4PACK16,
+		B10X6G10X6R10X6G10X6_422_UNORM_4PACK16_KHR = B10X6G10X6R10X6G10X6_422_UNORM_4PACK16,
+		G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16_KHR = G10X6_B10X6_R10X6_3PLANE_420_UNORM_3PACK16,
+		G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16_KHR = G10X6_B10X6R10X6_2PLANE_420_UNORM_3PACK16,
+		G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16_KHR = G10X6_B10X6_R10X6_3PLANE_422_UNORM_3PACK16,
+		G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16_KHR = G10X6_B10X6R10X6_2PLANE_422_UNORM_3PACK16,
+		G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16_KHR = G10X6_B10X6_R10X6_3PLANE_444_UNORM_3PACK16,
+		R12X4_UNORM_PACK16_KHR = R12X4_UNORM_PACK16,
+		R12X4G12X4_UNORM_2PACK16_KHR = R12X4G12X4_UNORM_2PACK16,
+		R12X4G12X4B12X4A12X4_UNORM_4PACK16_KHR = R12X4G12X4B12X4A12X4_UNORM_4PACK16,
+		G12X4B12X4G12X4R12X4_422_UNORM_4PACK16_KHR = G12X4B12X4G12X4R12X4_422_UNORM_4PACK16,
+		B12X4G12X4R12X4G12X4_422_UNORM_4PACK16_KHR = B12X4G12X4R12X4G12X4_422_UNORM_4PACK16,
+		G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16_KHR = G12X4_B12X4_R12X4_3PLANE_420_UNORM_3PACK16,
+		G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16_KHR = G12X4_B12X4R12X4_2PLANE_420_UNORM_3PACK16,
+		G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16_KHR = G12X4_B12X4_R12X4_3PLANE_422_UNORM_3PACK16,
+		G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16_KHR = G12X4_B12X4R12X4_2PLANE_422_UNORM_3PACK16,
+		G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16_KHR = G12X4_B12X4_R12X4_3PLANE_444_UNORM_3PACK16,
+		G16B16G16R16_422_UNORM_KHR = G16B16G16R16_422_UNORM,
+		B16G16R16G16_422_UNORM_KHR = B16G16R16G16_422_UNORM,
+		G16_B16_R16_3PLANE_420_UNORM_KHR = G16_B16_R16_3PLANE_420_UNORM,
+		G16_B16R16_2PLANE_420_UNORM_KHR = G16_B16R16_2PLANE_420_UNORM,
+		G16_B16_R16_3PLANE_422_UNORM_KHR = G16_B16_R16_3PLANE_422_UNORM,
+		G16_B16R16_2PLANE_422_UNORM_KHR = G16_B16R16_2PLANE_422_UNORM,
+		G16_B16_R16_3PLANE_444_UNORM_KHR = G16_B16_R16_3PLANE_444_UNORM,
+		MAX_ENUM = 0x7FFFFFFF
+	};
+
 	// TODO: Is setting all the members to false necessary?
 	// TODO: Straight up copy most of these with a memcpy?
 	struct MaterialCreateInfo
@@ -531,7 +840,7 @@ namespace flex
 
 		// PBR Constant values
 		glm::vec4 constAlbedo = VEC4_ONE;
-		glm::vec4 constEmissive = VEC4_ONE;
+		glm::vec4 constEmissive = VEC4_ZERO;
 		real constMetallic = 0.0f;
 		real constRoughness = 0.0f;
 
@@ -565,8 +874,10 @@ namespace flex
 		bool bSerializable = true;
 
 		bool persistent = false;
-		bool visibleInEditor = true;
+		bool bEditorMaterial = false;
 	};
+
+	using HTextureSampler = void*;
 
 	struct Texture
 	{
@@ -576,15 +887,38 @@ namespace flex
 		virtual ~Texture() = default;
 
 		Texture(const Texture&) = delete;
-		Texture(const Texture&&) = delete;
+		Texture(Texture&&) = delete;
 		Texture& operator=(const Texture&) = delete;
-		Texture& operator=(const Texture&&) = delete;
+		Texture& operator=(Texture&&) = delete;
 
-		// TODO: Add Reload
+		virtual void Reload() = 0;
+
+		bool LoadData(i32 requestedChannelCount);
+		void FreeData();
+
+		virtual u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
+			TextureFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount = 1) = 0;
+
+		/*
+		* Creates this texture's rendering resources
+		* Requires data to have been loaded already
+		* Returns the size of the image
+		*/
+		virtual u64 Create(bool bGenerateFullMipChain = false) = 0;
+
+		/*
+		 * Creates image, image view, and sampler based on the texture at relativeFilePath
+		 * Returns true if load completed successfully
+		 */
+		virtual bool LoadFromFile(const std::string& inRelativeFilePath, HTextureSampler inSampler, TextureFormat inFormat = TextureFormat::UNDEFINED) = 0;
+
+		bool IsLoading() const;
+		bool IsCreated() const;
 
 		u32 width = 0;
 		u32 height = 0;
 		u32 channelCount = 0;
+		u8* pixels = nullptr; // Only valid in between load and creation
 		std::string name;
 		std::string relativeFilePath;
 		std::string fileName;
@@ -594,7 +928,8 @@ namespace flex
 		bool bGenerateMipMaps = false;
 		bool bHDR = false;
 		bool bIsArray = false;
-		bool bSamplerClampToBorder = false;
+		std::atomic_uint32_t bIsLoading = 0;
+		std::atomic_uint32_t bIsCreated = 0;
 	};
 
 	template<typename UniformType>
@@ -616,6 +951,7 @@ namespace flex
 
 		void SetUniform(Uniform const* uniform, const UniformType object)
 		{
+			PROFILE_AUTO("ShaderUniformContainer SetUniform");
 			for (u32 i = 0; i < (u32)values.size(); ++i)
 			{
 				if (values[i].uniform->id == uniform->id)
@@ -655,6 +991,7 @@ namespace flex
 
 		bool Contains(Uniform const* uniform) const
 		{
+			PROFILE_AUTO("ShaderUniformContainer Contains");
 			for (const auto& pair : values)
 			{
 				if (pair.uniform->id == uniform->id)
@@ -680,22 +1017,126 @@ namespace flex
 		std::vector<TexPair> values;
 	};
 
+	struct UniformList
+	{
+		bool HasUniform(Uniform const* uniform) const;
+		bool HasUniform(const StringID& uniformID) const;
+		void AddUniform(Uniform const* uniform);
+		u32 GetSizeInBytes() const;
+
+		std::vector<Uniform const*> uniforms;
+		u32 totalSizeInBytes = 0;
+	};
+
+	enum class GPUBufferType
+	{
+		STATIC,
+		DYNAMIC,
+		PARTICLE_DATA,
+		TERRAIN_POINT_BUFFER,
+		TERRAIN_VERTEX_BUFFER,
+
+		_NONE
+	};
+
+	struct UniformBufferObjectData
+	{
+		u8* data = nullptr;
+		u32 unitSize = 0; // Size of each buffer instance (per object)
+	};
+
+	struct GPUBuffer
+	{
+		GPUBuffer(GPUBufferType type, const std::string& debugName);
+		virtual ~GPUBuffer();
+
+		GPUBuffer(const GPUBuffer&) = delete;
+		GPUBuffer(GPUBuffer&& other) = delete;
+		GPUBuffer& operator=(const GPUBuffer&) = delete;
+		GPUBuffer& operator=(GPUBuffer&&) = delete;
+
+		void AllocHostMemory(u32 size, u32 alignment = u32_max);
+		void FreeHostMemory();
+
+		GPUBufferID ID = InvalidGPUBufferID;
+		u32 fullDynamicBufferSize = 0;
+		UniformBufferObjectData data;
+		std::string debugName;
+
+		GPUBufferType type = GPUBufferType::_NONE;
+	};
+
+	struct SpecializationInfoType
+	{
+		std::string name;
+		u32 id;
+		i32 defaultValut;
+	};
+
+	struct GPUBufferList
+	{
+		~GPUBufferList();
+
+		void Add(GPUBufferType type, const std::string& debugName);
+		GPUBuffer* Get(GPUBufferType type);
+		const GPUBuffer* Get(GPUBufferType type) const;
+		bool Has(GPUBufferType type) const;
+
+		std::vector<GPUBuffer*> bufferList;
+	};
+
 	struct MaterialPropertyOverride
 	{
-		MaterialPropertyOverride() : i32Value(0) {}
-		MaterialPropertyOverride(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		MaterialPropertyOverride(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		void operator=(const MaterialPropertyOverride& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		void operator=(const MaterialPropertyOverride&& other) { memcpy(this, &other, sizeof(MaterialPropertyOverride)); }
-		MaterialPropertyOverride(real realValue) : realValue(realValue) {}
-		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value) {}
-		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value) {}
-		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue) {}
-		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value) {}
-		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value) {}
-		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value) {}
-		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value) {}
-		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue) {}
+		enum class ValueType
+		{
+			REAL,
+			UINT,
+			INT,
+			BOOL,
+			VEC2,
+			VEC3,
+			VEC4,
+			MAT4,
+			VOID_STAR,
+			_NONE
+		};
+
+		MaterialPropertyOverride(const MaterialPropertyOverride& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		MaterialPropertyOverride(MaterialPropertyOverride&& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		void operator=(const MaterialPropertyOverride& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+		void operator=(MaterialPropertyOverride&& other)
+		{
+			memcpy(this, &other, sizeof(MaterialPropertyOverride));
+		}
+
+		MaterialPropertyOverride() : i32Value(0), valueType(ValueType::_NONE) {}
+		MaterialPropertyOverride(real realValue) : realValue(realValue), valueType(ValueType::REAL) {}
+		MaterialPropertyOverride(u32 u32Value) : u32Value(u32Value), valueType(ValueType::UINT) {}
+		MaterialPropertyOverride(i32 i32Value) : i32Value(i32Value), valueType(ValueType::INT) {}
+		MaterialPropertyOverride(bool boolValue) : boolValue(boolValue), valueType(ValueType::BOOL) {}
+		MaterialPropertyOverride(const glm::vec2& vec2Value) : vec2Value(vec2Value), valueType(ValueType::VEC2) {}
+		MaterialPropertyOverride(const glm::vec3& vec3Value) : vec3Value(vec3Value), valueType(ValueType::VEC3) {}
+		MaterialPropertyOverride(const glm::vec4& vec4Value) : vec4Value(vec4Value), valueType(ValueType::VEC4) {}
+		MaterialPropertyOverride(const glm::mat4& mat4Value) : mat4Value(mat4Value), valueType(ValueType::MAT4) {}
+		MaterialPropertyOverride(void* pointerValue) : pointerValue(pointerValue), valueType(ValueType::VOID_STAR) {}
+
+		void* GetDataPointer()
+		{
+			if (valueType == ValueType::VOID_STAR)
+			{
+				return pointerValue;
+			}
+			return &realValue;
+		}
 
 		union {
 			real realValue;
@@ -708,6 +1149,7 @@ namespace flex
 			glm::mat4 mat4Value;
 			void* pointerValue;
 		};
+		ValueType valueType;
 	};
 
 	struct UniformOverrides
@@ -715,8 +1157,10 @@ namespace flex
 		using UniformPair = Pair<Uniform const*, MaterialPropertyOverride>;
 
 		void AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride);
-		bool HasUniform(Uniform const* uniform) const;
-		bool HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const;
+		bool HasUniform(StringID uniformID) const;
+		bool HasUniform(StringID uniformID, MaterialPropertyOverride& outPropertyOverride) const;
+
+		void Clear();
 
 		std::map<StringID, UniformPair> overrides;
 	};
@@ -728,17 +1172,16 @@ namespace flex
 		Material() = default;
 		virtual ~Material();
 		explicit Material(const Material& rhs);
-
-		Material(const Material&&) = delete;
+		Material(Material&&) = delete;
 		Material& operator=(const Material&) = delete;
-		Material& operator=(const Material&&) = delete;
+		Material& operator=(Material&&) = delete;
 
 		bool Equals(const Material& other);
 
-		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut);
-		JSONObject Serialize() const;
+		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion);
+		FLEX_NO_DISCARD JSONObject Serialize() const;
 
-		static std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);
+		static FLEX_NO_DISCARD std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);
 
 		std::string name;
 		ShaderID shaderID = InvalidShaderID;
@@ -746,6 +1189,9 @@ namespace flex
 
 		// GBuffer samplers
 		std::vector<Pair<std::string, void*>> sampledFrameBuffers;
+
+		// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
+		GPUBufferList gpuBufferList;
 
 		glm::vec2 cubemapSamplerSize = VEC2_ZERO;
 
@@ -764,16 +1210,15 @@ namespace flex
 		glm::vec2 prefilteredMapSize = VEC2_ZERO;
 		glm::vec4 colourMultiplier = VEC4_ONE;
 
-		bool enableNormalSampler = false;
-
 		bool generateCubemapSampler = false;
 		bool enableCubemapSampler = false;
 
 		// PBR samplers
 		bool enableAlbedoSampler = false;
-		bool enableEmissiveSampler = false;
 		bool enableMetallicSampler = false;
 		bool enableRoughnessSampler = false;
+		bool enableNormalSampler = false;
+		bool enableEmissiveSampler = false;
 
 		bool generateHDREquirectangularSampler = false;
 		bool enableHDREquirectangularSampler = false;
@@ -792,7 +1237,7 @@ namespace flex
 		bool generateReflectionProbeMaps = false;
 
 		bool persistent = false;
-		bool visibleInEditor = false;
+		bool bEditorMaterial = false;
 
 		bool bSerializable = true;
 
@@ -816,9 +1261,9 @@ namespace flex
 			PushConstantBlock(i32 initialSize);
 
 			PushConstantBlock(const PushConstantBlock& rhs);
-			PushConstantBlock(const PushConstantBlock&& rhs);
+			PushConstantBlock(PushConstantBlock&& rhs);
 			PushConstantBlock& operator=(const PushConstantBlock& rhs);
-			PushConstantBlock& operator=(const PushConstantBlock&& rhs);
+			PushConstantBlock& operator=(PushConstantBlock&& rhs);
 
 			~PushConstantBlock();
 
@@ -867,6 +1312,7 @@ namespace flex
 		DepthTestFunc depthTestReadFunc = DepthTestFunc::GEQUAL;
 		CullFace cullFace = CullFace::BACK;
 		RenderPassType renderPassOverride = RenderPassType::_NONE;
+		TopologyMode topologyMode = TopologyMode::TRIANGLE_LIST;
 
 		bool visible = true;
 		bool visibleInSceneExplorer = true;
@@ -874,17 +1320,6 @@ namespace flex
 		bool bSetDynamicStates = false;
 		bool bIndexed = false;
 		bool bAllowDynamicBufferShrinking = true;
-	};
-
-	struct UniformList
-	{
-		bool HasUniform(Uniform const* uniform) const;
-		bool HasUniform(const StringID& uniformID) const;
-		void AddUniform(Uniform const* uniform);
-		u32 GetSizeInBytes() const;
-
-		std::map<StringID, Uniform const*> uniforms;
-		u32 totalSizeInBytes = 0;
 	};
 
 	struct ShaderInfo
@@ -908,9 +1343,9 @@ namespace flex
 		virtual ~Shader() = default;
 
 		Shader(const Shader&) = delete;
-		Shader(const Shader&&) = delete;
+		Shader(Shader&&) = delete;
 		Shader& operator=(const Shader&) = delete;
-		Shader& operator=(const Shader&&) = delete;
+		Shader& operator=(Shader&&) = delete;
 
 		std::string name;
 

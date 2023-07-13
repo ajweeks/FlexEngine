@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Black glass",
+		"shader" : "pbr",
+		"const albedo" : "0.047,0.026,0.026",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.050000
+	}
+}

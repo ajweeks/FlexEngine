@@ -5,21 +5,22 @@
 #include <stdlib.h> // rand
 
 #include "Audio/AudioManager.hpp"
+#include "ResourceManager.hpp"
 
 namespace flex
 {
-	void AudioCue::Initialize(const std::string& filePath0, i32 fileCount)
+	void AudioCue::Initialize(const std::string& firstFileName, i32 fileCount, bool b2D)
 	{
 		// "xxx00.wav"
 		//     ^
 		//     654321
-		assert(filePath0.substr(filePath0.length() - 6, 2).compare("00") == 0);
-		assert(fileCount >= 1);
+		CHECK_EQ(firstFileName.substr(firstFileName.length() - 6, 2).compare("00"), 0);
+		CHECK_GE(fileCount, 1);
 
 		// ".wav"
-		std::string fileTypeStr = filePath0.substr(filePath0.length() - 4);
+		std::string fileTypeStr = firstFileName.substr(firstFileName.length() - 4);
 		// "audio/xxx"
-		std::string filePathStripped = filePath0.substr(0, filePath0.length() - 6);
+		std::string filePathStripped = firstFileName.substr(0, firstFileName.length() - 6);
 		for (i32 i = 0; i < fileCount; ++i)
 		{
 			std::string iStr = std::to_string(i);
@@ -27,8 +28,8 @@ namespace flex
 			{
 				iStr = "0" + iStr;
 			}
-			std::string filePathI = filePathStripped + iStr + fileTypeStr;
-			AudioSourceID sourceIDi = AudioManager::AddAudioSource(filePathI);
+			std::string filePath = filePathStripped + iStr + fileTypeStr;
+			AudioSourceID sourceIDi = g_ResourceManager->GetOrLoadAudioSourceID(SID(filePath.c_str()), b2D);
 			m_SourceIDs.push_back(sourceIDi);
 		}
 

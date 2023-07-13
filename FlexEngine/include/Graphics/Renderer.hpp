@@ -1,15 +1,11 @@
 #pragma once
 
-IGNORE_WARNINGS_PUSH
-#include "LinearMath/btIDebugDraw.h"
-IGNORE_WARNINGS_POP
-
+#include "BitmapFont.hpp"
+#include "ConfigFile.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
 #include "RendererTypes.hpp"
-#include "BitmapFont.hpp"
 #include "VertexBufferData.hpp"
 
-class btIDebugDraw;
 struct FT_LibraryRec_;
 typedef struct FT_LibraryRec_* FT_Library;
 
@@ -17,70 +13,15 @@ namespace flex
 {
 	class DirectionalLight;
 	class DirectoryWatcher;
+	class DebugRenderer;
 	class GameObject;
+	class EditorObject;
 	class MeshComponent;
 	class Mesh;
 	class ParticleSystem;
 	class PointLight;
 	class UIMesh;
 	struct TextCache;
-
-	class PhysicsDebugDrawBase : public btIDebugDraw
-	{
-	public:
-		virtual ~PhysicsDebugDrawBase() {};
-
-		virtual void Initialize() = 0;
-		virtual void Destroy() = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour) = 0;
-		virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) = 0;
-
-		virtual void OnPostSceneChange() = 0;
-
-		virtual void flushLines() override;
-
-		void DrawAxes(const btVector3& origin, const btQuaternion& orientation, real scale);
-
-		void UpdateDebugMode();
-		void ClearLines();
-
-	protected:
-		virtual void Draw() = 0;
-
-		struct LineSegment
-		{
-			LineSegment() {}
-
-			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector3& vColFrom, const btVector3& vColTo)
-			{
-				memcpy(start, vStart.m_floats, sizeof(real) * 3);
-				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 3);
-				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 3);
-				colourFrom[3] = 1.0f;
-				colourTo[3] = 1.0f;
-			}
-			LineSegment(const btVector3& vStart, const btVector3& vEnd, const btVector4& vColFrom, const btVector3& vColTo)
-			{
-				memcpy(start, vStart.m_floats, sizeof(real) * 3);
-				memcpy(end, vEnd.m_floats, sizeof(real) * 3);
-				memcpy(colourFrom, vColFrom.m_floats, sizeof(real) * 4);
-				memcpy(colourTo, vColTo.m_floats, sizeof(real) * 4);
-			}
-			real start[3];
-			real end[3];
-			real colourFrom[4];
-			real colourTo[4];
-		};
-
-		// TODO: Allocate from pool to reduce startup alloc size (currently 57MB!)
-		static const u32 MAX_NUM_LINE_SEGMENTS = 1'048'576;
-		u32 m_LineSegmentIndex = 0;
-		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];
-
-		i32 m_DebugMode = 0;
-
-	};
 
 	class Renderer
 	{
@@ -91,20 +32,22 @@ namespace flex
 		virtual void Initialize();
 		virtual void PostInitialize();
 		virtual void Destroy();
-		void DestroyPersistentObjects();
 
 		virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) = 0;
-		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) = 0;
-		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) = 0;
-		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkFilter inFilter) = 0;
+		virtual TextureID InitializeLoadedTexture(TextureID textureID) = 0;
+		virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath,
+			HTextureSampler inSampler,
+			bool bFlipVertically,
+			bool bGenerateMipMaps,
+			bool bHDR,
+			TextureID existingTextureID = InvalidTextureID) = 0;
+		virtual TextureID InitializeTextureFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) = 0;
+		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
 		virtual void OnTextureDestroyed(TextureID textureID) = 0;
 
 		virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) = 0;
-
-		virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) = 0;
-		virtual void SetClearColour(real r, real g, real b) = 0;
 
 		virtual void Update();
 		virtual void EndOfFrame();
@@ -121,13 +64,15 @@ namespace flex
 		virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 		virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) = 0;
 
-		void QueueHologramMesh(PrefabID prefabID, const Transform& transform, const glm::vec4& colour);
+		void QueueHologramMesh(PrefabID prefabID, Transform& transform, const glm::vec4& colour);
 		void QueueHologramMesh(PrefabID prefabID, const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec3& scaleWS, const glm::vec4& colour);
 
 		virtual void OnWindowSizeChanged(i32 width, i32 height) = 0;
 
-		virtual void OnPreSceneChange() = 0;
+		virtual void OnPreSceneChange();
 		virtual void OnPostSceneChange(); // Called once scene has been loaded and all objects have been initialized and post initialized
+
+		virtual void OnSettingsReloaded() = 0;
 
 		/*
 		* Fills outInfo with an up-to-date version of the render object's info
@@ -146,7 +91,7 @@ namespace flex
 
 		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 
-		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const = 0;
+		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames(bool bEditorMaterials) const = 0;
 
 		virtual bool DestroyRenderObject(RenderID renderID) = 0;
 
@@ -157,7 +102,7 @@ namespace flex
 
 		virtual void RenderObjectMaterialChanged(MaterialID materialID) = 0;
 
-		virtual PhysicsDebugDrawBase* GetDebugDrawer() = 0;
+		virtual DebugRenderer* GetDebugRenderer() = 0;
 
 		virtual void DrawStringSS(const std::string& str,
 			const glm::vec4& colour,
@@ -181,8 +126,11 @@ namespace flex
 		// TODO: Use MeshID
 		virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) = 0;
 
-		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) = 0;
+		virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system) = 0;
 		virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) = 0;
+		virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
+		virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) = 0;
+		virtual void OnParticleSystemTemplateUpdated(StringID particleTemplateNameSID) = 0;
 
 		virtual void RecreateEverything() = 0;
 
@@ -196,20 +144,47 @@ namespace flex
 		virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const = 0;
 		virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) = 0;
 
-
 		// Will attempt to find pre-rendered font at specified path, and
 		// only render a new file if not present or if bForceRender is true
 		// Returns true if succeeded
 		virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) = 0;
 
+		virtual void OnTextureReloaded(Texture* texture) = 0;
+
+		virtual Texture* CreateTexture(const std::string& textureName) = 0;
+
+		virtual HTextureSampler GetSamplerLinearRepeat() = 0;
+		virtual HTextureSampler GetSamplerLinearClampToEdge() = 0;
+		virtual HTextureSampler GetSamplerLinearClampToBorder() = 0;
+		virtual HTextureSampler GetSamplerNearestClampToEdge() = 0;
+
+		virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) = 0;
+		virtual void UnregisterGPUBuffer(GPUBufferID bufferID) = 0;
+		virtual GPUBuffer* GetGPUBuffer(GPUBufferID bufferID) = 0;
+
+		virtual void UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferSize, void* data, u32 dataSize) = 0;
+
+		virtual void FreeGPUBuffer(GPUBuffer*) = 0;
+		virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type, const std::string& debugName) = 0;
+
+		virtual void CreateGPUBuffer(GPUBuffer* buffer,
+			u32 bufferSize,
+			VkBufferUsageFlags bufferUseageFlagBits,
+			VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+			bool bMap = true) = 0;
+
+		virtual void SetGPUBufferName(GPUBuffer const* buffer, const char* name) = 0;
+
+		virtual u32 GetNonCoherentAtomSize() const = 0;
+
 		void SetReflectionProbeMaterial(MaterialID reflectionProbeMaterialID);
 
 		i32 GetShortMaterialIndex(MaterialID materialID, bool bShowEditorMaterials);
 		// Returns true when the selected material has changed
-		bool DrawImGuiMaterialList(i32* selectedMaterialIndexShort, MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
+		bool DrawImGuiMaterialList(MaterialID* selectedMaterialID, bool bShowEditorMaterials, bool bScrollToSelected);
 		void DrawImGuiTexturePreviewTooltip(Texture* texture);
 		// Returns true if any property changed
-		bool DrawImGuiForGameObject(GameObject* gameObject);
+		bool DrawImGuiForGameObject(GameObject* gameObject, bool bDrawingEditorObjects);
 
 		void DrawSpecializationConstantInfoImGui();
 		void DrawImGuiSettings();
@@ -261,24 +236,25 @@ namespace flex
 		PhysicsDebuggingSettings& GetPhysicsDebuggingSettings();
 
 		bool RegisterDirectionalLight(DirectionalLight* dirLight);
-		PointLightID RegisterPointLight(PointLightData* pointLightData);
-		void UpdatePointLightData(PointLightID ID, PointLightData* data);
-		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
-		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
-		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
-		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
-
 		void RemoveDirectionalLight();
+		DirectionalLight* GetDirectionalLight();
+
+		PointLightID RegisterPointLight(PointLightData* pointLightData);
 		void RemovePointLight(PointLightID ID);
 		void RemoveAllPointLights();
+		void UpdatePointLightData(PointLightID ID, PointLightData* data);
+		i32 GetNumPointLights();
+
+		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
 		void RemoveSpotLight(SpotLightID ID);
 		void RemoveAllSpotLights();
+		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
+		i32 GetNumSpotLights();
+
+		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
 		void RemoveAreaLight(AreaLightID ID);
 		void RemoveAllAreaLights();
-
-		DirectionalLight* GetDirectionalLight();
-		i32 GetNumPointLights();
-		i32 GetNumSpotLights();
+		void UpdateAreaLightData(AreaLightID ID, AreaLightData* data);
 		i32 GetNumAreaLights();
 
 		i32 GetFramesRenderedCount() const;
@@ -299,13 +275,13 @@ namespace flex
 		bool MaterialWithNameExists(const std::string& matName);
 
 		bool GetShaderID(const std::string& shaderName, ShaderID& shaderID);
-		bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& materialID);
+		bool FindOrCreateMaterialByName(const std::string& materialName, MaterialID& outMaterialID);
 
 		struct PostProcessSettings
 		{
 			real saturation = 1.0f;
-			glm::vec3 brightness;
-			glm::vec3 offset;
+			glm::vec3 brightness = VEC3_ONE;
+			glm::vec3 offset = VEC3_ZERO;
 			bool bEnableFXAA = true;
 			bool bEnableFXAADEBUGShowEdges = false;
 		};
@@ -324,7 +300,7 @@ namespace flex
 
 		void SetDirtyFlags(RenderBatchDirtyFlags flags);
 
-		std::vector<JSONObject> SerializeAllMaterialsToJSON();
+		const std::map<MaterialID, Material*>& GetLoadedMaterials();
 
 		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
 		void SetStaticGeometryBufferDirty(u32 staticVertexBufferIndex);
@@ -347,16 +323,17 @@ namespace flex
 		void ClearShaderHash(const std::string& shaderName);
 		void RecompileShaders(bool bForceCompileAll);
 
-		bool bUniformBufferWindowShowing = false;
-		bool bGPUTimingsWindowShowing = false;
+		u32 GetAlignedUBOSize(u32 unalignedSize);
 
-		static const u32 MAX_PARTICLE_COUNT = 65536;
+		static const u32 MAX_PARTICLE_COUNT_PER_INSTANCE = 65536;
+		static const u32 MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM = 16;
 		static const u32 PARTICLES_PER_DISPATCH = 256;
 		static const u32 SSAO_NOISE_DIM = 4;
 
 		// TODO: Store in map (string name -> TextureID)
 		TextureID blankTextureID = InvalidTextureID; // 1x1 white pixel texture
 		TextureID blankTextureArrID = InvalidTextureID; // 1x1 white pixel with texture array with one layer
+		TextureID pinkTextureID = InvalidTextureID; // 1x1 pink (magenta) texture
 		TextureID alphaBGTextureID = InvalidTextureID;
 
 		TextureID pointLightIconID = InvalidTextureID;
@@ -372,17 +349,23 @@ namespace flex
 
 		MaterialID m_HologramMatID = InvalidMaterialID;
 		//RenderID m_HologramProxyRenderID = InvalidRenderID;
-		GameObject* m_HologramProxyObject = nullptr;
+		EditorObject* m_HologramProxyObject = nullptr;
 
-		PrefabID m_QueuedHologramPrefabID;
-		glm::vec3 m_QueuedHologramPosWS;
-		glm::quat m_QueuedHologramRotWS;
-		glm::vec3 m_QueuedHologramScaleWS;
-		glm::vec4 m_QueuedHologramColour;
+		struct HologramMetaData
+		{
+			glm::vec3 posWS;
+			glm::quat rotWS;
+			glm::vec3 scaleWS;
+			glm::vec4 colour;
+		};
+		// Stores data about the queued hologram (if any)
+		HologramMetaData m_QueuedHologramData;
+		PrefabID m_QueuedHologramPrefabID = InvalidPrefabID;
 
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;
 		Texture* m_NoiseTexture = nullptr;
+		Texture* m_PinkTexture = nullptr;
 
 	protected:
 		struct ShaderMetaData
@@ -393,10 +376,6 @@ namespace flex
 			std::vector<std::string> sampledTextures;
 		};
 
-		void ParseShaderMetaData();
-		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);
-		void LoadShaders();
-
 		virtual void InitializeShaders(const std::vector<ShaderInfo>& shaderInfos) = 0;
 		virtual bool LoadShaderCode(ShaderID shaderID) = 0;
 		virtual void FillOutGBufferFrameBufferAttachments(std::vector<Pair<std::string, void*>>& outVec) = 0;
@@ -404,6 +383,10 @@ namespace flex
 
 		virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) = 0;
 		virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) = 0;
+
+		void ParseShaderMetaData();
+		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);
+		void LoadShaders();
 
 		void EnqueueScreenSpaceSprites();
 		void EnqueueWorldSpaceSprites();
@@ -414,8 +397,6 @@ namespace flex
 		void EnqueueWorldSpaceText();
 
 		void InitializeEngineMaterials();
-
-		std::string PickRandomSkyboxTexture();
 
 		u32 UpdateTextBufferSS(std::vector<TextVertex2D>& outTextVertices);
 		u32 UpdateTextBufferWS(std::vector<TextVertex3D>& outTextVertices);
@@ -433,6 +414,11 @@ namespace flex
 		void SerializeSpecializationConstantInfo();
 		void SerializeShaderSpecializationConstants();
 
+		void CreateParticleBuffer(Material* material);
+
+		bool InitializeFreeType();
+		void DestroyFreeType();
+
 		u8* m_LightData = nullptr;
 		PointLightData* m_PointLightData = nullptr; // Points into m_LightData buffer
 		SpotLightData* m_SpotLightData = nullptr; // Points into m_LightData buffer
@@ -441,6 +427,8 @@ namespace flex
 		i32 m_NumSpotLightsEnabled = 0;
 		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
+
+		u32 m_DynamicAlignment = 0;
 
 		struct DrawCallInfo
 		{
@@ -481,6 +469,7 @@ namespace flex
 
 		std::map<MaterialID, Material*> m_Materials;
 		std::vector<Shader*> m_Shaders;
+		std::map<ShaderID, std::vector<MaterialID>> m_ShaderUsedMaterials; // Stores all materials used by each shader
 		std::map<std::string, ShaderMetaData> m_ShaderMetaData;
 
 		// TODO: Use a mesh prefab here
@@ -491,8 +480,6 @@ namespace flex
 		RenderID m_FullScreenTriRenderID = InvalidRenderID;
 
 		RenderID m_GBufferQuadRenderID = InvalidRenderID;
-		// Any editor objects which also require a game object wrapper
-		std::vector<GameObject*> m_EditorObjects;
 
 		bool m_bVSyncEnabled = true;
 		PhysicsDebuggingSettings m_PhysicsDebuggingSettings;
@@ -503,6 +490,7 @@ namespace flex
 		BitmapFont* m_CurrentFont = nullptr;
 
 		PostProcessSettings m_PostProcessSettings;
+		ConfigFile m_Settings;
 
 		UIMesh* m_UIMesh = nullptr;
 
@@ -528,11 +516,6 @@ namespace flex
 
 		i32 m_ShaderQualityLevel = 1;
 		const i32 MAX_SHADER_QUALITY_LEVEL = 3;
-
-		GameObject* m_Grid = nullptr;
-		GameObject* m_WorldOrigin = nullptr;
-		MaterialID m_GridMaterialID = InvalidMaterialID;
-		MaterialID m_WorldAxisMaterialID = InvalidMaterialID;
 
 		sec m_EditorStrSecRemaining = 0.0f;
 		sec m_EditorStrSecDuration = 1.5f;
@@ -565,17 +548,12 @@ namespace flex
 		ShaderID m_SSAOShaderID = InvalidShaderID;
 		ShaderID m_SSAOBlurShaderID = InvalidShaderID;
 
-		std::string m_RendererSettingsFilePathAbs;
-
 		Mesh* m_SkyBoxMesh = nullptr;
 		ShaderID m_SkyboxShaderID = InvalidShaderID;
 
 		ShaderID m_UIShaderID = InvalidShaderID;
 
 		glm::mat4 m_LastFrameViewProj;
-
-		// Contains file paths for each file with a .hdr extension in the `resources/textures/hdri/` directory
-		std::vector<std::string> m_AvailableHDRIs;
 
 		ShadowSamplingData m_ShadowSamplingData;
 
@@ -593,6 +571,8 @@ namespace flex
 
 		ShaderBatch m_DepthAwareEditorObjBatches;
 		ShaderBatch m_DepthUnawareEditorObjBatches;
+
+		ImGuiTextFilter m_MaterialFilter;
 
 		static const u32 NUM_GPU_TIMINGS = 64;
 		std::vector<std::array<real, NUM_GPU_TIMINGS>> m_TimestampHistograms;
@@ -614,12 +594,11 @@ namespace flex
 		// TODO: Remove
 		RenderBatchDirtyFlags m_DirtyFlagBits = (RenderBatchDirtyFlags)RenderBatchDirtyFlag::CLEAN;
 
-		PhysicsDebugDrawBase* m_PhysicsDebugDrawer = nullptr;
+		DebugRenderer* m_DebugRenderer = nullptr;
 
 		static std::array<glm::mat4, 6> s_CaptureViews;
 
-		static const i32 LATEST_RENDERER_SETTINGS_FILE_VERSION = 1;
-		i32 m_RendererSettingsFileVersion = 0;
+		static const i32 CURRENT_RENDERER_SETTINGS_FILE_VERSION = 2;
 
 		DirectoryWatcher* m_ShaderDirectoryWatcher = nullptr;
 

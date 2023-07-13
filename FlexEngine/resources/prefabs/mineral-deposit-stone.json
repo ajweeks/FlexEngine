@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "18DC46A7569BA0844A8721C36FF54D77",
+	"root" : 
+	{
+		"id" : "37AEAEF54928519D4C97CC87DCEEDAB4",
+		"name" : "mineral deposit stone",
+		"type" : "mineral deposit",
+		"mineral deposit" : 
+		{
+			"mineral remaining" : 1000,
+			"type" : "stone"
+		}
+	}
+}

@@ -31,7 +31,7 @@ namespace flex
 
 		void VulkanRenderPass::Create()
 		{
-			assert(m_bRegistered); // This function can only be called on render passes whose Register[...] function has been called
+			CHECK(m_bRegistered); // This function can only be called on render passes whose Register[...] function has been called
 
 			const bool bDepthAttachmentPresent = m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID;
 
@@ -84,8 +84,6 @@ namespace flex
 
 			VkAttachmentDescription depthAttachmentDesc = vks::attachmentDescription((bDepthAttachmentPresent && bCreateFrameBuffer) ? depthAttachment->format : m_DepthAttachmentFormat, m_TargetDepthAttachmentFinalLayout);
 
-			VkAttachmentReference depthAttachmentRef = { colourAttachmentCount, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
 			if (m_TargetDepthAttachmentInitialLayout != VK_IMAGE_LAYOUT_UNDEFINED)
 			{
 				depthAttachmentDesc.initialLayout = m_TargetDepthAttachmentInitialLayout;
@@ -98,10 +96,13 @@ namespace flex
 				attachmentDescriptions[i] = colourAttachments[i];
 			}
 
+			u32 depthAttachmentIndex = attachmentCount - 1;
 			if (bDepthAttachmentPresent)
 			{
-				attachmentDescriptions[attachmentDescriptions.size() - 1] = depthAttachmentDesc;
+				attachmentDescriptions[depthAttachmentIndex] = depthAttachmentDesc;
 			}
+
+			VkAttachmentReference depthAttachmentRef = { depthAttachmentIndex , VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
 			VkSubpassDescription subpass = {};
 			subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
@@ -138,7 +139,7 @@ namespace flex
 
 			if (bCreateFrameBuffer)
 			{
-				assert(frameBufferWidth != -1 && frameBufferHeight != -1);
+				CHECK(frameBufferWidth != -1 && frameBufferHeight != -1);
 			}
 			Create(m_Name, &renderPassCreateInfo, attachmentImageViews, frameBufferWidth, frameBufferHeight);
 		}
@@ -235,6 +236,21 @@ namespace flex
 			}
 
 			vkCmdEndRenderPass(m_ActiveCommandBuffer);
+
+			if (m_TargetDepthAttachmentID != InvalidFrameBufferAttachmentID)
+			{
+				FrameBufferAttachment* depthAttachment = ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetDepthAttachmentID);
+				depthAttachment->layout = m_TargetDepthAttachmentFinalLayout;
+			}
+
+			if (bCreateFrameBuffer)
+			{
+				for (u32 i = 0; i < (u32)m_TargetColourAttachmentFinalLayouts.size(); ++i)
+				{
+					FrameBufferAttachment* attachment = ((VulkanRenderer*)g_Renderer)->GetFrameBufferAttachment(m_TargetColourAttachmentIDs[i]);
+					attachment->layout = m_TargetColourAttachmentFinalLayouts[i];
+				}
+			}
 
 			m_ActiveCommandBuffer = VK_NULL_HANDLE;
 		}

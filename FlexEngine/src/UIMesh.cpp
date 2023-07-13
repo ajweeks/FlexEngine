@@ -35,7 +35,7 @@ namespace flex
 			debugMatCreateInfo.shaderName = "ui";
 			debugMatCreateInfo.name = debugMatName;
 			debugMatCreateInfo.persistent = true;
-			debugMatCreateInfo.visibleInEditor = true;
+			debugMatCreateInfo.bEditorMaterial = true;
 			debugMatCreateInfo.bDynamic = true;
 			debugMatCreateInfo.bSerializable = false;
 			m_MaterialID = g_Renderer->InitializeMaterial(&debugMatCreateInfo);
@@ -58,6 +58,12 @@ namespace flex
 	void UIMesh::DrawRect(const glm::vec2& bottomLeft, const glm::vec2& topRight, const glm::vec4& colour, real cornerRadius)
 	{
 		FLEX_UNUSED(cornerRadius);
+
+		if (NearlyEquals(bottomLeft.x, topRight.x, 0.001f) || NearlyEquals(bottomLeft.y, topRight.y, 0.001f))
+		{
+			// Degenerate rect
+			return;
+		}
 
 		if (bottomLeft.x >= topRight.x || bottomLeft.y >= topRight.y)
 		{
@@ -108,8 +114,8 @@ namespace flex
 			indices.emplace_back(3);
 		}
 
-		assert((u32)points.size() == vertCount);
-		assert((u32)indices.size() == indexCount);
+		CHECK_EQ((u32)points.size(), vertCount);
+		CHECK_EQ((u32)indices.size(), indexCount);
 
 		glm::vec2 uvBlendAmount(0.5f / width, 0.5f / height);
 
@@ -183,8 +189,8 @@ namespace flex
 			}
 		}
 
-		assert((u32)points.size() == vertCount);
-		assert((u32)indices.size() == indexCount);
+		CHECK_EQ((u32)points.size(), vertCount);
+		CHECK_EQ((u32)indices.size(), indexCount);
 
 		real width = thickness * windowSize.x; // strip width
 		real height = totalAngle * (innerRadius + thickness * 0.5f) * windowSize.y; // circumference
@@ -257,11 +263,12 @@ namespace flex
 			if (!newSubMesh->CreateProcedural(vertCount, vertexAttributes, TopologyMode::TRIANGLE_LIST, &createInfo))
 			{
 				PrintWarn("UIMesh failed to create new submesh\n");
+				delete drawData;
 			}
 			else
 			{
 				i32 submeshIndex1 = mesh->AddSubMesh(newSubMesh);
-				assert(submeshIndex1 == submeshIndex);
+				CHECK_EQ(submeshIndex1, submeshIndex);
 				m_DrawData.emplace_back(drawData);
 			}
 		}
@@ -336,7 +343,8 @@ namespace flex
 			m_Object = nullptr;
 		}
 
-		m_Object = new GameObject("UI Mesh", SID("object"));
+		m_Object = new GameObject("UI Mesh", BaseObjectSID);
+		m_Object->ID = InvalidGameObjectID;
 		m_Object->SetSerializable(false);
 		m_Object->SetVisibleInSceneExplorer(false);
 		m_Object->SetCastsShadow(false);

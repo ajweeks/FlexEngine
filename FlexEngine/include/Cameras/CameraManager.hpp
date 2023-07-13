@@ -9,6 +9,7 @@ namespace flex
 {
 	class BaseCamera;
 
+	// TODO: Make inherit from System
 	class CameraManager final
 	{
 	public:
@@ -17,8 +18,7 @@ namespace flex
 		void Initialize();
 		void Destroy();
 		void Update();
-
-		void OnSceneChanged();
+		void OnPostSceneChange();
 
 		BaseCamera* CurrentCamera() const;
 
@@ -31,20 +31,20 @@ namespace flex
 
 		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize);
 		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize);
-		void PopCamera();
+		void PopCamera(bool bAlignWithCurrent = false);
 
 		BaseCamera* GetCameraByName(const std::string& name);
 
 		void DrawImGuiObjects();
+
+		// Copies position, rotation, and FOV of "from" to "to"
+		void AlignCameras(BaseCamera* from, BaseCamera* to);
 
 	private:
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<CameraManager> m_ActionCallback;
 
 		i32 GetCameraIndex(BaseCamera* camera);
-
-		/* Copies position, rotation, and FOV of "from" to "to" */
-		void AlignCameras(BaseCamera* from, BaseCamera* to);
 
 		// TODO: Roll custom stack class
 		// Stack containing temporary cameras, the topmost of which is the current camera

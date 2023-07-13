@@ -4,6 +4,11 @@
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "ResourceManager.hpp"
+#include "Scene/BaseScene.hpp"
+
+IGNORE_WARNINGS_PUSH
+#include "stb_image.h"
+IGNORE_WARNINGS_POP
 
 namespace flex
 {
@@ -12,41 +17,53 @@ namespace flex
 		return memcmp(&lhs, &rhs, sizeof(RoadSegment_GPU)) == 0;
 	}
 
-	Uniform::Uniform(const char* uniformName, StringID id, u64 size) :
+	Uniform::Uniform(const char* uniformName, StringID id, u64 size, u32 index) :
 		id(id),
-		size((u32)size)
+		size((u32)size),
+		DBG_name(uniformName),
+		index(index)
 	{
 		RegisterUniform(id, this);
-
-#if DEBUG
-		DBG_name = uniformName;
-#else
-		FLEX_UNUSED(uniformName);
-#endif
 	}
 
-	static std::map<StringID, Uniform*>& GetAllUniforms()
+	static std::vector<Uniform const*>& GetAllUniforms()
 	{
-		static std::map<StringID, Uniform*> allUniforms;
+		static std::vector<Uniform const*> allUniforms;
 		return allUniforms;
+	}
+
+	static Uniform const* GetUniform(const std::vector<Uniform const*>& uniforms, StringID uniformID)
+	{
+		PROFILE_AUTO("GetUniform");
+
+		for (Uniform const* uniform : uniforms)
+		{
+			if (uniform->id == uniformID)
+			{
+				return uniform;
+			}
+		}
+		return nullptr;
 	}
 
 	void RegisterUniform(StringID uniformNameSID, Uniform* uniform)
 	{
-		std::map<StringID, Uniform*>& allUniforms = GetAllUniforms();
-		if (allUniforms.find(uniformNameSID) == allUniforms.end())
+		std::vector<Uniform const*>& allUniforms = GetAllUniforms();
+		if (GetUniform(allUniforms, uniformNameSID) == nullptr)
 		{
-			allUniforms[uniformNameSID] = uniform;
+			allUniforms.emplace_back(uniform);
 		}
 	}
 
-	Uniform* UniformFromStringID(StringID uniformNameSID)
+	Uniform const* UniformFromStringID(StringID uniformNameSID)
 	{
-		std::map<StringID, Uniform*>& allUniforms = GetAllUniforms();
-		auto iter = allUniforms.find(uniformNameSID);
-		if (iter != allUniforms.end())
+		PROFILE_AUTO("UniformFromStringID");
+
+		std::vector<Uniform const*>& allUniforms = GetAllUniforms();
+		Uniform const* uniform = GetUniform(allUniforms, uniformNameSID);
+		if (uniform != nullptr)
 		{
-			return iter->second;
+			return uniform;
 		}
 
 		return nullptr;
@@ -72,14 +89,40 @@ namespace flex
 
 	bool UniformList::HasUniform(const StringID& uniformID) const
 	{
-		return Contains(uniforms, uniformID);
+		PROFILE_AUTO("UniformList HasUniform");
+
+		for (Uniform const* uniform : uniforms)
+		{
+			if (uniform->id == uniformID)
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	void UniformList::AddUniform(Uniform const* uniform)
 	{
+		PROFILE_AUTO("UniformList AddUniform");
+
 		if (!HasUniform(uniform))
 		{
-			uniforms[uniform->id] = uniform;
+			// Insert while maintaining order by uniform index
+			bool bFoundSlot = false;
+			for (auto iter = uniforms.begin(); iter != uniforms.end(); ++iter)
+			{
+				if (uniform->index < (*iter)->index)
+				{
+					uniforms.emplace(iter, uniform);
+					bFoundSlot = true;
+					break;
+				}
+			}
+			if (!bFoundSlot)
+			{
+				uniforms.emplace_back(uniform);
+			}
+
 			totalSizeInBytes += (u32)uniform->size;
 		}
 	}
@@ -87,6 +130,112 @@ namespace flex
 	u32 UniformList::GetSizeInBytes() const
 	{
 		return totalSizeInBytes;
+	}
+
+	GPUBufferList::~GPUBufferList()
+	{
+		for (GPUBuffer* buffer : bufferList)
+		{
+			g_Renderer->FreeGPUBuffer(buffer);
+		}
+		bufferList.clear();
+	}
+
+	void GPUBufferList::Add(GPUBufferType type, const std::string& debugName)
+	{
+		GPUBuffer* buffer = g_Renderer->AllocateGPUBuffer(type, debugName);
+		bufferList.emplace_back(buffer);
+	}
+
+	const GPUBuffer* GPUBufferList::Get(GPUBufferType type) const
+	{
+		for (GPUBuffer* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return buffer;
+			}
+		}
+		return nullptr;
+	}
+
+	bool GPUBufferList::Has(GPUBufferType type) const
+	{
+		for (GPUBuffer const* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	GPUBuffer* GPUBufferList::Get(GPUBufferType type)
+	{
+		CHECK_NE((u32)type, (u32)GPUBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
+		for (GPUBuffer* buffer : bufferList)
+		{
+			if (buffer->type == type)
+			{
+				return buffer;
+			}
+		}
+		return nullptr;
+	}
+
+	GPUBuffer::GPUBuffer(GPUBufferType type, const std::string& debugName) :
+		type(type),
+		debugName(debugName)
+	{
+		ID = g_Renderer->RegisterGPUBuffer(this);
+	}
+
+	GPUBuffer::~GPUBuffer()
+	{
+		g_Renderer->UnregisterGPUBuffer(ID);
+		ID = InvalidGPUBufferID;
+		FreeHostMemory();
+	}
+
+	void GPUBuffer::AllocHostMemory(u32 size, u32 alignment /* = u32_max */)
+	{
+		CHECK_EQ(data.data, nullptr);
+
+		if (type == GPUBufferType::DYNAMIC ||
+			type == GPUBufferType::PARTICLE_DATA ||
+			type == GPUBufferType::TERRAIN_POINT_BUFFER ||
+			type == GPUBufferType::TERRAIN_VERTEX_BUFFER)
+		{
+			CHECK_NE(alignment, u32_max);
+			data.data = (u8*)flex_aligned_malloc(size, alignment);
+		}
+		else
+		{
+			data.data = (u8*)malloc(size);
+		}
+
+		CHECK_NE(data.data, nullptr);
+	}
+
+	void GPUBuffer::FreeHostMemory()
+	{
+		if (data.data != nullptr)
+		{
+			if (type == GPUBufferType::DYNAMIC ||
+				type == GPUBufferType::PARTICLE_DATA ||
+				type == GPUBufferType::TERRAIN_POINT_BUFFER ||
+				type == GPUBufferType::TERRAIN_VERTEX_BUFFER)
+			{
+				flex_aligned_free(data.data);
+			}
+			else
+			{
+				free(data.data);
+			}
+
+			data.data = nullptr;
+		}
 	}
 
 	Shader::Shader(const ShaderInfo& shaderInfo) :
@@ -105,17 +254,6 @@ namespace flex
 		const std::string& inComputeShaderFilePath /* = "" */) :
 		name(name)
 	{
-#if COMPILE_OPEN_GL
-		vertexShaderFilePath = SHADER_SOURCE_DIRECTORY + inVertexShaderFilePath;
-		if (!inFragmentShaderFilePath.empty())
-		{
-			fragmentShaderFilePath = SHADER_SOURCE_DIRECTORY + inFragmentShaderFilePath;
-		}
-		if (!inGeometryShaderFilePath.empty())
-		{
-			geometryShaderFilePath = SHADER_SOURCE_DIRECTORY + inGeometryShaderFilePath;
-		}
-#elif COMPILE_VULKAN
 		if (!inVertexShaderFilePath.empty())
 		{
 			vertexShaderFilePath = COMPILED_SHADERS_DIRECTORY + inVertexShaderFilePath;
@@ -132,7 +270,6 @@ namespace flex
 		{
 			computeShaderFilePath = COMPILED_SHADERS_DIRECTORY + inComputeShaderFilePath;
 		}
-#endif
 	}
 
 	Material::~Material()
@@ -199,8 +336,10 @@ namespace flex
 		return equal;
 	}
 
-	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut)
+	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion)
 	{
+		FLEX_UNUSED(fileVersion);
+
 		material.TryGetString("name", createInfoOut.name);
 		material.TryGetString("shader", createInfoOut.shaderName);
 
@@ -254,6 +393,7 @@ namespace flex
 		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
 		material.TryGetVec4("const albedo", createInfoOut.constAlbedo);
 		material.TryGetVec4("const emissive", createInfoOut.constEmissive);
+
 		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
 		material.TryGetFloat("const roughness", createInfoOut.constRoughness);
 
@@ -264,6 +404,8 @@ namespace flex
 
 	std::vector<MaterialID> Material::ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion)
 	{
+		PROFILE_AUTO("Material ParseMaterialArrayJSON");
+
 		std::vector<MaterialID> matIDs;
 		if (fileVersion >= 3)
 		{
@@ -272,26 +414,28 @@ namespace flex
 			{
 				for (const JSONField& materialNameField : materialNames)
 				{
-					std::string materialName = materialNameField.value.strValue;
+					std::string materialName = materialNameField.value.AsString();
 					bool bSuccess = false;
 					if (!materialName.empty())
 					{
-						MaterialID materialID = g_Renderer->GetMaterialID(materialName);
-
-						if (materialID == InvalidMaterialID)
+						MaterialID materialID = InvalidMaterialID;
+						if (g_Renderer->FindOrCreateMaterialByName(materialName, materialID))
 						{
-							if (materialName.compare("placeholder") == 0)
+							if (materialID == InvalidMaterialID)
 							{
-								materialID = g_Renderer->GetPlaceholderMaterialID();
+								if (materialName.compare("placeholder") == 0)
+								{
+									materialID = g_Renderer->GetPlaceholderMaterialID();
+								}
 							}
-						}
 
-						if (materialID != InvalidMaterialID)
-						{
-							bSuccess = true;
-						}
+							if (materialID != InvalidMaterialID)
+							{
+								bSuccess = true;
+							}
 
-						matIDs.push_back(materialID);
+							matIDs.push_back(materialID);
+						}
 					}
 
 					if (!bSuccess)
@@ -303,18 +447,20 @@ namespace flex
 		}
 		else // fileVersion < 3
 		{
-			MaterialID materialID = InvalidMaterialID;
 			std::string materialName;
+			MaterialID materialID = InvalidMaterialID;
 			if (object.TryGetString("material", materialName))
 			{
 				if (!materialName.empty())
 				{
-					materialID = g_Renderer->GetMaterialID(materialName);
-					if (materialID == InvalidMaterialID)
+					if (g_Renderer->FindOrCreateMaterialByName(materialName, materialID))
 					{
-						if (materialName.compare("placeholder") == 0)
+						if (materialID == InvalidMaterialID)
 						{
-							materialID = g_Renderer->GetPlaceholderMaterialID();
+							if (materialName.compare("placeholder") == 0)
+							{
+								materialID = g_Renderer->GetPlaceholderMaterialID();
+							}
 						}
 					}
 				}
@@ -325,7 +471,10 @@ namespace flex
 				}
 			}
 
-			matIDs.push_back(materialID);
+			if (materialID != InvalidMaterialID)
+			{
+				matIDs.push_back(materialID);
+			}
 		}
 
 		return matIDs;
@@ -334,7 +483,7 @@ namespace flex
 	Material::PushConstantBlock::PushConstantBlock(i32 initialSize) :
 		size(initialSize)
 	{
-		assert(initialSize != 0);
+		CHECK_NE(initialSize, 0);
 	}
 
 	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock& rhs)
@@ -343,7 +492,7 @@ namespace flex
 		size = rhs.size;
 	}
 
-	Material::PushConstantBlock::PushConstantBlock(const PushConstantBlock&& rhs)
+	Material::PushConstantBlock::PushConstantBlock(PushConstantBlock&& rhs)
 	{
 		data = rhs.data;
 		size = rhs.size;
@@ -356,7 +505,7 @@ namespace flex
 		return *this;
 	}
 
-	Material::PushConstantBlock& Material::PushConstantBlock::operator=(const PushConstantBlock&& rhs)
+	Material::PushConstantBlock& Material::PushConstantBlock::operator=(PushConstantBlock&& rhs)
 	{
 		data = rhs.data;
 		size = rhs.size;
@@ -365,7 +514,7 @@ namespace flex
 
 	Material::PushConstantBlock::~PushConstantBlock()
 	{
-		if (data)
+		if (data != nullptr)
 		{
 			free(data);
 			data = nullptr;
@@ -375,9 +524,14 @@ namespace flex
 
 	void Material::PushConstantBlock::InitWithSize(u32 dataSize)
 	{
+		PROFILE_AUTO("PushConstantBlock InitWithSize");
+
 		if (data == nullptr)
 		{
-			assert(size == dataSize || size == 0);
+			if (size != dataSize && size != 0)
+			{
+				PrintError("Push constant block size changed! (%d to %d) Memory leak will occur\n", size, dataSize);
+			}
 
 			size = dataSize;
 			if (dataSize != 0)
@@ -387,19 +541,24 @@ namespace flex
 		}
 		else
 		{
-			assert(size == dataSize && "Attempted to initialize push constant data with differing size. Block must be reallocated when size changes.");
+			// Push constant blocks must be reallocated when block size changes.
+			CHECK_EQ(size, dataSize);
 		}
 	}
 
 	void Material::PushConstantBlock::SetData(real* newData, u32 dataSize)
 	{
+		PROFILE_AUTO("PushConstantBlock SetData u32");
+
 		InitWithSize(dataSize);
 		memcpy(data, newData, size);
 	}
 
 	void Material::PushConstantBlock::SetData(const std::vector<Pair<void*, u32>>& dataList)
 	{
-		i32 dataSize = 0;
+		PROFILE_AUTO("PushConstantBlock SetData std::vector<Pair<void*, u32>>");
+
+		u32 dataSize = 0;
 		for (const auto& pair : dataList)
 		{
 			dataSize += pair.second;
@@ -417,7 +576,9 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& viewProj)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 1;
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4");
+
+		const u32 dataSize = sizeof(glm::mat4) * 1;
 		InitWithSize(dataSize);
 
 		real* dst = (real*)data;
@@ -426,7 +587,9 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 2;
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4 glm::mat4");
+
+		const u32 dataSize = sizeof(glm::mat4) * 2;
 		InitWithSize(dataSize);
 
 		real* dst = (real*)data;
@@ -436,18 +599,21 @@ namespace flex
 
 	void Material::PushConstantBlock::SetData(const glm::mat4& view, const glm::mat4& proj, i32 textureIndex)
 	{
-		const i32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
+		PROFILE_AUTO("PushConstantBlock SetData glm::mat4 glm::mat4 i32");
+
+		const u32 dataSize = sizeof(glm::mat4) * 2 + sizeof(i32);
 		if (data == nullptr)
 		{
-			assert(size == dataSize || size == 0);
+			CHECK(size == dataSize || size == 0);
 
 			size = dataSize;
 			data = malloc(dataSize);
-			assert(data != nullptr);
+			CHECK_NE(data, nullptr);
 		}
 		else
 		{
-			assert(size == dataSize && "Attempted to set push constant data with differing size. Block must be reallocated.");
+			// Push constant block must be reallocated when block size changes.
+			CHECK_EQ(size, dataSize);
 		}
 		real* dst = (real*)data;
 		memcpy(dst, &view, sizeof(glm::mat4)); dst += sizeof(glm::mat4) / sizeof(real);
@@ -457,9 +623,15 @@ namespace flex
 
 	JSONObject Material::Serialize() const
 	{
+		PROFILE_AUTO("Material Serialize");
+
 		// TODO: Make more generic key-value system
 
-		assert(bSerializable);
+		CHECK(bSerializable);
+
+		JSONObject parentObj = {};
+
+		parentObj.fields.emplace_back("version", JSONValue(BaseScene::LATEST_MATERIALS_FILE_VERSION));
 
 		JSONObject materialObject = {};
 
@@ -476,13 +648,11 @@ namespace flex
 
 		if (constAlbedo != VEC4_ONE)
 		{
-			std::string constAlbedoStr = VecToString(constAlbedo, 3);
-			materialObject.fields.emplace_back("const albedo", JSONValue(constAlbedoStr));
+			materialObject.fields.emplace_back("const albedo", JSONValue((glm::vec3)constAlbedo, 3));
 		}
-		if (constEmissive != VEC4_ONE)
+		if (constEmissive != VEC4_ZERO)
 		{
-			std::string constEmissiveStr = VecToString(constEmissive, 3);
-			materialObject.fields.emplace_back("const emissive", JSONValue(constEmissiveStr));
+			materialObject.fields.emplace_back("const emissive", JSONValue((glm::vec3)constEmissive, 3));
 		}
 		if (constMetallic != 0.0f)
 		{
@@ -563,27 +733,20 @@ namespace flex
 		if (shader->textureUniforms.HasUniform(&U_CUBEMAP_SAMPLER))
 		{
 			materialObject.fields.emplace_back("enable cubemap sampler", JSONValue(enableCubemapSampler));
-
 			materialObject.fields.emplace_back("enable cubemap trilinear filtering", JSONValue(enableCubemapTrilinearFiltering));
-
-			std::string cubemapSamplerSizeStr = VecToString(cubemapSamplerSize, 0);
-			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSizeStr));
+			materialObject.fields.emplace_back("generated cubemap size", JSONValue(cubemapSamplerSize, 0));
 		}
 
 		if (shader->textureUniforms.HasUniform(&U_IRRADIANCE_SAMPLER) || irradianceSamplerSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate irradiance sampler", JSONValue(generateIrradianceSampler));
-
-			std::string irradianceSamplerSizeStr = VecToString(irradianceSamplerSize, 0);
-			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSizeStr));
+			materialObject.fields.emplace_back("generated irradiance cubemap size", JSONValue(irradianceSamplerSize, 0));
 		}
 
 		if (shader->textureUniforms.HasUniform(&U_PREFILTER_MAP) || prefilteredMapSize.x > 0)
 		{
 			materialObject.fields.emplace_back("generate prefiltered map", JSONValue(generatePrefilteredMap));
-
-			std::string prefilteredMapSizeStr = VecToString(prefilteredMapSize, 0);
-			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSizeStr));
+			materialObject.fields.emplace_back("generated prefiltered map size", JSONValue(prefilteredMapSize, 0));
 		}
 
 		if (!environmentMapPath.empty())
@@ -599,8 +762,7 @@ namespace flex
 
 		if (colourMultiplier != VEC4_ONE)
 		{
-			std::string colourMultiplierStr = VecToString(colourMultiplier, 3);
-			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplierStr));
+			materialObject.fields.emplace_back("colour multiplier", JSONValue(colourMultiplier, 3));
 		}
 
 		if (generateReflectionProbeMaps)
@@ -613,7 +775,9 @@ namespace flex
 			materialObject.fields.emplace_back("dynamic", JSONValue(bDynamic));
 		}
 
-		return materialObject;
+		parentObj.fields.emplace_back("material", JSONValue(materialObject));
+
+		return parentObj;
 	}
 
 	Texture::Texture(const std::string& name) :
@@ -621,19 +785,89 @@ namespace flex
 	{
 	}
 
+	bool Texture::LoadData(i32 requestedChannelCount)
+	{
+		PROFILE_AUTO("Load texture data");
+
+		CHECK(requestedChannelCount == 3 || requestedChannelCount == 4);
+
+		if (g_bEnableLogging_Loading)
+		{
+			Print("Loading texture %s\n", fileName.c_str());
+		}
+
+		stbi_set_flip_vertically_on_load(bFlipVertically);
+
+		i32 tempW, tempH, tempC;
+		if (bHDR)
+		{
+			pixels = (u8*)stbi_loadf(relativeFilePath.c_str(),
+				&tempW,
+				&tempH,
+				&tempC,
+				(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+		}
+		else
+		{
+			pixels = stbi_load(relativeFilePath.c_str(),
+				&tempW,
+				&tempH,
+				&tempC,
+				(requestedChannelCount == 4 ? STBI_rgb_alpha : STBI_rgb));
+
+		}
+
+		if (pixels == nullptr)
+		{
+			return false;
+		}
+
+		width = (u32)tempW;
+		height = (u32)tempH;
+
+		channelCount = 4;
+
+		CHECK_LE(width, MAX_TEXTURE_DIM);
+		CHECK_LE(height, MAX_TEXTURE_DIM);
+
+		return true;
+	}
+
+	void Texture::FreeData()
+	{
+		stbi_image_free(pixels);
+		pixels = nullptr;
+	}
+
+	bool Texture::IsLoading() const
+	{
+		return bIsLoading;
+	}
+
+	bool Texture::IsCreated() const
+	{
+		return bIsCreated;
+	}
+
 	void UniformOverrides::AddUniform(Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
 	{
+		PROFILE_AUTO("UniformOverrides AddUniform");
+
 		overrides[uniform->id] = UniformPair(uniform, propertyOverride);
 	}
 
-	bool UniformOverrides::HasUniform(Uniform const* uniform) const
+	bool UniformOverrides::HasUniform(StringID uniformID) const
 	{
-		return Contains(overrides, uniform->id);
+		PROFILE_AUTO("UniformOverrides HasUniform");
+
+		return Contains(overrides, uniformID);
 	}
 
-	bool UniformOverrides::HasUniform(Uniform const* uniform, MaterialPropertyOverride& outPropertyOverride) const
+	bool UniformOverrides::HasUniform(StringID uniformID, MaterialPropertyOverride& outPropertyOverride) const
 	{
-		auto iter = overrides.find(uniform->id);
+		PROFILE_AUTO("UniformOverrides HasUniform outPropertyOverride");
+
+		auto iter = overrides.find(uniformID);
 		if (iter != overrides.end())
 		{
 			outPropertyOverride = iter->second.second;

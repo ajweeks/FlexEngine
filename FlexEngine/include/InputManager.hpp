@@ -56,6 +56,8 @@ namespace flex
 		// Axis-equivalent to button "press"
 		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const;
 
+		bool GetActionBindingName(Action action, StringBuilder& outStrBuff) const;
+
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);

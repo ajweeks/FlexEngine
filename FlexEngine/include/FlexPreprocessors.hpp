@@ -37,3 +37,13 @@
 #endif
 #endif // ifndef SUPPRESS_WARN_BEGIN
 
+#ifndef SUPPRESS_WARNING_PUSH
+#define SUPPRESS_WARNING_PUSH(warningID) \
+	__pragma(warning(push)) \
+	__pragma(warning(disable:warningID))
+#endif // #ifndef SUPPRESS_WARNING_PUSH
+
+#ifndef SUPPRESS_WARNING_POP
+#define SUPPRESS_WARNING_POP() \
+	__pragma(warning(pop))
+#endif // #ifndef SUPPRESS_WARNING_POP

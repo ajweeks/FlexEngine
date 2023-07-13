@@ -14,6 +14,10 @@ IGNORE_WARNINGS_PUSH
 #include <stdio.h> // For gcvt, fopen
 
 #include <Rpc.h> // For UuidCreate
+
+#include <dbghelp.h> // For SymInitialize
+
+#include <stringapiset.h> // For MultiByteToWideChar
 IGNORE_WARNINGS_POP
 
 #include "FlexEngine.hpp"
@@ -255,7 +259,7 @@ namespace flex
 
 		SYSTEMTIME fileWriteTimeSystem;
 		bool bSuccess = FileTimeToSystemTime(&fileWriteTime, &fileWriteTimeSystem);
-		assert(bSuccess);
+		CHECK(bSuccess);
 		// Incorrect hour? TODO: Get in UTC
 		outModificationDate = Date(fileWriteTimeSystem.wYear, fileWriteTimeSystem.wMonth, fileWriteTimeSystem.wDay,
 			fileWriteTimeSystem.wHour, fileWriteTimeSystem.wMinute, fileWriteTimeSystem.wSecond, fileWriteTimeSystem.wMilliseconds);
@@ -264,7 +268,7 @@ namespace flex
 		return true;
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter)
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse /* = false */)
 	{
 		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
@@ -276,100 +280,71 @@ namespace flex
 		}
 
 		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
 
-		WIN32_FIND_DATAA findData;
-		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
-
-		if (hFind == INVALID_HANDLE_VALUE)
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
 		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
-
-		do
-		{
-			if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			if (cleanedFileTypeFilter == "*")
 			{
-				// Skip over directories
-				//Print(findData.cFileName);
+				return true;
 			}
 			else
 			{
-				bool bFoundFileTypeMatches = false;
-				if (cleanedFileTypeFilter == "*")
-				{
-					bFoundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileNameStr(findData.cFileName);
-					std::string fileType = ExtractFileType(fileNameStr);
-					if (fileType == cleanedFileTypeFilter)
-					{
-						bFoundFileTypeMatches = true;
-					}
-				}
-
-				if (bFoundFileTypeMatches)
-				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
-				}
+				std::string fileType = ExtractFileType(fileNameStr);
+				return fileType == cleanedFileTypeFilter;
 			}
-		} while (FindNextFile(hFind, &findData) != 0);
-
-		FindClose(hFind);
-
-		DWORD dwError = GetLastError();
-		if (dwError != ERROR_NO_MORE_FILES)
-		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
+		}, bRecurse);
 
 		return !filePaths.empty();
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen, bool bRecurse /* = false */)
 	{
 		std::string cleanedDirPath = ReplaceBackSlashesWithForward(EnsureTrailingSlash(directoryPath));
-
 		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
+		{
+			std::string fileType = ExtractFileType(fileNameStr);
+			return Contains(fileTypes, fileTypesLen, fileType.c_str());
+		}, bRecurse);
+
+		return !filePaths.empty();
+	}
+
+	// Returns true if search succeeded
+	bool Platform::FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse)
+	{
+		std::string cleanedDirPathWithWildCard = directoryPath + '*';
 
 		WIN32_FIND_DATAA findData;
 		HANDLE hFind = FindFirstFile(cleanedDirPathWithWildCard.c_str(), &findData);
+
 		if (hFind == INVALID_HANDLE_VALUE)
 		{
-			PrintError("Failed to find any file in directory %s\n", cleanedDirPath.c_str());
+			PrintError("Failed to find any file in directory %s\n", directoryPath.c_str());
 			return false;
 		}
 
 		do
 		{
-			if (!(findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+			std::string fileNameStr(findData.cFileName);
+
+			if (fileNameStr != "." && fileNameStr != "..")
 			{
-				bool bFoundFileTypeMatches = false;
-
-				std::string fileNameStr(findData.cFileName);
-				std::string fileType = ExtractFileType(fileNameStr);
-				if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+				if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 				{
-					bFoundFileTypeMatches = true;
+					if (bRecurse)
+					{
+						// Recurse into directory
+						FindFilesInDirectoryInternal(directoryPath + fileNameStr + "/", filePaths, fileTypeFilter, bRecurse);
+					}
 				}
-
-				if (bFoundFileTypeMatches)
+				else
 				{
-					// File size retrieval:
-					//LARGE_INTEGER filesize;
-					//filesize.LowPart = findData.nFileSizeLow;
-					//filesize.HighPart = findData.nFileSizeHigh;
-
-					filePaths.push_back(cleanedDirPath + findData.cFileName);
+					if (fileTypeFilter(fileNameStr))
+					{
+						filePaths.push_back(directoryPath + fileNameStr);
+					}
 				}
 			}
 		} while (FindNextFile(hFind, &findData) != 0);
@@ -379,11 +354,11 @@ namespace flex
 		DWORD dwError = GetLastError();
 		if (dwError != ERROR_NO_MORE_FILES)
 		{
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			PrintError("Error encountered while finding files in directory %s\n", directoryPath.c_str());
 			return false;
 		}
 
-		return !filePaths.empty();
+		return true;
 	}
 
 	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
@@ -456,43 +431,6 @@ namespace flex
 		return result.str();
 	}
 
-	u64 Platform::GetUSSinceEpoch()
-	{
-		FILETIME ft;
-		LARGE_INTEGER li;
-
-		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
-		// copy it to a LARGE_INTEGER structure.
-		GetSystemTimeAsFileTime(&ft);
-		li.LowPart = ft.dwLowDateTime;
-		li.HighPart = ft.dwHighDateTime;
-
-		u64 result = li.QuadPart;
-
-		// Convert from file time to UNIX epoch time
-		result -= 116444736000000000LL;
-
-		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
-		//result /= 10000;
-
-		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
-		result /= 10;
-
-		return result;
-	}
-
-	GameObjectID Platform::GenerateGUID()
-	{
-		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
-
-		GameObjectID result;
-		::UUID winGuid;
-		RPC_STATUS status = ::UuidCreate(&winGuid);
-		assert(status == RPC_S_OK);
-		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
-		return result;
-	}
-
 	u32 Platform::AtomicIncrement(volatile u32* value)
 	{
 		return InterlockedIncrement(value);
@@ -532,6 +470,26 @@ namespace flex
 		}
 	}
 
+	bool Platform::SetFlexThreadAffinityMask(void* threadHandle, u64 threadID)
+	{
+		u64 affinityMask = 1ull << threadID;
+		u64 affinityResult = SetThreadAffinityMask(threadHandle, affinityMask);
+		return affinityResult != 0;
+	}
+
+	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
+	{
+		const int strLength = MultiByteToWideChar(0 /*: CP_ACP*/, 0, threadName, -1, NULL, 0);
+		// TODO: Stack allocate
+		const WCHAR* strWide = new WCHAR[strLength];
+		MultiByteToWideChar(0 /*: CP_ACP*/, 0, threadName, -1, (LPWSTR)strWide, strLength);
+
+		HRESULT hr = SetThreadDescription(threadHandle, strWide);
+		delete[] strWide;
+
+		return SUCCEEDED(hr);
+	}
+
 	void Platform::YieldProcessor()
 	{
 		::YieldProcessor();
@@ -562,6 +520,77 @@ namespace flex
 	void Platform::Sleep(ms milliseconds)
 	{
 		::Sleep((DWORD)milliseconds);
+	}
+
+	u64 Platform::GetUSSinceEpoch()
+	{
+		FILETIME ft;
+		LARGE_INTEGER li;
+
+		// Get the amount of 100 nano seconds intervals elapsed since January 1, 1601 (UTC) and
+		// copy it to a LARGE_INTEGER structure.
+		GetSystemTimeAsFileTime(&ft);
+		li.LowPart = ft.dwLowDateTime;
+		li.HighPart = ft.dwHighDateTime;
+
+		u64 result = li.QuadPart;
+
+		// Convert from file time to UNIX epoch time
+		result -= 116444736000000000LL;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 millisecond (10^-3) intervals
+		//result /= 10000;
+
+		// Convert from 100 nano second (10^-7) intervals to 1 microsecond (10^-6) intervals
+		result /= 10;
+
+		return result;
+	}
+
+	GameObjectID Platform::GenerateGUID()
+	{
+		static_assert(sizeof(GameObjectID) == sizeof(::UUID), "GameObjectID has invalid length");
+
+		GameObjectID result;
+		::UUID winGuid;
+		RPC_STATUS status = ::UuidCreate(&winGuid);
+		CHECK_EQ(status, RPC_S_OK);
+		memcpy(&result.Data1, &winGuid.Data1, sizeof(GameObjectID));
+		return result;
+	}
+
+	void Platform::PrintStackTrace()
+	{
+#ifdef DBGHELP_TRANSLATE_TCHAR
+		// https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
+		void* stack[32];
+		constexpr i32 maxNameLength = 1024;
+		HANDLE process = GetCurrentProcess();
+		SymInitialize(process, NULL, TRUE);
+		WORD nFrames = CaptureStackBackTrace(0, ARRAY_LENGTH(stack), stack, NULL);
+		SYMBOL_INFO* symbol =
+			(SYMBOL_INFO*)malloc(sizeof(SYMBOL_INFO) + (maxNameLength - 1) * sizeof(TCHAR));
+		symbol->MaxNameLen = maxNameLength;
+		symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+		DWORD displacement;
+		IMAGEHLP_LINE64* line = (IMAGEHLP_LINE64*)malloc(sizeof(IMAGEHLP_LINE64));
+		line->SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+		for (i32 i = 0; i < nFrames; ++i)
+		{
+			DWORD64 address = (DWORD64)(stack[i]);
+			SymFromAddr(process, address, NULL, symbol);
+			if (SymGetLineFromAddr64(process, address, &displacement, line))
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + line %d\n", line->FileName,
+					(void*)symbol->Address, symbol->Name, line->LineNumber);
+			}
+			else
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s\n", "unknown", (void*)symbol->Address,
+					symbol->Name);
+			}
+		}
+#endif
 	}
 
 	void Platform::RetrieveCPUInfo()
@@ -635,7 +664,7 @@ namespace flex
 		}
 
 		ptr = buffer;
-		assert(ptr != nullptr);
+		CHECK_NE(ptr, nullptr);
 
 		while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength)
 		{
@@ -703,6 +732,19 @@ namespace flex
 		else
 		{
 			m_bInstalled = true;
+
+			std::vector<std::string> directoryFilePaths;
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*", m_bWatchSubtree))
+			{
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					Date modificationTime;
+					if (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime))
+					{
+						fileCreationTimes.push_back(FileMetaData{ filePath, modificationTime });
+					}
+				}
+			}
 		}
 	}
 
@@ -723,11 +765,50 @@ namespace flex
 		case WAIT_OBJECT_0:
 			// A file was created, renamed, or deleted in the directory
 
-			// Clear modification flag (needs to be called twice for some reason...)
+			// Clear modification flag (needs to be called twice for some reason)
 			if (FindNextChangeNotification(m_ChangeHandle) == FALSE ||
 				FindNextChangeNotification(m_ChangeHandle) == FALSE)
 			{
 				PrintError("Something bad happened with the directory watch on %s\n", directory.c_str());
+			}
+
+			modifiedFilePaths.clear();
+			std::vector<std::string> directoryFilePaths;
+			if (Platform::FindFilesInDirectory(directory, directoryFilePaths, "*", m_bWatchSubtree))
+			{
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					auto iter = std::find_if(fileCreationTimes.begin(), fileCreationTimes.end(), [&filePath](const FileMetaData& fileMetaData)
+					{
+						if (filePath == fileMetaData.filePath)
+						{
+							return true;
+						}
+						return false;
+					});
+					bool bNewFile = iter == fileCreationTimes.end();
+
+					Date modificationTime;
+					if (bNewFile || (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime) && modificationTime != iter->lastModificationTime))
+					{
+						modifiedFilePaths.push_back(filePath);
+					}
+				}
+
+				// Update creation times list
+				fileCreationTimes.clear();
+				for (const std::string& filePath : directoryFilePaths)
+				{
+					Date modificationTime;
+					if (Platform::GetFileModifcationTime(filePath.c_str(), modificationTime))
+					{
+						fileCreationTimes.push_back(FileMetaData{ filePath, modificationTime });
+					}
+				}
+			}
+			else
+			{
+				PrintError("Failed to get files in directory %s\n", directory.c_str());
 			}
 
 			return true;

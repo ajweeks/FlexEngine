@@ -47,7 +47,7 @@ void main()
 
 	vec4 colour = texture(in_Texture, ex_TexCoord);
 
-	// colour.rgb = (uboDynamic.contrastBrightnessSaturation * vec4(colour.rgb, 1)).rgb;
+	colour.rgb = (uboDynamic.contrastBrightnessSaturation * vec4(colour.rgb, 1)).rgb;
 
 	colour.rgb = colour.rgb / (colour.rgb + vec3(1.0f)); // Reinhard tone-mapping
 

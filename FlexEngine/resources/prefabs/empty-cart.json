@@ -1,0 +1,24 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "A6A08D627C3486914B009C28C8394D61",
+	"root" : 
+	{
+		"id" : "CC6102DA5011249843BF11E3D64BBC8A",
+		"name" : "empty cart",
+		"type" : "empty cart",
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.100,1.300,1.500"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : true,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		}
+	}
+}

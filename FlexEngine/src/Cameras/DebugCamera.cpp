@@ -10,6 +10,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -73,6 +74,7 @@ namespace flex
 	void DebugCamera::Update()
 	{
 		BaseCamera::Update();
+
 		// Override value from base update
 		roll = Lerp(roll, 0.0f, rollRestorationSpeed * g_UnpausedDeltaTime);
 
@@ -247,7 +249,7 @@ namespace flex
 
 		m_MouseDragDist = VEC2_ZERO;
 
-		g_Renderer->GetDebugDrawer()->drawSphere(ToBtVec3(m_OrbitCenter), 0.5f, btVector3(1.0f, 0.0f, 0.0f));
+		g_Renderer->GetDebugRenderer()->drawSphere(ToBtVec3(m_OrbitCenter), 0.5f, btVector3(1.0f, 0.0f, 0.0f));
 	}
 
 	EventReply DebugCamera::OnMouseButtonEvent(MouseButton button, KeyAction action)

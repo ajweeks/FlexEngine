@@ -2,15 +2,20 @@
 
 #include <list>
 
+#include "Pair.hpp"
+
 namespace flex
 {
 	template<typename T, u32 PoolSize>
 	class PoolAllocator
 	{
 	public:
-		PoolAllocator()
-		{
-		}
+		PoolAllocator() = default;
+
+		PoolAllocator(const PoolAllocator&&) = delete;
+		PoolAllocator(const PoolAllocator&) = delete;
+		PoolAllocator& operator=(const PoolAllocator&&) = delete;
+		PoolAllocator& operator=(const PoolAllocator&) = delete;
 
 		~PoolAllocator()
 		{
@@ -21,15 +26,36 @@ namespace flex
 		{
 			if (data.size() == 0 || data.back().second == PoolSize)
 			{
-				Resize();
+				PushPool();
 			}
 
 			auto& arrPair = data.back();
-			return &arrPair.first[arrPair.second++];
+			void* result = (T*)arrPair.first + arrPair.second++;
+			T* r = new(result) T();
+			return r;
+		}
+
+		template<typename...Vars>
+		T* Alloc(Vars&&...vars)
+		{
+			if (data.size() == 0 || data.back().second == PoolSize)
+			{
+				PushPool();
+			}
+
+			auto& arrPair = data.back();
+			void* result = (T*)arrPair.first + arrPair.second++;
+			T* r = new(result) T(std::forward<Vars>(vars)...);
+			return r;
 		}
 
 		void ReleaseAll()
 		{
+			for (auto& pair : data)
+			{
+				((T*)pair.first)->~T();
+				free(pair.first);
+			}
 			data.clear();
 		}
 
@@ -48,17 +74,16 @@ namespace flex
 			return (u32)(sizeof(T) * GetPoolCount() * PoolSize);
 		}
 
-		PoolAllocator(const PoolAllocator&&) = delete;
-		PoolAllocator(const PoolAllocator&) = delete;
-		PoolAllocator& operator=(const PoolAllocator&&) = delete;
-		PoolAllocator& operator=(const PoolAllocator&) = delete;
-
 	private:
-		void Resize()
+		void PushPool()
 		{
-			data.push_back({ std::array<T, PoolSize>(), 0u });
+			void* newAlloc = malloc(sizeof(T) * PoolSize);
+			memset(newAlloc, 0, sizeof(T) * PoolSize);
+			CHECK_NE(newAlloc, nullptr);
+			data.push_back({ newAlloc, 0u });
 		}
 
-		std::list<Pair<std::array<T, PoolSize>, u32>> data;
+		// List of pairs of arrays (pools) & usage counts
+		std::list<Pair<void*, u32>> data;
 	};
 } // namespace flex

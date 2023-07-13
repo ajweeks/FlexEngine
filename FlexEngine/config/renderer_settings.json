@@ -1,11 +1,10 @@
 {
-	"version" : 1,
+	"version" : 2,
+	"offset" : "-0.015,-0.004,0.001",
 	"enable v-sync" : true,
 	"enable fxaa" : true,
-	"brightness" : "1.000, 1.100, 1.200",
-	"offset" : "-0.003, -0.002, -0.004",
+	"brightness" : "0.990,0.985,1.150",
 	"saturation" : 1.000000,
-	"aperture" : 1.000000,
-	"shutter speed" : 0.125000,
-	"light sensitivity" : 800.000000
+	"shadow cascade count" : 4,
+	"shadow cascade base resolution" : 1024
 }

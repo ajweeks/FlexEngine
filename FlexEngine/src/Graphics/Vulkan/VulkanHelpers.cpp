@@ -4,6 +4,8 @@
 #include "Graphics/Vulkan/VulkanHelpers.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include "vulkan/vk_enum_string_helper.h"
+
 #include "stb_image.h"
 IGNORE_WARNINGS_POP
 
@@ -26,11 +28,45 @@ namespace flex
 		{
 			if (result != VK_SUCCESS)
 			{
-				PrintError("Vulkan fatal error: %s\n", VulkanErrorString(result).c_str());
+				PrintError("Vulkan fatal error: %s\n", string_VkResult(result));
 				((VulkanRenderer*)g_Renderer)->GetCheckPointData();
 				DEBUG_BREAK();
-				assert(result == VK_SUCCESS);
+				CHECK_EQ(result, VK_SUCCESS);
 			}
+		}
+
+		VkResult vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			FLEX_UNUSED(device);
+			FLEX_UNUSED(pAllocateInfo);
+			FLEX_UNUSED(pAllocator);
+			FLEX_UNUSED(pMemory);
+
+			ENSURE_NO_ENTRY();
+			return VK_ERROR_UNKNOWN;
+		}
+
+		void vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			FLEX_UNUSED(device);
+			FLEX_UNUSED(memory);
+			FLEX_UNUSED(pAllocator);
+
+			ENSURE_NO_ENTRY();
+		}
+
+		VkResult deviceAllocateMemory(const char* debugName, VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			FLEX_UNUSED(device);
+
+			return ((VulkanRenderer*)g_Renderer)->GetDevice()->AllocateMemory(debugName, pAllocateInfo, pAllocator, pMemory);
+		}
+
+		void deviceFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			FLEX_UNUSED(device);
+
+			((VulkanRenderer*)g_Renderer)->GetDevice()->FreeMemory(memory, pAllocator);
 		}
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
@@ -134,6 +170,19 @@ namespace flex
 				++location;
 			}
 
+			if (vertexAttributes & (u32)VertexAttribute::SCALE)
+			{
+				VkVertexInputAttributeDescription attributeDescription = {};
+				attributeDescription.binding = 0;
+				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
+				attributeDescription.location = location;
+				attributeDescription.offset = offset;
+				attributeDescriptions.push_back(attributeDescription);
+
+				offset += sizeof(glm::vec3);
+				++location;
+			}
+
 			if (vertexAttributes & (u32)VertexAttribute::TANGENT)
 			{
 				VkVertexInputAttributeDescription attributeDescription = {};
@@ -187,29 +236,15 @@ namespace flex
 			}
 		}
 
-		UniformBuffer::UniformBuffer(VulkanDevice* device, UniformBufferType type) :
-			buffer(device),
-			type(type)
+		VulkanGPUBuffer::VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type, const std::string& debugName) :
+			GPUBuffer(type, debugName),
+			buffer(device)
 		{
 		}
 
-		UniformBuffer::~UniformBuffer()
+		VulkanGPUBuffer::~VulkanGPUBuffer()
 		{
-			if (data.data != nullptr)
-			{
-				if (type == UniformBufferType::DYNAMIC ||
-					type == UniformBufferType::PARTICLE_DATA ||
-					type == UniformBufferType::TERRAIN_POINT_BUFFER ||
-					type == UniformBufferType::TERRAIN_VERTEX_BUFFER)
-				{
-					flex_aligned_free(data.data);
-				}
-				else
-				{
-					free(data.data);
-				}
-				data.data = nullptr;
-			}
+			buffer.Destroy();
 		}
 
 		void VertexIndexBufferPair::Destroy()
@@ -226,8 +261,6 @@ namespace flex
 				delete indexBuffer;
 				indexBuffer = nullptr;
 			}
-			vertexCount = 0;
-			indexCount = 0;
 		}
 
 		void VertexIndexBufferPair::Clear()
@@ -240,16 +273,13 @@ namespace flex
 			{
 				indexBuffer->Reset();
 			}
-			vertexCount = 0;
-			indexCount = 0;
 		}
 
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue) :
 			Texture(),
 			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
 			m_Queue(queue)
 		{
@@ -258,32 +288,52 @@ namespace flex
 		VulkanTexture::VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name) :
 			Texture(name),
 			image(device->m_LogicalDevice, vkDestroyImage),
-			imageMemory(device->m_LogicalDevice, vkFreeMemory),
+			imageMemory(device->m_LogicalDevice, deviceFreeMemory),
 			imageView(device->m_LogicalDevice, vkDestroyImageView),
-			sampler(device->m_LogicalDevice, vkDestroySampler),
 			m_VulkanDevice(device),
 			m_Queue(queue)
 		{
 		}
 
-		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-			VkFormat inFormat, i32 inMipLevels, VkFilter filter /* = VK_FILTER_LINEAR */, i32 layerCount /* = 1 */)
+		void VulkanTexture::Reload()
 		{
-			assert(inWidth != 0 && inHeight != 0);
-			assert(buffer != nullptr);
-			assert(bufferSize != 0);
-			assert((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
+			if (!fileName.empty())
+			{
+				if (!LoadFromFile(relativeFilePath, sampler, (TextureFormat)imageFormat))
+				{
+					PrintError("Failed to reload texture at %s\n", relativeFilePath.c_str());
+					return;
+				}
+
+				if (Create(mipLevels > 1) == 0)
+				{
+					PrintError("Failed to reload texture resources at %s\n", relativeFilePath.c_str());
+					return;
+				}
+
+				g_Renderer->OnTextureReloaded(this);
+			}
+		}
+
+		u32 VulkanTexture::CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
+			TextureFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount /* = 1 */)
+		{
+			CHECK(inWidth != 0u && inHeight != 0u);
+			CHECK_NE(buffer, nullptr);
+			CHECK_NE(bufferSize, 0u);
+			CHECK((!bIsArray && layerCount == 1) || (bIsArray && layerCount >= 1));
 
 			width = inWidth;
 			height = inHeight;
 			channelCount = inChannelCount;
-			imageFormat = inFormat;
+			imageFormat = (VkFormat)inFormat;
+			sampler = inSampler;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.DBG_Name = name.c_str();
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
-			imageCreateInfo.format = inFormat;
+			imageCreateInfo.format = (VkFormat)inFormat;
 			imageCreateInfo.width = inWidth;
 			imageCreateInfo.height = inHeight;
 			imageCreateInfo.arrayLayers = layerCount;
@@ -298,11 +348,13 @@ namespace flex
 			imageLayout = imageCreateInfo.initialLayout;
 
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(imageSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
-			void* data = nullptr;
-			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
-			memcpy(data, buffer, bufferSize);
+			void* stagingBufferData = nullptr;
+			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &stagingBufferData));
+			memcpy(stagingBufferData, buffer, bufferSize);
 			vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory);
 			{
 				VkCommandBuffer cmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
@@ -320,26 +372,13 @@ namespace flex
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.DBG_Name = name.c_str();
 			viewCreateInfo.viewType = (bIsArray ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D);
-			viewCreateInfo.format = inFormat;
+			viewCreateInfo.format = (VkFormat)inFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
 
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.DBG_Name = name.c_str();
-			samplerCreateInfo.sampler = &sampler;
-			samplerCreateInfo.minFilter = filter;
-			samplerCreateInfo.magFilter = filter;
-			if (bSamplerClampToBorder)
-			{
-				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-			}
-			else
-			{
-				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-			}
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
+			bIsCreated = 1u;
 
 			return imageSize;
 		}
@@ -361,18 +400,19 @@ namespace flex
 			height = inHeight;
 		}
 
-		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, VkImageUsageFlags inUsage)
+		VkDeviceSize VulkanTexture::CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels /* = 1 */, VkImageUsageFlags inUsage /* = VK_IMAGE_USAGE_SAMPLED_BIT */)
 		{
 			PROFILE_AUTO("VulkanTexture CreateEmpty");
 
-			assert(inWidth > 0);
-			assert(inHeight > 0);
+			CHECK_GT(inWidth, 0u);
+			CHECK_GT(inHeight, 0u);
 
 			width = inWidth;
 			height = inHeight;
 			channelCount = inChannelCount;
 			mipLevels = inMipLevels;
 			imageFormat = inFormat;
+			sampler = inSampler;
 
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
@@ -383,6 +423,7 @@ namespace flex
 			imageCreateInfo.mipLevels = inMipLevels;
 			imageCreateInfo.usage = inUsage;
 			imageCreateInfo.properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+			imageCreateInfo.DBG_Name = name.c_str();
 
 			VkDeviceSize imageSize = CreateImage(m_VulkanDevice, imageCreateInfo);
 
@@ -393,9 +434,7 @@ namespace flex
 			imageViewCreateInfo.mipLevels = inMipLevels;
 			CreateImageView(m_VulkanDevice, imageViewCreateInfo);
 
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sampler = &sampler;
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
+			bIsCreated = 1u;
 
 			return imageSize;
 		}
@@ -433,31 +472,8 @@ namespace flex
 			VkMemoryAllocateInfo memAllocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			memAllocInfo.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAllocInfo, nullptr, createInfo.imageMemory));
+			VK_CHECK_RESULT(device->AllocateMemory(createInfo.DBG_Name, &memAllocInfo, nullptr, createInfo.imageMemory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
-
-			VkSamplerCreateInfo samplerCreateInfo = vks::samplerCreateInfo();
-			samplerCreateInfo.maxAnisotropy = 1.0f;
-			samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
-			samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
-			samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-			samplerCreateInfo.addressModeV = samplerCreateInfo.addressModeU;
-			samplerCreateInfo.addressModeW = samplerCreateInfo.addressModeU;
-			samplerCreateInfo.mipLodBias = 0.0f;
-			samplerCreateInfo.compareOp = VK_COMPARE_OP_NEVER;
-			samplerCreateInfo.minLod = 0.0f;
-			samplerCreateInfo.maxLod = (real)createInfo.mipLevels;
-			samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-			// Enable anisotropy if desired with:
-			//if (device->m_PhysicalDeviceFeatures.samplerAnisotropy)
-			//{
-			//	samplerCreateInfo.maxAnisotropy = device->m_PhysicalDeviceProperties.limits.maxSamplerAnisotropy;
-			//	samplerCreateInfo.anisotropyEnable = VK_TRUE;
-			//}
-
-			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerCreateInfo, nullptr, createInfo.sampler));
-			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
 
 			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
 			imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
@@ -474,23 +490,23 @@ namespace flex
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering)
+		VkDeviceSize VulkanTexture::CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapEmpty");
 
-			assert(inWidth > 0);
-			assert(inHeight > 0);
-			assert(inChannelCount > 0);
+			CHECK_GT(inWidth, 0u);
+			CHECK_GT(inHeight, 0u);
+			CHECK_GT(inChannelCount, 0u);
 
 			width = inWidth;
 			height = inHeight;
 			channelCount = inChannelCount;
+			sampler = inSampler;
 
 			CubemapCreateInfo createInfo = {};
 			createInfo.image = &image;
 			createInfo.imageMemory = &imageMemory;
 			createInfo.imageView = &imageView;
-			createInfo.sampler = &sampler;
 			createInfo.format = inFormat;
 			createInfo.width = width;
 			createInfo.height = height;
@@ -498,6 +514,7 @@ namespace flex
 			createInfo.totalSize = width * height * channelCount * 6;
 			createInfo.mipLevels = inMipLevels;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
+			createInfo.DBG_Name = "Empty cubemap";
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
@@ -505,12 +522,16 @@ namespace flex
 			imageLayout = createInfo.imageLayoutOut;
 			imageFormat = inFormat;
 
+			bIsCreated = 1u;
+
 			return imageSize;
 		}
 
-		VkDeviceSize VulkanTexture::CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering)
+		bool VulkanTexture::LoadCubemapFromTextures(const std::array<std::string, 6>& filePaths, HTextureSampler inSampler)
 		{
 			PROFILE_AUTO("VulkanTexture CreateCubemapFromTextures");
+
+			sampler = inSampler;
 
 			struct Image
 			{
@@ -528,20 +549,26 @@ namespace flex
 			if (fileName.empty())
 			{
 				PrintError("CreateCubemapFromTextures was given an empty filepath!\n");
-				return 0;
+				return false;
+			}
+
+			if (name.empty())
+			{
+				name = fileName;
 			}
 
 			if (g_bEnableLogging_Loading)
 			{
-				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n", filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
+				Print("Loading cubemap textures %s, %s, %s, %s, %s, %s\n",
+					filePaths[0].c_str(), filePaths[1].c_str(), filePaths[2].c_str(), filePaths[3].c_str(), filePaths[4].c_str(), filePaths[5].c_str());
 			}
 
 			images.reserve(filePaths.size());
 			for (const std::string& path : filePaths)
 			{
 				int w, h, c;
-				unsigned char* pixels = stbi_load(path.c_str(), &w, &h, &c, STBI_rgb_alpha);
-				if (!pixels)
+				unsigned char* imagePixels = stbi_load(path.c_str(), &w, &h, &c, STBI_rgb_alpha);
+				if (imagePixels != nullptr)
 				{
 					const char* failureReasonStr = stbi_failure_reason();
 					PrintError("CreateCubemapFromTextures failed to load image %s, failure reason: %s\n", path.c_str(), failureReasonStr);
@@ -555,22 +582,27 @@ namespace flex
 				channelCount = (u32)c;
 
 				i32 size = width * height * channelCount * sizeof(unsigned char);
-				images.push_back({ pixels, (i32)width, (i32)height, (i32)channelCount, size });
+				images.push_back({ imagePixels, (i32)width, (i32)height, (i32)channelCount, size });
 				totalSize += size;
 			}
 
 			if (totalSize == 0)
 			{
 				PrintError("CreateCubemapFromTextures failed to load cubemap textures (%s)\n", fileName.c_str());
-				return 0;
+				return false;
 			}
 
-			unsigned char* pixels = (unsigned char*)malloc(totalSize);
+			pixels = (unsigned char*)malloc(totalSize);
 			if (pixels == nullptr)
 			{
 				PrintError("CreateCubemapFromTextures Failed to allocate %u bytes\n", totalSize);
-				// NOTE: Leak of all pixel data
-				return 0;
+
+				for (Image& cubeImage : images)
+				{
+					stbi_image_free(cubeImage.pixels);
+				}
+
+				return false;
 			}
 
 			unsigned char* pixelData = pixels;
@@ -582,9 +614,19 @@ namespace flex
 				stbi_image_free(cubeImage.pixels);
 			}
 
+			return true;
+		}
+
+
+		VkDeviceSize VulkanTexture::CreateCubemap(VkFormat inFormat, bool bEnableTrilinearFiltering)
+		{
+			u32 totalSize = width * height * channelCount * sizeof(unsigned char) * 6;
+
 			// Create a host-visible staging buffer that contains the raw image data
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(totalSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(totalSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
 			stagingBuffer.Map();
 			memcpy(stagingBuffer.m_Mapped, pixels, totalSize);
@@ -595,11 +637,10 @@ namespace flex
 			createInfo.image = &image;
 			createInfo.imageMemory = &imageMemory;
 			createInfo.imageView = &imageView;
-			createInfo.sampler = &sampler;
 			createInfo.totalSize = totalSize;
 			createInfo.format = inFormat;
-			createInfo.filePaths = filePaths;
 			createInfo.bEnableTrilinearFiltering = bEnableTrilinearFiltering;
+			createInfo.DBG_Name = name.c_str();
 
 			VkDeviceSize imageSize = CreateCubemap(m_VulkanDevice, createInfo);
 
@@ -805,9 +846,9 @@ namespace flex
 
 		VkDeviceSize VulkanTexture::CreateImage(VulkanDevice* device, ImageCreateInfo& createInfo)
 		{
-			assert(createInfo.width != 0);
-			assert(createInfo.height != 0);
-			assert(createInfo.format != VK_FORMAT_UNDEFINED);
+			CHECK_NE(createInfo.width, 0u);
+			CHECK_NE(createInfo.height, 0u);
+			CHECK_NE((u32)createInfo.format, (u32)VK_FORMAT_UNDEFINED);
 
 			if (createInfo.width > MAX_TEXTURE_DIM ||
 				createInfo.height > MAX_TEXTURE_DIM ||
@@ -855,22 +896,27 @@ namespace flex
 			VkMemoryAllocateInfo allocInfo = vks::memoryAllocateInfo(memRequirements.size);
 			allocInfo.memoryTypeIndex = FindMemoryType(device, memRequirements.memoryTypeBits, createInfo.properties);
 
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &allocInfo, nullptr, createInfo.imageMemory));
+			VK_CHECK_RESULT(device->AllocateMemory(createInfo.DBG_Name, &allocInfo, nullptr, createInfo.imageMemory));
 
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *createInfo.image, *createInfo.imageMemory, 0));
 
 			return memRequirements.size;
 		}
 
-		VkDeviceSize VulkanTexture::CreateFromFile(
-			const std::string& inRelativeFilePath,
-			VkFormat inFormat /* = VK_FORMAT_UNDEFINED */,
-			bool bGenerateFullMipChain /* = false */)
+		bool VulkanTexture::LoadFromFile(const std::string& inRelativeFilePath,
+			HTextureSampler inSampler,
+			TextureFormat inFormat /* = TextureFormat::UNDEFINED */)
 		{
-			PROFILE_AUTO("VulkanTexture CreateFromFile");
+			PROFILE_AUTO("VulkanTexture LoadFromFile");
+
+			sampler = inSampler;
 
 			relativeFilePath = inRelativeFilePath;
 			fileName = StripLeadingDirectories(inRelativeFilePath);
+			if (name.empty())
+			{
+				name = fileName;
+			}
 
 			if (g_bEnableLogging_Loading)
 			{
@@ -879,49 +925,29 @@ namespace flex
 
 			width = height = channelCount = 0;
 
-			// TODO: Make HDRImage subclass of Image class to unify code paths here
-			HDRImage hdrImage;
-			unsigned char* pixels = nullptr;
-
-			// TODO: Unify hdr path with non-hdr & cubemap paths
-			if (bHDR)
-			{
-				if (hdrImage.Load(relativeFilePath, 4, false))
-				{
-					width = hdrImage.width;
-					height = hdrImage.height;
-					channelCount = hdrImage.channelCount;
-				}
-			}
-			else
-			{
-				int w, h, c;
-				pixels = stbi_load(relativeFilePath.c_str(), &w, &h, &c, STBI_rgb_alpha);
-
-				if (pixels != nullptr)
-				{
-					width = (u32)w;
-					height = (u32)h;
-					channelCount = (u32)c;
-				}
-			}
+			LoadData(4);
 
 			if (width == 0 || height == 0 || channelCount == 0 ||
-				((bHDR && hdrImage.pixels == nullptr) || (!bHDR && pixels == nullptr)))
+				pixels == nullptr)
 			{
 				const char* failureReasonStr = stbi_failure_reason();
 				PrintError("Failed to load texture data from %s error: %s\n", relativeFilePath.c_str(), failureReasonStr);
-				return 0;
+				return false;
 			}
 
 			channelCount = 4; // ??
 
-			if (inFormat == VK_FORMAT_UNDEFINED)
+			imageFormat = (VkFormat)inFormat;
+			if (imageFormat == VK_FORMAT_UNDEFINED)
 			{
-				inFormat = CalculateFormat();
+				imageFormat = CalculateFormat();
 			}
-			imageFormat = inFormat;
 
+			return true;
+		}
+
+		u64 VulkanTexture::Create(bool bGenerateFullMipChain /* = false */)
+		{
 			if (bGenerateFullMipChain)
 			{
 				bool bFormatSupportsBlit = true;
@@ -946,6 +972,7 @@ namespace flex
 				mipLevels = ((u32)(glm::log2((real)glm::max(width, height))));
 			}
 
+			PROFILE_BEGIN("Create image");
 			ImageCreateInfo imageCreateInfo = {};
 			imageCreateInfo.image = image.replace();
 			imageCreateInfo.imageMemory = imageMemory.replace();
@@ -961,8 +988,10 @@ namespace flex
 				VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 				VK_IMAGE_USAGE_SAMPLED_BIT |
 				(bGenerateFullMipChain ? VK_IMAGE_USAGE_TRANSFER_SRC_BIT : 0);
+			imageCreateInfo.DBG_Name = name.c_str();
 
 			u32 imageSize = (u32)CreateImage(m_VulkanDevice, imageCreateInfo);
+			PROFILE_END("Create image");
 
 			if (imageSize == 0)
 			{
@@ -974,8 +1003,11 @@ namespace flex
 
 			imageLayout = imageCreateInfo.initialLayout;
 
+			PROFILE_BEGIN("Upload data");
 			VulkanBuffer stagingBuffer(m_VulkanDevice);
-			stagingBuffer.Create(imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			stagingBuffer.Create(imageSize,
+				VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				name.c_str());
 
 			u32 pixelBufSize = bHDR ?
 				(u32)(width * height * channelCount * sizeof(real)) :
@@ -983,23 +1015,8 @@ namespace flex
 
 			void* data = nullptr;
 			VK_CHECK_RESULT(vkMapMemory(m_VulkanDevice->m_LogicalDevice, stagingBuffer.m_Memory, 0, imageSize, 0, &data));
-			if (bHDR)
-			{
-				memcpy(data, hdrImage.pixels, (size_t)pixelBufSize);
-			}
-			else
-			{
-				memcpy(data, pixels, (size_t)pixelBufSize);
-			}
-
-			if (bHDR)
-			{
-				hdrImage.Free();
-			}
-			else
-			{
-				stbi_image_free(pixels);
-			}
+			memcpy(data, pixels, (size_t)pixelBufSize);
+			FreeData();
 
 			// Upload data via staging buffer
 			{
@@ -1018,25 +1035,25 @@ namespace flex
 				VulkanRenderer::EndDebugMarkerRegion(cmdBuffer);
 				EndSingleTimeCommands(m_VulkanDevice, m_Queue, cmdBuffer);
 			}
+			PROFILE_END("Upload data");
 
+			PROFILE_BEGIN("Create image view");
 			ImageViewCreateInfo viewCreateInfo = {};
 			viewCreateInfo.format = imageFormat;
 			viewCreateInfo.image = &image;
 			viewCreateInfo.imageView = &imageView;
 			viewCreateInfo.mipLevels = mipLevels;
 			CreateImageView(m_VulkanDevice, viewCreateInfo);
-
-			SamplerCreateInfo samplerCreateInfo = {};
-			samplerCreateInfo.sampler = &sampler;
-			samplerCreateInfo.maxLod = (real)mipLevels;
-			CreateSampler(m_VulkanDevice, samplerCreateInfo);
+			PROFILE_END("Create image view");
 
 			if (bGenerateFullMipChain)
 			{
 				GenerateMipmaps();
 			}
 
-			return imageSize;
+			bIsCreated = 1u;
+
+			return (u64)imageSize;
 		}
 
 		void VulkanTexture::CreateImageView(VulkanDevice* device, ImageViewCreateInfo& createInfo)
@@ -1061,27 +1078,27 @@ namespace flex
 			VkSamplerCreateInfo samplerInfo = vks::samplerCreateInfo();
 			samplerInfo.magFilter = createInfo.magFilter;
 			samplerInfo.minFilter = createInfo.minFilter;
+			samplerInfo.mipmapMode = createInfo.mipmapMode;
 			samplerInfo.addressModeU = createInfo.samplerAddressMode;
 			samplerInfo.addressModeV = createInfo.samplerAddressMode;
 			samplerInfo.addressModeW = createInfo.samplerAddressMode;
+			samplerInfo.mipLodBias = 0.0f;
 			samplerInfo.anisotropyEnable = VK_FALSE;
 			samplerInfo.maxAnisotropy = createInfo.maxAnisotropy;
-			samplerInfo.borderColor = createInfo.borderColor;
-			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 			samplerInfo.compareEnable = VK_FALSE;
 			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-			samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-			samplerInfo.mipLodBias = 0.0f;
 			samplerInfo.minLod = createInfo.minLod;
 			samplerInfo.maxLod = createInfo.maxLod;
+			samplerInfo.borderColor = createInfo.borderColor;
+			samplerInfo.unnormalizedCoordinates = VK_FALSE;
 
-			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, createInfo.sampler));
-			VulkanRenderer::SetSamplerName(device, *createInfo.sampler, createInfo.DBG_Name);
+			VK_CHECK_RESULT(vkCreateSampler(device->m_LogicalDevice, &samplerInfo, nullptr, (VkSampler*)createInfo.sampler));
+			VulkanRenderer::SetSamplerName(device, *(VkSampler*)createInfo.sampler, createInfo.DBG_Name);
 		}
 
-		bool VulkanTexture::SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat)
+		bool VulkanTexture::SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat)
 		{
-			assert(channelCount == 3 || channelCount == 4);
+			CHECK(channelCount == 3 || channelCount == 4);
 
 			bool bSupportsBlit = true;
 
@@ -1134,7 +1151,7 @@ namespace flex
 				VkMemoryAllocateInfo memAllocInfo = vks::memoryAllocateInfo(memRequirements.size);
 				memAllocInfo.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 				VkDeviceMemory dstImageMemory;
-				VK_CHECK_RESULT(vkAllocateMemory(m_VulkanDevice->m_LogicalDevice, &memAllocInfo, nullptr, &dstImageMemory));
+				VK_CHECK_RESULT(device->AllocateMemory("Saving texture to file", &memAllocInfo, nullptr, &dstImageMemory));
 				VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, dstImage, dstImageMemory, 0));
 
 				VkCommandBuffer copyCmd = VulkanCommandBufferManager::CreateCommandBuffer(m_VulkanDevice, VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
@@ -1211,8 +1228,6 @@ namespace flex
 					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VkImageSubresourceRange{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 
-				TransitionToLayout(previousLayout);
-
 				VulkanCommandBufferManager::FlushCommandBuffer(m_VulkanDevice, copyCmd, m_Queue, true);
 
 				// Get layout of the image (including row pitch)
@@ -1237,8 +1252,10 @@ namespace flex
 				bResult = SaveImage(absoluteFilePath, saveFormat, width, height, channelCount, u8Data, bFlipVertically);
 
 				vkUnmapMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory);
-				vkFreeMemory(m_VulkanDevice->m_LogicalDevice, dstImageMemory, nullptr);
+				device->FreeMemory(dstImageMemory, nullptr);
 				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, dstImage, nullptr);
+
+				TransitionToLayout(previousLayout);
 			}
 			else
 			{
@@ -1248,11 +1265,6 @@ namespace flex
 			free(u8Data);
 
 			return bResult;
-		}
-
-		void VulkanTexture::Build(void* data /* = nullptr */)
-		{
-			FLEX_UNUSED(data);
 		}
 
 		VkFormat VulkanTexture::CalculateFormat()
@@ -1359,6 +1371,8 @@ namespace flex
 				return;
 			}
 
+			PROFILE_AUTO("TransitionImageLayout");
+
 			VkCommandBuffer commandBuffer = optCmdBuf;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1384,7 +1398,7 @@ namespace flex
 			}
 			else
 			{
-				assert(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
+				CHECK(oldLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
 					newLayout != VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 				barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -1552,6 +1566,8 @@ namespace flex
 		void CopyImage(VulkanDevice* device, VkQueue queue, VkImage srcImage, VkImage dstImage, u32 width, u32 height,
 			VkCommandBuffer optCmdBuf /* = VK_NULL_HANDLE */, VkImageAspectFlags aspectMask /* = VK_IMAGE_ASPECT_COLOR_BIT */)
 		{
+			PROFILE_AUTO("CopyImage");
+
 			VkCommandBuffer commandBuffer = optCmdBuf;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1585,6 +1601,8 @@ namespace flex
 		void CopyBufferToImage(VulkanDevice* device, VkQueue queue, VkBuffer buffer, VkImage image,
 			u32 width, u32 height, VkCommandBuffer optCommandBuffer /* = VK_NULL_HANDLE */)
 		{
+			PROFILE_AUTO("CopyBufferToImage");
+
 			VkCommandBuffer commandBuffer = optCommandBuffer;
 			if (commandBuffer == VK_NULL_HANDLE)
 			{
@@ -1616,6 +1634,8 @@ namespace flex
 
 		void CopyBuffer(VulkanDevice* device, VkQueue queue, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size, VkDeviceSize srcOffset, VkDeviceSize dstOffset)
 		{
+			PROFILE_AUTO("CopyBuffer");
+
 			VkCommandBuffer commandBuffer = BeginSingleTimeCommands(device);
 
 			VkBufferCopy copyRegion = {};
@@ -1635,7 +1655,7 @@ namespace flex
 
 			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-			assert(queueFamilyCount > 0);
+			CHECK_GT(queueFamilyCount, 0u);
 			std::vector<VkQueueFamilyProperties> queueFamilyProperties(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilyProperties.data());
 
@@ -1683,96 +1703,31 @@ namespace flex
 		{
 		}
 
-		bool GraphicsPipelineCreateInfo::operator=(const GraphicsPipelineCreateInfo& other)
-		{
-			// TODO: memcmp
-			return shaderID == other.shaderID &&
-				vertexAttributes == other.vertexAttributes &&
-				topology == other.topology &&
-				cullMode == other.cullMode &&
-				renderPass == other.renderPass &&
-				subpass == other.subpass &&
-				pushConstantRangeCount == other.pushConstantRangeCount &&
-				descriptorSetLayoutIndex == other.descriptorSetLayoutIndex &&
-				bSetDynamicStates == other.bSetDynamicStates &&
-				bEnableColourBlending == other.bEnableColourBlending &&
-				bEnableAdditiveColourBlending == other.bEnableAdditiveColourBlending &&
-				depthTestEnable == other.depthTestEnable &&
-				depthWriteEnable == other.depthWriteEnable &&
-				depthCompareOp == other.depthCompareOp &&
-				stencilTestEnable == other.stencilTestEnable;
-			// TODO: Check push constant value count/types?
-		}
-
 		u64 GraphicsPipelineCreateInfo::Hash()
 		{
 			// NOTE: Is this hash cryptographically secure? Heck no! Does it work for my purposes? Yes it does :)
-			u64 result = 0;
+			u64 result = 0u;
 
-			result += (u64)shaderID * 11;
-			result += (u64)vertexAttributes * 2;
-			result += (u64)topology * 5;
+			result += (u64)shaderID * 111u;
+			result += (u64)vertexAttributes * 652u;
+			result += ((u64)topology * 931u) << 1u;
 			result <<= 2;
-			result *= 982451653;
-			result += (u64)cullMode * 3;
-			result += (u64)renderPass;
-			result += (u64)subpass * 5;
-			result += (u64)(pushConstantRangeCount + 1) * 7;
-			result += (u64)descriptorSetLayoutIndex * 13;
-			result += (u64)(bSetDynamicStates ? 68 : 458);
-			result += (u64)(bEnableColourBlending ? 19956 : 15485863);
-			result += (u64)(bEnableAdditiveColourBlending ? 898 : 123456789);
-			result += (u64)(depthTestEnable ? 77 : 2829);
-			result <<= 1;
-			result *= 492876847;
-			result += (u64)(depthWriteEnable ? 13 : 9);
-			result += (u64)depthCompareOp * 6;
-			result += (u64)(stencilTestEnable ? 3 : 199);
+			result += (u64)cullMode * 84u;
+			result *= 982451653u;
+			result += ((u64)renderPass + 1) * ((u64)renderPass + 1u);
+			result += (u64)subpass * 46;
+			result += ((u64)pushConstantRangeCount + 1) * 7u; // TODO: Deeper hash of push contant types
+			result += (u64)(bSetDynamicStates ? 9568u : 458u);
+			result += (u64)(bEnableColourBlending ? 19956u : 15485863u);
+			result += (u64)(bEnableAdditiveColourBlending ? 898u : 123456789u);
+			result <<= 1u;
+			result += (u64)(depthTestEnable ? 77u : 2829u);
+			result *= 492876847u;
+			result += (u64)(depthWriteEnable ? 1613u : 259u);
+			result += (u64)depthCompareOp * 45u;
+			result += (u64)(stencilTestEnable ? 869u : 199u);
 
 			return result;
-		}
-
-		std::string VulkanErrorString(VkResult errorCode)
-		{
-			switch (errorCode)
-			{
-#define STR(r) case VK_ ##r: return #r
-				STR(NOT_READY);
-				STR(TIMEOUT);
-				STR(EVENT_SET);
-				STR(EVENT_RESET);
-				STR(INCOMPLETE);
-				STR(ERROR_OUT_OF_HOST_MEMORY);
-				STR(ERROR_OUT_OF_DEVICE_MEMORY);
-				STR(ERROR_INITIALIZATION_FAILED);
-				STR(ERROR_DEVICE_LOST);
-				STR(ERROR_MEMORY_MAP_FAILED);
-				STR(ERROR_LAYER_NOT_PRESENT);
-				STR(ERROR_EXTENSION_NOT_PRESENT);
-				STR(ERROR_FEATURE_NOT_PRESENT);
-				STR(ERROR_INCOMPATIBLE_DRIVER);
-				STR(ERROR_TOO_MANY_OBJECTS);
-				STR(ERROR_FORMAT_NOT_SUPPORTED);
-				STR(ERROR_SURFACE_LOST_KHR);
-				STR(ERROR_NATIVE_WINDOW_IN_USE_KHR);
-				STR(SUBOPTIMAL_KHR);
-				STR(ERROR_OUT_OF_DATE_KHR);
-				STR(ERROR_INCOMPATIBLE_DISPLAY_KHR);
-				STR(ERROR_VALIDATION_FAILED_EXT);
-				STR(ERROR_INVALID_SHADER_NV);
-				STR(ERROR_OUT_OF_POOL_MEMORY_KHR);
-				STR(ERROR_INVALID_EXTERNAL_HANDLE_KHR);
-#undef STR
-			case VK_SUCCESS:
-				// No error to print
-				return "";
-			case VK_RESULT_RANGE_SIZE:
-			case VK_RESULT_MAX_ENUM:
-			case VK_RESULT_BEGIN_RANGE:
-				return "INVALID_ENUM";
-			default:
-				return "UNKNOWN_ERROR";
-			}
 		}
 
 		void SetImageLayout(
@@ -1952,10 +1907,10 @@ namespace flex
 			VkDeviceMemory* memory, VkImageView* imageView,
 			const char* DBG_ImageName /* = nullptr */, const char* DBG_ImageViewName /* = nullptr */)
 		{
-			assert(format != VK_FORMAT_UNDEFINED);
-			assert(width != 0 && height != 0);
-			assert(width <= MAX_TEXTURE_DIM);
-			assert(height <= MAX_TEXTURE_DIM);
+			CHECK_NE((u32)format, (u32)VK_FORMAT_UNDEFINED);
+			CHECK(width != 0 && height != 0);
+			CHECK_LE(width, MAX_TEXTURE_DIM);
+			CHECK_LE(height, MAX_TEXTURE_DIM);
 
 			VkImageAspectFlags aspectMask = 0;
 
@@ -2000,7 +1955,7 @@ namespace flex
 			vkGetImageMemoryRequirements(device->m_LogicalDevice, *image, &memRequirements);
 			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
 			memAlloc.memoryTypeIndex = device->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VK_CHECK_RESULT(vkAllocateMemory(device->m_LogicalDevice, &memAlloc, nullptr, memory));
+			VK_CHECK_RESULT(device->AllocateMemory(DBG_ImageName, &memAlloc, nullptr, memory));
 			VK_CHECK_RESULT(vkBindImageMemory(device->m_LogicalDevice, *image, *memory, 0));
 
 			VkImageViewCreateInfo imageViewCreateInfo = vks::imageViewCreateInfo();
@@ -2027,7 +1982,7 @@ namespace flex
 				frameBufferAttachment->image = VK_NULL_HANDLE;
 				vkDestroyImageView(device->m_LogicalDevice, frameBufferAttachment->view, nullptr);
 				frameBufferAttachment->view = VK_NULL_HANDLE;
-				vkFreeMemory(device->m_LogicalDevice, frameBufferAttachment->mem, nullptr);
+				device->FreeMemory(frameBufferAttachment->mem, nullptr);
 				frameBufferAttachment->mem = VK_NULL_HANDLE;
 			}
 
@@ -2173,7 +2128,7 @@ namespace flex
 				}
 				if (mem != VK_NULL_HANDLE)
 				{
-					vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+					device->FreeMemory(mem, nullptr);
 				}
 				if (view != VK_NULL_HANDLE)
 				{
@@ -2204,7 +2159,7 @@ namespace flex
 
 			if (mem != VK_NULL_HANDLE)
 			{
-				vkFreeMemory(device->m_LogicalDevice, mem, nullptr);
+				device->FreeMemory(mem, nullptr);
 				mem = VK_NULL_HANDLE;
 			}
 
@@ -2342,60 +2297,8 @@ namespace flex
 			}
 		}
 
-		UniformBufferList::UniformBufferList()
-		{
-			// Every instance will have at least one type
-			uniformBufferList.reserve(1);
-		}
-
-		void UniformBufferList::Add(VulkanDevice* device, UniformBufferType type)
-		{
-			uniformBufferList.emplace_back(device, type);
-		}
-
-		const UniformBuffer* UniformBufferList::Get(UniformBufferType type) const
-		{
-			for (const UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return &buffer;
-				}
-			}
-			return nullptr;
-		}
-
-		bool UniformBufferList::Has(UniformBufferType type) const
-		{
-			for (const UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return true;
-				}
-			}
-			return false;
-		}
-
-		UniformBuffer* UniformBufferList::Get(UniformBufferType type)
-		{
-			assert(type != UniformBufferType::TERRAIN_VERTEX_BUFFER); // Terrain data should be retrieved via VulkanRenderer::m_Terrain, not through a uniform buffer list!
-			for (UniformBuffer& buffer : uniformBufferList)
-			{
-				if (buffer.type == type)
-				{
-					return &buffer;
-				}
-			}
-			return nullptr;
-		}
-
 		VulkanParticleSystem::VulkanParticleSystem(VulkanDevice* device) :
 			computePipeline(device->m_LogicalDevice, vkDestroyPipeline)
-		{
-		}
-
-		GraphicsPipeline::GraphicsPipeline()
 		{
 		}
 
@@ -2403,12 +2306,6 @@ namespace flex
 			pipeline(vulkanDevice, vkDestroyPipeline),
 			layout(vulkanDevice, vkDestroyPipelineLayout)
 		{
-		}
-
-		void GraphicsPipeline::replace()
-		{
-			pipeline.replace();
-			layout.replace();
 		}
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode)
@@ -2555,17 +2452,18 @@ namespace flex
 		{
 		}
 
-		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device) :
+		VulkanDescriptorPool::VulkanDescriptorPool(VulkanDevice* device, const char* name) :
 			device(device),
+			name(name),
 			size(maxNumDescSets)
 		{
 			std::vector<VkDescriptorPoolSize> poolSizes
 			{
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS },
-				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_NUM_DESC_STORAGE_BUFFERS },
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS * maxNumDescSets },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_NUM_DESC_UNIFORM_BUFFERS * maxNumDescSets },
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS * maxNumDescSets },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS * maxNumDescSets },
+				{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, MAX_NUM_DESC_STORAGE_BUFFERS * maxNumDescSets },
 			};
 
 			VkDescriptorPoolCreateInfo poolInfo = vks::descriptorPoolCreateInfo(poolSizes, maxNumDescSets);
@@ -2582,14 +2480,17 @@ namespace flex
 
 		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(DescriptorSetCreateInfo* createInfo)
 		{
-			VkDescriptorSetLayout layouts[] = { *createInfo->descriptorSetLayout };
+			PROFILE_AUTO("CreateDescriptorSet");
+
+			VkDescriptorSetLayout layouts[] = { createInfo->descriptorSetLayout };
 			VkDescriptorSetAllocateInfo allocInfo = vks::descriptorSetAllocateInfo(pool, layouts, 1);
 
 			if ((allocatedSetCount + 1) > maxNumDescSets)
 			{
 				// TODO: Create new pool or recreate and copy old one?
 				//maxNumDescSets *= 2;
-				assert(false);
+				PRINT_FATAL("Ran out of descriptor sets (max: %d)\n", maxNumDescSets);
+				return VK_NULL_HANDLE;
 			}
 
 			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
@@ -2611,7 +2512,9 @@ namespace flex
 			UniformList textureUniforms = shader->textureUniforms;
 
 			std::vector<VkWriteDescriptorSet> writeDescriptorSets;
-			writeDescriptorSets.reserve(createInfo->bufferDescriptors.Count() + createInfo->imageDescriptors.Count());
+			writeDescriptorSets.reserve(
+				(size_t)createInfo->bufferDescriptors.Count() +
+				(size_t)createInfo->imageDescriptors.Count());
 
 			u32 binding = 0;
 
@@ -2621,29 +2524,29 @@ namespace flex
 			{
 				const u64 uniformID = pair.uniform->id;
 				const BufferDescriptorInfo& bufferDescInfo = pair.object;
-				assert((bufferDescInfo.type == UniformBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
-					(bufferDescInfo.type == UniformBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
-				assert(bufferDescInfo.buffer != VK_NULL_HANDLE);
+				CHECK((bufferDescInfo.type == GPUBufferType::DYNAMIC && dynamicBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::STATIC && constantBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::PARTICLE_DATA && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::TERRAIN_POINT_BUFFER && additionalBufferUniforms.HasUniform(uniformID)) ||
+					(bufferDescInfo.type == GPUBufferType::TERRAIN_VERTEX_BUFFER && additionalBufferUniforms.HasUniform(uniformID)));
+				CHECK_NE(bufferDescInfo.buffer, (VkBuffer)VK_NULL_HANDLE);
 
 				VkDescriptorType type;
 				switch (bufferDescInfo.type)
 				{
-				case UniformBufferType::STATIC:
+				case GPUBufferType::STATIC:
 					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 					break;
-				case UniformBufferType::DYNAMIC:
+				case GPUBufferType::DYNAMIC:
 					type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
 					break;
-				case UniformBufferType::PARTICLE_DATA:
+				case GPUBufferType::PARTICLE_DATA:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
 					break;
-				case UniformBufferType::TERRAIN_POINT_BUFFER:
+				case GPUBufferType::TERRAIN_POINT_BUFFER:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
-				case UniformBufferType::TERRAIN_VERTEX_BUFFER:
+				case GPUBufferType::TERRAIN_VERTEX_BUFFER:
 					type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
 					break;
 				default:
@@ -2665,7 +2568,7 @@ namespace flex
 			i = 0;
 			for (const auto& pair : createInfo->imageDescriptors)
 			{
-				assert(textureUniforms.HasUniform(pair.uniform));
+				CHECK(textureUniforms.HasUniform(pair.uniform));
 				const ImageDescriptorInfo& imageDescInfo = pair.object;
 
 				VkDescriptorImageInfo& imageInfo = imageInfos[i];
@@ -2675,18 +2578,18 @@ namespace flex
 					imageInfo.imageView = imageDescInfo.imageView;
 					if (imageDescInfo.imageSampler != VK_NULL_HANDLE)
 					{
-						imageInfo.sampler = imageDescInfo.imageSampler;
+						imageInfo.sampler = (VkSampler)imageDescInfo.imageSampler;
 					}
 					else
 					{
-						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_LinMipLinSampler;
+						imageInfo.sampler = ((VulkanRenderer*)g_Renderer)->m_SamplerLinearRepeat;
 					}
 				}
 				else
 				{
 					VulkanTexture* blankTexture = ((VulkanTexture*)g_Renderer->m_BlankTexture);
 					imageInfo.imageView = blankTexture->imageView;
-					imageInfo.sampler = blankTexture->sampler;
+					imageInfo.sampler = (VkSampler)blankTexture->sampler;
 				}
 				writeDescriptorSets.push_back(vks::writeDescriptorSet(descriptorSet, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, binding, &imageInfo));
 
@@ -2702,8 +2605,10 @@ namespace flex
 			return descriptorSet;
 		}
 
-		void VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
+		VkDescriptorSet VulkanDescriptorPool::CreateDescriptorSet(MaterialID materialID, const char* DBG_Name /* = nullptr */)
 		{
+			PROFILE_AUTO("CreateDescriptorSet");
+
 			DescriptorSetCreateInfo createInfo = {};
 			createInfo.DBG_Name = DBG_Name;
 
@@ -2719,27 +2624,51 @@ namespace flex
 
 			VulkanMaterial* material = (VulkanMaterial*)g_Renderer->GetMaterial(materialID);
 
-			createInfo.descriptorSetLayout = &descriptorSetLayouts[material->shaderID];
+			createInfo.descriptorSetLayout = GetOrCreateLayout(material->shaderID);
 			createInfo.shaderID = material->shaderID;
-			createInfo.uniformBufferList = &material->uniformBufferList;
+			createInfo.gpuBufferList = &material->gpuBufferList;
 
 			((VulkanRenderer*)g_Renderer)->FillOutTextureDescriptorInfos(&createInfo.imageDescriptors, materialID);
-			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.uniformBufferList, createInfo.shaderID);
+			((VulkanRenderer*)g_Renderer)->FillOutBufferDescriptorInfos(&createInfo.bufferDescriptors, createInfo.gpuBufferList, createInfo.shaderID);
 
 			VkDescriptorSet descriptorSet = CreateDescriptorSet(&createInfo);
-			if (descriptorSets.size() <= materialID)
+
+			if (materialID >= (u32)descriptorSets.size())
 			{
 				descriptorSets.resize(materialID + 1);
 			}
 			descriptorSets[materialID] = descriptorSet;
+
+			layoutUsageCounts[createInfo.descriptorSetLayout]++;
+
+			return descriptorSet;
 		}
 
-		void VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
+		VkDescriptorSet VulkanDescriptorPool::GetSet(MaterialID materialID)
+		{
+			if (materialID < (u32)descriptorSets.size())
+			{
+				return descriptorSets[materialID];
+			}
+
+			return VK_NULL_HANDLE;
+		}
+
+		VkDescriptorSet VulkanDescriptorPool::GetOrCreateSet(MaterialID materialID, const char* DBG_Name)
+		{
+			if (materialID >= (u32)descriptorSets.size() || descriptorSets[materialID] == VK_NULL_HANDLE)
+			{
+				return CreateDescriptorSet(materialID, DBG_Name);
+			}
+
+			return descriptorSets[materialID];
+		}
+
+		VkDescriptorSetLayout VulkanDescriptorPool::CreateDescriptorSetLayout(ShaderID shaderID)
 		{
 			PROFILE_AUTO("CreateDescriptorSetLayout");
 
-			descriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VkDescriptorSetLayout* descriptorSetLayout = &descriptorSetLayouts.back();
+			VkDescriptorSetLayout descriptorSetLayout = {};
 
 			VulkanShader* shader = (VulkanShader*)g_Renderer->GetShader(shaderID);
 
@@ -2842,6 +2771,7 @@ namespace flex
 
 			std::vector<VkDescriptorSetLayoutBinding> bindings;
 
+			std::vector<Uniform const*> uniforms;
 			for (DescriptorSetInfo& descSetInfo : descriptorSetInfos)
 			{
 				if (shader->constantBufferUniforms.HasUniform(descSetInfo.uniform) ||
@@ -2855,26 +2785,49 @@ namespace flex
 					descSetLayoutBinding.descriptorType = descSetInfo.descriptorType;
 					descSetLayoutBinding.stageFlags = descSetInfo.shaderStageFlags;
 					bindings.push_back(descSetLayoutBinding);
+
+					descriptorTypeCounts[descSetInfo.descriptorType]++;
+
+					uniforms.push_back(descSetInfo.uniform);
 				}
 			}
 
 			VkDescriptorSetLayoutCreateInfo layoutInfo = vks::descriptorSetLayoutCreateInfo(bindings);
 
-			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, descriptorSetLayout));
+			VK_CHECK_RESULT(vkCreateDescriptorSetLayout(device->m_LogicalDevice, &layoutInfo, nullptr, &descriptorSetLayout));
 
 			std::string descSetLayoutName = shader->name + " descriptor set layout";
-			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, *descriptorSetLayout, descSetLayoutName.c_str());
+			((VulkanRenderer*)g_Renderer)->SetDescriptorSetLayoutName(device, descriptorSetLayout, descSetLayoutName.c_str());
+
+			descriptorSetLayouts[shaderID] = descriptorSetLayout;
+			layoutUniforms[descriptorSetLayout] = uniforms;
+
+			return descriptorSetLayouts[shaderID];
+		}
+
+		VkDescriptorSetLayout VulkanDescriptorPool::GetOrCreateLayout(ShaderID shaderID)
+		{
+			auto iter = descriptorSetLayouts.find(shaderID);
+			if (iter == descriptorSetLayouts.end())
+			{
+				return CreateDescriptorSetLayout(shaderID);
+			}
+
+			return iter->second;
 		}
 
 		void VulkanDescriptorPool::Replace()
 		{
-			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			for (const auto& pair : descriptorSetLayouts)
 			{
-				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, pair.second, nullptr);
 			}
 			descriptorSetLayouts.clear();
-
 			descriptorSets.clear();
+
+			layoutUniforms.clear();
+			layoutUsageCounts.clear();
+			descriptorTypeCounts.clear();
 
 			vkDestroyDescriptorPool(device->m_LogicalDevice, pool, nullptr);
 			pool = VK_NULL_HANDLE;
@@ -2884,12 +2837,16 @@ namespace flex
 
 		void VulkanDescriptorPool::Reset()
 		{
-			for (const VkDescriptorSetLayout& descriptorSetLayout : descriptorSetLayouts)
+			for (const auto& pair : descriptorSetLayouts)
 			{
-				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, descriptorSetLayout, nullptr);
+				vkDestroyDescriptorSetLayout(device->m_LogicalDevice, pair.second, nullptr);
 			}
 			descriptorSetLayouts.clear();
 			descriptorSets.clear();
+
+			layoutUniforms.clear();
+			layoutUsageCounts.clear();
+			descriptorTypeCounts.clear();
 
 			vkResetDescriptorPool(device->m_LogicalDevice, pool, 0);
 
@@ -2916,6 +2873,61 @@ namespace flex
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
+		}
+
+		void VulkanDescriptorPool::DrawImGui()
+		{
+			if (ImGui::TreeNode(name))
+			{
+				if (ImGui::TreeNode("Layouts"))
+				{
+					i32 i = 0;
+					for (const auto& pair : layoutUniforms)
+					{
+						ImGui::PushID(i++);
+						std::string label = "Layout";
+						auto usageCountIter = layoutUsageCounts.find(pair.first);
+						if (usageCountIter != layoutUsageCounts.end())
+						{
+							u32 usageCount = usageCountIter->second;
+							label += " (instances: " + std::to_string(usageCount) + ")";
+						}
+						if (ImGui::TreeNode(label.c_str()))
+						{
+							for (Uniform const* uniform : pair.second)
+							{
+#if DEBUG
+								ImGui::Text("%s", uniform->DBG_name);
+#else
+								ImGui::Text("Size: %u (name stripped)", uniform->size);
+#endif
+							}
+
+							ImGui::TreePop();
+						}
+						ImGui::PopID();
+					}
+					ImGui::TreePop();
+				}
+
+				ImGui::Text("Sets allocated: %u/%u", allocatedSetCount, maxNumDescSets);
+
+				ImGui::Text("Types allocated");
+				ImGui::Indent();
+				for (const auto& pair : descriptorTypeCounts)
+				{
+					std::string descTypeStr = vkhpp::to_string((vkhpp::DescriptorType)pair.first);
+					ImGui::Text("%s: %u", descTypeStr.c_str(), pair.second);
+				}
+				ImGui::Unindent();
+
+				ImGui::TreePop();
+			}
+		}
+
+		VkDescriptorPool VulkanDescriptorPool::GetPool() const
+		{
+			return pool;
 		}
 	} // namespace vk
 } // namespace flex

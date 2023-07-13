@@ -1,5 +1,5 @@
 #pragma once
-#if COMPILE_OPEN_GL || COMPILE_VULKAN
+#if COMPILE_VULKAN
 
 IGNORE_WARNINGS_PUSH
 #include <GLFW/glfw3.h> // For GLFWimage (other types are forward declared
@@ -102,4 +102,4 @@ namespace flex
 
 } // namespace flex
 
-#endif // COMPILE_OPEN_GL || COMPILE_VULKAN
+#endif // COMPILE_VULKAN

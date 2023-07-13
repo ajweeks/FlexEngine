@@ -1,0 +1,65 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "A43DB14860BDDB8A406C48E105BD22BA",
+	"root" : 
+	{
+		"id" : "A8E5A550A24421804190C323A5132FAD",
+		"name" : "miner",
+		"type" : "miner",
+		"mesh" : "miner.glb",
+		"materials" : 
+		[
+			"pbr grey",
+			"Brake-light"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "1.400,8.300,10.200"
+		},
+		"rigid body" : 
+		{
+			"mass" : 0.000000,
+			"kinematic" : false,
+			"static" : true,
+			"mask" : 1,
+			"group" : 1
+		},
+		"miner" : 
+		{
+			"max charge" : 10.000000,
+			"mine rate" : 1.000000,
+			"power draw" : 0.100000
+		},
+		"children" : 
+		[
+			{
+				"id" : "9A1BD5DD5C25299A463A28C01115F847",
+				"name" : "socket_00",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "0.000, 1.751, -10.213"
+				},
+				"socket" : 
+				{
+					"slotIdx" : 0
+				}
+			},
+			{
+				"id" : "B53644B0C649F9A54B5AC9DC6B3D5007",
+				"name" : "socket_01",
+				"type" : "socket",
+				"transform" : 
+				{
+					"pos" : "0.000, 7.264, 10.302"
+				},
+				"socket" : 
+				{
+					"slotIdx" : 0
+				}
+			}
+		]
+	}
+}

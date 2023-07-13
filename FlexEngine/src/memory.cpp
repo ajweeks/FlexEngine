@@ -78,7 +78,7 @@ namespace flex
 			}
 			ptr = ((std::size_t*)ptr) - 1;
 			std::size_t stored_size = *((std::size_t*)ptr);
-			assert(stored_size == (size + sizeof(std::size_t))); // Only full deallocations are permitted
+			CHECK_EQ(stored_size, (size + sizeof(std::size_t))); // Only full deallocations are permitted
 			flex::g_TotalTrackedAllocatedMemory -= size;
 			++flex::g_TrackedDeallocationCount;
 			free(ptr);

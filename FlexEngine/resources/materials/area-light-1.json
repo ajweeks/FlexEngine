@@ -1,0 +1,8 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "area light 1",
+		"shader" : "colour"
+	}
+}

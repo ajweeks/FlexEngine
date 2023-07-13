@@ -13,10 +13,11 @@ namespace flex
 		virtual ~FirstPersonCamera();
 
 		virtual void Initialize() override;
-		virtual void OnSceneChanged() override;
-		virtual void Update() override;
+		virtual void OnPostSceneChange() override;
+		virtual void FixedUpdate() override;
 
 	private:
+		void TrackPlayer();
 		void FindPlayer();
 
 		Player* m_Player = nullptr;

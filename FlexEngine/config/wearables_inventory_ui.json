@@ -1,0 +1,75 @@
+{
+	"type" : "Wearables",
+	"cut type" : "Left",
+	"amount" : 0.244000,
+	"visible" : false,
+	"relative" : true,
+	"children" : 
+	[
+		{
+			"type" : "Base",
+			"cut type" : "Right",
+			"amount" : 0.298000,
+			"visible" : false,
+			"relative" : true,
+			"children" : 
+			[
+				{
+					"type" : "Base",
+					"cut type" : "Top",
+					"amount" : 0.639000,
+					"visible" : false,
+					"relative" : true,
+					"children" : 
+					[
+						{
+							"type" : "Base",
+							"cut type" : "Bottom",
+							"amount" : 0.563000,
+							"visible" : false,
+							"relative" : true,
+							"children" : 
+							[
+								{
+									"type" : "Item",
+									"cut type" : "Top",
+									"amount" : 0.120000,
+									"visible" : true,
+									"relative" : false,
+									"tag source string" : "slot0",
+									"tag" : 16612773434777059667,
+									"item" : 
+									{
+										"index" : 0
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Top",
+									"amount" : 0.120000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 1
+									}
+								},
+								{
+									"type" : "Item",
+									"cut type" : "Top",
+									"amount" : 0.120000,
+									"visible" : true,
+									"relative" : false,
+									"item" : 
+									{
+										"index" : 2
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

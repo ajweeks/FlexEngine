@@ -34,14 +34,14 @@ glm::quat ToQuaternion(const btQuaternion& rhs)
 	return glm::quat(rhs.getW(), rhs.getX(), rhs.getY(), rhs.getZ());
 }
 
-btTransform ToBtTransform(const flex::Transform& transform)
+glm::mat4 BtMat3ToMat4(const btMatrix3x3& mat3)
 {
-	btTransform result(ToBtQuaternion(transform.GetWorldRotation()), ToBtVec3(transform.GetWorldPosition()));
-	return result;
-}
-
-flex::Transform ToTransform(const btTransform& transform)
-{
-	flex::Transform result(ToVec3(transform.getOrigin()), ToQuaternion(transform.getRotation()));
-	return result;
+	btVector3 row0 = mat3.getRow(0);
+	btVector3 row1 = mat3.getRow(1);
+	btVector3 row2 = mat3.getRow(2);
+	return glm ::mat4(
+		row0.x(), row0.y(), row0.z(), 0.0f,
+		row1.x(), row1.y(), row1.z(), 0.0f,
+		row2.x(), row2.y(), row2.z(), 0.0f,
+		0.0f, 0.0f, 0.0f, 1.0f);
 }

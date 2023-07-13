@@ -18,7 +18,7 @@ namespace flex
 
 	bool VariableContainer::GetTypeName(const std::string& identifierStr, AST::TypeName& outTypeName)
 	{
-		assert(vars.size() == funcs.size());
+		CHECK_EQ(vars.size(), funcs.size());
 
 		for (u32 i = 0; i < (u32)vars.size(); ++i)
 		{
@@ -76,7 +76,7 @@ namespace flex
 
 	void VariableContainer::ClearVarsInFrame()
 	{
-		assert(!vars.empty());
+		CHECK(!vars.empty());
 		vars[vars.size() - 1].clear();
 	}
 

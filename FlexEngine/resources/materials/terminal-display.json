@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "terminal display",
+		"shader" : "pbr",
+		"const albedo" : "0.001,0.001,0.001"
+	}
+}

@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr red",
+		"shader" : "pbr",
+		"const albedo" : "0.010,0.067,0.085",
+		"const roughness" : 0.020000
+	}
+}

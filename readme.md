@@ -4,24 +4,27 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
 
-Flex Engine is a personal game engine I began work on in February 2017. I use it as a playground for learning about real-time techniques. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
+Flex Engine is a personal game engine I began work on in early 2017. I use it as a playground for learning about real-time rendering and simulation techniques, and I'm starting to make a sandbox game with it. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
 
 #### Notable Features
-- Vulkan backend
-- Conditional checksum-based shader compilation
+- Vulkan rendering backend
+- In-game scripting language compiler/editor & virtual machine evaluator
+- Conditional checksum-based shader recompilation
+- File modification monitoring for textures, meshes, prefabs, shaders, config files, etc.
+- Built-in profiling capture/inspection tools
 - Support for Windows & linux
 - Scene editor with serialization
-- In-game scripting language & virtual machine
-- Built-in profiling capture/inspection tools
 - Rendering:
+	- Marching cubes terrain generator & renderer
+  - Gerstner wave ocean renderer
+  - Rectangular area lighting
 	- Physically based shading model
 	- Image based lighting
 	- Screen-space ambient occlusion
 	- Stable cascaded shadow mapping
 	- Temporal anti-aliasing
 	- Signed-distance field font generation & rendering
-	- GPU particles
-	- Terrain, ocean, and sky rendering
+	- GPU particle simulation
 
 ![](FlexEngine/screenshots/2021-05-22_21-05-20.jpg)
 **Procedural terrain generated on the GPU**

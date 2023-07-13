@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "mineral quartz",
+		"shader" : "pbr",
+		"const albedo" : "0.179,0.550,0.677",
+		"const roughness" : 0.460000
+	}
+}

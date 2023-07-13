@@ -12,10 +12,7 @@
 
 struct Tri
 {
-	float data[(3 + 3 + 4) * 3];
-	// vec3 positionWS_A; vec3 normalWS_A;
-	// vec3 positionWS_C; vec3 normalWS_B;
-	// vec3 positionWS_B; vec3 normalWS_C;
+	float data[(3 + 4 + 3) * 3];
 };
 
 layout (std430, binding = 0) uniform UBOConstant
@@ -48,13 +45,13 @@ vec3 interpolateVerts(vec4 v0, vec4 v1, float isoLevel)
 }
 
 void fillOutTri(int index,
-	vec3 posA, vec3 normA, vec4 colA, 
-	vec3 posB, vec3 normB, vec4 colB,
-	vec3 posC, vec3 normC, vec4 colC)
+	vec3 posA_WS, vec3 normA, vec4 colA, 
+	vec3 posB_WS, vec3 normB, vec4 colB,
+	vec3 posC_WS, vec3 normC, vec4 colC)
 {
-	triangles[index].data[0] = posA.x;
-	triangles[index].data[1] = posA.y;
-	triangles[index].data[2] = posA.z;
+	triangles[index].data[0] = posA_WS.x;
+	triangles[index].data[1] = posA_WS.y;
+	triangles[index].data[2] = posA_WS.z;
 
 	triangles[index].data[3] = colA.x;
 	triangles[index].data[4] = colA.y;
@@ -65,9 +62,9 @@ void fillOutTri(int index,
 	triangles[index].data[8] = normA.y;
 	triangles[index].data[9] = normA.z;
 
-	triangles[index].data[10] = posB.x;
-	triangles[index].data[11] = posB.y;
-	triangles[index].data[12] = posB.z;
+	triangles[index].data[10] = posB_WS.x;
+	triangles[index].data[11] = posB_WS.y;
+	triangles[index].data[12] = posB_WS.z;
 
 	triangles[index].data[13] = colB.x;
 	triangles[index].data[14] = colB.y;
@@ -78,9 +75,9 @@ void fillOutTri(int index,
 	triangles[index].data[18] = normB.y;
 	triangles[index].data[19] = normB.z;
 
-	triangles[index].data[20] = posC.x;
-	triangles[index].data[21] = posC.y;
-	triangles[index].data[22] = posC.z;
+	triangles[index].data[20] = posC_WS.x;
+	triangles[index].data[21] = posC_WS.y;
+	triangles[index].data[22] = posC_WS.z;
 
 	triangles[index].data[23] = colC.x;
 	triangles[index].data[24] = colC.y;
@@ -163,16 +160,16 @@ void main()
         int index = atomicAdd(triangleCount, 1);
         //if (index < maxNumTriangles)
         {
-	        vec3 posA = interpolateVerts(cubeCorners[a0], cubeCorners[b0], isoLevel);
-	        vec3 posB = interpolateVerts(cubeCorners[a1], cubeCorners[b1], isoLevel);
-	        vec3 posC = interpolateVerts(cubeCorners[a2], cubeCorners[b2], isoLevel);
-	        vec3 normA = normalize(cross(posB - posA, posC - posA));
+	        vec3 posA_WS = interpolateVerts(cubeCorners[a0], cubeCorners[b0], isoLevel);
+	        vec3 posB_WS = interpolateVerts(cubeCorners[a1], cubeCorners[b1], isoLevel);
+	        vec3 posC_WS = interpolateVerts(cubeCorners[a2], cubeCorners[b2], isoLevel);
+	        vec3 normA = normalize(cross(posB_WS - posA_WS, posC_WS - posA_WS));
 	        vec3 normB = normA;
 	        vec3 normC = normA;
 
 		    float dist;
 		    int biome0Index, biome1Index;
-		    GetBiomeIndices(posA, uboConstant.terrainGenConstantData, /*out*/ dist, /*out*/ biome0Index, /*out*/ biome1Index);
+		    GetBiomeIndices(posA_WS, uboConstant.terrainGenConstantData, /*out*/ dist, /*out*/ biome0Index, /*out*/ biome1Index);
 
     		// float blendWeight = clamp(abs(dist) * 10.0, 0.0, 1.0);
     		float maxp = numPointsPerAxis - 2;
@@ -184,9 +181,9 @@ void main()
 	        vec4 colB = vec4(/*temp*/ dist, blendWeight, matID0, matID1);
 	        vec4 colC = vec4(/*temp*/ dist, blendWeight, matID0, matID1);
 	        fillOutTri(index,
-	        	posA, normA, colA,
-	        	posB, normB, colB,
-	        	posC, normC, colC);
+	        	posA_WS, normA, colA,
+	        	posB_WS, normB, colB,
+	        	posC_WS, normC, colC);
 	    }
     }
 

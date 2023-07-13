@@ -31,8 +31,8 @@ layout (binding = 1) uniform UBODynamic
 	float constRoughness;
 
 	bool enableAlbedoSampler;
-	bool enableEmissiveSampler;
 	bool enableNormalSampler;
+	bool enableEmissiveSampler;
 } uboDynamic;
 
 void main()

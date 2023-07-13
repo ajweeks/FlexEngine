@@ -6,7 +6,7 @@ namespace flex
 	{
 	public:
 		// Loads several audio source files post-fix numbered starting from "00" going up to fileCount
-		void Initialize(const std::string& filePath0, i32 fileCount);
+		void Initialize(const std::string& firstFileName, i32 fileCount, bool b2D);
 		void Destroy();
 
 		void Play(bool bForceRestart);

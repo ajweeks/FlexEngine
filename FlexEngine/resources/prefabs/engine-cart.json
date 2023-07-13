@@ -1,19 +1,16 @@
 {
 	"version" : 3,
-	"scene version" : 6,
+	"scene version" : 7,
 	"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
 	"root" : 
 	{
-		"name" : "engine-cart",
-		"id" : "A634A8D0DBD204BA4B0D9A3121D067E4",
+		"id" : "E6D4AD3A50446AA64E54F28DD2C4B83F",
+		"name" : "engine cart",
 		"type" : "engine cart",
-		"visible" : true,
-		"casts shadow" : true,
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.100, 1.500, 1.500",
-			"offset pos" : "0.000, 1.300, 0.000"
+			"half extents" : "1.100,1.600,1.500"
 		},
 		"rigid body" : 
 		{
@@ -22,13 +19,6 @@
 			"static" : true,
 			"mask" : 1,
 			"group" : 1
-		},
-		"cart info" : 
-		{
-			"track ID" : 4294967295,
-			"dist along track" : -1.000000,
-			"move direction" : 1.000000,
-			"power remaining" : 0.000000
 		}
 	}
 }

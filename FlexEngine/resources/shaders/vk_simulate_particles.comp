@@ -1,69 +1,190 @@
 #version 450
 
-#define PI_DIV_TWO 1.57079632679489661923132169163975144
+#include "vk_particles_common.glsl"
 
-layout (binding = 0) uniform UBODynamic
+layout (binding = 0) uniform UBOConstant
 {
-	vec4 colour0;
-	vec4 colour1;
-	float dt;
-	float speed;
-	uint particleCount;
+	vec4 time;
+} uboConstant;
+
+layout (binding = 1) uniform UBODynamic
+{
+	ParticleSimData particleSimData;
 } uboDynamic;
 
-struct Particle
-{
-	float data[14];
-	/*
-	vec3 pos;
-	vec3 vel;
-	vec4 col;
-	vec4 extraVec4;
-	*/
-};
-
-layout (binding = 1) buffer ParticleBuffer
+layout (binding = 2) buffer ParticleBuffer
 {
 	Particle particles[];
 };
 
 layout (local_size_x = 256) in;
 
+void Write(uint emitterIndex, vec3 pos, vec3 vel, vec4 col, vec3 scale, float lifetime)
+{
+	particles[emitterIndex].data[0] = pos[0];
+	particles[emitterIndex].data[1] = pos[1];
+	particles[emitterIndex].data[2] = pos[2];
+	particles[emitterIndex].data[3] = vel[0];
+	particles[emitterIndex].data[4] = vel[1];
+	particles[emitterIndex].data[5] = vel[2];
+	particles[emitterIndex].data[6] = col[0];
+	particles[emitterIndex].data[7] = col[1];
+	particles[emitterIndex].data[8] = col[2];
+	particles[emitterIndex].data[9] = col[3];
+	particles[emitterIndex].data[10] = scale[0];
+	particles[emitterIndex].data[11] = scale[1];
+	particles[emitterIndex].data[12] = scale[2];
+	particles[emitterIndex].data[13] = lifetime;
+	// 14 = initial lifetime
+}
+
+float RandomFloat(float minValue, float maxValue, int seedOffset)
+{
+	float seed = float(uboConstant.time.x + gl_GlobalInvocationID.x + uboDynamic.particleSimData.bufferOffset + seedOffset);
+    float r = fract(seed * 17.0 * fract(seed * 0.3183099));
+    return minValue + r * (maxValue - minValue);
+}
+
+float SampleFloat(Param param)
+{
+	switch (param.sampleType)
+	{
+		case SAMPLE_TYPE_CONSTANT:
+			return param.valueMin.x;
+		case SAMPLE_TYPE_RANDOM:
+			return RandomFloat(param.valueMin[0], param.valueMax[0], 0);
+	}
+	return 0.0;
+}
+
+vec2 SampleVec2(Param param)
+{
+	switch (param.sampleType)
+	{
+		case SAMPLE_TYPE_CONSTANT:
+			return param.valueMin.xy;
+		case SAMPLE_TYPE_RANDOM:
+			return vec2(
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1));
+	}
+	return vec2(0, 0);
+}
+
+vec3 SampleVec3(Param param)
+{
+	switch (param.sampleType)
+	{
+		case SAMPLE_TYPE_CONSTANT:
+			return param.valueMin.xyz;
+		case SAMPLE_TYPE_RANDOM:
+			return vec3(
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1),
+				RandomFloat(param.valueMin[2], param.valueMax[2], 2));
+	}
+	return vec3(0, 0, 0);
+}
+
+vec4 SampleVec4(Param param)
+{
+	switch (param.sampleType)
+	{
+		case SAMPLE_TYPE_CONSTANT:
+			return param.valueMin;
+		case SAMPLE_TYPE_RANDOM:
+			return vec4(
+				RandomFloat(param.valueMin[0], param.valueMax[0], 0),
+				RandomFloat(param.valueMin[1], param.valueMax[1], 1),
+				RandomFloat(param.valueMin[2], param.valueMax[2], 2),
+				RandomFloat(param.valueMin[3], param.valueMax[3], 3));
+	}
+	return vec4(0, 0, 0, 0);
+}
+
+void Spawn(uint emitterIndex)
+{
+	// Params: (alphabetized)
+	// 0: acceleration
+	// 1: enable respawning
+	// 2: fade over lifetime
+	// 3: initial colour
+	// 4: initial pos
+	// 5: initial velocity
+	// 6: lifetime
+	// 7: particle count
+	// 8: scale
+	// 9: uniform scale
+
+	vec4 col = SampleVec4(uboDynamic.particleSimData.spawnParams[3]);
+	vec3 pos = SampleVec3(uboDynamic.particleSimData.spawnParams[4]);
+	vec3 vel = SampleVec3(uboDynamic.particleSimData.spawnParams[5]);
+	float lifetime = SampleFloat(uboDynamic.particleSimData.spawnParams[6]);
+
+	vec3 scale;
+	bool uniformScale =  uboDynamic.particleSimData.spawnParams[9].valueMin[0] != 0.0;
+	if (uniformScale)
+	{
+		scale.x = SampleFloat(uboDynamic.particleSimData.spawnParams[8]);
+		scale.y = scale.x;
+		scale.z = scale.x;
+	}
+	else
+	{
+		scale = SampleVec3(uboDynamic.particleSimData.spawnParams[8]);
+	}
+
+	//vel = (objectToWorld * vec4(vel, 0)).xyz;
+
+	Write(emitterIndex, pos, vel, col, scale, lifetime);
+}
+
 void main()
 {
-	uint index = gl_GlobalInvocationID.x;
-	if (index >= uboDynamic.particleCount)
+	uint index = gl_GlobalInvocationID.x + uboDynamic.particleSimData.bufferOffset;
+
+	float lifetime = particles[index].data[13];
+
+	if (lifetime <= 0.0) 
 	{
-		return;
+		if (uboDynamic.particleSimData.enableSpawning == 0)
+		{
+			return;
+		}
+
+		Spawn(index);
+		lifetime = particles[index].data[13];
 	}
+
+	vec3 acceleration = SampleVec3(uboDynamic.particleSimData.spawnParams[0]);
 
 	vec3 pos = vec3(particles[index].data[0], particles[index].data[1], particles[index].data[2]);
 	vec3 vel = vec3(particles[index].data[3], particles[index].data[4], particles[index].data[5]);
 	vec4 col = vec4(particles[index].data[6], particles[index].data[7], particles[index].data[8], particles[index].data[9]);
+	vec3 scale = vec3(particles[index].data[10], particles[index].data[11], particles[index].data[12]);
+	float initialLifetime = particles[index].data[11];
 
-	float mag = pow(length(pos.xz), 0.9);
-	float dz = pos.z * 2.0;
-	float dx = pos.x * 2.0;
-	float theta = atan(dz, dx) - PI_DIV_TWO;
+	float dt = uboDynamic.particleSimData.dt;
 
-	vec3 perpVec = vec3(cos(theta), 0, sin(theta));
-	vel += perpVec * uboDynamic.speed * (mag + sin(pos.y*0.2));
-	float velMag = length(perpVec);
-	vel *= 0.4;
+	bool fadeOverLife = uboDynamic.particleSimData.spawnParams[2].valueMin[0] != 0.0;
 
-	pos += vel * uboDynamic.dt;
+	pos += vel * dt;
+	float alpha = 1.0;
+	if (fadeOverLife)
+	{
+		float fadePower = 3.0;
+		alpha = 1.0 - pow(1.0 - clamp(lifetime / initialLifetime, 0.0, 1.0), fadePower);
+	}
 
-	col = mix(uboDynamic.colour0, uboDynamic.colour1, clamp(pow(length(vel)*0.03, 5.0), 0, 1));
+	lifetime -= dt;
+	if (lifetime <= 0.0) 
+	{
+		lifetime = 0.0;
+		alpha = 0.0;
+	}
+	col.a = alpha;
+	vel.y -= dt * 0.2;
+	vel += (1.0 - dt) * acceleration;
 
-	particles[index].data[0] = pos[0];
-	particles[index].data[1] = pos[1];
-	particles[index].data[2] = pos[2];
-	particles[index].data[3] = vel[0];
-	particles[index].data[4] = vel[1];
-	particles[index].data[5] = vel[2];
-	particles[index].data[6] = col[0];
-	particles[index].data[7] = col[1];
-	particles[index].data[8] = col[2];
-	particles[index].data[9] = col[3];
-	particles[index].data[10] = mix(5.0, 4.0, clamp(mag, 0, 1)); // Size
+	Write(index, pos, vel, col, scale, lifetime);
 }

@@ -15,7 +15,7 @@ namespace flex
 			PROFILE_AUTO("VulkanDevice::VulkanDevice");
 
 			// TODO: Move work to Initialize
-			assert(createInfo.physicalDevice);
+			CHECK(createInfo.physicalDevice);
 			m_PhysicalDevice = createInfo.physicalDevice;
 
 			m_QueueFamilyIndices = FindQueueFamilies(createInfo.surface, m_PhysicalDevice);
@@ -26,7 +26,7 @@ namespace flex
 
 			u32 queueFamilyCount;
 			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, nullptr);
-			assert(queueFamilyCount > 0);
+			CHECK_GT(queueFamilyCount, 0u);
 			m_QueueFamilyProperties.resize(queueFamilyCount);
 			vkGetPhysicalDeviceQueueFamilyProperties(m_PhysicalDevice, &queueFamilyCount, m_QueueFamilyProperties.data());
 
@@ -54,6 +54,7 @@ namespace flex
 
 			for (const char* extName : *createInfo.requiredExtensions)
 			{
+				CHECK(ExtensionSupported(extName));
 				m_EnabledExtensions.push_back(extName);
 			}
 
@@ -65,7 +66,43 @@ namespace flex
 				}
 			}
 
+			VkPhysicalDeviceFeatures2 supportedFeatures2 = {};
+			supportedFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			VkPhysicalDeviceRayTracingPipelineFeaturesKHR supportedRayTracingFeatures = {};
+			supportedRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+			supportedFeatures2.pNext = &supportedRayTracingFeatures;
+			vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supportedFeatures2);
+
+			if (createInfo.bTryEnableRayTracing)
+			{
+				m_bRayTracingSupported = supportedRayTracingFeatures.rayTracingPipeline != 0;
+			}
+			else
+			{
+				m_bRayTracingSupported = false;
+			}
+
+			if (m_bRayTracingSupported)
+			{
+				for (const char* extName : *createInfo.optionalExtensions)
+				{
+					if (ExtensionSupported(extName))
+					{
+						m_EnabledExtensions.push_back(extName);
+					}
+				}
+			}
+
 			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeatures();
+
+			VkPhysicalDeviceFeatures2 enabledFeatures2 = {};
+			enabledFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			enabledFeatures2.features = deviceFeatures;
+
+			if (m_bRayTracingSupported)
+			{
+				enabledFeatures2.pNext = &supportedRayTracingFeatures;
+			}
 
 			VkDeviceCreateInfo deviceCreateInfo = {};
 			deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -73,7 +110,7 @@ namespace flex
 			deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 			deviceCreateInfo.queueCreateInfoCount = (u32)queueCreateInfos.size();
 
-			deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+			deviceCreateInfo.pEnabledFeatures = nullptr; // Referenced in pNext chain
 
 			deviceCreateInfo.enabledExtensionCount = (u32)m_EnabledExtensions.size();
 			deviceCreateInfo.ppEnabledExtensionNames = m_EnabledExtensions.data();
@@ -87,6 +124,8 @@ namespace flex
 			{
 				deviceCreateInfo.enabledLayerCount = 0;
 			}
+
+			deviceCreateInfo.pNext = &enabledFeatures2;
 
 			{
 				// TODO: Call on separate thread? Takes 500ms!
@@ -102,6 +141,41 @@ namespace flex
 			}
 
 			m_CommandPool = { m_LogicalDevice, vkDestroyCommandPool };
+		}
+
+		VkResult VulkanDevice::AllocateMemory(const std::string& debugName, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory)
+		{
+			VkResult result = ::vkAllocateMemory(m_LogicalDevice, pAllocateInfo, pAllocator, pMemory);
+
+			m_vkAllocations.emplace_back(VkAllocInfo{ debugName, *pMemory, (u64)pAllocateInfo->allocationSize });
+			m_vkAllocations.sort([](const VkAllocInfo& a, const VkAllocInfo& b) {
+				return a.size > b.size;
+			});
+			++m_vkAllocCount;
+			m_vkAllocAmount += (u64)pAllocateInfo->allocationSize;
+
+			return result;
+		}
+
+		void VulkanDevice::FreeMemory(VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator)
+		{
+			auto iter = std::find_if(m_vkAllocations.begin(), m_vkAllocations.end(), [memory](const VkAllocInfo& allocInfo)
+			{
+				return allocInfo.memory == memory;
+			});
+			if (iter != m_vkAllocations.end())
+			{
+				m_vkAllocAmount -= (u64)iter->size;
+				m_vkAllocations.erase(iter);
+			}
+			else
+			{
+				PrintError("Freeing vk allocation which doesn't correspond to a tracked allocation! (memory: %p)\n", (void*)memory);
+			}
+
+			::vkFreeMemory(m_LogicalDevice, memory, pAllocator);
+
+			++m_vkFreeCount;
 		}
 
 		u32 VulkanDevice::GetMemoryType(u32 typeBits, VkMemoryPropertyFlags properties, VkBool32* outMemTypeFound) const
@@ -165,9 +239,14 @@ namespace flex
 			return enabledFeatures;
 		}
 
+		bool VulkanDevice::IsRayTracingSupported() const
+		{
+			return m_bRayTracingSupported;
+		}
+
 		void VulkanDevice::DrawImGuiRendererInfo() const
 		{
-			if (ImGui::TreeNode("Enabled device extensions"))
+			if (ImGui::TreeNode("enabled-device-ext", "Enabled device extensions (%u)", (u32)m_EnabledExtensions.size()))
 			{
 				for (const char* extension : m_EnabledExtensions)
 				{
@@ -176,7 +255,7 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("Supported device extensions"))
+			if (ImGui::TreeNode("supported-device-ext", "Supported device extensions(%u)", (u32)m_SupportedExtensions.size()))
 			{
 				for (const VkExtensionProperties& extension : m_SupportedExtensions)
 				{

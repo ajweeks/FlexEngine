@@ -1,8 +1,12 @@
 #pragma once
 
 IGNORE_WARNINGS_PUSH
+#define AL_ALEXT_PROTOTYPES
 #include "AL/al.h"
 #include "AL/alc.h"
+#include "AL/alext.h"
+#include "AL/efx.h"
+#include "AL/efx-presets.h"
 IGNORE_WARNINGS_POP
 
 #include "Histogram.hpp"
@@ -74,7 +78,7 @@ namespace flex
 	struct SoundClip_LoopingSimple
 	{
 		SoundClip_LoopingSimple();
-		SoundClip_LoopingSimple(const char* name, StringID loopSID);
+		SoundClip_LoopingSimple(const char* name, StringID loopSID, bool b2D);
 
 		bool IsValid() const;
 		bool IsPlaying() const;
@@ -109,6 +113,60 @@ namespace flex
 
 	};
 
+	struct AudioEffect
+	{
+		enum class Type : i32
+		{
+			REVERB,
+			CHORUS,
+			DISTORTION,
+			ECHO,
+			FLANGER,
+			FREQUENCY_SHIFTER,
+			VOCAL_MORPHER,
+			PITCH_SHITER,
+			RING_MODULATOR,
+			AUTOWAH,
+			COMPRESSOR,
+			EQUALIZER,
+			EAX_REVERB,
+
+			// TODO: low/hi/band pass
+
+			_NONE
+		};
+
+		EFXEAXREVERBPROPERTIES reverbProperties;
+		ALuint effectID;
+		Type type;
+		i32 presetIndex = -1;
+	};
+
+	static const char* AudioEffectTypeStrings[] =
+	{
+		"Reverb",
+		"Chorus",
+		"Distortion",
+		"Echo",
+		"Flanger",
+		"Frequency Shifter",
+		"Vocal Morpher",
+		"Pitch Shifter",
+		"Ring Modulator",
+		"Auto Wah",
+		"Compressor",
+		"Equalizer",
+		"EAX Reverb",
+
+		"None"
+	};
+
+	static_assert(ARRAY_LENGTH(AudioEffectTypeStrings) == (u32)AudioEffect::Type::_NONE + 1, "AudioEffectTypeStrings length must match AudioEffect::Type enum");
+
+	AudioEffect::Type AudioEffectTypeFromALEffect(i32 alEffect);
+
+	const char* AudioEffectTypeToString(AudioEffect::Type type);
+	AudioEffect::Type AudioEffectTypeFromString(const char* typeStr);
 
 	// TODO: Make global instance like every other manager?
 	// TODO: Inherit from System base class?
@@ -130,8 +188,10 @@ namespace flex
 			real fadeDuration = 0.0f;
 			real fadeDurationRemaining = 0.0f;
 			bool bFadingIn;
+			// "2D" sounds remain at a constant volume regardless of listener position
+			bool b2D;
 
-			const char* name = nullptr;
+			std::string fileName;
 
 			bool bLooping = false;
 		};
@@ -140,25 +200,29 @@ namespace flex
 		static void Destroy();
 		static void Update();
 
+		static void StopAllSources();
+
 		static real NoteToFrequencyHz(i32 note);
 
-		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr);
-		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
 		static AudioSourceID SynthesizeSound(sec length, real freq);
 		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
-		static bool DestroyAudioSource(AudioSourceID sourceID);
-		static void ClearAllAudioSources();
+		static void SetListenerPos(const glm::vec3& posWS);
+		static void SetListenerVel(const glm::vec3& velocity);
 
 		/* [0.0, 1.0] logarithmic */
 		static void SetMasterGain(real masterGain);
 		static real GetMasterGain();
 
-		static void PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		static bool PlaySource(AudioSourceID sourceID, bool bForceRestart = true);
+		static bool PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart = true);
 		// Start source partway through (t in [0, 1])
-		static void PlaySourceFromPos(AudioSourceID sourceID, real t);
-		static void PauseSource(AudioSourceID sourceID);
-		static void StopSource(AudioSourceID sourceID);
-		static void PlayNote(real frequency, sec length, real gain);
+		static bool PlaySourceAtOffset(AudioSourceID sourceID, real t);
+		static bool PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS, bool bForceRestart = true);
+		static bool PauseSource(AudioSourceID sourceID);
+		static bool StopSource(AudioSourceID sourceID);
+		static bool PlayNote(real frequency, sec length, real gain);
+
+		static void SetSourcePositionWS(AudioSourceID sourceID, const glm::vec3& posWS);
 
 		static void MarkSourceTemporary(AudioSourceID sourceID);
 
@@ -170,6 +234,7 @@ namespace flex
 		static real GetSourceGain(AudioSourceID sourceID);
 		static void SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier);
 		static real GetSourceGainMultiplier(AudioSourceID sourceID);
+		static bool IsSource2D(AudioSourceID sourceID);
 
 		static void AddToSourcePitch(AudioSourceID sourceID, real deltaPitch);
 
@@ -187,6 +252,7 @@ namespace flex
 		static u8* GetSourceSamples(AudioSourceID sourceID, u32& outSampleCount, u32& outVersion);
 
 		static Source* GetSource(AudioSourceID sourceID);
+		static std::string GetSourceFileName(AudioSourceID sourceID);
 
 		static real GetSourcePlaybackPos(AudioSourceID sourceID);
 
@@ -198,18 +264,39 @@ namespace flex
 
 		static bool AudioFileNameSIDField(const char* label, StringID& sourceFileNameSID, bool* bTreeOpen);
 
-	private:
-		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format);
+		static AudioEffect LoadReverbEffect(const EFXEAXREVERBPROPERTIES* reverb);
+		// Returns the created effect type (Either EAX Reverb or normal Reverb)
+		static i32 SetupReverbEffect(const EFXEAXREVERBPROPERTIES* reverb, ALuint& effectID);
+		static void UpdateReverbEffect(u32 slotID, i32 effectID);
 
-		static void DisplayALError(const std::string& str, ALenum error);
+		static i32 SLOT_DEFAULT_2D;
+		static i32 SLOT_DEFAULT_3D;
+
+	private:
+		friend ResourceManager;
+
+		static AudioSourceID AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr = nullptr, bool b2D = false);
+		static AudioSourceID ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr = nullptr);
+
+		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format, bool b2D);
+
+		static bool DestroyAudioSource(AudioSourceID sourceID);
+		static void ClearAllAudioSources();
+
+		// If error is not AL_NO_ERROR then an appropriate error message is printed
+		// Returns true when error != AL_NO_ERROR
+		static bool DisplayALError(const char* errorMessage, ALenum error);
 
 		static void PrintAudioDevices(const ALCchar* devices);
 
 		static ALuint GetNextAvailableSourceAndBufferIndex();
 
-		static AudioSourceID AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr);
+		static AudioSourceID AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr, bool b2D);
 
 		static void UpdateSourceGain(AudioSourceID sourceID);
+
+		static void CreateAudioEffects();
+		static void ClearAudioEffects();
 
 		static real s_MasterGain;
 		static bool s_Muted;
@@ -226,6 +313,8 @@ namespace flex
 
 		static std::array<Source, NUM_BUFFERS> s_Sources;
 		static std::list<AudioSourceID> s_TemporarySources;
+
+		static std::vector<AudioEffect> s_Effects;
 
 		static ALCdevice* s_Device;
 		static ALCcontext* s_Context;

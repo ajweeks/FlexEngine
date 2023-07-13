@@ -4,9 +4,7 @@ namespace flex
 {
 	struct Histogram
 	{
-		Histogram()
-		{
-		}
+		Histogram() = default;
 
 		explicit Histogram(i32 count)
 		{
@@ -28,8 +26,7 @@ namespace flex
 		void DrawImGui()
 		{
 			ImVec2 p = ImGui::GetCursorScreenPos();
-			real width = 300.0f;
-			real height = 100.0f;
+			real height = 200.0f;
 			real lowestMin = overrideMin;
 			real highestMax = overrideMax;
 			if (lowestMin == FLT_MAX || highestMax == -FLT_MAX)
@@ -40,8 +37,11 @@ namespace flex
 					highestMax = glm::max(highestMax, element);
 				}
 			}
-			real maxAbs = glm::max(abs(lowestMin), abs(highestMax));
-			ImGui::PlotLines("", data.data(), (u32)data.size(), 0, 0, -maxAbs, maxAbs, ImVec2(width, height));
+			real maxAbs = glm::min(glm::max(abs(lowestMin), abs(highestMax)), 0.01f);
+			ImGui::PushItemWidth(-1.0f);
+			real width = ImGui::CalcItemWidth();
+			ImGui::PlotLines("", data.data(), (u32)data.size(), 0, 0, -maxAbs, maxAbs, ImVec2(0.0f, height));
+			ImGui::PopItemWidth();
 			ImGui::GetWindowDrawList()->AddLine(ImVec2(p.x, p.y + height * 0.5f), ImVec2(p.x + width, p.y + height * 0.5f), IM_COL32(0, 128, 0, 255), 1.0f);
 			p.x += width * ((real)index / data.size());
 			ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x, p.y + height), IM_COL32(128, 0, 0, 255), 1.0f);

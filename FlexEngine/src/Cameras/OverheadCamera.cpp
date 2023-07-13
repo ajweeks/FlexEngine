@@ -6,10 +6,9 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
-
-#include <LinearMath/btIDebugDraw.h>
 IGNORE_WARNINGS_POP
 
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -50,9 +49,9 @@ namespace flex
 		}
 	}
 
-	void OverheadCamera::OnSceneChanged()
+	void OverheadCamera::OnPostSceneChange()
 	{
-		BaseCamera::OnSceneChanged();
+		BaseCamera::OnPostSceneChange();
 
 		m_Player0 = nullptr;
 		FindPlayer();
@@ -60,10 +59,13 @@ namespace flex
 		ResetValues();
 	}
 
-	void OverheadCamera::Update()
+	void OverheadCamera::FixedUpdate()
 	{
-		BaseCamera::Update();
+		TrackPlayer();
+	}
 
+	void OverheadCamera::TrackPlayer()
+	{
 		if (m_Player0 == nullptr)
 		{
 			return;
@@ -112,7 +114,7 @@ namespace flex
 			{
 				glm::vec3 start = m_Player0->GetTransform()->GetWorldPosition();
 				glm::vec3 end = start + m_PlayerForwardRollingAvg.currentAverage * 10.0f;
-				g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
+				g_Renderer->GetDebugRenderer()->drawLine(ToBtVec3(start), ToBtVec3(end), btVector3(1.0f, 1.0f, 1.0f));
 
 				ImGui::Text("Avg player forward: %s", VecToString(m_PlayerForwardRollingAvg.currentAverage, 2).c_str());
 				ImGui::Text("For: %s", VecToString(forward, 2).c_str());

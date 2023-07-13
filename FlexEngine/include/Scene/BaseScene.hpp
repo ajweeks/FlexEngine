@@ -3,6 +3,10 @@
 #include "Graphics/RendererTypes.hpp"
 #include "Scene/GameObject.hpp"
 
+IGNORE_WARNINGS_PUSH
+#include <glm/gtx/norm.hpp> // for distance2
+IGNORE_WARNINGS_POP
+
 namespace flex
 {
 	class PhysicsWorld;
@@ -20,13 +24,20 @@ namespace flex
 	public:
 		// fileName e.g. "scene_01.json"
 		explicit BaseScene(const std::string& fileName);
-		~BaseScene();
+		~BaseScene() = default;
+
+		BaseScene(const BaseScene&) = delete;
+		BaseScene& operator=(const BaseScene&) = delete;
 
 		void Initialize();
 		void PostInitialize();
 		void Destroy();
+		void FixedUpdate();
 		void Update();
 		void LateUpdate();
+		void Render();
+
+		bool IsInitialized() const;
 
 		void OnPrefabChanged(const PrefabID& prefabID);
 
@@ -64,14 +75,26 @@ namespace flex
 
 		std::vector<GameObject*>& GetRootObjects();
 		void GetInteractableObjects(std::vector<GameObject*>& interactableObjects);
+		void GetNearbyInteractableObjects(std::list<Pair<GameObject*, real>>& sortedInteractableObjects,
+			const glm::vec3& posWS,
+			real sqDistThreshold,
+			GameObjectID excludeGameObjectID);
 
 		GameObject* AddRootObject(GameObject* gameObject);
 		GameObject* AddRootObjectImmediate(GameObject* gameObject);
 		GameObject* AddChildObject(GameObject* parent, GameObject* child);
 		GameObject* AddChildObjectImmediate(GameObject* parent, GameObject* child);
 		GameObject* AddSiblingObjectImmediate(GameObject* gameObject, GameObject* newSibling);
+
+		void SetRootObjectIndex(GameObject* rootObject, i32 newIndex);
+
+		// Editor objects are objects not normally shown in the scene hierarchy, or searched by standard functions
+		EditorObject* AddEditorObjectImmediate(EditorObject* editorObject);
+		void RemoveEditorObjectImmediate(EditorObject* editorObject);
+
 		void RemoveAllObjects(); // Removes and destroys all objects in scene at end of frame
 		void RemoveAllObjectsImmediate();  // Removes and destroys all objects in scene
+		void RemoveAllEditorObjectsImmediate();
 		void RemoveObject(const GameObjectID& gameObjectID, bool bDestroy);
 		void RemoveObject(GameObject* gameObject, bool bDestroy);
 		void RemoveObjectImmediate(const GameObjectID& gameObjectID, bool bDestroy);
@@ -82,7 +105,10 @@ namespace flex
 		void RemoveObjectsImmediate(const std::vector<GameObject*>& gameObjects, bool bDestroy);
 
 		GameObject* InstantiatePrefab(const PrefabID& prefabID, GameObject* parent = nullptr);
-		GameObject* ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance);
+		GameObject* ReinstantiateFromPrefab(const PrefabID& prefabID, GameObject* previousInstance);
+
+		u32 NumObjectsLoadedFromPrefabID(const PrefabID& prefabID) const;
+		void DeleteInstancesOfPrefab(const PrefabID& prefabID);
 
 		GameObjectID FirstObjectWithTag(const std::string& tag);
 
@@ -90,19 +116,18 @@ namespace flex
 
 		bool IsLoaded() const;
 
-		std::vector<GameObject*> GetAllObjects();
-		std::vector<GameObjectID> GetAllObjectIDs();
-
 		template<class T>
-		T* GetObjectOfType(StringID typeID)
+		T* GetFirstObjectOfType(StringID typeID)
 		{
-			std::vector<GameObject*> gameObjects = GetAllObjects();
-
-			for (GameObject* gameObject : gameObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (gameObject->GetTypeID() == typeID)
+				GameObject* result = rootObject->FilterFirst([&typeID](GameObject* gameObject)
 				{
-					return (T*)gameObject;
+					return (gameObject->GetTypeID() == typeID);
+				});
+				if (result != nullptr)
+				{
+					return (T*)result;
 				}
 			}
 
@@ -112,24 +137,25 @@ namespace flex
 		template<class T>
 		std::vector<T*> GetObjectsOfType(StringID typeID)
 		{
-			std::vector<GameObject*> gameObjects = GetAllObjects();
 			std::vector<T*> result;
 
-			for (GameObject* gameObject : gameObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (gameObject->GetTypeID() == typeID)
+				rootObject->FilterType([&typeID](GameObject* gameObject)
 				{
-					result.push_back((T*)gameObject);
-				}
+					return (gameObject->GetTypeID() == typeID);
+				}, result);
 			}
 
 			return result;
 		}
 
-		std::string GetUniqueObjectName(const std::string& existingName);
+		// Returns a unique name beginning with existingName that no other children of parent have
+		// If root object, specify nullptr as parent
+		std::string GetUniqueObjectName(const std::string& existingName, GameObject* parent = nullptr);
 		// Returns 'prefix' with a number appended representing
 		// how many other objects with that prefix are in the scene
-		std::string GetUniqueObjectName(const std::string& prefix, i16 digits);
+		std::string GetUniqueObjectName(const std::string& prefix, i16 digits, GameObject* parent = nullptr);
 
 		i32 GetSceneFileVersion() const;
 
@@ -137,19 +163,19 @@ namespace flex
 
 		const SkyboxData& GetSkyboxData() const;
 
-		void DrawImGuiForSelectedObjects();
-		void DrawImGuiForRenderObjectsList();
+		void DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
 		void DoCreateGameObjectButton(const char* buttonName, const char* popupName);
-		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject);
+		bool DrawImGuiGameObjectNameAndChildren(GameObject* gameObject, bool bDrawingEditorObjects);
 		// Returns true if the parent-child tree changed during this call
-		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject);
+		bool DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject, bool bDrawingEditorObjects);
 
 		bool DoNewGameObjectTypeList();
 		bool DoGameObjectTypeList(const char* currentlySelectedTypeCStr, StringID& selectedTypeStringID, std::string& selectedTypeStr);
 
 		GameObject* GetGameObject(const GameObjectID& gameObjectID) const;
+		GameObject* GetEditorObject(const EditorObjectID& editorObjectID) const;
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
 
@@ -165,27 +191,69 @@ namespace flex
 
 		void RegenerateTerrain();
 
+		void OnExternalMeshChange(const std::string& meshFilePath);
+
+		// Fills out a sorted list of objects with the given typeID & their distance to the given point
+		// Returns true when there are nearby objects
+		template<class T>
+		bool GetObjectsInRadius(const glm::vec3& pos, real radius, StringID typeID, std::vector<Pair<T*, real>>& objects)
+		{
+			real radiusSq = radius * radius;
+			std::vector<T*> allObjects = GetObjectsOfType<T>(typeID);
+			for (T* object : allObjects)
+			{
+				real dist2 = glm::distance2(pos, object->GetTransform()->GetWorldPosition());
+				if (dist2 < radiusSq)
+				{
+					objects.push_back({ object, glm::sqrt(dist2) });
+				}
+			}
+
+			std::sort(objects.begin(), objects.end(), [](const Pair<MineralDeposit*, real>& a, const Pair<MineralDeposit*, real>& b)
+			{
+				return a.second > b.second;
+			});
+
+			return !objects.empty();
+		}
+
+		// Returns true when there are nearby items
+		bool GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
+
+		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel);
+		void OnDroppedItemDestroyed(DroppedItem* item);
+
 		static const char* GameObjectTypeIDToString(StringID typeID);
 
-		static std::map<StringID, std::string> GameObjectTypeStringIDPairs;
-
-		static const i32 LATEST_SCENE_FILE_VERSION = 6;
-		static const i32 LATEST_MATERIALS_FILE_VERSION = 1;
+		static const i32 LATEST_SCENE_FILE_VERSION = 7;
+		static const i32 LATEST_MATERIALS_FILE_VERSION = 2;
 		static const i32 LATEST_MESHES_FILE_VERSION = 1;
 		static const i32 LATETST_PREFAB_FILE_VERSION = 3;
 
+		static AudioSourceID s_PickupAudioID;
+
 	protected:
 		friend GameObject;
+		friend EditorObject;
 		friend SceneManager;
+
+		void FindNextAvailableUniqueName(GameObject* gameObject, i32& highestNoNameObj, i16& maxNumChars, const char* defaultNewNameBase);
+		void DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject);
 
 		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
 
 		void UpdateRootObjectSiblingIndices();
 		void RegisterGameObject(GameObject* gameObject);
-		void UnregisterGameObject(const GameObjectID& gameObjectID);
-		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID);
+		void UnregisterGameObject(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
+		void UnregisterGameObjectRecursive(const GameObjectID& gameObjectID, bool bAssertSuccess = false);
+
+		void RegisterEditorObject(EditorObject* editorObject);
+		void UnregisterEditorObject(EditorObjectID* editorObjectID);
+		void UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID);
 
 		void CreateNewGameObject(const std::string& newObjectName, GameObject* parent = nullptr);
+
+		bool FindConflictingObjectsWithName(GameObject* parent, const std::string& name, const std::vector<GameObject*>& objects);
 
 		i32 m_SceneFileVersion = 1;
 		i32 m_MaterialsFileVersion = 1;
@@ -198,6 +266,8 @@ namespace flex
 
 		std::map<GameObjectID, GameObject*> m_GameObjectLUT;
 		std::vector<GameObject*> m_RootObjects;
+		std::map<EditorObjectID, EditorObject*> m_EditorObjectLUT;
+		std::vector<EditorObject*> m_EditorObjects;
 
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
@@ -215,6 +285,8 @@ namespace flex
 
 		glm::vec3 m_DirLightColours[4];
 
+		const real m_DroppedItemScale = 0.3f;
+
 		// Kill zone for player
 		real m_PlayerMinHeight = -500.0f;
 		glm::vec3 m_PlayerSpawnPoint;
@@ -229,6 +301,8 @@ namespace flex
 		std::vector<GameObjectID> m_PendingRemoveObjects; // Objects to remove but not destroy at LateUpdate this frame
 		std::vector<GameObjectID> m_PendingDestroyObjects; // Objects to destroy at LateUpdate this frame
 
+		std::vector<DroppedItem*> m_DroppedItems;
+
 	private:
 		/*
 		* Recursively searches through all game objects and returns first
@@ -238,17 +312,7 @@ namespace flex
 
 		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
 
-		void ReadGameObjectTypesFile();
-		void WriteGameObjectTypesFile();
-
-		BaseScene(const BaseScene&) = delete;
-		BaseScene& operator=(const BaseScene&) = delete;
-
-		const size_t m_MaxObjectNameLen = 256;
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
-		bool m_bTriggerNewObjectTypePopup = false;
-		const char* m_NewObjectTypePopupStr = "New Object Type";
-		std::string m_NewObjectTypeStrBuffer;
 
 	};
 } // namespace flex

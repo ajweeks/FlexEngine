@@ -3,12 +3,6 @@
 	"name" : "scene_prefab_test",
 	"spawn player" : true,
 	"player 0 guid" : "3D2F8D5AEE8722B04AC85FF150AB7A21",
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -33,7 +27,6 @@
 			"name" : "Skybox",
 			"id" : "550D6BBEFAA67685495BCE9A868118FE",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
 			"materials" : 
 			[
@@ -50,15 +43,13 @@
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.194, -0.973, -2.523"
+				"rot" : "1.571, -0.000, 0.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"directional light info" : 
 			{
-				"rotation" : "-0.217, -0.591, -0.616, 0.473",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "1.00, 1.00, 1.00",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 3.000000,
 				"cast shadows" : true,
@@ -73,7 +64,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.000, 0.447, 0.000"
+				"pos" : "0.012, 1.332, 0.000",
+				"rot" : "-0.015, 0.004, -0.005"
 			}
 		},
 		{
@@ -85,8 +77,6 @@
 				"pos" : "0.000, -0.336, 0.000",
 				"scale" : "100.000, 0.495, 100.000"
 			},
-			"visible" : true,
-			"casts shadow" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -95,7 +85,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "1.000,1.000,1.000"
 			},
 			"rigid body" : 
 			{
@@ -114,7 +104,8 @@
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
 			"transform" : 
 			{
-				"pos" : "0.000, 0.447, 4.783"
+				"pos" : "0.012, 1.333, 4.783",
+				"rot" : "-0.015, 0.004, -0.006"
 			}
 		}
 	]

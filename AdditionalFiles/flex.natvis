@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+  <Type Name="flex::GUID">
+    <DisplayString>{Data1} {Data2}</DisplayString>
+  </Type>
+
   <Type Name="flex::Uniform">
-    <DisplayString>{DBG_name,na}, id: {id} (size: {size})</DisplayString>
+    <DisplayString>{DBG_name,na}, id: {id}, size: {size}</DisplayString>
   </Type>
 
   <Type Name="flex::BaseScene">
@@ -9,7 +13,7 @@
   </Type>
 
   <Type Name="flex::GameObject">
-    <DisplayString>{m_Name}, ID: {ID.Data1} {ID.Data2}</DisplayString>
+    <DisplayString>{m_Name}, ID: {ID}</DisplayString>
   </Type>
 
   <Type Name="flex::JSONObject">
@@ -29,27 +33,30 @@
   </Type>
 
   <Type Name="flex::JSONValue">
-    <DisplayString Condition="type == flex::JSONValue::Type::STRING">{strValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::INT">{intValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::UINT">{uintValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::LONG">{longValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::ULONG">{ulongValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::FLOAT">{floatValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::BOOL">{boolValue}</DisplayString>
-    <DisplayString Condition="type == flex::JSONValue::Type::OBJECT">{objectValue}</DisplayString>
-    <!--<DisplayString Condition="type == flex::JSONValue::Type::OBJECT_ARRAY">{obj}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::STRING">{strValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::INT">{intValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::UINT">{uintValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::LONG">{longValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::ULONG">{ulongValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::FLOAT">{floatValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::BOOL">{uintValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::VEC2">{vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::VEC3">{vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::VEC4">{vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::QUAT">{vecValue}</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::OBJECT">{objectValue}</DisplayString>
+    <!--<DisplayString Condition="type == flex::ValueType::OBJECT_ARRAY">{obj}</DisplayString>
     <Expand>
       <Item Name="obj">objectArrayValue</Item>
     </Expand>-->
-    <!--<DisplayString Condition="type == flex::JSONValue::Type::FIELD_ARRAY">{field}</DisplayString>
+    <!--<DisplayString Condition="type == flex::ValueType::FIELD_ARRAY">{field}</DisplayString>
     <Expand>
       <Item Name="field">fieldArrayValue</Item>
     </Expand>-->
-    <DisplayString Condition="type == flex::JSONValue::Type::UNINITIALIZED">uninitialized</DisplayString>
+    <DisplayString Condition="type == flex::ValueType::UNINITIALIZED">uninitialized</DisplayString>
   </Type>
 
   <Type Name="flex::Value">
-    <!--<DisplayString>{val.intRaw}</DisplayString>-->
     <DisplayString Condition="type == flex::ValueType::OPERATION">{val.operation}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::INT_RAW">{val.intRaw}</DisplayString>
     <DisplayString Condition="type == flex::ValueType::FLOAT_RAW">{val.floatRaw}</DisplayString>

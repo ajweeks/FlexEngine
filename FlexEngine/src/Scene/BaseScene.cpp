@@ -4,8 +4,6 @@
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
-
-#include <glm/gtx/norm.hpp> // for distance2
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
@@ -14,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -36,7 +35,7 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	std::map<StringID, std::string> BaseScene::GameObjectTypeStringIDPairs;
+	AudioSourceID BaseScene::s_PickupAudioID = InvalidAudioSourceID;
 
 	BaseScene::BaseScene(const std::string& fileName) :
 		m_FileName(fileName)
@@ -73,10 +72,11 @@ namespace flex
 		m_SkyboxData.fog = m_SkyboxDatas[0].fog;
 
 		m_PlayerSpawnPoint = glm::vec3(0.0f, 2.0f, 0.0f);
-	}
 
-	BaseScene::~BaseScene()
-	{
+		if (s_PickupAudioID == InvalidAudioSourceID)
+		{
+			s_PickupAudioID = g_ResourceManager->GetOrLoadAudioSourceID(SID("pickup-item.wav"), true);
+		}
 	}
 
 	void BaseScene::Initialize()
@@ -100,7 +100,10 @@ namespace flex
 
 			if (FileExists(filePath))
 			{
-				LoadFromFile(filePath);
+				if (!LoadFromFile(filePath))
+				{
+					CreateBlank(filePath);
+				}
 			}
 			else
 			{
@@ -129,8 +132,6 @@ namespace flex
 			m_bLoaded = true;
 		}
 
-		ReadGameObjectTypesFile();
-
 		// All updating to new file version should be complete by this point
 		m_SceneFileVersion = LATEST_SCENE_FILE_VERSION;
 		m_MaterialsFileVersion = LATEST_MATERIALS_FILE_VERSION;
@@ -144,7 +145,7 @@ namespace flex
 			rootObject->PostInitialize();
 		}
 
-		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugDrawer());
+		m_PhysicsWorld->GetWorld()->setDebugDrawer(g_Renderer->GetDebugRenderer());
 	}
 
 	void BaseScene::Destroy()
@@ -170,7 +171,6 @@ namespace flex
 
 		m_OnGameObjectDestroyedCallbacks.clear();
 
-		g_Renderer->SetSkyboxMesh(nullptr);
 		g_Renderer->RemoveDirectionalLight();
 		g_Renderer->RemoveAllPointLights();
 		g_Renderer->RemoveAllSpotLights();
@@ -192,7 +192,7 @@ namespace flex
 
 		if (m_PhysicsWorld)
 		{
-			m_PhysicsWorld->Update(g_DeltaTime);
+			m_PhysicsWorld->StepSimulation(g_DeltaTime);
 		}
 
 		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
@@ -206,6 +206,15 @@ namespace flex
 
 		{
 			PROFILE_AUTO("Update scene objects");
+
+			for (GameObject* rootObject : m_RootObjects)
+			{
+				if (rootObject != nullptr)
+				{
+					rootObject->ClearNearbyInteractable();
+				}
+			}
+
 			for (GameObject* rootObject : m_RootObjects)
 			{
 				if (rootObject != nullptr)
@@ -213,35 +222,61 @@ namespace flex
 					rootObject->Update();
 				}
 			}
+
+			for (GameObject* editorObject : m_EditorObjects)
+			{
+				if (editorObject != nullptr)
+				{
+					editorObject->Update();
+				}
+			}
 		}
 
 		if (!m_bPauseTimeOfDay)
 		{
-			m_TimeOfDay = glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f);
+			SetTimeOfDay(glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f));
 		}
+	}
 
-		i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
-		i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
-		real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
+	void BaseScene::FixedUpdate()
+	{
+		PROFILE_AUTO("Scene fixed update");
 
-		alpha = SmootherStep01(alpha);
-		alpha = SmootherStep01(alpha);
-		alpha = SmootherStep01(alpha);
-		m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
-		m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
-		m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
-		m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
-
-		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
-		if (dirLight != nullptr)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			real azimuth = 0.0f;
-			real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
-			glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
-			rot = glm::rotate(rot, elevation, VEC3_RIGHT);
-			dirLight->GetTransform()->SetWorldRotation(rot);
-			dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+			if (rootObject != nullptr)
+			{
+				rootObject->FixedUpdate();
+			}
 		}
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			if (rootObject != nullptr)
+			{
+				rootObject->GetTransform()->UpdateRigidBodyRecursive();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->FixedUpdate();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->GetTransform()->UpdateRigidBodyRecursive();
+			}
+		}
+
+		g_CameraManager->CurrentCamera()->FixedUpdate();
+
+		g_Editor->FixedUpdate();
 	}
 
 	void BaseScene::LateUpdate()
@@ -289,11 +324,39 @@ namespace flex
 			{
 				objectPair.first->AddChildImmediate(objectPair.second);
 				RegisterGameObject(objectPair.second);
+				objectPair.second->Initialize();
+				objectPair.second->PostInitialize();
 			}
 			m_PendingAddChildObjects.clear();
 			UpdateRootObjectSiblingIndices();
 			g_Renderer->RenderObjectStateChanged();
 		}
+	}
+
+	void BaseScene::Render()
+	{
+		PROFILE_AUTO("BaseScene Render");
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			if (rootObject != nullptr)
+			{
+				rootObject->Render();
+			}
+		}
+
+		for (GameObject* editorObject : m_EditorObjects)
+		{
+			if (editorObject != nullptr)
+			{
+				editorObject->Render();
+			}
+		}
+	}
+
+	bool BaseScene::IsInitialized() const
+	{
+		return m_bInitialized;
 	}
 
 	void BaseScene::OnPrefabChanged(const PrefabID& prefabID)
@@ -312,9 +375,9 @@ namespace flex
 
 	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* gameObject)
 	{
-		if (gameObject->m_PrefabIDLoadedFrom == prefabID)
+		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
 		{
-			GameObject* newGameObject = ReplacePrefab(prefabID, gameObject);
+			GameObject* newGameObject = ReinstantiateFromPrefab(prefabID, gameObject);
 
 			for (GameObject* child : newGameObject->m_Children)
 			{
@@ -328,11 +391,6 @@ namespace flex
 		if (!FileExists(filePath))
 		{
 			return false;
-		}
-
-		if (g_bEnableLogging_Loading)
-		{
-			Print("Loading scene from %s\n", filePath.c_str());
 		}
 
 		JSONObject sceneRootObject;
@@ -408,7 +466,7 @@ namespace flex
 			JSONObject cameraTransform;
 			if (cameraObj.TryGetObject("transform", cameraTransform))
 			{
-				glm::vec3 camPos = ParseVec3(cameraTransform.GetString("position"));
+				glm::vec3 camPos = cameraTransform.GetVec3("position");
 				if (IsNanOrInf(camPos))
 				{
 					PrintError("Camera pos was saved out as nan or inf, resetting to 0\n");
@@ -443,10 +501,9 @@ namespace flex
 			using CopyFlags = GameObject::CopyFlags;
 
 			CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
-			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, false, copyFlags);
+			GameObject* rootObj = GameObject::CreateObjectFromJSON(rootObjectJSON, this, m_SceneFileVersion, InvalidPrefabIDPair, false, copyFlags);
 			if (rootObj != nullptr)
 			{
-				rootObj->GetTransform()->UpdateParentTransform();
 				AddRootObjectImmediate(rootObj);
 			}
 			else
@@ -478,7 +535,7 @@ namespace flex
 		{
 			MaterialID skyboxMatID = InvalidMaterialID;
 			g_Renderer->FindOrCreateMaterialByName("skybox 01", skyboxMatID);
-			assert(skyboxMatID != InvalidMaterialID);
+			CHECK_NE(skyboxMatID, InvalidMaterialID);
 
 			Skybox* skybox = new Skybox("Skybox");
 			skybox->ProcedurallyInitialize(skyboxMatID);
@@ -491,7 +548,7 @@ namespace flex
 		{
 			MaterialID sphereMatID = InvalidMaterialID;
 			g_Renderer->FindOrCreateMaterialByName("pbr chrome", sphereMatID);
-			assert(sphereMatID != InvalidMaterialID);
+			CHECK_NE(sphereMatID, InvalidMaterialID);
 
 			ReflectionProbe* reflectionProbe = new ReflectionProbe("Reflection Probe 01");
 
@@ -504,9 +561,11 @@ namespace flex
 #endif
 
 		// Default directional light
-		DirectionalLight* dirLight = new DirectionalLight("Directional light", glm::vec3(0.0f, 15.0f, 0.0f), glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)));
-		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
+		DirectionalLight* dirLight = new DirectionalLight("Directional light");
+		dirLight->pos = glm::vec3(0.0f, 15.0f, 0.0f);
+		dirLight->data.dir = glm::rotate(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)), VEC3_RIGHT);
 		dirLight->data.brightness = 3.0f;
+		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
 		dirLight->Initialize();
 		dirLight->PostInitialize();
 	}
@@ -580,66 +639,14 @@ namespace flex
 		{
 			m_SecondsPerDay = glm::clamp(m_SecondsPerDay, 0.001f, 6000.0f);
 		}
-		if (ImGui::SliderFloat("Time of day", &m_TimeOfDay, 0.0f, 0.999f))
+		real timeOfDay = m_TimeOfDay;
+		if (ImGui::SliderFloat("Time of day", &timeOfDay, 0.0f, 0.999f))
 		{
-			m_TimeOfDay = glm::clamp(m_TimeOfDay, 0.0f, 0.999f);
+			SetTimeOfDay(glm::clamp(timeOfDay, 0.0f, 0.999f));
 		}
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
 
 		DoSceneContextMenu();
-
-		if (m_bTriggerNewObjectTypePopup)
-		{
-			m_bTriggerNewObjectTypePopup = false;
-			ImGui::OpenPopup(m_NewObjectTypePopupStr);
-			m_NewObjectTypeStrBuffer.clear();
-			m_NewObjectTypeStrBuffer.resize(m_MaxObjectNameLen);
-		}
-
-		if (ImGui::BeginPopupModal(m_NewObjectTypePopupStr, NULL,
-			ImGuiWindowFlags_AlwaysAutoResize |
-			ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_NoNavInputs))
-		{
-			bool bCreateType = false;
-			if (ImGui::InputText("Type", (char*)m_NewObjectTypeStrBuffer.data(), m_MaxObjectNameLen, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				bCreateType = true;
-			}
-
-			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
-
-			if (ImGui::Button("Cancel"))
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-
-			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
-
-			if (ImGui::Button("Create") || bCreateType)
-			{
-				// Remove excess trailing \0 chars
-				m_NewObjectTypeStrBuffer = std::string(m_NewObjectTypeStrBuffer.c_str());
-
-				if (!m_NewObjectTypeStrBuffer.empty())
-				{
-					StringID newTypeID = Hash(m_NewObjectTypeStrBuffer.c_str());
-					GameObjectTypeStringIDPairs.emplace(newTypeID, m_NewObjectTypeStrBuffer);
-
-					WriteGameObjectTypesFile();
-
-					ImGui::CloseCurrentPopup();
-				}
-			}
-
-			ImGui::EndPopup();
-		}
 	}
 
 	void BaseScene::DoSceneContextMenu()
@@ -878,7 +885,7 @@ namespace flex
 				{
 					if (!EndsWith(newSceneFileNameStr, ".json"))
 					{
-						assert(!Contains(newSceneFileNameStr, '.'));
+						CHECK(!Contains(newSceneFileNameStr, '.'));
 						newSceneFileNameStr += ".json";
 					}
 					if (g_SceneManager->DuplicateScene(this, newSceneFileNameStr, newSceneName))
@@ -976,38 +983,66 @@ namespace flex
 		return m_bLoaded;
 	}
 
-	std::vector<GameObject*> BaseScene::GetAllObjects()
+	bool BaseScene::FindConflictingObjectsWithName(GameObject* parent, const std::string& name, const std::vector<GameObject*>& objects)
 	{
-		std::vector<GameObject*> result;
-
-		for (GameObject* obj : m_RootObjects)
+		for (const GameObject* gameObject : objects)
 		{
-			obj->AddSelfAndChildrenToVec(result);
+			if (gameObject->GetName() == name)
+			{
+				return true;
+			}
 		}
 
-		return result;
-	}
-
-	std::vector<GameObjectID> BaseScene::GetAllObjectIDs()
-	{
-		std::vector<GameObjectID> result;
-
-		for (GameObject* obj : m_RootObjects)
+		if (parent == nullptr)
 		{
-			obj->AddSelfIDAndChildrenToVec(result);
+			// Check for pending root object name collisions
+			for (const GameObject* gameObject : m_PendingAddObjects)
+			{
+				if (gameObject->GetName() == name)
+				{
+					return true;
+				}
+			}
+		}
+		else
+		{
+			// Check for pending child object name collisions
+			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
+			{
+				if (gameObjectPair.first == parent && gameObjectPair.second->GetName() == name)
+				{
+					return true;
+				}
+			}
 		}
 
-		return result;
+		return false;
 	}
 
-	std::string BaseScene::GetUniqueObjectName(const std::string& existingName)
+	std::string BaseScene::GetUniqueObjectName(const std::string& existingName, GameObject* parent /* = nullptr */)
 	{
-		const std::vector<GameObject*> allObjects = GetAllObjects();
+		const std::vector<GameObject*> allObjects = parent != nullptr ? parent->GetChildren() : GetRootObjects();
+
+		if (!FindConflictingObjectsWithName(parent, existingName, allObjects))
+		{
+			return existingName;
+		}
 
 		i16 digits;
 		i32 existingIndex = GetNumberEndingWith(existingName, digits);
 
-		std::string prefix = existingName.substr(0, existingName.length() - digits);
+		std::string prefix;
+		if (existingIndex != -1)
+		{
+			prefix = existingName.substr(0, existingName.length() - digits);
+		}
+		else
+		{
+			prefix = existingName;
+			existingIndex = 0;
+			digits = 2;
+		}
+
 
 		i32 newIndex = existingIndex;
 		bool bNameTaken = true;
@@ -1018,41 +1053,20 @@ namespace flex
 			bNameTaken = false;
 			std::string suffix = IntToString(newIndex, digits);
 			name = prefix + suffix;
-			for (const GameObject* gameObject : allObjects)
+
+			if (FindConflictingObjectsWithName(parent, name, allObjects))
 			{
-				if (gameObject->GetName().compare(name) == 0)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const GameObject* gameObject : m_PendingAddObjects)
-			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
-			{
-				if (gameObjectPair.second->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
+				bNameTaken = true;
+				++newIndex;
 			}
 		}
 
 		return name;
 	}
 
-	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits)
+	std::string BaseScene::GetUniqueObjectName(const std::string& prefix, i16 digits, GameObject* parent /* = nullptr */)
 	{
-		const std::vector<GameObject*> allObjects = GetAllObjects();
+		const std::vector<GameObject*> allObjects = parent != nullptr ? parent->GetChildren() : GetRootObjects();
 
 		i32 newIndex = 0;
 		bool bNameTaken = true;
@@ -1061,32 +1075,11 @@ namespace flex
 			bNameTaken = false;
 			std::string suffix = IntToString(newIndex, digits);
 			std::string name = prefix + suffix;
-			for (const GameObject* gameObject : allObjects)
+
+			if (FindConflictingObjectsWithName(parent, name, allObjects))
 			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const GameObject* gameObject : m_PendingAddObjects)
-			{
-				if (gameObject->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
-			}
-			for (const Pair<GameObject*, GameObject*>& gameObjectPair : m_PendingAddChildObjects)
-			{
-				if (gameObjectPair.second->GetName() == name)
-				{
-					bNameTaken = true;
-					++newIndex;
-					break;
-				}
+				bNameTaken = true;
+				++newIndex;
 			}
 		}
 
@@ -1108,142 +1101,189 @@ namespace flex
 		return m_SkyboxData;
 	}
 
-	void BaseScene::DrawImGuiForSelectedObjects()
+	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
 	{
+		static bool bGameObjectTabActive = true;
+
 		ImGui::NewLine();
 
-		ImGui::BeginChild("SelectedObject", ImVec2(0.0f, 500.0f), true);
+		ImGui::BeginChild("Selected Object", ImVec2(0.0f, 500.0f), true);
 
-		if (g_Editor->HasSelectedObject())
+		if (bGameObjectTabActive)
 		{
-			// TODO: Draw common fields for all selected objects?
-			GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
-			if (selectedObject != nullptr)
+			if (g_Editor->HasSelectedObject())
 			{
-				selectedObject->DrawImGuiObjects();
+				// TODO: Draw common fields for all selected objects?
+				GameObject* selectedObject = GetGameObject(g_Editor->GetFirstSelectedObjectID());
+				if (selectedObject != nullptr)
+				{
+					selectedObject->DrawImGuiObjects(false);
+				}
+			}
+		}
+		else
+		{
+			if (g_Editor->HasSelectedEditorObject())
+			{
+				GameObject* selectedObject = GetEditorObject(g_Editor->GetSelectedEditorObject());
+				if (selectedObject != nullptr)
+				{
+					selectedObject->DrawImGuiObjects(true);
+				}
 			}
 		}
 
 		ImGui::EndChild();
-	}
 
-	void BaseScene::DrawImGuiForRenderObjectsList()
-	{
 		ImGui::NewLine();
 
-		ImGui::Text("Game Objects");
-
-		// Dropping objects onto this text makes them root objects
-		if (ImGui::BeginDragDropTarget())
+		if (ImGui::BeginTabBar("Hierarchy"))
 		{
-			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+			if (ImGui::BeginTabItem("Game Objects"))
 			{
-				i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+				bool bGameObjectTabDragDropTarget = ImGui::BeginDragDropTarget();
 
-				std::vector<GameObjectID> draggedGameObjectsIDs;
-				draggedGameObjectsIDs.reserve(draggedObjectCount);
-				for (i32 i = 0; i < draggedObjectCount; ++i)
+				if (ImGui::BeginChild("##go_scroll_region", ImVec2(0.0f, 400.0f)))
 				{
-					draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
-				}
+					bGameObjectTabActive = true;
 
-				if (!draggedGameObjectsIDs.empty())
-				{
-					for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
+					// Dropping objects onto this text makes them root objects
+					if (bGameObjectTabDragDropTarget)
 					{
-						GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
-						GameObject* parent = draggedGameObject->GetParent();
-						GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
-						bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
-						// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
-						if (!bParentInSelection && parent)
+						const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+						if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
 						{
-							parent->RemoveChildImmediate(draggedGameObject->ID, false);
-							g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+							i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+
+							std::vector<GameObjectID> draggedGameObjectsIDs;
+							draggedGameObjectsIDs.reserve(draggedObjectCount);
+							for (i32 i = 0; i < draggedObjectCount; ++i)
+							{
+								draggedGameObjectsIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
+							}
+
+							if (!draggedGameObjectsIDs.empty())
+							{
+								for (const GameObjectID& draggedGameObjectID : draggedGameObjectsIDs)
+								{
+									GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+									GameObject* parent = draggedGameObject->GetParent();
+									GameObjectID parentID = parent != nullptr ? parent->ID : InvalidGameObjectID;
+									bool bParentInSelection = parentID.IsValid() ? Contains(draggedGameObjectsIDs, parentID) : false;
+									// Make all non-root objects whose parents aren't being moved root objects (but leave sub-hierarchy as is)
+									if (!bParentInSelection && parent)
+									{
+										parent->RemoveChildImmediate(draggedGameObject->ID, false);
+										g_SceneManager->CurrentScene()->AddRootObject(draggedGameObject);
+									}
+								}
+							}
+						}
+
+						const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+						if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+						{
+							PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+							InstantiatePrefab(prefabID);
+						}
+
+						ImGui::EndDragDropTarget();
+					}
+
+					for (GameObject* rootObject : m_RootObjects)
+					{
+						if (DrawImGuiGameObjectNameAndChildren(rootObject, false))
+						{
+							break;
 						}
 					}
 				}
+				ImGui::EndChild(); // Scroll region
+
+				DoCreateGameObjectButton("Add object...", "Add object");
+
+				const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
+				if (bShowAddPointLightBtn)
+				{
+					if (ImGui::Button("Add point light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						PointLight* newPointLight = new PointLight(scene);
+						scene->AddRootObject(newPointLight);
+						newPointLight->Initialize();
+						newPointLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newPointLight->ID);
+					}
+
+					ImGui::SameLine();
+
+					if (ImGui::Button("Add spot light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						SpotLight* newSpotLight = new SpotLight(scene);
+						scene->AddRootObject(newSpotLight);
+						newSpotLight->Initialize();
+						newSpotLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newSpotLight->ID);
+					}
+
+					if (ImGui::Button("Add area light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						AreaLight* newAreaLight = new AreaLight(scene);
+						scene->AddRootObject(newAreaLight);
+						newAreaLight->Initialize();
+						newAreaLight->PostInitialize();
+
+						g_Editor->SetSelectedObject(newAreaLight->ID);
+					}
+				}
+
+				const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
+				if (bShowAddDirLightBtn)
+				{
+					if (bShowAddPointLightBtn)
+					{
+						ImGui::SameLine();
+					}
+
+					if (ImGui::Button("Add directional light"))
+					{
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						DirectionalLight* newDiright = new DirectionalLight();
+						scene->AddRootObject(newDiright);
+						newDiright->Initialize();
+						newDiright->PostInitialize();
+
+						g_Editor->SetSelectedObject(newDiright->ID);
+					}
+				}
+
+				ImGui::EndTabItem();
 			}
 
-			const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
-			if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+			if (ImGui::BeginTabItem("Editor Objects"))
 			{
-				PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
-				InstantiatePrefab(prefabID);
+				if (ImGui::BeginChild("##editor_scroll_region", ImVec2(0.0f, 400.0f)))
+				{
+					bGameObjectTabActive = false;
+
+					for (EditorObject* editorObject : m_EditorObjects)
+					{
+						if (DrawImGuiGameObjectNameAndChildren(editorObject, true))
+						{
+							break;
+						}
+					}
+				}
+				ImGui::EndChild();
+
+				ImGui::EndTabItem();
 			}
 
-			ImGui::EndDragDropTarget();
-		}
-
-		std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
-		for (GameObject* rootObject : rootObjects)
-		{
-			if (DrawImGuiGameObjectNameAndChildren(rootObject))
-			{
-				break;
-			}
-		}
-
-		DoCreateGameObjectButton("Add object...", "Add object");
-
-		const bool bShowAddPointLightBtn = g_Renderer->GetNumPointLights() < MAX_POINT_LIGHT_COUNT;
-		if (bShowAddPointLightBtn)
-		{
-			if (ImGui::Button("Add point light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				PointLight* newPointLight = new PointLight(scene);
-				scene->AddRootObject(newPointLight);
-				newPointLight->Initialize();
-				newPointLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newPointLight->ID);
-			}
-
-			ImGui::SameLine();
-
-			if (ImGui::Button("Add spot light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				SpotLight* newSpotLight = new SpotLight(scene);
-				scene->AddRootObject(newSpotLight);
-				newSpotLight->Initialize();
-				newSpotLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newSpotLight->ID);
-			}
-
-			if (ImGui::Button("Add area light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				AreaLight* newAreaLight = new AreaLight(scene);
-				scene->AddRootObject(newAreaLight);
-				newAreaLight->Initialize();
-				newAreaLight->PostInitialize();
-
-				g_Editor->SetSelectedObject(newAreaLight->ID);
-			}
-		}
-
-		const bool bShowAddDirLightBtn = g_Renderer->GetDirectionalLight() == nullptr;
-		if (bShowAddDirLightBtn)
-		{
-			if (bShowAddPointLightBtn)
-			{
-				ImGui::SameLine();
-			}
-
-			if (ImGui::Button("Add directional light"))
-			{
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				DirectionalLight* newDiright = new DirectionalLight();
-				scene->AddRootObject(newDiright);
-				newDiright->Initialize();
-				newDiright->PostInitialize();
-
-				g_Editor->SetSelectedObject(newDiright->ID);
-			}
+			ImGui::EndTabBar();
 		}
 	}
 
@@ -1259,7 +1299,7 @@ namespace flex
 
 		if (bShowCombo)
 		{
-			for (const auto& typeIDPair : GameObjectTypeStringIDPairs)
+			for (const auto& typeIDPair : g_ResourceManager->gameObjectTypeStringIDPairs)
 			{
 				bool bSelected = (typeIDPair.first == selectedTypeStringID);
 				if (ImGui::Selectable(typeIDPair.second.c_str(), &bSelected))
@@ -1275,10 +1315,29 @@ namespace flex
 
 		if (ImGui::Button("New Type"))
 		{
-			m_bTriggerNewObjectTypePopup = true;
+			g_SceneManager->bOpenNewObjectTypePopup = true;
 		}
 
 		return bChanged;
+	}
+
+	void BaseScene::FindNextAvailableUniqueName(GameObject* gameObject, i32& highestNoNameObj, i16& maxNumChars, const char* defaultNewNameBase)
+	{
+		if (StartsWith(gameObject->GetName(), defaultNewNameBase))
+		{
+			i16 numChars;
+			i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
+			if (num != -1)
+			{
+				highestNoNameObj = glm::max(highestNoNameObj, num);
+				maxNumChars = glm::max(maxNumChars, maxNumChars);
+			}
+		}
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			FindNextAvailableUniqueName(child, highestNoNameObj, maxNumChars, defaultNewNameBase);
+		}
 	}
 
 	void BaseScene::DoCreateGameObjectButton(const char* buttonName, const char* popupName)
@@ -1291,24 +1350,14 @@ namespace flex
 		{
 			ImGui::OpenPopup(popupName);
 
-			m_NewObjectTypeIDPair.first = SID("object");
-			m_NewObjectTypeIDPair.second = GameObjectTypeStringIDPairs[SID("object")];
+			m_NewObjectTypeIDPair.first = BaseObjectSID;
+			m_NewObjectTypeIDPair.second = g_ResourceManager->gameObjectTypeStringIDPairs[BaseObjectSID];
 
 			i32 highestNoNameObj = -1;
 			i16 maxNumChars = 2;
-			const std::vector<GameObject*> allObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-			for (GameObject* gameObject : allObjects)
+			for (GameObject* rootObject : m_RootObjects)
 			{
-				if (StartsWith(gameObject->GetName(), defaultNewNameBase))
-				{
-					i16 numChars;
-					i32 num = GetNumberEndingWith(gameObject->GetName(), numChars);
-					if (num != -1)
-					{
-						highestNoNameObj = glm::max(highestNoNameObj, num);
-						maxNumChars = glm::max(maxNumChars, maxNumChars);
-					}
-				}
+				FindNextAvailableUniqueName(rootObject, highestNoNameObj, maxNumChars, defaultNewNameBase);
 			}
 			newObjectName = defaultNewNameBase + IntToString(highestNoNameObj + 1, maxNumChars);
 		}
@@ -1317,11 +1366,11 @@ namespace flex
 			ImGuiWindowFlags_AlwaysAutoResize |
 			ImGuiWindowFlags_NoSavedSettings))
 		{
-			newObjectName.resize(m_MaxObjectNameLen);
+			newObjectName.resize(GameObject::MaxNameLength);
 
 			bool bCreate = ImGui::InputText("##new-object-name",
 				(char*)newObjectName.data(),
-				m_MaxObjectNameLen,
+				GameObject::MaxNameLength,
 				ImGuiInputTextFlags_EnterReturnsTrue);
 
 			// SetItemDefaultFocus doesn't work here for some reason
@@ -1387,22 +1436,10 @@ namespace flex
 		// Special case handling
 		switch (m_NewObjectTypeIDPair.first)
 		{
-		case SID("object"):
+		case BaseObjectSID:
 		{
 			Mesh* mesh = newGameObject->SetMesh(new Mesh(newGameObject));
 			mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
-		} break;
-		case SID("socket"):
-		{
-			std::string socketName = g_SceneManager->CurrentScene()->GetUniqueObjectName("socket_", 3);
-
-			u32 socketIndex = 0;
-			if (parent != nullptr)
-			{
-				socketIndex = (u32)parent->sockets.size();
-			}
-
-			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket((Socket*)newGameObject, socketIndex);
 		} break;
 		};
 
@@ -1421,7 +1458,7 @@ namespace flex
 		g_Editor->SetSelectedObject(newGameObject->ID);
 	}
 
-	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject)
+	bool BaseScene::DrawImGuiGameObjectNameAndChildren(GameObject* gameObject, bool bDrawingEditorObjects)
 	{
 		if (!gameObject->IsVisibleInSceneExplorer())
 		{
@@ -1430,14 +1467,14 @@ namespace flex
 
 		ImGui::PushID(gameObject);
 
-		bool result = DrawImGuiGameObjectNameAndChildrenInternal(gameObject);
+		bool result = DrawImGuiGameObjectNameAndChildrenInternal(gameObject, bDrawingEditorObjects);
 
 		ImGui::PopID();
 
 		return result;
 	}
 
-	bool BaseScene::DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject)
+	bool BaseScene::DrawImGuiGameObjectNameAndChildrenInternal(GameObject* gameObject, bool bDrawingEditorObjects)
 	{
 		// ImGui::PushID will have been called so ImGui calls in this function don't need to be qualified to be unique
 
@@ -1445,7 +1482,7 @@ namespace flex
 
 		std::string objectName = gameObject->GetName();
 
-		bool bSelected = g_Editor->IsObjectSelected(gameObject->ID);
+		bool bSelected = bDrawingEditorObjects ? g_Editor->IsEditorObjectSelected((EditorObjectID*)&gameObject->ID) : g_Editor->IsObjectSelected(gameObject->ID);
 
 		bool bForceTreeNodeOpen = false;
 
@@ -1495,13 +1532,13 @@ namespace flex
 			ImGui::SetNextTreeNodeOpen(true);
 		}
 
-		const bool bPrefab = gameObject->m_PrefabIDLoadedFrom.IsValid();
+		const bool bPrefab = gameObject->m_SourcePrefabID.IsValid();
 		if (bPrefab)
 		{
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.65f, 0.75f, 0.98f, 1.0f));
 		}
 
-		bool bPrefabDirty = (gameObject->m_PrefabIDLoadedFrom.IsValid() ? g_ResourceManager->IsPrefabDirty(gameObject->m_PrefabIDLoadedFrom) : false);
+		bool bPrefabDirty = (gameObject->m_SourcePrefabID.m_PrefabID.IsValid() ? g_ResourceManager->IsPrefabDirty(gameObject->m_SourcePrefabID.m_PrefabID) : false);
 		const char* prefabDirtyStr = (bPrefabDirty ? "*" : "");
 		bool bNodeOpen = ImGui::TreeNodeEx((void*)gameObject, node_flags, "%s%s", objectName.c_str(), prefabDirtyStr);
 
@@ -1510,14 +1547,25 @@ namespace flex
 			ImGui::PopStyleColor();
 		}
 
-		bool bGameObjectDeletedOrDuplicated = gameObject->DoImGuiContextMenu(false);
-		if (bGameObjectDeletedOrDuplicated || gameObject == nullptr)
+		if (gameObject->DoImGuiContextMenu(false))
 		{
-			bParentChildTreeDirty = true;
+			// Game object was deleted or duplicated, early out to not index out of bounds in scene hierarchy
+
+			if (bNodeOpen && bHasChildren)
+			{
+				ImGui::TreePop();
+			}
+
+			return true;
 		}
-		else
+
+		if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
 		{
-			if (ImGui::IsMouseReleased(0) && ImGui::IsItemHovered(ImGuiHoveredFlags_None))
+			if (bDrawingEditorObjects)
+			{
+				g_Editor->SetSelectedEditorObject((EditorObjectID*)&gameObject->ID);
+			}
+			else
 			{
 				if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL))
 				{
@@ -1552,7 +1600,7 @@ namespace flex
 
 							const std::vector<GameObject*>& objectALaterSiblings = objectA->GetLaterSiblings();
 							auto objectBIter = FindIter(objectALaterSiblings, objectB);
-							assert(objectBIter != objectALaterSiblings.end());
+							CHECK(objectBIter != objectALaterSiblings.end());
 							for (auto iter = objectALaterSiblings.begin(); iter != objectBIter; ++iter)
 							{
 								(*iter)->AddSelfAndChildrenToVec(objectsToSelect);
@@ -1570,127 +1618,127 @@ namespace flex
 					g_Editor->SetSelectedObject(gameObject->ID);
 				}
 			}
+		}
 
-			if (ImGui::IsItemActive())
+		if (ImGui::IsItemActive())
+		{
+			if (ImGui::BeginDragDropSource())
 			{
-				if (ImGui::BeginDragDropSource())
+				void* data = nullptr;
+				size_t size = 0;
+
+				const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
+				auto iter = FindIter(selectedObjectIDs, gameObject->ID);
+				bool bItemInSelection = iter != selectedObjectIDs.end();
+				std::string dragDropText;
+
+				std::vector<GameObjectID> draggedGameObjectIDs;
+				if (bItemInSelection)
 				{
-					void* data = nullptr;
-					size_t size = 0;
-
-					const std::vector<GameObjectID>& selectedObjectIDs = g_Editor->GetSelectedObjectIDs();
-					auto iter = FindIter(selectedObjectIDs, gameObject->ID);
-					bool bItemInSelection = iter != selectedObjectIDs.end();
-					std::string dragDropText;
-
-					std::vector<GameObjectID> draggedGameObjectIDs;
-					if (bItemInSelection)
+					for (const GameObjectID& selectedObjectID : selectedObjectIDs)
 					{
-						for (const GameObjectID& selectedObjectID : selectedObjectIDs)
-						{
-							// Don't allow children to not be part of dragged selection
-							GameObject* selectedObject = GetGameObject(selectedObjectID);
-							selectedObject->AddSelfIDAndChildrenToVec(draggedGameObjectIDs);
-						}
+						// Don't allow children to not be part of dragged selection
+						GameObject* selectedObject = GetGameObject(selectedObjectID);
+						selectedObject->AddSelfIDAndChildrenToVec(draggedGameObjectIDs);
+					}
 
-						data = draggedGameObjectIDs.data();
-						size = draggedGameObjectIDs.size() * sizeof(GameObjectID);
+					data = draggedGameObjectIDs.data();
+					size = draggedGameObjectIDs.size() * sizeof(GameObjectID);
 
-						if (draggedGameObjectIDs.size() == 1)
-						{
-							dragDropText = GetGameObject(draggedGameObjectIDs[0])->GetName();
-						}
-						else
-						{
-							dragDropText = IntToString((u32)draggedGameObjectIDs.size()) + " objects";
-						}
+					if (draggedGameObjectIDs.size() == 1)
+					{
+						dragDropText = GetGameObject(draggedGameObjectIDs[0])->GetName();
 					}
 					else
 					{
-						data = (void*)&gameObject->ID;
-						size = sizeof(GameObjectID);
-						dragDropText = gameObject->GetName();
+						dragDropText = IntToString((u32)draggedGameObjectIDs.size()) + " objects";
 					}
-
-					ImGui::SetDragDropPayload(Editor::GameObjectPayloadCStr, data, size);
-
-					ImGui::Text("%s", dragDropText.c_str());
-
-					ImGui::EndDragDropSource();
 				}
-			}
-
-			if (ImGui::BeginDragDropTarget())
-			{
-				const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
-				if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+				else
 				{
-					i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+					data = (void*)&gameObject->ID;
+					size = sizeof(GameObjectID);
+					dragDropText = gameObject->GetName();
+				}
 
-					std::vector<GameObjectID> draggedGameObjectIDs;
-					draggedGameObjectIDs.reserve(draggedObjectCount);
-					for (i32 i = 0; i < draggedObjectCount; ++i)
+				ImGui::SetDragDropPayload(Editor::GameObjectPayloadCStr, data, size);
+
+				ImGui::Text("%s", dragDropText.c_str());
+
+				ImGui::EndDragDropSource();
+			}
+		}
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* gameObjectPayload = ImGui::AcceptDragDropPayload(Editor::GameObjectPayloadCStr);
+			if (gameObjectPayload != nullptr && gameObjectPayload->Data != nullptr)
+			{
+				i32 draggedObjectCount = gameObjectPayload->DataSize / sizeof(GameObjectID);
+
+				std::vector<GameObjectID> draggedGameObjectIDs;
+				draggedGameObjectIDs.reserve(draggedObjectCount);
+				for (i32 i = 0; i < draggedObjectCount; ++i)
+				{
+					draggedGameObjectIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
+				}
+
+				if (!draggedGameObjectIDs.empty())
+				{
+					bool bContainsChild = false;
+
+					for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
 					{
-						draggedGameObjectIDs.push_back(*((GameObjectID*)gameObjectPayload->Data + i));
+						GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
+						if (draggedGameObject == gameObject)
+						{
+							bContainsChild = true;
+							break;
+						}
+
+						if (draggedGameObject->HasChild(gameObject, true))
+						{
+							bContainsChild = true;
+							break;
+						}
 					}
 
-					if (!draggedGameObjectIDs.empty())
+					// If we're a child of the dragged object then don't allow (causes infinite recursion)
+					if (!bContainsChild)
 					{
-						bool bContainsChild = false;
-
 						for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
 						{
 							GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
-							if (draggedGameObject == gameObject)
+							GameObject* parent = draggedGameObject->GetParent();
+							if (parent != nullptr)
 							{
-								bContainsChild = true;
-								break;
-							}
-
-							if (draggedGameObject->HasChild(gameObject, true))
-							{
-								bContainsChild = true;
-								break;
-							}
-						}
-
-						// If we're a child of the dragged object then don't allow (causes infinite recursion)
-						if (!bContainsChild)
-						{
-							for (const GameObjectID& draggedGameObjectID : draggedGameObjectIDs)
-							{
-								GameObject* draggedGameObject = GetGameObject(draggedGameObjectID);
-								GameObject* parent = draggedGameObject->GetParent();
-								if (parent != nullptr)
+								// Parent isn't also being dragged
+								if (!Contains(draggedGameObjectIDs, parent->ID))
 								{
-									// Parent isn't also being dragged
-									if (!Contains(draggedGameObjectIDs, parent->ID))
-									{
-										draggedGameObject->DetachFromParent();
-										gameObject->AddChildImmediate(draggedGameObject);
-										bParentChildTreeDirty = true;
-									}
-								}
-								else
-								{
-									g_SceneManager->CurrentScene()->RemoveObjectImmediate(draggedGameObject, false);
+									draggedGameObject->DetachFromParent();
 									gameObject->AddChildImmediate(draggedGameObject);
 									bParentChildTreeDirty = true;
 								}
 							}
+							else
+							{
+								g_SceneManager->CurrentScene()->RemoveObjectImmediate(draggedGameObject, false);
+								gameObject->AddChildImmediate(draggedGameObject);
+								bParentChildTreeDirty = true;
+							}
 						}
 					}
 				}
-
-				const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
-				if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
-				{
-					PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
-					InstantiatePrefab(prefabID);
-				}
-
-				ImGui::EndDragDropTarget();
 			}
+
+			const ImGuiPayload* prefabPayload = ImGui::AcceptDragDropPayload(Editor::PrefabPayloadCStr);
+			if (prefabPayload != nullptr && prefabPayload->Data != nullptr)
+			{
+				PrefabID prefabID = *(PrefabID*)prefabPayload->Data;
+				InstantiatePrefab(prefabID);
+			}
+
+			ImGui::EndDragDropTarget();
 		}
 
 		if (bNodeOpen && bHasChildren)
@@ -1701,19 +1749,17 @@ namespace flex
 				// Don't cache results since children can change during this recursive call
 				for (GameObject* child : gameObject->GetChildren())
 				{
-					if (DrawImGuiGameObjectNameAndChildren(child))
+					if (DrawImGuiGameObjectNameAndChildren(child, bDrawingEditorObjects))
 					{
 						// If parent-child tree changed then early out
-
-						ImGui::Unindent();
-						ImGui::TreePop();
-
-						return true;
+						bParentChildTreeDirty = true;
+						break;
 					}
 				}
 				ImGui::Unindent();
 			}
 
+			// Only needed if bHasChildren because of ImGuiTreeNodeFlags_NoTreePushOnOpen
 			ImGui::TreePop();
 		}
 
@@ -1724,7 +1770,7 @@ namespace flex
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 		std::string prefabName = prefabTemplate->GetName();
-		std::string newObjectName = GetUniqueObjectName(prefabName);
+		std::string newObjectName = GetUniqueObjectName(prefabName, parent);
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, &newObjectName, parent);
 
 		newPrefabInstance->Initialize();
@@ -1735,7 +1781,7 @@ namespace flex
 		return newPrefabInstance;
 	}
 
-	GameObject* BaseScene::ReplacePrefab(const PrefabID& prefabID, GameObject* previousInstance)
+	GameObject* BaseScene::ReinstantiateFromPrefab(const PrefabID& prefabID, GameObject* previousInstance)
 	{
 		using CopyFlags = GameObject::CopyFlags;
 
@@ -1743,8 +1789,18 @@ namespace flex
 		GameObject* previousParent = previousInstance->m_Parent;
 		std::string previousName = previousInstance->m_Name;
 		CopyFlags copyFlags = (CopyFlags)(CopyFlags::ALL & ~CopyFlags::ADD_TO_SCENE);
+		i32 siblingIndex = previousInstance->GetSiblingIndex();
+
+		CHECK(!previousInstance->m_bIsTemplate);
 
 		GameObject* newPrefabInstance = GameObject::CreateObjectFromPrefabTemplate(prefabID, previousGameObjectID, &previousName, previousParent, nullptr, copyFlags);
+
+		if (newPrefabInstance == nullptr)
+		{
+			std::string idStr = prefabID.ToString();
+			PrintError("Failed to replace prefab with ID %s\n", idStr.c_str());
+			return nullptr;
+		}
 
 		// Place in root object list or as child of parent
 		if (previousParent == nullptr)
@@ -1764,26 +1820,79 @@ namespace flex
 			g_SceneManager->CurrentScene()->AddChildObject(previousParent, newPrefabInstance);
 		}
 
+		// Clear out old instance's ID to prevent it from unregistering
+		// the new object from various systems on destruction
+		//previousInstance->ID = InvalidGameObjectID;
 		previousInstance->Destroy(true);
 		delete previousInstance;
+		previousInstance = nullptr;
 
 		// Destroy will have removed our ID from the LUT
 		RegisterGameObject(newPrefabInstance);
 
+		g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+
 		newPrefabInstance->Initialize();
 		newPrefabInstance->PostInitialize();
+		newPrefabInstance->SetSiblingIndex(siblingIndex);
 
 		return newPrefabInstance;
+	}
+
+	u32 BaseScene::NumObjectsLoadedFromPrefabID(const PrefabID& prefabID) const
+	{
+		u32 total = 0;
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			total += rootObject->FilterCount([&prefabID](GameObject* gameObject)
+			{
+				return (gameObject->m_SourcePrefabID.m_PrefabID == prefabID);
+			});
+		}
+
+		return total;
+	}
+
+	void BaseScene::DeleteInstancesOfPrefab(const PrefabID& prefabID)
+	{
+		for (GameObject* rootGameObject : m_RootObjects)
+		{
+			DeleteInstancesOfPrefabRecursive(prefabID, rootGameObject);
+		}
+	}
+
+	void BaseScene::DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject)
+	{
+		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
+		{
+			RemoveObjectImmediate(gameObject, true);
+		}
+
+		for (GameObject* child : gameObject->m_Children)
+		{
+			DeleteInstancesOfPrefabRecursive(prefabID, child);
+		}
 	}
 
 	GameObject* BaseScene::GetGameObject(const GameObjectID& gameObjectID) const
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
-		if (iter == m_GameObjectLUT.end())
+		if (iter != m_GameObjectLUT.end())
 		{
-			return nullptr;
+			return iter->second;
 		}
-		return iter->second;
+		return nullptr;
+	}
+
+	GameObject* BaseScene::GetEditorObject(const EditorObjectID& editorObjectID) const
+	{
+		auto iter = m_EditorObjectLUT.find(editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
+		{
+			return iter->second;
+		}
+		return nullptr;
 	}
 
 	bool BaseScene::DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly /* = false */)
@@ -1854,7 +1963,35 @@ namespace flex
 
 	void BaseScene::SetTimeOfDay(real time)
 	{
-		m_TimeOfDay = glm::clamp(time, 0.0f, 1.0f);
+		time = glm::clamp(time, 0.0f, 1.0f);
+
+		if (!NearlyEquals(m_TimeOfDay, time, 1.0e-7f))
+		{
+			m_TimeOfDay = time;
+
+			i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
+			i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
+			real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
+
+			alpha = SmootherStep01(alpha);
+			alpha = SmootherStep01(alpha);
+			alpha = SmootherStep01(alpha);
+			m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
+			m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
+			m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
+			m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
+
+			DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+			if (dirLight != nullptr)
+			{
+				real azimuth = 0.0f;
+				real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
+				glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
+				rot = glm::rotate(rot, elevation, VEC3_RIGHT);
+				dirLight->GetTransform()->SetWorldRotation(rot);
+				dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
+			}
+		}
 	}
 
 	real BaseScene::GetTimeOfDay() const
@@ -1894,17 +2031,60 @@ namespace flex
 
 	void BaseScene::RegenerateTerrain()
 	{
-		TerrainGenerator* terrainGenerator = GetObjectOfType<TerrainGenerator>(SID("terrain generator"));
+		TerrainGenerator* terrainGenerator = GetFirstObjectOfType<TerrainGenerator>(TerrainGeneratorSID);
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->Regenerate();
 		}
 	}
 
+	void BaseScene::OnExternalMeshChange(const std::string& meshFilePath)
+	{
+		for (u32 i = 0; i < (u32)m_RootObjects.size(); ++i)
+		{
+			m_RootObjects[i]->OnExternalMeshChange(meshFilePath);
+		}
+	}
+
+	bool BaseScene::GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items)
+	{
+		real radiusSq = radius * radius;
+		for (DroppedItem* item : m_DroppedItems)
+		{
+			if (glm::distance2(pos, item->GetTransform()->GetWorldPosition()) < radiusSq)
+			{
+				items.push_back(item);
+			}
+		}
+
+		return !items.empty();
+	}
+
+	void BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel)
+	{
+		DroppedItem* item = new DroppedItem(prefabID, stackSize);
+		item->initialVel = initialVel;
+		Transform* itemTransform = item->GetTransform();
+		itemTransform->SetWorldPosition(dropPosWS, false);
+		itemTransform->SetWorldScale(glm::vec3(m_DroppedItemScale), true);
+
+		m_DroppedItems.push_back(item);
+
+		AddRootObject(item);
+	}
+
+	void BaseScene::OnDroppedItemDestroyed(DroppedItem* item)
+	{
+		if (!Erase(m_DroppedItems, item))
+		{
+			PrintWarn("Attempted to destroy dropped item not found in scene\n");
+		}
+	}
+
 	const char* BaseScene::GameObjectTypeIDToString(StringID typeID)
 	{
-		auto iter = GameObjectTypeStringIDPairs.find(typeID);
-		if (iter == GameObjectTypeStringIDPairs.end())
+		auto iter = g_ResourceManager->gameObjectTypeStringIDPairs.find(typeID);
+		if (iter == g_ResourceManager->gameObjectTypeStringIDPairs.end())
 		{
 			return "";
 		}
@@ -1926,7 +2106,7 @@ namespace flex
 
 		// TODO: Check for dirty prefabs in scene and warn user if so
 
-		success = g_ResourceManager->SerializeMaterialFile() && success;
+		success = g_ResourceManager->SerializeLoadedMaterials() && success;
 		//success &= BaseScene::SerializePrefabFile();
 
 		PROFILE_AUTO("Serialize scene");
@@ -1988,7 +2168,7 @@ namespace flex
 		{
 			if (rootObject->IsSerializable())
 			{
-				JSONObject rootObj = rootObject->Serialize(this, true);
+				JSONObject rootObj = rootObject->Serialize(this, true, false);
 				if (!rootObj.fields.empty())
 				{
 					objectsArray.push_back(rootObj);
@@ -2120,10 +2300,13 @@ namespace flex
 
 	void BaseScene::RegisterGameObject(GameObject* gameObject)
 	{
+		// Prefab templates shouldn't get registered in the scene
+		CHECK(!gameObject->IsPrefabTemplate());
+
 		auto iter = m_GameObjectLUT.find(gameObject->ID);
 		if (iter != m_GameObjectLUT.end())
 		{
-			assert(iter->second == gameObject);
+			CHECK_EQ(iter->second, gameObject);
 		}
 		m_GameObjectLUT[gameObject->ID] = gameObject;
 
@@ -2133,25 +2316,77 @@ namespace flex
 		}
 	}
 
-	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID)
+	void BaseScene::UnregisterGameObject(const GameObjectID& gameObjectID, bool bAssertSuccess /* = false */)
 	{
 		auto iter = m_GameObjectLUT.find(gameObjectID);
 		if (iter != m_GameObjectLUT.end())
 		{
 			m_GameObjectLUT.erase(iter);
+			return;
+		}
+
+		if (bAssertSuccess)
+		{
+			char gameObjectIDStr[33];
+			gameObjectID.ToString(gameObjectIDStr);
+			PrintError("Failed to unregister game object with ID %s\n", gameObjectIDStr);
 		}
 	}
 
-	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID)
+	void BaseScene::UnregisterGameObjectRecursive(const GameObjectID& gameObjectID, bool bAssertSuccess /* = false */)
 	{
 		GameObject* gameObject = GetGameObject(gameObjectID);
-		UnregisterGameObject(gameObjectID);
+		UnregisterGameObject(gameObjectID, bAssertSuccess);
 
 		if (gameObject != nullptr)
 		{
 			for (GameObject* child : gameObject->m_Children)
 			{
-				UnregisterGameObject(child->ID);
+				UnregisterGameObject(child->ID, bAssertSuccess);
+			}
+		}
+	}
+
+	void BaseScene::RegisterEditorObject(EditorObject* editorObject)
+	{
+		EditorObjectID* editorObjectID = (EditorObjectID*)&editorObject->ID;
+		auto iter = m_EditorObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
+		{
+			CHECK_EQ(iter->second, editorObject);
+		}
+		m_EditorObjectLUT[*editorObjectID] = editorObject;
+
+		for (GameObject* child : editorObject->m_Children)
+		{
+			RegisterEditorObject((EditorObject*)child);
+		}
+	}
+
+	void BaseScene::UnregisterEditorObject(EditorObjectID* editorObjectID)
+	{
+		auto iter =	m_EditorObjectLUT.find(*editorObjectID);
+		if (iter != m_EditorObjectLUT.end())
+		{
+			m_EditorObjectLUT.erase(iter);
+			return;
+		}
+
+		char editorObjectIDStr[33];
+		editorObjectID->ToString(editorObjectIDStr);
+		PrintError("Failed to unregister editor object with ID %s\n", editorObjectIDStr);
+	}
+
+	void BaseScene::UnregisterEditorObjectRecursive(EditorObjectID* editorObjectID)
+	{
+		GameObject* gameObject = GetEditorObject(*editorObjectID);
+		UnregisterEditorObject(editorObjectID);
+
+		if (gameObject != nullptr)
+		{
+			for (GameObject* child : gameObject->m_Children)
+			{
+				UnregisterEditorObject((EditorObjectID*)&child->ID);
 			}
 		}
 	}
@@ -2187,7 +2422,6 @@ namespace flex
 			return child;
 		}
 
-
 		parent->AddChildImmediate(child);
 
 		return child;
@@ -2219,6 +2453,41 @@ namespace flex
 		return newSibling;
 	}
 
+	void BaseScene::SetRootObjectIndex(GameObject* rootObject, i32 newIndex)
+	{
+		i32 previousIndex = rootObject->GetSiblingIndex();
+		ReorderItemInList(m_RootObjects, previousIndex, newIndex);
+
+		UpdateRootObjectSiblingIndices();
+	}
+
+	EditorObject* BaseScene::AddEditorObjectImmediate(EditorObject* editorObject)
+	{
+		m_EditorObjects.push_back(editorObject);
+
+		RegisterEditorObject(editorObject);
+
+		return editorObject;
+	}
+
+	void BaseScene::RemoveEditorObjectImmediate(EditorObject* editorObject)
+	{
+		for (auto iter = m_EditorObjects.begin(); iter != m_EditorObjects.end(); ++iter)
+		{
+			if ((*iter)->ID == editorObject->ID)
+			{
+				EditorObject* gameObject = *iter;
+
+				gameObject->Destroy();
+				delete gameObject;
+
+				m_EditorObjects.erase(iter);
+
+				break;
+			}
+		}
+	}
+
 	void BaseScene::RemoveAllObjects()
 	{
 		for (GameObject* rootObject : m_RootObjects)
@@ -2242,9 +2511,23 @@ namespace flex
 		}
 
 		m_GameObjectLUT.clear();
-		m_RootObjects.clear();
 
 		g_Renderer->RenderObjectStateChanged();
+	}
+
+	void BaseScene::RemoveAllEditorObjectsImmediate()
+	{
+		auto iter = m_EditorObjects.begin();
+		while (iter != m_EditorObjects.end())
+		{
+			EditorObject* gameObject = *iter;
+
+			// Recurses down child hierarchy
+			gameObject->Destroy();
+			delete gameObject;
+
+			iter = m_EditorObjects.erase(iter);
+		}
 	}
 
 	void BaseScene::RemoveObject(const GameObjectID& gameObjectID, bool bDestroy)
@@ -2464,49 +2747,6 @@ namespace flex
 		return InvalidGameObjectID;
 	}
 
-	void BaseScene::ReadGameObjectTypesFile()
-	{
-		GameObjectTypeStringIDPairs.clear();
-		std::string fileContents;
-		// TODO: Gather this info from reflection?
-		if (ReadFile(GAME_OBJECT_TYPES_LOCATION, fileContents, false))
-		{
-			std::vector<std::string> lines = Split(fileContents, '\n');
-			for (const std::string& line : lines)
-			{
-				if (!line.empty())
-				{
-					const char* lineCStr = line.c_str();
-					StringID typeID = Hash(lineCStr);
-					if (GameObjectTypeStringIDPairs.find(typeID) != GameObjectTypeStringIDPairs.end())
-					{
-						PrintError("Game Object Type hash collision on %s!\n", lineCStr);
-					}
-					GameObjectTypeStringIDPairs.emplace(typeID, line);
-				}
-			}
-		}
-		else
-		{
-			PrintError("Failed to read game object types file from %s!\n", GAME_OBJECT_TYPES_LOCATION);
-		}
-	}
-
-	void BaseScene::WriteGameObjectTypesFile()
-	{
-		StringBuilder fileContents;
-
-		for (auto iter = GameObjectTypeStringIDPairs.begin(); iter != GameObjectTypeStringIDPairs.end(); ++iter)
-		{
-			fileContents.AppendLine(iter->second);
-		}
-
-		if (!WriteFile(GAME_OBJECT_TYPES_LOCATION, fileContents.ToString(), false))
-		{
-			PrintError("Failed to write game object types file to %s\n", GAME_OBJECT_TYPES_LOCATION);
-		}
-	}
-
 	std::vector<GameObject*>& BaseScene::GetRootObjects()
 	{
 		return m_RootObjects;
@@ -2514,14 +2754,54 @@ namespace flex
 
 	void BaseScene::GetInteractableObjects(std::vector<GameObject*>& interactableObjects)
 	{
-		std::vector<GameObject*> allObjects = GetAllObjects();
-		for (GameObject* object : allObjects)
+		for (GameObject* rootObject : m_RootObjects)
 		{
-			if (object->m_bInteractable)
+			rootObject->Filter([](GameObject* gameObject)
 			{
-				interactableObjects.push_back(object);
+				return gameObject->m_bInteractable;
+			}, interactableObjects);
+		}
+	}
+
+	void BaseScene::GetNearbyInteractableObjects(std::list<Pair<GameObject*, real>>& sortedInteractableObjects,
+		const glm::vec3& posWS,
+		real sqDistThreshold,
+		GameObjectID excludeGameObjectID)
+	{
+		std::vector<GameObject*> nearbyInteractables;
+
+		for (GameObject* rootObject : m_RootObjects)
+		{
+			rootObject->Filter([excludeGameObjectID, &posWS, &sqDistThreshold](GameObject* gameObject)
+			{
+				if (gameObject->m_bInteractable && gameObject->ID != excludeGameObjectID)
+				{
+					real dist2 = glm::distance2(gameObject->GetTransform()->GetWorldPosition(), posWS);
+					if (dist2 <= sqDistThreshold)
+					{
+						return true;
+					}
+				}
+				return false;
+			}, nearbyInteractables);
+		}
+
+		for (GameObject* object : nearbyInteractables)
+		{
+			if (object->m_bInteractable && object->ID != excludeGameObjectID)
+			{
+				real dist2 = glm::distance2(object->GetTransform()->GetWorldPosition(), posWS);
+				if (dist2 <= sqDistThreshold)
+				{
+					sortedInteractableObjects.emplace_back(object, dist2);
+				}
 			}
 		}
+
+		sortedInteractableObjects.sort([](const Pair<GameObject*, real>& a, const Pair<GameObject*, real>& b)
+		{
+			return a.second < b.second;
+		});
 	}
 
 	void BaseScene::BindOnGameObjectDestroyedCallback(ICallbackGameObject* callback)
@@ -2549,7 +2829,7 @@ namespace flex
 
 	void BaseScene::SetName(const std::string& name)
 	{
-		assert(!name.empty());
+		CHECK(!name.empty());
 		m_Name = name;
 	}
 

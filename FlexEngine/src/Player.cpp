@@ -24,7 +24,9 @@ IGNORE_WARNINGS_POP
 #include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -33,26 +35,38 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 
 namespace flex
 {
-	Player::Player(i32 index, GameObjectID gameObjectID /* = InvalidGameObjectID */) :
-		GameObject("Player " + std::to_string(index), SID("player"), gameObjectID),
-		m_Index(index),
-		m_TrackPlacementReticlePos(0.0f, -1.95f, 3.5f)
+	const glm::vec3 Player::HEADLAMP_MOUNT_POS = glm::vec3(0.0f, 0.8f, 0.2f);
+
+	Player::Player(i32 index, GameObjectID gameObjectID) :
+		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID, InvalidPrefabIDPair, false),
+		m_Index(index)
 	{
+		m_TrackBuildingContext = {};
+		m_TrackBuildingContext.m_TrackPlacementReticlePos = glm::vec3(0.0f, -1.95f, 3.5f);
+		m_TrackBuildingContext.m_SnapThreshold = 1.0f;
+	}
+
+	PropertyCollection* Player::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		return collection;
 	}
 
 	void Player::Initialize()
 	{
-		m_SoundPlaceTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "click-02.wav");
-		m_SoundPlaceFinalTrackNodeID = AudioManager::AddAudioSource(SFX_DIRECTORY "jingle-single-01.wav");
-		m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "crunch-13.wav");
-		m_SoundTrackDetachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-02.wav");
-		m_SoundTrackSwitchDirID = AudioManager::AddAudioSource(SFX_DIRECTORY "whistle-01.wav");
-		//m_SoundTrackAttachID = AudioManager::AddAudioSource(SFX_DIRECTORY "schluck-07.wav");
+		m_SoundPlaceTrackNodeID = g_ResourceManager->GetOrLoadAudioSourceID(SID("click-02.wav"), true);
+		m_SoundPlaceFinalTrackNodeID = g_ResourceManager->GetOrLoadAudioSourceID(SID("jingle-single-01.wav"), true);
+		m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("crunch-13.wav"), true);
+		m_SoundTrackDetachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("schluck-02.wav"), true);
+		m_SoundTrackSwitchDirID = g_ResourceManager->GetOrLoadAudioSourceID(SID("whistle-01.wav"), true);
+		//m_SoundTrackAttachID = g_ResourceManager->GetOrLoadAudioSourceID(SID("schluck-07.wav"), true);
 
 		MaterialCreateInfo matCreateInfo = {};
 		matCreateInfo.name = "Player " + std::to_string(m_Index) + " material";
@@ -63,7 +77,7 @@ namespace flex
 		matCreateInfo.bSerializable = false;
 		MaterialID matID = g_Renderer->InitializeMaterial(&matCreateInfo);
 
-		RigidBody* rigidBody = new RigidBody((i32)CollisionType::DEFAULT, (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT);
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::DEFAULT, (u32)CollisionType::STATIC | (u32)CollisionType::DEFAULT);
 		rigidBody->SetAngularDamping(2.0f);
 		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
@@ -92,7 +106,7 @@ namespace flex
 			mapTabletMatCreateInfo.bSerializable = false;
 			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
 
-			m_MapTabletHolder = new GameObject("Map tablet", SID("object"));
+			m_MapTabletHolder = new GameObject("Map tablet", BaseObjectSID);
 			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
 			AddChild(m_MapTabletHolder);
 
@@ -105,7 +119,7 @@ namespace flex
 				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
 			}
 
-			m_MapTablet = new GameObject("Map tablet mesh", SID("object"));
+			m_MapTablet = new GameObject("Map tablet mesh", BaseObjectSID);
 			Mesh* mapTabletMesh = m_MapTablet->SetMesh(new Mesh(m_MapTablet));
 			mapTabletMesh->LoadFromFile(MESH_DIRECTORY "map_tablet.glb", mapTabletMatID);
 			m_MapTabletHolder->AddChild(m_MapTablet);
@@ -113,7 +127,10 @@ namespace flex
 			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
 		}
 
-		m_CrosshairTextureID = g_Renderer->InitializeTextureFromFile(TEXTURE_DIRECTORY "cross-hair-01.png", false, false, false);
+		TextureLoadInfo loadInfo = {};
+		loadInfo.relativeFilePath = TEXTURE_DIRECTORY "cross-hair-01.png";
+		loadInfo.sampler = g_Renderer->GetSamplerLinearClampToEdge();
+		m_CrosshairTextureID = g_ResourceManager->QueueTextureLoad(loadInfo);
 
 		ParseInventoryFile();
 
@@ -130,17 +147,17 @@ namespace flex
 
 	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
-		if (m_Controller)
+		if (m_Controller != nullptr)
 		{
 			m_Controller->Destroy();
 			delete m_Controller;
 		}
 
-		AudioManager::DestroyAudioSource(m_SoundPlaceTrackNodeID);
-		AudioManager::DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
-		AudioManager::DestroyAudioSource(m_SoundTrackAttachID);
-		AudioManager::DestroyAudioSource(m_SoundTrackDetachID);
-		AudioManager::DestroyAudioSource(m_SoundTrackSwitchDirID);
+		g_ResourceManager->DestroyAudioSource(m_SoundPlaceTrackNodeID);
+		g_ResourceManager->DestroyAudioSource(m_SoundPlaceFinalTrackNodeID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackAttachID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackDetachID);
+		g_ResourceManager->DestroyAudioSource(m_SoundTrackSwitchDirID);
 
 		GameObject::Destroy(bDetachFromParent);
 	}
@@ -184,15 +201,15 @@ namespace flex
 		}
 		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
 
-		if (terminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
+		if (m_TerminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
 		{
-			Terminal* terminal = (Terminal*)terminalInteractingWithID.Get();
+			Terminal* terminal = (Terminal*)m_TerminalInteractingWithID.Get();
 			terminal->DrawImGuiWindow();
 		}
 
-		if (ridingVehicleID.IsValid())
+		if (m_RidingVehicleID.IsValid())
 		{
-			Vehicle* vehicle = (Vehicle*)ridingVehicleID.Get();
+			Vehicle* vehicle = (Vehicle*)m_RidingVehicleID.Get();
 
 			const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
 
@@ -205,7 +222,89 @@ namespace flex
 			Reset();
 		}
 
+		std::vector<DroppedItem*> nearbyItems;
+		if (scene->GetDroppedItemsInRadius(m_Transform.GetWorldPosition(), m_ItemPickupRadius, nearbyItems))
+		{
+			for (DroppedItem* item : nearbyItems)
+			{
+				if (item->CanBePickedUp())
+				{
+					AddToInventory(item);
+				}
+			}
+		}
+
+		if (m_HeldItemLeftHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemLeftHand);
+		}
+
+		if (m_HeldItemRightHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemRightHand);
+		}
+
+		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		if (stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory))
+		{
+			if (m_ActiveItem.IsValid())
+			{
+				if (m_ActiveItem.m_SourcePrefabID != stack.prefabID)
+				{
+					m_ActiveItem.Clear();
+				}
+			}
+			else
+			{
+				m_ActiveItem.Create(stack.prefabID);
+			}
+		}
+		else
+		{
+			m_ActiveItem.Clear();
+		}
+
+		if (m_ActiveItem.IsValid())
+		{
+			GameObject::UpdateActiveItem(m_ActiveItem);
+		}
+
+		if (m_ItemPickingTimer != -1.0f)
+		{
+			m_ItemPickingTimer -= g_DeltaTime;
+
+			if (m_ItemPickingTimer <= 0.0f)
+			{
+				GameObjectStack::UserData itemUserData = {};
+				PrefabID itemID = m_ItemPickingUp->Itemize(itemUserData);
+				AddToInventory(itemID, 1, itemUserData);
+
+				SetItemPickingUp(nullptr);
+			}
+			else
+			{
+				GameObject* pickedItem = GetObjectPointedAt();
+				if (pickedItem == nullptr || pickedItem != m_ItemPickingUp)
+				{
+					SetItemPickingUp(nullptr);
+				}
+				else
+				{
+					real startAngle = PI_DIV_TWO - (1.0f - m_ItemPickingTimer / m_ItemPickingDuration) * TWO_PI;
+					real endAngle = PI_DIV_TWO;
+					g_Renderer->GetUIMesh()->DrawArc(VEC2_ZERO, startAngle, endAngle, 0.05f, 0.025f, 32, VEC4_ONE);
+				}
+			}
+		}
+
 		GameObject::Update();
+	}
+
+	void Player::FixedUpdate()
+	{
+		GameObject::FixedUpdate();
+
+		m_Controller->FixedUpdate();
 	}
 
 	void Player::SetPitch(real pitch)
@@ -245,7 +344,25 @@ namespace flex
 		glm::vec3 lookDir = rotMat[2];
 		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
 
-		return lookDir;
+		return glm::normalize(lookDir);
+	}
+
+	glm::quat Player::GetLookRotation() const
+	{
+		glm::quat rotWS = glm::rotate(QUAT_IDENTITY, m_Pitch, m_Transform.GetRight());
+		rotWS *= m_Transform.GetWorldRotation();
+		return rotWS;
+	}
+
+	glm::vec3 Player::GetHeldItemPosWS(Hand hand) const
+	{
+		glm::vec3 right = m_Transform.GetRight();
+
+		glm::vec3 offset = m_Transform.GetWorldPosition() +
+			GetLookDirection() * 5.0f +
+			m_Transform.GetUp() * -0.75f +
+			((hand == Hand::LEFT) ? -right : right);
+		return offset;
 	}
 
 	i32 Player::GetIndex() const
@@ -263,9 +380,47 @@ namespace flex
 		return m_Controller;
 	}
 
-	void Player::DrawImGuiObjects()
+	template<typename T>
+	void DrawInventoryImGui(const char* inventoryName, i32 highlightedIndex, const T& inventory)
 	{
-		GameObject::DrawImGuiObjects();
+		if (ImGui::TreeNode(inventoryName))
+		{
+			for (i32 i = 0; i < (i32)inventory.size(); ++i)
+			{
+				const bool bHeld = (i == highlightedIndex);
+				if (bHeld)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
+				}
+
+				if (inventory[i].count != 0)
+				{
+					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(inventory[i].prefabID);
+					if (prefabTemplate != nullptr)
+					{
+						std::string prefabTemplateName = prefabTemplate->GetName();
+						ImGui::Text("%s (%i), User data: %.3f", prefabTemplateName.c_str(), inventory[i].count, inventory[i].userData.floatVal);
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
+						ImGui::Text("INVALID (%i)", inventory[i].count);
+						ImGui::PopStyleColor();
+					}
+				}
+
+				if (bHeld)
+				{
+					ImGui::PopStyleColor();
+				}
+			}
+			ImGui::TreePop();
+		}
+	}
+
+	void Player::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		std::string treeNodeName = "Player " + IntToString(m_Index);
 		if (ImGui::TreeNode(treeNodeName.c_str()))
@@ -284,60 +439,37 @@ namespace flex
 				ImGui::Unindent();
 			}
 
-			ImGui::Text("Held item slot: %i", heldItemSlot);
+			ImGui::Text("Selected slot: %i", m_SelectedQuickAccessItemSlot);
 
-			ImGui::Text("Inventory:");
-			ImGui::Indent();
-			for (const GameObjectStack& gameObjectStack : m_Inventory)
 			{
-				if (gameObjectStack.count != 0)
-				{
-					GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-					if (prefabTemplate != nullptr)
-					{
-						std::string prefabTemplateName = prefabTemplate->GetName();
-						ImGui::Text("%s (%i)", prefabTemplateName.c_str(), gameObjectStack.count);
-					}
-					else
-					{
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 0, 0, 1));
-						ImGui::Text("INVALID (%i)", gameObjectStack.count);
-						ImGui::PopStyleColor();
-					}
-				}
-			}
-			ImGui::Unindent();
+				char idBuff[33];
 
-			ImGui::Text("Quick access inventory:");
-			ImGui::Indent();
-			for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
-			{
-
-				const bool bHeld = (i == heldItemSlot);
-				if (bHeld)
+				if (m_HeldItemLeftHand.IsValid())
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.3f, 1.0f));
-				}
-
-				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QuickAccessInventory[i].prefabID);
-				if (prefabTemplate != nullptr)
-				{
-					std::string prefabTemplateName = prefabTemplate->GetName();
-					ImGui::Text("%s (%i)", prefabTemplateName.c_str(), m_QuickAccessInventory[i].count);
+					m_HeldItemLeftHand.ToString(idBuff);
+					ImGui::TextWrapped("Held item (L):\n  %s (%s)", idBuff, m_HeldItemLeftHand.Get()->GetName().c_str());
 				}
 				else
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, bHeld ? ImVec4(0.7f, 0.7f, 0.7f, 1.0f) : ImVec4(0.6f, 0.6f, 0.6f, 1));
-					ImGui::Text("Empty");
-					ImGui::PopStyleColor();
+					ImGui::TextWrapped("Held item (L): Empty");
 				}
 
-				if (bHeld)
+				if (m_HeldItemRightHand.IsValid())
 				{
-					ImGui::PopStyleColor();
+					m_HeldItemRightHand.ToString(idBuff);
+					ImGui::TextWrapped("Held item (R):\n  %s (%s)", idBuff, m_HeldItemRightHand.Get()->GetName().c_str());
+				}
+				else
+				{
+					ImGui::TextWrapped("Held item (R): Empty");
 				}
 			}
-			ImGui::Unindent();
+
+			DrawInventoryImGui("Inventory", -1, m_Inventory);
+			DrawInventoryImGui("Quick access inventory", m_SelectedQuickAccessItemSlot, m_QuickAccessInventory);
+			DrawInventoryImGui("Wearables inventory", -1, m_WearablesInventory);
+
+			m_Controller->DrawImGuiObjects();
 
 			ImGui::TreePop();
 		}
@@ -383,7 +515,7 @@ namespace flex
 
 	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */, bool bSnapToHandles /* = false */) const
 	{
-		glm::vec3 offsetWS = m_TrackPlacementReticlePos;
+		glm::vec3 offsetWS = m_TrackBuildingContext.m_TrackPlacementReticlePos;
 		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
 		offsetWS = rotMat * glm::vec4(offsetWS, 1.0f);
 
@@ -406,7 +538,7 @@ namespace flex
 	{
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		BezierCurveList* track = trackManager->GetTrack(trackID);
-		assert(track);
+		CHECK_NE(track, nullptr);
 
 		if (m_TrackRidingID != InvalidTrackID)
 		{
@@ -462,17 +594,14 @@ namespace flex
 		}
 	}
 
-	i32 Player::GetNextFreeQuickAccessInventorySlot()
+	void Player::DropSelectedItem()
 	{
-		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
-		{
-			if (m_QuickAccessInventory[i].count == 0)
-			{
-				return i;
-			}
-		}
+		DropItemStack(GetGameObjectStackIDForQuickAccessInventory(m_SelectedQuickAccessItemSlot), false);
+	}
 
-		return -1;
+	bool Player::HasFullSelectedInventorySlot()
+	{
+		return m_QuickAccessInventory[m_SelectedQuickAccessItemSlot].count > 0;
 	}
 
 	i32 Player::GetNextFreeInventorySlot()
@@ -488,48 +617,134 @@ namespace flex
 		return -1;
 	}
 
+	i32 Player::GetNextFreeQuickAccessInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_QuickAccessInventory.size(); ++i)
+		{
+			if (m_QuickAccessInventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+
+		return -1;
+	}
+
+	i32 Player::GetNextFreeMinerInventorySlot()
+	{
+		if (m_NearbyInteractableID.IsValid() && m_NearbyInteractableID.Get()->GetTypeID() == MinerSID)
+		{
+			Miner* miner = (Miner*)m_NearbyInteractableID.Get();
+			return miner->GetNextFreeInventorySlot();
+		}
+		else
+		{
+			PrintWarn("Attempted to get free inventory slot from miner inventory when not being interacted with\n");
+			return -1;
+		}
+	}
+
 	bool Player::IsRidingTrack()
 	{
 		return m_TrackRidingID != InvalidTrackID;
 	}
 
-	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID)
+	GameObjectStack* Player::GetGameObjectStackFromInventory(GameObjectStackID stackID, InventoryType& outInventoryType)
 	{
-		if ((i32)stackID < QUICK_ACCESS_ITEM_COUNT)
+		if ((i32)stackID < INVENTORY_MAX)
 		{
-			return &m_QuickAccessInventory[(i32)stackID];
+			outInventoryType = InventoryType::PLAYER_INVENTORY;
+			return &m_Inventory[(i32)stackID - INVENTORY_MIN];
 		}
-		if ((i32)stackID < (QUICK_ACCESS_ITEM_COUNT + INVENTORY_ITEM_COUNT))
+		if ((i32)stackID < INVENTORY_QUICK_ACCESS_MAX)
 		{
-			return &m_Inventory[(i32)stackID - QUICK_ACCESS_ITEM_COUNT];
+			outInventoryType = InventoryType::QUICK_ACCESS;
+			return &m_QuickAccessInventory[(i32)stackID - INVENTORY_QUICK_ACCESS_MIN];
+		}
+		if ((i32)stackID < INVENTORY_WEARABLES_MAX)
+		{
+			outInventoryType = InventoryType::WEARABLES;
+			return &m_WearablesInventory[(i32)stackID - INVENTORY_WEARABLES_MIN];
+		}
+		if ((i32)stackID < INVENTORY_MINER_MAX)
+		{
+			if (m_NearbyInteractableID.IsValid() && m_NearbyInteractableID.Get()->GetTypeID() == MinerSID)
+			{
+				Miner* miner = (Miner*)m_NearbyInteractableID.Get();
+				outInventoryType = InventoryType::MINER_INVENTORY;
+				return miner->GetStackFromInventory((i32)stackID - INVENTORY_MINER_MIN);
+			}
+			else
+			{
+				PrintWarn("Attempted to get game object from miner inventory when not being interacted with\n");
+				outInventoryType = InventoryType::NONE;
+				return nullptr;
+			}
 		}
 
+		outInventoryType = InventoryType::NONE;
 		PrintWarn("Attempted to get item from inventory with invalid stackID: %d!\n", (i32)stackID);
 		return nullptr;
 	}
 
-	bool Player::MoveItem(GameObjectStackID fromID, GameObjectStackID toID)
+	bool Player::MoveItemStack(GameObjectStackID fromID, GameObjectStackID toID)
 	{
-		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID);
-		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID);
+		InventoryType fromInventoryType, toInventoryType;
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID, fromInventoryType);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID, toInventoryType);
 
 		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
 		{
-			if (toStack->count == 0)
+			bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
+			bool bToWearables = toInventoryType == InventoryType::WEARABLES;
+
+			if (bToWearables)
 			{
-				toStack->prefabID = fromStack->prefabID;
-				toStack->count = fromStack->count;
-				fromStack->prefabID = InvalidPrefabID;
-				fromStack->count = 0;
-				return true;
-			}
-			else if ((toStack->count + fromStack->count) <= MAX_STACK_SIZE)
-			{
-				if (toStack->prefabID == fromStack->prefabID)
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(fromStack->prefabID);
+				if (prefabTemplate->IsWearable())
 				{
+					if (toStack->count == 0 && fromStack->count == 1)
+					{
+						toStack->prefabID = fromStack->prefabID;
+						toStack->count = fromStack->count;
+						toStack->userData = fromStack->userData;
+						fromStack->Clear();
+
+						if (!bFromWearables)
+						{
+							// Only needed if the item wasn't being worn already
+							OnWearableEquipped(toStack);
+						}
+
+						return true;
+					}
+				}
+			}
+			else
+			{
+				if (toStack->count == 0)
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					toStack->prefabID = fromStack->prefabID;
+					toStack->count = fromStack->count;
+					toStack->userData = fromStack->userData;
+					fromStack->Clear();
+					return true;
+				}
+				else if (toStack->prefabID == fromStack->prefabID &&
+					(u32)(toStack->count + fromStack->count) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
 					toStack->count = toStack->count + fromStack->count;
-					fromStack->prefabID = InvalidPrefabID;
-					fromStack->count = 0;
+					fromStack->Clear();
 					return true;
 				}
 			}
@@ -538,38 +753,249 @@ namespace flex
 		return false;
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(i32 slotIndex)
+	bool Player::MoveSingleItemFromStack(GameObjectStackID fromID, GameObjectStackID toID)
 	{
-		if (slotIndex >= 0 && slotIndex < QUICK_ACCESS_ITEM_COUNT)
+		InventoryType fromInventoryType, toInventoryType;
+		GameObjectStack* fromStack = GetGameObjectStackFromInventory(fromID, fromInventoryType);
+		GameObjectStack* toStack = GetGameObjectStackFromInventory(toID, toInventoryType);
+
+		if (fromStack != nullptr && toStack != nullptr && fromStack != toStack)
 		{
-			return (GameObjectStackID)slotIndex;
+			bool bFromWearables = fromInventoryType == InventoryType::WEARABLES;
+			bool bToWearables = toInventoryType == InventoryType::WEARABLES;
+
+			if (bToWearables)
+			{
+				GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(fromStack->prefabID);
+				if (prefabTemplate->IsWearable())
+				{
+					if (toStack->count == 0 && fromStack->count >= 1)
+					{
+						toStack->prefabID = fromStack->prefabID;
+						toStack->count = 1;
+						toStack->userData = fromStack->userData;
+						--fromStack->count;
+						if (fromStack->count == 0)
+						{
+							fromStack->Clear();
+						}
+
+						if (!bFromWearables)
+						{
+							// Only needed if the item wasn't being worn already
+							OnWearableEquipped(toStack);
+						}
+
+						return true;
+					}
+				}
+			}
+			else
+			{
+				if (toStack->count == 0)
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					toStack->prefabID = fromStack->prefabID;
+					toStack->count = 1;
+					toStack->userData = fromStack->userData;
+					--fromStack->count;
+					if (fromStack->count == 0)
+					{
+						fromStack->Clear();
+					}
+					return true;
+				}
+				else if (toStack->prefabID == fromStack->prefabID &&
+					(u32)(toStack->count + 1) <= g_ResourceManager->GetMaxStackSize(toStack->prefabID))
+				{
+					if (bFromWearables)
+					{
+						OnWearableUnequipped(fromStack);
+					}
+
+					++toStack->count;
+					--fromStack->count;
+					if (fromStack->count == 0)
+					{
+						fromStack->Clear();
+					}
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	bool Player::DropItemStack(GameObjectStackID stackID, bool bDestroyItem)
+	{
+		InventoryType inventoryType;
+		GameObjectStack* stack = GetGameObjectStackFromInventory(stackID, inventoryType);
+
+		if (stack != nullptr)
+		{
+			bool bFromWearables = inventoryType == InventoryType::WEARABLES;
+
+			if (bFromWearables)
+			{
+				OnWearableUnequipped(stack);
+			}
+
+			if (!bDestroyItem)
+			{
+				CreateDroppedItemFromStack(stack);
+			}
+
+			stack->Clear();
+			return true;
+		}
+
+		return false;
+	}
+
+	bool Player::DropSingleItemFromStack(GameObjectStackID stackID, bool bDestroyItem)
+	{
+		InventoryType inventoryType;
+		GameObjectStack* stack = GetGameObjectStackFromInventory(stackID, inventoryType);
+
+		if (stack != nullptr && stack->count > 0)
+		{
+			bool bFromWearables = inventoryType == InventoryType::WEARABLES;
+
+			if (bFromWearables)
+			{
+				OnWearableUnequipped(stack);
+			}
+
+			if (!bDestroyItem)
+			{
+				CreateDroppedItemFromStack(stack);
+			}
+
+			--stack->count;
+			if (stack->count == 0)
+			{
+				stack->Clear();
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	i32 Player::MoveStackBetweenInventories(GameObjectStackID stackID, InventoryType destInventoryType, i32 countToMove)
+	{
+		InventoryType sourceInventoryType;
+		GameObjectStack* sourceStack = GetGameObjectStackFromInventory(stackID, sourceInventoryType);
+		if (sourceInventoryType != destInventoryType && sourceStack != nullptr)
+		{
+			if (countToMove == -1)
+			{
+				countToMove = sourceStack->count;
+			}
+			u32 itemsNotMoved = AddToInventory(sourceStack->prefabID, countToMove, sourceStack->userData, destInventoryType);
+			if (itemsNotMoved == 0)
+			{
+				sourceStack->count -= countToMove;
+				if (sourceStack->count == 0)
+				{
+					sourceStack->Clear();
+				}
+				return 0;
+			}
+			else
+			{
+				sourceStack->count = itemsNotMoved;
+				return itemsNotMoved;
+			}
+		}
+
+		return countToMove;
+	}
+
+	void Player::CreateDroppedItemFromStack(GameObjectStack* stack)
+	{
+		glm::vec3 lookDir = GetLookDirection();
+		glm::vec3 dropPos = m_Transform.GetWorldPosition() + lookDir * m_ItemDropPosForwardOffset;
+		g_SceneManager->CurrentScene()->CreateDroppedItem(
+			stack->prefabID,
+			stack->count,
+			dropPos,
+			lookDir * m_ItemDropForwardVelocity);
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForInventory(u32 slotIndex)
+	{
+		if (slotIndex <= INVENTORY_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_MIN);
 		}
 		return InvalidID;
 	}
 
+	GameObjectStackID Player::GetGameObjectStackIDForQuickAccessInventory(u32 slotIndex)
+	{
+		if (slotIndex <= QUICK_ACCESS_ITEM_COUNT)
+		{
+			return (GameObjectStackID)slotIndex + INVENTORY_QUICK_ACCESS_MIN;
+		}
+		return InvalidID;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForWearablesInventory(u32 slotIndex)
+	{
+		if (slotIndex <= WEARABLES_ITEM_COUNT)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_WEARABLES_MIN);
+		}
+		return InvalidID;
+	}
+
+	GameObjectStackID Player::GetGameObjectStackIDForMinerInventory(u32 slotIndex)
+	{
+		if (slotIndex <= Miner::INVENTORY_SIZE)
+		{
+			return (GameObjectStackID)(slotIndex + INVENTORY_MINER_MIN);
+		}
+		return InvalidID;
+	}
+
+	void Player::AddToInventory(DroppedItem* droppedItem)
+	{
+		GameObjectStack::UserData userData = {};
+		AddToInventory(droppedItem->prefabID, droppedItem->stackSize, userData);
+
+		droppedItem->OnPickedUp();
+
+		g_SceneManager->CurrentScene()->RemoveObject(droppedItem, true);
+	}
+
 	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
-		i32 initialCount = count;
+		AddToInventory(prefabID, count, {});
+	}
 
-		auto printResults = [initialCount, &prefabID, &count]()
-		{
-			std::string itemName = g_ResourceManager->GetPrefabTemplate(prefabID)->GetName();
-			Print("Added %d \"%s\"s to player inventory\n", initialCount - count, itemName.c_str());
-		};
+	void Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+	{
+		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 
 		// Fill up any existing slots in quick access
 		for (GameObjectStack& gameObjectStack : m_QuickAccessInventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
 			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				i32 deposit = glm::min(((i32)maxStackSize - gameObjectStack.count), count);
 				count -= deposit;
 				gameObjectStack.count += deposit;
+				// TODO: Merge user data here
 			}
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -577,16 +1003,16 @@ namespace flex
 		// Fill up any existing slots in main inventory
 		for (GameObjectStack& gameObjectStack : m_Inventory)
 		{
-			if (gameObjectStack.prefabID == prefabID && gameObjectStack.count <= MAX_STACK_SIZE)
+			if (gameObjectStack.prefabID == prefabID && (gameObjectStack.count + 1) <= maxStackSize)
 			{
-				i32 deposit = glm::min((MAX_STACK_SIZE - gameObjectStack.count), count);
+				i32 deposit = glm::min(((i32)maxStackSize - gameObjectStack.count), count);
 				count -= deposit;
 				gameObjectStack.count += deposit;
+				// TODO: Merge user data here
 			}
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -596,15 +1022,15 @@ namespace flex
 		{
 			if (gameObjectStack.count == 0)
 			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				i32 deposit = glm::min((i32)maxStackSize, count);
 				count -= deposit;
 				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
+				gameObjectStack.count = deposit;
+				gameObjectStack.userData = userData;
 			}
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
@@ -614,35 +1040,94 @@ namespace flex
 		{
 			if (gameObjectStack.count == 0)
 			{
-				i32 deposit = glm::min(MAX_STACK_SIZE, count);
+				i32 deposit = glm::min((i32)maxStackSize, count);
 				count -= deposit;
 				gameObjectStack.prefabID = prefabID;
-				gameObjectStack.count += deposit;
+				gameObjectStack.count = deposit;
+				gameObjectStack.userData = userData;
 			}
 
 			if (count == 0)
 			{
-				printResults();
 				return;
 			}
 		}
-
-		printResults();
 	}
 
-	GameObjectStackID Player::GetGameObjectStackIDForInventory(i32 slotIndex)
+	u32 Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType)
 	{
-		if (slotIndex >= 0 && slotIndex < INVENTORY_ITEM_COUNT)
+		switch (inventoryType)
 		{
-			return (GameObjectStackID)(slotIndex + QUICK_ACCESS_ITEM_COUNT);
+		case InventoryType::QUICK_ACCESS:
+			return MoveToInventory(&m_QuickAccessInventory[0], (u32)m_QuickAccessInventory.size(), prefabID, count, userData);
+		case InventoryType::PLAYER_INVENTORY:
+			return MoveToInventory(&m_Inventory[0], (u32)m_Inventory.size(), prefabID, count, userData);
+		case InventoryType::WEARABLES:
+			return MoveToInventory(&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), prefabID, count, userData);
+		case InventoryType::MINER_INVENTORY:
+		{
+			if (m_NearbyInteractableID.IsValid())
+			{
+				GameObject* nearbyInteractable = m_NearbyInteractableID.Get();
+				if (nearbyInteractable->GetTypeID() == MinerSID)
+				{
+					Miner* miner = (Miner*)nearbyInteractable;
+					return miner->AddToInventory(prefabID, count, userData);
+				}
+			}
+		} break;
 		}
-		return InvalidID;
+
+		return count;
+	}
+
+	u32 Player::MoveToInventory(GameObjectStack* inventory, u32 inventorySize, const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+	{
+		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
+
+		// Fill up any existing slots
+		for (u32 i = 0; i < inventorySize; ++i)
+		{
+			if (inventory[i].prefabID == prefabID && (inventory[i].count + 1) <= maxStackSize)
+			{
+				i32 deposit = glm::min((maxStackSize - inventory[i].count), count);
+				count -= deposit;
+				inventory[i].count += deposit;
+				// TODO: Merge user data here
+			}
+
+			if (count == 0)
+			{
+				return 0;
+			}
+		}
+
+		// Fill empty slots
+		for (u32 i = 0; i < inventorySize; ++i)
+		{
+			if (inventory[i].count == 0)
+			{
+				i32 deposit = glm::min(maxStackSize, count);
+				count -= deposit;
+				inventory[i].prefabID = prefabID;
+				inventory[i].count = deposit;
+				inventory[i].userData = userData;
+			}
+
+			if (count == 0)
+			{
+				return 0;
+			}
+		}
+
+		return count;
 	}
 
 	void Player::ClearInventory()
 	{
 		m_Inventory.fill({});
 		m_QuickAccessInventory.fill({});
+		m_WearablesInventory.fill({});
 	}
 
 	void Player::ParseInventoryFile()
@@ -655,32 +1140,38 @@ namespace flex
 				JSONObject inventoryObj;
 				if (JSONParser::Parse(fileContents, inventoryObj))
 				{
-					std::vector<JSONObject> slotLists[2];
+					std::vector<JSONObject> slotLists[3];
 
 					inventoryObj.TryGetObjectArray("slots", slotLists[0]);
 					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
+					inventoryObj.TryGetObjectArray("wearable slots", slotLists[2]);
 
-					for (i32 slotListIndex = 0; slotListIndex < 2; ++slotListIndex)
+					for (i32 slotListIndex = 0; slotListIndex < ARRAY_LENGTH(slotLists); ++slotListIndex)
 					{
 						for (JSONObject& slot : slotLists[slotListIndex])
 						{
 							i32 index = slot.GetInt("index");
 							i32 count = slot.GetInt("count");
 							PrefabID prefabID = slot.GetPrefabID("prefab id");
+							i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
 
 							bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
-							bool bCountValid = count >= 0 && count <= MAX_STACK_SIZE;
+							bool bCountValid = count >= 0 && count <= maxStackSize;
 							bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
 
 							if (bIndexValid && bCountValid && bPrefabIDValid)
 							{
 								if (slotListIndex == 0)
 								{
-									m_Inventory[index] = GameObjectStack{ prefabID, count };
+									m_Inventory[index] = GameObjectStack(prefabID, count);
 								}
-								else
+								else if (slotListIndex == 1)
 								{
-									m_QuickAccessInventory[index] = GameObjectStack{ prefabID, count };
+									m_QuickAccessInventory[index] = GameObjectStack(prefabID, count);
+								}
+								else if (slotListIndex == 2)
+								{
+									m_WearablesInventory[index] = GameObjectStack(prefabID, count);
 								}
 							}
 							else
@@ -701,12 +1192,19 @@ namespace flex
 							}
 						}
 					}
+
+					for (const GameObjectStack& stack : m_WearablesInventory)
+					{
+						if (stack.count > 0)
+						{
+							OnWearableEquipped(&stack);
+						}
+					}
 				}
 				else
 				{
 					PrintError("Failed to parse user inventory file, error: %s\n", JSONParser::GetErrorString());
 				}
-
 			}
 			else
 			{
@@ -732,31 +1230,22 @@ namespace flex
 		};
 
 		std::vector<JSONObject> slots;
-		slots.reserve(m_Inventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)m_Inventory.size(); ++slotIdx)
+		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), slots))
 		{
-			GameObjectStack& stack = m_Inventory[slotIdx];
-			if (stack.count > 0)
-			{
-				JSONObject slot = SerializeSlot(slotIdx, stack);
-				slots.emplace_back(slot);
-			}
+			inventoryObj.fields.emplace_back("slots", JSONValue(slots));
 		}
 
 		std::vector<JSONObject> quickAccessSlots;
-		quickAccessSlots.reserve(m_QuickAccessInventory.size());
-		for (i32 slotIdx = 0; slotIdx < (i32)m_QuickAccessInventory.size(); ++slotIdx)
+		if (SerializeInventory((GameObjectStack*)&m_QuickAccessInventory[0], (u32)m_QuickAccessInventory.size(), quickAccessSlots))
 		{
-			GameObjectStack& stack = m_QuickAccessInventory[slotIdx];
-			if (stack.count > 0)
-			{
-				JSONObject slot = SerializeSlot(slotIdx, stack);
-				quickAccessSlots.emplace_back(slot);
-			}
+			inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
 		}
 
-		inventoryObj.fields.emplace_back("slots", JSONValue(slots));
-		inventoryObj.fields.emplace_back("quick access slots", JSONValue(quickAccessSlots));
+		std::vector<JSONObject> wearablesSlots;
+		if (SerializeInventory((GameObjectStack*)&m_WearablesInventory[0], (u32)m_WearablesInventory.size(), wearablesSlots))
+		{
+			inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
+		}
 
 		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
 
@@ -775,36 +1264,39 @@ namespace flex
 	{
 		if (terminal != nullptr)
 		{
-			assert(!terminalInteractingWithID.IsValid());
+			CHECK(!m_TerminalInteractingWithID.IsValid());
 
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			BaseCamera* currCam = g_CameraManager->CurrentCamera();
 			TerminalCamera* terminalCam = nullptr;
-			if (cam->type == CameraType::TERMINAL)
+			if (currCam->type == CameraType::TERMINAL)
 			{
-				terminalCam = static_cast<TerminalCamera*>(cam);
+				terminalCam = static_cast<TerminalCamera*>(currCam);
+				terminalCam->SetTerminal(terminal);
 			}
 			else
 			{
 				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
+				g_CameraManager->AlignCameras(currCam, terminalCam);
+				terminalCam->SetTerminal(terminal);
 				g_CameraManager->PushCamera(terminalCam, true, true);
 			}
-			terminalCam->SetTerminal(terminal);
 
-			terminalInteractingWithID = terminal->ID;
+			m_TerminalInteractingWithID = terminal->ID;
 			terminal->SetBeingInteractedWith(this);
 		}
 		else
 		{
-			assert(terminalInteractingWithID.IsValid());
-			Terminal* terminalInteractingWith = (Terminal*)terminalInteractingWithID.Get();
+			Terminal* terminalInteractingWith = (Terminal*)m_TerminalInteractingWithID.Get();
+			if (terminalInteractingWith != nullptr)
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				CHECK_EQ((u32)cam->type, (u32)CameraType::TERMINAL);
+				TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
+				terminalCam->SetTerminal(nullptr);
 
-			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			assert(cam->type == CameraType::TERMINAL);
-			TerminalCamera* terminalCam = static_cast<TerminalCamera*>(cam);
-			terminalCam->SetTerminal(nullptr);
-
-			terminalInteractingWith->SetBeingInteractedWith(nullptr);
-			terminalInteractingWithID = InvalidGameObjectID;
+				terminalInteractingWith->SetBeingInteractedWith(nullptr);
+				m_TerminalInteractingWithID = InvalidGameObjectID;
+			}
 		}
 	}
 
@@ -812,11 +1304,11 @@ namespace flex
 	{
 		if (vehicle != nullptr)
 		{
-			assert(!ridingVehicleID.IsValid());
+			CHECK(!m_RidingVehicleID.IsValid());
 
 			vehicle->OnPlayerEnter();
 
-			ridingVehicleID = vehicle->ID;
+			m_RidingVehicleID = vehicle->ID;
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			VehicleCamera* vehicleCamera = nullptr;
@@ -831,10 +1323,10 @@ namespace flex
 		}
 		else
 		{
-			Vehicle* ridingVehicle = (Vehicle*)ridingVehicleID.Get();
+			Vehicle* ridingVehicle = (Vehicle*)m_RidingVehicleID.Get();
 			ridingVehicle->OnPlayerExit();
 
-			ridingVehicleID = InvalidGameObjectID;
+			m_RidingVehicleID = InvalidGameObjectID;
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (cam->type == CameraType::VEHICLE)
@@ -848,14 +1340,14 @@ namespace flex
 
 	bool Player::PickupWithFreeHand(GameObject* object)
 	{
-		if (!heldItemLeftHand.IsValid())
+		if (!m_HeldItemLeftHand.IsValid())
 		{
-			heldItemLeftHand = object->ID;
+			m_HeldItemLeftHand = object->ID;
 			return true;
 		}
-		if (!heldItemRightHand.IsValid())
+		if (!m_HeldItemRightHand.IsValid())
 		{
-			heldItemRightHand = object->ID;
+			m_HeldItemRightHand = object->ID;
 			return true;
 		}
 		return false;
@@ -863,26 +1355,377 @@ namespace flex
 
 	bool Player::IsHolding(GameObject* object)
 	{
-		return heldItemLeftHand == object->ID || heldItemRightHand == object->ID;
+		return m_HeldItemLeftHand == object->ID || m_HeldItemRightHand == object->ID;
 	}
 
 	void Player::DropIfHolding(GameObject* object)
 	{
 		if (object != nullptr)
 		{
-			if (heldItemLeftHand == object->ID)
+			if (m_HeldItemLeftHand == object->ID)
 			{
-				heldItemLeftHand = InvalidGameObjectID;
+				m_HeldItemLeftHand = InvalidGameObjectID;
 			}
-			if (heldItemRightHand == object->ID)
+			if (m_HeldItemRightHand == object->ID)
 			{
-				heldItemRightHand = InvalidGameObjectID;
+				m_HeldItemRightHand = InvalidGameObjectID;
 			}
 		}
 	}
 
 	bool Player::HasFreeHand() const
 	{
-		return !heldItemLeftHand.IsValid() || !heldItemRightHand.IsValid();
+		return !m_HeldItemLeftHand.IsValid() || !m_HeldItemRightHand.IsValid();
 	}
+
+	void Player::OnWearableEquipped(GameObjectStack const* wearableStack)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
+		CHECK(prefabTemplate->IsWearable());
+
+		switch (prefabTemplate->GetTypeID())
+		{
+		case HeadLampSID:
+		{
+			GameObject* headLamp = prefabTemplate->CopySelf(this, GameObject::ALL);
+			headLamp->GetTransform()->SetLocalPosition(HEADLAMP_MOUNT_POS);
+		} break;
+		default:
+		{
+			PrintError("Unhandled wearable equipped\n");
+		} break;
+		}
+	}
+
+	void Player::OnWearableUnequipped(GameObjectStack const* wearableStack)
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(wearableStack->prefabID);
+		CHECK(prefabTemplate->IsWearable());
+
+		switch (prefabTemplate->GetTypeID())
+		{
+		case HeadLampSID:
+		{
+			std::vector<HeadLamp*> headlamps;
+			GetChildrenOfType<HeadLamp>(HeadLampSID, true, headlamps);
+			if (headlamps.size() == 1)
+			{
+				if (!RemoveChildImmediate(headlamps[0]->ID, true))
+				{
+					PrintError("Failed to remove headlamp from player\n");
+				}
+			}
+			else
+			{
+				PrintError("Failed to find headlamp child in player\n");
+			}
+		} break;
+		default:
+		{
+			PrintError("Unhandled wearable unequipped\n");
+		} break;
+		}
+	}
+
+	bool Player::IsAnyInventoryShowing() const
+	{
+		return m_bInventoryShowing || m_bMinerInventoryShowing;
+	}
+
+	bool Player::IsInventoryShowing() const
+	{
+		return m_bInventoryShowing;
+	}
+
+	bool Player::IsMinerInventoryShowing() const
+	{
+		return m_bMinerInventoryShowing;
+	}
+
+	bool Player::PlaceNewTrackNode()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bPlacingTrack);
+
+		glm::vec3 posWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
+
+		ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = posWS;
+		if (ctx.m_CurveNodesPlaced == 4)
+		{
+			AudioManager::PlaySource(m_SoundPlaceFinalTrackNodeID);
+
+			ctx.m_CurvePlacing.CalculateLength();
+			ctx.m_TrackPlacing.curves.push_back(ctx.m_CurvePlacing);
+
+			glm::vec3 prevHandlePos = ctx.m_CurvePlacing.points[2];
+
+			ctx.m_CurveNodesPlaced = 0;
+			ctx.m_CurvePlacing.points[0] = VEC3_ZERO;
+			ctx.m_CurvePlacing.points[1] = VEC3_ZERO;
+			ctx.m_CurvePlacing.points[2] = VEC3_ZERO;
+			ctx.m_CurvePlacing.points[3] = VEC3_ZERO;
+
+			glm::vec3 controlPointPos = posWS;
+			glm::vec3 nextHandlePos = controlPointPos + (controlPointPos - prevHandlePos);
+			ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = controlPointPos;
+			ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = nextHandlePos;
+		}
+		else
+		{
+			AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+		}
+
+		for (i32 i = 3; i > ctx.m_CurveNodesPlaced - 1; --i)
+		{
+			ctx.m_CurvePlacing.points[i] = posWS;
+		}
+
+		return true;
+	}
+
+	bool Player::AttemptCompleteTrack()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bPlacingTrack);
+
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+		ctx.m_CurveNodesPlaced = 0;
+		ctx.m_CurvePlacing.points[0] = VEC3_ZERO;
+		ctx.m_CurvePlacing.points[1] = VEC3_ZERO;
+		ctx.m_CurvePlacing.points[2] = VEC3_ZERO;
+		ctx.m_CurvePlacing.points[3] = VEC3_ZERO;
+
+		if (!ctx.m_TrackPlacing.curves.empty())
+		{
+			trackManager->AddTrack(ctx.m_TrackPlacing);
+			trackManager->FindJunctions();
+			ctx.m_TrackPlacing.curves.clear();
+		}
+
+		return true;
+	}
+
+	void Player::DrawTrackDebug() const
+	{
+		const TrackBuildingContext& ctx = m_TrackBuildingContext;
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+		static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
+		static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
+		static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
+		static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
+
+		for (const BezierCurve3D& curve : ctx.m_TrackPlacing.curves)
+		{
+			curve.DrawDebug(false, placedCurveCol, placedCurveCol);
+		}
+
+		if (ctx.m_TrackEditingID != InvalidTrackID)
+		{
+			BezierCurveList* trackEditing = trackManager->GetTrack(ctx.m_TrackEditingID);
+			for (const BezierCurve3D& curve : trackEditing->curves)
+			{
+				curve.DrawDebug(false, editedCurveCol, editingCurveCol);
+			}
+		}
+
+		if (ctx.m_CurveNodesPlaced > 0)
+		{
+			ctx.m_CurvePlacing.DrawDebug(false, placingCurveCol, placingCurveCol);
+		}
+
+		glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
+		btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(placementPosWS));
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		if (ctx.m_bPlacingTrack || ctx.m_bEditingTrack)
+		{
+			static btVector3 ringColEditing(0.6f, 0.1f, 0.5f);
+			static btVector3 ringColEditingActive(0.4f, 0.2f, 0.85f);
+			static btVector3 placingCol(0.18f, 0.22f, 0.35f);
+
+			btVector3 col = ctx.m_bPlacingTrack ? placingCol :
+				ctx.m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive;
+
+			debugRenderer->drawCylinder(0.6f, 0.01f, 1, cylinderTransform, col);
+			debugRenderer->drawCylinder(0.605f, 0.01f, 1, cylinderTransform, col);
+			debugRenderer->drawCylinder(1.1f, 0.01f, 1, cylinderTransform, col);
+			debugRenderer->drawCylinder(1.105f, 0.01f, 1, cylinderTransform, col);
+		}
+	}
+
+	void Player::SelectNearestTrackCurve()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling SelectNearestTrackCurve");
+		CHECK(ctx.m_TrackEditingCurveIdx == -1);// "Must have deselect track editing curve index before calling SelectNearestTrackCurve");
+
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+		real snapThreshold = ctx.m_TrackEditingID == InvalidTrackID ? ctx.m_SnapThreshold : 0.0f;
+		// TODO: Snap to points other than the one we are editing
+		glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(snapThreshold, true);
+		//glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
+
+		const real range = 0.1f;
+
+		TrackID trackID;
+		i32 curveIndex, pointIndex;
+		if (trackManager->GetPointInRange(placementPosWS, range, &trackID, &curveIndex, &pointIndex))
+		{
+			ctx.m_TrackEditingID = trackID;
+			ctx.m_TrackEditingCurveIdx = curveIndex;
+			ctx.m_TrackEditingPointIdx = pointIndex;
+		}
+	}
+
+	void Player::DeselectTrackCurve()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling DeselectTrackCurve");
+		CHECK(ctx.m_TrackEditingCurveIdx != -1); // "Must have selected track editing curve index before calling DeselectTrackCurve");
+
+		ctx.m_TrackEditingID = InvalidTrackID;
+		ctx.m_TrackEditingCurveIdx = -1;
+		ctx.m_TrackEditingPointIdx = -1;
+	}
+
+	void Player::UpdateTrackEditing()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling UpdateTrackEditing");
+
+		if (ctx.m_TrackEditingID != InvalidTrackID)
+		{
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+			BezierCurveList* trackEditing = trackManager->GetTrack(ctx.m_TrackEditingID);
+			glm::vec3 point = trackEditing->GetPointOnCurve(ctx.m_TrackEditingCurveIdx, ctx.m_TrackEditingPointIdx);
+
+			// TODO: Snap to points other than the one we are editing
+			glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold, true);
+
+			glm::vec3 newPoint(placementPosWS.x, point.y, placementPosWS.z);
+			trackEditing->SetPointPosAtIndex(ctx.m_TrackEditingCurveIdx, ctx.m_TrackEditingPointIdx, newPoint, true);
+
+			trackManager->FindJunctions();
+		}
+	}
+
+	void Player::ToggleEditingTrack()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+
+		ctx.m_bEditingTrack = !ctx.m_bEditingTrack;
+		ctx.m_bPlacingTrack = false;
+	}
+
+	void Player::TogglePlacingTrack()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+
+		ctx.m_bPlacingTrack = !ctx.m_bPlacingTrack;
+		ctx.m_bEditingTrack = false;
+	}
+
+	void Player::SetHeldItem(Hand hand, GameObjectID gameObjectID)
+	{
+		if (hand == Hand::LEFT)
+		{
+			m_HeldItemLeftHand = gameObjectID;
+		}
+		else
+		{
+			m_HeldItemRightHand = gameObjectID;
+		}
+	}
+
+	void Player::SpawnWire()
+	{
+		if (!m_HeldItemLeftHand.IsValid() && !m_HeldItemRightHand.IsValid())
+		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			Wire* wire = (Wire*)GameObject::CreateObjectOfType(WireSID, currentScene->GetUniqueObjectName("wire_", 3));
+
+			Transform* wireTransform = wire->GetTransform();
+
+			glm::vec3 targetPos = m_Transform.GetWorldPosition() +
+				GetLookDirection() * 5.0f +
+				m_Transform.GetUp() * -0.75f;
+
+			wireTransform->SetWorldPosition(targetPos, false);
+
+			currentScene->AddRootObject(wire);
+
+			CHECK(!GetHeldItem(Hand::LEFT).IsValid());
+			CHECK(!GetHeldItem(Hand::RIGHT).IsValid());
+
+			SetHeldItem(Hand::LEFT, wire->plug0ID);
+			SetHeldItem(Hand::RIGHT, wire->plug1ID);
+		}
+	}
+
+	bool Player::AbleToInteract() const
+	{
+		return m_bPossessed  &&
+			!m_RidingVehicleID.IsValid() &&
+			!m_TerminalInteractingWithID.IsValid();
+	}
+
+	void Player::SetSelectedQuickAccessItemSlot(i32 selectedQuickAccessItemSlot)
+	{
+		if (m_SelectedQuickAccessItemSlot == selectedQuickAccessItemSlot)
+		{
+			return;
+		}
+
+		m_SelectedQuickAccessItemSlot = selectedQuickAccessItemSlot;
+	}
+
+	void Player::ResetItemPickingTimer()
+	{
+		m_ItemPickingTimer = -1.0f;
+	}
+
+	GameObject* Player::GetObjectPointedAt() const
+	{
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+		btVector3 rayStart, rayEnd;
+		FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, m_ItemPickupMaxDist);
+
+		const btRigidBody* pickedBody = physicsWorld->PickFirstBody(rayStart, rayEnd);
+
+		if (pickedBody != nullptr)
+		{
+			GameObject* gameObject = static_cast<GameObject*>(pickedBody->getUserPointer());
+			real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Transform.GetWorldPosition());
+			if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
+			{
+				return gameObject;
+			}
+		}
+
+		return nullptr;
+	}
+
+	void Player::SetItemPickingUp(GameObject* pickedItem)
+	{
+		if (pickedItem == nullptr)
+		{
+			m_ItemPickingUp = nullptr;
+			ResetItemPickingTimer();
+			return;
+		}
+
+		if (m_ItemPickingUp != nullptr)
+		{
+			PrintError("Attempted to pick up item while m_ItemPickingUp was non-null, ignoring additional requests\n");
+			return;
+		}
+
+		m_ItemPickingUp = pickedItem;
+		m_ItemPickingTimer = m_ItemPickingDuration;
+	}
+
 } // namespace flex

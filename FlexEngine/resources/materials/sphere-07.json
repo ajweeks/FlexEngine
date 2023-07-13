@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "sphere 07",
+		"shader" : "pbr",
+		"const albedo" : "0.390,0.350,0.320",
+		"const roughness" : 0.700000
+	}
+}

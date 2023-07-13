@@ -11,7 +11,6 @@ namespace flex
 	public:
 		BezierCurveList();
 		explicit BezierCurveList(const std::vector<BezierCurve3D>& curves);
-		~BezierCurveList();
 
 		void InitializeFromJSON(const JSONObject& obj);
 
@@ -44,7 +43,7 @@ namespace flex
 		void DEBUG_GenerateRandomSeed();
 
 		real m_DebugColourRandomSeed = -1.0f;
-		btVector4* m_BaseColour = nullptr;
+		btVector4 m_BaseColour;
 
 	};
 } // namespace flex

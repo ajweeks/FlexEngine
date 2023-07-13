@@ -2,6 +2,7 @@
 
 #include <vector>
 
+#include "GUID.hpp"
 #include "Types.hpp"
 
 namespace flex
@@ -11,6 +12,28 @@ namespace flex
 	struct JSONObject;		// Holds fields
 	struct ParsedJSONFile;	// Holds a root object
 
+	enum class ValueType
+	{
+		STRING,
+		INT,
+		UINT,
+		LONG,
+		ULONG,
+		FLOAT,
+		BOOL,
+		VEC2,
+		VEC3,
+		VEC4,
+		QUAT,
+		MAT4,
+		GUID,
+		OBJECT,
+		OBJECT_ARRAY,
+		FIELD_ARRAY,
+		FIELD_ENTRY,
+		UNINITIALIZED
+	};
+
 	struct JSONObject
 	{
 		bool HasField(const std::string& label) const;
@@ -19,13 +42,21 @@ namespace flex
 		bool TryGetString(const std::string& label, std::string& value) const;
 		StringID GetStringID(const std::string& label) const;
 		bool TryGetStringID(const std::string& label, StringID& value) const;
-		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
-		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
-		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
 
 		glm::vec2 GetVec2(const std::string& label) const;
+		bool TryGetVec2(const std::string& label, glm::vec2& value) const;
+
 		glm::vec3 GetVec3(const std::string& label) const;
+		bool TryGetVec3(const std::string& label, glm::vec3& value) const;
+
 		glm::vec4 GetVec4(const std::string& label) const;
+		bool TryGetVec4(const std::string& label, glm::vec4& value) const;
+
+		glm::quat GetQuat(const std::string& label) const;
+		bool TryGetQuat(const std::string& label, glm::quat& value) const;
+
+		glm::mat4 GetMat4(const std::string& label) const;
+		bool TryGetMat4(const std::string& label, glm::mat4& value) const;
 
 		i32 GetInt(const std::string& label) const;
 		bool TryGetInt(const std::string& label, i32& value) const;
@@ -63,7 +94,12 @@ namespace flex
 		const JSONObject& GetObject(const std::string& label) const;
 		bool TryGetObject(const std::string& label, JSONObject& value) const;
 
+		bool TryGetValueOfType(const char* label, void* valuePtr, ValueType type) const;
+
 		std::string ToString(i32 tabCount = 0) const;
+
+		bool operator!=(const JSONObject& other);
+		bool operator==(const JSONObject& other);
 
 		static JSONObject s_EmptyObject;
 		static std::vector<JSONObject> s_EmptyObjectArray;
@@ -74,25 +110,9 @@ namespace flex
 
 	struct JSONValue
 	{
-		enum class Type
-		{
-			STRING,
-			INT,
-			UINT,
-			LONG,
-			ULONG,
-			FLOAT,
-			BOOL,
-			OBJECT,
-			OBJECT_ARRAY,
-			FIELD_ARRAY,
-			FIELD_ENTRY,
-			UNINITIALIZED
-		};
-
 		static const u32 DEFAULT_FLOAT_PRECISION = 6;
 
-		static Type TypeFromChar(char c, const std::string& stringAfter);
+		static ValueType TypeFromChar(char c, const std::string& stringAfter);
 
 		explicit JSONValue();
 		explicit JSONValue(const std::string& inStrValue);
@@ -104,10 +124,20 @@ namespace flex
 		explicit JSONValue(real inFloatValue);
 		explicit JSONValue(real inFloatValue, u32 precision);
 		explicit JSONValue(bool inBoolValue);
+		explicit JSONValue(const glm::vec2& inVec2Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::vec3& inVec3Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::vec4& inVec4Value, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::quat& inQuatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const glm::mat4& inMatValue, u32 inFloatPrecision = DEFAULT_FLOAT_PRECISION);
+		explicit JSONValue(const GUID& inGUIDValue);
 		explicit JSONValue(const JSONObject& inObjectValue);
 		explicit JSONValue(const std::vector<JSONObject>& inObjectArrayValue);
 		explicit JSONValue(const std::vector<JSONField>& inFieldArrayValue);
-		explicit JSONValue(const GUID& inGUIDValue);
+
+		static JSONValue FromRawPtr(void* valuePtr, ValueType type, u32 precision = DEFAULT_FLOAT_PRECISION);
+
+		bool operator!=(const JSONValue& other);
+		bool operator==(const JSONValue& other);
 
 		i32 AsInt() const;
 		u32 AsUInt() const;
@@ -116,8 +146,15 @@ namespace flex
 		real AsFloat() const;
 		bool AsBool() const;
 		std::string AsString() const;
+		glm::vec2 AsVec2() const;
+		glm::vec3 AsVec3() const;
+		glm::vec4 AsVec4() const;
+		glm::mat4 AsMat4() const;
+		glm::quat AsQuat() const;
+		GUID AsGUID() const;
 
-		Type type = Type::UNINITIALIZED;
+		ValueType type = ValueType::UNINITIALIZED;
+
 		union
 		{
 			i32 intValue = 0;
@@ -125,13 +162,16 @@ namespace flex
 			i64 longValue;
 			u64 ulongValue;
 			real floatValue;
-			bool boolValue;
+			glm::vec4 vecValue;
+			glm::mat4 matValue;
 		};
+		GUID guidValue;
 		JSONObject objectValue;
 		std::string strValue;
-		u32 floatPrecision;
 		std::vector<JSONField> fieldArrayValue;
 		std::vector<JSONObject> objectArrayValue;
+
+		u32 floatPrecision;
 	};
 
 	struct JSONField
@@ -139,9 +179,15 @@ namespace flex
 		JSONField();
 		JSONField(const std::string& label, const JSONValue& value);
 
+		bool operator!=(const JSONField& other);
+		bool operator==(const JSONField& other);
+
 		std::string label;
 		JSONValue value;
 
 		std::string ToString(i32 tabCount) const;
 	};
+
+	bool DrawImGuiForValueType(void* valuePtr, const char* label, ValueType type, bool valueMinSet, bool valueMaxSet, void* valueMin, void* valueMax);
+
 } // namespace flex

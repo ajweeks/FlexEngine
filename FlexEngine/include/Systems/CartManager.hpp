@@ -6,7 +6,7 @@
 
 namespace flex
 {
-	class Cart;
+	class BaseCart;
 	class EngineCart;
 	class BaseScene;
 
@@ -46,10 +46,9 @@ namespace flex
 
 		virtual void DrawImGui() override;
 
-		// Creates a new cart with given name and adds to the current scene
-		Cart* CreateCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID, bool bPrefabTemplate = false);
-		EngineCart* CreateEngineCart(const std::string& name, GameObjectID gameObjectID = InvalidGameObjectID, bool bPrefabTemplate = false);
-		Cart* GetCart(CartID cartID) const;
+		CartID RegisterCart(BaseCart* cart);
+		void DeregisterCart(BaseCart* cart);
+		BaseCart* GetCart(CartID cartID) const;
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);
 
@@ -61,7 +60,8 @@ namespace flex
 		// Allocates room for and return the id of the next cart chain ID
 		CartChainID GetNextAvailableCartChainID();
 
-		std::vector<Cart*> m_Carts;
+		// TODO: Store GameObjectIDs
+		std::vector<BaseCart*> m_Carts;
 		std::vector<CartChain> m_CartChains;
 
 	};

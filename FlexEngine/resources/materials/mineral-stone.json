@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "mineral stone",
+		"shader" : "pbr",
+		"const albedo" : "0.109,0.109,0.109",
+		"const metallic" : 1.000000
+	}
+}

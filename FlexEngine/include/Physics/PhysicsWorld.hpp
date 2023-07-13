@@ -15,6 +15,8 @@ class btDiscreteDynamicsWorld;
 class btDynamicsWorld;
 class btRigidBody;
 class btCollisionObject;
+class btConvexShape;
+class btTransform;
 
 namespace flex
 {
@@ -27,7 +29,7 @@ namespace flex
 		void Initialize();
 		void Destroy();
 
-		void Update(sec deltaSeconds);
+		void StepSimulation(sec deltaSeconds);
 
 		btDiscreteDynamicsWorld* GetWorld();
 
@@ -37,14 +39,19 @@ namespace flex
 		const btRigidBody* PickFirstBody(const btVector3& rayStart, const btVector3& rayEnd);
 
 		// Returns the first body hit along the given ray with the given tag
-		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, i32 mask = (i32)CollisionType::DEFAULT);
+		GameObject* PickTaggedBody(const btVector3& rayStart, const btVector3& rayEnd, const std::string& tag, u32 mask = (u32)CollisionType::DEFAULT);
+
+		bool GetPointOnGround(const glm::vec3& startingPoint, glm::vec3& outPointOnGround);
+		bool GetPointOnGround(const btConvexShape* shape, const btTransform& from, const btTransform& to, glm::vec3& outPointOnGround, glm::vec3& outGroundNormal);
+
+		static const u32 MAX_SUBSTEPS;
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);
 
 		btDiscreteDynamicsWorld* m_World = nullptr;
 
-		static const u32 MAX_SUBSTEPS = 32;
+		real m_AccumulatedTime = 0.0f;
 
 		std::set<std::pair<const btCollisionObject*, const btCollisionObject*>> m_CollisionPairs;
 	};

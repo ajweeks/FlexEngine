@@ -19,7 +19,7 @@ solution "Flex"
 		"Release_WithSymbols"
 	}
 
-	platforms { "x32", "x64" }
+	platforms { "x64" }
 
 	language "C++"
 
@@ -83,7 +83,6 @@ function windowsPlatformPostBuild()
 				--copy dlls and resources after build
 				local cfgStr = configName(cfgs[i])
 				postbuildcommands {
-					-- TODO: Copy into x32 & x64 build dirs
 					"copy \"$(SolutionDir)..\\FlexEngine\\lib\\" .. p[j] .. "\\" .. cfgStr .. "\\openal32.dll\" \"$(OutDir)\\\""
 				}
 		end
@@ -107,14 +106,11 @@ configuration "Release"
 configuration "Release_WithSymbols"
 	defines { "RELEASE", "SYMBOLS" }
 	flags {"OptimizeSpeed", "Symbols", "No64BitChecks" }
-configuration "x32"
-	defines "FLEX_32"
 configuration "x64"
 	defines "FLEX_64"
 configuration {}
 
 configuration {}
-	flags { "NoIncrementalLink", "NoEditAndContinue", "NoJMC" }
 	includedirs { path.join(SOURCE_DIR, "include") }
 
 	-- Files to include that shouldn't get warnings reported on
@@ -139,11 +135,8 @@ configuration {}
 configuration "vs*"
 	defines { "PLATFORM_Win", "_WINDOWS" }
 	linkoptions { "/ignore:4221", "/NODEFAULTLIB:LIBCMTD" }
-configuration { "vs*", "x32" }
-	flags { "EnableSSE2" }
-	defines { "WIN32" }
-configuration { "x32" }
-	defines { "PLATFORM_x32" }
+configuration { "vs*", "DEBUG" }
+	links { "Dbghelp" }
 configuration "linux*"
 	defines { "linux", "__linux", "__linux__" }
 configuration {}
@@ -153,7 +146,7 @@ startproject "Flex"
 
 project "Flex"
 	kind "ConsoleApp"
-	defines { "_CONSOLE", "USE_PL=1" } -- TODO: don't include palanteer in release
+	defines { "_CONSOLE", "USE_PL=0" } -- TODO: don't include palanteer in release
 	location "../build"
 	outputDirectories("FlexEngine")
 
@@ -186,7 +179,8 @@ project "Flex"
 		}
 		buildoptions_cpp {
 			-- Ignored warnings:
-			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess", "-Wno-unused-but-set-variable", "-Wno-unused-variable", "-Wno-sign-compare",
+			"-Wno-reorder", "-Wno-unused-parameter", "-Wno-switch", "-Wno-class-memaccess", "-Wno-unused-but-set-variable",
+			"-Wno-unused-variable", "-Wno-sign-compare","-Wno-invalid-offsetof",
 			"-Wall", "-Werror", "-Wpedantic"
 		}
 		buildoptions_c {

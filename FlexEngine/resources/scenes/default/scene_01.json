@@ -1,0 +1,139 @@
+{
+	"version" : 7,
+	"name" : "scene_01",
+	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "0.199, 9.093, 14.948",
+			"pitch" : -0.176009,
+			"yaw" : -1.418519
+		}
+	},
+	"objects" : 
+	[
+		{
+			"id" : "F4C0DE9056DC45A74172C62CC9A7E227",
+			"name" : "Skybox",
+			"type" : "skybox",
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			]
+		},
+		{
+			"id" : "7A0F9013C64D24844C0BF0B3AF9BE178",
+			"name" : "Directional light",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"pos" : "0.000, 22.690, 0.657",
+				"rot" : "1.600, -0.000, 0.000"
+			},
+			"directional light info" : 
+			{
+				"colour" : "0.99,1.00,0.84",
+				"brightness" : 3.00
+			}
+		},
+		{
+			"id" : "8321E42A1F1A5A914C5DC6458D232456",
+			"name" : "Ground plane",
+			"type" : "object",
+			"transform" : 
+			{
+				"scale" : "200.000, 1.000, 200.000"
+			},
+			"mesh" : "cube.glb",
+			"materials" : 
+			[
+				"grid"
+			],
+			"collider" : 
+			{
+				"shape" : "box",
+				"half extents" : "0.500,0.500,0.500"
+			},
+			"rigid body" : 
+			{
+				"mass" : 0.000000,
+				"kinematic" : true,
+				"static" : true,
+				"mask" : 1,
+				"group" : 1
+			}
+		},
+		{
+			"id" : "4C9C78A00C232CA5489AC7AA32FEF1D4",
+			"name" : "Dragon 01",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "9.356, 0.598, -8.452",
+				"rot" : "-3.141, -0.921, -3.141",
+				"scale" : "8.649, 8.649, 8.649"
+			},
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"Blue paint"
+			]
+		},
+		{
+			"id" : "1621FAD36034C4B040D58EA9A8570C6F",
+			"name" : "Dragon 02",
+			"type" : "object",
+			"transform" : 
+			{
+				"pos" : "-7.404, 0.598, -8.452",
+				"rot" : "3.141, 1.156, 3.141",
+				"scale" : "6.859, 6.859, 6.859"
+			},
+			"mesh" : "dragon_mid.glb",
+			"materials" : 
+			[
+				"pbr red"
+			]
+		},
+		{
+			"id" : "954D2055FA978F844A030BE5EBC57AB9",
+			"name" : "Spot Light 0",
+			"type" : "spot light",
+			"transform" : 
+			{
+				"pos" : "2.825, 7.003, -32.365",
+				"rot" : "0.372, -0.930, 0.000"
+			},
+			"spot light info" : 
+			{
+				"angle" : 0.760,
+				"brightness" : 1000.000
+			}
+		},
+		{
+			"id" : "E2DB097955490E834244057B074927B0",
+			"name" : "Terminal",
+			"type" : "terminal",
+			"transform" : 
+			{
+				"pos" : "-2.900, 1.244, -24.400",
+				"rot" : "0.000, 0.440, 0.000"
+			},
+			"terminal" : 
+			{
+				"script file path" : ""
+			}
+		}
+	]
+}

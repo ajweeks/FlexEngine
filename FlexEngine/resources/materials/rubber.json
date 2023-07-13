@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "rubber",
+		"shader" : "pbr",
+		"const albedo" : "0.014,0.014,0.014",
+		"const roughness" : 0.980000
+	}
+}

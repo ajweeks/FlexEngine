@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "mineral olivine",
+		"shader" : "pbr",
+		"const albedo" : "0.278,0.953,0.543"
+	}
+}

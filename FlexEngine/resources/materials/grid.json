@@ -1,0 +1,12 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "grid",
+		"shader" : "pbr_ws",
+		"const albedo" : "0.055,0.055,0.055",
+		"const roughness" : 1.000000,
+		"enable albedo sampler" : true,
+		"albedo texture filepath" : "alpha-bg.png"
+	}
+}

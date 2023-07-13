@@ -11,21 +11,26 @@
 
 namespace flex
 {
-	std::array<AudioManager::Source, AudioManager::NUM_BUFFERS> AudioManager::s_Sources;
-	std::list<AudioSourceID> AudioManager::s_TemporarySources;
-
-	ALCcontext* AudioManager::s_Context = nullptr;
-	ALCdevice* AudioManager::s_Device = nullptr;
+	real AudioManager::s_MasterGain = 0.2f;
+	bool AudioManager::s_Muted = false;
 
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
 	u8* AudioManager::s_WaveData[NUM_BUFFERS];
 	u32 AudioManager::s_WaveDataLengths[NUM_BUFFERS];
 	u32 AudioManager::s_WaveDataVersions[NUM_BUFFERS];
 
-	real AudioManager::s_MasterGain = 0.2f;
-	bool AudioManager::s_Muted = false;
+	std::array<AudioManager::Source, AudioManager::NUM_BUFFERS> AudioManager::s_Sources;
+	std::list<AudioSourceID> AudioManager::s_TemporarySources;
+
+	std::vector<AudioEffect> AudioManager::s_Effects;
+
+	ALCcontext* AudioManager::s_Context = nullptr;
+	ALCdevice* AudioManager::s_Device = nullptr;
 
 	AudioSourceID AudioManager::s_BeepID = InvalidAudioSourceID;
+
+	i32 AudioManager::SLOT_DEFAULT_2D = -1;
+	i32 AudioManager::SLOT_DEFAULT_3D = -1;
 
 	SoundClip_Looping::SoundClip_Looping()
 	{}
@@ -144,7 +149,7 @@ namespace flex
 			stateLength = std::max(AudioManager::GetSourceLength(start) - m_FadeDuration, 0.0f);
 			if (offset != -1.0f)
 			{
-				AudioManager::PlaySourceFromPos(start, offset);
+				AudioManager::PlaySourceAtOffset(start, offset);
 			}
 			else
 			{
@@ -191,7 +196,7 @@ namespace flex
 			stateLength = AudioManager::GetSourceLength(end);
 			if (offset != -1.0f)
 			{
-				AudioManager::PlaySourceFromPos(end, offset);
+				AudioManager::PlaySourceAtOffset(end, offset);
 			}
 			else
 			{
@@ -285,7 +290,7 @@ namespace flex
 	SoundClip_LoopingSimple::SoundClip_LoopingSimple()
 	{}
 
-	SoundClip_LoopingSimple::SoundClip_LoopingSimple(const char* name, StringID loopSID) :
+	SoundClip_LoopingSimple::SoundClip_LoopingSimple(const char* name, StringID loopSID, bool b2D) :
 		m_Name(name),
 		loopSID(loopSID),
 		m_VolHisto(128)
@@ -297,7 +302,7 @@ namespace flex
 				if (g_ResourceManager->discoveredAudioFiles[loopSID].sourceID == InvalidAudioSourceID)
 				{
 					StringBuilder errorStringBuilder;
-					g_ResourceManager->LoadAudioFile(loopSID, &errorStringBuilder);
+					g_ResourceManager->LoadAudioFile(loopSID, &errorStringBuilder, b2D);
 					if (errorStringBuilder.Length() > 0)
 					{
 						PrintError("Failed to audio file for SoundClip_LoopingSimple, error: %s\n", errorStringBuilder.ToCString());
@@ -415,7 +420,10 @@ namespace flex
 
 	void SoundClip_LoopingSimple::SetGainMultiplier(real gainMultiplier)
 	{
-		AudioManager::SetSourceGainMultiplier(loop, gainMultiplier);
+		if (loop != InvalidAudioSourceID)
+		{
+			AudioManager::SetSourceGainMultiplier(loop, gainMultiplier);
+		}
 	}
 
 	bool SoundClip_LoopingSimple::DrawImGui()
@@ -462,14 +470,58 @@ namespace flex
 		return false;
 	}
 
+	AudioEffect::Type AudioEffectTypeFromALEffect(i32 alEffect)
+	{
+		switch (alEffect)
+		{
+		case AL_EFFECT_NULL: return AudioEffect::Type::_NONE;
+		case AL_EFFECT_REVERB: return AudioEffect::Type::REVERB;
+		case AL_EFFECT_CHORUS: return AudioEffect::Type::CHORUS;
+		case AL_EFFECT_DISTORTION: return AudioEffect::Type::DISTORTION;
+		case AL_EFFECT_ECHO: return AudioEffect::Type::ECHO;
+		case AL_EFFECT_FLANGER: return AudioEffect::Type::FLANGER;
+		case AL_EFFECT_FREQUENCY_SHIFTER: return AudioEffect::Type::FREQUENCY_SHIFTER;
+		case AL_EFFECT_VOCAL_MORPHER: return AudioEffect::Type::VOCAL_MORPHER;
+		case AL_EFFECT_PITCH_SHIFTER: return AudioEffect::Type::PITCH_SHITER;
+		case AL_EFFECT_RING_MODULATOR: return AudioEffect::Type::RING_MODULATOR;
+		case AL_EFFECT_AUTOWAH: return AudioEffect::Type::AUTOWAH;
+		case AL_EFFECT_COMPRESSOR: return AudioEffect::Type::COMPRESSOR;
+		case AL_EFFECT_EQUALIZER: return AudioEffect::Type::EQUALIZER;
+		case AL_EFFECT_EAXREVERB: return AudioEffect::Type::EAX_REVERB;
+		default: return AudioEffect::Type::_NONE;
+		}
+	}
+
+	const char* AudioEffectTypeToString(AudioEffect::Type type)
+	{
+		return AudioEffectTypeStrings[(i32)type];
+	}
+
+	AudioEffect::Type AudioEffectTypeFromString(const char* typeStr)
+	{
+		for (i32 i = 0; i < (i32)AudioEffect::Type::_NONE; ++i)
+		{
+			if (strcmp(typeStr, AudioEffectTypeStrings[i]) == 0)
+			{
+				return (AudioEffect::Type)i;
+			}
+		}
+
+		return AudioEffect::Type::_NONE;
+	}
+
 	// ---
 
 	void AudioManager::Initialize()
 	{
 		PROFILE_AUTO("AudioManager Initialize");
 
-		// Retrieve preferred device
-		s_Device = alcOpenDevice(NULL);
+		{
+			PROFILE_AUTO("alcOpenDevice");
+
+			// Retrieve preferred device
+			s_Device = alcOpenDevice(NULL);
+		}
 
 		if (!s_Device)
 		{
@@ -495,8 +547,14 @@ namespace flex
 		const ALchar* deviceName = alcGetString(s_Device, ALC_DEVICE_SPECIFIER);
 		Print("Chosen audio device: %s\n", deviceName);
 
-		s_Context = alcCreateContext(s_Device, NULL);
-		alcMakeContextCurrent(s_Context);
+		{
+			PROFILE_AUTO("alcCreateContext");
+			s_Context = alcCreateContext(s_Device, NULL);
+		}
+		{
+			PROFILE_AUTO("alcMakeContextCurrent");
+			alcMakeContextCurrent(s_Context);
+		}
 
 		//bool eaxPresent = (alIsExtensionPresent("EAX2.0") == GL_TRUE);
 
@@ -508,16 +566,45 @@ namespace flex
 			return;
 		}
 
-		// Reserve first ID for beep to play on volume change
-		s_BeepID = AudioManager::AddAudioSource(SFX_DIRECTORY "wah-wah-02.wav");
+		alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
+		DisplayALError("Distance model", alGetError());
+
+		alDopplerFactor(0.01f);
+		DisplayALError("Doppler factor", alGetError());
+
+		u32 slots[2];
+		alGenAuxiliaryEffectSlots(2, slots);
+		SLOT_DEFAULT_2D = (i32)slots[0];
+		SLOT_DEFAULT_3D = (i32)slots[1];
 
 		SetMasterGain(s_MasterGain);
+
+		if (alGetEnumValue("AL_EFFECT_EAXREVERB") != 0)
+		{
+			Print("Using EAX Reverb\n");
+		}
+		else
+		{
+			Print("Using Standard Reverb (EAX not available)\n");
+		}
+
+		CreateAudioEffects();
+
+		// Reserve first ID for beep to play on volume change
+		s_BeepID = AudioManager::AddAudioSource(SFX_DIRECTORY "wah-wah-02.wav", nullptr, true);
+
 	}
 
 	void AudioManager::Destroy()
 	{
 		ClearAllAudioSources();
 		alDeleteBuffers(NUM_BUFFERS, s_Buffers);
+
+		ClearAudioEffects();
+
+		u32 slots[2] = { (u32)SLOT_DEFAULT_2D, (u32)SLOT_DEFAULT_3D };
+		alDeleteAuxiliaryEffectSlots(2, slots);
+
 		alcMakeContextCurrent(NULL);
 		alcDestroyContext(s_Context);
 		alcCloseDevice(s_Device);
@@ -545,7 +632,7 @@ namespace flex
 		{
 			Source& source = s_Sources[i];
 
-			if (source.fadeDurationRemaining > 0.0f)
+			if (s_Sources[i].source != InvalidAudioSourceID && source.fadeDurationRemaining > 0.0f)
 			{
 				real gain;
 
@@ -569,13 +656,24 @@ namespace flex
 		}
 	}
 
+	void AudioManager::StopAllSources()
+	{
+		for (u32 i = 0; i < (u32)s_Sources.size(); ++i)
+		{
+			if (s_Sources[i].source != InvalidAudioSourceID)
+			{
+				StopSource(i);
+			}
+		}
+	}
+
 	real AudioManager::NoteToFrequencyHz(i32 note)
 	{
 		const real pitchStandardHz = 440.0f;
 		return pitchStandardHz * std::pow(2.0f, (real)(note - 69) / 12.0f);
 	}
 
-	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr /* = nullptr */)
+	AudioSourceID AudioManager::AddAudioSource(const std::string& filePath, StringBuilder* outErrorStr /* = nullptr */, bool b2D /* = false */)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
 		if (newID == InvalidAudioSourceID)
@@ -585,7 +683,7 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
-		return AddAudioSourceInternal(newID, filePath, outErrorStr);
+		return AddAudioSourceInternal(newID, filePath, outErrorStr, b2D);
 	}
 
 	AudioSourceID AudioManager::ReplaceAudioSource(const std::string& filePath, AudioSourceID sourceID, StringBuilder* outErrorStr /* = nullptr */)
@@ -601,9 +699,10 @@ namespace flex
 		real sourcePitch = GetSourcePitch(sourceID);
 		real sourceGain = GetSourceGain(sourceID);
 		real sourceGainMultiplier = GetSourceGainMultiplier(sourceID);
+		bool b2D = IsSource2D(sourceID);
 		DestroyAudioSource(sourceID);
 
-		AudioSourceID newID = AddAudioSourceInternal(sourceID, filePath, outErrorStr);
+		AudioSourceID newID = AddAudioSourceInternal(sourceID, filePath, outErrorStr, b2D);
 		SetSourceLooping(newID, bSourceWasLooping);
 		SetSourcePitch(newID, sourcePitch);
 		SetSourceGain(newID, sourceGain);
@@ -611,12 +710,13 @@ namespace flex
 		return newID;
 	}
 
-	AudioSourceID AudioManager::AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr)
+	AudioSourceID AudioManager::AddAudioSourceInternal(AudioSourceID sourceID, const std::string& filePath, StringBuilder* outErrorStr, bool b2D)
 	{
+		std::string fileName = StripLeadingDirectories(filePath);
+
 		if (g_bEnableLogging_Loading)
 		{
-			const std::string friendlyName = StripLeadingDirectories(filePath);
-			Print("Loading audio source %s\n", friendlyName.c_str());
+			Print("Loading audio source %s\n", fileName.c_str());
 		}
 
 		if (s_WaveData[sourceID] != nullptr)
@@ -638,6 +738,11 @@ namespace flex
 			return InvalidAudioSourceID;
 		}
 
+		if (!b2D && (format == AL_FORMAT_STEREO8 || format == AL_FORMAT_STEREO16))
+		{
+			PrintWarn("Sound effect is stereo but 3D - only mono sounds will be attenuated\n");
+		}
+
 		++s_WaveDataVersions[sourceID];
 
 		// Buffer
@@ -655,12 +760,22 @@ namespace flex
 		error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("alGenSources 1", error);
+			DisplayALError("alGenSources", error);
 			return InvalidAudioSourceID;
 		}
 
 		alSourcei(s_Sources[sourceID].source, AL_BUFFER, s_Buffers[sourceID]);
-		DisplayALError("alSourcei", alGetError());
+		DisplayALError("Sound Buffer", alGetError());
+
+		s_Sources[sourceID].fileName = fileName;
+
+		s_Sources[sourceID].b2D = b2D;
+		alSourcei(s_Sources[sourceID].source, AL_SOURCE_RELATIVE, b2D ? AL_TRUE : AL_FALSE);
+		DisplayALError("Source Relative", alGetError());
+
+		ALint slot = (ALint)(b2D ? SLOT_DEFAULT_2D : SLOT_DEFAULT_3D);
+		alSource3i(s_Sources[sourceID].source, AL_AUXILIARY_SEND_FILTER, slot, 0, AL_FILTER_NULL);
+		DisplayALError("Failed to connect to slot", alGetError());
 
 		ALint bufferID, bufferSize, frequency, bitsPerSample, channels;
 		alGetSourcei(s_Sources[sourceID].source, AL_BUFFER, &bufferID);
@@ -687,6 +802,46 @@ namespace flex
 		}
 	}
 
+	void AudioManager::CreateAudioEffects()
+	{
+		PROFILE_AUTO("CreateAudioEffects");
+
+		if (alcIsExtensionPresent(alcGetContextsDevice(alcGetCurrentContext()), "ALC_EXT_EFX"))
+		{
+			// Load the reverb into an effect
+			EFXEAXREVERBPROPERTIES reverb = EFX_REVERB_PRESET_GENERIC;
+
+			AudioEffect effect = AudioManager::LoadReverbEffect(&reverb);
+			if (effect.effectID != 0)
+			{
+				s_Effects.push_back(effect);
+				UpdateReverbEffect(SLOT_DEFAULT_3D, (i32)effect.effectID);
+			}
+		}
+		else
+		{
+			PrintWarn("EFX not supported\n");
+		}
+	}
+
+	void AudioManager::UpdateReverbEffect(u32 slotID, i32 effectID)
+	{
+		// Tell the effect slot to use the loaded effect object. Note that the this
+		// effectively copies the effect properties. You can modify or delete the
+		// effect object afterward without affecting the effect slot.
+		alAuxiliaryEffectSloti(slotID, AL_EFFECTSLOT_EFFECT, effectID);
+		DisplayALError("Failed to set effect slot", alGetError());
+	}
+
+	void AudioManager::ClearAudioEffects()
+	{
+		for (const AudioEffect& effect : s_Effects)
+		{
+			alDeleteEffects(1, &effect.effectID);
+		}
+		s_Effects.clear();
+	}
+
 	AudioSourceID AudioManager::SynthesizeSound(sec length, real freq)
 	{
 		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
@@ -699,13 +854,13 @@ namespace flex
 		// WAVE file
 		i32 format = AL_FORMAT_MONO16;
 		i32 sampleRate = 44100;
-		u32 sampleCount = (i32)(sampleRate * length);
+		u32 sampleCount = (u32)(sampleRate * length);
 		u32 bufferSize = sampleCount * sizeof(i16);
 		i16* data = (i16*)malloc(bufferSize);
-		assert(data != nullptr);
+		CHECK_NE(data, nullptr);
 
 		// See http://iquilezles.org/apps/soundtoy/index.html for more patterns
-		for (i32 i = 0; i < (i32)sampleCount; ++i)
+		for (u32 i = 0; i < sampleCount; ++i)
 		{
 			real t = (real)i / (real)(sampleRate);
 			real alpha = (real)i / (real)(sampleCount - 1);
@@ -724,7 +879,7 @@ namespace flex
 			data[i] = (i16)(y * 32767.0f);
 		}
 
-		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format);
+		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format, true);
 	}
 
 	AudioSourceID AudioManager::SynthesizeMelody(real bpm /* = 340.0f */)
@@ -755,7 +910,7 @@ namespace flex
 		u32 sampleCount = (i32)(sampleRate * lengthSec);
 		u32 bufferSize = sampleCount * sizeof(i16);
 		i16* data = (i16*)malloc(bufferSize);
-		assert(data != nullptr);
+		CHECK_NE(data, nullptr);
 
 		for (i32 i = 0; i < (i32)sampleCount; ++i)
 		{
@@ -776,7 +931,7 @@ namespace flex
 			}
 		}
 
-		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format);
+		return SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, format, true);
 
 	}
 
@@ -810,10 +965,23 @@ namespace flex
 		s_TemporarySources.clear();
 	}
 
+	void AudioManager::SetListenerPos(const glm::vec3& posWS)
+	{
+		alListener3f(AL_POSITION, posWS.x, posWS.y, posWS.z);
+		DisplayALError("SetListenerPos", alGetError());
+	}
+
+	void AudioManager::SetListenerVel(const glm::vec3& velocity)
+	{
+		alListener3f(AL_VELOCITY, velocity.x, velocity.y, velocity.z);
+		DisplayALError("SetListenerVel", alGetError());
+	}
+
 	void AudioManager::SetMasterGain(real masterGain)
 	{
 		s_MasterGain = glm::clamp(masterGain, 0.0f, 1.0f);
 		alListenerf(AL_GAIN, s_MasterGain);
+		DisplayALError("SetMasterGain", alGetError());
 	}
 
 	real AudioManager::GetMasterGain()
@@ -821,12 +989,12 @@ namespace flex
 		return s_MasterGain;
 	}
 
-	void AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
+	bool AudioManager::PlaySource(AudioSourceID sourceID, bool bForceRestart /* = true */)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		// TODO: Just test cached value?
@@ -838,29 +1006,51 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("PlaySource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::PlaySourceFromPos(AudioSourceID sourceID, real t)
+	bool AudioManager::PlaySourceWithGain(AudioSourceID sourceID, real gain, bool bForceRestart)
 	{
-		if (sourceID >= s_Sources.size())
+		SetSourceGain(sourceID, gain);
+		return PlaySource(sourceID, bForceRestart);
+	}
+
+	bool AudioManager::PlaySourceAtOffset(AudioSourceID sourceID, real t)
+	{
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		sec offset = t * s_Sources[sourceID].length;
 		alSourcef(s_Sources[sourceID].source, AL_SEC_OFFSET, offset);
 		alSourcePlay(s_Sources[sourceID].source);
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
-		DisplayALError("PlaySourceFromPos", alGetError());
+		DisplayALError("PlaySourceAtOffset", alGetError());
+
+		return true;
 	}
 
-	void AudioManager::PauseSource(AudioSourceID sourceID)
+	bool AudioManager::PlaySourceAtPosWS(AudioSourceID sourceID, const glm::vec3& posWS, bool bForceRestart /* = true */)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
+		{
+			PrintError("Attempted to play invalid source %u\n", (u32)sourceID);
+			return false;
+		}
+
+		SetSourcePositionWS(sourceID, posWS);
+		return PlaySource(sourceID, bForceRestart);
+	}
+
+	bool AudioManager::PauseSource(AudioSourceID sourceID)
+	{
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to pause invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
@@ -871,14 +1061,16 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("PauseSource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::StopSource(AudioSourceID sourceID)
+	bool AudioManager::StopSource(AudioSourceID sourceID)
 	{
-		if (sourceID >= s_Sources.size())
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
 		{
 			PrintError("Attempted to stop invalid source %u\n", (u32)sourceID);
-			return;
+			return false;
 		}
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
@@ -889,14 +1081,22 @@ namespace flex
 			alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 			DisplayALError("StopSource", alGetError());
 		}
+
+		return true;
 	}
 
-	void AudioManager::PlayNote(real frequency, sec length, real gain)
+	bool AudioManager::PlayNote(real frequency, sec length, real gain)
 	{
 		AudioSourceID sourceID = AudioManager::SynthesizeSound(length, frequency);
 		MarkSourceTemporary(sourceID);
 		SetSourceGain(sourceID, gain);
-		PlaySource(sourceID);
+		return PlaySource(sourceID);
+	}
+
+	void AudioManager::SetSourcePositionWS(AudioSourceID sourceID, const glm::vec3& posWS)
+	{
+		alSource3f(s_Sources[sourceID].source, AL_POSITION, posWS.x, posWS.y, posWS.z);
+		DisplayALError("SetSourcePositionWS", alGetError());
 	}
 
 	void AudioManager::MarkSourceTemporary(AudioSourceID sourceID)
@@ -920,7 +1120,7 @@ namespace flex
 
 	void AudioManager::SetSourceGain(AudioSourceID sourceID, real gain)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 		s_Sources[sourceID].gain = gain;
 
 		UpdateSourceGain(sourceID);
@@ -928,14 +1128,14 @@ namespace flex
 
 	real AudioManager::GetSourceGain(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].gain;
 	}
 
 	void AudioManager::SetSourceGainMultiplier(AudioSourceID sourceID, real gainMultiplier)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 		s_Sources[sourceID].gainMultiplier = gainMultiplier;
 
 		UpdateSourceGain(sourceID);
@@ -943,21 +1143,28 @@ namespace flex
 
 	real AudioManager::GetSourceGainMultiplier(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].gainMultiplier;
 	}
 
+	bool AudioManager::IsSource2D(AudioSourceID sourceID)
+	{
+		CHECK_LT(sourceID, s_Sources.size());
+
+		return s_Sources[sourceID].b2D;
+	}
+
 	void AudioManager::AddToSourcePitch(AudioSourceID sourceID, real deltaPitch)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		SetSourcePitch(sourceID, s_Sources[sourceID].pitch + deltaPitch);
 	}
 
 	void AudioManager::SetSourceLooping(AudioSourceID sourceID, bool bLooping)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		if (s_Sources[sourceID].bLooping != bLooping)
 		{
@@ -970,14 +1177,14 @@ namespace flex
 
 	bool AudioManager::GetSourceLooping(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].bLooping;
 	}
 
 	bool AudioManager::IsSourcePlaying(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		alGetSourcei(s_Sources[sourceID].source, AL_SOURCE_STATE, &s_Sources[sourceID].state);
 		return (s_Sources[sourceID].state == AL_PLAYING);
@@ -998,6 +1205,11 @@ namespace flex
 	AudioManager::Source* AudioManager::GetSource(AudioSourceID sourceID)
 	{
 		return &s_Sources[sourceID];
+	}
+
+	std::string AudioManager::GetSourceFileName(AudioSourceID sourceID)
+	{
+		return s_Sources[sourceID].fileName;
 	}
 
 	real AudioManager::GetSourcePlaybackPos(AudioSourceID sourceID)
@@ -1136,9 +1348,91 @@ namespace flex
 		return bChanged;
 	}
 
+	AudioEffect AudioManager::LoadReverbEffect(const EFXEAXREVERBPROPERTIES* reverb)
+	{
+		ALuint effectID = 0;
+		alGenEffects(1, &effectID);
+
+		i32 effectType = SetupReverbEffect(reverb, effectID);
+
+		AudioEffect effect;
+		effect.reverbProperties = *reverb;
+		effect.effectID = effectID;
+		effect.type = AudioEffectTypeFromALEffect(effectType);
+
+		return effect;
+	}
+
+	i32 AudioManager::SetupReverbEffect(const EFXEAXREVERBPROPERTIES* reverb, ALuint& effectID)
+	{
+		bool bEAXSupported = alGetEnumValue("AL_EFFECT_EAXREVERB") != 0;
+		if (bEAXSupported)
+		{
+			// EAX reverb is available
+			// Set the EAX effect type then load the reverb properties
+			alEffecti(effectID, AL_EFFECT_TYPE, AL_EFFECT_EAXREVERB);
+
+			alEffectf(effectID, AL_EAXREVERB_DENSITY, reverb->flDensity);
+			alEffectf(effectID, AL_EAXREVERB_DIFFUSION, reverb->flDiffusion);
+			alEffectf(effectID, AL_EAXREVERB_GAIN, reverb->flGain);
+			alEffectf(effectID, AL_EAXREVERB_GAINHF, reverb->flGainHF);
+			alEffectf(effectID, AL_EAXREVERB_GAINLF, reverb->flGainLF);
+			alEffectf(effectID, AL_EAXREVERB_DECAY_TIME, reverb->flDecayTime);
+			alEffectf(effectID, AL_EAXREVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
+			alEffectf(effectID, AL_EAXREVERB_DECAY_LFRATIO, reverb->flDecayLFRatio);
+			alEffectf(effectID, AL_EAXREVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
+			alEffectf(effectID, AL_EAXREVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
+			alEffectfv(effectID, AL_EAXREVERB_REFLECTIONS_PAN, reverb->flReflectionsPan);
+			alEffectf(effectID, AL_EAXREVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
+			alEffectf(effectID, AL_EAXREVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
+			alEffectfv(effectID, AL_EAXREVERB_LATE_REVERB_PAN, reverb->flLateReverbPan);
+			alEffectf(effectID, AL_EAXREVERB_ECHO_TIME, reverb->flEchoTime);
+			alEffectf(effectID, AL_EAXREVERB_ECHO_DEPTH, reverb->flEchoDepth);
+			alEffectf(effectID, AL_EAXREVERB_MODULATION_TIME, reverb->flModulationTime);
+			alEffectf(effectID, AL_EAXREVERB_MODULATION_DEPTH, reverb->flModulationDepth);
+			alEffectf(effectID, AL_EAXREVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
+			alEffectf(effectID, AL_EAXREVERB_HFREFERENCE, reverb->flHFReference);
+			alEffectf(effectID, AL_EAXREVERB_LFREFERENCE, reverb->flLFReference);
+			alEffectf(effectID, AL_EAXREVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
+			alEffecti(effectID, AL_EAXREVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+		}
+		else
+		{
+			// EAX reverb not supported
+			// Set the standard reverb effect type then load the available reverb properties
+			alEffecti(effectID, AL_EFFECT_TYPE, AL_EFFECT_REVERB);
+
+			alEffectf(effectID, AL_REVERB_DENSITY, reverb->flDensity);
+			alEffectf(effectID, AL_REVERB_DIFFUSION, reverb->flDiffusion);
+			alEffectf(effectID, AL_REVERB_GAIN, reverb->flGain);
+			alEffectf(effectID, AL_REVERB_GAINHF, reverb->flGainHF);
+			alEffectf(effectID, AL_REVERB_DECAY_TIME, reverb->flDecayTime);
+			alEffectf(effectID, AL_REVERB_DECAY_HFRATIO, reverb->flDecayHFRatio);
+			alEffectf(effectID, AL_REVERB_REFLECTIONS_GAIN, reverb->flReflectionsGain);
+			alEffectf(effectID, AL_REVERB_REFLECTIONS_DELAY, reverb->flReflectionsDelay);
+			alEffectf(effectID, AL_REVERB_LATE_REVERB_GAIN, reverb->flLateReverbGain);
+			alEffectf(effectID, AL_REVERB_LATE_REVERB_DELAY, reverb->flLateReverbDelay);
+			alEffectf(effectID, AL_REVERB_AIR_ABSORPTION_GAINHF, reverb->flAirAbsorptionGainHF);
+			alEffectf(effectID, AL_REVERB_ROOM_ROLLOFF_FACTOR, reverb->flRoomRolloffFactor);
+			alEffecti(effectID, AL_REVERB_DECAY_HFLIMIT, reverb->iDecayHFLimit);
+		}
+
+		// Check if an error occurred, and clean up if so
+		if (DisplayALError("Reverb effect creation", alGetError()))
+		{
+			if (alIsEffect(effectID))
+			{
+				alDeleteEffects(1, &effectID);
+			}
+			effectID = 0;
+		}
+
+		return bEAXSupported ? AL_EFFECT_EAXREVERB : AL_EFFECT_REVERB;
+	}
+
 	void AudioManager::SetSourcePitch(AudioSourceID sourceID, real pitch)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		// openAL range (found in al.h)
 		pitch = glm::clamp(pitch, 0.5f, 2.0f);
@@ -1154,17 +1448,17 @@ namespace flex
 
 	real AudioManager::GetSourcePitch(AudioSourceID sourceID)
 	{
-		assert(sourceID < s_Sources.size());
+		CHECK_LT(sourceID, s_Sources.size());
 
 		return s_Sources[sourceID].pitch;
 	}
 
-	AudioSourceID AudioManager::SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format)
+	AudioSourceID AudioManager::SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format, bool b2D)
 	{
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("OpenAndParseWAVFile", error);
+			DisplayALError("?", error);
 			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			free(data);
 			return InvalidAudioSourceID;
@@ -1192,26 +1486,34 @@ namespace flex
 		}
 
 		alSourcei(s_Sources[newID].source, AL_BUFFER, s_Buffers[newID]);
-		DisplayALError("alSourcei", alGetError());
+		DisplayALError("alSourcei AL_BUFFER", alGetError());
+
+		s_Sources[newID].b2D = b2D;
+		alSourcei(s_Sources[newID].source, AL_SOURCE_RELATIVE, b2D ? AL_TRUE : AL_FALSE);
+		DisplayALError("Source Relative", alGetError());
 
 		alGetSourcef(s_Sources[newID].source, AL_SEC_OFFSET, &s_Sources[newID].length);
+
+		alSource3i(s_Sources[newID].source, AL_AUXILIARY_SEND_FILTER, SLOT_DEFAULT_2D, 0, AL_FILTER_NULL);
+		DisplayALError("Failed to connect to slot", alGetError());
 
 		return newID;
 	}
 
-	void AudioManager::DisplayALError(const std::string& str, ALenum error)
+	bool AudioManager::DisplayALError(const char* errorMessage, ALenum error)
 	{
-		const char* cStr = str.c_str();
 		switch (error)
 		{
-		case AL_NO_ERROR:			return;
-		case AL_INVALID_NAME:		PrintError("ALError: Invalid name - %s\n", cStr); break;
-		case AL_ILLEGAL_ENUM:		PrintError("ALError: Invalid enum - %s\n", cStr); break;
-		case AL_INVALID_VALUE:		PrintError("ALError: Invalid value - %s\n", cStr); break;
-		case AL_INVALID_OPERATION:	PrintError("ALError: Invalid operation - %s\n", cStr); break;
-		case AL_OUT_OF_MEMORY:		PrintError("ALError: Out of memory - %s\n", cStr); break;
-		default:					PrintError("ALError: Unknown error - %s\n", cStr); break;
+		case AL_NO_ERROR:			return false;
+		case AL_INVALID_NAME:		PrintError("ALError: Invalid name - %s\n", errorMessage); break;
+		case AL_ILLEGAL_ENUM:		PrintError("ALError: Invalid enum - %s\n", errorMessage); break;
+		case AL_INVALID_VALUE:		PrintError("ALError: Invalid value - %s\n", errorMessage); break;
+		case AL_INVALID_OPERATION:	PrintError("ALError: Invalid operation - %s\n", errorMessage); break;
+		case AL_OUT_OF_MEMORY:		PrintError("ALError: Out of memory - %s\n", errorMessage); break;
+		default:					PrintError("ALError: Unknown error - %s\n", errorMessage); break;
 		}
+
+		return true;
 	}
 
 	void AudioManager::PrintAudioDevices(const ALCchar* devices)

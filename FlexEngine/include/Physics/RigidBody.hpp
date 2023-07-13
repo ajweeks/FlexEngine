@@ -13,12 +13,12 @@ namespace flex
 	class RigidBody
 	{
 	public:
-		RigidBody(i32 group = (i32)CollisionType::DEFAULT, i32 mask = (i32)CollisionType::DEFAULT);
+		RigidBody(u32 group = (u32)CollisionType::DEFAULT, u32 mask = (u32)CollisionType::DEFAULT);
 		// NOTE: This copy constructor does not initialize data, it only copies POD fields
 		RigidBody(const RigidBody& other);
 		virtual ~RigidBody();
 
-		void Initialize(btCollisionShape* collisionShape, Transform* parentTransform);
+		void Initialize(btCollisionShape* collisionShape, Transform* transform);
 		void Destroy();
 
 		void AddConstraint(btTypedConstraint* constraint);
@@ -35,35 +35,34 @@ namespace flex
 		void SetLinearDamping(real linearDamping);
 		void SetAngularDamping(real angularDamping);
 
+		// Limit movement to the given axes (0 = locked, 1 = free)
+		void SetLinearFactor(const btVector3& factor);
+		// Limit rotation to the given axes (0 = locked, 1 = free)
+		void SetAngularFactor(const btVector3& factor);
+
 		// Vector passed in defines the axis (or axes) this body can rotate around
 		void SetOrientationConstraint(const btVector3& axis);
 
 		// Vector passed in defines the axis (or axes) this body can move along
 		void SetPositionalConstraint(const btVector3& axis);
 
-		// Set local transform (relative to parent transform)
-		void SetLocalSRT(const glm::vec3& scale, const glm::quat& rot, const glm::vec3& pos);
-		void SetLocalPosition(const glm::vec3& pos);
-		void SetLocalRotation(const glm::quat& rot);
-		void SetLocalScale(const glm::vec3& scale);
+		void SetWorldPosition(const glm::vec3& worldPos);
+		void SetWorldRotation(const glm::quat& worldRot);
+		void SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot);
 
-		i32 GetGroup() const;
+		u32 GetGroup() const;
 		// NOTE: This function removes, then re-adds this object to the world!
-		void SetGroup(i32 group);
+		void SetGroup(u32 group);
 
-		i32 GetMask() const;
+		u32 GetMask() const;
 		// NOTE: This function removes, then re-adds this object to the world!
-		void SetMask(i32 mask);
+		void SetMask(u32 mask);
 
-		glm::vec3 GetLocalPosition() const;
-		glm::quat GetLocalRotation() const;
-		glm::vec3 GetLocalScale() const;
+		// Applies rigid body transform to our transform (taking into account local transform)
+		//void UpdateTransform();
 
-		// Applies physics-driven transform to parent transform (taking into account local transform)
-		void UpdateParentTransform();
-
-		// Sets physics-driven transform to parent transform (taking into account local transform)
-		void MatchParentTransform();
+		// Sets rigid body transform to our transform (taking into account local transform)
+		//void MatchTransform();
 
 		void GetUpRightForward(btVector3& up, btVector3& right, btVector3& forward);
 
@@ -72,16 +71,14 @@ namespace flex
 		void SetPhysicsFlags(u32 flags);
 		u32 GetPhysicsFlags();
 
+		static RigidBody* ParseFromJSON(const JSONObject& rigidBodyObj);
+		JSONObject SerializeToJSON();
+
 	private:
-		btRigidBody* m_RigidBody = nullptr;
-		btMotionState* m_MotionState = nullptr;
+		btRigidBody* m_btRigidBody = nullptr;
+		btMotionState* m_btMotionState = nullptr;
 
 		std::vector<btTypedConstraint*> m_Constraints;
-
-		Transform* m_ParentTransform = nullptr;
-		glm::vec3 m_LocalPosition;
-		glm::quat m_LocalRotation;
-		glm::vec3 m_LocalScale;
 
 		// Must be 0 if static, non-zero otherwise
 		real m_Mass = 1.0f;
@@ -89,8 +86,8 @@ namespace flex
 		bool m_bKinematic = false;
 		real m_Friction = 1.0f;
 
-		i32 m_Group = 0;
-		i32 m_Mask = 0;
+		u32 m_Group = (u32)CollisionType::DEFAULT;
+		u32 m_Mask = (u32)CollisionType::DEFAULT;
 
 		real m_AngularDamping = 0.0f;
 		real m_LinearDamping = 0.0f;

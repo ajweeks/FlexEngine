@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "sphere 14",
+		"shader" : "pbr",
+		"const albedo" : "0.388,0.349,0.322",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.700000
+	}
+}

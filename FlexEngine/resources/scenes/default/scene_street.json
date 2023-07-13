@@ -1,13 +1,7 @@
 {
-	"version" : 5,
+	"version" : 6,
 	"name" : "scene_02",
 	"spawn player" : false,
-	"skybox data" : 
-	{
-		"top colour" : "0.22, 0.58, 0.88, 0.00",
-		"mid colour" : "0.66, 0.86, 0.95, 0.00",
-		"btm colour" : "0.75, 0.91, 0.99, 0.00"
-	},
 	"camera" : 
 	{
 		"type" : "debug",
@@ -32,13 +26,11 @@
 			"name" : "Street",
 			"id" : "9251D190D97BF6894F81A161E5E10438",
 			"type" : "object",
-			"visible" : true,
-			"static" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"scale" : "3.000, 3.000, 3.000"
 			},
+			"static" : true,
 			"mesh" : "street-03.glb",
 			"materials" : 
 			[
@@ -51,14 +43,12 @@
 			"name" : "ground plane",
 			"id" : "F62E8D955A50DBB741F9D231C7996282",
 			"type" : "object",
-			"visible" : true,
-			"static" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, -0.020, 0.000",
 				"scale" : "500.000, 1.000, 500.000"
 			},
+			"static" : true,
 			"mesh" : "cube.glb",
 			"materials" : 
 			[
@@ -67,26 +57,22 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "1.000, 1.000, 1.000"
+				"half extents" : "1.000,1.000,1.000"
 			},
 			"rigid body" : 
 			{
 				"mass" : 0.000000,
 				"kinematic" : true,
 				"static" : true,
-				"mask" : -1,
-				"group" : -1
+				"mask" : 4294967295,
+				"group" : 4294967295
 			}
 		},
 		{
 			"name" : "Skybox",
 			"id" : "D166C3BD4BE0A387457EA847FC73660D",
 			"type" : "skybox",
-			"visible" : true,
 			"casts shadow" : false,
-			"transform" : 
-			{
-			},
 			"materials" : 
 			[
 				"skybox 01"
@@ -99,8 +85,6 @@
 			"name" : "Reflection Probe 01",
 			"id" : "4D015E9E90D0EE994B3F7AA3BEB69D38",
 			"type" : "reflection probe",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-7.300, 8.600, 8.500"
@@ -110,18 +94,16 @@
 			"name" : "Directional Light",
 			"id" : "650748CD43725E8147CA3E38E7914ECE",
 			"type" : "directional light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "0.001, -0.997, 1.069"
+				"rot" : "1.571, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.244, -0.411, 0.448, 0.756",
-				"pos" : "0.000, 15.000, 0.000",
-				"colour" : "0.99, 1.00, 0.86",
+				"rotation" : "0.707,0.000,0.000,0.707",
+				"pos" : "0.000,15.000,0.000",
+				"colour" : "0.99,1.00,0.84",
 				"enabled" : true,
 				"brightness" : 4.531000,
 				"cast shadows" : true,
@@ -132,16 +114,14 @@
 			"name" : "PointLight_01",
 			"id" : "47ED58E93BF985A245464C66F12803B4",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "20.104, 11.018, 10.456"
 			},
 			"point light info" : 
 			{
-				"pos" : "20.104, 11.018, 10.456",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "20.104,11.018,10.456",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -150,16 +130,14 @@
 			"name" : "PointLight_00",
 			"id" : "7DD6EA4A12AA229E45BAC14345E8AEDE",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "20.104, 11.018, -10.002"
 			},
 			"point light info" : 
 			{
-				"pos" : "20.104, 11.018, -10.002",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "20.104,11.018,-10.002",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -168,16 +146,14 @@
 			"name" : "PointLight_02",
 			"id" : "A8D14527034E1BB94CC0015C71B86AD3",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-13.551, 11.018, -10.002"
 			},
 			"point light info" : 
 			{
-				"pos" : "-13.551, 11.018, -10.002",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-13.551,11.018,-10.002",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -186,16 +162,14 @@
 			"name" : "PointLight_03",
 			"id" : "E4FBAEF32D3C649D48E32AEBE5B19AE0",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-13.551, 11.018, 10.858"
 			},
 			"point light info" : 
 			{
-				"pos" : "-13.551, 11.018, 10.858",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-13.551,11.018,10.858",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -204,16 +178,14 @@
 			"name" : "PointLight_04",
 			"id" : "9C3657206CBC618F4091297F7ACB2599",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-28.937, 11.018, 23.804"
 			},
 			"point light info" : 
 			{
-				"pos" : "-28.937, 11.018, 23.804",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-28.937,11.018,23.804",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -222,16 +194,14 @@
 			"name" : "PointLight_05",
 			"id" : "92DFE9E85F8D07BD4F80A0D507784720",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-52.272, 11.018, 24.200"
 			},
 			"point light info" : 
 			{
-				"pos" : "-52.272, 11.018, 24.200",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-52.272,11.018,24.200",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -240,16 +210,14 @@
 			"name" : "PointLight_06",
 			"id" : "1039FEA6D4CAC59240A1CFFB5DB637F9",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-52.272, 11.018, -26.181"
 			},
 			"point light info" : 
 			{
-				"pos" : "-52.272, 11.018, -26.181",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-52.272,11.018,-26.181",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -258,16 +226,14 @@
 			"name" : "PointLight_07",
 			"id" : "B68CD67894D7A99849B55C496AF97970",
 			"type" : "point light",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-29.924, 11.018, -26.181"
 			},
 			"point light info" : 
 			{
-				"pos" : "-29.924, 11.018, -26.181",
-				"colour" : "1.00, 0.86, 0.52",
+				"pos" : "-29.924,11.018,-26.181",
+				"colour" : "1.00,0.86,0.52",
 				"enabled" : true,
 				"brightness" : 931.033997
 			}
@@ -276,8 +242,6 @@
 			"name" : "vehicle",
 			"id" : "6C1F5556147E90A14FD8B574B4D1EBB3",
 			"type" : "object",
-			"visible" : true,
-			"casts shadow" : true,
 			"transform" : 
 			{
 				"pos" : "-28.612, 2.389, -1.054",

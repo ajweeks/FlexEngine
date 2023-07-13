@@ -18,10 +18,10 @@
 namespace flex
 {
 	struct ShaderBatchPair;
+	class DebugRenderer;
 
 	namespace vk
 	{
-		class VulkanPhysicsDebugDraw;
 		struct VulkanBuffer;
 		struct VulkanDevice;
 
@@ -31,10 +31,10 @@ namespace flex
 			VulkanRenderer();
 			virtual ~VulkanRenderer();
 
-			VulkanRenderer(const VulkanRenderer&&) = delete;
 			VulkanRenderer(const VulkanRenderer&) = delete;
-			VulkanRenderer& operator=(const VulkanRenderer&&) = delete;
+			VulkanRenderer(VulkanRenderer&&) = delete;
 			VulkanRenderer& operator=(const VulkanRenderer&) = delete;
+			VulkanRenderer& operator=(VulkanRenderer&&) = delete;
 
 			virtual void Initialize() override;
 			virtual void PostInitialize() override;
@@ -42,9 +42,15 @@ namespace flex
 			virtual void Destroy() override;
 
 			virtual MaterialID InitializeMaterial(const MaterialCreateInfo* createInfo, MaterialID matToReplace = InvalidMaterialID) override;
-			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath, bool bFlipVertically, bool bGenerateMipMaps, bool bHDR) override;
-			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, VkFilter inFilter) override;
-			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, VkFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, VkFilter inFilter) override;
+			virtual TextureID InitializeTextureFromFile(const std::string& relativeFilePath,
+				HTextureSampler inSampler,
+				bool bFlipVertically,
+				bool bGenerateMipMaps,
+				bool bHDR,
+				TextureID existingTextureID = InvalidTextureID) override;
+			virtual TextureID InitializeLoadedTexture(TextureID textureID) override;
+			virtual TextureID InitializeTextureFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 channelCount, HTextureSampler inSampler, VkFilter inFilter) override;
+			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
 			virtual void OnTextureDestroyed(TextureID textureID) override;
@@ -65,13 +71,12 @@ namespace flex
 			virtual void DrawImGuiTexture(TextureID textureID, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 			virtual void DrawImGuiTexture(Texture* texture, real texSize, ImVec2 uv0 = ImVec2(0, 0), ImVec2 uv1 = ImVec2(1, 1)) override;
 
-			virtual void SetTopologyMode(RenderID renderID, TopologyMode topology) override;
-			virtual void SetClearColour(real r, real g, real b) override;
-
 			virtual void OnWindowSizeChanged(i32 width, i32 height) override;
 
 			virtual void OnPreSceneChange() override;
 			virtual void OnPostSceneChange() override;
+
+			virtual void OnSettingsReloaded() override;
 
 			virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) override;
 
@@ -85,7 +90,7 @@ namespace flex
 
 			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
-			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames() const override;
+			virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames(bool bEditorMaterials) const override;
 
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
@@ -94,7 +99,7 @@ namespace flex
 
 			virtual void NewFrame() override;
 
-			virtual PhysicsDebugDrawBase* GetDebugDrawer() override;
+			virtual DebugRenderer* GetDebugRenderer() override;
 
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& colour,
@@ -117,14 +122,15 @@ namespace flex
 			virtual void RenderObjectStateChanged() override;
 			virtual void RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath) override;
 
-			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system, i32 particleCount) override;
+			virtual ParticleSystemID AddParticleSystem(const std::string& name, ParticleSystem* system) override;
 			virtual bool RemoveParticleSystem(ParticleSystemID particleSystemID) override;
+			virtual bool AddParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
+			virtual void RemoveParticleEmitterInstance(ParticleSystemID particleSystemID, ParticleEmitterID emitterID) override;
+			virtual void OnParticleSystemTemplateUpdated(StringID particleTemplateNameSID) override;
 
 			virtual void RecreateEverything() override;
 
 			virtual void ReloadObjectsWithMesh(const std::string& meshFilePath) override;
-
-			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
 
 			virtual void InitializeTerrain(MaterialID terrainMaterialID, TextureID randomTablesTextureID, const TerrainGenConstantData& constantData, u32 initialMaxChunkCount) override;
 			virtual void RegenerateTerrain(const TerrainGenConstantData& constantData, u32 maxChunkCount) override;
@@ -133,6 +139,37 @@ namespace flex
 			virtual u32 GetCurrentTerrainChunkCapacity() const;
 			virtual u32 GetChunkVertCount(u32 chunkLinearIndex) const override;
 			virtual void SetChunkVertCount(u32 chunkLinearIndex, u32 count) override;
+
+			virtual bool LoadFont(FontMetaData& fontMetaData, bool bForceRender) override;
+
+			virtual void OnTextureReloaded(Texture* texture) override;
+
+			virtual Texture* CreateTexture(const std::string& textureName) override;
+
+			virtual HTextureSampler GetSamplerLinearRepeat() override;
+			virtual HTextureSampler GetSamplerLinearClampToEdge() override;
+			virtual HTextureSampler GetSamplerLinearClampToBorder() override;
+			virtual HTextureSampler GetSamplerNearestClampToEdge() override;
+
+			virtual GPUBufferID RegisterGPUBuffer(GPUBuffer* uniformBuffer) override;
+			virtual void UnregisterGPUBuffer(GPUBufferID bufferID) override;
+			virtual GPUBuffer* GetGPUBuffer(GPUBufferID bufferID) override;
+			virtual void UploadDataViaStagingBuffer(GPUBufferID bufferID, u32 bufferOffset, void* data, u32 dataSize) override;
+
+			virtual void FreeGPUBuffer(GPUBuffer* buffer) override;
+			virtual GPUBuffer* AllocateGPUBuffer(GPUBufferType type, const std::string& debugName) override;
+
+			virtual void CreateGPUBuffer(GPUBuffer* buffer,
+				u32 bufferSize,
+				VkBufferUsageFlags bufferUseageFlagBits,
+				VkMemoryPropertyFlags memoryPropertyHostFlagBits,
+				bool bMap = true) override;
+
+			virtual void SetGPUBufferName(GPUBuffer const* buffer, const char* name) override;
+
+			virtual u32 GetNonCoherentAtomSize() const override;
+
+			VulkanDevice* GetDevice();
 
 			void RegisterFramebufferAttachment(FrameBufferAttachment* frameBufferAttachment);
 			FrameBufferAttachment* GetFrameBufferAttachment(FrameBufferAttachmentID frameBufferAttachmentID) const;
@@ -171,20 +208,18 @@ namespace flex
 			virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) override;
 
 		private:
-			friend VulkanPhysicsDebugDraw;
+			friend DebugRenderer;
 			friend VulkanRenderPass;
 			friend VulkanDescriptorPool;
 
 			void DestroyRenderObject(RenderID renderID, VulkanRenderObject* renderObject);
-
-			bool InitializeFreeType();
-			void DestroyFreeType();
 
 			void GenerateCubemapFromHDR(VulkanRenderObject* renderObject, const std::string& environmentMapPath);
 			void GenerateIrradianceSampler(VulkanRenderObject* renderObject);
 			void GeneratePrefilteredCube(VulkanRenderObject* renderObject);
 			void GenerateBRDFLUT();
 
+			void CreateSSAOMaterials();
 			void CreateSSAOPipelines();
 			void CreateSSAODescriptorSets();
 
@@ -208,7 +243,7 @@ namespace flex
 			void CreateSpecialzationInfos();
 
 			void FillOutTextureDescriptorInfos(ShaderUniformContainer<ImageDescriptorInfo>* imageDescriptors, MaterialID materialID);
-			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, UniformBufferList const* uniformBufferList, ShaderID shaderID);
+			void FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, GPUBufferList const* gpuBufferList, ShaderID shaderID);
 
 			void CreateDescriptorSets();
 
@@ -222,12 +257,12 @@ namespace flex
 			void CreateDepthResources();
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
+			void CreateSamplers();
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
 			void CreateStaticUniformBuffer(VulkanMaterial* material);
 			void CreateDynamicUniformBuffer(VulkanMaterial* material);
-			void CreateParticleBuffer(VulkanMaterial* material);
 
 			void CreateTerrainBuffers();
 
@@ -247,6 +282,8 @@ namespace flex
 			void CreateDynamicVertexAndIndexBuffers();
 			void CreateAllDynamicVertexAndIndexBuffers();
 
+			void AllocateDynamicVertexBuffers();
+
 			// Creates the static index buffer used by all static geometry
 			void CreateStaticIndexBuffer();
 
@@ -257,10 +294,6 @@ namespace flex
 
 			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name = nullptr);
-
-			u32 AllocateDynamicUniformBuffer(u32 bufferUnitSize, void** data, i32 maxObjectCount = -1);
-			void PrepareUniformBuffer(VulkanBuffer* buffer, u32 bufferSize,
-				VkBufferUsageFlags bufferUseageFlagBits, VkMemoryPropertyFlags memoryPropertyHostFlagBits, bool bMap = true);
 
 			void CreateSemaphores();
 
@@ -349,23 +382,20 @@ namespace flex
 
 			u32 GetActiveRenderObjectCount() const;
 
-			u32 GetAlignedUBOSize(u32 unalignedSize);
-
 			void DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
 			void DrawUIMesh(UIMesh* uiMesh, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
 			void DrawTerrain(VkCommandBuffer commandBuffer);
 
-			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer);
+			VkDescriptorSet GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer, bool bCacheResult);
 
 			VkRenderPass ResolveRenderPassType(RenderPassType renderPassType, const char* shaderName = nullptr);
 
 			void CreateShadowResources();
 			VkDescriptorSet CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer = 0);
 
-			void InitializeAllParticleSystemBuffers();
-			void InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem);
+			bool InitializeParticleSystemBuffer(VulkanParticleSystem* particleSystem, ParticleEmitterID emitterID);
 
 			void DestroyTerrain();
 
@@ -392,6 +422,20 @@ namespace flex
 			bool m_bEnableDebugPrintf = true;
 #endif
 
+			bool m_bTryEnableRayTracing = true;
+			bool m_bRayTracingEnabled = false;
+
+			struct Version
+			{
+				i32 maj;
+				i32 min;
+				i32 patch;
+			};
+
+			Version m_InstanceVersion;
+			Version m_DeviceVersion;
+			Version m_DriverVersion;
+
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
 			std::vector<VulkanRenderObject*> m_RenderObjects;
 
@@ -408,7 +452,7 @@ namespace flex
 			const std::vector<const char*> m_RequiredDeviceExtensions =
 			{
 				VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-				VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME,
+				VK_KHR_MAINTENANCE1_EXTENSION_NAME,
 			};
 
 			const std::vector<const char*> m_RequiredInstanceExtensions =
@@ -449,9 +493,11 @@ namespace flex
 			FrameBufferAttachment* m_GBufferColourAttachment1 = nullptr;
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
-			VDeleter<VkSampler> m_LinMipLinSampler;
-			VDeleter<VkSampler> m_DepthSampler;
-			VDeleter<VkSampler> m_NearestClampEdgeSampler;
+			VDeleter<VkSampler> m_SamplerDepth;
+			VDeleter<VkSampler> m_SamplerLinearRepeat;
+			VDeleter<VkSampler> m_SamplerLinearClampToEdge;
+			VDeleter<VkSampler> m_SamplerLinearClampToBorder;
+			VDeleter<VkSampler> m_SamplerNearestClampToEdge;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
 			FrameBufferAttachment* m_OffscreenFB0ColourAttachment0 = nullptr;
@@ -585,8 +631,6 @@ namespace flex
 
 			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair;
 
-			u32 m_DynamicAlignment = 0;
-
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
 
@@ -638,21 +682,23 @@ namespace flex
 				VkDrawIndirectCommand* indirectBufferCPU = nullptr;
 				VulkanBuffer* indirectBuffer = nullptr;
 
-				UniformBuffer* pointBufferGPU = nullptr;
-				UniformBuffer* vertexBufferGPU = nullptr;
-				u32 maxChunkCount;
+				GPUBuffer* pointBufferGPU = nullptr;
+				GPUBuffer* vertexBufferGPU = nullptr;
+				u32 maxChunkCount = 0;
 
 				VkFence fence = VK_NULL_HANDLE;
 				i32 lastTriCount = 0;
 				glm::ivec3 loadingChunkIndex;
 				u32 loadingChunkLinearIndex = u32_max;
 
-				const u32 maxNumRenderedChunks = 32;
+				const u32 maxNumRenderedChunks = 256;
 			};
 			Terrain* m_Terrain = nullptr;
 
 			std::vector<Pair<glm::ivec3, u32>> m_TerrainGenWorkloads;
 			std::vector<Pair<glm::ivec3, u32>> m_TerrainChunksLoaded;
+
+			std::vector<GPUBuffer*> m_GPUBuffers;
 		};
 	} // namespace vk
 } // namespace flex

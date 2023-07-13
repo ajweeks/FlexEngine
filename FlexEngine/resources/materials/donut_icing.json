@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "donut_icing",
+		"shader" : "pbr",
+		"const albedo" : "0.618,0.000,0.610",
+		"const roughness" : 1.000000
+	}
+}

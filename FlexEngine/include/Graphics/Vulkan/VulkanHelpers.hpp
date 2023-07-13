@@ -16,9 +16,20 @@ namespace flex
 	{
 		struct VulkanDevice;
 
-		std::string VulkanErrorString(VkResult errorCode);
-
 		void VK_CHECK_RESULT(VkResult result);
+
+		VkResult vkAllocateMemory(VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+		void vkFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator);
+
+		VkResult deviceAllocateMemory(const char* debugName, VkDevice device, const VkMemoryAllocateInfo* pAllocateInfo, const VkAllocationCallbacks* pAllocator, VkDeviceMemory* pMemory);
+		void deviceFreeMemory(VkDevice device, VkDeviceMemory memory, const VkAllocationCallbacks* pAllocator);
+
+		struct VkAllocInfo
+		{
+			std::string debugName;
+			VkDeviceMemory memory;
+			u64 size;
+		};
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
 			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
@@ -43,9 +54,9 @@ namespace flex
 			~FrameBufferAttachment();
 
 			FrameBufferAttachment(const FrameBufferAttachment&) = delete;
-			FrameBufferAttachment(const FrameBufferAttachment&&) = delete;
-			FrameBufferAttachment& operator=(FrameBufferAttachment&) = delete;
-			FrameBufferAttachment& operator=(const FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment(FrameBufferAttachment&&) = delete;
+			FrameBufferAttachment& operator=(const FrameBufferAttachment&) = delete;
+			FrameBufferAttachment& operator=(FrameBufferAttachment&&) = delete;
 
 			void CreateImage(u32 inWidth = 0, u32 inHeight = 0, const char* optDBGName = nullptr);
 			void CreateImageView(const char* optDBGName = nullptr);
@@ -78,9 +89,9 @@ namespace flex
 			~FrameBuffer();
 
 			FrameBuffer(const FrameBuffer&) = delete;
-			FrameBuffer(const FrameBuffer&&) = delete;
-			FrameBuffer& operator=(FrameBuffer&) = delete;
-			FrameBuffer& operator=(const FrameBuffer&&) = delete;
+			FrameBuffer(FrameBuffer&&) = delete;
+			FrameBuffer& operator=(const FrameBuffer&) = delete;
+			FrameBuffer& operator=(FrameBuffer&&) = delete;
 
 			void Create(VkFramebufferCreateInfo* createInfo, VulkanRenderPass* inRenderPass, const char* debugName);
 
@@ -105,9 +116,9 @@ namespace flex
 			~Cascade();
 
 			Cascade(const Cascade&) = delete;
-			Cascade(const Cascade&&) = delete;
+			Cascade(Cascade&&) = delete;
 			Cascade& operator=(const Cascade&) = delete;
-			Cascade& operator=(const Cascade&&) = delete;
+			Cascade& operator=(Cascade&&) = delete;
 
 			FrameBuffer frameBuffer;
 			FrameBufferAttachment* attachment = nullptr;
@@ -134,49 +145,17 @@ namespace flex
 			std::vector<VkPresentModeKHR> presentModes;
 		};
 
-		struct VulkanUniformBufferObjectData
+		struct VulkanGPUBuffer final : public GPUBuffer
 		{
-			u8* data = nullptr;
-			u32 unitSize = 0; // Size of each buffer instance (per object)
-		};
+			VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type, const std::string& debugName);
+			~VulkanGPUBuffer();
 
-		enum class UniformBufferType
-		{
-			STATIC,
-			DYNAMIC,
-			PARTICLE_DATA,
-			TERRAIN_POINT_BUFFER,
-			TERRAIN_VERTEX_BUFFER,
-
-			_NONE
-		};
-
-		// TODO: Rename to just GPUBuffer?
-		struct UniformBuffer final
-		{
-			UniformBuffer(VulkanDevice* device, UniformBufferType type);
-			~UniformBuffer();
-
-			UniformBuffer(const UniformBuffer&) = delete;
-			UniformBuffer& operator=(const UniformBuffer&) = delete;
-
-			UniformBuffer(const UniformBuffer&& other) :
-				buffer(other.buffer)
-			{
-				if (this != &other)
-				{
-					data = other.data;
-					fullDynamicBufferSize = other.fullDynamicBufferSize;
-					type = other.type;
-				}
-			}
-			UniformBuffer& operator=(const UniformBuffer&&) = delete;
+			VulkanGPUBuffer(const VulkanGPUBuffer&) = delete;
+			VulkanGPUBuffer(VulkanGPUBuffer&& other) = delete;
+			VulkanGPUBuffer& operator=(const VulkanGPUBuffer&) = delete;
+			VulkanGPUBuffer& operator=(VulkanGPUBuffer&&) = delete;
 
 			VulkanBuffer buffer;
-			VulkanUniformBufferObjectData data;
-			u32 fullDynamicBufferSize = 0;
-
-			UniformBufferType type = UniformBufferType::_NONE;
 		};
 
 		struct VertexIndexBufferPair final
@@ -187,21 +166,19 @@ namespace flex
 			{}
 
 			VertexIndexBufferPair(const VertexIndexBufferPair&) = delete;
-			VertexIndexBufferPair(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair(VertexIndexBufferPair&&) = delete;
 			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&) = delete;
-			VertexIndexBufferPair& operator=(const VertexIndexBufferPair&&) = delete;
+			VertexIndexBufferPair& operator=(VertexIndexBufferPair&&) = delete;
 
 			void Destroy();
 			void Clear();
 
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
-			u32 vertexCount = 0;
-			u32 indexCount = 0;
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
 		};
 
-		struct VulkanTexture final : Texture
+		struct VulkanTexture final : public Texture
 		{
 			VulkanTexture(VulkanDevice* device, VkQueue queue);
 			VulkanTexture(VulkanDevice* device, VkQueue queue, const std::string& name);
@@ -209,9 +186,11 @@ namespace flex
 			virtual ~VulkanTexture() {}
 
 			VulkanTexture(const VulkanTexture&) = delete;
-			VulkanTexture(const VulkanTexture&&) = delete;
+			VulkanTexture(VulkanTexture&&) = delete;
 			VulkanTexture& operator=(const VulkanTexture&) = delete;
-			VulkanTexture& operator=(const VulkanTexture&&) = delete;
+			VulkanTexture& operator=(VulkanTexture&&) = delete;
+
+			virtual void Reload() override;
 
 			struct ImageCreateInfo
 			{
@@ -251,13 +230,14 @@ namespace flex
 
 			struct SamplerCreateInfo
 			{
-				VkSampler* sampler = nullptr;
+				HTextureSampler* sampler = nullptr;
 
 				real maxAnisotropy = 16.0f;
 				real minLod = 0.0f;
 				real maxLod = 1.0f;
 				VkFilter magFilter = VK_FILTER_LINEAR;
 				VkFilter minFilter = VK_FILTER_LINEAR;
+				VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 				VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 
@@ -269,7 +249,6 @@ namespace flex
 				VkImage* image = nullptr;
 				VkDeviceMemory* imageMemory = nullptr;
 				VkImageView* imageView = nullptr;
-				VkSampler* sampler = nullptr;
 
 				VkImageLayout imageLayoutOut = VK_IMAGE_LAYOUT_UNDEFINED; // Will be set upon successful creation
 
@@ -281,9 +260,6 @@ namespace flex
 				u32 mipLevels = 1;
 				bool bGenerateMipMaps = false;
 				bool bEnableTrilinearFiltering = true;
-
-				// Leave following field empty to generate uninitialized cubemap
-				std::array<std::string, 6> filePaths;
 
 				const char* DBG_Name = nullptr;
 			};
@@ -301,38 +277,50 @@ namespace flex
 			static VkDeviceSize CreateCubemap(VulkanDevice* device, CubemapCreateInfo& createInfo);
 
 			u32 CreateFromMemory(void* buffer, u32 bufferSize, u32 inWidth, u32 inHeight, u32 inChannelCount,
-				VkFormat inFormat, i32 inMipLevels, VkFilter filter = VK_FILTER_LINEAR, i32 layerCount = 1);
+				TextureFormat inFormat, i32 inMipLevels, HTextureSampler inSampler, i32 layerCount = 1) override;
 
 			void TransitionToLayout(VkImageLayout newLayout, VkCommandBuffer optCommandBuffer = VK_NULL_HANDLE);
 			void CopyFromBuffer(VkBuffer buffer, u32 inWidth, u32 inHeight, VkCommandBuffer optCommandBuffer = 0);
 
-			bool SaveToFile(const std::string& absoluteFilePath, ImageFormat saveFormat);
-
-			void Build(void* data = nullptr);
+			bool SaveToFile(VulkanDevice* device, const std::string& absoluteFilePath, ImageFormat saveFormat);
 
 			/*
 			 * Creates image, image view, and sampler based on the texture at relativeFilePath
-			 * Returns size of image in bytes
+			 * Returns true if load completed successfully
 			 */
-			VkDeviceSize CreateFromFile(const std::string& relativeFilePath, VkFormat inFormat = VK_FORMAT_UNDEFINED, bool bGenerateFullMipChain = false);
+			bool LoadFromFile(const std::string& inRelativeFilePath, HTextureSampler inSampler, TextureFormat inFormat = TextureFormat::UNDEFINED) override;
+
+			/*
+			* Creates this texture's rendering resources
+			* Requires data to have been loaded already
+			* Returns the size of the image
+			*/
+			u64 Create(bool bGenerateFullMipChain = false) override;
 
 			/*
 			 * Creates image, image view, and sampler
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
+			VkDeviceSize CreateEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels = 1, VkImageUsageFlags inUsage = VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			/*
 			 * Creates an empty cubemap and returns the size of the generated image
 			 * Returns the size of the image
 			*/
-			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, u32 inMipLevels, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemapEmpty(u32 inWidth, u32 inHeight, u32 inChannelCount, VkFormat inFormat, HTextureSampler inSampler, u32 inMipLevels, bool bEnableTrilinearFiltering);
 
 			/*
 			 * Creates a cubemap from the given 6 textures
+			 * Returns true if load completed successfully
+			 */
+			bool LoadCubemapFromTextures(const std::array<std::string, 6>& filePaths, HTextureSampler inSampler);
+
+			/*
+			 * Creates a cubemap from the given 6 textures
+			 * Requires data to have been loaded already
 			 * Returns the size of the image
 			 */
-			VkDeviceSize CreateCubemapFromTextures(VkFormat inFormat, const std::array<std::string, 6>& filePaths, bool bEnableTrilinearFiltering);
+			VkDeviceSize CreateCubemap(VkFormat inFormat, bool bEnableTrilinearFiltering);
 
 			void GenerateMipmaps();
 
@@ -341,9 +329,9 @@ namespace flex
 			VDeleter<VkImage> image;
 			VDeleter<VkDeviceMemory> imageMemory;
 			VDeleter<VkImageView> imageView;
-			// TODO: CLEANUP: Don't store sampler per texture, pool together all unique samplers in VulkanRenderer
-			VDeleter<VkSampler> sampler;
 
+			// References sampler being used (owned by renderer)
+			HTextureSampler sampler;
 
 			VkImageLayout imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkFormat imageFormat = VK_FORMAT_UNDEFINED;
@@ -443,34 +431,15 @@ namespace flex
 
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
-		struct SpecializationInfoType
-		{
-			std::string name;
-			u32 id;
-			i32 defaultValut;
-		};
-
-		struct UniformBufferList
-		{
-			UniformBufferList();
-
-			void Add(VulkanDevice* device, UniformBufferType type);
-			UniformBuffer* Get(UniformBufferType type);
-			const UniformBuffer* Get(UniformBufferType type) const;
-			bool Has(UniformBufferType type) const;
-
-			std::vector<UniformBuffer> uniformBufferList;
-		};
-
 		struct VulkanShader final : public Shader
 		{
 			VulkanShader(const VDeleter<VkDevice>& device, ShaderInfo shaderInfo);
 			virtual ~VulkanShader();
 
 			VulkanShader(const VulkanShader&) = delete;
-			VulkanShader(const VulkanShader&&) = delete;
+			VulkanShader(VulkanShader&&) = delete;
 			VulkanShader& operator=(const VulkanShader&) = delete;
-			VulkanShader& operator=(const VulkanShader&&) = delete;
+			VulkanShader& operator=(VulkanShader&&) = delete;
 
 			VkRenderPass renderPass = VK_NULL_HANDLE;
 
@@ -484,24 +453,18 @@ namespace flex
 
 		struct VulkanMaterial final : public Material
 		{
-			VulkanMaterial() {};
-			virtual ~VulkanMaterial() {};
+			VulkanMaterial() = default;
+			virtual ~VulkanMaterial() = default;
 
 			VulkanMaterial(const VulkanMaterial&) = delete;
-			VulkanMaterial(const VulkanMaterial&&) = delete;
+			VulkanMaterial(VulkanMaterial&&) = delete;
 			VulkanMaterial& operator=(const VulkanMaterial&) = delete;
-			VulkanMaterial& operator=(const VulkanMaterial&&) = delete;
-
-			// TODO: OPTIMIZE: MEMORY: Only store dynamic buffers here, store constant buffers in shader/globally
-			UniformBufferList uniformBufferList;
+			VulkanMaterial& operator=(VulkanMaterial&&) = delete;
 
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
 			u32 cubemapSamplerID = 0;
 			u32 cubemapDepthSamplerID = 0;
-
-			// TODO: Remove, this always equals shaderID
-			u32 descriptorSetLayoutIndex = 0;
 		};
 
 		struct SpecializationConstantCreateInfo
@@ -513,10 +476,7 @@ namespace flex
 
 		struct GraphicsPipeline
 		{
-			GraphicsPipeline();
 			GraphicsPipeline(const VDeleter<VkDevice>& vulkanDevice);
-
-			void replace();
 
 			VDeleter<VkPipeline> pipeline;
 			VDeleter<VkPipelineLayout> layout;
@@ -553,9 +513,9 @@ namespace flex
 			VulkanRenderObject(RenderID renderID);
 
 			VulkanRenderObject(const VulkanRenderObject&) = delete;
-			VulkanRenderObject(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject(VulkanRenderObject&&) = delete;
 			VulkanRenderObject& operator=(const VulkanRenderObject&) = delete;
-			VulkanRenderObject& operator=(const VulkanRenderObject&&) = delete;
+			VulkanRenderObject& operator=(VulkanRenderObject&&) = delete;
 
 			VkPrimitiveTopology topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
@@ -596,7 +556,6 @@ namespace flex
 
 		struct GraphicsPipelineCreateInfo
 		{
-			bool operator=(const GraphicsPipelineCreateInfo& other);
 			u64 Hash();
 
 			ShaderID shaderID = InvalidShaderID;
@@ -610,8 +569,6 @@ namespace flex
 
 			VkPushConstantRange* pushConstants = nullptr;
 			u32 pushConstantRangeCount = 0;
-
-			u32 descriptorSetLayoutIndex = 0;
 
 			bool bSetDynamicStates = false;
 			bool bEnableColourBlending = false;
@@ -632,21 +589,21 @@ namespace flex
 		{
 			VkBuffer buffer;
 			VkDeviceSize bufferSize;
-			UniformBufferType type;
+			GPUBufferType type;
 		};
 
 		struct ImageDescriptorInfo
 		{
 			VkImageView imageView = VK_NULL_HANDLE;
-			VkSampler imageSampler = VK_NULL_HANDLE;
+			HTextureSampler imageSampler = nullptr;
 		};
 
 		struct DescriptorSetCreateInfo
 		{
-			VkDescriptorSet* descriptorSet = nullptr;
-			VkDescriptorSetLayout* descriptorSetLayout = nullptr;
+			VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+			VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
 			ShaderID shaderID = InvalidShaderID;
-			UniformBufferList const * uniformBufferList = nullptr;
+			GPUBufferList const* gpuBufferList = nullptr;
 
 			ShaderUniformContainer<BufferDescriptorInfo> bufferDescriptors;
 			ShaderUniformContainer<ImageDescriptorInfo> imageDescriptors;
@@ -660,14 +617,14 @@ namespace flex
 			glm::vec2 translate;
 		};
 
-		struct VulkanParticleSystem
+		struct VulkanParticleSystem final
 		{
 			explicit VulkanParticleSystem(VulkanDevice* device);
 
 			VulkanParticleSystem(const VulkanParticleSystem&) = delete;
-			VulkanParticleSystem(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem(VulkanParticleSystem&&) = delete;
 			VulkanParticleSystem& operator=(const VulkanParticleSystem&) = delete;
-			VulkanParticleSystem& operator=(const VulkanParticleSystem&&) = delete;
+			VulkanParticleSystem& operator=(VulkanParticleSystem&&) = delete;
 
 			ParticleSystemID ID = InvalidParticleSystemID;
 			VkDescriptorSet computeDescriptorSet = VK_NULL_HANDLE;
@@ -704,39 +661,52 @@ namespace flex
 				: GPUVendor::UNKNOWN;
 		}
 
-		struct VulkanDescriptorPool
+		struct VulkanDescriptorPool final
 		{
 			VulkanDescriptorPool();
-			VulkanDescriptorPool(VulkanDevice* device);
+			VulkanDescriptorPool(VulkanDevice* device, const char* name);
 			~VulkanDescriptorPool();
 
 			VulkanDescriptorPool(const VulkanDescriptorPool& other) = delete;
-			VulkanDescriptorPool(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool(VulkanDescriptorPool&& other) = delete;
 			VulkanDescriptorPool operator=(const VulkanDescriptorPool& other) = delete;
-			VulkanDescriptorPool operator=(const VulkanDescriptorPool&& other) = delete;
+			VulkanDescriptorPool operator=(VulkanDescriptorPool&& other) = delete;
 
 			VkDescriptorSet CreateDescriptorSet(DescriptorSetCreateInfo* createInfo);
-			void CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
-			void CreateDescriptorSetLayout(ShaderID shaderID);
+			VkDescriptorSet CreateDescriptorSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			VkDescriptorSet GetSet(MaterialID materialID);
+			VkDescriptorSet GetOrCreateSet(MaterialID materialID, const char* DBG_Name = nullptr);
+			VkDescriptorSetLayout CreateDescriptorSetLayout(ShaderID shaderID);
+			VkDescriptorSetLayout GetOrCreateLayout(ShaderID shaderID);
 			void Replace();
 			void Reset();
 			void FreeSet(VkDescriptorSet descSet);
 
+			void DrawImGui();
+
+			VkDescriptorPool GetPool() const;
+
 			// TODO: Monitor number of used desc sets to set this value intelligently
-			u32 maxNumDescSets = 1024;
-			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 16;
+			u32 maxNumDescSets = 4096;
+			static const u32 MAX_NUM_DESC_COMBINED_IMAGE_SAMPLERS = 8;
 			static const u32 MAX_NUM_DESC_UNIFORM_BUFFERS = 2;
-			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 1;
-			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1; // Particles
-			static const u32 MAX_NUM_DESC_STORAGE_BUFFERS = 1; // Terrain
+			static const u32 MAX_NUM_DESC_DYNAMIC_UNIFORM_BUFFERS = 2;
+			static const u32 MAX_NUM_DESC_DYNAMIC_STORAGE_BUFFERS = 1;
+			static const u32 MAX_NUM_DESC_STORAGE_BUFFERS = 4;
+
+		private:
+			std::map<ShaderID, VkDescriptorSetLayout> descriptorSetLayouts;
+			std::vector<VkDescriptorSet> descriptorSets;
+			u32 allocatedSetCount = 0;
 
 			VulkanDevice* device = nullptr;
+			const char* name = "";
 			VkDescriptorPool pool = VK_NULL_HANDLE;
 			u32 size = 0;
 
-			std::vector<VkDescriptorSetLayout> descriptorSetLayouts; // One per shader
-			std::vector<VkDescriptorSet> descriptorSets; // One per material
-			u32 allocatedSetCount = 0;
+			std::map<VkDescriptorSetLayout, std::vector<Uniform const*>> layoutUniforms;
+			std::map<VkDescriptorSetLayout, u32> layoutUsageCounts;
+			std::map<VkDescriptorType, u32> descriptorTypeCounts;
 		};
 
 		VkPrimitiveTopology TopologyModeToVkPrimitiveTopology(TopologyMode mode);

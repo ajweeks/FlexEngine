@@ -29,6 +29,7 @@ IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // for distance2
 #include <glm/gtx/quaternion.hpp> // for rotate
 #include <glm/gtx/vector_angle.hpp> // for angle
+#include <glm/ext/matrix_transform.hpp> // for rotate
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
 
@@ -41,12 +42,16 @@ IGNORE_WARNINGS_POP
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
+#include "Graphics/DebugRenderer.hpp"
+#include "Graphics/MarchingCubes.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Particles.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "ResourceManager.hpp"
@@ -55,6 +60,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
@@ -65,10 +71,12 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	const char* GameObject::s_DefaultNewGameObjectName = "New_Game_Object_00";
-	AudioCue GameObject::s_SqueakySounds;
-	AudioSourceID GameObject::s_BunkSound;
+	AudioCue Valve::s_SqueakySounds;
+	AudioSourceID Valve::s_BunkSound;
 
-	const char* Cart::emptyCartMeshName = "cart-empty.glb";
+	const real DroppedItem::MIN_TIME_BEFORE_PICKUP = 3.0f;
+
+	const char* BaseCart::emptyCartMeshName = "cart-empty.glb";
 	const char* EngineCart::engineMeshName = "cart-engine.glb";
 
 	ms SoftBody::FIXED_UPDATE_TIMESTEP = 1000.0f / 120.0f;
@@ -84,6 +92,8 @@ namespace flex
 	const real WirePlug::nearbyThreshold = 3.0f;
 
 	const real Wire::DEFAULT_LENGTH = 2.0f;
+
+	const real Battery::flashDuration = 0.5f;
 
 #define SIMD_WAVES 0
 
@@ -103,9 +113,108 @@ namespace flex
 	static const char* BrakeLightNames[] = { "Left", "Right" };
 	static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Vehicle::Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
 
-	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
+	GameObjectStack::GameObjectStack() :
+		prefabID(InvalidPrefabID),
+		count(0),
+		userData({})
+	{
+	}
+
+	GameObjectStack::GameObjectStack(const PrefabID& prefabID, i32 count) :
+		prefabID(prefabID),
+		count(count),
+		userData({})
+	{
+	}
+
+	void GameObjectStack::Clear()
+	{
+		prefabID = InvalidPrefabID;
+		count = 0;
+		userData.floatVal = 0.0f;
+	}
+
+	void GameObjectStack::SerializeToJSON(JSONObject& parentObject) const
+	{
+		parentObject.fields.emplace_back("prefab id", JSONValue(prefabID));
+		parentObject.fields.emplace_back("count", JSONValue(count));
+		if (userData.floatVal != 0.0f)
+		{
+			parentObject.fields.emplace_back("user data", JSONValue(userData.floatVal));
+		}
+	}
+
+	void GameObjectStack::ParseFromJSON(const JSONObject& parentObject)
+	{
+		prefabID = parentObject.GetPrefabID("prefab id");
+		count = parentObject.GetInt("count");
+		parentObject.TryGetFloat("user data", userData.floatVal);
+	}
+
+
+	void ActiveItem::Create(PrefabID sourcePrefabID)
+	{
+		m_SourcePrefabID = sourcePrefabID;
+
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(sourcePrefabID);
+		m_TypeID = prefabTemplate->GetTypeID();
+
+		m_ItemProxyObject = GameObject::CreateObjectOfType(BaseObjectSID, "Active item");
+		m_ItemProxyObject->SetSerializable(false);
+		m_ItemProxyObject->SetVisibleInSceneExplorer(false);
+		m_ItemProxyObject->GetTransform()->Scale(0.5f);
+
+		if (prefabTemplate->GetMesh() != nullptr)
+		{
+			prefabTemplate->GetMesh()->CloneSelf(m_ItemProxyObject, true);
+		}
+		else
+		{
+			Mesh* mesh = m_ItemProxyObject->SetMesh(new Mesh(m_ItemProxyObject));
+			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+		}
+
+		g_SceneManager->CurrentScene()->AddRootObject(m_ItemProxyObject);
+	}
+
+	void ActiveItem::Clear()
+	{
+		if (m_ItemProxyObject != nullptr)
+		{
+			g_SceneManager->CurrentScene()->RemoveObject(m_ItemProxyObject, true);
+			m_ItemProxyObject = nullptr;
+		}
+		m_TypeID = InvalidID;
+		m_SourcePrefabID = InvalidPrefabID;
+	}
+
+
+#define FIELD_OFFSET_AND_TYPE(type, field) offsetof(type, field), typeid(decltype(field))
+
+
+	//
+	// GameObject
+	//
+
+	GameObject::GameObject(const std::string& name, StringID typeID) :
+		 GameObject(name, typeID, InvalidGameObjectID, InvalidPrefabIDPair, false)
+	{
+	}
+
+	GameObject::GameObject(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate) :
 		m_Name(name),
-		m_TypeID(typeID)
+		m_TypeID(typeID),
+		m_SourcePrefabID(sourcePrefabID),
+		m_bSerializable(true),
+		m_bVisible(true),
+		m_bVisibleInSceneExplorer(true),
+		m_bStatic(false),
+		m_bTrigger(false),
+		m_bInteractable(false),
+		m_bCastsShadow(true),
+		m_bIsTemplate(bIsPrefabTemplate),
+		m_bUniformScale(false),
+		m_bItemizable(false)
 	{
 		if (gameObjectID.IsValid())
 		{
@@ -118,17 +227,6 @@ namespace flex
 
 		m_Transform.SetAsIdentity();
 		m_Transform.SetGameObject(this);
-
-		if (!s_SqueakySounds.IsInitialized())
-		{
-			s_SqueakySounds.Initialize(SFX_DIRECTORY "squeak00.wav", 5);
-
-			s_BunkSound = AudioManager::AddAudioSource(SFX_DIRECTORY "bunk.wav");
-		}
-	}
-
-	GameObject::~GameObject()
-	{
 	}
 
 	GameObject* GameObject::CopySelf(
@@ -137,7 +235,7 @@ namespace flex
 		std::string* optionalName /* = nullptr */,
 		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
 	{
-		if (parent != nullptr && (parent->GetTypeID() == SID("directional light")))
+		if (parent != nullptr && (parent->GetTypeID() == DirectionalLightSID))
 		{
 			PrintError("Attempted to copy directional light\n");
 			return nullptr;
@@ -145,8 +243,11 @@ namespace flex
 
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
-		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
+		// TODO:
+		bool bPrefabTemplate = (copyFlags & CopyFlags::COPYING_TO_PREFAB);
+		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID, typeStr, m_SourcePrefabID, bPrefabTemplate);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
@@ -157,8 +258,9 @@ namespace flex
 		const JSONObject& obj,
 		BaseScene* scene,
 		i32 sceneFileVersion,
-		bool bIsPrefabTemplate /* = false */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */)
+		const PrefabIDPair& sourcePrefabIDPair,
+		bool bIsPrefabTemplate,
+		CopyFlags copyFlags)
 	{
 		std::string gameObjectTypeStr = obj.GetString("type");
 		std::string objectName = obj.GetString("name");
@@ -212,20 +314,33 @@ namespace flex
 			if (prefabTemplate != nullptr)
 			{
 				JSONObject transformObj;
-				Transform transform = Transform::Identity();
+				Transform transform = Transform::Identity;
 				if (obj.TryGetObject("transform", transformObj))
 				{
-					transform = Transform::ParseJSON(transformObj);
+					Transform::ParseJSON(transformObj, transform);
 				}
 
-				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, &objectName, nullptr, &transform, copyFlags);
+				std::string* optionalObjectName = objectName.length() > 0 ? &objectName : nullptr;
+				GameObject* newPrefabInstance = CreateObjectFromPrefabTemplate(prefabID, gameObjectID, optionalObjectName, nullptr, &transform, copyFlags);
+
+				std::vector<MaterialID> matIDs = Material::ParseMaterialArrayJSON(obj, sceneFileVersion);
+				if (matIDs.empty())
+				{
+					matIDs.push_back(g_Renderer->GetPlaceholderMaterialID());
+				}
+
+				// Apply prefab overrides that may exist in scene
+				newPrefabInstance->ParseTypeUniqueFields(obj, matIDs);
 
 				std::vector<JSONObject> children;
 				if (obj.TryGetObjectArray("children", children))
 				{
 					for (JSONObject& child : children)
 					{
-						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, bIsPrefabTemplate, copyFlags));
+						PrefabIDPair idPair;
+						idPair.m_PrefabID = sourcePrefabIDPair.m_PrefabID;
+						idPair.m_SubGameObjectID = child.GetGUID("id");
+						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, idPair, bIsPrefabTemplate, copyFlags));
 					}
 				}
 
@@ -240,12 +355,11 @@ namespace flex
 
 		StringID gameObjectTypeID = Hash(gameObjectTypeStr.c_str());
 
-		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str(), bIsPrefabTemplate);
+		GameObject* newGameObject = CreateObjectOfType(gameObjectTypeID, objectName, gameObjectID, gameObjectTypeStr.c_str(), sourcePrefabIDPair, bIsPrefabTemplate);
 
 		if (newGameObject != nullptr)
 		{
-			newGameObject->m_bIsTemplate = bIsPrefabTemplate;
-			newGameObject->ParseJSON(obj, scene, sceneFileVersion, InvalidMaterialID, bIsPrefabTemplate, copyFlags);
+			newGameObject->ParseJSON(obj, scene, sceneFileVersion, InvalidMaterialID, copyFlags);
 		}
 
 		return newGameObject;
@@ -263,16 +377,17 @@ namespace flex
 		if (prefabTemplate == nullptr)
 		{
 			std::string prefabTemplateIDStr = prefabID.ToString();
-			PrintError("Failed to create game objet from prefab template with ID %s\n", prefabTemplateIDStr.c_str());
+			PrintError("Failed to create game object from prefab template with ID %s\n", prefabTemplateIDStr.c_str());
 			return nullptr;
 		}
 		GameObject* prefabInstance = prefabTemplate->CopySelf(parent, copyFlags, optionalObjectName, gameObjectID);
 
-		prefabInstance->m_PrefabIDLoadedFrom = prefabID;
+		CHECK(prefabInstance->m_SourcePrefabID.m_PrefabID.IsValid());
+		CHECK(prefabInstance->m_SourcePrefabID.m_SubGameObjectID.IsValid());
 
 		if (optionalTransform != nullptr)
 		{
-			prefabInstance->m_Transform = *optionalTransform;
+			prefabInstance->m_Transform.CloneFrom(*optionalTransform);
 		}
 
 		return prefabInstance;
@@ -283,38 +398,43 @@ namespace flex
 		const std::string& objectName,
 		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
 		const char* optionalTypeStr /* = nullptr */,
+		const PrefabIDPair& sourcePrefabIDPair /* = InvalidPrefabIDPair */,
 		bool bIsPrefabTemplate /* = false */)
 	{
 		switch (gameObjectTypeID)
 		{
-		case SID("skybox"): return new Skybox(objectName, gameObjectID);
-		case SID("reflection probe"): return new ReflectionProbe(objectName, gameObjectID);
-		case SID("valve"): return new Valve(objectName, gameObjectID);
-		case SID("rising block"): return new RisingBlock(objectName, gameObjectID);
-		case SID("glass pane"): return new GlassPane(objectName, gameObjectID);
-		case SID("point light"): return new PointLight(objectName, gameObjectID);
-		case SID("spot light"): return new SpotLight(objectName, gameObjectID);
-		case SID("area light"): return new AreaLight(objectName, gameObjectID);
-		case SID("directional light"): return new DirectionalLight(objectName, gameObjectID);
-		case SID("cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateCart(objectName, gameObjectID, bIsPrefabTemplate);
-		case SID("engine cart"): return GetSystem<CartManager>(SystemType::CART_MANAGER)->CreateEngineCart(objectName, gameObjectID, bIsPrefabTemplate);
-		case SID("mobile liquid box"): return new MobileLiquidBox(objectName, gameObjectID);
-		case SID("battery"): return new Battery(objectName, gameObjectID);
-		case SID("terminal"): return new Terminal(objectName, gameObjectID);
-		case SID("gerstner wave"): return new GerstnerWave(objectName, gameObjectID);
-		case SID("blocks"): return new Blocks(objectName, gameObjectID);
-		case SID("particle system"): return new ParticleSystem(objectName, gameObjectID);
-		case SID("terrain generator"): return new TerrainGenerator(objectName, gameObjectID);
-		case SID("wire"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWire(gameObjectID);
-		case SID("wire plug"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddWirePlug(gameObjectID);
-		case SID("socket"): return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->AddSocket(objectName, gameObjectID);
-		case SID("spring"): return new SpringObject(objectName, gameObjectID);
-		case SID("soft body"): return new SoftBody(objectName, gameObjectID);
-		case SID("vehicle"): return new Vehicle(objectName, gameObjectID);
-		case SID("road"): return new Road(objectName, gameObjectID);
-		case SID("solar panel"): return new SolarPanel(objectName, gameObjectID);
-		case SID("object"): return new GameObject(objectName, gameObjectTypeID, gameObjectID);
-		case SID("player"):
+		case SkyboxSID: return new Skybox(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case ReflectionProbeSID: return new ReflectionProbe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case ValveSID: return new Valve(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case RisingBlockSID: return new RisingBlock(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case GlassPaneSID: return new GlassPane(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PointLightSID: return new PointLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpotLightSID: return new SpotLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case AreaLightSID: return new AreaLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case DirectionalLightSID: return new DirectionalLight(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case EmptyCartSID: return new EmptyCart(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case EngineCartSID: return new EngineCart(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MobileLiquidBoxSID: return new MobileLiquidBox(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case BatterySID: return new Battery(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case TerminalSID: return new Terminal(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case GerstnerWaveSID: return new GerstnerWave(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case TerrainGeneratorSID: return new TerrainGenerator(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case WireSID: return new Wire(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case WirePlugSID: return new WirePlug(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SocketSID: return new Socket(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpringObjectSID: return new SpringObject(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SoftBodySID: return new SoftBody(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case VehicleSID: return new Vehicle(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case RoadSID: return new Road(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SolarPanelSID: return new SolarPanel(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case HeadLampSID: return new HeadLamp(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PowerPoleSID: return new PowerPole(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MineralDepositSID: return new MineralDeposit(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case MinerSID: return new Miner(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case SpeakerSID: return new Speaker(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PickAxeSID: return new PickAxe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case PlayerSID:
 		{
 			PrintError("Player was serialized to scene file!\n");
 		} break;
@@ -325,7 +445,7 @@ namespace flex
 				"Creating placeholder base object.\n",
 				objectName.c_str(), (optionalTypeStr == nullptr ? "unknown" : optionalTypeStr));
 
-			return new GameObject(objectName, gameObjectTypeID, gameObjectID);
+			return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		} break;
 		}
 
@@ -371,10 +491,7 @@ namespace flex
 			child->PostInitialize();
 		}
 
-		m_Transform.UpdateParentTransform();
-
-		GetChildrenOfType(SID("socket"), false, sockets);
-		outputSignals.resize((u32)sockets.size());
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->CacheGameObjectSockets(ID);
 	}
 
 	void GameObject::Destroy(bool bDetachFromParent /* = true */)
@@ -383,6 +500,8 @@ namespace flex
 		{
 			DetachFromParent();
 		}
+
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RemoveGameObjectSockets(ID);
 
 		// Handle m_Children being modified during loop (from call to DetachFromParent)
 		for (GameObject* child : m_Children)
@@ -412,14 +531,18 @@ namespace flex
 			m_CollisionShape = nullptr;
 		}
 
-		if (g_Editor->IsObjectSelected(ID))
+		if (!m_bIsTemplate)
 		{
-			g_Editor->DeselectObject(ID);
-		}
+			if (g_Editor->IsObjectSelected(ID))
+			{
+				g_Editor->DeselectObject(ID);
+			}
 
-		if (g_SceneManager->HasSceneLoaded())
-		{
-			g_SceneManager->CurrentScene()->UnregisterGameObject(ID);
+			// ID will not be valid on objects that are being saved as a prefab template
+			if (g_SceneManager->HasSceneLoaded() && ID.IsValid())
+			{
+				g_SceneManager->CurrentScene()->UnregisterGameObject(ID, /* bAssertSuccess: */ true);
+			}
 		}
 	}
 
@@ -427,42 +550,21 @@ namespace flex
 	{
 		PROFILE_AUTO("GameObject Update");
 
-		if (m_NearbyInteractable != nullptr)
+		if (m_NearbyInteractableID.IsValid())
 		{
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			btVector3 pos = ToBtVec3(m_NearbyInteractable->GetTransform()->GetWorldPosition());
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			btVector3 pos = ToBtVec3(m_NearbyInteractableID.Get()->GetTransform()->GetWorldPosition());
 			//real pulse = sin(g_SecElapsedSinceProgramStart * 8.0f);
-			//debugDrawer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
+			//debugRenderer->drawSphere(pos, pulse * 0.1f + 0.35f, btVector3(0.1f, pulse * 0.5f + 0.7f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.1f, 0.95f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.1f, 0.95f, 0.1f));
 		}
 		else if (m_bInteractable)
 		{
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 			btVector3 pos = ToBtVec3(m_Transform.GetWorldPosition());
-			debugDrawer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
-			debugDrawer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
-		}
-
-		if (m_Name == "Spinner")
-		{
-			m_Transform.SetWorldRotation(glm::quat(glm::vec3(0.0f, g_SecElapsedSinceProgramStart, 0.0f)));
-		}
-
-		// Clear every frame
-		m_NearbyInteractable = nullptr;
-
-		if (m_RigidBody)
-		{
-			if (m_RigidBody->IsKinematic())
-			{
-				m_RigidBody->MatchParentTransform();
-			}
-			else
-			{
-				// Rigid body will take these changes into account
-				m_RigidBody->UpdateParentTransform();
-			}
+			debugRenderer->drawLine(pos + btVector3(-1, 0.1f, 0), pos + btVector3(1, 0.1f, 0), btVector3(0.95f, 0.95f, 0.1f));
+			debugRenderer->drawLine(pos + btVector3(0, 0.1f, -1), pos + btVector3(0, 0.1f, 1), btVector3(0.95f, 0.95f, 0.1f));
 		}
 
 		for (GameObject* child : m_Children)
@@ -471,7 +573,15 @@ namespace flex
 		}
 	}
 
-	void GameObject::DrawImGuiObjects()
+	void GameObject::FixedUpdate()
+	{
+	}
+
+	void GameObject::Render()
+	{
+	}
+
+	void GameObject::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		if (!IsVisibleInSceneExplorer())
 		{
@@ -480,19 +590,27 @@ namespace flex
 
 		ImGui::PushID(this);
 
-		DrawImGuiForSelfInternal();
+		DrawImGuiForSelfInternal(bDrawingEditorObjects);
 
 		ImGui::PopID();
 	}
 
-	void GameObject::DrawImGuiForSelfInternal()
+	void GameObject::DrawImGuiForSelfInternal(bool bDrawingEditorObjects)
 	{
 		// ImGui::PushID will have already been called, making names not need to be quailfied for uniqueness
 
 		bool bAnyPropertyChanged = false;
 
 		const char* typeStr = BaseScene::GameObjectTypeIDToString(m_TypeID);
-		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_PrefabIDLoadedFrom.IsValid() ? "(prefab)" : "");
+		ImGui::Text("%s : %s %s", m_Name.c_str(), typeStr, m_SourcePrefabID.IsValid() ? "(prefab)" : "");
+
+		if (m_SourcePrefabID.IsValid())
+		{
+			char prefabIDStrBuff[33];
+			m_SourcePrefabID.m_PrefabID.ToString(prefabIDStrBuff);
+			std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
+			ImGui::Text("Source prefab: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStrBuff);
+		}
 
 		if (DoImGuiContextMenu(true))
 		{
@@ -508,10 +626,12 @@ namespace flex
 			ID.ToString(buffer);
 			ImGui::Text("%s", buffer);
 
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
-				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_PrefabIDLoadedFrom);
-				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
+				char prefabIDStrBuff[33];
+				m_SourcePrefabID.m_PrefabID.ToString(prefabIDStrBuff);
+				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
+				ImGui::Text("Prefab source: %s (%s)", prefabLoadedFromFilePath.c_str(), prefabIDStrBuff);
 			}
 
 			ImGui::EndTooltip();
@@ -532,6 +652,12 @@ namespace flex
 		{
 			bAnyPropertyChanged = true;
 			SetStatic(bStatic);
+		}
+
+		PropertyCollection* propertyCollection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+		if (propertyCollection != nullptr)
+		{
+			bAnyPropertyChanged = propertyCollection->DrawImGuiForObject(this) || bAnyPropertyChanged;
 		}
 
 		// Transform
@@ -559,9 +685,12 @@ namespace flex
 				ImGui::EndPopup();
 			}
 
-			glm::vec3 translation = m_Transform.GetLocalPosition();
-			glm::vec3 rotation = glm::degrees((glm::eulerAngles(m_Transform.GetLocalRotation())));
-			glm::vec3 pScale = m_Transform.GetLocalScale();
+			static bool bWorldSpace = false;
+			ImGui::Checkbox("World Space", &bWorldSpace);
+
+			glm::vec3 translation = bWorldSpace ? m_Transform.GetWorldPosition() : m_Transform.GetLocalPosition();
+			glm::vec3 rotation = glm::degrees((glm::eulerAngles(bWorldSpace ? m_Transform.GetWorldRotation() : m_Transform.GetLocalRotation())));
+			glm::vec3 pScale = bWorldSpace ? m_Transform.GetWorldScale() : m_Transform.GetLocalScale();
 			glm::vec3 scale = pScale;
 
 			bool bValueChanged = false;
@@ -608,18 +737,33 @@ namespace flex
 			if (bValueChanged)
 			{
 				bAnyPropertyChanged = true;
-				m_Transform.SetLocalPosition(translation, false);
 
 				glm::quat rotQuat(glm::quat(glm::radians(cleanedRot)));
 
-				m_Transform.SetLocalRotation(rotQuat, false);
-				m_Transform.SetLocalScale(scale, true);
+				if (bWorldSpace)
+				{
+					m_Transform.SetWorldPosition(translation, false);
+					m_Transform.SetWorldRotation(rotQuat, false);
+					m_Transform.SetWorldScale(scale, true);
+				}
+				else
+				{
+					m_Transform.SetLocalPosition(translation, false);
+					m_Transform.SetLocalRotation(rotQuat, false);
+					m_Transform.SetLocalScale(scale, true);
+				}
+
+				if (m_RigidBody != nullptr)
+				{
+					m_RigidBody->GetRigidBodyInternal()->activate(true);
+				}
+
 				SetUseUniformScale(m_bUniformScale, false);
 
-				if (m_RigidBody)
-				{
-					m_RigidBody->MatchParentTransform();
-				}
+				//if (m_RigidBody != nullptr)
+				//{
+				//	m_RigidBody->MatchTransform();
+				//}
 
 				if (g_Editor->IsObjectSelected(ID))
 				{
@@ -630,7 +774,7 @@ namespace flex
 
 		if (m_Mesh != nullptr)
 		{
-			bAnyPropertyChanged = g_Renderer->DrawImGuiForGameObject(this) || bAnyPropertyChanged;
+			bAnyPropertyChanged = g_Renderer->DrawImGuiForGameObject(this, bDrawingEditorObjects) || bAnyPropertyChanged;
 		}
 		else
 		{
@@ -640,9 +784,24 @@ namespace flex
 				Mesh* mesh = SetMesh(new Mesh(this));
 				mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", g_Renderer->GetPlaceholderMaterialID());
 			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(Editor::MeshPayloadCStr);
+
+				if (payload != nullptr && payload->Data != nullptr)
+				{
+					bAnyPropertyChanged = true;
+					Mesh* mesh = SetMesh(new Mesh(this));
+					std::string relativeFilePath = std::string((const char*)payload->Data, payload->DataSize);
+					mesh->LoadFromFile(MESH_DIRECTORY + relativeFilePath, g_Renderer->GetPlaceholderMaterialID());
+
+					ImGui::EndDragDropTarget();
+				}
+			}
 		}
 
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			ImGui::Spacing();
 
@@ -681,21 +840,21 @@ namespace flex
 
 					ImGui::PushItemWidth(80.0f);
 					{
-						i32 group = m_RigidBody->GetGroup();
-						if (ImGui::InputInt("Group", &group, 1, 16))
+						u32 group = m_RigidBody->GetGroup();
+						if (ImGuiExt::InputUInt("Group", &group, 1u, 16u))
 						{
 							bAnyPropertyChanged = true;
-							group = glm::clamp(group, -1, 16);
+							group = glm::clamp(group, 0u, 16u);
 							m_RigidBody->SetGroup(group);
 						}
 
 						ImGui::SameLine();
 
-						i32 mask = m_RigidBody->GetMask();
-						if (ImGui::InputInt("Mask", &mask, 1, 16))
+						u32 mask = m_RigidBody->GetMask();
+						if (ImGuiExt::InputUInt("Mask", &mask, 1u, 16u))
 						{
 							bAnyPropertyChanged = true;
-							mask = glm::clamp(mask, -1, 16);
+							mask = glm::clamp(mask, 0u, 16u);
 							m_RigidBody->SetMask(mask);
 						}
 					}
@@ -758,39 +917,8 @@ namespace flex
 
 										selectedColliderShape = i;
 
-										BroadphaseNativeTypes collisionShapeType = g_CollisionTypes[selectedColliderShape];
-										switch (collisionShapeType)
-										{
-										case BOX_SHAPE_PROXYTYPE:
-										{
-											btBoxShape* newShape = new btBoxShape(btVector3(1.0f, 1.0f, 1.0f));
-											SetCollisionShape(newShape);
-										} break;
-										case SPHERE_SHAPE_PROXYTYPE:
-										{
-											btSphereShape* newShape = new btSphereShape(1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										case CAPSULE_SHAPE_PROXYTYPE:
-										{
-											btCapsuleShapeZ* newShape = new btCapsuleShapeZ(1.0f, 1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										case CYLINDER_SHAPE_PROXYTYPE:
-										{
-											btCylinderShape* newShape = new btCylinderShape(btVector3(1.0f, 1.0f, 1.0f));
-											SetCollisionShape(newShape);
-										} break;
-										case CONE_SHAPE_PROXYTYPE:
-										{
-											btConeShape* newShape = new btConeShape(1.0f, 1.0f);
-											SetCollisionShape(newShape);
-										} break;
-										default:
-										{
-											PrintError("Unhandled BroadphaseNativeType in GameObject::DrawImGuiObjects: %d\n", (i32)collisionShapeType);
-										} break;
-										}
+										btCollisionShape* collisionShape = CreateCollisionShape(g_CollisionTypes[selectedColliderShape]);
+										SetCollisionShape(collisionShape);
 									}
 								}
 							}
@@ -809,13 +937,12 @@ namespace flex
 						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.01f, 0.0f, 1000.0f))
 						{
+							halfExtentsG *= scale;
 							bAnyPropertyChanged = true;
-							halfExtents = ToBtVec3(halfExtentsG);
-							btBoxShape* newShape = new btBoxShape(halfExtents);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(BOX_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case SPHERE_SHAPE_PROXYTYPE:
@@ -824,12 +951,12 @@ namespace flex
 						real radius = sphereShape->getRadius();
 						radius /= scale.x;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, 1000.0f))
 						{
+							radius *= scale.x;
 							bAnyPropertyChanged = true;
-							btSphereShape* newShape = new btSphereShape(radius);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, radius);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case CAPSULE_SHAPE_PROXYTYPE:
@@ -840,15 +967,16 @@ namespace flex
 						radius /= scale.x;
 						halfHeight /= scale.x;
 
-						real maxExtent = 1000.0f;
-						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, maxExtent);
-						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, maxExtent);
+						bool bUpdateShape = ImGui::DragFloat("radius", &radius, 0.1f, 0.0f, 1000.0f);
+						bUpdateShape |= ImGui::DragFloat("height", &halfHeight, 0.1f, 0.0f, 1000.0f);
 
 						if (bUpdateShape)
 						{
+							radius *= scale.x;
+							halfHeight *= scale.x;
 							bAnyPropertyChanged = true;
-							btCapsuleShapeZ* newShape = new btCapsuleShapeZ(radius, halfHeight * 2.0f);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, radius, halfHeight * 2.0f);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					case CYLINDER_SHAPE_PROXYTYPE:
@@ -858,13 +986,12 @@ namespace flex
 						glm::vec3 halfExtentsG = ToVec3(halfExtents);
 						halfExtentsG /= scale;
 
-						real maxExtent = 1000.0f;
-						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, maxExtent))
+						if (ImGui::DragFloat3("Half extents", &halfExtentsG.x, 0.1f, 0.0f, 1000.0f))
 						{
+							halfExtentsG *= scale;
 							bAnyPropertyChanged = true;
-							halfExtents = ToBtVec3(halfExtentsG);
-							btCylinderShape* newShape = new btCylinderShape(halfExtents);
-							SetCollisionShape(newShape);
+							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
+							SetCollisionShape(collisionShape);
 						}
 					} break;
 					default:
@@ -873,25 +1000,25 @@ namespace flex
 					} break;
 					}
 
-					glm::vec3 localOffsetPos = m_RigidBody->GetLocalPosition();
-					if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalPosition(localOffsetPos);
-					}
-					if (ImGui::IsItemClicked(1))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalPosition(VEC3_ZERO);
-					}
+					//glm::vec3 localOffsetPos = m_RigidBody->GetRigidBodyInternal()->getCollisionShape();
+					//if (ImGui::DragFloat3("Pos offset", &localOffsetPos.x, 0.05f))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalPosition(localOffsetPos);
+					//}
+					//if (ImGui::IsItemClicked(1))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalPosition(VEC3_ZERO);
+					//}
 
-					glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
-					glm::vec3 cleanedRot;
-					if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
-					{
-						bAnyPropertyChanged = true;
-						m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
-					}
+					//glm::vec3 localOffsetRotEuler = glm::degrees(glm::eulerAngles(m_RigidBody->GetLocalRotation()));
+					//glm::vec3 cleanedRot;
+					//if (DoImGuiRotationDragFloat3("Rot offset", localOffsetRotEuler, cleanedRot))
+					//{
+					//	bAnyPropertyChanged = true;
+					//	m_RigidBody->SetLocalRotation(glm::quat(glm::radians(cleanedRot)));
+					//}
 
 					ImGui::Spacing();
 
@@ -921,8 +1048,8 @@ namespace flex
 
 					ImGui::Text("Activation state: %i", rbInternal->getActivationState());
 
-					ImGui::Text("Group: %i", m_RigidBody->GetGroup());
-					ImGui::Text("Mask: %i", m_RigidBody->GetMask());
+					ImGui::Text("Group: %u", m_RigidBody->GetGroup());
+					ImGui::Text("Mask: %u", m_RigidBody->GetMask());
 				}
 
 				ImGui::TreePop();
@@ -934,26 +1061,26 @@ namespace flex
 			{
 				bAnyPropertyChanged = true;
 				RigidBody* rb = SetRigidBody(new RigidBody());
-				btVector3 btHalfExtents(1.0f, 1.0f, 1.0f);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
+				btCollisionShape* collisionShape = CreateCollisionShape(BOX_SHAPE_PROXYTYPE);
+				SetCollisionShape(collisionShape);
 
-				SetCollisionShape(boxShape);
-				rb->Initialize(boxShape, &m_Transform);
+				rb->Initialize(collisionShape, &m_Transform);
 				rb->GetRigidBodyInternal()->setUserPointer(this);
 			}
 		}
 
-		if (!sockets.empty())
+		std::vector<SocketData> const* sockets = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
 			bool bTreeOpen = ImGui::TreeNode("Sockets");
 			ImGui::SameLine();
-			ImGui::Text("(%i)", (i32)sockets.size());
+			ImGui::Text("(%i)", (i32)sockets->size());
 
 			if (bTreeOpen)
 			{
-				for (u32 i = 0; i < (u32)sockets.size(); ++i)
+				for (u32 i = 0; i < (u32)sockets->size(); ++i)
 				{
-					ImGui::Text("%u: %i", i, outputSignals[i]);
+					ImGui::Text("%u: %i", i, (*sockets)[i].outputSignal);
 				}
 				ImGui::TreePop();
 			}
@@ -965,9 +1092,9 @@ namespace flex
 		ImGui::Text("Trigger: %s", m_bTrigger ? "true" : "false"); // TODO: Make checkbox
 
 		std::string nearbyInteractibleName;
-		if (m_NearbyInteractable != nullptr)
+		if (m_NearbyInteractableID.IsValid())
 		{
-			nearbyInteractibleName = m_NearbyInteractable->GetName();
+			nearbyInteractibleName = m_NearbyInteractableID.Get()->GetName();
 		}
 		ImGui::Text("NearbyInteractible: %s", nearbyInteractibleName.c_str());
 		ImGui::Text("Sibling index: %i", m_SiblingIndex);
@@ -980,12 +1107,9 @@ namespace flex
 		ImGui::Text("Parent: %s", parentName.c_str());
 		ImGui::Text("Num children: %u", (u32)m_Children.size());
 
-		if (bAnyPropertyChanged)
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
 		{
-			if (m_PrefabIDLoadedFrom.IsValid())
-			{
-				g_ResourceManager->SetPrefabDirty(m_PrefabIDLoadedFrom);
-			}
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
 		}
 	}
 
@@ -1072,9 +1196,9 @@ namespace flex
 				}
 			}
 
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
-				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_PrefabIDLoadedFrom);
+				std::string prefabLoadedFromFilePath = g_ResourceManager->GetPrefabFileName(m_SourcePrefabID.m_PrefabID);
 				ImGui::Text("Prefab source: %s", prefabLoadedFromFilePath.c_str());
 			}
 
@@ -1089,7 +1213,7 @@ namespace flex
 
 				std::string name = m_Name;
 				GameObject* parent = m_Parent;
-				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID);
+				GameObject* newObject = CreateObjectOfType(newTypeID, m_Name, ID, typeStr, m_SourcePrefabID, m_bIsTemplate);
 				CopyGenericFields(newObject, parent, (CopyFlags)((i32)CopyFlags::ALL & ~(i32)CopyFlags::ADD_TO_SCENE));
 				newObject->m_TypeID = newTypeID; // Overwrite type ID again
 				currentScene->RemoveObjectImmediate(this, true);
@@ -1125,8 +1249,32 @@ namespace flex
 				ImGui::CloseCurrentPopup();
 			}
 
-			if (ImGui::Button("Save as prefab"))
+			bool bDisableSaveAsPrefab = !IsStringLower(m_Name);
+			if (bDisableSaveAsPrefab)
 			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1.0f, 0.1f, 0.1f, 1.0f));
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+			}
+			bool bDoSaveAsPrefab = ImGui::Button("Save as prefab");
+			bool bDoForceSaveAsPrefab = ImGui::Button("Save as prefab (force new)");
+			if (bDisableSaveAsPrefab)
+			{
+				if (ImGui::IsItemHovered()) ImGui::SetTooltip("Prefab names must be all lowercase");
+				ImGui::PopStyleColor(3);
+			}
+
+			if (bDoSaveAsPrefab && !bDisableSaveAsPrefab)
+			{
+				SaveAsPrefab();
+				bDeletedOrDuplicated = true;
+
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (bDoForceSaveAsPrefab && !bDisableSaveAsPrefab)
+			{
+				m_SourcePrefabID.Clear();
 				SaveAsPrefab();
 				bDeletedOrDuplicated = true;
 
@@ -1142,37 +1290,124 @@ namespace flex
 		return bDeletedOrDuplicated;
 	}
 
-	void GameObject::SaveAsPrefab()
+	bool GameObject::SaveAsPrefab()
 	{
-		if (m_PrefabIDLoadedFrom.IsValid())
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+		if (!IsStringLower(m_Name))
 		{
-			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			PrintError("Prefab names must be all lowercase, given name is not: %s\n", m_Name.c_str());
+			return false;
+		}
+
+		if (m_bIsTemplate)
+		{
+			// Save a prefab over an existing prefab
+			return g_ResourceManager->WriteExistingPrefabToDisk(this);
+		}
+		else if (m_SourcePrefabID.IsValid())
+		{
+			// Save an instance over an existing prefab
+
+			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
+			if (previousPrefabTemplate == nullptr)
+			{
+				PrintError("Failed to find source prefab for object %s!\n", m_Name.c_str());
+				return false;
+			}
+
+			currentScene->UnregisterGameObjectRecursive(ID, /* bAssertSuccess: */ true);
 
 			CopyFlags copyFlags = (CopyFlags)(
 				(CopyFlags::ALL &
 					~CopyFlags::ADD_TO_SCENE &
 					~CopyFlags::CREATE_RENDER_OBJECT)
 				| CopyFlags::COPYING_TO_PREFAB);
-			GameObject* previousPrefabTemplate = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom);
 
-			currentScene->UnregisterGameObjectRecursive(previousPrefabTemplate->ID);
-			currentScene->UnregisterGameObjectRecursive(ID);
+			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags);
 
-			std::string previousPrefabName = previousPrefabTemplate->GetName();
-			//GameObjectID previousPrefabID = previousPrefabTemplate->ID;
-			GameObject* newPrefabTemplate = CopySelf(nullptr, copyFlags, &previousPrefabName);
-			newPrefabTemplate->m_bIsTemplate = true;
-			newPrefabTemplate->m_PrefabIDLoadedFrom = InvalidPrefabID;
-			newPrefabTemplate->ID = previousPrefabTemplate->ID;
-			newPrefabTemplate->m_Name = previousPrefabName;
+			// Use previous game object IDs where possible to prevent unnecessary changes in file
 			OverwritePrefabIDs(previousPrefabTemplate, newPrefabTemplate);
 			previousPrefabTemplate->FixupPrefabTemplateIDs(newPrefabTemplate);
 
-			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_PrefabIDLoadedFrom);
+			g_ResourceManager->UpdatePrefabData(newPrefabTemplate, m_SourcePrefabID.m_PrefabID);
+
+			return true;
 		}
 		else
 		{
-			m_PrefabIDLoadedFrom = g_ResourceManager->AddNewPrefab(this);
+			// Save as a new prefab
+
+			char fileNameStrBuff[256];
+			snprintf(fileNameStrBuff, ARRAY_LENGTH(fileNameStrBuff), "%s.json", m_Name.c_str());
+
+			PrefabID newPrefabID = g_ResourceManager->CreateNewPrefab(this, fileNameStrBuff);
+			if (!newPrefabID.IsValid())
+			{
+				PrintError("Failed to create new prefab from object %s\n", m_Name.c_str());
+				return false;
+			}
+
+			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(newPrefabID);
+			CHECK_NE(prefabTemplate, nullptr);
+
+			// This object's GameObjectID will match that of the existing object in
+			// the scene, but that shouldn't pose any issues.
+
+			ResourceManager::PrefabTemplateInfo prefabTemplateInfo(prefabTemplate, newPrefabID, std::string(fileNameStrBuff));
+			bool bResult = g_ResourceManager->WritePrefabToDisk(prefabTemplateInfo);
+
+			if (!bResult)
+			{
+				return false;
+			}
+
+			//i32 siblingIndex = GetSiblingIndex();
+
+			//currentScene->UnregisterGameObjectRecursive(ID, true);
+
+			//GameObject* newInstance = CreateObjectFromPrefabTemplate(newPrefabID, ID, &m_Name, m_Parent, &m_Transform, CopyFlags::ALL);
+			//CHECK_NE(newInstance, nullptr);
+
+			//g_SceneManager->CurrentScene()->RemoveObjectImmediate(this, true);
+
+			//g_ResourceManager->DiscoverPrefabs();
+
+			currentScene->ReinstantiateFromPrefab(newPrefabID, this);
+			// NOTE: !! At this point, `this` is deleted, proceed with caution! !!
+
+			//newInstance->SetSiblingIndex(siblingIndex);
+
+			return true;
+		}
+	}
+
+	void GameObject::ChangeAllIDs()
+	{
+		GameObjectID oldID = ID;
+		GameObjectID newID = (GameObjectID)Platform::GenerateGUID();
+		OnIDChanged(oldID, newID);
+
+		ID = newID;
+
+		if (m_bIsTemplate)
+		{
+			m_SourcePrefabID.m_SubGameObjectID = newID;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			child->ChangeAllIDs();
+		}
+	}
+
+	void GameObject::SetSourcePrefabID(PrefabID sourcePrefabID)
+	{
+		m_SourcePrefabID.m_PrefabID = sourcePrefabID;
+
+		for (GameObject* child : m_Children)
+		{
+			child->SetSourcePrefabID(sourcePrefabID);
 		}
 	}
 
@@ -1207,7 +1442,7 @@ namespace flex
 
 	void GameObject::RemoveRigidBody()
 	{
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			physicsWorld->removeRigidBody(m_RigidBody->GetRigidBodyInternal());
@@ -1221,9 +1456,81 @@ namespace flex
 		}
 	}
 
+	void GameObject::Filter(std::function<bool(GameObject*)> callback, std::vector<GameObject*>& outList)
+	{
+		if (callback(this))
+		{
+			outList.emplace_back(this);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			child->Filter(callback, outList);
+		}
+	}
+
+	void GameObject::FilterID(std::function<bool(GameObject*)> callback, std::vector<GameObjectID>& outList)
+	{
+		if (callback(this))
+		{
+			outList.emplace_back(ID);
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			child->FilterID(callback, outList);
+		}
+	}
+
+	u32 GameObject::FilterCount(std::function<bool(GameObject*)> callback)
+	{
+		return FilterCountInternal(callback, 0);
+	}
+
+	u32 GameObject::FilterCountInternal(std::function<bool(GameObject*)> callback, u32 count)
+	{
+		if (callback(this))
+		{
+			++count;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			count += child->FilterCountInternal(callback, count);
+		}
+
+		return count;
+	}
+
+	GameObject* GameObject::FilterFirst(std::function<bool(GameObject*)> callback)
+	{
+		if (callback(this))
+		{
+			return this;
+		}
+
+		for (GameObject* child : m_Children)
+		{
+			GameObject* result = child->FilterFirst(callback);
+			if (result != nullptr)
+			{
+				return result;
+			}
+		}
+
+		return nullptr;
+	}
 	void GameObject::FixupPrefabTemplateIDs(GameObject* newGameObject)
 	{
 		FLEX_UNUSED(newGameObject);
+	}
+
+	void GameObject::OnIDChanged(const GameObjectID& oldID, const GameObjectID& newID)
+	{
+		for (GameObject* child : m_Children)
+		{
+			child->OnIDChanged(oldID, newID);
+		}
 	}
 
 	bool GameObject::ShouldSerialize()
@@ -1231,14 +1538,27 @@ namespace flex
 		return true;
 	}
 
+	void GameObject::OnItemize(GameObjectStack::UserData& outUserData)
+	{
+		FLEX_UNUSED(outUserData);
+	}
+
+	void GameObject::OnDeItemize(const GameObjectStack::UserData& userData)
+	{
+		FLEX_UNUSED(userData);
+	}
+
 	void GameObject::ParseJSON(
 		const JSONObject& obj,
 		BaseScene* scene,
 		i32 fileVersion,
 		MaterialID overriddenMatID /* = InvalidMaterialID */,
-		bool bIsPrefabTemplate /* = false */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		DeserializeRegisteredProperties(obj, collection);
+
 		bool bVisible = true;
 		obj.TryGetBool("visible", bVisible);
 		bool bVisibleInSceneGraph = true;
@@ -1262,92 +1582,16 @@ namespace flex
 		JSONObject transformObj;
 		if (obj.TryGetObject("transform", transformObj))
 		{
-			m_Transform = Transform::ParseJSON(transformObj);
+			Transform::ParseJSON(transformObj, m_Transform);
 		}
 
-		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs);
-
-		bool bColliderContainsOffset = false;
-
-		glm::vec3 localPos(0.0f);
-		glm::quat localRot(VEC3_ZERO);
-		glm::vec3 localScale(1.0f);
+		bool bCreateRenderObject = (copyFlags & (u32)CopyFlags::CREATE_RENDER_OBJECT) != 0;
+		g_ResourceManager->ParseMeshJSON(fileVersion, this, obj, matIDs, bCreateRenderObject);
 
 		JSONObject colliderObj;
 		if (obj.TryGetObject("collider", colliderObj))
 		{
-			std::string shapeStr = colliderObj.GetString("shape");
-			BroadphaseNativeTypes shapeType = StringToCollisionShapeType(shapeStr);
-
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.TryGetVec3("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btBoxShape* boxShape = new btBoxShape(btHalfExtents);
-
-				SetCollisionShape(boxShape);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				btSphereShape* sphereShape = new btSphereShape(radius);
-
-				SetCollisionShape(sphereShape);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btCapsuleShapeZ* capsuleShape = new btCapsuleShapeZ(radius, height);
-
-				SetCollisionShape(capsuleShape);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = colliderObj.GetFloat("radius");
-				real height = colliderObj.GetFloat("height");
-				btConeShape* coneShape = new btConeShape(radius, height);
-
-				SetCollisionShape(coneShape);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				glm::vec3 halfExtents;
-				colliderObj.TryGetVec3("half extents", halfExtents);
-				btVector3 btHalfExtents(halfExtents.x, halfExtents.y, halfExtents.z);
-				btCylinderShape* cylinderShape = new btCylinderShape(btHalfExtents);
-
-				SetCollisionShape(cylinderShape);
-			} break;
-			default:
-			{
-				PrintWarn("Unhandled BroadphaseNativeType: %s\n", shapeStr.c_str());
-			} break;
-			}
-
-			if (colliderObj.TryGetVec3("offset pos", localPos))
-			{
-				bColliderContainsOffset = true;
-			}
-
-			glm::vec3 localRotEuler;
-			if (colliderObj.TryGetVec3("offset rot", localRotEuler))
-			{
-				localRot = glm::quat(localRotEuler);
-				bColliderContainsOffset = true;
-			}
-
-			//
-			//if (colliderObj.TryGetVec3("offset scale", localScale))
-			//{
-			//	bColliderContainsOffset = true;
-			//}
-
-			//bool bIsTrigger = colliderObj.GetBool("trigger");
-			// TODO: Create btGhostObject to use for trigger
+			SetCollisionShape(ParseCollider(colliderObj));
 		}
 
 		JSONObject rigidBodyObj;
@@ -1359,32 +1603,11 @@ namespace flex
 			}
 			else
 			{
-				real mass = rigidBodyObj.GetFloat("mass");
-				bool bKinematic = rigidBodyObj.GetBool("kinematic");
-				bool bStatic = rigidBodyObj.GetBool("static");
-				i32 mask = rigidBodyObj.GetInt("mask");
-				i32 group = rigidBodyObj.GetInt("group");
-
-				RigidBody* rigidBody = SetRigidBody(new RigidBody(group, mask));
-				rigidBody->SetMass(mass);
-				rigidBody->SetKinematic(bKinematic);
-				// TODO: Use IsStatic() ?
-				rigidBody->SetStatic(bStatic);
+				SetRigidBody(RigidBody::ParseFromJSON(rigidBodyObj));
 			}
 		}
 
-		// Must happen after rigid body has been created
-		if (bColliderContainsOffset)
-		{
-			m_RigidBody->SetLocalSRT(localScale, localRot, localPos);
-		}
-
-		ParseTypeUniqueFields(obj, scene, matIDs);
-
-		if (!bIsPrefabTemplate)
-		{
-			ParseInstanceUniqueFields(obj, scene, matIDs);
-		}
+		ParseTypeUniqueFields(obj, matIDs);
 
 		SetVisible(bVisible, false);
 		SetVisibleInSceneExplorer(bVisibleInSceneGraph);
@@ -1395,22 +1618,27 @@ namespace flex
 			SetStatic(bStatic);
 		}
 
-		obj.TryGetBool("casts shadow", m_bCastsShadow);
-
+		bool bCastsShadow = m_bCastsShadow;
+		if (obj.TryGetBool("casts shadow", bCastsShadow))
+		{
+			m_bCastsShadow = bCastsShadow;
+		}
 
 		std::vector<JSONObject> children;
 		if (obj.TryGetObjectArray("children", children))
 		{
-			for (JSONObject& child : children)
+			for (const JSONObject& child : children)
 			{
-				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, bIsPrefabTemplate, copyFlags));
+				// TODO: Handle nested prefabs
+				PrefabIDPair idPair;
+				idPair.m_PrefabID = m_SourcePrefabID.m_PrefabID;
+				idPair.m_SubGameObjectID = child.GetGUID("id");
+				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, idPair, m_bIsTemplate, copyFlags));
 			}
 		}
 	}
 
-	JSONObject GameObject::Serialize(const BaseScene* scene,
-		bool bIsRoot /* = false */,
-		bool bSerializePrefabData /* = false */)
+	JSONObject GameObject::Serialize(const BaseScene* scene, bool bIsRoot, bool bSerializePrefabData)
 	{
 		JSONObject object = {};
 
@@ -1425,10 +1653,9 @@ namespace flex
 			return object;
 		}
 
-		object.fields.emplace_back("name", JSONValue(m_Name));
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		// Added in scene v5
-		object.fields.emplace_back("id", JSONValue(ID));
+		SerializeRegisteredProperties(object, collection, bSerializePrefabData);
 
 		if (bSerializePrefabData)
 		{
@@ -1441,13 +1668,13 @@ namespace flex
 		}
 		else
 		{
-			if (m_PrefabIDLoadedFrom.IsValid())
+			if (m_SourcePrefabID.IsValid())
 			{
-				object.fields.emplace_back("type", JSONValue(std::string("prefab")));
-				std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_PrefabIDLoadedFrom)->m_Name;
+				object.fields.emplace_back("type", JSONValue("prefab"));
+				std::string prefabName = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID)->m_Name;
 				object.fields.emplace_back("prefab type", JSONValue(prefabName)); // More of a convenience for source control, GUID is ground truth
 				// Added in scene v6
-				std::string prefabIDStr = m_PrefabIDLoadedFrom.ToString();
+				std::string prefabIDStr = m_SourcePrefabID.m_PrefabID.ToString();
 				object.fields.emplace_back("prefab id", JSONValue(prefabIDStr));
 			}
 			else
@@ -1461,40 +1688,50 @@ namespace flex
 			}
 		}
 
-		// Don't serialize prefab root's transform data
-		if (!bSerializePrefabData || !bIsRoot)
+		// Prefab root's transform is always assumed to be at the origin
+		bool bIsPrefabRoot = bSerializePrefabData && bIsRoot;
+		if (!bIsPrefabRoot)
 		{
-			JSONField transformField = m_Transform.Serialize();
-			if (!transformField.value.objectValue.fields.empty())
+			JSONObject transformObj = m_Transform.Serialize();
+			if (!transformObj.fields.empty())
 			{
-				object.fields.push_back(transformField);
+				object.fields.emplace_back("transform", JSONValue(transformObj));
 			}
 		}
 
 		// TODO: Handle overrides
-		if (!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData)
+		if (!m_SourcePrefabID.IsValid() || bSerializePrefabData)
 		{
-			object.fields.emplace_back("visible", JSONValue(IsVisible()));
-			if (!IsVisibleInSceneExplorer())
+			if (!m_bVisible)
 			{
-				object.fields.emplace_back("visible in scene graph", JSONValue(IsVisibleInSceneExplorer()));
+				object.fields.emplace_back("visible", JSONValue(m_bVisible));
 			}
 
-			if (IsStatic())
+			if (!m_bVisibleInSceneExplorer)
 			{
-				object.fields.emplace_back("static", JSONValue(true));
+				object.fields.emplace_back("visible in scene graph", JSONValue(m_bVisibleInSceneExplorer));
 			}
 
-			object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
+			if (m_bStatic)
+			{
+				object.fields.emplace_back("static", JSONValue(m_bStatic));
+			}
+
+			if (!m_bCastsShadow)
+			{
+				object.fields.emplace_back("casts shadow", JSONValue(m_bCastsShadow));
+			}
 
 			if (m_Mesh != nullptr)
 			{
-				if (m_bSerializeMesh && !m_PrefabIDLoadedFrom.IsValid())
+				bool bSerializeMesh = ShouldSerializeMesh();
+				if (bSerializeMesh && (!m_SourcePrefabID.IsValid() || m_bIsTemplate))
 				{
 					object.fields.emplace_back(g_ResourceManager->SerializeMesh(m_Mesh));
 				}
 
-				if (m_bSerializeMaterial)
+				bool bSerializeMaterial = ShouldSerializeMaterial();
+				if (bSerializeMaterial)
 				{
 					std::vector<JSONField> materialFields;
 					for (u32 slotIndex = 0; slotIndex < m_Mesh->GetSubmeshCount(); ++slotIndex)
@@ -1531,122 +1768,30 @@ namespace flex
 			}
 
 			btCollisionShape* collisionShape = GetCollisionShape();
-			if (collisionShape &&
-				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (collisionShape != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
 				JSONObject colliderObj;
-
-				i32 shapeType = collisionShape->getShapeType();
-				std::string shapeTypeStr = CollisionShapeTypeToString(shapeType);
-				colliderObj.fields.emplace_back("shape", JSONValue(shapeTypeStr));
-
-				switch (shapeType)
+				if (SerializeCollider(collisionShape, m_Transform.GetWorldScale(), colliderObj))
 				{
-				case BOX_SHAPE_PROXYTYPE:
-				{
-					btVector3 btHalfExtents = static_cast<btBoxShape*>(collisionShape)->getHalfExtentsWithMargin();
-					glm::vec3 halfExtents = ToVec3(btHalfExtents);
-					halfExtents /= m_Transform.GetWorldScale();
-					std::string halfExtentsStr = VecToString(halfExtents, 3);
-					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
-				} break;
-				case SPHERE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btSphereShape*>(collisionShape)->getRadius();
-					radius /= m_Transform.GetWorldScale().x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-				} break;
-				case CAPSULE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btCapsuleShapeZ*>(collisionShape)->getRadius();
-					real height = static_cast<btCapsuleShapeZ*>(collisionShape)->getHalfHeight() * 2.0f;
-					radius /= m_Transform.GetWorldScale().x;
-					height /= m_Transform.GetWorldScale().x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-					colliderObj.fields.emplace_back("height", JSONValue(height));
-				} break;
-				case CONE_SHAPE_PROXYTYPE:
-				{
-					real radius = static_cast<btConeShape*>(collisionShape)->getRadius();
-					real height = static_cast<btConeShape*>(collisionShape)->getHeight();
-					radius /= m_Transform.GetWorldScale().x;
-					height /= m_Transform.GetWorldScale().x;
-					colliderObj.fields.emplace_back("radius", JSONValue(radius));
-					colliderObj.fields.emplace_back("height", JSONValue(height));
-				} break;
-				case CYLINDER_SHAPE_PROXYTYPE:
-				{
-					btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
-					glm::vec3 halfExtents = ToVec3(btHalfExtents);
-					halfExtents /= m_Transform.GetWorldScale();
-					std::string halfExtentsStr = VecToString(halfExtents, 3);
-					colliderObj.fields.emplace_back("half extents", JSONValue(halfExtentsStr));
-				} break;
-				default:
-				{
-					PrintWarn("Unhandled BroadphaseNativeType: %i\n on: %s in scene: %s\n",
-						shapeType, m_Name.c_str(), scene->GetName().c_str());
-				} break;
+					object.fields.emplace_back("collider", JSONValue(colliderObj));
 				}
-
-				if (m_RigidBody->GetLocalPosition() != VEC3_ZERO)
-				{
-					colliderObj.fields.emplace_back("offset pos", JSONValue(VecToString(m_RigidBody->GetLocalPosition(), 3)));
-				}
-
-				if (m_RigidBody->GetLocalRotation() != QUAT_IDENTITY)
-				{
-					glm::vec3 localRotEuler = glm::eulerAngles(m_RigidBody->GetLocalRotation());
-					colliderObj.fields.emplace_back("offset rot", JSONValue(VecToString(localRotEuler, 3)));
-				}
-
-				if (m_RigidBody->GetLocalScale() != VEC3_ONE)
-				{
-					colliderObj.fields.emplace_back("offset scale", JSONValue(VecToString(m_RigidBody->GetLocalScale(), 3)));
-				}
-
-				//bool bTrigger = false;
-				//colliderObj.fields.emplace_back("trigger", JSONValue(bTrigger)));
-				// TODO: Handle triggers
-
-				object.fields.emplace_back("collider", JSONValue(colliderObj));
 			}
 
 			RigidBody* rigidBody = GetRigidBody();
-			if (rigidBody &&
-				(!m_PrefabIDLoadedFrom.IsValid() || bSerializePrefabData))
+			if (rigidBody != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
-				JSONObject rigidBodyObj = {};
-
 				if (collisionShape == nullptr)
 				{
 					PrintError("Attempted to serialize object (%s) which has a rigid body but no collider!\n", GetName().c_str());
 				}
 				else
 				{
-					real mass = rigidBody->GetMass();
-					bool bKinematic = rigidBody->IsKinematic();
-					bool bStatic = rigidBody->IsStatic();
-					i32 mask = m_RigidBody->GetMask();
-					i32 group = m_RigidBody->GetGroup();
-
-					rigidBodyObj.fields.emplace_back("mass", JSONValue(mass));
-					rigidBodyObj.fields.emplace_back("kinematic", JSONValue(bKinematic));
-					rigidBodyObj.fields.emplace_back("static", JSONValue(bStatic));
-					rigidBodyObj.fields.emplace_back("mask", JSONValue(mask));
-					rigidBodyObj.fields.emplace_back("group", JSONValue(group));
+					object.fields.emplace_back("rigid body", JSONValue(rigidBody->SerializeToJSON()));
 				}
-
-				object.fields.emplace_back("rigid body", JSONValue(rigidBodyObj));
 			}
-
-			SerializeTypeUniqueFields(object);
 		}
 
-		if (!bSerializePrefabData)
-		{
-			SerializeInstanceUniqueFields(object);
-		}
+		SerializeTypeUniqueFields(object, bSerializePrefabData);
 
 		if (!m_Children.empty())
 		{
@@ -1656,9 +1801,11 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					if (m_PrefabIDLoadedFrom.IsValid())
+					if (m_SourcePrefabID.IsValid() && !m_bIsTemplate)
 					{
-						if (g_ResourceManager->PrefabTemplateContainsChild(m_PrefabIDLoadedFrom, child))
+						// Don't serialize children if this is a prefab instance and
+						// the children are present in the prefab definition
+						if (g_ResourceManager->PrefabTemplateContainsChild(m_SourcePrefabID.m_PrefabID, child))
 						{
 							continue;
 						}
@@ -1687,11 +1834,11 @@ namespace flex
 		return m_TypeID;
 	}
 
-	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	void GameObject::AddSelfAndChildrenToVec(std::vector<GameObject*>& vec) const
 	{
-		if (!Contains(vec, this))
+		if (!Contains<GameObject*>(vec, const_cast<GameObject*>(this)))
 		{
-			vec.push_back(this);
+			vec.push_back(const_cast<GameObject*>(this));
 		}
 
 		for (GameObject* child : m_Children)
@@ -1705,9 +1852,9 @@ namespace flex
 		}
 	}
 
-	void GameObject::RemoveSelfAndChildrenToVec(std::vector<GameObject*>& vec)
+	void GameObject::RemoveSelfAndChildrenFromVec(std::vector<GameObject*>& vec) const
 	{
-		auto iter = FindIter(vec, this);
+		auto iter = FindIter(vec, const_cast<GameObject*>(this));
 		if (iter != vec.end())
 		{
 			vec.erase(iter);
@@ -1721,10 +1868,10 @@ namespace flex
 				vec.erase(childIter);
 			}
 
-			child->RemoveSelfAndChildrenToVec(vec);
+			child->RemoveSelfAndChildrenFromVec(vec);
 		}
 	}
-	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	void GameObject::AddSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec) const
 	{
 		if (!Contains(vec, ID))
 		{
@@ -1742,7 +1889,7 @@ namespace flex
 		}
 	}
 
-	void GameObject::RemoveSelfIDAndChildrenToVec(std::vector<GameObjectID>& vec)
+	void GameObject::RemoveSelfIDAndChildrenFromVec(std::vector<GameObjectID>& vec) const
 	{
 		auto iter = FindIter(vec, ID);
 		if (iter != vec.end())
@@ -1758,7 +1905,7 @@ namespace flex
 				vec.erase(childIter);
 			}
 
-			child->RemoveSelfIDAndChildrenToVec(vec);
+			child->RemoveSelfIDAndChildrenFromVec(vec);
 		}
 	}
 
@@ -1780,14 +1927,147 @@ namespace flex
 		return false;
 	}
 
-	void GameObject::SetNearbyInteractable(GameObject* nearbyInteractable)
+	bool GameObject::IsWearable() const
 	{
-		m_NearbyInteractable = nearbyInteractable;
+		return m_TypeID == HeadLampSID;
 	}
 
-	bool GameObject::IsTemplate() const
+	void GameObject::RegisterPropertyCollections()
+	{
+		PropertyCollectionManager* propertyCollectionManager = GetSystem<PropertyCollectionManager>(SystemType::PROPERTY_COLLECTION_MANAGER);
+
+		propertyCollectionManager->RegisterType(BaseObjectSID, GameObject::BuildPropertyCollection()); // TODO?
+		propertyCollectionManager->RegisterType(DirectionalLightSID, DirectionalLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PointLightSID,PointLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpotLightSID, SpotLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(AreaLightSID, AreaLight::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(ValveSID, Valve::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(RisingBlockSID, RisingBlock::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(GlassPaneSID, GlassPane::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(ReflectionProbeSID, ReflectionProbe::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SkyboxSID, Skybox::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(BaseCartSID, BaseCart::BuildTypeUniquePropertyCollection()); // TODO?
+		propertyCollectionManager->RegisterType(EmptyCartSID, EmptyCart::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(EngineCartSID, EngineCart::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MobileLiquidBoxSID, MobileLiquidBox::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(BatterySID, Battery::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(GerstnerWaveSID, GerstnerWave::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(WireSID, Wire::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(WirePlugSID, WirePlug::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SocketSID, Socket::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(TerminalSID, Terminal::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(TerrainGeneratorSID, TerrainGenerator::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpringObjectSID, SpringObject::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SoftBodySID, SoftBody::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(VehicleSID, Vehicle::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(RoadSID, Road::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SolarPanelSID, SolarPanel::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(HeadLampSID, HeadLamp::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PowerPoleSID, PowerPole::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MineralDepositSID, MineralDeposit::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(MinerSID, Miner::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(SpeakerSID, Speaker::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PickAxeSID, PickAxe::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(PlayerSID, Player::BuildTypeUniquePropertyCollection());
+	}
+
+	void GameObject::UpdateHeldItem(GameObjectID heldItemID)
+	{
+		GameObject* gameObject = heldItemID.Get();
+		if (!gameObject) return;
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		CHECK(player->GetHeldItem(Hand::LEFT) == heldItemID ||
+			player->GetHeldItem(Hand::RIGHT) == heldItemID);
+
+		switch (gameObject->GetTypeID())
+		{
+		case WirePlugSID:
+		{
+			WirePlug* wirePlug = (WirePlug*)gameObject;
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UpdatePlugTransform(wirePlug);
+		} break;
+		default:
+		{
+			Transform* playerTransform = player->GetTransform();
+
+			glm::vec3 playerRight = playerTransform->GetRight();
+			const bool bLeftHand = player->GetHeldItem(Hand::LEFT) == heldItemID;
+			glm::vec3 newPos = player->GetHeldItemPosWS(bLeftHand ? Hand::LEFT : Hand::RIGHT);
+			gameObject->GetTransform()->SetWorldPosition(newPos);
+		} break;
+		}
+	}
+
+	void GameObject::UpdateActiveItem(const ActiveItem& activeItem)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		Transform* playerTransform = player->GetTransform();
+
+		glm::vec3 posWS = playerTransform->GetWorldPosition() +
+			player->GetLookDirection() * 2.0f +
+			playerTransform->GetRight() * 1.0f;
+		glm::quat rotWS = player->GetLookRotation();
+
+		switch (activeItem.m_TypeID)
+		{
+		case PickAxeSID:
+		{
+			real timer = player->GetItemPickingTimer();
+			if (timer >= 0.0f)
+			{
+				// Bias so first frame
+				real timerAdjusted = timer + (PI - player->GetItemPickingDuration());
+				const real mineAnimSpeed = 20.0f;
+				const real mineAnimArc = glm::radians(30.0f);
+				rotWS = glm::angleAxis(-sin(timerAdjusted * mineAnimSpeed) * mineAnimArc, playerTransform->GetRight()) * rotWS;
+			}
+		} break;
+		default:
+		{
+			// Nothing additional
+		} break;
+		}
+
+		activeItem.m_ItemProxyObject->GetTransform()->SetWorldPosition(posWS, false);
+		activeItem.m_ItemProxyObject->GetTransform()->SetWorldRotation(rotWS, true);
+	}
+
+	PropertyCollection* GameObject::BuildPropertyCollection()
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->AllocateCollection("base object");
+
+		collection->RegisterProperty("name", FIELD_OFFSET_AND_TYPE(GameObject, m_Name));
+
+		// Added in scene v5
+		collection->RegisterProperty("id", FIELD_OFFSET_AND_TYPE(GameObject, ID));
+
+		return collection;
+	}
+
+	void GameObject::SetNearbyInteractable(GameObjectID nearbyInteractableID)
+	{
+		m_NearbyInteractableID = nearbyInteractableID;
+	}
+
+	const PrefabIDPair& GameObject::GetSourcePrefabIDPair() const
+	{
+		return m_SourcePrefabID;
+	}
+
+	bool GameObject::IsPrefabTemplate() const
 	{
 		return m_bIsTemplate;
+	}
+
+	void GameObject::ClearNearbyInteractable()
+	{
+		m_NearbyInteractableID = InvalidGameObjectID;
+
+		for (GameObject* child : m_Children)
+		{
+			child->ClearNearbyInteractable();
+		}
 	}
 
 	void GameObject::OnCharge(real chargeAmount)
@@ -1850,9 +2130,9 @@ namespace flex
 		return result;
 	}
 
-	PrefabID GameObject::Itemize()
+	PrefabID GameObject::Itemize(GameObjectStack::UserData& outUserData)
 	{
-		PrefabID prefabID = m_PrefabIDLoadedFrom;
+		PrefabID prefabID = m_SourcePrefabID.m_PrefabID;
 
 		if (!prefabID.IsValid())
 		{
@@ -1860,12 +2140,14 @@ namespace flex
 			return prefabID;
 		}
 
+		OnItemize(outUserData);
+
 		g_SceneManager->CurrentScene()->RemoveObject(this, true);
 
 		return prefabID;
 	}
 
-	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS)
+	GameObject* GameObject::Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData)
 	{
 		GameObject* newObject = CreateObjectFromPrefabTemplate(prefabID, InvalidGameObjectID, nullptr, nullptr, nullptr,
 			(CopyFlags)((u32)CopyFlags::ALL & ~(u32)CopyFlags::ADD_TO_SCENE));
@@ -1873,8 +2155,7 @@ namespace flex
 		newObject->m_Transform.SetWorldPosition(positionWS, false);
 		newObject->m_Transform.SetWorldRotation(rotWS, true);
 
-		newObject->Initialize();
-		newObject->PostInitialize();
+		newObject->OnDeItemize(userData);
 
 		return newObject;
 	}
@@ -1882,7 +2163,7 @@ namespace flex
 	bool GameObject::IsItemizable() const
 	{
 		// Only prefabs are itemizable, we store the prefab ID
-		return m_bItemizable && (m_bIsTemplate || m_PrefabIDLoadedFrom.IsValid());
+		return m_bItemizable && (m_bIsTemplate || m_SourcePrefabID.IsValid());
 	}
 
 	bool GameObject::GetIDAtChildIndexRecursive(ChildIndex childIndex, GameObjectID& outGameObjectID) const
@@ -1905,7 +2186,7 @@ namespace flex
 		return false;
 	}
 
-	void GameObject::GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, std::string& newObjectName, GameObjectID& newGameObjectID)
+	void GameObject::GetNewObjectNameAndID(CopyFlags copyFlags, std::string* optionalName, GameObject* parent, std::string& newObjectName, GameObjectID& newGameObjectID)
 	{
 		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
 		{
@@ -1914,39 +2195,108 @@ namespace flex
 		}
 		else
 		{
-			newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name));
+			newObjectName = (optionalName != nullptr ? *optionalName : g_SceneManager->CurrentScene()->GetUniqueObjectName(m_Name, parent));
 		}
 	}
 
-	//void GameObject::OnConnectionMade(Wire* wire)
-	//{
-	//	wireConnections.push_back(wire);
-	//	outputSignals.resize(wireConnections.size(), -1);
-	//}
-	//
-	//void GameObject::OnConnectionBroke(Wire* wire)
-	//{
-	//	FLEX_UNUSED(wire);
-	//}
-
-	void GameObject::ParseTypeUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
+	bool GameObject::ShouldSerializeMesh() const
 	{
-		// Generic game objects have no unique fields
+		switch (m_TypeID)
+		{
+		case MineralDepositSID:
+		case SkyboxSID:
+		case GerstnerWaveSID:
+		case BaseCartSID:
+		case EmptyCartSID:
+		case EngineCartSID:
+		case WireSID:
+		case TerminalSID:
+		case TerrainGeneratorSID:
+		case SpringObjectSID:
+		case RoadSID:
+			return false;
+		}
+
+		return true;
 	}
 
-	void GameObject::ParseInstanceUniqueFields(const JSONObject& /* parentObj */, BaseScene* /* scene */, const std::vector<MaterialID>& /* matIDs */)
+	bool GameObject::ShouldSerializeMaterial() const
 	{
-		// Generic game objects have no unique fields
+		switch (m_TypeID)
+		{
+		case BaseCartSID:
+		case EmptyCartSID:
+		case EngineCartSID:
+		case GerstnerWaveSID:
+		case WireSID:
+		case TerminalSID:
+		case TerrainGeneratorSID:
+		case SpringObjectSID:
+		case RoadSID:
+			return false;
+		}
+
+		return true;
 	}
 
-	void GameObject::SerializeTypeUniqueFields(JSONObject& /* parentObject */)
+	void GameObject::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		// Generic game objects have no unique fields
+		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(matIDs);
 	}
 
-	void GameObject::SerializeInstanceUniqueFields(JSONObject& /* parentObject */) const
+	void GameObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		// Generic game objects have no unique fields
+		FLEX_UNUSED(parentObject);
+		FLEX_UNUSED(bSerializePrefabData);
+	}
+
+	void GameObject::SerializeField(JSONObject& parentObject, bool bSerializePrefabData, const char* fieldLabel, void* valuePtr, ValueType valueType, u32 precision /* = 2 */)
+	{
+		if (!m_SourcePrefabID.IsValid() || bSerializePrefabData)
+		{
+			// Object isn't loaded from a prefab or we're saving it as a prefab template, ignore overrides
+			parentObject.fields.emplace_back(fieldLabel, JSONValue::FromRawPtr(valuePtr, valueType, precision));
+			return;
+		}
+
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_SourcePrefabID);
+		if (prefabTemplate == nullptr)
+		{
+			PrintWarn("Attempted to serialize prefab instance which wasn't loaded from a valid prefab in GameObject::SerializeField (%s)\n", m_Name.c_str());
+			return;
+		}
+
+		u32 fieldOffset = (u32)((u64)valuePtr - (u64)this);
+		void* templateField = ((u8*)prefabTemplate + fieldOffset);
+
+		SerializePrefabInstanceFieldIfUnique(parentObject, fieldLabel, valuePtr, templateField, valueType, precision);
+	}
+
+	bool GameObject::SerializeRegisteredProperties(JSONObject& parentObject, PropertyCollection* collection, bool bSerializePrefabData)
+	{
+		if (m_bIsTemplate)
+		{
+			return GetPropertyCollectionManager()->SerializePrefabTemplate(m_SourcePrefabID, collection, m_Name.c_str(), parentObject);
+		}
+		else
+		{
+			return GetPropertyCollectionManager()->SerializeGameObject(ID, collection, m_Name.c_str(), parentObject, bSerializePrefabData);
+		}
+	}
+
+	void GameObject::DeserializeRegisteredProperties(const JSONObject& parentObject, PropertyCollection* collection)
+	{
+		if (m_bIsTemplate)
+		{
+			GetPropertyCollectionManager()->DeserializePrefabTemplate(this, collection, parentObject);
+		}
+		else
+		{
+			GetPropertyCollectionManager()->DeserializeGameObject(this, collection, parentObject);
+		}
 	}
 
 	void GameObject::CopyGenericFields(
@@ -1955,7 +2305,7 @@ namespace flex
 		CopyFlags copyFlags /* = CopyFlags::ALL */)
 	{
 		newGameObject->m_Tags = m_Tags;
-		newGameObject->m_Transform = m_Transform;
+		newGameObject->m_Transform.CloneFrom(m_Transform);
 		newGameObject->m_TypeID = m_TypeID;
 
 		newGameObject->m_bSerializable = m_bSerializable;
@@ -1964,28 +2314,39 @@ namespace flex
 		newGameObject->m_bStatic = m_bStatic;
 		newGameObject->m_bTrigger = m_bTrigger;
 		newGameObject->m_bInteractable = m_bInteractable;
-		newGameObject->m_PrefabIDLoadedFrom = m_PrefabIDLoadedFrom;
+		newGameObject->m_SourcePrefabID = m_SourcePrefabID;
 		newGameObject->m_bCastsShadow = m_bCastsShadow;
 		newGameObject->m_bUniformScale = m_bUniformScale;
+		if (copyFlags & CopyFlags::COPYING_TO_PREFAB)
+		{
+			newGameObject->m_bIsTemplate = true;
+		}
 
 		bool bAddToScene = (copyFlags & CopyFlags::ADD_TO_SCENE);
 
-		if (parent != nullptr)
+		if (bAddToScene)
 		{
-			parent->AddChild(newGameObject);
-		}
-		else
-		{
-			if (m_Parent != nullptr)
+			if (parent != nullptr)
 			{
-				g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
+				parent->AddChild(newGameObject);
 			}
 			else
 			{
-				if (bAddToScene)
+				if (m_Parent != nullptr)
+				{
+					g_SceneManager->CurrentScene()->AddChildObjectImmediate(m_Parent, newGameObject);
+				}
+				else
 				{
 					g_SceneManager->CurrentScene()->AddRootObjectImmediate(newGameObject);
 				}
+			}
+		}
+		else
+		{
+			if (parent != nullptr)
+			{
+				parent->AddChildImmediate(newGameObject, /* bRegisterChild: */ false);
 			}
 		}
 
@@ -1996,94 +2357,24 @@ namespace flex
 
 		bool bCreateRenderObject = (copyFlags & CopyFlags::CREATE_RENDER_OBJECT);
 
-		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && m_bSerializeMesh)
+		bool bSerializeMesh = ShouldSerializeMesh();
+		if ((copyFlags & CopyFlags::MESH) && m_Mesh != nullptr && bSerializeMesh)
 		{
-			std::vector<MaterialID> matIDs = m_Mesh->GetMaterialIDs();
-
 			if (newGameObject->GetMesh() != nullptr)
 			{
-				PrintError("New mesh (%s) already has mesh, perhaps it should have m_bSerializeMesh set to false?\n", newGameObject->m_Name.c_str());
+				const char* typeStr = g_ResourceManager->TypeIDToString(newGameObject->GetTypeID());
+				PrintError("New object %s already has mesh, perhaps its type (%s) should not be set to serialize mesh?\n", newGameObject->m_Name.c_str(), typeStr);
 			}
 			else
 			{
-				Mesh* newMesh = newGameObject->SetMesh(new Mesh(newGameObject));
-				Mesh::Type meshType = m_Mesh->GetType();
-				switch (meshType)
-				{
-				case Mesh::Type::PREFAB:
-				{
-					PrefabShape shape = m_Mesh->GetSubMesh(0)->GetShape();
-					newMesh->LoadPrefabShape(shape, matIDs[0], nullptr, bCreateRenderObject);
-				} break;
-				case Mesh::Type::FILE:
-				{
-					std::string filePath = m_Mesh->GetRelativeFilePath();
-					newMesh->LoadFromFile(filePath, matIDs, false, bCreateRenderObject);
-				} break;
-				default:
-				{
-					PrintError("Unhandled mesh component prefab type encountered while duplicating object\n");
-				} break;
-				}
+				m_Mesh->CloneSelf(newGameObject, bCreateRenderObject);
 			}
 		}
 
 		if ((copyFlags & CopyFlags::RIGIDBODY) && m_RigidBody != nullptr)
 		{
 			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
-
-			btCollisionShape* pCollisionShape = m_CollisionShape;
-			btCollisionShape* newCollisionShape = nullptr;
-
-			btVector3 btWorldScale = ToBtVec3(m_Transform.GetWorldScale());
-			real btWorldScaleX = btWorldScale.getX();
-
-			i32 shapeType = pCollisionShape->getShapeType();
-			switch (shapeType)
-			{
-			case BOX_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btBoxShape*>(pCollisionShape)->getHalfExtentsWithMargin();
-				btHalfExtents = btHalfExtents / btWorldScale;
-				newCollisionShape = new btBoxShape(btHalfExtents);
-			} break;
-			case SPHERE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btSphereShape*>(pCollisionShape)->getRadius();
-				radius /= btWorldScaleX;
-				newCollisionShape = new btSphereShape(radius);
-			} break;
-			case CAPSULE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getRadius();
-				real height = static_cast<btCapsuleShapeZ*>(pCollisionShape)->getHalfHeight() * 2.0f;
-				radius /= btWorldScaleX;
-				height /= btWorldScaleX;
-				newCollisionShape = new btCapsuleShapeZ(radius, height);
-			} break;
-			case CONE_SHAPE_PROXYTYPE:
-			{
-				real radius = static_cast<btConeShape*>(pCollisionShape)->getRadius();
-				real height = static_cast<btConeShape*>(pCollisionShape)->getHeight();
-				radius /= btWorldScaleX;
-				height /= btWorldScaleX;
-				newCollisionShape = new btConeShape(radius, height);
-			} break;
-			case CYLINDER_SHAPE_PROXYTYPE:
-			{
-				btVector3 btHalfExtents = static_cast<btCylinderShape*>(pCollisionShape)->getHalfExtentsWithMargin();
-				btHalfExtents = btHalfExtents / btWorldScale;
-				newCollisionShape = new btCylinderShape(btHalfExtents);
-			} break;
-			default:
-			{
-				PrintWarn("Unhanded shape type in GameObject::CopyGenericFields\n");
-			} break;
-			}
-
-			newGameObject->SetCollisionShape(newCollisionShape);
-
-			// TODO: Copy over constraints here
+			newGameObject->SetCollisionShape(CloneCollisionShape(m_Transform.GetWorldScale(), m_CollisionShape));
 		}
 
 		if (copyFlags & CopyFlags::CHILDREN)
@@ -2092,7 +2383,7 @@ namespace flex
 			{
 				if (child->IsSerializable())
 				{
-					GameObject* newChild = child->CopySelf(newGameObject, copyFlags);
+					GameObject* newChild = child->CopySelf(newGameObject, (CopyFlags)((i32)copyFlags & ~(i32)CopyFlags::ADD_TO_SCENE));
 					if (newChild != nullptr)
 					{
 						newGameObject->AddChildImmediate(newChild);
@@ -2104,11 +2395,12 @@ namespace flex
 
 	void GameObject::SetOutputSignal(i32 slotIdx, i32 value)
 	{
-		if (slotIdx >= (i32)outputSignals.size())
-		{
-			outputSignals.resize(slotIdx + 1);
-		}
-		outputSignals[slotIdx] = value;
+		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->SetGameObjectOutputSignal(ID, slotIdx, value);
+	}
+
+	i32 GameObject::GetOutputSignal(i32 slotIdx)
+	{
+		return GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetGameObjectOutputSignal(ID, slotIdx);
 	}
 
 	GameObject* GameObject::GetParent()
@@ -2188,7 +2480,42 @@ namespace flex
 		return g_SceneManager->CurrentScene()->AddChildObject(this, child);
 	}
 
-	GameObject* GameObject::AddChildImmediate(GameObject* child)
+	GameObject* GameObject::AddChildImmediate(GameObject* child, bool bRegisterChild /* = true */)
+	{
+		AddChildImmediateCommon(child);
+
+		// Prefab templates aren't registered in the scene
+		if (bRegisterChild && !m_bIsTemplate)
+		{
+			g_SceneManager->CurrentScene()->RegisterGameObject(child);
+		}
+
+		if (g_SceneManager->HasSceneLoaded())
+		{
+			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
+		}
+
+		if (!m_bIsTemplate)
+		{
+			if (child->GetTypeID() == SocketSID)
+			{
+				GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->OnSocketChildAdded(ID, child);
+			}
+		}
+
+		return child;
+	}
+
+	EditorObject* GameObject::AddEditorChildImmediate(EditorObject* child)
+	{
+		AddChildImmediateCommon(child);
+
+		g_SceneManager->CurrentScene()->RegisterEditorObject(child);
+
+		return child;
+	}
+
+	GameObject* GameObject::AddChildImmediateCommon(GameObject* child)
 	{
 		if (child == nullptr)
 		{
@@ -2202,7 +2529,7 @@ namespace flex
 		}
 
 		Transform* childTransform = child->GetTransform();
-		GameObject* childPParent = child->GetParent();
+		GameObject* childPrevParent = child->GetParent();
 		glm::mat4 childWorldTransform = childTransform->GetWorldTransform();
 
 		if (child == m_Parent)
@@ -2222,26 +2549,11 @@ namespace flex
 		m_Children.push_back(child);
 
 		child->SetParent(this);
+		child->GetTransform()->MarkDirty(true, true, true);
 
-		g_SceneManager->CurrentScene()->RegisterGameObject(child);
-
-		if (childPParent != nullptr)
+		if (childPrevParent != nullptr)
 		{
 			childTransform->SetWorldTransform(childWorldTransform);
-		}
-
-		if (child->GetTypeID() == SID("socket"))
-		{
-			Socket* socket = (Socket*)child;
-			socket->slotIdx = (i32)sockets.size();
-			sockets.push_back(socket);
-			socket->parent = this;
-			outputSignals.resize(sockets.size(), -1);
-		}
-
-		if (g_SceneManager->HasSceneLoaded())
-		{
-			g_SceneManager->CurrentScene()->UpdateRootObjectSiblingIndices();
 		}
 
 		return child;
@@ -2249,8 +2561,7 @@ namespace flex
 
 	bool GameObject::RemoveChildImmediate(GameObjectID childID, bool bDestroy)
 	{
-		GameObject* child = g_SceneManager->CurrentScene()->GetGameObject(childID);
-		return RemoveChildImmediate(child, bDestroy);
+		return RemoveChildImmediate(childID.Get(), bDestroy);
 	}
 
 	bool GameObject::RemoveChildImmediate(GameObject* child, bool bDestroy)
@@ -2266,7 +2577,7 @@ namespace flex
 			{
 				if (bDestroy)
 				{
-					child->Destroy();
+					child->Destroy(false);
 					delete child;
 				}
 				else
@@ -2274,8 +2585,11 @@ namespace flex
 					glm::mat4 childWorldTransform = child->GetTransform()->GetWorldTransform();
 
 					child->SetParent(nullptr);
+					child->GetTransform()->MarkDirty(true, true, true);
 
-					child->GetTransform()->SetWorldTransform(childWorldTransform);
+					Transform* childTransform = child->GetTransform();
+
+					childTransform->SetWorldTransform(childWorldTransform);
 				}
 
 				if (g_SceneManager->HasSceneLoaded())
@@ -2290,6 +2604,22 @@ namespace flex
 		}
 
 		return false;
+	}
+
+	void GameObject::MoveChild(GameObjectID childID, i32 newSiblingIndex)
+	{
+		MoveChild(childID.Get(), newSiblingIndex);
+	}
+
+	void GameObject::MoveChild(GameObject* child, i32 newSiblingIndex)
+	{
+		i32 previousSiblingIndex = child->GetSiblingIndex();
+		ReorderItemInList(m_Children, previousSiblingIndex, newSiblingIndex);
+
+		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
+		{
+			m_Children[i]->UpdateSiblingIndices(i);
+		}
 	}
 
 	const std::vector<GameObject*>& GameObject::GetChildren() const
@@ -2315,6 +2645,11 @@ namespace flex
 		}
 
 		return count;
+	}
+
+	u32 GameObject::GetChildCount() const
+	{
+		return (u32)m_Children.size();
 	}
 
 	GameObject* GameObject::AddSibling(GameObject* child)
@@ -2370,13 +2705,30 @@ namespace flex
 		return nullptr;
 	}
 
-	void GameObject::UpdateSiblingIndices(i32 myIndex)
+	void GameObject::UpdateSiblingIndices(i32 newIndex)
 	{
-		m_SiblingIndex = myIndex;
+		m_SiblingIndex = newIndex;
 
 		for (i32 i = 0; i < (i32)m_Children.size(); ++i)
 		{
 			m_Children[i]->UpdateSiblingIndices(i);
+		}
+	}
+
+	void GameObject::SetSiblingIndex(i32 newIndex)
+	{
+		if (m_SiblingIndex == newIndex)
+		{
+			return;
+		}
+
+		if (m_Parent != nullptr)
+		{
+			m_Parent->MoveChild(this, newIndex);
+		}
+		else
+		{
+			g_SceneManager->CurrentScene()->SetRootObjectIndex(this, newIndex);
 		}
 	}
 
@@ -2424,7 +2776,7 @@ namespace flex
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
 			auto thisIter = FindIter(siblings, this);
-			assert(thisIter != siblings.end());
+			CHECK(thisIter != siblings.end());
 
 			for (auto iter = siblings.begin(); iter != thisIter; ++iter)
 			{
@@ -2436,7 +2788,7 @@ namespace flex
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
 			auto thisIter = FindIter(rootObjects, this);
-			assert(thisIter != rootObjects.end());
+			CHECK(thisIter != rootObjects.end());
 
 			for (auto iter = rootObjects.begin(); iter != thisIter; ++iter)
 			{
@@ -2456,7 +2808,7 @@ namespace flex
 			const std::vector<GameObject*>& siblings = m_Parent->GetChildren();
 
 			auto thisIter = FindIter(siblings, this);
-			assert(thisIter != siblings.end());
+			CHECK(thisIter != siblings.end());
 
 			for (auto iter = thisIter + 1; iter != siblings.end(); ++iter)
 			{
@@ -2468,7 +2820,7 @@ namespace flex
 			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
 
 			auto thisIter = FindIter(rootObjects, this);
-			assert(thisIter != rootObjects.end());
+			CHECK(thisIter != rootObjects.end());
 
 			for (auto iter = thisIter + 1; iter != rootObjects.end(); ++iter)
 			{
@@ -2487,10 +2839,6 @@ namespace flex
 	const Transform* GameObject::GetTransform() const
 	{
 		return &m_Transform;
-	}
-
-	void GameObject::OnTransformChanged()
-	{
 	}
 
 	void GameObject::AddTag(const std::string& tag)
@@ -2520,6 +2868,17 @@ namespace flex
 	void GameObject::SetName(const std::string& newName)
 	{
 		m_Name = newName;
+	}
+
+	void GameObject::GetFullyPathedName(StringBuilder& stringBuilder)
+	{
+		if (m_Parent != nullptr)
+		{
+			m_Parent->GetFullyPathedName(stringBuilder);
+			stringBuilder.Append('/');
+		}
+
+		stringBuilder.Append(m_Name);
 	}
 
 	bool GameObject::IsSerializable() const
@@ -2603,13 +2962,33 @@ namespace flex
 		m_bUniformScale = bUseUniformScale;
 		if (m_bUniformScale && bEnforceImmediately)
 		{
-			m_Transform.SetLocalScale(glm::vec3(m_Transform.GetLocalScale().x));
+			EnforceUniformScale();
 		}
+	}
+
+	void GameObject::EnforceUniformScale()
+	{
+		glm::vec3 localScale = m_Transform.GetLocalScale();
+		real scale;
+		if (localScale.x == localScale.y && localScale.x != localScale.z)
+		{
+			scale = localScale.z;
+		}
+		else if (localScale.y == localScale.z && localScale.y != localScale.x)
+		{
+			scale = localScale.x;
+		}
+		else
+		{
+			scale = localScale.y;
+		}
+
+		m_Transform.SetLocalScale(glm::vec3(scale));
 	}
 
 	btCollisionShape* GameObject::SetCollisionShape(btCollisionShape* collisionShape)
 	{
-		if (m_CollisionShape)
+		if (m_CollisionShape != nullptr)
 		{
 			delete m_CollisionShape;
 			m_CollisionShape = nullptr;
@@ -2617,9 +2996,10 @@ namespace flex
 
 		m_CollisionShape = collisionShape;
 
-		if (m_RigidBody && m_RigidBody->GetRigidBodyInternal())
+		if (m_RigidBody != nullptr && m_RigidBody->GetRigidBodyInternal() != nullptr)
 		{
 			m_RigidBody->GetRigidBodyInternal()->setCollisionShape(collisionShape);
+			m_RigidBody->GetRigidBodyInternal()->activate(true);
 		}
 
 		return collisionShape;
@@ -2628,6 +3008,29 @@ namespace flex
 	btCollisionShape* GameObject::GetCollisionShape() const
 	{
 		return m_CollisionShape;
+	}
+
+	void GameObject::OnExternalMeshChange(const std::string& meshFilePath)
+	{
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->OnExternalMeshChange(meshFilePath);
+		}
+	}
+
+	bool GameObject::GetCollisionAABB(AABB& outAABB)
+	{
+		if (m_CollisionShape != nullptr)
+		{
+			btTransform tr;
+			tr.setIdentity();
+			btVector3 aabbMin, aabbMax;
+
+			m_CollisionShape->getAabb(tr, aabbMin, aabbMax);
+			outAABB = { aabbMin.x(), aabbMax.x(),aabbMin.z(), aabbMax.z(), aabbMin.y(), aabbMax.y() };
+			return true;
+		}
+		return false;
 	}
 
 	RigidBody* GameObject::SetRigidBody(RigidBody* rigidBody)
@@ -2686,7 +3089,7 @@ namespace flex
 	{
 		overlappingObjects.push_back(other);
 
-		if (m_TypeID != SID("player"))
+		if (m_TypeID != PlayerSID)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
@@ -2710,7 +3113,7 @@ namespace flex
 			}
 		}
 
-		if (m_TypeID != SID("player"))
+		if (m_TypeID != PlayerSID)
 		{
 			if (other->HasTag("Player0") ||
 				other->HasTag("Player1"))
@@ -2720,10 +3123,30 @@ namespace flex
 		}
 	}
 
-	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("valve"), gameObjectID)
+	Valve::Valve(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, ValveSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
-		// TODO: Set m_bSerializeMesh to false here?
+		if (!s_SqueakySounds.IsInitialized())
+		{
+			s_SqueakySounds.Initialize("squeak00.wav", 5, true);
+		}
+		if (!s_SqueakySounds.IsInitialized())
+		{
+			s_BunkSound = g_ResourceManager->GetOrLoadAudioSourceID(SID("bunk.wav"), true);
+		}
+	}
+
+	PropertyCollection* Valve::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("valve info");
+
+		collection->childCollection->RegisterProperty("range", FIELD_OFFSET_AND_TYPE(Valve, valveRange))
+			.VersionAdded(6)
+			.Precision(3);
+
+		return collection;
 	}
 
 	GameObject* Valve::CopySelf(
@@ -2734,11 +3157,10 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Valve* newGameObject = new Valve(newObjectName, newGameObjectID);
 
-		newGameObject->minRotation = minRotation;
-		newGameObject->maxRotation = maxRotation;
+		newGameObject->valveRange = valveRange;
 		newGameObject->rotationSpeedScale = rotationSpeedScale;
 		newGameObject->invSlowDownRate = invSlowDownRate;
 		newGameObject->rotationSpeed = rotationSpeed;
@@ -2749,27 +3171,27 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Valve::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Valve::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		JSONObject valveInfo;
-		if (parentObj.TryGetObject("valve info", valveInfo))
+		if (parentObject.TryGetObject("valve info", valveInfo))
 		{
-			glm::vec2 valveRange;
-			valveInfo.TryGetVec2("range", valveRange);
-			minRotation = valveRange.x;
-			maxRotation = valveRange.y;
-			if (glm::abs(maxRotation - minRotation) <= 0.0001f)
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(valveInfo, collection->childCollection);
+
+			if (glm::abs(valveRange.y - valveRange.x) <= 0.0001f)
 			{
 				PrintWarn("Valve's rotation range is 0, it will not be able to rotate!\n");
 			}
-			if (minRotation > maxRotation)
+			if (valveRange.x > valveRange.y)
 			{
 				PrintWarn("Valve's minimum rotation range is greater than its maximum! Undefined behavior\n");
 			}
 		}
 		else
 		{
-			std::string sceneName = scene->GetName();
+			std::string sceneName = g_SceneManager->CurrentScene()->GetName();
 			PrintError("Valve's \"valve info\" field missing in scene %s\n", sceneName.c_str());
 		}
 
@@ -2777,8 +3199,12 @@ namespace flex
 		{
 			Mesh* valveMesh = new Mesh(this);
 			bool bCreateRenderObject = !m_bIsTemplate;
-			valveMesh->LoadFromFile(MESH_DIRECTORY "valve.glb", matIDs.empty() ? g_Renderer->GetPlaceholderMaterialID() : matIDs[0], false, bCreateRenderObject);
-			assert(m_Mesh == nullptr);
+			Mesh::CreateInfo meshCreateInfo = {};
+			meshCreateInfo.relativeFilePath = MESH_DIRECTORY "valve.glb";
+			meshCreateInfo.materialIDs = matIDs;
+			meshCreateInfo.bCreateRenderObject = bCreateRenderObject;
+			valveMesh->LoadFromFile(meshCreateInfo);
+			CHECK_EQ(m_Mesh, nullptr);
 			SetMesh(valveMesh);
 		}
 
@@ -2799,14 +3225,16 @@ namespace flex
 		}
 	}
 
-	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Valve::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject valveInfo = {};
-
-		glm::vec2 valveRange(minRotation, maxRotation);
-		valveInfo.fields.emplace_back("range", JSONValue(VecToString(valveRange, 2)));
-
-		parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
+		SerializeRegisteredProperties(valveInfo, collection->childCollection, bSerializePrefabData);
+		if (!valveInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("valve info", JSONValue(valveInfo));
+		}
 	}
 
 	void Valve::PostInitialize()
@@ -2836,10 +3264,8 @@ namespace flex
 			bRotatedByOtherObject = (glm::abs(rotation - pRotation) > 0);
 		}
 
-		if ((rotationSpeed < 0.0f &&
-			rotation <= minRotation) ||
-			(rotationSpeed > 0.0f &&
-				rotation >= maxRotation))
+		if ((rotationSpeed < 0.0f && rotation <= valveRange.x) ||
+			(rotationSpeed > 0.0f && rotation >= valveRange.y))
 		{
 			rotationSpeed = 0.0f;
 			pRotationSpeed = 0.0f;
@@ -2862,15 +3288,15 @@ namespace flex
 		}
 
 		real overshoot = 0.0f;
-		if (rotation > maxRotation)
+		if (rotation > valveRange.y)
 		{
-			overshoot = rotation - maxRotation;
-			rotation = maxRotation;
+			overshoot = rotation - valveRange.y;
+			rotation = valveRange.y;
 		}
-		else if (rotation < minRotation)
+		else if (rotation < valveRange.x)
 		{
-			overshoot = minRotation - rotation;
-			rotation = minRotation;
+			overshoot = valveRange.x - rotation;
+			rotation = valveRange.x;
 		}
 
 		pRotation = rotation;
@@ -2900,7 +3326,6 @@ namespace flex
 
 		m_RigidBody->GetRigidBodyInternal()->activate(true);
 		m_Transform.SetLocalRotation(glm::quat(glm::vec3(0, rotation, 0)));
-		m_RigidBody->UpdateParentTransform();
 
 		if (glm::abs(rotationSpeed) > 0.2f)
 		{
@@ -2917,10 +3342,25 @@ namespace flex
 		GameObject::Update();
 	}
 
-	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("rising block"), gameObjectID)
+	RisingBlock::RisingBlock(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, RisingBlockSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
+
+	PropertyCollection* RisingBlock::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("block info");
+
+		collection->childCollection->RegisterProperty("move axis", FIELD_OFFSET_AND_TYPE(RisingBlock, moveAxis))
+			.VersionAdded(6)
+			.Precision(3);
+		collection->childCollection->RegisterProperty("affected by gravity", FIELD_OFFSET_AND_TYPE(RisingBlock, bAffectedByGravity))
+			.VersionAdded(6);
+
+		return collection;
 	}
 
 	GameObject* RisingBlock::CopySelf(
@@ -2931,7 +3371,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		RisingBlock* newGameObject = new RisingBlock(newObjectName, newGameObjectID);
 
 		newGameObject->valve = valve;
@@ -2942,73 +3382,6 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, copyFlags);
 
 		return newGameObject;
-	}
-
-	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		if (!m_Mesh)
-		{
-			Mesh* cubeMesh = new Mesh(this);
-			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
-			SetMesh(cubeMesh);
-		}
-
-		if (!m_RigidBody)
-		{
-			RigidBody* rigidBody = SetRigidBody(new RigidBody());
-			rigidBody->SetMass(1.0f);
-			rigidBody->SetKinematic(true);
-			rigidBody->SetStatic(false);
-		}
-
-		std::string valveName;
-
-		JSONObject blockInfo;
-		if (parentObj.TryGetObject("block info", blockInfo))
-		{
-			valveName = blockInfo.GetString("valve name");
-		}
-
-		if (valveName.empty())
-		{
-			PrintWarn("Rising block's \"valve name\" field is empty! Can't find matching valve\n");
-		}
-		else
-		{
-			const std::vector<GameObject*>& rootObjects = scene->GetRootObjects();
-			for (GameObject* rootObject : rootObjects)
-			{
-				if (rootObject->GetName().compare(valveName) == 0)
-				{
-					valve = static_cast<Valve*>(rootObject);
-					break;
-				}
-			}
-		}
-
-		if (!valve)
-		{
-			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
-		}
-
-		blockInfo.TryGetBool("affected by gravity", bAffectedByGravity);
-
-		blockInfo.TryGetVec3("move axis", moveAxis);
-		if (moveAxis == VEC3_ZERO)
-		{
-			PrintWarn("Rising block's move axis is not set! It won't be able to move\n");
-		}
-	}
-
-	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		JSONObject blockInfo = {};
-
-		blockInfo.fields.emplace_back("valve name", JSONValue(valve->GetName()));
-		blockInfo.fields.emplace_back("move axis", JSONValue(VecToString(moveAxis, 3)));
-		blockInfo.fields.emplace_back("affected by gravity", JSONValue(bAffectedByGravity));
-
-		parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
 	}
 
 	void RisingBlock::Initialize()
@@ -3024,31 +3397,18 @@ namespace flex
 
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setGravity(btVector3(0, 0, 0));
-
-		//btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
-		//btFixedConstraint* constraint = new btFixedConstraint(
-		//	*m_RigidBody->GetRigidBodyInternal(),
-		//	*m_RigidBody->GetRigidBodyInternal(),
-		//	transform,
-		//	transform);
-		////constraint->setAngularLowerLimit(btVector3(0, 0, 0));
-		////constraint->setAngularUpperLimit(btVector3(0, 0, 0));
-		//m_RigidBody->AddConstraint(constraint);
 	}
 
 	void RisingBlock::Update()
 	{
 		PROFILE_AUTO("RisingBlock Update");
 
-		real minDist = valve->minRotation;
-		real maxDist = valve->maxRotation;
-		//real totalDist = (maxDist - minDist);
+		real minDist = valve->valveRange.x;
+		real maxDist = valve->valveRange.y;
 		real dist = valve->rotation;
 
-		//real playerControlledValveRotationSpeed = 0.0f;
-
 		if (bAffectedByGravity &&
-			valve->rotation >= valve->minRotation + 0.1f)
+			valve->rotation >= valve->valveRange.x + 0.1f)
 		{
 			// Apply gravity by rotating valve
 			real fallSpeed = 6.0f;
@@ -3066,7 +3426,7 @@ namespace flex
 
 		glm::vec3 newPos = startingPos + dist * moveAxis;
 
-		if (m_RigidBody)
+		if (m_RigidBody != nullptr)
 		{
 			m_RigidBody->GetRigidBodyInternal()->activate(true);
 			btTransform transform = m_RigidBody->GetRigidBodyInternal()->getInterpolationWorldTransform();
@@ -3076,19 +3436,19 @@ namespace flex
 		}
 
 		btVector3 startPos = ToBtVec3(startingPos);
-		g_Renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugRenderer()->drawLine(
 			startPos,
 			startPos + ToBtVec3(moveAxis * maxDist),
 			btVector3(1, 1, 1));
 		if (minDist < 0.0f)
 		{
-			g_Renderer->GetDebugDrawer()->drawLine(
+			g_Renderer->GetDebugRenderer()->drawLine(
 				startPos,
 				startPos + ToBtVec3(moveAxis * minDist),
 				btVector3(0.99f, 0.6f, 0.6f));
 		}
 
-		g_Renderer->GetDebugDrawer()->drawLine(
+		g_Renderer->GetDebugRenderer()->drawLine(
 			startPos,
 			startPos + ToBtVec3(moveAxis * dist),
 			btVector3(0.3f, 0.3f, 0.5f));
@@ -3096,10 +3456,88 @@ namespace flex
 		GameObject::Update();
 	}
 
-	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("glass pane"), gameObjectID)
+	void RisingBlock::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		if (m_Mesh == nullptr)
+		{
+			Mesh* cubeMesh = new Mesh(this);
+			cubeMesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matIDs[0]);
+			SetMesh(cubeMesh);
+		}
+
+		if (m_RigidBody == nullptr)
+		{
+			RigidBody* rigidBody = SetRigidBody(new RigidBody());
+			rigidBody->SetMass(1.0f);
+			rigidBody->SetKinematic(true);
+			rigidBody->SetStatic(false);
+		}
+
+		std::string valveName;
+
+		JSONObject blockInfo;
+		if (parentObject.TryGetObject("block info", blockInfo))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(blockInfo, collection->childCollection);
+
+			valveName = blockInfo.GetString("valve name");
+		}
+
+		if (valveName.empty())
+		{
+			PrintWarn("Rising block's \"valve name\" field is empty! Can't find matching valve\n");
+		}
+		else
+		{
+			const std::vector<GameObject*>& rootObjects = g_SceneManager->CurrentScene()->GetRootObjects();
+			for (GameObject* rootObject : rootObjects)
+			{
+				if (rootObject->GetName().compare(valveName) == 0)
+				{
+					valve = static_cast<Valve*>(rootObject);
+					break;
+				}
+			}
+		}
+
+		if (valve == nullptr)
+		{
+			PrintError("Rising block contains invalid valve name: %s - Has that valve been created yet?\n", valveName.c_str());
+		}
+	}
+
+	void RisingBlock::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject blockInfo = {};
+		SerializeRegisteredProperties(blockInfo, collection->childCollection, bSerializePrefabData);
+		std::string valveName = valve->GetName();
+		SerializeField(blockInfo, bSerializePrefabData, "valve name", &valveName, ValueType::STRING);
+		if (!blockInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("block info", JSONValue(blockInfo));
+		}
+	}
+
+	GlassPane::GlassPane(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, GlassPaneSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+	}
+
+	PropertyCollection* GlassPane::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("window info");
+
+		collection->childCollection->RegisterProperty("broken", FIELD_OFFSET_AND_TYPE(GlassPane, bBroken))
+			.VersionAdded(6);
+
+		return collection;
 	}
 
 	GameObject* GlassPane::CopySelf(
@@ -3110,7 +3548,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		GlassPane* newGameObject = new GlassPane(newObjectName, newGameObjectID);
 
 		newGameObject->bBroken = bBroken;
@@ -3120,17 +3558,16 @@ namespace flex
 		return newGameObject;
 	}
 
-	void GlassPane::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void GlassPane::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
-		FLEX_UNUSED(matIDs);
-
 		JSONObject glassInfo;
-		if (parentObj.TryGetObject("window info", glassInfo))
+		if (parentObject.TryGetObject("window info", glassInfo))
 		{
-			glassInfo.TryGetBool("broken", bBroken);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-			if (!m_Mesh)
+			DeserializeRegisteredProperties(glassInfo, collection->childCollection);
+
+			if (m_Mesh == nullptr)
 			{
 				Mesh* windowMesh = new Mesh(this);
 				const char* filePath;
@@ -3147,7 +3584,7 @@ namespace flex
 			}
 		}
 
-		if (!m_RigidBody)
+		if (m_RigidBody == nullptr)
 		{
 			RigidBody* rigidBody = SetRigidBody(new RigidBody());
 			rigidBody->SetMass(1.0f);
@@ -3156,18 +3593,27 @@ namespace flex
 		}
 	}
 
-	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void GlassPane::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject windowInfo = {};
-
-		windowInfo.fields.emplace_back("broken", JSONValue(bBroken));
-
-		parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
+		SerializeRegisteredProperties(windowInfo, collection->childCollection, bSerializePrefabData);
+		if (!windowInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("window info", JSONValue(windowInfo));
+		}
 	}
 
-	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("reflection probe"), gameObjectID)
+	ReflectionProbe::ReflectionProbe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, ReflectionProbeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
+	}
+
+	PropertyCollection* ReflectionProbe::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	GameObject* ReflectionProbe::CopySelf(
@@ -3178,7 +3624,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		ReflectionProbe* newGameObject = new ReflectionProbe(newObjectName, newGameObjectID);
 
 		newGameObject->captureMatID = captureMatID;
@@ -3188,68 +3634,6 @@ namespace flex
 		return newGameObject;
 	}
 
-	void ReflectionProbe::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(scene);
-		FLEX_UNUSED(parentObj);
-		FLEX_UNUSED(matIDs);
-
-		// Probe capture material
-		//MaterialCreateInfo probeCaptureMatCreateInfo = {};
-		//probeCaptureMatCreateInfo.name = "reflection probe capture";
-		//probeCaptureMatCreateInfo.shaderName = "deferred_combine_cubemap";
-		//probeCaptureMatCreateInfo.generateReflectionProbeMaps = true;
-		//probeCaptureMatCreateInfo.generateHDRCubemapSampler = true;
-		//probeCaptureMatCreateInfo.generatedCubemapSize = glm::vec2(512.0f, 512.0f); // TODO: Add support for non-512.0f size
-		//probeCaptureMatCreateInfo.generateCubemapDepthBuffers = true;
-		//probeCaptureMatCreateInfo.generateIrradianceSampler = true;
-		//probeCaptureMatCreateInfo.generatedIrradianceCubemapSize = { 32, 32 };
-		//probeCaptureMatCreateInfo.enablePrefilteredMap = true;
-		//probeCaptureMatCreateInfo.generatePrefilteredMap = true;
-		//probeCaptureMatCreateInfo.generatedPrefilteredCubemapSize = { 128, 128 };
-		//probeCaptureMatCreateInfo.enableBRDFLUT = true;
-		//probeCaptureMatCreateInfo.persistent = true;
-		//probeCaptureMatCreateInfo.visibleInEditor = false;
-		//probeCaptureMatCreateInfo.sampledFrameBuffers = {
-		//	{ "positionMetallicFrameBufferSampler", nullptr },
-		//	{ "normalRoughnessFrameBufferSampler", nullptr },
-		//	{ "albedoAOFrameBufferSampler", nullptr },
-		//};
-		//captureMatID = g_Renderer->InitializeMaterial(&probeCaptureMatCreateInfo);
-
-		//MeshComponent* sphereMesh = new MeshComponent(this, matID);
-
-		//assert(m_MeshComponent == nullptr);
-		//sphereMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb");
-		//SetMeshComponent(sphereMesh);
-
-		//std::string captureName = m_Name + "_capture";
-		//GameObject* captureObject = new GameObject(captureName, SID("_NONE);
-		//captureObject->SetSerializable(false);
-		//captureObject->SetVisible(false);
-		//captureObject->SetVisibleInSceneExplorer(false);
-
-		//RenderObjectCreateInfo captureObjectCreateInfo = {};
-		//captureObjectCreateInfo.vertexBufferData = nullptr;
-		//captureObjectCreateInfo.materialID = captureMatID;
-		//captureObjectCreateInfo.gameObject = captureObject;
-		//captureObjectCreateInfo.visibleInSceneExplorer = false;
-
-		//RenderID captureRenderID = g_Renderer->InitializeRenderObject(&captureObjectCreateInfo);
-		//captureObject->SetRenderID(captureRenderID);
-
-		//AddChild(captureObject);
-
-		//g_Renderer->SetReflectionProbeMaterial(captureMatID);
-	}
-
-	void ReflectionProbe::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		FLEX_UNUSED(parentObject);
-
-		// Reflection probes have no unique fields currently
-	}
-
 	void ReflectionProbe::PostInitialize()
 	{
 		GameObject::PostInitialize();
@@ -3257,11 +3641,16 @@ namespace flex
 		g_Renderer->SetReflectionProbeMaterial(captureMatID);
 	}
 
-	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("skybox"), gameObjectID)
+	Skybox::Skybox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SkyboxSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		SetCastsShadow(false);
-		m_bSerializeMesh = false;
+	}
+
+	PropertyCollection* Skybox::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Skybox::ProcedurallyInitialize(MaterialID matID)
@@ -3269,35 +3658,33 @@ namespace flex
 		InternalInit(matID);
 	}
 
-	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObj, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Skybox::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
-		assert(matIDs.size() == 1);
-
 		JSONObject skyboxInfo;
-		if (parentObj.TryGetObject("skybox info", skyboxInfo))
+		if (parentObject.TryGetObject("skybox info", skyboxInfo))
 		{
-			glm::vec3 rotEuler;
-			if (skyboxInfo.TryGetVec3("rot", rotEuler))
+			glm::quat rot;
+			if (skyboxInfo.TryGetQuat("rot", rot))
 			{
-				m_Transform.SetWorldRotation(glm::quat(rotEuler));
+				m_Transform.SetWorldRotation(rot);
 			}
 		}
 
 		InternalInit(matIDs[0]);
 	}
 
-	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Skybox::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject skyboxInfo = {};
-		glm::quat worldRot = m_Transform.GetWorldRotation();
-		if (worldRot != QUAT_IDENTITY)
+		glm::vec3 eulerRot = glm::eulerAngles(m_Transform.GetWorldRotation());
+		if (!NearlyEquals(eulerRot, VEC3_ZERO, 0.001f))
 		{
-			std::string eulerRotStr = VecToString(glm::eulerAngles(worldRot), 2);
-			skyboxInfo.fields.emplace_back("rot", JSONValue(eulerRotStr));
+			SerializeField(skyboxInfo, bSerializePrefabData, "rot", &eulerRot, ValueType::VEC3, 2);
 		}
-
-		parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+		if (!skyboxInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("skybox info", JSONValue(skyboxInfo));
+		}
 	}
 
 	void Skybox::InternalInit(MaterialID matID)
@@ -3314,27 +3701,157 @@ namespace flex
 		g_Renderer->SetSkyboxMesh(m_Mesh);
 	}
 
+	//
+	// EditorObject
+	//
+
+	EditorObject::EditorObject(const std::string& name) :
+		GameObject(name, EditorObjectSID, InvalidGameObjectID, InvalidPrefabIDPair, false)
+	{
+	}
+
+	void EditorObject::Destroy(bool bDetachFromParent /* = true */)
+	{
+		if (bDetachFromParent)
+		{
+			DetachFromParent();
+		}
+
+		// Handle m_Children being modified during loop (from call to DetachFromParent)
+		for (GameObject* child : m_Children)
+		{
+			child->Destroy(false);
+			delete child;
+		}
+		m_Children.clear();
+
+		if (m_Mesh != nullptr)
+		{
+			m_Mesh->Destroy();
+			delete m_Mesh;
+			m_Mesh = nullptr;
+		}
+
+		if (g_Editor->IsObjectSelected(ID))
+		{
+			g_Editor->DeselectObject(ID);
+		}
+
+		// ID will not be valid on objects that are being saved as a prefab template
+		if (g_SceneManager->HasSceneLoaded() && ID.IsValid())
+		{
+			g_SceneManager->CurrentScene()->UnregisterEditorObject((EditorObjectID*)&ID);
+		}
+	}
+
+	//
+	// DroppedItem
+	//
+
+	DroppedItem::DroppedItem(const PrefabID& prefabID, i32 stackSize) :
+		GameObject("", DroppedItemSID),
+		prefabID(prefabID),
+		stackSize(stackSize)
+	{
+		m_bSerializable = false;
+	}
+
+	PropertyCollection* DroppedItem::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
+	void DroppedItem::Initialize()
+	{
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
+
+		GameObject* child = new GameObject("dropped item child", BaseObjectSID);
+		child->SetSerializable(false);
+
+		if (prefabTemplate->GetMesh() != nullptr)
+		{
+			prefabTemplate->GetMesh()->CloneSelf(child, true);
+		}
+		else
+		{
+			Mesh* mesh = SetMesh(new Mesh(child));
+			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+		}
+
+		if (prefabTemplate->GetRigidBody() != nullptr)
+		{
+			RigidBody* rb = SetRigidBody(new RigidBody(*prefabTemplate->GetRigidBody()));
+			// TODO: Figure out how to get dropped items to collide with everything but themselves
+			if (rb->IsStatic())
+			{
+				rb->SetStatic(false);
+				rb->SetMass(1.0f);
+			}
+			rb->SetKinematic(true);
+			SetCollisionShape(CloneCollisionShape(VEC3_ONE, prefabTemplate->GetCollisionShape()));
+		}
+
+		AddChild(child);
+
+		GameObject::Initialize();
+
+		if (m_RigidBody != nullptr)
+		{
+			m_RigidBody->SetAngularFactor(btVector3(0.0f, 0.0f, 0.0f)); // Prevent rotation
+			m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(ToBtVec3(initialVel));
+		}
+	}
+
+	void DroppedItem::Destroy(bool bDetachFromParent /* = true */)
+	{
+		g_SceneManager->CurrentScene()->OnDroppedItemDestroyed(this);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void DroppedItem::Update()
+	{
+		PROFILE_AUTO("DroppedItem Update");
+
+		secondsAlive += g_DeltaTime;
+
+		GameObject* child = GetChild(0);
+		if (child != nullptr)
+		{
+			Transform* childTransform = child->GetTransform();
+
+			bobAmount = (sin(g_SecElapsedSinceProgramStart * 7.0f) * 0.5f + 0.5f) * 0.6f;
+
+			glm::vec3 newPos(0.0f, bobAmount, 0.0f);
+
+			glm::quat newRot = childTransform->GetLocalRotation();
+			newRot *= glm::quat(glm::vec3(0.0f, turnSpeed * g_DeltaTime, 0.0f));
+
+			childTransform->SetLocalPosition(newPos, false);
+			childTransform->SetLocalRotation(newRot, true);
+		}
+
+		GameObject::Update();
+	}
+
+	bool DroppedItem::CanBePickedUp() const
+	{
+		return secondsAlive > MIN_TIME_BEFORE_PICKUP;
+	}
+
+	void DroppedItem::OnPickedUp()
+	{
+		AudioManager::PlaySource(BaseScene::s_PickupAudioID);
+	}
+
 	DirectionalLight::DirectionalLight() :
 		DirectionalLight("Directional Light")
 	{
 	}
 
-	DirectionalLight::DirectionalLight(const std::string& name, const glm::vec3& initialPos, const glm::quat& initialOrientation) :
-		GameObject(name, SID("directional light"), InvalidGameObjectID)
-	{
-		m_Transform.SetWorldPosition(initialPos);
-
-		data.enabled = m_bVisible ? 1 : 0;
-		data.dir = glm::rotate(initialOrientation, VEC3_RIGHT);
-		data.colour = VEC3_ONE;
-		data.brightness = 1.0f;
-		data.castShadows = 1;
-		data.shadowDarkness = 1.0f;
-		data.pad[0] = data.pad[1] = 0;
-	}
-
-	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("directional light"), gameObjectID)
+	DirectionalLight::DirectionalLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, DirectionalLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = m_bVisible ? 1 : 0;
 		data.dir = VEC3_RIGHT;
@@ -3345,12 +3862,35 @@ namespace flex
 		data.pad[0] = data.pad[1] = 0;
 	}
 
+	PropertyCollection* DirectionalLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("directional light info");
+
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.colour))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.brightness))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(1.0f);
+		collection->childCollection->RegisterProperty("cast shadows", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.castShadows))
+			.VersionAdded(2)
+			.DefaultValue(1);
+		collection->childCollection->RegisterProperty("shadow darkness", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.shadowDarkness))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(1.0f);
+
+		return collection;
+	}
+
 	void DirectionalLight::Initialize()
 	{
 		g_Renderer->RegisterDirectionalLight(this);
 		data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
-
-		m_Transform.updateParentOnStateChange = true;
 
 		GameObject::Initialize();
 	}
@@ -3366,9 +3906,12 @@ namespace flex
 	{
 		PROFILE_AUTO("DirectionalLight Update");
 
-		if (sockets.size() >= 1)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -3378,13 +3921,16 @@ namespace flex
 
 		if (data.enabled && g_EngineInstance->IsRenderingEditorObjects())
 		{
+			pos = m_Transform.GetWorldPosition();
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
+
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 
 			if (!cam->bIsGameplayCam)
 			{
 				// Debug lines
 				{
-					PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+					DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 					glm::vec3 forward = m_Transform.GetForward();
 					glm::vec3 right = m_Transform.GetRight();
@@ -3399,7 +3945,7 @@ namespace flex
 						glm::vec3 basePos = pos + offset * spacing;
 						btVector3 lightPos = ToBtVec3(basePos);
 						btVector3 lineEnd = ToBtVec3(basePos + scaledForward);
-						debugDrawer->drawLine(lightPos, lineEnd, lineColour);
+						debugRenderer->drawLine(lightPos, lineEnd, lineColour);
 					}
 				}
 
@@ -3432,9 +3978,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void DirectionalLight::DrawImGuiObjects()
+	void DirectionalLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		static const ImGuiColorEditFlags colorEditFlags =
 			ImGuiColorEditFlags_NoInputs |
@@ -3445,9 +3991,11 @@ namespace flex
 
 		ImGui::Text("Directional Light");
 
-		if (ImGui::Checkbox("Enabled", &m_bVisible))
+		bool bVisible = m_bVisible;
+		if (ImGui::Checkbox("Enabled", &bVisible))
 		{
-			data.enabled = m_bVisible ? 1 : 0;
+			m_bVisible = bVisible;
+			data.enabled = bVisible ? 1 : 0;
 		}
 
 		ImGui::SameLine();
@@ -3471,78 +4019,51 @@ namespace flex
 		GameObject::SetVisible(bVisible, bEffectChildren);
 	}
 
-	void DirectionalLight::OnTransformChanged()
-	{
-		pos = m_Transform.GetLocalPosition();
-		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
-	}
-
-	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void DirectionalLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 
-		i32 sceneFileVersion = scene->GetSceneFileVersion();
+		i32 fileVersion = g_SceneManager->CurrentScene()->GetSceneFileVersion();
 
 		JSONObject directionalLightObj;
 		if (parentObject.TryGetObject("directional light info", directionalLightObj))
 		{
-			std::string rotStr = directionalLightObj.GetString("rotation");
-			if (sceneFileVersion >= 2)
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(directionalLightObj, collection->childCollection);
+
+			if (fileVersion < 2)
 			{
-				m_Transform.SetWorldRotation(ParseQuat(rotStr));
+				// Rotation is saved using euler angles in these versions
+				glm::vec3 rot = directionalLightObj.GetVec3("rotation");
+				m_Transform.SetWorldRotation(glm::quat(rot));
+			}
+			else if (fileVersion <= 6)
+			{
+				// Rotation is saved explicitly in these versions
+				glm::quat rot = directionalLightObj.GetQuat("rotation");
+				m_Transform.SetWorldRotation(rot);
 				data.dir = glm::rotate(m_Transform.GetWorldRotation(), VEC3_RIGHT);
 			}
 			else
 			{
-				glm::quat rot(ParseVec3(rotStr));
-				m_Transform.SetWorldRotation(rot);
+				// Rotation is saved simply through the transform in this version
 			}
 
-			std::string posStr = directionalLightObj.GetString("pos");
-			if (!posStr.empty())
-			{
-				m_Transform.SetLocalPosition(ParseVec3(posStr));
-				pos = m_Transform.GetWorldPosition();
-			}
-
-			directionalLightObj.TryGetVec3("colour", data.colour);
-
-			directionalLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (directionalLightObj.HasField("enabled"))
-			{
-				m_bVisible = directionalLightObj.GetBool("enabled") ? 1 : 0;
-			}
-
-			bool bCastShadow = false;
-			if (directionalLightObj.TryGetBool("cast shadows", bCastShadow))
-			{
-				data.castShadows = bCastShadow ? 1 : 0;
-			}
-			directionalLightObj.TryGetFloat("shadow darkness", data.shadowDarkness);
+			data.enabled = m_bVisible ? 1 : 0;
 		}
 	}
 
-	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void DirectionalLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject dirLightObj = {};
-
-		std::string dirStr = QuatToString(m_Transform.GetWorldRotation(), 3);
-		dirLightObj.fields.emplace_back("rotation", JSONValue(dirStr));
-
-		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
-		dirLightObj.fields.emplace_back("pos", JSONValue(posStr));
-
-		std::string colourStr = VecToString(data.colour, 2);
-		dirLightObj.fields.emplace_back("colour", JSONValue(colourStr));
-
-		dirLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		dirLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		dirLightObj.fields.emplace_back("cast shadows", JSONValue(static_cast<bool>(data.castShadows)));
-		dirLightObj.fields.emplace_back("shadow darkness", JSONValue(data.shadowDarkness));
-
-		parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+		SerializeRegisteredProperties(dirLightObj, collection->childCollection, bSerializePrefabData);
+		if (!dirLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("directional light info", JSONValue(dirLightObj));
+		}
 	}
 
 	bool DirectionalLight::operator==(const DirectionalLight& other)
@@ -3559,13 +4080,34 @@ namespace flex
 	{
 	}
 
-	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("point light"), gameObjectID)
+	PointLight::PointLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PointLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
+	}
+
+	PropertyCollection* PointLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("point light info");
+
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(PointLight, data.colour))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(PointLight, data.brightness))
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(1.0f);
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(PointLight, data.enabled))
+			.VersionAdded(2)
+			.DefaultValue(1);
+
+		return collection;
 	}
 
 	GameObject* PointLight::CopySelf(
@@ -3576,7 +4118,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumPointLights() >= MAX_POINT_LIGHT_COUNT)
 		{
@@ -3596,16 +4138,27 @@ namespace flex
 
 	void PointLight::Initialize()
 	{
-		pointLightID = g_Renderer->RegisterPointLight(&data);
-
-		m_Transform.updateParentOnStateChange = true;
+		if (pointLightID == InvalidPointLightID)
+		{
+			pointLightID = g_Renderer->RegisterPointLight(&data);
+			if (pointLightID == InvalidPointLightID)
+			{
+				PrintError("More point lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_POINT_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = false;
+			}
+		}
 
 		GameObject::Initialize();
 	}
 
 	void PointLight::Destroy(bool bDetachFromParent /* = true */)
 	{
-		g_Renderer->RemovePointLight(pointLightID);
+		if (pointLightID != InvalidPointLightID)
+		{
+			g_Renderer->RemovePointLight(pointLightID);
+			pointLightID = InvalidPointLightID;
+		}
 
 		GameObject::Destroy(bDetachFromParent);
 	}
@@ -3614,9 +4167,12 @@ namespace flex
 	{
 		PROFILE_AUTO("PointLight Update");
 
-		if (sockets.size() >= 1)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -3665,9 +4221,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void PointLight::DrawImGuiObjects()
+	void PointLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (pointLightID != InvalidPointLightID)
 		{
@@ -3684,10 +4240,12 @@ namespace flex
 
 			if (!bRemovedPointLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedPointLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -3706,60 +4264,36 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
+
 		if (pointLightID != InvalidPointLightID)
 		{
 			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
 	}
 
-	void PointLight::OnTransformChanged()
+	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		data.pos = m_Transform.GetWorldPosition();
-		if (pointLightID != InvalidPointLightID)
-		{
-			g_Renderer->UpdatePointLightData(pointLightID, &data);
-		}
-	}
-
-	void PointLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject pointLightObj;
 		if (parentObject.TryGetObject("point light info", pointLightObj))
 		{
-			std::string posStr = pointLightObj.GetString("pos");
-			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
-			m_Transform.SetLocalPosition(pos);
-			data.pos = pos;
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-			pointLightObj.TryGetVec3("colour", data.colour);
-
-			pointLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (pointLightObj.HasField("enabled"))
-			{
-				m_bVisible = pointLightObj.GetBool("enabled") ? 1 : 0;
-				data.enabled = m_bVisible ? 1 : 0;
-			}
+			DeserializeRegisteredProperties(pointLightObj, collection->childCollection);
 		}
 	}
 
-	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void PointLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject pointLightObj = {};
-
-		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
-		pointLightObj.fields.emplace_back("pos", JSONValue(posStr));
-
-		std::string colourStr = VecToString(data.colour, 2);
-		pointLightObj.fields.emplace_back("colour", JSONValue(colourStr));
-
-		pointLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		pointLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+		SerializeRegisteredProperties(pointLightObj, collection->childCollection, bSerializePrefabData);
+		if (!pointLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("point light info", JSONValue(pointLightObj));
+		}
 	}
 
 	bool PointLight::operator==(const PointLight& other)
@@ -3775,22 +4309,47 @@ namespace flex
 	{
 	}
 
-	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("spot light"), gameObjectID)
+	SpotLight::SpotLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpotLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
 		data.pos = m_Transform.GetWorldPosition();
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
 		data.dir = VEC3_RIGHT;
-		data.angle = 0.1f;
+		data.angle = 0.0f;
+	}
+
+	PropertyCollection* SpotLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spot light info");
+
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(SpotLight, data.colour))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(SpotLight, data.brightness))
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(1.0f);
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(SpotLight, data.enabled))
+			.VersionAdded(2)
+			.DefaultValue(1);
+		collection->childCollection->RegisterProperty("angle", FIELD_OFFSET_AND_TYPE(SpotLight, data.angle))
+			.VersionAdded(2)
+			.Precision(3)
+			.DefaultValue(0.0f);
+
+		return collection;
 	}
 
 	GameObject* SpotLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumSpotLights() >= MAX_SPOT_LIGHT_COUNT)
 		{
@@ -3810,27 +4369,41 @@ namespace flex
 
 	void SpotLight::Initialize()
 	{
-		spotLightID = g_Renderer->RegisterSpotLight(&data);
-
-		m_Transform.updateParentOnStateChange = true;
+		if (spotLightID == InvalidSpotLightID)
+		{
+			spotLightID = g_Renderer->RegisterSpotLight(&data);
+			if (spotLightID == InvalidSpotLightID)
+			{
+				PrintError("More spot lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_SPOT_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = 0;
+			}
+		}
 
 		GameObject::Initialize();
 	}
 
 	void SpotLight::Destroy(bool bDetachFromParent)
 	{
-		g_Renderer->RemoveSpotLight(spotLightID);
+		if (spotLightID != InvalidSpotLightID)
+		{
+			g_Renderer->RemoveSpotLight(spotLightID);
+			spotLightID = InvalidSpotLightID;
 
-		GameObject::Destroy(bDetachFromParent);
+			GameObject::Destroy(bDetachFromParent);
+		}
 	}
 
 	void SpotLight::Update()
 	{
 		PROFILE_AUTO("SpotLight Update");
 
-		if (sockets.size() >= 1)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
@@ -3880,9 +4453,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void SpotLight::DrawImGuiObjects()
+	void SpotLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (spotLightID != InvalidSpotLightID)
 		{
@@ -3899,10 +4472,12 @@ namespace flex
 
 			if (!bRemovedSpotLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedSpotLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -3922,13 +4497,7 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		OnTransformChanged();
-	}
 
-	void SpotLight::OnTransformChanged()
-	{
-		data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
-		data.pos = m_Transform.GetWorldPosition();
 		if (spotLightID != InvalidSpotLightID)
 		{
 			g_Renderer->UpdateSpotLightData(spotLightID, &data);
@@ -3945,51 +4514,29 @@ namespace flex
 			other.data.angle == data.angle;
 	}
 
-	void SpotLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SpotLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject spotLightObj;
 		if (parentObject.TryGetObject("spot light info", spotLightObj))
 		{
-			std::string posStr = spotLightObj.GetString("pos");
-			glm::vec3 pos = glm::vec3(ParseVec3(posStr));
-			m_Transform.SetLocalPosition(pos);
-			data.pos = pos;
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-			spotLightObj.TryGetVec3("colour", data.colour);
-
-			spotLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (spotLightObj.HasField("enabled"))
-			{
-				m_bVisible = spotLightObj.GetBool("enabled") ? 1 : 0;
-				data.enabled = m_bVisible ? 1 : 0;
-			}
-
-			spotLightObj.TryGetVec3("direction", data.dir);
-			spotLightObj.TryGetFloat("angle", data.angle);
+			DeserializeRegisteredProperties(spotLightObj, collection->childCollection);
 		}
 	}
 
-	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SpotLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject spotLightObj = {};
-
-		std::string posStr = VecToString(m_Transform.GetLocalPosition(), 3);
-		spotLightObj.fields.emplace_back("pos", JSONValue(posStr));
-
-		std::string colourStr = VecToString(data.colour, 2);
-		spotLightObj.fields.emplace_back("colour", JSONValue(colourStr));
-
-		spotLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		spotLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		spotLightObj.fields.emplace_back("direction", JSONValue(VecToString(data.dir)));
-		spotLightObj.fields.emplace_back("angle", JSONValue(data.angle));
-
-		parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
+		SerializeRegisteredProperties(spotLightObj, collection->childCollection, bSerializePrefabData);
+		if (!spotLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("spot light info", JSONValue(spotLightObj));
+		}
 	}
 
 	AreaLight::AreaLight(BaseScene* scene) :
@@ -3997,20 +4544,40 @@ namespace flex
 	{
 	}
 
-	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("area light"), gameObjectID)
+	AreaLight::AreaLight(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, AreaLightSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		data.enabled = 1;
-		data.colour = VEC4_ONE;
+		data.colour = VEC3_ONE;
 		data.brightness = 500.0f;
 		UpdatePoints();
+}
+
+	PropertyCollection* AreaLight::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("area light info");
+
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(AreaLight, data.colour))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(VEC3_ONE);
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(AreaLight, data.brightness))
+			.VersionAdded(2)
+			.DefaultValue(500.0f);
+		collection->childCollection->RegisterProperty("enabled", FIELD_OFFSET_AND_TYPE(AreaLight, data.enabled))
+			.VersionAdded(2)
+			.DefaultValue(1);
+
+		return collection;
 	}
 
 	GameObject* AreaLight::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
 		if (g_Renderer->GetNumAreaLights() >= MAX_AREA_LIGHT_COUNT)
 		{
@@ -4030,16 +4597,27 @@ namespace flex
 
 	void AreaLight::Initialize()
 	{
-		areaLightID = g_Renderer->RegisterAreaLight(&data);
-
-		m_Transform.updateParentOnStateChange = true;
+		if (areaLightID == InvalidAreaLightID)
+		{
+			areaLightID = g_Renderer->RegisterAreaLight(&data);
+			if (areaLightID == InvalidAreaLightID)
+			{
+				PrintError("More area lights added to scene than possible (%d). Additional lights will be disabled\n", MAX_AREA_LIGHT_COUNT);
+				m_bVisible = false;
+				data.enabled = false;
+			}
+		}
 
 		GameObject::Initialize();
 	}
 
 	void AreaLight::Destroy(bool bDetachFromParent)
 	{
-		g_Renderer->RemoveAreaLight(areaLightID);
+		if (areaLightID != InvalidAreaLightID)
+		{
+			g_Renderer->RemoveAreaLight(areaLightID);
+			areaLightID = InvalidAreaLightID;
+		}
 
 		GameObject::Destroy(bDetachFromParent);
 	}
@@ -4048,14 +4626,21 @@ namespace flex
 	{
 		PROFILE_AUTO("AreaLight Update");
 
-		if (sockets.size() >= 1)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			i32 receivedSignal = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->GetReceivedSignal(sockets[0]);
+			Socket* socket = (Socket*)((*sockets)[0].socketID.Get());
+			i32 receivedSignal = pluggablesSystem->GetReceivedSignal(socket);
 			if (receivedSignal != -1)
 			{
 				m_bVisible = receivedSignal == 1;
 				data.enabled = m_bVisible ? 1 : 0;
-				g_Renderer->UpdateAreaLightData(areaLightID, &data);
+
+				if (areaLightID != InvalidAreaLightID)
+				{
+					g_Renderer->UpdateAreaLightData(areaLightID, &data);
+				}
 			}
 		}
 
@@ -4067,7 +4652,7 @@ namespace flex
 
 			if (g_EngineInstance->IsRenderingEditorObjects())
 			{
-				PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+				DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 
 				btVector3 lineColour(0.1f, 0.8f, 0.1f);
 				btVector3 p0(ToBtVec3(data.points[0]));
@@ -4077,12 +4662,12 @@ namespace flex
 				btVector3 center(ToBtVec3((data.points[0] + data.points[1] + data.points[2] + data.points[3]) / 4.0f));
 				glm::vec3 dir = glm::normalize(glm::cross(glm::vec3(data.points[1]) - glm::vec3(data.points[0]), glm::vec3(data.points[2]) - glm::vec3(data.points[0])));
 				btVector3 dirBt = ToBtVec3(dir);
-				debugDrawer->drawLine(p0, p1, lineColour);
-				debugDrawer->drawLine(p1, p2, lineColour);
-				debugDrawer->drawLine(p2, p3, lineColour);
-				debugDrawer->drawLine(p3, p0, lineColour);
+				debugRenderer->drawLine(p0, p1, lineColour);
+				debugRenderer->drawLine(p1, p2, lineColour);
+				debugRenderer->drawLine(p2, p3, lineColour);
+				debugRenderer->drawLine(p3, p0, lineColour);
 
-				debugDrawer->drawLine(center, center + dirBt, lineColour);
+				debugRenderer->drawLine(center, center + dirBt, lineColour);
 
 				//BaseCamera* cam = g_CameraManager->CurrentCamera();
 				//
@@ -4117,9 +4702,9 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void AreaLight::DrawImGuiObjects()
+	void AreaLight::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (areaLightID != InvalidAreaLightID)
 		{
@@ -4136,10 +4721,12 @@ namespace flex
 
 			if (!bRemovedAreaLight)
 			{
-				if (ImGui::Checkbox("Enabled", &m_bVisible))
+				bool bVisible = m_bVisible;
+				if (ImGui::Checkbox("Enabled", &bVisible))
 				{
+					m_bVisible = bVisible;
 					bEditedAreaLightData = true;
-					data.enabled = m_bVisible ? 1 : 0;
+					data.enabled = bVisible ? 1 : 0;
 				}
 
 				ImGui::SameLine();
@@ -4158,12 +4745,6 @@ namespace flex
 	{
 		data.enabled = (bVisible ? 1 : 0);
 		GameObject::SetVisible(bVisible, bEffectChildren);
-		OnTransformChanged();
-	}
-
-	void AreaLight::OnTransformChanged()
-	{
-		UpdatePoints();
 
 		if (areaLightID != InvalidAreaLightID)
 		{
@@ -4178,37 +4759,29 @@ namespace flex
 			other.data.brightness == data.brightness;
 	}
 
-	void AreaLight::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void AreaLight::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject areaLightObj;
 		if (parentObject.TryGetObject("area light info", areaLightObj))
 		{
-			areaLightObj.TryGetVec3("colour", data.colour);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-			areaLightObj.TryGetFloat("brightness", data.brightness);
-
-			if (areaLightObj.HasField("enabled"))
-			{
-				m_bVisible = areaLightObj.GetBool("enabled");
-				data.enabled = m_bVisible ? 1 : 0;
-			}
+			DeserializeRegisteredProperties(areaLightObj, collection->childCollection);
 		}
 	}
 
-	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void AreaLight::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject areaLightObj = {};
-
-		std::string colourStr = VecToString(data.colour, 2);
-		areaLightObj.fields.emplace_back("colour", JSONValue(colourStr));
-
-		areaLightObj.fields.emplace_back("enabled", JSONValue(m_bVisible != 0));
-		areaLightObj.fields.emplace_back("brightness", JSONValue(data.brightness));
-
-		parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
+		SerializeRegisteredProperties(areaLightObj, collection->childCollection, bSerializePrefabData);
+		if (!areaLightObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("area light info", JSONValue(areaLightObj));
+		}
 	}
 
 	void AreaLight::UpdatePoints()
@@ -4220,23 +4793,15 @@ namespace flex
 		data.points[3] = model * glm::vec4(-1.0f, -1.0f, 0.0f, 1.0f);
 	}
 
-	Cart::Cart(CartID cartID) :
-		Cart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("Cart_", 4))
-	{
-	}
-
-	Cart::Cart(CartID cartID,
-		const std::string& name,
-		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		StringID typeID /* = SID('cart') */,
-		const char* meshName /* = emptyCartMeshName */,
-		bool bPrefabTemplate /* = false */) :
-		GameObject(name, typeID, gameObjectID),
-		cartID(cartID)
+	BaseCart::BaseCart(const std::string& name,
+		StringID typeID,
+		const GameObjectID& gameObjectID,
+		const char* meshName,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		GameObject(name, typeID, gameObjectID, sourcePrefabID, bPrefabTemplate)
 	{
 		m_bItemizable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr grey", matID))
@@ -4246,9 +4811,11 @@ namespace flex
 			matID = 0;
 		}
 		Mesh* mesh = SetMesh(new Mesh(this));
-		std::string meshFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
-		bool bCreateRenderObject = !bPrefabTemplate;
-		if (!mesh->LoadFromFile(meshFilePath, matID, false, bCreateRenderObject))
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.relativeFilePath = std::string(MESH_DIRECTORY) + std::string(meshName);
+		meshCreateInfo.materialIDs = { matID };
+		meshCreateInfo.bCreateRenderObject = !bPrefabTemplate;
+		if (!mesh->LoadFromFile(meshCreateInfo))
 		{
 			PrintWarn("Failed to load cart mesh!\n");
 		}
@@ -4256,34 +4823,41 @@ namespace flex
 		m_TSpringToCartAhead.DR = 1.0f;
 	}
 
-	GameObject* Cart::CopySelf(
-		GameObject* parent /* = nullptr */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */,
-		std::string* optionalName /* = nullptr */,
-		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	PropertyCollection* BaseCart::BuildTypeUniquePropertyCollection()
 	{
-		std::string newObjectName;
-		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
 
-		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
-		Cart* newGameObject = new Cart(cartID, newObjectName, newGameObjectID, m_TypeID, emptyCartMeshName, bCopyingToPrefabTemplate);
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("cart info");
 
-		newGameObject->currentTrackID = currentTrackID;
-		newGameObject->distAlongTrack = distAlongTrack;
+		collection->childCollection->RegisterProperty("track ID", FIELD_OFFSET_AND_TYPE(BaseCart, currentTrackID))
+			.VersionAdded(6)
+			.DefaultValue(InvalidTrackID);
+		collection->childCollection->RegisterProperty("dist along track", FIELD_OFFSET_AND_TYPE(BaseCart, distAlongTrack))
+			.VersionAdded(6)
+			.DefaultValue(-1.0f);
 
-		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::MESH);
-		CopyGenericFields(newGameObject, parent, copyFlags);
-
-		return newGameObject;
+		return collection;
 	}
 
-	void Cart::DrawImGuiObjects()
+	void BaseCart::Initialize()
 	{
-		GameObject::DrawImGuiObjects();
+		GetSystem<CartManager>(SystemType::CART_MANAGER)->RegisterCart(this);
 
-		if (ImGui::TreeNode("Cart"))
+		GameObject::Initialize();
+	}
+
+	void BaseCart::Destroy(bool bDetachFromParent)
+	{
+		GetSystem<CartManager>(SystemType::CART_MANAGER)->DeregisterCart(this);
+
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void BaseCart::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		if (ImGui::TreeNode("BaseCart"))
 		{
 			ImGui::Text("track ID: %d", currentTrackID);
 			ImGui::Text("dist along track: %.2f", distAlongTrack);
@@ -4292,12 +4866,12 @@ namespace flex
 		}
 	}
 
-	real Cart::GetDrivePower() const
+	real BaseCart::GetDrivePower() const
 	{
 		return 0.0f;
 	}
 
-	void Cart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
+	void BaseCart::OnTrackMount(TrackID trackID, real newDistAlongTrack)
 	{
 		if (trackID == InvalidTrackID)
 		{
@@ -4313,7 +4887,7 @@ namespace flex
 			TrackState trackState;
 			glm::vec3 newPos = trackManager->GetPointOnTrack(currentTrackID, newDistAlongTrack, newDistAlongTrack,
 				LookDirection::CENTER, false, &newTrackID, &newDistAlongTrack, &juncIndex, &curveIndex, &trackState, false);
-			assert(newTrackID == trackID);
+			CHECK_EQ(newTrackID, trackID);
 
 			distAlongTrack = newDistAlongTrack;
 			m_Transform.SetLocalPosition(newPos);
@@ -4322,23 +4896,23 @@ namespace flex
 		}
 	}
 
-	void Cart::OnTrackDismount()
+	void BaseCart::OnTrackDismount()
 	{
 		currentTrackID = InvalidTrackID;
 		distAlongTrack = -1.0f;
 	}
 
-	void Cart::SetItemHolding(GameObject* obj)
+	void BaseCart::SetItemHolding(GameObject* obj)
 	{
 		FLEX_UNUSED(obj);
 		// TODO:
 	}
 
-	void Cart::RemoveItemHolding()
+	void BaseCart::RemoveItemHolding()
 	{
 	}
 
-	void Cart::AdvanceAlongTrack(real dT)
+	void BaseCart::AdvanceAlongTrack(real dT)
 	{
 		if (currentTrackID != InvalidTrackID)
 		{
@@ -4377,7 +4951,7 @@ namespace flex
 		}
 	}
 
-	real Cart::UpdatePosition()
+	real BaseCart::UpdatePosition()
 	{
 		if (currentTrackID != InvalidTrackID)
 		{
@@ -4387,7 +4961,7 @@ namespace flex
 				CartManager* cartManager = GetSystem<CartManager>(SystemType::CART_MANAGER);
 
 				//real targetT = trackManager->GetCartTargetDistAlongTrackInChain(chainID, cartID);
-				//assert(targetT != -1.0f);
+				//CHECK_NE(targetT, -1.0f);
 
 				//m_TSpringToCartAhead.targetPos = targetT;
 				//m_TSpringToCartAhead.Tick(g_DeltaTime);
@@ -4475,41 +5049,93 @@ namespace flex
 		return 0.0f;
 	}
 
-	void Cart::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void BaseCart::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject cartInfo = parentObject.GetObject("cart info");
-		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
-		distAlongTrack = cartInfo.GetFloat("dist along track");
+		JSONObject cartInfo;
+		if (parentObject.TryGetObject("cart info", cartInfo))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(cartInfo, collection->childCollection);
+		}
 	}
 
-	void Cart::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void BaseCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject cartInfo = {};
-
-		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
-		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
-
-		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		SerializeRegisteredProperties(cartInfo, collection->childCollection, bSerializePrefabData);
+		if (!cartInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		}
 	}
 
-	EngineCart::EngineCart(CartID cartID) :
-		EngineCart(cartID, g_SceneManager->CurrentScene()->GetUniqueObjectName("EngineCart_", 4))
+	EmptyCart::EmptyCart(const std::string& name,
+		const GameObjectID& gameObjectID,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		BaseCart(name, EmptyCartSID, gameObjectID, BaseCart::emptyCartMeshName, sourcePrefabID, bPrefabTemplate)
 	{
 	}
 
-	EngineCart::EngineCart(CartID cartID,
-		const std::string& name,
-		const GameObjectID& gameObjectID /* = InvalidGameObjectID */,
-		bool bPrefabTemplate /* = false */) :
-		Cart(cartID, name, gameObjectID, SID("engine cart"), engineMeshName, bPrefabTemplate)
+	PropertyCollection* EmptyCart::BuildTypeUniquePropertyCollection()
+	{
+		return BaseCart::BuildTypeUniquePropertyCollection();
+	}
+
+	GameObject* EmptyCart::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+
+		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
+		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
+		EmptyCart* newGameObject = new EmptyCart(newObjectName, newGameObjectID, m_SourcePrefabID, bCopyingToPrefabTemplate);
+
+		newGameObject->currentTrackID = currentTrackID;
+		newGameObject->distAlongTrack = distAlongTrack;
+
+		copyFlags = (CopyFlags)(copyFlags & ~CopyFlags::MESH);
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	EngineCart::EngineCart(const std::string& name,
+		const GameObjectID& gameObjectID,
+		const PrefabIDPair& sourcePrefabID,
+		bool bPrefabTemplate) :
+		BaseCart(name, EngineCartSID, gameObjectID, engineMeshName, sourcePrefabID, bPrefabTemplate)
 	{
 		// TODO: Serialize and expose in ImGui
 		m_bItemizable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
+	}
+
+	PropertyCollection* EngineCart::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = BaseCart::BuildTypeUniquePropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("engine cart info");
+
+		// BaseCart already registered trackID & dist along track fields
+		collection->childCollection->RegisterProperty("move direction", FIELD_OFFSET_AND_TYPE(EngineCart, moveDirection))
+			.VersionAdded(6)
+			.Precision(1)
+			.DefaultValue(1.0f);
+		collection->childCollection->RegisterProperty("power remaining", FIELD_OFFSET_AND_TYPE(EngineCart, powerRemaining))
+			.VersionAdded(6)
+			.DefaultValue(1.0f);
+
+		return collection;
 	}
 
 	GameObject* EngineCart::CopySelf(
@@ -4520,10 +5146,11 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
+		bool bCopyingToPrefabTemplate = copyFlags & CopyFlags::COPYING_TO_PREFAB;
 		// TODO: FIXME: Get newly generated cart ID! & move allocation into cart manager
-		EngineCart* newGameObject = new EngineCart(cartID, newObjectName, newGameObjectID);
+		EngineCart* newGameObject = new EngineCart(newObjectName, newGameObjectID, m_SourcePrefabID, bCopyingToPrefabTemplate);
 
 		newGameObject->powerRemaining = powerRemaining;
 
@@ -4575,11 +5202,11 @@ namespace flex
 		GameObject::Update();
 	}
 
-	void EngineCart::DrawImGuiObjects()
+	void EngineCart::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
-		if (ImGui::TreeNode("Engine Cart"))
+		if (ImGui::TreeNode("Engine BaseCart"))
 		{
 			ImGui::Text("track ID: %d", currentTrackID);
 			ImGui::Text("dist along track: %.2f", distAlongTrack);
@@ -4595,30 +5222,31 @@ namespace flex
 		return (1.0f - glm::pow(1.0f - powerRemaining, 5.0f)) * moveDirection * speed;
 	}
 
-	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void EngineCart::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject cartInfo = parentObject.GetObject("cart info");
-		currentTrackID = (TrackID)cartInfo.GetInt("track ID");
-		distAlongTrack = cartInfo.GetFloat("dist along track");
+		JSONObject cartInfo;
+		// TODO: Also call BaseCart::PartTypeUniqueFields?
+		if (parentObject.TryGetObject("engine cart info", cartInfo))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		moveDirection = cartInfo.GetFloat("move direction");
-		powerRemaining = cartInfo.GetFloat("power remaining");
+			DeserializeRegisteredProperties(cartInfo, collection->childCollection);
+		}
 	}
 
-	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void EngineCart::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject cartInfo = {};
-
-		cartInfo.fields.emplace_back("track ID", JSONValue(currentTrackID));
-		cartInfo.fields.emplace_back("dist along track", JSONValue(distAlongTrack));
-
-		cartInfo.fields.emplace_back("move direction", JSONValue(moveDirection));
-		cartInfo.fields.emplace_back("power remaining", JSONValue(powerRemaining));
-
-		parentObject.fields.emplace_back("cart info", JSONValue(cartInfo));
+		// TODO: Also call BaseCart::SerializeTypeUniqueFields?
+		SerializeRegisteredProperties(cartInfo, collection->childCollection, bSerializePrefabData);
+		if (!cartInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("engine cart info", JSONValue(cartInfo));
+		}
 	}
 
 	MobileLiquidBox::MobileLiquidBox() :
@@ -4627,8 +5255,8 @@ namespace flex
 	{
 	}
 
-	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("mobile liquid box"), gameObjectID)
+	MobileLiquidBox::MobileLiquidBox(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MobileLiquidBoxSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		MaterialID matID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr white", matID))
@@ -4643,6 +5271,12 @@ namespace flex
 		}
 	}
 
+	PropertyCollection* MobileLiquidBox::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
 	GameObject* MobileLiquidBox::CopySelf(
 		GameObject* parent /* = nullptr */,
 		CopyFlags copyFlags /* = CopyFlags::ALL */,
@@ -4651,7 +5285,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		MobileLiquidBox* newGameObject = new MobileLiquidBox(newObjectName, newGameObjectID);
 
 		newGameObject->bInCart = bInCart;
@@ -4666,7 +5300,7 @@ namespace flex
 	{
 		// TODO: Query from CartManager?
 		BaseScene* scene = g_SceneManager->CurrentScene();
-		std::vector<Cart*> carts = scene->GetObjectsOfType<Cart>(SID("cart"));
+		std::vector<BaseCart*> carts = scene->GetObjectsOfType<BaseCart>(BaseCartSID);
 		Player* player = scene->GetPlayer(0);
 		if (player != nullptr)
 		{
@@ -4693,9 +5327,9 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::DrawImGuiObjects()
+	void MobileLiquidBox::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGui::TreeNode("Mobile liquid box"))
 		{
@@ -4706,37 +5340,59 @@ namespace flex
 		}
 	}
 
-	void MobileLiquidBox::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(parentObject);
-		FLEX_UNUSED(scene);
-		FLEX_UNUSED(matIDs);
-	}
-
-	void MobileLiquidBox::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		FLEX_UNUSED(parentObject);
-	}
-
 	Battery::Battery() :
 		Battery(g_SceneManager->CurrentScene()->GetUniqueObjectName("Battery_", 2), InvalidGameObjectID)
 	{
 	}
 
-	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID) :
-		GameObject(name, SID("battery"), gameObjectID)
+	Battery::Battery(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, BatterySID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 	}
 
+	PropertyCollection* Battery::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("battery info");
+
+		collection->childCollection->RegisterProperty("charge amount", FIELD_OFFSET_AND_TYPE(Battery, chargeAmount))
+			.VersionAdded(2)
+			.Precision(2)
+			.DefaultValue(0.0f);
+
+		return collection;
+	}
+
 	void Battery::Update()
 	{
+		PROFILE_AUTO("Battery Update");
+
+		if (flashTimer > 0.0f)
+		{
+			flashTimer = glm::max(flashTimer - g_DeltaTime, 0.0f);
+		}
+
 		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() >= 1)
 		{
 			MeshComponent* submesh0 = m_Mesh->GetSubMesh(0);
+			Material* submesh0Mat = g_Renderer->GetMaterial(submesh0->GetMaterialID());
+
+			real normalizedChargeAmount = chargeAmount / chargeCapacity;
 			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
 				&U_CHARGE_AMOUNT,
-				{ chargeAmount / chargeCapacity });
+				{ normalizedChargeAmount });
+			glm::vec3 constEmissive = submesh0Mat->constEmissive;
+			real constEmissiveMultiplier = 1.0f;
+			if (flashTimer > 0.0f)
+			{
+				const real flashIntensity = 1.0f;
+				constEmissiveMultiplier += sin(flashTimer / flashDuration * TWO_PI * 2.0f) * (0.5f * flashIntensity);
+			}
+			g_Renderer->AddRenderObjectUniformOverride(submesh0->renderID,
+				&U_CONST_EMISSIVE,
+				{ constEmissive * constEmissiveMultiplier });
 		}
 
 		GameObject::Update();
@@ -4744,14 +5400,20 @@ namespace flex
 
 	void Battery::OnCharge(real amount)
 	{
+		real prevChargeAmount = chargeAmount;
 		chargeAmount = glm::clamp(chargeAmount + amount, 0.0f, chargeCapacity);
+		if (chargeAmount >= chargeCapacity && prevChargeAmount < chargeCapacity)
+		{
+			// Flash when fully charged
+			flashTimer = flashDuration;
+		}
 	}
 
 	GameObject* Battery::CopySelf(GameObject* parent, CopyFlags copyFlags, std::string* optionalName, const GameObjectID& optionalGameObjectID)
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Battery* newGameObject = new Battery(newObjectName, newGameObjectID);
 
 		newGameObject->chargeAmount = chargeAmount;
@@ -4761,32 +5423,44 @@ namespace flex
 		return newGameObject;
 	}
 
-	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Battery::OnItemize(GameObjectStack::UserData& outUserData)
 	{
-		FLEX_UNUSED(scene);
+		outUserData.floatVal = chargeAmount;
+	}
+
+	void Battery::OnDeItemize(const GameObjectStack::UserData& userData)
+	{
+		chargeAmount = glm::clamp(userData.floatVal, 0.0f, chargeCapacity);
+	}
+
+	void Battery::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
 		FLEX_UNUSED(matIDs);
 
 		JSONObject batteryInfo;
 		if (parentObject.TryGetObject("battery info", batteryInfo))
 		{
-			batteryInfo.TryGetFloat("charge amount", chargeAmount);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(batteryInfo, collection->childCollection);
 		}
 	}
 
-	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Battery::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject batteryInfo = {};
-
-		batteryInfo.fields.emplace_back("charge amount", JSONValue(chargeAmount));
-
-		parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
+		SerializeRegisteredProperties(batteryInfo, collection->childCollection, bSerializePrefabData);
+		if (!batteryInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("battery info", JSONValue(batteryInfo));
+		}
 	}
 
-	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("gerstner wave"), gameObjectID)
+	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, GerstnerWaveSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		wave_workQueue = new ThreadSafeArray<WaveGenData>(32);
 
 		// Defaults to use if not set in file
@@ -4817,7 +5491,7 @@ namespace flex
 		bobberTarget = Spring<real>(0.0f);
 		bobberTarget.DR = 2.5f;
 		bobberTarget.UAF = 40.0f;
-		bobber = new GameObject("Bobber", SID("object"));
+		bobber = new GameObject("Bobber", BaseObjectSID);
 		bobber->SetSerializable(false);
 		MaterialID bobberMatID = InvalidMaterialID;
 		if (!g_Renderer->FindOrCreateMaterialByName("pbr red", bobberMatID))
@@ -4834,6 +5508,31 @@ namespace flex
 			PrintError("Failed to load bobber mesh\n");
 		}
 		g_SceneManager->CurrentScene()->AddRootObject(bobber);
+	}
+
+	PropertyCollection* GerstnerWave::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("gerstner wave");
+
+		collection->childCollection->RegisterProperty("fresnel factor", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fresnelFactor))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("fresnel power", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fresnelPower))
+			.VersionAdded(2)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("sky reflection factor", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.skyReflectionFactor))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("fog falloff", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fogFalloff))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("fog density", FIELD_OFFSET_AND_TYPE(GerstnerWave, oceanData.fogDensity))
+			.VersionAdded(6)
+			.Precision(2);
+
+		return collection;
 	}
 
 	void GerstnerWave::Initialize()
@@ -4865,8 +5564,13 @@ namespace flex
 		UpdateWaveVertexData();
 
 		SetMesh(new Mesh(this));
-
-		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, m_WaveMaterialID, (u32)m_VertexBufferCreateInfo.positions_3D.size());
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_VertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { m_WaveMaterialID };
+		meshCreateInfo.initialMaxVertexCount = (u32)m_VertexBufferCreateInfo.positions_3D.size();
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		GameObject::Initialize();
 	}
@@ -4878,7 +5582,6 @@ namespace flex
 			return;
 		}
 
-		PROFILE_AUTO("Gerstner update");
 		PROFILE_AUTO("GerstnerWave Update");
 
 		for (WaveInfo& waveInfo : waveContributions)
@@ -4895,7 +5598,7 @@ namespace flex
 			const glm::vec2i& chunkIndex = waveChunks[i].index;
 			for (u32 j = 0; j < i; ++j)
 			{
-				g_Renderer->GetDebugDrawer()->drawSphere(btVector3((chunkIndex.x) * size, 8.0f + 1.5f * j, (chunkIndex.y) * size), 0.5f, btVector4(1, 1, 1, 1));
+				g_Renderer->GetDebugRenderer()->drawSphere(btVector3((chunkIndex.x) * size, 8.0f + 1.5f * j, (chunkIndex.y) * size), 0.5f, btVector4(1, 1, 1, 1));
 			}
 		}
 #endif
@@ -5022,9 +5725,9 @@ namespace flex
 			{
 				glm::vec2 chunkCenter(x * size, z * size);
 
-				//if (g_Renderer->GetDebugDrawer() != nullptr)
+				//if (g_Renderer->GetDebugRenderer() != nullptr)
 				//{
-				//	g_Renderer->GetDebugDrawer()->drawSphere(btVector3(chunkCenter.x, 1.0f, chunkCenter.y), 0.5f, btVector3(0.75f, 0.5f, 0.6f));
+				//	g_Renderer->GetDebugRenderer()->drawSphere(btVector3(chunkCenter.x, 1.0f, chunkCenter.y), 0.5f, btVector3(0.75f, 0.5f, 0.6f));
 				//}
 
 				if (glm::distance2(chunkCenter, centerXZ) < radiusSqr)
@@ -5044,7 +5747,7 @@ namespace flex
 		const u32 vertCountPerChunk = maxChunkVertCountPerAxis * maxChunkVertCountPerAxis;
 		const u32 vertCountPerChunkDiv4 = vertCountPerChunk / 4;
 
-		assert((*wave_workQueue)[workQueueIndex].positionsx_4 == nullptr);
+		CHECK_EQ((*wave_workQueue)[workQueueIndex].positionsx_4, nullptr);
 
 		(*wave_workQueue)[workQueueIndex].positionsx_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
 		(*wave_workQueue)[workQueueIndex].positionsy_4 = (__m128*)_mm_malloc(vertCountPerChunkDiv4 * sizeof(__m128), 16);
@@ -5390,8 +6093,8 @@ namespace flex
 
 						WRITE_BARRIER;
 
-						assert(wave_workQueueEntriesClaimed <= wave_workQueueEntriesCreated);
-						assert(wave_workQueueEntriesClaimed <= wave_workQueue->Size());
+						CHECK_LE(wave_workQueueEntriesClaimed, wave_workQueueEntriesCreated);
+						CHECK_LE(wave_workQueueEntriesClaimed, wave_workQueue->Size());
 					}
 
 				}
@@ -5754,9 +6457,9 @@ namespace flex
 		return result;
 	}
 
-	void GerstnerWave::DrawImGuiObjects()
+	void GerstnerWave::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Text("Loaded chunks: %d", (u32)waveChunks.size());
 
@@ -5781,6 +6484,13 @@ namespace flex
 			{
 				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
 			}
+		}
+
+		if (m_bPinCenter)
+		{
+			ImGui::SameLine();
+
+			ImGui::Text("(%.2f, %.2f, %.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
 		ImGui::SliderFloat("Reverse wave amp", &reverseWaveAmplitude, 0.0f, 2.0f);
@@ -5824,7 +6534,7 @@ namespace flex
 
 			{
 				char byteCountStr[64];
-				ByteCountToString(byteCountStr, 64, (u32)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
+				ByteCountToString(byteCountStr, 64, (u64)(m_VertexBufferCreateInfo.positions_3D.size() * sizeof(glm::vec3)));
 
 				char nameBuf[256];
 				snprintf(nameBuf, 256, "CPU Vertex buffer size %s", byteCountStr);
@@ -6039,7 +6749,7 @@ namespace flex
 		return memcmp(&lhs, &rhs, sizeof(GerstnerWave::WaveInfo)) == 0;
 	}
 
-	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void GerstnerWave::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
 
@@ -6070,50 +6780,55 @@ namespace flex
 
 			gerstnerWaveObj.TryGetFloat("blend dist", blendDist);
 
-			std::vector<JSONField> waveSamplingLODsArrObj;
-			if (gerstnerWaveObj.TryGetFieldArray("wave sampling lods", waveSamplingLODsArrObj))
+			std::vector<JSONObject> waveSamplingLODsArrObj;
+			if (gerstnerWaveObj.TryGetObjectArray("wave sampling lods", waveSamplingLODsArrObj))
 			{
 				waveSamplingLODs.clear();
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
 				{
-					std::string samplingPropertyList = waveSamplingLODsArrObj[i].value.AsString();
-					std::vector<std::string> strParts = Split(samplingPropertyList, ',');
-					if (strParts.size() != 2)
-					{
-						std::string sceneName = scene->GetFileName();
-						PrintError("Invalid wave sampling LOD cutoff pair (%s) in scene %s\n", samplingPropertyList.c_str(), sceneName.c_str());
-						continue;
-					}
-					// TODO: Store as array of objects
-					real dist = (real)atof(strParts[0].c_str());
-					real amplitude = (real)atof(strParts[1].c_str());
-					waveSamplingLODs.emplace_back(dist, amplitude);
+					real sqrDist;
+					waveSamplingLODsArrObj[i].TryGetFloat("square dist", sqrDist);
+					real amplitude;
+					waveSamplingLODsArrObj[i].TryGetFloat("amplitude cutoff", amplitude);
+
+					waveSamplingLODs.emplace_back(sqrDist, amplitude);
 				}
 
 				SortWaveSamplingLODs();
 			}
+			else
+			{
+				// Set good default value
+				waveSamplingLODs.clear();
+				waveSamplingLODs.reserve(1);
+				waveSamplingLODs.emplace_back(35721.0f, 0.0f);
+			}
 
-			std::vector<JSONField> waveTessellationLODsArrObj;
-			if (gerstnerWaveObj.TryGetFieldArray("wave tessellation lods", waveTessellationLODsArrObj))
+			std::vector<JSONObject> waveTessellationLODsArrObj;
+			if (gerstnerWaveObj.TryGetObjectArray("wave tessellation lods", waveTessellationLODsArrObj))
 			{
 				waveTessellationLODs.clear();
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
 				{
-					std::string tessellationPropertyList = waveTessellationLODsArrObj[i].value.AsString();
-					std::vector<std::string> strParts = Split(tessellationPropertyList, ',');
-					if (strParts.size() != 2)
-					{
-						std::string sceneName = scene->GetFileName();
-						PrintError("Invalid wave tessellation LOD cutoff pair (%s) in scene %s\n", tessellationPropertyList.c_str(), sceneName.c_str());
-						continue;
-					}
-					// TODO: Store as array of objects
-					real sqrDist = (real)atof(strParts[0].c_str());
-					u32 vertCount = (u32)atoi(strParts[1].c_str());
+					real sqrDist;
+					waveTessellationLODsArrObj[i].TryGetFloat("square dist", sqrDist);
+					u32 vertCount;
+					waveTessellationLODsArrObj[i].TryGetUInt("vert count per axis", vertCount);
+
 					waveTessellationLODs.emplace_back(sqrDist, vertCount);
 				}
+			}
+			else
+			{
+				// Set good default value
+				waveTessellationLODs.clear();
+				waveTessellationLODs.reserve(4);
+				waveTessellationLODs.emplace_back(37636.0f, 8);
+				waveTessellationLODs.emplace_back(14438.9f, 28);
+				waveTessellationLODs.emplace_back(4116.8f, 52);
+				waveTessellationLODs.emplace_back(0.0f, 80);
 			}
 
 			if (gerstnerWaveObj.TryGetVec4("colour top", oceanData.top))
@@ -6128,11 +6843,6 @@ namespace flex
 			{
 				oceanData.btm = glm::pow(oceanData.btm, glm::vec4(2.2f));
 			}
-			gerstnerWaveObj.TryGetFloat("fresnel factor", oceanData.fresnelFactor);
-			gerstnerWaveObj.TryGetFloat("fresnel power", oceanData.fresnelPower);
-			gerstnerWaveObj.TryGetFloat("sky reflection factor", oceanData.skyReflectionFactor);
-			gerstnerWaveObj.TryGetFloat("fog falloff", oceanData.fogFalloff);
-			gerstnerWaveObj.TryGetFloat("fog density", oceanData.fogDensity);
 		}
 
 		SortWaves();
@@ -6144,8 +6854,10 @@ namespace flex
 		}
 	}
 
-	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void GerstnerWave::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject gerstnerWaveObj = {};
 
 		std::vector<JSONObject> waveObjs;
@@ -6167,32 +6879,35 @@ namespace flex
 		gerstnerWaveObj.fields.emplace_back("update speed", JSONValue(updateSpeed));
 
 		gerstnerWaveObj.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
-		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(VecToString(m_PinnedPos)));
+		gerstnerWaveObj.fields.emplace_back("pinned center position", JSONValue(m_PinnedPos, 2));
 
 		gerstnerWaveObj.fields.emplace_back("blend dist", JSONValue(blendDist));
 
-		std::vector<JSONField> waveSamplingLODsArrObj(waveSamplingLODs.size());
+		std::vector<JSONObject> waveSamplingLODsArrObj(waveSamplingLODs.size());
 		for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
 		{
-			waveSamplingLODsArrObj[i] = JSONField(FloatToString(waveSamplingLODs[i].squareDist, 1) + "," + FloatToString(waveSamplingLODs[i].amplitudeCutoff, 6), JSONValue(0));
+			JSONObject samplingLOD = {};
+			samplingLOD.fields.emplace_back("square dist", JSONValue(waveSamplingLODs[i].squareDist, 1));
+			samplingLOD.fields.emplace_back("amplitude cutoff", JSONValue(waveSamplingLODs[i].amplitudeCutoff));
+			waveSamplingLODsArrObj[i] = samplingLOD;
 		}
 		gerstnerWaveObj.fields.emplace_back("wave sampling lods", JSONValue(waveSamplingLODsArrObj));
 
-		std::vector<JSONField> waveTessellationLODsArrObj(waveTessellationLODs.size());
+		std::vector<JSONObject> waveTessellationLODsArrObj(waveTessellationLODs.size());
 		for (u32 i = 0; i < (u32)waveTessellationLODs.size(); ++i)
 		{
-			waveTessellationLODsArrObj[i] = JSONField(FloatToString(waveTessellationLODs[i].squareDist, 1) + "," + IntToString(waveTessellationLODs[i].vertCountPerAxis), JSONValue(0));
+			JSONObject tessellationLOD = {};
+			tessellationLOD.fields.emplace_back("square dist", JSONValue(waveTessellationLODs[i].squareDist, 1));
+			tessellationLOD.fields.emplace_back("vert count per axis", JSONValue(waveTessellationLODs[i].vertCountPerAxis));
+			waveTessellationLODsArrObj[i] = tessellationLOD;
 		}
 		gerstnerWaveObj.fields.emplace_back("wave tessellation lods", JSONValue(waveTessellationLODsArrObj));
 
-		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(VecToString(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)))));
-		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(VecToString(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)))));
-		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(VecToString(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)))));
-		gerstnerWaveObj.fields.emplace_back("fresnel factor", JSONValue(oceanData.fresnelFactor));
-		gerstnerWaveObj.fields.emplace_back("fresnel power", JSONValue(oceanData.fresnelPower));
-		gerstnerWaveObj.fields.emplace_back("sky reflection factor", JSONValue(oceanData.skyReflectionFactor));
-		gerstnerWaveObj.fields.emplace_back("fog falloff", JSONValue(oceanData.fogFalloff));
-		gerstnerWaveObj.fields.emplace_back("fog density", JSONValue(oceanData.fogDensity));
+		gerstnerWaveObj.fields.emplace_back("colour top", JSONValue(glm::pow(oceanData.top, glm::vec4(1.0f / 2.2f)), 2));
+		gerstnerWaveObj.fields.emplace_back("colour mid", JSONValue(glm::pow(oceanData.mid, glm::vec4(1.0f / 2.2f)), 2));
+		gerstnerWaveObj.fields.emplace_back("colour btm", JSONValue(glm::pow(oceanData.btm, glm::vec4(1.0f / 2.2f)), 2));
+
+		SerializeRegisteredProperties(gerstnerWaveObj, collection->childCollection, bSerializePrefabData);
 
 		parentObject.fields.emplace_back("gerstner wave", JSONValue(gerstnerWaveObj));
 	}
@@ -6286,54 +7001,37 @@ namespace flex
 		return 0.0f;
 	}
 
-	Blocks::Blocks(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("blocks"), gameObjectID)
+	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, WireSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bSerializable = false;
-
-		std::vector<MaterialID> matIDs;
-		for (i32 i = 0; i < 10; ++i)
+		if (!m_bIsTemplate)
 		{
-			matCreateInfo.name = "block " + IntToString(i, 2);
-			matCreateInfo.constAlbedo = glm::vec4(RandomFloat(0.3f, 0.6f), RandomFloat(0.4f, 0.8f), RandomFloat(0.4f, 0.7f), 1.0f);
-			matCreateInfo.constRoughness = RandomFloat(0.0f, 1.0f);
-			matIDs.push_back(g_Renderer->InitializeMaterial(&matCreateInfo));
-		}
-
-		real blockSize = 1.5f;
-		i32 count = 18;
-		for (i32 x = 0; x < count; ++x)
-		{
-			for (i32 z = 0; z < count; ++z)
-			{
-				GameObject* obj = new GameObject("block", SID("object"));
-				obj->SetMesh(new Mesh(obj));
-				obj->GetMesh()->LoadFromFile(MESH_DIRECTORY "cube.glb", PickRandomFrom(matIDs));
-				AddChild(obj);
-				obj->GetTransform()->SetLocalScale(glm::vec3(blockSize));
-				obj->GetTransform()->SetLocalPosition(glm::vec3(
-					((real)x / (real)count - 0.5f) * (blockSize * count),
-					RandomFloat(0.0f, 1.2f),
-					((real)z / (real)count - 0.5f) * (blockSize * count)));
-			}
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterWire(this);
 		}
 	}
 
-	Wire::Wire(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("wire"), gameObjectID)
+	PropertyCollection* Wire::BuildTypeUniquePropertyCollection()
 	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire");
+
+		collection->childCollection->RegisterProperty("plug 0 id", FIELD_OFFSET_AND_TYPE(Wire, plug0ID))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("plug 1 id", FIELD_OFFSET_AND_TYPE(Wire, plug1ID))
+			.VersionAdded(6);
+
+		return collection;
 	}
 
 	void Wire::Initialize()
 	{
 		GeneratePoints();
 
-		MaterialID wireMatID = g_Renderer->GetMaterialID("wire");
-		if (wireMatID == InvalidMaterialID)
+		MaterialID wireMatID;
+		if (!g_Renderer->FindOrCreateMaterialByName("wire", wireMatID))
 		{
+			PrintWarn("Failed to find wire material, using placeholder\n");
 			wireMatID = g_Renderer->GetPlaceholderMaterialID();
 		}
 		m_VertexBufferCreateInfo = {};
@@ -6342,16 +7040,63 @@ namespace flex
 		UpdateIndices();
 
 		SetMesh(new Mesh(this));
-		u32 maxInitialVertCount = numRadialPoints * numPoints;
-		m_Mesh->LoadFromMemoryDynamic(m_VertexBufferCreateInfo, m_Indices, wireMatID, maxInitialVertCount);
-
-		UpdateMesh();
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_VertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { wireMatID };
+		meshCreateInfo.initialMaxVertexCount = numRadialPoints * numPoints;
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		GameObject::Initialize();
 	}
 
+	void Wire::PostInitialize()
+	{
+		if (plug0ID.IsValid())
+		{
+			WirePlug* plug0 = (WirePlug*)plug0ID.Get();
+			if (!plug0->wireID.IsValid())
+			{
+				plug0->wireID = ID;
+			}
+			else
+			{
+				if (plug0->wireID != ID)
+				{
+					StringBuilder plugPath;
+					plug0->GetFullyPathedName(plugPath);
+					PrintError("Wire plug \"%s\" references unexpected wire\n", plugPath.ToCString());
+				}
+			}
+		}
+
+		if (plug1ID.IsValid())
+		{
+			WirePlug* plug1 = (WirePlug*)plug1ID.Get();
+			if (!plug1->wireID.IsValid())
+			{
+				plug1->wireID = ID;
+			}
+			else
+			{
+				if (plug1->wireID != ID)
+				{
+					StringBuilder plugPath;
+					plug1->GetFullyPathedName(plugPath);
+					PrintError("Wire plug \"%s\" references unexpected wire\n", plugPath.ToCString());
+				}
+			}
+		}
+
+
+		GameObject::PostInitialize();
+	}
+
 	void Wire::Update()
 	{
+		PROFILE_AUTO("Wire Update");
+
 		UpdateIndices();
 		UpdateMesh();
 
@@ -6361,20 +7106,25 @@ namespace flex
 			meshComponent->UpdateDynamicVertexData(m_VertexBufferCreateInfo, m_Indices);
 			g_Renderer->ShrinkDynamicVertexData(meshComponent->renderID, 0.5f);
 		}
+
+		GameObject::Update();
 	}
 
 	void Wire::Destroy(bool bDetachFromParent /* = true */)
 	{
-		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroyWire(this);
+		if (!m_bIsTemplate)
+		{
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UnregisterWire(this);
+		}
 
 		DestroyPoints();
 
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void Wire::DrawImGuiObjects()
+	void Wire::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		bool bRegenPoints = false;
 
@@ -6419,27 +7169,29 @@ namespace flex
 		return true;
 	}
 
-	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Wire::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject wireInfo;
 		if (parentObject.TryGetObject("wire", wireInfo))
 		{
-			wireInfo.TryGetGameObjectID("plug 0 id", plug0ID);
-			wireInfo.TryGetGameObjectID("plug 1 id", plug1ID);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(wireInfo, collection->childCollection);
 		}
 	}
 
-	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Wire::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject wireInfo = {};
-
-		wireInfo.fields.emplace_back("plug 0 id", JSONValue(plug0ID));
-		wireInfo.fields.emplace_back("plug 1 id", JSONValue(plug1ID));
-
-		parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
+		SerializeRegisteredProperties(wireInfo, collection->childCollection, bSerializePrefabData);
+		if (!wireInfo.fields.empty())
+		{
+			parentObject.fields.emplace_back("wire", JSONValue(wireInfo));
+		}
 	}
 
 	GameObjectID Wire::GetOtherPlug(WirePlug* plug)
@@ -6480,8 +7232,9 @@ namespace flex
 		m_SoftBody->points[numPoints - 2]->invMass = m_SoftBody->points[numPoints - 3]->invMass;
 	}
 
-	void Wire::StepSimulation()
+	void Wire::UpdateWireMesh()
 	{
+		CHECK_NE(m_SoftBody, nullptr);
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
 		WirePlug* plug1 = (WirePlug*)plug1ID.Get();
@@ -6493,24 +7246,26 @@ namespace flex
 		m_SoftBody->Update();
 	}
 
-	void Wire::CalculateTangentAtPoint(real t, glm::vec3& outTangent)
+	glm::vec3 Wire::CalculateTangentAtPoint(real t)
 	{
-		assert(t >= 0.0f && t <= 1.0f);
+		CHECK_NE(m_SoftBody, nullptr);
+		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
-			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
+			return glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
 		}
 		else
 		{
 			u32 i0 = (u32)(t * numPoints);
 			u32 i1 = (u32)(t * numPoints + 1.0f);
-			outTangent = glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
+			return glm::normalize(m_SoftBody->points[i1]->pos - m_SoftBody->points[i0]->pos);
 		}
 	}
 
 	void Wire::CalculateBasisAtPoint(real t, glm::vec3& outNormal, glm::vec3& outTangent, glm::vec3& outBitangent)
 	{
-		assert(t >= 0.0f && t <= 1.0f);
+		CHECK_NE(m_SoftBody, nullptr);
+		CHECK(t >= 0.0f && t <= 1.0f);
 		if (t == 1.0f)
 		{
 			outTangent = glm::normalize(m_SoftBody->points[numPoints - 1]->pos - m_SoftBody->points[numPoints - 2]->pos);
@@ -6539,7 +7294,7 @@ namespace flex
 
 	void Wire::GeneratePoints()
 	{
-		assert(m_SoftBody == nullptr);
+		CHECK_EQ(m_SoftBody, nullptr);
 
 		WirePlug* plug0 = (WirePlug*)plug0ID.Get();
 		Transform* plug0Transform = plug0->GetTransform();
@@ -6584,6 +7339,15 @@ namespace flex
 		Transform* plug1Transform = plug1->GetTransform();
 		glm::vec3 plug1Pos = plug1Transform->GetWorldPosition();
 
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_RIGHT), btVector3(1, 1, 1));
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_UP), btVector3(1, 1, 1));
+		debugRenderer->drawLine(ToBtVec3(plug0Pos), ToBtVec3(plug0Pos + VEC3_FORWARD), btVector3(1, 1, 1));
+
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_RIGHT), btVector3(1, 0.5f, 1));
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_UP), btVector3(1, 0.5f, 1));
+		debugRenderer->drawLine(ToBtVec3(plug1Pos), ToBtVec3(plug1Pos + VEC3_FORWARD), btVector3(1, 0.5f, 1));
+
 		glm::vec3 startToEnd = plug1Pos - plug0Pos;
 
 		u32 numVerts = numPoints * numRadialPoints;
@@ -6617,8 +7381,8 @@ namespace flex
 				real cosTheta = cos(theta * TWO_PI);
 				real sinTheta = sin(theta * TWO_PI);
 				glm::vec3 pos = centerPos +
-					(cosTheta * radius) * wireBitangentWS  +
-					(sinTheta * radius) * wireNormalWS ;
+					(cosTheta * radius) * wireBitangentWS +
+					(sinTheta * radius) * wireNormalWS;
 
 				glm::vec3 normal = glm::normalize(cosTheta * wireBitangentWS + sinTheta * wireNormalWS);
 				// TODO: Take cross product with VEC3_UP when normal is similar to VEC3_RIGHT
@@ -6662,16 +7426,47 @@ namespace flex
 		}
 	}
 
-	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID) :
-		GameObject(name, SID("wire plug"), gameObjectID)
+	WirePlug::WirePlug(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, WirePlugSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
+
+		if (!m_bIsTemplate)
+		{
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterWirePlug(this);
+		}
 	}
 
-	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID) :
-		WirePlug(name, gameObjectID)
+	PropertyCollection* WirePlug::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("wire plug");
+
+		collection->childCollection->RegisterProperty("wire id", FIELD_OFFSET_AND_TYPE(WirePlug, wireID))
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+		collection->childCollection->RegisterProperty("socket id", FIELD_OFFSET_AND_TYPE(WirePlug, socketID))
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+
+		return collection;
+	}
+
+	WirePlug::WirePlug(const std::string& name, Wire* owningWire, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		WirePlug(name, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		wireID = owningWire->ID;
+	}
+
+	void WirePlug::Destroy(bool bDetachFromParent)
+	{
+		if (!m_bIsTemplate)
+		{
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UnregisterWirePlug(this);
+		}
+
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void WirePlug::PlugIn(Socket* socket)
@@ -6698,34 +7493,97 @@ namespace flex
 		}
 	}
 
-	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void WirePlug::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
-		JSONObject obj = parentObject.GetObject("wire plug");
+		JSONObject wireObj;
+		if (parentObject.TryGetObject("wire plug", wireObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		obj.TryGetGameObjectID("wire id", wireID);
-		obj.TryGetGameObjectID("socket id", socketID);
+			DeserializeRegisteredProperties(wireObj, collection->childCollection);
+		}
 	}
 
-	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void WirePlug::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject obj = {};
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		if (wireID.IsValid())
+		JSONObject wirePlugObj = {};
+		SerializeRegisteredProperties(wirePlugObj, collection->childCollection, bSerializePrefabData);
+		if (!wirePlugObj.fields.empty())
 		{
-			obj.fields.emplace_back("wire id", JSONValue(wireID));
+			parentObject.fields.emplace_back("wire plug", JSONValue(wirePlugObj));
+		}
+	}
+
+	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SocketSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bInteractable = true;
+
+		if (!m_bIsTemplate)
+		{
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->RegisterSocket(this);
+		}
+	}
+
+	PropertyCollection* Socket::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("socket");
+
+		collection->childCollection->RegisterProperty("slotIdx", FIELD_OFFSET_AND_TYPE(Socket, slotIdx))
+			.VersionAdded(6);
+		//	.CustomSerializeCallback([](SerializationContext& context, u32 value)
+		//{
+		//	if (value > 0)
+		//	{
+		//		context.Write("foo", value);
+		//	}
+		//});
+		collection->childCollection->RegisterProperty("connected plug id", FIELD_OFFSET_AND_TYPE(Socket, connectedPlugID))
+			.VersionAdded(6)
+			.DefaultValue(InvalidGameObjectID);
+
+		return collection;
+	}
+
+	void Socket::Destroy(bool bDetachFromParent /* = true */)
+	{
+		if (!m_bIsTemplate)
+		{
+			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UnregisterSocket(this);
 		}
 
-		if (socketID.IsValid())
+		GameObject::Destroy(bDetachFromParent);
+	}
+
+	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject socketObj;
+		if (parentObject.TryGetObject("socket", socketObj))
 		{
-			obj.fields.emplace_back("socket id", JSONValue(socketID));
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(socketObj, collection->childCollection);
 		}
+	}
 
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
+	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		parentObject.fields.emplace_back("wire plug", JSONValue(obj));
+		JSONObject socketObj = {};
+		SerializeRegisteredProperties(socketObj, collection->childCollection, bSerializePrefabData);
+		if (!socketObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("socket", JSONValue(socketObj));
+		}
 	}
 
 	void Socket::OnPlugIn(WirePlug* plug)
@@ -6752,61 +7610,17 @@ namespace flex
 		}
 	}
 
-	Socket::Socket(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("socket"), gameObjectID)
-	{
-		m_bInteractable = true;
-	}
-
-	void Socket::Destroy(bool bDetachFromParent /* = true */)
-	{
-		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->DestroySocket(this);
-
-		GameObject::Destroy(bDetachFromParent);
-	}
-
-	void Socket::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(scene);
-		FLEX_UNUSED(matIDs);
-
-		JSONObject obj = parentObject.GetObject("socket");
-		obj.TryGetInt("slotIdx", slotIdx);
-
-		obj.TryGetGameObjectID("connected plug id", connectedPlugID);
-
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
-	}
-
-	void Socket::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		JSONObject obj = {};
-
-		obj.fields.emplace_back("slotIdx", JSONValue(slotIdx));
-		if (connectedPlugID.IsValid())
-		{
-			obj.fields.emplace_back("connected plug id", JSONValue(connectedPlugID));
-		}
-
-		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
-		parentObject.fields.emplace_back("socket", JSONValue(obj));
-	}
-
 	Terminal::Terminal() :
 		Terminal(g_SceneManager->CurrentScene()->GetUniqueObjectName("Terminal_", 2), InvalidGameObjectID)
 	{
 	}
 
-	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("terminal"), gameObjectID),
+	Terminal::Terminal(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, TerminalSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_KeyEventCallback(this, &Terminal::OnKeyEvent),
 		cursor(0, 0)
 	{
 		m_bInteractable = true;
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 
 		MaterialID matID;
 		// TODO: Don't rely on material names!
@@ -6821,9 +7635,13 @@ namespace flex
 			PrintWarn("Failed to load terminal mesh!\n");
 		}
 
-		m_Transform.UpdateParentTransform();
-
 		m_VM = new VM::VirtualMachine();
+	}
+
+	PropertyCollection* Terminal::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Terminal::Initialize()
@@ -6836,19 +7654,6 @@ namespace flex
 		GameObject::Initialize();
 	}
 
-	void Terminal::PostInitialize()
-	{
-		//std::vector<GameObject*> gameObjects = g_SceneManager->CurrentScene()->GetAllObjects();
-		//for (GameObject* gameObject : gameObjects)
-		//{
-		//	if (gameObject->GetType() == SID("point light"))
-		//	{
-		//		PointLight* pointLight = static_cast<PointLight*>(obj);
-		//		GetSystem<PluggablesSystem>(SystemType::PLUGGABLES_SYSTEM)->AddWire(this, obj);
-		//	}
-		//}
-	}
-
 	void Terminal::Destroy(bool bDetachFromParent /* = true */)
 	{
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
@@ -6856,6 +7661,7 @@ namespace flex
 		if (m_VM != nullptr)
 		{
 			delete m_VM;
+			m_VM = nullptr;
 		}
 
 		GetSystem<TerminalManager>(SystemType::TERMINAL_MANAGER)->DeregisterTerminal(this);
@@ -6866,6 +7672,55 @@ namespace flex
 	void Terminal::Update()
 	{
 		PROFILE_AUTO("Terminal Update");
+
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+
+		if (m_NearbyInteractableID.IsValid())
+		{
+			const real scale = 2.0f;
+			const glm::vec3 right = m_Transform.GetRight();
+			const glm::vec3 forward = m_Transform.GetForward();
+			glm::vec3 c = m_Transform.GetWorldPosition();
+			glm::vec3 v1 = c + (right + forward) * scale;
+			glm::vec3 v2 = c + (-right + forward) * scale;
+			glm::vec3 v3 = c - (forward * scale);
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			debugRenderer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+			o = glm::vec3(0.0f, 2.0f, 0.0f);
+			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
+		}
+
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		u32 socketCount = sockets != nullptr ? (u32)sockets->size() : 0;
+
+		if (m_VM != nullptr && m_VM->IsExecuting())
+		{
+			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), socketCount);
+			for (u32 i = 0; i < outputCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, m_VM->terminalOutputs[i].valInt);
+			}
+			for (u32 i = outputCount; i < socketCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
+			}
+		}
+		else
+		{
+			for (u32 i = 0; i < socketCount; ++i)
+			{
+				pluggablesSystem->SetGameObjectOutputSignal(ID, i, -1);
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void Terminal::Render()
+	{
+		PROFILE_AUTO("Terminal Render");
 
 		if (m_DisplayReloadTimeRemaining != -1.0f)
 		{
@@ -6924,6 +7779,7 @@ namespace flex
 
 			if (bRenderText)
 			{
+				// TODO: EZ: Define in hot-reloadable config file
 				static const glm::vec4 lineNumberColour(0.4f, 0.4f, 0.4f, 1.0f);
 				static const glm::vec4 lineNumberColourActive(0.65f, 0.65f, 0.65f, 1.0f);
 				static const glm::vec4 textColour(0.85f, 0.81f, 0.80f, 1.0f);
@@ -6992,45 +7848,6 @@ namespace flex
 				}
 			}
 		}
-
-		if (m_NearbyInteractable != nullptr)
-		{
-			const real scale = 2.0f;
-			const glm::vec3 right = m_Transform.GetRight();
-			const glm::vec3 forward = m_Transform.GetForward();
-			glm::vec3 c = m_Transform.GetWorldPosition();
-			glm::vec3 v1 = c + (right + forward) * scale;
-			glm::vec3 v2 = c + (-right + forward) * scale;
-			glm::vec3 v3 = c - (forward * scale);
-			btIDebugDraw* debugDrawer = g_Renderer->GetDebugDrawer();
-			debugDrawer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
-			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-			o = glm::vec3(0.0f, 2.0f, 0.0f);
-			debugDrawer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-		}
-
-		if (m_VM != nullptr && m_VM->IsExecuting())
-		{
-			u32 outputCount = glm::min((u32)m_VM->terminalOutputs.size(), (u32)outputSignals.size());
-			for (u32 i = 0; i < outputCount; ++i)
-			{
-				SetOutputSignal(i, m_VM->terminalOutputs[i].valInt);
-			}
-			for (u32 i = outputCount; i < (u32)outputSignals.size(); ++i)
-			{
-				SetOutputSignal(i, -1);
-			}
-		}
-		else
-		{
-			for (u32 i = 0; i < (u32)outputSignals.size(); ++i)
-			{
-				SetOutputSignal(i, -1);
-			}
-		}
-
-		GameObject::Update();
 	}
 
 	void Terminal::DrawImGuiWindow()
@@ -7060,6 +7877,30 @@ namespace flex
 				{
 					SaveScript();
 				}
+			}
+
+			if (!m_ScriptFileName.empty())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+
+				ImGui::SameLine();
+				if (ImGui::Button("Reload"))
+				{
+					ReloadScript();
+				}
+
+				ImGui::PopStyleColor(3);
+			}
+
+			ImGui::SameLine();
+
+			bool bInstallTerminalWatch = g_EngineInstance->GetInstallTerminalWatch();
+			if (ImGui::Checkbox("Auto-reload from disk", &bInstallTerminalWatch))
+			{
+				g_EngineInstance->SetInstallTerminalWatch(bInstallTerminalWatch);
+
 			}
 
 			ImGui::Separator();
@@ -7369,9 +8210,8 @@ namespace flex
 		m_Camera = camera;
 	}
 
-	void Terminal::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Terminal::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject terminalObj = parentObject.GetObject("terminal");
@@ -7395,13 +8235,13 @@ namespace flex
 		MoveCursorToStart();
 	}
 
-	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void Terminal::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
 		JSONObject terminalObj = {};
 
 		SaveScript();
 
-		terminalObj.fields.emplace_back("script file path", JSONValue(m_ScriptFileName));
+		SerializeField(terminalObj, bSerializePrefabData, "script file path", &m_ScriptFileName, ValueType::STRING);
 
 		parentObject.fields.emplace_back("terminal", JSONValue(terminalObj));
 	}
@@ -7779,7 +8619,7 @@ namespace flex
 
 	void Terminal::ParseCode()
 	{
-		assert(m_VM != nullptr);
+		CHECK_NE(m_VM, nullptr);
 
 		std::string str;
 		for (const std::string& line : lines)
@@ -7809,16 +8649,41 @@ namespace flex
 				m_bDirtyFlag = false;
 				return true;
 			}
+			else
+			{
+				PrintError("Failed to save terminal script to %s\n", m_ScriptFileName.c_str());
+			}
+		}
+		else
+		{
+			PrintError("Failed to save terminal script, file name not set\n");
 		}
 
-		PrintError("Failed to save terminal script to %s\n", m_ScriptFileName.c_str());
 		return false;
+	}
+
+	void Terminal::ReloadScript()
+	{
+		if (!m_ScriptFileName.empty())
+		{
+			OnScriptChanged();
+		}
+		else
+		{
+			PrintError("Failed to reload terminal script, file name not set\n");
+		}
 	}
 
 	EventReply Terminal::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
 		if (m_Camera != nullptr)
 		{
+			if (m_Camera->IsTransitioningOut())
+			{
+				// Don't respond to input while camera is transitioning out
+				return EventReply::UNCONSUMED;
+			}
+
 			if (action == KeyAction::KEY_PRESS || action == KeyAction::KEY_REPEAT)
 			{
 				const bool bCapsLock = (modifiers & (i32)InputModifier::CAPS_LOCK) > 0;
@@ -7898,6 +8763,7 @@ namespace flex
 					return EventReply::CONSUMED;
 				}
 
+				// Most letters, numbers, & characters
 				if ((i32)keyCode >= (i32)KeyCode::KEY_APOSTROPHE && (i32)keyCode <= (i32)KeyCode::KEY_RIGHT_BRACKET)
 				{
 					char c = KeyCodeStrings[(i32)keyCode][0];
@@ -8098,129 +8964,6 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	ParticleSystem::ParticleSystem(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("particle system"), gameObjectID)
-	{
-		m_Transform.updateParentOnStateChange = true;
-	}
-
-	void ParticleSystem::Destroy(bool bDetachFromParent /* = true */)
-	{
-		g_Renderer->RemoveParticleSystem(particleSystemID);
-		GameObject::Destroy(bDetachFromParent);
-	}
-
-	GameObject* ParticleSystem::CopySelf(
-		GameObject* parent /* = nullptr */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */,
-		std::string* optionalName /* = nullptr */,
-		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
-	{
-		std::string newObjectName;
-		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
-		ParticleSystem* newParticleSystem = new ParticleSystem(newObjectName, newGameObjectID);
-
-		CopyGenericFields(newParticleSystem, parent, copyFlags);
-
-		newParticleSystem->data.colour0 = data.colour0;
-		newParticleSystem->data.colour1 = data.colour1;
-		newParticleSystem->data.speed = data.speed;
-		newParticleSystem->data.particleCount = data.particleCount;
-		newParticleSystem->bEnabled = true;
-		newParticleSystem->scale = scale;
-		newParticleSystem->model = model;
-		g_Renderer->AddParticleSystem(m_Name, newParticleSystem, data.particleCount);
-
-		return newParticleSystem;
-	}
-
-	void ParticleSystem::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
-	{
-		FLEX_UNUSED(matIDs);
-		FLEX_UNUSED(scene);
-
-		JSONObject particleSystemObj = parentObject.GetObject("particle system info");
-
-		Transform::ParseJSON(particleSystemObj, model);
-		m_Transform.SetWorldFromMatrix(model);
-		particleSystemObj.TryGetFloat("scale", scale);
-		particleSystemObj.TryGetBool("enabled", bEnabled);
-
-		JSONObject systemDataObj = particleSystemObj.GetObject("data");
-		data = {};
-		systemDataObj.TryGetVec4("colour0", data.colour0);
-		systemDataObj.TryGetVec4("colour1", data.colour1);
-		systemDataObj.TryGetFloat("speed", data.speed);
-		i32 particleCount;
-		if (systemDataObj.TryGetInt("particle count", particleCount))
-		{
-			data.particleCount = particleCount;
-		}
-
-		particleSystemID = g_Renderer->AddParticleSystem(m_Name, this, particleCount);
-	}
-
-	void ParticleSystem::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		JSONObject particleSystemObj = {};
-
-		particleSystemObj.fields.emplace_back(Transform::Serialize(model, m_Name.c_str()));
-		particleSystemObj.fields.emplace_back("scale", JSONValue(scale));
-		particleSystemObj.fields.emplace_back("enabled", JSONValue(bEnabled));
-
-
-		JSONObject systemDataObj = {};
-		systemDataObj.fields.emplace_back("colour0", JSONValue(VecToString(data.colour0, 2)));
-		systemDataObj.fields.emplace_back("colour1", JSONValue(VecToString(data.colour1, 2)));
-		systemDataObj.fields.emplace_back("speed", JSONValue(data.speed));
-		systemDataObj.fields.emplace_back("particle count", JSONValue(data.particleCount));
-		particleSystemObj.fields.emplace_back("data", JSONValue(systemDataObj));
-
-		parentObject.fields.emplace_back("particle system info", JSONValue(particleSystemObj));
-	}
-
-	void ParticleSystem::DrawImGuiObjects()
-	{
-		GameObject::DrawImGuiObjects();
-
-		static const ImGuiColorEditFlags colorEditFlags =
-			ImGuiColorEditFlags_NoInputs |
-			ImGuiColorEditFlags_Float |
-			ImGuiColorEditFlags_RGB |
-			ImGuiColorEditFlags_PickerHueWheel |
-			ImGuiColorEditFlags_HDR;
-
-		ImGui::Text("Particle System");
-
-		ImGui::Checkbox("Enabled", &bEnabled);
-
-		ImGui::ColorEdit4("Colour 0", &data.colour0.r, colorEditFlags);
-		ImGui::SameLine();
-		ImGui::ColorEdit4("Colour 1", &data.colour1.r, colorEditFlags);
-		ImGui::SliderFloat("Speed", &data.speed, -10.0f, 10.0f);
-		i32 particleCount = (i32)data.particleCount;
-		if (ImGui::SliderInt("Particle count", &particleCount, 0, Renderer::MAX_PARTICLE_COUNT))
-		{
-			data.particleCount = particleCount;
-		}
-	}
-
-	void ParticleSystem::OnTransformChanged()
-	{
-		scale = m_Transform.GetLocalScale().x;
-		UpdateModelMatrix();
-	}
-
-	void ParticleSystem::UpdateModelMatrix()
-	{
-		PROFILE_AUTO("ParticleSystem Update");
-
-		model = glm::scale(m_Transform.GetWorldTransform(), glm::vec3(scale));
-
-		GameObject::Update();
-	}
-
 	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
 	{
 		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
@@ -8285,31 +9028,83 @@ namespace flex
 		return result;
 	}
 
-	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("terrain generator"), gameObjectID),
+	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, TerrainGeneratorSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_LowCol(0.2f, 0.3f, 0.45f),
 		m_MidCol(0.45f, 0.55f, 0.25f),
 		m_HighCol(0.65f, 0.67f, 0.69f)
 	{
 		AddTag("terrain");
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		if (!m_bUseAsyncCompute)
 		{
 			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
 		}
 	}
 
+	PropertyCollection* TerrainGenerator::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("chunk generator info");
+
+		collection->childCollection->RegisterProperty("chunk size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ChunkSize))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("max height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxHeight))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("use manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_UseManualSeed))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ManualSeed));
+
+		collection->childCollection->RegisterProperty("loaded chunk radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRadius))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("loaded chunk rigid body square radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRigidBodyRadius2))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("base table width", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_BasePerlinTableWidth))
+			.VersionAdded(6);
+
+		collection->childCollection->RegisterProperty("isolate noise layer", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_IsolateNoiseLayer))
+			.VersionAdded(6);
+
+		collection->childCollection->RegisterProperty("num points per axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_NumPointsPerAxis))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("max chunk count", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxChunkCount))
+			.VersionAdded(6);
+
+		collection->childCollection->RegisterProperty("low colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LowCol))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("mid colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MidCol))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("high colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_HighCol))
+			.VersionAdded(6)
+			.Precision(2);
+
+		collection->childCollection->RegisterProperty("pin center", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_bPinCenter))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("pinned center", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_PinnedPos))
+			.VersionAdded(6)
+			.Precision(2);
+
+		return collection;
+	}
+
 	void TerrainGenerator::Initialize()
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Terrain";
-		matCreateInfo.shaderName = "terrain";
-		matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-		matCreateInfo.constRoughness = 1.0f;
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bSerializable = false;
-		m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		m_TerrainMatID = g_Renderer->GetMaterialID("Terrain");
+		if (m_TerrainMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Terrain";
+			matCreateInfo.shaderName = "terrain";
+			matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			matCreateInfo.constRoughness = 1.0f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.bSerializable = false;
+			m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 
 		GenerateGradients();
 
@@ -8349,6 +9144,7 @@ namespace flex
 				threadUserData = {};
 				threadUserData.running = true;
 				threadUserData.criticalSection = criticalSection;
+				threadUserData.mode = (u8)m_Mode;
 				Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
 			}
 
@@ -8368,7 +9164,7 @@ namespace flex
 		constantData.maxHeight = m_MaxHeight;
 		constantData.roadBlendDist = m_RoadBlendDist;
 		constantData.roadBlendThreshold = m_RoadBlendThreshold;
-		constantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		constantData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
 		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
 		constantData.numPointsPerAxis = m_NumPointsPerAxis;
 		constantData.isoLevel = m_IsoLevel;
@@ -8634,7 +9430,7 @@ namespace flex
 				bValueChanged = true;
 			}
 			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -10.0f, 10.0f) || bValueChanged;
+			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -1000.0f, 1000.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 1000.0f) || bValueChanged;
 			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
@@ -8662,9 +9458,9 @@ namespace flex
 		return bValueChanged;
 	}
 
-	void TerrainGenerator::DrawImGuiObjects()
+	void TerrainGenerator::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		u32 loadedChunkCount = (u32)m_Meshes.size();
 		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
@@ -8715,8 +9511,10 @@ namespace flex
 		u32 pointsPerVoxel = (m_NumPointsPerAxis - 1);
 		u32 maxVertsPerChunk = pointsPerVoxel * pointsPerVoxel * pointsPerVoxel * 5 * 3;
 		ImGui::Text("Max verts per chunk: %u", maxVertsPerChunk);
-		std::string vertMemoryStr = PrettifyLargeNumber((u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
-		ImGui::Text("Total vert memory: %sB", vertMemoryStr.c_str());
+		static const u32 strBufLen = 32;
+		char strBuf[strBufLen];
+		ByteCountToString(strBuf, strBufLen, (u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
+		ImGui::Text("Total vert memory: %s", strBuf);
 		std::string totalVertCountStr = PrettifyLargeNumber((u64)totalVertCount, 2);
 		ImGui::Text("Total verts: %s", totalVertCountStr.c_str());
 
@@ -8735,6 +9533,13 @@ namespace flex
 			{
 				m_PinnedPos = g_CameraManager->CurrentCamera()->position;
 			}
+		}
+
+		if (m_bPinCenter)
+		{
+			ImGui::SameLine();
+
+			ImGui::Text("(%.2f, %.2f, %.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
 		ImGui::Separator();
@@ -8972,22 +9777,18 @@ namespace flex
 			}
 			else
 			{
-				if (m_NumPointsPerAxis != previousPointsPerAxis)
-				{
+				m_Meshes.clear();
+				m_ChunksToDestroy.clear();
+				m_ChunksToLoad.clear();
+
+				m_PreviousLoadedChunkRadius = 0.0f;
+
 					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
 					{
 						FreeWorkQueueEntry(i);
 						AllocWorkQueueEntry(i);
 					}
 				}
-				else
-				{
-					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-					{
-						FillInTerrainChunkData((*terrain_workQueue)[i]);
-					}
-				}
-			}
 		}
 
 		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 10.0f, 3000.0f);
@@ -9082,35 +9883,16 @@ namespace flex
 		return noiseFunctionObj;
 	}
 
-	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
-		FLEX_UNUSED(scene);
 
-		if (parentObject.HasField("chunk generator info"))
+		JSONObject chunkGenInfo;
+		if (parentObject.TryGetObject("chunk generator info", chunkGenInfo))
 		{
-			JSONObject chunkGenInfo = parentObject.GetObject("chunk generator info");
-			m_VertCountPerChunkAxis = (u32)chunkGenInfo.GetInt("vert count per chunk axis");
-			m_ChunkSize = chunkGenInfo.GetFloat("chunk size");
-			m_MaxHeight = chunkGenInfo.GetFloat("max height");
-			m_UseManualSeed = chunkGenInfo.GetBool("use manual seed");
-			m_ManualSeed = (u32)chunkGenInfo.GetInt("manual seed");
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-			chunkGenInfo.TryGetFloat("loaded chunk radius", m_LoadedChunkRadius);
-			chunkGenInfo.TryGetFloat("loaded chunk rigid body square radius", m_LoadedChunkRigidBodyRadius2);
-			chunkGenInfo.TryGetUInt("base table width", m_BasePerlinTableWidth);
-
-			chunkGenInfo.TryGetInt("isolate noise layer", m_IsolateNoiseLayer);
-
-			chunkGenInfo.TryGetUInt("num points per axis", m_NumPointsPerAxis);
-			chunkGenInfo.TryGetUInt("max chunk count", m_MaxChunkCount);
-
-			chunkGenInfo.TryGetVec3("low colour", m_LowCol);
-			chunkGenInfo.TryGetVec3("mid colour", m_MidCol);
-			chunkGenInfo.TryGetVec3("high colour", m_HighCol);
-
-			chunkGenInfo.TryGetBool("pin center", m_bPinCenter);
-			chunkGenInfo.TryGetVec3("pinned center", m_PinnedPos);
+			DeserializeRegisteredProperties(chunkGenInfo, collection->childCollection);
 
 			std::vector<JSONObject> biomesArr;
 			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
@@ -9152,32 +9934,13 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void TerrainGenerator::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject chunkGenInfo = {};
 
-		chunkGenInfo.fields.emplace_back("vert count per chunk axis", JSONValue(m_VertCountPerChunkAxis));
-		chunkGenInfo.fields.emplace_back("chunk size", JSONValue(m_ChunkSize));
-		chunkGenInfo.fields.emplace_back("max height", JSONValue(m_MaxHeight));
-		chunkGenInfo.fields.emplace_back("use manual seed", JSONValue(m_UseManualSeed));
-		chunkGenInfo.fields.emplace_back("manual seed", JSONValue(m_ManualSeed));
-
-		chunkGenInfo.fields.emplace_back("isolate noise layer", JSONValue(m_IsolateNoiseLayer));
-
-		chunkGenInfo.fields.emplace_back("num points per axis", JSONValue(m_NumPointsPerAxis));
-		chunkGenInfo.fields.emplace_back("max chunk count", JSONValue(m_MaxChunkCount));
-
-		chunkGenInfo.fields.emplace_back("loaded chunk radius", JSONValue(m_LoadedChunkRadius));
-		chunkGenInfo.fields.emplace_back("loaded chunk rigid body square radius", JSONValue(m_LoadedChunkRigidBodyRadius2));
-
-		chunkGenInfo.fields.emplace_back("base table width", JSONValue(m_BasePerlinTableWidth));
-
-		chunkGenInfo.fields.emplace_back("low colour", JSONValue(VecToString(m_LowCol)));
-		chunkGenInfo.fields.emplace_back("mid colour", JSONValue(VecToString(m_MidCol)));
-		chunkGenInfo.fields.emplace_back("high colour", JSONValue(VecToString(m_HighCol)));
-
-		chunkGenInfo.fields.emplace_back("pin center", JSONValue(m_bPinCenter));
-		chunkGenInfo.fields.emplace_back("pinned center", JSONValue(VecToString(m_PinnedPos)));
+		SerializeRegisteredProperties(chunkGenInfo, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> biomesArr;
 		for (const Biome& biome : m_Biomes)
@@ -9225,7 +9988,7 @@ namespace flex
 		outChunkData.maxHeight = m_MaxHeight;
 		outChunkData.roadBlendDist = m_RoadBlendDist;
 		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		outChunkData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
+		outChunkData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
 		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
 		outChunkData.numPointsPerAxis = m_NumPointsPerAxis;
 
@@ -9313,14 +10076,10 @@ namespace flex
 
 		// TODO: Upload as two channel texture
 		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
-		m_RandomTableTextureID = g_Renderer->InitializeTextureArrayFromMemory(textureMem.data(),
-			(u32)(textureMem.size() * sizeof(u32) * 4),
-			VK_FORMAT_R32G32B32A32_SFLOAT,
+		m_RandomTableTextureID = g_ResourceManager->InitializeTextureArrayFromMemory(textureMem.data(),
+			(u32)(textureMem.size() * sizeof(u32) * 4), TextureFormat::R32G32B32A32_SFLOAT,
 			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
-
-			VK_FILTER_NEAREST /* ? */
-
-		);
+			g_Renderer->GetSamplerNearestClampToEdge());
 	}
 
 	void TerrainGenerator::UpdateRoadSegments()
@@ -9503,7 +10262,7 @@ namespace flex
 					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
 
 					auto iter = m_Meshes.find(chunkIdx);
-					assert(iter != m_Meshes.end());
+					CHECK(iter != m_Meshes.end());
 					DestroyChunk(iter->second);
 					m_Meshes.erase(iter);
 
@@ -9528,7 +10287,7 @@ namespace flex
 			{
 				const glm::ivec3& chunkIndex = *chunkToLoadIter;
 
-				assert(m_Meshes.find(chunkIndex) == m_Meshes.end());
+				CHECK(m_Meshes.find(chunkIndex) == m_Meshes.end());
 
 				Chunk* chunk = new Chunk();
 				chunk->meshComponent = nullptr;
@@ -9567,10 +10326,6 @@ namespace flex
 
 			if (!m_ChunksToLoad.empty())
 			{
-				const u32 vertexCount = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
-				const u32 triCount = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
-				const u32 indexCount = triCount * 3;
-
 				// TODO: Spread creation across multiple frames
 
 				static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
@@ -9578,29 +10333,47 @@ namespace flex
 				vertexBufferCreateInfo.texCoords_UV.clear();
 				vertexBufferCreateInfo.colours_R32G32B32A32.clear();
 				vertexBufferCreateInfo.normals.clear();
-
-				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
-				vertexBufferCreateInfo.positions_3D.resize(vertexCount);
-				vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
-				vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
-				vertexBufferCreateInfo.normals.resize(vertexCount);
+				vertexBufferCreateInfo.tangents.clear();
+				vertexBufferCreateInfo.normals.clear();
 
 				static std::vector<u32> indices;
-				indices.resize(indexCount);
 
-				real quadSize = m_ChunkSize / (m_VertCountPerChunkAxis - 1);
+				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
 
 				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
 				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
-				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
+				u32 emptyChunkCount = 0;
+				for (const glm::ivec3& chunkIndex : m_ChunksToLoad)
 				{
-					const glm::ivec3& chunkIndex = *chunkToLoadIter;
-
 					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
+
+					const u32 vertexCount = terrainChunkData->vertexCount;
+					const u32 triCount = terrainChunkData->indexCount;
+					const u32 indexCount = triCount * 3;
+
+					if (vertexCount == 0)
+					{
+						++emptyChunkCount;
+						continue;
+					}
+
+					if (terrainChunkData->ranOutOfRoom)
+					{
+						PrintError("Ran out of room! Increase max vertex or index count (%u/%u, %u/%u)\n", vertexCount, m_MaxVertCountPerChunk, indexCount, m_MaxTriCountPerChunk);
+					}
+
+					vertexBufferCreateInfo.positions_3D.resize(vertexCount);
+					vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
+					vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
+					vertexBufferCreateInfo.normals.resize(vertexCount);
+					vertexBufferCreateInfo.tangents.resize(vertexCount);
+					indices.resize(indexCount);
 
 					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
 					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.normals.data(), (void*)terrainChunkData->normals, sizeof(glm::vec3) * vertexCount);
+					memcpy((void*)vertexBufferCreateInfo.tangents.data(), (void*)terrainChunkData->tangents, sizeof(glm::vec3) * vertexCount);
 					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
 
 					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
@@ -9610,71 +10383,8 @@ namespace flex
 						overlappingRoadSegments = &roadSegmentIter->second;
 					}
 
-					glm::vec4 colour; // Throwaway
-					u32 vertIndex = 0;
-					for (u32 z = 0; z < m_VertCountPerChunkAxis; ++z)
-					{
-						for (u32 x = 0; x < m_VertCountPerChunkAxis; ++x)
-						{
-							glm::vec2 uv(x / (real)(m_VertCountPerChunkAxis - 1), z / (real)(m_VertCountPerChunkAxis - 1));
-
-							glm::vec2 vertPosOS = glm::vec2(uv.x * m_ChunkSize, uv.y * m_ChunkSize);
-							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * m_ChunkSize, chunkIndex.y * m_ChunkSize);
-
-							real left = 0.0f;
-							if (x > 0)
-							{
-								left = vertexBufferCreateInfo.positions_3D[vertIndex - 1].y;
-							}
-							else
-							{
-								left = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x - quadSize, sampleCenter.y), colour, false).y;
-							}
-
-							real right = 0.0f;
-							if (x < m_VertCountPerChunkAxis - 1)
-							{
-								right = vertexBufferCreateInfo.positions_3D[vertIndex + 1].y;
-							}
-							else
-							{
-								right = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x + quadSize, sampleCenter.y), colour, false).y;
-							}
-
-							real back = 0.0f;
-							if (z > 0)
-							{
-								back = vertexBufferCreateInfo.positions_3D[vertIndex - m_VertCountPerChunkAxis].y;
-							}
-							else
-							{
-								back = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x, sampleCenter.y - quadSize), colour, false).y;
-							}
-
-							real forward = 0.0f;
-							if (z < m_VertCountPerChunkAxis - 1)
-							{
-								forward = vertexBufferCreateInfo.positions_3D[vertIndex + m_VertCountPerChunkAxis].y;
-							}
-							else
-							{
-								forward = SampleTerrainWithRoadBlend(terrainChunkData, overlappingRoadSegments,
-									glm::vec2(sampleCenter.x, sampleCenter.y + quadSize), colour, false).y;
-							}
-
-							real dX = left - right;
-							real dZ = back - forward;
-							vertexBufferCreateInfo.normals[vertIndex] = glm::normalize(glm::vec3(dX, 2.0f, dZ));
-							//tangents[vertIdx] = glm::normalize(-glm::cross(normals[vertIdx], glm::vec3(0.0f, 0.0f, 1.0f)));
-
-							++vertIndex;
-						}
-					}
-
 					RenderObjectCreateInfo renderObjectCreateInfo = {};
+					renderObjectCreateInfo.cullFace = CullFace::NONE;
 					i32 submeshIndex;
 					MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
 					if (meshComponent != nullptr)
@@ -9684,7 +10394,7 @@ namespace flex
 					}
 				}
 
-				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
+				Print("Loaded %d chunks (total: %d, empty: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size(), emptyChunkCount);
 				m_ChunksToLoad.clear();
 			}
 		}
@@ -9715,12 +10425,12 @@ namespace flex
 
 		MeshComponent* submesh = chunk->meshComponent;
 
-		assert(chunk->collisionShape == nullptr);
+		CHECK_EQ(chunk->collisionShape, nullptr);
 
 		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
 
 		// TODO: Don't even create rb?
-		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(chunk->collisionShape, &m_Transform);
 		chunk->rigidBody = rigidBody;
@@ -9757,21 +10467,30 @@ namespace flex
 
 	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
 	{
-		const u32 vertCountPerChunk = m_VertCountPerChunkAxis * m_VertCountPerChunkAxis;
-		const u32 triCountPerChunk = ((m_VertCountPerChunkAxis - 1) * (m_VertCountPerChunkAxis - 1)) * 2;
-		const u32 indexCountPerChunk = triCountPerChunk * 3;
+		const u32 maxVertCountPerChunk = m_MaxVertCountPerChunk;
+		const u32 triCountPerChunk = m_MaxTriCountPerChunk;
+		const u32 maxIndexCountPerChunk = triCountPerChunk * 3;
 
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
 
-		chunkData.positions = (glm::vec3*)malloc(vertCountPerChunk * sizeof(glm::vec3));
-		assert(chunkData.positions != nullptr);
-		chunkData.colours = (glm::vec4*)malloc(vertCountPerChunk * sizeof(glm::vec4));
-		assert(chunkData.colours != nullptr);
-		chunkData.uvs = (glm::vec2*)malloc(vertCountPerChunk * sizeof(glm::vec2));
-		assert(chunkData.uvs != nullptr);
+		chunkData.maxVertexCount = maxVertCountPerChunk;
+		chunkData.positions = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
+		CHECK_NE(chunkData.positions, nullptr);
+		chunkData.colours = (glm::vec4*)malloc(maxVertCountPerChunk * sizeof(glm::vec4));
+		CHECK_NE(chunkData.colours, nullptr);
+		chunkData.uvs = (glm::vec2*)malloc(maxVertCountPerChunk * sizeof(glm::vec2));
+		CHECK_NE(chunkData.uvs, nullptr);
+		chunkData.normals = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
+		CHECK_NE(chunkData.normals, nullptr);
+		chunkData.tangents = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
+		CHECK_NE(chunkData.tangents, nullptr);
 
-		chunkData.indices = (u32*)malloc(indexCountPerChunk * sizeof(u32));
-		assert(chunkData.indices != nullptr);
+		chunkData.maxIndexCount = maxIndexCountPerChunk;
+		chunkData.indices = (u32*)malloc(maxIndexCountPerChunk * sizeof(u32));
+		CHECK_NE(chunkData.indices, nullptr);
+
+		chunkData.vertexCount = 0;
+		chunkData.indexCount = 0;
 
 		FillInTerrainChunkData(chunkData);
 	}
@@ -9780,21 +10499,32 @@ namespace flex
 	{
 		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
 
-		assert(chunkData.positions != nullptr);
+		CHECK_NE(chunkData.positions, nullptr);
 		free((void*)chunkData.positions);
 		chunkData.positions = nullptr;
 
-		assert(chunkData.colours != nullptr);
+		CHECK_NE(chunkData.colours, nullptr);
 		free((void*)chunkData.colours);
 		chunkData.colours = nullptr;
 
-		assert(chunkData.uvs != nullptr);
+		CHECK_NE(chunkData.uvs, nullptr);
 		free((void*)chunkData.uvs);
 		chunkData.uvs = nullptr;
 
-		assert(chunkData.indices != nullptr);
+		CHECK_NE(chunkData.normals, nullptr);
+		free((void*)chunkData.normals);
+		chunkData.normals = nullptr;
+
+		CHECK_NE(chunkData.tangents, nullptr);
+		free((void*)chunkData.tangents);
+		chunkData.tangents = nullptr;
+
+		CHECK_NE(chunkData.indices, nullptr);
 		free((void*)chunkData.indices);
 		chunkData.indices = nullptr;
+
+		chunkData.vertexCount = 0;
+		chunkData.indexCount = 0;
 	}
 
 	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
@@ -9898,8 +10628,8 @@ namespace flex
 
 						WRITE_BARRIER;
 
-						assert(terrain_workQueueEntriesClaimed <= terrain_workQueueEntriesCreated);
-						assert(terrain_workQueueEntriesClaimed <= terrain_workQueue->Size());
+						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueueEntriesCreated);
+						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueue->Size());
 					}
 
 				}
@@ -9908,62 +10638,172 @@ namespace flex
 
 			if (work != nullptr)
 			{
-				// Inputs
 				glm::ivec3 chunkIndex = glm::ivec3(work->chunkIndex.x, work->chunkIndex.y, work->chunkIndex.z);
-				u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
 				real chunkSize = work->chunkSize;
-				std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
-
-				std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
-				auto roadSegmentIter = roadSegments->find(chunkIndex);
-				if (roadSegmentIter != roadSegments->end())
-				{
-					overlappingRoadSegments = &roadSegmentIter->second;
-				}
 
 				// Outputs
 				volatile glm::vec3* positions = work->positions;
 				volatile glm::vec4* colours = work->colours;
 				volatile glm::vec2* uvs = work->uvs;
+				volatile glm::vec3* normals = work->normals;
+				volatile glm::vec3* tangents = work->tangents;
 				volatile u32* indices = work->indices;
+				volatile u32* outVertexCount = &work->vertexCount;
+				volatile u32* outIndexCount = &work->indexCount;
 
-				u32 posIndex = 0;
-				for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
+				switch ((TerrainGenMode)threadData->mode)
 				{
-					for (u32 x = 0; x < vertCountPerChunkAxis; ++x)
-					{
-						glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
-
-						glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
-						glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
-
-						glm::vec4 colour;
-						glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
-
-						memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
-						memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
-						memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
-
-						++posIndex;
-					}
-				}
-
-				for (u32 z = 0; z < vertCountPerChunkAxis - 1; ++z)
+				case TerrainGenMode::LEGACY:
 				{
-					for (u32 x = 0; x < vertCountPerChunkAxis - 1; ++x)
+					// Inputs
+					std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
+					u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
+
+					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
+					auto roadSegmentIter = roadSegments->find(chunkIndex);
+					if (roadSegmentIter != roadSegments->end())
 					{
-						u32 vertIdx = z * (vertCountPerChunkAxis - 1) + x;
-						u32 i = z * vertCountPerChunkAxis + x;
-						indices[vertIdx * 6 + 0] = i;
-						indices[vertIdx * 6 + 1] = i + 1 + vertCountPerChunkAxis;
-						indices[vertIdx * 6 + 2] = i + 1;
-
-						indices[vertIdx * 6 + 3] = i;
-						indices[vertIdx * 6 + 4] = i + vertCountPerChunkAxis;
-						indices[vertIdx * 6 + 5] = i + 1 + vertCountPerChunkAxis;
+						overlappingRoadSegments = &roadSegmentIter->second;
 					}
-				}
 
+					u32 posIndex = 0;
+					for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
+					{
+						for (u32 x = 0; x < vertCountPerChunkAxis; ++x)
+						{
+							glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
+
+							glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
+							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
+
+							glm::vec4 colour;
+							glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
+
+							memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
+							memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
+							memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
+
+							++posIndex;
+						}
+					}
+
+					for (u32 z = 0; z < vertCountPerChunkAxis - 1; ++z)
+					{
+						for (u32 x = 0; x < vertCountPerChunkAxis - 1; ++x)
+						{
+							u32 vertIdx = z * (vertCountPerChunkAxis - 1) + x;
+							u32 i = z * vertCountPerChunkAxis + x;
+							indices[vertIdx * 6 + 0] = i;
+							indices[vertIdx * 6 + 1] = i + 1 + vertCountPerChunkAxis;
+							indices[vertIdx * 6 + 2] = i + 1;
+
+							indices[vertIdx * 6 + 3] = i;
+							indices[vertIdx * 6 + 4] = i + vertCountPerChunkAxis;
+							indices[vertIdx * 6 + 5] = i + 1 + vertCountPerChunkAxis;
+						}
+					}
+
+				} break;
+				case TerrainGenMode::MARCHING_CUBES:
+				{
+					u32 gridCellCountPerAxis = work->vertCountPerChunkAxis;
+					u32 maxVertexCount = work->maxVertexCount;
+					u32 maxIndexCount = work->maxIndexCount;
+					volatile u8* outRanOutOfRoom = &work->ranOutOfRoom;
+
+					TriMeshFace trianglesTemp[10];
+					memset(trianglesTemp, 0, sizeof(trianglesTemp));
+					glm::vec3 verticesTemp[15];
+					memset(verticesTemp, 0, sizeof(verticesTemp));
+
+					u32 posIndex = 0;
+					u32 indexIndex = 0;
+					u8 ranOutOfRoom = 0;
+					real gridCellSize = 1.0f / gridCellCountPerAxis;
+					for (u32 z = 0; z < gridCellCountPerAxis && !ranOutOfRoom; ++z)
+					{
+						for (u32 y = 0; y < gridCellCountPerAxis && !ranOutOfRoom; ++y)
+						{
+							for (u32 x = 0; x < gridCellCountPerAxis; ++x)
+							{
+								glm::vec3 uvw(
+									x / (real)(gridCellCountPerAxis),
+									y / (real)(gridCellCountPerAxis),
+									z / (real)(gridCellCountPerAxis));
+
+								glm::vec3 vertPosOS = uvw * chunkSize;
+								glm::vec3 sampleCenter = vertPosOS + glm::vec3(chunkIndex) * chunkSize;
+
+								real c = gridCellSize * chunkSize;
+								GridCell gridCell;
+								gridCell.pos[0] = sampleCenter;
+								gridCell.pos[1] = sampleCenter + glm::vec3(c, 0.0f, 0.0f);
+								gridCell.pos[2] = sampleCenter + glm::vec3(c, c, 0.0f);
+								gridCell.pos[3] = sampleCenter + glm::vec3(0.0f, c, 0.0f);
+								gridCell.pos[4] = sampleCenter + glm::vec3(0.0f, 0.0f, c);
+								gridCell.pos[5] = sampleCenter + glm::vec3(c, 0.0f, c);
+								gridCell.pos[6] = sampleCenter + glm::vec3(c, c, c);
+								gridCell.pos[7] = sampleCenter + glm::vec3(0.0f, c, c);
+
+								// TODO: Cache results cleverly to avoid duplicate work ("top" and "bottom" cells, swap)
+								gridCell.val[0] = SampleTerrain3D(work, gridCell.pos[0]);
+								gridCell.val[1] = SampleTerrain3D(work, gridCell.pos[1]);
+								gridCell.val[2] = SampleTerrain3D(work, gridCell.pos[2]);
+								gridCell.val[3] = SampleTerrain3D(work, gridCell.pos[3]);
+								gridCell.val[4] = SampleTerrain3D(work, gridCell.pos[4]);
+								gridCell.val[5] = SampleTerrain3D(work, gridCell.pos[5]);
+								gridCell.val[6] = SampleTerrain3D(work, gridCell.pos[6]);
+								gridCell.val[7] = SampleTerrain3D(work, gridCell.pos[7]);
+
+								u8 numVertsGenerated;
+								i32 numTrisGenerated = Polygonize(gridCell, trianglesTemp, numVertsGenerated, verticesTemp);
+								if (numTrisGenerated > 0)
+								{
+									if ((indexIndex + numTrisGenerated * 3 >= maxIndexCount - 3) ||
+										posIndex + numVertsGenerated >= maxVertexCount)
+									{
+										ranOutOfRoom = 1;
+										break;
+									}
+
+									i16 indexOffset = (i16)posIndex;
+									for (i32 triIndex = 0; triIndex < numTrisGenerated; triIndex++)
+									{
+										indices[indexIndex++] = trianglesTemp[triIndex].i[0] + indexOffset;
+										indices[indexIndex++] = trianglesTemp[triIndex].i[2] + indexOffset;
+										indices[indexIndex++] = trianglesTemp[triIndex].i[1] + indexOffset;
+
+										glm::vec3 a = verticesTemp[trianglesTemp[triIndex].i[1]] - verticesTemp[trianglesTemp[triIndex].i[0]];
+										glm::vec3 b = verticesTemp[trianglesTemp[triIndex].i[2]] - verticesTemp[trianglesTemp[triIndex].i[0]];
+										glm::vec3 normal = glm::normalize(glm::cross(b, a));
+										glm::vec3 tangent = glm::normalize(glm::cross(normal, a));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 0], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 1], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&normals[posIndex + triIndex * 3 + 2], (void*)&normal, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 0], (void*)&tangent, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 1], (void*)&tangent, sizeof(glm::vec3));
+										memcpy((void*)&tangents[posIndex + triIndex * 3 + 2], (void*)&tangent, sizeof(glm::vec3));
+									}
+									for (u8 vertexIndex = 0; vertexIndex < numVertsGenerated; vertexIndex++)
+									{
+										glm::vec4 colour(1.0f);
+										glm::vec2 uv(0.0f);
+										memcpy((void*)&positions[posIndex], (void*)&verticesTemp[vertexIndex], sizeof(glm::vec3));
+										memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
+										memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
+
+										++posIndex;
+									}
+								}
+							}
+						}
+					}
+
+					*outVertexCount = posIndex;
+					*outIndexCount = indexIndex;
+					*outRanOutOfRoom = ranOutOfRoom;
+				} break;
+				}
 				WRITE_BARRIER;
 
 				Platform::AtomicIncrement(&terrain_workQueueEntriesCompleted);
@@ -10455,9 +11295,39 @@ namespace flex
 		// Divide by 2 to transform range from [-1, 1] to [0, 1]
 		height = height * 0.5f + 0.5f;
 
-		assert(biome0Index >= 0 && biome0Index < 65536);
+		CHECK(biome0Index >= 0 && biome0Index < 65536);
 
 		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
+	}
+
+	real SampleTerrain3D(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec3& pos)
+	{
+		// Sphere:
+		//real density = glm::length(pos) - chunkData->radius;
+
+		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
+		{
+			i32 biome0Index = 0;
+			glm::vec2 biome0CellCoord;
+
+			const glm::vec2 pos2DScaled = glm::vec2(pos.x, pos.z) / chunkData->biomeNoise->wavelength;
+			const i32 biomeCount = (i32)chunkData->biomes->size();
+
+			if (biomeCount > 1)
+			{
+				VoronoiDistance(pos2DScaled, biome0CellCoord);
+				biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
+			}
+			else
+			{
+				biome0Index = 0;
+			}
+
+			real terrainHeight = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], glm::vec2(pos.x, pos.z));;
+			return pos.y - terrainHeight;
+		}
+
+		return 0.0f;
 	}
 
 	// Returns a value in [-1, 1]
@@ -10508,9 +11378,23 @@ namespace flex
 
 	// ---
 
-	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("spring"), gameObjectID)
+	SpringObject::SpringObject(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpringObjectSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
+	}
+
+	PropertyCollection* SpringObject::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("spring");
+
+		collection->childCollection->RegisterProperty("end point", FIELD_OFFSET_AND_TYPE(SpringObject, m_TargetPos))
+			.VersionAdded(6)
+			.Precision(2)
+			.DefaultValue(VEC3_ZERO);
+
+		return collection;
 	}
 
 	GameObject* SpringObject::CopySelf(
@@ -10521,7 +11405,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		SpringObject* newObject = new SpringObject(newObjectName, newGameObjectID);
 
 		// Ensure mesh & rigid body isn't copied
@@ -10551,7 +11435,7 @@ namespace flex
 
 		if (m_bSimulateTarget)
 		{
-			m_OriginTransform = new GameObject("Spring origin", SID("object"));
+			m_OriginTransform = new GameObject("Spring origin", BaseObjectSID);
 			m_OriginTransform->SetSerializable(false);
 			m_OriginTransform->SetVisibleInSceneExplorer(false);
 			AddChild(m_OriginTransform);
@@ -10568,7 +11452,13 @@ namespace flex
 
 		m_Mesh = new Mesh(m_OriginTransform);
 		m_Indices = m_ExtendedMesh->GetIndexBufferCopy();
-		m_Mesh->LoadFromMemoryDynamic(m_DynamicVertexBufferCreateInfo, m_Indices, s_SpringMatID, vertCount);
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.vertexBufferCreateInfo = &m_DynamicVertexBufferCreateInfo;
+		meshCreateInfo.indices = m_Indices;
+		meshCreateInfo.materialIDs = { s_SpringMatID };
+		meshCreateInfo.initialMaxVertexCount = vertCount;
+		m_Mesh->LoadFromMemory(meshCreateInfo);
 
 		m_DynamicVertexBufferCreateInfo.positions_3D.resize(vertCount);
 		m_DynamicVertexBufferCreateInfo.texCoords_UV.resize(vertCount);
@@ -10622,7 +11512,7 @@ namespace flex
 			m_SpringSim->Initialize();
 			m_SpringSim->PostInitialize();
 
-			m_Bobber = new GameObject("Spring bobber", SID("object"));
+			m_Bobber = new GameObject("Spring bobber", BaseObjectSID);
 			m_Bobber->SetSerializable(false);
 			m_Bobber->SetVisibleInSceneExplorer(false);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
@@ -10632,7 +11522,7 @@ namespace flex
 		}
 		else
 		{
-			m_Target = new GameObject("Spring target", SID("object"));
+			m_Target = new GameObject("Spring target", BaseObjectSID);
 			m_Target->SetSerializable(false);
 			m_Target->GetTransform()->SetWorldPosition(initialTargetPos);
 			AddSibling(m_Target);
@@ -10678,7 +11568,7 @@ namespace flex
 		if (lookLen > 0.0001f)
 		{
 			static glm::quat offsetQuat = glm::quat(glm::vec3(PI_DIV_TWO, PI, 0.0f));
-			//g_Renderer->GetDebugDrawer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
+			//g_Renderer->GetDebugRenderer()->drawLine(ToBtVec3(rootPos), ToBtVec3(rootPos + lookDirNorm), btVector3(1.0f, 0.0f, 0.0f), btVector3(1.0f, 0.0f, 0.0f));
 			glm::vec3 up = glm::abs(glm::angle(lookDirNorm, VEC3_UP)) < 0.01f ? VEC3_FORWARD : VEC3_UP;
 			glm::quat targetRot = glm::quatLookAt(lookDirNorm, up) * offsetQuat;
 			if (!glm::any(glm::isnan(targetRot)))
@@ -10690,7 +11580,7 @@ namespace flex
 
 		GameObject::Update();
 
-		g_Renderer->GetDebugDrawer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
+		g_Renderer->GetDebugRenderer()->DrawAxes(ToBtVec3(originTransform->GetWorldPosition()), ToBtQuaternion(originTransform->GetWorldRotation()), 2.0f);
 
 		m_SpringSim->Update();
 		m_Bobber->Update();
@@ -10700,9 +11590,11 @@ namespace flex
 	{
 		m_ExtendedMesh->Destroy();
 		delete m_ExtendedMesh;
+		m_ExtendedMesh = nullptr;
 
 		m_ContractedMesh->Destroy();
 		delete m_ContractedMesh;
+		m_ContractedMesh = nullptr;
 
 		m_SpringSim->Destroy();
 		delete m_SpringSim;
@@ -10715,81 +11607,79 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	void SpringObject::DrawImGuiObjects()
+	void SpringObject::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Spring");
-		m_SpringSim->DrawImGuiObjects();
+		m_SpringSim->DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Bobber");
-		m_Bobber->DrawImGuiObjects();
+		m_Bobber->DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGui::Spacing();
 		ImGui::Text("Origin");
-		m_Bobber->DrawImGuiObjects();
+		m_Bobber->DrawImGuiObjects(bDrawingEditorObjects);
 
 	}
 
-	void SpringObject::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SpringObject::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject springObj;
 		if (parentObject.TryGetObject("spring", springObj))
 		{
-			m_TargetPos = springObj.GetVec3("end point");
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(springObj, collection->childCollection);
 		}
 	}
 
-	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SpringObject::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
 		JSONObject springObj = {};
 
-		springObj.fields.emplace_back("end point", JSONValue(VecToString(m_SpringSim->points[1]->pos)));
-
-		parentObject.fields.emplace_back("spring", JSONValue(springObj));
-	}
-
-	void SpringObject::ParseJSON(
-		const JSONObject& obj,
-		BaseScene* scene,
-		i32 fileVersion,
-		MaterialID overriddenMatID /* = InvalidMaterialID */,
-		bool bIsPrefabTemplate /* = false */,
-		CopyFlags copyFlags /* = CopyFlags::ALL */)
-	{
-		if (s_SpringMatID == InvalidMaterialID)
+		m_TargetPos = m_SpringSim->points[1]->pos;
+		SerializeRegisteredProperties(springObj, collection->childCollection, bSerializePrefabData);
+		if (!springObj.fields.empty())
 		{
-			CreateMaterials();
+			parentObject.fields.emplace_back("spring", JSONValue(springObj));
 		}
-
-		GameObject::ParseJSON(obj, scene, fileVersion, overriddenMatID, bIsPrefabTemplate, copyFlags);
 	}
 
 	void SpringObject::CreateMaterials()
 	{
-		MaterialCreateInfo matCreateInfo = {};
-		matCreateInfo.name = "Spring";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
-		matCreateInfo.constRoughness = 1.0f;
-		matCreateInfo.constMetallic = 0.0f;
-		matCreateInfo.bDynamic = true;
-		matCreateInfo.bSerializable = false;
-		s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		s_SpringMatID = g_Renderer->GetMaterialID("Spring");
+		if (s_SpringMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Spring";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.constAlbedo = glm::vec4(0.8f, 0.05f, 0.04f, 1.0f);
+			matCreateInfo.constRoughness = 1.0f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.bDynamic = true;
+			matCreateInfo.bSerializable = false;
+			s_SpringMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 
-		matCreateInfo = {};
-		matCreateInfo.name = "Bobber";
-		matCreateInfo.shaderName = "pbr";
-		matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
-		matCreateInfo.constRoughness = 0.0f;
-		matCreateInfo.constMetallic = 1.0f;
-		matCreateInfo.bSerializable = false;
-		s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		s_BobberMatID = g_Renderer->GetMaterialID("Bobber");
+		if (s_BobberMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = "Bobber";
+			matCreateInfo.shaderName = "pbr";
+			matCreateInfo.constAlbedo = glm::vec4(0.2f, 0.2f, 0.24f, 1.0f);
+			matCreateInfo.constRoughness = 0.0f;
+			matCreateInfo.constMetallic = 1.0f;
+			matCreateInfo.bSerializable = false;
+			s_BobberMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
 	}
 
 	DistanceConstraint::DistanceConstraint(i32 pointIndex0, i32 pointIndex1, real stiffness, real targetDistance) :
@@ -10824,10 +11714,33 @@ namespace flex
 		pointIndices[2] = pointIndex2;
 	}
 
-	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("soft body"), gameObjectID),
+	SoftBody::SoftBody(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SoftBodySID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_SolverIterationCount(4) // Default, gets overridden in ParseUniqueFields
 	{
+	}
+
+	PropertyCollection* SoftBody::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("soft body");
+
+		collection->childCollection->RegisterProperty("solver iteration count", FIELD_OFFSET_AND_TYPE(SoftBody, m_SolverIterationCount))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("render wireframe", FIELD_OFFSET_AND_TYPE(SoftBody, m_bRenderWireframe))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("damping", FIELD_OFFSET_AND_TYPE(SoftBody, m_Damping))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("stiffness", FIELD_OFFSET_AND_TYPE(SoftBody, m_Stiffness))
+			.VersionAdded(6)
+			.Precision(2);
+		collection->childCollection->RegisterProperty("bending stiffness", FIELD_OFFSET_AND_TYPE(SoftBody, m_BendingStiffness))
+			.VersionAdded(6)
+			.Precision(2);
+
+		return collection;
 	}
 
 	GameObject* SoftBody::CopySelf(
@@ -10838,7 +11751,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		SoftBody* newSoftBody = new SoftBody(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newSoftBody, parent, copyFlags);
@@ -10898,6 +11811,8 @@ namespace flex
 	void SoftBody::Initialize()
 	{
 		m_MSToSim = 0.0f;
+
+		GameObject::Initialize();
 	}
 
 	void SoftBody::Destroy(bool bDetachFromParent /* = true */)
@@ -10953,6 +11868,7 @@ namespace flex
 
 			u32 fixedUpdateCount = glm::min((u32)(m_MSToSim / FIXED_UPDATE_TIMESTEP), MAX_UPDATE_COUNT);
 
+			// TODO: Make member/store in manager
 			std::vector<glm::vec3> predictedPositions(points.size());
 
 			for (u32 updateIteration = 0; updateIteration < fixedUpdateCount; ++updateIteration)
@@ -11186,10 +12102,10 @@ namespace flex
 
 	void SoftBody::Draw()
 	{
-		PhysicsDebugDrawBase* debugDrawer = g_Renderer->GetDebugDrawer();
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 		for (Point* point : points)
 		{
-			debugDrawer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
+			debugRenderer->drawSphere(ToBtVec3(point->pos), 0.1f, btVector3(0.8f, 0.2f, 0.1f));
 		}
 
 		for (u32 i = 0; i < (u32)constraints.size(); ++i)
@@ -11201,7 +12117,7 @@ namespace flex
 			case Constraint::Type::DISTANCE:
 			{
 				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
-				debugDrawer->drawLine(
+				debugRenderer->drawLine(
 					ToBtVec3(points[distanceConstraint->pointIndices[0]]->pos),
 					ToBtVec3(points[distanceConstraint->pointIndices[1]]->pos),
 					btVector3(0.5f, 0.4f, 0.1f), btVector3(0.5f, 0.4f, 0.1f));
@@ -11224,18 +12140,18 @@ namespace flex
 					btVector3 colN = btVector3(0.9f, 0.1f, 0.1f);
 					real f = 0.01f;
 
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), col, col);
-					debugDrawer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[2]]->pos + normal0 * f), ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal0 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[0]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), col, col);
+					debugRenderer->drawLine(ToBtVec3(points[bendingConstraint->pointIndices[3]]->pos + normal1 * f), ToBtVec3(points[bendingConstraint->pointIndices[1]]->pos + normal1 * f), col, col);
 
 					glm::vec3 tri0Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[2]]->pos) / 3.0f;
 					glm::vec3 tri1Mid = (points[bendingConstraint->pointIndices[0]]->pos + points[bendingConstraint->pointIndices[1]]->pos + points[bendingConstraint->pointIndices[3]]->pos) / 3.0f;
 
-					debugDrawer->drawLine(ToBtVec3(tri0Mid), ToBtVec3(tri0Mid + normal0 * 1.0f), colN, colN);
-					debugDrawer->drawLine(ToBtVec3(tri1Mid), ToBtVec3(tri1Mid + normal1 * 1.0f), colN, colN);
+					debugRenderer->drawLine(ToBtVec3(tri0Mid), ToBtVec3(tri0Mid + normal0 * 1.0f), colN, colN);
+					debugRenderer->drawLine(ToBtVec3(tri1Mid), ToBtVec3(tri1Mid + normal1 * 1.0f), colN, colN);
 				}
 			} break;
 			}
@@ -11335,9 +12251,16 @@ namespace flex
 		}
 
 		m_Mesh = new Mesh(this);
+
 		RenderObjectCreateInfo renderObjectCreateInfo = {};
 		renderObjectCreateInfo.cullFace = CullFace::NONE;
-		if (!m_Mesh->LoadFromFile(m_CurrentMeshFilePath, m_MeshMaterialID, true, true, &renderObjectCreateInfo))
+
+		Mesh::CreateInfo meshCreateInfo = {};
+		meshCreateInfo.relativeFilePath = m_CurrentMeshFilePath;
+		meshCreateInfo.materialIDs = { m_MeshMaterialID };
+		meshCreateInfo.bDynamic = true;
+		meshCreateInfo.optionalRenderObjectCreateInfo = &renderObjectCreateInfo;
+		if (!m_Mesh->LoadFromFile(meshCreateInfo))
 		{
 			PrintError("Failed to load mesh\n");
 			m_Mesh->Destroy();
@@ -11488,15 +12411,16 @@ namespace flex
 		return false;
 	}
 
-	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void SoftBody::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
-		FLEX_UNUSED(scene);
 
 		JSONObject softBodyObject;
 		if (parentObject.TryGetObject("soft body", softBodyObject))
 		{
-			softBodyObject.TryGetUInt("solver iteration count", m_SolverIterationCount);
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(softBodyObject, collection->childCollection);
 
 			std::vector<JSONObject> pointsArr;
 			if (softBodyObject.TryGetObjectArray("points", pointsArr))
@@ -11563,9 +12487,8 @@ namespace flex
 				}
 			}
 
-			if (softBodyObject.HasField("mesh file path"))
+			if (softBodyObject.TryGetString("mesh file path", m_CurrentMeshFilePath))
 			{
-				m_CurrentMeshFilePath = softBodyObject.GetString("mesh file path");
 				m_CurrentMeshFileName = StripLeadingDirectories(m_CurrentMeshFilePath);
 				for (i32 i = 0; i < (i32)g_ResourceManager->discoveredMeshes.size(); ++i)
 				{
@@ -11586,19 +12509,16 @@ namespace flex
 					LoadFromMesh();
 				}
 			}
-
-			softBodyObject.TryGetBool("render wireframe", m_bRenderWireframe);
-			softBodyObject.TryGetFloat("damping", m_Damping);
-			softBodyObject.TryGetFloat("stiffness", m_Stiffness);
-			softBodyObject.TryGetFloat("bending stiffness", m_BendingStiffness);
 		}
 	}
 
-	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject)
+	void SoftBody::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		JSONObject softBodyObject = JSONObject();
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
-		softBodyObject.fields.emplace_back("solver iteration count", JSONValue(m_SolverIterationCount));
+		JSONObject softBodyObject = {};
+
+		SerializeRegisteredProperties(softBodyObject, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> pointsArr(points.size());
 		{
@@ -11606,8 +12526,7 @@ namespace flex
 			glm::vec3 parentPos = m_Transform.GetWorldPosition();
 			for (const Point* point : points)
 			{
-				pointsArr[i] = JSONObject();
-				pointsArr[i].fields.emplace_back("position", JSONValue(VecToString(point->pos - parentPos)));
+				pointsArr[i].fields.emplace_back("position", JSONValue(point->pos - parentPos));
 				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
 
 				i++;
@@ -11620,7 +12539,6 @@ namespace flex
 			u32 i = 0;
 			for (const Constraint* constraint : constraints)
 			{
-				constraintsArr[i] = JSONObject();
 				constraintsArr[i].fields.emplace_back("stiffness", JSONValue(constraint->stiffness));
 				constraintsArr[i].fields.emplace_back("type", JSONValue((i32)constraint->type));
 
@@ -11630,7 +12548,7 @@ namespace flex
 				{
 					DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
 
-					JSONObject distanceConstraintObj = JSONObject();
+					JSONObject distanceConstraintObj = {};
 
 					distanceConstraintObj.fields.emplace_back("index 0", JSONValue(distanceConstraint->pointIndices[0]));
 					distanceConstraintObj.fields.emplace_back("index 1", JSONValue(distanceConstraint->pointIndices[1]));
@@ -11642,7 +12560,7 @@ namespace flex
 				{
 					BendingConstraint* bendingConstraint = (BendingConstraint*)constraint;
 
-					JSONObject bendingConstraintObj = JSONObject();
+					JSONObject bendingConstraintObj = {};
 
 					bendingConstraintObj.fields.emplace_back("index 0", JSONValue(bendingConstraint->pointIndices[0]));
 					bendingConstraintObj.fields.emplace_back("index 1", JSONValue(bendingConstraint->pointIndices[1]));
@@ -11668,17 +12586,12 @@ namespace flex
 			softBodyObject.fields.emplace_back("mesh file path", JSONValue(m_CurrentMeshFilePath));
 		}
 
-		softBodyObject.fields.emplace_back("render wireframe", JSONValue(m_bRenderWireframe));
-		softBodyObject.fields.emplace_back("damping", JSONValue(m_Damping));
-		softBodyObject.fields.emplace_back("stiffness", JSONValue(m_Stiffness));
-		softBodyObject.fields.emplace_back("bending stiffness", JSONValue(m_BendingStiffness));
-
 		parentObject.fields.emplace_back("soft body", JSONValue(softBodyObject));
 	}
 
-	void SoftBody::DrawImGuiObjects()
+	void SoftBody::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		ImGuiExt::SliderUInt("Solver iteration count", &m_SolverIterationCount, 1, 60);
 
@@ -11704,7 +12617,7 @@ namespace flex
 
 		if (ImGui::Checkbox("Render wireframe", &m_bRenderWireframe))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_bRenderWireframe = m_bRenderWireframe;
@@ -11713,7 +12626,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Damping", &m_Damping, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				softBody->m_Damping = m_Damping;
@@ -11722,7 +12635,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Stiffness", &m_Stiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)
@@ -11737,7 +12650,7 @@ namespace flex
 
 		if (ImGui::SliderFloat("Bending stiffness", &m_BendingStiffness, 0.0f, 1.0f))
 		{
-			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SID("soft body"));
+			std::vector<SoftBody*> softBodies = g_SceneManager->CurrentScene()->GetObjectsOfType<SoftBody>(SoftBodySID);
 			for (SoftBody* softBody : softBodies)
 			{
 				for (Constraint* constraint : softBody->constraints)
@@ -11802,17 +12715,23 @@ namespace flex
 		m_bRenderWireframe = bRenderWireframe;
 	}
 
-	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("vehicle"), gameObjectID),
+	Vehicle::Vehicle(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, VehicleSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
 		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
 	{
 		m_bInteractable = true;
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
-			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID);
+			m_SoundEffects[i] = SoundClip_LoopingSimple(VehicleSoundEffectNames[i], InvalidStringID, false);
 			m_SoundEffectSIDs[i] = InvalidStringID;
 		}
+	}
+
+	PropertyCollection* Vehicle::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	GameObject* Vehicle::CopySelf(
@@ -11823,7 +12742,7 @@ namespace flex
 	{
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Vehicle* newGameObject = new Vehicle(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newGameObject, parent, copyFlags);
@@ -11844,15 +12763,7 @@ namespace flex
 		UpdateSiblingIndices(0);
 		newGameObject->UpdateSiblingIndices(0);
 
-		for (i32 i = 0; i < m_TireCount; ++i)
-		{
-			MatchCorrespondingID(m_TireIDs[i], newGameObject, TireNames[i], newGameObject->m_TireIDs[i]);
-		}
-
-		for (i32 i = 0; i < 2; ++i)
-		{
-			MatchCorrespondingID(m_BrakeLightIDs[i], newGameObject, BrakeLightNames[i], newGameObject->m_BrakeLightIDs[i]);
-		}
+		FixupPrefabTemplateIDs(newGameObject);
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
@@ -11874,8 +12785,8 @@ namespace flex
 		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
 		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
 		if (brakeLightL != nullptr && brakeLightR != nullptr &&
-			brakeLightL->GetTypeID() == SID("spot light") &&
-			brakeLightR->GetTypeID() == SID("spot light"))
+			brakeLightL->GetTypeID() == SpotLightSID &&
+			brakeLightR->GetTypeID() == SpotLightSID)
 		{
 			((SpotLight*)brakeLightL)->SetVisible(false, true);
 			((SpotLight*)brakeLightR)->SetVisible(false, true);
@@ -11994,6 +12905,11 @@ namespace flex
 		}
 
 		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+		if (rb == nullptr)
+		{
+			return;
+		}
+
 		const btVector3 linearVel = rb->getLinearVelocity();
 		const btVector3 linearAccel = (linearVel - m_pLinearVelocity) / g_DeltaTime;
 		const real forwardVel = glm::dot(m_Transform.GetForward(), ToVec3(linearVel));
@@ -12050,30 +12966,34 @@ namespace flex
 
 		bool bBraking = m_BrakeForce > 0.0f;
 		bool bReversing = m_EngineForce < 0.0f;
-		if (bBraking)
-		{
-			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
-		}
-		else
-		{
-			g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
-		}
 
-		if (bReversing)
+		if (m_Mesh != nullptr)
 		{
-			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
-		}
-		else
-		{
-			g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
+			if (bBraking)
+			{
+				g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_ActiveBrakeLightMatEmissive;
+			}
+			else
+			{
+				g_Renderer->GetMaterial(m_BrakeLightMatID)->constEmissive = m_InitialBrakeLightMatEmissive;
+			}
+
+			if (bReversing)
+			{
+				g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_ActiveReverseLightMatEmissive;
+			}
+			else
+			{
+				g_Renderer->GetMaterial(m_ReverseLightMatID)->constEmissive = m_InitialReverseLightMatEmissive;
+			}
 		}
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		GameObject* brakeLightL = scene->GetGameObject(m_BrakeLightIDs[0]);
 		GameObject* brakeLightR = scene->GetGameObject(m_BrakeLightIDs[1]);
 		if (brakeLightL != nullptr && brakeLightR != nullptr &&
-			brakeLightL->GetTypeID() == SID("spot light") &&
-			brakeLightR->GetTypeID() == SID("spot light"))
+			brakeLightL->GetTypeID() == SpotLightSID &&
+			brakeLightR->GetTypeID() == SpotLightSID)
 		{
 			((SpotLight*)brakeLightL)->SetVisible(bBraking, true);
 			((SpotLight*)brakeLightR)->SetVisible(bBraking, true);
@@ -12160,8 +13080,8 @@ namespace flex
 			m_Vehicle->updateWheelTransform(i, true);
 
 			const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-			Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
-			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelTransform.GetWorldRotation());
+			glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
+			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelRotation);
 
 			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
@@ -12221,99 +13141,105 @@ namespace flex
 		m_pLinearVelocity = linearVel;
 	}
 
-	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
-		FLEX_UNUSED(scene);
 		FLEX_UNUSED(matIDs);
 
 		JSONObject vehicleObj;
 		if (parentObject.TryGetObject("vehicle", vehicleObj))
 		{
-			std::vector<JSONField> tireIDs;
-			if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
+			// If this object was copied from a prefab, it will already have filled out IDs
+			if (!m_TireIDs[0].IsValid())
 			{
-				assert(m_TireCount == (i32)tireIDs.size());
-				for (i32 i = 0; i < m_TireCount; ++i)
+				std::vector<JSONField> tireIDs;
+				if (vehicleObj.TryGetFieldArray("tire ids", tireIDs))
 				{
-					m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+					if (m_TireCount == (i32)tireIDs.size())
+					{
+						for (i32 i = 0; i < m_TireCount; ++i)
+						{
+							m_TireIDs[i] = GameObjectID::FromString(tireIDs[i].value.AsString());
+						}
+					}
+					else
+					{
+						PrintError("Failed to parse tire IDs, incorrect number present (%i found, %i expected)", (i32)tireIDs.size(), m_TireCount);
+					}
 				}
 			}
 
-			std::vector<JSONField> brakeLightIDs;
-			if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
+			if (!m_BrakeLightIDs[0].IsValid())
 			{
-				assert((i32)brakeLightIDs.size() == 2);
-				for (i32 i = 0; i < 2; ++i)
+				std::vector<JSONField> brakeLightIDs;
+				if (vehicleObj.TryGetFieldArray("brake light ids", brakeLightIDs))
 				{
-					m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+					if ((i32)brakeLightIDs.size() == 2)
+					{
+						for (i32 i = 0; i < 2; ++i)
+						{
+							m_BrakeLightIDs[i] = GameObjectID::FromString(brakeLightIDs[i].value.AsString());
+						}
+					}
+					else
+					{
+						PrintError("Failed to parse brake light IDs, incorrect number present (%i found, %i expected)", (i32)brakeLightIDs.size(), 2);
+					}
 				}
 			}
 
-			std::vector<JSONField> soundEffectSIDs;
-			if (vehicleObj.TryGetFieldArray("sound effect sids", soundEffectSIDs))
+			if (m_SoundEffectSIDs[0] != InvalidStringID)
 			{
-				i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
-				for (i32 i = 0; i < count; ++i)
+				std::vector<JSONField> soundEffectSIDs;
+				if (vehicleObj.TryGetFieldArray("sound effect sids", soundEffectSIDs))
 				{
-					// TODO: Store as ints now that that's supported
-					m_SoundEffectSIDs[i] = ParseULong(soundEffectSIDs[i].value.AsString());
+					i32 count = std::min((i32)SoundEffect::_COUNT, (i32)soundEffectSIDs.size());
+					for (i32 i = 0; i < count; ++i)
+					{
+						m_SoundEffectSIDs[i] = soundEffectSIDs[i].value.AsULong();
+					}
 				}
 			}
 		}
 	}
 
-	void Vehicle::ParseInstanceUniqueFields(const JSONObject& parentObject, BaseScene* scene, const std::vector<MaterialID>& matIDs)
+	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		FLEX_UNUSED(parentObject);
-		FLEX_UNUSED(scene);
-		FLEX_UNUSED(matIDs);
-	}
+		FLEX_UNUSED(bSerializePrefabData);
 
-	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject)
-	{
-		JSONObject vehicleObj = JSONObject();
+		JSONObject vehicleObj = {};
 
 		std::vector<JSONField> tireIDs;
 		tireIDs.reserve(m_TireCount);
-		for (i32 i = 0; i < m_TireCount; ++i)
+		for (GameObjectID& TireID : m_TireIDs)
 		{
-			JSONField tireIDField = {};
-			tireIDField.label = m_TireIDs[i].ToString();
-			tireIDs.push_back(tireIDField);
+			tireIDs.emplace_back("", JSONValue(TireID.ToString()));
 		}
 
 		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
 
 		std::vector<JSONField> brakeLightIDs;
 		brakeLightIDs.reserve(2);
-		for (i32 i = 0; i < 2; ++i)
+		for (GameObjectID& BrakeLightID : m_BrakeLightIDs)
 		{
-			JSONField brakeLightIDField = {};
-			brakeLightIDField.label = m_BrakeLightIDs[i].ToString();
-			brakeLightIDs.push_back(brakeLightIDField);
+			brakeLightIDs.emplace_back("", JSONValue(BrakeLightID.ToString()));
 		}
 
 		vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
 
 		std::vector<JSONField> soundEffectSIDs;
-		soundEffectSIDs.resize(m_SoundEffectSIDs.size());
-		for (i32 i = 0; i < (i32)m_SoundEffectSIDs.size(); ++i)
+		soundEffectSIDs.reserve(m_SoundEffectSIDs.size());
+		for (StringID SoundEffectSID : m_SoundEffectSIDs)
 		{
-			soundEffectSIDs[i].label = ULongToString(m_SoundEffectSIDs[i]);
+			soundEffectSIDs.emplace_back("", JSONValue(SoundEffectSID));
 		}
 		vehicleObj.fields.emplace_back("sound effect sids", JSONValue(soundEffectSIDs));
 
 		parentObject.fields.emplace_back("vehicle", JSONValue(vehicleObj));
 	}
 
-	void Vehicle::SerializeInstanceUniqueFields(JSONObject& parentObject) const
+	void Vehicle::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		FLEX_UNUSED(parentObject);
-	}
-
-	void Vehicle::DrawImGuiObjects()
-	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		BaseScene* scene = g_SceneManager->CurrentScene();
 
@@ -12376,10 +13302,10 @@ namespace flex
 				m_Vehicle->updateWheelTransform(i, true);
 
 				const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-				Transform newWheelTransform = ToTransform(wheelInfo.m_worldTransform);
+				glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
 				GameObject* tireObject = scene->GetGameObject(m_TireIDs[i]);
 				Transform* tireTransform = tireObject->GetTransform();
-				tireTransform->SetWorldRotation(newWheelTransform.GetWorldRotation());
+				tireTransform->SetWorldRotation(newWheelRotation);
 
 				real x = (real)(i % 2);
 				real y = (real)(i / 2);
@@ -12477,7 +13403,7 @@ namespace flex
 
 	void Vehicle::SetSoundEffectSID(SoundEffect soundEffect, StringID soundSID)
 	{
-		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID);
+		m_SoundEffects[(i32)soundEffect] = SoundClip_LoopingSimple(VehicleSoundEffectNames[(i32)soundEffect], soundSID, false);
 		if (soundSID != InvalidStringID && soundEffect == SoundEffect::ENGINE)
 		{
 			// TODO: Save this metadata somewhere in a file
@@ -12489,7 +13415,7 @@ namespace flex
 	{
 		m_RigidBody->GetRigidBodyInternal()->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
 		m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
-		m_Transform.SetWorldFromMatrix(MAT4_IDENTITY);
+		m_Transform.CloneFrom(Transform::Identity);
 		m_Transform.Translate(0.0f, 2.0f, 0.0f);
 		m_SecUpsideDown = 0.0f;
 		m_bFlippingRightSideUp = false;
@@ -12583,12 +13509,16 @@ namespace flex
 		}
 	}
 
-	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */) :
-		GameObject(name, SID("road"), gameObjectID)
+	Road::Road(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, RoadSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
-		m_bSerializeMesh = false;
-		m_bSerializeMaterial = false;
 		AddTag("road");
+	}
+
+	PropertyCollection* Road::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
 	void Road::Initialize()
@@ -12635,7 +13565,7 @@ namespace flex
 
 		const PhysicsDebuggingSettings& debuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 		if (!debuggingSettings.bDisableAll &&
-			g_Renderer->GetDebugDrawer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
+			g_Renderer->GetDebugRenderer()->getDebugMode() != btIDebugDraw::DebugDrawModes::DBG_NoDebug)
 		{
 			for (u32 i = 0; i < (u32)roadSegments.size(); ++i)
 			{
@@ -12652,9 +13582,9 @@ namespace flex
 		}
 	}
 
-	void Road::DrawImGuiObjects()
+	void Road::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
-		GameObject::DrawImGuiObjects();
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
 		if (ImGuiExt::DragUInt("Quad count per segment", &m_QuadCountPerSegment, 0.1f, 1u, 32u))
 		{
@@ -12824,7 +13754,7 @@ namespace flex
 		MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_RoadMaterialID, &renderObjectCreateInfo);
 		if (meshComponent != nullptr)
 		{
-			assert(roadSegments[index].mesh == nullptr);
+			CHECK_EQ(roadSegments[index].mesh, nullptr);
 			roadSegments[index].mesh = meshComponent;
 		}
 
@@ -12837,7 +13767,7 @@ namespace flex
 
 		std::string newObjectName;
 		GameObjectID newGameObjectID = optionalGameObjectID;
-		GetNewObjectNameAndID(copyFlags, optionalName, newObjectName, newGameObjectID);
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 		Road* newGameObject = new Road(newObjectName, newGameObjectID);
 
 		CopyGenericFields(newGameObject, parent, CopyFlags::ADD_TO_SCENE);
@@ -12906,6 +13836,7 @@ namespace flex
 
 	void Road::GenerateMaterial()
 	{
+		m_RoadMaterialID = g_Renderer->GetMaterialID("Road surface");
 		if (m_RoadMaterialID == InvalidMaterialID)
 		{
 			// TODO: Add serialized member which points at material ID once support for that is in
@@ -12950,52 +13881,1047 @@ namespace flex
 		submesh->CreateCollisionMesh(&m_MeshVertexArrays[meshIndex], &shape);
 
 		// TODO: Don't even create rb?
-		RigidBody* rigidBody = new RigidBody((i32)CollisionType::STATIC, (i32)CollisionType::DEFAULT & ~(i32)CollisionType::STATIC);
+		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(shape, &m_Transform);
 		m_RigidBodies[meshIndex] = rigidBody;
 	}
 
-	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID) :
-		GameObject(name, SID("solar panel"), gameObjectID)
+	SolarPanel::SolarPanel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SolarPanelSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
 	}
 
-	void SolarPanel::Initialize()
+	PropertyCollection* SolarPanel::BuildTypeUniquePropertyCollection()
 	{
-		GameObject::Initialize();
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
 	}
 
-	void SolarPanel::PostInitialize()
+	PropertyCollection* MineralDeposit::BuildTypeUniquePropertyCollection()
 	{
-		GameObject::PostInitialize();
-	}
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
 
-	void SolarPanel::Destroy(bool bDetachFromParent)
-	{
-		FLEX_UNUSED(bDetachFromParent);
-		GameObject::Destroy();
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("mineral deposit");
+
+		collection->childCollection->RegisterProperty("mineral remaining", FIELD_OFFSET_AND_TYPE(MineralDeposit, m_MineralRemaining))
+			.VersionAdded(6);
+
+		return collection;
 	}
 
 	void SolarPanel::Update()
 	{
 		PROFILE_AUTO("SolarPanel Update");
 
-		if (sockets.size() >= 1)
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector< SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
 		{
-			PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
-			for (Socket* socket : sockets)
+			for (const SocketData& socketData : *sockets)
 			{
+				Socket* socket = (Socket*)socketData.socketID.Get();
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{
 					real chargeAmount = m_ChargeRate * m_Efficiency * g_DeltaTime;
-					otherSocket->parent->OnCharge(chargeAmount);
+					otherSocket->GetParent()->OnCharge(chargeAmount);
 				}
 			}
 		}
 
 		GameObject::Update();
+	}
+
+	HeadLamp::HeadLamp(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, HeadLampSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bItemizable = true;
+	}
+
+	PropertyCollection* HeadLamp::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
+	PowerPole::PowerPole(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PowerPoleSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+	}
+
+	PropertyCollection* PowerPole::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+		return collection;
+	}
+
+	void PowerPole::OnCharge(real chargeAmount)
+	{
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
+		{
+			std::vector<Socket*> activeSockets;
+
+			for (const SocketData& socketData : *sockets)
+			{
+				Socket* socket = (Socket*)socketData.socketID.Get();
+				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
+				if (otherSocket != nullptr)
+				{
+					// TODO: Detect and avoid infinite loops
+					otherSocket->GetParent()->OnCharge(chargeAmount);
+				}
+			}
+		}
+	}
+
+	const char* MineralTypeToString(MineralType type)
+	{
+		return MineralTypeStrings[(i32)type];
+	}
+
+	MineralType MineralTypeFromString(const char* typeStr)
+	{
+		for (i32 i = 0; i < (i32)MineralType::_NONE; ++i)
+		{
+			if (StrCmpCaseInsensitive(MineralTypeStrings[i], typeStr) == 0)
+			{
+				return (MineralType)i;
+			}
+		}
+
+		return MineralType::_NONE;
+	}
+
+	MineralDeposit::MineralDeposit(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MineralDepositSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bItemizable = true;
+	}
+
+	void MineralDeposit::Initialize()
+	{
+		GameObject::Initialize();
+
+		UpdateMesh();
+	}
+
+	void MineralDeposit::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		bool bAnyPropertyChanged = false;
+
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
+		{
+			ImGui::Text("Material");
+			MeshComponent* meshComponent = m_Mesh->GetSubMesh(0);
+			if (meshComponent->DrawImGui(0, bDrawingEditorObjects))
+			{
+				bAnyPropertyChanged = true;
+			}
+		}
+
+		const char* mineralTypeStr = MineralTypeToString(m_Type);
+		if (ImGui::BeginCombo("Mineral Type", mineralTypeStr))
+		{
+			for (u32 i = 0; i < (u32)MineralType::_NONE; ++i)
+			{
+				bool bSelected = (u32)m_Type == i;
+				if (ImGui::Selectable(MineralTypeToString((MineralType)i), &bSelected))
+				{
+					m_Type = (MineralType)i;
+					bAnyPropertyChanged = true;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
+		{
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
+		}
+
+		ImGui::Text("Mineral remaining: %u", m_MineralRemaining);
+	}
+
+	GameObject* MineralDeposit::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		MineralDeposit* newGameObject = new MineralDeposit(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_MineralRemaining = m_MineralRemaining;
+		newGameObject->m_Type = m_Type;
+
+		return newGameObject;
+	}
+
+	u32 MineralDeposit::GetMineralRemaining() const
+	{
+		return m_MineralRemaining;
+	}
+
+	PrefabID MineralDeposit::GetMineralPrefabID()
+	{
+		std::string prefabName = "mineral deposit " + std::string(MineralTypeToString(m_Type));
+		return g_ResourceManager->GetPrefabID(prefabName.c_str());
+	}
+
+	u32 MineralDeposit::OnMine(real mineAmount)
+	{
+		CHECK_GE(mineAmount, 0.0f);
+
+		u32 actualMineAmount = glm::clamp((u32)mineAmount, 0u, m_MineralRemaining);
+		m_MineralRemaining -= actualMineAmount;
+		UpdateMesh();
+		return actualMineAmount;
+	}
+
+	void MineralDeposit::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject mineralDepositObj;
+		if (parentObject.TryGetObject("mineral deposit", mineralDepositObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(mineralDepositObj, collection->childCollection);
+
+			std::string typeStr = mineralDepositObj.GetString("type");
+			m_Type = MineralTypeFromString(typeStr.c_str());
+			if (m_Type == MineralType::_NONE)
+			{
+				char buff[33];
+				ID.ToString(buff);
+				PrintError("Failed to parse mineral's type: %s (for object: %s, ID: %s)\n", typeStr.c_str(), m_Name.c_str(), buff);
+			}
+		}
+	}
+
+	void MineralDeposit::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject mineralDepositObj = {};
+
+		SerializeRegisteredProperties(mineralDepositObj, collection->childCollection, bSerializePrefabData);
+
+		const char* typeStr = MineralTypeToString(m_Type);
+		mineralDepositObj.fields.emplace_back("type", JSONValue(typeStr));
+
+		parentObject.fields.emplace_back("mineral deposit", JSONValue(mineralDepositObj));
+	}
+
+	void MineralDeposit::UpdateMesh()
+	{
+		static const char* meshes[] = { "mineral-deposit-100.glb", "mineral-deposit-66.glb", "mineral-deposit-33.glb" };
+
+		const char* newMeshFileName = "";
+		if (m_MineralRemaining > 80u)
+		{
+			newMeshFileName = meshes[0];
+		}
+		else if (m_MineralRemaining > 50u)
+		{
+			newMeshFileName = meshes[1];
+		}
+		else if (m_MineralRemaining > 0u)
+		{
+			newMeshFileName = meshes[2];
+		}
+
+		if (m_Mesh != nullptr && m_Mesh->GetSubmeshCount() == 1)
+		{
+			std::string meshFileName = m_Mesh->GetFileName();
+			if (strcmp(newMeshFileName, "") == 0)
+			{
+				// Mineral depleted, no need for a mesh anymore
+				m_Mesh->Destroy();
+			}
+			else if (strcmp(meshFileName.c_str(), newMeshFileName))
+			{
+				MaterialID matID = m_Mesh->GetSubMesh(0)->GetMaterialID();
+				m_Mesh->Destroy();
+				m_Mesh->SetOwner(this);
+				m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+			}
+		}
+		else
+		{
+			if (m_Mesh == nullptr)
+			{
+				SetMesh(new Mesh(this));
+			}
+
+			const char* mineralTypeStr = MineralTypeToString(m_Type);
+			MaterialID matID;
+			if (!g_Renderer->FindOrCreateMaterialByName("mineral " + std::string(mineralTypeStr), matID))
+			{
+				PrintWarn("No mineral material found for mineral %s, using placeholder\n", mineralTypeStr);
+				matID = g_Renderer->GetPlaceholderMaterialID();
+			}
+			m_Mesh->Destroy();
+			m_Mesh->SetOwner(this);
+			m_Mesh->LoadFromFile(MESH_DIRECTORY + std::string(newMeshFileName), matID);
+		}
+	}
+
+	Miner::Miner(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, MinerSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
+		m_MineTimer(1.0f),
+		m_MineCooldownTimer(0.2f)
+	{
+		CHECK_GT(m_MineCooldownTimer.duration, 0.0f);
+
+		m_bInteractable = true;
+		m_bItemizable = true;
+
+		laserColour = glm::vec4(1.2f, 0.2f, 0.2f, 0.8f);
+		m_LaserEmitterHeight = 5.0f;
+
+		ComputeNewTargetPos();
+	}
+
+	PropertyCollection* Miner::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("miner");
+
+		collection->childCollection->RegisterProperty("charge", FIELD_OFFSET_AND_TYPE(Miner, m_Charge))
+			.VersionAdded(6)
+			.DefaultValue(0.0f);
+		collection->childCollection->RegisterProperty("max charge", FIELD_OFFSET_AND_TYPE(Miner, m_MaxCharge))
+			.VersionAdded(6)
+			.Range(0.0f, 100.0f);
+		collection->childCollection->RegisterProperty("mine rate", FIELD_OFFSET_AND_TYPE(Miner, m_MineRate))
+			.VersionAdded(6)
+			.Range(0.0f, 100.0f);
+		collection->childCollection->RegisterProperty("power draw", FIELD_OFFSET_AND_TYPE(Miner, m_PowerDraw))
+			.VersionAdded(6)
+			.Range(0.0f, 10.0f);
+
+		return collection;
+	}
+
+	void Miner::Update()
+	{
+		PROFILE_AUTO("Miner Update");
+
+		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
+
+		if (!m_NearestMineralDepositID.IsValid())
+		{
+			// TODO: Only search every second or so rather than every frame
+			std::vector<Pair<MineralDeposit*, real>> nearbyDeposits;
+			if (g_SceneManager->CurrentScene()->GetObjectsInRadius<MineralDeposit>(m_Transform.GetWorldPosition(), m_MineRadius, MineralDepositSID, nearbyDeposits))
+			{
+				for (const Pair<MineralDeposit*, real>& mineralDepositPair : nearbyDeposits)
+				{
+					if (mineralDepositPair.first->GetMineralRemaining() > 0.0f)
+					{
+						m_NearestMineralDepositID = mineralDepositPair.first->ID;
+						break;
+					}
+				}
+			}
+		}
+
+		if (m_NearestMineralDepositID.IsValid())
+		{
+			MineralDeposit* nearestMineralDeposit = (MineralDeposit*)m_NearestMineralDepositID.Get();
+			if (nearestMineralDeposit == nullptr)
+			{
+				m_NearestMineralDepositID = InvalidGameObjectID;
+			}
+			else
+			{
+				if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+				{
+					m_NearestMineralDepositID = InvalidGameObjectID;
+
+					ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+					sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+					m_MiningSparksEmitterID = InvalidParticleEmitterID;
+				}
+
+				PrefabID minedMineralPrefabID = nearestMineralDeposit->GetMineralPrefabID();
+				if (minedMineralPrefabID != InvalidPrefabID)
+				{
+					if (!m_MineCooldownTimer.IsComplete() && m_MineCooldownTimer.Update())
+					{
+						if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+						{
+							m_NearestMineralDepositID = InvalidGameObjectID;
+						}
+						else
+						{
+							m_MineTimer.Restart();
+							ComputeNewTargetPos();
+
+							PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+
+							glm::vec3 laserOriginWS = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+							glm::vec3 laserEndWS = laserOriginWS + m_LaserDirection + VEC3_UP * 0.2f;
+							btCollisionWorld::ClosestRayResultCallback rayCallback(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS));
+							physicsWorld->GetWorld()->rayTest(ToBtVec3(laserOriginWS), ToBtVec3(laserEndWS), rayCallback);
+
+							if (rayCallback.hasHit())
+							{
+								m_MineTargetLocation = ToVec3(rayCallback.m_hitPointWorld);
+							}
+							else
+							{
+								m_MineTargetLocation = laserEndWS;
+							}
+
+							glm::vec3 sparkDir = glm::reflect(m_LaserDirection, VEC3_UP);
+							glm::quat rot = glm::quatLookAt(glm::normalize(sparkDir), VEC3_UP) * glm::quat(glm::vec3(PI_DIV_TWO, 0.0f, 0.0f));
+							glm::mat4 objectToWorld = glm::mat4(rot);
+							objectToWorld[3] = glm::vec4(m_MineTargetLocation, 1.0f);
+							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+						}
+					}
+
+					if (m_MineCooldownTimer.IsComplete() && m_Charge > m_PowerDraw && !IsInventoryFull())
+					{
+						if (m_MineTimer.Update())
+						{
+							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							m_MiningSparksEmitterID = InvalidParticleEmitterID;
+
+							m_MineCooldownTimer.Restart();
+
+							u32 mineralMined = nearestMineralDeposit->OnMine(m_MineRate);
+							m_Charge -= m_PowerDraw;
+
+							if (mineralMined > 0)
+							{
+								GameObjectStack::UserData userData = {};
+								u32 extraItems = AddToInventory(minedMineralPrefabID, mineralMined, userData);
+								if (extraItems > 0)
+								{
+									glm::vec3 pos = m_Transform.GetWorldPosition() +
+										m_Transform.GetUp() * 0.5f +
+										m_Transform.GetForward() * 1.0f;
+									g_SceneManager->CurrentScene()->CreateDroppedItem(minedMineralPrefabID, extraItems, pos, VEC3_ZERO);
+								}
+
+								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, m_MineTargetLocation);
+								ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
+								m_MiningDustEmitterID = dustParticleSystem->SpawnEmitterInstance(objectToWorld);
+							}
+
+							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
+							{
+								m_MineTimer.Complete();
+								m_NearestMineralDepositID = InvalidGameObjectID;
+
+								sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+								m_MiningSparksEmitterID = InvalidParticleEmitterID;
+							}
+						}
+					}
+					else
+					{
+						if (m_MiningSparksEmitterID != InvalidParticleEmitterID)
+						{
+							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							m_MiningSparksEmitterID = InvalidParticleEmitterID;
+						}
+					}
+				}
+			}
+		}
+
+		if (g_Editor->IsObjectSelected(ID))
+		{
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			debugRenderer->drawArc(ToBtVec3(m_Transform.GetWorldPosition() + glm::vec3(0.0f, 0.1f, 0.0f)), ToBtVec3(VEC3_UP), ToBtVec3(VEC3_RIGHT), m_MineRadius, m_MineRadius, 0.0f, TWO_PI - EPSILON, btVector3(0.9f, 0.5f, 0.5f), false);
+		}
+
+		if (m_MineCooldownTimer.remaining == 0.0f && m_MineTimer.remaining > 0.0f)
+		{
+			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+			glm::vec3 laserOrigin = m_Transform.GetWorldPosition() + m_Transform.GetUp() * m_LaserEmitterHeight;
+			debugRenderer->DrawLineWithAlpha(ToBtVec3(laserOrigin), ToBtVec3(laserOrigin + m_LaserDirection), ToBtVec4(laserColour));
+		}
+
+		GameObject::Update();
+	}
+
+	void Miner::OnCharge(real chargeAmount)
+	{
+		m_Charge = glm::clamp(m_Charge + chargeAmount, 0.0f, m_MaxCharge);
+	}
+
+	void Miner::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		bool bAnyPropertyChanged = false;
+
+		//PropertyCollection* collection = GetPropertyCollection();
+		//CHECK_NE(collection, nullptr);
+		//bAnyPropertyChanged = collection->DrawImGuiObjects();
+
+		ImGui::Text("Inventory");
+		for (const GameObjectStack& stack : m_Inventory)
+		{
+			if (stack.prefabID.IsValid())
+			{
+				std::string prefabName = g_ResourceManager->GetPrefabTemplate(stack.prefabID)->GetName();
+				ImGui::Text("%s : %i", prefabName.c_str(), stack.count);
+			}
+			else
+			{
+				ImGui::Text("Empty");
+			}
+		}
+
+		if (ImGui::Button("Clear inventory"))
+		{
+			for (GameObjectStack& stack : m_Inventory)
+			{
+				stack.Clear();
+			}
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Fill charge"))
+		{
+			m_Charge = m_MaxCharge;
+		}
+
+		if (bAnyPropertyChanged && m_SourcePrefabID.IsValid())
+		{
+			g_ResourceManager->SetPrefabDirty(m_SourcePrefabID.m_PrefabID);
+		}
+	}
+
+	GameObject* Miner::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		Miner* newGameObject = new Miner(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_Charge = m_Charge;
+		newGameObject->m_MaxCharge = m_MaxCharge;
+		newGameObject->m_MineRate = m_MineRate;
+		newGameObject->m_PowerDraw = m_PowerDraw;
+		newGameObject->m_MineRadius = m_MineRadius;
+		newGameObject->m_Inventory = m_Inventory;
+
+		return newGameObject;
+	}
+
+	void Miner::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
+		if (particleManager != nullptr)
+		{
+			ParticleSystem* sparksParticleSystem = particleManager->GetParticleSystem(SID("laser sparks"));
+			if (sparksParticleSystem != nullptr)
+			{
+				sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+				m_MiningSparksEmitterID = InvalidParticleEmitterID;
+
+				sparksParticleSystem->ExtinguishEmitter(m_MiningDustEmitterID);
+				m_MiningDustEmitterID = InvalidParticleEmitterID;
+			}
+		}
+	}
+
+	i32 Miner::GetNextFreeInventorySlot()
+	{
+		for (i32 i = 0; i < (i32)m_Inventory.size(); ++i)
+		{
+			if (m_Inventory[i].count == 0)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void Miner::ComputeNewTargetPos()
+	{
+		real radius = 3.0f;
+		m_LaserDirection = glm::vec3(
+			RandomFloat(-radius, radius),
+			-m_LaserEmitterHeight,
+			RandomFloat(-radius, radius));
+	}
+
+	GameObjectStack* Miner::GetStackFromInventory(i32 slotIndex)
+	{
+		if (slotIndex >= 0 && slotIndex < m_Inventory.size())
+		{
+			return &m_Inventory[slotIndex];
+		}
+		return nullptr;
+	}
+
+	bool Miner::IsInventoryFull() const
+	{
+		for (const GameObjectStack& stack : m_Inventory)
+		{
+			if (!stack.prefabID.IsValid())
+			{
+				return false;
+			}
+
+			i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(stack.prefabID);
+			if (stack.count < maxStackSize)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	u32 Miner::AddToInventory(const PrefabID& prefabID, i32 stackSize, const GameObjectStack::UserData& userData)
+	{
+		i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
+		for (GameObjectStack& stack : m_Inventory)
+		{
+			if (!stack.prefabID.IsValid())
+			{
+				// Empty slot
+				stack.prefabID = prefabID;
+				stack.count = stackSize;
+				stack.userData = userData;
+				return 0;
+			}
+			else if (stack.prefabID == prefabID)
+			{
+				i32 deltaToAdd = glm::min(stackSize, maxStackSize - stack.count);
+				stack.count += deltaToAdd;
+				// TODO: Merge user data
+				if (deltaToAdd == stackSize)
+				{
+					return 0;
+				}
+
+				stackSize -= deltaToAdd;
+			}
+		}
+		return stackSize;
+	}
+
+	u32 Miner::AddToInventory(GameObjectStack* stack)
+	{
+		return AddToInventory(stack->prefabID, stack->count, stack->userData);
+	}
+
+	void Miner::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject minerObj;
+		if (parentObject.TryGetObject("miner", minerObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(minerObj, collection->childCollection);
+
+			std::vector<JSONObject> inventory;
+			if (minerObj.TryGetObjectArray("inventory", inventory))
+			{
+				// TODO: Change function to take arrays once custom array class is in use (clang didn't like templatizing over std::array len)
+				ParseInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory);
+			}
+		}
+	}
+
+	void Miner::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject minerObj = {};
+
+		SerializeRegisteredProperties(minerObj, collection->childCollection, bSerializePrefabData);
+
+		std::vector<JSONObject> inventory;
+		if (SerializeInventory((GameObjectStack*)&m_Inventory[0], (u32)m_Inventory.size(), inventory))
+		{
+			if (!inventory.empty())
+			{
+				minerObj.fields.emplace_back("inventory", JSONValue(inventory));
+			}
+		}
+
+		parentObject.fields.emplace_back("miner", JSONValue(minerObj));
+	}
+
+	Speaker::Speaker(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, SpeakerSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bInteractable = true;
+	}
+
+	PropertyCollection* Speaker::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("speaker");
+
+		collection->childCollection->RegisterProperty("playing", FIELD_OFFSET_AND_TYPE(Speaker, m_bPlaying))
+			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("audio source path", FIELD_OFFSET_AND_TYPE(Speaker, m_AudioSourceFileName))
+			.VersionAdded(6);
+
+		return collection;
+	}
+
+	void Speaker::Initialize()
+	{
+		GameObject::Initialize();
+
+		if (!m_AudioSourceFileName.empty())
+		{
+			m_SourceID = g_ResourceManager->GetOrLoadAudioSourceID(Hash(m_AudioSourceFileName.c_str()), false);
+
+			if (m_SourceID != InvalidAudioSourceID)
+			{
+				if (m_bPlaying)
+				{
+					AudioManager::SetSourceLooping(m_SourceID, true);
+					AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+				}
+			}
+		}
+	}
+
+	void Speaker::Destroy(bool bDetachFromParent /* = true */)
+	{
+		GameObject::Destroy(bDetachFromParent);
+
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			g_ResourceManager->DestroyAudioSource(m_SourceID);
+			m_SourceID = InvalidAudioSourceID;
+		}
+	}
+
+	void Speaker::Update()
+	{
+		PROFILE_AUTO("Speaker Update");
+
+		if (m_SourceID != InvalidAudioSourceID && m_bPlaying)
+		{
+			if (AudioManager::IsSourcePlaying(m_SourceID))
+			{
+				AudioManager::SetSourcePositionWS(m_SourceID, m_Transform.GetWorldPosition());
+			}
+			else
+			{
+				AudioManager::SetSourceLooping(m_SourceID, true);
+				AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+			}
+		}
+
+		GameObject::Update();
+	}
+
+	void Speaker::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		StringID sourceSID = Hash(m_AudioSourceFileName.c_str());
+		if (g_ResourceManager->DrawAudioSourceIDImGui("Audio source", sourceSID))
+		{
+			if (sourceSID != InvalidStringID)
+			{
+				AudioSourceID newSourceID = g_ResourceManager->GetAudioSourceID(sourceSID);
+				if (newSourceID == InvalidAudioSourceID)
+				{
+					newSourceID = g_ResourceManager->GetOrLoadAudioSourceID(sourceSID, false);
+				}
+
+				if (newSourceID == InvalidAudioSourceID)
+				{
+					PrintError("Speaker set to use invalid audio source\n");
+					return;
+				}
+
+				if (m_SourceID != InvalidAudioSourceID)
+				{
+					AudioManager::StopSource(m_SourceID);
+				}
+
+				if (AudioManager::GetSource(newSourceID)->b2D)
+				{
+					PrintWarn("2D sound selected for speaker. Audio will not be localized.\n");
+				}
+
+				AudioManager::SetSourceLooping(newSourceID, true);
+
+				if (m_bPlaying)
+				{
+					AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition());
+				}
+
+				m_SourceID = newSourceID;
+				m_AudioSourceFileName = AudioManager::GetSourceFileName(newSourceID);
+			}
+			else
+			{
+				if (m_SourceID != InvalidAudioSourceID)
+				{
+					AudioManager::StopSource(m_SourceID);
+				}
+
+				m_SourceID = InvalidAudioSourceID;
+				m_AudioSourceFileName.clear();
+			}
+		}
+
+		if (ImGui::Checkbox("Playing", &m_bPlaying))
+		{
+			if (m_SourceID != InvalidAudioSourceID)
+			{
+				if (m_bPlaying)
+				{
+					if (!AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition()))
+					{
+						m_SourceID = InvalidAudioSourceID;
+					}
+				}
+				else
+				{
+					if (!AudioManager::StopSource(m_SourceID))
+					{
+						m_SourceID = InvalidAudioSourceID;
+					}
+				}
+			}
+		}
+	}
+
+	GameObject* Speaker::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		Speaker* newGameObject = new Speaker(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_AudioSourceFileName = m_AudioSourceFileName;
+		newGameObject->m_bPlaying = m_bPlaying;
+		// Leave m_SourceID as invalid so the new object creates its own audio source
+
+		return newGameObject;
+	}
+
+	void Speaker::TogglePlaying()
+	{
+		m_bPlaying = !m_bPlaying;
+
+		if (m_SourceID != InvalidAudioSourceID)
+		{
+			if (m_bPlaying)
+			{
+				if (!AudioManager::PlaySourceAtPosWS(m_SourceID, m_Transform.GetWorldPosition()))
+				{
+					m_SourceID = InvalidAudioSourceID;
+				}
+			}
+			else
+			{
+				if (!AudioManager::StopSource(m_SourceID))
+				{
+					m_SourceID = InvalidAudioSourceID;
+				}
+			}
+		}
+	}
+
+	void Speaker::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject speakerObj;
+		if (parentObject.TryGetObject("speaker", speakerObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(speakerObj, collection->childCollection);
+		}
+	}
+
+	void Speaker::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject speakerObj = {};
+		SerializeRegisteredProperties(speakerObj, collection->childCollection, bSerializePrefabData);
+		if (!speakerObj.fields.empty())
+		{
+			parentObject.fields.emplace_back("speaker", JSONValue(speakerObj));
+		}
+	}
+
+	//
+	// PickAxe
+	//
+	PickAxe::PickAxe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		GameObject(name, PickAxeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bInteractable = true;
+		m_bItemizable = true;
+	}
+
+	PropertyCollection* PickAxe::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("pickaxe");
+
+		collection->childCollection->RegisterProperty("usage remaining", FIELD_OFFSET_AND_TYPE(PickAxe, m_UsageRemaining))
+			.VersionAdded(6);
+
+		return collection;
+	}
+
+	void PickAxe::Update()
+	{
+		PROFILE_AUTO("PickAxe Update");
+
+		GameObject::Update();
+	}
+
+	void PickAxe::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		ImGui::Text("Usage remaining: %.3f", m_UsageRemaining);
+
+		const char* mineralTypeStr = MineralTypeToString(m_Material);
+		if (ImGui::BeginCombo("Material", mineralTypeStr))
+		{
+			for (u32 i = 0; i < (u32)MineralType::_NONE; ++i)
+			{
+				bool bSelected = (u32)m_Material == i;
+				if (ImGui::Selectable(MineralTypeToString((MineralType)i), &bSelected))
+				{
+					m_Material = (MineralType)i;
+				}
+			}
+
+			ImGui::EndCombo();
+		}
+	}
+
+	GameObject* PickAxe::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		PickAxe* newGameObject = new PickAxe(newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		newGameObject->m_UsageRemaining = m_UsageRemaining;
+		newGameObject->m_Material = m_Material;
+		// Leave m_SourceID as invalid so the new object creates its own audio source
+
+		return newGameObject;
+	}
+
+	void PickAxe::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject pickaxeObj;
+		if (parentObject.TryGetObject("pickaxe", pickaxeObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(pickaxeObj, collection->childCollection);
+
+			std::string materialStr = pickaxeObj.GetString("material");
+			m_Material = MineralTypeFromString(materialStr.c_str());
+			if (m_Material == MineralType::_NONE)
+			{
+				PrintError("Failed to parse material from pickaxe: \"%s\", falling back to IRON", materialStr.c_str());
+				m_Material = MineralType::IRON;
+			}
+		}
+	}
+
+	void PickAxe::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject pickaxeObj = {};
+		SerializeRegisteredProperties(pickaxeObj, collection->childCollection, bSerializePrefabData);
+
+		if (m_Material == MineralType::_NONE)
+		{
+			PrintError("Can not save pickaxe with no material set! Falling back to IRON\n");
+			m_Material = MineralType::IRON;
+		}
+		pickaxeObj.fields.emplace_back("material", JSONValue(MineralTypeToString(m_Material)));
+
+		parentObject.fields.emplace_back("pickaxe", JSONValue(pickaxeObj));
+	}
+
+	real PickAxe::GetMineSpeed(MineralType material)
+	{
+		switch (material)
+		{
+			// Elements
+		case MineralType::IRON:
+		case MineralType::SILICON:
+		case MineralType::ALUMINUM:
+			return 1.0f;
+		case MineralType::TIN:
+			return 0.5f;
+
+			// Minerals
+		case MineralType::STONE:
+		case MineralType::QUARTZ:
+		case MineralType::OLIVINE:
+			return 0.5f;
+		}
+		ENSURE_NO_ENTRY(); // Unhandled material for mining
+		return -1.0f;
 	}
 } // namespace flex

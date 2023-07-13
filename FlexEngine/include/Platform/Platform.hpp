@@ -107,8 +107,8 @@ namespace flex
 
 		// Returns true if any files were found
 		// Set fileType to "*" to retrieve all files
-		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter);
-		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse = false);
+		static bool FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen, bool bRecurse = false);
 		static bool OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] = nullptr);
 
 		static void OpenFileWithDefaultApplication(const std::string& absoluteDirectory);
@@ -127,6 +127,8 @@ namespace flex
 		static void JoinThreads();
 		static void SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData);
 		static void YieldProcessor();
+		static bool SetFlexThreadAffinityMask(void* threadHandle, u64 threadID);
+		static bool SetFlexThreadName(void* threadHandle, const char* threadName);
 
 		static void* InitCriticalSection();
 		static void FreeCriticalSection(void* criticalSection);
@@ -138,10 +140,13 @@ namespace flex
 		static u64 GetUSSinceEpoch();
 		static GameObjectID GenerateGUID();
 
+		static void PrintStackTrace();
+
 		static CPUInfo cpuInfo;
 
 	private:
 		static void RetrieveCPUInfo();
+		static bool FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse);
 
 	};
 
@@ -198,18 +203,26 @@ namespace flex
 			return *this;
 		}
 
-		// Returns true when directory has changed
+		// Returns true when directory has changed. Modified files are then stored in modifiedFilePaths.
 		bool Update();
 
 		bool Installed() const;
 
 		void* userData = nullptr;
 		std::string directory;
+		std::vector<std::string> modifiedFilePaths;
 
 	private:
+		struct FileMetaData
+		{
+			std::string filePath;
+			Date lastModificationTime;
+		};
+
 		bool m_bInstalled = false;
 		bool m_bWatchSubtree = false;
 		void* m_ChangeHandle = nullptr;
+		std::vector<FileMetaData> fileCreationTimes;
 
 	};
 } // namespace flex

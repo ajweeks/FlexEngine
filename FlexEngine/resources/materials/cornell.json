@@ -1,0 +1,9 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "cornell",
+		"shader" : "pbr",
+		"const roughness" : 1.000000
+	}
+}

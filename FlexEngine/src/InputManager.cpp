@@ -7,6 +7,7 @@
 #include "Helpers.hpp" // For WriteFile
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
+#include "StringBuilder.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -212,7 +213,7 @@ namespace flex
 
 	void InputManager::UpdateGamepadState(i32 gamepadIndex, real axes[6], u8 buttons[15])
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		m_pGamepadStates[gamepadIndex] = m_GamepadStates[gamepadIndex];
 
@@ -265,7 +266,7 @@ namespace flex
 
 	GamepadState& InputManager::GetGamepadState(i32 gamepadIndex)
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 		return m_GamepadStates[gamepadIndex];
 	}
 
@@ -567,7 +568,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonDown(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bDown = ((m_GamepadStates[gamepadIndex].buttonStates & (1 << (i32)button)) != 0);
 		return bDown;
@@ -575,7 +576,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonPressed(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bPressed = ((m_GamepadStates[gamepadIndex].buttonsPressed & (1 << (i32)button)) != 0);
 		return bPressed;
@@ -583,7 +584,7 @@ namespace flex
 
 	bool InputManager::IsGamepadButtonReleased(i32 gamepadIndex, GamepadButton button) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		bool bReleased = ((m_GamepadStates[gamepadIndex].buttonsReleased & (1 << (i32)button)) != 0);
 		return bReleased;
@@ -591,7 +592,7 @@ namespace flex
 
 	real InputManager::GetPrevGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		real axisValue = m_pGamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
@@ -599,7 +600,7 @@ namespace flex
 
 	real InputManager::GetGamepadAxisValue(i32 gamepadIndex, GamepadAxis axis) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		real axisValue = m_GamepadStates[gamepadIndex].axes[(i32)axis];
 		return axisValue;
@@ -607,7 +608,7 @@ namespace flex
 
 	bool InputManager::HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		if (threshold >= 0.0f)
 		{
@@ -619,6 +620,44 @@ namespace flex
 			return (m_GamepadStates[gamepadIndex].axes[(i32)axis] <= threshold &&
 				m_pGamepadStates[gamepadIndex].axes[(i32)axis] > threshold);
 		}
+	}
+	
+	bool InputManager::GetActionBindingName(Action action, StringBuilder& outStrBuff) const
+	{
+		bool bBound = false;
+
+		const InputBinding& binding = m_InputBindings[(i32)action];
+		if (binding.keyCode != KeyCode::_NONE)
+		{
+			outStrBuff.Append(KeyCodeStrings[(u32)binding.keyCode]);
+			bBound = true;
+		}
+		if (binding.mouseButton != MouseButton::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(MouseButtonStrings[(u32)binding.mouseButton]);
+			bBound = true;
+		}
+		if (binding.mouseAxis != MouseAxis::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(MouseAxisStrings[(u32)binding.mouseAxis]);
+			bBound = true;
+		}
+		if (binding.gamepadButton != GamepadButton::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(GamepadButtonStrings[(u32)binding.gamepadButton]);
+			bBound = true;
+		}
+		if (binding.gamepadAxis != GamepadAxis::_NONE)
+		{
+			if (bBound) outStrBuff.Append(", ");
+			outStrBuff.Append(GamepadAxisStrings[(u32)binding.gamepadAxis]);
+			bBound = true;
+		}
+
+		return bBound;
 	}
 
 	void InputManager::CursorPosCallback(double x, double y)
@@ -737,7 +776,7 @@ namespace flex
 	{
 		FLEX_UNUSED(mods);
 
-		assert((u32)mouseButton < MOUSE_BUTTON_COUNT);
+		CHECK_LT((i32)mouseButton, MOUSE_BUTTON_COUNT);
 
 		if (keyAction == KeyAction::KEY_PRESS)
 		{
@@ -1015,7 +1054,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonStates & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1027,7 +1066,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonsPressed & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1039,7 +1078,7 @@ namespace flex
 			return false;
 		}
 
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonsReleased & (1 << (i32)mouseButton)) != 0;
 	}
@@ -1088,14 +1127,14 @@ namespace flex
 
 	glm::vec2 InputManager::GetMouseDragDistance(MouseButton mouseButton)
 	{
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		return (m_MouseButtonDrags[(i32)mouseButton].endLocation - m_MouseButtonDrags[(i32)mouseButton].startLocation);
 	}
 
 	void InputManager::ClearMouseDragDistance(MouseButton mouseButton)
 	{
-		assert((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
+		CHECK((i32)mouseButton >= 0 && (i32)mouseButton <= MOUSE_BUTTON_COUNT - 1);
 
 		m_MouseButtonDrags[(i32)mouseButton].startLocation = m_MouseButtonDrags[(i32)mouseButton].endLocation;
 	}
@@ -1145,7 +1184,7 @@ namespace flex
 
 	void InputManager::ClearGampadInput(i32 gamepadIndex)
 	{
-		assert(gamepadIndex == 0 || gamepadIndex == 1);
+		CHECK(gamepadIndex == 0 || gamepadIndex == 1);
 
 		GamepadState& gamepadState = m_GamepadStates[gamepadIndex];
 
@@ -1802,28 +1841,28 @@ namespace flex
 			}
 			else
 			{
-				i32 keyCode = child.GetInt("key code");
-				if (keyCode != -1)
+				i32 keyCode;
+				if (child.TryGetInt("key code", keyCode))
 				{
 					m_InputBindings[i].keyCode = (KeyCode)keyCode;
 				}
-				i32 mouseButton = child.GetInt("mouse button");
-				if (mouseButton != -1)
+				i32 mouseButton;
+				if (child.TryGetInt("mouse button", mouseButton))
 				{
 					m_InputBindings[i].mouseButton = (MouseButton)mouseButton;
 				}
-				i32 mouseAxis = child.GetInt("mouse axis");
-				if (mouseAxis != -1)
+				i32 mouseAxis;
+				if (child.TryGetInt("mouse axis", mouseAxis))
 				{
 					m_InputBindings[i].mouseAxis = (MouseAxis)mouseAxis;
 				}
-				i32 gamepadButton = child.GetInt("gamepad button");
-				if (gamepadButton != -1)
+				i32 gamepadButton;
+				if (child.TryGetInt("gamepad button", gamepadButton))
 				{
 					m_InputBindings[i].gamepadButton = (GamepadButton)gamepadButton;
 				}
-				i32 gamepadAxis = child.GetInt("gamepad axis");
-				if (gamepadAxis != -1)
+				i32 gamepadAxis;
+				if (child.TryGetInt("gamepad axis", gamepadAxis))
 				{
 					m_InputBindings[i].gamepadAxis = (GamepadAxis)gamepadAxis;
 				}
@@ -1848,18 +1887,34 @@ namespace flex
 
 			JSONObject bindingObj = {};
 
-			i32 keyCode = binding.keyCode == KeyCode::_NONE ? -1 : (i32)binding.keyCode;
-			bindingObj.fields.emplace_back("key code", JSONValue(keyCode));
-			i32 mouseButton = binding.mouseButton == MouseButton::_NONE ? -1 : (i32)binding.mouseButton;
-			bindingObj.fields.emplace_back("mouse button", JSONValue(mouseButton));
-			i32 mouseAxis = binding.mouseAxis == MouseAxis::_NONE ? -1 : (i32)binding.mouseAxis;
-			bindingObj.fields.emplace_back("mouse axis", JSONValue(mouseAxis));
-			i32 gamepadButton = binding.gamepadButton == GamepadButton::_NONE ? -1 : (i32)binding.gamepadButton;
-			bindingObj.fields.emplace_back("gamepad button", JSONValue(gamepadButton));
-			i32 gamepadAxis = binding.gamepadAxis == GamepadAxis::_NONE ? -1 : (i32)binding.gamepadAxis;
-			bindingObj.fields.emplace_back("gamepad axis", JSONValue(gamepadAxis));
-			bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
-			bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
+			if (binding.keyCode != KeyCode::_NONE)
+			{
+				bindingObj.fields.emplace_back("key code", JSONValue((i32)binding.keyCode));
+			}
+			if (binding.mouseButton != MouseButton::_NONE)
+			{
+				bindingObj.fields.emplace_back("mouse button", JSONValue((i32)binding.mouseButton));
+			}
+			if (binding.mouseAxis != MouseAxis::_NONE)
+			{
+				bindingObj.fields.emplace_back("mouse axis", JSONValue((i32)binding.mouseAxis));
+			}
+			if (binding.gamepadButton != GamepadButton::_NONE)
+			{
+				bindingObj.fields.emplace_back("gamepad button", JSONValue((i32)binding.gamepadButton));
+			}
+			if (binding.gamepadAxis != GamepadAxis::_NONE)
+			{
+				bindingObj.fields.emplace_back("gamepad axis", JSONValue((i32)binding.gamepadAxis));
+			}
+			if (binding.bInvertMouseAxis)
+			{
+				bindingObj.fields.emplace_back("invert mouse axis", JSONValue(binding.bInvertMouseAxis));
+			}
+			if (binding.bInvertGamepadAxis)
+			{
+				bindingObj.fields.emplace_back("invert gamepad axis", JSONValue(binding.bInvertGamepadAxis));
+			}
 
 			rootObject.fields.emplace_back(ActionStrings[i], JSONValue(bindingObj));
 		}

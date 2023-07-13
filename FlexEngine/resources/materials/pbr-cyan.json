@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "pbr cyan",
+		"shader" : "pbr",
+		"const albedo" : "0.096,0.476,0.477",
+		"const metallic" : 0.770000,
+		"const roughness" : 0.250000
+	}
+}

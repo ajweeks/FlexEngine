@@ -27,7 +27,7 @@ namespace flex
 		VertexBufferSize = VertexCount * VertexStride;
 		UsedVertexBufferSize = VertexBufferSize;
 
-		assert(vertexData == nullptr);
+		CHECK_EQ(vertexData, nullptr);
 		vertexData = (real*)malloc(VertexBufferSize);
 		if (vertexData == nullptr)
 		{
@@ -50,7 +50,7 @@ namespace flex
 
 		if (VertexBufferSize > 0)
 		{
-			assert(vertexData == nullptr);
+			CHECK_EQ(vertexData, nullptr);
 			vertexData = (real*)malloc(VertexBufferSize);
 			if (vertexData == nullptr)
 			{
@@ -81,7 +81,7 @@ namespace flex
 		UsedVertexCount = vertCountToUpdate;
 		UsedVertexBufferSize = UsedVertexCount * VertexStride;
 
-		assert(vertexData != nullptr);
+		CHECK_NE(vertexData, nullptr);
 
 		real* vertexDataP = vertexData;
 		for (u32 i = 0; i < vertCountToUpdate; ++i)
@@ -152,7 +152,7 @@ namespace flex
 				vertexDataP += 1;
 			}
 		}
-		assert(vertexDataP == vertexData + (VertexStride / sizeof(real) * vertCountToUpdate));
+		CHECK_EQ(vertexDataP, vertexData + (VertexStride / sizeof(real) * vertCountToUpdate));
 	}
 
 	void VertexBufferData::Destroy()
@@ -173,7 +173,7 @@ namespace flex
 	void VertexBufferData::ShrinkIfExcessGreaterThan(real minExcess /* = 0.0f */)
 	{
 		// Only dynamic buffers can be resized
-		assert(bDynamic);
+		CHECK(bDynamic);
 
 		real excess = (real)(VertexBufferSize - UsedVertexBufferSize) / VertexBufferSize;
 		if (excess >= minExcess)
@@ -368,6 +368,24 @@ namespace flex
 				src += 3;
 			}
 
+			if (usingAttributes & (u32)VertexAttribute::SCALE)
+			{
+				if (Attributes & (u32)VertexAttribute::SCALE)
+				{
+					memcpy(dst, src, sizeof(glm::vec3));
+				}
+				else
+				{
+					memcpy(dst, &VEC3_ONE, sizeof(glm::vec3));
+				}
+				dst += 3;
+			}
+
+			if (Attributes & (u32)VertexAttribute::SCALE)
+			{
+				src += 3;
+			}
+
 			if (usingAttributes & (u32)VertexAttribute::EXTRA_VEC4)
 			{
 				if (Attributes & (u32)VertexAttribute::EXTRA_VEC4)
@@ -405,7 +423,7 @@ namespace flex
 				src += 1;
 			}
 
-			assert(src == (vertSrc + VertexStride / sizeof(real)));
+			CHECK_EQ(src, (vertSrc + VertexStride / sizeof(real)));
 		}
 		u32 bytesCopied = (u32)(dst - initialDst) * sizeof(real);
 		return bytesCopied;

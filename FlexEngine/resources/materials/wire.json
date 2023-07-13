@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "wire",
+		"shader" : "pbr",
+		"const albedo" : "0.085,0.085,0.085",
+		"dynamic" : true
+	}
+}

@@ -1,6 +1,6 @@
 #include "stdafx.hpp"
 
-#ifdef linux
+#ifdef __linux__
 
 #include "Platform/Platform.hpp"
 
@@ -22,6 +22,9 @@ IGNORE_WARNINGS_PUSH
 #include <libgen.h> // for dirname
 #include <linux/limits.h> // for PATH_MAX
 #include <uuid/uuid.h>
+
+#include <cxxabi.h> // for __cxa_demangle
+#include <execinfo.h> // for backtrace
 
 #include <stdlib.h>
 IGNORE_WARNINGS_POP
@@ -295,70 +298,42 @@ namespace flex
 		return false;
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileType)
+	// TODO: Test!
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const std::string& fileTypeFilter, bool bRecurse /* = false */)
 	{
-		std::string cleanedFileType = fileType;
-		{
-			size_t dotPos = cleanedFileType.find('.');
-			if (dotPos != std::string::npos)
-			{
-				cleanedFileType.erase(dotPos, 1);
-			}
-		}
-
 		std::string cleanedDirPath = directoryPath;
 		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
 		{
 			cleanedDirPath += '/';
 		}
 
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
-
-		struct dirent *ent;
-		DIR *dir = opendir(cleanedDirPath.c_str());
-		if (dir != NULL)
+		std::string cleanedFileTypeFilter = fileTypeFilter;
 		{
-			/* print all the files and directories within directory */
-			while ((ent = readdir(dir)) != NULL)
+			size_t dotPos = cleanedFileTypeFilter.find('.');
+			if (dotPos != std::string::npos)
 			{
-				std::string fileNameStr(ent->d_name);
-				bool bFoundFileTypeMatches = false;
-				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
-				{
-					bFoundFileTypeMatches = false;
-				}
-				else if (cleanedFileType == "*")
-				{
-					bFoundFileTypeMatches = true;
-				}
-				else
-				{
-					std::string fileType = ExtractFileType(fileNameStr);
-
-					if (fileType == cleanedFileType)
-					{
-						bFoundFileTypeMatches = true;
-					}
-				}
-
-				if (bFoundFileTypeMatches)
-				{
-					filePaths.push_back(cleanedDirPath + fileNameStr);
-				}
+				cleanedFileTypeFilter.erase(dotPos, 1);
 			}
-			closedir(dir);
 		}
-		else
+
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
 		{
-			/* could not open directory */
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
-			return false;
-		}
+			if (cleanedFileTypeFilter == "*")
+			{
+				return true;
+			}
+			else
+			{
+				std::string fileType = ExtractFileType(fileNameStr);
+				return fileType == cleanedFileTypeFilter;
+			}
+		}, bRecurse);
 
 		return !filePaths.empty();
 	}
 
-	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen)
+	// TODO: Test!
+	bool Platform::FindFilesInDirectory(const std::string& directoryPath, std::vector<std::string>& filePaths, const char* fileTypes[], u32 fileTypesLen, bool bRecurse /* = false */)
 	{
 		std::string cleanedDirPath = directoryPath;
 		if (cleanedDirPath[cleanedDirPath.size() - 1] != '/')
@@ -366,45 +341,59 @@ namespace flex
 			cleanedDirPath += '/';
 		}
 
-		std::string cleanedDirPathWithWildCard = cleanedDirPath + '*';
+		FindFilesInDirectoryInternal(cleanedDirPath, filePaths, [&](const std::string& fileNameStr)
+		{
+			std::string fileType = ExtractFileType(fileNameStr);
+			return Contains(fileTypes, fileTypesLen, fileType.c_str());
+		}, bRecurse);
 
+		return !filePaths.empty();
+	}
+
+	// Returns true if search succeeded
+	bool Platform::FindFilesInDirectoryInternal(const std::string& directoryPath, std::vector<std::string>& filePaths, std::function<bool(const std::string&)> fileTypeFilter, bool bRecurse)
+	{
 		struct dirent* ent;
-		DIR* dir = opendir(cleanedDirPath.c_str());
+		DIR* dir = opendir(directoryPath.c_str());
 		if (dir != NULL)
 		{
-			/* print all the files and directories within directory */
+			// Iterate over all files and directories within directory
 			while ((ent = readdir(dir)) != NULL)
 			{
 				std::string fileNameStr(ent->d_name);
-				bool bFoundFileTypeMatches = false;
-				if (fileNameStr.compare(".") == 0 || fileNameStr.compare("..") == 0)
+				if (fileNameStr != "." && fileNameStr != "..")
 				{
-					bFoundFileTypeMatches = false;
-				}
-				else
-				{
-					std::string fileType = ExtractFileType(fileNameStr);
-					if (Contains(fileTypes, fileTypesLen, fileType.c_str()))
+					struct stat path_stat;
+					stat(fileNameStr.c_str(), &path_stat);
+					bool bIsDir = S_ISREG(path_stat.st_mode) != 0;
+					if (bIsDir)
 					{
-						bFoundFileTypeMatches = true;
+						if (bRecurse)
+						{
+							// Recurse into directory
+							FindFilesInDirectoryInternal(directoryPath + fileNameStr + "/", filePaths, fileTypeFilter, bRecurse);
+						}
+					}
+					else
+					{
+						if (fileTypeFilter(fileNameStr))
+						{
+							filePaths.push_back(directoryPath + fileNameStr);
+						}
 					}
 				}
-
-				if (bFoundFileTypeMatches)
-				{
-					filePaths.push_back(cleanedDirPath + fileNameStr);
-				}
 			}
+
 			closedir(dir);
 		}
 		else
 		{
-			/* could not open directory */
-			PrintError("Error encountered while finding files in directory %s\n", cleanedDirPath.c_str());
+			// Could not open directory
+			PrintError("Error encountered while finding files in directory %s\n", directoryPath.c_str());
 			return false;
 		}
 
-		return !filePaths.empty();
+		return true;
 	}
 
 	bool Platform::OpenFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath, char filter[] /* = nullptr */)
@@ -572,6 +561,24 @@ namespace flex
 		sched_yield();
 	}
 
+	bool Platform::SetFlexThreadAffinityMask(void* threadHandle, u64 threadID)
+	{
+		int ret;
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		size_t cpusetsize = sizeof(cpuset);
+
+		CPU_SET(threadID, &cpuset);
+		ret = pthread_setaffinity_np((pthread_t)threadHandle, cpusetsize, &cpuset);
+		return ret != 0;
+	}
+
+	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
+	{
+		int ret = pthread_setname_np((pthread_t)threadHandle, threadName);
+		return ret != 0;
+	}
+
 	void* Platform::InitCriticalSection()
 	{
 		u32 index = mutexes.size();
@@ -587,7 +594,7 @@ namespace flex
 
 		if (index >= (u32)mutexes.size())
 		{
-			mutexes.resize((u32)((index+1) * 1.5f));
+			mutexes.resize((u32)((index + 1) * 1.5f));
 		}
 
 		mutexes[index] = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
@@ -615,6 +622,74 @@ namespace flex
 		usleep((useconds_t)Time::ConvertFormats(milliseconds, Time::Format::MILLISECOND, Time::Format::MICROSECOND));
 	}
 
+	void Platform::PrintStackTrace()
+	{
+		void* callstack[32];
+		i32 frames = backtrace(callstack, ARRAY_LENGTH(callstack));
+		char** strs = backtrace_symbols(callstack, frames);
+		for (i32 i = 0; i < frames; ++i)
+		{
+			char moduleName[1024] = {};
+			char functionSymbol[1024] = {};
+			char offset[64] = {};
+			i32 validCppName = 0;
+			char* demangledFunctionSymbol = nullptr;
+
+			const char* ptr = strs[i];
+			char* mptr = moduleName;
+			while (*ptr && *ptr != '(')
+			{
+				*mptr++ = *ptr++;
+			}
+			*mptr = '\0';
+			++ptr;
+			if (*ptr == '+')
+			{
+				strcpy(functionSymbol, "(unknown)");
+				++ptr;
+			}
+			else
+			{
+				// Copy mangled function name
+				char* fptr = functionSymbol;
+				while (*ptr && *ptr != '+')
+				{
+					*fptr++ = *ptr++;
+				}
+				*fptr = '\0';
+
+				if (*ptr != '+')
+				{
+					fprintf(stderr, "Unable to decode frame: %s\n", strs[i]);
+					continue;
+				}
+				++ptr;
+			}
+
+			char* optr = offset;
+			while (*ptr && *ptr != ')')
+			{
+				*optr++ = *ptr++;
+			}
+			*optr = '\0';
+
+			validCppName = 0;
+			demangledFunctionSymbol = abi::__cxa_demangle(functionSymbol, NULL, 0, &validCppName);
+
+			if (validCppName == 0)
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + %s\n", moduleName, callstack[i],
+					demangledFunctionSymbol, offset);
+			}
+			else
+			{
+				fprintf(stderr, "(%-40s)\t0x%p - %s + %s\n", moduleName, callstack[i],
+					functionSymbol, offset);
+			}
+		}
+		free(strs);
+	}
+
 	void Platform::RetrieveCPUInfo()
 	{
 		cpuInfo = {};
@@ -640,6 +715,7 @@ namespace flex
 
 	bool DirectoryWatcher::Update()
 	{
+		// TODO: Unimplemented
 		return false;
 	}
 
@@ -647,6 +723,5 @@ namespace flex
 	{
 		return m_bInstalled;
 	}
-
 } // namespace flex
 #endif // linux

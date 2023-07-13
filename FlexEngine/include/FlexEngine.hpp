@@ -4,6 +4,8 @@
 #include "Spring.hpp"
 #include "Timer.hpp"
 
+#undef CreateWindow
+
 struct RENDERDOC_API_1_4_0;
 
 struct ImGuiInputTextCallbackData;
@@ -50,10 +52,14 @@ namespace flex
 		void SetSimulationSpeed(real speed);
 		void StepSimulationFrame();
 
-		bool* GetUIWindowOpen(StringID windowNameSID);
+		// Use SID_PAIR macro to pass one string in to both params
+		bool* GetUIWindowOpen(StringID windowNameSID, const char* windowName);
 
 		void ParseUIWindowCache();
 		void SerializeUIWindowCache();
+
+		bool GetInstallTerminalWatch() const;
+		void SetInstallTerminalWatch(bool bInstallTerminalWatch);
 
 		static void GenerateRayAtMousePos(btVector3& outRayStart, btVector3& outRayEnd);
 		static void GenerateRayAtScreenCenter(btVector3& outRayStart, btVector3& outRayEnd, real maxDist);
@@ -68,9 +74,30 @@ namespace flex
 			const glm::vec3& startPos,
 			const glm::vec3& cameraForward,
 			real& inOutOffset,
-			bool recalculateOffset,
-			glm::vec3& inOutPrevIntersectionPoint,
-			glm::vec3* outTrueIntersectionPoint = nullptr);
+			bool bRecalculateOffset,
+			glm::vec3& inOutPrevIntersectionPoint);
+
+		// Returns the intersection point of the given ray & plane
+		static glm::vec3 CalculateRayPlaneIntersection(
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeOrigin,
+			const glm::vec3& planeNorm,
+			const glm::vec3& planeTan,
+			const glm::vec3& planeBitan,
+			const glm::vec3& startPos,
+			const glm::vec3& cameraForward,
+			glm::vec2& inOutOffset2D,
+			bool bRecalculateOffset,
+			glm::vec3& inOutPrevIntersectionPoint);
+
+		// Returns the intersection point of the given ray & plane
+		static real CalculateRayPlaneIntersection(
+			const glm::vec3& rayOrigin,
+			const glm::vec3& rayEnd,
+			const glm::vec3& planeOrigin,
+			const glm::vec3& planeNorm,
+			const glm::vec3& cameraForward);
 
 		static const u32 EngineVersionMajor;
 		static const u32 EngineVersionMinor;
@@ -112,6 +139,12 @@ namespace flex
 		static bool s_bHasGLDebugExtension;
 		u32 mainProcessID = 0;
 
+#if COMPILE_RENDERDOC_API
+		void RenderDocStartCapture();
+		void RenderDocEndCapture();
+		void TriggerRenderDocCaptureOnNextFrame();
+#endif
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;
@@ -132,7 +165,7 @@ namespace flex
 
 		void Destroy();
 
-		void CreateWindowAndRenderer();
+		void CreateWindow();
 		void InitializeWindowAndRenderer();
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();
@@ -148,7 +181,7 @@ namespace flex
 
 		void AppendToBootupTimesFile(const std::string& entry);
 
-		void ToggleUIWindow(const std::string& windowName);
+		bool ToggleUIWindow(const std::string& windowName);
 
 		bool m_bRunning = false;
 
@@ -180,7 +213,6 @@ namespace flex
 
 		// Indexed using SoundEffect enum
 		static std::vector<AudioSourceID> s_AudioSourceIDs;
-
 
 		std::string m_CommonSettingsFileName;
 		std::string m_CommonSettingsAbsFilePath;
@@ -223,11 +255,12 @@ namespace flex
 		bool m_bShouldFocusKeyboardOnConsole = false;
 
 		bool m_bInstallShaderDirectoryWatch = true;
+		bool m_bInstallTerminalDirectoryWatch = true;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;
 
-		std::vector<real> m_FrameTimes;
+		RollingAverage<real> m_FrameTimes;
 
 #if COMPILE_RENDERDOC_API
 		RENDERDOC_API_1_4_0* m_RenderDocAPI = nullptr;

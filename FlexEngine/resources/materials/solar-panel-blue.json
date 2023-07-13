@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "solar-panel-blue",
+		"shader" : "pbr",
+		"const roughness" : 0.080000,
+		"enable albedo sampler" : true,
+		"albedo texture filepath" : "solar-panel-face.png"
+	}
+}
