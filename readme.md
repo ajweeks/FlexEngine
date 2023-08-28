@@ -2,29 +2,32 @@
 
 [![linux](https://github.com/ajweeks/FlexEngine/actions/workflows/build_linux.yml/badge.svg)](https://github.com/ajweeks/FlexEngine/actions/workflows/build_linux.yml)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
-[![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
 
-Flex Engine is a personal game engine I began work on in early 2017. I use it as a playground for learning about real-time rendering and simulation techniques, and I'm starting to make a sandbox game with it. I try to keep [master](https://github.com/ajweeks/FlexEngine/tree/master) reasonably stable, and therefore update it infrequently. See [development](https://github.com/ajweeks/FlexEngine/tree/development) for the latest changes.
+Flex Engine is a personal game engine I began work on in early 2017. I use it as a playground for learning about real-time rendering and simulation techniques. Flex Engine is not a commercial game engine nor is it intended for public use.
 
-#### Notable Features
-- Vulkan rendering backend
-- In-game scripting language compiler/editor & virtual machine evaluator
-- Conditional checksum-based shader recompilation
-- File modification monitoring for textures, meshes, prefabs, shaders, config files, etc.
-- Built-in profiling capture/inspection tools
+## Building Flex
+See [build.md](build.md)
+
+## Notable Features
+- Vulkan rendering backend ([VulkanRenderer.cpp](FlexEngine/src/Graphics/Vulkan/VulkanRenderer.cpp))
+- In-game scripting language compiler/editor & virtual machine ([VirtualMachine.cpp](FlexEngine/src/VirtualMachine/Backend/VirtualMachine.cpp))
+- Conditional checksum-based shader recompilation ([ShaderCompiler.cpp](FlexEngine/src/Graphics/ShaderCompiler.cpp))
+- File modification monitoring for textures, meshes, prefabs, shaders, config files, etc. ([ResourceManager.cpp](FlexEngine/src/ResourceManager.cpp))
+- Scene editor with serialization ([BaseScene.cpp](FlexEngine/src/Scene/BaseScene.cpp))
+- Editor tools (transform gizmo, property editor, keybinding editor, etc.) ([Editor.cpp](FlexEngine/src/Editor.cpp))
+- Basic profiling capture/inspection tools
 - Support for Windows & linux
-- Scene editor with serialization
 - Rendering:
-	- Marching cubes terrain generator & renderer
+  - Marching cubes terrain generator & renderer
   - Gerstner wave ocean renderer
-  - Rectangular area lighting
-	- Physically based shading model
-	- Image based lighting
-	- Screen-space ambient occlusion
-	- Stable cascaded shadow mapping
-	- Temporal anti-aliasing
-	- Signed-distance field font generation & rendering
-	- GPU particle simulation
+  - Rectangular area lights (direct-only diffuse & specular)
+  - Physically-based shading model
+  - Image-based lighting
+  - Screen-space ambient occlusion
+  - Stable cascaded shadow mapping
+  - Temporal anti-aliasing
+  - Signed distance field (SDF) font generation & rendering
+  - GPU-based particle simulation
 
 ![](FlexEngine/screenshots/2021-05-22_21-05-20.jpg)
 **Procedural terrain generated on the GPU**
@@ -53,23 +56,11 @@ Flex Engine is a personal game engine I began work on in early 2017. I use it as
 ![](FlexEngine/screenshots/2018-07-08_21-52-09.png)
 **View into editor**
 
-![](FlexEngine/screenshots/2017-10-08_11-38-06-combined.jpg)
-
 ![](FlexEngine/screenshots/2017-10-08_10-46-22-combined.jpg)
 
 ![](FlexEngine/screenshots/2017-10-08_10-33-45-combined.jpg)
 
-<div style="display: inline-block; padding-bottom: 20px">
-  <img src="FlexEngine/screenshots/2017-10-08_14-35-01.png" width="49%"/>
-  <img src="FlexEngine/screenshots/2017-10-08_14-41-35.png" width="49%" style="float: right"/>
-</div>
-
-![](FlexEngine/screenshots/2017-10-08_10-41-01_360_edited.gif)
-
 See more screenshots [here](https://github.com/ajweeks/FlexEngine/tree/development/FlexEngine/screenshots)
-
-## Building Flex
-See `build.md`
 
 ## Dependencies
 Flex Engine uses the following open-source libraries:
@@ -84,7 +75,7 @@ Flex Engine uses the following open-source libraries:
  - [volk](https://github.com/zeux/volk) - Vulkan meta-loader
 
 ## License
-Flex engine is released under The MIT License. See [license.md](LICENSE.md) for details.
+Flex engine is licensed under the MIT license. See [LICENSE.md](LICENSE.md) for details.
 
 ## Acknowledgements
 A huge thank you must be given to the following individuals and organizations for their incredibly useful resources:
