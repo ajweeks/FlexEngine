@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
 
@@ -136,7 +136,7 @@ jobs:
         run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
 
       - name: upload-artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: flex-linux
           path: Flex.zip
@@ -151,7 +151,7 @@ jobs:
         run: sudo apt-get update -m && sudo apt-get install -y libopenal-dev
     
       - name: download-artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: flex-linux
           path: .
