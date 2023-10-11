@@ -7,6 +7,19 @@
 		"id" : "37AEAEF54928519D4C97CC87DCEEDAB4",
 		"name" : "mineral deposit stone",
 		"type" : "mineral deposit",
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "10.000,0.500,10.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 0.000000,
+			"kinematic" : true,
+			"static" : true,
+			"mask" : 1,
+			"group" : 2
+		},
 		"mineral deposit" : 
 		{
 			"mineral remaining" : 1000,

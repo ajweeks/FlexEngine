@@ -14027,6 +14027,7 @@ namespace flex
 		GameObject(name, MineralDepositSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bItemizable = true;
+		m_bInteractable = true;
 	}
 
 	void MineralDeposit::Initialize()
