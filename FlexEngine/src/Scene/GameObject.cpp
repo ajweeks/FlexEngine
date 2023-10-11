@@ -1541,6 +1541,29 @@ namespace flex
 	void GameObject::OnItemize(GameObjectStack::UserData& outUserData)
 	{
 		FLEX_UNUSED(outUserData);
+
+		// Check if anything is plugged into this object, and if so unplug it
+		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
+		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
+		if (sockets != nullptr)
+		{
+			for (const SocketData& data : *sockets)
+			{
+				const Socket* socket = (Socket*)data.socketID.Get();
+				if (socket->connectedPlugID.IsValid())
+				{
+					GameObject* gameObject = socket->connectedPlugID.Get();
+					CHECK_EQ(gameObject->GetTypeID(), WirePlugSID);
+					Wire* wire = (Wire*)((WirePlug*)gameObject)->wireID.Get();
+					pluggablesSystem->UnregisterWire(wire);
+					GameObject* plug0 = wire->plug0ID.Get();
+					GameObject* plug1 = wire->plug1ID.Get();
+					if (plug0) g_SceneManager->CurrentScene()->RemoveObject(plug0, true);
+					if (plug1) g_SceneManager->CurrentScene()->RemoveObject(plug1, true);
+					g_SceneManager->CurrentScene()->RemoveObject(wire, true);
+				}
+			}
+		}
 	}
 
 	void GameObject::OnDeItemize(const GameObjectStack::UserData& userData)
@@ -5425,11 +5448,15 @@ namespace flex
 
 	void Battery::OnItemize(GameObjectStack::UserData& outUserData)
 	{
+		GameObject::OnItemize(outUserData);
+
 		outUserData.floatVal = chargeAmount;
 	}
 
 	void Battery::OnDeItemize(const GameObjectStack::UserData& userData)
 	{
+		GameObject::OnDeItemize(userData);
+
 		chargeAmount = glm::clamp(userData.floatVal, 0.0f, chargeCapacity);
 	}
 
