@@ -1,4 +1,3 @@
-power pole
 wire plug
 spring
 socket
@@ -10,11 +9,9 @@ directional light
 point light
 reflection probe
 rising block
-empty cart
 engine cart
 skybox
 terminal
-head lamp
 battery
 area light
 glass pane
@@ -23,11 +20,15 @@ miner
 mineral deposit
 mobile liquid box
 object
+pickaxe
 road
 wire
+head lamp
+empty cart
+neuralnetwork
+power pole
 particle system
 terrain generator
 solar panel
 vehicle
 speaker
-pickaxe

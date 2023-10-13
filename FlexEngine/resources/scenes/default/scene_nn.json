@@ -1,0 +1,58 @@
+{
+	"version" : 7,
+	"name" : "scene_nn",
+	"spawn player" : false,
+	"camera" : 
+	{
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : 
+		{
+			"position" : "20.000, 8.000, -16.000",
+			"pitch" : -0.174533,
+			"yaw" : 2.268928
+		}
+	},
+	"objects" : 
+	[
+		{
+			"id" : "EF61D833FD4C3486423C5621934FBC7F",
+			"name" : "Skybox",
+			"type" : "skybox",
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			]
+		},
+		{
+			"id" : "CAFCCB866FF3B0A9440CC4A40AA1D669",
+			"name" : "Directional light",
+			"type" : "directional light",
+			"transform" : 
+			{
+				"rot" : "1.577, -0.000, 0.000"
+			},
+			"directional light info" : 
+			{
+				"colour" : "0.99,1.00,0.84",
+				"brightness" : 3.00
+			}
+		},
+		{
+			"id" : "51037D65F4F8DDBB43619B449DBCD079",
+			"name" : "Neural Network",
+			"type" : "neuralnetwork",
+			"neuralnetwork" : 
+			{
+			}
+		}
+	]
+}

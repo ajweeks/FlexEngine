@@ -32,8 +32,6 @@ IGNORE_WARNINGS_PUSH
 #include <glm/ext/matrix_transform.hpp> // for rotate
 
 #include <imgui/imgui_internal.h> // For PushItemFlag
-
-#include <random>
 IGNORE_WARNINGS_POP
 
 #include "Scene/GameObject.hpp"
@@ -433,6 +431,7 @@ namespace flex
 		case MinerSID: return new Miner(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case SpeakerSID: return new Speaker(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PickAxeSID: return new PickAxe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		case NeuralNetworkSID: return new NeuralNetwork(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PlayerSID:
 		{
@@ -1991,6 +1990,7 @@ namespace flex
 		propertyCollectionManager->RegisterType(MinerSID, Miner::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(SpeakerSID, Speaker::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(PickAxeSID, PickAxe::BuildTypeUniquePropertyCollection());
+		propertyCollectionManager->RegisterType(NeuralNetworkSID, NeuralNetwork::BuildTypeUniquePropertyCollection());
 		propertyCollectionManager->RegisterType(PlayerSID, Player::BuildTypeUniquePropertyCollection());
 	}
 
@@ -14952,4 +14952,305 @@ namespace flex
 		ENSURE_NO_ENTRY(); // Unhandled material for mining
 		return -1.0f;
 	}
+
+	//
+	// NeuralNetwork
+	//
+	NeuralNetwork::NeuralNetwork(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /* = false */) :
+		GameObject(name, NeuralNetworkSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		u64 seed = (u64)std::chrono::steady_clock::now().time_since_epoch().count();
+		m_Rng = std::mt19937((u32)seed);
+		m_Distribution = std::uniform_real_distribution<real>(0.0f, 1.0f);
+
+		InitializeNetwork({});
+	}
+
+	PropertyCollection* NeuralNetwork::BuildTypeUniquePropertyCollection()
+	{
+		PropertyCollection* collection = GameObject::BuildPropertyCollection();
+
+		return collection;
+	}
+
+	void NeuralNetwork::DrawImGuiObjects(bool bDrawingEditorObjects)
+	{
+		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
+
+		if (ImGui::Begin("Neural Net", &m_DebugWindowOpen))
+		{
+			bool bNeedsReinit = false;
+
+			bNeedsReinit = ImGuiExt::SliderUInt("Layer count", &m_LayerCount, 1, 1024) || bNeedsReinit;
+			bNeedsReinit = ImGuiExt::SliderUInt("Layer size", &m_LayerSize, 1, 1024) || bNeedsReinit;
+
+			static std::vector<ActivationFunc> activationFunctions;
+			activationFunctions.resize(m_LayerCount, ActivationFunc::RELU);
+
+			if (ImGui::TreeNode("Activation functions"))
+			{
+				for (ActivationFunc& func : activationFunctions)
+				{
+					ImGui::PushID(&func);
+					if (ImGui::Combo("", (i32*)&func, ActivationFuncStr, ARRAY_LENGTH(ActivationFuncStr)))
+					{
+						bNeedsReinit = true;
+					}
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+
+			if (bNeedsReinit)
+			{
+				InitializeNetwork(activationFunctions);
+			}
+
+			ImGui::Checkbox("Run training", &m_RunTraining);
+			ImGui::SameLine();
+			if (ImGui::Button("Run training on frame"))
+			{
+				m_RunTrainingOneFrame = true;
+			}
+
+			static std::vector<real> inputNeurons;
+			inputNeurons.resize(m_LayerSize);
+
+			if (ImGui::TreeNode("Input neurons"))
+			{
+				for (real& neuron : inputNeurons)
+				{
+					ImGui::PushID(&neuron);
+					ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+
+			if (ImGui::Button("Run forward prop"))
+			{
+				RunForwardPropagation(inputNeurons);
+			}
+
+			ImGui::Text("Epochs: %u", m_Epochs);
+
+			ImGui::NewLine();
+
+			if (ImGui::Button("Reinitialize"))
+			{
+				InitializeNetwork(activationFunctions);
+			}
+
+			ImGui::Text("Network");
+			if (ImGui::BeginChild("scroll_region", ImVec2(0, 0), true))
+			{
+				ImGui::BeginColumns("cols", m_LayerCount);
+				for (u32 layerIndex = 0; layerIndex < m_LayerCount; ++layerIndex)
+				{
+					for (real neuron : m_Network[layerIndex].m_Neurons)
+					{
+						ImGui::Text("%.2f", neuron);
+					}
+
+					if (ImGui::IsItemHovered() && layerIndex > 0)
+					{
+						ImGui::BeginTooltip();
+						ImGui::Text("Bias: %.4f", m_Layers[layerIndex].m_Bias);
+						ImGui::Text("Activation func: %s", ActivationFuncStr[(u32)m_Layers[layerIndex].m_ActivationFunc]);
+						ImGui::Text("Weights:");
+						for (u32 i = 0; i < (u32)m_Layers[layerIndex].m_Weights.size(); ++i)
+						{
+							ImGui::Text("%.2f", m_Layers[layerIndex].m_Weights[i]);
+							if (i % m_LayerSize == (m_LayerSize - 1))
+							{
+								ImGui::NewLine();
+							}
+						}
+						ImGui::EndTooltip();
+					}
+
+					ImGui::NextColumn();
+				}
+				ImGui::EndColumns();
+			}
+			ImGui::EndChild();
+		}
+		ImGui::End();
+	}
+
+	float RandomFloatNormalized(std::uniform_real_distribution<real>& distribution, std::mt19937& rng)
+	{
+		real result = distribution(rng);
+		return result;
+	}
+
+	// Returns [0, inf]
+	real ReLU(real x)
+	{
+		return glm::max(x, 0.0f);
+	}
+
+	// Returns [-inf, inf]
+	real LeakyReLU(real x)
+	{
+		return glm::max(x * 0.1f, x);
+	}
+
+	static const real e = glm::e<real>();
+
+	// Compresses to [0, 1] smoothly
+	real Sigmoid(real x)
+	{
+		return 1.0f / (1.0f + glm::pow(e, -x));
+	}
+
+	// Compresses to [-1, 1], can work better in practice than Sigmoid
+	real Tanh(real x)
+	{
+		real a = glm::pow(e, x);
+		real b = glm::pow(e, -x);
+		return (a - b) / (a + b);
+	}
+
+	real RunActivationFunc(ActivationFunc func, real x)
+	{
+		switch (func)
+		{
+		case ActivationFunc::RELU: return ReLU(x);
+		case ActivationFunc::LEAKY_RELU: return LeakyReLU(x);
+		case ActivationFunc::SIGMOID: return Sigmoid(x);
+		case ActivationFunc::TANH: return Tanh(x);
+		}
+
+		ENSURE_NO_ENTRY();
+		return -1.0f;
+	}
+
+	void NeuralNetwork::Update()
+	{
+		GameObject::Update();
+
+		if (m_RunTraining || m_RunTrainingOneFrame)
+		{
+			m_RunTrainingOneFrame = false;
+			RunEpoch();
+		}
+	}
+
+	void NeuralNetwork::RunTrainingStep()
+	{
+	}
+
+	void NeuralNetwork::RunEpoch()
+	{
+		++m_Epochs;
+	}
+
+	void NeuralNetwork::RunForwardPropagation(const std::vector<real>& inputNeurons)
+	{
+		CHECK_GE(m_Layers.size(), 2);
+		CHECK_EQ(inputNeurons.size(), m_Network[0].m_Neurons.size());
+
+		// Copy in inputs
+		for (u32 i = 0; i < (u32)inputNeurons.size(); ++i)
+		{
+			m_Network[0].m_Neurons[i] = inputNeurons[i];
+		}
+
+		// Propagate
+		for (u32 layerIndex = 1; layerIndex < (u32)m_Layers.size(); ++layerIndex)
+		{
+			for (u32 n = 0; n < (u32)m_Network[layerIndex].m_Neurons.size(); ++n)
+			{
+				u32 prevLayerIndex = layerIndex - 1;
+				real result = 0.0f;
+				u32 prevLayerSize = (u32)m_Network[prevLayerIndex].m_Neurons.size();
+				for (u32 p = 0; p < prevLayerSize; ++p)
+				{
+					u32 weightIndex = p + n * prevLayerSize;
+					result += m_Network[prevLayerIndex].m_Neurons[p] * m_Layers[layerIndex].m_Weights[weightIndex];
+				}
+				result += m_Layers[layerIndex].m_Bias;
+
+				m_Network[layerIndex].m_Neurons[n] = RunActivationFunc(m_Layers[layerIndex].m_ActivationFunc, result);
+			}
+		}
+	}
+
+	void NeuralNetwork::InitializeNetwork(const std::vector<ActivationFunc>& activationFunctions)
+	{
+		CHECK(activationFunctions.empty() || activationFunctions.size() == m_LayerCount);
+
+		m_Layers.resize(m_LayerCount);
+		m_Network.resize(m_LayerCount);
+
+		// First layer is a bit special
+		m_Network[0].m_Neurons.clear();
+		m_Network[0].m_Neurons.resize(m_LayerSize, 0.0f);
+		m_Layers[0].m_Size = m_LayerSize;
+		m_Layers[0].m_Weights.resize(0);
+		m_Layers[0].m_Bias = 0.0f;
+
+		for (u32 layerIndex = 1; layerIndex < m_LayerCount; ++layerIndex)
+		{
+			m_Network[layerIndex].m_Neurons.clear();
+			m_Network[layerIndex].m_Neurons.resize(m_LayerSize, 0.0f);
+
+			u32 currLayerSize = m_LayerSize;
+			u32 prevLayerSize = m_Layers[layerIndex - 1].m_Size;
+
+			m_Layers[layerIndex].m_ActivationFunc = activationFunctions.empty() ? ActivationFunc::RELU : activationFunctions[layerIndex];
+
+			m_Layers[layerIndex].m_Size = currLayerSize;
+			m_Layers[layerIndex].m_Bias = RandomFloatNormalized(m_Distribution, m_Rng);
+
+			m_Layers[layerIndex].m_Weights.resize(prevLayerSize * currLayerSize);
+			for (u32 weight = 0; weight < (u32)m_Layers[layerIndex].m_Weights.size(); ++weight)
+			{
+				m_Layers[layerIndex].m_Weights[weight] = RandomFloatNormalized(m_Distribution, m_Rng);
+			}
+		}
+	}
+
+	GameObject* NeuralNetwork::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		NeuralNetwork* newGameObject = new NeuralNetwork(newObjectName, newGameObjectID);
+
+		// ...
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	void NeuralNetwork::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
+	{
+		FLEX_UNUSED(matIDs);
+
+		JSONObject neuralNetworkObj;
+		if (parentObject.TryGetObject("neuralnetwork", neuralNetworkObj))
+		{
+			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+			DeserializeRegisteredProperties(neuralNetworkObj, collection->childCollection);
+		}
+	}
+
+	void NeuralNetwork::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
+	{
+		PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
+
+		JSONObject neuralNetworkObj = {};
+		SerializeRegisteredProperties(neuralNetworkObj, collection->childCollection, bSerializePrefabData);
+
+		parentObject.fields.emplace_back("neuralnetwork", JSONValue(neuralNetworkObj));
+	}
+
 } // namespace flex

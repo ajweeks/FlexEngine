@@ -5,6 +5,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include <list>
+#include <random>
 
 #include "Audio/AudioCue.hpp"
 #include "Audio/AudioManager.hpp"
@@ -2186,6 +2187,87 @@ namespace flex
 
 		// Non-serialized fields
 		AudioSourceID m_SourceID = InvalidAudioSourceID;
+
+	};
+
+	enum class ActivationFunc
+	{
+		RELU,
+		LEAKY_RELU,
+		SIGMOID,
+		TANH,
+
+		_COUNT
+	};
+
+	static const char* ActivationFuncStr[] =
+	{
+		"ReLU",
+		"Leaky ReLU",
+		"Sigmoid",
+		"tanh",
+	};
+	static_assert(ARRAY_LENGTH(ActivationFuncStr) == (u32)ActivationFunc::_COUNT, "ActivationFuncStr length must match ActivationFunc enum");
+
+	struct Layer
+	{
+		u32 m_Size = 0;
+		real m_Bias = 0.0f;
+		std::vector<real> m_Weights;
+		ActivationFunc m_ActivationFunc = ActivationFunc::RELU;
+	};
+
+	struct Neurons
+	{
+		std::vector<real> m_Neurons;
+	};
+
+	static constexpr StringID NeuralNetworkSID = SID("neuralnetwork");
+	class NeuralNetwork : public GameObject
+	{
+	public:
+		NeuralNetwork(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+		virtual void Update() override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+
+	protected:
+		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
+		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+	private:
+		void InitializeNetwork(const std::vector<ActivationFunc>& activationFunctions);
+		void RunTrainingStep();
+		void RunEpoch();
+		void RunForwardPropagation(const std::vector<real>& inputNeurons);
+
+		std::vector<Layer> m_Layers;
+		std::vector<Neurons> m_Network;
+
+		// Hyper parameters
+		u32 m_LayerCount = 2;
+		u32 m_LayerSize = 4;
+
+		// Debug
+		bool m_DebugWindowOpen = false;
+
+		// Evaluation
+		bool m_RunTraining = false;
+		bool m_RunTrainingOneFrame = false;
+
+		u32 m_Epochs = 0;
+
+		// Rand
+		std::uniform_real_distribution<real> m_Distribution;
+		std::mt19937 m_Rng;
 
 	};
 } // namespace flex
