@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/RendererTypes.hpp"
 #include "Graphics/VertexBufferData.hpp" // For VertexBufferDataCreateInfo
 #include "Helpers.hpp"
+#include "NeuralNetworkHelpers.hpp"
 #include "Spring.hpp"
 #include "Track/BezierCurve3D.hpp"
 #include "Transform.hpp"
@@ -2190,38 +2191,6 @@ namespace flex
 
 	};
 
-	enum class ActivationFunc
-	{
-		RELU,
-		LEAKY_RELU,
-		SIGMOID,
-		TANH,
-
-		_COUNT
-	};
-
-	static const char* ActivationFuncStr[] =
-	{
-		"ReLU",
-		"Leaky ReLU",
-		"Sigmoid",
-		"tanh",
-	};
-	static_assert(ARRAY_LENGTH(ActivationFuncStr) == (u32)ActivationFunc::_COUNT, "ActivationFuncStr length must match ActivationFunc enum");
-
-	struct Layer
-	{
-		u32 m_Size = 0;
-		real m_Bias = 0.0f;
-		std::vector<real> m_Weights;
-		ActivationFunc m_ActivationFunc = ActivationFunc::RELU;
-	};
-
-	struct Neurons
-	{
-		std::vector<real> m_Neurons;
-	};
-
 	static constexpr StringID NeuralNetworkSID = SID("neuralnetwork");
 	class NeuralNetwork : public GameObject
 	{
@@ -2244,17 +2213,13 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
-		void InitializeNetwork(const std::vector<ActivationFunc>& activationFunctions);
+		void InitializeNetwork();
 		void RunTrainingStep();
 		void RunEpoch();
-		void RunForwardPropagation(const std::vector<real>& inputNeurons);
 
-		std::vector<Layer> m_Layers;
-		std::vector<Neurons> m_Network;
+		Network m_Network;
 
-		// Hyper parameters
-		u32 m_LayerCount = 2;
-		u32 m_LayerSize = 4;
+		u32 m_TraingSetSize = 4;
 
 		// Debug
 		bool m_DebugWindowOpen = false;
@@ -2262,8 +2227,11 @@ namespace flex
 		// Evaluation
 		bool m_RunTraining = false;
 		bool m_RunTrainingOneFrame = false;
+		real m_StopThreshold = 0.001f;
 
-		u32 m_Epochs = 0;
+		std::vector<TrainingData> m_TrainingData;
+		real m_LearningRate = 0.03f;
+		Matrix m_EvaluationData;
 
 		// Rand
 		std::uniform_real_distribution<real> m_Distribution;

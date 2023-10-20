@@ -14963,7 +14963,7 @@ namespace flex
 		m_Rng = std::mt19937((u32)seed);
 		m_Distribution = std::uniform_real_distribution<real>(0.0f, 1.0f);
 
-		InitializeNetwork({});
+		InitializeNetwork();
 	}
 
 	PropertyCollection* NeuralNetwork::BuildTypeUniquePropertyCollection()
@@ -14981,149 +14981,135 @@ namespace flex
 		{
 			bool bNeedsReinit = false;
 
-			bNeedsReinit = ImGuiExt::SliderUInt("Layer count", &m_LayerCount, 1, 1024) || bNeedsReinit;
-			bNeedsReinit = ImGuiExt::SliderUInt("Layer size", &m_LayerSize, 1, 1024) || bNeedsReinit;
-
-			static std::vector<ActivationFunc> activationFunctions;
-			activationFunctions.resize(m_LayerCount, ActivationFunc::RELU);
-
-			if (ImGui::TreeNode("Activation functions"))
-			{
-				for (ActivationFunc& func : activationFunctions)
-				{
-					ImGui::PushID(&func);
-					if (ImGui::Combo("", (i32*)&func, ActivationFuncStr, ARRAY_LENGTH(ActivationFuncStr)))
-					{
-						bNeedsReinit = true;
-					}
-					ImGui::PopID();
-				}
-				ImGui::TreePop();
-			}
+			bNeedsReinit = ImGuiExt::SliderUInt("Training set size", &m_TraingSetSize, 1, 1024) || bNeedsReinit;
+			bNeedsReinit = ImGui::SliderFloat("Learning rate", &m_LearningRate, 0.0f, 0.5f, "%.3f", 2.0f) || bNeedsReinit;
 
 			if (bNeedsReinit)
 			{
-				InitializeNetwork(activationFunctions);
+				InitializeNetwork();
 			}
 
+			ImGui::SliderFloat("Stop threshold", &m_StopThreshold, 0.0f, 0.1f, "%0.3f", 2.0f);
 			ImGui::Checkbox("Run training", &m_RunTraining);
 			ImGui::SameLine();
-			if (ImGui::Button("Run training on frame"))
+			if (ImGui::Button("Run training one frame"))
 			{
 				m_RunTrainingOneFrame = true;
 			}
 
-			static std::vector<real> inputNeurons;
-			inputNeurons.resize(m_LayerSize);
+			ImGui::SameLine();
 
-			if (ImGui::TreeNode("Input neurons"))
+			if (ImGui::Button("Reinitialize"))
 			{
-				for (real& neuron : inputNeurons)
+				InitializeNetwork();
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reinitialize and run"))
+			{
+				InitializeNetwork();
+				m_RunTraining = true;
+			}
+
+			ImGui::SetNextTreeNodeOpen(true, ImGuiCond_FirstUseEver);
+			if (ImGui::TreeNode("Training data"))
+			{
+				if (ImGui::BeginChild("cc", ImVec2(0, 325), true))
+				{
+					for (u32 i = 0; i < (u32)m_TrainingData.size(); ++i)
+					{
+						ImGui::PushID(i);
+
+						TrainingData& trainingData = m_TrainingData[i];
+
+						ImGui::BeginColumns("cols", 3);
+
+						ImGui::Text("Input");
+						for (real& neuron : trainingData.m_Input.m_Data)
+						{
+							ImGui::PushID(&neuron);
+							ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+							ImGui::PopID();
+						}
+
+						ImGui::NextColumn();
+
+						ImGui::Text("Output");
+						for (real& neuron : trainingData.m_Output.m_Data)
+						{
+							ImGui::PushID(&neuron);
+							ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+							ImGui::PopID();
+						}
+
+						ImGui::NextColumn();
+
+						if (ImGui::Button("Run"))
+						{
+							m_Network.Evaluate(trainingData);
+						}
+
+
+						glm::vec4 white(0.9f, 0.9f, 0.9f, 1.0f);
+						glm::vec4 green(0.2f, 0.9f, 0.2f, 1.0f);
+						glm::vec4 col = Lerp(green, white, trainingData.m_LastLoss);
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(col));
+						ImGui::Text("Last loss: % .4f", trainingData.m_LastLoss);
+						ImGui::Text("Last outputs:");
+						for (real data : trainingData.m_LastOutput.m_Data)
+						{
+							ImGui::Text("  % .2f", data);
+						}
+						ImGui::PopStyleColor();
+
+						ImGui::EndColumns();
+
+						if (i < (u32)m_TrainingData.size() - 1)
+						{
+							ImGui::Separator();
+						}
+
+						ImGui::PopID();
+					}
+				}
+				ImGui::EndChild();
+				ImGui::TreePop();
+			}
+
+			if (ImGui::TreeNode("Evaluation data"))
+			{
+				if (ImGui::Button("Run##eval data"))
+				{
+					m_Network.Evaluate(m_EvaluationData);
+				}
+
+				ImGui::Text("Input");
+				for (real& neuron : m_EvaluationData.m_Data)
 				{
 					ImGui::PushID(&neuron);
 					ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
 					ImGui::PopID();
 				}
+
 				ImGui::TreePop();
 			}
 
-			if (ImGui::Button("Run forward prop"))
-			{
-				RunForwardPropagation(inputNeurons);
-			}
+			glm::vec4 red(0.8f, 0.1f, 0.1f, 1.0f);
+			glm::vec4 yellow(0.8f, 0.8f, 0.1f, 1.0f);
+			glm::vec4 green(0.1f, 0.8f, 0.1f, 1.0f);
+			real rmse = glm::clamp(m_Network.m_RMSE, 0.0f, 1.0f);
+			glm::vec4 col = Lerp(yellow, red, SmootherStep(0.5f, 1.0f, rmse));
+			col = Lerp(green, col, SmootherStep(0.0f, 0.5f, rmse));
+			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
+			ImGui::ProgressBar(m_Network.m_RMSE, ImVec2(-1, 0), "RMSE");
+			ImGui::Text("% .2f", m_Network.m_RMSE);
+			ImGui::PopStyleColor();
+			ImGui::Text("Epochs: %u", m_Network.m_Epochs);
 
-			ImGui::Text("Epochs: %u", m_Epochs);
-
-			ImGui::NewLine();
-
-			if (ImGui::Button("Reinitialize"))
-			{
-				InitializeNetwork(activationFunctions);
-			}
-
-			ImGui::Text("Network");
-			if (ImGui::BeginChild("scroll_region", ImVec2(0, 0), true))
-			{
-				ImGui::BeginColumns("cols", m_LayerCount);
-				for (u32 layerIndex = 0; layerIndex < m_LayerCount; ++layerIndex)
-				{
-					for (real neuron : m_Network[layerIndex].m_Neurons)
-					{
-						ImGui::Text("%.2f", neuron);
-					}
-
-					if (ImGui::IsItemHovered() && layerIndex > 0)
-					{
-						ImGui::BeginTooltip();
-						ImGui::Text("Bias: %.4f", m_Layers[layerIndex].m_Bias);
-						ImGui::Text("Activation func: %s", ActivationFuncStr[(u32)m_Layers[layerIndex].m_ActivationFunc]);
-						ImGui::Text("Weights:");
-						for (u32 i = 0; i < (u32)m_Layers[layerIndex].m_Weights.size(); ++i)
-						{
-							ImGui::Text("%.2f", m_Layers[layerIndex].m_Weights[i]);
-							if (i % m_LayerSize == (m_LayerSize - 1))
-							{
-								ImGui::NewLine();
-							}
-						}
-						ImGui::EndTooltip();
-					}
-
-					ImGui::NextColumn();
-				}
-				ImGui::EndColumns();
-			}
-			ImGui::EndChild();
+			DrawImGuiForNetwork(m_Network);
 		}
 		ImGui::End();
-	}
-
-	float RandomFloatNormalized(std::uniform_real_distribution<real>& distribution, std::mt19937& rng)
-	{
-		real result = distribution(rng);
-		return result;
-	}
-
-	// Returns [0, inf]
-	real ReLU(real x)
-	{
-		return glm::max(x, 0.0f);
-	}
-
-	// Returns [-inf, inf]
-	real LeakyReLU(real x)
-	{
-		return glm::max(x * 0.1f, x);
-	}
-
-	static const real e = glm::e<real>();
-
-	// Compresses to [0, 1] smoothly
-	real Sigmoid(real x)
-	{
-		return 1.0f / (1.0f + glm::pow(e, -x));
-	}
-
-	// Compresses to [-1, 1], can work better in practice than Sigmoid
-	real Tanh(real x)
-	{
-		real a = glm::pow(e, x);
-		real b = glm::pow(e, -x);
-		return (a - b) / (a + b);
-	}
-
-	real RunActivationFunc(ActivationFunc func, real x)
-	{
-		switch (func)
-		{
-		case ActivationFunc::RELU: return ReLU(x);
-		case ActivationFunc::LEAKY_RELU: return LeakyReLU(x);
-		case ActivationFunc::SIGMOID: return Sigmoid(x);
-		case ActivationFunc::TANH: return Tanh(x);
-		}
-
-		ENSURE_NO_ENTRY();
-		return -1.0f;
 	}
 
 	void NeuralNetwork::Update()
@@ -15133,7 +15119,13 @@ namespace flex
 		if (m_RunTraining || m_RunTrainingOneFrame)
 		{
 			m_RunTrainingOneFrame = false;
+
 			RunEpoch();
+
+			if (m_Network.m_RMSE < m_StopThreshold)
+			{
+				m_RunTraining = false;
+			}
 		}
 	}
 
@@ -15143,73 +15135,30 @@ namespace flex
 
 	void NeuralNetwork::RunEpoch()
 	{
-		++m_Epochs;
+		m_Network.RunEpoch(m_TrainingData, m_LearningRate);
 	}
 
-	void NeuralNetwork::RunForwardPropagation(const std::vector<real>& inputNeurons)
+	void NeuralNetwork::InitializeNetwork()
 	{
-		CHECK_GE(m_Layers.size(), 2);
-		CHECK_EQ(inputNeurons.size(), m_Network[0].m_Neurons.size());
+		u64 seed = (u64)std::chrono::steady_clock::now().time_since_epoch().count();
+		m_Network = Network(seed);
+		m_Network.AddFullyConnectedLayer(2, 3);
+		m_Network.AddActivationLayer(3, ActivationFunc::TANH);
+		m_Network.AddFullyConnectedLayer(3, 1);
+		m_Network.AddActivationLayer(1, ActivationFunc::TANH);
 
-		// Copy in inputs
-		for (u32 i = 0; i < (u32)inputNeurons.size(); ++i)
+		u32 networkInputSize = m_Network.m_Layers.front().m_InputSize;
+		u32 networkOutputSize = m_Network.m_Layers.back().m_OutputSize;
+
+		m_TrainingData.resize(m_TraingSetSize);
+		for (TrainingData& trainingData : m_TrainingData)
 		{
-			m_Network[0].m_Neurons[i] = inputNeurons[i];
+			trainingData.m_LastLoss = 0.0f;
+			trainingData.m_Input.m_Data.resize(networkInputSize);
+			trainingData.m_Output.m_Data.resize(networkOutputSize);
 		}
 
-		// Propagate
-		for (u32 layerIndex = 1; layerIndex < (u32)m_Layers.size(); ++layerIndex)
-		{
-			for (u32 n = 0; n < (u32)m_Network[layerIndex].m_Neurons.size(); ++n)
-			{
-				u32 prevLayerIndex = layerIndex - 1;
-				real result = 0.0f;
-				u32 prevLayerSize = (u32)m_Network[prevLayerIndex].m_Neurons.size();
-				for (u32 p = 0; p < prevLayerSize; ++p)
-				{
-					u32 weightIndex = p + n * prevLayerSize;
-					result += m_Network[prevLayerIndex].m_Neurons[p] * m_Layers[layerIndex].m_Weights[weightIndex];
-				}
-				result += m_Layers[layerIndex].m_Bias;
-
-				m_Network[layerIndex].m_Neurons[n] = RunActivationFunc(m_Layers[layerIndex].m_ActivationFunc, result);
-			}
-		}
-	}
-
-	void NeuralNetwork::InitializeNetwork(const std::vector<ActivationFunc>& activationFunctions)
-	{
-		CHECK(activationFunctions.empty() || activationFunctions.size() == m_LayerCount);
-
-		m_Layers.resize(m_LayerCount);
-		m_Network.resize(m_LayerCount);
-
-		// First layer is a bit special
-		m_Network[0].m_Neurons.clear();
-		m_Network[0].m_Neurons.resize(m_LayerSize, 0.0f);
-		m_Layers[0].m_Size = m_LayerSize;
-		m_Layers[0].m_Weights.resize(0);
-		m_Layers[0].m_Bias = 0.0f;
-
-		for (u32 layerIndex = 1; layerIndex < m_LayerCount; ++layerIndex)
-		{
-			m_Network[layerIndex].m_Neurons.clear();
-			m_Network[layerIndex].m_Neurons.resize(m_LayerSize, 0.0f);
-
-			u32 currLayerSize = m_LayerSize;
-			u32 prevLayerSize = m_Layers[layerIndex - 1].m_Size;
-
-			m_Layers[layerIndex].m_ActivationFunc = activationFunctions.empty() ? ActivationFunc::RELU : activationFunctions[layerIndex];
-
-			m_Layers[layerIndex].m_Size = currLayerSize;
-			m_Layers[layerIndex].m_Bias = RandomFloatNormalized(m_Distribution, m_Rng);
-
-			m_Layers[layerIndex].m_Weights.resize(prevLayerSize * currLayerSize);
-			for (u32 weight = 0; weight < (u32)m_Layers[layerIndex].m_Weights.size(); ++weight)
-			{
-				m_Layers[layerIndex].m_Weights[weight] = RandomFloatNormalized(m_Distribution, m_Rng);
-			}
-		}
+		m_EvaluationData.m_Data.resize(networkInputSize);
 	}
 
 	GameObject* NeuralNetwork::CopySelf(
@@ -15252,5 +15201,4 @@ namespace flex
 
 		parentObject.fields.emplace_back("neuralnetwork", JSONValue(neuralNetworkObj));
 	}
-
 } // namespace flex
