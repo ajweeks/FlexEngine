@@ -15023,47 +15023,46 @@ namespace flex
 
 						TrainingData& trainingData = m_TrainingData[i];
 
-						ImGui::BeginColumns("cols", 3);
+						//ImGui::BeginColumns("cols", 3);
 
-						ImGui::Text("Input");
-						for (real& neuron : trainingData.m_Input.m_Data)
-						{
-							ImGui::PushID(&neuron);
-							ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
-							ImGui::PopID();
-						}
+						//ImGui::Text("Input");
+						//for (real& neuron : trainingData.m_Input.m_Data)
+						//{
+						//	ImGui::PushID(&neuron);
+						//	ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+						//	ImGui::PopID();
+						//}
 
-						ImGui::NextColumn();
+						//ImGui::NextColumn();
 
-						ImGui::Text("Output");
-						for (real& neuron : trainingData.m_Output.m_Data)
-						{
-							ImGui::PushID(&neuron);
-							ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
-							ImGui::PopID();
-						}
+						//ImGui::Text("Output");
+						//for (real& neuron : trainingData.m_Output.m_Data)
+						//{
+						//	ImGui::PushID(&neuron);
+						//	ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+						//	ImGui::PopID();
+						//}
 
-						ImGui::NextColumn();
+						//ImGui::NextColumn();
 
 						if (ImGui::Button("Run"))
 						{
 							m_Network.Evaluate(trainingData);
 						}
 
-
 						glm::vec4 white(0.9f, 0.9f, 0.9f, 1.0f);
 						glm::vec4 green(0.2f, 0.9f, 0.2f, 1.0f);
 						glm::vec4 col = Lerp(green, white, trainingData.m_LastLoss);
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(col));
 						ImGui::Text("Last loss: % .4f", trainingData.m_LastLoss);
-						ImGui::Text("Last outputs:");
-						for (real data : trainingData.m_LastOutput.m_Data)
-						{
-							ImGui::Text("  % .2f", data);
-						}
+						//ImGui::Text("Last outputs:");
+						//for (real data : trainingData.m_LastOutput.m_Data)
+						//{
+						//	ImGui::Text("  % .2f", data);
+						//}
 						ImGui::PopStyleColor();
 
-						ImGui::EndColumns();
+						//ImGui::EndColumns();
 
 						if (i < (u32)m_TrainingData.size() - 1)
 						{
@@ -15077,23 +15076,23 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::TreeNode("Evaluation data"))
-			{
-				if (ImGui::Button("Run##eval data"))
-				{
-					m_Network.Evaluate(m_EvaluationData);
-				}
+			//if (ImGui::TreeNode("Evaluation data"))
+			//{
+			//	if (ImGui::Button("Run##eval data"))
+			//	{
+			//		m_Network.Evaluate(m_EvaluationData);
+			//	}
 
-				ImGui::Text("Input");
-				for (real& neuron : m_EvaluationData.m_Data)
-				{
-					ImGui::PushID(&neuron);
-					ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
-					ImGui::PopID();
-				}
+			//	ImGui::Text("Input");
+			//	for (real& neuron : m_EvaluationData.m_Data)
+			//	{
+			//		ImGui::PushID(&neuron);
+			//		ImGui::SliderFloat("", &neuron, 0.0f, 1.0f);
+			//		ImGui::PopID();
+			//	}
 
-				ImGui::TreePop();
-			}
+			//	ImGui::TreePop();
+			//}
 
 			glm::vec4 red(0.8f, 0.1f, 0.1f, 1.0f);
 			glm::vec4 yellow(0.8f, 0.8f, 0.1f, 1.0f);
@@ -15103,7 +15102,7 @@ namespace flex
 			col = Lerp(green, col, SmootherStep(0.0f, 0.5f, rmse));
 			ImGui::PushStyleColor(ImGuiCol_PlotHistogram, col);
 			ImGui::ProgressBar(m_Network.m_RMSE, ImVec2(-1, 0), "RMSE");
-			ImGui::Text("% .2f", m_Network.m_RMSE);
+			ImGui::Text("% .5f", m_Network.m_RMSE);
 			ImGui::PopStyleColor();
 			ImGui::Text("Epochs: %u", m_Network.m_Epochs);
 
@@ -15142,10 +15141,27 @@ namespace flex
 	{
 		u64 seed = (u64)std::chrono::steady_clock::now().time_since_epoch().count();
 		m_Network = Network(seed);
+#if 0
+		// XOR
 		m_Network.AddFullyConnectedLayer(2, 3);
 		m_Network.AddActivationLayer(3, ActivationFunc::TANH);
 		m_Network.AddFullyConnectedLayer(3, 1);
 		m_Network.AddActivationLayer(1, ActivationFunc::TANH);
+#else
+		//
+		m_Network.AddFullyConnectedLayer(28*28, 100);
+		m_Network.AddActivationLayer(100, ActivationFunc::TANH);
+		m_Network.AddFullyConnectedLayer(100, 50);
+		m_Network.AddActivationLayer(50, ActivationFunc::TANH);
+		m_Network.AddFullyConnectedLayer(50, 50);
+		m_Network.AddActivationLayer(50, ActivationFunc::TANH);
+		m_Network.AddFullyConnectedLayer(50, 100);
+		m_Network.AddActivationLayer(100, ActivationFunc::TANH);
+		m_Network.AddFullyConnectedLayer(100, 28*28);
+		m_Network.AddActivationLayer(28*28, ActivationFunc::SIGMOID); // Normalize to [0, 1]
+#endif
+
+		Print("Created network with %u parameters\n", m_Network.CalculateParameterCount());
 
 		u32 networkInputSize = m_Network.m_Layers.front().m_InputSize;
 		u32 networkOutputSize = m_Network.m_Layers.back().m_OutputSize;
@@ -15156,6 +15172,12 @@ namespace flex
 			trainingData.m_LastLoss = 0.0f;
 			trainingData.m_Input.m_Data.resize(networkInputSize);
 			trainingData.m_Output.m_Data.resize(networkOutputSize);
+
+			for (u32 i = 0; i < (u32)trainingData.m_Input.m_Data.size(); ++i)
+			{
+				trainingData.m_Input.m_Data[i] = RandomFloatNormalized(m_Network.m_RealDistribution, m_Network.m_Rng);
+				trainingData.m_Output.m_Data[i] = trainingData.m_Input.m_Data[i] * 0.5f;
+			}
 		}
 
 		m_EvaluationData.m_Data.resize(networkInputSize);

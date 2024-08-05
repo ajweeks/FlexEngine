@@ -79,6 +79,8 @@ namespace flex
 		real Evaluate(TrainingData& trainingData);
 		void Evaluate(Matrix& inputs);
 
+		u32 CalculateParameterCount() const;
+
 		std::vector<Layer> m_Layers;
 
 		std::vector<real> m_LastOutputVector;

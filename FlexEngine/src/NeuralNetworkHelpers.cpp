@@ -3,6 +3,7 @@
 #include "NeuralNetworkHelpers.hpp"
 
 #include "Helpers.hpp"
+#include "Time.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <imgui/imgui_internal.h> // For BeginColumns
@@ -31,7 +32,7 @@ namespace flex
 		newLayer.m_Weights.resize(inputSize * outputSize);
 		for (real& weight : newLayer.m_Weights)
 		{
-			weight = GetNextRandFloat();
+			weight = GetNextRandFloat() * 0.1f;
 		}
 	}
 
@@ -53,6 +54,8 @@ namespace flex
 
 	void Network::RunEpoch(std::vector<TrainingData>& trainingData, real learningRate)
 	{
+		real start = Time::CurrentMilliseconds();
+
 		real accumError = 0.0f;
 		for (TrainingData& data : trainingData)
 		{
@@ -64,9 +67,12 @@ namespace flex
 			RunBackPropagation(*this, data.m_Output.m_Data, m_LastOutputVector, learningRate);
 		}
 
+		real end = Time::CurrentMilliseconds();
+		real duration = end - start;
+
 		m_RMSE = accumError / trainingData.size();
 		++m_Epochs;
-		Print("Loss: %1.3f (epochs: %3u)\n", m_RMSE, m_Epochs);
+		Print("Loss: %1.3f (epochs: %3u) (%.2fms)\n", m_RMSE, m_Epochs, duration);
 		m_RMSEHistory.push_back(m_RMSE);
 	}
 
@@ -80,6 +86,21 @@ namespace flex
 	void Network::Evaluate(Matrix& inputs)
 	{
 		m_LastOutputVector = RunForwardPropagation(*this, inputs.m_Data);
+	}
+
+	u32 Network::CalculateParameterCount() const
+	{
+		u32 paramCount = 0;
+
+		for (const Layer& layer : m_Layers)
+		{
+			if (layer.m_Type == LayerType::FULLY_CONNECTED)
+			{
+				paramCount += layer.m_InputSize * layer.m_OutputSize;
+			}
+		}
+
+		return paramCount;
 	}
 
 	void DrawImGuiForNetwork(Network& network)
@@ -107,16 +128,27 @@ namespace flex
 
 				if (layer.m_Type == LayerType::FULLY_CONNECTED)
 				{
-					ImGui::Text("Weights:");
-					for (u32 i = 0; i < (u32)layer.m_Weights.size(); ++i)
+					ImGui::Text("Weights: %u", layer.m_Weights.size());
+					if (ImGui::IsItemHovered())
 					{
-						ImGui::Text("% .2f", layer.m_Weights[i]);
+						ImGui::BeginTooltip();
 
-						if (i % layer.m_OutputSize != (layer.m_OutputSize - 1))
+						for (i32 i = 0; i < glm::min((u32)layer.m_Weights.size(), 15u); ++i)
 						{
-							ImGui::SameLine();
+							ImGui::Text("%2i) % .5f", i, layer.m_Weights[i]);
 						}
+
+						ImGui::EndTooltip();
 					}
+					//for (u32 i = 0; i < (u32)layer.m_Weights.size(); ++i)
+					//{
+					//	ImGui::Text("% .2f", layer.m_Weights[i]);
+
+					//	if (i % layer.m_OutputSize != (layer.m_OutputSize - 1))
+					//	{
+					//		ImGui::SameLine();
+					//	}
+					//}
 				}
 				ImGui::NextColumn();
 			}
@@ -184,13 +216,20 @@ namespace flex
 		return result;
 	}
 
+	real SigmoidPrime(real x)
+	{
+		real s = Sigmoid(x);
+		real result = s * (1.0f - s);
+		return result;
+	}
+
 	// Compresses to [-1, 1], can work better in practice than Sigmoid
 	real Tanh(real x)
 	{
+		x = glm::clamp(x, -30.0f, 30.0f); // Outside of this range we get infinities, but we just want -1.0 or 1.0 at that point anyway
 		real a = glm::pow(e, x);
 		real b = glm::pow(e, -x);
-		CHECK(!IsNanOrInf(a));
-		CHECK(!IsNanOrInf(b));
+		CHECK(!IsNanOrInf(a) && !IsNanOrInf(b));
 		return (a - b) / (a + b);
 	}
 
@@ -219,9 +258,9 @@ namespace flex
 	{
 		switch (func)
 		{
-		case ActivationFunc::RELU: return ReLU(x);// TODO
-		case ActivationFunc::LEAKY_RELU: return LeakyReLU(x);// TODO
-		case ActivationFunc::SIGMOID: return Sigmoid(x); // TODO
+		case ActivationFunc::RELU: ENSURE_NO_ENTRY(); break; // TODO
+		case ActivationFunc::LEAKY_RELU: ENSURE_NO_ENTRY(); break; // TODO
+		case ActivationFunc::SIGMOID: return SigmoidPrime(x);
 		case ActivationFunc::TANH: return TanhPrime(x);
 		}
 
@@ -282,6 +321,7 @@ namespace flex
 					u32 weightIndex = p + n * layer.m_InputSize;
 					result += input[p] * layer.m_Weights[weightIndex];
 				}
+				//result /= layer.m_InputSize;
 				result += layer.m_Bias;
 
 				output[n] = result;
