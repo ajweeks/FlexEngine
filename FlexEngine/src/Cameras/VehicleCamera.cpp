@@ -27,6 +27,7 @@ namespace flex
 		m_TargetFollowDist(256),
 		m_LastLookOffset(VEC2_ZERO)
 	{
+		bDEBUGCyclable = false;
 		bPossessPlayer = true;
 		m_SpeedFactors.overrideMin = 0.0f;
 		m_SpeedFactors.overrideMax = 1.0f;

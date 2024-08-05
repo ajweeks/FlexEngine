@@ -33,11 +33,7 @@ namespace flex
 	{
 		if (!m_bInitialized)
 		{
-			if (m_Player == nullptr)
-			{
-				FindPlayer();
-			}
-
+			FindPlayer();
 			Update();
 
 			BaseCamera::Initialize();

@@ -35,10 +35,7 @@ namespace flex
 	{
 		if (!m_bInitialized)
 		{
-			if (m_Player0 == nullptr)
-			{
-				FindPlayer();
-			}
+			FindPlayer();
 
 			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
 			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);

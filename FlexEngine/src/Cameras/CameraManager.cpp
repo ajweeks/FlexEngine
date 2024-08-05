@@ -60,10 +60,10 @@ namespace flex
 
 	BaseCamera* CameraManager::CurrentCamera() const
 	{
-		return m_CameraStack.top();
+		return GetCamera(m_CameraStack.top());
 	}
 
-	void CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
+	BaseCamera* CameraManager::AddCamera(BaseCamera* camera, bool bSwitchTo)
 	{
 		CHECK_NE(camera, nullptr);
 
@@ -76,7 +76,11 @@ namespace flex
 			{
 				SetCamera(camera, false);
 			}
+
+			return camera;
 		}
+
+		return nullptr;
 	}
 
 	BaseCamera* CameraManager::SetCamera(BaseCamera* camera, bool bAlignWithPrevious)
@@ -102,7 +106,7 @@ namespace flex
 
 		const i32 numCameras = (i32)m_Cameras.size();
 
-		const i32 desiredIndex = GetCameraIndex(m_CameraStack.top()) + deltaIndex;
+		const i32 desiredIndex = GetCameraIndex(GetCamera(m_CameraStack.top())) + deltaIndex;
 		i32 newIndex;
 		i32 offset = 0;
 		do
@@ -147,13 +151,14 @@ namespace flex
 		BaseCamera* pActiveCam = nullptr;
 		if (!m_CameraStack.empty())
 		{
-			pActiveCam = m_CameraStack.top();
+			pActiveCam = GetCamera(m_CameraStack.top());
 
 			pActiveCam->OnDepossess();
 			pActiveCam->Destroy();
 		}
 
-		m_CameraStack.push(camera);
+		i32 cameraIndex = GetCameraIndex(camera);
+		m_CameraStack.push((u32)cameraIndex);
 
 		if (bAlignWithPrevious && pActiveCam != nullptr)
 		{
@@ -269,6 +274,22 @@ namespace flex
 				}
 			}
 
+			if (ImGui::TreeNode("Camera Stack"))
+			{
+				std::stack<u32> stackCpy = m_CameraStack; // Very gross, please replace container type
+				while (!stackCpy.empty())
+				{
+					BaseCamera* camera = GetCamera(stackCpy.top());
+					stackCpy.pop();
+
+					ImGui::PushID(camera);
+					ImGui::Text("%s", camera->GetName().c_str());
+					ImGui::PopID();
+				}
+
+				ImGui::TreePop();
+			}
+
 			ImGui::SliderFloat("Move speed", &currentCamera->moveSpeed, 1.0f, 750.0f);
 
 			real turnSpeed = glm::degrees(currentCamera->mouseRotationSpeed);
@@ -326,6 +347,13 @@ namespace flex
 		}
 
 		return -1;
+	}
+
+	BaseCamera* CameraManager::GetCamera(u32 index) const
+	{
+		CHECK_LT(index, (u32)m_Cameras.size());
+
+		return m_Cameras[index];
 	}
 
 	void CameraManager::AlignCameras(BaseCamera* from, BaseCamera* to)

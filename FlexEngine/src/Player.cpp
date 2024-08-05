@@ -1275,7 +1275,7 @@ namespace flex
 			}
 			else
 			{
-				terminalCam = static_cast<TerminalCamera*>(g_CameraManager->GetCameraByName("terminal"));
+				terminalCam = g_CameraManager->GetOrCreateCameraByName<TerminalCamera>("terminal");
 				g_CameraManager->AlignCameras(currCam, terminalCam);
 				terminalCam->SetTerminal(terminal);
 				g_CameraManager->PushCamera(terminalCam, true, true);
@@ -1315,7 +1315,7 @@ namespace flex
 			// Switch to vehicle cam
 			if (cam->type != CameraType::VEHICLE)
 			{
-				vehicleCamera = static_cast<VehicleCamera*>(g_CameraManager->GetCameraByName("vehicle"));
+				vehicleCamera = g_CameraManager->GetOrCreateCameraByName<VehicleCamera>("vehicle");
 				g_CameraManager->PushCamera(vehicleCamera, false, true);
 			}
 
