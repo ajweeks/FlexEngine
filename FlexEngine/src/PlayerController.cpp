@@ -208,7 +208,11 @@ namespace flex
 				const bool bPickupItemLeft = m_bAttemptInteractLeftHand && !bLeftHandFilled;
 				const bool bPickupItemRight = m_bAttemptInteractRightHand && !bRightHandFilled;
 
-				if (bPlaceItemLeft || bPlaceItemRight)
+				if (m_Player->GetRidingVehicleID().IsValid() && m_bAttemptInteractRightHand)
+				{
+					m_Player->SetRidingVehicle(nullptr);
+				}
+				else if (bPlaceItemLeft || bPlaceItemRight)
 				{
 					AttemptToIteractUsingHeldItem();
 				}
@@ -1088,6 +1092,17 @@ namespace flex
 				if (!m_Player->m_bInventoryShowing)
 				{
 					m_Player->m_bMinerInventoryShowing = !m_Player->m_bMinerInventoryShowing;
+					m_bAttemptInteractLeftHand = false;
+					m_bAttemptInteractRightHand = false;
+					bInteracted = true;
+				}
+			} break;
+			case VehicleSID:
+			{
+				if (!m_Player->GetRidingVehicleID().IsValid())
+				{
+					Vehicle* vehicle = (Vehicle*)nearbyInteractable;
+					m_Player->SetRidingVehicle(vehicle);
 					m_bAttemptInteractLeftHand = false;
 					m_bAttemptInteractRightHand = false;
 					bInteracted = true;

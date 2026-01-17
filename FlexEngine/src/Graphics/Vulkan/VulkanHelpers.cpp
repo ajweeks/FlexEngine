@@ -2855,21 +2855,15 @@ namespace flex
 
 		void VulkanDescriptorPool::FreeSet(VkDescriptorSet descSet)
 		{
-			bool bFound = false;
+			// Remove this descSet from descriptorSets if present (certain descSets are not)
 			for (u32 i = 0; i < descriptorSets.size(); ++i)
 			{
 				if (descriptorSets[i] == descSet)
 				{
 					descriptorSets[i] = VK_NULL_HANDLE;
 					--allocatedSetCount;
-					bFound = true;
 					break;
 				}
-			}
-
-			if (!bFound)
-			{
-				PrintError("Didn't find descriptor set in VulkanDescriptorPool::FreeSet: %lu\n", (u64)descSet);
 			}
 
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);

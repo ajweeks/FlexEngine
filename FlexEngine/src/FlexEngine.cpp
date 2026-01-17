@@ -27,8 +27,6 @@ IGNORE_WARNINGS_POP
 #include "Cameras/DebugCamera.hpp"
 #include "Cameras/FirstPersonCamera.hpp"
 #include "Cameras/OverheadCamera.hpp"
-#include "Cameras/TerminalCamera.hpp"
-#include "Cameras/VehicleCamera.hpp"
 #include "ConfigFileManager.hpp"
 #include "Editor.hpp"
 #include "Graphics/Renderer.hpp"
@@ -77,7 +75,7 @@ namespace flex
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
 	const u32 FlexEngine::EngineVersionMinor = 8;
-	const u32 FlexEngine::EngineVersionPatch = 8;
+	const u32 FlexEngine::EngineVersionPatch = 9;
 
 	std::string FlexEngine::s_CurrentWorkingDirectory;
 	std::string FlexEngine::s_ExecutablePath;
@@ -2279,12 +2277,6 @@ namespace flex
 
 		OverheadCamera* overheadCamera = new OverheadCamera();
 		g_CameraManager->AddCamera(overheadCamera, false);
-
-		TerminalCamera* terminalCamera = new TerminalCamera();
-		g_CameraManager->AddCamera(terminalCamera, false);
-
-		VehicleCamera* vehicleCamera = new VehicleCamera();
-		g_CameraManager->AddCamera(vehicleCamera, false);
 	}
 
 #if COMPILE_RENDERDOC_API

@@ -7,6 +7,19 @@
 		"id" : "50D4D1CABD95F5934762B0163A7DC3EE",
 		"name" : "mineral deposit quartz",
 		"type" : "mineral deposit",
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "10.000,0.500,10.000"
+		},
+		"rigid body" : 
+		{
+			"mass" : 0.000000,
+			"kinematic" : true,
+			"static" : true,
+			"mask" : 1,
+			"group" : 2
+		},
 		"mineral deposit" : 
 		{
 			"mineral remaining" : 1000,

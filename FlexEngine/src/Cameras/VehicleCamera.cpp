@@ -27,6 +27,7 @@ namespace flex
 		m_TargetFollowDist(256),
 		m_LastLookOffset(VEC2_ZERO)
 	{
+		bDEBUGCyclable = false;
 		bPossessPlayer = true;
 		m_SpeedFactors.overrideMin = 0.0f;
 		m_SpeedFactors.overrideMax = 1.0f;
@@ -41,10 +42,7 @@ namespace flex
 	{
 		if (!m_bInitialized)
 		{
-			if (m_TrackedVehicle == nullptr)
-			{
-				FindActiveVehicle();
-			}
+			FindActiveVehicle();
 
 			m_TargetPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
 			m_TargetForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
@@ -61,7 +59,6 @@ namespace flex
 	{
 		BaseCamera::OnPostSceneChange();
 
-		m_TrackedVehicle = nullptr;
 		FindActiveVehicle();
 
 		ResetValues();
@@ -201,6 +198,10 @@ namespace flex
 		if (player0 != nullptr)
 		{
 			m_TrackedVehicle = (Vehicle*)player0->GetRidingVehicleID().Get();
+		}
+		else
+		{
+			m_TrackedVehicle = nullptr;
 		}
 	}
 

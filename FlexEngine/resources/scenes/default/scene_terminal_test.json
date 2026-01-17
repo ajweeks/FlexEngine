@@ -24,8 +24,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "ground plane",
 			"id" : "69CB35807A080CA94986D8D301C70BE7",
+			"name" : "ground plane",
 			"type" : "object",
 			"transform" : 
 			{
@@ -40,7 +40,7 @@
 			"collider" : 
 			{
 				"shape" : "box",
-				"half extents" : "0.500,0.500,0.500"
+				"half extents" : "0.500,0.100,0.500"
 			},
 			"rigid body" : 
 			{
