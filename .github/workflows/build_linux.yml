@@ -136,7 +136,7 @@ jobs:
         run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
 
       - name: upload-artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v6
         with:
           name: flex-linux
           path: Flex.zip
@@ -151,7 +151,7 @@ jobs:
         run: sudo apt-get update -m && sudo apt-get install -y libopenal-dev
     
       - name: download-artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v7
         with:
           name: flex-linux
           path: .
