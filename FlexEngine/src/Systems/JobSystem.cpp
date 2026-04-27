@@ -127,6 +127,9 @@ namespace flex
 		{
 			if (s_InternalState.numThreads > 0)
 				return;
+
+			s_InternalState.alive.store(true);
+			s_InternalState.nextQueue.store(0);
 			maxThreadCount = std::max(1u, maxThreadCount);
 
 			// Retrieve the number of hardware threads in this system:
@@ -171,7 +174,21 @@ namespace flex
 		void Destroy()
 		{
 			s_InternalState.alive = false;
-			// TODO: Join all threads?
+			s_InternalState.wakeCondition.notify_all();
+
+			for (std::thread& thread : s_InternalState.threads)
+			{
+				if (thread.joinable())
+				{
+					thread.join();
+				}
+			}
+
+			s_InternalState.threads.clear();
+			s_InternalState.jobQueuePerThread.reset();
+			s_InternalState.numThreads = 0;
+			s_InternalState.numCores = 0;
+			s_InternalState.nextQueue.store(0);
 		}
 
 		u32 GetThreadCount()

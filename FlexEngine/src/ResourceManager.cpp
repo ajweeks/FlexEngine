@@ -72,6 +72,7 @@ namespace flex
 		PROFILE_AUTO("ResourceManager PostInitialize");
 
 		tofuIconID = GetOrLoadTexture(ICON_DIRECTORY "tofu-icon-256.png");
+		PreloadDiscoveredIconsAsync();
 	}
 
 	void ResourceManager::Update()
@@ -114,6 +115,7 @@ namespace flex
 
 		{
 			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
+			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
 			if (!m_QueuedTextureLoadInfos.empty())
 			{
@@ -124,14 +126,19 @@ namespace flex
 					TextureID textureID = iter->first;
 					TextureLoadInfo& loadInfo = iter->second;
 
-					bool bIsLoading = loadedTextures[textureID]->IsLoading();
+					if (textureID >= loadedTextures.size() || loadedTextures[textureID] == nullptr)
+					{
+						iter = m_QueuedTextureLoadInfos.erase(iter);
+						continue;
+					}
+
+					Texture* texture = loadedTextures[textureID];
+					bool bIsLoading = texture->IsLoading();
 					if (bIsLoading)
 					{
 						++iter;
 						continue;
 					}
-
-					Texture* texture = GetLoadedTexture(textureID, false);
 
 					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
 					Print("[TEXTURE] Created texture: %s\n", loadInfo.relativeFilePath.c_str());
@@ -139,7 +146,8 @@ namespace flex
 					if (newTexSize == 0)
 					{
 						delete texture;
-						++iter;
+						loadedTextures[textureID] = nullptr;
+						iter = m_QueuedTextureLoadInfos.erase(iter);
 						continue;
 					}
 
@@ -175,6 +183,8 @@ namespace flex
 		}
 		fontsWorldSpace.clear();
 
+		JobSystem::Wait(m_TextureLoadingContext);
+
 		{
 			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
@@ -191,8 +201,6 @@ namespace flex
 			delete prefabTemplateInfo.templateObject;
 		}
 		prefabTemplates.clear();
-
-		JobSystem::Wait(m_TextureLoadingContext);
 	}
 
 	void ResourceManager::DestroyAllLoadedMeshes()
@@ -1213,11 +1221,25 @@ namespace flex
 	TextureID ResourceManager::GetOrLoadTexture(const std::string& textureFilePath, HTextureSampler sampler /* = nullptr */)
 	{
 		{
+			FLEX_MUTEX_LOCK(m_QueuedTextureLoadInfoMutex);
 			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+			for (const Pair<TextureID, TextureLoadInfo>& pair : m_QueuedTextureLoadInfos)
+			{
+				if (pair.second.relativeFilePath == textureFilePath)
+				{
+					return pair.first;
+				}
+			}
 
 			for (u32 i = 0; i < (u32)loadedTextures.size(); ++i)
 			{
 				Texture* texture = loadedTextures[i];
+				if (texture == nullptr || texture->IsLoading())
+				{
+					continue;
+				}
+
 				if (texture != nullptr &&
 					texture->relativeFilePath.compare(textureFilePath) == 0)
 				{
@@ -1286,6 +1308,17 @@ namespace flex
 		return InvalidTextureID;
 	}
 
+	void ResourceManager::PreloadDiscoveredIconsAsync()
+	{
+		for (Pair<StringID, IconMetaData>& pair : discoveredIcons)
+		{
+			if (pair.second.textureID == InvalidTextureID)
+			{
+				pair.second.textureID = GetOrLoadTexture(pair.second.relativeFilePath);
+			}
+		}
+	}
+
 	TextureID ResourceManager::GetNextAvailableTextureID()
 	{
 		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
@@ -1325,7 +1358,6 @@ namespace flex
 			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
 
 			m_QueuedTextureLoadInfos.emplace_back(textureID, loadInfo);
-			Print("[TEXTURE] Queued texture load: %s\n", loadInfo.relativeFilePath.c_str());
 
 			std::string textureName = StripLeadingDirectories(loadInfo.relativeFilePath);
 			Texture* newTex = g_Renderer->CreateTexture(textureName);
@@ -1351,10 +1383,11 @@ namespace flex
 				{
 					u32 expected = 1u;
 					texture->bIsLoading.compare_exchange_strong(expected, 0u, std::memory_order_release, std::memory_order_relaxed);
-					Print("[TEXTURE] Texture load complete: %s\n", loadInfo.relativeFilePath.c_str());
 				}
 				else
 				{
+					u32 expected = 1u;
+					texture->bIsLoading.compare_exchange_strong(expected, 0u, std::memory_order_release, std::memory_order_relaxed);
 					PrintError("Failed to load texture from file %s (TextureID: %u)\n", loadInfo.relativeFilePath.c_str(), (TextureID)args.payload);
 				}
 			}

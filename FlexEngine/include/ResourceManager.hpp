@@ -113,6 +113,7 @@ namespace flex
 		bool RemoveLoadedTexture(TextureID textureID, bool bDestroy);
 		bool RemoveLoadedTexture(Texture* texture, bool bDestroy);
 		TextureID GetOrLoadIcon(StringID prefabNameSID, i32 resolution = -1);
+		void PreloadDiscoveredIconsAsync();
 
 		TextureID GetNextAvailableTextureID();
 		TextureID QueueTextureLoad(const std::string& relativeFilePath,
