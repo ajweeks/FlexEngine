@@ -242,7 +242,13 @@ namespace flex
 	{
 		if (m_btRigidBody != nullptr)
 		{
-			m_btRigidBody->setCenterOfMassTransform(btTransform(m_btRigidBody->getCenterOfMassTransform().getRotation(), ToBtVec3(worldPos)));
+			btTransform transform(m_btRigidBody->getCenterOfMassTransform().getRotation(), ToBtVec3(worldPos));
+			m_btRigidBody->setCenterOfMassTransform(transform);
+			m_btRigidBody->setInterpolationWorldTransform(transform);
+			if (m_btMotionState != nullptr)
+			{
+				m_btMotionState->setWorldTransform(transform);
+			}
 			m_btRigidBody->activate(false);
 		}
 	}
@@ -251,7 +257,13 @@ namespace flex
 	{
 		if (m_btRigidBody != nullptr)
 		{
-			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), m_btRigidBody->getCenterOfMassPosition()));
+			btTransform transform(ToBtQuaternion(worldRot), m_btRigidBody->getCenterOfMassPosition());
+			m_btRigidBody->setCenterOfMassTransform(transform);
+			m_btRigidBody->setInterpolationWorldTransform(transform);
+			if (m_btMotionState != nullptr)
+			{
+				m_btMotionState->setWorldTransform(transform);
+			}
 			m_btRigidBody->activate(false);
 		}
 	}
@@ -260,7 +272,13 @@ namespace flex
 	{
 		if (m_btRigidBody != nullptr)
 		{
-			m_btRigidBody->setCenterOfMassTransform(btTransform(ToBtQuaternion(worldRot), ToBtVec3(worldPos)));
+			btTransform transform(ToBtQuaternion(worldRot), ToBtVec3(worldPos));
+			m_btRigidBody->setCenterOfMassTransform(transform);
+			m_btRigidBody->setInterpolationWorldTransform(transform);
+			if (m_btMotionState != nullptr)
+			{
+				m_btMotionState->setWorldTransform(transform);
+			}
 			m_btRigidBody->activate(false);
 		}
 	}

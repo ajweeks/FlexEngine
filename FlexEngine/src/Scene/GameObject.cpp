@@ -170,8 +170,25 @@ namespace flex
 		}
 		else
 		{
+			// Prefab template has no mesh; attempt type-specific fallback
 			Mesh* mesh = m_ItemProxyObject->SetMesh(new Mesh(m_ItemProxyObject));
-			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+			bool bLoadedFallback = false;
+
+			if (m_TypeID == MineralDepositSID)
+			{
+				MineralDeposit* mineralDeposit = static_cast<MineralDeposit*>(prefabTemplate);
+				const char* mineralTypeStr = MineralTypeToString(mineralDeposit->GetMineralType());
+				MaterialID matID;
+				if (g_Renderer->FindOrCreateMaterialByName("mineral " + std::string(mineralTypeStr), matID))
+				{
+					bLoadedFallback = mesh->LoadFromFile(MESH_DIRECTORY "mineral-deposit-100.glb", matID);
+				}
+			}
+
+			if (!bLoadedFallback)
+			{
+				mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+			}
 		}
 
 		g_SceneManager->CurrentScene()->AddRootObject(m_ItemProxyObject);
@@ -14099,6 +14116,11 @@ namespace flex
 	u32 MineralDeposit::GetMineralRemaining() const
 	{
 		return m_MineralRemaining;
+	}
+
+	MineralType MineralDeposit::GetMineralType() const
+	{
+		return m_Type;
 	}
 
 	PrefabID MineralDeposit::GetMineralPrefabID()

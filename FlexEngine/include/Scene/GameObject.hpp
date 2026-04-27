@@ -2048,6 +2048,7 @@ namespace flex
 			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
 
 		u32 GetMineralRemaining() const;
+		MineralType GetMineralType() const;
 		PrefabID GetMineralPrefabID();
 
 		// Returns the actual amount of mineral mined

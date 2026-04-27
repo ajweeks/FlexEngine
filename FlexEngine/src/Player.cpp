@@ -84,13 +84,16 @@ namespace flex
 
 		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
 
-		m_Mesh = new Mesh(this);
+		GameObject* playerMeshObject = new GameObject("Player mesh", BaseObjectSID);
+		Mesh* playerMesh = playerMeshObject->SetMesh(new Mesh(playerMeshObject));
 		AddTag("Player" + std::to_string(m_Index));
 		SetRigidBody(rigidBody);
 		SetStatic(false);
 		SetSerializable(false);
 		SetCollisionShape(collisionShape);
-		m_Mesh->LoadFromFile(MESH_DIRECTORY "capsule.glb", matID);
+		playerMesh->LoadFromFile(MESH_DIRECTORY "capsule.glb", matID);
+		playerMeshObject->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-PI_DIV_TWO, 0.0f, 0.0f)));
+		AddChild(playerMeshObject);
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);

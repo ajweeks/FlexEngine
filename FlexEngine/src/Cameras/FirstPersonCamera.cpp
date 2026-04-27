@@ -58,6 +58,12 @@ namespace flex
 		TrackPlayer();
 	}
 
+	void FirstPersonCamera::LateUpdate()
+	{
+		TrackPlayer();
+		BaseCamera::LateUpdate();
+	}
+
 	void FirstPersonCamera::TrackPlayer()
 	{
 		if (m_Player == nullptr)

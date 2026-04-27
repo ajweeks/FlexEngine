@@ -439,11 +439,12 @@ namespace flex
 		if (m_Player->AbleToInteract() &&
 			m_Player->m_TrackRidingID == InvalidTrackID)
 		{
-			real lookH = lookLR;
+			real lookH = lookLR + m_MouseLookAccum.x * m_MouseRotateHSpeed;
 			real lookV = 0.0f;
 			if (m_Mode == Mode::FIRST_PERSON)
 			{
 				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
+				lookV += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f);
 			}
 
 			glm::quat rot = playerTransform->GetLocalRotation();
@@ -453,6 +454,8 @@ namespace flex
 
 			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_FixedDeltaTime);
 		}
+
+		m_MouseLookAccum = VEC2_ZERO;
 
 		if (m_Player->m_bPossessed)
 		{
@@ -822,17 +825,7 @@ namespace flex
 			if (m_Player->AbleToInteract() &&
 				m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				real lookH = dMousePos.x;
-				real lookV = dMousePos.y;
-
-				Transform* transform = m_Player->GetTransform();
-				glm::vec3 up = transform->GetUp();
-				glm::quat rot = transform->GetLocalRotation();
-				real angle = lookH * m_MouseRotateHSpeed * 0.001f;
-				rot = glm::rotate(rot, angle, up);
-				transform->SetWorldRotation(rot);
-
-				m_Player->AddToPitch(lookV * m_MouseRotateVSpeed * 0.001f * (m_bInvertMouseV ? -1.0f : 1.0f));
+				m_MouseLookAccum += dMousePos * 0.01f;
 
 				return EventReply::CONSUMED;
 			}

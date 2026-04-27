@@ -24,7 +24,7 @@ namespace flex
 		BaseCamera("debug", CameraType::DEBUG_CAM, false, FOV),
 		mouseButtonCallback(this, &DebugCamera::OnMouseButtonEvent),
 		mouseMovedCallback(this, &DebugCamera::OnMouseMovedEvent),
-		m_RollOnTurnAmount(1.5f),
+		m_RollOnTurnAmount(0.0f),
 		m_MouseDragDist(0.0f),
 		m_MoveVel(0.0f),
 		m_TurnVel(0.0f),

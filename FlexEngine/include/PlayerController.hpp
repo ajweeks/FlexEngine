@@ -58,6 +58,7 @@ namespace flex
 		real m_RotateVSpeed = 1.0f;
 		real m_MouseRotateHSpeed = 1.0f;
 		real m_MouseRotateVSpeed = 1.0f;
+		glm::vec2 m_MouseLookAccum = VEC2_ZERO;
 		bool m_bInvertMouseV = false;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0

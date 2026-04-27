@@ -28,6 +28,7 @@ namespace flex
 		bDirtyPos = true;
 		bDirtyRot = true;
 		bDirtyScale = true;
+		m_bDirtyFromRigidbody = false;
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
@@ -36,7 +37,8 @@ namespace flex
 		localScale(scale),
 		bDirtyPos(true),
 		bDirtyRot(true),
-		bDirtyScale(true)
+		bDirtyScale(true),
+		m_bDirtyFromRigidbody(false)
 	{
 	}
 
@@ -46,7 +48,8 @@ namespace flex
 		localScale(VEC3_ONE),
 		bDirtyPos(true),
 		bDirtyRot(true),
-		bDirtyScale(true)
+		bDirtyScale(true),
+		m_bDirtyFromRigidbody(false)
 	{
 	}
 
@@ -56,7 +59,8 @@ namespace flex
 		localScale(VEC3_ONE),
 		bDirtyPos(true),
 		bDirtyRot(true),
-		bDirtyScale(true)
+		bDirtyScale(true),
+		m_bDirtyFromRigidbody(false)
 	{
 	}
 
@@ -67,7 +71,8 @@ namespace flex
 		m_GameObject(other.m_GameObject),
 		bDirtyPos(true),
 		bDirtyRot(true),
-		bDirtyScale(true)
+		bDirtyScale(true),
+		m_bDirtyFromRigidbody(other.m_bDirtyFromRigidbody)
 	{
 	}
 
@@ -78,7 +83,8 @@ namespace flex
 		m_GameObject(other.m_GameObject),
 		bDirtyPos(true),
 		bDirtyRot(true),
-		bDirtyScale(true)
+		bDirtyScale(true),
+		m_bDirtyFromRigidbody(other.m_bDirtyFromRigidbody)
 	{
 	}
 
@@ -153,6 +159,7 @@ namespace flex
 		bDirtyPos = other.bDirtyPos;
 		bDirtyRot = other.bDirtyRot;
 		bDirtyScale = other.bDirtyScale;
+		m_bDirtyFromRigidbody = other.m_bDirtyFromRigidbody;
 
 		// NOTE: m_GameObject is not copied here
 	}
@@ -317,7 +324,9 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			SetLocalPositionInternal(position - parent->GetTransform()->GetWorldPosition());
+			glm::mat4 invParentWorldTransform = glm::inverse(parent->GetTransform()->GetWorldTransform());
+			glm::vec3 newLocalPosition = glm::vec3(invParentWorldTransform * glm::vec4(position, 1.0f));
+			SetLocalPositionInternal(newLocalPosition);
 		}
 		else
 		{
@@ -542,13 +551,18 @@ namespace flex
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
 		if (rigidBody != nullptr)
 		{
+			if (m_bDirtyFromRigidbody)
+			{
+				m_bDirtyFromRigidbody = false;
+				return;
+			}
+
 			if (bDirtyScale)
 			{
-				glm::vec3 worldScale = GetWorldScale();
 				if (rigidBody->GetRigidBodyInternal() != nullptr &&
-					!NearlyEquals(worldScale, VEC3_ONE, 0.00001f))
+					!NearlyEquals(localScale, VEC3_ONE, 0.00001f))
 				{
-					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(worldScale));
+					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(localScale));
 				}
 			}
 			if (bDirtyPos && bDirtyRot)
@@ -583,11 +597,16 @@ namespace flex
 		if (bRot) bDirtyRot = true;
 		if (bScale) bDirtyScale = true;
 
+		// Parent rotation/scale changes affect child world positions even when child local position is unchanged.
+		const bool bChildPosDirty = bPos || bRot || bScale;
+		const bool bChildRotDirty = bRot;
+		const bool bChildScaleDirty = bScale;
+
 		u32 childCount = m_GameObject->GetChildCount();
 		for (u32 i = 0; i < childCount; ++i)
 		{
 			Transform* childTransform = m_GameObject->GetChild(i)->GetTransform();
-			childTransform->MarkDirty(bPos, bRot, bScale);
+			childTransform->MarkDirty(bChildPosDirty, bChildRotDirty, bChildScaleDirty);
 		}
 	}
 
@@ -637,6 +656,7 @@ namespace flex
 	{
 		if (!NearlyEquals(localPosition, newLocalPos, DirtyThreshold))
 		{
+			m_bDirtyFromRigidbody = false;
 			localPosition = newLocalPos;
 			MarkDirty(true, false, false);
 		}
@@ -646,6 +666,7 @@ namespace flex
 	{
 		if (!NearlyEquals(localRotation, newLocalRot, DirtyThreshold))
 		{
+			m_bDirtyFromRigidbody = false;
 			localRotation = newLocalRot;
 			MarkDirty(false, true, false);
 		}
@@ -655,6 +676,7 @@ namespace flex
 	{
 		if (!NearlyEquals(localScale, newLocalScale, DirtyThreshold))
 		{
+			m_bDirtyFromRigidbody = false;
 			localScale = newLocalScale;
 			MarkDirty(false, false, true);
 		}
@@ -667,7 +689,8 @@ namespace flex
 		glm::quat newRotation;
 		if (parent != nullptr)
 		{
-			newPosition = position - parent->GetTransform()->GetWorldPosition();
+			glm::mat4 invParentWorldTransform = glm::inverse(parent->GetTransform()->GetWorldTransform());
+			newPosition = glm::vec3(invParentWorldTransform * glm::vec4(position, 1.0f));
 			newRotation = glm::inverse(parent->GetTransform()->GetWorldRotation()) * rotation;
 
 		}
@@ -684,6 +707,7 @@ namespace flex
 		{
 			localPosition = newPosition;
 			localRotation = newRotation;
+			m_bDirtyFromRigidbody = true;
 
 			MarkDirty(bNewPosDirty, bNewRotDirty, false);
 		}

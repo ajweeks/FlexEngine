@@ -113,6 +113,7 @@ namespace flex
 		bool bDirtyPos : 1;
 		bool bDirtyRot : 1;
 		bool bDirtyScale : 1;
+		bool m_bDirtyFromRigidbody : 1;
 
 	};
 } // namespace flex
