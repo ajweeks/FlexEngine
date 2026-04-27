@@ -541,7 +541,10 @@ namespace flex
 
 				if (imageElement != nullptr)
 				{
-					g_UIManager->EnqueueImageSprite(imageElement->textureID, lastCutRect);
+					if (g_ResourceManager->IsTextureCreated(imageElement->textureID))
+					{
+						g_UIManager->EnqueueImageSprite(imageElement->textureID, lastCutRect);
+					}
 				}
 
 				if (textElement != nullptr)
