@@ -12,6 +12,12 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	struct ShaderIncludeData
+	{
+		std::string sourceName;
+		std::string content;
+	};
+
 	class FlexShaderIncluder : public shaderc::CompileOptions::IncluderInterface
 	{
 		virtual shaderc_include_result* GetInclude(const char* requested_source,
@@ -24,42 +30,31 @@ namespace flex
 			FLEX_UNUSED(include_depth);
 
 			shaderc_include_result* result = new shaderc_include_result();
+			ShaderIncludeData* includeData = new ShaderIncludeData();
 
 			std::string requestedFilePath = SHADER_SOURCE_DIRECTORY + std::string(requested_source);
-			std::string fileContent;
-			if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, fileContent, false))
+			if (FileExists(requestedFilePath) && ReadFile(requestedFilePath, includeData->content, false))
 			{
-				u32 requestedFilePathLen = (u32)requestedFilePath.size();
-				result->source_name = (const char*)malloc(requestedFilePathLen + 1);
-				memset((void*)result->source_name, 0, requestedFilePathLen + 1);
-				strncpy((char*)result->source_name, requestedFilePath.c_str(), requestedFilePathLen);
-				result->source_name_length = requestedFilePathLen;
-
-				u32 fileContentLen = (u32)fileContent.size();
-				result->content = (const char*)malloc(fileContentLen + 1);
-				memset((void*)result->content, 0, fileContentLen + 1);
-				strncpy((char*)result->content, fileContent.c_str(), fileContentLen);
-				result->content_length = strlen(result->content);
+				includeData->sourceName = requestedFilePath;
 			}
 			else
 			{
-				result->source_name = "";
-				result->source_name_length = 0;
-				result->content = "Failed to include shader";
-				result->content_length = strlen(result->content);
+				includeData->sourceName = "";
+				includeData->content = "Failed to include shader";
 			}
+
+			result->source_name = includeData->sourceName.c_str();
+			result->source_name_length = includeData->sourceName.size();
+			result->content = includeData->content.c_str();
+			result->content_length = includeData->content.size();
+			result->user_data = includeData;
 
 			return result;
 		}
 
 		virtual void ReleaseInclude(shaderc_include_result* data) override
 		{
-			// This causes heap corruption for some reason... but it's leaking without this.
-			//if (data->source_name_length != 0)
-			//{
-			//	free((void*)data->source_name);
-			//	free((void*)data->content);
-			//}
+			delete static_cast<ShaderIncludeData*>(data->user_data);
 			delete data;
 		}
 	};

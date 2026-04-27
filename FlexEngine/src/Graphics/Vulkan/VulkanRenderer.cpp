@@ -135,11 +135,14 @@ namespace flex
 			std::vector<const char*> rayTracingDeviceExtensions;
 			if (m_bTryEnableRayTracing)
 			{
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
 				rayTracingDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
 				rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
 				//rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
 				//rayTracingDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-				//rayTracingDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
 			}
 
 			deviceCreateInfo.rayTracingExtensions = &rayTracingDeviceExtensions;
@@ -327,7 +330,7 @@ namespace flex
 			m_CommandBufferManager.CreatePool();
 
 			// TODO: Always returning null for some reason...
-			m_vkGetPhysicalDeviceMemoryProperties2 = reinterpret_cast<PFN_vkGetPhysicalDeviceMemoryProperties2>(vkGetDeviceProcAddr(m_VulkanDevice->m_LogicalDevice, "vkGetPhysicalDeviceMemoryProperties2"));
+			m_vkGetPhysicalDeviceMemoryProperties2 = reinterpret_cast<PFN_vkGetPhysicalDeviceMemoryProperties2>(vkGetInstanceProcAddr(m_Instance, "vkGetPhysicalDeviceMemoryProperties2"));
 
 			CreateFrameBufferAttachments();
 			CreateSamplers();
@@ -1963,9 +1966,37 @@ namespace flex
 				BatchRenderObjects();
 			}
 
+			auto ensureSpriteBatchCapacity = [this](const std::vector<SpriteQuadDrawInfo>& spriteBatch)
+			{
+				if (spriteBatch.empty())
+				{
+					return;
+				}
+
+				MaterialID matID = (spriteBatch[0].materialID == InvalidMaterialID ?
+					(spriteBatch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) :
+					spriteBatch[0].materialID);
+				VulkanMaterial* spriteMat = (VulkanMaterial*)m_Materials.at(matID);
+				VulkanShader* spriteShader = (VulkanShader*)m_Shaders[spriteMat->shaderID];
+
+				if ((i32)spriteBatch.size() > spriteShader->maxObjectCount)
+				{
+					UpdateShaderMaxObjectCount(spriteMat->shaderID, (i32)spriteBatch.size());
+				}
+			};
+
+			ensureSpriteBatchCapacity(m_QueuedWSSprites);
+			ensureSpriteBatchCapacity(m_QueuedSSPreUISprites);
+			ensureSpriteBatchCapacity(m_QueuedSSArrSprites);
+			ensureSpriteBatchCapacity(m_QueuedSSPostUISprites);
+
 			FillOutOffscreenCommandBuffer();
 
 			u32 nextImageIndex = SubmitOffscreenWork();
+			if (nextImageIndex != u32_max)
+			{
+				m_CurrentSwapChainBufferIndex = nextImageIndex;
+			}
 
 			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
 			FillOutForwardCommandBuffer(drawCallInfo);
@@ -2828,6 +2859,7 @@ namespace flex
 		{
 			// TODO: Ignore object visibility changes
 			m_bRebatchRenderObjects = true;
+			m_DirtyFlagBits |= RenderBatchDirtyFlag::SHADOW_DATA;
 		}
 
 		void VulkanRenderer::RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath)
@@ -4860,18 +4892,26 @@ namespace flex
 			// TODO: Use instancing!
 			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[spriteShader->staticVertexBufferIndex].second;
 
-			if ((i32)batch.size() > spriteShader->maxObjectCount)
+			u32 spriteCountToDraw = (u32)batch.size();
+			if ((i32)spriteCountToDraw > spriteShader->maxObjectCount)
 			{
-				UpdateShaderMaxObjectCount(spriteMat->shaderID, (i32)batch.size());
-				// TODO: Flush GPU queues here?
+				PrintWarn("Sprite batch size (%u) exceeds shader max object count (%i); skipping excess sprites this frame\n",
+					spriteCountToDraw,
+					spriteShader->maxObjectCount);
+				spriteCountToDraw = (u32)glm::max(0, spriteShader->maxObjectCount);
+			}
+			if (spriteCountToDraw == 0)
+			{
+				return;
 			}
 
 
 			GraphicsPipeline* defaultGraphicsPipeline = GetGraphicsPipeline(spriteRenderObject->graphicsPipelineID)->pipeline;
 
 			u32 i = 0;
-			for (const SpriteQuadDrawInfo& drawInfo : batch)
+			for (; i < spriteCountToDraw; ++i)
 			{
+				const SpriteQuadDrawInfo& drawInfo = batch[i];
 				glm::vec3 translation = drawInfo.pos;
 				glm::quat rotation = drawInfo.rotation;
 				glm::vec3 scale = drawInfo.scale;
@@ -4951,7 +4991,6 @@ namespace flex
 
 				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
 
-				++i;
 			}
 		}
 
@@ -5277,7 +5316,7 @@ namespace flex
 
 			emitterIter->second.bufferIndex = emitterBufferIndex;
 
-			const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT_PER_INSTANCE * MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM * sizeof(ParticleBufferData);
+			//const u32 maxParticleBufferSize = MAX_PARTICLE_COUNT_PER_INSTANCE * MAX_PARTICLE_EMITTER_INSTANCES_PER_SYSTEM * sizeof(ParticleBufferData);
 
 			std::vector<ParticleBufferData> particleBufferData(MAX_PARTICLE_COUNT_PER_INSTANCE);
 
@@ -5404,8 +5443,28 @@ namespace flex
 					if (objMat->shaderID == shaderID)
 					{
 						CreateGraphicsPipeline(i);
-						m_DescriptorPool->CreateDescriptorSet(m_RenderObjects[i]->materialID);
+						if (objMat->persistent)
+						{
+							m_DescriptorPoolPersistent->CreateDescriptorSet(m_RenderObjects[i]->materialID);
+						}
+						else
+						{
+							m_DescriptorPool->CreateDescriptorSet(m_RenderObjects[i]->materialID);
+						}
 					}
+				}
+			}
+
+			for (auto& spriteDescSetPair : m_SpriteDescSets)
+			{
+				Material* spriteMat = GetMaterial(spriteDescSetPair.second.materialID);
+				if (spriteMat != nullptr && spriteMat->shaderID == shaderID)
+				{
+					m_DescriptorPoolPersistent->FreeSet(spriteDescSetPair.second.descSet);
+					spriteDescSetPair.second.descSet = CreateSpriteDescSet(
+						spriteDescSetPair.second.materialID,
+						spriteDescSetPair.first,
+						spriteDescSetPair.second.textureLayer);
 				}
 			}
 #else
@@ -7434,6 +7493,7 @@ namespace flex
 			{
 				if (renderObject != nullptr &&
 					renderObject->vertexBufferData != nullptr &&
+					!renderObject->bEditorObject &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
 				{
@@ -7511,6 +7571,7 @@ namespace flex
 			{
 				if (renderObject != nullptr &&
 					renderObject->bIndexed &&
+					!renderObject->bEditorObject &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
 				{
@@ -7786,6 +7847,7 @@ namespace flex
 				VulkanRenderObject* renderObject = GetRenderObject(i);
 				if (renderObject != nullptr &&
 					renderObject->vertexBufferData != nullptr &&
+					!renderObject->bEditorObject &&
 					renderObject->gameObject->CastsShadow() &&
 					renderObject->gameObject->IsVisible())
 				{
@@ -9081,7 +9143,7 @@ namespace flex
 			presentInfo.swapchainCount = 1;
 			presentInfo.pSwapchains = &m_SwapChain;
 
-			presentInfo.pImageIndices = &m_CurrentSwapChainBufferIndex;
+			presentInfo.pImageIndices = &nextImageIndex;
 
 			PROFILE_BEGIN("Queue present");
 			VkResult result = vkQueuePresentKHR(m_PresentQueue, &presentInfo);
@@ -9096,7 +9158,7 @@ namespace flex
 				VK_CHECK_RESULT(result);
 			}
 
-			m_CurrentSwapChainBufferIndex = (nextImageIndex + 1) % m_SwapChainImages.size();
+			m_CurrentSwapChainBufferIndex = nextImageIndex;
 
 			PROFILE_BEGIN("Queue wait idle on present queue");
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
@@ -9236,20 +9298,35 @@ namespace flex
 		{
 			if (m_bMemoryBudgetExtensionEnabled && m_vkGetPhysicalDeviceMemoryProperties2 != nullptr)
 			{
-				VkPhysicalDeviceMemoryProperties2 memoryProperties;
-				m_vkGetPhysicalDeviceMemoryProperties2(m_VulkanDevice->m_PhysicalDevice, &memoryProperties);
-				VkPhysicalDeviceMemoryBudgetPropertiesEXT* memoryPropertiesEXT = (VkPhysicalDeviceMemoryBudgetPropertiesEXT*)memoryProperties.pNext;
+				VkPhysicalDeviceMemoryBudgetPropertiesEXT memoryPropertiesBudget = {};
+				memoryPropertiesBudget.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT;
 
-				Print("%d heaps\n", VK_MAX_MEMORY_HEAPS);
-				for (u32 i = 0; i < (i32)VK_MAX_MEMORY_HEAPS; ++i)
+				VkPhysicalDeviceMemoryProperties2 memoryProperties = {};
+				memoryProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2;
+				memoryProperties.pNext = &memoryPropertiesBudget;
+				m_vkGetPhysicalDeviceMemoryProperties2(m_VulkanDevice->m_PhysicalDevice, &memoryProperties);
+				VkPhysicalDeviceMemoryBudgetPropertiesEXT* memoryPropertiesEXT = &memoryPropertiesBudget;
+
+				const u32 heapCount = memoryProperties.memoryProperties.memoryHeapCount;
+				Print("%u heaps\n", heapCount);
+				for (u32 i = 0; i < heapCount; ++i)
 				{
 					char heapBudgetBuf[64];
 					char heapUsageBuf[64];
-					ByteCountToString(heapBudgetBuf, 64, (u64)memoryPropertiesEXT->heapBudget[i]);
-					ByteCountToString(heapUsageBuf, 64, (u64)memoryPropertiesEXT->heapUsage[i]);
+					const VkDeviceSize budget = memoryPropertiesEXT->heapBudget[i];
+					const VkDeviceSize usage = memoryPropertiesEXT->heapUsage[i];
+					ByteCountToString(heapBudgetBuf, 64, (u64)budget);
+					ByteCountToString(heapUsageBuf, 64, (u64)usage);
 					Print("Heap budget: %s\n", heapBudgetBuf);
-					Print("Heap usage: %s (%.2f%%)\n", heapUsageBuf,
-						(real)memoryPropertiesEXT->heapUsage[i] / memoryPropertiesEXT->heapBudget[i] * 100.0f);
+					if (budget != 0)
+					{
+						Print("Heap usage: %s (%.2f%%)\n", heapUsageBuf,
+							(real)usage / (real)budget * 100.0f);
+					}
+					else
+					{
+						Print("Heap usage: %s\n", heapUsageBuf);
+					}
 				}
 			}
 		}
@@ -10150,6 +10227,18 @@ namespace flex
 
 			if (!bError && !bWarning && !bMessage)
 			{
+				return VK_FALSE;
+			}
+
+			if (bWarning &&
+				pCallbackData != nullptr &&
+				pCallbackData->pMessageIdName != nullptr &&
+				strcmp(pCallbackData->pMessageIdName, "WARNING-DEBUG-PRINTF") == 0 &&
+				pCallbackData->pMessage != nullptr &&
+				strstr(pCallbackData->pMessage, "Internal Warning:") != nullptr)
+			{
+				// Emitted by validation when DEBUG_PRINTF is enabled and it injects required features.
+				// These are informational and can be noisy during startup.
 				return VK_FALSE;
 			}
 

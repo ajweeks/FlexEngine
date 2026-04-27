@@ -361,6 +361,8 @@ namespace flex
 		// Stores data about the queued hologram (if any)
 		HologramMetaData m_QueuedHologramData;
 		PrefabID m_QueuedHologramPrefabID = InvalidPrefabID;
+		// Cache of PrefabID -> mesh file path to avoid repeated Destroy/LoadFromFile
+		std::map<PrefabID, std::string> m_HologramMeshCache;
 
 		Texture* m_BlankTexture = nullptr;
 		Texture* m_BlankTextureArr = nullptr;

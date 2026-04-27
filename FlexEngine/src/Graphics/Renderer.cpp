@@ -1216,58 +1216,138 @@ namespace flex
 		{
 			Mesh* mesh = m_HologramProxyObject->GetMesh();
 			GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(m_QueuedHologramPrefabID);
-			const std::string meshFilePath = prefabTemplate->GetMesh()->GetRelativeFilePath();
+
+			std::string meshFilePath;
+			if (prefabTemplate != nullptr && prefabTemplate->GetMesh() != nullptr)
+			{
+				meshFilePath = prefabTemplate->GetMesh()->GetRelativeFilePath();
+			}
 
 			bool bValid = false;
-			if (mesh->GetSubmeshCount() != 0)
+			if (!meshFilePath.empty())
 			{
-				if (mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+				// Check if we already have this mesh cached
+				auto cacheIt = m_HologramMeshCache.find(m_QueuedHologramPrefabID);
+				if (cacheIt != m_HologramMeshCache.end() && mesh->GetSubmeshCount() != 0)
 				{
-					// Same prefab is being drawn as last frame
-					bValid = true;
+					if (mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+					{
+						// Same prefab is being drawn as last frame
+						bValid = true;
+					}
+					else
+					{
+						mesh->Destroy();
+						// Restore game object reference
+						mesh->SetOwner(m_HologramProxyObject);
+					}
+				}
+				else if (mesh->GetSubmeshCount() != 0)
+				{
+					if (mesh->GetRelativeFilePath().compare(meshFilePath) == 0)
+					{
+						bValid = true;
+					}
+					else
+					{
+						mesh->Destroy();
+						mesh->SetOwner(m_HologramProxyObject);
+					}
+				}
+
+				if (m_HologramMatID == InvalidMaterialID)
+				{
+					g_Renderer->FindOrCreateMaterialByName("Selection Hologram", m_HologramMatID);
+				}
+
+				if (!bValid)
+				{
+					bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
+					m_HologramProxyObject->PostInitialize();
+
+					if (bValid)
+					{
+						m_HologramMeshCache[m_QueuedHologramPrefabID] = meshFilePath;
+					}
+				}
+
+				if (bValid)
+				{
+					m_HologramProxyObject->SetVisible(true);
+
+					Material* hologramMat = GetMaterial(m_HologramMatID);
+					if (hologramMat != nullptr)
+					{
+						hologramMat->constEmissive = m_QueuedHologramData.colour;
+
+						Transform* transform = m_HologramProxyObject->GetTransform();
+						transform->SetWorldPosition(m_QueuedHologramData.posWS, false);
+						transform->SetWorldRotation(m_QueuedHologramData.rotWS, false);
+						transform->SetWorldScale(m_QueuedHologramData.scaleWS, true);
+					}
 				}
 				else
 				{
-					mesh->Destroy();
+					std::string prefabIDStr = m_QueuedHologramPrefabID.ToString();
+					std::string prefabName = prefabTemplate->GetName();
+					PrintError("Failed to load mesh for selection hologram proxy (prefab ID: %s, prefab name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
 					// Restore game object reference
 					mesh->SetOwner(m_HologramProxyObject);
+					mesh->Destroy();
 				}
 			}
-
-			if (m_HologramMatID == InvalidMaterialID)
+			else if (prefabTemplate != nullptr)
 			{
-				g_Renderer->FindOrCreateMaterialByName("Selection Hologram", m_HologramMatID);
-			}
+				// Prefab template has no mesh (e.g. mineral deposits generate mesh at runtime)
+				// Attempt type-specific fallback
+				bool bFallbackValid = false;
 
-			if (!bValid)
-			{
-				bValid = mesh->LoadFromFile(meshFilePath, m_HologramMatID);
-				m_HologramProxyObject->PostInitialize();
-			}
-
-			if (bValid)
-			{
-				m_HologramProxyObject->SetVisible(true);
-
-				Material* hologramMat = GetMaterial(m_HologramMatID);
-				if (hologramMat != nullptr)
+				if (prefabTemplate->GetTypeID() == MineralDepositSID)
 				{
-					hologramMat->constEmissive = m_QueuedHologramData.colour;
+					std::string fallbackMeshPath = MESH_DIRECTORY "mineral-deposit-100.glb";
 
-					Transform* transform = m_HologramProxyObject->GetTransform();
-					transform->SetWorldPosition(m_QueuedHologramData.posWS, false);
-					transform->SetWorldRotation(m_QueuedHologramData.rotWS, false);
-					transform->SetWorldScale(m_QueuedHologramData.scaleWS, true);
+					if (m_HologramMatID == InvalidMaterialID)
+					{
+						g_Renderer->FindOrCreateMaterialByName("Selection Hologram", m_HologramMatID);
+					}
+
+					if (m_HologramMatID != InvalidMaterialID)
+					{
+						if (mesh->GetSubmeshCount() != 0)
+						{
+							mesh->Destroy();
+							mesh->SetOwner(m_HologramProxyObject);
+						}
+
+						bFallbackValid = mesh->LoadFromFile(fallbackMeshPath, m_HologramMatID);
+						if (bFallbackValid)
+						{
+							m_HologramProxyObject->PostInitialize();
+							m_HologramMeshCache[m_QueuedHologramPrefabID] = fallbackMeshPath;
+						}
+					}
 				}
-			}
-			else
-			{
-				std::string prefabIDStr = m_QueuedHologramPrefabID.ToString();
-				std::string prefabName = prefabTemplate->GetName();
-				PrintError("Failed to load mesh for selection hologram proxy (prefab ID: %s, prefab name: %s)\n", prefabIDStr.c_str(), prefabName.c_str());
-				// Restore game object reference
-				mesh->SetOwner(m_HologramProxyObject);
-				mesh->Destroy();
+
+				if (bFallbackValid)
+				{
+					m_HologramProxyObject->SetVisible(true);
+
+					Material* hologramMat = GetMaterial(m_HologramMatID);
+					if (hologramMat != nullptr)
+					{
+						hologramMat->constEmissive = m_QueuedHologramData.colour;
+
+						Transform* transform = m_HologramProxyObject->GetTransform();
+						transform->SetWorldPosition(m_QueuedHologramData.posWS, false);
+						transform->SetWorldRotation(m_QueuedHologramData.rotWS, false);
+						transform->SetWorldScale(m_QueuedHologramData.scaleWS, true);
+					}
+				}
+				else
+				{
+					std::string prefabIDStr = m_QueuedHologramPrefabID.ToString();
+					PrintWarn("Skipping hologram for prefab with no mesh (prefab ID: %s, name: %s)\n", prefabIDStr.c_str(), prefabTemplate->GetName().c_str());
+				}
 			}
 
 			m_QueuedHologramPrefabID = InvalidPrefabID;
@@ -1636,6 +1716,8 @@ namespace flex
 
 	void Renderer::OnPreSceneChange()
 	{
+		m_HologramMeshCache.clear();
+
 		if (m_DebugRenderer != nullptr)
 		{
 			m_DebugRenderer->OnPreSceneChange();

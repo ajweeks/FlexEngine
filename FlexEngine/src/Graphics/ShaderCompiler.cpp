@@ -14,9 +14,9 @@ namespace flex
 
 	const char* ShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
 
-	volatile u32 shaderWorkItemsCreated = 0;
-	volatile u32 shaderWorkItemsClaimed = 0;
-	volatile u32 shaderWorkItemsCompleted = 0;
+	std::atomic<u32> shaderWorkItemsCreated{ 0 };
+	std::atomic<u32> shaderWorkItemsClaimed{ 0 };
+	std::atomic<u32> shaderWorkItemsCompleted{ 0 };
 	ShaderCompiler::ShaderCompilationResult** s_ShaderCompilationResults;
 	u32 s_ShaderCompilationResultsLength = 0;
 	std::vector<ShaderCompiler::ShaderError> s_ShaderErrors;
@@ -55,13 +55,13 @@ namespace flex
 			ShaderCompiler::ShaderCompilationResult* compilationResult = nullptr;
 
 			// Check for new unclaimed work items
-			if (shaderWorkItemsCreated != shaderWorkItemsClaimed)
+			if (shaderWorkItemsCreated.load(std::memory_order_acquire) != shaderWorkItemsClaimed.load(std::memory_order_acquire))
 			{
 				Platform::EnterCriticalSection(threadData->criticalSection);
-				if (shaderWorkItemsCreated != shaderWorkItemsClaimed)
+				if (shaderWorkItemsCreated.load(std::memory_order_acquire) != shaderWorkItemsClaimed.load(std::memory_order_relaxed))
 				{
-					compilationResult = s_ShaderCompilationResults[shaderWorkItemsClaimed];
-					shaderWorkItemsClaimed += 1;
+					u32 workItemIndex = shaderWorkItemsClaimed.fetch_add(1, std::memory_order_acq_rel);
+					compilationResult = s_ShaderCompilationResults[workItemIndex];
 
 					WRITE_BARRIER;
 
@@ -121,7 +121,7 @@ namespace flex
 
 				WRITE_BARRIER;
 
-				Platform::AtomicIncrement(&shaderWorkItemsCompleted);
+				shaderWorkItemsCompleted.fetch_add(1, std::memory_order_release);
 			}
 			else
 			{
@@ -132,12 +132,11 @@ namespace flex
 
 	void ShaderCompiler::QueueWorkItem(const std::string& shaderAbsPath)
 	{
-		CHECK_LT(shaderWorkItemsCreated, s_ShaderCompilationResultsLength);
+		u32 workItemIndex = shaderWorkItemsCreated.fetch_add(1, std::memory_order_acq_rel);
+		CHECK_LT(workItemIndex, s_ShaderCompilationResultsLength);
 
-		s_ShaderCompilationResults[shaderWorkItemsCreated] = new ShaderCompilationResult();
-		s_ShaderCompilationResults[shaderWorkItemsCreated]->shaderAbsPath = shaderAbsPath;
-
-		Platform::AtomicIncrement(&shaderWorkItemsCreated);
+		s_ShaderCompilationResults[workItemIndex] = new ShaderCompilationResult();
+		s_ShaderCompilationResults[workItemIndex]->shaderAbsPath = shaderAbsPath;
 	}
 
 	//void ShaderCompiler::bComplete()
@@ -263,9 +262,9 @@ namespace flex
 			m_ThreadData.criticalSection = nullptr;
 		}
 		bComplete = true;
-		shaderWorkItemsCreated = 0;
-		shaderWorkItemsClaimed = 0;
-		shaderWorkItemsCompleted = 0;
+		shaderWorkItemsCreated.store(0, std::memory_order_release);
+		shaderWorkItemsClaimed.store(0, std::memory_order_release);
+		shaderWorkItemsCompleted.store(0, std::memory_order_release);
 
 		WRITE_BARRIER;
 
@@ -516,7 +515,7 @@ namespace flex
 			return false;
 		}
 
-		bool bAllCompleted = (shaderWorkItemsCreated == shaderWorkItemsCompleted);
+		bool bAllCompleted = (shaderWorkItemsCreated.load(std::memory_order_acquire) == shaderWorkItemsCompleted.load(std::memory_order_acquire));
 
 		if (!bAllCompleted)
 		{
@@ -697,9 +696,9 @@ namespace flex
 			m_ThreadData.criticalSection = nullptr;
 		}
 
-		shaderWorkItemsCreated = 0;
-		shaderWorkItemsClaimed = 0;
-		shaderWorkItemsCompleted = 0;
+		shaderWorkItemsCreated.store(0, std::memory_order_release);
+		shaderWorkItemsClaimed.store(0, std::memory_order_release);
+		shaderWorkItemsCompleted.store(0, std::memory_order_release);
 
 		// Append new checksums to file
 		std::string checksumFileContentsAppend;
@@ -750,7 +749,7 @@ namespace flex
 
 	i32 ShaderCompiler::WorkItemsRemaining() const
 	{
-		return shaderWorkItemsCreated - shaderWorkItemsCompleted;
+		return (i32)shaderWorkItemsCreated.load(std::memory_order_acquire) - (i32)shaderWorkItemsCompleted.load(std::memory_order_acquire);
 	}
 
 	i32 ShaderCompiler::ThreadCount() const

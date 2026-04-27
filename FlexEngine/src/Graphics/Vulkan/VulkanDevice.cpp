@@ -52,17 +52,48 @@ namespace flex
 
 			m_EnabledExtensions.clear();
 
+			auto addEnabledExtension = [this](const char* extName) -> bool
+			{
+				if (!ExtensionSupported(extName))
+				{
+					return false;
+				}
+
+				if (!ExtensionEnabled(extName))
+				{
+					m_EnabledExtensions.push_back(extName);
+				}
+
+				return true;
+			};
+
 			for (const char* extName : *createInfo.requiredExtensions)
 			{
-				CHECK(ExtensionSupported(extName));
-				m_EnabledExtensions.push_back(extName);
+				CHECK(addEnabledExtension(extName));
 			}
 
 			for (const char* extName : *createInfo.optionalExtensions)
 			{
-				if (ExtensionSupported(extName))
+				addEnabledExtension(extName);
+			}
+
+			const char* missingRayTracingExtension = nullptr;
+			bool bRayTracingExtensionsSupported = createInfo.bTryEnableRayTracing && createInfo.rayTracingExtensions != nullptr;
+			if (bRayTracingExtensionsSupported)
+			{
+				for (const char* extName : *createInfo.rayTracingExtensions)
 				{
-					m_EnabledExtensions.push_back(extName);
+					if (!ExtensionSupported(extName))
+					{
+						missingRayTracingExtension = extName;
+						bRayTracingExtensionsSupported = false;
+						break;
+					}
+				}
+
+				if (!bRayTracingExtensionsSupported && missingRayTracingExtension != nullptr)
+				{
+					Print("Ray tracing disabled: missing device extension %s\n", missingRayTracingExtension);
 				}
 			}
 
@@ -70,12 +101,19 @@ namespace flex
 			supportedFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			VkPhysicalDeviceRayTracingPipelineFeaturesKHR supportedRayTracingFeatures = {};
 			supportedRayTracingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-			supportedFeatures2.pNext = &supportedRayTracingFeatures;
+			if (bRayTracingExtensionsSupported)
+			{
+				supportedFeatures2.pNext = &supportedRayTracingFeatures;
+			}
 			vkGetPhysicalDeviceFeatures2(m_PhysicalDevice, &supportedFeatures2);
 
-			if (createInfo.bTryEnableRayTracing)
+			if (bRayTracingExtensionsSupported)
 			{
 				m_bRayTracingSupported = supportedRayTracingFeatures.rayTracingPipeline != 0;
+				if (!m_bRayTracingSupported)
+				{
+					Print("Ray tracing disabled: VkPhysicalDeviceRayTracingPipelineFeaturesKHR::rayTracingPipeline not supported\n");
+				}
 			}
 			else
 			{
@@ -84,12 +122,9 @@ namespace flex
 
 			if (m_bRayTracingSupported)
 			{
-				for (const char* extName : *createInfo.optionalExtensions)
+				for (const char* extName : *createInfo.rayTracingExtensions)
 				{
-					if (ExtensionSupported(extName))
-					{
-						m_EnabledExtensions.push_back(extName);
-					}
+					CHECK(addEnabledExtension(extName));
 				}
 			}
 
