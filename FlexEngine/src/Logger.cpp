@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstdio> // For fprintf, ...
+#include <mutex>
 
 #include "Helpers.hpp"
 #include "Platform/Platform.hpp"
@@ -15,6 +16,12 @@ namespace flex
 
 	// Max number of characters allowed in a single message
 	static const int MAX_CHARS = 1024;
+
+	// Serializes access to g_LogBuffer, the console colour, stdout and the debugger console
+	// so that concurrent calls to Print/PrintWarn/PrintError from multiple threads (e.g. the
+	// main thread queuing texture loads while worker threads log load completions) do not
+	// race and corrupt the underlying buffers.
+	static std::recursive_mutex g_LogMutex;
 
 	//
 	// File-private function declarations
@@ -49,6 +56,8 @@ namespace flex
 	{
 		// TODO: Only append new content rather than overwriting old content?
 
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f != nullptr)
@@ -65,6 +74,8 @@ namespace flex
 		{
 			return;
 		}
+
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::DEFAULT);
 
@@ -83,6 +94,8 @@ namespace flex
 			return;
 		}
 
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::WARNING);
 
 		va_list argList;
@@ -99,6 +112,8 @@ namespace flex
 		{
 			return;
 		}
+
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
@@ -117,9 +132,7 @@ namespace flex
 			return;
 		}
 
-		// TODO: Make thread safe?
-		//static std::mutex mutex;
-		//std::lock_guard<std::mutex> lock(mutex);
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 
 		// Strip leading directories
 		const char* filePath = strstr(file, "FlexEngine/");
@@ -148,6 +161,8 @@ namespace flex
 			return;
 		}
 
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::DEFAULT);
 
 		PrintSimple(str);
@@ -159,6 +174,8 @@ namespace flex
 		{
 			return;
 		}
+
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::WARNING);
 
@@ -172,6 +189,8 @@ namespace flex
 			return;
 		}
 
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
 		PrintSimple(str);
@@ -183,6 +202,11 @@ namespace flex
 
 	void Print(const char* str, va_list argList)
 	{
+		// Callers in this file already hold g_LogMutex; lock here too in case this
+		// file-private overload is ever invoked directly without going through the
+		// public variadic wrappers above.
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		if (strlen(str) == 0)
 		{
 			std::cout << "\n";
@@ -196,7 +220,6 @@ namespace flex
 
 			std::string s(buffer);
 			s[s.size() - 1] = '\n';
-			// TODO: Make thread-safe
 			g_LogBuffer << s;
 
 			std::cout << buffer;
@@ -207,6 +230,8 @@ namespace flex
 
 	void PrintSimple(const char* str)
 	{
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
 		if (strlen(str) == 0)
 		{
 			std::cout << "\n";
