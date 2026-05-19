@@ -10392,8 +10392,9 @@ namespace flex
 					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
 
 					const u32 vertexCount = terrainChunkData->vertexCount;
-					const u32 triCount = terrainChunkData->indexCount;
-					const u32 indexCount = triCount * 3;
+					// NOTE: TerrainChunkData::indexCount is the total number of indices written
+					// by the generator (already triangleCount * 3), despite its name.
+					const u32 indexCount = terrainChunkData->indexCount;
 
 					if (vertexCount == 0)
 					{
@@ -10468,6 +10469,12 @@ namespace flex
 		}
 
 		MeshComponent* submesh = chunk->meshComponent;
+
+		// Empty chunks (no generated geometry) have no mesh component; nothing to collide with.
+		if (submesh == nullptr || submesh->GetIndexCount() == 0)
+		{
+			return;
+		}
 
 		CHECK_EQ(chunk->collisionShape, nullptr);
 

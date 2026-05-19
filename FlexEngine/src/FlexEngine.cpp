@@ -2330,7 +2330,6 @@ namespace flex
 
 	EventReply FlexEngine::OnKeyEvent(KeyCode keyCode, KeyAction action, i32 modifiers)
 	{
-		const bool bControlDown = (modifiers & (i32)InputModifier::CONTROL) > 0;
 		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
 		const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 

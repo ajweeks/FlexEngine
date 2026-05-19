@@ -273,8 +273,12 @@ namespace flex
 		GameObject* parent = m_GameObject->GetParent();
 		if (parent != nullptr)
 		{
-			glm::mat4 m = parent->GetTransform()->GetWorldTransform();
-			return glm::quat_cast(m) * localRotation;
+			// Compose rotations by walking the parent chain rather than
+			// extracting from the cached world matrix. The cached matrix
+			// can include (non-uniform or non-unit) scale, in which case
+			// glm::quat_cast produces an incorrect quaternion because the
+			// matrix columns aren't orthonormal.
+			return parent->GetTransform()->GetWorldRotation() * localRotation;
 		}
 		return localRotation;
 	}
@@ -559,10 +563,13 @@ namespace flex
 
 			if (bDirtyScale)
 			{
-				if (rigidBody->GetRigidBodyInternal() != nullptr &&
-					!NearlyEquals(localScale, VEC3_ONE, 0.00001f))
+				if (rigidBody->GetRigidBodyInternal() != nullptr)
 				{
-					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(localScale));
+					// Use world scale so the collision shape matches the visually drawn
+					// mesh (which uses the world transform). Using localScale alone would
+					// miss parent-driven scaling (e.g. the editor's transform gizmo, which
+					// scales its root every frame while leaves keep localScale = 1).
+					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(GetWorldScale()));
 				}
 			}
 			if (bDirtyPos && bDirtyRot)

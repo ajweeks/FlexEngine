@@ -141,8 +141,6 @@ namespace flex
 					}
 
 					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
-					Print("[TEXTURE] Created texture: %s\n", loadInfo.relativeFilePath.c_str());
-
 					if (newTexSize == 0)
 					{
 						delete texture;

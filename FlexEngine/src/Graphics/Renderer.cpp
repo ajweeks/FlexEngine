@@ -85,17 +85,17 @@ namespace flex
 		for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 		{
 			memset(&m_PointLightData[i], 0, sizeof(PointLightData));
-			m_PointLightData[i].colour = VEC3_NEG_ONE;
+			m_PointLightData[i].colour = VEC4_NEG_ONE;
 		}
 		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
 		{
 			memset(&m_SpotLightData[i], 0, sizeof(SpotLightData));
-			m_SpotLightData[i].colour = VEC3_NEG_ONE;
+			m_SpotLightData[i].colour = VEC4_NEG_ONE;
 		}
 		for (i32 i = 0; i < MAX_AREA_LIGHT_COUNT; ++i)
 		{
 			memset(&m_AreaLightData[i], 0, sizeof(AreaLightData));
-			m_AreaLightData[i].colour = VEC3_NEG_ONE;
+			m_AreaLightData[i].colour = VEC4_NEG_ONE;
 		}
 
 		// TODO: Move these defaults to config file
@@ -269,6 +269,7 @@ namespace flex
 		m_LightData = nullptr;
 		m_PointLightData = nullptr;
 		m_SpotLightData = nullptr;
+		m_AreaLightData = nullptr;
 
 		m_HologramProxyObject->Destroy();
 		delete m_HologramProxyObject;
@@ -628,7 +629,7 @@ namespace flex
 			else
 			{
 				memset(&m_PointLightData[ID], 0, sizeof(PointLightData));
-				m_PointLightData[ID].colour = VEC3_NEG_ONE;
+				m_PointLightData[ID].colour = VEC4_NEG_ONE;
 			}
 		}
 	}
@@ -702,7 +703,7 @@ namespace flex
 			else
 			{
 				memset(&m_SpotLightData[ID], 0, sizeof(SpotLightData));
-				m_SpotLightData[ID].colour = VEC3_NEG_ONE;
+				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
 			}
 		}
 	}
@@ -776,7 +777,7 @@ namespace flex
 			else
 			{
 				memset(&m_AreaLightData[ID], 0, sizeof(AreaLightData));
-				m_AreaLightData[ID].colour = VEC3_NEG_ONE;
+				m_AreaLightData[ID].colour = VEC4_NEG_ONE;
 			}
 		}
 	}
@@ -903,12 +904,11 @@ namespace flex
 	bool Renderer::FindOrCreateMaterialByName(const std::string& materialName, MaterialID& outMaterialID)
 	{
 		const char* matNameCStr = materialName.c_str();
-		for (u32 i = 0; i < (u32)m_Materials.size(); ++i)
+		for (const auto& matPair : m_Materials)
 		{
-			auto matIter = m_Materials.find(i);
-			if (matIter != m_Materials.end() && matIter->second->name.compare(matNameCStr) == 0)
+			if (matPair.second->name.compare(matNameCStr) == 0)
 			{
-				outMaterialID = i;
+				outMaterialID = matPair.first;
 				return true;
 			}
 		}
@@ -1543,11 +1543,6 @@ namespace flex
 						newNameBuf[bufSize - 1] = '\0';
 						material->name = std::string(newNameBuf);
 						bMaterialSelectionChanged = true;
-					}
-
-					if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))
-					{
-						ImGui::CloseCurrentPopup();
 					}
 
 					if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE, true))

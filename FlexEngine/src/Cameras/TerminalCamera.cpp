@@ -99,7 +99,6 @@ namespace flex
 		if (m_TransitionRemaining != 0.0f)
 		{
 			const bool bTransitioningIn = m_TransitionRemaining > 0.0f;
-			const bool bTransitioningOut = m_TransitionRemaining < 0.0f;
 			bool bTransitionComplete = false;
 
 			if (bTransitioningIn)
