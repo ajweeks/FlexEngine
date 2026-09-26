@@ -59,6 +59,8 @@ namespace flex
 		m_ConfigFile.RegisterProperty("mouse rotate v speed", &m_MouseRotateVSpeed)
 			.SetRange(0.01f, 10.0f);
 		m_ConfigFile.RegisterProperty("invert move v", &m_bInvertMouseV);
+		m_ConfigFile.RegisterProperty("look smoothing time", &m_LookSmoothingTime)
+			.SetRange(0.0f, 0.2f);
 	}
 
 	PlayerController::~PlayerController()
@@ -100,6 +102,8 @@ namespace flex
 		{
 			g_Window->SetCursorMode(m_Player->IsAnyInventoryShowing() ? CursorMode::NORMAL : CursorMode::DISABLED);
 		}
+
+		UpdateLook();
 
 		// TODO: Make frame-rate-independent!
 
@@ -406,7 +410,6 @@ namespace flex
 
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
-		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
 
 		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
@@ -435,27 +438,6 @@ namespace flex
 		{
 			UpdatePreviewPlacementItem();
 		}
-
-		if (m_Player->AbleToInteract() &&
-			m_Player->m_TrackRidingID == InvalidTrackID)
-		{
-			real lookH = lookLR + m_MouseLookAccum.x * m_MouseRotateHSpeed;
-			real lookV = 0.0f;
-			if (m_Mode == Mode::FIRST_PERSON)
-			{
-				lookV = -g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN);
-				lookV += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f);
-			}
-
-			glm::quat rot = playerTransform->GetLocalRotation();
-			real angle = lookH * (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson) * g_FixedDeltaTime;
-			rot = glm::rotate(rot, angle, playerTransform->GetUp());
-			playerTransform->SetWorldRotation(rot);
-
-			m_Player->AddToPitch(lookV * m_RotateVSpeed * g_FixedDeltaTime);
-		}
-
-		m_MouseLookAccum = VEC2_ZERO;
 
 		if (m_Player->m_bPossessed)
 		{
@@ -506,6 +488,49 @@ namespace flex
 		rb->applyCentralForce(force);
 	}
 
+	// Look is applied every frame rather than every fixed step so rotation isn't quantized to the physics rate.
+	// Yaw is written straight through to the rigid body, which isn't simulated rotationally (see Player::PostInitialize)
+	void PlayerController::UpdateLook()
+	{
+		if (!m_Player->AbleToInteract() ||
+			m_Player->m_TrackRidingID != InvalidTrackID)
+		{
+			m_MouseLookAccum = VEC2_ZERO;
+			m_PendingLook = VEC2_ZERO;
+			return;
+		}
+
+		const real rotateHSpeed = (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson);
+
+		// Mouse deltas are distances, so they aren't scaled by the frame time (g_FixedDeltaTime is only kept to preserve existing sensitivities)
+		glm::vec2 lookInput(m_MouseLookAccum.x * m_MouseRotateHSpeed * rotateHSpeed * g_FixedDeltaTime, 0.0f);
+		// Stick input is a rate
+		lookInput.x += (-g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT)) * rotateHSpeed * g_DeltaTime;
+		if (m_Mode == Mode::FIRST_PERSON)
+		{
+			lookInput.y += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f) * m_RotateVSpeed * g_FixedDeltaTime;
+			lookInput.y += (-g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN)) * m_RotateVSpeed * g_DeltaTime;
+		}
+		m_MouseLookAccum = VEC2_ZERO;
+
+		m_PendingLook += lookInput;
+
+		const real applyFrac = (m_LookSmoothingTime > 0.0f) ? (1.0f - glm::exp(-g_DeltaTime / m_LookSmoothingTime)) : 1.0f;
+		const glm::vec2 look = m_PendingLook * applyFrac;
+		m_PendingLook -= look;
+
+		if (look.x != 0.0f)
+		{
+			Transform* playerTransform = m_Player->GetTransform();
+			playerTransform->SetWorldRotation(glm::rotate(playerTransform->GetWorldRotation(), look.x, VEC3_UP));
+		}
+
+		if (look.y != 0.0f)
+		{
+			m_Player->AddToPitch(look.y);
+		}
+	}
+
 	void PlayerController::ResetTransformAndVelocities()
 	{
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
@@ -516,6 +541,7 @@ namespace flex
 		btTransform identity = btTransform::getIdentity();
 		identity.setOrigin(btVector3(0, 5, 0));
 		rb->setWorldTransform(identity);
+		m_Player->ResetPositionInterpolation();
 	}
 
 	void PlayerController::DrawImGuiObjects()

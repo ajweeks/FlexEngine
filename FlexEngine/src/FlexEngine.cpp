@@ -7,7 +7,7 @@
 #include "FlexEngine.hpp"
 
 #include <stdlib.h> // For srand, rand
-#include <time.h> // For time
+#include <time.h> // For timed
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btRigidBody.h>

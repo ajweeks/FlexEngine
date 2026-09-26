@@ -32,6 +32,7 @@ namespace flex
 
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
+		void UpdateLook();
 
 		void LoadConfigFile();
 		void SerializeConfigFile();
@@ -59,6 +60,10 @@ namespace flex
 		real m_MouseRotateHSpeed = 1.0f;
 		real m_MouseRotateVSpeed = 1.0f;
 		glm::vec2 m_MouseLookAccum = VEC2_ZERO;
+		// Yaw & pitch (radians) still to be applied. Drained over a short time to soften uneven mouse deltas
+		glm::vec2 m_PendingLook = VEC2_ZERO;
+		// Time constant of look smoothing, 0 disables it
+		sec m_LookSmoothingTime = 0.02f;
 		bool m_bInvertMouseV = false;
 		// If the player has a velocity magnitude of this value or lower, their
 		// rotation speed will linearly decrease as their velocity approaches 0

@@ -78,12 +78,22 @@ namespace flex
 
 			if (!g_EngineInstance->IsSimulationPaused())
 			{
+				// Snap frame times which are very close to a whole number of fixed steps (e.g. vsync at the fixed rate)
+				// so timer noise doesn't cause frames to alternate between taking zero and two steps
+				const sec snapTolerance = 0.0005f;
+				const real wholeSteps = glm::round(deltaSeconds / g_FixedDeltaTime);
+				if (wholeSteps >= 1.0f && glm::abs(deltaSeconds - wholeSteps * g_FixedDeltaTime) < snapTolerance)
+				{
+					deltaSeconds = wholeSteps * g_FixedDeltaTime;
+				}
+
 				m_AccumulatedTime += deltaSeconds;
 			}
 
 			BaseScene* scene = g_SceneManager->CurrentScene();
 
-			u32 numSubsteps = glm::min((u32)(m_AccumulatedTime / g_FixedDeltaTime), MAX_SUBSTEPS);
+			// Small epsilon prevents float error from leaving the accumulator a hair short of a whole step
+			u32 numSubsteps = glm::min((u32)((m_AccumulatedTime + 1.0e-6f) / g_FixedDeltaTime), MAX_SUBSTEPS);
 
 			for (u32 step = 0; step < numSubsteps; ++step)
 			{
@@ -91,9 +101,12 @@ namespace flex
 				scene->FixedUpdate();
 				m_AccumulatedTime -= g_FixedDeltaTime;
 			}
-
-			// TODO: Tell bullet what remaining time is so it can interpolate?
 		}
+	}
+
+	real PhysicsWorld::GetInterpolationAlpha() const
+	{
+		return glm::clamp(m_AccumulatedTime / g_FixedDeltaTime, 0.0f, 1.0f);
 	}
 
 	btDiscreteDynamicsWorld* PhysicsWorld::GetWorld()

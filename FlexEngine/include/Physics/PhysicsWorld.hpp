@@ -31,6 +31,10 @@ namespace flex
 
 		void StepSimulation(sec deltaSeconds);
 
+		// How far between the last fixed step and the next one the current frame lies, in [0, 1].
+		// Used to interpolate rendered transforms between the two most recent physics states
+		real GetInterpolationAlpha() const;
+
 		btDiscreteDynamicsWorld* GetWorld();
 
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);

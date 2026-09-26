@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -58,7 +59,26 @@ namespace flex
 
 	void OverheadCamera::FixedUpdate()
 	{
+		if (m_Player0 == nullptr)
+		{
+			return;
+		}
+
+		// Sample on the fixed step so smoothing is independent of frame rate
+		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
+		m_PlayerPosRollingAvg.AddValue(m_Player0->GetTransform()->GetWorldPosition());
+
+		m_PrevPlayerPosAvg = m_CurrPlayerPosAvg;
+		m_CurrPlayerPosAvg = m_PlayerPosRollingAvg.currentAverage;
+		m_PrevPlayerForwardAvg = m_CurrPlayerForwardAvg;
+		m_CurrPlayerForwardAvg = m_PlayerForwardRollingAvg.currentAverage;
+	}
+
+	void OverheadCamera::LateUpdate()
+	{
 		TrackPlayer();
+
+		BaseCamera::LateUpdate();
 	}
 
 	void OverheadCamera::TrackPlayer()
@@ -85,19 +105,17 @@ namespace flex
 			m_ZoomLevel = MoveTowards(m_ZoomLevel, m_TargetZoomLevel, g_DeltaTime * 15.0f);
 		}
 
-		m_PlayerForwardRollingAvg.AddValue(m_Player0->GetTransform()->GetForward());
-
-		m_PlayerPosRollingAvg.AddValue(m_Player0->GetTransform()->GetWorldPosition());
-		m_TargetLookAtPos = m_PlayerPosRollingAvg.currentAverage;
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+		real alpha = (physicsWorld != nullptr) ? physicsWorld->GetInterpolationAlpha() : 1.0f;
+		m_TargetLookAtPos = glm::mix(m_PrevPlayerPosAvg, m_CurrPlayerPosAvg, alpha);
+		glm::vec3 playerForward = glm::mix(m_PrevPlayerForwardAvg, m_CurrPlayerForwardAvg, alpha);
 
 #if THOROUGH_CHECKS
 		ENSURE(!IsNanOrInf(m_TargetLookAtPos));
 #endif
 
+		position = GetOffsetPosition(m_TargetLookAtPos, playerForward);
 		SetLookAt();
-
-		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
-		position = desiredPos;
 
 		CalculateYawAndPitchFromForward();
 		RecalculateViewProjection();
@@ -120,9 +138,9 @@ namespace flex
 		}
 	}
 
-	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos)
+	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos, const glm::vec3& playerForward)
 	{
-		glm::vec3 backward = -m_PlayerForwardRollingAvg.currentAverage;
+		glm::vec3 backward = -playerForward;
 		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * m_ZoomLevel;
 		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
 		return pos + offsetVec;
@@ -137,7 +155,7 @@ namespace flex
 
 		m_TargetLookAtPos = m_Player0->GetTransform()->GetWorldPosition();
 
-		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
+		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos, m_Player0->GetTransform()->GetForward());
 		position = desiredPos;
 
 		SetLookAt();
@@ -148,6 +166,12 @@ namespace flex
 		forward = glm::normalize(m_TargetLookAtPos - position);
 		right = normalize(glm::cross(VEC3_UP, forward));
 		up = cross(forward, right);
+	}
+
+	void OverheadCamera::ResetSmoothedSamples()
+	{
+		m_CurrPlayerPosAvg = m_PrevPlayerPosAvg = m_PlayerPosRollingAvg.currentAverage;
+		m_CurrPlayerForwardAvg = m_PrevPlayerForwardAvg = m_PlayerForwardRollingAvg.currentAverage;
 	}
 
 	void OverheadCamera::FindPlayer()
@@ -175,6 +199,8 @@ namespace flex
 			m_PlayerPosRollingAvg.Reset();
 			m_PlayerForwardRollingAvg.Reset();
 		}
+
+		ResetSmoothedSamples();
 
 		RecalculateViewProjection();
 	}

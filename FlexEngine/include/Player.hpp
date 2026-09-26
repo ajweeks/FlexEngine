@@ -64,6 +64,9 @@ namespace flex
 		void ClampPitch();
 		void UpdateIsGrounded();
 
+		// Discards the previous physics position so the next frame doesn't interpolate across a teleport
+		void ResetPositionInterpolation();
+
 		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
 
 		void AttachToTrack(TrackID trackID, real distAlongTrack);
@@ -211,6 +214,11 @@ namespace flex
 		real m_Height = 4.0f;
 
 		real m_Pitch = 0.0f;
+
+		// Rigid body positions after the two most recent fixed steps, used to smooth the rendered position between steps
+		glm::vec3 m_PrevPhysicsPos = VEC3_ZERO;
+		glm::vec3 m_CurrPhysicsPos = VEC3_ZERO;
+		bool m_bPhysicsPosValid = false;
 
 		TrackBuildingContext m_TrackBuildingContext;
 

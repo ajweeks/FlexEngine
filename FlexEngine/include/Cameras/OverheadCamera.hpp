@@ -18,15 +18,17 @@ namespace flex
 		virtual void Initialize() override;
 		virtual void OnPostSceneChange() override;
 		virtual void FixedUpdate() override;
+		virtual void LateUpdate() override;
 
 		virtual void DrawImGuiObjects() override;
 
 	private:
-		glm::vec3 GetOffsetPosition(const glm::vec3& pos);
+		glm::vec3 GetOffsetPosition(const glm::vec3& pos, const glm::vec3& playerForward);
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindPlayer();
 		void TrackPlayer();
+		void ResetSmoothedSamples();
 
 		void ResetValues();
 
@@ -34,6 +36,12 @@ namespace flex
 
 		RollingAverage<glm::vec3> m_PlayerPosRollingAvg;
 		RollingAverage<glm::vec3> m_PlayerForwardRollingAvg;
+		// Rolling averages after the two most recent fixed steps. The camera is placed between them each frame
+		// using the same interpolation alpha as the player so the two stay in sync
+		glm::vec3 m_PrevPlayerPosAvg = VEC3_ZERO;
+		glm::vec3 m_CurrPlayerPosAvg = VEC3_ZERO;
+		glm::vec3 m_PrevPlayerForwardAvg = VEC3_FORWARD;
+		glm::vec3 m_CurrPlayerForwardAvg = VEC3_FORWARD;
 
 		real m_ZoomLevel;
 		real m_TargetZoomLevel;
