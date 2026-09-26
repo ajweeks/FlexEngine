@@ -14,6 +14,7 @@ namespace flex
 {
 	class GameObject;
 	class IFunction;
+	class SceneTestRunner;
 	enum class TransformState;
 
 	class FlexEngine final
@@ -26,11 +27,8 @@ namespace flex
 		void UpdateAndRender();
 		void Stop();
 
-		// Loads each scene in turn (or only those in sceneFileNames, if non-empty), simulating
-		// framesPerScene frames in each, and records any warnings/errors printed. Call before Initialize.
-		void EnableSceneTestMode(const std::vector<std::string>& sceneFileNames, u32 framesPerScene);
-		// Returns the number of scenes which failed (plus one if startup failed)
-		i32 GetSceneTestFailureCount() const;
+		// Call before Initialize. The engine will stop once the runner has tested every scene.
+		void SetSceneTestRunner(SceneTestRunner* sceneTestRunner);
 
 		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data);
 
@@ -263,27 +261,7 @@ namespace flex
 		bool m_bInstallShaderDirectoryWatch = true;
 		bool m_bInstallTerminalDirectoryWatch = true;
 
-		struct SceneTestResult
-		{
-			std::string sceneFileName;
-			u32 warningCount = 0;
-			u32 errorCount = 0;
-			bool bLoaded = false;
-		};
-
-		// Returns false once all scenes have been tested
-		bool UpdateSceneTest();
-		void BeginSceneTestEntry(const std::string& name);
-		void EndSceneTestEntry();
-		void PrintSceneTestResults();
-
-		bool m_bSceneTestMode = false;
-		u32 m_SceneTestFramesPerScene = 0;
-		u32 m_SceneTestFramesRemaining = 0;
-		std::vector<std::string> m_SceneTestQueue;
-		std::vector<SceneTestResult> m_SceneTestResults;
-		u32 m_SceneTestWarningCountStart = 0;
-		u32 m_SceneTestErrorCountStart = 0;
+		SceneTestRunner* m_SceneTestRunner = nullptr;
 
 		std::vector<Spring<glm::vec3>> m_TestSprings;
 		real m_SpringTimer = 0.0f;

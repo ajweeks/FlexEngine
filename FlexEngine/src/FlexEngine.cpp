@@ -47,6 +47,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "SceneTestRunner.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
@@ -536,9 +537,9 @@ namespace flex
 
 		ParseUIWindowCache();
 
-		if (m_bSceneTestMode && m_SceneTestQueue.empty())
+		if (m_SceneTestRunner != nullptr)
 		{
-			m_SceneTestQueue = g_SceneManager->GetSceneFileNames();
+			m_SceneTestRunner->OnEngineInitialized();
 		}
 
 		sec durationSec = Time::CurrentSeconds() - startTime;
@@ -723,7 +724,7 @@ namespace flex
 		sec frameStartTime = Time::CurrentSeconds();
 		while (m_bRunning)
 		{
-			if (m_bSceneTestMode && !UpdateSceneTest())
+			if (m_SceneTestRunner != nullptr && !m_SceneTestRunner->Update())
 			{
 				break;
 			}
@@ -2016,99 +2017,9 @@ namespace flex
 		m_bRunning = false;
 	}
 
-	void FlexEngine::EnableSceneTestMode(const std::vector<std::string>& sceneFileNames, u32 framesPerScene)
+	void FlexEngine::SetSceneTestRunner(SceneTestRunner* sceneTestRunner)
 	{
-		m_bSceneTestMode = true;
-		m_SceneTestQueue = sceneFileNames;
-		m_SceneTestFramesPerScene = glm::max(framesPerScene, 1u);
-
-		// Anything printed before the first scene test begins is attributed to startup
-		BeginSceneTestEntry("<startup>");
-		m_SceneTestResults.back().bLoaded = true;
-	}
-
-	i32 FlexEngine::GetSceneTestFailureCount() const
-	{
-		i32 failureCount = 0;
-		for (const SceneTestResult& result : m_SceneTestResults)
-		{
-			if (!result.bLoaded || result.warningCount > 0 || result.errorCount > 0)
-			{
-				++failureCount;
-			}
-		}
-		return failureCount;
-	}
-
-	bool FlexEngine::UpdateSceneTest()
-	{
-		if (m_SceneTestFramesRemaining > 0)
-		{
-			--m_SceneTestFramesRemaining;
-			return true;
-		}
-
-		EndSceneTestEntry();
-
-		if (m_SceneTestQueue.empty())
-		{
-			PrintSceneTestResults();
-			return false;
-		}
-
-		std::string sceneFileName = m_SceneTestQueue.front();
-		m_SceneTestQueue.erase(m_SceneTestQueue.begin());
-
-		BeginSceneTestEntry(sceneFileName);
-		bool bLoaded = g_SceneManager->SetCurrentScene(sceneFileName);
-		m_SceneTestResults.back().bLoaded = bLoaded;
-		// The current frame counts as the first frame
-		m_SceneTestFramesRemaining = bLoaded ? (m_SceneTestFramesPerScene - 1) : 0;
-
-		return true;
-	}
-
-	void FlexEngine::BeginSceneTestEntry(const std::string& name)
-	{
-		SceneTestResult result = {};
-		result.sceneFileName = name;
-		m_SceneTestResults.push_back(result);
-
-		m_SceneTestWarningCountStart = GetWarningCount();
-		m_SceneTestErrorCountStart = GetErrorCount();
-	}
-
-	void FlexEngine::EndSceneTestEntry()
-	{
-		CHECK(!m_SceneTestResults.empty());
-
-		SceneTestResult& result = m_SceneTestResults.back();
-		result.warningCount = GetWarningCount() - m_SceneTestWarningCountStart;
-		result.errorCount = GetErrorCount() - m_SceneTestErrorCountStart;
-	}
-
-	void FlexEngine::PrintSceneTestResults()
-	{
-		// Only use Print here so as not to affect warning/error counts
-		Print("\n=== Scene test results (%u frames per scene) ===\n", m_SceneTestFramesPerScene);
-		for (const SceneTestResult& result : m_SceneTestResults)
-		{
-			if (!result.bLoaded)
-			{
-				Print("  FAIL  %s (failed to load)\n", result.sceneFileName.c_str());
-			}
-			else if (result.warningCount > 0 || result.errorCount > 0)
-			{
-				Print("  FAIL  %s (%u warnings, %u errors)\n", result.sceneFileName.c_str(), result.warningCount, result.errorCount);
-			}
-			else
-			{
-				Print("  PASS  %s\n", result.sceneFileName.c_str());
-			}
-		}
-
-		i32 failureCount = GetSceneTestFailureCount();
-		Print("%i/%u passed\n", (i32)m_SceneTestResults.size() - failureCount, (u32)m_SceneTestResults.size());
+		m_SceneTestRunner = sceneTestRunner;
 	}
 
 	void FlexEngine::PrintAllConsoleCommands()

@@ -1,8 +1,9 @@
 #include "stdafx.hpp"
 
+#include <algorithm>
+#include <atomic>
 #include <iostream>
 #include <cstdio> // For fprintf, ...
-#include <atomic>
 #include <mutex>
 
 #include "Helpers.hpp"
@@ -24,14 +25,18 @@ namespace flex
 	// race and corrupt the underlying buffers.
 	static std::recursive_mutex g_LogMutex;
 
-	static std::atomic<u32> g_WarningCount = 0;
-	static std::atomic<u32> g_ErrorCount = 0;
+	// Guarded by g_LogMutex
+	static std::vector<LogSink*> g_LogSinks;
+	// Allows skipping the lock & formatting entirely when no sinks are registered (the common case)
+	static std::atomic<bool> g_bHasLogSinks = false;
 
 	//
 	// File-private function declarations
 	//
 	void Print(const char* str, va_list argList);
 	void PrintSimple(const char* str);
+	void DispatchToSinks(LogLevel level, const char* str, va_list argList);
+	void DispatchToSinks(LogLevel level, const char* str);
 
 	void InitializeLogger()
 	{
@@ -69,6 +74,13 @@ namespace flex
 
 	void Print(const char* str, ...)
 	{
+		{
+			va_list sinkArgList;
+			va_start(sinkArgList, str);
+			DispatchToSinks(LogLevel::MESSAGE, str, sinkArgList);
+			va_end(sinkArgList);
+		}
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -88,7 +100,12 @@ namespace flex
 
 	void PrintWarn(const char* str, ...)
 	{
-		++g_WarningCount;
+		{
+			va_list sinkArgList;
+			va_start(sinkArgList, str);
+			DispatchToSinks(LogLevel::WARNING, str, sinkArgList);
+			va_end(sinkArgList);
+		}
 
 		if (!g_bEnableLogToConsole)
 		{
@@ -109,7 +126,12 @@ namespace flex
 
 	void PrintError(const char* str, ...)
 	{
-		++g_ErrorCount;
+		{
+			va_list sinkArgList;
+			va_start(sinkArgList, str);
+			DispatchToSinks(LogLevel::ERROR, str, sinkArgList);
+			va_end(sinkArgList);
+		}
 
 		if (!g_bEnableLogToConsole)
 		{
@@ -159,6 +181,8 @@ namespace flex
 
 	void PrintLong(const char* str)
 	{
+		DispatchToSinks(LogLevel::MESSAGE, str);
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -173,7 +197,7 @@ namespace flex
 
 	void PrintWarnLong(const char* str)
 	{
-		++g_WarningCount;
+		DispatchToSinks(LogLevel::WARNING, str);
 
 		if (!g_bEnableLogToConsole)
 		{
@@ -189,7 +213,7 @@ namespace flex
 
 	void PrintErrorLong(const char* str)
 	{
-		++g_ErrorCount;
+		DispatchToSinks(LogLevel::ERROR, str);
 
 		if (!g_bEnableLogToConsole)
 		{
@@ -203,14 +227,20 @@ namespace flex
 		PrintSimple(str);
 	}
 
-	u32 GetWarningCount()
+	void AddLogSink(LogSink* sink)
 	{
-		return g_WarningCount;
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
+		g_LogSinks.push_back(sink);
+		g_bHasLogSinks = true;
 	}
 
-	u32 GetErrorCount()
+	void RemoveLogSink(LogSink* sink)
 	{
-		return g_ErrorCount;
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
+		g_LogSinks.erase(std::remove(g_LogSinks.begin(), g_LogSinks.end(), sink), g_LogSinks.end());
+		g_bHasLogSinks = !g_LogSinks.empty();
 	}
 
 	//
@@ -241,6 +271,35 @@ namespace flex
 			std::cout << buffer;
 
 			Platform::PrintStringToDebuggerConsole(s.c_str());
+		}
+	}
+
+	void DispatchToSinks(LogLevel level, const char* str, va_list argList)
+	{
+		if (!g_bHasLogSinks.load(std::memory_order_relaxed))
+		{
+			return;
+		}
+
+		char buffer[MAX_CHARS];
+		vsnprintf(buffer, MAX_CHARS, str, argList);
+
+		DispatchToSinks(level, buffer);
+	}
+
+	void DispatchToSinks(LogLevel level, const char* str)
+	{
+		if (!g_bHasLogSinks.load(std::memory_order_relaxed))
+		{
+			return;
+		}
+
+		// Sinks are only ever called while holding the lock, so once RemoveLogSink returns a sink won't be called again
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
+		for (LogSink* sink : g_LogSinks)
+		{
+			sink->OnLog(level, str);
 		}
 	}
 

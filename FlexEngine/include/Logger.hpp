@@ -5,6 +5,8 @@
 
 #include "Types.hpp"
 
+#undef ERROR
+
 namespace flex
 {
 	void InitializeLogger();
@@ -20,9 +22,24 @@ namespace flex
 	void PrintWarnLong(const char* str);
 	void PrintErrorLong(const char* str);
 
-	// Total number of warnings/errors printed since startup (counted even when console logging is disabled)
-	u32 GetWarningCount();
-	u32 GetErrorCount();
+	enum class LogLevel
+	{
+		MESSAGE,
+		WARNING,
+		ERROR
+	};
+
+	// Receives every formatted log message, in addition to (and regardless of) console output.
+	// OnLog may be called from any thread, but never concurrently.
+	class LogSink
+	{
+	public:
+		virtual ~LogSink() = default;
+		virtual void OnLog(LogLevel level, const char* message) = 0;
+	};
+
+	void AddLogSink(LogSink* sink);
+	void RemoveLogSink(LogSink* sink);
 
 	extern bool g_bEnableLogToConsole;
 

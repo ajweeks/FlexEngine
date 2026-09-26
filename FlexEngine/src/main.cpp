@@ -2,6 +2,7 @@
 
 #include "FlexEngine.hpp"
 #include "Platform/Platform.hpp"
+#include "SceneTestRunner.hpp"
 #include "Test.hpp"
 
 // Memory leak checking includes
@@ -77,18 +78,22 @@ int main(int argc, char *argv[])
 	i32 result = 0;
 
 	{
+		// Created before the engine so that warnings during startup are captured too
+		flex::SceneTestRunner* sceneTestRunner = bTestScenes ? new flex::SceneTestRunner(sceneTestFileNames, sceneTestFrameCount) : nullptr;
+
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
-		if (bTestScenes)
-		{
-			engineInstance->EnableSceneTestMode(sceneTestFileNames, sceneTestFrameCount);
-		}
+		engineInstance->SetSceneTestRunner(sceneTestRunner);
 		engineInstance->Initialize();
 		engineInstance->UpdateAndRender();
-		if (bTestScenes)
-		{
-			result = engineInstance->GetSceneTestFailureCount();
-		}
 		delete engineInstance;
+
+		if (sceneTestRunner != nullptr)
+		{
+			// Print after shutdown so the summary is the last thing in the output
+			flex::PrintLong(sceneTestRunner->GetSummary().c_str());
+			result = sceneTestRunner->GetFailureCount();
+			delete sceneTestRunner;
+		}
 	}
 
 	if (g_bShowConsole && !flex::g_bHeadless)
