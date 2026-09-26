@@ -2519,6 +2519,8 @@ namespace flex
 
 			// Clear non-persistent descriptor pool only
 			m_DescriptorPool->Reset();
+			// Built from a (now destroyed) layout owned by m_DescriptorPool
+			m_ParticleSimulationComputePipelineLayout.replace();
 
 			// TODO: Clear m_StaticVertexBuffers, m_StaticIndexBuffer?
 
