@@ -34,8 +34,59 @@ IGNORE_WARNINGS_POP
 #include "Window/Monitor.hpp"
 #include "Window/Window.hpp"
 
+#include <sys/stat.h> // For stat
+
 namespace flex
 {
+	struct CachedPrefabFile
+	{
+		i64 modificationTime;
+		i64 fileSize;
+		JSONObject prefabObject;
+	};
+
+	// Prefab templates are recreated on every scene load, but the files they're parsed from rarely change,
+	// so keep the parsed JSON around, keyed by file path. Entries are validated against the file's
+	// modification time & size, and the whole cache is cleared whenever prefabs are written or change on disk.
+	static std::map<std::string, CachedPrefabFile> s_PrefabFileCache;
+
+	static void ClearPrefabFileCache()
+	{
+		s_PrefabFileCache.clear();
+	}
+
+	// Returns nullptr if the file couldn't be parsed
+	static const JSONObject* FindOrParsePrefabFile(const std::string& filePath)
+	{
+		struct stat fileStat;
+		if (stat(filePath.c_str(), &fileStat) != 0)
+		{
+			s_PrefabFileCache.erase(filePath);
+			return nullptr;
+		}
+
+		auto iter = s_PrefabFileCache.find(filePath);
+		if (iter != s_PrefabFileCache.end() &&
+			iter->second.modificationTime == (i64)fileStat.st_mtime &&
+			iter->second.fileSize == (i64)fileStat.st_size)
+		{
+			return &iter->second.prefabObject;
+		}
+
+		CachedPrefabFile cachedFile = {};
+		if (!JSONParser::ParseFromFile(filePath, cachedFile.prefabObject))
+		{
+			s_PrefabFileCache.erase(filePath);
+			return nullptr;
+		}
+		cachedFile.modificationTime = (i64)fileStat.st_mtime;
+		cachedFile.fileSize = (i64)fileStat.st_size;
+
+		CachedPrefabFile& entry = s_PrefabFileCache[filePath];
+		entry = std::move(cachedFile);
+		return &entry.prefabObject;
+	}
+
 	// TODO: Support DDS
 	const char* ResourceManager::s_SupportedTextureFormats[] = { "jpg", "jpeg", "png", "tga", "bmp", "gif", "hdr", "pic" };
 
@@ -100,6 +151,7 @@ namespace flex
 
 		if (m_PrefabDirectoryWatcher->Update())
 		{
+			ClearPrefabFileCache();
 			DiscoverPrefabs();
 		}
 
@@ -391,9 +443,11 @@ namespace flex
 
 	bool ParsePrefabTemplate(const std::string& filePath, std::map<PrefabID, std::string>& prefabNames, std::vector<ResourceManager::PrefabTemplateInfo>& templateInfos)
 	{
-		JSONObject prefabObject;
-		if (JSONParser::ParseFromFile(filePath, prefabObject))
+		const JSONObject* cachedPrefabObject = FindOrParsePrefabFile(filePath);
+		if (cachedPrefabObject != nullptr)
 		{
+			const JSONObject& prefabObject = *cachedPrefabObject;
+
 			const std::string fileName = StripLeadingDirectories(filePath);
 
 			i32 prefabVersion = prefabObject.GetInt("version");
@@ -1851,6 +1905,7 @@ namespace flex
 		prefabJSON.fields.emplace_back("root", JSONValue(objectSource));
 
 		std::string fileContents = prefabJSON.ToString();
+		ClearPrefabFileCache();
 		if (WriteFile(path, fileContents, false))
 		{
 			prefabTemplateInfo.bDirty = false;

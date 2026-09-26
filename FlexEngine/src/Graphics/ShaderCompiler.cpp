@@ -8,8 +8,25 @@
 #include "Platform/Platform.hpp"
 #include "Time.hpp"
 
+#include <sstream> // For stringstream
+
 namespace flex
 {
+	// Reads the file in a single pass without logging an error if it doesn't exist
+	static bool ReadShaderSource(const std::string& filePath, std::string& outFileContents)
+	{
+		std::ifstream file(filePath);
+		if (!file)
+		{
+			return false;
+		}
+
+		std::stringstream stream;
+		stream << file.rdbuf();
+		outFileContents = stream.str();
+		return true;
+	}
+
 	std::string ShaderCompiler::s_ChecksumFilePathAbs;
 
 	const char* ShaderCompiler::s_RecognizedShaderTypes[] = { "vert", "geom", "frag", "comp", "glsl" };
@@ -273,6 +290,7 @@ namespace flex
 		std::map<std::string, u64> compiledShaders;
 
 		s_ShaderErrors.clear();
+		m_IncludeChecksumCache.clear();
 
 		if (!bForceCompileAll)
 		{
@@ -443,7 +461,7 @@ namespace flex
 		if (bGoodStart && bGoodEnd)
 		{
 			std::string fileContents;
-			if (FileExists(filePath) && ReadFile(filePath, fileContents, false))
+			if (ReadShaderSource(filePath, fileContents))
 			{
 				const char* includeString = "include ";
 
@@ -451,7 +469,7 @@ namespace flex
 				u32 fileContentsLen = (u32)fileContents.size();
 				for (char c : fileContents)
 				{
-					if (c == '#' && i < (fileContentsLen + strlen(includeString)))
+					if (c == '#' && i + strlen(includeString) <= fileContentsLen)
 					{
 						if (memcmp((void*)&fileContents[i], (void*)includeString, strlen(includeString)) == 0)
 						{
@@ -485,10 +503,21 @@ namespace flex
 										}
 									}
 
-									if (!includedPath.empty() && FileExists(includedPath))
+									if (!includedPath.empty())
 									{
-										bFoundInclude = true;
-										checksum += CalculteChecksum(includedPath);
+										auto cacheIter = m_IncludeChecksumCache.find(includedPath);
+										if (cacheIter != m_IncludeChecksumCache.end())
+										{
+											bFoundInclude = true;
+											checksum += cacheIter->second;
+										}
+										else if (FileExists(includedPath))
+										{
+											bFoundInclude = true;
+											u64 includeChecksum = CalculteChecksum(includedPath);
+											m_IncludeChecksumCache.emplace(includedPath, includeChecksum);
+											checksum += includeChecksum;
+										}
 									}
 								}
 							}
@@ -533,6 +562,9 @@ namespace flex
 	{
 		u32 compiledShaderCount = 0;
 		u32 invalidShaderCount = 0;
+
+		// Included files may have changed since compilation began
+		m_IncludeChecksumCache.clear();
 
 		std::map<std::string, u64> compiledShaders;
 

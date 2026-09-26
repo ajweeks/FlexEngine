@@ -22,7 +22,11 @@ void main()
 	vec3 right = cross(up, normal);
 	up = cross(normal, right);
 
-	float sampleDelta = 0.025;
+	// Irradiance is very low frequency, so a coarse sample grid is sufficient as long as
+	// each sample is taken from a mip whose texels roughly cover the spacing between samples
+	float sampleDelta = 0.05;
+	float faceSize = float(textureSize(cubemapSampler, 0).x);
+	float lod = max(log2(faceSize * sampleDelta / (0.5 * PI)), 0.0);
 	float nrSamples = 0.0;
 	for (float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta)
 	{
@@ -33,7 +37,7 @@ void main()
 	        // Tangent space to world
 	        vec3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * normal; 
 
-	        irradiance += texture(cubemapSampler, sampleVec).rgb * cos(theta) * sin(theta);
+	        irradiance += textureLod(cubemapSampler, sampleVec, lod).rgb * cos(theta) * sin(theta);
 	        ++nrSamples;
 	    }
 	}

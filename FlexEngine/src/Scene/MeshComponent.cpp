@@ -238,6 +238,77 @@ namespace flex
 		return LoadFromCGLTFInternal(owningMesh, primitive, materialID, true, initialMaxVertexCount, optionalRenderObjectCreateInfo, bCreateRenderObject);
 	}
 
+	// Reads count elements of componentCount floats each into out (which must be tightly packed).
+	// cgltf_accessor_read_float is slow when called per element in unoptimized builds, so float data is copied directly where possible.
+	static void ReadAccessorFloats(const cgltf_accessor* accessor, real* out, u32 componentCount, u32 count)
+	{
+		const u32 accessorComponentCount = (u32)cgltf_num_components(accessor->type);
+		if (!accessor->is_sparse &&
+			accessor->buffer_view != nullptr &&
+			accessor->component_type == cgltf_component_type_r_32f &&
+			accessorComponentCount >= componentCount)
+		{
+			const u8* src = (const u8*)accessor->buffer_view->buffer->data + accessor->buffer_view->offset + accessor->offset;
+			const size_t copySize = componentCount * sizeof(real);
+			if (accessor->stride == copySize)
+			{
+				memcpy(out, src, copySize * count);
+			}
+			else
+			{
+				for (u32 i = 0; i < count; ++i)
+				{
+					memcpy(out + i * componentCount, src + i * accessor->stride, copySize);
+				}
+			}
+		}
+		else
+		{
+			real element[16];
+			for (u32 i = 0; i < count; ++i)
+			{
+				cgltf_accessor_read_float(accessor, i, element, 16);
+				memcpy(out + i * componentCount, element, componentCount * sizeof(real));
+			}
+		}
+	}
+
+	static void ReadAccessorIndices(const cgltf_accessor* accessor, u32* out, u32 count)
+	{
+		if (accessor->buffer_view != nullptr)
+		{
+			const u8* src = (const u8*)accessor->buffer_view->buffer->data + accessor->buffer_view->offset + accessor->offset;
+			switch (accessor->component_type)
+			{
+			case cgltf_component_type_r_32u:
+				if (accessor->stride == sizeof(u32))
+				{
+					memcpy(out, src, count * sizeof(u32));
+					return;
+				}
+				break;
+			case cgltf_component_type_r_16u:
+				if (accessor->stride == sizeof(u16))
+				{
+					const u16* src16 = (const u16*)src;
+					for (u32 i = 0; i < count; ++i)
+					{
+						out[i] = (u32)src16[i];
+					}
+					return;
+				}
+				break;
+			default:
+				break;
+			}
+		}
+
+		for (u32 i = 0; i < count; ++i)
+		{
+			out[i] = (u32)cgltf_accessor_read_index(accessor, i);
+		}
+	}
+
 	MeshComponent* MeshComponent::LoadFromCGLTFInternal(
 		Mesh* owningMesh,
 		cgltf_primitive* primitive,
@@ -346,99 +417,84 @@ namespace flex
 		}
 
 		// Vertices
-		for (u32 vi = 0; vi < vertCount; ++vi)
+		ReadAccessorFloats(posAccessor, (real*)vertexBufferDataCreateInfo.positions_3D.data(), 3, vertCount);
+
+		if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
 		{
-			// Position
-			glm::vec3 pos;
-			cgltf_accessor_read_float(posAccessor, vi, &pos.x, 3);
-			vertexBufferDataCreateInfo.positions_3D[vi] = pos;
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
 
-			// Normal
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::NORMAL)
+			if (normAttribIndex == -1)
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::NORMAL;
-
-				if (normAttribIndex == -1)
-				{
-					vertexBufferDataCreateInfo.normals[vi] = m_DefaultNormal;
-				}
-				else
-				{
-					cgltf_accessor* normAccessor = primitive->attributes[normAttribIndex].data;
-					CHECK_EQ(primitive->attributes[normAttribIndex].type, cgltf_attribute_type_normal);
-					CHECK_EQ(normAccessor->component_type, cgltf_component_type_r_32f);
-					CHECK_EQ(normAccessor->type, cgltf_type_vec3);
-
-					glm::vec3 norm;
-					cgltf_accessor_read_float(normAccessor, vi, &norm.x, 3);
-					vertexBufferDataCreateInfo.normals[vi] = norm;
-				}
+				std::fill(vertexBufferDataCreateInfo.normals.begin(), vertexBufferDataCreateInfo.normals.end(), m_DefaultNormal);
 			}
-
-			// Tangent
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
+			else
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
-
-				if (tanAttribIndex == -1)
-				{
-					vertexBufferDataCreateInfo.tangents[vi] = m_DefaultTangent;
-				}
-				else
-				{
-					cgltf_accessor* tanAccessor = primitive->attributes[tanAttribIndex].data;
-					CHECK_EQ(primitive->attributes[tanAttribIndex].type, cgltf_attribute_type_tangent);
-					CHECK_EQ(tanAccessor->component_type, cgltf_component_type_r_32f);
-					//CHECK_EQ(tanAccessor->type, cgltf_type_vec3);
-
-					glm::vec4 tangent;
-					cgltf_accessor_read_float(tanAccessor, vi, &tangent.x, 4);
-					vertexBufferDataCreateInfo.tangents[vi] = tangent;
-				}
+				cgltf_accessor* normAccessor = primitive->attributes[normAttribIndex].data;
+				CHECK_EQ(primitive->attributes[normAttribIndex].type, cgltf_attribute_type_normal);
+				CHECK_EQ(normAccessor->component_type, cgltf_component_type_r_32f);
+				CHECK_EQ(normAccessor->type, cgltf_type_vec3);
+				ReadAccessorFloats(normAccessor, (real*)vertexBufferDataCreateInfo.normals.data(), 3, vertCount);
 			}
+		}
 
-			// Colour
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+		if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::TANGENT)
+		{
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::TANGENT;
+
+			if (tanAttribIndex == -1)
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
-
-				if (colAttribIndex == -1)
-				{
-					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = m_DefaultColour_4;
-				}
-				else
-				{
-					cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
-					CHECK_EQ(primitive->attributes[colAttribIndex].type, cgltf_attribute_type_color);
-					CHECK_EQ(colAccessor->type, cgltf_type_vec4);
-
-					glm::vec4 col;
-					cgltf_accessor_read_float(colAccessor, vi, &col.x, 4);
-					vertexBufferDataCreateInfo.colours_R32G32B32A32[vi] = col;
-				}
+				std::fill(vertexBufferDataCreateInfo.tangents.begin(), vertexBufferDataCreateInfo.tangents.end(), m_DefaultTangent);
 			}
-
-			// UV 0
-			if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::UV)
+			else
 			{
-				vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+				cgltf_accessor* tanAccessor = primitive->attributes[tanAttribIndex].data;
+				CHECK_EQ(primitive->attributes[tanAttribIndex].type, cgltf_attribute_type_tangent);
+				CHECK_EQ(tanAccessor->component_type, cgltf_component_type_r_32f);
+				//CHECK_EQ(tanAccessor->type, cgltf_type_vec3);
+				// Tangents may be stored with a handedness in w, which we don't use
+				ReadAccessorFloats(tanAccessor, (real*)vertexBufferDataCreateInfo.tangents.data(), 3, vertCount);
+			}
+		}
 
-				if (uvAttribIndex == -1)
+		if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
+		{
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
+
+			if (colAttribIndex == -1)
+			{
+				std::fill(vertexBufferDataCreateInfo.colours_R32G32B32A32.begin(), vertexBufferDataCreateInfo.colours_R32G32B32A32.end(), m_DefaultColour_4);
+			}
+			else
+			{
+				cgltf_accessor* colAccessor = primitive->attributes[colAttribIndex].data;
+				CHECK_EQ(primitive->attributes[colAttribIndex].type, cgltf_attribute_type_color);
+				CHECK_EQ(colAccessor->type, cgltf_type_vec4);
+				ReadAccessorFloats(colAccessor, (real*)vertexBufferDataCreateInfo.colours_R32G32B32A32.data(), 4, vertCount);
+			}
+		}
+
+		if (newMeshComponent->m_RequiredAttributes & (u32)VertexAttribute::UV)
+		{
+			vertexBufferDataCreateInfo.attributes |= (u32)VertexAttribute::UV;
+
+			if (uvAttribIndex == -1)
+			{
+				std::fill(vertexBufferDataCreateInfo.texCoords_UV.begin(), vertexBufferDataCreateInfo.texCoords_UV.end(), m_DefaultTexCoord);
+			}
+			else
+			{
+				cgltf_accessor* uvAccessor = primitive->attributes[uvAttribIndex].data;
+				CHECK_EQ(primitive->attributes[uvAttribIndex].type, cgltf_attribute_type_texcoord);
+				CHECK_EQ(uvAccessor->component_type, cgltf_component_type_r_32f);
+				CHECK_EQ(uvAccessor->type, cgltf_type_vec2);
+				ReadAccessorFloats(uvAccessor, (real*)vertexBufferDataCreateInfo.texCoords_UV.data(), 2, vertCount);
+
+				if (newMeshComponent->m_UVScale != glm::vec2(1.0f))
 				{
-					vertexBufferDataCreateInfo.texCoords_UV[vi] = m_DefaultTexCoord;
-				}
-				else
-				{
-					cgltf_accessor* uvAccessor = primitive->attributes[uvAttribIndex].data;
-					CHECK_EQ(primitive->attributes[uvAttribIndex].type, cgltf_attribute_type_texcoord);
-					CHECK_EQ(uvAccessor->component_type, cgltf_component_type_r_32f);
-					CHECK_EQ(uvAccessor->type, cgltf_type_vec2);
-
-					glm::vec2 uv0;
-					cgltf_accessor_read_float(uvAccessor, vi, &uv0.x, 2);
-
-					uv0 *= newMeshComponent->m_UVScale;
-					vertexBufferDataCreateInfo.texCoords_UV[vi] = uv0;
+					for (glm::vec2& uv : vertexBufferDataCreateInfo.texCoords_UV)
+					{
+						uv *= newMeshComponent->m_UVScale;
+					}
 				}
 			}
 		}
@@ -454,10 +510,7 @@ namespace flex
 				primitive->indices->component_type == cgltf_component_type_r_16u ||
 				primitive->indices->component_type == cgltf_component_type_r_32u);
 
-			for (i32 l = 0; l < indexCount; ++l)
-			{
-				newMeshComponent->m_Indices[l] = (u32)cgltf_accessor_read_index(primitive->indices, l);
-			}
+			ReadAccessorIndices(primitive->indices, newMeshComponent->m_Indices.data(), (u32)indexCount);
 		}
 
 		if (bCalculateTangents)

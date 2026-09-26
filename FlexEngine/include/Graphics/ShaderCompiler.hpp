@@ -121,6 +121,9 @@ namespace flex
 
 		u64 CalculteChecksum(const std::string& filePath);
 
+		// Included file path => checksum, to avoid re-reading files included by many shaders. Cleared before each use.
+		std::map<std::string, u64> m_IncludeChecksumCache;
+
 	};
 
 	shaderc_shader_kind FilePathToShaderKind(const char* fileSuffix);

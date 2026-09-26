@@ -8,6 +8,7 @@
 #include "Pair.hpp"
 #include "Platform/Platform.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Time.hpp"
 
 namespace flex
 {
@@ -26,6 +27,7 @@ namespace flex
 
 		// Anything logged before the first scene test begins is attributed to startup
 		BeginEntry("<startup>");
+		m_StartupBeginTime = Time::CurrentMilliseconds();
 	}
 
 	SceneTestRunner::~SceneTestRunner()
@@ -40,6 +42,11 @@ namespace flex
 
 	void SceneTestRunner::OnEngineInitialized()
 	{
+		{
+			std::lock_guard<std::mutex> lock(m_Mutex);
+			m_Results.back().loadDuration = Time::CurrentMilliseconds() - m_StartupBeginTime;
+		}
+
 		if (m_Queue.empty())
 		{
 			m_Queue = g_SceneManager->GetSceneFileNames();
@@ -65,10 +72,13 @@ namespace flex
 		m_Queue.erase(m_Queue.begin());
 
 		BeginEntry(sceneFileName);
+		ms loadBeginTime = Time::CurrentMilliseconds();
 		bool bLoaded = g_SceneManager->SetCurrentScene(sceneFileName);
+		ms loadDuration = Time::CurrentMilliseconds() - loadBeginTime;
 		{
 			std::lock_guard<std::mutex> lock(m_Mutex);
 			m_Results.back().bLoaded = bLoaded;
+			m_Results.back().loadDuration = loadDuration;
 		}
 		// The current frame counts as the first frame
 		m_FramesRemaining = bLoaded ? (m_FramesPerScene - 1) : 0;
@@ -106,8 +116,12 @@ namespace flex
 
 			lines.emplace_back(Colour::DEFAULT, "\n=== Scene test results (" + UIntToString(m_FramesPerScene) + " frames per scene) ===\n");
 
+			ms totalLoadDuration = 0.0f;
 			for (const Result& result : m_Results)
 			{
+				totalLoadDuration += result.loadDuration;
+				const std::string durationStr = " [" + IntToString((i32)result.loadDuration) + " ms]";
+
 				u32 errorCount = 0;
 				for (const Issue& issue : result.issues)
 				{
@@ -117,17 +131,17 @@ namespace flex
 
 				if (!result.bLoaded)
 				{
-					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (failed to load)\n");
+					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (failed to load)" + durationStr + "\n");
 					failureLines.emplace_back(Colour::ERROR, "  " + result.sceneFileName + ": failed to load\n");
 					++issueCount;
 				}
 				else if (!result.issues.empty())
 				{
-					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (" + UIntToString(warningCount) + " warnings, " + UIntToString(errorCount) + " errors)\n");
+					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (" + UIntToString(warningCount) + " warnings, " + UIntToString(errorCount) + " errors)" + durationStr + "\n");
 				}
 				else
 				{
-					lines.emplace_back(Colour::SUCCESS, "  PASS  " + result.sceneFileName + "\n");
+					lines.emplace_back(Colour::SUCCESS, "  PASS  " + result.sceneFileName + durationStr + "\n");
 				}
 
 				// Only use the first line of each message, and collapse consecutive duplicates
@@ -161,7 +175,7 @@ namespace flex
 			}
 
 			lines.emplace_back(failureCount == 0 ? Colour::SUCCESS : Colour::ERROR,
-				IntToString((i32)m_Results.size() - failureCount) + "/" + UIntToString((u32)m_Results.size()) + " passed\n");
+				IntToString((i32)m_Results.size() - failureCount) + "/" + UIntToString((u32)m_Results.size()) + " passed (" + IntToString((i32)totalLoadDuration) + " ms total load time)\n");
 		}
 
 		if (failureCount > 0)

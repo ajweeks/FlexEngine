@@ -26,6 +26,7 @@
 #define FONT_SDF_DIRECTORY							SAVED_DIRECTORY "fonts/"
 #define SCREENSHOT_DIRECTORY						SAVED_DIRECTORY "screenshots/"
 #define COMPILED_SHADERS_DIRECTORY					SAVED_DIRECTORY "spv/"
+#define PIPELINE_CACHE_DIRECTORY					SAVED_DIRECTORY "pipeline_cache/"
 #define SAVE_FILE_DIRECTORY							SAVED_DIRECTORY "save_files/"
 
 #define DEBUG_OVERLAY_NAMES_LOCATION				CONFIG_DIRECTORY "debug_overlay_names.json"

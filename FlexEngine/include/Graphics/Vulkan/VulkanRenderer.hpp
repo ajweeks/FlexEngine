@@ -258,6 +258,11 @@ namespace flex
 			void CreateSwapChainFramebuffers();
 			void CreateFrameBufferAttachments();
 			void CreateSamplers();
+
+			// Pipeline cache data is saved to disk on shutdown to speed up pipeline creation on subsequent runs
+			void CreatePipelineCache();
+			void SaveAndDestroyPipelineCache();
+			std::string GetPipelineCacheFilePath() const;
 			void PhysicsDebugRender();
 
 			void CreateUniformBuffers(VulkanMaterial* material);
@@ -533,6 +538,8 @@ namespace flex
 			VDeleter<VkSampler> m_SamplerLinearClampToEdge;
 			VDeleter<VkSampler> m_SamplerLinearClampToBorder;
 			VDeleter<VkSampler> m_SamplerNearestClampToEdge;
+			// Allows sampling every mip level (other samplers clamp to mip 1)
+			VDeleter<VkSampler> m_SamplerLinearClampToEdgeAllMips;
 
 			VkFormat m_OffscreenFrameBufferFormat = VK_FORMAT_UNDEFINED;
 			FrameBufferAttachment* m_OffscreenFB0ColourAttachment0 = nullptr;
@@ -579,6 +586,8 @@ namespace flex
 
 			// TODO: Create other query pools
 			VkQueryPool m_TimestampQueryPool = VK_NULL_HANDLE;
+
+			VkPipelineCache m_PipelineCache = VK_NULL_HANDLE;
 			static const u64 MAX_TIMESTAMP_QUERIES = 1024;
 
 			// Points from timestamp names to query indices. Index is negated on timestamp end to signify being ended.

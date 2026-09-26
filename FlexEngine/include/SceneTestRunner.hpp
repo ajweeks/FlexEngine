@@ -41,6 +41,8 @@ namespace flex
 			std::string sceneFileName;
 			std::vector<Issue> issues;
 			bool bLoaded = false;
+			// Time taken to initialize the engine, or to load the scene
+			ms loadDuration = 0.0f;
 		};
 
 		// Subsequent issues will be attributed to this entry
@@ -53,6 +55,7 @@ namespace flex
 
 		u32 m_FramesPerScene = 0;
 		u32 m_FramesRemaining = 0;
+		ms m_StartupBeginTime = 0.0f;
 		std::vector<std::string> m_Queue;
 		// Only written on the main thread, read without locking by the crash handler
 		std::string m_CurrentEntryName;

@@ -166,6 +166,8 @@ namespace flex
 			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
 			m_bMemoryBudgetExtensionEnabled = m_VulkanDevice->ExtensionEnabled(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 
+			CreatePipelineCache();
+
 			{
 				PROFILE_AUTO("Get device queues");
 				vkGetDeviceQueue(m_VulkanDevice->m_LogicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily, 0, &m_GraphicsQueue);
@@ -282,6 +284,7 @@ namespace flex
 				m_SamplerLinearClampToEdge = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerLinearClampToBorder = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerNearestClampToEdge = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+				m_SamplerLinearClampToEdgeAllMips = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 
 				m_ParticleSimulationComputePipelineLayout = { m_VulkanDevice->m_LogicalDevice, vkDestroyPipelineLayout };
 
@@ -515,7 +518,7 @@ namespace flex
 				init_info.Device = *m_VulkanDevice;
 				init_info.QueueFamily = m_VulkanDevice->m_QueueFamilyIndices.graphicsFamily;
 				init_info.Queue = m_GraphicsQueue;
-				init_info.PipelineCache = VK_NULL_HANDLE;
+				init_info.PipelineCache = m_PipelineCache;
 				init_info.DescriptorPool = m_DescriptorPoolPersistent->GetPool();
 				init_info.Allocator = NULL;
 				init_info.CheckVkResultFn = NULL;
@@ -771,6 +774,7 @@ namespace flex
 			m_SamplerLinearClampToEdge.replace();
 			m_SamplerLinearClampToBorder.replace();
 			m_SamplerNearestClampToEdge.replace();
+			m_SamplerLinearClampToEdgeAllMips.replace();
 
 			m_BlankTextureArr = nullptr;
 			m_BlankTexture = nullptr;
@@ -790,6 +794,8 @@ namespace flex
 			m_TimestampQueryPool = VK_NULL_HANDLE;
 
 			m_CommandBufferManager.DestroyCommandBuffers();
+
+			SaveAndDestroyPipelineCache();
 
 			delete m_VulkanDevice;
 			m_VulkanDevice = nullptr;
@@ -1720,7 +1726,7 @@ namespace flex
 
 				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_ParticleSimulationComputePipelineLayout);
 				pipelineCreateInfo.stage = stage;
-				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, particleSystem->computePipeline.replace()));
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, particleSystem->computePipeline.replace()));
 
 				std::string pipelineName = "Particle simulation compute pipeline " + idStr;
 				SetPipelineName(m_VulkanDevice, particleSystem->computePipeline, pipelineName.c_str());
@@ -1788,7 +1794,7 @@ namespace flex
 
 				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_Terrain->genPointsPipelineLayout);
 				pipelineCreateInfo.stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, genPointsShader->computeShaderModule);
-				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genPointsPipeline));
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genPointsPipeline));
 
 				SetObjectName(m_VulkanDevice, (u64)(VkPipelineLayout)m_Terrain->genPointsPipelineLayout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Terrain point generation compute pipeline layout");
 				SetPipelineName(m_VulkanDevice, m_Terrain->genPointsPipeline, "Terrain point generation compute pipeline");
@@ -1814,7 +1820,7 @@ namespace flex
 
 				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_Terrain->genMeshComputePipelineLayout);
 				pipelineCreateInfo.stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, genMeshShader->computeShaderModule);
-				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genMeshComputePipeline));
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genMeshComputePipeline));
 
 				SetObjectName(m_VulkanDevice, (u64)(VkPipelineLayout)m_Terrain->genMeshComputePipelineLayout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Terrain mesh generation compute pipeline layout");
 				SetPipelineName(m_VulkanDevice, m_Terrain->genMeshComputePipeline, "Terrain mesh generation compute pipeline");
@@ -3330,7 +3336,8 @@ namespace flex
 			irradianceDescriptorCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(irradianceMaterial->shaderID);
 			irradianceDescriptorCreateInfo.shaderID = irradianceMaterial->shaderID;
 			irradianceDescriptorCreateInfo.gpuBufferList = &irradianceMaterial->gpuBufferList;
-			irradianceDescriptorCreateInfo.imageDescriptors.SetUniform(&U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_SamplerLinearRepeat });
+			// The irradiance shader samples lower mips to reduce its sample count
+			irradianceDescriptorCreateInfo.imageDescriptors.SetUniform(&U_CUBEMAP_SAMPLER, ImageDescriptorInfo{ cubemapTexture->imageView, m_SamplerLinearClampToEdgeAllMips });
 			FillOutBufferDescriptorInfos(&irradianceDescriptorCreateInfo.bufferDescriptors, irradianceDescriptorCreateInfo.gpuBufferList, irradianceDescriptorCreateInfo.shaderID);
 			VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&irradianceDescriptorCreateInfo);
 
@@ -6842,11 +6849,9 @@ namespace flex
 			pipelineInfo.subpass = createInfo->subpass;
 			pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
-			VkPipelineCache pipelineCache = VK_NULL_HANDLE;
-
 			{
 				PROFILE_AUTO("vkCreateGraphicsPipelines");
-				VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline->pipeline));
+				VK_CHECK_RESULT(vkCreateGraphicsPipelines(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, 1, &pipelineInfo, nullptr, &newPipeline->pipeline));
 			}
 			SetPipelineName(m_VulkanDevice, newPipeline->pipeline, createInfo->DBG_Name);
 
@@ -7231,6 +7236,94 @@ namespace flex
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
 			}
+			{
+				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerLinearClampToEdgeAllMips.replace();
+				samplerCreateInfo.DBG_Name = "Linear clamp to edge all mips sampler";
+				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+				samplerCreateInfo.maxLod = VK_LOD_CLAMP_NONE;
+				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
+			}
+		}
+
+		std::string VulkanRenderer::GetPipelineCacheFilePath() const
+		{
+			// Keyed by device so that switching GPUs (or running under a different driver) doesn't discard other caches
+			const VkPhysicalDeviceProperties& props = m_VulkanDevice->m_PhysicalDeviceProperties;
+			char fileName[64];
+			snprintf(fileName, sizeof(fileName), "vk_pipeline_cache_%04x_%04x.bin", props.vendorID, props.deviceID);
+			return RelativePathToAbsolute(PIPELINE_CACHE_DIRECTORY) + fileName;
+		}
+
+		void VulkanRenderer::CreatePipelineCache()
+		{
+			PROFILE_AUTO("CreatePipelineCache");
+
+			const VkPhysicalDeviceProperties& props = m_VulkanDevice->m_PhysicalDeviceProperties;
+
+			std::vector<char> cacheData;
+			const std::string filePath = GetPipelineCacheFilePath();
+			if (FileExists(filePath) && ReadFile(filePath, cacheData, true))
+			{
+				// Discard data from a different driver version, which the driver would reject anyway
+				VkPipelineCacheHeaderVersionOne header = {};
+				bool bValid = cacheData.size() >= sizeof(header);
+				if (bValid)
+				{
+					memcpy(&header, cacheData.data(), sizeof(header));
+					bValid = header.headerSize >= sizeof(header) &&
+						header.headerVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE &&
+						header.vendorID == props.vendorID &&
+						header.deviceID == props.deviceID &&
+						memcmp(header.pipelineCacheUUID, props.pipelineCacheUUID, VK_UUID_SIZE) == 0;
+				}
+
+				if (!bValid)
+				{
+					cacheData.clear();
+				}
+			}
+
+			VkPipelineCacheCreateInfo createInfo = {};
+			createInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+			createInfo.initialDataSize = cacheData.size();
+			createInfo.pInitialData = cacheData.empty() ? nullptr : cacheData.data();
+			if (vkCreatePipelineCache(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, &m_PipelineCache) != VK_SUCCESS)
+			{
+				// Retry without the initial data in case it was corrupt
+				createInfo.initialDataSize = 0;
+				createInfo.pInitialData = nullptr;
+				VK_CHECK_RESULT(vkCreatePipelineCache(m_VulkanDevice->m_LogicalDevice, &createInfo, nullptr, &m_PipelineCache));
+			}
+		}
+
+		void VulkanRenderer::SaveAndDestroyPipelineCache()
+		{
+			if (m_PipelineCache == VK_NULL_HANDLE)
+			{
+				return;
+			}
+
+			size_t dataSize = 0;
+			if (vkGetPipelineCacheData(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, &dataSize, nullptr) == VK_SUCCESS && dataSize > 0)
+			{
+				std::vector<char> cacheData(dataSize);
+				if (vkGetPipelineCacheData(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, &dataSize, cacheData.data()) == VK_SUCCESS)
+				{
+					cacheData.resize(dataSize);
+					Platform::CreateDirectoryRecursive(RelativePathToAbsolute(PIPELINE_CACHE_DIRECTORY));
+					if (!WriteFile(GetPipelineCacheFilePath(), cacheData, true))
+					{
+						PrintWarn("Failed to write pipeline cache to %s\n", GetPipelineCacheFilePath().c_str());
+					}
+				}
+			}
+
+			vkDestroyPipelineCache(m_VulkanDevice->m_LogicalDevice, m_PipelineCache, nullptr);
+			m_PipelineCache = VK_NULL_HANDLE;
 		}
 
 		void VulkanRenderer::InitializeShaders(const std::vector<ShaderInfo>& shaderInfos)
@@ -10393,11 +10486,12 @@ namespace flex
 
 				VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
-				if (renderObjectMat->generateIrradianceSampler)
+				if (renderObjectMat->generateIrradianceSampler && !renderObjectMat->bIrradianceMapsGenerated)
 				{
 					GenerateCubemapFromHDR(renderObject, renderObjectMat->environmentMapPath);
 					GenerateIrradianceSampler(renderObject);
 					GeneratePrefilteredCube(renderObject);
+					renderObjectMat->bIrradianceMapsGenerated = true;
 				}
 			}
 		}
@@ -10444,7 +10538,10 @@ namespace flex
 
 			for (auto& materialPair : m_Materials)
 			{
-				CreateUniformBuffers((VulkanMaterial*)materialPair.second);
+				VulkanMaterial* material = (VulkanMaterial*)materialPair.second;
+				CreateUniformBuffers(material);
+				// Shaders may have changed, so regenerate irradiance maps on the next scene change
+				material->bIrradianceMapsGenerated = false;
 			}
 
 			CreateShadowResources();

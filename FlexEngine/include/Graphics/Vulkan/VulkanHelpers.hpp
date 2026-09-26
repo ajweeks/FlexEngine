@@ -467,6 +467,10 @@ namespace flex
 
 			VkFramebuffer hdrCubemapFramebuffer = VK_NULL_HANDLE;
 
+			// Set once the cubemap, irradiance, and prefiltered maps have been generated. These textures
+			// persist across scene changes, so they only need to be regenerated when their inputs change.
+			bool bIrradianceMapsGenerated = false;
+
 			u32 cubemapSamplerID = 0;
 			u32 cubemapDepthSamplerID = 0;
 		};
