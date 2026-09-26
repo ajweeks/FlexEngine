@@ -84,7 +84,7 @@ namespace flex
 	void Platform::SetConsoleTextColour(ConsoleColour colour)
 	{
 #if ENABLE_CONSOLE_COLOURS
-		static const char* const w_colours[] = { FOREWHT, FOREYEL, FORERED };
+		static const char* const w_colours[] = { FOREWHT, FOREYEL, FORERED, FOREGRN };
 
 		std::cout << w_colours[(u32)colour];
 #else

@@ -5,6 +5,7 @@
 #include <csignal>
 
 #include "Helpers.hpp"
+#include "Pair.hpp"
 #include "Platform/Platform.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -90,78 +91,91 @@ namespace flex
 		return failureCount;
 	}
 
-	std::string SceneTestRunner::GetSummary() const
+	void SceneTestRunner::PrintSummary() const
 	{
+		using Colour = Platform::ConsoleColour;
+
 		i32 failureCount = GetFailureCount();
 
-		std::lock_guard<std::mutex> lock(m_Mutex);
-
-		std::string summary = "\n=== Scene test results (" + UIntToString(m_FramesPerScene) + " frames per scene) ===\n";
-
-		std::string failureList;
+		std::vector<Pair<Colour, std::string>> lines;
+		std::vector<Pair<Colour, std::string>> failureLines;
 		u32 issueCount = 0;
-		for (const Result& result : m_Results)
+
 		{
-			u32 errorCount = 0;
-			for (const Issue& issue : result.issues)
-			{
-				errorCount += issue.bError ? 1 : 0;
-			}
-			u32 warningCount = (u32)result.issues.size() - errorCount;
+			std::lock_guard<std::mutex> lock(m_Mutex);
 
-			if (!result.bLoaded)
-			{
-				summary += "  FAIL  " + result.sceneFileName + " (failed to load)\n";
-				failureList += "  " + result.sceneFileName + ": failed to load\n";
-				++issueCount;
-			}
-			else if (!result.issues.empty())
-			{
-				summary += "  FAIL  " + result.sceneFileName + " (" + UIntToString(warningCount) + " warnings, " + UIntToString(errorCount) + " errors)\n";
-			}
-			else
-			{
-				summary += "  PASS  " + result.sceneFileName + "\n";
-			}
+			lines.emplace_back(Colour::DEFAULT, "\n=== Scene test results (" + UIntToString(m_FramesPerScene) + " frames per scene) ===\n");
 
-			// Only use the first line of each message, and collapse consecutive duplicates
-			for (u32 i = 0; i < (u32)result.issues.size();)
+			for (const Result& result : m_Results)
 			{
-				const Issue& issue = result.issues[i];
-				u32 repeatCount = 1;
-				while (i + repeatCount < (u32)result.issues.size() &&
-					result.issues[i + repeatCount].bError == issue.bError &&
-					result.issues[i + repeatCount].message == issue.message)
+				u32 errorCount = 0;
+				for (const Issue& issue : result.issues)
 				{
-					++repeatCount;
+					errorCount += issue.bError ? 1 : 0;
 				}
-				i += repeatCount;
+				u32 warningCount = (u32)result.issues.size() - errorCount;
 
-				std::string message = TrimLeadingWhitespace(issue.message);
-				message = Trim(message.substr(0, message.find('\n')));
-				if (message.empty())
+				if (!result.bLoaded)
 				{
-					continue;
+					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (failed to load)\n");
+					failureLines.emplace_back(Colour::ERROR, "  " + result.sceneFileName + ": failed to load\n");
+					++issueCount;
+				}
+				else if (!result.issues.empty())
+				{
+					lines.emplace_back(Colour::ERROR, "  FAIL  " + result.sceneFileName + " (" + UIntToString(warningCount) + " warnings, " + UIntToString(errorCount) + " errors)\n");
+				}
+				else
+				{
+					lines.emplace_back(Colour::SUCCESS, "  PASS  " + result.sceneFileName + "\n");
 				}
 
-				failureList += "  " + result.sceneFileName + ": " + (issue.bError ? "error: " : "warning: ") + message;
-				if (repeatCount > 1)
+				// Only use the first line of each message, and collapse consecutive duplicates
+				for (u32 i = 0; i < (u32)result.issues.size();)
 				{
-					failureList += " (x" + UIntToString(repeatCount) + ")";
+					const Issue& issue = result.issues[i];
+					u32 repeatCount = 1;
+					while (i + repeatCount < (u32)result.issues.size() &&
+						result.issues[i + repeatCount].bError == issue.bError &&
+						result.issues[i + repeatCount].message == issue.message)
+					{
+						++repeatCount;
+					}
+					i += repeatCount;
+
+					std::string message = TrimLeadingWhitespace(issue.message);
+					message = Trim(message.substr(0, message.find('\n')));
+					if (message.empty())
+					{
+						continue;
+					}
+
+					std::string line = "  " + result.sceneFileName + ": " + (issue.bError ? "error: " : "warning: ") + message;
+					if (repeatCount > 1)
+					{
+						line += " (x" + UIntToString(repeatCount) + ")";
+					}
+					failureLines.emplace_back(issue.bError ? Colour::ERROR : Colour::WARNING, line + "\n");
+					issueCount += repeatCount;
 				}
-				failureList += "\n";
-				issueCount += repeatCount;
 			}
+
+			lines.emplace_back(failureCount == 0 ? Colour::SUCCESS : Colour::ERROR,
+				IntToString((i32)m_Results.size() - failureCount) + "/" + UIntToString((u32)m_Results.size()) + " passed\n");
 		}
-
-		summary += IntToString((i32)m_Results.size() - failureCount) + "/" + UIntToString((u32)m_Results.size()) + " passed\n";
 
 		if (failureCount > 0)
 		{
-			summary += "\n" + IntToString(failureCount) + " failed, " + UIntToString(issueCount) + " issues:\n" + failureList;
+			lines.emplace_back(Colour::ERROR, "\n" + IntToString(failureCount) + " failed, " + UIntToString(issueCount) + " issues:\n");
+			lines.insert(lines.end(), failureLines.begin(), failureLines.end());
 		}
 
-		return summary;
+		// Print outside of m_Mutex, as printing calls back into OnLog
+		for (const Pair<Colour, std::string>& line : lines)
+		{
+			PrintColouredLong(line.first, line.second.c_str());
+		}
+		Platform::SetConsoleTextColour(Colour::DEFAULT);
 	}
 
 	void SceneTestRunner::OnLog(LogLevel level, const char* message)

@@ -195,6 +195,22 @@ namespace flex
 		PrintSimple(str);
 	}
 
+	void PrintColouredLong(Platform::ConsoleColour colour, const char* str)
+	{
+		DispatchToSinks(LogLevel::MESSAGE, str);
+
+		if (!g_bEnableLogToConsole)
+		{
+			return;
+		}
+
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
+		Platform::SetConsoleTextColour(colour);
+
+		PrintSimple(str);
+	}
+
 	void PrintWarnLong(const char* str)
 	{
 		DispatchToSinks(LogLevel::WARNING, str);

@@ -55,6 +55,7 @@ namespace flex
 			DEFAULT = 0,
 			WARNING,
 			ERROR,
+			SUCCESS,
 
 			_NONE
 		};

@@ -90,7 +90,7 @@ int main(int argc, char *argv[])
 		if (sceneTestRunner != nullptr)
 		{
 			// Print after shutdown so the summary is the last thing in the output
-			flex::PrintLong(sceneTestRunner->GetSummary().c_str());
+			sceneTestRunner->PrintSummary();
 			result = sceneTestRunner->GetFailureCount();
 			delete sceneTestRunner;
 		}

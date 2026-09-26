@@ -24,8 +24,8 @@ namespace flex
 
 		// Returns the number of scenes which failed (plus one if startup failed)
 		i32 GetFailureCount() const;
-		// Per-scene results followed by a list of every warning/error, one per line
-		std::string GetSummary() const;
+		// Prints per-scene results followed by a list of every warning/error, one per line
+		void PrintSummary() const;
 
 		virtual void OnLog(LogLevel level, const char* message) override;
 

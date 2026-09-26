@@ -47,3 +47,12 @@ namespace flex
 
 #define PRINT_FATAL(...) \
 	flex::PrintFatal(__FILE__, __LINE__, __VA_ARGS__)
+
+// Platform.hpp uses the print functions above, so must be included after them
+#include "Platform/Platform.hpp"
+
+namespace flex
+{
+	// Prints in the given colour, but is otherwise treated as a regular message (e.g. by sinks)
+	void PrintColouredLong(Platform::ConsoleColour colour, const char* str);
+} // namespace flex
