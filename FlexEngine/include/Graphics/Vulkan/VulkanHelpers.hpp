@@ -32,7 +32,8 @@ namespace flex
 		};
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
-			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
+			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
+			VertexAttributes unreadVertexAttributes = 0);
 
 		// Framebuffer for offscreen rendering
 		struct FrameBufferAttachment final

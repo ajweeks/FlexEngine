@@ -70,170 +70,48 @@ namespace flex
 		}
 
 		void GetVertexAttributeDescriptions(VertexAttributes vertexAttributes,
-			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions)
+			std::vector<VkVertexInputAttributeDescription>& attributeDescriptions,
+			VertexAttributes unreadVertexAttributes /* = 0 */)
 		{
 			attributeDescriptions.clear();
 
 			u32 offset = 0;
 			u32 location = 0;
 
-			// TODO: Roll into iteration over array
-
-			if (vertexAttributes & (u32)VertexAttribute::POSITION)
+			// Unread attributes still occupy a location & space in the vertex, but get no description
+			auto AddAttribute = [&](VertexAttribute attribute, VkFormat format, u32 size)
 			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
+				if ((vertexAttributes & (u32)attribute) == 0)
+				{
+					return;
+				}
 
-				offset += sizeof(glm::vec3);
+				if ((unreadVertexAttributes & (u32)attribute) == 0)
+				{
+					VkVertexInputAttributeDescription attributeDescription = {};
+					attributeDescription.binding = 0;
+					attributeDescription.format = format;
+					attributeDescription.location = location;
+					attributeDescription.offset = offset;
+					attributeDescriptions.push_back(attributeDescription);
+				}
+
+				offset += size;
 				++location;
-			}
+			};
 
-			if (vertexAttributes & (u32)VertexAttribute::POSITION2)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec2);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::POSITION4)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec4);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::VELOCITY3)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec3);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::UV)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec2);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R8G8B8A8_UNORM)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R8G8B8A8_UNORM;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(i32);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec4);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::SCALE)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec3);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::TANGENT)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec3);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::NORMAL)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec3);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::EXTRA_VEC4)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(glm::vec4);
-				++location;
-			}
-
-			if (vertexAttributes & (u32)VertexAttribute::EXTRA_INT)
-			{
-				VkVertexInputAttributeDescription attributeDescription = {};
-				attributeDescription.binding = 0;
-				attributeDescription.format = VK_FORMAT_R32_SINT;
-				attributeDescription.location = location;
-				attributeDescription.offset = offset;
-				attributeDescriptions.push_back(attributeDescription);
-
-				offset += sizeof(i32);
-				++location;
-			}
+			AddAttribute(VertexAttribute::POSITION, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3));
+			AddAttribute(VertexAttribute::POSITION2, VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec2));
+			AddAttribute(VertexAttribute::POSITION4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4));
+			AddAttribute(VertexAttribute::VELOCITY3, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3));
+			AddAttribute(VertexAttribute::UV, VK_FORMAT_R32G32_SFLOAT, sizeof(glm::vec2));
+			AddAttribute(VertexAttribute::COLOUR_R8G8B8A8_UNORM, VK_FORMAT_R8G8B8A8_UNORM, sizeof(i32));
+			AddAttribute(VertexAttribute::COLOUR_R32G32B32A32_SFLOAT, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4));
+			AddAttribute(VertexAttribute::SCALE, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3));
+			AddAttribute(VertexAttribute::TANGENT, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3));
+			AddAttribute(VertexAttribute::NORMAL, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3));
+			AddAttribute(VertexAttribute::EXTRA_VEC4, VK_FORMAT_R32G32B32A32_SFLOAT, sizeof(glm::vec4));
+			AddAttribute(VertexAttribute::EXTRA_INT, VK_FORMAT_R32_SINT, sizeof(i32));
 		}
 
 		VulkanGPUBuffer::VulkanGPUBuffer(VulkanDevice* device, GPUBufferType type, const std::string& debugName) :

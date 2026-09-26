@@ -389,36 +389,7 @@ namespace flex
 			ParseShaderSpecializationConstants();
 			CreateSpecialzationInfos();
 
-			{
-				PROFILE_AUTO("Allocate static vertex buffers");
-				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
-				{
-					const u32 stride = CalculateVertexStride(m_Shaders[shaderID]->vertexAttributes);
-					if (stride == 0)
-					{
-						continue;
-					}
-
-					u32 staticVertexBufferIndex = 0;
-					bool bExists = false;
-					for (u32 bufferIndex = 0; bufferIndex < m_StaticVertexBuffers.size(); ++bufferIndex)
-					{
-						auto& pair = m_StaticVertexBuffers[bufferIndex];
-						if (pair.first == stride)
-						{
-							bExists = true;
-							staticVertexBufferIndex = bufferIndex;
-							break;
-						}
-					}
-					if (!bExists)
-					{
-						m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
-						staticVertexBufferIndex = (u32)(m_StaticVertexBuffers.size() - 1);
-					}
-					m_Shaders[shaderID]->staticVertexBufferIndex = staticVertexBufferIndex;
-				}
-			}
+			AllocateStaticVertexBuffers();
 
 			AllocateDynamicVertexBuffers();
 
@@ -6671,7 +6642,7 @@ namespace flex
 			VkVertexInputBindingDescription bindingDescription = vks::vertexInputBindingDescription(0, vertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
 
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions);
+			GetVertexAttributeDescriptions(createInfo->vertexAttributes, attributeDescriptions, shader->unreadVertexAttributes);
 
 			VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 			if (vertexStride > 0)
@@ -7550,6 +7521,39 @@ namespace flex
 			}
 		}
 
+
+		void VulkanRenderer::AllocateStaticVertexBuffers()
+		{
+			PROFILE_AUTO("AllocateStaticVertexBuffers");
+
+			for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
+			{
+				const u32 stride = CalculateVertexStride(m_Shaders[shaderID]->vertexAttributes);
+				if (stride == 0)
+				{
+					continue;
+				}
+
+				u32 staticVertexBufferIndex = 0;
+				bool bExists = false;
+				for (u32 bufferIndex = 0; bufferIndex < m_StaticVertexBuffers.size(); ++bufferIndex)
+				{
+					auto& pair = m_StaticVertexBuffers[bufferIndex];
+					if (pair.first == stride)
+					{
+						bExists = true;
+						staticVertexBufferIndex = bufferIndex;
+						break;
+					}
+				}
+				if (!bExists)
+				{
+					m_StaticVertexBuffers.emplace_back(stride, new VulkanBuffer(m_VulkanDevice));
+					staticVertexBufferIndex = (u32)(m_StaticVertexBuffers.size() - 1);
+				}
+				m_Shaders[shaderID]->staticVertexBufferIndex = staticVertexBufferIndex;
+			}
+		}
 
 		void VulkanRenderer::AllocateDynamicVertexBuffers()
 		{
@@ -10343,6 +10347,8 @@ namespace flex
 			m_TerrainAsyncComputeCommandBuffer = VK_NULL_HANDLE;
 
 			LoadShaders();
+			// Shaders were recreated, so per-shader state set up after loading must be restored
+			AllocateStaticVertexBuffers();
 			CreateSpecialzationInfos();
 
 			CreateFrameBufferAttachments();
@@ -10402,6 +10408,11 @@ namespace flex
 			{
 				g_SceneManager->CurrentScene()->RegenerateTerrain();
 			}
+
+			// Shader max object counts were reset to their defaults (shrinking dynamic uniform buffers),
+			// so reassign dynamic UBO slots now (growing buffers as needed) before any UBOs are written
+			m_bRebatchRenderObjects = true;
+			UpdateRenderObjectBatches();
 		}
 
 		void VulkanRenderer::SetLineWidthForCmdBuffer(VkCommandBuffer cmdBuffer, real requestedWidth /* = 3.0f */)

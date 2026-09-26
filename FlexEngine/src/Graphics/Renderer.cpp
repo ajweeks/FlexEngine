@@ -2491,6 +2491,9 @@ namespace flex
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
 			(u32)VertexAttribute::SCALE |
 			(u32)VertexAttribute::EXTRA_VEC4;
+		m_Shaders[shaderID]->unreadVertexAttributes =
+			(u32)VertexAttribute::VELOCITY3 |
+			(u32)VertexAttribute::EXTRA_VEC4;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
@@ -2573,6 +2576,9 @@ namespace flex
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
 			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::TANGENT;
+		m_Shaders[shaderID]->unreadVertexAttributes =
 			(u32)VertexAttribute::NORMAL |
 			(u32)VertexAttribute::TANGENT;
 

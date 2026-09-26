@@ -1361,6 +1361,8 @@ namespace flex
 		u32 dynamicVertexIndexBufferIndex = 0;
 
 		VertexAttributes vertexAttributes = 0;
+		// Attributes which are part of the vertex layout (e.g. for compute passes) but not read by the vertex shader
+		VertexAttributes unreadVertexAttributes = 0;
 		i32 numAttachments = 1;
 
 		// Specifies how many objects to allocate dynamic uniform buffer room for (per material)

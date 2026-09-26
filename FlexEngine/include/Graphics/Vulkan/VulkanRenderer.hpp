@@ -282,6 +282,8 @@ namespace flex
 			void CreateDynamicVertexAndIndexBuffers();
 			void CreateAllDynamicVertexAndIndexBuffers();
 
+			// Finds or creates the static vertex buffer matching each shader's vertex stride
+			void AllocateStaticVertexBuffers();
 			void AllocateDynamicVertexBuffers();
 
 			// Creates the static index buffer used by all static geometry
