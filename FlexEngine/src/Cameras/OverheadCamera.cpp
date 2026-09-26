@@ -38,8 +38,8 @@ namespace flex
 		{
 			FindPlayer();
 
-			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(15, SamplingType::LINEAR);
-			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(30, SamplingType::LINEAR);
+			m_PlayerPosRollingAvg = RollingAverage<glm::vec3>(3, SamplingType::LINEAR);
+			m_PlayerForwardRollingAvg = RollingAverage<glm::vec3>(8, SamplingType::LINEAR);
 
 			ResetValues();
 
@@ -138,11 +138,16 @@ namespace flex
 		}
 	}
 
+	void OverheadCamera::AddToElevation(real deltaElevation)
+	{
+		m_Elevation = glm::clamp(m_Elevation + deltaElevation, m_MinElevation, m_MaxElevation);
+	}
+
 	glm::vec3 OverheadCamera::GetOffsetPosition(const glm::vec3& pos, const glm::vec3& playerForward)
 	{
 		glm::vec3 backward = -playerForward;
-		glm::vec3 offsetVec = glm::vec3(VEC3_UP * 2.0f + backward * 2.0f) * m_ZoomLevel;
-		//glm::vec3 offsetVec = glm::rotate(backward, pitch, m_Player0->GetTransform()->GetRight()) * m_ZoomLevel;
+		const real dist = glm::root_two<real>() * 2.0f * m_ZoomLevel;
+		glm::vec3 offsetVec = (backward * glm::cos(m_Elevation) + VEC3_UP * glm::sin(m_Elevation)) * dist;
 		return pos + offsetVec;
 	}
 
@@ -187,6 +192,7 @@ namespace flex
 		m_TargetZoomLevel = (real)(m_ZoomLevels / 2) * ((m_MaxZoomLevel - m_MinZoomLevel) / (real)(m_ZoomLevels - 1)) + m_MinZoomLevel;
 		m_ZoomLevel = m_TargetZoomLevel;
 		pitch = -PI_DIV_FOUR;
+		m_Elevation = m_MinElevation + (m_MaxElevation - m_MinElevation) * 0.5f;
 		SetPosAndLookAt();
 
 		if (m_Player0 != nullptr)

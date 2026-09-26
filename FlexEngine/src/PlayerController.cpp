@@ -51,6 +51,12 @@ namespace flex
 	{
 		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed)
 			.SetRange(0.001f, 100.0f);
+		m_ConfigFile.RegisterProperty("move acceleration", &m_MoveAcceleration)
+			.SetRange(0.1f, 500.0f);
+		m_ConfigFile.RegisterProperty("move deceleration", &m_MoveDeceleration)
+			.SetRange(0.1f, 500.0f);
+		m_ConfigFile.RegisterProperty("camera elevation sensitivity", &m_CameraElevationSensitivity)
+			.SetRange(0.01f, 10.0f);
 		m_ConfigFile.RegisterProperty("rotate h speed first person", &m_RotateHSpeedFirstPerson);
 		m_ConfigFile.RegisterProperty("rotate h speed third person", &m_RotateHSpeedThirdPerson);
 		m_ConfigFile.RegisterProperty("rotate v speed", &m_RotateVSpeed);
@@ -403,18 +409,18 @@ namespace flex
 
 	void PlayerController::FixedUpdate()
 	{
-		btVector3 force(0.0f, 0.0f, 0.0f);
-
 		Transform* playerTransform = m_Player->GetTransform();
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
 		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
 
+		bool bMoving = false;
+
 		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
-		const btVector3& vel = rb->getLinearVelocity();
+		const btVector3 vel = rb->getLinearVelocity();
 		btVector3 xzVel(vel.getX(), 0, vel.getZ());
 		real xzVelMagnitude = xzVel.length();
 		if (xzVelMagnitude > m_MaxMoveSpeed)
@@ -477,15 +483,35 @@ namespace flex
 				if (m_Player->AbleToInteract() &&
 					!m_Player->IsAnyInventoryShowing())
 				{
-					real moveAcceleration = TWEAKABLE(80000.0f);
+					glm::vec3 moveDir = playerTransform->GetRight() * moveLR + playerTransform->GetForward() * moveFB;
+					moveDir.y = 0.0f;
+					const real moveDirLen = glm::length(moveDir);
+					if (moveDirLen > 1.0f)
+					{
+						moveDir /= moveDirLen;
+					}
 
-					force += ToBtVec3(playerTransform->GetRight()) * moveAcceleration * moveLR * g_FixedDeltaTime;
-					force += ToBtVec3(playerTransform->GetForward()) * moveAcceleration * moveFB * g_FixedDeltaTime;
+					bMoving = moveDirLen > 0.01f;
+					if (bMoving)
+					{
+						// Drive horizontal velocity towards the target directly. Speeding up is gradual, while
+						// slowing down/changing direction uses the (faster) deceleration rate
+						const glm::vec3 currentVel = ToVec3(xzVel);
+						const glm::vec3 targetVel = moveDir * m_MaxMoveSpeed;
+						const real rate = glm::length(targetVel) > glm::length(currentVel) ? m_MoveAcceleration : m_MoveDeceleration;
+						const glm::vec3 diff = targetVel - currentVel;
+						const real diffLen = glm::length(diff);
+						const real maxDelta = rate * g_FixedDeltaTime;
+						const glm::vec3 newVel = (diffLen > maxDelta) ? (currentVel + diff * (maxDelta / diffLen)) : targetVel;
+						rb->setLinearVelocity(btVector3(newVel.x, rb->getLinearVelocity().getY(), newVel.z));
+						rb->activate();
+					}
 				}
 			}
 		}
 
-		rb->applyCentralForce(force);
+		// Friction would fight the velocity set above, so it only applies when there's no move input (to stop quickly)
+		rb->setFriction(bMoving ? 0.0f : m_Player->m_MoveFriction);
 	}
 
 	// Look is applied every frame rather than every fixed step so rotation isn't quantized to the physics rate.
@@ -506,11 +532,9 @@ namespace flex
 		glm::vec2 lookInput(m_MouseLookAccum.x * m_MouseRotateHSpeed * rotateHSpeed * g_FixedDeltaTime, 0.0f);
 		// Stick input is a rate
 		lookInput.x += (-g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT)) * rotateHSpeed * g_DeltaTime;
-		if (m_Mode == Mode::FIRST_PERSON)
-		{
-			lookInput.y += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f) * m_RotateVSpeed * g_FixedDeltaTime;
-			lookInput.y += (-g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN)) * m_RotateVSpeed * g_DeltaTime;
-		}
+		// Positive y looks down. In third person it tilts the overhead camera instead of the player
+		lookInput.y += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f) * m_RotateVSpeed * g_FixedDeltaTime;
+		lookInput.y += (-g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN)) * m_RotateVSpeed * g_DeltaTime;
 		m_MouseLookAccum = VEC2_ZERO;
 
 		m_PendingLook += lookInput;
@@ -527,7 +551,18 @@ namespace flex
 
 		if (look.y != 0.0f)
 		{
-			m_Player->AddToPitch(look.y);
+			if (m_Mode == Mode::FIRST_PERSON)
+			{
+				m_Player->AddToPitch(look.y);
+			}
+			else
+			{
+				BaseCamera* cam = g_CameraManager->CurrentCamera();
+				if (cam->type == CameraType::OVERHEAD)
+				{
+					((OverheadCamera*)cam)->AddToElevation(look.y * m_CameraElevationSensitivity);
+				}
+			}
 		}
 	}
 

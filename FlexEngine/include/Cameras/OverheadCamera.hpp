@@ -22,6 +22,9 @@ namespace flex
 
 		virtual void DrawImGuiObjects() override;
 
+		// Tilts the camera, positive values move it higher above the player
+		void AddToElevation(real deltaElevation);
+
 	private:
 		glm::vec3 GetOffsetPosition(const glm::vec3& pos, const glm::vec3& playerForward);
 		void SetPosAndLookAt();
@@ -48,6 +51,11 @@ namespace flex
 		const real m_MinZoomLevel = 3.0f;
 		const real m_MaxZoomLevel = 15.0f;
 		const i32 m_ZoomLevels = 7;
+
+		// Angle (radians) of the camera above the player's horizontal plane
+		real m_Elevation;
+		const real m_MinElevation = 0.0f;
+		const real m_MaxElevation = PI_DIV_TWO - 0.05f;
 
 		// Where we point at on the ground
 		glm::vec3 m_TargetLookAtPos;

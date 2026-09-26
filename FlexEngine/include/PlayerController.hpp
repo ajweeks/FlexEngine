@@ -53,7 +53,12 @@ namespace flex
 
 		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
 
-		real m_MaxMoveSpeed = 5.0f;
+		real m_MaxMoveSpeed = 26.0f;
+		// Rates (m/s^2) at which horizontal velocity approaches the target while move input is held
+		real m_MoveAcceleration = 165.0f;
+		real m_MoveDeceleration = 260.0f;
+		// Scales vertical look input when tilting the overhead camera
+		real m_CameraElevationSensitivity = 2.0f;
 		real m_RotateHSpeedFirstPerson = 3.0f;
 		real m_RotateHSpeedThirdPerson = 4.0f;
 		real m_RotateVSpeed = 1.0f;
