@@ -61,7 +61,6 @@ layout (binding = 1) uniform UBODynamic
 
 layout (location = 0) in vec2 ex_TexCoord;
 layout (location = 1) in vec4 ex_Colour;
-layout (location = 2) in mat3 ex_TBN;
 
 layout (binding = 2) uniform sampler2D albedoSampler;
 layout (binding = 3) uniform sampler2D normalSampler;
@@ -73,10 +72,6 @@ void main()
 {
 	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : uboDynamic.constAlbedo.xyz;
 	vec3 emissive = uboDynamic.enableEmissiveSampler ? texture(emissiveSampler, ex_TexCoord).rgb : uboDynamic.constEmissive.xyz;
-	float roughness = uboDynamic.constRoughness;
-	vec3 N = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];
-
-	N = normalize(mat3(uboConstant.view) * N);
 
 	outColour = vec4(albedo * emissive * ex_Colour.xyz, 1.0);
 }

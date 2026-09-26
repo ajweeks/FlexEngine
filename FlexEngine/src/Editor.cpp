@@ -1728,7 +1728,9 @@ namespace flex
 			Mesh* subMesh = editorObject->SetMesh(new Mesh(editorObject));
 			meshCreateInfo.relativeFilePath = createInfo.meshName;
 			meshCreateInfo.materialIDs = { createInfo.matID };
-			RenderObjectCreateInfo renderObjCreateInfo = {};
+			// Start from the shared gizmo settings so every gizmo mesh is an editor object
+			// (drawn on top of the scene, excluded from shadows)
+			RenderObjectCreateInfo renderObjCreateInfo = gizmoCreateInfo;
 			if (createInfo.parent == m_TranslationGizmoPlanes)
 			{
 				renderObjCreateInfo.cullFace = CullFace::NONE;

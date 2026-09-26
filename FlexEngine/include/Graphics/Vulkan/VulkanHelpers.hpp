@@ -240,6 +240,9 @@ namespace flex
 				VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				VkSamplerAddressMode samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 				VkBorderColor borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+				// Enables depth comparison (hardware PCF when combined with linear filtering)
+				VkBool32 compareEnable = VK_FALSE;
+				VkCompareOp compareOp = VK_COMPARE_OP_ALWAYS;
 
 				const char* DBG_Name = nullptr;
 			};

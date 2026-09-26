@@ -312,6 +312,10 @@ namespace flex
 		bool IsSerializable() const;
 		void SetSerializable(bool bSerializable);
 
+		// Objects owned directly by another object (e.g. internal simulation objects) are never
+		// added to the scene, so shouldn't expect to be registered with it on destruction
+		void SetOwnedInternally(bool bOwnedInternally);
+
 		bool IsStatic() const;
 		void SetStatic(bool bStatic);
 
@@ -452,6 +456,9 @@ namespace flex
 
 		// If true, this object will never be added to a scene, but will only be instantiated (copied from)
 		bool m_bIsTemplate : 1;
+
+		// If true, this object is owned by another object and never registered with the scene
+		bool m_bOwnedInternally : 1;
 
 		// Bitfield 1
 		bool m_bSerializeMaterial : 1;

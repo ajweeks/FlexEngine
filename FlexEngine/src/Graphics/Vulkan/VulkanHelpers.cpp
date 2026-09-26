@@ -1085,8 +1085,8 @@ namespace flex
 			samplerInfo.mipLodBias = 0.0f;
 			samplerInfo.anisotropyEnable = VK_FALSE;
 			samplerInfo.maxAnisotropy = createInfo.maxAnisotropy;
-			samplerInfo.compareEnable = VK_FALSE;
-			samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+			samplerInfo.compareEnable = createInfo.compareEnable;
+			samplerInfo.compareOp = createInfo.compareOp;
 			samplerInfo.minLod = createInfo.minLod;
 			samplerInfo.maxLod = createInfo.maxLod;
 			samplerInfo.borderColor = createInfo.borderColor;

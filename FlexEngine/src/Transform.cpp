@@ -28,7 +28,8 @@ namespace flex
 		bDirtyPos = true;
 		bDirtyRot = true;
 		bDirtyScale = true;
-		m_bDirtyFromRigidbody = false;
+		m_bPosDirtyFromRigidbody = false;
+		m_bRotDirtyFromRigidbody = false;
 	}
 
 	Transform::Transform(const glm::vec3& position, const glm::quat& rotation, const glm::vec3& scale) :
@@ -38,7 +39,8 @@ namespace flex
 		bDirtyPos(true),
 		bDirtyRot(true),
 		bDirtyScale(true),
-		m_bDirtyFromRigidbody(false)
+		m_bPosDirtyFromRigidbody(false),
+		m_bRotDirtyFromRigidbody(false)
 	{
 	}
 
@@ -49,7 +51,8 @@ namespace flex
 		bDirtyPos(true),
 		bDirtyRot(true),
 		bDirtyScale(true),
-		m_bDirtyFromRigidbody(false)
+		m_bPosDirtyFromRigidbody(false),
+		m_bRotDirtyFromRigidbody(false)
 	{
 	}
 
@@ -60,7 +63,8 @@ namespace flex
 		bDirtyPos(true),
 		bDirtyRot(true),
 		bDirtyScale(true),
-		m_bDirtyFromRigidbody(false)
+		m_bPosDirtyFromRigidbody(false),
+		m_bRotDirtyFromRigidbody(false)
 	{
 	}
 
@@ -72,7 +76,8 @@ namespace flex
 		bDirtyPos(true),
 		bDirtyRot(true),
 		bDirtyScale(true),
-		m_bDirtyFromRigidbody(other.m_bDirtyFromRigidbody)
+		m_bPosDirtyFromRigidbody(other.m_bPosDirtyFromRigidbody),
+		m_bRotDirtyFromRigidbody(other.m_bRotDirtyFromRigidbody)
 	{
 	}
 
@@ -84,7 +89,8 @@ namespace flex
 		bDirtyPos(true),
 		bDirtyRot(true),
 		bDirtyScale(true),
-		m_bDirtyFromRigidbody(other.m_bDirtyFromRigidbody)
+		m_bPosDirtyFromRigidbody(other.m_bPosDirtyFromRigidbody),
+		m_bRotDirtyFromRigidbody(other.m_bRotDirtyFromRigidbody)
 	{
 	}
 
@@ -159,7 +165,8 @@ namespace flex
 		bDirtyPos = other.bDirtyPos;
 		bDirtyRot = other.bDirtyRot;
 		bDirtyScale = other.bDirtyScale;
-		m_bDirtyFromRigidbody = other.m_bDirtyFromRigidbody;
+		m_bPosDirtyFromRigidbody = other.m_bPosDirtyFromRigidbody;
+		m_bRotDirtyFromRigidbody = other.m_bRotDirtyFromRigidbody;
 
 		// NOTE: m_GameObject is not copied here
 	}
@@ -485,9 +492,7 @@ namespace flex
 		Decompose(localTransform, localPosition, localRotation, localScale);
 		cachedWorldTransform = desiredWorldTransform;
 
-		bDirtyPos = false;
-		bDirtyScale = false;
-		bDirtyRot = false;
+		ClearDirtyFlags();
 	}
 
 	void Transform::SetFromBtTransform(const btTransform& transform)
@@ -548,6 +553,8 @@ namespace flex
 		bDirtyPos = false;
 		bDirtyRot = false;
 		bDirtyScale = false;
+		m_bPosDirtyFromRigidbody = false;
+		m_bRotDirtyFromRigidbody = false;
 	}
 
 	void Transform::UpdateRigidBody()
@@ -555,12 +562,6 @@ namespace flex
 		RigidBody* rigidBody = m_GameObject->GetRigidBody();
 		if (rigidBody != nullptr)
 		{
-			if (m_bDirtyFromRigidbody)
-			{
-				m_bDirtyFromRigidbody = false;
-				return;
-			}
-
 			if (bDirtyScale)
 			{
 				if (rigidBody->GetRigidBodyInternal() != nullptr)
@@ -572,15 +573,20 @@ namespace flex
 					rigidBody->GetRigidBodyInternal()->getCollisionShape()->setLocalScaling(ToBtVec3(GetWorldScale()));
 				}
 			}
-			if (bDirtyPos && bDirtyRot)
+			// Only write back components changed by something other than the rigid body itself. Bullet's
+			// reported transform may not exactly match its internal state, so echoing it back would
+			// teleport the body (e.g. undoing movement when only rotation was changed by game code)
+			const bool bWritePos = bDirtyPos && !m_bPosDirtyFromRigidbody;
+			const bool bWriteRot = bDirtyRot && !m_bRotDirtyFromRigidbody;
+			if (bWritePos && bWriteRot)
 			{
 				rigidBody->SetWorldPositionAndRotation(GetWorldPosition(), GetWorldRotation());
 			}
-			else if (bDirtyPos)
+			else if (bWritePos)
 			{
 				rigidBody->SetWorldPosition(GetWorldPosition());
 			}
-			else if (bDirtyRot)
+			else if (bWriteRot)
 			{
 				rigidBody->SetWorldRotation(GetWorldRotation());
 			}
@@ -613,6 +619,9 @@ namespace flex
 		for (u32 i = 0; i < childCount; ++i)
 		{
 			Transform* childTransform = m_GameObject->GetChild(i)->GetTransform();
+			// Parent-driven changes must be propagated to child rigid bodies
+			if (bChildPosDirty) childTransform->m_bPosDirtyFromRigidbody = false;
+			if (bChildRotDirty) childTransform->m_bRotDirtyFromRigidbody = false;
 			childTransform->MarkDirty(bChildPosDirty, bChildRotDirty, bChildScaleDirty);
 		}
 	}
@@ -663,7 +672,7 @@ namespace flex
 	{
 		if (!NearlyEquals(localPosition, newLocalPos, DirtyThreshold))
 		{
-			m_bDirtyFromRigidbody = false;
+			m_bPosDirtyFromRigidbody = false;
 			localPosition = newLocalPos;
 			MarkDirty(true, false, false);
 		}
@@ -673,7 +682,7 @@ namespace flex
 	{
 		if (!NearlyEquals(localRotation, newLocalRot, DirtyThreshold))
 		{
-			m_bDirtyFromRigidbody = false;
+			m_bRotDirtyFromRigidbody = false;
 			localRotation = newLocalRot;
 			MarkDirty(false, true, false);
 		}
@@ -683,7 +692,6 @@ namespace flex
 	{
 		if (!NearlyEquals(localScale, newLocalScale, DirtyThreshold))
 		{
-			m_bDirtyFromRigidbody = false;
 			localScale = newLocalScale;
 			MarkDirty(false, false, true);
 		}
@@ -712,9 +720,16 @@ namespace flex
 
 		if (bNewPosDirty || bNewRotDirty)
 		{
-			localPosition = newPosition;
-			localRotation = newRotation;
-			m_bDirtyFromRigidbody = true;
+			if (bNewPosDirty)
+			{
+				localPosition = newPosition;
+				m_bPosDirtyFromRigidbody = true;
+			}
+			if (bNewRotDirty)
+			{
+				localRotation = newRotation;
+				m_bRotDirtyFromRigidbody = true;
+			}
 
 			MarkDirty(bNewPosDirty, bNewRotDirty, false);
 		}

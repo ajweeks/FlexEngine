@@ -13,7 +13,6 @@ layout (location = 4) in vec3 in_Tangent;
 
 layout (location = 0) out vec2 ex_TexCoord;
 layout (location = 1) out vec4 ex_Colour;
-layout (location = 2) out mat3 ex_TBN;
 
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
@@ -39,12 +38,6 @@ void main()
 {
 	ex_TexCoord = in_TexCoord;
 	ex_Colour = in_Colour;
-
-	vec3 bitan = cross(in_Normal, in_Tangent);
-	ex_TBN = mat3(
-		normalize(mat3(uboDynamic.model) * in_Tangent), 
-		normalize(mat3(uboDynamic.model) * bitan), 
-		normalize(mat3(uboDynamic.model) * in_Normal));
 
     vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
     gl_Position = uboConstant.viewProjection * worldPos;

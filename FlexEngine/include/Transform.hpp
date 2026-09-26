@@ -113,7 +113,10 @@ namespace flex
 		bool bDirtyPos : 1;
 		bool bDirtyRot : 1;
 		bool bDirtyScale : 1;
-		bool m_bDirtyFromRigidbody : 1;
+		// Set when the corresponding dirty flag was caused by the rigid body moving, in
+		// which case that component must not be written back to the rigid body
+		bool m_bPosDirtyFromRigidbody : 1;
+		bool m_bRotDirtyFromRigidbody : 1;
 
 	};
 } // namespace flex

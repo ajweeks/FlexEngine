@@ -2109,13 +2109,16 @@ namespace flex
 
 
 
+			// Always submit & present an acquired image, even if the swap chain needs rebuilding, otherwise
+			// the offscreen semaphore signaled by SubmitOffscreenWork will never be waited on
+			if (nextImageIndex != u32_max)
+			{
+				SubmitSceneRenderingWork(nextImageIndex);
+			}
+
 			if (m_bSwapChainNeedsRebuilding)
 			{
 				RecreateSwapChain();
-			}
-			else if (nextImageIndex != u32_max)
-			{
-				SubmitSceneRenderingWork(nextImageIndex);
 			}
 
 			++m_FramesRendered;
@@ -7681,11 +7684,8 @@ namespace flex
 
 		void VulkanRenderer::CreateRenderCompleteSemaphores()
 		{
-			if (m_RenderCompleteSemaphores.size() == m_SwapChainImages.size())
-			{
-				return;
-			}
-
+			// Always recreate, images from the old swap chain will never be reacquired so their
+			// semaphores would never be known to have been waited on by the presentation engine
 			DestroyRenderCompleteSemaphores();
 
 			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();

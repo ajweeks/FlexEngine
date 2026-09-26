@@ -96,9 +96,10 @@ namespace flex
 	// 16 bytes
 	struct SSAOSamplingData
 	{
-		i32 enabled; // 0
-		real powExp; // 4
-		real pad[2]; // 8
+		i32 enabled;				// 0
+		real powExp;				// 4
+		real ambientIntensity;		// 8 - Scales all ambient (IBL) lighting
+		real ambientShadowAmount;	// 12 - How much the directional shadow darkens ambient lighting [0, 1]
 	};
 
 	// 32 bytes
@@ -113,13 +114,20 @@ namespace flex
 		i32 bDEBUGShowEdges;   // 28
 	};
 
-	// 288 bytes
+	// 320 bytes
 	struct ShadowSamplingData
 	{
-		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];
-		glm::vec4 cascadeDepthSplits;
-		real pad[3];
-		real baseBias;
+		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
+		// Normalized linear depth at which each cascade ends (unused cascades are > 1)
+		glm::vec4 cascadeDepthSplits;								// 256
+		// World-space size of one shadow map texel in each cascade
+		glm::vec4 cascadeTexelSizes;								// 272
+		// Depth bias in each cascade's normalized light-space depth
+		glm::vec4 cascadeDepthBiases;								// 288
+		i32 cascadeCount;											// 304
+		// Receiver offset along its normal, in shadow map texels
+		real normalOffset;											// 308
+		real pad[2];												// 312
 	};
 
 	// 112 bytes

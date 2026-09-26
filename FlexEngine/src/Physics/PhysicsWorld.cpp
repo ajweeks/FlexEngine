@@ -41,6 +41,9 @@ namespace flex
 			m_World = g_PhysicsManager->CreateWorld();
 
 			m_World->setInternalTickCallback(PhysicsInternalTickCallback, this);
+			// We step at a fixed rate ourselves so Bullet never has leftover time to interpolate with,
+			// meaning latency interpolation would only report each body's transform from one step ago
+			m_World->setLatencyMotionStateInterpolation(false);
 
 			m_World->getSolverInfo().m_globalCfm = 0.00001f;
 		}

@@ -158,7 +158,8 @@ namespace flex
 		m_ItemProxyObject = GameObject::CreateObjectOfType(BaseObjectSID, "Active item");
 		m_ItemProxyObject->SetSerializable(false);
 		m_ItemProxyObject->SetVisibleInSceneExplorer(false);
-		m_ItemProxyObject->GetTransform()->Scale(0.5f);
+		// Mineral deposit meshes are world-sized (~20m across), shrink them down to be hand-held
+		m_ItemProxyObject->GetTransform()->Scale(m_TypeID == MineralDepositSID ? 0.04f : 0.5f);
 
 		if (prefabTemplate->GetMesh() != nullptr)
 		{
@@ -226,6 +227,7 @@ namespace flex
 		m_bInteractable(false),
 		m_bCastsShadow(true),
 		m_bIsTemplate(bIsPrefabTemplate),
+		m_bOwnedInternally(false),
 		m_bUniformScale(false),
 		m_bItemizable(false)
 	{
@@ -552,7 +554,7 @@ namespace flex
 			}
 
 			// ID will not be valid on objects that are being saved as a prefab template
-			if (g_SceneManager->HasSceneLoaded() && ID.IsValid())
+			if (g_SceneManager->HasSceneLoaded() && ID.IsValid() && !m_bOwnedInternally)
 			{
 				g_SceneManager->CurrentScene()->UnregisterGameObject(ID, /* bAssertSuccess: */ true);
 			}
@@ -2059,6 +2061,15 @@ namespace flex
 				rotWS = glm::angleAxis(-sin(timerAdjusted * mineAnimSpeed) * mineAnimArc, playerTransform->GetRight()) * rotWS;
 			}
 		} break;
+		case MineralDepositSID:
+		{
+			// Hold slightly below center of view, tilting the top face (+Y) back towards the player
+			posWS = playerTransform->GetWorldPosition() +
+				player->GetLookDirection() * 1.5f +
+				playerTransform->GetUp() * -0.4f;
+			const real faceAngle = glm::radians(-60.0f);
+			rotWS = rotWS * glm::angleAxis(faceAngle, VEC3_RIGHT);
+		} break;
 		default:
 		{
 			// Nothing additional
@@ -2980,6 +2991,11 @@ namespace flex
 		return false;
 	}
 
+	void GameObject::SetOwnedInternally(bool bOwnedInternally)
+	{
+		m_bOwnedInternally = bOwnedInternally;
+	}
+
 	void GameObject::SetVisibleInSceneExplorer(bool bVisibleInSceneExplorer)
 	{
 		if (m_bVisibleInSceneExplorer != bVisibleInSceneExplorer)
@@ -3117,8 +3133,8 @@ namespace flex
 
 	void GameObject::SetCastsShadow(bool bCastsShadow)
 	{
+		// Shadow casters are filtered at draw time, no need to notify the renderer
 		m_bCastsShadow = bCastsShadow;
-		g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::SHADOW_DATA);
 	}
 
 	void GameObject::OnOverlapBegin(GameObject* other)
@@ -7363,6 +7379,7 @@ namespace flex
 
 		m_SoftBody->SetSerializable(false);
 		m_SoftBody->SetVisibleInSceneExplorer(false);
+		m_SoftBody->SetOwnedInternally(true);
 		m_SoftBody->SetStiffness(stiffness);
 		m_SoftBody->SetDamping(damping);
 		m_SoftBody->Initialize();
@@ -11552,6 +11569,7 @@ namespace flex
 			m_SpringSim->points = std::vector<Point*>{ new Point(initialRootPos, VEC3_ZERO, 0.0f), new Point(initialTargetPos, VEC3_ZERO, 1.0f / 20.0f) };
 			m_SpringSim->SetSerializable(false);
 			m_SpringSim->SetVisibleInSceneExplorer(false);
+			m_SpringSim->SetOwnedInternally(true);
 			real stiffness = 0.02f;
 			m_SpringSim->SetStiffness(stiffness);
 			m_SpringSim->SetDamping(0.999f);
@@ -11562,6 +11580,7 @@ namespace flex
 			m_Bobber = new GameObject("Spring bobber", BaseObjectSID);
 			m_Bobber->SetSerializable(false);
 			m_Bobber->SetVisibleInSceneExplorer(false);
+			m_Bobber->SetOwnedInternally(true);
 			Mesh* bobberMesh = m_Bobber->SetMesh(new Mesh(m_Bobber));
 			bobberMesh->LoadFromFile(MESH_DIRECTORY "sphere.glb", s_BobberMatID);
 			m_Bobber->Initialize();
@@ -12412,9 +12431,6 @@ namespace flex
 						constraintIndex = AddUniqueBendingConstraint(index2, index0, index1, index3, constraintIndex, 0.995f);
 					}
 				}
-
-
-				g_Renderer->SetDirtyFlags(RenderBatchDirtyFlag::DYNAMIC_DATA);
 			}
 		}
 	}

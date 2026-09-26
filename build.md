@@ -49,6 +49,12 @@ First ensure you've pulled all the dependencies, either passing `--recurse-submo
 5. `./Flex`
 
 
+## Testing
+Run from the binary directory (e.g. `bin/Debug_x64/FlexEngine`):
+- `Flex --test --headless` runs the unit tests
+- `Flex --test-scenes [--frames=N] [scene ...]` loads every scene (or only those listed, e.g. `scene_01.json` or `01`) in a hidden window, simulates N frames (default 10) in each, and prints a PASS/FAIL summary. A scene fails if it fails to load or prints any warnings or errors. The exit code is the number of failures (engine startup counts as its own entry). Settings (common settings, window config, UI layout) are not saved.
+
+
 ## Troubleshooting
 
 ---

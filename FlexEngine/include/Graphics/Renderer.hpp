@@ -467,8 +467,6 @@ namespace flex
 		real m_ShadowCascadeSplitLambda = 0.75f;
 		// Constant depth bias in world units
 		real m_ShadowBias = 0.02f;
-		// Persisted in renderer settings & applied to the shader_quality_level specialization constant (-1 = use its default)
-		i32 m_ShaderQualityLevel = -1;
 
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;
@@ -527,7 +525,8 @@ namespace flex
 		i32 m_TAASampleCount = 2;
 		bool m_bTAAStateChanged = false;
 
-		i32 m_ShaderQualityLevel = 1;
+		// Persisted in renderer settings & applied to the shader_quality_level specialization constant (-1 = use its default)
+		i32 m_ShaderQualityLevel = -1;
 		const i32 MAX_SHADER_QUALITY_LEVEL = 3;
 
 		sec m_EditorStrSecRemaining = 0.0f;
