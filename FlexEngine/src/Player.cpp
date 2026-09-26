@@ -4,6 +4,7 @@
 
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletCollision/CollisionDispatch/btManifoldResult.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
@@ -42,6 +43,27 @@ IGNORE_WARNINGS_POP
 namespace flex
 {
 	const glm::vec3 Player::HEADLAMP_MOUNT_POS = glm::vec3(0.0f, 0.8f, 0.2f);
+
+	// Removes friction from contacts against steep surfaces (walls) so the player slides along them rather than sticking
+	static bool PlayerContactAddedCallback(btManifoldPoint& cp, const btCollisionObjectWrapper* colObj0Wrap, int partId0, int index0,
+		const btCollisionObjectWrapper* colObj1Wrap, int partId1, int index1)
+	{
+		FLEX_UNUSED(colObj0Wrap);
+		FLEX_UNUSED(partId0);
+		FLEX_UNUSED(index0);
+		FLEX_UNUSED(colObj1Wrap);
+		FLEX_UNUSED(partId1);
+		FLEX_UNUSED(index1);
+
+		// Surfaces steeper than ~45 degrees are treated as walls
+		const btScalar maxWalkableNormalY = 0.7f;
+		if (btFabs(cp.m_normalWorldOnB.getY()) < maxWalkableNormalY)
+		{
+			cp.m_combinedFriction = 0.0f;
+		}
+
+		return true;
+	}
 
 	Player::Player(i32 index, GameObjectID gameObjectID) :
 		GameObject("Player " + std::to_string(index), PlayerSID, gameObjectID, InvalidPrefabIDPair, false),
@@ -144,6 +166,10 @@ namespace flex
 	{
 		m_RigidBody->SetOrientationConstraint(btVector3(0.0f, 1.0f, 0.0f));
 		m_RigidBody->GetRigidBodyInternal()->setSleepingThresholds(0.0f, 0.0f);
+
+		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+		rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+		gContactAddedCallback = PlayerContactAddedCallback;
 
 		GameObject::PostInitialize();
 	}
