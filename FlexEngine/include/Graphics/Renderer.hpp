@@ -11,6 +11,7 @@ typedef struct FT_LibraryRec_* FT_Library;
 
 namespace flex
 {
+	class BaseCamera;
 	class DirectionalLight;
 	class DirectoryWatcher;
 	class DebugRenderer;
@@ -391,6 +392,9 @@ namespace flex
 		void EnqueueScreenSpaceSprites();
 		void EnqueueWorldSpaceSprites();
 
+		// Fits cascades to the camera's frustum out to m_ShadowDistance
+		void UpdateShadowCascades(BaseCamera* cam);
+
 		void GenerateGBuffer();
 
 		void EnqueueScreenSpaceText();
@@ -457,6 +461,14 @@ namespace flex
 
 		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
 		u32 m_ShadowMapBaseResolution = 4096;
+		// Distance from the camera that shadow cascades cover (shadows fade out towards this distance)
+		real m_ShadowDistance = 200.0f;
+		// Blend between uniform (0) and logarithmic (1) cascade split distances
+		real m_ShadowCascadeSplitLambda = 0.75f;
+		// Constant depth bias in world units
+		real m_ShadowBias = 0.02f;
+		// Persisted in renderer settings & applied to the shader_quality_level specialization constant (-1 = use its default)
+		i32 m_ShaderQualityLevel = -1;
 
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;

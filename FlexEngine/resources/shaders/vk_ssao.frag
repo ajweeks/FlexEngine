@@ -40,7 +40,8 @@ void main()
 		return;
 	}
 
-	vec3 normal = normalize(texture(in_Normal, ex_TexCoord).rgb * 2.0f - 1.0f);
+	// G-buffer stores signed view-space normals (float format), no decode needed
+	vec3 normal = normalize(texture(in_Normal, ex_TexCoord).rgb);
 
 	vec3 posVS = reconstructVSPosFromDepth(ex_TexCoord);
 
@@ -55,10 +56,9 @@ void main()
 	vec3 bitangent = cross(tangent, normal);
 	mat3 TBN = mat3(tangent, bitangent, normal);
 
-	float bias = 0.01f;
+	float bias = 0.025f;
 
 	float occlusion = 0.0f;
-	int sampleCount = 0;
 	for (uint i = 0; i < SSAO_KERNEL_SIZE; i++)
 	{
 		vec3 samplePos = TBN * uboConstant.samples[i].xyz;
@@ -71,19 +71,13 @@ void main()
 		offset.y = 1.0f - offset.y;
 		
 		vec3 reconstructedPos = reconstructVSPosFromDepth(offset.xy);
-		vec3 sampledNormal = normalize(texture(in_Normal, offset.xy).xyz * 2.0f - 1.0f);
-		if (dot(sampledNormal, normal) > 0.99)
-		{
-			++sampleCount;
-		}
-		else
-		{
-			float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(reconstructedPos.z - samplePos.z - bias));
-			occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
-			++sampleCount;
-		}
+
+		// Occluded when the visible surface at the sample's screen position is in front of the sample
+		// Range check fades out contributions from geometry far in front of this fragment (e.g. silhouette edges)
+		float rangeCheck = smoothstep(0.0f, 1.0f, uboConstant.ssaoRadius / abs(posVS.z - reconstructedPos.z));
+		occlusion += (reconstructedPos.z <= samplePos.z - bias ? 1.0f : 0.0f) * rangeCheck;
 	}
-	occlusion = 1.0 - (occlusion / float(max(sampleCount,1)));
+	occlusion = 1.0 - (occlusion / float(SSAO_KERNEL_SIZE));
 	
 	fragColour = occlusion;
 }

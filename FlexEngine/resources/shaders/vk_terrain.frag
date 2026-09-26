@@ -23,7 +23,7 @@ layout (location = 2) in float ex_Depth;
 layout (location = 3) in vec3 ex_PositionWS;
 
 layout (binding = 1) uniform sampler2D albedoSampler;
-layout (binding = 2) uniform sampler2DArray shadowCascadeSampler;
+layout (binding = 2) uniform sampler2DArrayShadow shadowCascadeSampler;
 
 layout (location = 0) out vec4 fragmentColour;
 
@@ -245,7 +245,7 @@ void main()
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = pow(dot(N, L) * 0.5 + 0.5, 4.0); // Wrapped diffuse
 
-		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, cascadeIndex, shadowCascadeSampler, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, N, linDepth, cascadeIndex, shadowCascadeSampler, NoL);
 		light = (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= NoL * radiance;
 	}

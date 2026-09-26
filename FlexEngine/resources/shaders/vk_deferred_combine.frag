@@ -315,7 +315,7 @@ layout (binding = 2) uniform samplerCube irradianceSampler;
 layout (binding = 3) uniform samplerCube prefilterMap;
 layout (binding = 4) uniform sampler2D depthSampler;
 layout (binding = 5) uniform sampler2D ssaoFinalSampler;
-layout (binding = 6) uniform sampler2DArray shadowCascadeSampler;
+layout (binding = 6) uniform sampler2DArrayShadow shadowCascadeSampler;
 
 layout (binding = 7) uniform sampler2D normalRoughnessSampler;
 layout (binding = 8) uniform sampler2D albedoMetallicSampler;
@@ -472,7 +472,7 @@ void main()
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, cascadeIndex, shadowCascadeSampler, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, N, linDepth, cascadeIndex, shadowCascadeSampler, NoL);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}
@@ -481,7 +481,6 @@ void main()
 
 	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
 	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
-	skyColour *= dirLightShadowOpacity;
 
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
@@ -500,9 +499,12 @@ void main()
 	// Dampen specular on downward facing normals
 	//specular *= dot(N, vec3(0, 1, 0)) * 0.5 + 0.5;
 
-	vec3 ambient = (kD * diffuse + specular);
+	// Ambient light is occluded by nearby geometry (SSAO) and partially by the sun's shadow
+	// (the brightest part of the sky is typically in the sun's direction)
+	float ambientShadow = mix(1.0, dirLightShadowOpacity, uboConstant.ssaoData.ambientShadowAmount);
+	vec3 ambient = (kD * diffuse + specular) * uboConstant.ssaoData.ambientIntensity * ssao * ambientShadow;
 
-	vec3 colour = ambient + Lo * ssao;
+	vec3 colour = ambient + Lo;
     ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping

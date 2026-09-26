@@ -22,7 +22,8 @@ layout (binding = 4) uniform sampler2D in_Normal;
 void main()
 {
 	float ourDepth = texture(in_Depth, ex_TexCoord).r;
-	vec3 ourNormal = normalize(texture(in_Normal, ex_TexCoord).rgb * 2.0f - 1.0f);
+	// G-buffer stores signed view-space normals (float format), no decode needed
+	vec3 ourNormal = normalize(texture(in_Normal, ex_TexCoord).rgb);
 
 	int sampleCount = 0;
 	float sum = 0.0f;
@@ -30,12 +31,13 @@ void main()
 	{
 		vec2 offset = uboDyanmic.ssaoTexelOffset * float(i);
 		float depth = texture(in_Depth, ex_TexCoord + offset).r;
-		vec3 normal = normalize(texture(in_Normal, ex_TexCoord + offset).rgb * 2.0f - 1.0f);
+		vec3 normal = normalize(texture(in_Normal, ex_TexCoord + offset).rgb);
 		if (abs(ourDepth - depth) < 0.00002f && dot(ourNormal, normal) > 0.85f)
 		{
 			sum += texture(in_SSAO, ex_TexCoord + offset).r;
 			++sampleCount;
 		}
 	}
-	out_Colour = clamp(sum / float(sampleCount), 0.0f, 1.0f);
+	// Background pixels have no normal (NaN comparisons fail), pass their value through
+	out_Colour = sampleCount > 0 ? clamp(sum / float(sampleCount), 0.0f, 1.0f) : texture(in_SSAO, ex_TexCoord).r;
 }

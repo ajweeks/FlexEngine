@@ -54,6 +54,14 @@ namespace flex
 
 		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount);
 		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution);
+		m_Settings.RegisterProperty("shadow distance", &m_ShadowDistance);
+		m_Settings.RegisterProperty("shadow cascade split lambda", &m_ShadowCascadeSplitLambda);
+		m_Settings.RegisterProperty("shadow bias", &m_ShadowBias);
+		m_Settings.RegisterProperty("shadow normal offset", &m_ShadowSamplingData.normalOffset);
+		m_Settings.RegisterProperty("shader quality level", &m_ShaderQualityLevel);
+
+		m_Settings.RegisterProperty("ambient intensity", &m_SSAOSamplingData.ambientIntensity);
+		m_Settings.RegisterProperty("ambient shadow amount", &m_SSAOSamplingData.ambientShadowAmount);
 
 		m_Settings.SetOnDeserialize([this]()
 		{
@@ -116,9 +124,12 @@ namespace flex
 
 		m_SSAOSamplingData.enabled = 1;
 		m_SSAOSamplingData.powExp = 3.0f;
+		m_SSAOSamplingData.ambientIntensity = 0.5f;
+		m_SSAOSamplingData.ambientShadowAmount = 0.5f;
 
-		m_ShadowSamplingData.cascadeDepthSplits = glm::vec4(0.1f, 0.25f, 0.5f, 0.8f);
-		m_ShadowSamplingData.baseBias = 0.002f;
+		m_ShadowSamplingData = {};
+		m_ShadowSamplingData.cascadeCount = m_ShadowCascadeCount;
+		m_ShadowSamplingData.normalOffset = 1.5f;
 
 		m_UIMesh = new UIMesh();
 
@@ -359,6 +370,7 @@ namespace flex
 	void Renderer::SetShaderQualityLevel(i32 newQualityLevel)
 	{
 		newQualityLevel = glm::clamp(newQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL);
+		m_ShaderQualityLevel = newQualityLevel;
 		SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
 		if (newQualityLevel != specializationConstantMetaData.value)
 		{
@@ -1053,6 +1065,115 @@ namespace flex
 		}
 	}
 
+	void Renderer::UpdateShadowCascades(BaseCamera* cam)
+	{
+		const real zNear = cam->zNear;
+		const real zFar = cam->zFar;
+		const real shadowDistance = glm::clamp(m_ShadowDistance, zNear + 0.01f, zFar);
+		const i32 cascadeCount = glm::clamp(m_ShadowCascadeCount, 1, MAX_SHADOW_CASCADE_COUNT);
+
+		// Casters between the light & a cascade (but outside of it) must still be rendered into it
+		const real casterMargin = shadowDistance;
+
+		// Flip near & far planes
+		glm::mat4 modifiedProj = cam->GetProjection();
+		modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
+		modifiedProj[3][2] = -modifiedProj[3][2];
+		glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
+
+		if ((i32)m_ShadowLightViewMats.size() != cascadeCount)
+		{
+			m_ShadowLightViewMats.resize(cascadeCount);
+			m_ShadowLightProjMats.resize(cascadeCount);
+		}
+
+		const glm::vec3 lightDir = glm::normalize(m_DirectionalLight->data.dir); // Points towards the light
+		const glm::vec3 up = glm::abs(glm::dot(lightDir, VEC3_UP)) > 0.99f ? VEC3_FORWARD : VEC3_UP;
+		const glm::mat4 lightRotation = glm::lookAt(VEC3_ZERO, -lightDir, up);
+		const glm::mat4 invLightRotation = glm::inverse(lightRotation);
+
+		real lastSplitDist = 0.0f;
+		for (i32 c = 0; c < cascadeCount; ++c)
+		{
+			// Practical split scheme: blend between uniform & logarithmic split depths
+			const real p = (real)(c + 1) / (real)cascadeCount;
+			const real logSplitDepth = zNear * glm::pow(shadowDistance / zNear, p);
+			const real uniformSplitDepth = zNear + (shadowDistance - zNear) * p;
+			const real splitDepth = Lerp(uniformSplitDepth, logSplitDepth, m_ShadowCascadeSplitLambda);
+			// Normalized linear depth (matches linDepth in shaders)
+			const real splitDist = (splitDepth - zNear) / (zFar - zNear);
+
+			glm::vec3 frustumCorners[8] = {
+				{ -1.0f,  1.0f, -1.0f },
+				{  1.0f,  1.0f, -1.0f },
+				{  1.0f, -1.0f, -1.0f },
+				{ -1.0f, -1.0f, -1.0f },
+				{ -1.0f,  1.0f,  1.0f },
+				{  1.0f,  1.0f,  1.0f },
+				{  1.0f, -1.0f,  1.0f },
+				{ -1.0f, -1.0f,  1.0f },
+			};
+
+			// Transform frustum corners from clip space to world space
+			for (glm::vec3& frustumCorner : frustumCorners)
+			{
+				glm::vec4 invCorner = invCam * glm::vec4(frustumCorner, 1.0f);
+				frustumCorner = invCorner / invCorner.w;
+			}
+
+			for (u32 i = 0; i < 4; ++i)
+			{
+				glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
+				frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
+				frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
+			}
+
+			glm::vec3 frustumCenter(0.0f);
+			for (const glm::vec3& frustumCorner : frustumCorners)
+			{
+				frustumCenter += frustumCorner;
+			}
+			frustumCenter /= 8.0f;
+
+			// Bounding sphere keeps the cascade's size constant as the camera rotates
+			real radius = 0.0f;
+			for (const glm::vec3& frustumCorner : frustumCorners)
+			{
+				real distance = glm::length(frustumCorner - frustumCenter);
+				radius = glm::max(radius, distance);
+			}
+			radius = std::ceil(radius * 16.0f) / 16.0f;
+
+			const real texelSize = (2.0f * radius) / (real)m_ShadowMapBaseResolution;
+
+			// Snap center to whole texels in light space to prevent shadow edges shimmering as the camera moves
+			glm::vec3 centerLS = glm::vec3(lightRotation * glm::vec4(frustumCenter, 1.0f));
+			centerLS.x = glm::floor(centerLS.x / texelSize) * texelSize;
+			centerLS.y = glm::floor(centerLS.y / texelSize) * texelSize;
+			frustumCenter = glm::vec3(invLightRotation * glm::vec4(centerLS, 1.0f));
+
+			// Reversed-Z: depth is 1 at casterMargin towards the light & 0 at the far side of the cascade
+			m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter + lightDir * radius, frustumCenter, up);
+			m_ShadowLightProjMats[c] = glm::ortho(-radius, radius, -radius, radius, 2.0f * radius, -casterMargin);
+
+			m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
+			m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
+			m_ShadowSamplingData.cascadeTexelSizes[c] = texelSize;
+			m_ShadowSamplingData.cascadeDepthBiases[c] = m_ShadowBias / (2.0f * radius + casterMargin);
+
+			lastSplitDist = splitDist;
+		}
+
+		// Unused cascades are never selected (normalized depth never exceeds 1)
+		for (i32 c = cascadeCount; c < MAX_SHADOW_CASCADE_COUNT; ++c)
+		{
+			m_ShadowSamplingData.cascadeDepthSplits[c] = 2.0f;
+			m_ShadowSamplingData.cascadeTexelSizes[c] = 0.0f;
+			m_ShadowSamplingData.cascadeDepthBiases[c] = 0.0f;
+		}
+		m_ShadowSamplingData.cascadeCount = cascadeCount;
+	}
+
 	void Renderer::EnqueueWorldSpaceSprites()
 	{
 	}
@@ -1129,81 +1250,11 @@ namespace flex
 			RecompileShaders(false);
 		}
 
-		glm::vec4 depthSplits(0.04f, 0.15f, 0.4f, 1.0f);
-
 		BaseCamera* cam = g_CameraManager->CurrentCamera();
 		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
 		if (dirLight != nullptr)
 		{
-			// Flip near & far planes
-			glm::mat4 modifiedProj = cam->GetProjection();
-			modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
-			modifiedProj[3][2] = -modifiedProj[3][2];
-			glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
-
-			if ((i32)m_ShadowLightViewMats.size() != m_ShadowCascadeCount)
-			{
-				m_ShadowLightViewMats.resize(m_ShadowCascadeCount);
-				m_ShadowLightProjMats.resize(m_ShadowCascadeCount);
-			}
-
-			real lastSplitDist = 0.0f;
-			for (u32 c = 0; c < (u32)m_ShadowCascadeCount; ++c)
-			{
-				real splitDist = depthSplits[c];
-
-				glm::vec3 frustumCorners[8] = {
-					{ -1.0f,  1.0f, -1.0f },
-					{  1.0f,  1.0f, -1.0f },
-					{  1.0f, -1.0f, -1.0f },
-					{ -1.0f, -1.0f, -1.0f },
-					{ -1.0f,  1.0f,  1.0f },
-					{  1.0f,  1.0f,  1.0f },
-					{  1.0f, -1.0f,  1.0f },
-					{ -1.0f, -1.0f,  1.0f },
-				};
-
-				// Transform frustum corners from clip space to world space
-				for (glm::vec3& frustumCorner : frustumCorners)
-				{
-					glm::vec4 invCorner = invCam * glm::vec4(frustumCorner, 1.0f);
-					frustumCorner = invCorner / invCorner.w;
-				}
-
-				for (u32 i = 0; i < 4; ++i)
-				{
-					glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
-					frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
-					frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
-				}
-
-				glm::vec3 frustumCenter(0.0f);
-				for (const glm::vec3& frustumCorner : frustumCorners)
-				{
-					frustumCenter += frustumCorner;
-				}
-				frustumCenter /= 8.0f;
-
-				real radius = 0.0f;
-				for (const glm::vec3& frustumCorner : frustumCorners)
-				{
-					real distance = glm::length(frustumCorner - frustumCenter);
-					radius = glm::max(radius, distance);
-				}
-				radius = std::ceil(radius * 16.0f) / 16.0f;
-
-				glm::vec3 maxExtents = glm::vec3(radius);
-				glm::vec3 minExtents = -maxExtents;
-				real zFar = g_CameraManager->CurrentCamera()->zFar;
-
-				m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter - m_DirectionalLight->data.dir * minExtents.z, frustumCenter, VEC3_UP);
-				m_ShadowLightProjMats[c] = glm::ortho(minExtents.x, maxExtents.x, minExtents.y, maxExtents.y, zFar * 2.0f, -zFar);
-
-				m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
-				m_ShadowSamplingData.cascadeDepthSplits[c] = depthSplits[c];
-
-				lastSplitDist = depthSplits[c];
-			}
+			UpdateShadowCascades(cam);
 		}
 
 		m_UIMesh->Draw();
@@ -3281,12 +3332,24 @@ namespace flex
 				ImGui::TreePop();
 			}
 
-			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, 4))
+			// Shadow & ambient settings are saved to renderer settings as soon as they're edited
+			bool bSaveSettings = false;
+			// Only save once a slider is released to avoid writing to disk every frame while dragging
+			auto SaveOnRelease = [&bSaveSettings]()
 			{
-				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, 4);
+				if (ImGui::IsItemDeactivatedAfterEdit())
+				{
+					bSaveSettings = true;
+				}
+			};
+
+			if (ImGui::SliderInt("Shadow cascade count", &m_ShadowCascadeCount, 1, MAX_SHADOW_CASCADE_COUNT))
+			{
+				m_ShadowCascadeCount = glm::clamp(m_ShadowCascadeCount, 1, MAX_SHADOW_CASCADE_COUNT);
 				// TODO: Recreate less
 				RecreateEverything();
 			}
+			SaveOnRelease();
 
 			if (ImGuiExt::SliderUInt("Shadow cascade base resolution", &m_ShadowMapBaseResolution, 128u, 4096u))
 			{
@@ -3294,17 +3357,33 @@ namespace flex
 				// TODO: Recreate less
 				RecreateEverything();
 			}
+			SaveOnRelease();
 
-			ImGui::SliderFloat("Shadow bias", &m_ShadowSamplingData.baseBias, 0.0f, 0.02f);
+			ImGui::SliderFloat("Shadow distance", &m_ShadowDistance, 10.0f, 1000.0f);
+			SaveOnRelease();
+			ImGui::SliderFloat("Shadow cascade split lambda", &m_ShadowCascadeSplitLambda, 0.0f, 1.0f);
+			SaveOnRelease();
+			ImGui::SliderFloat("Shadow bias", &m_ShadowBias, 0.0f, 0.25f);
+			SaveOnRelease();
+			ImGui::SliderFloat("Shadow normal offset", &m_ShadowSamplingData.normalOffset, 0.0f, 4.0f);
+			SaveOnRelease();
 
-			SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
-			if (ImGui::SliderInt("Shader quality level", &specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL))
+			ImGui::SliderFloat("Ambient intensity", &m_SSAOSamplingData.ambientIntensity, 0.0f, 2.0f);
+			SaveOnRelease();
+			ImGui::SliderFloat("Ambient shadow amount", &m_SSAOSamplingData.ambientShadowAmount, 0.0f, 1.0f);
+			SaveOnRelease();
+
+			// Edit a copy: the slider writes into its value directly, so comparing afterwards would never detect a change
+			i32 shaderQualityLevel = m_SpecializationConstants[SID("shader_quality_level")].value;
+			if (ImGui::SliderInt("Shader quality level", &shaderQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL))
 			{
-				i32 newShaderQualityLevel = glm::clamp(specializationConstantMetaData.value, 0, MAX_SHADER_QUALITY_LEVEL);
-				if (newShaderQualityLevel != specializationConstantMetaData.value)
-				{
-					RecreateEverything();
-				}
+				SetShaderQualityLevel(shaderQualityLevel);
+			}
+			SaveOnRelease();
+
+			if (bSaveSettings)
+			{
+				SaveSettingsToDisk(false);
 			}
 
 			SpecializationConstantMetaData& debugOverlayConstant = m_SpecializationConstants[SID("debug_overlay_index")];

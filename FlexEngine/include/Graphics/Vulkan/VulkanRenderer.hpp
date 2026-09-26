@@ -522,6 +522,8 @@ namespace flex
 			FrameBufferAttachment* m_GBufferDepthAttachment = nullptr;
 
 			VDeleter<VkSampler> m_SamplerDepth;
+			// Depth-comparison sampler for shadow maps (hardware PCF)
+			VDeleter<VkSampler> m_SamplerShadow;
 			VDeleter<VkSampler> m_SamplerLinearRepeat;
 			VDeleter<VkSampler> m_SamplerLinearClampToEdge;
 			VDeleter<VkSampler> m_SamplerLinearClampToBorder;

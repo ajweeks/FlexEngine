@@ -67,16 +67,20 @@ struct AreaLight
 struct ShadowSamplingData
 {
 	mat4 cascadeViewProjMats[NUM_CASCADES];
-	vec4 cascadeDepthSplits;
-	vec3 _pad;
-	float baseBias;
+	vec4 cascadeDepthSplits; // Normalized linear depth at which each cascade ends
+	vec4 cascadeTexelSizes; // World-space size of one shadow map texel
+	vec4 cascadeDepthBiases; // In normalized light-space depth
+	int cascadeCount;
+	float normalOffset; // In texels
+	vec2 _pad;
 };
 
 struct SSAOSamplingData
 {
 	int enabled; // TODO: Make specialization constant
 	float powExp;
-	vec2 _pad;
+	float ambientIntensity;
+	float ambientShadowAmount;
 };
 
 struct SkyboxData
@@ -174,52 +178,60 @@ vec3 ReconstructWSPosFromDepth(mat4 invProj, mat4 invView, vec2 uv, float depth)
 	return (invView * vec4(posNDC, 1)).xyz;
 }
 
-float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSamplingData, vec3 posWS, uint cascadeIndex, sampler2DArray shadowMaps, float NoL)
+// Returns 1.0 when fully lit, (1 - shadowDarkness) when fully shadowed
+// shadowMaps must be bound with a depth-comparison sampler (hardware PCF)
+float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSamplingData, vec3 posWS, vec3 N, float linDepth, uint cascadeIndex, sampler2DArrayShadow shadowMaps, float NoL)
 {
-	float dirLightShadowOpacity = 1.0;
-	if (dirLight.castShadows != 0)
+	if (dirLight.castShadows == 0 || cascadeIndex >= uint(shadowSamplingData.cascadeCount))
 	{
-		vec4 transformedShadowPos = (biasMat * shadowSamplingData.cascadeViewProjMats[cascadeIndex]) * vec4(posWS, 1.0);
-		transformedShadowPos.y = 1.0f - transformedShadowPos.y;
-		transformedShadowPos /= transformedShadowPos.w;
-		
-		if (transformedShadowPos.z > -1.0 && transformedShadowPos.z < 1.0)
+		// Beyond shadow distance
+		return 1.0;
+	}
+
+	// Offset receiver along its normal by a few texels to avoid acne without a large depth bias
+	// (more offset is needed the more grazing the light is)
+	float texelSize = shadowSamplingData.cascadeTexelSizes[cascadeIndex];
+	vec3 offsetPosWS = posWS + N * (texelSize * shadowSamplingData.normalOffset * (1.0 - NoL * 0.5));
+
+	vec4 shadowPos = (biasMat * shadowSamplingData.cascadeViewProjMats[cascadeIndex]) * vec4(offsetPosWS, 1.0);
+	shadowPos.y = 1.0 - shadowPos.y;
+	shadowPos /= shadowPos.w;
+
+	if (shadowPos.z <= 0.0 || shadowPos.z >= 1.0)
+	{
+		return 1.0;
+	}
+
+	// Reversed-Z: comparison passes (lit) when receiver is at least as close to the light as the occluder
+	float refDepth = shadowPos.z + shadowSamplingData.cascadeDepthBiases[cascadeIndex];
+
+	float lit;
+	if (QUALITY_LEVEL >= 1)
+	{
+		// 3x3 bilinear-filtered taps (each tap is itself a 2x2 hardware PCF), covering a 4x4 texel footprint
+		vec2 shadowMapTexelSize = 1.0 / vec2(textureSize(shadowMaps, 0).xy);
+		lit = 0.0;
+		for (int x = -1; x <= 1; ++x)
 		{
-			float baseBias = shadowSamplingData.baseBias;
-			float bias = max(baseBias * (1.0 - NoL), baseBias * 0.01);
-
-			if (QUALITY_LEVEL >= 1)
+			for (int y = -1; y <= 1; ++y)
 			{
-				int sampleRadius = 3;
-				float spread = 1.75;
-				float shadowSampleContrib = dirLight.shadowDarkness / ((sampleRadius*2 + 1) * (sampleRadius*2 + 1));
-
-				vec3 shadowMapTexelSize = 1.0 / textureSize(shadowMaps, 0);
-
-				for (int x = -sampleRadius; x <= sampleRadius; ++x)
-				{
-					for (int y = -sampleRadius; y <= sampleRadius; ++y)
-					{
-						float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy + vec2(x, y) * shadowMapTexelSize.xy*spread, cascadeIndex)).r;
-
-						if (shadowDepth > transformedShadowPos.z + bias)
-						{
-							dirLightShadowOpacity -= shadowSampleContrib;
-						}
-					}
-				}
-			}
-			else
-			{
-				float shadowDepth = texture(shadowMaps, vec3(transformedShadowPos.xy, cascadeIndex)).r;
-				if (shadowDepth > transformedShadowPos.z + bias)
-				{
-					dirLightShadowOpacity = 1.0 - dirLight.shadowDarkness;
-				}
+				vec2 uv = shadowPos.xy + vec2(x, y) * shadowMapTexelSize;
+				lit += texture(shadowMaps, vec4(uv, float(cascadeIndex), refDepth));
 			}
 		}
+		lit /= 9.0;
 	}
-	return dirLightShadowOpacity;
+	else
+	{
+		lit = texture(shadowMaps, vec4(shadowPos.xy, float(cascadeIndex), refDepth));
+	}
+
+	// Fade out over the last 10% of the shadow distance to hide the cutoff
+	float shadowEnd = shadowSamplingData.cascadeDepthSplits[shadowSamplingData.cascadeCount - 1];
+	float fade = smoothstep(shadowEnd * 0.9, shadowEnd, linDepth);
+	lit = mix(lit, 1.0, fade);
+
+	return 1.0 - (1.0 - lit) * dirLight.shadowDarkness;
 }
 
 vec3 ColourByShadowCascade(uint cascadeIndex)

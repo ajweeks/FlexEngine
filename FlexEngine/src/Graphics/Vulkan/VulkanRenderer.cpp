@@ -277,6 +277,7 @@ namespace flex
 				m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
 				m_SamplerDepth = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
+				m_SamplerShadow = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerLinearRepeat = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerLinearClampToEdge = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerLinearClampToBorder = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
@@ -380,6 +381,11 @@ namespace flex
 
 			LoadShaders();
 			ParseSpecializationConstantInfo();
+			if (m_ShaderQualityLevel != -1)
+			{
+				// Override default with value from renderer settings
+				m_SpecializationConstants[SID("shader_quality_level")].value = glm::clamp(m_ShaderQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL);
+			}
 			ParseShaderSpecializationConstants();
 			CreateSpecialzationInfos();
 
@@ -789,6 +795,7 @@ namespace flex
 			m_ParticleSimulationComputePipelineLayout.replace();
 
 			m_SamplerDepth.replace();
+			m_SamplerShadow.replace();
 			m_SamplerLinearRepeat.replace();
 			m_SamplerLinearClampToEdge.replace();
 			m_SamplerLinearClampToBorder.replace();
@@ -2574,6 +2581,12 @@ namespace flex
 					m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution))
 			{
 				RecreateEverything();
+			}
+
+			if (m_bInitialized && m_ShaderQualityLevel != -1)
+			{
+				// Recreates everything if the level changed
+				SetShaderQualityLevel(m_ShaderQualityLevel);
 			}
 		}
 
@@ -6402,7 +6415,7 @@ namespace flex
 			if (shader->textureUniforms.HasUniform(&U_SHADOW_CASCADES_SAMPLER))
 			{
 				VkImageView imageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : ((VulkanTexture*)m_BlankTextureArr)->imageView;
-				imageDescriptors->SetUniform(&U_SHADOW_CASCADES_SAMPLER, ImageDescriptorInfo{ imageView, m_SamplerDepth });
+				imageDescriptors->SetUniform(&U_SHADOW_CASCADES_SAMPLER, ImageDescriptorInfo{ imageView, m_SamplerShadow });
 			}
 
 			if (shader->textureUniforms.HasUniform(&U_FB_0_SAMPLER))
@@ -7100,6 +7113,21 @@ namespace flex
 				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
 				samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
+			}
+			{
+				VulkanTexture::SamplerCreateInfo samplerCreateInfo = {};
+				samplerCreateInfo.sampler = (HTextureSampler*)m_SamplerShadow.replace();
+				samplerCreateInfo.DBG_Name = "Shadow sampler";
+				samplerCreateInfo.magFilter = VK_FILTER_LINEAR;
+				samplerCreateInfo.minFilter = VK_FILTER_LINEAR;
+				samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
+				samplerCreateInfo.samplerAddressMode = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+				// Border depth of 0 is furthest from the light (reversed-Z), so outside the map is lit
+				samplerCreateInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK;
+				// Reversed-Z: passes (lit) when the receiver is at least as close to the light as the occluder
+				samplerCreateInfo.compareEnable = VK_TRUE;
+				samplerCreateInfo.compareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 				VulkanTexture::CreateSampler(m_VulkanDevice, samplerCreateInfo);
 			}
 			{
