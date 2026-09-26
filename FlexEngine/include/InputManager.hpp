@@ -71,6 +71,8 @@ namespace flex
 		// Returns distance mouse has moved since last frame
 		glm::vec2 GetMouseMovement(bool bIgnoreImGui = false) const;
 		void ClearMouseButton(MouseButton mouseButton);
+		// Treats key as released until it is next pressed
+		void ClearKey(KeyCode keyCode);
 		bool IsAnyMouseButtonDown(bool bIgnoreImGui = false) const;
 		bool IsMouseButtonDown(MouseButton mouseButton, bool bIgnoreImGui = false) const;
 		bool IsMouseButtonPressed(MouseButton mouseButton, bool bIgnoreImGui = false) const;

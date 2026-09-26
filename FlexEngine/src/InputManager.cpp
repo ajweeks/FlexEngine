@@ -937,6 +937,7 @@ namespace flex
 				}
 			}
 
+			bool bConsumed = false;
 			bool bEventsInQueue = (actionIter != m_ActionCallbacks.end()) ||
 				(keyEventIter != m_KeyEventCallbacks.end());
 			while (bEventsInQueue)
@@ -945,6 +946,7 @@ namespace flex
 				{
 					if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 					{
+						bConsumed = true;
 						break;
 					}
 					++keyEventIter;
@@ -953,6 +955,7 @@ namespace flex
 				{
 					if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 					{
+						bConsumed = true;
 						break;
 					}
 					++actionIter;
@@ -963,6 +966,7 @@ namespace flex
 					{
 						if (actionIter->first->Execute(keyPressAction, actionEvent) == EventReply::CONSUMED)
 						{
+							bConsumed = true;
 							break;
 						}
 						++actionIter;
@@ -971,6 +975,7 @@ namespace flex
 					{
 						if (keyEventIter->first->Execute(keyCode, keyAction, mods) == EventReply::CONSUMED)
 						{
+							bConsumed = true;
 							break;
 						}
 						++keyEventIter;
@@ -978,6 +983,15 @@ namespace flex
 				}
 
 				bEventsInQueue = (actionIter != m_ActionCallbacks.end()) || (keyEventIter != m_KeyEventCallbacks.end());
+			}
+
+			// A consumed ctrl+key shortcut (e.g. ctrl+S, ctrl+A) shouldn't also be read as the key being held
+			// (e.g. moving the debug camera). Ctrl+key presses that aren't consumed are left alone so ctrl can
+			// still act as a modifier for held keys (e.g. slow camera movement).
+			const bool bIsModifierKey = keyCode >= KeyCode::KEY_LEFT_SHIFT && keyCode <= KeyCode::KEY_RIGHT_SUPER;
+			if (bConsumed && bCtrlDown && keyAction == KeyAction::KEY_PRESS && !bIsModifierKey)
+			{
+				ClearKey(keyCode);
 			}
 		}
 	}
@@ -1027,6 +1041,16 @@ namespace flex
 		m_MouseButtonStates &= ~(1 << ((i32)mouseButton));
 		m_MouseButtonsPressed &= ~(1 << ((i32)mouseButton));
 		m_MouseButtonsReleased &= ~(1 << ((i32)mouseButton));
+	}
+
+	void InputManager::ClearKey(KeyCode keyCode)
+	{
+		auto iter = m_Keys.find(keyCode);
+		if (iter != m_Keys.end())
+		{
+			iter->second.down = 0;
+			iter->second.pDown = 0;
+		}
 	}
 
 	bool InputManager::IsAnyMouseButtonDown(bool bIgnoreImGui /* = false */) const
