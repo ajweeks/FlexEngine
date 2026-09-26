@@ -34,11 +34,6 @@ namespace flex
 		g_LogBufferFilePath = SAVED_DIRECTORY "flex.log";
 
 		ClearLogFile();
-
-		if (g_bEnableLogToConsole)
-		{
-			g_LogBuffer << '[' << Platform::GetDateString_YMDHMS() << ']' << '\n';
-		}
 	}
 
 	void ClearLogFile()
@@ -219,7 +214,6 @@ namespace flex
 			vsnprintf(buffer, MAX_CHARS, str, argList);
 
 			std::string s(buffer);
-			s[s.size() - 1] = '\n';
 			g_LogBuffer << s;
 
 			std::cout << buffer;
@@ -239,6 +233,7 @@ namespace flex
 		}
 		else
 		{
+			g_LogBuffer << str;
 			std::cout << str;
 			Platform::PrintStringToDebuggerConsole(str);
 		}

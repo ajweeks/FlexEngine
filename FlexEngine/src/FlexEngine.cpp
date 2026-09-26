@@ -180,6 +180,8 @@ namespace flex
 		const char* platformStr = "Linux";
 #endif
 
+		Print("[%s]\n", Platform::GetDateString_YMDHMS().c_str());
+
 		Print("FlexEngine v%u.%u.%u - Config: [%s %s, %s] - Compiler: [%s %s]\n", EngineVersionMajor, EngineVersionMinor, EngineVersionPatch, configStr, targetStr, platformStr, m_CompilerName.c_str(), m_CompilerVersion.c_str());
 
 #if USE_PL
