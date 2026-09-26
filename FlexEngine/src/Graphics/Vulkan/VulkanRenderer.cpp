@@ -988,11 +988,10 @@ namespace flex
 
 					if (texture == nullptr)
 					{
-						texture = CreateTexture(std::string(textureInfo.textureUniform->DBG_name));
-						texture->bHDR = textureInfo.bHDR;
 						bool bGenerateMipChain = false;
-						// TODO: Fix race condition bug
-						g_ResourceManager->QueueTextureLoad(textureInfo.relativeFilePath, m_SamplerLinearRepeat, false, bGenerateMipChain, textureInfo.bHDR);
+						// Bind the queued texture itself so its descriptor picks up the real image once it's created
+						TextureID textureID = g_ResourceManager->QueueTextureLoad(textureInfo.relativeFilePath, m_SamplerLinearRepeat, false, bGenerateMipChain, textureInfo.bHDR);
+						texture = g_ResourceManager->GetLoadedTexture(textureID, false);
 					}
 
 					if (texture != nullptr)
@@ -1280,12 +1279,31 @@ namespace flex
 			MarkRenderObjectBatchDirty(renderID);
 		}
 
-		void VulkanRenderer::OnTextureDestroyed(TextureID textureID)
+		void VulkanRenderer::OnTextureDestroyed(TextureID textureID, Texture* texture)
 		{
 			auto spriteDescSetIter = m_SpriteDescSets.find(textureID);
 			if (spriteDescSetIter != m_SpriteDescSets.end())
 			{
 				m_SpriteDescSets.erase(spriteDescSetIter);
+			}
+
+			// Don't leave materials pointing at the soon-to-be-deleted texture
+			Texture* fallbackTexture = texture->bIsArray ? m_BlankTextureArr : m_BlankTexture;
+			if (texture == fallbackTexture)
+			{
+				return;
+			}
+
+			for (auto& materialPair : m_Materials)
+			{
+				for (auto& texturePair : materialPair.second->textures)
+				{
+					if (texturePair.object == texture)
+					{
+						texturePair.object = fallbackTexture;
+						m_bRecreateDescriptorSets = true;
+					}
+				}
 			}
 		}
 
@@ -1868,6 +1886,13 @@ namespace flex
 				// Update SSAO pipelines in case kernel size changed
 				CreateSSAODescriptorSets();
 				CreateSSAOPipelines();
+			}
+
+			if (m_bRecreateDescriptorSets)
+			{
+				m_bRecreateDescriptorSets = false;
+
+				CreateDescriptorSets();
 			}
 
 			if (m_bTAAStateChanged)

@@ -53,7 +53,7 @@ namespace flex
 			virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) override;
 			virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) override;
 			virtual void PostInitializeRenderObject(RenderID renderID) override;
-			virtual void OnTextureDestroyed(TextureID textureID) override;
+			virtual void OnTextureDestroyed(TextureID textureID, Texture* texture) override;
 
 			virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) override;
 

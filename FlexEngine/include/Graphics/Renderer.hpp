@@ -46,7 +46,8 @@ namespace flex
 		virtual TextureID InitializeTextureArrayFromMemory(void* data, u32 size, TextureFormat inFormat, const std::string& name, u32 width, u32 height, u32 layerCount, u32 channelCount, HTextureSampler inSampler) = 0;
 		virtual RenderID InitializeRenderObject(const RenderObjectCreateInfo* createInfo) = 0;
 		virtual void PostInitializeRenderObject(RenderID renderID) = 0; // Only call when creating objects after calling PostInitialize()
-		virtual void OnTextureDestroyed(TextureID textureID) = 0;
+		// NOTE: Called while ResourceManager's loaded textures mutex is held
+		virtual void OnTextureDestroyed(TextureID textureID, Texture* texture) = 0;
 
 		virtual void ReplaceMaterialsOnObjects(MaterialID oldMatID, MaterialID newMatID) = 0;
 
@@ -511,6 +512,7 @@ namespace flex
 		bool m_bSwapChainNeedsRebuilding = false;
 		// Forces all render object batches to be rebuilt from scratch (incremental changes are tracked per render object)
 		bool m_bRebatchRenderObjects = true;
+		bool m_bRecreateDescriptorSets = false;
 
 		bool m_bEnableWireframeOverlay = false;
 		bool m_bEnableSelectionWireframe = false;

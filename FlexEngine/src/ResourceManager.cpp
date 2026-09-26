@@ -113,6 +113,8 @@ namespace flex
 			DiscoverTextures();
 		}
 
+		bool bTexturesCreated = false;
+
 		{
 			const std::lock_guard<std::mutex> lock(m_QueuedTextureLoadInfoMutex);
 			FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
@@ -143,15 +145,23 @@ namespace flex
 					u64 newTexSize = texture->Create(loadInfo.bGenerateMipMaps);
 					if (newTexSize == 0)
 					{
+						g_Renderer->OnTextureDestroyed(textureID, texture);
 						delete texture;
 						loadedTextures[textureID] = nullptr;
 						iter = m_QueuedTextureLoadInfos.erase(iter);
 						continue;
 					}
 
+					bTexturesCreated = true;
 					iter = m_QueuedTextureLoadInfos.erase(iter);
 				}
 			}
+		}
+
+		if (bTexturesCreated)
+		{
+			// Descriptor sets written while these textures were loading fell back to the blank texture
+			g_Renderer->OnTextureReloaded(nullptr);
 		}
 	}
 
@@ -1151,12 +1161,28 @@ namespace flex
 
 	Texture* ResourceManager::FindLoadedTextureWithPath(const std::string& filePath)
 	{
+		if (filePath.empty())
+		{
+			return nullptr;
+		}
+
+		FLEX_MUTEX_LOCK(m_QueuedTextureLoadInfoMutex);
 		FLEX_MUTEX_LOCK(m_LoadedTexturesMutex);
+
+		// Textures still loading have their path written on a job thread, so match them by their queued load info instead
+		for (const Pair<TextureID, TextureLoadInfo>& pair : m_QueuedTextureLoadInfos)
+		{
+			if (pair.second.relativeFilePath == filePath)
+			{
+				return loadedTextures[pair.first];
+			}
+		}
 
 		for (Texture* texture : loadedTextures)
 		{
 			if (texture != nullptr &&
-				!filePath.empty() && filePath.compare(texture->relativeFilePath) == 0)
+				!texture->IsLoading() &&
+				filePath.compare(texture->relativeFilePath) == 0)
 			{
 				return texture;
 			}
@@ -1277,7 +1303,7 @@ namespace flex
 				TextureID textureID = (TextureID)(iter - loadedTextures.begin());
 				if (bDestroy)
 				{
-					g_Renderer->OnTextureDestroyed(textureID);
+					g_Renderer->OnTextureDestroyed(textureID, *iter);
 					delete* iter;
 				}
 				loadedTextures[textureID] = nullptr;
