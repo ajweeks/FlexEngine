@@ -97,11 +97,7 @@ def clean_project(config, platform):
 
 	# FreeType
 	free_type_path = project_root + 'dependencies/freetype/'
-	free_type_build_path = free_type_path
-	if platform == 'linux':
-		 free_type_build_path += 'build/'
-	# TODO: What do here?
-	# rm_dir(free_type_build_path)
+	rm_dir(free_type_path + 'build/')
 
 	if platform == 'windows':
 		rm_file(libs_target + 'freetype.lib')

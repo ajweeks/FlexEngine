@@ -16,10 +16,6 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
-#include <Vehicles/Hinge2Vehicle.h>
-#include <CommonInterfaces/CommonExampleInterface.h>
-#include <CommonInterfaces/CommonGUIHelperInterface.h>
-
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
 

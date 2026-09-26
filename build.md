@@ -6,76 +6,48 @@
 
 If you want to build Flex Engine on your own system, follow these steps. You an always download the latest release binaries [here](https://github.com/ajweeks/flexengine/releases) if that's what you're after.
 
-First ensure you've pulled all the dependencies, either passing `--recurse-submodules` when cloning, or using `git submodule update` after the fact.
-
-Note that prebuilt binaries do exist for linux, see [Pre-built binaries](#1-pre-built-binaries) for steps.
+First ensure you've pulled all the dependencies, either passing `--recurse-submodules` when cloning, or using `git submodule update --init --recursive` after the fact.
 
 ## Windows
 #### Requirements:
 - Python 3
-- cmake 3.13+
+- Visual Studio 2019, 2022, or 2026 with the "Desktop development with C++" workload, which includes:
+  - MSVC x64/x86 build tools
+  - A Windows 10 or 11 SDK (the latest installed is used)
+  - cmake (used if no newer cmake is on your PATH)
+- cmake 3.15+ (4.2+ for VS2026), only needed if the version bundled with Visual Studio is too old
+- Optional: the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home), to enable validation layers in Debug builds
 
 #### Steps
 1. `cd scripts`
-2. `python build_dependencies.py windows vs2019 Debug` (or any newer version)
+2. `python build_dependencies.py windows vs2026 Debug` (or `vs2022`/`vs2019`, and `Debug`/`Sanitize`/`Profile`/`Release`/`All`)
+    - Pass e.g. `--windows-sdk=10.0.26100.0` to target a specific Windows SDK
+    - Re-running is incremental, only changed dependencies are rebuilt
 3. Open `build/Flex.sln`
 4. Build and run!
 
 
 ## Linux
 #### Requirements:
-- [GENie](https://github.com/bkaradzic/GENie)
+- A C++ compiler (gcc or clang), make and/or ninja
 - Python 3
-- cmake 3.13+
+- cmake 3.15+
+- [GENie](https://github.com/bkaradzic/GENie), either on your PATH or copied into `scripts/`. To build it: `git clone --depth 1 https://github.com/bkaradzic/GENie && make -C GENie`, which outputs `GENie/bin/linux/genie`
+- Development packages for OpenAL, X11 (plus Xcursor, Xi, Xrandr, Xinerama), and libuuid
+- Optional: the [Vulkan SDK](https://vulkan.lunarg.com/sdk/home), to enable validation layers in Debug builds
 
-### Ubuntu 18.04
+#### Installing packages
+- Ubuntu/Debian: `sudo apt install build-essential cmake ninja-build python3 libopenal-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev uuid-dev`
+- Fedora: `sudo dnf install gcc-c++ cmake ninja-build python3 openal-soft-devel libX11-devel libXcursor-devel libXi-devel libXrandr-devel libXinerama-devel libuuid-devel`
+- Solus: `sudo eopkg install -c system.devel` then `sudo eopkg install cmake ninja python3 openal-soft-devel libx11-devel libxcursor-devel libxi-devel libxrandr-devel libxinerama-devel util-linux-devel`
+
 #### Steps
-1. Run the following commands to install prerequisites:
-  - `sudo apt update`
-  - `sudo apt-get install cmake dos2unix g++-multilib libopenal-dev python3-dev xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev automake libtool autoconf libbz2-dev uuid-dev`
-  - `wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add -`
-  - `sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list` (substitute in any newer vulkan version)
-2. `cd scripts`
-3. `python3 build_dependencies.py linux gmake Debug`
-4. `make`
-5. `cd ../bin/Debug_x64/FlexEngine`
-6. `./Flex`
+1. `cd scripts`
+2. `python3 build_dependencies.py linux ninja Debug` (or `gmake`, and `Debug`/`Sanitize`/`Profile`/`Release`/`All`)
+3. `ninja -C ../build/debug64` (or `make -C ../build config=debug64` for gmake)
+4. `cd ../bin/Debug_x64/FlexEngine`
+5. `./Flex`
 
-### Solus 4.2
-#### Steps
-1. Run the following commands to install prerequisites:
-  - `sudo eopkg upgrade`
-  - `sudo eopkg install cmake dos2unix gcc llvm-clang glibc-devel libx11-devel libxcursor-devel vulkan automake libtool autoconf make libxrandr-devel libxinerama-devel libxi-devel openal-soft-devel libpng-devel bzip2-devel`
-  - `sudo eopkg install -c system.devel uuid-dev`
-  - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
-2. `cd scripts`
-3. `git config --global init.defaultBranchName main`
-4. `python3 build_dependencies.py linux gmake Debug`
-5. `make`
-6. `cd ../bin/Debug_x64/FlexEngine`
-7. `./Flex`
-
-### Fedora
-#### Steps
-1. Run the following commands to install prerequisites:
-  - `sudo dnf update`
-  - `sudo dnf install cmake dos2unix gcc glibc-devel libx11-devel libXcursor-devel vulkan automake libtool autoconf make libXrandr-devel libXinerama-devel libXi-devel openal-soft libpng zlib uuid-dev`
-  - Install latest vulkan sdk by following steps here: https://vulkan.lunarg.com/sdk/home
-2. `cd scripts`
-3. `git config --global init.defaultBranchName main`
-4. `python3 build_dependencies.py linux gmake Debug`
-5. `make`
-6. `cd ../bin/Debug_x64/FlexEngine`
-7. `./Flex`
-
-
-## Pre-built binaries (linux-only)
-To download prebuilt dependencies (not the full engine) follow the following steps:
-
-1. `wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip`
-2. `unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/`
-
-This is mostly provided for continuous integration reasons, and so is less well tested by humans.
 
 ## Troubleshooting
 
@@ -84,8 +56,6 @@ This is mostly provided for continuous integration reasons, and so is less well 
 If some libraries can't be found but are installed (e.g., "cannot find -lopenal", but `/usr/lib64/libopenal.so.1` exists), create a symlink as follows:
 
 `ln -s /usr/lib64/libopenal.so.1 /usr/lib64/libopenal.so`
-
-If you get an error while building a dependency on linux which is similar to "Syntax error near unexpected token 'elif'"", a script likely has incorrect line endings. For example, freetype/autogen.sh may have to be converted using `dos2unix autogen.sh autogen.sh`
 
 ---
 

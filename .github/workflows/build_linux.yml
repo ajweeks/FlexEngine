@@ -1,4 +1,3 @@
-
 name: 'Linux'
 
 on:
@@ -6,131 +5,61 @@ on:
     branches: [ master, development ]
     paths-ignore:
       - 'AdditionalFiles/**'
+      - '**.md'
   pull_request:
     branches: [ master, development ]
     paths-ignore:
       - 'AdditionalFiles/**'
+      - '**.md'
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-    inputs:
-      empty:
-        required: false
-        default: ""
+
+# Cancel superseded runs on the same branch/PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v6
         with:
           submodules: recursive
 
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y ninja-build zip unzip libopenal-dev g++-multilib python3 xserver-xorg-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev uuid-dev
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ninja-build libopenal-dev libx11-dev libxcursor-dev libxi-dev libxrandr-dev libxinerama-dev uuid-dev
 
       - name: build-genie
         run: |
-           git clone https://github.com/bkaradzic/genie; \
-           pushd genie; \
-           make; \
-           popd
-         
-      - name: create-build-directories
-        run: |
-          mkdir -p \
-            FlexEngine/lib/x64/Debug/ \
-            FlexEngine/dependencies/glfw/build/ \
-            FlexEngine/dependencies/openAL/build/ \
-            FlexEngine/dependencies/bullet/build/ \
-            FlexEngine/dependencies/freetype/build/
+          git clone --depth 1 https://github.com/bkaradzic/GENie "$RUNNER_TEMP/genie"
+          make -C "$RUNNER_TEMP/genie" -j$(nproc)
+          cp "$RUNNER_TEMP/genie/bin/linux/genie" scripts/
 
-      - name: download-prebuilt-dependencies
-        run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-libs-debug.zip
+      # Dependencies only need rebuilding when a submodule, the build script (which pins shaderc), or the OS image changes
+      - name: dependencies-cache-key
+        id: deps-key
+        run: echo "submodules=$(git submodule status | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
-      - name: extract-prebuilt-dependencies
-        run: unzip linux-libs-debug.zip -d FlexEngine/lib/x64/Debug/
-        
-      - name: shaderc-clone
-        run: |
-          git clone https://github.com/google/shaderc FlexEngine/dependencies/shaderc/ --recurse-submodules --depth=1; \
-          pushd FlexEngine/dependencies/shaderc/; \
-          git fetch --tags; \
-          git checkout tags/v2020.2 -b master; \
-          popd
+      - name: cache-dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            FlexEngine/lib/x64/Debug
+            FlexEngine/dependencies/shaderc/libshaderc/include
+          key: deps-${{ env.ImageOS }}-${{ hashFiles('scripts/build_dependencies.py') }}-${{ steps.deps-key.outputs.submodules }}
 
+      - name: build-dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: cd scripts && python3 build_dependencies.py linux ninja Debug
 
-# Build all dependencies:
+      - name: generate-project
+        run: cd scripts && ./genie ninja
 
-#       - name: install-deps
-#         run: sudo apt-get install -y dos2unix cmake g++-multilib libopenal-dev python3
-    
-# # GLFW
-#       - name: glfw-generate-build-files
-#         run: cmake -S FlexEngine/dependencies/glfw/ -B FlexEngine/dependencies/glfw/build/ -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF -G'Unix Makefiles'
-      
-#       - name: glfw-build
-#         run: cmake --build FlexEngine/dependencies/glfw/build/
-      
-#       - name: glfw-copy-binaries
-#         run: cp FlexEngine/dependencies/glfw/build/src/libglfw3.a FlexEngine/lib/x64/Debug/
-      
-# # Bullet
-#       - name: bullet-generate-build-files
-#         run: cmake -S FlexEngine/dependencies/bullet/ -B FlexEngine/dependencies/bullet/build/ -DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON -DBUILD_UNIT_TESTS=OFF -DBUILD_CPU_DEMOS=OFF -DBUILD_BULLET2_DEMOS=OFF -DBUILD_EXTRAS=OFF -DCMAKE_BUILD_TYPE=Debug -Wno-dev
-      
-#       - name: bullet-build
-#         run: cmake --build FlexEngine/dependencies/bullet/build/
-      
-#       - name: bullet-copy-binaries
-#         run: cp FlexEngine/dependencies/bullet/build/src/{BulletCollision/libBulletCollision.a,BulletDynamics/libBulletDynamics.a,LinearMath/libLinearMath.a} FlexEngine/lib/x64/Debug/
-        
-# # Freetype
-#       - name: freetype-generate-build-files
-#         run: |
-#           pushd FlexEngine/dependencies/freetype/; \
-#           dos2unix autogen.sh; \
-#           ./autogen.sh; \
-#           cmake -S . -B build/ -DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=ON -Wno-dev; \
-#           popd
-      
-#       - name: freetype-build
-#         run: cmake --build FlexEngine/dependencies/freetype/build/
-      
-#       - name: freetype-copy-binaries
-#         run: cp FlexEngine/dependencies/freetype/build/libfreetype.a FlexEngine/lib/x64/Debug/
-      
-# # Shaderc
-#       - name: shaderc-sync-deps
-#         run: ./FlexEngine/dependencies/shaderc/utils/git-sync-deps
-        
-#       - name: shaderc-generate-build-files
-#         run: |
-#           pushd FlexEngine/dependencies/shaderc/; \
-#           mkdir build/; \
-#           cmake -S . -B build/ -DSHADERC_ENABLE_SPVC=ON -DSHADERC_SKIP_TESTS=ON -DBUILD_TESTING=OFF -DENABLE_CTEST=OFF -DSHADERC_ENABLE_SHARED_CRT=ON -G'Unix Makefiles' -DCMAKE_BUILD_TYPE=Debug -Wno-dev; \
-#           popd
-      
-#       - name: shaderc-build
-#         run: |
-#           cmake --build FlexEngine/dependencies/shaderc/build/ --config Debug -- -j6
-      
-#       - name: shaderc-copy-binaries
-#         run: cp FlexEngine/dependencies/shaderc/build/libshaderc/libshaderc_combined.a FlexEngine/lib/x64/Debug/
-      
-      
-      - name: run-genie
-        run: |
-          cd scripts; \
-          ./../genie/bin/linux/genie ninja; \
-          cd ../
- 
       - name: build
-        run: |
-          cd build/debug64; \
-          ninja -j6;\
-          cd ../../
+        run: ninja -C build/debug64
 
       - name: compress-artifacts
         run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
@@ -148,31 +77,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: install-deps
-        run: sudo apt-get update -m && sudo apt-get install -y libopenal-dev
-    
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libopenal1
+
       - name: download-artifacts
         uses: actions/download-artifact@v7
         with:
           name: flex-linux
           path: .
-      
+
       - name: decompress-artifacts
         run: unzip Flex.zip
 
-#       - name: download-shared-objects
-#         run: sudo wget https://raw.githubusercontent.com/ajweeks/ajweeks.github.io/master/flex_binaries/linux-shared-libs-debug.zip
-      
-#       - name: decompress-shared-objects
-#         run: |
-#           unzip linux-shared-libs-debug.zip -d . ; \
-#           ln -s libopenal.so.1.20.1 libopenal.so.1
-
       - name: run-tests
         run: |
-          sudo chmod +x Flex; \
+          chmod +x Flex
           ./Flex --test --headless
-
-      #- name: install-vulkan-sdk
-      #  run: |
-      #    wget -qO - http://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo apt-key add; \
-      #    sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.2.131-bionic.list http://packages.lunarg.com/vulkan/1.2.131/lunarg-vulkan-1.2.131-bionic.list
