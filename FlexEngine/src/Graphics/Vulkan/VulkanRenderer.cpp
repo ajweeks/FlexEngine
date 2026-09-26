@@ -4620,6 +4620,22 @@ namespace flex
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
 			SetImageViewName(m_VulkanDevice, m_ShadowImageView, "Shadow cascade image view (main)");
 
+			// Transition all layers to be sampleable so the view can be bound before the first shadow pass runs
+			// (or when shadows are disabled). The shadow render pass's initial layout is undefined so this is overwritten when rendering.
+			{
+				VkCommandBuffer transitionCmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+				VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				barrier.image = m_ShadowImage;
+				barrier.subresourceRange = fullImageView.subresourceRange;
+				vkCmdPipelineBarrier(transitionCmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					0, 0, nullptr, 0, nullptr, 1, &barrier);
+				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
+			}
+
 			if ((i32)m_ShadowCascades.size() < m_ShadowCascadeCount)
 			{
 				i32 prevSize = (i32)m_ShadowCascades.size();
@@ -6452,8 +6468,9 @@ namespace flex
 
 			if (shader->textureUniforms.HasUniform(&U_SHADOW_CASCADES_SAMPLER))
 			{
-				VkImageView imageView = (m_DirectionalLight && m_DirectionalLight->data.castShadows) ? m_ShadowImageView : ((VulkanTexture*)m_BlankTextureArr)->imageView;
-				imageDescriptors->SetUniform(&U_SHADOW_CASCADES_SAMPLER, ImageDescriptorInfo{ imageView, m_SamplerShadow });
+				// Always bind the shadow depth image, even when shadows are disabled, since m_SamplerShadow uses depth comparison
+				// which requires a depth format (the shader skips sampling when castShadows is 0)
+				imageDescriptors->SetUniform(&U_SHADOW_CASCADES_SAMPLER, ImageDescriptorInfo{ m_ShadowImageView, m_SamplerShadow });
 			}
 
 			if (shader->textureUniforms.HasUniform(&U_FB_0_SAMPLER))
