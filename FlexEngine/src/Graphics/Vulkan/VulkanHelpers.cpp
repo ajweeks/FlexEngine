@@ -1716,6 +1716,7 @@ namespace flex
 
 			result += (u64)shaderID * 111u;
 			result += (u64)vertexAttributes * 652u;
+			result += (u64)vertexStrideOverride * 3571u;
 			result += ((u64)topology * 931u) << 1u;
 			result <<= 2;
 			result += (u64)cullMode * 84u;

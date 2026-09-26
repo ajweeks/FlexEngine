@@ -298,8 +298,6 @@ namespace flex
 
 		i32 GetTAASampleCount() const;
 
-		void SetDirtyFlags(RenderBatchDirtyFlags flags);
-
 		const std::map<MaterialID, Material*>& GetLoadedMaterials();
 
 		void SetDynamicGeometryBufferDirty(u32 dynamicVertexBufferIndex);
@@ -501,7 +499,8 @@ namespace flex
 		bool m_bInitialized = false;
 		bool m_bPostInitialized = false;
 		bool m_bSwapChainNeedsRebuilding = false;
-		bool m_bRebatchRenderObjects = true; // TODO: Replace with simply checking dirty flags
+		// Forces all render object batches to be rebuilt from scratch (incremental changes are tracked per render object)
+		bool m_bRebatchRenderObjects = true;
 
 		bool m_bEnableWireframeOverlay = false;
 		bool m_bEnableSelectionWireframe = false;
@@ -569,7 +568,6 @@ namespace flex
 		ShaderBatch m_DeferredObjectBatches;
 		// One per forward-rendered shader
 		ShaderBatch m_ForwardObjectBatches;
-		ShaderBatch m_ShadowBatch;
 
 		ShaderBatch m_DepthAwareEditorObjBatches;
 		ShaderBatch m_DepthUnawareEditorObjBatches;
@@ -592,9 +590,6 @@ namespace flex
 		FT_Library m_FTLibrary;
 
 		real m_TAA_ks[2];
-
-		// TODO: Remove
-		RenderBatchDirtyFlags m_DirtyFlagBits = (RenderBatchDirtyFlags)RenderBatchDirtyFlag::CLEAN;
 
 		DebugRenderer* m_DebugRenderer = nullptr;
 

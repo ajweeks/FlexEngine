@@ -287,20 +287,35 @@ namespace flex
 			// Creates the static index buffer used by all static geometry
 			void CreateStaticIndexBuffer();
 
-			void CreateShadowVertexBuffer();
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize, const char* DEBUG_name = nullptr);
 			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name = nullptr);
 			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name = nullptr);
 
-			void CreateShadowIndexBuffer();
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name = nullptr);
 
 			void CreateSemaphores();
+			void CreateRenderCompleteSemaphores();
+			void DestroyRenderCompleteSemaphores();
 
 			void FillOutShaderBatches(const std::vector<RenderID>& renderIDs, i32* inOutDynamicUBOOffset,
 				MaterialBatchPair& matBatchPair, MaterialBatchPair& depthAwareEditorMatBatchPair, MaterialBatchPair& depthUnawareEditorMatBatchPair,
 				MaterialID matID, bool bWriteUBOOffsets = true);
-			void BatchRenderObjects();
+			// Applies pending batch changes (or a full rebuild when required) before drawing
+			void UpdateRenderObjectBatches();
+			void RebuildAllRenderObjectBatches();
+			void MarkRenderObjectBatchDirty(RenderID renderID);
+			// Returns true if any dynamic uniform buffers had to grow (invalidating their contents)
+			bool AddRenderObjectToBatches(RenderID renderID);
+			void RemoveRenderObjectFromBatches(VulkanRenderObject* renderObject);
+			ShaderBatch* GetShaderBatchOfType(u8 batchType);
+			// Returns true if the shader's dynamic UBO had to grow
+			bool AllocateDynamicUBOSlot(VulkanRenderObject* renderObject, VulkanMaterial* material);
+			void FreeDynamicUBOSlot(VulkanRenderObject* renderObject);
+
+			GraphicsPipeline* GetShadowGraphicsPipeline(u32 vertexStride);
+			// Returns InvalidID if the render object's slot doesn't fit in the shadow material's dynamic buffer
+			u32 GetShadowDynamicUBOOffset(RenderID renderID) const;
+			bool RenderObjectCastsShadow(VulkanRenderObject* renderObject) const;
 			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
 
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
@@ -438,6 +453,19 @@ namespace flex
 
 			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
 			std::vector<VulkanRenderObject*> m_RenderObjects;
+
+			// Render objects whose batch membership needs to be re-evaluated before the next draw
+			std::vector<RenderID> m_RenderObjectsPendingBatch;
+
+			struct DynamicUBOSlotAllocator
+			{
+				u32 slotCount = 0;
+				std::vector<u32> freeSlots;
+			};
+			// Indexed by shader ID
+			std::vector<DynamicUBOSlotAllocator> m_DynamicUBOSlotAllocators;
+			// Dynamic UBO offsets are invalidated when this changes
+			u32 m_BatchedDynamicAlignment = 0;
 
 			std::vector<const char*> m_ValidationLayers =
 			{
@@ -587,7 +615,8 @@ namespace flex
 				&m_ForwardRenderPass, &m_PostProcessRenderPass, &m_GammaCorrectRenderPass, &m_TAAResolveRenderPass, &m_UIRenderPass };
 			std::vector<VulkanRenderPass*> m_AutoTransitionedRenderPasses;
 
-			GraphicsPipelineID m_ShadowGraphicsPipelineID = InvalidGraphicsPipelineID;
+			// Maps source vertex stride to shadow pipeline (this map doesn't have ownership over pipelines, only references)
+			std::map<u32, GraphicsPipelineID> m_ShadowGraphicsPipelines;
 
 			GraphicsPipelineID m_FontSSGraphicsPipelineID = InvalidGraphicsPipelineID;
 			GraphicsPipelineID m_FontWSGraphicsPipelineID = InvalidGraphicsPipelineID;
@@ -627,12 +656,13 @@ namespace flex
 			// Pair is: (stride, vertex index buffer pair)
 			// Indexed into through Material::dynamicVertexBufferIndex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
-			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
 			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair = nullptr;
 
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
-			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
+			// One per swap chain image since presentation doesn't signal when it's done waiting on a semaphore,
+			// we only know it's safe to reuse once the image it was presented with is reacquired
+			std::vector<VkSemaphore> m_RenderCompleteSemaphores;
 
 			VkCommandBuffer m_OffScreenCmdBuffer = VK_NULL_HANDLE;
 			VkSemaphore m_OffscreenSemaphore = VK_NULL_HANDLE;

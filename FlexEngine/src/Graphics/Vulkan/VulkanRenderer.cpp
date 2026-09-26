@@ -62,6 +62,15 @@ namespace flex
 		PFN_vkCmdEndDebugUtilsLabelEXT VulkanRenderer::m_vkCmdEndDebugUtilsLabelEXT = nullptr;
 		PFN_vkGetPhysicalDeviceMemoryProperties2 VulkanRenderer::m_vkGetPhysicalDeviceMemoryProperties2 = nullptr;
 
+		// Which of the renderer's ShaderBatch lists a render object belongs to (stored in VulkanRenderObject::batchType)
+		enum class RenderBatchType : u8
+		{
+			DEFERRED,
+			FORWARD,
+			EDITOR_DEPTH_AWARE,
+			EDITOR_DEPTH_UNAWARE,
+		};
+
 		VulkanRenderer::VulkanRenderer() :
 			m_ClearColour(VkClearColorValue{ 1.0f, 0.0f, 1.0f, 1.0f }),
 			m_BRDFSize({ 512, 512 }),
@@ -266,7 +275,6 @@ namespace flex
 				}
 
 				m_PresentCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
-				m_RenderCompleteSemaphore = { m_VulkanDevice->m_LogicalDevice, vkDestroySemaphore };
 
 				m_SamplerDepth = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
 				m_SamplerLinearRepeat = { m_VulkanDevice->m_LogicalDevice, vkDestroySampler };
@@ -374,8 +382,6 @@ namespace flex
 			ParseSpecializationConstantInfo();
 			ParseShaderSpecializationConstants();
 			CreateSpecialzationInfos();
-
-			m_ShadowVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
 
 			{
 				PROFILE_AUTO("Allocate static vertex buffers");
@@ -564,9 +570,6 @@ namespace flex
 			CreateStaticIndexBuffer();
 			// NOTE: CreateAllDynamicVertexAndIndexBuffers will have been called in Initialize
 
-			CreateShadowVertexBuffer();
-			CreateShadowIndexBuffer();
-
 			// Fullscreen tri vertex data
 			{
 				// TODO: Bring out to Mesh class?
@@ -626,7 +629,7 @@ namespace flex
 			m_DescriptorPool = nullptr;
 
 			m_PresentCompleteSemaphore.replace();
-			m_RenderCompleteSemaphore.replace();
+			DestroyRenderCompleteSemaphores();
 
 			delete m_FullScreenTriVertexBuffer;
 			m_FullScreenTriVertexBuffer = nullptr;
@@ -668,10 +671,6 @@ namespace flex
 			m_DynamicUIVertexIndexBufferPair->Destroy();
 			delete m_DynamicUIVertexIndexBufferPair;
 			m_DynamicUIVertexIndexBufferPair = nullptr;
-
-			m_ShadowVertexIndexBufferPair->Destroy();
-			delete m_ShadowVertexIndexBufferPair;
-			m_ShadowVertexIndexBufferPair = nullptr;
 
 			for (auto& pair : m_StaticVertexBuffers)
 			{
@@ -785,6 +784,7 @@ namespace flex
 			m_ShadowImageMemory.replace();
 
 			m_WireframeGraphicsPipelines.clear();
+			m_ShadowGraphicsPipelines.clear();
 
 			m_ParticleSimulationComputePipelineLayout.replace();
 
@@ -834,12 +834,16 @@ namespace flex
 				delete prevMat;
 
 				m_Materials.emplace(matID, new VulkanMaterial());
+
+				// Render objects using this material may now use a different shader
+				m_bRebatchRenderObjects = true;
 			}
 			else
 			{
+				// New materials have no render objects yet, nothing needs rebatching
+				// (dynamic UBO alignment changes are detected in UpdateRenderObjectBatches)
 				matID = GetNextAvailableMaterialID();
 				m_Materials.emplace(matID, new VulkanMaterial());
-				m_bRebatchRenderObjects = true;
 			}
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(matID);
@@ -1215,9 +1219,8 @@ namespace flex
 			const RenderID renderID = GetNextAvailableRenderID();
 			VulkanRenderObject* renderObject = new VulkanRenderObject(renderID);
 
-			m_bRebatchRenderObjects = true;
-
 			InsertNewRenderObject(renderObject);
+			MarkRenderObjectBatchDirty(renderID);
 			renderObject->materialID = createInfo->materialID;
 
 			if (renderObject->materialID == InvalidMaterialID)
@@ -1291,18 +1294,12 @@ namespace flex
 				}
 			}
 
-			if (renderObject->gameObject != nullptr && renderObject->gameObject->CastsShadow())
-			{
-				m_DirtyFlagBits |= RenderBatchDirtyFlag::SHADOW_DATA;
-			}
-
 			return renderID;
 		}
 
 		void VulkanRenderer::PostInitializeRenderObject(RenderID renderID)
 		{
-			FLEX_UNUSED(renderID);
-			m_bRebatchRenderObjects = true;
+			MarkRenderObjectBatchDirty(renderID);
 		}
 
 		void VulkanRenderer::OnTextureDestroyed(TextureID textureID)
@@ -1957,13 +1954,7 @@ namespace flex
 				PhysicsDebugRender();
 			}
 
-			if (m_bRebatchRenderObjects)
-			{
-				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-
-				m_bRebatchRenderObjects = false;
-				BatchRenderObjects();
-			}
+			UpdateRenderObjectBatches();
 
 			auto ensureSpriteBatchCapacity = [this](const std::vector<SpriteQuadDrawInfo>& spriteBatch)
 			{
@@ -2437,8 +2428,6 @@ namespace flex
 
 			renderObject->vertexOffset = (u32)(vertOffsetBytes / vertexBufferData->VertexStride);
 			renderObject->indexOffset = (u32)(indexOffsetBytes / sizeof(u32));
-
-			m_DirtyFlagBits |= RenderBatchDirtyFlag::DYNAMIC_DATA; // TODO: Is this needed?
 		}
 
 		void VulkanRenderer::FreeDynamicVertexData(RenderID renderID)
@@ -2543,7 +2532,7 @@ namespace flex
 			// Clear non-persistent descriptor pool only
 			m_DescriptorPool->Reset();
 
-			// TODO: Clear m_ShadowVertexIndexBufferPair, m_StaticVertexBuffers, m_StaticIndexBuffer?
+			// TODO: Clear m_StaticVertexBuffers, m_StaticIndexBuffer?
 
 			DestroyTerrain();
 
@@ -2569,11 +2558,11 @@ namespace flex
 				CreateStaticIndexBuffer();
 				CreateAllDynamicVertexAndIndexBuffers();
 
-				CreateShadowVertexBuffer();
-				CreateShadowIndexBuffer();
-
 				GenerateIrradianceMaps();
 			}
+
+			// Compact dynamic UBO slots now that the previous scene's objects are gone
+			m_bRebatchRenderObjects = true;
 		}
 
 		void VulkanRenderer::OnSettingsReloaded()
@@ -2724,7 +2713,7 @@ namespace flex
 				PrintError("SetRenderObjectMaterialID couldn't find render object with ID %u\n", renderID);
 			}
 
-			m_bRebatchRenderObjects = true;
+			MarkRenderObjectBatchDirty(renderID);
 		}
 
 		bool VulkanRenderer::DestroyRenderObject(RenderID renderID)
@@ -2744,6 +2733,8 @@ namespace flex
 		{
 			if (renderObject != nullptr)
 			{
+				RemoveRenderObjectFromBatches(renderObject);
+
 				FreeDynamicVertexData(renderID);
 
 				GraphicsPipelineConfiguration* graphicsPipelineConfig = GetGraphicsPipeline(renderObject->graphicsPipelineID);
@@ -2753,7 +2744,6 @@ namespace flex
 				renderObject = nullptr;
 			}
 			m_RenderObjects[renderID] = nullptr;
-			m_bRebatchRenderObjects = true;
 		}
 
 		void VulkanRenderer::SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize)
@@ -2857,9 +2847,8 @@ namespace flex
 
 		void VulkanRenderer::RenderObjectStateChanged()
 		{
-			// TODO: Ignore object visibility changes
-			m_bRebatchRenderObjects = true;
-			m_DirtyFlagBits |= RenderBatchDirtyFlag::SHADOW_DATA;
+			// Nothing to do: batches are updated per render object on creation, destruction & material
+			// change, and visibility/shadow casting are checked at draw time
 		}
 
 		void VulkanRenderer::RecreateRenderObjectsWithMesh(const std::string& relativeMeshFilePath)
@@ -5212,30 +5201,10 @@ namespace flex
 
 		void VulkanRenderer::CreateShadowResources()
 		{
-			// Shadow map pipeline
 			VulkanMaterial* shadowMaterial = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
-			VulkanShader* shadowShader = (VulkanShader*)m_Shaders[shadowMaterial->shaderID];
 
-			VkPushConstantRange pushConstantRange = {};
-			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-			pushConstantRange.offset = 0;
-			pushConstantRange.size = shadowShader->pushConstantBlockSize;
-
-			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-			pipelineCreateInfo.DBG_Name = "Shadow pipeline";
-			pipelineCreateInfo.bSetDynamicStates = true;
-			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-			pipelineCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-			pipelineCreateInfo.bEnableColourBlending = false;
-			pipelineCreateInfo.shaderID = shadowMaterial->shaderID;
-			pipelineCreateInfo.vertexAttributes = shadowShader->vertexAttributes;
-			pipelineCreateInfo.subpass = shadowShader->subpass;
-			pipelineCreateInfo.depthWriteEnable = shadowShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
-			pipelineCreateInfo.renderPass = shadowShader->renderPass;
-			pipelineCreateInfo.pushConstantRangeCount = 1;
-			pipelineCreateInfo.pushConstants = &pushConstantRange;
-			pipelineCreateInfo.bPersistent = true;
-			CreateGraphicsPipeline(&pipelineCreateInfo, m_ShadowGraphicsPipelineID);
+			// Shadow map pipelines are created lazily per vertex stride (see GetShadowGraphicsPipeline)
+			m_ShadowGraphicsPipelines.clear();
 
 			VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(shadowMaterial->shaderID);
 
@@ -5246,6 +5215,82 @@ namespace flex
 			descSetCreateInfo.gpuBufferList = &shadowMaterial->gpuBufferList;
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 			m_ShadowDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
+		}
+
+		GraphicsPipeline* VulkanRenderer::GetShadowGraphicsPipeline(u32 vertexStride)
+		{
+			auto iter = m_ShadowGraphicsPipelines.find(vertexStride);
+			if (iter != m_ShadowGraphicsPipelines.end())
+			{
+				return GetGraphicsPipeline(iter->second)->pipeline;
+			}
+
+			VulkanMaterial* shadowMaterial = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
+			VulkanShader* shadowShader = (VulkanShader*)m_Shaders[shadowMaterial->shaderID];
+
+			VkPushConstantRange pushConstantRange = {};
+			pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+			pushConstantRange.offset = 0;
+			pushConstantRange.size = shadowShader->pushConstantBlockSize;
+
+			char debugName[64];
+			snprintf(debugName, ARRAY_LENGTH(debugName), "Shadow pipeline (stride: %u)", vertexStride);
+
+			// Shadow casters are drawn directly from their regular vertex buffers, so only read
+			// positions (always the first attribute) using the source vertex stride
+			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
+			pipelineCreateInfo.DBG_Name = debugName;
+			pipelineCreateInfo.bSetDynamicStates = true;
+			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+			pipelineCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+			pipelineCreateInfo.bEnableColourBlending = false;
+			pipelineCreateInfo.shaderID = shadowMaterial->shaderID;
+			pipelineCreateInfo.vertexAttributes = shadowShader->vertexAttributes;
+			pipelineCreateInfo.vertexStrideOverride = vertexStride;
+			pipelineCreateInfo.subpass = shadowShader->subpass;
+			pipelineCreateInfo.depthWriteEnable = shadowShader->bDepthWriteEnable ? VK_TRUE : VK_FALSE;
+			pipelineCreateInfo.renderPass = shadowShader->renderPass;
+			pipelineCreateInfo.pushConstantRangeCount = 1;
+			pipelineCreateInfo.pushConstants = &pushConstantRange;
+			pipelineCreateInfo.bPersistent = true;
+
+			GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
+			CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
+			if (pipelineID == InvalidGraphicsPipelineID)
+			{
+				return nullptr;
+			}
+
+			m_ShadowGraphicsPipelines[vertexStride] = pipelineID;
+			return GetGraphicsPipeline(pipelineID)->pipeline;
+		}
+
+		u32 VulkanRenderer::GetShadowDynamicUBOOffset(RenderID renderID) const
+		{
+			// Every render object gets a fixed slot in the shadow material's dynamic buffer
+			// (which is sized for MAX_NUM_RENDER_OBJECTS) so offsets never need reassigning
+			const VulkanMaterial* shadowMaterial = (const VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
+			const GPUBuffer* dynamicBuffer = shadowMaterial->gpuBufferList.Get(GPUBufferType::DYNAMIC);
+			if (dynamicBuffer == nullptr)
+			{
+				return InvalidID;
+			}
+			const u32 stride = (u32)RoundUp((i32)dynamicBuffer->data.unitSize - 1, (i32)m_DynamicAlignment);
+			const u32 offset = renderID * stride;
+			if (offset + stride > dynamicBuffer->fullDynamicBufferSize)
+			{
+				return InvalidID;
+			}
+			return offset;
+		}
+
+		bool VulkanRenderer::RenderObjectCastsShadow(VulkanRenderObject* renderObject) const
+		{
+			return renderObject != nullptr &&
+				renderObject->vertexBufferData != nullptr &&
+				!renderObject->bEditorObject &&
+				renderObject->gameObject->CastsShadow() &&
+				renderObject->gameObject->IsVisible();
 		}
 
 		VkDescriptorSet VulkanRenderer::CreateSpriteDescSet(MaterialID spriteMaterialID, TextureID textureID, u32 layer /* = 0 */)
@@ -5830,6 +5875,8 @@ namespace flex
 			vkGetSwapchainImagesKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, &imageCount, nullptr);
 			m_SwapChainImages.resize(imageCount);
 			vkGetSwapchainImagesKHR(m_VulkanDevice->m_LogicalDevice, m_SwapChain, &imageCount, m_SwapChainImages.data());
+
+			CreateRenderCompleteSemaphores();
 
 			m_SwapChainImageFormat = surfaceFormat.format;
 			m_SwapChainExtent = extent;
@@ -6604,7 +6651,7 @@ namespace flex
 				}
 			}
 
-			const u32 vertexStride = CalculateVertexStride(createInfo->vertexAttributes);
+			const u32 vertexStride = createInfo->vertexStrideOverride != 0 ? createInfo->vertexStrideOverride : CalculateVertexStride(createInfo->vertexAttributes);
 			VkVertexInputBindingDescription bindingDescription = vks::vertexInputBindingDescription(0, vertexStride, VK_VERTEX_INPUT_RATE_VERTEX);
 
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
@@ -6753,6 +6800,7 @@ namespace flex
 			m_GraphicsPipelineHashes.clear();
 			m_GraphicsPipelines.clear();
 			m_WireframeGraphicsPipelines.clear();
+			m_ShadowGraphicsPipelines.clear();
 		}
 
 		void VulkanRenderer::DestroyNonPersistentGraphicsPipelines()
@@ -6833,6 +6881,15 @@ namespace flex
 				if (iter->second == pipelineID)
 				{
 					m_WireframeGraphicsPipelines.erase(iter);
+					break;
+				}
+			}
+
+			for (auto iter = m_ShadowGraphicsPipelines.begin(); iter != m_ShadowGraphicsPipelines.end(); ++iter)
+			{
+				if (iter->second == pipelineID)
+				{
+					m_ShadowGraphicsPipelines.erase(iter);
 					break;
 				}
 			}
@@ -7518,70 +7575,6 @@ namespace flex
 			CreateAndUploadToStaticIndexBuffer(m_StaticIndexBuffer, indices, "Static index buffer");
 		}
 
-		void VulkanRenderer::CreateShadowVertexBuffer()
-		{
-			PROFILE_AUTO("CreateShadowVertexBuffer");
-
-			VulkanMaterial* shadowMat = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
-			VulkanShader* shadowShader = (VulkanShader*)m_Shaders[shadowMat->shaderID];
-
-			u32 vertexStride = CalculateVertexStride(shadowShader->vertexAttributes);
-			u32 size = 0;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject != nullptr &&
-					renderObject->vertexBufferData != nullptr)
-				{
-					size += renderObject->vertexBufferData->VertexCount * vertexStride;
-				}
-			}
-
-			if (size == 0)
-			{
-				return;
-			}
-
-			void* vertexDataStart = malloc(size);
-			if (vertexDataStart == nullptr)
-			{
-				PrintError("Failed to allocate memory for shadow vertex buffer! Attempted to allocate %d bytes", size);
-				return;
-			}
-
-			void* vertexBufferData = vertexDataStart;
-
-			u32 vertexCount = 0;
-			u32 vertexBufferSize = 0;
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject != nullptr &&
-					renderObject->vertexBufferData != nullptr &&
-					!renderObject->bEditorObject &&
-					renderObject->gameObject->CastsShadow() &&
-					renderObject->gameObject->IsVisible())
-				{
-					renderObject->shadowVertexOffset = vertexCount;
-
-					u32 copySize = renderObject->vertexBufferData->CopyInto(static_cast<real*>(vertexBufferData), shadowShader->vertexAttributes);
-
-					vertexCount += renderObject->vertexBufferData->VertexCount;
-					vertexBufferSize += copySize;
-
-					vertexBufferData = (char*)vertexBufferData + copySize;
-				}
-			}
-
-			if (vertexBufferSize == 0 || vertexCount == 0)
-			{
-				free(vertexDataStart);
-				return;
-			}
-
-			CreateAndUploadToStaticVertexBuffer(m_ShadowVertexIndexBufferPair->vertexBuffer, vertexDataStart, vertexBufferSize, "Shadow vertex buffer");
-			free(vertexDataStart);
-		}
-
 		void VulkanRenderer::CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize, const char* DEBUG_name /* = nullptr */)
 		{
 			PROFILE_AUTO("CreateAndUploadToStaticVertexBuffer");
@@ -7625,33 +7618,6 @@ namespace flex
 				DEBUG_name);
 		}
 
-		void VulkanRenderer::CreateShadowIndexBuffer()
-		{
-			PROFILE_AUTO("CreateShadowIndexBuffer");
-
-			std::vector<u32> indices;
-
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
-			{
-				if (renderObject != nullptr &&
-					renderObject->bIndexed &&
-					!renderObject->bEditorObject &&
-					renderObject->gameObject->CastsShadow() &&
-					renderObject->gameObject->IsVisible())
-				{
-					renderObject->shadowIndexOffset = (u32)indices.size();
-					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
-				}
-			}
-
-			if (indices.empty())
-			{
-				return;
-			}
-
-			CreateAndUploadToStaticIndexBuffer(m_ShadowVertexIndexBufferPair->indexBuffer, indices, "Shadow index buffer");
-		}
-
 		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name /* = nullptr */)
 		{
 			PROFILE_AUTO("CreateAndUploadToStaticIndexBuffer");
@@ -7683,7 +7649,33 @@ namespace flex
 			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
 
 			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_PresentCompleteSemaphore.replace()));
-			VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, m_RenderCompleteSemaphore.replace()));
+		}
+
+		void VulkanRenderer::CreateRenderCompleteSemaphores()
+		{
+			if (m_RenderCompleteSemaphores.size() == m_SwapChainImages.size())
+			{
+				return;
+			}
+
+			DestroyRenderCompleteSemaphores();
+
+			VkSemaphoreCreateInfo semaphoreInfo = vks::semaphoreCreateInfo();
+
+			m_RenderCompleteSemaphores.resize(m_SwapChainImages.size(), VK_NULL_HANDLE);
+			for (VkSemaphore& semaphore : m_RenderCompleteSemaphores)
+			{
+				VK_CHECK_RESULT(vkCreateSemaphore(m_VulkanDevice->m_LogicalDevice, &semaphoreInfo, nullptr, &semaphore));
+			}
+		}
+
+		void VulkanRenderer::DestroyRenderCompleteSemaphores()
+		{
+			for (VkSemaphore semaphore : m_RenderCompleteSemaphores)
+			{
+				vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, semaphore, nullptr);
+			}
+			m_RenderCompleteSemaphores.clear();
 		}
 
 		void VulkanRenderer::FillOutShaderBatches(const std::vector<RenderID>& renderIDs,
@@ -7772,184 +7764,379 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BatchRenderObjects()
+		ShaderBatch* VulkanRenderer::GetShaderBatchOfType(u8 batchType)
 		{
-			PROFILE_AUTO("Batch render objects");
-
-			if (!m_DirtyStaticVertexBufferIndices.empty())
+			switch ((RenderBatchType)batchType)
 			{
-				CreateAllStaticVertexBuffers();
-				CreateStaticIndexBuffer();
+			case RenderBatchType::DEFERRED: return &m_DeferredObjectBatches;
+			case RenderBatchType::FORWARD: return &m_ForwardObjectBatches;
+			case RenderBatchType::EDITOR_DEPTH_AWARE: return &m_DepthAwareEditorObjBatches;
+			case RenderBatchType::EDITOR_DEPTH_UNAWARE: return &m_DepthUnawareEditorObjBatches;
 			}
-			if (m_DirtyFlagBits & RenderBatchDirtyFlag::SHADOW_DATA)
+			ENSURE_NO_ENTRY();
+			return nullptr;
+		}
+
+		void VulkanRenderer::MarkRenderObjectBatchDirty(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr && !renderObject->bPendingBatch)
 			{
-				CreateShadowVertexBuffer();
-				CreateShadowIndexBuffer();
+				renderObject->bPendingBatch = true;
+				m_RenderObjectsPendingBatch.push_back(renderID);
+			}
+		}
+
+		bool VulkanRenderer::AllocateDynamicUBOSlot(VulkanRenderObject* renderObject, VulkanMaterial* material)
+		{
+			const GPUBuffer* dynamicBuffer = material->gpuBufferList.Get(GPUBufferType::DYNAMIC);
+			if (dynamicBuffer == nullptr)
+			{
+				return false;
 			}
 
-			m_DirtyFlagBits = RenderBatchDirtyFlag::CLEAN;
+			if (material->shaderID >= (ShaderID)m_DynamicUBOSlotAllocators.size())
+			{
+				m_DynamicUBOSlotAllocators.resize(glm::max((u32)m_Shaders.size(), (u32)material->shaderID + 1));
+			}
+
+			// Slots are unique per shader since all materials of a shader share the same buffer size
+			DynamicUBOSlotAllocator& allocator = m_DynamicUBOSlotAllocators[material->shaderID];
+			u32 slot;
+			if (!allocator.freeSlots.empty())
+			{
+				slot = allocator.freeSlots.back();
+				allocator.freeSlots.pop_back();
+			}
+			else
+			{
+				slot = allocator.slotCount++;
+			}
+
+			const u32 stride = (u32)RoundUp((i32)dynamicBuffer->data.unitSize - 1, (i32)m_DynamicAlignment);
+			renderObject->dynamicUBOSlot = slot;
+			renderObject->dynamicUBOOffset = slot * stride;
+
+			const u32 requiredSize = (slot + 1) * stride;
+			if (requiredSize > dynamicBuffer->fullDynamicBufferSize)
+			{
+				// Buffers are about to be recreated, ensure the GPU is no longer using them
+				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+
+				const real growthRate = 1.5f;
+				i32 newMax = (i32)glm::ceil((real)requiredSize / m_DynamicAlignment * growthRate);
+				UpdateShaderMaxObjectCount(material->shaderID, newMax);
+				return true;
+			}
+
+			return false;
+		}
+
+		void VulkanRenderer::FreeDynamicUBOSlot(VulkanRenderObject* renderObject)
+		{
+			if (renderObject->dynamicUBOSlot == InvalidID)
+			{
+				return;
+			}
+
+			if (renderObject->batchShaderID < (ShaderID)m_DynamicUBOSlotAllocators.size())
+			{
+				m_DynamicUBOSlotAllocators[renderObject->batchShaderID].freeSlots.push_back(renderObject->dynamicUBOSlot);
+			}
+			renderObject->dynamicUBOSlot = InvalidID;
+		}
+
+		bool VulkanRenderer::AddRenderObjectToBatches(RenderID renderID)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject == nullptr || renderObject->bInBatch || renderObject->gameObject == nullptr)
+			{
+				return false;
+			}
+
+			auto matIter = m_Materials.find(renderObject->materialID);
+			if (matIter == m_Materials.end() || matIter->second->shaderID == InvalidShaderID)
+			{
+				return false;
+			}
+
+			VulkanMaterial* material = (VulkanMaterial*)matIter->second;
+			const ShaderID shaderID = material->shaderID;
+			VulkanShader* shader = (VulkanShader*)m_Shaders[shaderID];
+
+			// UI objects are drawn separately
+			if (shader->name == "ui")
+			{
+				return false;
+			}
+
+			RenderBatchType batchType;
+			if (renderObject->bEditorObject)
+			{
+				batchType = shader->bDepthWriteEnable ? RenderBatchType::EDITOR_DEPTH_AWARE : RenderBatchType::EDITOR_DEPTH_UNAWARE;
+			}
+			else
+			{
+				batchType = shader->numAttachments > 1 ? RenderBatchType::DEFERRED : RenderBatchType::FORWARD;
+			}
+
+			const bool bDynamic = material->bDynamic;
+
+			// Shader batches are kept sorted by shader ID (static before dynamic) so draw order is stable
+			ShaderBatch* shaderBatch = GetShaderBatchOfType((u8)batchType);
+			auto shaderIter = shaderBatch->batches.begin();
+			while (shaderIter != shaderBatch->batches.end() &&
+				(shaderIter->shaderID < shaderID || (shaderIter->shaderID == shaderID && (u32)shaderIter->bDynamic < (u32)bDynamic)))
+			{
+				++shaderIter;
+			}
+			if (shaderIter == shaderBatch->batches.end() || shaderIter->shaderID != shaderID || shaderIter->bDynamic != bDynamic)
+			{
+				ShaderBatchPair shaderBatchPair = {};
+				shaderBatchPair.shaderID = shaderID;
+				shaderBatchPair.bDynamic = bDynamic;
+				shaderIter = shaderBatch->batches.insert(shaderIter, shaderBatchPair);
+			}
+
+			std::vector<MaterialBatchPair>& matBatches = shaderIter->batch.batches;
+			MaterialBatchPair* matBatchPair = nullptr;
+			for (MaterialBatchPair& pair : matBatches)
+			{
+				if (pair.materialID == renderObject->materialID)
+				{
+					matBatchPair = &pair;
+					break;
+				}
+			}
+			if (matBatchPair == nullptr)
+			{
+				matBatches.emplace_back();
+				matBatchPair = &matBatches.back();
+				matBatchPair->materialID = renderObject->materialID;
+			}
+
+			matBatchPair->batch.objects.push_back(renderID);
+
+			renderObject->bInBatch = true;
+			renderObject->batchType = (u8)batchType;
+			renderObject->batchShaderID = shaderID;
+			renderObject->bBatchDynamic = bDynamic;
+			renderObject->batchMaterialID = renderObject->materialID;
+			renderObject->batchIndex = (u32)matBatchPair->batch.objects.size() - 1;
+
+			return AllocateDynamicUBOSlot(renderObject, material);
+		}
+
+		void VulkanRenderer::RemoveRenderObjectFromBatches(VulkanRenderObject* renderObject)
+		{
+			FreeDynamicUBOSlot(renderObject);
+
+			if (!renderObject->bInBatch)
+			{
+				return;
+			}
+			renderObject->bInBatch = false;
+
+			ShaderBatch* shaderBatch = GetShaderBatchOfType(renderObject->batchType);
+			for (auto shaderIter = shaderBatch->batches.begin(); shaderIter != shaderBatch->batches.end(); ++shaderIter)
+			{
+				if (shaderIter->shaderID != renderObject->batchShaderID || shaderIter->bDynamic != renderObject->bBatchDynamic)
+				{
+					continue;
+				}
+
+				std::vector<MaterialBatchPair>& matBatches = shaderIter->batch.batches;
+				for (auto matIter = matBatches.begin(); matIter != matBatches.end(); ++matIter)
+				{
+					if (matIter->materialID != renderObject->batchMaterialID)
+					{
+						continue;
+					}
+
+					std::vector<RenderID>& objects = matIter->batch.objects;
+					CHECK_LT(renderObject->batchIndex, (u32)objects.size());
+					CHECK_EQ(objects[renderObject->batchIndex], renderObject->renderID);
+
+					// Swap with last & pop to avoid shifting the rest of the batch
+					const RenderID lastRenderID = objects.back();
+					objects[renderObject->batchIndex] = lastRenderID;
+					VulkanRenderObject* lastRenderObject = GetRenderObject(lastRenderID);
+					if (lastRenderObject != nullptr)
+					{
+						lastRenderObject->batchIndex = renderObject->batchIndex;
+					}
+					objects.pop_back();
+
+					if (objects.empty())
+					{
+						matBatches.erase(matIter);
+						if (matBatches.empty())
+						{
+							shaderBatch->batches.erase(shaderIter);
+						}
+					}
+					return;
+				}
+			}
+
+			PrintError("Failed to find render object %u in render batches\n", renderObject->renderID);
+		}
+
+		void VulkanRenderer::RebuildAllRenderObjectBatches()
+		{
+			PROFILE_AUTO("Rebuild all render object batches");
 
 			sec startTime = Time::CurrentSeconds();
-			u32 renderObjBatchCount = 0;
+
+			m_DeferredObjectBatches.batches.clear();
+			m_ForwardObjectBatches.batches.clear();
+			m_DepthAwareEditorObjBatches.batches.clear();
+			m_DepthUnawareEditorObjBatches.batches.clear();
+
+			m_DynamicUBOSlotAllocators.clear();
+			m_DynamicUBOSlotAllocators.resize(m_Shaders.size());
+
+			m_RenderObjectsPendingBatch.clear();
+
+			for (VulkanRenderObject* renderObject : m_RenderObjects)
 			{
-				m_DeferredObjectBatches.batches.clear();
-				m_ForwardObjectBatches.batches.clear();
-				m_ShadowBatch.batches.clear();
-				m_DepthAwareEditorObjBatches.batches.clear();
-				m_DepthUnawareEditorObjBatches.batches.clear();
-
-				static std::vector<RenderID> renderIDs;
-				renderIDs.reserve(m_RenderObjects.size());
-				renderIDs.clear();
-				for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
+				if (renderObject != nullptr)
 				{
-					if (m_RenderObjects[renderID] != nullptr)
-					{
-						renderIDs.push_back(renderID);
-					}
-				}
-
-				// NOTE: Optimization options:
-				//			- Sort Materials by shader ID to allow early out on second loop
-				//			- Sort render objects based on batching order
-				//			- Reuse previous batching, only removing or adding entries
-
-				// TODO: Iterate over other definition of vertex buffers
-				for (u32 shaderID = 0; shaderID < m_Shaders.size(); ++shaderID)
-				{
-					const bool bDeferred = m_Shaders[shaderID]->numAttachments > 1;
-					ShaderBatch* shaderBatch = (bDeferred ? &m_DeferredObjectBatches : &m_ForwardObjectBatches);
-
-					// Blocklist certain shaders
-					if (strcmp(m_Shaders[shaderID]->name.c_str(), "ui") == 0)
-					{
-						continue;
-					}
-
-					auto iter = m_ShaderUsedMaterials.find(shaderID);
-					if (iter == m_ShaderUsedMaterials.end())
-					{
-						// Skip checking for usages of shaders that have no materials registered
-						continue;
-					}
-
-					const std::vector<MaterialID>& usedMaterials = iter->second;
-
-					for (u32 dynamic = 0; dynamic <= 1; ++dynamic)
-					{
-						ShaderBatchPair shaderBatchPair = {};
-						shaderBatchPair.shaderID = shaderID;
-						shaderBatchPair.bDynamic = (dynamic == 1);
-
-						ShaderBatchPair depthAwareEditorShaderBatchPair = {};
-						depthAwareEditorShaderBatchPair.shaderID = shaderID;
-						depthAwareEditorShaderBatchPair.bDynamic = (dynamic == 1);
-
-						ShaderBatchPair depthUnawareEditorShaderBatchPair = {};
-						depthUnawareEditorShaderBatchPair.shaderID = shaderID;
-						depthUnawareEditorShaderBatchPair.bDynamic = (dynamic == 1);
-
-						i32 dynamicUBOOffset = 0;
-
-						for (MaterialID matID : usedMaterials)
-						{
-							const VulkanMaterial* material = (VulkanMaterial*)GetMaterial(matID);
-
-							if ((u32)material->bDynamic == dynamic)
-							{
-								MaterialBatchPair matBatchPair = {};
-								matBatchPair.materialID = matID;
-
-								MaterialBatchPair depthAwareEditorMatBatchPair = {};
-								depthAwareEditorMatBatchPair.materialID = matID;
-
-								MaterialBatchPair depthUnawareEditorMatBatchPair = {};
-								depthUnawareEditorMatBatchPair.materialID = matID;
-
-								FillOutShaderBatches(renderIDs, &dynamicUBOOffset, matBatchPair, depthAwareEditorMatBatchPair, depthUnawareEditorMatBatchPair, matID);
-
-								if (!matBatchPair.batch.objects.empty())
-								{
-									++renderObjBatchCount;
-									shaderBatchPair.batch.batches.push_back(matBatchPair);
-								}
-								if (!depthAwareEditorMatBatchPair.batch.objects.empty())
-								{
-									++renderObjBatchCount;
-									depthAwareEditorShaderBatchPair.batch.batches.push_back(depthAwareEditorMatBatchPair);
-								}
-								if (!depthUnawareEditorMatBatchPair.batch.objects.empty())
-								{
-									++renderObjBatchCount;
-									depthUnawareEditorShaderBatchPair.batch.batches.push_back(depthUnawareEditorMatBatchPair);
-								}
-							}
-						}
-
-						if (!shaderBatchPair.batch.batches.empty())
-						{
-							shaderBatch->batches.push_back(shaderBatchPair);
-						}
-						if (!depthAwareEditorShaderBatchPair.batch.batches.empty())
-						{
-							m_DepthAwareEditorObjBatches.batches.push_back(depthAwareEditorShaderBatchPair);
-						}
-						if (!depthUnawareEditorShaderBatchPair.batch.batches.empty())
-						{
-							m_DepthUnawareEditorObjBatches.batches.push_back(depthUnawareEditorShaderBatchPair);
-						}
-					}
+					renderObject->bInBatch = false;
+					renderObject->bPendingBatch = false;
+					renderObject->dynamicUBOSlot = InvalidID;
 				}
 			}
+
+			u32 batchedCount = 0;
+			for (u32 renderID = 0; renderID < (u32)m_RenderObjects.size(); ++renderID)
+			{
+				AddRenderObjectToBatches(renderID);
+				VulkanRenderObject* renderObject = m_RenderObjects[renderID];
+				if (renderObject != nullptr && renderObject->bInBatch)
+				{
+					++batchedCount;
+				}
+			}
+
 			sec durationSec = Time::CurrentSeconds() - startTime;
-
-			ShaderBatchPair shadowShaderBatch;
-			shadowShaderBatch.batch.batches.resize(1);
-			u32 dynamicShadowUBOOffset = 0;
-			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
-			{
-				VulkanRenderObject* renderObject = GetRenderObject(i);
-				if (renderObject != nullptr &&
-					renderObject->vertexBufferData != nullptr &&
-					!renderObject->bEditorObject &&
-					renderObject->gameObject->CastsShadow() &&
-					renderObject->gameObject->IsVisible())
-				{
-					dynamicShadowUBOOffset += m_DynamicAlignment;
-					renderObject->dynamicShadowUBOOffset = dynamicShadowUBOOffset;
-					shadowShaderBatch.batch.batches[0].batch.objects.push_back(i);
-				}
-			}
-			m_ShadowBatch.batches.push_back(shadowShaderBatch);
-
 			ms blockMS = Time::ConvertFormats(durationSec, Time::Format::SECOND, Time::Format::MILLISECOND);
 			if (blockMS != -1)
 			{
-				Print("Batched %u render objects into %u batches in %.2fms\n", (u32)m_RenderObjects.size(), renderObjBatchCount, blockMS);
+				Print("Rebuilt render batches for %u render objects in %.2fms\n", batchedCount, blockMS);
 			}
 			else
 			{
 				// Profiler is disabled in release builds so all timings will be -1.0f
-				Print("Batched %u render objects into %u batches\n", (u32)m_RenderObjects.size(), renderObjBatchCount);
+				Print("Rebuilt render batches for %u render objects\n", batchedCount);
+			}
+		}
+
+		void VulkanRenderer::UpdateRenderObjectBatches()
+		{
+			PROFILE_AUTO("Update render object batches");
+
+			if (m_DynamicAlignment != m_BatchedDynamicAlignment)
+			{
+				// All previously assigned dynamic UBO offsets are stale
+				m_BatchedDynamicAlignment = m_DynamicAlignment;
+				m_bRebatchRenderObjects = true;
+			}
+
+			const bool bRebuildStaticBuffers = !m_DirtyStaticVertexBufferIndices.empty();
+			if (m_bRebatchRenderObjects || bRebuildStaticBuffers)
+			{
+				// Buffers in use by in-flight frames may be recreated
+				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+			}
+
+			if (bRebuildStaticBuffers)
+			{
+				// Only vertex buffers with new data need rebuilding, but the index buffer is shared by all
+				CreateStaticVertexBuffers();
+				CreateStaticIndexBuffer();
+			}
+
+			bool bRewriteAllUBOs = false;
+			if (m_bRebatchRenderObjects)
+			{
+				m_bRebatchRenderObjects = false;
+				RebuildAllRenderObjectBatches();
+				bRewriteAllUBOs = true;
+			}
+			else if (!m_RenderObjectsPendingBatch.empty())
+			{
+				static std::vector<RenderID> updatedRenderIDs;
+				updatedRenderIDs.clear();
+
+				for (RenderID renderID : m_RenderObjectsPendingBatch)
+				{
+					VulkanRenderObject* renderObject = GetRenderObject(renderID);
+					// Objects may have been destroyed (or had their ID reused & already processed) since being marked
+					if (renderObject == nullptr || !renderObject->bPendingBatch)
+					{
+						continue;
+					}
+
+					renderObject->bPendingBatch = false;
+					RemoveRenderObjectFromBatches(renderObject);
+					if (AddRenderObjectToBatches(renderID))
+					{
+						bRewriteAllUBOs = true;
+					}
+					updatedRenderIDs.push_back(renderID);
+				}
+				m_RenderObjectsPendingBatch.clear();
+
+				if (!bRewriteAllUBOs)
+				{
+					// Write data into newly assigned slots so objects don't render with stale data this frame
+					for (RenderID renderID : updatedRenderIDs)
+					{
+						UpdateDynamicUniformBuffer(renderID);
+					}
+				}
+			}
+
+			if (bRewriteAllUBOs)
+			{
+				for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+				{
+					UpdateDynamicUniformBuffer(i);
+				}
 			}
 		}
 
 		void VulkanRenderer::DrawShaderBatch(const ShaderBatchPair& shaderBatch, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo /* = nullptr */)
 		{
+			const bool bRenderingShadows = drawCallInfo && drawCallInfo->bRenderingShadows;
+
 			ShaderID shaderID = shaderBatch.shaderID;
-			if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID)
+			// Shadows are drawn from each object's own vertex buffers, so don't use the override's buffers
+			if (drawCallInfo && drawCallInfo->materialIDOverride != InvalidMaterialID && !bRenderingShadows)
 			{
 				shaderID = m_Materials.at(drawCallInfo->materialIDOverride)->shaderID;
 			}
 
+			GraphicsPipeline* shadowPipeline = nullptr;
+			if (bRenderingShadows)
+			{
+				const VertexAttributes vertexAttributes = m_Shaders[shaderBatch.shaderID]->vertexAttributes;
+				if ((vertexAttributes & (u32)VertexAttribute::POSITION) == 0)
+				{
+					// No 3D positions to render into shadow map
+					return;
+				}
+
+				shadowPipeline = GetShadowGraphicsPipeline(CalculateVertexStride(vertexAttributes));
+				if (shadowPipeline == nullptr)
+				{
+					return;
+				}
+			}
+
 			VulkanBuffer* indexBuffer;
 			VulkanBuffer* vertBuffer;
-			if (drawCallInfo && drawCallInfo->bRenderingShadows)
-			{
-				vertBuffer = m_ShadowVertexIndexBufferPair->vertexBuffer;
-				indexBuffer = m_ShadowVertexIndexBufferPair->indexBuffer;
-			}
-			else
 			{
 				Shader* shader = m_Shaders[shaderID];
 
@@ -8006,6 +8193,12 @@ namespace flex
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
+					// Invisible objects remain in their batches to avoid rebatching on visibility changes
+					if (!renderObject->gameObject->IsVisible())
+					{
+						continue;
+					}
+
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(renderObject->graphicsPipelineID)->pipeline;
 					VkPipeline graphicsPipeline = pipeline->pipeline;
 					VkPipelineLayout pipelineLayout = pipeline->layout;
@@ -8023,9 +8216,21 @@ namespace flex
 						{
 							descriptorSet = (VkDescriptorSet)drawCallInfo->descriptorSetOverride;
 						}
-						if (drawCallInfo->bRenderingShadows)
+						if (bRenderingShadows)
 						{
-							dynamicUBOOffset = renderObject->dynamicShadowUBOOffset;
+							if (!RenderObjectCastsShadow(renderObject))
+							{
+								continue;
+							}
+
+							dynamicUBOOffset = GetShadowDynamicUBOOffset(renderID);
+							if (dynamicUBOOffset == InvalidID)
+							{
+								continue;
+							}
+
+							graphicsPipeline = shadowPipeline->pipeline;
+							pipelineLayout = shadowPipeline->layout;
 						}
 						if (drawCallInfo->bWireframe)
 						{
@@ -8109,27 +8314,14 @@ namespace flex
 							// Dynamic data hasn't been uploaded yet (UpdateDynamicVertexData not called since creation),
 							// so indices may already hold the full CPU-side count while nothing is allocated on the GPU
 						}
-						else if (drawCallInfo == nullptr ||
-							!drawCallInfo->bRenderingShadows)
-						{
-							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
-						}
 						else
 						{
-							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->shadowIndexOffset, renderObject->shadowVertexOffset, 0);
+							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
 						}
 					}
 					else
 					{
-						if (drawCallInfo == nullptr ||
-							!drawCallInfo->bRenderingShadows)
-						{
-							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->vertexOffset, 0);
-						}
-						else
-						{
-							vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->shadowVertexOffset, 0);
-						}
+						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->vertexOffset, 0);
 					}
 				}
 			}
@@ -8236,13 +8428,28 @@ namespace flex
 
 					VkClearValue depthStencilClearValue = VkClearValue{ 0.0f, 0 };
 
+					// Shadow casters are drawn straight out of the regular (non-editor) batches
+					ShaderBatch* shadowCasterBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+
 					PROFILE_BEGIN("Update shadow dynamic uniform buffer");
-					for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+					for (ShaderBatch* shaderBatches : shadowCasterBatches)
 					{
-						for (RenderID renderID : shaderBatch.batch.batches[0].batch.objects)
+						for (const ShaderBatchPair& shaderBatch : shaderBatches->batches)
 						{
-							VulkanRenderObject* renderObject = GetRenderObject(renderID);
-							UpdateDynamicUniformBuffer(renderID, m_ShadowMaterialID, renderObject->dynamicShadowUBOOffset);
+							for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+							{
+								for (RenderID renderID : matBatch.batch.objects)
+								{
+									if (RenderObjectCastsShadow(GetRenderObject(renderID)))
+									{
+										u32 shadowUBOOffset = GetShadowDynamicUBOOffset(renderID);
+										if (shadowUBOOffset != InvalidID)
+										{
+											UpdateDynamicUniformBuffer(renderID, m_ShadowMaterialID, shadowUBOOffset);
+										}
+									}
+								}
+							}
 						}
 					}
 					PROFILE_END("");
@@ -8259,12 +8466,9 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock = new Material::PushConstantBlock();
 					}
 
-					GraphicsPipeline* pipeline = GetGraphicsPipeline(m_ShadowGraphicsPipelineID)->pipeline;
-
+					// NOTE: Shadow pipelines are chosen per shader batch in DrawShaderBatch (based on vertex stride)
 					DrawCallInfo shadowDrawCallInfo = {};
 					shadowDrawCallInfo.materialIDOverride = m_ShadowMaterialID;
-					shadowDrawCallInfo.graphicsPipelineOverride = (u64)(VkPipeline)pipeline->pipeline;
-					shadowDrawCallInfo.pipelineLayoutOverride = (u64)(VkPipelineLayout)pipeline->layout;
 					shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
 					shadowDrawCallInfo.bRenderingShadows = true;
 
@@ -8276,9 +8480,12 @@ namespace flex
 						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
 						shadowDrawCallInfo.pushConstantOverride = m_CascadedShadowMapPushConstantBlock;
 
-						for (const ShaderBatchPair& shaderBatch : m_ShadowBatch.batches)
+						for (ShaderBatch* shaderBatches : shadowCasterBatches)
 						{
-							DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &shadowDrawCallInfo);
+							for (const ShaderBatchPair& shaderBatch : shaderBatches->batches)
+							{
+								DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &shadowDrawCallInfo);
+							}
 						}
 
 						m_ShadowRenderPass->End();
@@ -8560,6 +8767,12 @@ namespace flex
 									{
 										for (RenderID renderID : matBatch.batch.objects)
 										{
+											// Must match objects drawn in DrawShaderBatch
+											if (!GetRenderObject(renderID)->gameObject->IsVisible())
+											{
+												continue;
+											}
+
 											UpdateDynamicUniformBuffer(renderID, m_WireframeMatID, dynamicUBOOffset);
 											dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 										}
@@ -9193,7 +9406,7 @@ namespace flex
 			submitInfo.pWaitSemaphores = &m_OffscreenSemaphore;
 
 			submitInfo.signalSemaphoreCount = 1;
-			submitInfo.pSignalSemaphores = &m_RenderCompleteSemaphore;
+			submitInfo.pSignalSemaphores = &m_RenderCompleteSemaphores[nextImageIndex];
 
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &m_CommandBufferManager.m_CommandBuffers[0];
@@ -9207,7 +9420,7 @@ namespace flex
 			presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 
 			presentInfo.waitSemaphoreCount = 1;
-			presentInfo.pWaitSemaphores = &m_RenderCompleteSemaphore;
+			presentInfo.pWaitSemaphores = &m_RenderCompleteSemaphores[nextImageIndex];
 
 			presentInfo.swapchainCount = 1;
 			presentInfo.pSwapchains = &m_SwapChain;

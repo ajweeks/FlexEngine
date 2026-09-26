@@ -531,9 +531,6 @@ namespace flex
 			std::vector<u32>* indices = nullptr;
 			u32 indexOffset = 0;
 
-			u32 shadowVertexOffset = 0;
-			u32 shadowIndexOffset = 0;
-
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 
@@ -542,7 +539,17 @@ namespace flex
 			bool bAllowDynamicBufferShrinking = true;
 
 			u32 dynamicUBOOffset = 0;
-			u32 dynamicShadowUBOOffset = 0;
+			// Slot in the per-shader dynamic UBO allocator (InvalidID when unallocated)
+			u32 dynamicUBOSlot = InvalidID;
+
+			// Location of this object in the renderer's persistent batches (see VulkanRenderer::AddRenderObjectToBatches)
+			bool bInBatch = false;
+			bool bPendingBatch = false;
+			u8 batchType = 0;
+			ShaderID batchShaderID = InvalidShaderID;
+			bool bBatchDynamic = false;
+			MaterialID batchMaterialID = InvalidMaterialID;
+			u32 batchIndex = 0;
 
 			u64 dynamicVertexBufferOffset = InvalidBufferID;
 			u64 dynamicIndexBufferOffset = InvalidBufferID;
@@ -560,6 +567,9 @@ namespace flex
 
 			ShaderID shaderID = InvalidShaderID;
 			VertexAttributes vertexAttributes = 0;
+			// When non-zero, used as the vertex binding stride instead of the stride of vertexAttributes
+			// (allows reading a subset of attributes from a wider vertex, e.g. just positions)
+			u32 vertexStrideOverride = 0;
 
 			VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;

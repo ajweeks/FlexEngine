@@ -515,20 +515,6 @@ namespace flex
 		_NONE
 	};
 
-	// TODO: Remove
-	enum RenderBatchDirtyFlag : u32
-	{
-		CLEAN = 0,
-		STATIC_DATA = 1 << 0,
-		DYNAMIC_DATA = 1 << 1,
-		SHADOW_DATA = 1 << 2,
-
-		MAX_VALUE = 1 << 30,
-		_NONE
-	};
-
-	using RenderBatchDirtyFlags = u32;
-
 	enum TextureFormat : u32
 	{
 		UNDEFINED = 0,

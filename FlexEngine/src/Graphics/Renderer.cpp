@@ -845,6 +845,8 @@ namespace flex
 
 			delete iter->second;
 			m_Materials.erase(iter);
+
+			m_bRebatchRenderObjects = true;
 		}
 	}
 
@@ -975,12 +977,6 @@ namespace flex
 	i32 Renderer::GetTAASampleCount() const
 	{
 		return m_TAASampleCount;
-	}
-
-	void Renderer::SetDirtyFlags(RenderBatchDirtyFlags flags)
-	{
-		m_DirtyFlagBits |= flags;
-		m_bRebatchRenderObjects = true;
 	}
 
 	const std::map<MaterialID, Material*>& Renderer::GetLoadedMaterials()
