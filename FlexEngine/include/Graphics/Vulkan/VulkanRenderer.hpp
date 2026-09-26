@@ -629,7 +629,7 @@ namespace flex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
 			VertexIndexBufferPair* m_ShadowVertexIndexBufferPair = nullptr;
 
-			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair;
+			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair = nullptr;
 
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			VDeleter<VkSemaphore> m_RenderCompleteSemaphore;
@@ -665,10 +665,10 @@ namespace flex
 				MaterialID genPointsMaterialID = InvalidMaterialID;
 				MaterialID genMeshMaterialID = InvalidMaterialID;
 				MaterialID renderingMaterialID = InvalidMaterialID;
-				VDeleter<VkPipeline> genPointsPipeline;
-				VDeleter<VkPipelineLayout> genPointsPipelineLayout;
-				VDeleter<VkPipeline> genMeshComputePipeline;
-				VDeleter<VkPipelineLayout> genMeshComputePipelineLayout;
+				VkPipeline genPointsPipeline = VK_NULL_HANDLE;
+				VkPipelineLayout genPointsPipelineLayout = VK_NULL_HANDLE;
+				VkPipeline genMeshComputePipeline = VK_NULL_HANDLE;
+				VkPipelineLayout genMeshComputePipelineLayout = VK_NULL_HANDLE;
 				GraphicsPipelineID graphicsPipelineID = InvalidGraphicsPipelineID;
 				VkDescriptorSet genPointsDescriptorSet = VK_NULL_HANDLE;
 				VkDescriptorSet genMeshDescriptorSet = VK_NULL_HANDLE;

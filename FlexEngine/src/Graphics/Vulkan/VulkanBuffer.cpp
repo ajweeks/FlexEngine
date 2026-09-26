@@ -166,8 +166,6 @@ namespace flex
 		{
 			Unmap();
 
-			const VkDeviceSize errorCode = (VkDeviceSize)-1;
-
 			bool bCanResizeInPlace = (offset + size) < m_Size;
 			if (bCanResizeInPlace)
 			{

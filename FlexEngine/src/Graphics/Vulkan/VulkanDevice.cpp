@@ -150,15 +150,8 @@ namespace flex
 			deviceCreateInfo.enabledExtensionCount = (u32)m_EnabledExtensions.size();
 			deviceCreateInfo.ppEnabledExtensionNames = m_EnabledExtensions.data();
 
-			if (createInfo.bEnableValidationLayers)
-			{
-				deviceCreateInfo.enabledLayerCount = (u32)createInfo.validationLayers->size();
-				deviceCreateInfo.ppEnabledLayerNames = createInfo.validationLayers->data();
-			}
-			else
-			{
-				deviceCreateInfo.enabledLayerCount = 0;
-			}
+			// Device layers are deprecated; validation layers are enabled on the instance only
+			deviceCreateInfo.enabledLayerCount = 0;
 
 			deviceCreateInfo.pNext = &enabledFeatures2;
 

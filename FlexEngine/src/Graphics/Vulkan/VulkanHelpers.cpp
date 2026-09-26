@@ -1549,8 +1549,14 @@ namespace flex
 			}
 
 			// TODO: Set src & dst stage masks intelligently
+			VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+			if (barrier.srcAccessMask & VK_ACCESS_HOST_WRITE_BIT)
+			{
+				// Host accesses are not included in ALL_COMMANDS
+				srcStageMask |= VK_PIPELINE_STAGE_HOST_BIT;
+			}
 			vkCmdPipelineBarrier(commandBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				srcStageMask,
 				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 				0,
 				0, nullptr,
@@ -1839,6 +1845,12 @@ namespace flex
 			default:
 				// Other source layouts aren't handled (yet)
 				break;
+			}
+
+			if (imageMemoryBarrier.srcAccessMask & VK_ACCESS_HOST_WRITE_BIT)
+			{
+				// Host accesses are not included in ALL_COMMANDS
+				srcStageMask |= VK_PIPELINE_STAGE_HOST_BIT;
 			}
 
 			// Put barrier inside setup command buffer

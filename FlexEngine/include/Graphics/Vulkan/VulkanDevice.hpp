@@ -21,7 +21,6 @@ namespace flex
 				const std::vector<const char*>* rayTracingExtensions;
 				bool bEnableValidationLayers;
 				bool bTryEnableRayTracing;
-				const std::vector<const char*>* validationLayers;
 			};
 
 			VulkanDevice(const CreateInfo& createInfo);

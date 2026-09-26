@@ -148,7 +148,6 @@ namespace flex
 			deviceCreateInfo.rayTracingExtensions = &rayTracingDeviceExtensions;
 			// TODO: If device creation fails, try again without validation layers enabled
 			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
-			deviceCreateInfo.validationLayers = &m_ValidationLayers;
 			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
 
 			m_bRayTracingEnabled = m_VulkanDevice->ExtensionEnabled(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
@@ -1791,12 +1790,12 @@ namespace flex
 				{
 					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(genPointsMat->shaderID);
 					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
-					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_Terrain->genPointsPipelineLayout.replace()));
+					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Terrain->genPointsPipelineLayout));
 				}
 
 				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_Terrain->genPointsPipelineLayout);
 				pipelineCreateInfo.stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, genPointsShader->computeShaderModule);
-				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, m_Terrain->genPointsPipeline.replace()));
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genPointsPipeline));
 
 				SetObjectName(m_VulkanDevice, (u64)(VkPipelineLayout)m_Terrain->genPointsPipelineLayout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Terrain point generation compute pipeline layout");
 				SetPipelineName(m_VulkanDevice, m_Terrain->genPointsPipeline, "Terrain point generation compute pipeline");
@@ -1817,12 +1816,12 @@ namespace flex
 				{
 					VkDescriptorSetLayout descSetLayout = m_DescriptorPool->GetOrCreateLayout(genMeshMat->shaderID);
 					VkPipelineLayoutCreateInfo pipelineLayoutInfo = vks::pipelineLayoutCreateInfo(1, &descSetLayout);
-					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, m_Terrain->genMeshComputePipelineLayout.replace()));
+					VK_CHECK_RESULT(vkCreatePipelineLayout(m_VulkanDevice->m_LogicalDevice, &pipelineLayoutInfo, nullptr, &m_Terrain->genMeshComputePipelineLayout));
 				}
 
 				VkComputePipelineCreateInfo pipelineCreateInfo = vks::computePipelineCreateInfo(m_Terrain->genMeshComputePipelineLayout);
 				pipelineCreateInfo.stage = vks::pipelineShaderStageCreateInfo(VK_SHADER_STAGE_COMPUTE_BIT, genMeshShader->computeShaderModule);
-				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, m_Terrain->genMeshComputePipeline.replace()));
+				VK_CHECK_RESULT(vkCreateComputePipelines(m_VulkanDevice->m_LogicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &m_Terrain->genMeshComputePipeline));
 
 				SetObjectName(m_VulkanDevice, (u64)(VkPipelineLayout)m_Terrain->genMeshComputePipelineLayout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Terrain mesh generation compute pipeline layout");
 				SetPipelineName(m_VulkanDevice, m_Terrain->genMeshComputePipeline, "Terrain mesh generation compute pipeline");
@@ -2103,6 +2102,7 @@ namespace flex
 							(u32)m_TerrainChunksLoaded.size());
 					}
 
+					vkDestroyFence(m_VulkanDevice->m_LogicalDevice, m_Terrain->fence, nullptr);
 					m_Terrain->fence = VK_NULL_HANDLE;
 					m_Terrain->loadingChunkIndex = glm::ivec3(i32_max);
 					m_Terrain->loadingChunkLinearIndex = u32_max;
@@ -4519,7 +4519,11 @@ namespace flex
 				m_Terrain->maxChunkCount = maxChunkCount;
 
 				// TODO: Wait for in-flight workloads to complete?
-				m_Terrain->fence = VK_NULL_HANDLE;
+				if (m_Terrain->fence != VK_NULL_HANDLE)
+				{
+					vkDestroyFence(m_VulkanDevice->m_LogicalDevice, m_Terrain->fence, nullptr);
+					m_Terrain->fence = VK_NULL_HANDLE;
+				}
 				m_Terrain->lastTriCount = 0;
 				m_Terrain->loadingChunkIndex = glm::ivec3(u32_max);
 				m_Terrain->loadingChunkLinearIndex = u32_max;
@@ -5403,8 +5407,31 @@ namespace flex
 				RemoveMaterial(m_Terrain->genPointsMaterialID);
 				// Leave rendering mat ID since user passes it in
 
-				m_Terrain->genPointsPipeline.replace();
-
+				if (m_Terrain->genPointsPipeline != VK_NULL_HANDLE)
+				{
+					vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_Terrain->genPointsPipeline, nullptr);
+					m_Terrain->genPointsPipeline = VK_NULL_HANDLE;
+				}
+				if (m_Terrain->genPointsPipelineLayout != VK_NULL_HANDLE)
+				{
+					vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_Terrain->genPointsPipelineLayout, nullptr);
+					m_Terrain->genPointsPipelineLayout = VK_NULL_HANDLE;
+				}
+				if (m_Terrain->genMeshComputePipeline != VK_NULL_HANDLE)
+				{
+					vkDestroyPipeline(m_VulkanDevice->m_LogicalDevice, m_Terrain->genMeshComputePipeline, nullptr);
+					m_Terrain->genMeshComputePipeline = VK_NULL_HANDLE;
+				}
+				if (m_Terrain->genMeshComputePipelineLayout != VK_NULL_HANDLE)
+				{
+					vkDestroyPipelineLayout(m_VulkanDevice->m_LogicalDevice, m_Terrain->genMeshComputePipelineLayout, nullptr);
+					m_Terrain->genMeshComputePipelineLayout = VK_NULL_HANDLE;
+				}
+				if (m_Terrain->fence != VK_NULL_HANDLE)
+				{
+					vkDestroyFence(m_VulkanDevice->m_LogicalDevice, m_Terrain->fence, nullptr);
+					m_Terrain->fence = VK_NULL_HANDLE;
+				}
 				delete m_Terrain->pointBufferGPU;
 				delete m_Terrain->vertexBufferGPU;
 
@@ -5649,6 +5676,23 @@ namespace flex
 			features.enabledValidationFeatureCount = (u32)validationFeatureEnables.size();
 			features.pEnabledValidationFeatures = validationFeatureEnables.data();
 			createInfo.pNext = &features;
+
+			// Chain a debug messenger into the instance creation so messages emitted by
+			// vkCreateInstance/vkDestroyInstance themselves are routed through DebugCallback
+			// (and therefore filtered just like any other message).
+			VkDebugUtilsMessengerCreateInfoEXT instanceDebugCreateInfo = {};
+			if (m_bEnableValidationLayers)
+			{
+				instanceDebugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+				instanceDebugCreateInfo.messageSeverity =
+					VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT;
+				instanceDebugCreateInfo.messageType =
+					VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+				instanceDebugCreateInfo.pfnUserCallback = DebugCallback;
+				features.pNext = &instanceDebugCreateInfo;
+			}
 
 			// TODO: PERFORMANCE: Call on separate thread? (taking 10% of bootup time!)
 			VkResult result = vkCreateInstance(&createInfo, nullptr, &m_Instance);
@@ -7355,11 +7399,24 @@ namespace flex
 
 				if (sizePair.vertMemoryReq > 0)
 				{
+					// Only perform the destructive (Re)Create on buffers that haven't been
+					// created yet. Otherwise we'd wipe the underlying VkBuffer (and its
+					// allocation backing) while leaving stale per-render-object sub-allocation
+					// bookkeeping (offsets/sizes) intact, which causes UpdateDynamicVertexData
+					// to think existing allocations still fit and emit out-of-bounds draws
+					// (see VUID-vkCmdDrawIndexed-robustBufferAccess2-08798). Subsequent growth
+					// for additional render objects is handled lazily through Alloc/Realloc.
 					char buffer[256];
-					sprintf(buffer, "Dynamic vertex buffer (stride: %u)", vertexIndexBufferPair.first);
-					CreateDynamicVertexBuffer(vertexIndexBufferPair.second->vertexBuffer, sizePair.vertMemoryReq, buffer);
-					sprintf(buffer, "Dynamic index buffer (stride: %u)", vertexIndexBufferPair.first);
-					CreateDynamicIndexBuffer(vertexIndexBufferPair.second->indexBuffer, sizePair.indexMemoryReq, buffer);
+					if (vertexIndexBufferPair.second->vertexBuffer->m_Buffer == VK_NULL_HANDLE)
+					{
+						sprintf(buffer, "Dynamic vertex buffer (stride: %u)", vertexIndexBufferPair.first);
+						CreateDynamicVertexBuffer(vertexIndexBufferPair.second->vertexBuffer, sizePair.vertMemoryReq, buffer);
+					}
+					if (vertexIndexBufferPair.second->indexBuffer->m_Buffer == VK_NULL_HANDLE)
+					{
+						sprintf(buffer, "Dynamic index buffer (stride: %u)", vertexIndexBufferPair.first);
+						CreateDynamicIndexBuffer(vertexIndexBufferPair.second->indexBuffer, sizePair.indexMemoryReq, buffer);
+					}
 				}
 
 				iter = m_DirtyDynamicVertexAndIndexBufferIndices.erase(iter);
@@ -7387,6 +7444,13 @@ namespace flex
 				GetShaderID("ui", uiShaderID);
 				VulkanShader* uiShader = (VulkanShader*)GetShader(uiShaderID);
 				const u32 stride = CalculateVertexStride(uiShader->vertexAttributes);
+
+				if (m_DynamicUIVertexIndexBufferPair != nullptr)
+				{
+					m_DynamicUIVertexIndexBufferPair->Destroy();
+					delete m_DynamicUIVertexIndexBufferPair;
+					m_DynamicUIVertexIndexBufferPair = nullptr;
+				}
 
 				m_DynamicUIVertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
 
@@ -8040,7 +8104,12 @@ namespace flex
 
 					if (renderObject->bIndexed)
 					{
-						if (drawCallInfo == nullptr ||
+						if (shaderBatch.bDynamic && renderObject->dynamicIndexBufferOffset == InvalidBufferID)
+						{
+							// Dynamic data hasn't been uploaded yet (UpdateDynamicVertexData not called since creation),
+							// so indices may already hold the full CPU-side count while nothing is allocated on the GPU
+						}
+						else if (drawCallInfo == nullptr ||
 							!drawCallInfo->bRenderingShadows)
 						{
 							vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
@@ -10239,6 +10308,35 @@ namespace flex
 			{
 				// Emitted by validation when DEBUG_PRINTF is enabled and it injects required features.
 				// These are informational and can be noisy during startup.
+				return VK_FALSE;
+			}
+
+			if (bWarning &&
+				pCallbackData != nullptr &&
+				pCallbackData->pMessageIdName != nullptr &&
+				strcmp(pCallbackData->pMessageIdName, "VALIDATION-SETTINGS") == 0)
+			{
+				// Informational startup notices about DebugPrintf configuration (e.g. logging severity
+				// and duplicate message limit). These are expected when DEBUG_PRINTF is enabled.
+				return VK_FALSE;
+			}
+
+			if (pCallbackData != nullptr &&
+				pCallbackData->messageIdNumber == 0x23dfd876)
+			{
+				// "CreateInstance-status-message" - informational notice emitted once at vkCreateInstance
+				// listing active validation features (e.g. VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT).
+				// Severity varies by SDK version (WARNING or INFO).
+				return VK_FALSE;
+			}
+
+			if (pCallbackData != nullptr &&
+				pCallbackData->pMessage != nullptr &&
+				(strstr(pCallbackData->pMessage, "Warning that validation is adjusting settings") != nullptr ||
+				 strstr(pCallbackData->pMessage, "Cannot open shader validation cache") != nullptr))
+			{
+				// Informational notices emitted at vkCreateDevice when GPU assisted validation is enabled:
+				// it force-enables the device features it relies on, and the shader cache won't exist on first run.
 				return VK_FALSE;
 			}
 
