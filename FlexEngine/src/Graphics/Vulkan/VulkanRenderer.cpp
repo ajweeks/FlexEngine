@@ -1923,7 +1923,7 @@ namespace flex
 				return;
 			}
 
-			m_SpriteDynamicUBOOffset = 0;
+			m_SpriteDynamicUBOSlotCounts.clear();
 
 			DrawCallInfo drawCallInfo = {};
 
@@ -1934,29 +1934,11 @@ namespace flex
 
 			UpdateRenderObjectBatches();
 
-			auto ensureSpriteBatchCapacity = [this](const std::vector<SpriteQuadDrawInfo>& spriteBatch)
-			{
-				if (spriteBatch.empty())
-				{
-					return;
-				}
+			// Enqueue renderer-owned sprites now (rather than while recording) so they're included in the capacity check
+			EnqueueWorldSpaceSprites();
+			EnqueueScreenSpaceSprites();
 
-				MaterialID matID = (spriteBatch[0].materialID == InvalidMaterialID ?
-					(spriteBatch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) :
-					spriteBatch[0].materialID);
-				VulkanMaterial* spriteMat = (VulkanMaterial*)m_Materials.at(matID);
-				VulkanShader* spriteShader = (VulkanShader*)m_Shaders[spriteMat->shaderID];
-
-				if ((i32)spriteBatch.size() > spriteShader->maxObjectCount)
-				{
-					UpdateShaderMaxObjectCount(spriteMat->shaderID, (i32)spriteBatch.size());
-				}
-			};
-
-			ensureSpriteBatchCapacity(m_QueuedWSSprites);
-			ensureSpriteBatchCapacity(m_QueuedSSPreUISprites);
-			ensureSpriteBatchCapacity(m_QueuedSSArrSprites);
-			ensureSpriteBatchCapacity(m_QueuedSSPostUISprites);
+			EnsureSpriteCapacity();
 
 			FillOutOffscreenCommandBuffer();
 
@@ -4865,20 +4847,24 @@ namespace flex
 
 			VkDeviceSize offsets[1] = { 0 };
 
-			MaterialID matID = (batch[0].materialID == InvalidMaterialID ? (batch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID) : batch[0].materialID);
+			MaterialID matID = GetSpriteBatchMaterialID(batch);
 			VulkanMaterial* spriteMat = (VulkanMaterial*)m_Materials.at(matID);
 			VulkanShader* spriteShader = (VulkanShader*)m_Shaders[spriteMat->shaderID];
 
 			// TODO: Use instancing!
 			VulkanBuffer* vertexBuffer = m_StaticVertexBuffers[spriteShader->staticVertexBufferIndex].second;
 
+			// Each sprite takes a slot in its material's dynamic UBO, shared with other batches using that material this frame
+			u32& usedSlotCount = m_SpriteDynamicUBOSlotCounts[matID];
+			const u32 slotCapacity = (u32)glm::max(0, spriteShader->maxObjectCount);
+			const u32 availableSlotCount = slotCapacity - glm::min(usedSlotCount, slotCapacity);
 			u32 spriteCountToDraw = (u32)batch.size();
-			if ((i32)spriteCountToDraw > spriteShader->maxObjectCount)
+			if (spriteCountToDraw > availableSlotCount)
 			{
-				PrintWarn("Sprite batch size (%u) exceeds shader max object count (%i); skipping excess sprites this frame\n",
-					spriteCountToDraw,
-					spriteShader->maxObjectCount);
-				spriteCountToDraw = (u32)glm::max(0, spriteShader->maxObjectCount);
+				// Should only happen for sprites enqueued after EnsureSpriteCapacity was called
+				PrintWarn("Not enough space for sprite batch (%u sprites, %u slots free in material \"%s\"); skipping excess sprites this frame\n",
+					spriteCountToDraw, availableSlotCount, spriteMat->name.c_str());
+				spriteCountToDraw = availableSlotCount;
 			}
 			if (spriteCountToDraw == 0)
 			{
@@ -4914,8 +4900,8 @@ namespace flex
 					glm::mat4(rotation) *
 					glm::scale(MAT4_IDENTITY, scale);
 
-				u32 dynamicUBOOffset = m_SpriteDynamicUBOOffset;
-				m_SpriteDynamicUBOOffset += m_DynamicAlignment;
+				u32 dynamicUBOOffset = usedSlotCount * m_DynamicAlignment;
+				++usedSlotCount;
 
 				GraphicsPipeline* graphicsPipeline = defaultGraphicsPipeline;
 
@@ -4971,6 +4957,59 @@ namespace flex
 
 				vkCmdDraw(commandBuffer, spriteRenderObject->vertexBufferData->VertexCount, 1, spriteRenderObject->vertexOffset, 0);
 
+			}
+		}
+
+		MaterialID VulkanRenderer::GetSpriteBatchMaterialID(const std::vector<SpriteQuadDrawInfo>& batch) const
+		{
+			// All sprites in a batch are drawn using the first sprite's material
+			CHECK(!batch.empty());
+			if (batch[0].materialID != InvalidMaterialID)
+			{
+				return batch[0].materialID;
+			}
+			return batch[0].bScreenSpace ? m_SpriteMatSSID : m_SpriteMatWSID;
+		}
+
+		void VulkanRenderer::EnsureSpriteCapacity()
+		{
+			// Total slots required per material across every batch drawn this frame
+			std::map<MaterialID, u32> requiredSlotCounts;
+			const std::vector<SpriteQuadDrawInfo>* batches[] = { &m_QueuedWSSprites, &m_QueuedSSPreUISprites, &m_QueuedSSArrSprites, &m_QueuedSSPostUISprites };
+			for (const std::vector<SpriteQuadDrawInfo>* batch : batches)
+			{
+				if (!batch->empty())
+				{
+					requiredSlotCounts[GetSpriteBatchMaterialID(*batch)] += (u32)batch->size();
+				}
+			}
+
+			// Materials sharing a shader share its max object count, so it must fit the largest requirement
+			std::map<ShaderID, u32> requiredShaderCounts;
+			for (const auto& pair : requiredSlotCounts)
+			{
+				ShaderID shaderID = m_Materials.at(pair.first)->shaderID;
+				u32& requiredShaderCount = requiredShaderCounts[shaderID];
+				requiredShaderCount = glm::max(requiredShaderCount, pair.second);
+			}
+
+			bool bWaitedForIdle = false;
+			for (const auto& pair : requiredShaderCounts)
+			{
+				Shader* shader = m_Shaders[pair.first];
+				if ((i32)pair.second > shader->maxObjectCount)
+				{
+					if (!bWaitedForIdle)
+					{
+						// Growing recreates buffers & descriptor sets which in-flight frames may still reference
+						VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+						bWaitedForIdle = true;
+					}
+
+					// Leave some headroom to avoid regrowing every time a sprite is added
+					const i32 newMax = (i32)glm::ceil(pair.second * 1.5f);
+					UpdateShaderMaxObjectCount(pair.first, newMax);
+				}
 			}
 		}
 
@@ -8965,7 +9004,6 @@ namespace flex
 					EndDebugMarkerRegion(commandBuffer, "End Editor objects");
 				}
 
-				EnqueueWorldSpaceSprites();
 				if (!m_QueuedWSSprites.empty())
 				{
 					PROFILE_AUTO("World space sprites");
@@ -9075,7 +9113,6 @@ namespace flex
 				// Fullscreen blit from offscreen frame buffer onto swap chain
 				RenderFullscreenTri(commandBuffer, m_FullscreenBlitMatID, blitPipeline->layout, m_FinalFullscreenBlitDescriptorSet);
 
-				EnqueueScreenSpaceSprites();
 				EnqueueScreenSpaceText();
 
 				if (!m_QueuedSSPreUISprites.empty() || !m_QueuedSSArrSprites.empty())

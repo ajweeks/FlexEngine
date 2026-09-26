@@ -401,6 +401,9 @@ namespace flex
 
 			void DrawText(VkCommandBuffer commandBuffer, bool bScreenSpace);
 			void DrawSpriteBatch(const std::vector<SpriteQuadDrawInfo>& batch, VkCommandBuffer commandBuffer);
+			MaterialID GetSpriteBatchMaterialID(const std::vector<SpriteQuadDrawInfo>& batch) const;
+			// Grows sprite shaders' dynamic UBOs to fit every sprite queued this frame (must be called before recording)
+			void EnsureSpriteCapacity();
 			void DrawUIMesh(UIMesh* uiMesh, VkCommandBuffer commandBuffer);
 			void DrawParticles(VkCommandBuffer commandBuffer);
 			void DrawTerrain(VkCommandBuffer commandBuffer);
@@ -568,8 +571,8 @@ namespace flex
 			};
 
 			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
-			// Value which gets incremented by each sprite draw and reset at the end of every frame
-			u32 m_SpriteDynamicUBOOffset = 0;
+			// Number of dynamic UBO slots used by sprites this frame, per material (each material has its own buffer)
+			std::map<MaterialID, u32> m_SpriteDynamicUBOSlotCounts;
 
 			// Maps uniform IDs to data & data length
 			std::map<u64, Pair<void*, u32>> m_GlobalUserUniforms;
