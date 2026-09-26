@@ -1705,11 +1705,29 @@ namespace flex
 			real dist = glm::distance(gameObject->GetTransform()->GetWorldPosition(), m_Transform.GetWorldPosition());
 			if (dist < m_ItemPickupMaxDist && gameObject->IsItemizable())
 			{
+				// Minerals can only be mined with a pickaxe
+				if (gameObject->GetTypeID() == MineralDepositSID && !IsWieldingPickAxe())
+				{
+					return nullptr;
+				}
+
 				return gameObject;
 			}
 		}
 
 		return nullptr;
+	}
+
+	bool Player::IsWieldingPickAxe() const
+	{
+		const GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		if (stack.count <= 0 || !stack.prefabID.IsValid())
+		{
+			return false;
+		}
+
+		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(stack.prefabID);
+		return prefabTemplate != nullptr && prefabTemplate->GetTypeID() == PickAxeSID;
 	}
 
 	void Player::SetItemPickingUp(GameObject* pickedItem)

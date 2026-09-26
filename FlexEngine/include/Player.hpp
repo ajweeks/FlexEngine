@@ -151,6 +151,7 @@ namespace flex
 		void ResetItemPickingTimer();
 
 		GameObject* GetObjectPointedAt() const;
+		bool IsWieldingPickAxe() const;
 
 		static const u32 WEARABLES_ITEM_COUNT = 3;
 		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
