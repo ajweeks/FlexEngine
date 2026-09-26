@@ -95,6 +95,17 @@ namespace flex
 		return true;
 	}
 
+	std::vector<std::string> SceneManager::GetSceneFileNames() const
+	{
+		std::vector<std::string> result;
+		result.reserve(m_Scenes.size());
+		for (BaseScene* scene : m_Scenes)
+		{
+			result.push_back(scene->GetFileName());
+		}
+		return result;
+	}
+
 	bool SceneManager::SetCurrentScene(BaseScene* scene, bool bPrintErrorOnFailure /* = true */)
 	{
 		for (size_t i = 0; i < m_Scenes.size(); ++i)

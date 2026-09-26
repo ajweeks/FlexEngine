@@ -570,13 +570,13 @@ namespace flex
 
 		CPU_SET(threadID, &cpuset);
 		ret = pthread_setaffinity_np((pthread_t)threadHandle, cpusetsize, &cpuset);
-		return ret != 0;
+		return ret == 0;
 	}
 
 	bool Platform::SetFlexThreadName(void* threadHandle, const char* threadName)
 	{
 		int ret = pthread_setname_np((pthread_t)threadHandle, threadName);
-		return ret != 0;
+		return ret == 0;
 	}
 
 	void* Platform::InitCriticalSection()

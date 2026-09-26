@@ -82,6 +82,8 @@ namespace flex
 	const bool g_bVulkanEnabled = false;
 #endif
 
+	bool g_bHeadless = false;
+
 	PropertyCollectionManager* GetPropertyCollectionManager()
 	{
 		return GetSystem<PropertyCollectionManager>(SystemType::PROPERTY_COLLECTION_MANAGER);

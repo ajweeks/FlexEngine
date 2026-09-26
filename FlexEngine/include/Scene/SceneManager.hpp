@@ -34,6 +34,8 @@ namespace flex
 		BaseScene* CurrentScene() const;
 		bool HasSceneLoaded() const; // False during initial load
 
+		std::vector<std::string> GetSceneFileNames() const;
+
 		bool DuplicateScene(BaseScene* scene, const std::string& newSceneFileName, const std::string& newSceneName);
 
 		void OpenNewSceneWindow();

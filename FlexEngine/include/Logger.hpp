@@ -20,6 +20,10 @@ namespace flex
 	void PrintWarnLong(const char* str);
 	void PrintErrorLong(const char* str);
 
+	// Total number of warnings/errors printed since startup (counted even when console logging is disabled)
+	u32 GetWarningCount();
+	u32 GetErrorCount();
+
 	extern bool g_bEnableLogToConsole;
 
 } // namespace flex

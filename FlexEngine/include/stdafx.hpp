@@ -307,6 +307,9 @@ namespace flex
 	extern const bool g_bEnableLogging_Shaders;
 
 	extern const bool g_bVulkanEnabled;
+
+	// When set the window is never shown and nothing is persisted to disk (settings, window config, etc.)
+	extern bool g_bHeadless;
 }
 
 namespace glm

@@ -18,13 +18,13 @@ namespace flex
 
 	PropertyCollection::PropertyCollection(const PropertyCollection& other)
 	{
-		values = std::map<const char*, PropertyValue>(other.values);
+		values = other.values;
 		name = other.name;
 	}
 
 	PropertyCollection::PropertyCollection(const PropertyCollection&& other) noexcept
 	{
-		values = std::map<const char*, PropertyValue>(other.values);
+		values = other.values;
 		name = other.name;
 	}
 
@@ -32,7 +32,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			values = std::map<const char*, PropertyValue>(other.values);
+			values = other.values;
 			name = other.name;
 		}
 		return *this;
@@ -42,7 +42,7 @@ namespace flex
 	{
 		if (this != &other)
 		{
-			values = std::map<const char*, PropertyValue>(other.values);
+			values = other.values;
 			name = other.name;
 		}
 		return *this;

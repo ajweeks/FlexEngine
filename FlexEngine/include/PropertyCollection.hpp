@@ -2,8 +2,20 @@
 
 #include "JSONTypes.hpp"
 
+#include <cstring>
+
 namespace flex
 {
+	// Orders C-string keys by contents rather than address so iteration (and therefore
+	// serialization) order is alphabetical and stable across builds
+	struct CStringLess
+	{
+		bool operator()(const char* a, const char* b) const
+		{
+			return strcmp(a, b) < 0;
+		}
+	};
+
 	struct PropertyValue
 	{
 		PropertyValue(const char* label, ValueType type, size_t offset) :
@@ -169,8 +181,7 @@ namespace flex
 
 		bool DrawImGuiForObject(GameObject* gameObject);
 
-		// TODO: Make vector
-		std::map<const char*, PropertyValue> values;
+		std::map<const char*, PropertyValue, CStringLess> values;
 		std::string name;
 
 		PropertyCollection* childCollection = nullptr;

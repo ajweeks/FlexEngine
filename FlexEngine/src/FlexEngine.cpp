@@ -350,7 +350,7 @@ namespace flex
 
 		ImGuiIO& io = ImGui::GetIO();
 		m_ImGuiIniFilepathStr = IMGUI_INI_LOCATION;
-		io.IniFilename = m_ImGuiIniFilepathStr.c_str();
+		io.IniFilename = g_bHeadless ? nullptr : m_ImGuiIniFilepathStr.c_str();
 		m_ImGuiLogFilepathStr = IMGUI_LOG_LOCATION;
 		io.LogFilename = m_ImGuiLogFilepathStr.c_str();
 		io.DisplaySize = (ImVec2)g_Window->GetFrameBufferSize();
@@ -536,6 +536,11 @@ namespace flex
 
 		ParseUIWindowCache();
 
+		if (m_bSceneTestMode && m_SceneTestQueue.empty())
+		{
+			m_SceneTestQueue = g_SceneManager->GetSceneFileNames();
+		}
+
 		sec durationSec = Time::CurrentSeconds() - startTime;
 		PROFILE_END("FlexEngine Initialize");
 
@@ -718,6 +723,11 @@ namespace flex
 		sec frameStartTime = Time::CurrentSeconds();
 		while (m_bRunning)
 		{
+			if (m_bSceneTestMode && !UpdateSceneTest())
+			{
+				break;
+			}
+
 			sec now = Time::CurrentSeconds();
 
 			if (m_bToggleRenderImGui)
@@ -2006,6 +2016,101 @@ namespace flex
 		m_bRunning = false;
 	}
 
+	void FlexEngine::EnableSceneTestMode(const std::vector<std::string>& sceneFileNames, u32 framesPerScene)
+	{
+		m_bSceneTestMode = true;
+		m_SceneTestQueue = sceneFileNames;
+		m_SceneTestFramesPerScene = glm::max(framesPerScene, 1u);
+
+		// Anything printed before the first scene test begins is attributed to startup
+		BeginSceneTestEntry("<startup>");
+		m_SceneTestResults.back().bLoaded = true;
+	}
+
+	i32 FlexEngine::GetSceneTestFailureCount() const
+	{
+		i32 failureCount = 0;
+		for (const SceneTestResult& result : m_SceneTestResults)
+		{
+			if (!result.bLoaded || result.warningCount > 0 || result.errorCount > 0)
+			{
+				++failureCount;
+			}
+		}
+		return failureCount;
+	}
+
+	bool FlexEngine::UpdateSceneTest()
+	{
+		if (m_SceneTestFramesRemaining > 0)
+		{
+			--m_SceneTestFramesRemaining;
+			return true;
+		}
+
+		EndSceneTestEntry();
+
+		if (m_SceneTestQueue.empty())
+		{
+			PrintSceneTestResults();
+			return false;
+		}
+
+		std::string sceneFileName = m_SceneTestQueue.front();
+		m_SceneTestQueue.erase(m_SceneTestQueue.begin());
+
+		BeginSceneTestEntry(sceneFileName);
+		bool bLoaded = g_SceneManager->SetCurrentScene(sceneFileName);
+		m_SceneTestResults.back().bLoaded = bLoaded;
+		// The current frame counts as the first frame
+		m_SceneTestFramesRemaining = bLoaded ? (m_SceneTestFramesPerScene - 1) : 0;
+
+		return true;
+	}
+
+	void FlexEngine::BeginSceneTestEntry(const std::string& name)
+	{
+		SceneTestResult result = {};
+		result.sceneFileName = name;
+		m_SceneTestResults.push_back(result);
+
+		m_SceneTestWarningCountStart = GetWarningCount();
+		m_SceneTestErrorCountStart = GetErrorCount();
+	}
+
+	void FlexEngine::EndSceneTestEntry()
+	{
+		CHECK(!m_SceneTestResults.empty());
+
+		SceneTestResult& result = m_SceneTestResults.back();
+		result.warningCount = GetWarningCount() - m_SceneTestWarningCountStart;
+		result.errorCount = GetErrorCount() - m_SceneTestErrorCountStart;
+	}
+
+	void FlexEngine::PrintSceneTestResults()
+	{
+		// Only use Print here so as not to affect warning/error counts
+		Print("\n=== Scene test results (%u frames per scene) ===\n", m_SceneTestFramesPerScene);
+		for (const SceneTestResult& result : m_SceneTestResults)
+		{
+			if (!result.bLoaded)
+			{
+				Print("  FAIL  %s (failed to load)\n", result.sceneFileName.c_str());
+			}
+			else if (result.warningCount > 0 || result.errorCount > 0)
+			{
+				Print("  FAIL  %s (%u warnings, %u errors)\n", result.sceneFileName.c_str(), result.warningCount, result.errorCount);
+			}
+			else
+			{
+				Print("  PASS  %s\n", result.sceneFileName.c_str());
+			}
+		}
+
+		i32 failureCount = GetSceneTestFailureCount();
+		Print("%i/%u passed\n", (i32)m_SceneTestResults.size() - failureCount, (u32)m_SceneTestResults.size());
+	}
+
 	void FlexEngine::PrintAllConsoleCommands()
 	{
 		for (IFunction* command : m_ConsoleCommands)
@@ -2109,6 +2214,11 @@ namespace flex
 	{
 		PROFILE_AUTO("SaveCommonSettingsToDisk");
 
+		if (g_bHeadless)
+		{
+			return;
+		}
+
 		if (m_CommonSettingsAbsFilePath.empty())
 		{
 			PrintError("Failed to save common settings to disk: file path is not set!\n");
@@ -2145,6 +2255,11 @@ namespace flex
 
 	void FlexEngine::AppendToBootupTimesFile(const std::string& entry)
 	{
+		if (g_bHeadless)
+		{
+			return;
+		}
+
 		std::string newFileContents;
 		if (FileExists(m_BootupTimesAbsFilePath))
 		{
@@ -2223,6 +2338,11 @@ namespace flex
 	void FlexEngine::SerializeUIWindowCache()
 	{
 		PROFILE_AUTO("ParseUIWindowCache");
+
+		if (g_bHeadless)
+		{
+			return;
+		}
 
 		JSONObject uiWindowsOpenObj = {};
 		for (auto& pair : m_UIWindows)
@@ -2365,12 +2485,6 @@ namespace flex
 			{
 				m_bSimulationPaused = false;
 				m_bSimulateNextFrame = true;
-				return EventReply::CONSUMED;
-			}
-
-			if (keyCode == KeyCode::KEY_G)
-			{
-				g_Renderer->ToggleRenderGrid();
 				return EventReply::CONSUMED;
 			}
 

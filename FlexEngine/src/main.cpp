@@ -14,9 +14,6 @@ bool g_bShowConsole = true;
 
 int main(int argc, char *argv[])
 {
-	FLEX_UNUSED(argc);
-	FLEX_UNUSED(argv);
-
 #ifdef _WINDOWS
 	// Enable run-time memory leak check for debug builds
 #ifdef DEBUG
@@ -54,19 +51,52 @@ int main(int argc, char *argv[])
 	}
 
 
+	// Usage: Flex --test-scenes [--frames=N] [scene_file_name ...]
+	// Loads each scene (or only those listed) in a hidden window and exits with the number of
+	// scenes which printed any warnings or errors while loading/simulating
+	bool bTestScenes = argc >= 2 && strcmp(argv[1], "--test-scenes") == 0;
+	std::vector<std::string> sceneTestFileNames;
+	u32 sceneTestFrameCount = 10;
+	if (bTestScenes)
+	{
+		for (i32 i = 2; i < argc; ++i)
+		{
+			if (strncmp(argv[i], "--frames=", 9) == 0)
+			{
+				sceneTestFrameCount = (u32)atoi(argv[i] + 9);
+			}
+			else
+			{
+				sceneTestFileNames.emplace_back(argv[i]);
+			}
+		}
+
+		flex::g_bHeadless = true;
+	}
+
+	i32 result = 0;
+
 	{
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
+		if (bTestScenes)
+		{
+			engineInstance->EnableSceneTestMode(sceneTestFileNames, sceneTestFrameCount);
+		}
 		engineInstance->Initialize();
 		engineInstance->UpdateAndRender();
+		if (bTestScenes)
+		{
+			result = engineInstance->GetSceneTestFailureCount();
+		}
 		delete engineInstance;
 	}
 
-	if (g_bShowConsole)
+	if (g_bShowConsole && !flex::g_bHeadless)
 	{
 		system("pause");
 	}
 
-	return 0;
+	return result;
 }
 
 #ifdef _WINDOWS

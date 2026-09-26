@@ -66,7 +66,7 @@ namespace flex
 		// Returns true when user requested data to be serialized
 		Request DrawImGuiObjects();
 
-		std::map<const char*, ConfigValue> values;
+		std::map<const char*, ConfigValue, CStringLess> values;
 
 		std::string filePath;
 		std::string name;

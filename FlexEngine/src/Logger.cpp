@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <cstdio> // For fprintf, ...
+#include <atomic>
 #include <mutex>
 
 #include "Helpers.hpp"
@@ -22,6 +23,9 @@ namespace flex
 	// main thread queuing texture loads while worker threads log load completions) do not
 	// race and corrupt the underlying buffers.
 	static std::recursive_mutex g_LogMutex;
+
+	static std::atomic<u32> g_WarningCount = 0;
+	static std::atomic<u32> g_ErrorCount = 0;
 
 	//
 	// File-private function declarations
@@ -84,6 +88,8 @@ namespace flex
 
 	void PrintWarn(const char* str, ...)
 	{
+		++g_WarningCount;
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -103,6 +109,8 @@ namespace flex
 
 	void PrintError(const char* str, ...)
 	{
+		++g_ErrorCount;
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -165,6 +173,8 @@ namespace flex
 
 	void PrintWarnLong(const char* str)
 	{
+		++g_WarningCount;
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -179,6 +189,8 @@ namespace flex
 
 	void PrintErrorLong(const char* str)
 	{
+		++g_ErrorCount;
+
 		if (!g_bEnableLogToConsole)
 		{
 			return;
@@ -189,6 +201,16 @@ namespace flex
 		Platform::SetConsoleTextColour(Platform::ConsoleColour::ERROR);
 
 		PrintSimple(str);
+	}
+
+	u32 GetWarningCount()
+	{
+		return g_WarningCount;
+	}
+
+	u32 GetErrorCount()
+	{
+		return g_ErrorCount;
 	}
 
 	//

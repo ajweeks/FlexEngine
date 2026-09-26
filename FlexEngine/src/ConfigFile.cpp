@@ -26,7 +26,7 @@ namespace flex
 		g_ConfigFileManager->DeregisterConfigFile(this);
 	}
 
-	using EmplaceResult = std::pair<std::map<const char*, ConfigFile::ConfigValue>::iterator, bool>;
+	using EmplaceResult = std::pair<decltype(ConfigFile::values)::iterator, bool>;
 
 	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, real* propertyValue)
 	{

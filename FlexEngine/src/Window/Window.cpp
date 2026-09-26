@@ -255,6 +255,11 @@ namespace flex
 
 	void Window::SaveToConfig()
 	{
+		if (g_bHeadless)
+		{
+			return;
+		}
+
 		JSONObject rootObject = {};
 
 		rootObject.fields.emplace_back("move console to other monitor on bootup", JSONValue(m_bMoveConsoleToOtherMonitor));

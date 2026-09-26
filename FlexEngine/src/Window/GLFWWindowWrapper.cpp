@@ -109,11 +109,20 @@ namespace flex
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		}
 
-		if (m_bMaximized)
+		if (g_bHeadless)
+		{
+			glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+		}
+		else if (m_bMaximized)
 		{
 			glfwWindowHint(GLFW_MAXIMIZED, 1);
 		}
 
+
+		if (g_bHeadless)
+		{
+			m_CurrentWindowMode = WindowMode::WINDOWED;
+		}
 
 		GLFWmonitor* monitor = NULL;
 		if (m_CurrentWindowMode == WindowMode::FULLSCREEN)
@@ -165,8 +174,11 @@ namespace flex
 
 		glfwSetWindowPos(m_Window, m_StartingPosition.x, m_StartingPosition.y);
 
-		glfwFocusWindow(m_Window);
-		m_bHasFocus = true;
+		if (!g_bHeadless)
+		{
+			glfwFocusWindow(m_Window);
+			m_bHasFocus = true;
+		}
 	}
 
 	void GLFWWindowWrapper::RetrieveMonitorInfo()
