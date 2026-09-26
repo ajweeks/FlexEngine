@@ -229,7 +229,10 @@ namespace flex
 		char buf[256];
 		// This works on Ubuntu at least (TODO: Support more distros)
 		snprintf(buf, 256, "nautilus --browser %s", absoluteDirectory);
-		system(buf);
+		if (system(buf) != 0)
+		{
+			PrintError("Failed to open file explorer at %s\n", absoluteDirectory);
+		}
 	}
 
 	bool Platform::DirectoryExists(const std::string& absoluteDirectoryPath)
@@ -434,14 +437,23 @@ namespace flex
 	void Platform::OpenFileWithDefaultApplication(const std::string& absoluteDirectory)
 	{
 		std::string pString = "xdg-open " + absoluteDirectory;
-		popen(pString.c_str(), "w");
+		FILE* pipe = popen(pString.c_str(), "w");
+		if (pipe == nullptr)
+		{
+			PrintError("Failed to open %s with default application\n", absoluteDirectory.c_str());
+			return;
+		}
+		pclose(pipe);
 	}
 
 	void Platform::LaunchApplication(const std::string& applicationName, const std::string& param0)
 	{
 		// TODO: Strip out of release builds!
 		std::string s = "./" + applicationName + " " + param0.c_str();
-		system(s.c_str());
+		if (system(s.c_str()) != 0)
+		{
+			PrintError("Failed to launch application %s\n", applicationName.c_str());
+		}
 	}
 
 	std::string Platform::GetDateString_YMD()

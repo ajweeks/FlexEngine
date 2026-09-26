@@ -1557,7 +1557,8 @@ namespace flex
 				if (bOpenRename)
 				{
 					ImGui::OpenPopup(renamePopupWindowStr.c_str());
-					strncpy(newNameBuf, material->name.c_str(), bufSize);
+					strncpy(newNameBuf, material->name.c_str(), bufSize - 1);
+					newNameBuf[bufSize - 1] = '\0';
 				}
 
 				if (ImGui::BeginPopupModal(renamePopupWindowStr.c_str(), NULL, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))

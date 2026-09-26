@@ -499,7 +499,8 @@ namespace flex
 				usageCount(1),
 				bPersistent(bPersistent)
 			{
-				strncpy(this->DBG_Name, DBG_Name, ARRAY_LENGTH(this->DBG_Name));
+				strncpy(this->DBG_Name, DBG_Name, ARRAY_LENGTH(this->DBG_Name) - 1);
+				this->DBG_Name[ARRAY_LENGTH(this->DBG_Name) - 1] = '\0';
 			}
 
 			~GraphicsPipelineConfiguration()

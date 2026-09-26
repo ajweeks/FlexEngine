@@ -45,7 +45,8 @@ int main(int argc, char *argv[])
 		if (!bHeadless)
 		{
 			// TODO: Use cross-platform solution here
-			system("pause");
+			i32 pauseResult = system("pause");
+			FLEX_UNUSED(pauseResult);
 		}
 
 		return result;
@@ -98,7 +99,8 @@ int main(int argc, char *argv[])
 
 	if (g_bShowConsole && !flex::g_bHeadless)
 	{
-		system("pause");
+		i32 pauseResult = system("pause");
+		FLEX_UNUSED(pauseResult);
 	}
 
 	return result;

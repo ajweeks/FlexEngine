@@ -1244,7 +1244,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGui::SliderFloat(label, (real*)valuePtr, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+				bValueChanged = ImGui::SliderFloat(label, (real*)valuePtr, UnpackFromPointer<real>(valueMin), UnpackFromPointer<real>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1255,7 +1255,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGui::SliderInt(label, (i32*)valuePtr, *(i32*)&valueMin, *(i32*)&valueMax) || bValueChanged;
+				bValueChanged = ImGui::SliderInt(label, (i32*)valuePtr, UnpackFromPointer<i32>(valueMin), UnpackFromPointer<i32>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1266,7 +1266,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGuiExt::SliderUInt(label, (u32*)valuePtr, *(u32*)&valueMin, *(u32*)&valueMax) || bValueChanged;
+				bValueChanged = ImGuiExt::SliderUInt(label, (u32*)valuePtr, UnpackFromPointer<u32>(valueMin), UnpackFromPointer<u32>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1281,7 +1281,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGui::SliderFloat2(label, &((glm::vec2*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+				bValueChanged = ImGui::SliderFloat2(label, &((glm::vec2*)valuePtr)->x, UnpackFromPointer<real>(valueMin), UnpackFromPointer<real>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1292,7 +1292,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGui::SliderFloat3(label, &((glm::vec3*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+				bValueChanged = ImGui::SliderFloat3(label, &((glm::vec3*)valuePtr)->x, UnpackFromPointer<real>(valueMin), UnpackFromPointer<real>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1303,7 +1303,7 @@ namespace flex
 		{
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				bValueChanged = ImGui::SliderFloat4(label, &((glm::vec4*)valuePtr)->x, *(real*)&valueMin, *(real*)&valueMax) || bValueChanged;
+				bValueChanged = ImGui::SliderFloat4(label, &((glm::vec4*)valuePtr)->x, UnpackFromPointer<real>(valueMin), UnpackFromPointer<real>(valueMax)) || bValueChanged;
 			}
 			else
 			{
@@ -1318,8 +1318,8 @@ namespace flex
 			real valueMaxReal = TWO_PI;
 			if (valueMinSet != 0 && valueMaxSet != 0)
 			{
-				valueMinReal = *(real*)&valueMin;
-				valueMaxReal = *(real*)&valueMax;
+				valueMinReal = UnpackFromPointer<real>(valueMin);
+				valueMaxReal = UnpackFromPointer<real>(valueMax);
 			}
 
 			if (ImGui::SliderFloat3(label, &rotEuler.x, valueMinReal, valueMaxReal))

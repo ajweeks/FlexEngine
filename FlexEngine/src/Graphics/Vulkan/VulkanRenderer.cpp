@@ -9743,12 +9743,12 @@ namespace flex
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
 			{
-				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
+				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			for (BitmapFont* font : g_ResourceManager->fontsWorldSpace)
 			{
-				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
+				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			CreateSwapChainFramebuffers();
@@ -9953,7 +9953,7 @@ namespace flex
 			{
 				DeviceDiagnosticCheckpoint* checkpointData = m_CheckPointAllocator.Alloc();
 				memset(checkpointData->name, 0, ARRAY_LENGTH(checkpointData->name));
-				strncpy(checkpointData->name, checkPointName, std::min(strlen(checkPointName), ARRAY_LENGTH(checkpointData->name) - 1));
+				memcpy(checkpointData->name, checkPointName, std::min(strlen(checkPointName), ARRAY_LENGTH(checkpointData->name) - 1));
 
 				vkCmdSetCheckpointNV(cmdBuf, checkpointData);
 			}
@@ -10567,12 +10567,12 @@ namespace flex
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
 			{
-				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
+				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			for (BitmapFont* font : g_ResourceManager->fontsWorldSpace)
 			{
-				*(VkDescriptorSet*)&font->userData = VK_NULL_HANDLE;
+				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			m_WireframeGraphicsPipelines.clear();

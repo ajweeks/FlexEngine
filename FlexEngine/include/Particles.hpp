@@ -195,6 +195,7 @@ namespace flex
 		bool bEnableRespawning = false;
 	};
 
+	static constexpr StringID ParticleSystemSID = SID("particle system");
 	class ParticleSystem final
 	{
 	public:

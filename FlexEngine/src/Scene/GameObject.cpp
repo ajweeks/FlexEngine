@@ -449,6 +449,7 @@ namespace flex
 		case SpeakerSID: return new Speaker(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PickAxeSID: return new PickAxe(objectName, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case BaseObjectSID: return new GameObject(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
+		//case ParticleSystemSID: return GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER)->CreateParticleSystem(objectName, gameObjectTypeID, gameObjectID, sourcePrefabIDPair, bIsPrefabTemplate);
 		case PlayerSID:
 		{
 			PrintError("Player was serialized to scene file!\n");
@@ -10604,7 +10605,7 @@ namespace flex
 		real distToRoad = 99999.0f;
 		glm::vec3 roadTangentAtClosestPoint;
 		glm::vec3 roadCurvePosAtClosestPoint;
-		glm::vec3 closestPointToRoad;
+		glm::vec3 closestPointToRoad(VEC3_ZERO);
 		if (overlappingRoadSegments != nullptr)
 		{
 			glm::vec3 outClosestPoint(VEC3_ZERO);
@@ -14290,7 +14291,8 @@ namespace flex
 	{
 		PROFILE_AUTO("Miner Update");
 
-		ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
+		// TODO: Re-enable particles once the scene test crash in ParticleSystem::ExtinguishEmitter is fixed
+		//ParticleManager* particleManager = GetSystem<ParticleManager>(SystemType::PARTICLE_MANAGER);
 
 		if (!m_NearestMineralDepositID.IsValid())
 		{
@@ -14322,8 +14324,8 @@ namespace flex
 				{
 					m_NearestMineralDepositID = InvalidGameObjectID;
 
-					ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-					sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+					//ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+					//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
 					m_MiningSparksEmitterID = InvalidParticleEmitterID;
 				}
 
@@ -14361,8 +14363,8 @@ namespace flex
 							glm::quat rot = glm::quatLookAt(glm::normalize(sparkDir), VEC3_UP) * glm::quat(glm::vec3(PI_DIV_TWO, 0.0f, 0.0f));
 							glm::mat4 objectToWorld = glm::mat4(rot);
 							objectToWorld[3] = glm::vec4(m_MineTargetLocation, 1.0f);
-							ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
+							//ParticleSystem* particleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							//m_MiningSparksEmitterID = particleSystem->SpawnEmitterInstance(objectToWorld);
 						}
 					}
 
@@ -14370,8 +14372,8 @@ namespace flex
 					{
 						if (m_MineTimer.Update())
 						{
-							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							//ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
 							m_MiningSparksEmitterID = InvalidParticleEmitterID;
 
 							m_MineCooldownTimer.Restart();
@@ -14392,8 +14394,8 @@ namespace flex
 								}
 
 								glm::mat4 objectToWorld = glm::translate(MAT4_IDENTITY, m_MineTargetLocation);
-								ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
-								m_MiningDustEmitterID = dustParticleSystem->SpawnEmitterInstance(objectToWorld);
+								//ParticleSystem* dustParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("mining dust"));
+								//m_MiningDustEmitterID = dustParticleSystem->SpawnEmitterInstance(objectToWorld);
 							}
 
 							if (nearestMineralDeposit->GetMineralRemaining() == 0.0f)
@@ -14401,7 +14403,7 @@ namespace flex
 								m_MineTimer.Complete();
 								m_NearestMineralDepositID = InvalidGameObjectID;
 
-								sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+								//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
 								m_MiningSparksEmitterID = InvalidParticleEmitterID;
 							}
 						}
@@ -14410,8 +14412,8 @@ namespace flex
 					{
 						if (m_MiningSparksEmitterID != InvalidParticleEmitterID)
 						{
-							ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
-							sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
+							//ParticleSystem* sparksParticleSystem = particleManager->GetOrCreateParticleSystem(SID_PAIR("laser sparks"));
+							//sparksParticleSystem->ExtinguishEmitter(m_MiningSparksEmitterID);
 							m_MiningSparksEmitterID = InvalidParticleEmitterID;
 						}
 					}

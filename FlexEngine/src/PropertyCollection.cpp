@@ -116,7 +116,7 @@ namespace flex
 
 	u32 PropertyValue::GetPrecision() const
 	{
-		return precisionSet != 0 ? *(u32*)&precision : JSONValue::DEFAULT_FLOAT_PRECISION;
+		return precisionSet != 0 ? UnpackFromPointer<u32>(precision) : JSONValue::DEFAULT_FLOAT_PRECISION;
 	}
 
 } // namespace flex

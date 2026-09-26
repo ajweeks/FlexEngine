@@ -45,7 +45,7 @@ namespace flex
 		PropertyValue& Precision(u32 inPrecision)
 		{
 			CHECK(inPrecision < 10);
-			precision = *(void**)&inPrecision;
+			precision = PackIntoPointer(inPrecision);
 			precisionSet = 1;
 			return *this;
 		}
@@ -54,8 +54,8 @@ namespace flex
 		PropertyValue& Range(T inValueMin, T inValueMax)
 		{
 			CHECK(inValueMin < inValueMax);
-			valueMin = *(void**)&inValueMin;
-			valueMax = *(void**)&inValueMax;
+			valueMin = PackIntoPointer(inValueMin);
+			valueMax = PackIntoPointer(inValueMax);
 			valueMinSet = 1;
 			valueMaxSet = 1;
 

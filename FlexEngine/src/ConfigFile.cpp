@@ -165,8 +165,8 @@ namespace flex
 	ConfigFile::ConfigValue& ConfigFile::ConfigValue::SetRange(real rangeMin, real rangeMax)
 	{
 		CHECK(rangeMin < rangeMax);
-		valueMin = *(void**)&rangeMin;
-		valueMax = *(void**)&rangeMax;
+		valueMin = PackIntoPointer(rangeMin);
+		valueMax = PackIntoPointer(rangeMax);
 		valueMinSet = 1;
 		valueMaxSet = 1;
 

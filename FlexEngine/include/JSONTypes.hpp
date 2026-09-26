@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstring>
 #include <vector>
 
 #include "GUID.hpp"
@@ -187,6 +188,25 @@ namespace flex
 
 		std::string ToString(i32 tabCount) const;
 	};
+
+	// Stores a small value's bytes in a pointer-sized slot (memcpy avoids strict-aliasing UB and over-reading)
+	template<typename T>
+	void* PackIntoPointer(T value)
+	{
+		static_assert(sizeof(T) <= sizeof(void*), "Value too large to pack into pointer");
+		void* result = nullptr;
+		memcpy(&result, &value, sizeof(T));
+		return result;
+	}
+
+	template<typename T>
+	T UnpackFromPointer(void* ptr)
+	{
+		static_assert(sizeof(T) <= sizeof(void*), "Value too large to unpack from pointer");
+		T result;
+		memcpy(&result, &ptr, sizeof(T));
+		return result;
+	}
 
 	bool DrawImGuiForValueType(void* valuePtr, const char* label, ValueType type, bool valueMinSet, bool valueMaxSet, void* valueMin, void* valueMax);
 

@@ -1130,7 +1130,8 @@ namespace flex
 				if (ImGui::MenuItem("Shader editor path"))
 				{
 					bOpenShaderEditorPathPopup = true;
-					strncpy(shaderEditorBuf, m_ShaderEditorPath.c_str(), buffSize);
+					strncpy(shaderEditorBuf, m_ShaderEditorPath.c_str(), buffSize - 1);
+					shaderEditorBuf[buffSize - 1] = '\0';
 				}
 
 #if COMPILE_RENDERDOC_API
@@ -1139,7 +1140,8 @@ namespace flex
 					bOpenRenderDocDLLPathPopup = true;
 					std::string renderDocDLLPath;
 					ReadRenderDocSettingsFileFromDisk(renderDocDLLPath);
-					strncpy(renderDocDLLBuf, renderDocDLLPath.c_str(), buffSize);
+					strncpy(renderDocDLLBuf, renderDocDLLPath.c_str(), buffSize - 1);
+					renderDocDLLBuf[buffSize - 1] = '\0';
 				}
 #endif
 
@@ -1585,7 +1587,8 @@ namespace flex
 					if (ImGui::Selectable(str.c_str(), i == (u32)m_SelectedCmdLineAutoCompleteIndex))
 					{
 						m_SelectedCmdLineAutoCompleteIndex = (i32)i;
-						strncpy(m_CmdLineStrBuf, m_CmdAutoCompletions[i].c_str(), m_CmdAutoCompletions[i].size());
+						strncpy(m_CmdLineStrBuf, m_CmdAutoCompletions[i].c_str(), MAX_CHARS_CMD_LINE_STR - 1);
+						m_CmdLineStrBuf[MAX_CHARS_CMD_LINE_STR - 1] = '\0';
 						bFocusTextBox = true;
 					}
 				}
@@ -1974,7 +1977,8 @@ namespace flex
 		else if (data->EventFlag == ImGuiInputTextFlags_DeleteCallback)
 		{
 			char cmdLine[128];
-			strncpy(cmdLine, m_CmdLineStrBuf, ARRAY_LENGTH(cmdLine));
+			strncpy(cmdLine, m_CmdLineStrBuf, ARRAY_LENGTH(cmdLine) - 1);
+			cmdLine[ARRAY_LENGTH(cmdLine) - 1] = '\0';
 
 			// Delete char
 			if (strlen(m_CmdLineStrBuf) == 1)

@@ -102,7 +102,7 @@ namespace flex
 		void OnRigidbodyTransformChanged(const glm::vec3& position, const glm::quat& rotation);
 
 		// Only valid when bDirty is false
-		glm::mat4 cachedWorldTransform;
+		glm::mat4 cachedWorldTransform = glm::mat4(1.0f);
 
 		glm::quat localRotation;
 		glm::vec3 localPosition;
