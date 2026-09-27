@@ -44,8 +44,8 @@
 			],
 			"sound effect sids" : 
 			[
-				15097858619646670995,
-				11660463684859516375
+				18446744073709551615,
+				18446744073709551615
 			]
 		},
 		"children" : 
@@ -124,9 +124,9 @@
 				},
 				"spot light info" : 
 				{
-					"colour" : "0.96,0.97,0.59",
+					"angle" : 0.750,
 					"brightness" : 500.000,
-					"angle" : 0.750
+					"colour" : "0.96,0.97,0.59"
 				}
 			},
 			{
@@ -139,9 +139,9 @@
 				},
 				"spot light info" : 
 				{
-					"colour" : "0.96,0.97,0.59",
+					"angle" : 0.750,
 					"brightness" : 500.000,
-					"angle" : 0.750
+					"colour" : "0.96,0.97,0.59"
 				}
 			},
 			{
@@ -156,10 +156,10 @@
 				"visible" : false,
 				"spot light info" : 
 				{
-					"colour" : "0.91,0.07,0.07",
+					"angle" : 0.245,
 					"brightness" : 80.000,
-					"enabled" : 0,
-					"angle" : 0.245
+					"colour" : "0.91,0.07,0.07",
+					"enabled" : 0
 				}
 			},
 			{
@@ -174,10 +174,10 @@
 				"visible" : false,
 				"spot light info" : 
 				{
-					"colour" : "0.91,0.07,0.07",
+					"angle" : 0.245,
 					"brightness" : 80.000,
-					"enabled" : 0,
-					"angle" : 0.245
+					"colour" : "0.91,0.07,0.07",
+					"enabled" : 0
 				}
 			}
 		]
