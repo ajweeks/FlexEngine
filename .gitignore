@@ -143,3 +143,6 @@ Desktop.ini
 
 # Mac crap
 .DS_Store
+
+**.pyc
+scripts/genie
