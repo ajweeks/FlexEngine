@@ -14,6 +14,7 @@
 #include "Scene/GameObject.hpp"
 #include "StringBuilder.hpp"
 #include "Systems/TrackManager.hpp"
+#include "Time.hpp"
 
 namespace flex
 {
@@ -183,35 +184,61 @@ namespace flex
 
 	void SceneManager::SaveAllScenes()
 	{
-		PROFILE_AUTO("SaveAllScenes");
-
-		if (m_CurrentSceneIndex == InvalidID)
+		if (m_CurrentSceneIndex == InvalidID || IsSavingAllScenes())
 		{
 			return;
 		}
 
-		const u32 originalSceneIndex = m_CurrentSceneIndex;
+		m_SaveAllScenesStartTime = Time::CurrentMilliseconds();
+		m_SaveAllScenesOriginalIndex = m_CurrentSceneIndex;
+		m_SaveAllScenesNextIndex = 0;
 
 		// Save current scene first so unsaved edits aren't lost when switching away
-		m_Scenes[originalSceneIndex]->SerializeToFile(false);
+		CurrentScene()->SerializeToFile(true);
+	}
 
-		// Unloaded scenes have no objects, so each must be loaded before being serialized
-		for (u32 i = 0; i < (u32)m_Scenes.size(); ++i)
+	void SceneManager::UpdateSaveAllScenes()
+	{
+		if (!IsSavingAllScenes())
 		{
-			if (i == originalSceneIndex)
-			{
-				continue;
-			}
-
-			if (SetCurrentScene(i))
-			{
-				m_Scenes[i]->SerializeToFile(false);
-			}
+			return;
 		}
+
+		PROFILE_AUTO("UpdateSaveAllScenes");
+
+		if (m_SaveAllScenesNextIndex == m_SaveAllScenesOriginalIndex)
+		{
+			++m_SaveAllScenesNextIndex;
+		}
+
+		if (m_SaveAllScenesNextIndex < (u32)m_Scenes.size())
+		{
+			// Unloaded scenes have no objects, so each must be loaded before being serialized.
+			// Serialize immediately after loading (before any simulation) so dynamic objects don't drift,
+			// the scene then gets rendered for one frame before moving on to the next
+			const u32 sceneIndex = m_SaveAllScenesNextIndex++;
+			if (SetCurrentScene(sceneIndex))
+			{
+				m_Scenes[sceneIndex]->SerializeToFile(true);
+			}
+			return;
+		}
+
+		const u32 originalSceneIndex = m_SaveAllScenesOriginalIndex;
+		m_SaveAllScenesNextIndex = InvalidID;
+		m_SaveAllScenesOriginalIndex = InvalidID;
 
 		SetCurrentScene(originalSceneIndex);
 
-		g_Renderer->AddEditorString("Saved all scenes");
+		const ms elapsed = Time::CurrentMilliseconds() - m_SaveAllScenesStartTime;
+		std::string message = "Saved " + std::to_string(m_Scenes.size()) + " scenes in " + FloatToString(elapsed / 1000.0f, 2) + "s";
+		Print("%s\n", message.c_str());
+		g_Renderer->AddEditorString(message);
+	}
+
+	bool SceneManager::IsSavingAllScenes() const
+	{
+		return m_SaveAllScenesNextIndex != InvalidID;
 	}
 
 	void SceneManager::CreateNewScene(const std::string& name, bool bSwitchImmediately)

@@ -24,8 +24,11 @@ namespace flex
 		void SetNextSceneActive();
 		void SetPreviousSceneActive();
 		void ReloadCurrentScene();
-		// Loads & serializes every scene, then returns to the current one
+		// Saves every scene over its default file (like Ctrl+S), loading & rendering one scene per frame, then returns to the current one
 		void SaveAllScenes();
+		// Advances an in-progress SaveAllScenes by one scene, to be called once per frame
+		void UpdateSaveAllScenes();
+		bool IsSavingAllScenes() const;
 
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 		void DeleteScene(BaseScene* scene);
@@ -63,6 +66,11 @@ namespace flex
 
 		u32 m_CurrentSceneIndex = InvalidID;
 		std::vector<BaseScene*> m_Scenes;
+
+		// SaveAllScenes state, InvalidID when not saving
+		u32 m_SaveAllScenesNextIndex = InvalidID;
+		u32 m_SaveAllScenesOriginalIndex = InvalidID;
+		ms m_SaveAllScenesStartTime = 0;
 
 		std::string m_DefaultDirStr;
 

@@ -771,6 +771,8 @@ namespace flex
 			{
 				PROFILE_AUTO("Update");
 
+				g_SceneManager->UpdateSaveAllScenes();
+
 				UPDATE_TWEAKABLES();
 
 				g_ConfigFileManager->Update();

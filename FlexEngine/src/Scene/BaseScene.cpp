@@ -150,6 +150,14 @@ namespace flex
 
 	void BaseScene::Destroy()
 	{
+		// Flush pending adds/removes so queued objects (e.g. Player's mesh children, whose render objects
+		// already exist) join the hierarchy and get destroyed below, rather than leaking when no frame
+		// has run since they were queued
+		if (m_bInitialized)
+		{
+			LateUpdate();
+		}
+
 		m_bLoaded = false;
 		m_bInitialized = false;
 
