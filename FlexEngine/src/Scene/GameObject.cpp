@@ -12598,11 +12598,11 @@ namespace flex
 
 		std::vector<JSONObject> pointsArr(points.size());
 		{
+			// Points are simulated & parsed in world space
 			u32 i = 0;
-			glm::vec3 parentPos = m_Transform.GetWorldPosition();
 			for (const Point* point : points)
 			{
-				pointsArr[i].fields.emplace_back("position", JSONValue(point->pos - parentPos));
+				pointsArr[i].fields.emplace_back("position", JSONValue(point->pos));
 				pointsArr[i].fields.emplace_back("inverse mass", JSONValue(point->invMass));
 
 				i++;
@@ -13287,27 +13287,31 @@ namespace flex
 
 	void Vehicle::SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData)
 	{
-		FLEX_UNUSED(bSerializePrefabData);
-
 		JSONObject vehicleObj = {};
 
-		std::vector<JSONField> tireIDs;
-		tireIDs.reserve(m_TireCount);
-		for (GameObjectID& TireID : m_TireIDs)
+		// Prefab instances don't serialize their children (they're recreated with new IDs on load),
+		// and the IDs get fixed up from the prefab template (see FixupPrefabTemplateIDs)
+		bool bSerializeChildIDs = !m_SourcePrefabID.IsValid() || bSerializePrefabData;
+		if (bSerializeChildIDs)
 		{
-			tireIDs.emplace_back("", JSONValue(TireID.ToString()));
+			std::vector<JSONField> tireIDs;
+			tireIDs.reserve(m_TireCount);
+			for (GameObjectID& TireID : m_TireIDs)
+			{
+				tireIDs.emplace_back("", JSONValue(TireID.ToString()));
+			}
+
+			vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
+
+			std::vector<JSONField> brakeLightIDs;
+			brakeLightIDs.reserve(2);
+			for (GameObjectID& BrakeLightID : m_BrakeLightIDs)
+			{
+				brakeLightIDs.emplace_back("", JSONValue(BrakeLightID.ToString()));
+			}
+
+			vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
 		}
-
-		vehicleObj.fields.emplace_back("tire ids", JSONValue(tireIDs));
-
-		std::vector<JSONField> brakeLightIDs;
-		brakeLightIDs.reserve(2);
-		for (GameObjectID& BrakeLightID : m_BrakeLightIDs)
-		{
-			brakeLightIDs.emplace_back("", JSONValue(BrakeLightID.ToString()));
-		}
-
-		vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
 
 		std::vector<JSONField> soundEffectSIDs;
 		soundEffectSIDs.reserve(m_SoundEffectSIDs.size());

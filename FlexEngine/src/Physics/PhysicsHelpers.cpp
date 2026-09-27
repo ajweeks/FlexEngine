@@ -170,7 +170,7 @@ namespace flex
 		{
 			btVector3 btHalfExtents = static_cast<btCylinderShape*>(collisionShape)->getHalfExtentsWithMargin();
 			glm::vec3 halfExtents = ToVec3(btHalfExtents);
-			halfExtents /= scaleWS.x;
+			halfExtents /= scaleWS;
 			outColliderObj.fields.emplace_back("half extents", JSONValue(halfExtents, 3));
 		} return true;
 		default:
