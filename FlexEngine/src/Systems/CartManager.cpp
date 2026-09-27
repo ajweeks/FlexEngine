@@ -369,6 +369,26 @@ namespace flex
 		return m_Carts[cartID];
 	}
 
+	void CartManager::OnTrackRemoved(TrackID removedTrackID)
+	{
+		for (BaseCart* cart : m_Carts)
+		{
+			if (cart == nullptr || cart->currentTrackID == InvalidTrackID)
+			{
+				continue;
+			}
+
+			if (cart->currentTrackID == removedTrackID)
+			{
+				cart->OnTrackDismount();
+			}
+			else if (cart->currentTrackID > removedTrackID)
+			{
+				--cart->currentTrackID;
+			}
+		}
+	}
+
 	void CartManager::DrawImGui()
 	{
 		if (ImGui::TreeNode("Carts"))

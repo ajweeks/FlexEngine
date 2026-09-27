@@ -4,6 +4,8 @@
 #include "JSONParser.hpp"
 #include "Pair.hpp"
 #include "PoolAllocator.hpp"
+#include "Systems/TrackManager.hpp"
+#include "Track/BezierCurve3D.hpp"
 
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
@@ -2377,6 +2379,154 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(TrackThroughNodesPassesThroughNodes)
+		{
+			std::vector<glm::vec3> nodes = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(20.0f, 2.0f, 10.0f) };
+			BezierCurveList track = TrackManager::CreateTrackThroughNodes(nodes, VEC3_ZERO, VEC3_ZERO);
+
+			EXPECT((u32)track.curves.size(), 2u);
+			EXPECT(track.curves[0].points[0], nodes[0]);
+			EXPECT(track.curves[0].points[3], nodes[1]);
+			EXPECT(track.curves[1].points[0], nodes[1]);
+			EXPECT(track.curves[1].points[3], nodes[2]);
+			// Handles either side of the interior node must be mirrored for the track to be smooth
+			glm::vec3 inHandle = track.curves[0].points[3] - track.curves[0].points[2];
+			glm::vec3 outHandle = track.curves[1].points[1] - track.curves[1].points[0];
+			EXPECT(NearlyEquals(inHandle, outHandle, 0.0001f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(TrackThroughNodesAlignsWithForcedDir)
+		{
+			std::vector<glm::vec3> nodes = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.0f, 0.0f, 10.0f) };
+			// Existing track runs along -X, the new track should leave along +X since that's closer to the direction it's heading
+			BezierCurveList track = TrackManager::CreateTrackThroughNodes(nodes, glm::vec3(-1.0f, 0.0f, 0.0f), VEC3_ZERO);
+
+			EXPECT((u32)track.curves.size(), 1u);
+			glm::vec3 startHandleDir = glm::normalize(track.curves[0].points[1] - track.curves[0].points[0]);
+			EXPECT(NearlyEquals(startHandleDir, glm::vec3(1.0f, 0.0f, 0.0f), 0.0001f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(LoopedTracksLeadInJoinsLoop)
+		{
+			std::vector<glm::vec3> nodes = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(20.0f, 0.0f, 5.0f), glm::vec3(20.0f, 0.0f, 15.0f), glm::vec3(10.0f, 0.0f, 10.0f) };
+			std::vector<BezierCurveList> tracks;
+			TrackManager::CreateLoopedTracks(nodes, VEC3_ZERO, 1, tracks);
+
+			// Lead-in, then the loop split in two
+			EXPECT((u32)tracks.size(), 3u);
+			EXPECT((u32)tracks[0].curves.size(), 1u);
+			EXPECT((u32)(tracks[1].curves.size() + tracks[2].curves.size()), 4u);
+			EXPECT(tracks[0].curves.front().points[0], nodes[0]);
+			EXPECT(tracks[0].curves.back().points[3], nodes[1]);
+			EXPECT(tracks[1].curves.front().points[0], nodes[1]);
+			EXPECT(tracks[1].curves.back().points[3], tracks[2].curves.front().points[0]);
+			EXPECT(tracks[2].curves.back().points[3], nodes[1]);
+			// Loop is smooth where it closes
+			glm::vec3 inHandle = tracks[2].curves.back().points[3] - tracks[2].curves.back().points[2];
+			glm::vec3 outHandle = tracks[1].curves.front().points[1] - tracks[1].curves.front().points[0];
+			EXPECT(NearlyEquals(inHandle, outHandle, 0.0001f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(LoopedTracksClosedLoop)
+		{
+			std::vector<glm::vec3> nodes = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(5.0f, 0.0f, 10.0f) };
+			std::vector<BezierCurveList> tracks;
+			TrackManager::CreateLoopedTracks(nodes, VEC3_ZERO, 0, tracks);
+
+			EXPECT((u32)tracks.size(), 2u);
+			EXPECT((u32)(tracks[0].curves.size() + tracks[1].curves.size()), 3u);
+			EXPECT(tracks[0].curves.front().points[0], nodes[0]);
+			EXPECT(tracks[1].curves.back().points[3], nodes[0]);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(SmoothTrackMirrorsHandles)
+		{
+			TrackManager trackManager;
+			// Deliberately kinked handles at the interior node
+			BezierCurveList kinked(std::vector<BezierCurve3D>{
+				BezierCurve3D(glm::vec3(0.0f), glm::vec3(0.0f, 0.0f, 5.0f), glm::vec3(10.0f, 0.0f, 5.0f), glm::vec3(10.0f, 0.0f, 0.0f)),
+				BezierCurve3D(glm::vec3(10.0f, 0.0f, 0.0f), glm::vec3(10.0f, 0.0f, 5.0f), glm::vec3(20.0f, 0.0f, 5.0f), glm::vec3(20.0f, 0.0f, 0.0f)) });
+			TrackID trackID = trackManager.AddTrack(kinked);
+			trackManager.SmoothTrack(trackID, VEC3_ZERO, VEC3_ZERO);
+
+			const BezierCurveList* track = trackManager.GetTrack(trackID);
+			EXPECT(track->curves[0].points[3], glm::vec3(10.0f, 0.0f, 0.0f));
+			glm::vec3 inHandle = track->curves[0].points[3] - track->curves[0].points[2];
+			glm::vec3 outHandle = track->curves[1].points[1] - track->curves[1].points[0];
+			EXPECT(NearlyEquals(inHandle, outHandle, 0.0001f), true);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(RemoveInteriorNodeKeepsEnds)
+		{
+			TrackManager trackManager;
+			std::vector<glm::vec3> nodes = { glm::vec3(0.0f), glm::vec3(10.0f, 0.0f, 3.0f), glm::vec3(20.0f, 0.0f, 0.0f), glm::vec3(30.0f, 0.0f, 5.0f) };
+			TrackID trackID = trackManager.AddTrack(TrackManager::CreateTrackThroughNodes(nodes, VEC3_ZERO, VEC3_ZERO));
+
+			bool bTrackRemains = trackManager.RemoveNode({ trackID, 1, 0 });
+			EXPECT(bTrackRemains, true);
+
+			const BezierCurveList* track = trackManager.GetTrack(trackID);
+			EXPECT((u32)track->curves.size(), 2u);
+			EXPECT(track->curves[0].points[0], nodes[0]);
+			EXPECT(track->curves[0].points[3], nodes[2]);
+			EXPECT(track->curves[1].points[3], nodes[3]);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(JunctionExitSteering)
+		{
+			const glm::vec3 travelDir = VEC3_FORWARD;
+			std::vector<TrackManager::JunctionExit> exits(3);
+			exits[0].dir = glm::normalize(glm::vec3(-1.0f, 0.0f, 1.0f)); // Left of +Z is -X
+			exits[1].dir = VEC3_FORWARD;
+			exits[2].dir = glm::normalize(glm::vec3(1.0f, 0.0f, 1.0f));
+
+			EXPECT((u32)TrackManager::ChooseJunctionExit(exits, travelDir, 0.0f), 1u);
+			EXPECT((u32)TrackManager::ChooseJunctionExit(exits, travelDir, -1.0f), 0u);
+			EXPECT((u32)TrackManager::ChooseJunctionExit(exits, travelDir, 1.0f), 2u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(JunctionExitsSeparateParallelBranch)
+		{
+			TrackManager trackManager;
+			std::vector<glm::vec3> mainNodes = { glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(0.0f, 0.0f, 20.0f) };
+			trackManager.AddTrack(TrackManager::CreateTrackThroughNodes(mainNodes, VEC3_ZERO, VEC3_ZERO));
+			// Branch off the middle node, starting parallel to the main track then curving right (+X)
+			std::vector<glm::vec3> branchNodes = { glm::vec3(0.0f, 0.0f, 10.0f), glm::vec3(8.0f, 0.0f, 20.0f) };
+			trackManager.AddTrack(TrackManager::CreateTrackThroughNodes(branchNodes, VEC3_FORWARD, VEC3_ZERO));
+			trackManager.FindJunctions();
+
+			EXPECT((u32)trackManager.junctions.size(), 1u);
+			std::vector<TrackManager::JunctionExit> exits;
+			trackManager.GetJunctionExits(trackManager.junctions[0], VEC3_FORWARD, exits);
+			EXPECT((u32)exits.size(), 2u);
+
+			i32 rightExit = TrackManager::ChooseJunctionExit(exits, VEC3_FORWARD, 1.0f);
+			i32 leftExit = TrackManager::ChooseJunctionExit(exits, VEC3_FORWARD, -1.0f);
+			i32 straightExit = TrackManager::ChooseJunctionExit(exits, VEC3_FORWARD, 0.0f);
+			EXPECT((u32)exits[rightExit].trackID, 1u);
+			EXPECT((u32)exits[leftExit].trackID, 0u);
+			EXPECT((u32)exits[straightExit].trackID, 0u);
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(BezierCurveFromStringKeepsFractions)
+		{
+			BezierCurve3D curve(glm::vec3(1.5f, 0.25f, -2.75f), glm::vec3(3.125f, 0.0f, 1.0f), glm::vec3(-4.5f, 1.0f, 7.75f), glm::vec3(10.0f, -0.5f, 0.125f));
+			BezierCurve3D parsed = BezierCurve3D::FromString(curve.ToString());
+			for (i32 i = 0; i < 4; ++i)
+			{
+				EXPECT(parsed.points[i], curve.points[i]);
+			}
+		}
+		UNIT_TEST_END;
+
 	public:
 		static i32 Run()
 		{
@@ -2430,6 +2580,10 @@ namespace flex
 				TestContainsVector0, TestContainsVector1, TestContainsArray0, TestContainsMap0, TestContainsSet0,
 
 				TestReorderItemInList0, TestReorderItemInList1,
+
+				// Track tests
+				TrackThroughNodesPassesThroughNodes, TrackThroughNodesAlignsWithForcedDir, BezierCurveFromStringKeepsFractions,
+				LoopedTracksLeadInJoinsLoop, LoopedTracksClosedLoop, SmoothTrackMirrorsHandles, RemoveInteriorNodeKeepsEnds, JunctionExitSteering, JunctionExitsSeparateParallelBranch,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));

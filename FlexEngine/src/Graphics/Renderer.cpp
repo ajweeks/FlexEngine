@@ -28,6 +28,7 @@ IGNORE_WARNINGS_POP
 #include "JSONParser.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
+#include "Player.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -2884,6 +2885,13 @@ namespace flex
 		{
 			DrawStringSS(m_NotificationMessages[i], offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
 			topRightOffset += lineHeight;
+		}
+
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		Player* player = currentScene != nullptr ? currentScene->GetPlayer(0) : nullptr;
+		if (player != nullptr)
+		{
+			player->DrawTrackBuildingHUD();
 		}
 
 		if (previewedFont != InvalidStringID)

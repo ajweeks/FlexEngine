@@ -80,6 +80,8 @@ namespace flex
 
 		private:
 			void UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize);
+			// Recreates the buffer with the given size, preserving existing contents of host visible buffers
+			VkResult Resize(VkDeviceSize newSize);
 
 		};
 	} // namespace vk

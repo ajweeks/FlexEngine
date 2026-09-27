@@ -1172,8 +1172,8 @@ namespace flex
 
 		i32 numPoints = 12;
 		i32 numRadialPoints = 10;
-		real stiffness = 0.8f;
-		real pointInvMass = 1.0f / 15.0f;
+		real stiffness = 0.95f;
+		real pointInvMass = 1.0f / 5.0f;
 		real damping = 0.9f;
 
 		SoftBody* m_SoftBody = nullptr;

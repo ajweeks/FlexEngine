@@ -21,6 +21,11 @@ namespace flex
 
 		void Initialize(Player* player);
 		void Update();
+
+		// Branch the rider will take at the next fork: -1 = left, 0 = straightest, 1 = right
+		real GetForkSteer() const { return m_ForkSteer; }
+		void ResetForkSteer() { m_ForkSteer = 0.0f; }
+
 		void FixedUpdate();
 		void Destroy();
 
@@ -31,7 +36,7 @@ namespace flex
 		void UpdateMode();
 
 	private:
-		void SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack);
+		void SnapPosToTrack(real pDistAlongTrack, bool bMovingBackwards, real travelSign);
 		void UpdateLook();
 
 		void LoadConfigFile();
@@ -75,16 +80,13 @@ namespace flex
 		// TODO: Use again
 		//real m_MaxSlowDownRotationSpeedVel = 10.0f;
 
-		sec m_SecondsAttemptingToTurn = 0.0f;
-		// How large the joystick x value must be to enter a turning state
-		const real m_TurnStartStickXThreshold = 0.7f;
-		const sec m_AttemptToTurnTimeThreshold = 0.2f;
-		// How long after completing a turn around the player can start accumulating turn time again
-		const sec m_TurnAroundCooldown = 0.5f;
-
-		TurningDir m_DirTurning = TurningDir::NONE;
+		// Branch to take at the next fork while riding: -1 = left, 0 = straightest, 1 = right
+		real m_ForkSteer = 0.0f;
 
 		bool m_bAttemptCompleteTrack = false;
+		bool m_bAttemptUndoTrackNode = false;
+		bool m_bAttemptDeleteTrack = false;
+		bool m_bAttemptTrackBuildingPrimary = false;
 		bool m_bAttemptPlaceItemFromInventory = false;
 		bool m_bCancelPlaceItemFromInventory = false;
 		bool m_bAttemptInteractLeftHand = false;

@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "track sleeper",
+		"shader" : "pbr",
+		"const albedo" : "0.200,0.150,0.100",
+		"const roughness" : 0.900000,
+		"dynamic" : true
+	}
+}

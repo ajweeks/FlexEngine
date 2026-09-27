@@ -107,59 +107,34 @@ namespace flex
 
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
 
+			// Allocations aren't stored in order (Free & Realloc shuffle them), so sort before searching for a gap
+			std::sort(allocations.begin(), allocations.end(), [](const Allocation& a, const Allocation& b) { return a.offset < b.offset; });
+
+			// First fit
 			VkDeviceSize offset = 0;
-			u32 i = 0;
-			while (i < (u32)allocations.size())
+			for (const Allocation& allocation : allocations)
 			{
-				VkDeviceSize allocStart = allocations[i].offset;
-				if (allocStart >= offset && allocStart < (offset + size))
+				if (allocation.offset >= offset + size)
 				{
-					// Overlaps current guess
-					offset = allocStart + allocations[i].size;
-					if (offset + size > m_Size)
-					{
-						VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
-						VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
-						if (result == VK_SUCCESS)
-						{
-							// TODO: Copy previous contents in to new buffer?
-							allocations.push_back({ offset, size });
-							return offset;
-						}
-						else
-						{
-							VK_CHECK_RESULT(result);
-							return errorCode;
-						}
-					}
-					i = 0;
-					continue;
+					break;
 				}
-
-				++i;
+				offset = glm::max(offset, allocation.offset + allocation.size);
 			}
 
-			if (offset + size < m_Size)
+			if (offset + size > m_Size)
 			{
-				allocations.push_back({ offset, size });
-				return offset;
-			}
-			else
-			{
-				VkDeviceSize newSize = offset + size; // TODO: Grow by larger amount?
-				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
-				if (result == VK_SUCCESS)
-				{
-					// TODO: Copy previous contents in to new buffer?
-					allocations.push_back({ offset, size });
-					return offset;
-				}
-				else
+				// Grow by more than required so consecutive allocations don't each resize (which stalls the GPU)
+				VkDeviceSize newSize = glm::max(offset + size, m_Size + m_Size / 2);
+				VkResult result = Resize(newSize);
+				if (result != VK_SUCCESS)
 				{
 					VK_CHECK_RESULT(result);
 					return errorCode;
 				}
 			}
+
+			allocations.push_back({ offset, size });
+			return offset;
 		}
 
 		VkDeviceSize VulkanBuffer::Realloc(VkDeviceSize offset, VkDeviceSize size)
@@ -233,10 +208,41 @@ namespace flex
 			if (unused >= minUnused)
 			{
 				VkDeviceSize newSize = glm::max(usedSize, (VkDeviceSize)1); // Size must be greater than zero
-				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.c_str());
+				VkResult result = Resize(newSize);
 
 				VK_CHECK_RESULT(result);
 			}
+		}
+
+		VkResult VulkanBuffer::Resize(VkDeviceSize newSize)
+		{
+			// Other allocations' data must survive the resize since their owners may not upload it again (e.g. static track meshes)
+			std::vector<u8> contents;
+			const bool bHostVisible = (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
+			if (bHostVisible && m_Buffer != VK_NULL_HANDLE && m_Size > 0)
+			{
+				VkDeviceSize copySize = glm::min(m_Size, newSize);
+				contents.resize((size_t)copySize);
+				VK_CHECK_RESULT(Map(0, copySize));
+				memcpy(contents.data(), m_Mapped, (size_t)copySize);
+				Unmap();
+			}
+
+			if (m_Buffer != VK_NULL_HANDLE)
+			{
+				// Old buffer is destroyed in Create, ensure no in-flight frames still reference it
+				vkDeviceWaitIdle(m_Device->m_LogicalDevice);
+			}
+
+			VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.empty() ? nullptr : m_DEBUG_Name.c_str());
+			if (result == VK_SUCCESS && !contents.empty())
+			{
+				VK_CHECK_RESULT(Map(0, (VkDeviceSize)contents.size()));
+				memcpy(m_Mapped, contents.data(), contents.size());
+				Unmap();
+			}
+
+			return result;
 		}
 
 		void VulkanBuffer::UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize)

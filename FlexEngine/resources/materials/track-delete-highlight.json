@@ -1,0 +1,12 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "track delete highlight",
+		"shader" : "pbr",
+		"const albedo" : "0.173,0.025,0.025",
+		"const emissive" : "0.130,0.005,0.005",
+		"const roughness" : 0.800000,
+		"dynamic" : true
+	}
+}

@@ -113,12 +113,13 @@ namespace flex
 		if (parts.size() != 12)
 		{
 			PrintWarn("Invalidly formatted BezierCurve string! %s\n", str.c_str());
+			return result;
 		}
 
-		result.points[0] = glm::vec3(std::atoi(parts[0].c_str()), std::atoi(parts[1].c_str()), std::atoi(parts[2].c_str()));
-		result.points[1] = glm::vec3(std::atoi(parts[3].c_str()), std::atoi(parts[4].c_str()), std::atoi(parts[5].c_str()));
-		result.points[2] = glm::vec3(std::atoi(parts[6].c_str()), std::atoi(parts[7].c_str()), std::atoi(parts[8].c_str()));
-		result.points[3] = glm::vec3(std::atoi(parts[9].c_str()), std::atoi(parts[10].c_str()), std::atoi(parts[11].c_str()));
+		for (i32 i = 0; i < 4; ++i)
+		{
+			result.points[i] = glm::vec3(ParseFloat(parts[i * 3]), ParseFloat(parts[i * 3 + 1]), ParseFloat(parts[i * 3 + 2]));
+		}
 
 		result.CalculateLength();
 

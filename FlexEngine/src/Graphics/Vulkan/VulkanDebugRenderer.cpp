@@ -209,6 +209,13 @@ namespace flex
 				{
 					m_Object->GetMesh()->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}
+
+				// An empty buffer can't be uploaded, so without hiding the object the last frame's lines would keep being drawn
+				const bool bVisible = (lineCount > 0);
+				if (m_Object != nullptr && m_Object->IsVisible() != bVisible)
+				{
+					m_Object->SetVisible(bVisible);
+				}
 			}
 		}
 

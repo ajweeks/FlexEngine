@@ -133,46 +133,42 @@ namespace flex
 
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
-				if (m_Player->IsPlacingTrack())
+				if (m_Player->IsPlacingTrack() || m_Player->IsEditingTrack())
 				{
-					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
-					{
-						m_Player->PlaceNewTrackNode();
+					// Update the reticle before acting on it
+					m_Player->UpdateTrackBuilding();
 
-						m_bAttemptInteractLeftHand = false;
-						m_bAttemptInteractRightHand = false;
+					// Only LMB & right hand interact (E) act as the primary track building action, other interactions are ignored
+					if (m_bAttemptTrackBuildingPrimary || m_bAttemptInteractRightHand)
+					{
+						m_Player->OnTrackBuildingPrimaryAction();
+					}
+					m_bAttemptTrackBuildingPrimary = false;
+					m_bAttemptInteractLeftHand = false;
+					m_bAttemptInteractRightHand = false;
+					m_bAttemptPickup = false;
+
+					if (m_bAttemptUndoTrackNode)
+					{
+						m_Player->OnTrackBuildingUndoAction();
+						m_bAttemptUndoTrackNode = false;
+					}
+
+					if (m_bAttemptDeleteTrack)
+					{
+						m_Player->OnTrackBuildingDeleteTrackAction();
+						m_bAttemptDeleteTrack = false;
 					}
 
 					if (m_bAttemptCompleteTrack)
 					{
-						m_Player->AttemptCompleteTrack();
-
+						if (m_Player->IsPlacingTrack())
+						{
+							m_Player->AttemptCompleteTrack();
+						}
 						m_bAttemptCompleteTrack = false;
 					}
 				}
-
-				if (m_Player->IsEditingTrack())
-				{
-					if (m_bAttemptInteractLeftHand || m_bAttemptInteractRightHand)
-					{
-						// TODO: Check TrackEditingID instead?
-						if (m_Player->GetTrackEditingCurveIdx() == -1)
-						{
-							m_Player->SelectNearestTrackCurve();
-						}
-						else
-						{
-							m_Player->DeselectTrackCurve();
-						}
-
-						m_bAttemptInteractLeftHand = false;
-						m_bAttemptInteractRightHand = false;
-					}
-
-					m_Player->UpdateTrackEditing();
-				}
-
-				m_Player->DrawTrackDebug();
 
 				if (m_bAttemptPickup)
 				{
@@ -303,7 +299,7 @@ namespace flex
 
 						m_Player->AttachToTrack(trackInRangeIndex, distAlongTrack);
 
-						SnapPosToTrack(m_Player->m_DistAlongTrack, false);
+						SnapPosToTrack(m_Player->m_DistAlongTrack, false, m_Player->IsFacingDownTrack() ? -1.0f : 1.0f);
 					}
 				}
 				else
@@ -325,6 +321,9 @@ namespace flex
 		}
 
 		m_bAttemptCompleteTrack = false;
+		m_bAttemptUndoTrackNode = false;
+		m_bAttemptDeleteTrack = false;
+		m_bAttemptTrackBuildingPrimary = false;
 		m_bAttemptPlaceItemFromInventory = false;
 		m_bAttemptInteractLeftHand = false;
 		m_bAttemptInteractRightHand = false;
@@ -461,13 +460,16 @@ namespace flex
 					move = -move;
 				}
 
-				const bool bReversing = (move < 0.0f);
+				// Facing forward down the track means facing towards decreasing t
+				const real facingSign = m_Player->IsFacingDownTrack() ? -1.0f : 1.0f;
+				const bool bMovingBackwards = (moveFB < 0.0f);
+				const real travelSign = (move != 0.0f) ? glm::sign(move) : facingSign;
 
 				real targetDDist = move * m_Player->m_TrackMoveSpeed * g_FixedDeltaTime;
 				real pDist = m_Player->m_DistAlongTrack;
 				m_Player->m_DistAlongTrack = trackManager->AdvanceTAlongTrack(m_Player->m_TrackRidingID,
 					targetDDist, m_Player->m_DistAlongTrack);
-				SnapPosToTrack(pDist, bReversing);
+				SnapPosToTrack(pDist, bMovingBackwards, travelSign);
 
 				if (m_Player->IsFacingDownTrack() != bWasFacingDownTrack &&
 					m_Player->m_TrackRidingID == pTrackRidingID)
@@ -518,20 +520,23 @@ namespace flex
 	// Yaw is written straight through to the rigid body, which isn't simulated rotationally (see Player::PostInitialize)
 	void PlayerController::UpdateLook()
 	{
-		if (!m_Player->AbleToInteract() ||
-			m_Player->m_TrackRidingID != InvalidTrackID)
+		if (!m_Player->AbleToInteract())
 		{
 			m_MouseLookAccum = VEC2_ZERO;
 			m_PendingLook = VEC2_ZERO;
 			return;
 		}
 
+		const bool bRidingTrack = (m_Player->m_TrackRidingID != InvalidTrackID);
 		const real rotateHSpeed = (m_Mode == Mode::FIRST_PERSON ? m_RotateHSpeedFirstPerson : m_RotateHSpeedThirdPerson);
 
 		// Mouse deltas are distances, so they aren't scaled by the frame time (g_FixedDeltaTime is only kept to preserve existing sensitivities)
 		glm::vec2 lookInput(m_MouseLookAccum.x * m_MouseRotateHSpeed * rotateHSpeed * g_FixedDeltaTime, 0.0f);
-		// Stick input is a rate
-		lookInput.x += (-g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT)) * rotateHSpeed * g_DeltaTime;
+		// Stick input is a rate. While riding, horizontal look input picks which way to go at junctions instead
+		if (!bRidingTrack)
+		{
+			lookInput.x += (-g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT)) * rotateHSpeed * g_DeltaTime;
+		}
 		// Positive y looks down. In third person it tilts the overhead camera instead of the player
 		lookInput.y += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f) * m_RotateVSpeed * g_FixedDeltaTime;
 		lookInput.y += (-g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN)) * m_RotateVSpeed * g_DeltaTime;
@@ -545,8 +550,16 @@ namespace flex
 
 		if (look.x != 0.0f)
 		{
-			Transform* playerTransform = m_Player->GetTransform();
-			playerTransform->SetWorldRotation(glm::rotate(playerTransform->GetWorldRotation(), look.x, VEC3_UP));
+			if (bRidingTrack)
+			{
+				// The body follows the track, so look relative to it
+				m_Player->m_RidingLookYaw = glm::mod(m_Player->m_RidingLookYaw + look.x + PI, TWO_PI) - PI;
+			}
+			else
+			{
+				Transform* playerTransform = m_Player->GetTransform();
+				playerTransform->SetWorldRotation(glm::rotate(playerTransform->GetWorldRotation(), look.x, VEC3_UP));
+			}
 		}
 
 		if (look.y != 0.0f)
@@ -584,9 +597,6 @@ namespace flex
 		const std::string treeName = "Player Controller " + IntToString(m_PlayerIndex);
 		if (ImGui::TreeNode(treeName.c_str()))
 		{
-			ImGui::Text("Seconds attempting to turn: %.5f", m_SecondsAttemptingToTurn);
-			ImGui::Text("Turning dir: %s", m_DirTurning == TurningDir::LEFT ? "left" : m_DirTurning == TurningDir::RIGHT ? "right" : "none");
-
 			ConfigFile::Request request = m_ConfigFile.DrawImGuiObjects();
 			switch (request)
 			{
@@ -602,42 +612,54 @@ namespace flex
 		}
 	}
 
-	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bReversingDownTrack)
+	void PlayerController::SnapPosToTrack(real pDistAlongTrack, bool bMovingBackwards, real travelSign)
 	{
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 		TrackID newTrackID = m_Player->m_TrackRidingID;
 		real newDistAlongTrack = m_Player->m_DistAlongTrack;
+
+		// Pressing left/right picks a branch for the next fork, which sticks until a junction is passed so the key
+		// doesn't need to be held at the exact moment of crossing. Directions are relative to the player, who faces
+		// away from the direction of travel when moving backwards
+		real steerInput = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
+		if (steerInput > 0.5f)
+		{
+			m_ForkSteer = 1.0f;
+		}
+		else if (steerInput < -0.5f)
+		{
+			m_ForkSteer = -1.0f;
+		}
+
+		const real travelRelativeSteer = bMovingBackwards ? -m_ForkSteer : m_ForkSteer;
 		LookDirection desiredDir = LookDirection::CENTER;
-
-		const real moveLR = g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real lookLR = -g_InputManager->GetActionAxisValue(Action::LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::LOOK_RIGHT);
-
-		if (lookLR > 0.5f)
+		if (travelRelativeSteer > 0.0f)
 		{
 			desiredDir = LookDirection::RIGHT;
 		}
-		else if (lookLR < -0.5f)
+		else if (travelRelativeSteer < 0.0f)
 		{
 			desiredDir = LookDirection::LEFT;
 		}
 
-		trackManager->UpdatePreview(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
-			desiredDir, m_Player->GetTransform()->GetForward(), m_Player->IsFacingDownTrack(),
-			bReversingDownTrack);
+		trackManager->UpdatePreview(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack, desiredDir, travelSign, bMovingBackwards);
 
 		i32 newJunctionIndex = -1;
 		i32 newCurveIndex = -1;
 		TrackState newTrackState = TrackState::_NONE;
 		glm::vec3 newPos = trackManager->GetPointOnTrack(m_Player->m_TrackRidingID, m_Player->m_DistAlongTrack,
-			pDistAlongTrack, desiredDir, bReversingDownTrack, &newTrackID, &newDistAlongTrack,
+			pDistAlongTrack, desiredDir, bMovingBackwards, &newTrackID, &newDistAlongTrack,
 			&newJunctionIndex, &newCurveIndex, &newTrackState, false);
+
+		if (newJunctionIndex != -1)
+		{
+			// Passed through a junction, the choice has been used
+			m_ForkSteer = 0.0f;
+		}
 
 		bool bSwitchedTracks = (newTrackID != InvalidTrackID) && (newTrackID != m_Player->m_TrackRidingID);
 		if (bSwitchedTracks)
 		{
-			m_SecondsAttemptingToTurn = 0.0f;
-			m_DirTurning = TurningDir::NONE;
-
 			m_Player->m_TrackRidingID = newTrackID;
 			m_Player->m_DistAlongTrack = newDistAlongTrack;
 
@@ -648,31 +670,13 @@ namespace flex
 		}
 
 		newPos += glm::vec3(0.0f, m_Player->m_Height / 2.0f, 0.0f);
-		m_Player->GetTransform()->SetWorldPosition(newPos);
 
-
-		bool bTurningRight = moveLR > m_TurnStartStickXThreshold;
-		bool bTurningLeft = moveLR < -m_TurnStartStickXThreshold;
-		m_DirTurning = bTurningRight ? TurningDir::RIGHT : bTurningLeft ? TurningDir::LEFT : TurningDir::NONE;
-
-		if (m_DirTurning != TurningDir::NONE || m_SecondsAttemptingToTurn < 0.0f)
-		{
-			m_SecondsAttemptingToTurn += g_DeltaTime;
-		}
-		else
-		{
-			if (m_SecondsAttemptingToTurn > 0.0f)
-			{
-				m_SecondsAttemptingToTurn = 0.0f;
-			}
-		}
-
-		if (m_SecondsAttemptingToTurn > m_AttemptToTurnTimeThreshold)
-		{
-			m_SecondsAttemptingToTurn = -m_TurnAroundCooldown;
-			m_DirTurning = TurningDir::NONE;
-			m_Player->BeginTurnTransition();
-		}
+		// Moving along the track is continuous, so keep interpolating between fixed steps (resetting it every step made riding jitter).
+		// Large jumps (e.g. attaching to a track) are still treated as teleports
+		RigidBody* rigidBody = m_Player->GetRigidBody();
+		const glm::vec3 simPos = ToVec3(rigidBody->GetRigidBodyInternal()->getCenterOfMassPosition());
+		const real teleportDist = 2.0f;
+		rigidBody->SetWorldPosition(newPos, glm::distance2(simPos, newPos) > teleportDist * teleportDist);
 	}
 
 	void PlayerController::LoadConfigFile()
@@ -826,15 +830,45 @@ namespace flex
 
 		if (action == Action::COMPLETE_TRACK && actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
-			if (m_Player->m_TrackRidingID == InvalidTrackID)
+			if (m_Player->m_TrackRidingID == InvalidTrackID && m_Player->IsPlacingTrack())
 			{
 				m_bAttemptCompleteTrack = true;
 				return EventReply::CONSUMED;
 			}
 		}
 
+		if (action == Action::DELETE_TRACK && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID && m_Player->IsEditingTrack())
+			{
+				m_bAttemptDeleteTrack = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
+		if (action == Action::UNDO_TRACK_NODE && actionEvent == ActionEvent::ACTION_TRIGGER)
+		{
+			if (m_Player->m_TrackRidingID == InvalidTrackID && (m_Player->IsPlacingTrack() || m_Player->IsEditingTrack()))
+			{
+				m_bAttemptUndoTrackNode = true;
+				return EventReply::CONSUMED;
+			}
+		}
+
 		if (action == Action::PICKUP_ITEM)
 		{
+			if (actionEvent == ActionEvent::ACTION_TRIGGER &&
+				m_Player->m_TrackRidingID == InvalidTrackID &&
+				(m_Player->IsPlacingTrack() || m_Player->IsEditingTrack()))
+			{
+				// Pickup is also bound to a key, but only the mouse button should place track
+				if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT, true))
+				{
+					m_bAttemptTrackBuildingPrimary = true;
+				}
+				return EventReply::CONSUMED;
+			}
+
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
 			{
 				if (m_Player->m_bPossessed && m_Player->m_TrackRidingID == InvalidTrackID)
@@ -869,12 +903,6 @@ namespace flex
 			return EventReply::CONSUMED;
 		}
 
-		if (action == Action::TOGGLE_TABLET && actionEvent == ActionEvent::ACTION_TRIGGER)
-		{
-			m_Player->m_bTabletUp = !m_Player->m_bTabletUp;
-			return EventReply::CONSUMED;
-		}
-
 		return EventReply::UNCONSUMED;
 	}
 
@@ -883,8 +911,7 @@ namespace flex
 		if (m_Player != nullptr && !m_Player->IsAnyInventoryShowing() &&
 			g_Window->HasFocus() && !g_EngineInstance->IsSimulationPaused())
 		{
-			if (m_Player->AbleToInteract() &&
-				m_Player->m_TrackRidingID == InvalidTrackID)
+			if (m_Player->AbleToInteract())
 			{
 				m_MouseLookAccum += dMousePos * 0.01f;
 

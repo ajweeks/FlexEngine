@@ -79,11 +79,6 @@
 		"key code" : 58,
 		"gamepad button" : 9
 	},
-	"Toggle tablet" : 
-	{
-		"key code" : 34,
-		"gamepad button" : 0
-	},
 	"Enter track build mode" : 
 	{
 		"key code" : 41
@@ -96,6 +91,15 @@
 	{
 		"key code" : 43,
 		"gamepad axis" : 4
+	},
+	"Undo track node" : 
+	{
+		"key code" : 53
+	},
+	"Delete track" : 
+	{
+		"key code" : 55,
+		"mouse button" : 1
 	},
 	"Pickup Item" : 
 	{

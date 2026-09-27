@@ -6,6 +6,7 @@
 #include "Types.hpp" // For TrackState
 #include "Track/BezierCurve3D.hpp"
 #include "Track/BezierCurveList.hpp"
+#include "Systems/TrackManager.hpp" // For TrackPointRef
 
 namespace flex
 {
@@ -46,6 +47,7 @@ namespace flex
 		void SetPitch(real pitch);
 		void AddToPitch(real deltaPitch);
 		real GetPitch() const;
+		glm::quat GetLookYawRotation() const;
 
 		void Reset();
 
@@ -63,8 +65,6 @@ namespace flex
 
 		void ClampPitch();
 		void UpdateIsGrounded();
-
-		glm::vec3 GetTrackPlacementReticlePosWS(real snapThreshold = -1.0f, bool bSnapToHandles = false) const;
 
 		void AttachToTrack(TrackID trackID, real distAlongTrack);
 		void DetachFromTrack();
@@ -123,16 +123,19 @@ namespace flex
 		// Tracks
 		bool IsPlacingTrack() const { return m_TrackBuildingContext.m_bPlacingTrack; }
 		bool IsEditingTrack() const { return m_TrackBuildingContext.m_bEditingTrack; }
-		i32 GetTrackEditingCurveIdx() const { return m_TrackBuildingContext.m_TrackEditingCurveIdx; }
-		TrackID GetTrackEditingID() const { return m_TrackBuildingContext.m_TrackEditingID; }
-		bool PlaceNewTrackNode();
-		bool AttemptCompleteTrack();
-		void DrawTrackDebug() const;
-		void SelectNearestTrackCurve();
-		void DeselectTrackCurve();
-		void UpdateTrackEditing();
+		// Called every frame while placing or editing
+		void UpdateTrackBuilding();
+		// Places a node when placing, grabs/releases the hovered point when editing
+		void OnTrackBuildingPrimaryAction();
+		// Removes the last placed node when placing, deletes the hovered node when editing
+		void OnTrackBuildingUndoAction();
+		// Deletes the highlighted track when editing
+		void OnTrackBuildingDeleteTrackAction();
+		bool AttemptCompleteTrack(const glm::vec3& endDir = VEC3_ZERO);
 		void TogglePlacingTrack();
 		void ToggleEditingTrack();
+		void OnTrackRemoved(TrackID removedTrackID);
+		void DrawTrackBuildingHUD() const;
 
 		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
 
@@ -168,20 +171,45 @@ namespace flex
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
 
+		struct GrabbedTrackEndDirs
+		{
+			TrackID trackID = InvalidTrackID;
+			glm::vec3 startDir = VEC3_ZERO;
+			glm::vec3 endDir = VEC3_ZERO;
+		};
+
 		struct TrackBuildingContext
 		{
-			i32 m_CurveNodesPlaced = 0;
-			BezierCurveList m_TrackPlacing; // List of curves making up the track we're placing
-			BezierCurve3D m_CurvePlacing; // The specific curve being placed currently
 			bool m_bPlacingTrack = false; // Placing a new track
 			bool m_bEditingTrack = false; // Editing an existing track
-			TrackID m_TrackEditingID = InvalidTrackID;
-			i32 m_TrackEditingCurveIdx = -1;
-			i32 m_TrackEditingPointIdx = -1;
-			glm::vec3 m_TrackPlacementReticlePos; // Local offset
+
+			// Nodes of the track being placed, curve handles are generated to smoothly pass through them
+			std::vector<glm::vec3> m_PlacedNodes;
+			// Non-zero when the first node was snapped onto an existing track, so the new track lines up with it
+			glm::vec3 m_StartDir = VEC3_ZERO;
+
+			// Where the player is aiming, updated every frame
+			bool m_bReticleValid = false;
+			glm::vec3 m_ReticlePos = VEC3_ZERO;
+			// Point of an existing track the reticle is snapped to/hovering over
+			TrackPointRef m_HoveredPoint;
+			// Index into m_PlacedNodes the reticle is snapped to (placing here closes a loop)
+			i32 m_HoveredPlacedNodeIndex = -1;
+			// Track under the reticle in edit mode, which will be deleted by the delete action
+			TrackID m_HoveredTrackID = InvalidTrackID;
+
+			// Nodes being dragged in edit mode (several when dragging a junction)
+			std::vector<TrackPointRef> m_GrabbedPoints;
+			// Tracks being reshaped by the drag, and the directions their junction ends are held at
+			std::vector<GrabbedTrackEndDirs> m_GrabbedTrackEndDirs;
+
 			// Config vars
 			real m_SnapThreshold = 1.0f;
+			real m_MaxReach = 30.0f;
 		};
+
+		void UpdateTrackBuildingReticle();
+		void ClearTrackBuildingState();
 
 		static const glm::vec3 HEADLAMP_MOUNT_POS;
 
@@ -200,17 +228,13 @@ namespace flex
 		i32 m_Index = 0;
 
 		// TODO: Store IDs rather than raw pointer
-		GameObject* m_MapTablet = nullptr;
-		GameObject* m_MapTabletHolder = nullptr;
-		deg m_TabletOrbitAngleUp = 13.3f;
-		deg m_TabletOrbitAngleDown = -45.0f;
-		real m_TabletOrbitAngle = m_TabletOrbitAngleUp;
-		bool m_bTabletUp = false;
 
 		real m_MoveFriction = 12.0f;
 		real m_Height = 4.0f;
 
 		real m_Pitch = 0.0f;
+		// Yaw of the view relative to the body while riding a track
+		real m_RidingLookYaw = 0.0f;
 
 		TrackBuildingContext m_TrackBuildingContext;
 
@@ -238,7 +262,9 @@ namespace flex
 		i32 m_SelectedQuickAccessItemSlot = 0;
 
 		// The itemized item the player can interact using (based on selected quick access item slot)
-		ActiveItem m_ActiveItem;
+		// One proxy per prefab seen, only the active one is visible
+		std::vector<ActiveItem> m_ActiveItemCache;
+		i32 m_ActiveItemIndex = -1;
 
 		bool m_bPreviewPlaceItemFromInventory = false;
 

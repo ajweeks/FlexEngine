@@ -238,7 +238,7 @@ namespace flex
 		m_btRigidBody->setLinearFactor(axis);
 	}
 
-	void RigidBody::SetWorldPosition(const glm::vec3& worldPos)
+	void RigidBody::SetWorldPosition(const glm::vec3& worldPos, bool bTeleport /* = true */)
 	{
 		if (m_btRigidBody != nullptr)
 		{
@@ -250,7 +250,10 @@ namespace flex
 				m_btMotionState->setWorldTransform(transform);
 			}
 			m_btRigidBody->activate(false);
-			ResetInterpolation();
+			if (bTeleport)
+			{
+				ResetInterpolation();
+			}
 		}
 	}
 

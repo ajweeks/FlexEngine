@@ -47,7 +47,8 @@ namespace flex
 		void SetPositionalConstraint(const btVector3& axis);
 
 		// These teleport the body, so they also reset interpolation
-		void SetWorldPosition(const glm::vec3& worldPos);
+		// Teleports reset interpolation, otherwise the move is treated as continuous motion and rendering smoothly interpolates to it
+		void SetWorldPosition(const glm::vec3& worldPos, bool bTeleport = true);
 		void SetWorldRotation(const glm::quat& worldRot);
 		void SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot);
 

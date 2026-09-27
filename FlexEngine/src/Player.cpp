@@ -25,8 +25,10 @@ IGNORE_WARNINGS_POP
 #include "Cameras/VehicleCamera.hpp"
 #include "Editor.hpp"
 #include "FlexEngine.hpp"
+#include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
 #include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -38,7 +40,9 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
+#include "StringBuilder.hpp"
 #include "Systems/TrackManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
@@ -70,8 +74,6 @@ namespace flex
 		m_Index(index)
 	{
 		m_TrackBuildingContext = {};
-		m_TrackBuildingContext.m_TrackPlacementReticlePos = glm::vec3(0.0f, -1.95f, 3.5f);
-		m_TrackBuildingContext.m_SnapThreshold = 1.0f;
 	}
 
 	PropertyCollection* Player::BuildTypeUniquePropertyCollection()
@@ -119,38 +121,6 @@ namespace flex
 
 		m_Controller = new PlayerController();
 		m_Controller->Initialize(this);
-
-		// Map tablet
-		{
-			MaterialCreateInfo mapTabletMatCreateInfo = {};
-			mapTabletMatCreateInfo.name = "Map tablet material";
-			mapTabletMatCreateInfo.shaderName = "pbr";
-			mapTabletMatCreateInfo.constAlbedo = glm::vec4(0.34f, 0.38f, 0.39f, 1.0f);
-			mapTabletMatCreateInfo.constMetallic = 1.0f;
-			mapTabletMatCreateInfo.constRoughness = 0.24f;
-			mapTabletMatCreateInfo.bSerializable = false;
-			MaterialID mapTabletMatID = g_Renderer->InitializeMaterial(&mapTabletMatCreateInfo);
-
-			m_MapTabletHolder = new GameObject("Map tablet", BaseObjectSID);
-			m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, m_TabletOrbitAngle, 0.0f)));
-			AddChild(m_MapTabletHolder);
-
-			if (m_bTabletUp)
-			{
-				m_TabletOrbitAngle = m_TabletOrbitAngleUp;
-			}
-			else
-			{
-				m_TabletOrbitAngle = m_TabletOrbitAngleDown;
-			}
-
-			m_MapTablet = new GameObject("Map tablet mesh", BaseObjectSID);
-			Mesh* mapTabletMesh = m_MapTablet->SetMesh(new Mesh(m_MapTablet));
-			mapTabletMesh->LoadFromFile(MESH_DIRECTORY "map_tablet.glb", mapTabletMatID);
-			m_MapTabletHolder->AddChild(m_MapTablet);
-			m_MapTablet->GetTransform()->SetLocalPosition(glm::vec3(-0.75f, -0.3f, 2.3f));
-			m_MapTablet->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-glm::radians(80.0f), glm::radians(13.3f), -glm::radians(86.0f))));
-		}
 
 		TextureLoadInfo loadInfo = {};
 		loadInfo.relativeFilePath = TEXTURE_DIRECTORY "cross-hair-01.png";
@@ -224,16 +194,6 @@ namespace flex
 			g_Renderer->EnqueueSprite(drawInfo);
 		}
 
-		if (m_bTabletUp)
-		{
-			m_TabletOrbitAngle = MoveTowards(m_TabletOrbitAngle, m_TabletOrbitAngleUp, g_DeltaTime * 10.0f);
-		}
-		else
-		{
-			m_TabletOrbitAngle = MoveTowards(m_TabletOrbitAngle, m_TabletOrbitAngleDown, g_DeltaTime * 10.0f);
-		}
-		m_MapTabletHolder->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(0.0f, glm::radians(m_TabletOrbitAngle), 0.0f)));
-
 		if (m_TerminalInteractingWithID.IsValid() && g_EngineInstance->IsRenderingImGui())
 		{
 			Terminal* terminal = (Terminal*)m_TerminalInteractingWithID.Get();
@@ -278,28 +238,50 @@ namespace flex
 		}
 
 		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		PrefabID desiredActiveItemPrefabID = InvalidPrefabID;
 		if (stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory))
 		{
-			if (m_ActiveItem.IsValid())
-			{
-				if (m_ActiveItem.m_SourcePrefabID != stack.prefabID)
-				{
-					m_ActiveItem.Clear();
-				}
-			}
-			else
-			{
-				m_ActiveItem.Create(stack.prefabID);
-			}
-		}
-		else
-		{
-			m_ActiveItem.Clear();
+			desiredActiveItemPrefabID = stack.prefabID;
 		}
 
-		if (m_ActiveItem.IsValid())
+		ActiveItem* activeItem = m_ActiveItemIndex != -1 ? &m_ActiveItemCache[m_ActiveItemIndex] : nullptr;
+		if (activeItem == nullptr || activeItem->m_SourcePrefabID != desiredActiveItemPrefabID)
 		{
-			GameObject::UpdateActiveItem(m_ActiveItem);
+			// Proxies are cached & hidden rather than destroyed since creating a render object
+			// stalls the GPU to rebuild static vertex buffers, causing a hitch on every item switch
+			if (activeItem != nullptr)
+			{
+				activeItem->m_ItemProxyObject->SetVisible(false);
+			}
+			activeItem = nullptr;
+			m_ActiveItemIndex = -1;
+
+			if (desiredActiveItemPrefabID.IsValid())
+			{
+				for (i32 i = 0; i < (i32)m_ActiveItemCache.size(); ++i)
+				{
+					if (m_ActiveItemCache[i].m_SourcePrefabID == desiredActiveItemPrefabID)
+					{
+						m_ActiveItemIndex = i;
+						break;
+					}
+				}
+
+				if (m_ActiveItemIndex == -1)
+				{
+					m_ActiveItemCache.emplace_back();
+					m_ActiveItemCache.back().Create(desiredActiveItemPrefabID);
+					m_ActiveItemIndex = (i32)m_ActiveItemCache.size() - 1;
+				}
+
+				activeItem = &m_ActiveItemCache[m_ActiveItemIndex];
+				activeItem->m_ItemProxyObject->SetVisible(true);
+			}
+		}
+
+		if (activeItem != nullptr)
+		{
+			GameObject::UpdateActiveItem(*activeItem);
 		}
 
 		if (m_ItemPickingTimer != -1.0f)
@@ -371,19 +353,31 @@ namespace flex
 		m_Pitch = 0.0f;
 	}
 
+	glm::quat Player::GetLookYawRotation() const
+	{
+		// While riding, the body faces down the track and the head can look around independently
+		glm::quat rotWS = m_Transform.GetWorldRotation();
+		if (m_RidingLookYaw != 0.0f)
+		{
+			rotWS = glm::rotate(rotWS, m_RidingLookYaw, VEC3_UP);
+		}
+		return rotWS;
+	}
+
 	glm::vec3 Player::GetLookDirection() const
 	{
-		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
-		glm::vec3 lookDir = rotMat[2];
-		lookDir = glm::rotate(lookDir, m_Pitch, m_Transform.GetRight());
+		glm::quat yawRot = GetLookYawRotation();
+		glm::vec3 lookDir = yawRot * VEC3_FORWARD;
+		lookDir = glm::rotate(lookDir, m_Pitch, yawRot * VEC3_RIGHT);
 
 		return glm::normalize(lookDir);
 	}
 
 	glm::quat Player::GetLookRotation() const
 	{
-		glm::quat rotWS = glm::rotate(QUAT_IDENTITY, m_Pitch, m_Transform.GetRight());
-		rotWS *= m_Transform.GetWorldRotation();
+		glm::quat yawRot = GetLookYawRotation();
+		glm::quat rotWS = glm::rotate(QUAT_IDENTITY, m_Pitch, yawRot * VEC3_RIGHT);
+		rotWS *= yawRot;
 		return rotWS;
 	}
 
@@ -546,27 +540,6 @@ namespace flex
 		}
 	}
 
-	glm::vec3 Player::GetTrackPlacementReticlePosWS(real snapThreshold /* = -1.0f */, bool bSnapToHandles /* = false */) const
-	{
-		glm::vec3 offsetWS = m_TrackBuildingContext.m_TrackPlacementReticlePos;
-		glm::mat4 rotMat = glm::mat4(m_Transform.GetWorldRotation());
-		offsetWS = rotMat * glm::vec4(offsetWS, 1.0f);
-
-		glm::vec3 point = m_Transform.GetWorldPosition() + offsetWS;
-
-		if (snapThreshold != -1.0f)
-		{
-			glm::vec3 pointInRange;
-			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-			if (trackManager->GetPointInRange(point, bSnapToHandles, snapThreshold, &pointInRange))
-			{
-				point = pointInRange;
-			}
-		}
-
-		return point;
-	}
-
 	void Player::AttachToTrack(TrackID trackID, real distAlongTrack)
 	{
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
@@ -584,13 +557,15 @@ namespace flex
 		m_TrackRidingID = trackID;
 		m_DistAlongTrack = distAlongTrack;
 
-		if (track->IsVectorFacingDownTrack(m_DistAlongTrack, m_Transform.GetForward()))
+		// Keep facing the way the player was looking. IsVectorFacingDownTrack is true when the vector points towards
+		// decreasing t, which is the way FACING_FORWARD faces
+		if (track->IsVectorFacingDownTrack(m_DistAlongTrack, GetLookDirection()))
 		{
-			m_TrackState = TrackState::FACING_BACKWARD;
+			m_TrackState = TrackState::FACING_FORWARD;
 		}
 		else
 		{
-			m_TrackState = TrackState::FACING_FORWARD;
+			m_TrackState = TrackState::FACING_BACKWARD;
 		}
 
 		AudioManager::PlaySource(m_SoundTrackAttachID);
@@ -600,8 +575,28 @@ namespace flex
 	{
 		if (m_TrackRidingID != InvalidTrackID)
 		{
+			// Hop off to the side the player is looking towards so it's clear they've left the track
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+			glm::vec3 trackDir = trackManager->GetTrack(m_TrackRidingID)->GetCurveDirectionAt(m_DistAlongTrack);
+			trackDir.y = 0.0f;
+			if (glm::length2(trackDir) > 0.0001f)
+			{
+				const glm::vec3 trackRight = glm::normalize(glm::cross(VEC3_UP, glm::normalize(trackDir)));
+				const real side = glm::dot(GetLookDirection(), trackRight) >= 0.0f ? 1.0f : -1.0f;
+				const real hopDist = 1.75f;
+				m_Transform.SetWorldPosition(m_Transform.GetWorldPosition() + trackRight * side * hopDist + VEC3_UP * 0.25f);
+			}
+
 			m_TrackRidingID = InvalidTrackID;
 			m_DistAlongTrack = -1.0f;
+			m_Controller->ResetForkSteer();
+
+			// Turn the body to face where the player was looking so the view doesn't jump
+			if (m_RidingLookYaw != 0.0f)
+			{
+				m_Transform.SetWorldRotation(GetLookYawRotation());
+				m_RidingLookYaw = 0.0f;
+			}
 			AudioManager::PlaySource(m_SoundTrackDetachID);
 		}
 	}
@@ -1364,7 +1359,15 @@ namespace flex
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (cam->type == CameraType::VEHICLE)
 			{
-				g_CameraManager->PopCamera();
+				// Cycling cameras while riding clears the stack, leaving nothing beneath the vehicle cam to return to
+				if (g_CameraManager->GetCameraStackSize() > 1)
+				{
+					g_CameraManager->PopCamera();
+				}
+				else
+				{
+					g_CameraManager->SetCameraByName("first-person", false);
+				}
 			}
 
 			SetVisible(true);
@@ -1475,179 +1478,433 @@ namespace flex
 		return m_bMinerInventoryShowing;
 	}
 
-	bool Player::PlaceNewTrackNode()
+	void Player::ClearTrackBuildingState()
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
-		CHECK(ctx.m_bPlacingTrack);
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
-		glm::vec3 posWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
-
-		ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = posWS;
-		if (ctx.m_CurveNodesPlaced == 4)
+		if (!ctx.m_GrabbedPoints.empty())
 		{
-			AudioManager::PlaySource(m_SoundPlaceFinalTrackNodeID);
+			ctx.m_GrabbedPoints.clear();
+			ctx.m_GrabbedTrackEndDirs.clear();
+			trackManager->FindJunctions();
+		}
+		ctx.m_PlacedNodes.clear();
+		ctx.m_StartDir = VEC3_ZERO;
+		ctx.m_HoveredPoint = {};
+		ctx.m_HoveredPlacedNodeIndex = -1;
+		ctx.m_HoveredTrackID = InvalidTrackID;
+		ctx.m_bReticleValid = false;
 
-			ctx.m_CurvePlacing.CalculateLength();
-			ctx.m_TrackPlacing.curves.push_back(ctx.m_CurvePlacing);
+		trackManager->SetPreviewTrack(nullptr);
+		trackManager->SetHighlightedTrack(InvalidTrackID);
+	}
 
-			glm::vec3 prevHandlePos = ctx.m_CurvePlacing.points[2];
+	void Player::UpdateTrackBuildingReticle()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
 
-			ctx.m_CurveNodesPlaced = 0;
-			ctx.m_CurvePlacing.points[0] = VEC3_ZERO;
-			ctx.m_CurvePlacing.points[1] = VEC3_ZERO;
-			ctx.m_CurvePlacing.points[2] = VEC3_ZERO;
-			ctx.m_CurvePlacing.points[3] = VEC3_ZERO;
+		ctx.m_bReticleValid = false;
+		ctx.m_HoveredPoint = {};
+		ctx.m_HoveredPlacedNodeIndex = -1;
 
-			glm::vec3 controlPointPos = posWS;
-			glm::vec3 nextHandlePos = controlPointPos + (controlPointPos - prevHandlePos);
-			ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = controlPointPos;
-			ctx.m_CurvePlacing.points[ctx.m_CurveNodesPlaced++] = nextHandlePos;
+		struct IgnoreSelfRayResultCallback : public btCollisionWorld::ClosestRayResultCallback
+		{
+			IgnoreSelfRayResultCallback(const btVector3& rayFrom, const btVector3& rayTo, const btCollisionObject* selfObject) :
+				ClosestRayResultCallback(rayFrom, rayTo),
+				self(selfObject)
+			{
+			}
+
+			virtual bool needsCollision(btBroadphaseProxy* proxy0) const override
+			{
+				const btCollisionObject* collisionObject = (const btCollisionObject*)proxy0->m_clientObject;
+				if (collisionObject == self || (collisionObject->getCollisionFlags() & btCollisionObject::CF_NO_CONTACT_RESPONSE))
+				{
+					return false;
+				}
+				return ClosestRayResultCallback::needsCollision(proxy0);
+			}
+
+			const btCollisionObject* self;
+		};
+
+		// Aim where the camera is looking
+		btVector3 rayStart, rayEnd;
+		FlexEngine::GenerateRayAtScreenCenter(rayStart, rayEnd, ctx.m_MaxReach);
+
+		btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+		IgnoreSelfRayResultCallback rayCallback(rayStart, rayEnd, GetRigidBody()->GetRigidBodyInternal());
+		world->rayTest(rayStart, rayEnd, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			ctx.m_ReticlePos = ToVec3(rayCallback.m_hitPointWorld);
+			ctx.m_bReticleValid = true;
 		}
 		else
 		{
-			AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+			// Nothing was hit, fall back to intersecting with the plane the track is being built on
+			real planeHeight = ctx.m_PlacedNodes.empty() ? (m_Transform.GetWorldPosition().y - m_Height * 0.5f) : ctx.m_PlacedNodes.back().y;
+			glm::vec3 start = ToVec3(rayStart);
+			glm::vec3 delta = ToVec3(rayEnd - rayStart);
+			if (delta.y < -0.0001f)
+			{
+				real t = (planeHeight - start.y) / delta.y;
+				if (t >= 0.0f && t <= 1.0f)
+				{
+					ctx.m_ReticlePos = start + delta * t;
+					ctx.m_bReticleValid = true;
+				}
+			}
 		}
 
-		for (i32 i = 3; i > ctx.m_CurveNodesPlaced - 1; --i)
+		if (!ctx.m_bReticleValid)
 		{
-			ctx.m_CurvePlacing.points[i] = posWS;
+			return;
 		}
 
-		return true;
+		// Snap to nearby nodes
+		ctx.m_HoveredPoint = trackManager->GetClosestNode(ctx.m_ReticlePos, ctx.m_SnapThreshold,
+			ctx.m_GrabbedPoints.empty() ? nullptr : &ctx.m_GrabbedPoints);
+
+		if (ctx.m_bPlacingTrack)
+		{
+			// Nodes of the track being placed can be snapped to to close a loop, which needs at least three nodes
+			real closestDistSq = ctx.m_HoveredPoint.IsValid() ? glm::distance2(ctx.m_ReticlePos, trackManager->GetPoint(ctx.m_HoveredPoint)) : ctx.m_SnapThreshold * ctx.m_SnapThreshold;
+			for (i32 i = 0; i < (i32)ctx.m_PlacedNodes.size() - 2; ++i)
+			{
+				real distSq = glm::distance2(ctx.m_ReticlePos, ctx.m_PlacedNodes[i]);
+				if (distSq < closestDistSq)
+				{
+					closestDistSq = distSq;
+					ctx.m_HoveredPlacedNodeIndex = i;
+				}
+			}
+			if (ctx.m_HoveredPlacedNodeIndex != -1)
+			{
+				ctx.m_HoveredPoint = {};
+				ctx.m_ReticlePos = ctx.m_PlacedNodes[ctx.m_HoveredPlacedNodeIndex];
+			}
+		}
+
+		if (ctx.m_HoveredPoint.IsValid())
+		{
+			ctx.m_ReticlePos = trackManager->GetPoint(ctx.m_HoveredPoint);
+		}
 	}
 
-	bool Player::AttemptCompleteTrack()
+	void Player::UpdateTrackBuilding()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		CHECK(ctx.m_bPlacingTrack || ctx.m_bEditingTrack);
+
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+
+		UpdateTrackBuildingReticle();
+
+		const btVector3 nodeCol(0.95f, 0.75f, 0.2f);
+		const btVector3 highlightCol(1.0f, 1.0f, 1.0f);
+
+		// Nodes lie at ground level, inside the track mesh, so mark them above it
+		auto DrawNodeMarker = [debugRenderer](const glm::vec3& node, const btVector3& col)
+		{
+			const glm::vec3 markerPos = node + VEC3_UP * 1.0f;
+			debugRenderer->drawLine(ToBtVec3(node), ToBtVec3(markerPos), col);
+			debugRenderer->drawSphere(ToBtVec3(markerPos), 0.25f, col);
+		};
+
+		if (ctx.m_bPlacingTrack)
+		{
+			// Preview the track as it'd be if the next node were placed at the reticle
+			std::vector<glm::vec3> previewNodes = ctx.m_PlacedNodes;
+			glm::vec3 endDir = VEC3_ZERO;
+			if (ctx.m_bReticleValid && !ctx.m_PlacedNodes.empty() && ctx.m_HoveredPlacedNodeIndex == -1 &&
+				glm::distance(ctx.m_PlacedNodes.back(), ctx.m_ReticlePos) > 0.01f)
+			{
+				previewNodes.push_back(ctx.m_ReticlePos);
+				if (ctx.m_HoveredPoint.IsValid())
+				{
+					endDir = trackManager->GetNodeDirection(ctx.m_HoveredPoint);
+				}
+			}
+
+			if (ctx.m_HoveredPlacedNodeIndex != -1)
+			{
+				// The loop's tracks are contiguous, so they can be previewed as one
+				std::vector<BezierCurveList> loopTracks;
+				TrackManager::CreateLoopedTracks(ctx.m_PlacedNodes, ctx.m_StartDir, ctx.m_HoveredPlacedNodeIndex, loopTracks);
+				BezierCurveList previewTrack;
+				for (const BezierCurveList& loopTrack : loopTracks)
+				{
+					previewTrack.curves.insert(previewTrack.curves.end(), loopTrack.curves.begin(), loopTrack.curves.end());
+				}
+				trackManager->SetPreviewTrack(&previewTrack);
+			}
+			else if (previewNodes.size() >= 2)
+			{
+				BezierCurveList previewTrack = TrackManager::CreateTrackThroughNodes(previewNodes, ctx.m_StartDir, endDir);
+				trackManager->SetPreviewTrack(&previewTrack);
+			}
+			else
+			{
+				trackManager->SetPreviewTrack(nullptr);
+			}
+
+			for (i32 i = 0; i < (i32)ctx.m_PlacedNodes.size(); ++i)
+			{
+				DrawNodeMarker(ctx.m_PlacedNodes[i], i == ctx.m_HoveredPlacedNodeIndex ? highlightCol : nodeCol);
+			}
+		}
+
+		if (ctx.m_bEditingTrack)
+		{
+			trackManager->SetPreviewTrack(nullptr);
+
+			// Aimed at track will be deleted by the delete action, so show that
+			const real hoverRange = 1.25f;
+			ctx.m_HoveredTrackID = (ctx.m_GrabbedPoints.empty() && ctx.m_bReticleValid) ? trackManager->GetClosestTrack(ctx.m_ReticlePos, hoverRange) : InvalidTrackID;
+			trackManager->SetHighlightedTrack(ctx.m_HoveredTrackID);
+
+			if (!ctx.m_GrabbedPoints.empty() && ctx.m_bReticleValid &&
+				glm::distance2(trackManager->GetPoint(ctx.m_GrabbedPoints[0]), ctx.m_ReticlePos) > 0.000001f)
+			{
+				for (const TrackPointRef& ref : ctx.m_GrabbedPoints)
+				{
+					trackManager->GetTrack(ref.trackID)->SetPointPosAtIndex(ref.curveIndex, ref.pointIndex, ctx.m_ReticlePos, false);
+				}
+				// Handles are always generated, keeping each track smooth through its nodes
+				for (const GrabbedTrackEndDirs& grabbedTrack : ctx.m_GrabbedTrackEndDirs)
+				{
+					trackManager->SmoothTrack(grabbedTrack.trackID, grabbedTrack.startDir, grabbedTrack.endDir);
+				}
+			}
+		}
+
+		// Show nearby nodes of existing tracks (to snap to when placing, or to edit)
+		const real nodeDrawDistSq = 50.0f * 50.0f;
+		const glm::vec3 playerPos = m_Transform.GetWorldPosition();
+		for (i32 t = 0; t < (i32)trackManager->tracks.size(); ++t)
+		{
+			const BezierCurveList& track = trackManager->tracks[t];
+			for (i32 c = 0; c < (i32)track.curves.size(); ++c)
+			{
+				// Curves share nodes, so only draw the end of the last curve
+				for (i32 p = 0; p < 4; p += 3)
+				{
+					if (p == 3 && c != (i32)track.curves.size() - 1)
+					{
+						continue;
+					}
+
+					const glm::vec3& node = track.curves[c].points[p];
+					if (glm::distance2(node, playerPos) > nodeDrawDistSq)
+					{
+						continue;
+					}
+
+					TrackPointRef ref = { (TrackID)t, c, p };
+					bool bHighlighted = (ref == ctx.m_HoveredPoint) || Contains(ctx.m_GrabbedPoints, ref);
+					DrawNodeMarker(node, bHighlighted ? highlightCol : nodeCol);
+				}
+			}
+		}
+
+		if (ctx.m_bReticleValid)
+		{
+			static const btVector3 placingCol(0.3f, 0.55f, 0.95f);
+			static const btVector3 snappedCol(0.3f, 0.95f, 0.45f);
+			static const btVector3 editingCol(0.8f, 0.3f, 0.7f);
+			static const btVector3 grabbingCol(1.0f, 1.0f, 1.0f);
+
+			btVector3 col = ctx.m_bPlacingTrack ? placingCol : editingCol;
+			if (!ctx.m_GrabbedPoints.empty())
+			{
+				col = grabbingCol;
+			}
+			else if (ctx.m_HoveredPoint.IsValid())
+			{
+				col = snappedCol;
+			}
+
+			btTransform ringTransform(btQuaternion::getIdentity(), ToBtVec3(ctx.m_ReticlePos + VEC3_UP * 0.05f));
+			debugRenderer->drawCylinder(0.5f, 0.01f, 1, ringTransform, col);
+			debugRenderer->drawCylinder(0.52f, 0.01f, 1, ringTransform, col);
+			debugRenderer->drawLine(ToBtVec3(ctx.m_ReticlePos), ToBtVec3(ctx.m_ReticlePos + VEC3_UP * 1.0f), col);
+		}
+	}
+
+	void Player::OnTrackBuildingPrimaryAction()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+		if (ctx.m_bPlacingTrack)
+		{
+			if (!ctx.m_bReticleValid)
+			{
+				return;
+			}
+
+			// Ignore accidental double placements
+			if (!ctx.m_PlacedNodes.empty() && glm::distance(ctx.m_PlacedNodes.back(), ctx.m_ReticlePos) < 0.25f)
+			{
+				return;
+			}
+
+			if (ctx.m_HoveredPlacedNodeIndex != -1)
+			{
+				// Closing a loop finishes the track
+				std::vector<BezierCurveList> loopTracks;
+				TrackManager::CreateLoopedTracks(ctx.m_PlacedNodes, ctx.m_StartDir, ctx.m_HoveredPlacedNodeIndex, loopTracks);
+				for (const BezierCurveList& loopTrack : loopTracks)
+				{
+					trackManager->AddTrack(loopTrack);
+				}
+				trackManager->FindJunctions();
+				trackManager->SetPreviewTrack(nullptr);
+
+				ctx.m_PlacedNodes.clear();
+				ctx.m_StartDir = VEC3_ZERO;
+				ctx.m_HoveredPlacedNodeIndex = -1;
+
+				AudioManager::PlaySource(m_SoundPlaceFinalTrackNodeID);
+				return;
+			}
+
+			const bool bSnappedToTrack = ctx.m_HoveredPoint.IsValid();
+			const glm::vec3 snappedDir = bSnappedToTrack ? trackManager->GetNodeDirection(ctx.m_HoveredPoint) : VEC3_ZERO;
+
+			ctx.m_PlacedNodes.push_back(ctx.m_ReticlePos);
+
+			if (ctx.m_PlacedNodes.size() == 1)
+			{
+				// Starting on an existing track, line up with it
+				ctx.m_StartDir = snappedDir;
+				AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+			}
+			else if (bSnappedToTrack)
+			{
+				// Joining onto an existing track finishes this one
+				AttemptCompleteTrack(snappedDir);
+			}
+			else
+			{
+				AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+			}
+		}
+		else if (ctx.m_bEditingTrack)
+		{
+			if (!ctx.m_GrabbedPoints.empty())
+			{
+				ctx.m_GrabbedPoints.clear();
+				ctx.m_GrabbedTrackEndDirs.clear();
+				trackManager->FindJunctions();
+				AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+			}
+			else if (ctx.m_HoveredPoint.IsValid())
+			{
+				// Move every track meeting at this node so junctions stay connected
+				trackManager->GetCoincidentNodes(ctx.m_HoveredPoint, ctx.m_GrabbedPoints);
+
+				// Directions where tracks meet others are captured now, as re-reading them every frame would drift while dragging
+				ctx.m_GrabbedTrackEndDirs.clear();
+				for (const TrackPointRef& ref : ctx.m_GrabbedPoints)
+				{
+					bool bAlreadyAdded = false;
+					for (const GrabbedTrackEndDirs& grabbedTrack : ctx.m_GrabbedTrackEndDirs)
+					{
+						bAlreadyAdded = bAlreadyAdded || (grabbedTrack.trackID == ref.trackID);
+					}
+					if (!bAlreadyAdded)
+					{
+						GrabbedTrackEndDirs grabbedTrack = {};
+						grabbedTrack.trackID = ref.trackID;
+						trackManager->GetJunctionEndDirs(ref.trackID, grabbedTrack.startDir, grabbedTrack.endDir);
+						ctx.m_GrabbedTrackEndDirs.push_back(grabbedTrack);
+					}
+				}
+				AudioManager::PlaySource(m_SoundPlaceTrackNodeID);
+			}
+		}
+	}
+
+	void Player::OnTrackBuildingUndoAction()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+
+		if (ctx.m_bPlacingTrack)
+		{
+			if (!ctx.m_PlacedNodes.empty())
+			{
+				ctx.m_PlacedNodes.pop_back();
+				if (ctx.m_PlacedNodes.empty())
+				{
+					ctx.m_StartDir = VEC3_ZERO;
+				}
+				AudioManager::PlaySource(m_SoundTrackDetachID);
+			}
+		}
+		else if (ctx.m_bEditingTrack)
+		{
+			if (ctx.m_GrabbedPoints.empty() && ctx.m_HoveredPoint.IsValid())
+			{
+				TrackPointRef nodeToRemove = ctx.m_HoveredPoint;
+				ctx.m_HoveredPoint = {};
+				trackManager->RemoveNode(nodeToRemove);
+				AudioManager::PlaySource(m_SoundTrackDetachID);
+			}
+		}
+	}
+
+	void Player::OnTrackBuildingDeleteTrackAction()
+	{
+		TrackBuildingContext& ctx = m_TrackBuildingContext;
+		if (!ctx.m_bEditingTrack || !ctx.m_GrabbedPoints.empty() || ctx.m_HoveredTrackID == InvalidTrackID)
+		{
+			return;
+		}
+
+		TrackID trackToRemove = ctx.m_HoveredTrackID;
+		ctx.m_HoveredTrackID = InvalidTrackID;
+		GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->RemoveTrack(trackToRemove);
+		AudioManager::PlaySource(m_SoundTrackDetachID);
+	}
+
+	bool Player::AttemptCompleteTrack(const glm::vec3& endDir /* = VEC3_ZERO */)
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
 		CHECK(ctx.m_bPlacingTrack);
 
-		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-
-		ctx.m_CurveNodesPlaced = 0;
-		ctx.m_CurvePlacing.points[0] = VEC3_ZERO;
-		ctx.m_CurvePlacing.points[1] = VEC3_ZERO;
-		ctx.m_CurvePlacing.points[2] = VEC3_ZERO;
-		ctx.m_CurvePlacing.points[3] = VEC3_ZERO;
-
-		if (!ctx.m_TrackPlacing.curves.empty())
+		if (ctx.m_PlacedNodes.size() < 2)
 		{
-			trackManager->AddTrack(ctx.m_TrackPlacing);
-			trackManager->FindJunctions();
-			ctx.m_TrackPlacing.curves.clear();
+			return false;
 		}
+
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+		trackManager->AddTrack(TrackManager::CreateTrackThroughNodes(ctx.m_PlacedNodes, ctx.m_StartDir, endDir));
+		trackManager->FindJunctions();
+		trackManager->SetPreviewTrack(nullptr);
+
+		ctx.m_PlacedNodes.clear();
+		ctx.m_StartDir = VEC3_ZERO;
+
+		AudioManager::PlaySource(m_SoundPlaceFinalTrackNodeID);
 
 		return true;
-	}
-
-	void Player::DrawTrackDebug() const
-	{
-		const TrackBuildingContext& ctx = m_TrackBuildingContext;
-		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-
-		static const btVector4 placedCurveCol(0.5f, 0.8f, 0.3f, 0.9f);
-		static const btVector4 placingCurveCol(0.35f, 0.6f, 0.3f, 0.9f);
-		static const btVector4 editedCurveCol(0.3f, 0.85f, 0.53f, 0.9f);
-		static const btVector4 editingCurveCol(0.2f, 0.8f, 0.25f, 0.9f);
-
-		for (const BezierCurve3D& curve : ctx.m_TrackPlacing.curves)
-		{
-			curve.DrawDebug(false, placedCurveCol, placedCurveCol);
-		}
-
-		if (ctx.m_TrackEditingID != InvalidTrackID)
-		{
-			BezierCurveList* trackEditing = trackManager->GetTrack(ctx.m_TrackEditingID);
-			for (const BezierCurve3D& curve : trackEditing->curves)
-			{
-				curve.DrawDebug(false, editedCurveCol, editingCurveCol);
-			}
-		}
-
-		if (ctx.m_CurveNodesPlaced > 0)
-		{
-			ctx.m_CurvePlacing.DrawDebug(false, placingCurveCol, placingCurveCol);
-		}
-
-		glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
-		btTransform cylinderTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(placementPosWS));
-		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-		if (ctx.m_bPlacingTrack || ctx.m_bEditingTrack)
-		{
-			static btVector3 ringColEditing(0.6f, 0.1f, 0.5f);
-			static btVector3 ringColEditingActive(0.4f, 0.2f, 0.85f);
-			static btVector3 placingCol(0.18f, 0.22f, 0.35f);
-
-			btVector3 col = ctx.m_bPlacingTrack ? placingCol :
-				ctx.m_TrackEditingID == InvalidTrackID ? ringColEditing : ringColEditingActive;
-
-			debugRenderer->drawCylinder(0.6f, 0.01f, 1, cylinderTransform, col);
-			debugRenderer->drawCylinder(0.605f, 0.01f, 1, cylinderTransform, col);
-			debugRenderer->drawCylinder(1.1f, 0.01f, 1, cylinderTransform, col);
-			debugRenderer->drawCylinder(1.105f, 0.01f, 1, cylinderTransform, col);
-		}
-	}
-
-	void Player::SelectNearestTrackCurve()
-	{
-		TrackBuildingContext& ctx = m_TrackBuildingContext;
-		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling SelectNearestTrackCurve");
-		CHECK(ctx.m_TrackEditingCurveIdx == -1);// "Must have deselect track editing curve index before calling SelectNearestTrackCurve");
-
-		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-
-		real snapThreshold = ctx.m_TrackEditingID == InvalidTrackID ? ctx.m_SnapThreshold : 0.0f;
-		// TODO: Snap to points other than the one we are editing
-		glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(snapThreshold, true);
-		//glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold);
-
-		const real range = 0.1f;
-
-		TrackID trackID;
-		i32 curveIndex, pointIndex;
-		if (trackManager->GetPointInRange(placementPosWS, range, &trackID, &curveIndex, &pointIndex))
-		{
-			ctx.m_TrackEditingID = trackID;
-			ctx.m_TrackEditingCurveIdx = curveIndex;
-			ctx.m_TrackEditingPointIdx = pointIndex;
-		}
-	}
-
-	void Player::DeselectTrackCurve()
-	{
-		TrackBuildingContext& ctx = m_TrackBuildingContext;
-		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling DeselectTrackCurve");
-		CHECK(ctx.m_TrackEditingCurveIdx != -1); // "Must have selected track editing curve index before calling DeselectTrackCurve");
-
-		ctx.m_TrackEditingID = InvalidTrackID;
-		ctx.m_TrackEditingCurveIdx = -1;
-		ctx.m_TrackEditingPointIdx = -1;
-	}
-
-	void Player::UpdateTrackEditing()
-	{
-		TrackBuildingContext& ctx = m_TrackBuildingContext;
-		CHECK(ctx.m_bEditingTrack); // "Must be editing track before calling UpdateTrackEditing");
-
-		if (ctx.m_TrackEditingID != InvalidTrackID)
-		{
-			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-
-			BezierCurveList* trackEditing = trackManager->GetTrack(ctx.m_TrackEditingID);
-			glm::vec3 point = trackEditing->GetPointOnCurve(ctx.m_TrackEditingCurveIdx, ctx.m_TrackEditingPointIdx);
-
-			// TODO: Snap to points other than the one we are editing
-			glm::vec3 placementPosWS = GetTrackPlacementReticlePosWS(ctx.m_SnapThreshold, true);
-
-			glm::vec3 newPoint(placementPosWS.x, point.y, placementPosWS.z);
-			trackEditing->SetPointPosAtIndex(ctx.m_TrackEditingCurveIdx, ctx.m_TrackEditingPointIdx, newPoint, true);
-
-			trackManager->FindJunctions();
-		}
 	}
 
 	void Player::ToggleEditingTrack()
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
+
+		if (ctx.m_bPlacingTrack)
+		{
+			AttemptCompleteTrack();
+		}
+		ClearTrackBuildingState();
 
 		ctx.m_bEditingTrack = !ctx.m_bEditingTrack;
 		ctx.m_bPlacingTrack = false;
@@ -1657,8 +1914,109 @@ namespace flex
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
 
+		// Leaving build mode keeps whatever was placed
+		if (ctx.m_bPlacingTrack)
+		{
+			AttemptCompleteTrack();
+		}
+		ClearTrackBuildingState();
+
 		ctx.m_bPlacingTrack = !ctx.m_bPlacingTrack;
 		ctx.m_bEditingTrack = false;
+	}
+
+	void Player::OnTrackRemoved(TrackID removedTrackID)
+	{
+		if (m_TrackRidingID != InvalidTrackID)
+		{
+			if (m_TrackRidingID == removedTrackID)
+			{
+				DetachFromTrack();
+			}
+			else if (m_TrackRidingID > removedTrackID)
+			{
+				--m_TrackRidingID;
+			}
+		}
+
+		// Point references may now be stale
+		m_TrackBuildingContext.m_GrabbedPoints.clear();
+		m_TrackBuildingContext.m_GrabbedTrackEndDirs.clear();
+		m_TrackBuildingContext.m_HoveredPoint = {};
+		m_TrackBuildingContext.m_HoveredTrackID = InvalidTrackID;
+	}
+
+	void Player::DrawTrackBuildingHUD() const
+	{
+		const TrackBuildingContext& ctx = m_TrackBuildingContext;
+		const bool bBuilding = ctx.m_bPlacingTrack || ctx.m_bEditingTrack;
+		const bool bForkAhead = (m_TrackRidingID != InvalidTrackID) && GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->IsForkAhead();
+		if (!m_bPossessed || !(bBuilding || bForkAhead))
+		{
+			return;
+		}
+
+		auto BindingName = [](Action action)
+		{
+			StringBuilder name;
+			if (!g_InputManager->GetActionBindingName(action, name))
+			{
+				return std::string("Unbound");
+			}
+			return name.ToString();
+		};
+
+		// LMB is checked for directly in PlayerController
+		const std::string primaryBinding = "LMB / " + BindingName(Action::INTERACT_RIGHT_HAND);
+
+		std::vector<std::string> lines;
+		if (ctx.m_bPlacingTrack)
+		{
+			lines.push_back("TRACK BUILDING - " + std::to_string(ctx.m_PlacedNodes.size()) + " nodes placed");
+			lines.push_back("[" + primaryBinding + "] Place node");
+			lines.push_back("[" + BindingName(Action::UNDO_TRACK_NODE) + "] Undo last node");
+			lines.push_back("[" + BindingName(Action::COMPLETE_TRACK) + "] Finish track");
+			lines.push_back("[" + BindingName(Action::ENTER_TRACK_BUILD_MODE) + "] Finish & exit");
+			if (!ctx.m_bReticleValid)
+			{
+				lines.push_back("Aim at the ground to place nodes");
+			}
+			else if (ctx.m_HoveredPlacedNodeIndex != -1)
+			{
+				lines.push_back("Snapped - placing here closes the loop & finishes the track");
+			}
+			else if (ctx.m_HoveredPoint.IsValid())
+			{
+				lines.push_back(ctx.m_PlacedNodes.empty() ? "Snapped - new track will branch from this node" : "Snapped - placing here joins & finishes the track");
+			}
+		}
+		else if (ctx.m_bEditingTrack)
+		{
+			lines.push_back("TRACK EDITING");
+			lines.push_back("[" + primaryBinding + "] " + (ctx.m_GrabbedPoints.empty() ? "Grab point" : "Release point"));
+			lines.push_back("[" + BindingName(Action::UNDO_TRACK_NODE) + "] Delete hovered node");
+			lines.push_back("[" + BindingName(Action::DELETE_TRACK) + "] Delete highlighted track");
+			lines.push_back("[" + BindingName(Action::ENTER_TRACK_EDIT_MODE) + "] Exit");
+		}
+		else
+		{
+			const real forkSteer = m_Controller->GetForkSteer();
+			lines.push_back(std::string("FORK AHEAD - going ") + (forkSteer < 0.0f ? "left" : forkSteer > 0.0f ? "right" : "straight"));
+			lines.push_back("[" + BindingName(Action::MOVE_LEFT) + "] / [" + BindingName(Action::MOVE_RIGHT) + "] Choose left / right");
+		}
+
+		BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));
+		const real lineHeight = 3.2f * font->GetMetric('W')->height / (real)g_Window->GetSize().y;
+		const glm::vec4 titleColour(1.0f, 0.85f, 0.4f, 1.0f);
+		const glm::vec4 textColour(0.95f, 0.95f, 0.95f, 1.0f);
+
+		// Draw bottom-up so the title sits at the top
+		real yOffset = 0.05f;
+		for (i32 i = (i32)lines.size() - 1; i >= 0; --i)
+		{
+			g_Renderer->DrawStringSS(lines[i], i == 0 ? titleColour : textColour, AnchorPoint::BOTTOM_LEFT, glm::vec2(0.03f, yOffset), 1.5f, 0.6f);
+			yOffset += lineHeight;
+		}
 	}
 
 	void Player::SetHeldItem(Hand hand, GameObjectID gameObjectID)

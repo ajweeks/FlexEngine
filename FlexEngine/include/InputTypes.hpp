@@ -458,12 +458,13 @@ namespace flex
 		PAUSE,
 		ZOOM_IN,
 		ZOOM_OUT,
-		TOGGLE_TABLET,
 
 		// Tracks
 		ENTER_TRACK_BUILD_MODE,
 		ENTER_TRACK_EDIT_MODE,
 		COMPLETE_TRACK,
+		UNDO_TRACK_NODE,
+		DELETE_TRACK,
 		PICKUP_ITEM,
 
 		// Inventory
@@ -536,12 +537,13 @@ namespace flex
 		"Pause",
 		"Zoom in",
 		"Zoom out",
-		"Toggle tablet",
 
 		// Tracks
 		"Enter track build mode",
 		"Enter track edit mode",
 		"Complete track",
+		"Undo track node",
+		"Delete track",
 		"Pickup Item",
 
 		// Inventory

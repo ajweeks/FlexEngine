@@ -51,6 +51,8 @@ namespace flex
 		BaseCart* GetCart(CartID cartID) const;
 		CartChain* GetCartChain(CartChainID cartChainID);
 		real GetChainDrivePower(CartChainID cartChainID);
+		// Dismounts carts from the removed track and shifts the IDs of carts on following tracks
+		void OnTrackRemoved(TrackID removedTrackID);
 
 
 	private:
