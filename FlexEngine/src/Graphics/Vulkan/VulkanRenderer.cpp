@@ -2762,6 +2762,15 @@ namespace flex
 			pair.second = dataSize;
 		}
 
+		void VulkanRenderer::ClearGlobalUniform(Uniform const* uniform, void* data)
+		{
+			auto iter = m_GlobalUserUniforms.find(uniform->id);
+			if (iter != m_GlobalUserUniforms.end() && iter->second.first == data)
+			{
+				m_GlobalUserUniforms.erase(iter);
+			}
+		}
+
 		void VulkanRenderer::AddRenderObjectUniformOverride(RenderID renderID, Uniform const* uniform, const MaterialPropertyOverride& propertyOverride)
 		{
 			GetRenderObject(renderID)->uniformOverrides.AddUniform(uniform, propertyOverride);

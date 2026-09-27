@@ -95,6 +95,7 @@ namespace flex
 			virtual bool DestroyRenderObject(RenderID renderID) override;
 
 			virtual void SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize) override;
+			virtual void ClearGlobalUniform(Uniform const* uniform, void* data) override;
 			virtual void AddRenderObjectUniformOverride(RenderID renderID, Uniform const* uniform, const MaterialPropertyOverride& propertyOverride) override;
 
 			virtual void NewFrame() override;

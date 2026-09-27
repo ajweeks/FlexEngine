@@ -5701,6 +5701,8 @@ namespace flex
 
 	void GerstnerWave::Destroy(bool bDetachFromParent /* = true */)
 	{
+		g_Renderer->ClearGlobalUniform(&U_OCEAN_DATA, &oceanData);
+
 		threadUserData.running = false;
 
 		// TODO: Only join our threads!
