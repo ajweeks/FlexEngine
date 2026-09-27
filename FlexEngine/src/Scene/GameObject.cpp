@@ -1434,9 +1434,21 @@ namespace flex
 			newGameObject->ID = previousGameObject->ID;
 		}
 
-		for (u32 i = 0; i < (u32)previousGameObject->m_Children.size(); ++i)
+		// Children may have been added, removed, or reordered, so match by name rather than index.
+		// Each previous child is matched at most once to avoid duplicate IDs.
+		std::vector<bool> previousChildMatched(previousGameObject->m_Children.size(), false);
+		for (GameObject* newChild : newGameObject->m_Children)
 		{
-			OverwritePrefabIDs(previousGameObject->GetChild(i), newGameObject->GetChild(i));
+			for (u32 i = 0; i < (u32)previousGameObject->m_Children.size(); ++i)
+			{
+				GameObject* previousChild = previousGameObject->m_Children[i];
+				if (!previousChildMatched[i] && previousChild->m_Name == newChild->m_Name)
+				{
+					previousChildMatched[i] = true;
+					OverwritePrefabIDs(previousChild, newChild);
+					break;
+				}
+			}
 		}
 	}
 
