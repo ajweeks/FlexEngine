@@ -176,13 +176,34 @@ def read_cmake_cache_value(build_path, key):
 
 # Windows builds use a single multi-config build directory, linux builds use one per config.
 # Keeping these separate allows building both platforms from the same checkout (e.g. under WSL).
-def get_build_path(dependency_path, external_config, name = 'build'):
+# Windows Sanitize builds get their own directory since they're compiled with different flags (see sanitize_cmake_args).
+def get_build_path(dependency_path, config, name = 'build'):
 	root = dependency_path + name + '/'
 	# Clean up the old layout, which configured directly in the root build directory
 	if os.path.exists(root + 'CMakeCache.txt'):
 		print('Removing outdated build directory ' + root)
 		shutil.rmtree(root)
-	return root + ('windows/' if platform == 'windows' else 'linux-' + external_config.lower() + '/')
+	if platform == 'windows':
+		return root + ('windows-sanitize/' if config == 'Sanitize' else 'windows/')
+	return root + 'linux-' + get_external_config(config).lower() + '/'
+
+
+def get_external_config(config):
+	return 'Debug' if (config == 'Debug' or config == 'Sanitize') else 'Release'
+
+
+# Extra cmake args for static libraries linked into Flex
+def get_config_cmake_args(config):
+	if platform != 'windows' or config != 'Sanitize':
+		return []
+	# Static libs linked into an ASan build must also be built with ASan, otherwise MSVC's STL container annotations
+	# mismatch (LNK2038 'annotate_vector'/'annotate_string'). /RTC1 (in cmake's default debug flags) is incompatible with ASan.
+	# Debug info is embedded in the objects (/Z7) so no separate PDBs are needed when linking Flex (LNK4099).
+	debug_flags = '/MDd /Z7 /Ob0 /Od /fsanitize=address'
+	return [
+		'-DCMAKE_C_FLAGS_DEBUG=' + debug_flags,
+		'-DCMAKE_CXX_FLAGS_DEBUG=' + debug_flags,
+		'-DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded']
 
 
 def run_cmake(source, build, arguments = []):
@@ -234,10 +255,11 @@ start_time = time.perf_counter()
 def build_project(config):
 	project_root = '../FlexEngine/'
 	libs_target = project_root + 'lib/x64/' + config + '/'
-	external_config = 'Debug' if (config == 'Debug' or config == 'Sanitize') else 'Release'
+	external_config = get_external_config(config)
 	build_type_arg = '-DCMAKE_BUILD_TYPE=' + external_config
+	config_args = get_config_cmake_args(config)
 
-	print("\nBuilding " + config + " config (external: " + external_config + ")\n\n")
+	print("\nBuilding " + config + " config (external: " + external_config + (", with ASan" if config_args else "") + ")\n\n")
 
 	os.makedirs(libs_target, exist_ok=True)
 
@@ -245,13 +267,13 @@ def build_project(config):
 
 	# GLFW
 	glfw_path = project_root + 'dependencies/glfw/'
-	glfw_build_path = get_build_path(glfw_path, external_config)
+	glfw_build_path = get_build_path(glfw_path, config)
 	run_cmake(glfw_path, glfw_build_path, [
 		'-DGLFW_BUILD_EXAMPLES=OFF',
 		'-DGLFW_BUILD_TESTS=OFF',
 		'-DGLFW_BUILD_DOCS=OFF',
 		'-DGLFW_INSTALL=OFF',
-		build_type_arg])
+		build_type_arg] + config_args)
 	run_cmake_build(glfw_build_path, external_config, ['glfw'])
 
 	if platform == 'windows':
@@ -264,6 +286,7 @@ def build_project(config):
 	if platform == 'windows':
 		print_header('Building OpenAL...')
 		openAL_path = project_root + 'dependencies/openAL/'
+		# OpenAL is a DLL, so doesn't need to match Flex's ASan setting and can share the Debug build
 		openAL_build_path = get_build_path(openAL_path, external_config)
 		run_cmake(openAL_path, openAL_build_path, [
 			'-DALSOFT_UTILS=OFF',
@@ -284,7 +307,7 @@ def build_project(config):
 
 	# Bullet (only the collision, dynamics & math libraries are used)
 	bullet_path = project_root + 'dependencies/bullet/'
-	bullet_build_path = get_build_path(bullet_path, external_config)
+	bullet_build_path = get_build_path(bullet_path, config)
 	run_cmake(bullet_path, bullet_build_path, [
 		'-DUSE_MSVC_RUNTIME_LIBRARY_DLL=ON',
 		'-DUSE_GRAPHICAL_BENCHMARK=OFF',
@@ -298,7 +321,7 @@ def build_project(config):
 		'-DBUILD_CLSOCKET=OFF',
 		'-DBUILD_EXTRAS=OFF',
 		'-DINSTALL_LIBS=OFF',
-		build_type_arg])
+		build_type_arg] + config_args)
 	bullet_libs = ['BulletCollision', 'BulletDynamics', 'LinearMath']
 	run_cmake_build(bullet_build_path, external_config, bullet_libs)
 	for lib in bullet_libs:
@@ -320,14 +343,14 @@ def build_project(config):
 
 	# FreeType (built as a static library, without any optional dependencies)
 	free_type_path = project_root + 'dependencies/freetype/'
-	free_type_build_path = get_build_path(free_type_path, external_config)
+	free_type_build_path = get_build_path(free_type_path, config)
 	run_cmake(free_type_path, free_type_build_path, [
 		'-DCMAKE_DISABLE_FIND_PACKAGE_ZLIB=TRUE',
 		'-DCMAKE_DISABLE_FIND_PACKAGE_BZip2=TRUE',
 		'-DCMAKE_DISABLE_FIND_PACKAGE_PNG=TRUE',
 		'-DCMAKE_DISABLE_FIND_PACKAGE_HarfBuzz=TRUE',
 		'-DCMAKE_DISABLE_FIND_PACKAGE_BrotliDec=TRUE',
-		build_type_arg])
+		build_type_arg] + config_args)
 	run_cmake_build(free_type_build_path, external_config, ['freetype'])
 	if platform == 'windows':
 		# Debug builds are given a 'd' postfix, Flex links against 'freetype' in all configs
@@ -361,7 +384,7 @@ def build_project(config):
 	if not os.path.exists(shader_c_path):
 		run_git(['clone', 'https://github.com/google/shaderc', shader_c_path, '--branch', shaderc_tag, '--depth=1'])
 
-	shader_c_build_path = get_build_path(shader_c_path, external_config)
+	shader_c_build_path = get_build_path(shader_c_path, config)
 
 	os.environ['GIT_EXECUTABLE'] = git_path
 	subprocess.check_call([python_path, shader_c_path + 'utils/git-sync-deps'], stderr=subprocess.STDOUT)
@@ -381,7 +404,7 @@ def build_project(config):
 		'-DSPIRV_SKIP_TESTS=ON',
 		'-DSPIRV_WERROR=OFF',
 		'-DSPIRV_HEADERS_SKIP_EXAMPLES=ON',
-		build_type_arg])
+		build_type_arg] + config_args)
 	run_cmake_build(shader_c_build_path, external_config, ['shaderc_combined'])
 
 	if platform == 'windows':
