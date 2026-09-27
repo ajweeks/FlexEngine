@@ -85,7 +85,7 @@
 					"name" : "AreaLight_04",
 					"id" : "7F8E15ACA19627A24D327120F3438323",
 					"type" : "prefab",
-					"prefab type" : "area-light",
+					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 					"transform" : 
 					{
@@ -98,7 +98,7 @@
 					"name" : "AreaLight_05",
 					"id" : "985B1AAA19A4BD8440B789A7E0DE4E68",
 					"type" : "prefab",
-					"prefab type" : "area-light",
+					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 					"transform" : 
 					{
@@ -111,7 +111,7 @@
 					"name" : "AreaLight_06",
 					"id" : "C64F4CD1B66E51874FBFE0E544D15E79",
 					"type" : "prefab",
-					"prefab type" : "area-light",
+					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 					"transform" : 
 					{
@@ -124,7 +124,7 @@
 					"name" : "AreaLight_07",
 					"id" : "F815A82A713D2DAE4C6D7A7ACED902E2",
 					"type" : "prefab",
-					"prefab type" : "area-light",
+					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 					"transform" : 
 					{
