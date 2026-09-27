@@ -190,6 +190,10 @@ project "Flex"
 		}
 	configuration { "vs*", "Sanitize" }
 		buildoptions { "/fsanitize=address" }
+		-- The ASan runtime DLL lives in the MSVC toolset dir, which isn't on PATH outside a VS dev prompt
+		postbuildcommands {
+			"copy \"$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll\" \"$(OutDir)\\\""
+		}
 	configuration { "linux*", "Sanitize" }
 		linkoptions {
 			"-fsanitize=undefined,address", -- TODO: try memory
