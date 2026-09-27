@@ -5,7 +5,7 @@
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 
 	{
-		"type" : "first-person",
+		"type" : "debug",
 		"near plane" : 0.500000,
 		"far plane" : 1000.000000,
 		"fov" : 0.785398,
@@ -16,9 +16,9 @@
 		"move speed" : 18.000000,
 		"transform" : 
 		{
-			"position" : "-34.362, 2.500, -38.657",
-			"pitch" : -0.174000,
-			"yaw" : 1.313795
+			"position" : "25.339, 8.000, -1.172",
+			"pitch" : -0.176445,
+			"yaw" : 2.988609
 		}
 	},
 	"objects" : 
@@ -52,14 +52,14 @@
 			}
 		},
 		{
-			"name" : "Lighting",
 			"id" : "33BF534E4C5D72AC4A02E827589D0CDE",
+			"name" : "Lighting",
 			"type" : "object",
 			"children" : 
 			[
 				{
-					"name" : "Skybox",
 					"id" : "3C40C6CCE0DAA3914AAD5DBE31B94281",
+					"name" : "Skybox",
 					"type" : "skybox",
 					"casts shadow" : false,
 					"materials" : 
@@ -68,8 +68,8 @@
 					]
 				},
 				{
-					"name" : "Reflection Probe 01",
 					"id" : "267350C0434E709B4F2FA545E179963F",
+					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"transform" : 
 					{
@@ -77,23 +77,23 @@
 					}
 				},
 				{
-					"name" : "Directional Light",
 					"id" : "421EA4A9C639B98D43992BC7ED65034E",
+					"name" : "Directional Light",
 					"type" : "directional light",
 					"transform" : 
 					{
 						"pos" : "0.000, 15.000, 0.000",
-						"rot" : "1.575, -0.000, 0.000"
+						"rot" : "1.583, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
-						"colour" : "0.99,1.00,0.84",
-						"brightness" : 0.70
+						"brightness" : 0.70,
+						"colour" : "0.99,1.00,0.84"
 					}
 				},
 				{
-					"name" : "PointLight_03",
 					"id" : "771EB1387823558F480559B985C3469D",
+					"name" : "PointLight_03",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -101,21 +101,25 @@
 					},
 					"point light info" : 
 					{
-						"colour" : "0.49,0.78,0.91",
-						"brightness" : 31.250
+						"brightness" : 31.250,
+						"colour" : "0.49,0.78,0.91"
 					},
 					"children" : 
 					[
 						{
-							"name" : "socket_005",
 							"id" : "D2B4586102FEFE87433539B90CB0227C",
-							"type" : "socket"
+							"name" : "socket_005",
+							"type" : "socket",
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				},
 				{
-					"name" : "PointLight_02",
 					"id" : "B375AD1A5B18AC8C43966EBC3D651201",
+					"name" : "PointLight_02",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -123,21 +127,25 @@
 					},
 					"point light info" : 
 					{
-						"colour" : "0.94,0.80,0.57",
-						"brightness" : 395.833
+						"brightness" : 395.833,
+						"colour" : "0.94,0.80,0.57"
 					},
 					"children" : 
 					[
 						{
-							"name" : "socket_004",
 							"id" : "564F997157E832B04E56B9B3C26BF4BB",
-							"type" : "socket"
+							"name" : "socket_004",
+							"type" : "socket",
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				},
 				{
-					"name" : "PointLight_01",
 					"id" : "9F360CCEC1A5FF8B43FDE22F4E649704",
+					"name" : "PointLight_01",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -150,15 +158,19 @@
 					"children" : 
 					[
 						{
-							"name" : "socket_006",
 							"id" : "4994B353AAEF349A4E6367F48BFA9C0B",
-							"type" : "socket"
+							"name" : "socket_006",
+							"type" : "socket",
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				},
 				{
-					"name" : "PointLight_00",
 					"id" : "A922EFB2AA76D2A247E45EA150321530",
+					"name" : "PointLight_00",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -171,15 +183,19 @@
 					"children" : 
 					[
 						{
-							"name" : "socket_007",
 							"id" : "4F5DC2E885C2578B4D6E126053D6F3CE",
-							"type" : "socket"
+							"name" : "socket_007",
+							"type" : "socket",
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				},
 				{
-					"name" : "AreaLight",
 					"id" : "87A3091457AE338349F5D2BFFA33D061",
+					"name" : "AreaLight",
 					"type" : "area light",
 					"transform" : 
 					{
@@ -194,8 +210,8 @@
 					"children" : 
 					[
 						{
-							"name" : "New_Object_02",
 							"id" : "4997CA417B45399641AC88288BD61949",
+							"name" : "New_Object_02",
 							"type" : "object",
 							"transform" : 
 							{
@@ -211,8 +227,8 @@
 					]
 				},
 				{
-					"name" : "PointLight_04",
 					"id" : "21ABBE5DCE4780B3476680BC4DA4742F",
+					"name" : "PointLight_04",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -220,23 +236,27 @@
 					},
 					"point light info" : 
 					{
-						"colour" : "0.95,0.96,0.84",
-						"brightness" : 31.250
+						"brightness" : 31.250,
+						"colour" : "0.95,0.96,0.84"
 					},
 					"children" : 
 					[
 						{
-							"name" : "socket_008",
 							"id" : "F7A7593C555E7DAD4CAE91FA8E925CD9",
-							"type" : "socket"
+							"name" : "socket_008",
+							"type" : "socket",
+							"socket" : 
+							{
+								"slotIdx" : 0
+							}
 						}
 					]
 				}
 			]
 		},
 		{
-			"name" : "Copper Terminal 01",
 			"id" : "422AC6316779F682468EBD8FF46A9979",
+			"name" : "Copper Terminal 01",
 			"type" : "terminal",
 			"transform" : 
 			{
@@ -263,8 +283,8 @@
 			"children" : 
 			[
 				{
-					"name" : "screen",
 					"id" : "291AEF87F82FDB8649C261B1C1A356AD",
+					"name" : "screen",
 					"type" : "object",
 					"transform" : 
 					{
@@ -278,18 +298,22 @@
 					]
 				},
 				{
-					"name" : "socket_000",
 					"id" : "2E9E794CEB4608A048825843EF994F7B",
+					"name" : "socket_000",
 					"type" : "socket",
 					"transform" : 
 					{
 						"pos" : "-0.755, -0.362, -1.168",
 						"rot" : "3.141, 0.000, 3.141"
+					},
+					"socket" : 
+					{
+						"slotIdx" : 0
 					}
 				},
 				{
-					"name" : "socket_001",
 					"id" : "D9DFC1D0A521AEBF4338BF926808D6F2",
+					"name" : "socket_001",
 					"type" : "socket",
 					"transform" : 
 					{
@@ -302,8 +326,8 @@
 					}
 				},
 				{
-					"name" : "socket_002",
 					"id" : "0FA7C44D69B1B9B5479723F2EB967753",
+					"name" : "socket_002",
 					"type" : "socket",
 					"transform" : 
 					{
@@ -316,8 +340,8 @@
 					}
 				},
 				{
-					"name" : "socket_003",
 					"id" : "E70FF3A9CE23B4B74863F255F2ABC173",
+					"name" : "socket_003",
 					"type" : "socket",
 					"transform" : 
 					{
@@ -332,8 +356,8 @@
 			]
 		},
 		{
-			"name" : "moka",
 			"id" : "ECA2903A8E1C42A749F15519C5EF09D9",
+			"name" : "moka",
 			"type" : "object",
 			"transform" : 
 			{
@@ -349,8 +373,8 @@
 			]
 		},
 		{
-			"name" : "dragon",
 			"id" : "F93A579D7BBDF2A74D51FD2783BB0473",
+			"name" : "dragon",
 			"type" : "object",
 			"transform" : 
 			{
@@ -365,8 +389,8 @@
 			]
 		},
 		{
-			"name" : "Dragon stand",
 			"id" : "3214B079039EE582499DBB446FEE87CB",
+			"name" : "Dragon stand",
 			"type" : "object",
 			"transform" : 
 			{
@@ -394,44 +418,44 @@
 			}
 		},
 		{
-			"name" : "Cart",
 			"id" : "4F5C7B9E0D52C484401567D9337167F7",
+			"name" : "Cart",
 			"type" : "prefab",
 			"prefab type" : "empty cart",
 			"prefab id" : "A6A08D627C3486914B009C28C8394D61",
 			"transform" : 
 			{
-				"pos" : "-9.387, 1.800, 10.428",
+				"pos" : "-9.387, 1.400, 10.428",
 				"rot" : "0.000, 0.605, 0.000"
 			}
 		},
 		{
-			"name" : "Battery",
 			"id" : "49BA1A00D02473914B4C060DFA113653",
+			"name" : "Battery",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-20.980, 2.501, -1.965",
-				"rot" : "0.000, -0.676, -3.142"
+				"pos" : "-20.983, 2.101, -1.966",
+				"rot" : "0.000, -0.676, 3.141"
 			}
 		},
 		{
-			"name" : "Battery-1",
 			"id" : "FC8A67B3179CE4944867BD17D12BD28E",
+			"name" : "Battery-1",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-25.457, 2.501, -1.190",
-				"rot" : "-0.000, -0.006, -0.000"
+				"pos" : "-25.457, 2.101, -1.190",
+				"rot" : "0.000, -0.006, 0.000"
 			}
 		},
 		{
-			"name" : "EngineCart-1",
 			"id" : "C54A90F938F82C944622007A9EDCFB70",
+			"name" : "EngineCart-1",
 			"type" : "prefab",
 			"prefab type" : "engine cart",
 			"prefab id" : "A648391A22D9AFAF4918745CB0A8BE10",
@@ -439,26 +463,26 @@
 			{
 				"pos" : "12.505, 1.347, 0.161"
 			},
-			"cart info" : 
+			"engine cart info" : 
 			{
 				"power remaining" : 0.000000
 			}
 		},
 		{
-			"name" : "Battery-2",
 			"id" : "86598C04552820B64784628C42EE1632",
+			"name" : "Battery-2",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
-				"pos" : "-28.614, 1.500, -1.553",
+				"pos" : "-28.614, 1.100, -1.552",
 				"rot" : "0.192, 0.000, 1.571"
 			}
 		},
 		{
-			"name" : "rock-cube",
 			"id" : "3F3242989496499C4660836CE36D7484",
+			"name" : "rock-cube",
 			"type" : "object",
 			"transform" : 
 			{
@@ -472,8 +496,8 @@
 			]
 		},
 		{
-			"name" : "rock-cube-1",
 			"id" : "EA678D7D8CF2F8A74A71FD59452C90EE",
+			"name" : "rock-cube-1",
 			"type" : "object",
 			"transform" : 
 			{
@@ -487,8 +511,8 @@
 			]
 		},
 		{
-			"name" : "rock-cube-2",
 			"id" : "9567554FE8FB42B64717CD3ECD7F2595",
+			"name" : "rock-cube-2",
 			"type" : "object",
 			"transform" : 
 			{
@@ -502,8 +526,8 @@
 			]
 		},
 		{
-			"name" : "New_Object_03",
 			"id" : "0A2BF0E45D5535924D6CC22846414DAF",
+			"name" : "New_Object_03",
 			"type" : "object",
 			"transform" : 
 			{
@@ -518,8 +542,8 @@
 			"children" : 
 			[
 				{
-					"name" : "New_Object_04",
 					"id" : "037E892AD70154B84C302F17089E9788",
+					"name" : "New_Object_04",
 					"type" : "object",
 					"transform" : 
 					{
@@ -535,8 +559,8 @@
 					"children" : 
 					[
 						{
-							"name" : "New_Object_05",
 							"id" : "0285496278CFE6BC4D26F513369E21AC",
+							"name" : "New_Object_05",
 							"type" : "object",
 							"transform" : 
 							{
@@ -555,8 +579,8 @@
 			]
 		},
 		{
+			"id" : "B019F5F10EF6769A400AD7BCF1D0DC21",
 			"name" : "power_pole",
-			"id" : "C1223FB847F1BFAF4ECE2BAEFDB8FCED",
 			"type" : "prefab",
 			"prefab type" : "power pole",
 			"prefab id" : "FF518D129F74B1B442494D703055E816",
@@ -566,7 +590,6 @@
 			}
 		},
 		{
-			"name" : "miner",
 			"id" : "7C58E205F327AF8E4C60CA2570CA0190",
 			"type" : "prefab",
 			"prefab type" : "miner",
@@ -578,7 +601,7 @@
 			},
 			"miner" : 
 			{
-				"charge" : 5.199995,
+				"charge" : 3.499997,
 				"inventory" : 
 				[
 					{
@@ -598,14 +621,18 @@
 					},
 					{
 						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
-						"count" : 21,
+						"count" : 32,
 						"index" : 3
+					},
+					{
+						"prefab id" : "3F4C4F2ECCA45AA849EBBA54D3431F1E",
+						"count" : 6,
+						"index" : 4
 					}
 				]
 			}
 		},
 		{
-			"name" : "mineral deposit iron",
 			"id" : "D43AD3B3CE84169249BD470C2E36A181",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit iron",
@@ -616,12 +643,11 @@
 			},
 			"mineral deposit" : 
 			{
-				"mineral remaining" : 883,
+				"mineral remaining" : 866,
 				"type" : "iron"
 			}
 		},
 		{
-			"name" : "mineral deposit silicon",
 			"id" : "5F3FE1997191F6A7438AB8EC96A2EC1C",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit silicon",
@@ -636,7 +662,6 @@
 			}
 		},
 		{
-			"name" : "mineral deposit stone",
 			"id" : "343ACE72646E29974D777F594FBFCD5C",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit stone",
@@ -652,7 +677,6 @@
 			}
 		},
 		{
-			"name" : "mineral deposit aluminum",
 			"id" : "B3CB7220A21F0FA64B8E0024647DFCDB",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit aluminum",
@@ -667,7 +691,6 @@
 			}
 		},
 		{
-			"name" : "mineral deposit tin",
 			"id" : "6DA88CF19762FC904F0B75183E0F04B4",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit tin",
@@ -682,7 +705,6 @@
 			}
 		},
 		{
-			"name" : "mineral deposit quartz",
 			"id" : "62852C11369C898649D4F7AB5A425583",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit quartz",
@@ -697,7 +719,6 @@
 			}
 		},
 		{
-			"name" : "mineral deposit olivine",
 			"id" : "E53A36741709F0B64F7127674B74B664",
 			"type" : "prefab",
 			"prefab type" : "mineral deposit olivine",
@@ -713,14 +734,12 @@
 			}
 		},
 		{
-			"name" : "speaker",
 			"id" : "85B0A92857622390432E7511AECB345B",
 			"type" : "prefab",
 			"prefab type" : "speaker",
 			"prefab id" : "DE6BD4B6B87C4CBA4687092B8567F216"
 		},
 		{
-			"name" : "solar panel",
 			"id" : "F51EF76A4718D5954ACC8B30A73824DD",
 			"type" : "prefab",
 			"prefab type" : "solar panel",

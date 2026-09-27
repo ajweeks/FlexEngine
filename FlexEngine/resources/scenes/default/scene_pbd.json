@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_pbd",
 	"spawn player" : false,
 	"camera" : 
@@ -23,46 +23,38 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "E33D3F704D2A8BB240747101C7B74D76",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "351D7B866F7BEDB24B38A5A39DA008B3",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 5.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "Soft Bodies",
 			"id" : "19B226A6109ED5BC427D75C257C320BE",
+			"name" : "Soft Bodies",
 			"type" : "object"
 		},
 		{
-			"name" : "New_Object_00",
 			"id" : "BC56E4CFA335CFB748F08EB08FA373A6",
+			"name" : "New_Object_00",
 			"type" : "object",
 			"transform" : 
 			{
@@ -75,8 +67,8 @@
 			]
 		},
 		{
-			"name" : "New_Object_01",
 			"id" : "0804F61832DB0F96448DC9A368C23C69",
+			"name" : "New_Object_01",
 			"type" : "object",
 			"transform" : 
 			{
@@ -90,8 +82,8 @@
 			]
 		},
 		{
-			"name" : "New_Object_02",
 			"id" : "1638653263CA5BBC4D038B5D6AB9C3DB",
+			"name" : "New_Object_02",
 			"type" : "object",
 			"transform" : 
 			{
@@ -105,8 +97,8 @@
 			]
 		},
 		{
-			"name" : "SoftBody_000",
 			"id" : "4FDC2E83F9D248974D1D5C2BD5991EC4",
+			"name" : "SoftBody_000",
 			"type" : "soft body",
 			"transform" : 
 			{
@@ -114,7 +106,11 @@
 			},
 			"soft body" : 
 			{
+				"bending stiffness" : 0.10,
+				"damping" : 0.98,
+				"render wireframe" : true,
 				"solver iteration count" : 6,
+				"stiffness" : 1.00,
 				"points" : 
 				[
 					{
@@ -8508,11 +8504,7 @@
 							"target phi" : 3.141593
 						}
 					}
-				],
-				"render wireframe" : true,
-				"damping" : 0.980000,
-				"stiffness" : 0.995000,
-				"bending stiffness" : 0.100000
+				]
 			}
 		}
 	]

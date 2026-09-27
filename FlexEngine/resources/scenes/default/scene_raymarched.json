@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_raymarched",
 	"spawn player" : false,
 	"camera" : 
@@ -23,41 +23,33 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "A05A1A496025D1894604B6A0C2EAF247",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "980F43487C2F848D465FC6CDF9DBE5E6",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 3.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 3.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "New_Object_00",
 			"id" : "2FFEA6C90981698F462E7F3967E5CF93",
+			"name" : "New_Object_00",
 			"type" : "object",
 			"transform" : 
 			{
@@ -72,8 +64,8 @@
 			]
 		},
 		{
-			"name" : "raymarched",
 			"id" : "3A6766EAD54B3F874B8620E21629A3AF",
+			"name" : "raymarched",
 			"type" : "object",
 			"transform" : 
 			{

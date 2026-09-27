@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_prop_test",
 	"spawn player" : false,
 	"camera" : 
@@ -23,21 +23,18 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "9763844926D80BA8434D397DD6AFFF26",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "41F49358ACEB81834267F6075AA25618",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -45,28 +42,23 @@
 			}
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "C40F8F826876F9A44211DFC1EC87F1DC",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 3.047000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 3.05,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "ground plane",
 			"id" : "0C78995C913BB09D4A73DBE17D551FEB",
+			"name" : "ground plane",
 			"type" : "object",
 			"transform" : 
 			{
@@ -93,8 +85,8 @@
 			}
 		},
 		{
-			"name" : "case",
 			"id" : "8810D65B6A52478643940089A1994603",
+			"name" : "case",
 			"type" : "object",
 			"transform" : 
 			{
@@ -110,20 +102,20 @@
 			]
 		},
 		{
-			"name" : "battery cell",
 			"id" : "C9F01C5986A90DA84A0FB9EE2F677464",
+			"name" : "battery cell",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "-2.305, 1.100, 2.117",
-				"rot" : "0.525, 0.000, 1.571"
+				"rot" : "0.525, -0.000, 1.571"
 			}
 		},
 		{
-			"name" : "battery cell2",
 			"id" : "FE88C01211AF55A04620FFF1ED7C7CC6",
+			"name" : "battery cell2",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
@@ -134,32 +126,32 @@
 			}
 		},
 		{
-			"name" : "battery cell3",
 			"id" : "09C12026631301A04757C6A0E8A5D9F8",
+			"name" : "battery cell3",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "1.700, 2.101, 2.881",
-				"rot" : "-0.000, 0.592, -3.142"
+				"rot" : "0.000, 0.592, 3.141"
 			}
 		},
 		{
-			"name" : "battery cell4",
 			"id" : "D1D4E69694A7AAA04C7C6FF5CE84A459",
+			"name" : "battery cell4",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "6.128, 1.100, 0.310",
-				"rot" : "-0.005, 0.000, -1.571"
+				"rot" : "-0.005, -0.000, -1.571"
 			}
 		},
 		{
-			"name" : "battery cell5",
 			"id" : "FECDB85FB60D8BA14A481D3322BD045D",
+			"name" : "battery cell5",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
@@ -170,56 +162,56 @@
 			}
 		},
 		{
-			"name" : "battery cell2",
 			"id" : "A086C0C58254CA924819BD50D6D8C0BE",
+			"name" : "battery cell2",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "-2.072, 2.101, -3.179",
-				"rot" : "-3.142, 0.778, 3.142"
+				"rot" : "3.141, 0.778, -3.141"
 			}
 		},
 		{
-			"name" : "battery cell3",
 			"id" : "93B964CAB64F2EBF4DB9EE19F44D9A0E",
+			"name" : "battery cell3",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "0.857, 1.100, -1.702",
-				"rot" : "-0.006, 0.000, -1.571"
+				"rot" : "-0.006, -0.000, -1.571"
 			}
 		},
 		{
-			"name" : "battery cell4",
 			"id" : "4AD2F2D9FD5A94BD4E96F88D2277F7F9",
+			"name" : "battery cell4",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "3.875, 2.101, -1.673",
-				"rot" : "-0.000, 0.025, 0.000"
+				"rot" : "0.000, 0.025, 0.000"
 			}
 		},
 		{
-			"name" : "battery cell5",
 			"id" : "39208163D06ED69942DA303EA1B03BC9",
+			"name" : "battery cell5",
 			"type" : "prefab",
 			"prefab type" : "battery",
 			"prefab id" : "AE555A317F62C4B74F245593DF57B8CB",
 			"transform" : 
 			{
 				"pos" : "8.714, 2.101, -2.342",
-				"rot" : "-0.000, 0.016, -0.000"
+				"rot" : "0.000, 0.016, 0.000"
 			}
 		},
 		{
-			"name" : "greenhouse",
 			"id" : "092F821D779FFAA8401DBA49A9CDA64C",
+			"name" : "greenhouse",
 			"type" : "object",
 			"transform" : 
 			{

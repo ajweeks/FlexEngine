@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_donut",
 	"spawn player" : false,
 	"camera" : 
@@ -23,21 +23,18 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "6A50D04E9281558E457A9814F613E56D",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "0F6205F6C105D99C451A6E96CBB23243",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -45,8 +42,8 @@
 			}
 		},
 		{
-			"name" : "donut",
 			"id" : "F064E1C44DB843B1411FAAB9AF86DFB6",
+			"name" : "donut",
 			"type" : "object",
 			"transform" : 
 			{
@@ -63,8 +60,8 @@
 			"children" : 
 			[
 				{
-					"name" : "donut2",
 					"id" : "7725190D2D416181453E9AE57CEEEDB8",
+					"name" : "donut2",
 					"type" : "object",
 					"transform" : 
 					{
@@ -81,8 +78,8 @@
 					"children" : 
 					[
 						{
-							"name" : "donut3",
 							"id" : "B8123D5F8BB321BD47E6A3D4E93193BF",
+							"name" : "donut3",
 							"type" : "object",
 							"transform" : 
 							{
@@ -102,23 +99,18 @@
 			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "9844037EC2F88A954FE6D074D9820BD1",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 5.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		}
 	]

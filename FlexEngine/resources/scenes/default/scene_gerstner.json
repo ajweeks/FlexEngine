@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene Gerstner",
 	"spawn player" : false,
 	"camera" : 
@@ -23,21 +23,18 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "5A5E3EBF8B00FF96467AFE417DAEBBCA",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "37FA95F9BFAF47AD4C9E3BF2DB7F7643",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -46,28 +43,24 @@
 			"visible" : false
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "A4291E50B494F4B54F45C73D2AEC4901",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.638, 20.078, -1.444",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.638,20.078,-1.444",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 2.578000,
-				"cast shadows" : false,
-				"shadow darkness" : 1.000000
+				"brightness" : 2.58,
+				"cast shadows" : 0,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "Gerstner Wave",
 			"id" : "097971388B9245B14AE148BA63355EAD",
+			"name" : "Gerstner Wave",
 			"type" : "gerstner wave",
 			"gerstner wave" : 
 			{
@@ -158,16 +151,16 @@
 				"colour top" : "1.00,1.00,1.00,0.00",
 				"colour mid" : "1.00,1.00,1.00,0.00",
 				"colour btm" : "0.01,0.06,0.11,0.00",
-				"fresnel factor" : 1.000000,
-				"fresnel power" : 6.380000,
-				"sky reflection factor" : 0.177000,
-				"fog falloff" : 1.060000,
-				"fog density" : 1.350000
+				"fog density" : 1.20,
+				"fog falloff" : 1.20,
+				"fresnel factor" : 0.80,
+				"fresnel power" : 7.00,
+				"sky reflection factor" : 0.80
 			}
 		},
 		{
-			"name" : "PointLight_00",
 			"id" : "1A7273F28FFB93AE4CC39F5F8CA6E410",
+			"name" : "PointLight_00",
 			"type" : "point light",
 			"transform" : 
 			{
@@ -176,15 +169,13 @@
 			"visible" : false,
 			"point light info" : 
 			{
-				"pos" : "0.000,26.277,-16.438",
-				"colour" : "1.00,1.00,1.00",
-				"enabled" : false,
-				"brightness" : 500.000000
+				"brightness" : 500.000,
+				"enabled" : 0
 			}
 		},
 		{
-			"name" : "PointLight_01",
 			"id" : "FB8EFADB928129954EE21986E495E377",
+			"name" : "PointLight_01",
 			"type" : "point light",
 			"transform" : 
 			{
@@ -193,10 +184,8 @@
 			"visible" : false,
 			"point light info" : 
 			{
-				"pos" : "0.000,21.528,14.364",
-				"colour" : "1.00,1.00,1.00",
-				"enabled" : false,
-				"brightness" : 500.000000
+				"brightness" : 500.000,
+				"enabled" : 0
 			}
 		}
 	]

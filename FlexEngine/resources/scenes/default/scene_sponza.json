@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Sponza",
 	"spawn player" : false,
 	"camera" : 
@@ -23,8 +23,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "Sponza",
 			"id" : "8C15102E361213AF489DB2CCAF735860",
+			"name" : "Sponza",
 			"type" : "object",
 			"mesh" : "sponza.glb",
 			"materials" : 
@@ -35,8 +35,8 @@
 			]
 		},
 		{
-			"name" : "ground plane",
 			"id" : "B5208F47CA8DB7A8493960E2FA7F2C94",
+			"name" : "ground plane",
 			"type" : "object",
 			"transform" : 
 			{
@@ -64,21 +64,18 @@
 			}
 		},
 		{
-			"name" : "Skybox",
 			"id" : "399F2B7FE93B82B4456D6FAAED64295D",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "1C0FAB2C31A309B548AB41CA7B9113D3",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -87,8 +84,8 @@
 			}
 		},
 		{
-			"name" : "ball 01",
 			"id" : "A97834FA319F82BC42FD58A96A5E65F6",
+			"name" : "ball 01",
 			"type" : "object",
 			"transform" : 
 			{
@@ -115,8 +112,8 @@
 			}
 		},
 		{
-			"name" : "ball 02",
 			"id" : "900B3CA7BB16BDBF4CB9FBF5DB74BEB6",
+			"name" : "ball 02",
 			"type" : "object",
 			"transform" : 
 			{
@@ -143,8 +140,8 @@
 			}
 		},
 		{
-			"name" : "ball 03",
 			"id" : "928F359BF521E68840E000D077A9B3C3",
+			"name" : "ball 03",
 			"type" : "object",
 			"transform" : 
 			{
@@ -171,8 +168,8 @@
 			}
 		},
 		{
-			"name" : "ball 04",
 			"id" : "651183B56E8B90AA429B91D181B3B335",
+			"name" : "ball 04",
 			"type" : "object",
 			"transform" : 
 			{
@@ -199,8 +196,8 @@
 			}
 		},
 		{
-			"name" : "ball 05",
 			"id" : "49CE87DDD88207984EEEBC73243C3B26",
+			"name" : "ball 05",
 			"type" : "object",
 			"transform" : 
 			{
@@ -227,8 +224,8 @@
 			}
 		},
 		{
-			"name" : "ball 06",
 			"id" : "A2C1458350F900BE4D41CA2CD8C431A5",
+			"name" : "ball 06",
 			"type" : "object",
 			"transform" : 
 			{
@@ -255,8 +252,8 @@
 			}
 		},
 		{
-			"name" : "ball 07",
 			"id" : "DB2166D90E8EC68F4B33075CCF67304B",
+			"name" : "ball 07",
 			"type" : "object",
 			"transform" : 
 			{
@@ -283,8 +280,8 @@
 			}
 		},
 		{
-			"name" : "ball 08",
 			"id" : "829C43CB3823ECB4419B75A02CC8746F",
+			"name" : "ball 08",
 			"type" : "object",
 			"transform" : 
 			{
@@ -311,8 +308,8 @@
 			}
 		},
 		{
-			"name" : "ball 09",
 			"id" : "3E35E6DF07FEAFBF4C9F0F92E39A620E",
+			"name" : "ball 09",
 			"type" : "object",
 			"transform" : 
 			{
@@ -339,8 +336,8 @@
 			}
 		},
 		{
-			"name" : "ball 10",
 			"id" : "A245A3FC811808A340D2DBADE7F67D18",
+			"name" : "ball 10",
 			"type" : "object",
 			"transform" : 
 			{
@@ -367,8 +364,8 @@
 			}
 		},
 		{
-			"name" : "ball 11",
 			"id" : "980272AD9173969341833A30A04407E4",
+			"name" : "ball 11",
 			"type" : "object",
 			"transform" : 
 			{
@@ -395,8 +392,8 @@
 			}
 		},
 		{
-			"name" : "ball 12",
 			"id" : "820FE7401C8A299046A172499E4E37C1",
+			"name" : "ball 12",
 			"type" : "object",
 			"transform" : 
 			{
@@ -423,23 +420,19 @@
 			}
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "7B9BD2C31D79CD8A41FDCF101D4A4581",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "38.436, 67.272, 4.517",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "38.436,67.272,4.517",
+				"brightness" : 12.19,
 				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 12.188000,
-				"cast shadows" : true,
-				"shadow darkness" : 0.880000
+				"shadow darkness" : 0.88
 			}
 		}
 	]

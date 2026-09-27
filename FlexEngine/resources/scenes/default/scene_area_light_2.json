@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_area_light_2",
 	"spawn player" : false,
 	"camera" : 
@@ -23,42 +23,34 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "27F7672A65C29A944B1C0908E1377F5B",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Directional light",
 			"id" : "6D690C622527DA9F40C6F48F6F51B958",
+			"name" : "Directional light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"visible" : false,
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : false,
-				"brightness" : 3.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 3.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "ground plane",
 			"id" : "6A2D23333C0FC5BF4D6CB299DCD7D219",
+			"name" : "ground plane",
 			"type" : "object",
 			"transform" : 
 			{
@@ -71,8 +63,8 @@
 			]
 		},
 		{
-			"name" : "Area Light",
 			"id" : "E9509BA2CDFC45BA415EB4BC554CBA05",
+			"name" : "Area Light",
 			"type" : "area light",
 			"transform" : 
 			{
@@ -82,15 +74,14 @@
 			},
 			"area light info" : 
 			{
-				"colour" : "0.95,0.24,0.28",
-				"enabled" : true,
-				"brightness" : 14.778000
+				"brightness" : 14.778000,
+				"colour" : "0.95,0.24,0.28"
 			},
 			"children" : 
 			[
 				{
-					"name" : "New_Object_01",
 					"id" : "61B27BD463822091402A3963A43130D3",
+					"name" : "New_Object_01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -106,8 +97,8 @@
 			]
 		},
 		{
-			"name" : "Area Light-1",
 			"id" : "CA9D301714EB609B44D622C2866B39CB",
+			"name" : "Area Light-1",
 			"type" : "area light",
 			"transform" : 
 			{
@@ -117,15 +108,14 @@
 			},
 			"area light info" : 
 			{
-				"colour" : "0.95,0.24,0.28",
-				"enabled" : true,
-				"brightness" : 14.778000
+				"brightness" : 14.778000,
+				"colour" : "0.95,0.24,0.28"
 			},
 			"children" : 
 			[
 				{
-					"name" : "New_Object_02",
 					"id" : "5BE8271507A3DF914E74992EAA407700",
+					"name" : "New_Object_02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -141,8 +131,8 @@
 			]
 		},
 		{
-			"name" : "Area Light-2",
 			"id" : "CA620C560FA048A6477180E750AE1BB9",
+			"name" : "Area Light-2",
 			"type" : "area light",
 			"transform" : 
 			{
@@ -152,15 +142,14 @@
 			},
 			"area light info" : 
 			{
-				"colour" : "0.95,0.24,0.28",
-				"enabled" : true,
-				"brightness" : 14.778000
+				"brightness" : 14.778000,
+				"colour" : "0.95,0.24,0.28"
 			},
 			"children" : 
 			[
 				{
-					"name" : "New_Object_03",
 					"id" : "561E3223C9CE029A4804E87861066017",
+					"name" : "New_Object_03",
 					"type" : "object",
 					"transform" : 
 					{

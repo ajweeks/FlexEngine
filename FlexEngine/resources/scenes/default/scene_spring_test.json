@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_spring_test",
 	"spawn player" : false,
 	"camera" : 
@@ -23,21 +23,18 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "736194605078D09646265A3DC2E363A4",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "88F285DC181BC9894CFE009954B01B70",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -45,28 +42,23 @@
 			}
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "D7246CA6B5828AAA4231EE871567AF25",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.587, -0.000, 0.000"
+				"rot" : "0.713, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.713,0.000,0.000,0.701",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 5.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "New_Object_00",
 			"id" : "D9048C576625EFA94053EF3B20973C2D",
+			"name" : "New_Object_00",
 			"type" : "object",
 			"transform" : 
 			{
@@ -76,8 +68,8 @@
 			"children" : 
 			[
 				{
-					"name" : "spring1",
 					"id" : "33F9EB2D813252AF4B5A00C1DBE0B29A",
+					"name" : "spring1",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -85,12 +77,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "0.000000,-13.814279,1.945064"
+						"end point" : "0.00,-13.81,1.95"
 					}
 				},
 				{
-					"name" : "spring2",
 					"id" : "DDB35F8FD8F453AD4C327B0C4FEE8099",
+					"name" : "spring2",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -98,12 +90,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-6.688931,-11.465301,1.437968"
+						"end point" : "-6.69,-11.47,1.44"
 					}
 				},
 				{
-					"name" : "spring3",
 					"id" : "DFAEC52D028074A14B98E7BB4FBAE959",
+					"name" : "spring3",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -111,13 +103,13 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-14.559177,-16.473282,5.473850"
+						"end point" : "-14.56,-16.47,5.47"
 					},
 					"children" : 
 					[
 						{
-							"name" : "Spring origin2",
 							"id" : "FCFEA8CDB508CFBC4EDDA64A38F6DE07",
+							"name" : "Spring origin2",
 							"type" : "object",
 							"transform" : 
 							{
@@ -128,8 +120,8 @@
 					]
 				},
 				{
-					"name" : "spring4",
 					"id" : "AC4A3651DF96769D45EBD23901234839",
+					"name" : "spring4",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -137,12 +129,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-24.939661,-15.933435,7.656563"
+						"end point" : "-24.94,-15.93,7.66"
 					}
 				},
 				{
-					"name" : "spring3",
 					"id" : "A000570303E8CBAA413EFB2EF7A454BE",
+					"name" : "spring3",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -150,12 +142,12 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-6.687451,-10.843828,13.306085"
+						"end point" : "-6.69,-10.84,13.31"
 					}
 				},
 				{
-					"name" : "spring4",
 					"id" : "55EAE826C1391DB545A1613A734DB90D",
+					"name" : "spring4",
 					"type" : "spring",
 					"transform" : 
 					{
@@ -163,7 +155,7 @@
 					},
 					"spring" : 
 					{
-						"end point" : "-14.546527,-14.752476,17.329889"
+						"end point" : "-14.55,-14.75,17.33"
 					}
 				}
 			]

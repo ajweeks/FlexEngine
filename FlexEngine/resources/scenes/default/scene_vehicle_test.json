@@ -24,8 +24,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "550D6BBEFAA67685495BCE9A868118FE",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
@@ -34,8 +34,8 @@
 			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "364A266CCA195F894C5FB105EC59CC6B",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
@@ -44,38 +44,37 @@
 			},
 			"directional light info" : 
 			{
-				"colour" : "0.99,1.00,0.84",
-				"brightness" : 0.89
+				"brightness" : 0.89,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "Road",
 			"id" : "868430323533558740C132FED8F0E1C0",
+			"name" : "Road",
 			"type" : "road"
 		},
 		{
-			"name" : "Terrain",
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
+			"name" : "Terrain",
 			"type" : "terrain generator",
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
+				"base table width" : 256,
 				"chunk size" : 922.375000,
-				"pin center" : true,
-				"vert count per chunk axis" : 16,
-				"max height" : 500.000000,
-				"use manual seed" : true,
-				"manual seed" : 6,
+				"high colour" : "0.65,0.70,0.43",
+				"isolate noise layer" : 0,
 				"loaded chunk radius" : 2408.23,
 				"loaded chunk rigid body square radius" : 10000.00,
-				"base table width" : 256,
-				"isolate noise layer" : 0,
-				"num points per axis" : 17,
-				"max chunk count" : 142,
 				"low colour" : "0.33,0.41,0.33",
+				"manual seed" : 6,
+				"max chunk count" : 142,
+				"max height" : 500.000000,
 				"mid colour" : "0.51,0.58,0.37",
-				"high colour" : "0.65,0.70,0.43",
+				"num points per axis" : 17,
+				"pin center" : true,
 				"pinned center" : "0.03,10.43,-0.00",
+				"use manual seed" : true,
 				"biomes" : 
 				[
 					{
@@ -152,8 +151,8 @@
 			}
 		},
 		{
-			"name" : "cloud",
 			"id" : "38CB844333BA598B46F8147A4C4E407A",
+			"name" : "cloud",
 			"type" : "object",
 			"transform" : 
 			{
@@ -167,8 +166,8 @@
 			]
 		},
 		{
-			"name" : "cloud2",
 			"id" : "58C43E44B1F5DBBF415611823E71DA98",
+			"name" : "cloud2",
 			"type" : "object",
 			"transform" : 
 			{
@@ -194,8 +193,8 @@
 			}
 		},
 		{
-			"name" : "starting_cube",
 			"id" : "DBB6F73BA6F655994B1A190CD9D43C84",
+			"name" : "starting_cube",
 			"type" : "object",
 			"transform" : 
 			{
@@ -223,8 +222,8 @@
 			}
 		},
 		{
-			"name" : "cloud3",
 			"id" : "09800A82CFBA60A6487E3E202B121031",
+			"name" : "cloud3",
 			"type" : "object",
 			"transform" : 
 			{
@@ -238,8 +237,8 @@
 			]
 		},
 		{
-			"name" : "vehicle-1",
 			"id" : "15AAFA46948097954A47A3C5F3F65E34",
+			"name" : "vehicle-1",
 			"type" : "prefab",
 			"prefab type" : "vehicle",
 			"prefab id" : "D9F6FAEC87C5539E467A8873744AC159",
@@ -250,18 +249,6 @@
 			},
 			"vehicle" : 
 			{
-				"tire ids" : 
-				[
-					"87314E39D0BC7E994F9E31E5840173F3",
-					"8B2675755B3E2A95470090E9DAF9160B",
-					"1BC1BC8A1EFAC59244D218D932BC1A0E",
-					"EC0182FDE76A7AB44DE0CCB5F3BC7137"
-				],
-				"brake light ids" : 
-				[
-					"80F9807373CF76B94AE741F3DE667F7F",
-					"7605410A753768A04606CC02A24DBDAF"
-				],
 				"sound effect sids" : 
 				[
 					18446744073709551615,

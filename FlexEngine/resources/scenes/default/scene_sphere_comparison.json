@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene_sphere_comparison",
 	"spawn player" : false,
 	"camera" : 
@@ -23,8 +23,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "06935B2B9AA8FEBB4B349065A1966D7E",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"transform" : 
 			{
@@ -41,8 +41,8 @@
 			}
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "D8251972813E62AF496FED60C3F37152",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -51,8 +51,8 @@
 			"visible" : false
 		},
 		{
-			"name" : "Top spheres",
 			"id" : "28F997285BB14B8F451B5414973B71C7",
+			"name" : "Top spheres",
 			"type" : "object",
 			"transform" : 
 			{
@@ -61,8 +61,8 @@
 			"children" : 
 			[
 				{
-					"name" : "Sphere 10",
 					"id" : "5033F0F1B0D255A445F1B62CCFDBD453",
+					"name" : "Sphere 10",
 					"type" : "object",
 					"transform" : 
 					{
@@ -76,8 +76,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 09",
 					"id" : "023990954A04089A4714267041AE593D",
+					"name" : "Sphere 09",
 					"type" : "object",
 					"transform" : 
 					{
@@ -91,8 +91,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 08",
 					"id" : "078C1E1B53DFC6984072D08530B8B963",
+					"name" : "Sphere 08",
 					"type" : "object",
 					"transform" : 
 					{
@@ -106,8 +106,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 00",
 					"id" : "C9DE91FC126950AE4E6E802FBB6BF9A6",
+					"name" : "Sphere 00",
 					"type" : "object",
 					"transform" : 
 					{
@@ -121,8 +121,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 07",
 					"id" : "64E3BF5179E9488A461D3B5542D33215",
+					"name" : "Sphere 07",
 					"type" : "object",
 					"transform" : 
 					{
@@ -136,8 +136,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 05",
 					"id" : "2B4E49DC285F2E9B412495D1D06C1075",
+					"name" : "Sphere 05",
 					"type" : "object",
 					"transform" : 
 					{
@@ -151,8 +151,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 06",
 					"id" : "48E3623879D959BF4BD6A182D8B4F022",
+					"name" : "Sphere 06",
 					"type" : "object",
 					"transform" : 
 					{
@@ -166,8 +166,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 04",
 					"id" : "8CD35BC2BC39368447C28B44D073854E",
+					"name" : "Sphere 04",
 					"type" : "object",
 					"transform" : 
 					{
@@ -181,8 +181,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 03",
 					"id" : "9CBAA0C5FC36DDA74D1B68811755875C",
+					"name" : "Sphere 03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -196,8 +196,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 02",
 					"id" : "EFA945D890CE7F8C412158AA54EB3319",
+					"name" : "Sphere 02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -211,8 +211,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 01",
 					"id" : "7573B9199C3D5DAA4D3E25EAF2FD0D7F",
+					"name" : "Sphere 01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -228,8 +228,8 @@
 			]
 		},
 		{
-			"name" : "Bottom spheres",
 			"id" : "3E42FD046F8A76974D01724FC1ABBD52",
+			"name" : "Bottom spheres",
 			"type" : "object",
 			"transform" : 
 			{
@@ -238,8 +238,8 @@
 			"children" : 
 			[
 				{
-					"name" : "Sphere 11",
 					"id" : "7FAED39BC26E17B4462E2C8988717EB0",
+					"name" : "Sphere 11",
 					"type" : "object",
 					"transform" : 
 					{
@@ -253,8 +253,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 12",
 					"id" : "7C1F345570F3158346A525A9D6E21DFB",
+					"name" : "Sphere 12",
 					"type" : "object",
 					"transform" : 
 					{
@@ -268,8 +268,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 13",
 					"id" : "D8094E19894788AA4FAC149DB9FA97A4",
+					"name" : "Sphere 13",
 					"type" : "object",
 					"transform" : 
 					{
@@ -283,8 +283,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 14",
 					"id" : "4C1D99807FF5949A49BE0A9C2D988C42",
+					"name" : "Sphere 14",
 					"type" : "object",
 					"transform" : 
 					{
@@ -298,8 +298,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 15",
 					"id" : "DC7FB7CDF7BF48844A060946DC88D355",
+					"name" : "Sphere 15",
 					"type" : "object",
 					"transform" : 
 					{
@@ -313,8 +313,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 16",
 					"id" : "F8FF1FBB1848C18C438507B64E21D0EA",
+					"name" : "Sphere 16",
 					"type" : "object",
 					"transform" : 
 					{
@@ -328,8 +328,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 17",
 					"id" : "66F6F57B54B1BD8A4EC9A66D6DC9B1E2",
+					"name" : "Sphere 17",
 					"type" : "object",
 					"transform" : 
 					{
@@ -343,8 +343,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 18",
 					"id" : "0CE13C424A239B9E473C4926BB111E66",
+					"name" : "Sphere 18",
 					"type" : "object",
 					"transform" : 
 					{
@@ -358,8 +358,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 19",
 					"id" : "185655F3B2F9FCBB4552C10A0F74F40F",
+					"name" : "Sphere 19",
 					"type" : "object",
 					"transform" : 
 					{
@@ -373,8 +373,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 20",
 					"id" : "A29265559792A3BB4845987FD861538D",
+					"name" : "Sphere 20",
 					"type" : "object",
 					"transform" : 
 					{
@@ -388,8 +388,8 @@
 					]
 				},
 				{
-					"name" : "Sphere 21",
 					"id" : "95CFB6D2172627BD45AD62AB95D55F98",
+					"name" : "Sphere 21",
 					"type" : "object",
 					"transform" : 
 					{
@@ -405,28 +405,24 @@
 			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "78885AC04A4795AC48C4C9B974733CE4",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 32.400, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,32.400,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 0.391000,
-				"cast shadows" : false,
-				"shadow darkness" : 1.000000
+				"brightness" : 0.39,
+				"cast shadows" : 0,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "PointLight_00",
 			"id" : "293EF5FAE5DF6FBB45EFE6A789DA2393",
+			"name" : "PointLight_00",
 			"type" : "point light",
 			"transform" : 
 			{
@@ -434,15 +430,12 @@
 			},
 			"point light info" : 
 			{
-				"pos" : "32.752,13.554,-20.837",
-				"colour" : "1.00,1.00,1.00",
-				"enabled" : true,
-				"brightness" : 500.000000
+				"brightness" : 500.000
 			}
 		},
 		{
-			"name" : "PointLight_01",
 			"id" : "801DA2951C7AB4944DE337401A5077ED",
+			"name" : "PointLight_01",
 			"type" : "point light",
 			"transform" : 
 			{
@@ -450,10 +443,7 @@
 			},
 			"point light info" : 
 			{
-				"pos" : "31.325,13.227,29.397",
-				"colour" : "1.00,1.00,1.00",
-				"enabled" : true,
-				"brightness" : 500.000000
+				"brightness" : 500.000
 			}
 		}
 	]

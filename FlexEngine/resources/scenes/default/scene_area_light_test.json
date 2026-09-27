@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_area_light_test",
 	"spawn player" : false,
 	"camera" : 
@@ -23,42 +23,34 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "A88E777AB703778D4EDB89E1B342C090",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Directional light",
 			"id" : "C39FBFC00466B6AA449961CAFFA9D949",
+			"name" : "Directional light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "0.707, -0.000, 0.000"
 			},
 			"visible" : false,
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : false,
-				"brightness" : 3.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
+				"brightness" : 3.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		},
 		{
-			"name" : "ground_plane",
 			"id" : "7BC60CBE6479479E47E02F6E43D66444",
+			"name" : "ground_plane",
 			"type" : "object",
 			"transform" : 
 			{
@@ -72,18 +64,18 @@
 			]
 		},
 		{
-			"name" : "Spinner",
 			"id" : "B70BABFF6EEE478149DC6715A1F02390",
+			"name" : "Spinner",
 			"type" : "object",
 			"transform" : 
 			{
-				"rot" : "3.142, -1.471, 3.142"
+				"rot" : "-3.141, -1.471, -3.141"
 			},
 			"children" : 
 			[
 				{
-					"name" : "AreaLight_04",
 					"id" : "7F8E15ACA19627A24D327120F3438323",
+					"name" : "AreaLight_04",
 					"type" : "prefab",
 					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
@@ -95,8 +87,8 @@
 					}
 				},
 				{
-					"name" : "AreaLight_05",
 					"id" : "985B1AAA19A4BD8440B789A7E0DE4E68",
+					"name" : "AreaLight_05",
 					"type" : "prefab",
 					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
@@ -108,8 +100,8 @@
 					}
 				},
 				{
-					"name" : "AreaLight_06",
 					"id" : "C64F4CD1B66E51874FBFE0E544D15E79",
+					"name" : "AreaLight_06",
 					"type" : "prefab",
 					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
@@ -121,23 +113,23 @@
 					}
 				},
 				{
-					"name" : "AreaLight_07",
 					"id" : "F815A82A713D2DAE4C6D7A7ACED902E2",
+					"name" : "AreaLight_07",
 					"type" : "prefab",
 					"prefab type" : "area light",
 					"prefab id" : "1B1B8781D2B15AA34ED54E939D3D5D74",
 					"transform" : 
 					{
 						"pos" : "-3.000, 2.200, 0.000",
-						"rot" : "0.351, 1.571, -3.139",
+						"rot" : "-2.791, 1.570, 0.003",
 						"scale" : "0.599, 2.239, 1.000"
 					}
 				}
 			]
 		},
 		{
-			"name" : "Dragon",
 			"id" : "AD4E924AAD26E8BF44751C78FFA6EE51",
+			"name" : "Dragon",
 			"type" : "object",
 			"transform" : 
 			{
@@ -151,8 +143,8 @@
 			]
 		},
 		{
-			"name" : "ground_plane-1",
 			"id" : "178FAAAAF540418F4486DA1BD0B42899",
+			"name" : "ground_plane-1",
 			"type" : "object",
 			"transform" : 
 			{
@@ -167,8 +159,8 @@
 			]
 		},
 		{
-			"name" : "ground_plane-2",
 			"id" : "8E93C981369339AE4CBF2A6C522C7A0F",
+			"name" : "ground_plane-2",
 			"type" : "object",
 			"transform" : 
 			{

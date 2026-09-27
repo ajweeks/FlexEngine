@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_shadow_test",
 	"spawn player" : true,
 	"player 0 guid" : "7DC72E8C3217E78642D0C390F3C596D7",
@@ -24,8 +24,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "tablet",
 			"id" : "C8A47B216A9E05A64A33C8E42F2D54C9",
+			"name" : "tablet",
 			"type" : "object",
 			"transform" : 
 			{
@@ -39,35 +39,30 @@
 			]
 		},
 		{
-			"name" : "Lighting",
 			"id" : "743C576BD597F78149CDB26BFA7E01E3",
+			"name" : "Lighting",
 			"type" : "object",
 			"mesh" : "cube.glb",
 			"children" : 
 			[
 				{
-					"name" : "Directional Light",
 					"id" : "CDB26D078AE201974B26863B8ED101AE",
+					"name" : "Directional Light",
 					"type" : "directional light",
 					"transform" : 
 					{
 						"pos" : "-2.509, 15.629, 5.470",
-						"rot" : "1.571, -0.000, 0.000"
+						"rot" : "0.707, -0.000, 0.000"
 					},
 					"directional light info" : 
 					{
-						"rotation" : "0.707,0.000,0.000,0.707",
-						"pos" : "-2.509,15.629,5.470",
-						"colour" : "0.99,1.00,0.84",
-						"enabled" : true,
-						"brightness" : 2.365000,
-						"cast shadows" : true,
-						"shadow darkness" : 1.000000
+						"brightness" : 2.37,
+						"colour" : "0.99,1.00,0.84"
 					}
 				},
 				{
-					"name" : "PointLight_07",
 					"id" : "78809A7AF5E7B0B447871BD524DBE076",
+					"name" : "PointLight_07",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -76,15 +71,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "0.200,3.800,11.300",
+						"brightness" : 114.583,
 						"colour" : "0.96,0.53,1.00",
-						"enabled" : false,
-						"brightness" : 114.583000
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_00",
 					"id" : "B6AF8B4B4564F2B940721E79BC5B04FF",
+					"name" : "PointLight_00",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -93,15 +87,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "-6.100,8.000,-11.900",
+						"brightness" : 312.500,
 						"colour" : "0.98,0.27,0.73",
-						"enabled" : false,
-						"brightness" : 312.500000
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_01",
 					"id" : "095CB73E613366AA4C92BC3CFD1F123C",
+					"name" : "PointLight_01",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -110,15 +103,13 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "-7.900,3.393,4.800",
-						"colour" : "1.00,1.00,1.00",
-						"enabled" : false,
-						"brightness" : 552.083008
+						"brightness" : 552.083,
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_02",
 					"id" : "D6192130C048DC924314F2DB844958CA",
+					"name" : "PointLight_02",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -127,15 +118,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "-9.400,8.100,26.600",
+						"brightness" : 1000.000,
 						"colour" : "0.93,0.64,0.29",
-						"enabled" : false,
-						"brightness" : 1000.000000
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_03",
 					"id" : "5025B95080591A8F4C4D93F3F7C6B5EB",
+					"name" : "PointLight_03",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -144,15 +134,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "23.200,11.800,17.500",
+						"brightness" : 473.958,
 						"colour" : "0.55,0.77,1.00",
-						"enabled" : false,
-						"brightness" : 473.958008
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_04",
 					"id" : "AC78A390BE9383AE44091DA7F5C89AE6",
+					"name" : "PointLight_04",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -161,15 +150,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "-23.100,3.700,-13.200",
+						"brightness" : 796.875,
 						"colour" : "0.16,0.48,0.49",
-						"enabled" : false,
-						"brightness" : 796.875000
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_05",
 					"id" : "6D6E76D63602148448DEBCB6C36E3F9B",
+					"name" : "PointLight_05",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -178,15 +166,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "-17.000,11.800,3.300",
+						"brightness" : 411.458,
 						"colour" : "0.77,0.90,0.61",
-						"enabled" : false,
-						"brightness" : 411.458008
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "PointLight_06",
 					"id" : "C2ABDA0921B2DB8E41E6A6A027B3018F",
+					"name" : "PointLight_06",
 					"type" : "point light",
 					"transform" : 
 					{
@@ -195,15 +182,14 @@
 					"visible" : false,
 					"point light info" : 
 					{
-						"pos" : "11.100,1.700,-19.600",
+						"brightness" : 145.833,
 						"colour" : "0.46,0.93,0.88",
-						"enabled" : false,
-						"brightness" : 145.832993
+						"enabled" : 0
 					}
 				},
 				{
-					"name" : "Reflection Probe 01",
 					"id" : "FF420C63FF031EBA42C8E5594CAEA797",
+					"name" : "Reflection Probe 01",
 					"type" : "reflection probe",
 					"transform" : 
 					{
@@ -213,15 +199,15 @@
 			]
 		},
 		{
-			"name" : "Env",
 			"id" : "CF468D75C16934B0412F828F9959187B",
+			"name" : "Env",
 			"type" : "object",
 			"mesh" : "cube.glb",
 			"children" : 
 			[
 				{
-					"name" : "Wall 04",
 					"id" : "7B8D9D5F21DCEBB54AA2C595D54819BF",
+					"name" : "Wall 04",
 					"type" : "object",
 					"transform" : 
 					{
@@ -249,8 +235,8 @@
 					}
 				},
 				{
-					"name" : "Wall 01",
 					"id" : "91AD009742FD6FAB45BE579AFA5D6AA8",
+					"name" : "Wall 01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -278,8 +264,8 @@
 					}
 				},
 				{
-					"name" : "Wall 02",
 					"id" : "433EAE5E790685834DEE20A827ECC63D",
+					"name" : "Wall 02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -306,8 +292,8 @@
 					}
 				},
 				{
-					"name" : "Wall 03",
 					"id" : "EC804FF4047A9F89467BD4D5E5FE3C83",
+					"name" : "Wall 03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -335,8 +321,8 @@
 					}
 				},
 				{
-					"name" : "ground plane",
 					"id" : "E92BE4B4A92209BD4B4FB632F750CF1A",
+					"name" : "ground plane",
 					"type" : "object",
 					"transform" : 
 					{
@@ -363,8 +349,8 @@
 					}
 				},
 				{
-					"name" : "New_Game_Object_02",
 					"id" : "30FEAD42EBEC8B9E4A4DD31B97EFFA7F",
+					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -391,8 +377,8 @@
 					}
 				},
 				{
-					"name" : "New_Game_Object_03",
 					"id" : "277C81BDEC5859B047DD1C2D12FA8224",
+					"name" : "New_Game_Object_03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -419,8 +405,8 @@
 					}
 				},
 				{
-					"name" : "New_Game_Object_00",
 					"id" : "B53B764908785E8C4CB4B6116F2EC6D7",
+					"name" : "New_Game_Object_00",
 					"type" : "object",
 					"transform" : 
 					{
@@ -447,8 +433,8 @@
 					}
 				},
 				{
-					"name" : "New_Game_Object_01",
 					"id" : "A2912941D97E1FA44887B872BD4A28F5",
+					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -475,8 +461,8 @@
 					}
 				},
 				{
-					"name" : "Wall 03",
 					"id" : "A3B78516F7C0289F479097A8FE608210",
+					"name" : "Wall 03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -503,8 +489,8 @@
 					}
 				},
 				{
-					"name" : "New_Game_Object_02",
 					"id" : "023C2FC3EE975AB94FAAA20D53B78E0B",
+					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -518,8 +504,8 @@
 					]
 				},
 				{
-					"name" : "New_Game_Object_01",
 					"id" : "A1931E05AAE47AB041B7696793664005",
+					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -533,8 +519,8 @@
 					]
 				},
 				{
-					"name" : "New_Game_Object_02",
 					"id" : "7E54EC65A96188AA4B2B0F370AFA92C8",
+					"name" : "New_Game_Object_02",
 					"type" : "object",
 					"transform" : 
 					{
@@ -548,8 +534,8 @@
 					]
 				},
 				{
-					"name" : "New_Game_Object_03",
 					"id" : "FC8C4AB085A6438B45D28F93B395297C",
+					"name" : "New_Game_Object_03",
 					"type" : "object",
 					"transform" : 
 					{
@@ -563,8 +549,8 @@
 					]
 				},
 				{
-					"name" : "New_Game_Object_00",
 					"id" : "3A3F12F9A5D3DF864A4A4BD88C625E66",
+					"name" : "New_Game_Object_00",
 					"type" : "object",
 					"transform" : 
 					{
@@ -578,8 +564,8 @@
 					]
 				},
 				{
-					"name" : "New_Game_Object_01",
 					"id" : "B6CB0009431347B64DFC65C7FD697FE8",
+					"name" : "New_Game_Object_01",
 					"type" : "object",
 					"transform" : 
 					{
@@ -593,8 +579,8 @@
 					]
 				},
 				{
-					"name" : "bawl",
 					"id" : "B958F246723DBF904A6EFCDC7D40EEFD",
+					"name" : "bawl",
 					"type" : "object",
 					"transform" : 
 					{
@@ -608,8 +594,8 @@
 					]
 				},
 				{
-					"name" : "che",
 					"id" : "147153D605DC9BA644BB3CF2F5049599",
+					"name" : "che",
 					"type" : "object",
 					"transform" : 
 					{
@@ -627,8 +613,8 @@
 					]
 				},
 				{
-					"name" : "Cylinder",
 					"id" : "E84AC02002C40C8E42D0E64E5D654B8C",
+					"name" : "Cylinder",
 					"type" : "object",
 					"transform" : 
 					{
@@ -644,7 +630,7 @@
 					"collider" : 
 					{
 						"shape" : "cylinder",
-						"half extents" : "1.000,1.877,1.000"
+						"half extents" : "1.000,1.000,1.000"
 					},
 					"rigid body" : 
 					{
@@ -656,17 +642,14 @@
 					}
 				},
 				{
-					"name" : "Skybox",
 					"id" : "4C29A0CDF42BEEA84403CB07063E5F52",
+					"name" : "Skybox",
 					"type" : "skybox",
 					"casts shadow" : false,
 					"materials" : 
 					[
 						"skybox 01"
-					],
-					"skybox info" : 
-					{
-					}
+					]
 				}
 			]
 		}

@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "Scene Empty",
 	"spawn player" : false,
 	"camera" : 
@@ -23,8 +23,8 @@
 	"objects" : 
 	[
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "7A4F63B71FE65DA64C44E445F265B832",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -32,17 +32,14 @@
 			}
 		},
 		{
-			"name" : "Skybox",
 			"id" : "75C7C4C99FDECDBA4D5CD097E646926C",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 02"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		}
 	]
 }

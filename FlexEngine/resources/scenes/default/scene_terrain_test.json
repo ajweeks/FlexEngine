@@ -52,8 +52,8 @@
 			},
 			"directional light info" : 
 			{
-				"colour" : "0.14,0.19,0.27",
-				"brightness" : 5.00
+				"brightness" : 5.00,
+				"colour" : "0.14,0.19,0.27"
 			}
 		},
 		{
@@ -63,22 +63,21 @@
 			"casts shadow" : false,
 			"chunk generator info" : 
 			{
+				"base table width" : 32,
+				"chunk size" : 743.541992,
+				"high colour" : "0.65,0.67,0.69",
+				"isolate noise layer" : -1,
 				"loaded chunk radius" : 3000.00,
 				"loaded chunk rigid body square radius" : 10000.00,
-				"chunk size" : 743.541992,
-				"radius" : 1593.576050,
-				"pin center" : true,
-				"max height" : 768.000000,
-				"use manual seed" : true,
-				"manual seed" : 1234124,
-				"base table width" : 32,
-				"isolate noise layer" : -1,
-				"num points per axis" : 23,
-				"max chunk count" : 64,
 				"low colour" : "0.20,0.30,0.45",
+				"manual seed" : 1234124,
+				"max chunk count" : 64,
+				"max height" : 768.000000,
 				"mid colour" : "0.45,0.55,0.25",
-				"high colour" : "0.65,0.67,0.69",
+				"num points per axis" : 23,
+				"pin center" : true,
 				"pinned center" : "0.30,5.18,-0.22",
+				"use manual seed" : true,
 				"biomes" : 
 				[
 					{
