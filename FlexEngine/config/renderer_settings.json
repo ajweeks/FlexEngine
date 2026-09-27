@@ -1,10 +1,17 @@
 {
 	"version" : 2,
-	"offset" : "-0.015,-0.004,0.001",
-	"enable v-sync" : true,
+	"ambient intensity" : 0.188000,
+	"ambient shadow amount" : 0.827000,
+	"brightness" : "0.990000,0.985000,1.150000",
 	"enable fxaa" : true,
-	"brightness" : "0.990,0.985,1.150",
+	"enable v-sync" : false,
+	"offset" : "-0.015000,-0.004000,0.001000",
 	"saturation" : 1.000000,
+	"shader quality level" : 1,
+	"shadow bias" : 0.036000,
+	"shadow cascade base resolution" : 4096,
 	"shadow cascade count" : 4,
-	"shadow cascade base resolution" : 1024
+	"shadow cascade split lambda" : 0.812000,
+	"shadow distance" : 150.000000,
+	"shadow normal offset" : 2.313000
 }
