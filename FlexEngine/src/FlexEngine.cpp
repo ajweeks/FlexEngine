@@ -1,7 +1,3 @@
-// NOTE: These defines must be above the stdafx include
-#define PL_IMPLEMENTATION 1
-#define PL_IMPL_COLLECTION_BUFFER_BYTE_QTY 50'000'000
-
 #include "stdafx.hpp"
 
 #include "FlexEngine.hpp"

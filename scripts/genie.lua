@@ -253,4 +253,5 @@ end
 nopch {
 	path.join(DEPENDENCIES_DIR, "imgui/**.cpp"),
 	path.join(SOURCE_DIR, "src/ThirdParty/**.c"),
+	path.join(SOURCE_DIR, "src/ThirdParty/**.cpp"),
 }
