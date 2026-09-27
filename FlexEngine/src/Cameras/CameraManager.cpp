@@ -5,6 +5,9 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "InputManager.hpp"
+#include "Player.hpp"
+#include "Scene/BaseScene.hpp"
+#include "Scene/SceneManager.hpp"
 #include "StringBuilder.hpp"
 
 namespace flex
@@ -106,6 +109,20 @@ namespace flex
 
 		const i32 numCameras = (i32)m_Cameras.size();
 
+		// While riding a vehicle, player-possessing cameras are swapped out for the vehicle camera
+		// (they'd otherwise sit on the hidden player while the vehicle keeps taking input)
+		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
+		const bool bRidingVehicle = player0 != nullptr && player0->GetRidingVehicleID().IsValid();
+
+		auto IsCyclable = [bRidingVehicle](BaseCamera* camera)
+		{
+			if (camera->type == CameraType::VEHICLE)
+			{
+				return bRidingVehicle;
+			}
+			return camera->bDEBUGCyclable && !(bRidingVehicle && camera->bPossessPlayer);
+		};
+
 		const i32 desiredIndex = GetCameraIndex(GetCamera(m_CameraStack.top())) + deltaIndex;
 		i32 newIndex;
 		i32 offset = 0;
@@ -121,7 +138,7 @@ namespace flex
 			{
 				newIndex -= numCameras;
 			}
-		} while (!m_Cameras[newIndex]->bDEBUGCyclable);
+		} while (!IsCyclable(m_Cameras[newIndex]));
 
 		return SetCamera(m_Cameras[newIndex], bAlignWithPrevious);
 	}
@@ -184,6 +201,11 @@ namespace flex
 			return nullptr;
 		}
 		return PushCamera(cam, bAlignWithPrevious, bInitialize);
+	}
+
+	u32 CameraManager::GetCameraStackSize() const
+	{
+		return (u32)m_CameraStack.size();
 	}
 
 	void CameraManager::PopCamera(bool bAlignWithCurrent /* = false */)

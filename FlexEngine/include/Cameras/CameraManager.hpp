@@ -32,6 +32,7 @@ namespace flex
 		BaseCamera* PushCamera(BaseCamera* camera, bool bAlignWithPrevious, bool bInitialize);
 		BaseCamera* PushCameraByName(const std::string& name, bool bAlignWithPrevious, bool bInitialize);
 		void PopCamera(bool bAlignWithCurrent = false);
+		u32 GetCameraStackSize() const;
 
 		template<typename T>
 		T* GetOrCreateCameraByName(const std::string& name);
