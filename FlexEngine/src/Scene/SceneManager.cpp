@@ -181,6 +181,39 @@ namespace flex
 		g_Renderer->AddEditorString("Scene reloaded");
 	}
 
+	void SceneManager::SaveAllScenes()
+	{
+		PROFILE_AUTO("SaveAllScenes");
+
+		if (m_CurrentSceneIndex == InvalidID)
+		{
+			return;
+		}
+
+		const u32 originalSceneIndex = m_CurrentSceneIndex;
+
+		// Save current scene first so unsaved edits aren't lost when switching away
+		m_Scenes[originalSceneIndex]->SerializeToFile(false);
+
+		// Unloaded scenes have no objects, so each must be loaded before being serialized
+		for (u32 i = 0; i < (u32)m_Scenes.size(); ++i)
+		{
+			if (i == originalSceneIndex)
+			{
+				continue;
+			}
+
+			if (SetCurrentScene(i))
+			{
+				m_Scenes[i]->SerializeToFile(false);
+			}
+		}
+
+		SetCurrentScene(originalSceneIndex);
+
+		g_Renderer->AddEditorString("Saved all scenes");
+	}
+
 	void SceneManager::CreateNewScene(const std::string& name, bool bSwitchImmediately)
 	{
 		const i32 newSceneIndex = (i32)m_Scenes.size();

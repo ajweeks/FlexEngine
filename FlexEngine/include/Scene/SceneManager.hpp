@@ -24,6 +24,8 @@ namespace flex
 		void SetNextSceneActive();
 		void SetPreviousSceneActive();
 		void ReloadCurrentScene();
+		// Loads & serializes every scene, then returns to the current one
+		void SaveAllScenes();
 
 		void CreateNewScene(const std::string& name, bool bSwitchImmediately);
 		void DeleteScene(BaseScene* scene);

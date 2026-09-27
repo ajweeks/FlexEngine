@@ -1053,6 +1053,11 @@ namespace flex
 					g_SceneManager->CurrentScene()->SerializeToFile(false);
 				}
 
+				if (ImGui::MenuItem("Save all scenes"))
+				{
+					g_SceneManager->SaveAllScenes();
+				}
+
 				if (ImGui::MenuItem("Save all prefabs"))
 				{
 					g_ResourceManager->SerializeAllPrefabTemplates();
