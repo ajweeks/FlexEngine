@@ -172,6 +172,9 @@ namespace flex
 		rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
 		gContactAddedCallback = PlayerContactAddedCallback;
 
+		// Rotation is set every frame by the controller, so only position needs smoothing between fixed steps
+		m_RigidBody->SetInterpolation(true, false);
+
 		GameObject::PostInitialize();
 	}
 
@@ -208,15 +211,6 @@ namespace flex
 			glm::quat desiredRot = glm::quatLookAt(trackForward, m_Transform.GetUp());
 			glm::quat rot = glm::slerp(m_Transform.GetWorldRotation(), desiredRot, 1.0f - glm::clamp(g_DeltaTime * invTurnSpeed, 0.0f, 0.99f));
 			m_Transform.SetWorldRotation(rot, true);
-		}
-
-		// Render between the last two physics states to hide the fixed step rate. Applied as though it came
-		// from the rigid body so it isn't written back to the simulation (which continues from its true position)
-		if (m_bPhysicsPosValid && !m_RidingVehicleID.IsValid())
-		{
-			real alpha = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetInterpolationAlpha();
-			glm::vec3 renderPos = glm::mix(m_PrevPhysicsPos, m_CurrPhysicsPos, alpha);
-			m_Transform.SetFromBtTransform(btTransform(ToBtQuaternion(m_Transform.GetWorldRotation()), ToBtVec3(renderPos)));
 		}
 
 		// Draw cross hair
@@ -344,22 +338,6 @@ namespace flex
 		GameObject::FixedUpdate();
 
 		m_Controller->FixedUpdate();
-
-		glm::vec3 physicsPos = ToVec3(m_RigidBody->GetRigidBodyInternal()->getCenterOfMassPosition());
-		// Treat large jumps as teleports rather than interpolating across them
-		const real maxDistPerStep = 2.0f;
-		if (!m_bPhysicsPosValid || glm::distance2(physicsPos, m_CurrPhysicsPos) > maxDistPerStep * maxDistPerStep)
-		{
-			m_CurrPhysicsPos = physicsPos;
-		}
-		m_PrevPhysicsPos = m_CurrPhysicsPos;
-		m_CurrPhysicsPos = physicsPos;
-		m_bPhysicsPosValid = true;
-	}
-
-	void Player::ResetPositionInterpolation()
-	{
-		m_bPhysicsPosValid = false;
 	}
 
 	void Player::SetPitch(real pitch)
@@ -389,7 +367,6 @@ namespace flex
 		rigidBodyInternal->clearGravity();
 		rigidBodyInternal->setLinearVelocity(btVector3(0, 0, 0));
 		rigidBodyInternal->setAngularVelocity(btVector3(0, 0, 0));
-		ResetPositionInterpolation();
 
 		m_Pitch = 0.0f;
 	}

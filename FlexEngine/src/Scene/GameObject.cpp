@@ -12234,7 +12234,7 @@ namespace flex
 			{
 				DistanceConstraint* distanceConstraint = (DistanceConstraint*)constraint;
 				if (((distanceConstraint->pointIndices[0] == index0 && distanceConstraint->pointIndices[1] == index1) ||
-					(distanceConstraint->pointIndices[1] == index0 && distanceConstraint->pointIndices[1] == index1)))
+					(distanceConstraint->pointIndices[1] == index0 && distanceConstraint->pointIndices[0] == index1)))
 				{
 					return atIndex != u32_max ? atIndex : (u32)constraints.size();
 				}
@@ -12936,6 +12936,11 @@ namespace flex
 
 	void Vehicle::PostInitialize()
 	{
+		if (m_RigidBody != nullptr)
+		{
+			m_RigidBody->SetInterpolation(true, true);
+		}
+
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
 			if (m_SoundEffectSIDs[i] != InvalidStringID)
@@ -12943,6 +12948,8 @@ namespace flex
 				SetSoundEffectSID((SoundEffect)i, m_SoundEffectSIDs[i]);
 			}
 		}
+
+		GameObject::PostInitialize();
 	}
 
 	void Vehicle::Destroy(bool bDetachFromParent /* = true */)

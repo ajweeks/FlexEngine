@@ -576,7 +576,7 @@ namespace flex
 		btTransform identity = btTransform::getIdentity();
 		identity.setOrigin(btVector3(0, 5, 0));
 		rb->setWorldTransform(identity);
-		m_Player->ResetPositionInterpolation();
+		m_Player->GetRigidBody()->ResetInterpolation();
 	}
 
 	void PlayerController::DrawImGuiObjects()

@@ -1665,6 +1665,8 @@ namespace flex
 		{
 		}
 
+		virtual ~Constraint() = default;
+
 		real stiffness;
 		EqualityType equalityType;
 		Type type;

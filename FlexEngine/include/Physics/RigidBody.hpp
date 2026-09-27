@@ -46,9 +46,22 @@ namespace flex
 		// Vector passed in defines the axis (or axes) this body can move along
 		void SetPositionalConstraint(const btVector3& axis);
 
+		// These teleport the body, so they also reset interpolation
 		void SetWorldPosition(const glm::vec3& worldPos);
 		void SetWorldRotation(const glm::quat& worldRot);
 		void SetWorldPositionAndRotation(const glm::vec3& worldPos, const glm::quat& worldRot);
+
+		// When enabled, the transform seen after the scene has updated (by cameras & the renderer) is blended
+		// between the last two fixed steps rather than stepping at the fixed rate. Gameplay code always sees
+		// the simulated transform. Rotation should only be interpolated if it is driven by the simulation
+		void SetInterpolation(bool bPosition, bool bRotation);
+		// Skips interpolation until the next fixed step, e.g. after a teleport
+		void ResetInterpolation();
+
+		// Called by PhysicsWorld
+		void RecordInterpolationState();
+		void RestoreSimulatedTransform();
+		void ApplyInterpolatedTransform(real alpha);
 
 		u32 GetGroup() const;
 		// NOTE: This function removes, then re-adds this object to the world!
@@ -94,5 +107,16 @@ namespace flex
 
 		// Flags set from PhysicsFlag enum
 		u32 m_Flags = 0;
+
+		bool m_bInterpolatePosition = false;
+		bool m_bInterpolateRotation = false;
+		// False until a fixed step has been recorded since the last reset
+		bool m_bInterpolationStateValid = false;
+		bool m_bInterpolatedTransformApplied = false;
+		// Simulated transform after the two most recent fixed steps
+		glm::vec3 m_PrevSimPos = VEC3_ZERO;
+		glm::vec3 m_CurrSimPos = VEC3_ZERO;
+		glm::quat m_PrevSimRot = QUAT_IDENTITY;
+		glm::quat m_CurrSimRot = QUAT_IDENTITY;
 	};
 } // namespace flex

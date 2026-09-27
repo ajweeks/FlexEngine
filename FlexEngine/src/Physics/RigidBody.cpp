@@ -250,6 +250,7 @@ namespace flex
 				m_btMotionState->setWorldTransform(transform);
 			}
 			m_btRigidBody->activate(false);
+			ResetInterpolation();
 		}
 	}
 
@@ -265,6 +266,10 @@ namespace flex
 				m_btMotionState->setWorldTransform(transform);
 			}
 			m_btRigidBody->activate(false);
+			if (m_bInterpolateRotation)
+			{
+				ResetInterpolation();
+			}
 		}
 	}
 
@@ -280,7 +285,81 @@ namespace flex
 				m_btMotionState->setWorldTransform(transform);
 			}
 			m_btRigidBody->activate(false);
+			ResetInterpolation();
 		}
+	}
+
+	void RigidBody::SetInterpolation(bool bPosition, bool bRotation)
+	{
+		if (!bPosition && !bRotation)
+		{
+			RestoreSimulatedTransform();
+		}
+
+		m_bInterpolatePosition = bPosition;
+		m_bInterpolateRotation = bRotation;
+		ResetInterpolation();
+	}
+
+	void RigidBody::ResetInterpolation()
+	{
+		m_bInterpolationStateValid = false;
+	}
+
+	void RigidBody::RecordInterpolationState()
+	{
+		if ((!m_bInterpolatePosition && !m_bInterpolateRotation) || m_btRigidBody == nullptr)
+		{
+			return;
+		}
+
+		const btTransform& simTransform = m_btRigidBody->getWorldTransform();
+		const glm::vec3 simPos = ToVec3(simTransform.getOrigin());
+		const glm::quat simRot = ToQuaternion(simTransform.getRotation());
+
+		if (m_bInterpolationStateValid)
+		{
+			m_PrevSimPos = m_CurrSimPos;
+			m_PrevSimRot = m_CurrSimRot;
+		}
+		else
+		{
+			m_PrevSimPos = simPos;
+			m_PrevSimRot = simRot;
+			m_bInterpolationStateValid = true;
+		}
+		m_CurrSimPos = simPos;
+		m_CurrSimRot = simRot;
+	}
+
+	void RigidBody::RestoreSimulatedTransform()
+	{
+		if (m_bInterpolatedTransformApplied && m_btRigidBody != nullptr && m_btMotionState != nullptr)
+		{
+			m_btMotionState->setWorldTransform(m_btRigidBody->getWorldTransform());
+		}
+		m_bInterpolatedTransformApplied = false;
+	}
+
+	void RigidBody::ApplyInterpolatedTransform(real alpha)
+	{
+		if ((!m_bInterpolatePosition && !m_bInterpolateRotation) ||
+			!m_bInterpolationStateValid ||
+			m_btRigidBody == nullptr ||
+			m_btMotionState == nullptr ||
+			m_bStatic ||
+			m_bKinematic) // Kinematic bodies are driven by their transform
+		{
+			return;
+		}
+
+		const btTransform& simTransform = m_btRigidBody->getWorldTransform();
+		const glm::vec3 pos = m_bInterpolatePosition ? glm::mix(m_PrevSimPos, m_CurrSimPos, alpha) : ToVec3(simTransform.getOrigin());
+		const glm::quat rot = m_bInterpolateRotation ? glm::slerp(m_PrevSimRot, m_CurrSimRot, alpha) : ToQuaternion(simTransform.getRotation());
+
+		// Goes through the motion state so the transform treats it as coming from the rigid body and doesn't write it back
+		m_btMotionState->setWorldTransform(btTransform(ToBtQuaternion(rot), ToBtVec3(pos)));
+		m_bInterpolatedTransformApplied = true;
 	}
 
 	u32 RigidBody::GetGroup() const

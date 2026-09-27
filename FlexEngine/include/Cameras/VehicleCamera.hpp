@@ -18,12 +18,15 @@ namespace flex
 
 		virtual void Initialize() override;
 		virtual void OnPostSceneChange() override;
+		virtual void FixedUpdate() override;
 		virtual void Update() override;
+		virtual void LateUpdate() override;
 
 		virtual void DrawImGuiObjects() override;
 
 	private:
-		glm::vec3 GetOffsetPosition(const glm::vec3& pos);
+		glm::vec3 GetOffsetPosition(const glm::vec3& pos, const glm::vec3& targetForward);
+		void ResetSmoothedSamples();
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindActiveVehicle();
@@ -35,6 +38,12 @@ namespace flex
 		RollingAverage<glm::vec3> m_TargetPosRollingAvg;
 		RollingAverage<glm::vec3> m_TargetForwardRollingAvg;
 		RollingAverage<real> m_TargetVelMagnitudeRollingAvg;
+		// Rolling averages after the two most recent fixed steps. The camera is placed between them each frame
+		// using the physics interpolation alpha so it stays in sync with the (interpolated) vehicle
+		glm::vec3 m_PrevTargetPosAvg = VEC3_ZERO;
+		glm::vec3 m_CurrTargetPosAvg = VEC3_ZERO;
+		glm::vec3 m_PrevTargetForwardAvg = VEC3_FORWARD;
+		glm::vec3 m_CurrTargetForwardAvg = VEC3_FORWARD;
 
 		glm::vec3 m_TargetLookAtPos;
 		glm::vec3 m_Vel;

@@ -70,11 +70,35 @@ namespace flex
 		}
 	}
 
+	template<typename Fn>
+	void PhysicsWorld::ForEachRigidBody(Fn fn)
+	{
+		if (m_World == nullptr)
+		{
+			return;
+		}
+
+		const btCollisionObjectArray& collisionObjects = m_World->getCollisionObjectArray();
+		for (i32 i = 0; i < collisionObjects.size(); ++i)
+		{
+			btRigidBody* body = btRigidBody::upcast(collisionObjects[i]);
+			GameObject* gameObject = (body != nullptr) ? static_cast<GameObject*>(body->getUserPointer()) : nullptr;
+			RigidBody* rigidBody = (gameObject != nullptr) ? gameObject->GetRigidBody() : nullptr;
+			if (rigidBody != nullptr && rigidBody->GetRigidBodyInternal() == body)
+			{
+				fn(rigidBody);
+			}
+		}
+	}
+
 	void PhysicsWorld::StepSimulation(sec deltaSeconds)
 	{
 		if (m_World != nullptr)
 		{
 			PROFILE_AUTO("Step physics simulation");
+
+			// Gameplay & the simulation work with simulated transforms, not the previous frame's render pose
+			ForEachRigidBody([](RigidBody* rigidBody) { rigidBody->RestoreSimulatedTransform(); });
 
 			if (!g_EngineInstance->IsSimulationPaused())
 			{
@@ -100,6 +124,9 @@ namespace flex
 				m_World->stepSimulation(g_FixedDeltaTime, 1, g_FixedDeltaTime);
 				scene->FixedUpdate();
 				m_AccumulatedTime -= g_FixedDeltaTime;
+
+				// Recorded after FixedUpdate so anything it moved (e.g. snapping to a track) is included
+				ForEachRigidBody([](RigidBody* rigidBody) { rigidBody->RecordInterpolationState(); });
 			}
 		}
 	}
@@ -107,6 +134,17 @@ namespace flex
 	real PhysicsWorld::GetInterpolationAlpha() const
 	{
 		return glm::clamp(m_AccumulatedTime / g_FixedDeltaTime, 0.0f, 1.0f);
+	}
+
+	void PhysicsWorld::ApplyInterpolatedTransforms()
+	{
+		if (m_World == nullptr)
+		{
+			return;
+		}
+
+		const real alpha = GetInterpolationAlpha();
+		ForEachRigidBody([alpha](RigidBody* rigidBody) { rigidBody->ApplyInterpolatedTransform(alpha); });
 	}
 
 	btDiscreteDynamicsWorld* PhysicsWorld::GetWorld()

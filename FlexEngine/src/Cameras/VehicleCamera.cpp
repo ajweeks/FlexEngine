@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
@@ -64,6 +65,27 @@ namespace flex
 		ResetValues();
 	}
 
+	void VehicleCamera::FixedUpdate()
+	{
+		if (m_TrackedVehicle == nullptr)
+		{
+			return;
+		}
+
+		// Sample once per fixed step (after the vehicle has moved) so the averages track the simulation at a steady rate
+		Transform* targetTransform = m_TrackedVehicle->GetTransform();
+		btRigidBody* trackedRB = m_TrackedVehicle->GetRigidBody()->GetRigidBodyInternal();
+
+		m_TargetForwardRollingAvg.AddValue(targetTransform->GetForward());
+		m_TargetVelMagnitudeRollingAvg.AddValue(trackedRB->getLinearVelocity().length());
+		m_TargetPosRollingAvg.AddValue(targetTransform->GetWorldPosition());
+
+		m_PrevTargetPosAvg = m_CurrTargetPosAvg;
+		m_CurrTargetPosAvg = m_TargetPosRollingAvg.currentAverage;
+		m_PrevTargetForwardAvg = m_CurrTargetForwardAvg;
+		m_CurrTargetForwardAvg = m_TargetForwardRollingAvg.currentAverage;
+	}
+
 	void VehicleCamera::Update()
 	{
 		BaseCamera::Update();
@@ -73,30 +95,36 @@ namespace flex
 			return;
 		}
 
-		Transform* targetTransform = m_TrackedVehicle->GetTransform();
-		btRigidBody* trackedRB = m_TrackedVehicle->GetRigidBody()->GetRigidBodyInternal();
-
-		m_TargetForwardRollingAvg.AddValue(targetTransform->GetForward());
-		m_TargetVelMagnitudeRollingAvg.AddValue(trackedRB->getLinearVelocity().length());
-
-		m_TargetPosRollingAvg.AddValue(targetTransform->GetWorldPosition());
-		m_TargetLookAtPos = m_TargetPosRollingAvg.currentAverage;
-
 		real newLookOffsetH = -g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_RIGHT);
 		real newLookOffsetV = -g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_UP) + g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_DOWN);
 		m_LookOffsetRollingAvg.AddValue(glm::vec2(newLookOffsetH, newLookOffsetV) * m_LookOffsetMagnitude);
+	}
+
+	// Positioned after the scene has updated so the camera matches the vehicle's interpolated transform this frame
+	void VehicleCamera::LateUpdate()
+	{
+		if (m_TrackedVehicle != nullptr)
+		{
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+			real alpha = (physicsWorld != nullptr) ? physicsWorld->GetInterpolationAlpha() : 1.0f;
+			m_TargetLookAtPos = glm::mix(m_PrevTargetPosAvg, m_CurrTargetPosAvg, alpha);
+			glm::vec3 targetForward = glm::mix(m_PrevTargetForwardAvg, m_CurrTargetForwardAvg, alpha);
 
 #if THOROUGH_CHECKS
-		ENSURE(!IsNanOrInf(m_TargetLookAtPos));
+			ENSURE(!IsNanOrInf(m_TargetLookAtPos));
 #endif
 
-		SetLookAt();
+			SetLookAt();
 
-		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
-		position = desiredPos;
+			glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos, targetForward);
+			position = desiredPos;
 
-		CalculateYawAndPitchFromForward();
-		RecalculateViewProjection();
+			CalculateYawAndPitchFromForward();
+			RecalculateViewProjection();
+
+		}
+
+		BaseCamera::LateUpdate();
 	}
 
 	void VehicleCamera::DrawImGuiObjects()
@@ -135,10 +163,10 @@ namespace flex
 		}
 	}
 
-	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& lookAtPos)
+	glm::vec3 VehicleCamera::GetOffsetPosition(const glm::vec3& lookAtPos, const glm::vec3& targetForward)
 	{
 		// TODO: Handle camera cut to stationary vehicle? (use vehicle forward rather than vel)
-		glm::vec3 backward = -m_TargetForwardRollingAvg.currentAverage;
+		glm::vec3 backward = -targetForward;
 
 		real minOffsetY = 0.0f;
 		if (backward.y < minOffsetY)
@@ -179,7 +207,7 @@ namespace flex
 
 		m_TargetLookAtPos = targetTransform->GetWorldPosition();
 
-		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos);
+		glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos, targetTransform->GetForward());
 		position = desiredPos;
 
 		SetLookAt();
@@ -190,6 +218,12 @@ namespace flex
 		forward = glm::normalize(m_TargetLookAtPos - position);
 		right = normalize(glm::cross(VEC3_UP, forward));
 		up = cross(forward, right);
+	}
+
+	void VehicleCamera::ResetSmoothedSamples()
+	{
+		m_CurrTargetPosAvg = m_PrevTargetPosAvg = m_TargetPosRollingAvg.currentAverage;
+		m_CurrTargetForwardAvg = m_PrevTargetForwardAvg = m_TargetForwardRollingAvg.currentAverage;
 	}
 
 	void VehicleCamera::FindActiveVehicle()
@@ -224,6 +258,8 @@ namespace flex
 			m_TargetPosRollingAvg.Reset();
 			m_TargetForwardRollingAvg.Reset();
 		}
+
+		ResetSmoothedSamples();
 
 		RecalculateViewProjection();
 	}

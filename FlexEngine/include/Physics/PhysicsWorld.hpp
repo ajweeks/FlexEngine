@@ -35,6 +35,10 @@ namespace flex
 		// Used to interpolate rendered transforms between the two most recent physics states
 		real GetInterpolationAlpha() const;
 
+		// Moves interpolated rigid bodies' transforms to their blended render pose. Called once the scene
+		// has updated so gameplay code sees simulated transforms, while cameras & rendering see smooth motion
+		void ApplyInterpolatedTransforms();
+
 		btDiscreteDynamicsWorld* GetWorld();
 
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);
@@ -52,6 +56,9 @@ namespace flex
 
 	private:
 		friend void PhysicsInternalTickCallback(btDynamicsWorld *world, btScalar timeStep);
+
+		template<typename Fn>
+		void ForEachRigidBody(Fn fn);
 
 		btDiscreteDynamicsWorld* m_World = nullptr;
 

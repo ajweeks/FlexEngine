@@ -232,6 +232,11 @@ namespace flex
 			}
 		}
 
+		if (m_PhysicsWorld)
+		{
+			m_PhysicsWorld->ApplyInterpolatedTransforms();
+		}
+
 		if (!m_bPauseTimeOfDay)
 		{
 			SetTimeOfDay(glm::mod(m_TimeOfDay + g_DeltaTime / m_SecondsPerDay * g_EngineInstance->GetSimulationSpeed(), 1.0f));
