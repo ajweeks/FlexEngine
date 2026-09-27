@@ -1450,10 +1450,20 @@ namespace flex
 			m_Terrain->vertexBufferGPU->data.unitSize = vertBufferSize;
 
 			m_Terrain->vertexBufferGPU->AllocHostMemory(vertBufferSize, m_DynamicAlignment);
+			// Not host visible: device-local + host-visible memory is limited to a ~256MB BAR heap without resizable BAR.
+			// The triangle count is instead set & read back via transfer commands (see DispatchTerrainGenWorkloads)
 			CreateGPUBuffer(m_Terrain->vertexBufferGPU, vertBufferSize,
-				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 				false);
+
+			// Triangle count readback buffer
+
+			delete m_Terrain->triCountReadbackBuffer;
+			m_Terrain->triCountReadbackBuffer = new VulkanBuffer(m_VulkanDevice);
+			m_Terrain->triCountReadbackBuffer->Create(sizeof(i32), VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Terrain tri count readback");
+			VK_CHECK_RESULT(m_Terrain->triCountReadbackBuffer->Map());
+			*(i32*)m_Terrain->triCountReadbackBuffer->m_Mapped = 0;
 		}
 
 		void VulkanRenderer::CreatePostProcessingResources()
@@ -2044,10 +2054,7 @@ namespace flex
 						u32 numVoxels = numVoxelsPerAxis * numVoxelsPerAxis * numVoxelsPerAxis;
 						u32 maxNumTrianglesPerChunk = numVoxels * 5; // Each voxel can contain at most five triangles
 
-						VulkanGPUBuffer* vertexBufferGPU = (VulkanGPUBuffer*)m_Terrain->vertexBufferGPU;
-						VK_CHECK_RESULT(vertexBufferGPU->buffer.Map());
-						i32 newTotalTriCount = *(i32*)vertexBufferGPU->buffer.m_Mapped;
-						vertexBufferGPU->buffer.Unmap();
+						i32 newTotalTriCount = *(i32*)m_Terrain->triCountReadbackBuffer->m_Mapped;
 
 						u32 chunkIndex = (u32)m_TerrainChunksLoaded.size();
 
@@ -5555,6 +5562,7 @@ namespace flex
 				}
 				delete m_Terrain->pointBufferGPU;
 				delete m_Terrain->vertexBufferGPU;
+				delete m_Terrain->triCountReadbackBuffer;
 
 				delete m_Terrain->indirectBuffer;
 				delete[] m_Terrain->indirectBufferCPU;
@@ -9423,20 +9431,18 @@ namespace flex
 			i32 nextChunkTriOffset = m_Terrain->lastTriCount + slack;
 
 			VulkanGPUBuffer* vertexBufferGPU = (VulkanGPUBuffer*)m_Terrain->vertexBufferGPU;
-			VK_CHECK_RESULT(vertexBufferGPU->buffer.Map());
 			// Reset triangle atomic count var
 			m_Terrain->lastTriCount = nextChunkTriOffset;
-			*(i32*)vertexBufferGPU->buffer.m_Mapped = nextChunkTriOffset;
-			vertexBufferGPU->buffer.Unmap();
+			vkCmdUpdateBuffer(commandBuffer, vertexBufferGPU->buffer.m_Buffer, 0, sizeof(i32), &nextChunkTriOffset);
 
 			{
-				// Host m_Terrain->vertexBufferGPU read barrier
+				// Triangle count transfer write -> shader read/write barrier
 				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
-				memoryBarrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-				memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 				vkCmdPipelineBarrier(
 					commandBuffer,
-					VK_PIPELINE_STAGE_HOST_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
 					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 					0,
 					1, &memoryBarrier,
@@ -9532,18 +9538,37 @@ namespace flex
 					0, nullptr);
 			}
 
-			// Barrier allowing host to read back memory after compute stage completes
-			VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
-			memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-			memoryBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-			vkCmdPipelineBarrier(
-				m_TerrainAsyncComputeCommandBuffer,
-				VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-				VK_PIPELINE_STAGE_HOST_BIT,
-				0,
-				1, &memoryBarrier,
-				0, nullptr,
-				0, nullptr);
+			{
+				// Copy triangle count into host-visible readback buffer once mesh gen has finished writing it
+				VkMemoryBarrier memoryBarrier = vks::memoryBarrier();
+				memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+				memoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+				vkCmdPipelineBarrier(
+					commandBuffer,
+					VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					1, &memoryBarrier,
+					0, nullptr,
+					0, nullptr);
+
+				VkBufferCopy copyRegion = {};
+				copyRegion.size = sizeof(i32);
+				vkCmdCopyBuffer(commandBuffer, vertexBufferGPU->buffer.m_Buffer, m_Terrain->triCountReadbackBuffer->m_Buffer, 1, &copyRegion);
+
+				// Barrier allowing host to read back triangle count after transfer completes
+				memoryBarrier = vks::memoryBarrier();
+				memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+				memoryBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+				vkCmdPipelineBarrier(
+					commandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT,
+					VK_PIPELINE_STAGE_HOST_BIT,
+					0,
+					1, &memoryBarrier,
+					0, nullptr,
+					0, nullptr);
+			}
 
 			EndDebugMarkerRegion(commandBuffer, "End Terrain generation");
 			EndGPUTimeStamp(commandBuffer, "Terrain generation");

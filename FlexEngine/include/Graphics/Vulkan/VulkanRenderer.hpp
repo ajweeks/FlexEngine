@@ -729,7 +729,10 @@ namespace flex
 				VulkanBuffer* indirectBuffer = nullptr;
 
 				GPUBuffer* pointBufferGPU = nullptr;
+				// Device-local only; first i32 is the atomic triangle count written by the mesh gen shader
 				GPUBuffer* vertexBufferGPU = nullptr;
+				// Host-visible copy of vertexBufferGPU's triangle count, filled at the end of each gen dispatch
+				VulkanBuffer* triCountReadbackBuffer = nullptr;
 				u32 maxChunkCount = 0;
 
 				VkFence fence = VK_NULL_HANDLE;
