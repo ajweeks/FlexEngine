@@ -6,6 +6,29 @@
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
 
+namespace
+{
+	bool IsEscapedQuote(const std::string& text, size_t quoteIndex)
+	{
+		size_t backslashCount = 0;
+		while (quoteIndex > backslashCount && text[quoteIndex - backslashCount - 1] == '\\')
+		{
+			++backslashCount;
+		}
+		return (backslashCount % 2) != 0;
+	}
+
+	size_t FindUnescapedQuote(const std::string& text, size_t startIndex)
+	{
+		size_t quoteIndex = text.find('"', startIndex);
+		while (quoteIndex != std::string::npos && IsEscapedQuote(text, quoteIndex))
+		{
+			quoteIndex = text.find('"', quoteIndex + 1);
+		}
+		return quoteIndex;
+	}
+}
+
 namespace flex
 {
 	std::string JSONParser::s_ErrorStr;
@@ -41,7 +64,7 @@ namespace flex
 		while (i < (i32)dirtyFileContents.size())
 		{
 			char currentChar = dirtyFileContents[i];
-			if (currentChar == '\"')
+			if (currentChar == '\"' && !IsEscapedQuote(dirtyFileContents, (size_t)i))
 			{
 				bInQuote = !bInQuote;
 				cleanFileContents.push_back(currentChar);
@@ -195,11 +218,7 @@ namespace flex
 				return false;
 			}
 
-			size_t strQuoteEnd = strQuoteStart;
-			do
-			{
-				strQuoteEnd = fileContents.find('\"', strQuoteEnd + 1);
-			} while (strQuoteEnd != std::string::npos && fileContents[strQuoteEnd - 1] == '\\');
+			size_t strQuoteEnd = FindUnescapedQuote(fileContents, strQuoteStart + 1);
 
 			if (strQuoteEnd == std::string::npos)
 			{
@@ -384,7 +403,7 @@ namespace flex
 			return false;
 		}
 
-		size_t quoteEnd = fileContents.find('\"', quoteStart + 1);
+		size_t quoteEnd = FindUnescapedQuote(fileContents, quoteStart + 1);
 		if (quoteEnd == std::string::npos)
 		{
 			s_ErrorStr = "Couldn't find closing quote after offset " + std::to_string(*offset);
@@ -570,7 +589,7 @@ namespace flex
 		{
 			char currentChar = fileContents[offset];
 
-			if (currentChar == '\"')
+			if (currentChar == '\"' && !IsEscapedQuote(fileContents, (size_t)offset))
 			{
 				bInQuotes = !bInQuotes;
 			}
