@@ -248,6 +248,17 @@ namespace flex
 		}
 		JSON_UNIT_TEST_END;
 
+		JSON_UNIT_TEST(EscapedQuotesPreserveCommentMarkers)
+		{
+			std::string jsonStr = R"({"message":"say \"hello\" // remains string, }"})";
+			JSONObject jsonObj;
+			bool bSuccess = JSONParser::Parse(jsonStr, jsonObj);
+
+			EXPECT(bSuccess, true);
+			EXPECT(jsonObj.fields[0].value.strValue.c_str(), "say \"hello\" // remains string, }");
+		}
+		JSON_UNIT_TEST_END;
+
 		JSON_UNIT_TEST(MultipleFieldsParsedCorrectly)
 		{
 			std::string jsonStr = R"(
@@ -2535,7 +2546,7 @@ namespace flex
 			TestFunc funcs[] = {
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
-				MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
+				MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, EscapedQuotesPreserveCommentMarkers, MultipleFieldsParsedCorrectly,
 				JSONArray0, JSONArray1, JSONArray2, JSONArray3, ArrayParsedCorrectly, ArrayMissingCommaInArrayFailsParse, ComplexFileIsValid,
 				// Math tests
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
