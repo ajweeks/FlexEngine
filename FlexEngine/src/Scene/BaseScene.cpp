@@ -431,6 +431,10 @@ namespace flex
 		// TODO: Serialize player's game object ID
 		sceneRootObject.TryGetBool("spawn player", m_bSpawnPlayer);
 
+		real fogDistance = 0.0f;
+		sceneRootObject.TryGetFloat("fog distance", fogDistance);
+		SetFogDistance(fogDistance);
+
 		if (!sceneRootObject.TryGetGUID("player 0 guid", m_PlayerGUIDs[0]))
 		{
 			m_PlayerGUIDs[0] = InvalidGameObjectID;
@@ -586,6 +590,16 @@ namespace flex
 	void BaseScene::DrawImGuiObjects()
 	{
 		ImGui::Checkbox("Spawn player", &m_bSpawnPlayer);
+
+		real fogDistance = m_FogDistance;
+		if (ImGui::DragFloat("Fog distance", &fogDistance, 10.0f, 0.0f, 500000.0f))
+		{
+			SetFogDistance(fogDistance);
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Distance at which fog fully obscures the scene (0: depth based fog)");
+		}
 
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 		ImGui::PushID("main");
@@ -1116,6 +1130,18 @@ namespace flex
 	const SkyboxData& BaseScene::GetSkyboxData() const
 	{
 		return m_SkyboxData;
+	}
+
+	void BaseScene::SetFogDistance(real fogDistance)
+	{
+		m_FogDistance = glm::max(fogDistance, 0.0f);
+		// Values <= 1 select the legacy fog in shaders
+		m_SkyboxData.fog.w = m_FogDistance > 1.0f ? m_FogDistance : 1.0f;
+	}
+
+	real BaseScene::GetFogDistance() const
+	{
+		return m_FogDistance;
 	}
 
 	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
@@ -1997,6 +2023,7 @@ namespace flex
 			m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
 			m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
 			m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
+			SetFogDistance(m_FogDistance);
 
 			DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
 			if (dirLight != nullptr)
@@ -2133,6 +2160,10 @@ namespace flex
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
+		if (m_FogDistance > 0.0f)
+		{
+			rootSceneObject.fields.emplace_back("fog distance", JSONValue(m_FogDistance, 1));
+		}
 		if (m_Player0 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 0 guid", JSONValue(m_Player0->ID));
@@ -2726,6 +2757,46 @@ namespace flex
 		}
 
 		return InvalidGameObjectID;
+	}
+
+	Player* BaseScene::SpawnPlayer(const glm::vec3& position, const glm::vec3& forward)
+	{
+		if (m_Player0 != nullptr)
+		{
+			return m_Player0;
+		}
+
+		glm::vec3 spawnPos = position;
+		TerrainGenerator* terrain = TerrainGenerator::GetActive();
+		if (terrain != nullptr)
+		{
+			// Drop onto the ground below, or rise out of the ground if underneath it
+			glm::vec3 hitPos, hitNormal;
+			if (terrain->Raycast(position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 5000.0f, hitPos, hitNormal))
+			{
+				spawnPos = hitPos + glm::vec3(0.0f, 2.0f, 0.0f);
+			}
+			else
+			{
+				const real groundHeight = terrain->SampleHeight(glm::vec2(position.x, position.z));
+				spawnPos.y = glm::max(spawnPos.y, groundHeight + 2.0f);
+			}
+		}
+
+		m_Player0 = new Player(0, m_PlayerGUIDs[0]);
+		m_Player0->GetTransform()->SetWorldPosition(spawnPos);
+		glm::vec2 forward2D(forward.x, forward.z);
+		if (glm::length(forward2D) > 1e-4f)
+		{
+			forward2D = glm::normalize(forward2D);
+			m_Player0->GetTransform()->SetWorldRotation(glm::angleAxis(atan2(forward2D.x, forward2D.y), VEC3_UP));
+		}
+		AddRootObjectImmediate(m_Player0);
+		m_Player0->Initialize();
+		m_Player0->PostInitialize();
+		UpdateRootObjectSiblingIndices();
+
+		return m_Player0;
 	}
 
 	Player* BaseScene::GetPlayer(i32 index)

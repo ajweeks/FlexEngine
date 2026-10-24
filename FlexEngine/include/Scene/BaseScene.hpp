@@ -113,6 +113,9 @@ namespace flex
 		GameObjectID FirstObjectWithTag(const std::string& tag);
 
 		Player* GetPlayer(i32 index);
+		// Creates player 0 (if it doesn't already exist) at the given position, facing along the given direction.
+		// On terrain, the player is placed on the ground below (or above) the position.
+		Player* SpawnPlayer(const glm::vec3& position, const glm::vec3& forward);
 
 		bool IsLoaded() const;
 
@@ -162,6 +165,10 @@ namespace flex
 		bool HasPlayers() const;
 
 		const SkyboxData& GetSkyboxData() const;
+
+		// Distance at which fog fully obscures the scene (0 = legacy depth based fog)
+		void SetFogDistance(real fogDistance);
+		real GetFogDistance() const;
 
 		void DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
@@ -282,6 +289,8 @@ namespace flex
 
 		SkyboxData m_SkyboxDatas[4];
 		SkyboxData m_SkyboxData;
+		// Passed to shaders in m_SkyboxData.fog.w
+		real m_FogDistance = 0.0f;
 
 		glm::vec3 m_DirLightColours[4];
 

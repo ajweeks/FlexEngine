@@ -561,13 +561,6 @@ namespace flex
 		volatile bool running = true;
 	};
 
-	struct TerrainThreadData
-	{
-		void* criticalSection = nullptr;
-		volatile bool running = true;
-		u8 mode = 1; // TerrainGenMode::MARCHING_CUBES
-	};
-
 	struct ShaderThreadData
 	{
 		void* criticalSection = nullptr;

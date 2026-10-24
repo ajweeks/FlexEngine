@@ -1613,6 +1613,8 @@ namespace flex
 		createInfo.bSetDynamicStates = overrides.bSetDynamicStates;
 		createInfo.bIndexed = overrides.bIndexed;
 		createInfo.bAllowDynamicBufferShrinking = overrides.bAllowDynamicBufferShrinking;
+		createInfo.bCastsShadow = overrides.bCastsShadow;
+		createInfo.shadowCullSphere = overrides.shadowCullSphere;
 
 		if (overrides.vertexBufferData != nullptr)
 		{

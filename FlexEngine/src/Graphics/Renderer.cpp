@@ -56,6 +56,7 @@ namespace flex
 		m_Settings.RegisterProperty("shadow cascade count", &m_ShadowCascadeCount);
 		m_Settings.RegisterProperty("shadow cascade base resolution", &m_ShadowMapBaseResolution);
 		m_Settings.RegisterProperty("shadow distance", &m_ShadowDistance);
+		m_Settings.RegisterProperty("terrain quality", &m_TerrainQuality);
 		m_Settings.RegisterProperty("shadow cascade split lambda", &m_ShadowCascadeSplitLambda);
 		m_Settings.RegisterProperty("shadow bias", &m_ShadowBias);
 		m_Settings.RegisterProperty("shadow normal offset", &m_ShadowSamplingData.normalOffset);
@@ -1070,7 +1071,7 @@ namespace flex
 	{
 		const real zNear = cam->zNear;
 		const real zFar = cam->zFar;
-		const real shadowDistance = glm::clamp(m_ShadowDistance, zNear + 0.01f, zFar);
+		const real shadowDistance = glm::clamp(GetEffectiveShadowDistance(), zNear + 0.01f, zFar);
 		const i32 cascadeCount = glm::clamp(m_ShadowCascadeCount, 1, MAX_SHADOW_CASCADE_COUNT);
 
 		// Casters between the light & a cascade (but outside of it) must still be rendered into it
@@ -2510,11 +2511,14 @@ namespace flex
 		// Terrain
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
-		m_Shaders[shaderID]->maxObjectCount = 4096; // TODO: -1
+		m_Shaders[shaderID]->maxObjectCount = 8192; // Grows on demand
+		// Streamed terrain chunks are sub-allocated from the dynamic buffer, which grows as needed
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 160 * 1024 * 1024;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
-			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT;
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::EXTRA_VEC4;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
@@ -2892,6 +2896,7 @@ namespace flex
 		if (player != nullptr)
 		{
 			player->DrawTrackBuildingHUD();
+			player->DrawTerrainToolHUD();
 		}
 
 		if (previewedFont != InvalidStringID)
@@ -3376,6 +3381,19 @@ namespace flex
 
 			ImGui::SliderFloat("Shadow distance", &m_ShadowDistance, 10.0f, 1000.0f);
 			SaveOnRelease();
+			if (m_ShadowDistanceOverride > 0.0f)
+			{
+				ImGui::SameLine();
+				ImGui::TextColored(g_WarningTextColour, "(overridden: %.0fm)", m_ShadowDistanceOverride);
+			}
+
+			static const char* terrainQualityNames[] = { "Low", "Medium", "High", "Ultra" };
+			ImGui::Combo("Terrain quality", &m_TerrainQuality, terrainQualityNames, (i32)ARRAY_LENGTH(terrainQualityNames));
+			SaveOnRelease();
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Detail of streamed terrain (how far away detailed chunks are used)");
+			}
 			ImGui::SliderFloat("Shadow cascade split lambda", &m_ShadowCascadeSplitLambda, 0.0f, 1.0f);
 			SaveOnRelease();
 			ImGui::SliderFloat("Shadow bias", &m_ShadowBias, 0.0f, 0.25f);

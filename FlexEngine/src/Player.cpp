@@ -169,6 +169,8 @@ namespace flex
 	{
 		m_Controller->Update();
 
+		UpdateTerrainTool();
+
 		if (m_TrackRidingID != InvalidTrackID)
 		{
 			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
@@ -2104,6 +2106,97 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	void Player::UpdateTerrainTool()
+	{
+		m_bTerrainToolActive = false;
+
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (terrainGenerator == nullptr ||
+			!m_bPossessed ||
+			!IsWieldingPickAxe() ||
+			IsAnyInventoryShowing() ||
+			m_RidingVehicleID.IsValid() ||
+			m_TrackRidingID != InvalidTrackID ||
+			IsPlacingTrack() ||
+			IsEditingTrack() ||
+			g_EngineInstance->IsSimulationPaused())
+		{
+			return;
+		}
+
+		const i32 materialCount = (i32)ARRAY_LENGTH(terrain::FILL_MATERIALS);
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_R))
+		{
+			const i32 step = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0 ? -1 : 1;
+			m_TerrainFillMaterialIndex = (m_TerrainFillMaterialIndex + step + materialCount) % materialCount;
+		}
+		m_TerrainFillMaterialIndex = glm::clamp(m_TerrainFillMaterialIndex, 0, materialCount - 1);
+
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		glm::vec3 hitPos, hitNormal;
+		if (!terrainGenerator->Raycast(camera->position, camera->forward, m_TerrainToolReach, hitPos, hitNormal))
+		{
+			return;
+		}
+		m_bTerrainToolActive = true;
+
+		m_TerrainToolCooldown -= g_DeltaTime;
+
+		const bool bDig = g_InputManager->IsMouseButtonDown(MouseButton::LEFT);
+		const bool bFill = !bDig && g_InputManager->IsMouseButtonDown(MouseButton::RIGHT);
+
+		// Placed material sits on top of the surface
+		const glm::vec3 fillCenter = hitPos + hitNormal * m_TerrainDigRadius * 0.6f;
+		const glm::vec3 previewCenter = bFill ? fillCenter : hitPos;
+		g_Renderer->GetDebugRenderer()->drawSphere(ToBtVec3(previewCenter), m_TerrainDigRadius * 0.98f,
+			bFill ? btVector3(0.3f, 0.8f, 1.0f) : btVector3(1.0f, 0.6f, 0.15f));
+
+		if ((bDig || bFill) && m_TerrainToolCooldown <= 0.0f)
+		{
+			m_TerrainToolCooldown = 0.25f;
+			if (bDig)
+			{
+				terrainGenerator->Dig(hitPos, m_TerrainDigRadius);
+			}
+			else
+			{
+				// Don't bury ourselves
+				const glm::vec3 playerPos = m_Transform.GetWorldPosition();
+				if (glm::distance(fillCenter, playerPos) > m_TerrainDigRadius + 1.2f)
+				{
+					terrainGenerator->Fill(fillCenter, m_TerrainDigRadius, terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex]);
+				}
+			}
+		}
+	}
+
+	void Player::DrawTerrainToolHUD() const
+	{
+		if (!m_bTerrainToolActive)
+		{
+			return;
+		}
+
+		const std::string material = terrain::MaterialName(terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex]);
+		std::vector<std::string> lines;
+		lines.push_back("PICKAXE");
+		lines.push_back("[LMB] Dig");
+		lines.push_back("[RMB] Place " + material);
+		lines.push_back("[R] / [Shift+R] Change material");
+
+		BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));
+		const real lineHeight = 3.2f * font->GetMetric('W')->height / (real)g_Window->GetSize().y;
+		const glm::vec4 titleColour(1.0f, 0.85f, 0.4f, 1.0f);
+		const glm::vec4 textColour(0.95f, 0.95f, 0.95f, 1.0f);
+
+		real yOffset = 0.05f;
+		for (i32 i = (i32)lines.size() - 1; i >= 0; --i)
+		{
+			g_Renderer->DrawStringSS(lines[i], i == 0 ? titleColour : textColour, AnchorPoint::BOTTOM_LEFT, glm::vec2(0.03f, yOffset), 1.5f, 0.6f);
+			yOffset += lineHeight;
+		}
 	}
 
 	bool Player::IsWieldingPickAxe() const

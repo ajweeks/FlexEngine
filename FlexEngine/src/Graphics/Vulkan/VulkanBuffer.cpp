@@ -6,6 +6,7 @@
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
+#include "Time.hpp"
 
 namespace flex
 {
@@ -101,14 +102,18 @@ namespace flex
 			allocations.clear();
 		}
 
+		// Allocations are kept sorted by offset so searches don't need to sort (which is slow with thousands of allocations)
+		static std::vector<Allocation>::iterator LowerBoundAllocation(std::vector<Allocation>& allocations, VkDeviceSize offset)
+		{
+			return std::lower_bound(allocations.begin(), allocations.end(), offset,
+				[](const Allocation& allocation, VkDeviceSize value) { return allocation.offset < value; });
+		}
+
 		VkDeviceSize VulkanBuffer::Alloc(VkDeviceSize size)
 		{
 			Unmap();
 
 			const VkDeviceSize errorCode = (VkDeviceSize)-1;
-
-			// Allocations aren't stored in order (Free & Realloc shuffle them), so sort before searching for a gap
-			std::sort(allocations.begin(), allocations.end(), [](const Allocation& a, const Allocation& b) { return a.offset < b.offset; });
 
 			// First fit
 			VkDeviceSize offset = 0;
@@ -133,7 +138,8 @@ namespace flex
 				}
 			}
 
-			allocations.push_back({ offset, size });
+			allocations.insert(std::upper_bound(allocations.begin(), allocations.end(), offset,
+				[](VkDeviceSize value, const Allocation& allocation) { return value < allocation.offset; }), { offset, size });
 			return offset;
 		}
 
@@ -184,13 +190,10 @@ namespace flex
 		{
 			Unmap();
 
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			auto iter = LowerBoundAllocation(allocations, offset);
+			if (iter != allocations.end() && iter->offset == offset)
 			{
-				if (allocations[i].offset == offset)
-				{
-					allocations.erase(allocations.begin() + i);
-					break;
-				}
+				allocations.erase(iter);
 			}
 		}
 
@@ -216,6 +219,9 @@ namespace flex
 
 		VkResult VulkanBuffer::Resize(VkDeviceSize newSize)
 		{
+			PROFILE_AUTO("VulkanBuffer Resize");
+			const ns start = Time::CurrentNanoseconds();
+			const VkDeviceSize oldSize = m_Size;
 			// Other allocations' data must survive the resize since their owners may not upload it again (e.g. static track meshes)
 			std::vector<u8> contents;
 			const bool bHostVisible = (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
@@ -242,29 +248,32 @@ namespace flex
 				Unmap();
 			}
 
+			// Reading back host visible memory is slow, so large buffers should be sized to avoid resizing
+			const ms resizeTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+			if (resizeTime > 20.0f)
+			{
+				PrintWarn("Slow buffer resize: \"%s\" from %.1fMB to %.1fMB took %.1fms\n", m_DEBUG_Name.c_str(), oldSize / (1024.0 * 1024.0), newSize / (1024.0 * 1024.0), resizeTime);
+			}
+
 			return result;
 		}
 
 		void VulkanBuffer::UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize)
 		{
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			auto iter = LowerBoundAllocation(allocations, offset);
+			if (iter != allocations.end() && iter->offset == offset)
 			{
-				if (allocations[i].offset == offset)
-				{
-					allocations[i].size = newSize;
-					break;
-				}
+				iter->size = newSize;
 			}
 		}
 
 		VkDeviceSize VulkanBuffer::GetAllocationSize(VkDeviceSize offset) const
 		{
-			for (u32 i = 0; i < (u32)allocations.size(); ++i)
+			auto iter = std::lower_bound(allocations.begin(), allocations.end(), offset,
+				[](const Allocation& allocation, VkDeviceSize value) { return allocation.offset < value; });
+			if (iter != allocations.end() && iter->offset == offset)
 			{
-				if (allocations[i].offset == offset)
-				{
-					return allocations[i].size;
-				}
+				return iter->size;
 			}
 
 			return (VkDeviceSize)-1;

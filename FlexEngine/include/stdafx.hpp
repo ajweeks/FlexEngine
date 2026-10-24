@@ -100,6 +100,8 @@
 #endif
 
 #include <algorithm>
+#include <chrono>
+#include <deque>
 #include <functional>
 #include <future>
 #include <map>

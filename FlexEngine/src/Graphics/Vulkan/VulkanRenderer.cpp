@@ -638,6 +638,7 @@ namespace flex
 				PrintError("=====================================================\n");
 			}
 			m_RenderObjects.clear();
+			m_FirstFreeRenderIDHint = 0;
 
 			DestroyAllGraphicsPipelines();
 
@@ -1232,6 +1233,9 @@ namespace flex
 			renderObject->bSetDynamicStates = createInfo->bSetDynamicStates;
 			renderObject->renderPassOverride = createInfo->renderPassOverride;
 			renderObject->bAllowDynamicBufferShrinking = createInfo->bAllowDynamicBufferShrinking;
+			renderObject->bCastsShadow = createInfo->bCastsShadow;
+			renderObject->bHidden = false;
+			renderObject->shadowCullSphere = createInfo->shadowCullSphere;
 			renderObject->topology = TopologyModeToVkPrimitiveTopology(createInfo->topologyMode);
 
 			if (createInfo->indices != nullptr)
@@ -1254,13 +1258,15 @@ namespace flex
 			if (m_bPostInitialized)
 			{
 				CreateGraphicsPipeline(renderID);
+				// Descriptor sets are per material, so only the first object using a material needs to create one
+				// (recreating it would also free a set which in-flight frames may still be using)
 				if (GetMaterial(renderObject->materialID)->persistent)
 				{
-					m_DescriptorPoolPersistent->CreateDescriptorSet(renderObject->materialID);
+					m_DescriptorPoolPersistent->GetOrCreateSet(renderObject->materialID, nullptr);
 				}
 				else
 				{
-					m_DescriptorPool->CreateDescriptorSet(renderObject->materialID);
+					m_DescriptorPool->GetOrCreateSet(renderObject->materialID, nullptr);
 				}
 			}
 
@@ -2681,6 +2687,15 @@ namespace flex
 			m_bRebatchRenderObjects = true;
 		}
 
+		void VulkanRenderer::SetRenderObjectHidden(RenderID renderID, bool bHidden)
+		{
+			VulkanRenderObject* renderObject = GetRenderObject(renderID);
+			if (renderObject != nullptr)
+			{
+				renderObject->bHidden = bHidden;
+			}
+		}
+
 		void VulkanRenderer::SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -2727,13 +2742,12 @@ namespace flex
 
 		bool VulkanRenderer::DestroyRenderObject(RenderID renderID)
 		{
-			for (VulkanRenderObject* renderObject : m_RenderObjects)
+			// Render objects are stored at the index of their ID
+			if (renderID < (RenderID)m_RenderObjects.size() && m_RenderObjects[renderID] != nullptr)
 			{
-				if (renderObject != nullptr && renderObject->renderID == renderID)
-				{
-					DestroyRenderObject(renderID, renderObject);
-					return true;
-				}
+				CHECK_EQ(m_RenderObjects[renderID]->renderID, renderID);
+				DestroyRenderObject(renderID, m_RenderObjects[renderID]);
+				return true;
 			}
 			return false;
 		}
@@ -2753,6 +2767,7 @@ namespace flex
 				renderObject = nullptr;
 			}
 			m_RenderObjects[renderID] = nullptr;
+			m_FirstFreeRenderIDHint = glm::min(m_FirstFreeRenderIDHint, (u32)renderID);
 		}
 
 		void VulkanRenderer::SetGlobalUniform(Uniform const* uniform, void* data, u32 dataSize)
@@ -5381,6 +5396,8 @@ namespace flex
 			return renderObject != nullptr &&
 				renderObject->vertexBufferData != nullptr &&
 				!renderObject->bEditorObject &&
+				!renderObject->bHidden &&
+				renderObject->bCastsShadow &&
 				renderObject->gameObject->CastsShadow() &&
 				renderObject->gameObject->IsVisible();
 		}
@@ -5666,14 +5683,17 @@ namespace flex
 
 		RenderID VulkanRenderer::GetNextAvailableRenderID() const
 		{
-			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
+			// All slots below the hint are known to be occupied
+			for (u32 i = m_FirstFreeRenderIDHint; i < m_RenderObjects.size(); ++i)
 			{
 				if (m_RenderObjects[i] == nullptr)
 				{
+					m_FirstFreeRenderIDHint = i;
 					return (RenderID)i;
 				}
 			}
 
+			m_FirstFreeRenderIDHint = (u32)m_RenderObjects.size();
 			return (u32)m_RenderObjects.size();
 		}
 
@@ -7635,9 +7655,11 @@ namespace flex
 					{
 						const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(stride);
 						dynamicVertexBufferSizes[dynamicVertexBufferIndex].vertMemoryReq += shader->dynamicVertexBufferSize;
-						u32 vertexCount = (u32)glm::ceil(shader->dynamicVertexBufferSize / (real)stride / sizeof(real));
-						// Assume worst case of no shared verts
-						dynamicVertexBufferSizes[dynamicVertexBufferIndex].indexMemoryReq += vertexCount * sizeof(u32);
+						// (Stride is in bytes)
+						const u32 vertexCount = (u32)glm::ceil(shader->dynamicVertexBufferSize / (real)stride);
+						// Indexed meshes typically have ~2 triangles per vertex. Undersizing is costly since growing
+						// the buffer stalls the GPU & copies its contents.
+						dynamicVertexBufferSizes[dynamicVertexBufferIndex].indexMemoryReq += vertexCount * 6 * sizeof(u32);
 					}
 				}
 			}
@@ -8419,7 +8441,7 @@ namespace flex
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 					// Invisible objects remain in their batches to avoid rebatching on visibility changes
-					if (!renderObject->gameObject->IsVisible())
+					if (!renderObject->gameObject->IsVisible() || renderObject->bHidden)
 					{
 						continue;
 					}
@@ -8446,6 +8468,21 @@ namespace flex
 							if (!RenderObjectCastsShadow(renderObject))
 							{
 								continue;
+							}
+
+							if (renderObject->shadowCullSphere.w > 0.0f && drawCallInfo->shadowCascadeViewProj != nullptr)
+							{
+								// Cascades are orthographic, so the sphere can be tested in clip space (ignoring depth since
+								// casters between the light & the cascade must still be drawn)
+								const glm::mat4& viewProj = *drawCallInfo->shadowCascadeViewProj;
+								const glm::vec4 clipPos = viewProj * glm::vec4(glm::vec3(renderObject->shadowCullSphere), 1.0f);
+								const real scaleX = glm::length(glm::vec3(viewProj[0][0], viewProj[1][0], viewProj[2][0]));
+								const real scaleY = glm::length(glm::vec3(viewProj[0][1], viewProj[1][1], viewProj[2][1]));
+								const real radius = renderObject->shadowCullSphere.w;
+								if (glm::abs(clipPos.x) > 1.0f + radius * scaleX || glm::abs(clipPos.y) > 1.0f + radius * scaleY)
+								{
+									continue;
+								}
 							}
 
 							dynamicUBOOffset = GetShadowDynamicUBOOffset(renderID);
@@ -8704,6 +8741,7 @@ namespace flex
 						// TODO: Upload as one draw
 						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
 						shadowDrawCallInfo.pushConstantOverride = m_CascadedShadowMapPushConstantBlock;
+						shadowDrawCallInfo.shadowCascadeViewProj = &m_ShadowSamplingData.cascadeViewProjMats[c];
 
 						for (ShaderBatch* shaderBatches : shadowCasterBatches)
 						{
@@ -8993,7 +9031,7 @@ namespace flex
 										for (RenderID renderID : matBatch.batch.objects)
 										{
 											// Must match objects drawn in DrawShaderBatch
-											if (!GetRenderObject(renderID)->gameObject->IsVisible())
+											if (!GetRenderObject(renderID)->gameObject->IsVisible() || GetRenderObject(renderID)->bHidden)
 											{
 												continue;
 											}

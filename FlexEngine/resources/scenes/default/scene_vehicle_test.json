@@ -57,97 +57,68 @@
 			"id" : "AADF58784CA5B2964BFE4386C23B99E7",
 			"name" : "Terrain",
 			"type" : "terrain generator",
-			"casts shadow" : false,
 			"chunk generator info" : 
 			{
-				"base table width" : 256,
-				"chunk size" : 922.375000,
-				"high colour" : "0.65,0.70,0.43",
-				"isolate noise layer" : 0,
-				"loaded chunk radius" : 2408.23,
-				"loaded chunk rigid body square radius" : 10000.00,
-				"low colour" : "0.33,0.41,0.33",
-				"manual seed" : 6,
-				"max chunk count" : 142,
-				"max height" : 500.000000,
-				"mid colour" : "0.51,0.58,0.37",
-				"num points per axis" : 17,
+				"seed" : 6,
+				"voxel size" : 2.00,
+				"cells per chunk axis" : 24,
+				"max lod level" : 8,
+				"lod distance factor" : 2.00,
+				"view distance" : 8000.0,
+				"biome cell size" : 6000.0,
+				"biome blend distance" : 1800.0,
+				"continent wavelength" : 14000.0,
+				"continent amplitude" : 0.0,
+				"overhang wavelength" : 90.0,
+				"arch cell size" : 400.0,
+				"arch min radius" : 15.0,
+				"arch max radius" : 40.0,
+				"cave wavelength" : 160.0,
+				"tunnel radius" : 6.00,
+				"cave max depth" : 160.0,
+				"cavern wavelength" : 300.0,
+				"cavern chance" : 0.50,
+				"lake cell size" : 2400.0,
+				"lake chance" : 0.00,
+				"lake min radius" : 140.0,
+				"lake max radius" : 480.0,
+				"lake max relief" : 90.0,
+				"massif cell size" : 32000.0,
+				"massif chance" : 0.00,
+				"massif min height" : 1500.0,
+				"massif max height" : 3200.0,
+				"climate wavelength" : 40000.0,
+				"sea level" : 0.0,
+				"ocean wavelength" : 60000.0,
+				"ocean coverage" : 0.00,
+				"ocean depth" : 260.0,
+				"shadow distance" : 1500.0,
+				"rigid body load radius" : 250.0,
+				"thread count" : 0,
+				"enable disk cache" : true,
+				"auto fog" : true,
 				"pin center" : true,
 				"pinned center" : "0.03,10.43,-0.00",
-				"use manual seed" : true,
 				"biomes" : 
 				[
 					{
-						"name" : "Canyon",
-						"noise functions" : 
-						[
-							{
-								"type" : "FBM",
-								"feature size" : 375.625000,
-								"num octaves" : 6,
-								"h" : 0.800000,
-								"height scale" : 0.400000,
-								"lacunarity" : 1.000000,
-								"wavelength" : 209.125000
-							}
-						]
-					},
-					{
 						"name" : "Grassland",
-						"noise functions" : 
-						[
-							{
-								"type" : "FBM",
-								"feature size" : 311.033997,
-								"num octaves" : 6,
-								"h" : 0.800000,
-								"height scale" : 0.200000,
-								"lacunarity" : 1.000000,
-								"wavelength" : 111.022003
-							}
-						]
-					},
-					{
-						"name" : "Mountains",
-						"noise functions" : 
-						[
-							{
-								"type" : "FBM",
-								"feature size" : 311.033997,
-								"num octaves" : 6,
-								"h" : 0.800000,
-								"height scale" : 0.325000,
-								"lacunarity" : 1.000000,
-								"wavelength" : 261.822998
-							}
-						]
-					},
-					{
-						"name" : "Lake",
-						"noise functions" : 
-						[
-							{
-								"type" : "FBM",
-								"feature size" : 311.033997,
-								"num octaves" : 6,
-								"h" : 0.800000,
-								"height scale" : 0.100000,
-								"lacunarity" : 1.000000,
-								"wavelength" : 370.421997
-							}
-						]
+						"frequency" : 1.00,
+						"base height" : -6.0,
+						"height amplitude" : 5.0,
+						"wavelength" : 600.0,
+						"ridgedness" : 0.00,
+						"terrace strength" : 0.00,
+						"terrace height" : 40.0,
+						"overhang amplitude" : 0.0,
+						"arch strength" : 0.00,
+						"cave strength" : 0.00,
+						"ground colour" : "0.51,0.58,0.37",
+						"cliff colour" : "0.33,0.41,0.33",
+						"peak colour" : "0.65,0.70,0.43",
+						"peak height" : 100000.0
 					}
-				],
-				"biome noise" : 
-				{
-					"type" : "Voronoi",
-					"feature size" : 0.000000,
-					"num octaves" : 1,
-					"height scale" : 0.100000,
-					"lacunarity" : 1.000000,
-					"wavelength" : 600.000000,
-					"sharpness" : 1.000000
-				}
+				]
 			}
 		},
 		{

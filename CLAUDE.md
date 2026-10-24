@@ -1,0 +1,33 @@
+# Working on Flex
+
+General lessons for working in this repo (not task specifics).
+
+## Building & testing
+- Windows Release is the build that matters for performance. Build with MSBuild (`build/Flex.sln`, `/p:Configuration=Release /p:Platform=x64`) and run `bin/Release_x64/FlexEngine/Flex.exe` from WSL via interop; it uses the real GPU. The Linux build (`build/debug64`, `ninja`) renders on llvmpipe, so only use it for compile checks.
+- MSVC and GCC disagree. Code that compiles on Linux can still fail on Windows, so always do a Windows build before handing off.
+  - `include/ThirdParty/sse_mathfun.h` `#define`s `inline` on MSVC. Any standard header first included after it breaks. Add new std headers to `include/stdafx.hpp`, not to engine headers.
+- `--test-scenes` only runs 10 frames per scene by default. Streaming/async systems need `--frames=1500` or more, or they never finish loading and their stats are never printed.
+- Don't use `pkill -f <pattern>` from a shell whose own command line contains the pattern, because it kills itself. Use `pgrep -x` + `kill`.
+- Disk caches (`FlexEngine/saved/`) persist between test runs. A short run can save a partial cache that skews the next run's numbers, so check which run you are measuring.
+- ImGui here is an old version: no `ImGuiSliderFlags_*` (use the float `power` argument) and no `ImGuiMouseButton_*` (use integers).
+- `stdafx.hpp` uses CRLF; most other files use LF. Text-mode edits with `sed` `$` anchors silently fail on CRLF files, so verify that edits actually applied.
+- Shaders can be validated with `/mnt/c/VulkanSDK/*/Bin/glslangValidator.exe -V`. Inline the `#include`s first and run it on a copy under `/mnt/c/...`, since the Windows exe can't read WSL paths.
+
+## Performance investigations
+- Measure before guessing. Add timing or counters (and print them in existing load/stats output) rather than reasoning about which call "must" be slow. Several plausible culprits turned out to be wrong; the real ones were in unrelated shared code.
+- Compare against a baseline. When a metric looks bad, run the same scenario on the previous version (e.g. `git show :path` into a scratch dir) before changing things.
+- Renderer hot spots seen so far:
+  - Undersized GPU buffers that grow repeatedly. Reading back host-visible (write-combined) memory is very slow.
+  - Per-object work that recreates shared state (descriptor sets).
+  - Linear scans over all render objects.
+- Small standalone harnesses (compile a subsystem's .cpp with a tiny shim `stdafx.hpp`) are much faster to iterate with than the full engine. They can check invariants (e.g. crack-free LOD seams, consistent neighbor masks) far more thoroughly.
+
+## Design pitfalls
+- Async/batched systems: watch for livelock. Restarting in-flight work when inputs change can mean nothing ever completes, so prefer finishing a batch and predicting ahead instead.
+- Keep noise and density functions continuous. Conditional early-outs that skip a term can introduce discontinuities; only skip when the result is provably identical, or where it can't affect surfaces.
+- Deterministic generation: derive every random choice from the one world seed (via a derive/hash function). Never use `rand()` or time-based seeds in generation code.
+
+## Collaboration
+- Other agents and the user edit this repo concurrently, and changes may get staged by someone else. Never revert changes you didn't make; check `git status`/`git diff` before assuming a failure is yours.
+- Don't commit unless asked. Work in the main tree (no worktrees).
+- The user prefers long autonomous work sessions. Rebuild Release yourself at the end, and report measured numbers plus anything you couldn't verify visually.

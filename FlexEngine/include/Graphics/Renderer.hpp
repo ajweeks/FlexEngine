@@ -90,6 +90,17 @@ namespace flex
 		virtual void SetSkyboxMesh(Mesh* skyboxMesh) = 0;
 
 		virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) = 0;
+		// Hides an individual render object (game object visibility applies to all of its render objects)
+		virtual void SetRenderObjectHidden(RenderID renderID, bool bHidden) = 0;
+
+		// Overrides the shadow distance from the renderer settings (not saved). <= 0 to disable.
+		// Used by scenes with large view distances (e.g. streamed terrain).
+		void SetShadowDistanceOverride(real distance) { m_ShadowDistanceOverride = distance; }
+
+		// Streamed terrain detail: 0: low, 1: medium, 2: high, 3: ultra
+		i32 GetTerrainQuality() const { return m_TerrainQuality; }
+		void SetTerrainQuality(i32 quality) { m_TerrainQuality = glm::clamp(quality, 0, 3); }
+		real GetEffectiveShadowDistance() const { return m_ShadowDistanceOverride > 0.0f ? m_ShadowDistanceOverride : m_ShadowDistance; }
 
 		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 
@@ -454,6 +465,8 @@ namespace flex
 			u64 pipelineLayoutOverride = InvalidID;
 			u64 descriptorSetOverride = InvalidID;
 			Material::PushConstantBlock* pushConstantOverride = nullptr;
+			// When rendering shadows, used to cull objects outside of the cascade
+			const glm::mat4* shadowCascadeViewProj = nullptr;
 
 			// NOTE: DepthTestFunc only supported in GL, Vulkan requires specification at pipeline creation time
 			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
@@ -466,6 +479,8 @@ namespace flex
 		u32 m_ShadowMapBaseResolution = 4096;
 		// Distance from the camera that shadow cascades cover (shadows fade out towards this distance)
 		real m_ShadowDistance = 200.0f;
+		real m_ShadowDistanceOverride = 0.0f;
+		i32 m_TerrainQuality = 1;
 		// Blend between uniform (0) and logarithmic (1) cascade split distances
 		real m_ShadowCascadeSplitLambda = 0.75f;
 		// Constant depth bias in world units

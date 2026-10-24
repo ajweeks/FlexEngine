@@ -87,6 +87,7 @@ namespace flex
 
 			virtual void SetSkyboxMesh(Mesh* skyboxMesh) override;
 			virtual void SetRenderObjectMaterialID(RenderID renderID, MaterialID materialID) override;
+			virtual void SetRenderObjectHidden(RenderID renderID, bool bHidden) override;
 
 			virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) override;
 
@@ -462,8 +463,10 @@ namespace flex
 			Version m_DeviceVersion;
 			Version m_DriverVersion;
 
-			const u32 MAX_NUM_RENDER_OBJECTS = 4096; // TODO: Support resizing
+			// Streamed terrain alone can use several thousand objects (more at high quality settings)
+			const u32 MAX_NUM_RENDER_OBJECTS = 16384; // TODO: Support resizing
 			std::vector<VulkanRenderObject*> m_RenderObjects;
+			mutable u32 m_FirstFreeRenderIDHint = 0;
 
 			// Render objects whose batch membership needs to be re-evaluated before the next draw
 			std::vector<RenderID> m_RenderObjectsPendingBatch;

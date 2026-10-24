@@ -300,3 +300,35 @@ void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
 		fragmentColour = mix(fragmentColour, colourFog, dist);
 	}
 }
+
+// Matches the gradient drawn by the skybox shader (without its noise)
+vec3 SkyColour(vec3 dir, SkyboxData skyboxData)
+{
+	float h = sign(dir.y) * pow(abs(dir.y), 0.3);
+	float w0 = 1.0 - max(h, 0.0);
+	float w1 = max(-h, 0.0);
+	float w2 = h > 0.0 ? 0.0 : 1.0;
+	return clamp(mix(
+		mix(skyboxData.colourTop.xyz, skyboxData.colourMid.xyz, w0),
+		mix(skyboxData.colourMid.xyz, skyboxData.colourBtm.xyz, w1), w2), 0.0, 1.0);
+}
+
+// Distance fog, enabled when skyboxData.colourFog.w (the distance at which the scene is fully obscured) is > 1.
+// Blends towards the sky's colour in the view direction so distant geometry dissolves into the sky. Must be applied
+// to the final (tone mapped & gamma corrected) colour to match the skybox.
+bool IsDistanceFogEnabled(SkyboxData skyboxData)
+{
+	return ENABLE_FOG == 1 && skyboxData.colourFog.w > 1.0;
+}
+
+void ApplyDistanceFog(float dist, vec3 viewDir, SkyboxData skyboxData, inout vec3 fragmentColour)
+{
+	if (IsDistanceFogEnabled(skyboxData))
+	{
+		float t = dist / skyboxData.colourFog.w;
+		float amount = max(1.0 - exp(-3.0 * t * t * t), smoothstep(0.85, 1.05, t));
+		// Lower the horizon slightly so fogged terrain matches the sky just above it
+		vec3 skyDir = normalize(vec3(viewDir.x, max(viewDir.y, 0.0), viewDir.z));
+		fragmentColour = mix(fragmentColour, SkyColour(skyDir, skyboxData), clamp(amount, 0.0, 1.0));
+	}
+}

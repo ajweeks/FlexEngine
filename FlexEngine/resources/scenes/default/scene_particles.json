@@ -1,5 +1,5 @@
 {
-	"version" : 6,
+	"version" : 7,
 	"name" : "scene_particles",
 	"spawn player" : false,
 	"camera" : 
@@ -23,21 +23,18 @@
 	"objects" : 
 	[
 		{
-			"name" : "Skybox",
 			"id" : "0A76288EC369BD8241B8C1B5A3638EC5",
+			"name" : "Skybox",
 			"type" : "skybox",
 			"casts shadow" : false,
 			"materials" : 
 			[
 				"skybox 01"
-			],
-			"skybox info" : 
-			{
-			}
+			]
 		},
 		{
-			"name" : "Reflection Probe 01",
 			"id" : "63645861DA790682415D40ACB253AA27",
+			"name" : "Reflection Probe 01",
 			"type" : "reflection probe",
 			"transform" : 
 			{
@@ -45,8 +42,8 @@
 			}
 		},
 		{
-			"name" : "sphere",
 			"id" : "6292EA82CCAFA9A44A8A2F2CC178ADB9",
+			"name" : "sphere",
 			"type" : "object",
 			"mesh" : "ico-sphere.glb",
 			"materials" : 
@@ -55,148 +52,18 @@
 			]
 		},
 		{
-			"name" : "Directional Light",
 			"id" : "A99A9D3B39E7A7AE47D0560FA728D3A3",
+			"name" : "Directional Light",
 			"type" : "directional light",
 			"transform" : 
 			{
 				"pos" : "0.000, 15.000, 0.000",
-				"rot" : "1.571, -0.000, 0.000"
+				"rot" : "1.582, -0.000, 0.000"
 			},
 			"directional light info" : 
 			{
-				"rotation" : "0.707,0.000,0.000,0.707",
-				"pos" : "0.000,15.000,0.000",
-				"colour" : "0.99,1.00,0.84",
-				"enabled" : true,
-				"brightness" : 5.000000,
-				"cast shadows" : true,
-				"shadow darkness" : 1.000000
-			}
-		},
-		{
-			"name" : "particle system 1",
-			"id" : "1B117324FF7D319C4E78E137A116FD6D",
-			"type" : "particle system",
-			"transform" : 
-			{
-				"pos" : "20.000, 0.000, 0.000"
-			},
-			"particle system info" : 
-			{
-				"transform" : 
-				{
-					"pos" : "20.000, 0.000, 0.000"
-				},
-				"scale" : 1.000000,
-				"enabled" : true,
-				"data" : 
-				{
-					"colour0" : "0.03,0.04,0.85,1.00",
-					"colour1" : "1.00,0.00,0.14,1.00",
-					"speed" : 2.500000,
-					"particle count" : 65536
-				}
-			}
-		},
-		{
-			"name" : "particle system 2",
-			"id" : "1AB5A50682230E874615C25FBFB51E9C",
-			"type" : "particle system",
-			"transform" : 
-			{
-				"pos" : "-20.000, 0.000, 0.000"
-			},
-			"particle system info" : 
-			{
-				"transform" : 
-				{
-					"pos" : "-20.000, 0.000, 0.000"
-				},
-				"scale" : 1.000000,
-				"enabled" : true,
-				"data" : 
-				{
-					"colour0" : "0.97,0.94,0.29,1.00",
-					"colour1" : "1.00,1.00,1.00,1.00",
-					"speed" : -3.000000,
-					"particle count" : 32768
-				}
-			}
-		},
-		{
-			"name" : "particle system 3",
-			"id" : "72F54F0D5270D6A040FD723F8B87833E",
-			"type" : "particle system",
-			"transform" : 
-			{
-				"pos" : "20.000, 12.600, 24.300"
-			},
-			"particle system info" : 
-			{
-				"transform" : 
-				{
-					"pos" : "20.000, 12.600, 24.300"
-				},
-				"scale" : 1.000000,
-				"enabled" : true,
-				"data" : 
-				{
-					"colour0" : "0.00,0.00,0.00,0.00",
-					"colour1" : "0.00,0.00,0.00,0.00",
-					"speed" : 1.667000,
-					"particle count" : 51541
-				}
-			}
-		},
-		{
-			"name" : "particle system 4",
-			"id" : "A271016035DBFE86424E978BABFC660E",
-			"type" : "particle system",
-			"transform" : 
-			{
-				"pos" : "14.400, 4.500, -25.000"
-			},
-			"particle system info" : 
-			{
-				"transform" : 
-				{
-					"pos" : "14.400, 4.500, -25.000"
-				},
-				"scale" : 1.000000,
-				"enabled" : false,
-				"data" : 
-				{
-					"colour0" : "1.00,0.49,0.00,1.00",
-					"colour1" : "0.97,0.17,0.05,1.00",
-					"speed" : -9.896000,
-					"particle count" : 32768
-				}
-			}
-		},
-		{
-			"name" : "particle system 5",
-			"id" : "A1CF09336DE37DB54C5023DCE30E1ECA",
-			"type" : "particle system",
-			"transform" : 
-			{
-				"pos" : "14.000, -10.700, 16.500"
-			},
-			"particle system info" : 
-			{
-				"transform" : 
-				{
-					"pos" : "14.000, -10.700, 16.500"
-				},
-				"scale" : 1.000000,
-				"enabled" : false,
-				"data" : 
-				{
-					"colour0" : "0.85,0.03,0.67,1.00",
-					"colour1" : "0.19,0.90,0.80,1.00",
-					"speed" : 9.792000,
-					"particle count" : 65536
-				}
+				"brightness" : 5.00,
+				"colour" : "0.99,1.00,0.84"
 			}
 		}
 	]

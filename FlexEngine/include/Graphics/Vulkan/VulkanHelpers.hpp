@@ -546,6 +546,9 @@ namespace flex
 			bool bEditorObject = false;
 			bool bSetDynamicStates = false;
 			bool bAllowDynamicBufferShrinking = true;
+			bool bCastsShadow = true;
+			glm::vec4 shadowCullSphere = glm::vec4(0.0f);
+			bool bHidden = false;
 
 			u32 dynamicUBOOffset = 0;
 			// Slot in the per-shader dynamic UBO allocator (InvalidID when unallocated)

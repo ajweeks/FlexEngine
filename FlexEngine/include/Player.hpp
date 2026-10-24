@@ -137,6 +137,10 @@ namespace flex
 		void OnTrackRemoved(TrackID removedTrackID);
 		void DrawTrackBuildingHUD() const;
 
+		// Digging & filling terrain with a pickaxe
+		void UpdateTerrainTool();
+		void DrawTerrainToolHUD() const;
+
 		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
 
 		GameObjectID GetHeldItem(Hand hand) { if (hand == Hand::LEFT) return m_HeldItemLeftHand; return m_HeldItemRightHand; }
@@ -269,6 +273,12 @@ namespace flex
 		bool m_bPreviewPlaceItemFromInventory = false;
 
 		real m_ItemPickupMaxDist = 100.0f;
+
+		bool m_bTerrainToolActive = false; // Whether the player is pointing a pickaxe at terrain within reach
+		sec m_TerrainToolCooldown = 0.0f;
+		i32 m_TerrainFillMaterialIndex = 0;
+		real m_TerrainToolReach = 7.0f;
+		real m_TerrainDigRadius = 2.0f;
 		GameObject* m_ItemPickingUp = nullptr;
 		const real m_ItemPickingDuration = 0.5f;
 		real m_ItemPickingTimer = -1.0f;

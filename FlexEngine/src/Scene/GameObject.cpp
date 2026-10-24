@@ -39,7 +39,6 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
-#include "Graphics/MarchingCubes.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -98,12 +97,6 @@ namespace flex
 	static volatile u32 wave_workQueueEntriesClaimed = 0;
 	static volatile u32 wave_workQueueEntriesCompleted = 0;
 	static ThreadSafeArray<GerstnerWave::WaveGenData>* wave_workQueue = nullptr;
-
-	// Terrain generation globals accessed from threads
-	static volatile u32 terrain_workQueueEntriesCreated = 0;
-	static volatile u32 terrain_workQueueEntriesClaimed = 0;
-	static volatile u32 terrain_workQueueEntriesCompleted = 0;
-	static ThreadSafeArray<TerrainGenerator::TerrainChunkData>* terrain_workQueue = nullptr;
 
 	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
 	static const char* BrakeLightNames[] = { "Left", "Right" };
@@ -9036,81 +9029,20 @@ namespace flex
 		return EventReply::UNCONSUMED;
 	}
 
-	NoiseFunction::Type NoiseFunction::TypeFromString(const char* str)
-	{
-		for (i32 i = 0; i < (i32)Type::_NONE; ++i)
-		{
-			if (strcmp(str, NoiseFunctionTypeNames[i]) == 0)
-			{
-				return (Type)i;
-			}
-		}
+	TerrainGenerator* TerrainGenerator::s_Active = nullptr;
+	bool TerrainGenerator::s_bShowWorldMap = false;
+	bool TerrainGenerator::s_bShowMinimap = true;
 
-		return Type::_NONE;
-	}
-
-	const char* NoiseFunction::TypeToString(Type type)
-	{
-		return NoiseFunctionTypeNames[(i32)type];
-	}
-
-	NoiseFunction NoiseFunction::GenerateDefault(Type type)
-	{
-		NoiseFunction result = {};
-		result.type = type;
-		result.heightScale = 1.0f;
-		result.isolateOctave = -1;
-
-		switch (type)
-		{
-		case Type::PERLIN:
-		{
-			result.baseFeatureSize = 150.0f;
-			result.numOctaves = 6;
-			result.isolateOctave = -1;
-		} break;
-		case Type::FBM:
-		{
-			result.baseFeatureSize = 150.0f;
-			result.numOctaves = 6;
-			result.H = 0.8f;
-			result.lacunarity = 1.0f;
-			result.wavelength = 100.0f;
-		} break;
-		case Type::VORONOI:
-		{
-			result.baseFeatureSize = 150.0f;
-			result.numOctaves = 6;
-			result.H = 0.8f;
-			result.lacunarity = 1.0f;
-			result.wavelength = 100.0f;
-			result.sharpness = 1.0f;
-		} break;
-		case Type::SMOOTH_VORONOI:
-		{
-			result.baseFeatureSize = 150.0f;
-			result.numOctaves = 6;
-			result.H = 0.8f;
-			result.lacunarity = 1.0f;
-			result.wavelength = 100.0f;
-			result.sharpness = 1.0f;
-		} break;
-		}
-
-		return result;
-	}
+	// LOD distance factor multipliers for each terrain quality level (see Renderer::GetTerrainQuality)
+	static const real s_TerrainQualityLodScales[] = { 0.9f, 1.0f, 1.3f, 1.65f };
+	static const char* s_TerrainQualityNames[] = { "Low", "Medium", "High", "Ultra" };
 
 	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, TerrainGeneratorSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
-		m_LowCol(0.2f, 0.3f, 0.45f),
-		m_MidCol(0.45f, 0.55f, 0.25f),
-		m_HighCol(0.65f, 0.67f, 0.69f)
+		m_Params(terrain::WorldParams::Default()),
+		m_PinnedPos(VEC3_ZERO)
 	{
 		AddTag("terrain");
-		if (!m_bUseAsyncCompute)
-		{
-			terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(256);
-		}
 	}
 
 	PropertyCollection* TerrainGenerator::BuildTypeUniquePropertyCollection()
@@ -9119,40 +9051,80 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("chunk generator info");
 
-		collection->childCollection->RegisterProperty("chunk size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ChunkSize))
-			.VersionAdded(6);
-		collection->childCollection->RegisterProperty("max height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxHeight))
-			.VersionAdded(6);
-		collection->childCollection->RegisterProperty("use manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_UseManualSeed))
-			.VersionAdded(6);
-		collection->childCollection->RegisterProperty("manual seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ManualSeed));
+		// All world generation (biomes, oceans, mountains, lakes, caves, arches, ...) derives from this one seed
+		collection->childCollection->RegisterProperty("seed", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.seed));
 
-		collection->childCollection->RegisterProperty("loaded chunk radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRadius))
-			.VersionAdded(6)
+		collection->childCollection->RegisterProperty("voxel size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.voxelSize))
 			.Precision(2);
-		collection->childCollection->RegisterProperty("loaded chunk rigid body square radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LoadedChunkRigidBodyRadius2))
-			.VersionAdded(6)
+		collection->childCollection->RegisterProperty("cells per chunk axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.cellsPerChunkAxis));
+		collection->childCollection->RegisterProperty("max lod level", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.maxLodLevel));
+		collection->childCollection->RegisterProperty("lod distance factor", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lodDistanceFactor))
 			.Precision(2);
-		collection->childCollection->RegisterProperty("base table width", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_BasePerlinTableWidth))
-			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("view distance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.viewDistance))
+			.Precision(1);
 
-		collection->childCollection->RegisterProperty("isolate noise layer", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_IsolateNoiseLayer))
-			.VersionAdded(6);
+		collection->childCollection->RegisterProperty("biome cell size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.biomeCellSize))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("biome blend distance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.biomeBlendDistance))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("continent wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.continentWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("continent amplitude", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.continentAmplitude))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("overhang wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.overhangWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("arch cell size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.archCellSize))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("arch min radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.archMinRadius))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("arch max radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.archMaxRadius))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("cave wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.caveWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("tunnel radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.tunnelRadius))
+			.Precision(2);
+		collection->childCollection->RegisterProperty("cave max depth", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.caveMaxDepth))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("cavern wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.cavernWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("cavern chance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.cavernChance))
+			.Precision(2);
+		collection->childCollection->RegisterProperty("lake cell size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lakeCellSize))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("lake chance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lakeChance))
+			.Precision(2);
+		collection->childCollection->RegisterProperty("lake min radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lakeMinRadius))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("lake max radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lakeMaxRadius))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("lake max relief", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.lakeMaxRelief))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("massif cell size", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.massifCellSize))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("massif chance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.massifChance))
+			.Precision(2);
+		collection->childCollection->RegisterProperty("massif min height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.massifMinHeight))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("massif max height", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.massifMaxHeight))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("climate wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.climateWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("sea level", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.seaLevel))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("ocean wavelength", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.oceanWavelength))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("ocean coverage", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.oceanCoverage))
+			.Precision(2);
+		collection->childCollection->RegisterProperty("ocean depth", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_Params.oceanDepth))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("shadow distance", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ShadowDistance))
+			.Precision(1);
 
-		collection->childCollection->RegisterProperty("num points per axis", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_NumPointsPerAxis))
-			.VersionAdded(6);
-		collection->childCollection->RegisterProperty("max chunk count", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MaxChunkCount))
-			.VersionAdded(6);
-
-		collection->childCollection->RegisterProperty("low colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_LowCol))
-			.VersionAdded(6)
-			.Precision(2);
-		collection->childCollection->RegisterProperty("mid colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_MidCol))
-			.VersionAdded(6)
-			.Precision(2);
-		collection->childCollection->RegisterProperty("high colour", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_HighCol))
-			.VersionAdded(6)
-			.Precision(2);
+		collection->childCollection->RegisterProperty("rigid body load radius", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_RigidBodyLoadRadius))
+			.Precision(1);
+		collection->childCollection->RegisterProperty("thread count", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_ThreadCount));
+		collection->childCollection->RegisterProperty("enable disk cache", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_bEnableDiskCache));
+		collection->childCollection->RegisterProperty("auto fog", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_bAutoFog));
 
 		collection->childCollection->RegisterProperty("pin center", FIELD_OFFSET_AND_TYPE(TerrainGenerator, m_bPinCenter))
 			.VersionAdded(6);
@@ -9163,263 +9135,183 @@ namespace flex
 		return collection;
 	}
 
+	std::string TerrainGenerator::GetSaveFilePathBase() const
+	{
+		const std::string sceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
+		return RelativePathToAbsolute(SAVED_DIRECTORY "terrain/") + sceneName + "_" + std::to_string(GetEffectiveParams().seed);
+	}
+
 	void TerrainGenerator::Initialize()
 	{
-		m_TerrainMatID = g_Renderer->GetMaterialID("Terrain");
+		const char* materialName = "Terrain";
+		m_TerrainMatID = g_Renderer->GetMaterialID(materialName);
 		if (m_TerrainMatID == InvalidMaterialID)
 		{
 			MaterialCreateInfo matCreateInfo = {};
-			matCreateInfo.name = "Terrain";
+			matCreateInfo.name = materialName;
 			matCreateInfo.shaderName = "terrain";
 			matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 			matCreateInfo.constRoughness = 1.0f;
 			matCreateInfo.constMetallic = 0.0f;
 			matCreateInfo.bSerializable = false;
+			// Chunks are streamed in & out constantly, so use sub-allocated dynamic buffers
+			// rather than the static buffers which are rebuilt entirely on every change
+			matCreateInfo.bDynamic = true;
 			m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
-
-		GenerateGradients();
-
-		TerrainGenConstantData constantData;
-		FillOutConstantData(constantData);
-
-		glm::vec3 centerPoint = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		glm::vec2 center2D(centerPoint.x, centerPoint.z);
-		m_PreviousCenterPoint = centerPoint;
-
-		g_Renderer->InitializeTerrain(m_TerrainMatID, m_RandomTableTextureID, constantData, m_MaxChunkCount);
 
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
-		SetCastsShadow(false);
-
-		if (!m_bUseAsyncCompute)
+		u32 threadCount = m_ThreadCount;
+		if (threadCount == 0)
 		{
-			criticalSection = Platform::InitCriticalSection();
-
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-			{
-				AllocWorkQueueEntry(i);
-			}
-
-			terrain_workQueueEntriesCompleted = 0;
-			terrain_workQueueEntriesCreated = 0;
-			WRITE_BARRIER;
-			terrain_workQueueEntriesClaimed = 0;
-			WRITE_BARRIER;
-
-			// Kick off threads to wait for work
-			{
-				u32 threadCount = (u32)glm::clamp(((i32)Platform::GetLogicalProcessorCount()) - 1, 1, 16);
-
-				threadUserData = {};
-				threadUserData.running = true;
-				threadUserData.criticalSection = criticalSection;
-				threadUserData.mode = (u8)m_Mode;
-				Platform::SpawnThreads(threadCount, &TerrainThreadUpdate, &threadUserData);
-			}
-
-			WRITE_BARRIER;
+			// Leave room for the main & render threads
+			threadCount = (u32)glm::clamp((i32)std::thread::hardware_concurrency() - 2, 1, 16);
 		}
 
-		DiscoverChunks();
+		m_AppliedQuality = g_Renderer->GetTerrainQuality();
+		const terrain::WorldParams params = GetEffectiveParams();
+		m_Streamer = new terrain::TerrainStreamer();
 
-		// Wait to generate chunks until road has been generated
+		std::string snapshotPath;
+		if (m_bEnableDiskCache)
+		{
+			const std::string saveFilePathBase = GetSaveFilePathBase();
+			Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVED_DIRECTORY "terrain/"));
+
+			// Edits made in previous sessions
+			std::vector<terrain::Edit> edits;
+			if (terrain::ReadEdits(saveFilePathBase + ".edits", params.seed, edits))
+			{
+				m_Streamer->SetEdits(edits);
+			}
+
+			// Chunks displayed at the end of the last session are shown immediately
+			snapshotPath = saveFilePathBase + ".snapshot";
+		}
+		m_LoadedEditsSeed = params.seed;
+
+		m_Streamer->Start(params, threadCount, snapshotPath);
+		m_QueryDensity.reset();
+		m_bParamsDirty = false;
+		m_LoadStartTime = Time::CurrentNanoseconds();
+		m_bLoadComplete = false;
+		m_MaxApplyTime = 0.0f;
+
+		s_Active = this;
+		UpdateSceneFog();
 
 		GameObject::Initialize();
 	}
 
-	void TerrainGenerator::FillOutConstantData(TerrainGenConstantData& constantData)
+	terrain::WorldParams TerrainGenerator::GetEffectiveParams() const
 	{
-		constantData.chunkSize = m_ChunkSize;
-		constantData.maxHeight = m_MaxHeight;
-		constantData.roadBlendDist = m_RoadBlendDist;
-		constantData.roadBlendThreshold = m_RoadBlendThreshold;
-		constantData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
-		constantData.isolateNoiseLayer = m_IsolateNoiseLayer;
-		constantData.numPointsPerAxis = m_NumPointsPerAxis;
-		constantData.isoLevel = m_IsoLevel;
+		terrain::WorldParams params = m_Params;
+		const i32 quality = glm::clamp(g_Renderer->GetTerrainQuality(), 0, (i32)ARRAY_LENGTH(s_TerrainQualityLodScales) - 1);
+		params.lodDistanceFactor = glm::max(params.lodDistanceFactor * s_TerrainQualityLodScales[quality], 1.8f);
+		return params;
+	}
 
-
-		//// Copy road segments to GPU-friendly memory
-		//{
-		//	i32 i = 0;
-		//	for (auto& iter : m_RoadSegments)
-		//	{
-		//		glm::vec2i chunkIndex = iter.first;
-		//
-		//		for (RoadSegment* roadSegment : iter.second)
-		//		{
-		//			RoadSegment_GPU roadSegmentGPU = {};
-		//			roadSegmentGPU.aabb = roadSegment->aabb;
-		//			roadSegmentGPU.curve = BezierCurve3D_GPU{ {
-		//					glm::vec4(roadSegment->curve.points[0], 1.0f),
-		//					glm::vec4(roadSegment->curve.points[1], 1.0f),
-		//					glm::vec4(roadSegment->curve.points[2], 1.0f),
-		//					glm::vec4(roadSegment->curve.points[3], 1.0f)
-		//				} };
-		//			roadSegmentGPU.widthStart = roadSegment->widthStart;
-		//			roadSegmentGPU.widthEnd = roadSegment->widthEnd;
-		//
-		//			if (!Contains(m_RoadSegmentsGPU, roadSegmentGPU))
-		//			{
-		//				m_RoadSegmentsGPU[i++] = roadSegmentGPU;
-		//			}
-		//		}
-		//	}
-		//
-		//	memset(m_RoadSegmentsGPU.data() + i, 0, (MAX_NUM_ROAD_SEGMENTS - i) * sizeof(RoadSegment_GPU));
-		//}
-		//memcpy(constantData.roadSegments, m_RoadSegmentsGPU.data(), MAX_NUM_ROAD_SEGMENTS * sizeof(RoadSegment_GPU));
-
-		// TODO:
-		//memset(constantData.overlappingRoadSegmentIndices, 0, sizeof(i32) * MAX_NUM_ROAD_SEGMENTS * MAX_NUM_OVERLAPPING_SEGMENTS_PER_CHUNK);
-
-		memcpy(&constantData.biomeNoise, &m_BiomeNoise, sizeof(NoiseFunction_GPU));
-
-		// Copy biomes
-		constantData.biomeCount = (u32)m_Biomes.size();
-		for (u32 i = 0; i < constantData.biomeCount; ++i)
+	void TerrainGenerator::UpdateSceneFog()
+	{
+		if (!m_bAutoFog)
 		{
-			Biome& biomeCPU = m_Biomes[i];
-			Biome_GPU& biomeGPU = constantData.biomes[i];
-
-			biomeGPU = {};
-			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
-			for (u32 j = 0; j < noiseFunctionCount; ++j)
-			{
-				NoiseFunction& noiseFuncCPU = biomeCPU.noiseFunctions[j];
-				NoiseFunction_GPU& noiseFuncGPU = biomeGPU.noiseFunctions[j];
-				memcpy(&noiseFuncGPU, &noiseFuncCPU, sizeof(NoiseFunction_GPU));
-			}
+			return;
 		}
-		memset(&constantData.biomes[constantData.biomeCount], 0, (MAX_BIOME_COUNT - constantData.biomeCount) * sizeof(Biome_GPU));
 
-		auto PackByte = [](u32 num, i32 byteIndex)
+		// Fade out terrain before it reaches the view distance so the cutoff isn't visible
+		g_SceneManager->CurrentScene()->SetFogDistance(m_Params.viewDistance * 0.92f);
+	}
+
+	void TerrainGenerator::UpdateQuality()
+	{
+		const i32 quality = g_Renderer->GetTerrainQuality();
+		if (quality != m_AppliedQuality && m_Streamer != nullptr)
 		{
-			return (num & 0xFF) << byteIndex * 8;
-		};
-
-		// Pack biome noise function counts
-		glm::uvec4 curr(0);
-		//i32 currOffset = 0;
-		i32 index0 = 0; // Array index
-		i32 index1 = 0; // Index into uvec4
-		i32 index2 = 0; // Index into bytes of uvec4 component
-		for (u32 i = 0; i < constantData.biomeCount; ++i)
-		{
-			Biome& biomeCPU = m_Biomes[i];
-
-			u32 noiseFunctionCount = (u32)biomeCPU.noiseFunctions.size();
-
-			curr[index1] = curr[index1] | PackByte(noiseFunctionCount, index2);
-
-			++index2;
-			if (index2 >= 4)
-			{
-				index2 = 0;
-
-				++index1;
-				if (index1 >= 4)
-				{
-					index1 = 0;
-
-					constantData.biomeNoiseFunctionCounts[index0] = curr;
-					++index0;
-					curr = glm::uvec4(0);
-				}
-			}
+			m_AppliedQuality = quality;
+			// Only changes which chunks are selected, so existing chunks are kept where possible
+			m_Streamer->SetLodDistanceFactor(GetEffectiveParams().lodDistanceFactor);
 		}
-		if (index2 != 0 || index1 != 0)
-		{
-			constantData.biomeNoiseFunctionCounts[index0] = curr;
-		}
-		u32 uvec4sInUse = (u32)glm::ceil(constantData.biomeCount / 16.0f);
-		memset(&constantData.biomeNoiseFunctionCounts[uvec4sInUse], 0, (BIOME_NOISE_FUNCTION_INT4_COUNT - uvec4sInUse) * sizeof(glm::uvec4));
-
-		constantData.randomTablesSize = (u32)m_RandomTables.size();
-
-		// Post Process
-
-		//postProcessConstantData.blendRadius = 7.0f;
-		//postProcessConstantData.chunkSize = m_ChunkSize;
-		//postProcessConstantData.vertCountPerChunkAxis = m_VertCountPerChunkAxis;
-		// TODO: Update when capacity changes
-		//postProcessConstantData.vertexBufferSize = MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * MAX_VERTS_PER_TERRAIN_CHUNK_AXIS * m_MaxChunkCount;
 	}
 
 	void TerrainGenerator::Update()
 	{
 		PROFILE_AUTO("TerrainGenerator Update");
 
-		if (!m_bUseAsyncCompute)
+		if (m_Streamer != nullptr)
 		{
-			terrain_workQueueEntriesCompleted = 0;
-			terrain_workQueueEntriesCreated = 0;
-			WRITE_BARRIER;
-			terrain_workQueueEntriesClaimed = 0;
-			WRITE_BARRIER;
-		}
-
-		DiscoverChunks();
-		// Wait for road gen to call us back to fill out our road segments
-		if (!m_RoadGameObjectID.IsValid() || !m_RoadSegments.empty())
-		{
-			GenerateChunks();
-		}
-
-		if (m_bDisplayRandomTables)
-		{
-			real textureScale = 0.3f;
-			real textureY = -0.05f;
-			for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
+			UpdateQuality();
+			if (s_Active == this)
 			{
-				SpriteQuadDrawInfo drawInfo = {};
-				drawInfo.anchor = AnchorPoint::TOP_RIGHT;
-				drawInfo.bScreenSpace = true;
-				drawInfo.bReadDepth = false;
-				drawInfo.scale = glm::vec3(textureScale);
-				drawInfo.pos = glm::vec3(0.0f, textureY, 0.0f);
-				drawInfo.textureID = m_RandomTableTextureID;
-				drawInfo.textureLayer = i;
-				g_Renderer->EnqueueSprite(drawInfo);
-
-				textureY -= (textureScale * 2.0f + 0.01f);
-				textureScale /= 2.0f;
+				// Terrain is visible for many kilometers, so shadows need to reach further than in small scenes
+				g_Renderer->SetShadowDistanceOverride(m_ShadowDistance);
 			}
-		}
 
-		// TDOO: When using async compute trigger readback for nearby chunks
-		if (!m_bUseAsyncCompute)
-		{
-			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-			if (player != nullptr)
+			if (m_bParamsDirty)
 			{
-				glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
-				for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
-				{
-					const glm::ivec3& chunkIndex = iter->first;
-					glm::vec3 chunkPos = glm::vec3(chunkIndex) * m_ChunkSize;
-					real distToPlayer2 = glm::distance2(chunkPos, playerPos);
+				m_bParamsDirty = false;
+				const terrain::WorldParams params = GetEffectiveParams();
 
-					bool bShouldBeLoaded = distToPlayer2 < m_LoadedChunkRigidBodyRadius2;
-					if (bShouldBeLoaded)
+				// Edits are stored per world (seed)
+				if (params.seed != m_LoadedEditsSeed && m_bEnableDiskCache)
+				{
+					SaveEdits();
+					m_LoadedEditsSeed = params.seed;
+					std::vector<terrain::Edit> edits;
+					terrain::ReadEdits(GetSaveFilePathBase() + ".edits", params.seed, edits);
+					m_Streamer->SetEdits(edits);
+				}
+				m_LoadedEditsSeed = params.seed;
+				if (m_bEnableDiskCache)
+				{
+					m_Streamer->SetSnapshotPath(GetSaveFilePathBase() + ".snapshot");
+				}
+
+				m_Streamer->SetParams(params);
+				m_QueryDensity.reset();
+				m_LoadStartTime = Time::CurrentNanoseconds();
+				m_bLoadComplete = false;
+				m_MaxApplyTime = 0.0f;
+				m_WorldMap.bValid = false;
+				UpdateSceneFog();
+			}
+
+			const glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
+			m_LastCenter = center;
+			m_Streamer->Update(center, m_ChunkCommands);
+
+			// Ensure the far plane reaches the view distance
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			if (m_bAutoFog && camera->zFar < m_Params.viewDistance * 1.05f)
+			{
+				camera->zFar = m_Params.viewDistance * 1.05f;
+			}
+			ApplyChunkCommands();
+			UpdateRigidBodies();
+			UpdateEditorBrush();
+			UpdateMinimap();
+
+			if (m_bEditsDirty && g_SecElapsedSinceProgramStart - m_EditsDirtyTime > 2.0f)
+			{
+				SaveEdits();
+			}
+
+			if (!m_bLoadComplete)
+			{
+				terrain::TerrainStreamer::Stats stats = m_Streamer->GetStats();
+				if (stats.bSettled && stats.displayedChunkCount > 0 && m_ChunkCommands.empty() && m_StagedChunks.empty())
+				{
+					m_bLoadComplete = true;
+					u32 triangleCount = 0;
+					for (auto& pair : m_Chunks)
 					{
-						if (iter->second->rigidBody == nullptr)
-						{
-							Chunk* chunk = m_Meshes[chunkIndex];
-							CreateChunkRigidBody(chunk);
-						}
+						triangleCount += pair.second.meshComponent != nullptr ? pair.second.meshComponent->GetIndexCount() / 3 : 0;
 					}
-					else
-					{
-						if (iter->second->rigidBody != nullptr)
-						{
-							Chunk* chunk = m_Meshes[chunkIndex];
-							DestroyChunkRigidBody(chunk);
-						}
-					}
+					const ms loadTime = Time::ConvertFormats(Time::CurrentNanoseconds() - m_LoadStartTime, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+					Print("Terrain loaded in %.0fms (%u chunks, %u non-empty, %u from disk cache, %u triangles, avg %.2fms/chunk on %u threads, avg upload %.2fms/chunk, max upload %.1fms/frame)\n",
+						loadTime, stats.displayedChunkCount, stats.displayedNonEmptyChunkCount, stats.snapshotChunkCount, triangleCount,
+						stats.averageGenerationTime, stats.threadCount, m_UploadCount > 0 ? m_TotalUploadTime / (real)m_UploadCount : 0.0f, m_MaxApplyTime);
 				}
 			}
 		}
@@ -9427,177 +9319,495 @@ namespace flex
 		GameObject::Update();
 	}
 
+	TerrainGenerator::Chunk TerrainGenerator::CreateChunk(terrain::ChunkCommand& command, bool bHidden)
+	{
+		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
+		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
+
+		static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
+		vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
+
+		auto CreateMeshComponent = [&](std::vector<glm::vec3>&& positions, std::vector<glm::vec3>&& normals, std::vector<glm::vec4>&& colours,
+			std::vector<glm::vec4>&& weights, const std::vector<u32>& indices, bool bCastsShadow, i32* outSubmeshIndex)
+		{
+			const u32 vertexCount = (u32)positions.size();
+
+			glm::vec3 boundsMin(FLT_MAX);
+			glm::vec3 boundsMax(-FLT_MAX);
+			for (const glm::vec3& pos : positions)
+			{
+				boundsMin = glm::min(boundsMin, pos);
+				boundsMax = glm::max(boundsMax, pos);
+			}
+
+			vertexBufferCreateInfo.positions_3D = std::move(positions);
+			vertexBufferCreateInfo.normals = std::move(normals);
+			vertexBufferCreateInfo.colours_R32G32B32A32 = std::move(colours);
+			vertexBufferCreateInfo.extraVec4s = std::move(weights);
+
+			RenderObjectCreateInfo renderObjectCreateInfo = {};
+			renderObjectCreateInfo.cullFace = CullFace::NONE;
+			// Chunk meshes never change after creation
+			renderObjectCreateInfo.bAllowDynamicBufferShrinking = false;
+			renderObjectCreateInfo.bCastsShadow = bCastsShadow;
+			renderObjectCreateInfo.shadowCullSphere = glm::vec4((boundsMin + boundsMax) * 0.5f, glm::length(boundsMax - boundsMin) * 0.5f);
+
+			MeshComponent* meshComponent = MeshComponent::LoadFromMemoryDynamic(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID,
+				vertexCount, &renderObjectCreateInfo, true, outSubmeshIndex);
+			if (meshComponent != nullptr)
+			{
+				meshComponent->UpdateDynamicVertexData(vertexBufferCreateInfo, indices);
+			}
+			return meshComponent;
+		};
+
+		terrain::ChunkMeshData& mesh = command.mesh;
+
+		Chunk chunk = {};
+		chunk.key = command.key;
+		chunk.boundsMin = glm::vec3(FLT_MAX);
+		chunk.boundsMax = glm::vec3(-FLT_MAX);
+		for (const glm::vec3& pos : mesh.positions)
+		{
+			chunk.boundsMin = glm::min(chunk.boundsMin, pos);
+			chunk.boundsMax = glm::max(chunk.boundsMax, pos);
+		}
+
+		if (!mesh.indices.empty())
+		{
+			chunk.meshComponent = CreateMeshComponent(std::move(mesh.positions), std::move(mesh.normals), std::move(mesh.colours),
+				std::move(mesh.weights), mesh.indices, true, &chunk.submeshIndex);
+		}
+
+		if (!mesh.waterIndices.empty())
+		{
+			const u32 waterVertexCount = (u32)mesh.waterPositions.size();
+			for (const glm::vec3& pos : mesh.waterPositions)
+			{
+				chunk.boundsMin = glm::min(chunk.boundsMin, pos);
+				chunk.boundsMax = glm::max(chunk.boundsMax, pos);
+			}
+			// Negative alpha marks water surfaces in the terrain shader
+			static const glm::vec4 waterColour(0.06f, 0.20f, 0.28f, -1.0f);
+			chunk.waterMeshComponent = CreateMeshComponent(std::move(mesh.waterPositions),
+				std::vector<glm::vec3>(waterVertexCount, VEC3_UP),
+				std::vector<glm::vec4>(waterVertexCount, waterColour),
+				std::vector<glm::vec4>(waterVertexCount, VEC4_ZERO),
+				mesh.waterIndices, false, &chunk.waterSubmeshIndex);
+		}
+
+		if (bHidden)
+		{
+			SetChunkHidden(chunk, true);
+		}
+
+		return chunk;
+	}
+
+	TerrainGenerator::Chunk TerrainGenerator::CreateChunkTimed(terrain::ChunkCommand& command, bool bHidden)
+	{
+		const ns start = Time::CurrentNanoseconds();
+		Chunk chunk = CreateChunk(command, bHidden);
+		m_TotalUploadTime += Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+		++m_UploadCount;
+		return chunk;
+	}
+
+	void TerrainGenerator::SetChunkHidden(Chunk& chunk, bool bHidden)
+	{
+		if (chunk.meshComponent != nullptr)
+		{
+			g_Renderer->SetRenderObjectHidden(chunk.meshComponent->renderID, bHidden);
+		}
+		if (chunk.waterMeshComponent != nullptr)
+		{
+			g_Renderer->SetRenderObjectHidden(chunk.waterMeshComponent->renderID, bHidden);
+		}
+	}
+
+	void TerrainGenerator::ApplyChunkCommands()
+	{
+		if (m_ChunkCommands.empty())
+		{
+			return;
+		}
+
+		PROFILE_AUTO("TerrainGenerator ApplyChunkCommands");
+
+		const ns start = Time::CurrentNanoseconds();
+		// Uploads are spread over multiple frames to avoid hitches (with a larger budget while the initial load fills the
+		// screen, or when falling behind while moving quickly)
+		const ms frameBudget = m_bLoadComplete ? glm::mix(4.0f, 8.0f, glm::clamp((real)m_ChunkCommands.size() / 200.0f, 0.0f, 1.0f)) : 12.0f;
+		auto IsOverBudget = [start, frameBudget]()
+		{
+			return Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND) > frameBudget;
+		};
+
+		u32 uploadCount = 0;
+		while (!m_ChunkCommands.empty())
+		{
+			// Commands which must be applied in the same frame (so neighboring chunks always match)
+			size_t groupEnd = 1;
+			while (groupEnd < m_ChunkCommands.size() && m_ChunkCommands[groupEnd].bAtomicWithPrevious)
+			{
+				++groupEnd;
+			}
+
+			if (groupEnd == 1)
+			{
+				terrain::ChunkCommand& command = m_ChunkCommands.front();
+				if (command.type == terrain::ChunkCommand::Type::HIDE)
+				{
+					auto iter = m_Chunks.find(command.handle);
+					if (iter != m_Chunks.end())
+					{
+						DestroyChunk(iter->second);
+						m_Chunks.erase(iter);
+					}
+				}
+				else
+				{
+					if (uploadCount > 0 && IsOverBudget())
+					{
+						break;
+					}
+					m_Chunks.emplace(command.handle, CreateChunkTimed(command, false));
+					++uploadCount;
+				}
+				m_ChunkCommands.erase(m_ChunkCommands.begin());
+				continue;
+			}
+
+			// Upload the group's new chunks hidden (over as many frames as needed), then swap them in all at once
+			bool bAllStaged = true;
+			for (size_t i = 0; i < groupEnd; ++i)
+			{
+				terrain::ChunkCommand& command = m_ChunkCommands[i];
+				if (command.type != terrain::ChunkCommand::Type::SHOW || m_StagedChunks.find(command.handle) != m_StagedChunks.end())
+				{
+					continue;
+				}
+				if (uploadCount > 0 && IsOverBudget())
+				{
+					bAllStaged = false;
+					break;
+				}
+				m_StagedChunks.emplace(command.handle, CreateChunkTimed(command, true));
+				++uploadCount;
+			}
+
+			if (!bAllStaged)
+			{
+				break;
+			}
+
+			for (size_t i = 0; i < groupEnd; ++i)
+			{
+				terrain::ChunkCommand& command = m_ChunkCommands[i];
+				if (command.type == terrain::ChunkCommand::Type::HIDE)
+				{
+					auto iter = m_Chunks.find(command.handle);
+					if (iter != m_Chunks.end())
+					{
+						DestroyChunk(iter->second);
+						m_Chunks.erase(iter);
+					}
+				}
+				else
+				{
+					auto stagedIter = m_StagedChunks.find(command.handle);
+					if (stagedIter != m_StagedChunks.end())
+					{
+						SetChunkHidden(stagedIter->second, false);
+						m_Chunks.emplace(command.handle, stagedIter->second);
+						m_StagedChunks.erase(stagedIter);
+					}
+				}
+			}
+			m_ChunkCommands.erase(m_ChunkCommands.begin(), m_ChunkCommands.begin() + groupEnd);
+		}
+
+		m_LastApplyTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+		m_MaxApplyTime = glm::max(m_MaxApplyTime, m_LastApplyTime);
+	}
+
+	void TerrainGenerator::UpdateRigidBodies()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		const bool bHasPlayer = player != nullptr;
+		const glm::vec3 playerPos = bHasPlayer ? player->GetTransform()->GetWorldPosition() : VEC3_ZERO;
+
+		for (auto& pair : m_Chunks)
+		{
+			Chunk& chunk = pair.second;
+			bool bShouldHaveRigidBody = false;
+			if (bHasPlayer)
+			{
+				const glm::vec3 delta = glm::max(glm::max(chunk.boundsMin - playerPos, playerPos - chunk.boundsMax), VEC3_ZERO);
+				bShouldHaveRigidBody = glm::length(delta) < m_RigidBodyLoadRadius;
+			}
+
+			if (bShouldHaveRigidBody && chunk.rigidBody == nullptr)
+			{
+				CreateChunkRigidBody(chunk);
+			}
+			else if (!bShouldHaveRigidBody && chunk.rigidBody != nullptr)
+			{
+				DestroyChunkRigidBody(chunk);
+			}
+		}
+	}
+
+	bool TerrainGenerator::Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const
+	{
+		return m_Streamer != nullptr && m_Streamer->Raycast(origin, dir, maxDistance, outHitPos, outHitNormal);
+	}
+
+	void TerrainGenerator::Dig(const glm::vec3& center, real radius)
+	{
+		terrain::Edit edit = {};
+		edit.center = center;
+		edit.radius = radius;
+		edit.type = terrain::EditType::DIG;
+		edit.material = terrain::Material::SOIL;
+		ApplyEdit(edit);
+	}
+
+	void TerrainGenerator::Fill(const glm::vec3& center, real radius, terrain::Material material)
+	{
+		terrain::Edit edit = {};
+		edit.center = center;
+		edit.radius = radius;
+		edit.type = terrain::EditType::FILL;
+		edit.material = material;
+		ApplyEdit(edit);
+	}
+
+	bool TerrainGenerator::IsApplyingEdits() const
+	{
+		return m_Streamer != nullptr && m_Streamer->GetStats().editJobCount > 0;
+	}
+
+	void TerrainGenerator::ApplyEdit(const terrain::Edit& edit)
+	{
+		if (m_Streamer == nullptr)
+		{
+			return;
+		}
+
+		m_Streamer->ApplyEdit(edit);
+		if (!m_bEditsDirty)
+		{
+			m_bEditsDirty = true;
+			m_EditsDirtyTime = g_SecElapsedSinceProgramStart;
+		}
+	}
+
+	void TerrainGenerator::SaveEdits()
+	{
+		if (!m_bEditsDirty || m_Streamer == nullptr)
+		{
+			return;
+		}
+
+		m_bEditsDirty = false;
+		if (m_bEnableDiskCache)
+		{
+			const std::string sceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
+			const std::string filePath = RelativePathToAbsolute(SAVED_DIRECTORY "terrain/") + sceneName + "_" + std::to_string(m_LoadedEditsSeed) + ".edits";
+			if (!terrain::WriteEdits(filePath, m_LoadedEditsSeed, m_Streamer->Edits().Edits()))
+			{
+				PrintError("Failed to save terrain edits to %s\n", filePath.c_str());
+			}
+		}
+	}
+
+	void TerrainGenerator::UpdateEditorBrush()
+	{
+		if (!m_bEditorBrush || m_Streamer == nullptr)
+		{
+			return;
+		}
+
+		m_BrushCooldown -= g_DeltaTime;
+
+		btVector3 rayStart, rayEnd;
+		FlexEngine::GenerateRayAtMousePos(rayStart, rayEnd);
+		const glm::vec3 origin = ToVec3(rayStart);
+		const glm::vec3 dir = glm::normalize(ToVec3(rayEnd) - origin);
+
+		glm::vec3 hitPos, hitNormal;
+		if (!Raycast(origin, dir, 2000.0f, hitPos, hitNormal))
+		{
+			return;
+		}
+
+		g_Renderer->GetDebugRenderer()->drawSphere(ToBtVec3(hitPos), m_BrushRadius, btVector3(0.9f, 0.6f, 0.1f));
+
+		// LMB: dig, Shift + LMB: fill
+		if (g_InputManager->IsMouseButtonDown(MouseButton::LEFT) && m_BrushCooldown <= 0.0f)
+		{
+			m_BrushCooldown = 0.12f;
+			if (g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0)
+			{
+				const i32 materialCount = (i32)ARRAY_LENGTH(terrain::FILL_MATERIALS);
+				Fill(hitPos + hitNormal * m_BrushRadius * 0.5f, m_BrushRadius, terrain::FILL_MATERIALS[glm::clamp(m_BrushMaterialIndex, 0, materialCount - 1)]);
+			}
+			else
+			{
+				Dig(hitPos, m_BrushRadius);
+			}
+		}
+	}
+
 	void TerrainGenerator::Destroy(bool bDetachFromParent /* = true */)
 	{
-		threadUserData.running = false;
-
-		// TODO: Only join our threads!
-		Platform::JoinThreads();
-
-		for (auto& pair : m_Meshes)
+		if (s_Active == this)
 		{
-			DestroyChunk(pair.second);
+			s_Active = nullptr;
+			g_Renderer->SetShadowDistanceOverride(0.0f);
 		}
-		m_Meshes.clear();
 
-		m_ChunksToDestroy.clear();
-		m_ChunksToLoad.clear();
-
-		if (terrain_workQueue != nullptr)
+		if (m_WorldMapFuture.valid())
 		{
-			for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
+			m_WorldMapFuture.wait();
+			m_WorldMapFuture = {};
+		}
+		if (m_MinimapFuture.valid())
+		{
+			m_MinimapFuture.wait();
+			m_MinimapFuture = {};
+		}
+		DestroyMinimapTextures(true);
+
+		if (m_Streamer != nullptr)
+		{
+			SaveEdits();
+			if (m_bEnableDiskCache)
 			{
-				FreeWorkQueueEntry(i);
+				// (Cameras may have already been destroyed)
+				m_Streamer->SaveSnapshot(m_LastCenter);
 			}
-			delete terrain_workQueue;
-			terrain_workQueue = nullptr;
+			// Waits for the snapshot to finish writing
+			m_Streamer->Stop();
+			delete m_Streamer;
+			m_Streamer = nullptr;
 		}
+		m_ChunkCommands.clear();
+		m_QueryDensity.reset();
 
-		Platform::FreeCriticalSection(criticalSection);
-		criticalSection = nullptr;
+		DestroyAllChunks();
 
 		m_RoadSegments.clear();
 
 		GameObject::Destroy(bDetachFromParent);
 	}
 
-	bool TerrainGenerator::DrawNoiseFunctionImGui(NoiseFunction& noiseFunction, bool& bOutRemoved)
+	bool TerrainGenerator::DrawBiomeImGui(terrain::BiomeParams& biome)
 	{
-		bool bValueChanged = false;
+		bool bChanged = false;
 
-		static auto typeNameGetter = [](void* value, i32 index, const char** outName) -> bool
+		static char nameBuffer[128];
+		strncpy(nameBuffer, biome.name.c_str(), ARRAY_LENGTH(nameBuffer) - 1);
+		nameBuffer[ARRAY_LENGTH(nameBuffer) - 1] = '\0';
+		if (ImGui::InputText("Name", nameBuffer, ARRAY_LENGTH(nameBuffer)))
 		{
-			FLEX_UNUSED(value);
-
-			if (index >= 0 && index < (i32)NoiseFunction::Type::_NONE)
-			{
-				*outName = NoiseFunctionTypeNames[index];
-				return true;
-			}
-
-			*outName = "None";
-			return false;
-		};
-
-		const char* typeName = "None";
-		if ((i32)noiseFunction.type >= 0 && (i32)noiseFunction.type < (i32)NoiseFunction::Type::_NONE)
-		{
-			typeName = NoiseFunctionTypeNames[(i32)noiseFunction.type];
-		}
-		// Assumes this function was called within an ImGui::PushID/PopID pair so this doesn't cause conflicts
-		if (ImGui::TreeNode(typeName))
-		{
-			if (ImGui::Combo("Type", (i32*)&noiseFunction.type, typeNameGetter, nullptr, (i32)NoiseFunction::Type::_NONE))
-			{
-				bValueChanged = true;
-				noiseFunction = NoiseFunction::GenerateDefault(noiseFunction.type);
-			}
-
-			bValueChanged = ImGui::SliderFloat("H", &noiseFunction.H, 0.0f, 2.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Feature size", &noiseFunction.baseFeatureSize, 1.0f, 1000.0f) || bValueChanged;
-			const i32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
-			if (ImGui::SliderInt("Num octaves", &noiseFunction.numOctaves, 1, maxNumOctaves))
-			{
-				noiseFunction.numOctaves = glm::clamp(noiseFunction.numOctaves, 1, maxNumOctaves);
-				bValueChanged = true;
-			}
-			bValueChanged = ImGui::SliderInt("Isolate octave", &noiseFunction.isolateOctave, -1, maxNumOctaves - 1) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Height scale", &noiseFunction.heightScale, -1000.0f, 1000.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Lacunarity", &noiseFunction.lacunarity, 0.0f, 1.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Wavelength", &noiseFunction.wavelength, 1.0f, 1000.0f) || bValueChanged;
-			bValueChanged = ImGui::SliderFloat("Sharpness", &noiseFunction.sharpness, 0.1f, 50.0f) || bValueChanged;
-
-			if (ImGui::Button("Delete layer"))
-			{
-				bOutRemoved = true;
-				bValueChanged = true;
-			}
-
-			ImGui::TreePop();
+			biome.name = nameBuffer;
 		}
 
-		if (ImGui::BeginPopupContextWindow(""))
+		bChanged = ImGui::SliderFloat("Frequency", &biome.frequency, 0.0f, 4.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Temperature", &biome.temperature, -1.0f, 1.0f) || bChanged;
+		if (ImGui::IsItemHovered())
 		{
-			if (ImGui::Button("Delete layer"))
-			{
-				bOutRemoved = true;
-				bValueChanged = true;
-			}
-
-			ImGui::EndPopup();
+			ImGui::SetTooltip("Preferred climate (-1: polar, 1: desert)");
 		}
 
-		return bValueChanged;
+		ImGui::Text("Heightfield");
+		bChanged = ImGui::DragFloat("Base height", &biome.baseHeight, 1.0f, -2000.0f, 4000.0f) || bChanged;
+		bChanged = ImGui::DragFloat("Height amplitude", &biome.heightAmplitude, 1.0f, 0.0f, 4000.0f) || bChanged;
+		bChanged = ImGui::DragFloat("Wavelength", &biome.wavelength, 5.0f, 10.0f, 20000.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Ridgedness", &biome.ridgedness, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Terrace strength", &biome.terraceStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::DragFloat("Terrace height", &biome.terraceHeight, 0.5f, 1.0f, 500.0f) || bChanged;
+
+		ImGui::Text("Features");
+		bChanged = ImGui::DragFloat("Overhang amplitude", &biome.overhangAmplitude, 0.5f, 0.0f, 200.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Arch strength", &biome.archStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Cave strength", &biome.caveStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Lake strength", &biome.lakeStrength, 0.0f, 1.0f) || bChanged;
+
+		ImGui::Text("Surface");
+		bChanged = ImGui::ColorEdit3("Ground", &biome.groundColour.x) || bChanged;
+		bChanged = ImGui::SliderFloat("Grassiness", &biome.grassiness, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
+		bChanged = ImGui::ColorEdit3("Peak", &biome.peakColour.x) || bChanged;
+		bChanged = ImGui::DragFloat("Peak height", &biome.peakHeight, 5.0f, -1000.0f, 100000.0f) || bChanged;
+
+		return bChanged;
 	}
 
 	void TerrainGenerator::DrawImGuiObjects(bool bDrawingEditorObjects)
 	{
 		GameObject::DrawImGuiObjects(bDrawingEditorObjects);
 
-		u32 loadedChunkCount = (u32)m_Meshes.size();
-		ImGui::Text("Loaded chunks: %u (loading: %u)", loadedChunkCount, (u32)m_ChunksToLoad.size());
-
-		u32 totalVertCount = 0;
-
-		for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+		if (m_Streamer != nullptr)
 		{
-			totalVertCount += g_Renderer->GetChunkVertCount(iter->second->linearIndex);
-		}
+			terrain::TerrainStreamer::Stats stats = m_Streamer->GetStats();
+			ImGui::Text("Chunks: %u displayed (%u non-empty), %u desired", stats.displayedChunkCount, stats.displayedNonEmptyChunkCount, stats.desiredChunkCount);
+			ImGui::Text("Pending: %u (queued: %u), retiring: %u, edits in flight: %u", stats.pendingChunkCount, stats.queuedJobCount, stats.retiringChunkCount, stats.editJobCount);
+			ImGui::Text("Generated: %llu, avg %.2fms/chunk on %u threads", (unsigned long long)stats.totalGenerated, stats.averageGenerationTime, stats.threadCount);
+			ImGui::Text("Upload: %.2fms (max %.2fms, avg %.2fms/chunk), queued commands: %u", m_LastApplyTime, m_MaxApplyTime,
+				m_UploadCount > 0 ? m_TotalUploadTime / (real)m_UploadCount : 0.0f, (u32)m_ChunkCommands.size());
+			ImGui::Text("Camera speed: %.0f m/s, batch latency: %.2fs, swap groups: %u/%u", glm::length(stats.velocity), stats.batchLatency,
+				stats.pendingSwapGroupCount, stats.swapGroupCount);
+			char packedSizeStr[32];
+			ByteCountToString(packedSizeStr, (u32)ARRAY_LENGTH(packedSizeStr), (u64)stats.packedBytes);
+			ImGui::Text("Edits: %u, cached chunk data: %s (%u loaded from disk)", (u32)m_Streamer->Edits().Edits().size(), packedSizeStr, stats.snapshotChunkCount);
 
-		if (ImGui::TreeNode("Loaded Chunks"))
-		{
-			for (auto iter = m_Meshes.begin(); iter != m_Meshes.end(); ++iter)
+			if (ImGui::TreeNode("Chunks per LOD level"))
 			{
-				ImGui::PushID(iter->second->linearIndex);
-
-				u32 vertCount = g_Renderer->GetChunkVertCount(iter->second->linearIndex);
-				if (vertCount == 0)
+				for (u32 level = 0; level <= m_Params.maxLodLevel && level < ARRAY_LENGTH(stats.chunksPerLevel); ++level)
 				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+					ImGui::Text("Level %u (%.0fm): %u", level, m_Params.ChunkSize(level), stats.chunksPerLevel[level]);
 				}
-
-				if (ImGui::Button("x"))
-				{
-					g_Renderer->SetChunkVertCount(iter->second->linearIndex, 0);
-				}
-
-				ImGui::SameLine();
-
-				ImGui::Text("[%i] %i,%i,%i - %i verts %s",
-					iter->second->linearIndex,
-					iter->first.x, iter->first.y, iter->first.z,
-					vertCount,
-					iter->second->triangleIndexVertexArray != nullptr ? "(collision)" : "");
-
-				if (vertCount == 0)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				ImGui::PopID();
+				ImGui::TreePop();
 			}
 
-			ImGui::TreePop();
+			u32 vertexCount = 0;
+			u32 triangleCount = 0;
+			u32 rigidBodyCount = 0;
+			for (auto& pair : m_Chunks)
+			{
+				if (pair.second.meshComponent != nullptr)
+				{
+					vertexCount += pair.second.meshComponent->GetVertexBufferData()->UsedVertexCount;
+					triangleCount += pair.second.meshComponent->GetIndexCount() / 3;
+				}
+				if (pair.second.rigidBody != nullptr)
+				{
+					++rigidBodyCount;
+				}
+			}
+			const std::string vertexCountStr = PrettifyLargeNumber((u64)vertexCount, 2);
+			const std::string triangleCountStr = PrettifyLargeNumber((u64)triangleCount, 2);
+			ImGui::Text("Verts: %s, tris: %s, rigid bodies: %u", vertexCountStr.c_str(), triangleCountStr.c_str(), rigidBodyCount);
 		}
 
-		u32 pointsPerVoxel = (m_NumPointsPerAxis - 1);
-		u32 maxVertsPerChunk = pointsPerVoxel * pointsPerVoxel * pointsPerVoxel * 5 * 3;
-		ImGui::Text("Max verts per chunk: %u", maxVertsPerChunk);
-		static const u32 strBufLen = 32;
-		char strBuf[strBufLen];
-		ByteCountToString(strBuf, strBufLen, (u64)loadedChunkCount * maxVertsPerChunk * sizeof(TerrainVertex), 2);
-		ImGui::Text("Total vert memory: %s", strBuf);
-		std::string totalVertCountStr = PrettifyLargeNumber((u64)totalVertCount, 2);
-		ImGui::Text("Total verts: %s", totalVertCountStr.c_str());
+		bool bChanged = false;
 
-		bool bRegen = false;
-		bool bRegenGradients = false;
-
-		bRegen = ImGui::Checkbox("Highlight grid", &m_bHighlightGrid) || bRegen;
+		if (ImGui::Button("Regenerate"))
+		{
+			Regenerate();
+		}
 
 		ImGui::SameLine();
 
-		ImGui::Checkbox("Display tables", &m_bDisplayRandomTables);
+		if (ImGui::Button(s_bShowWorldMap ? "Hide world map" : "Show world map"))
+		{
+			s_bShowWorldMap = !s_bShowWorldMap;
+		}
+
+		ImGui::SameLine();
 
 		if (ImGui::Checkbox("Pin center", &m_bPinCenter))
 		{
@@ -9610,349 +9820,783 @@ namespace flex
 		if (m_bPinCenter)
 		{
 			ImGui::SameLine();
-
 			ImGui::Text("(%.2f, %.2f, %.2f)", m_PinnedPos.x, m_PinnedPos.y, m_PinnedPos.z);
 		}
 
-		ImGui::Separator();
-
+		bChanged = ImGui::InputInt("Seed", &m_Params.seed) || bChanged;
+		ImGui::SameLine();
+		if (ImGui::Button("Randomize"))
 		{
-			ImGui::PushID(99);
-			ImGui::Text("Biome noise");
-
-			bool bRemoved = false;
-			bool bValueChanged = DrawNoiseFunctionImGui(m_BiomeNoise, bRemoved);
-			ImGui::PopID();
-
-			if (bValueChanged)
-			{
-				bRegen = true;
-			}
+			m_Params.seed = (i32)((u64)Time::CurrentMilliseconds() & 0x7FFFFFFF);
+			bChanged = true;
 		}
 
 		ImGui::Separator();
 
-		ImGui::Text("Biomes");
-		for (i32 biomeIndex = 0; biomeIndex < (i32)m_Biomes.size(); ++biomeIndex)
+		ImGui::Checkbox("Edit with mouse", &m_bEditorBrush);
+		if (ImGui::IsItemHovered())
 		{
-			Biome& biome = m_Biomes[biomeIndex];
-
-			ImGui::PushID(&biome);
-
-			if (ImGui::TreeNode(biome.name.c_str()))
+			ImGui::SetTooltip("LMB: dig, Shift + LMB: fill with the selected material");
+		}
+		if (m_bEditorBrush)
+		{
+			ImGui::SliderFloat("Brush radius", &m_BrushRadius, 0.5f, 20.0f);
+			const i32 materialCount = (i32)ARRAY_LENGTH(terrain::FILL_MATERIALS);
+			m_BrushMaterialIndex = glm::clamp(m_BrushMaterialIndex, 0, materialCount - 1);
+			if (ImGui::BeginCombo("Fill material", terrain::MaterialName(terrain::FILL_MATERIALS[m_BrushMaterialIndex])))
 			{
-				if (ImGui::BeginPopupContextWindow())
+				for (i32 i = 0; i < materialCount; ++i)
 				{
-					static char buff[128];
-					if (ImGui::IsWindowAppearing())
+					if (ImGui::Selectable(terrain::MaterialName(terrain::FILL_MATERIALS[i]), i == m_BrushMaterialIndex))
 					{
-						memset(buff, 0, 128);
-					}
-
-					if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
-					{
-						biome.name = Trim(std::string(buff));
-					}
-
-					if (ImGui::Button("Remove biome"))
-					{
-						m_Biomes.erase(m_Biomes.begin() + biomeIndex);
-						bRegen = true;
-						ImGui::EndPopup();
-						ImGui::TreePop();
-						ImGui::PopID();
-						break;
-					}
-
-					ImGui::EndPopup();
-				}
-
-				for (i32 i = 0; i < (i32)biome.noiseFunctions.size(); ++i)
-				{
-					ImGui::PushID(i);
-					bool bRemoved = false;
-					bool bValueChanged = DrawNoiseFunctionImGui(biome.noiseFunctions[i], bRemoved);
-					ImGui::PopID();
-
-					if (bRemoved)
-					{
-						biome.noiseFunctions.erase(biome.noiseFunctions.begin() + i);
-						bRegen = true;
-						break;
-					}
-
-					if (bValueChanged)
-					{
-						bRegen = true;
-						break;
+						m_BrushMaterialIndex = i;
 					}
 				}
-
-				if (ImGui::Button("Add new noise layer"))
-				{
-					biome.noiseFunctions.push_back(NoiseFunction::GenerateDefault(NoiseFunction::Type::PERLIN));
-					bRegen = true;
-				}
-
-				ImGui::TreePop();
+				ImGui::EndCombo();
 			}
-
-			ImGui::PopID();
 		}
 
-		const char* newBiomePopupName = "New biome";
-		if (ImGui::Button("Add new biome"))
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
 		{
-			ImGui::OpenPopup(newBiomePopupName);
+			if (!player->IsWieldingPickAxe() && ImGui::Button("Give player a pickaxe"))
+			{
+				const PrefabID pickaxeID = g_ResourceManager->GetPrefabID("pickaxe");
+				if (pickaxeID.IsValid())
+				{
+					player->AddToInventory(pickaxeID, 1);
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Give player a vehicle"))
+			{
+				const PrefabID vehicleID = g_ResourceManager->GetPrefabID("vehicle");
+				if (vehicleID.IsValid())
+				{
+					player->AddToInventory(vehicleID, 1);
+				}
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Place it with the place item key, & pick it up again by holding the pickup key while looking at it");
+			}
+		}
+		else if (ImGui::Button("Spawn player at camera"))
+		{
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			g_SceneManager->CurrentScene()->SpawnPlayer(camera->position, camera->forward);
 		}
 
-		if (ImGui::BeginPopupModal(newBiomePopupName, nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		if (m_Streamer != nullptr && !m_Streamer->Edits().Edits().empty())
 		{
-			static char buff[128];
-			if (ImGui::IsWindowAppearing())
-			{
-				memset(buff, 0, 128);
-			}
-
-			bool bCreate = false;
-
-			if (ImGui::InputText("Name", buff, 128, ImGuiInputTextFlags_EnterReturnsTrue))
-			{
-				bCreate = true;
-			}
-
 			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
-
-			if (ImGui::Button("Cancel"))
+			if (ImGui::Button("Clear all edits"))
 			{
-				ImGui::CloseCurrentPopup();
+				m_Streamer->SetEdits({});
+				m_bEditsDirty = true;
+				SaveEdits();
 			}
-
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-			ImGui::PopStyleColor();
-
-			ImGui::SameLine(ImGui::GetWindowWidth() - 80.0f);
-
-			bCreate = ImGui::Button("Create") || bCreate;
-
-			if (bCreate)
-			{
-				std::string biomeName = Trim(std::string(buff));
-				Biome biome = {};
-				biome.name = biomeName;
-				m_Biomes.push_back(biome);
-				bRegen = true;
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::EndPopup();
+			ImGui::PopStyleColor(3);
 		}
 
-
-		//i32 maxNoiseLayer = 6; // TODO: find largest num layers in all biomes?
-		//bRegen = ImGui::SliderInt("Isolate noise layer", &m_IsolateNoiseLayer, -1, maxNoiseLayer) || bRegen;
-
-		//bRegen = ImGui::SliderFloat("Road blend", &m_RoadBlendDist, 0.0f, 100.0f) || bRegen;
-		//bRegen = ImGui::SliderFloat("Road blend threshold", &m_RoadBlendThreshold, 0.0f, 50.0f) || bRegen;
-
-		u32 oldtableWidth = m_BasePerlinTableWidth;
-		if (ImGuiExt::SliderUInt("Base table width", &m_BasePerlinTableWidth, 1, 512))
+		ImGui::Checkbox("Disk cache", &m_bEnableDiskCache);
+		if (ImGui::IsItemHovered())
 		{
-			m_BasePerlinTableWidth = NextPowerOfTwo(m_BasePerlinTableWidth);
-			if (m_BasePerlinTableWidth != oldtableWidth)
-			{
-				GenerateGradients();
-				bRegenGradients = true;
-			}
+			ImGui::SetTooltip("Saves edits, and the chunks around the camera on exit (so startup is instant)");
 		}
-
-		bRegen = ImGui::Button("Regen") || bRegen;
-
 		ImGui::SameLine();
-
-		bRegenGradients = ImGui::Button("Regen gradients") || bRegenGradients;
-
-		ImGui::SameLine();
-
-		bRegenGradients = ImGui::Checkbox("Use manual seed", &m_UseManualSeed) || bRegenGradients;
-
-		if (m_UseManualSeed)
+		if (ImGui::Checkbox("Auto fog", &m_bAutoFog))
 		{
-			bRegenGradients = ImGui::InputInt("Manual seed", &m_ManualSeed) || bRegenGradients;
+			UpdateSceneFog();
 		}
 
-		u32 minPointsPerAxis = 2 + 1;
-		u32 maxPointsPerAxis = 32 + 1;
-		const u32 previousPointsPerAxis = m_NumPointsPerAxis;
-		if (ImGuiExt::InputUInt("Points per axis", &m_NumPointsPerAxis))
+		ImGui::Separator();
+
 		{
-			m_NumPointsPerAxis = glm::clamp(m_NumPointsPerAxis, minPointsPerAxis, maxPointsPerAxis);
-			if (previousPointsPerAxis != m_NumPointsPerAxis)
+			i32 quality = g_Renderer->GetTerrainQuality();
+			if (ImGui::Combo("Quality", &quality, s_TerrainQualityNames, (i32)ARRAY_LENGTH(s_TerrainQualityNames)))
 			{
-				bRegen = true;
+				// Stored in the renderer settings, since it's a user preference rather than part of the scene
+				g_Renderer->SetTerrainQuality(quality);
+				g_Renderer->SaveSettingsToDisk(false);
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Higher quality uses detailed chunks further from the camera (more chunks)");
 			}
 		}
+		ImGui::SliderFloat("Shadow distance", &m_ShadowDistance, 50.0f, 10000.0f, "%.0f", 2.0f);
+		bChanged = ImGui::DragFloat("View distance", &m_Params.viewDistance, 50.0f, 100.0f, 200000.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("LOD distance factor", &m_Params.lodDistanceFactor, 1.8f, 6.0f) || bChanged;
+		bChanged = ImGuiExt::SliderUInt("Max LOD level", &m_Params.maxLodLevel, 0, 14) || bChanged;
+		bChanged = ImGuiExt::SliderUInt("Cells per chunk axis", &m_Params.cellsPerChunkAxis, 4, 64) || bChanged;
+		bChanged = ImGui::DragFloat("Voxel size", &m_Params.voxelSize, 0.05f, 0.25f, 64.0f) || bChanged;
+		ImGui::Text("Chunk size: %.1fm (largest: %.1fm)", m_Params.ChunkSize(0), m_Params.ChunkSize(m_Params.maxLodLevel));
+		ImGui::SliderFloat("Rigid body load radius", &m_RigidBodyLoadRadius, 0.0f, 2000.0f);
 
-		if (m_NumPointsPerAxis > minPointsPerAxis)
+		if (ImGui::TreeNode("World shape"))
 		{
-			if (ImGui::Button("/2"))
-			{
-				bRegen = true;
-				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) / 2 + 1;
-			}
-
-			if (m_NumPointsPerAxis < maxPointsPerAxis)
-			{
-				ImGui::SameLine();
-			}
+			bChanged = ImGui::DragFloat("Biome cell size", &m_Params.biomeCellSize, 10.0f, 100.0f, 100000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Biome blend distance", &m_Params.biomeBlendDistance, 10.0f, 1.0f, 50000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Continent wavelength", &m_Params.continentWavelength, 10.0f, 100.0f, 200000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Continent amplitude", &m_Params.continentAmplitude, 1.0f, 0.0f, 5000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Overhang wavelength", &m_Params.overhangWavelength, 1.0f, 2.0f, 2000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Arch cell size", &m_Params.archCellSize, 1.0f, 20.0f, 5000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Arch min radius", &m_Params.archMinRadius, 0.5f, 1.0f, 200.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Arch max radius", &m_Params.archMaxRadius, 0.5f, 1.0f, 200.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Cave wavelength", &m_Params.caveWavelength, 1.0f, 2.0f, 2000.0f) || bChanged;
+			bChanged = ImGui::SliderFloat("Tunnel radius", &m_Params.tunnelRadius, 0.0f, 20.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Cave max depth", &m_Params.caveMaxDepth, 1.0f, 0.0f, 2000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Cavern wavelength", &m_Params.cavernWavelength, 1.0f, 10.0f, 5000.0f) || bChanged;
+			bChanged = ImGui::SliderFloat("Cavern chance", &m_Params.cavernChance, 0.0f, 1.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Lake cell size", &m_Params.lakeCellSize, 10.0f, 100.0f, 50000.0f) || bChanged;
+			bChanged = ImGui::SliderFloat("Lake chance", &m_Params.lakeChance, 0.0f, 1.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Lake min radius", &m_Params.lakeMinRadius, 1.0f, 10.0f, 5000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Lake max radius", &m_Params.lakeMaxRadius, 1.0f, 10.0f, 5000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Lake max relief", &m_Params.lakeMaxRelief, 1.0f, 0.0f, 1000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Massif cell size", &m_Params.massifCellSize, 100.0f, 1000.0f, 500000.0f) || bChanged;
+			bChanged = ImGui::SliderFloat("Massif chance", &m_Params.massifChance, 0.0f, 1.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Massif min height", &m_Params.massifMinHeight, 10.0f, 0.0f, 10000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Massif max height", &m_Params.massifMaxHeight, 10.0f, 0.0f, 10000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Climate wavelength", &m_Params.climateWavelength, 100.0f, 1000.0f, 1000000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Sea level", &m_Params.seaLevel, 1.0f, -1000.0f, 1000.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Ocean wavelength", &m_Params.oceanWavelength, 100.0f, 1000.0f, 1000000.0f) || bChanged;
+			bChanged = ImGui::SliderFloat("Ocean coverage", &m_Params.oceanCoverage, 0.0f, 1.0f) || bChanged;
+			bChanged = ImGui::DragFloat("Ocean depth", &m_Params.oceanDepth, 1.0f, 0.0f, 5000.0f) || bChanged;
+			ImGui::TreePop();
 		}
 
-		if (m_NumPointsPerAxis < maxPointsPerAxis)
+		if (ImGui::TreeNode("Biomes"))
 		{
-			if (ImGui::Button("x2"))
+			for (i32 biomeIndex = 0; biomeIndex < (i32)m_Params.biomes.size(); ++biomeIndex)
 			{
-				bRegen = true;
-				m_NumPointsPerAxis = (m_NumPointsPerAxis - 1) * 2 + 1;
-			}
-		}
+				terrain::BiomeParams& biome = m_Params.biomes[biomeIndex];
 
-		bRegen = ImGuiExt::SliderUInt("Max chunk count", &m_MaxChunkCount, 1, 512) || bRegen;
-
-		bRegen = ImGui::SliderFloat("Chunk size", &m_ChunkSize, 8.0f, 1024.0f) || bRegen;
-
-		bRegen = ImGui::SliderFloat("Max height", &m_MaxHeight, 0.1f, 500.0f) || bRegen;
-
-		bRegen = ImGui::SliderFloat("Iso level", &m_IsoLevel, -1.0f, 1.0f) || bRegen;
-
-		bRegen = ImGui::ColorEdit3("low", &m_LowCol.x) || bRegen;
-		bRegen = ImGui::ColorEdit3("mid", &m_MidCol.x) || bRegen;
-		bRegen = ImGui::ColorEdit3("high", &m_HighCol.x) || bRegen;
-
-		if (bRegen || bRegenGradients)
-		{
-			if (bRegenGradients)
-			{
-				GenerateGradients();
-			}
-
-			DestroyAllChunks();
-
-			RoadManager* roadManager = GetSystem<RoadManager>(SystemType::ROAD_MANAGER);
-			roadManager->RegenerateAllRoads();
-
-			if (m_bUseAsyncCompute)
-			{
-				Regenerate();
-			}
-			else
-			{
-				m_Meshes.clear();
-				m_ChunksToDestroy.clear();
-				m_ChunksToLoad.clear();
-
-				m_PreviousLoadedChunkRadius = 0.0f;
-
-					for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-					{
-						FreeWorkQueueEntry(i);
-						AllocWorkQueueEntry(i);
-					}
-				}
-		}
-
-		ImGui::SliderFloat("View radius", &m_LoadedChunkRadius, 10.0f, 3000.0f);
-		ImGui::SliderFloat("Rigid body load radius sqr", &m_LoadedChunkRigidBodyRadius2, 10.0f, 9000.0f);
-
-		if (ImGui::TreeNode("Road segments"))
-		{
-			static glm::vec2i selectedChunkIndex;
-			static i32 selectedRoadSegmentIndex = -1;
-			static AABB* selectedChunkAABB = nullptr;
-			for (auto& iter : m_RoadSegments)
-			{
-				glm::vec2i chunkIndex = iter.first;
-
-				bool bSelectedSegmentInChunk = chunkIndex == selectedChunkIndex;
-
-				ImGui::PushID((const void*)((u64)((u64)chunkIndex.x + 9999) * 99999 + ((u64)chunkIndex.y + 9999)));
-
-				const std::vector<RoadSegment*>& roadSegments = iter.second;
-
-				if (ImGui::TreeNode("chunk road segments", "%i, %i", chunkIndex.x, chunkIndex.y))
+				ImGui::PushID(biomeIndex);
+				if (ImGui::TreeNode("biome", "%s", biome.name.c_str()))
 				{
-					for (i32 i = 0; i < (i32)roadSegments.size(); ++i)
-					{
-						RoadSegment* roadSegment = roadSegments[i];
-						ImGui::PushID((const void*)(roadSegment));
+					bChanged = DrawBiomeImGui(biome) || bChanged;
 
-						bool bSelected = (bSelectedSegmentInChunk && i == selectedRoadSegmentIndex);
-						std::string label = "segment " + std::to_string(i);
-						if (ImGui::Selectable(label.c_str(), &bSelected))
-						{
-							selectedChunkIndex = chunkIndex;
-							selectedRoadSegmentIndex = i;
-							selectedChunkAABB = &roadSegment->aabb;
-						}
-
-						ImGui::PopID();
-					}
+					ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+					const bool bRemove = m_Params.biomes.size() > 1 && ImGui::Button("Remove biome");
+					ImGui::PopStyleColor(3);
 
 					ImGui::TreePop();
-				}
 
+					if (bRemove)
+					{
+						m_Params.biomes.erase(m_Params.biomes.begin() + biomeIndex);
+						bChanged = true;
+						ImGui::PopID();
+						break;
+					}
+				}
 				ImGui::PopID();
 			}
 
-			ImGui::TreePop();
-
-			if (selectedChunkAABB != nullptr)
+			if (m_Params.biomes.size() < terrain::MAX_BIOME_COUNT && ImGui::Button("Add biome"))
 			{
-				selectedChunkAABB->DrawDebug(btVector3(0.1f, 0.1f, 0.9f));
+				terrain::BiomeParams biome = {};
+				biome.name = "Biome " + std::to_string(m_Params.biomes.size());
+				m_Params.biomes.push_back(biome);
+				bChanged = true;
 			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Reset to defaults"))
+			{
+				m_Params.biomes = terrain::WorldParams::Default().biomes;
+				bChanged = true;
+			}
+
+			ImGui::TreePop();
+		}
+
+		// Regenerating is expensive, so wait until dragging finishes
+		if (bChanged)
+		{
+			m_bEditPending = true;
+		}
+		if (m_bEditPending && !ImGui::IsAnyItemActive())
+		{
+			m_bEditPending = false;
+			Regenerate();
 		}
 	}
 
-	NoiseFunction TerrainGenerator::ParseNoiseFunction(const JSONObject& noiseFunctionObj)
+	void TerrainGenerator::DrawActiveImGuiWindows()
 	{
-		NoiseFunction result = {};
+		if (s_Active != nullptr && s_bShowWorldMap)
+		{
+			s_Active->DrawWorldMapWindow();
+		}
+	}
 
-		std::string typeName = noiseFunctionObj.GetString("type");
-		result.type = NoiseFunction::TypeFromString(typeName.c_str());
+	std::future<TerrainGenerator::WorldMap> TerrainGenerator::GenerateMap(std::shared_ptr<const terrain::TerrainDensity> density, const glm::vec3& center, real extent, u32 resolution)
+	{
+		return std::async(std::launch::async, [density, center, extent, resolution]()
+		{
+			WorldMap map = {};
+			map.center = center;
+			map.extent = extent;
+			map.resolution = resolution;
+			map.colours.resize(resolution * resolution);
 
-		noiseFunctionObj.TryGetFloat("feature size", result.baseFeatureSize);
-		noiseFunctionObj.TryGetInt("num octaves", result.numOctaves);
-		noiseFunctionObj.TryGetFloat("h", result.H);
-		noiseFunctionObj.TryGetFloat("height scale", result.heightScale);
-		noiseFunctionObj.TryGetFloat("lacunarity", result.lacunarity);
-		noiseFunctionObj.TryGetFloat("wavelength", result.wavelength);
-		noiseFunctionObj.TryGetFloat("sharpness", result.sharpness);
+			// Rows run from +z (north, top) to -z
+			std::vector<terrain::ColumnSample> columns(resolution * resolution);
+			const real cellSize = (2.0f * extent) / (real)resolution;
+			for (u32 row = 0; row < resolution; ++row)
+			{
+				for (u32 x = 0; x < resolution; ++x)
+				{
+					const real px = center.x - extent + ((real)x + 0.5f) * cellSize;
+					const real pz = center.z + extent - ((real)row + 0.5f) * cellSize;
+					columns[row * resolution + x] = density->SampleColumn(px, pz);
+				}
+			}
 
+			for (u32 row = 0; row < resolution; ++row)
+			{
+				for (u32 x = 0; x < resolution; ++x)
+				{
+					const terrain::ColumnSample& column = columns[row * resolution + x];
+					glm::vec3 colour;
+					if (column.lakeID != 0 && column.lakeT < 1.0f && column.height < column.waterLevel)
+					{
+						const real depth = column.waterLevel - column.height;
+						if (column.lakeID == terrain::OCEAN_ID)
+						{
+							colour = glm::mix(glm::vec3(0.22f, 0.46f, 0.58f), glm::vec3(0.05f, 0.14f, 0.32f), glm::smoothstep(0.0f, 150.0f, depth));
+						}
+						else
+						{
+							colour = glm::mix(glm::vec3(0.20f, 0.42f, 0.58f), glm::vec3(0.10f, 0.28f, 0.50f), glm::smoothstep(0.0f, 15.0f, depth));
+						}
+					}
+					else
+					{
+						colour = glm::mix(column.groundColour, column.cliffColour, 0.3f);
+						if (column.lakeID == terrain::OCEAN_ID && column.height - column.waterLevel < 5.0f)
+						{
+							colour = glm::vec3(0.78f, 0.70f, 0.52f);
+						}
+						if (column.height > column.peakHeight)
+						{
+							colour = column.peakColour;
+						}
+
+						// Hill shading, lit from the north west
+						const real hx = columns[row * resolution + glm::min(x + 1, resolution - 1)].height - columns[row * resolution + (x > 0 ? x - 1 : 0)].height;
+						const real hz = columns[(row > 0 ? row - 1 : 0) * resolution + x].height - columns[glm::min(row + 1, resolution - 1) * resolution + x].height;
+						const glm::vec3 normal = glm::normalize(glm::vec3(-hx, 2.0f * cellSize, -hz));
+						const real shade = glm::clamp(glm::dot(normal, glm::normalize(glm::vec3(-1.0f, 1.5f, 1.0f))) * 1.1f, 0.25f, 1.2f);
+						colour *= shade;
+					}
+					colour = glm::clamp(colour, VEC3_ZERO, VEC3_ONE);
+					map.colours[row * resolution + x] = IM_COL32((u32)(colour.r * 255.0f), (u32)(colour.g * 255.0f), (u32)(colour.b * 255.0f), 255);
+				}
+			}
+
+			map.bValid = true;
+			return map;
+		});
+	}
+
+	std::string TerrainGenerator::DescribeLocation(const glm::vec3& pos) const
+	{
+		if (m_Streamer == nullptr)
+		{
+			return "";
+		}
+
+		std::shared_ptr<const terrain::TerrainDensity> density = m_Streamer->Density();
+		const terrain::ColumnSample column = density->SampleColumn(pos.x, pos.z);
+		const std::vector<terrain::BiomeParams>& biomes = density->Params().biomes;
+		std::string result = column.primaryBiome >= 0 && column.primaryBiome < (i32)biomes.size() ? biomes[column.primaryBiome].name : "?";
+
+		const real temperature = column.temperature;
+		const char* climate = temperature < -0.6f ? "polar" : temperature < -0.2f ? "cold" : temperature < 0.3f ? "temperate" : temperature < 0.65f ? "warm" : "hot";
+		result += std::string(" (") + climate + ")";
+
+		const bool bUnderWater = column.lakeID != 0 && column.lakeT < 1.0f && column.height < column.waterLevel;
+		if (column.lakeID == terrain::OCEAN_ID && column.oceanWeight > 0.15f)
+		{
+			result += bUnderWater ? ", ocean" : ", coast";
+		}
+		else if (bUnderWater)
+		{
+			result += ", lake";
+		}
+		if (column.massifWeight > 0.1f)
+		{
+			result += ", mountain massif";
+		}
 		return result;
 	}
 
-	JSONObject TerrainGenerator::SerializeNoiseFunction(const NoiseFunction& noiseFunction)
+	void TerrainGenerator::DestroyMinimapTextures(bool bAll)
 	{
-		JSONObject noiseFunctionObj = {};
-
-		noiseFunctionObj.fields.emplace_back("type", JSONValue(NoiseFunction::TypeToString(noiseFunction.type)));
-		noiseFunctionObj.fields.emplace_back("feature size", JSONValue(noiseFunction.baseFeatureSize));
-		noiseFunctionObj.fields.emplace_back("num octaves", JSONValue(noiseFunction.numOctaves));
-		if (noiseFunction.type == NoiseFunction::Type::FBM)
+		for (auto iter = m_RetiredMinimapTextures.begin(); iter != m_RetiredMinimapTextures.end();)
 		{
-			noiseFunctionObj.fields.emplace_back("h", JSONValue(noiseFunction.H));
-		}
-		noiseFunctionObj.fields.emplace_back("height scale", JSONValue(noiseFunction.heightScale));
-		noiseFunctionObj.fields.emplace_back("lacunarity", JSONValue(noiseFunction.lacunarity));
-		noiseFunctionObj.fields.emplace_back("wavelength", JSONValue((noiseFunction.wavelength)));
-		if (noiseFunction.type == NoiseFunction::Type::VORONOI || noiseFunction.type == NoiseFunction::Type::SMOOTH_VORONOI)
-		{
-			noiseFunctionObj.fields.emplace_back("sharpness", JSONValue((noiseFunction.sharpness)));
+			// Wait a few frames before destroying, since in flight frames may still be using the texture
+			if (bAll || ++iter->second > 4)
+			{
+				g_ResourceManager->RemoveLoadedTexture(iter->first, true);
+				iter = m_RetiredMinimapTextures.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
 		}
 
-		return noiseFunctionObj;
+		if (bAll && m_MinimapTextureID != InvalidTextureID)
+		{
+			g_ResourceManager->RemoveLoadedTexture(m_MinimapTextureID, true);
+			m_MinimapTextureID = InvalidTextureID;
+		}
+	}
+
+	void TerrainGenerator::UpdateMinimap()
+	{
+		DestroyMinimapTextures(false);
+
+		if (m_MinimapFuture.valid() && m_MinimapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		{
+			m_Minimap = m_MinimapFuture.get();
+
+			// Sprite textures are displayed with their first row at the bottom, so flip (rows are stored north first)
+			const u32 resolution = m_Minimap.resolution;
+			std::vector<u32> pixels(resolution * resolution);
+			for (u32 row = 0; row < resolution; ++row)
+			{
+				memcpy(&pixels[(resolution - 1 - row) * resolution], &m_Minimap.colours[row * resolution], resolution * sizeof(u32));
+			}
+
+			const TextureID textureID = g_Renderer->InitializeTextureFromMemory(pixels.data(), (u32)(pixels.size() * sizeof(u32)), TextureFormat::R8G8B8A8_UNORM,
+				"Terrain minimap", resolution, resolution, 4, g_Renderer->GetSamplerLinearClampToEdge(), VK_FILTER_LINEAR);
+			if (m_MinimapTextureID != InvalidTextureID)
+			{
+				m_RetiredMinimapTextures.emplace_back(m_MinimapTextureID, 0u);
+			}
+			m_MinimapTextureID = textureID;
+		}
+
+		if (!s_bShowMinimap || m_Streamer == nullptr || s_Active != this)
+		{
+			return;
+		}
+
+		// Only shown while playing (rather than flying the debug camera around)
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		if (camera == nullptr || !camera->bPossessPlayer)
+		{
+			return;
+		}
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		const glm::vec3 pos = player != nullptr ? player->GetTransform()->GetWorldPosition() : camera->position;
+
+		const bool bStale = !m_Minimap.bValid || glm::distance(glm::vec2(pos.x, pos.z), glm::vec2(m_Minimap.center.x, m_Minimap.center.z)) > m_MinimapExtent * 0.15f;
+		if (bStale && !m_MinimapFuture.valid())
+		{
+			m_MinimapFuture = GenerateMap(m_Streamer->Density(), pos, m_MinimapExtent, 96);
+		}
+
+		if (m_MinimapTextureID == InvalidTextureID || !m_Minimap.bValid)
+		{
+			return;
+		}
+
+		// Positions are in the sprite's screen space ([-aspect, aspect] x [-1, 1], +y up), anchored at sprite centers
+		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
+		const real aspectRatio = (real)frameBufferSize.x / (real)glm::max(frameBufferSize.y, 1);
+		const real halfSize = 0.28f;
+		const real margin = 0.05f;
+		const glm::vec2 center(aspectRatio - margin - halfSize, 1.0f - margin - halfSize);
+
+		g_Renderer->EnqueueUntexturedQuad(center, AnchorPoint::CENTER, glm::vec2(halfSize + 0.008f), glm::vec4(0.05f, 0.05f, 0.06f, 0.85f));
+
+		SpriteQuadDrawInfo mapSprite = {};
+		mapSprite.textureID = m_MinimapTextureID;
+		mapSprite.anchor = AnchorPoint::CENTER;
+		mapSprite.bScreenSpace = true;
+		mapSprite.bReadDepth = false;
+		mapSprite.pos = glm::vec3(center, 0.0f);
+		mapSprite.scale = glm::vec3(halfSize, halfSize, 1.0f);
+		g_Renderer->EnqueueSprite(mapSprite);
+
+		// Player marker & heading
+		glm::vec2 offset = glm::vec2(pos.x - m_Minimap.center.x, pos.z - m_Minimap.center.z) / m_Minimap.extent;
+		offset = glm::clamp(offset, glm::vec2(-1.0f), glm::vec2(1.0f));
+		const glm::vec2 markerPos = center + offset * halfSize;
+		glm::vec2 forward(camera->forward.x, camera->forward.z);
+		forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : glm::vec2(0.0f, 1.0f);
+		g_Renderer->EnqueueUntexturedQuad(markerPos, AnchorPoint::CENTER, glm::vec2(0.009f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
+		g_Renderer->EnqueueUntexturedQuad(markerPos, AnchorPoint::CENTER, glm::vec2(0.006f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		g_Renderer->EnqueueUntexturedQuad(markerPos + forward * 0.022f, AnchorPoint::CENTER, glm::vec2(0.004f), glm::vec4(1.0f, 0.35f, 0.25f, 1.0f));
+	}
+
+	// Draws a rectangle outline with dashes moving around it (used to show chunks being loaded)
+	static void DrawDashedRect(ImDrawList* drawList, const ImVec2& a, const ImVec2& b, ImU32 colour, real dashLength, real offset)
+	{
+		const ImVec2 corners[5] = { a, ImVec2(b.x, a.y), b, ImVec2(a.x, b.y), a };
+		const real period = dashLength * 2.0f;
+		real perimeterPos = offset;
+		for (u32 edge = 0; edge < 4; ++edge)
+		{
+			const ImVec2 start = corners[edge];
+			const ImVec2 end = corners[edge + 1];
+			const real length = glm::length(glm::vec2(end.x - start.x, end.y - start.y));
+			if (length <= 0.0f)
+			{
+				continue;
+			}
+
+			real t = 0.0f;
+			while (t < length)
+			{
+				const real phase = glm::mod(perimeterPos + t, period);
+				if (phase < dashLength)
+				{
+					const real segmentEnd = glm::min(length, t + (dashLength - phase));
+					const ImVec2 p0(start.x + (end.x - start.x) * (t / length), start.y + (end.y - start.y) * (t / length));
+					const ImVec2 p1(start.x + (end.x - start.x) * (segmentEnd / length), start.y + (end.y - start.y) * (segmentEnd / length));
+					drawList->AddLine(p0, p1, colour, 1.5f);
+					t = segmentEnd;
+				}
+				else
+				{
+					t += period - phase;
+				}
+			}
+			perimeterPos += length;
+		}
+	}
+
+	void TerrainGenerator::DrawWorldMapWindow()
+	{
+		ImGui::SetNextWindowSize(ImVec2(540.0f, 760.0f), ImGuiCond_FirstUseEver);
+		// Scrolling zooms the map rather than scrolling the window
+		if (!ImGui::Begin("Terrain map", &s_bShowWorldMap, ImGuiWindowFlags_NoScrollWithMouse))
+		{
+			ImGui::End();
+			return;
+		}
+
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		const glm::vec3 cameraPos = camera->position;
+
+		if (m_WorldMapFuture.valid() && m_WorldMapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		{
+			m_WorldMap = m_WorldMapFuture.get();
+		}
+
+		const real desiredExtent = m_Params.viewDistance / glm::max(m_WorldMapZoom, 0.01f);
+		const bool bMapStale = !m_WorldMap.bValid ||
+			glm::distance(glm::vec2(m_WorldMap.center.x, m_WorldMap.center.z), glm::vec2(cameraPos.x, cameraPos.z)) > m_WorldMap.extent * 0.1f ||
+			glm::abs(m_WorldMap.extent - desiredExtent) > desiredExtent * 0.01f;
+		if (bMapStale && m_Streamer != nullptr && !m_WorldMapFuture.valid())
+		{
+			m_WorldMapFuture = GenerateMap(m_Streamer->Density(), cameraPos, desiredExtent, 128);
+		}
+
+		// Seed
+		{
+			i32 seed = GetEffectiveParams().seed;
+			ImGui::PushItemWidth(140.0f);
+			if (ImGui::InputInt("Seed", &seed, 1, 100, ImGuiInputTextFlags_EnterReturnsTrue))
+			{
+				m_Params.seed = seed;
+				Regenerate();
+			}
+			ImGui::PopItemWidth();
+			ImGui::SameLine();
+			if (ImGui::Button("Previous"))
+			{
+				m_Params.seed = seed - 1;
+				Regenerate();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Next"))
+			{
+				m_Params.seed = seed + 1;
+				Regenerate();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Random"))
+			{
+				m_Params.seed = (i32)((u64)Time::CurrentMilliseconds() & 0x7FFFFFFF);
+				Regenerate();
+			}
+		}
+
+		ImGui::PushItemWidth(160.0f);
+		ImGui::SliderFloat("Zoom", &m_WorldMapZoom, 0.05f, 64.0f, "%.2f", 3.0f);
+		ImGui::PopItemWidth();
+		ImGui::SameLine();
+		ImGui::Checkbox("Chunks", &m_bWorldMapShowChunks);
+		ImGui::SameLine();
+		ImGui::Checkbox("Minimap", &s_bShowMinimap);
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Show a minimap in the corner of the screen while playing");
+		}
+
+		static const ImU32 levelColours[] =
+		{
+			IM_COL32(255, 60, 60, 255), IM_COL32(255, 150, 40, 255), IM_COL32(250, 230, 50, 255), IM_COL32(120, 230, 60, 255),
+			IM_COL32(40, 220, 200, 255), IM_COL32(60, 140, 255, 255), IM_COL32(150, 90, 255, 255), IM_COL32(240, 80, 220, 255),
+			IM_COL32(250, 250, 250, 255), IM_COL32(150, 150, 150, 255), IM_COL32(90, 90, 90, 255), IM_COL32(40, 40, 40, 255),
+		};
+		const u32 levelColourCount = (u32)ARRAY_LENGTH(levelColours);
+
+		std::vector<terrain::TerrainStreamer::DisplayedChunkInfo> chunks;
+		u32 chunksPerLevel[32] = {};
+		u32 pendingPerLevel[32] = {};
+		if (m_Streamer != nullptr)
+		{
+			m_Streamer->GetDisplayedChunks(chunks);
+			for (const terrain::TerrainStreamer::DisplayedChunkInfo& chunk : chunks)
+			{
+				if (chunk.key.level >= 0 && chunk.key.level < 32)
+				{
+					if (chunk.bPending)
+					{
+						++pendingPerLevel[chunk.key.level];
+					}
+					else if (!chunk.bEmpty)
+					{
+						++chunksPerLevel[chunk.key.level];
+					}
+				}
+			}
+		}
+
+		// Legend
+		for (u32 level = 0; level <= m_Params.maxLodLevel && level < 32; ++level)
+		{
+			if (level % 6 != 0)
+			{
+				ImGui::SameLine();
+			}
+			const ImVec4 colour = ImGui::ColorConvertU32ToFloat4(levelColours[level % levelColourCount]);
+			ImGui::ColorButton("##level", colour, ImGuiColorEditFlags_NoTooltip, ImVec2(10.0f, 10.0f));
+			ImGui::SameLine();
+			if (pendingPerLevel[level] > 0)
+			{
+				ImGui::Text("L%u: %u (+%u)", level, chunksPerLevel[level], pendingPerLevel[level]);
+			}
+			else
+			{
+				ImGui::Text("L%u: %u", level, chunksPerLevel[level]);
+			}
+		}
+
+		const real footerHeight = ImGui::GetTextLineHeightWithSpacing() * 5.0f;
+		const ImVec2 available = ImGui::GetContentRegionAvail();
+		const real canvasSize = glm::max(glm::min(available.x, available.y - footerHeight), 64.0f);
+		const ImVec2 canvasPos = ImGui::GetCursorScreenPos();
+		ImGui::InvisibleButton("map", ImVec2(canvasSize, canvasSize));
+		const bool bHovered = ImGui::IsItemHovered();
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		drawList->PushClipRect(canvasPos, ImVec2(canvasPos.x + canvasSize, canvasPos.y + canvasSize), true);
+		drawList->AddRectFilled(canvasPos, ImVec2(canvasPos.x + canvasSize, canvasPos.y + canvasSize), IM_COL32(20, 20, 24, 255));
+
+		// The view is centered on the camera, with +x to the right & +z up
+		const real viewExtent = desiredExtent;
+		auto WorldToCanvas = [&](real x, real z)
+		{
+			return ImVec2(canvasPos.x + ((x - cameraPos.x) / (2.0f * viewExtent) + 0.5f) * canvasSize,
+				canvasPos.y + (0.5f - (z - cameraPos.z) / (2.0f * viewExtent)) * canvasSize);
+		};
+
+		if (m_WorldMap.bValid)
+		{
+			const real cellSize = (2.0f * m_WorldMap.extent) / (real)m_WorldMap.resolution;
+			for (u32 row = 0; row < m_WorldMap.resolution; ++row)
+			{
+				for (u32 x = 0; x < m_WorldMap.resolution; ++x)
+				{
+					const real px = m_WorldMap.center.x - m_WorldMap.extent + (real)x * cellSize;
+					const real pzTop = m_WorldMap.center.z + m_WorldMap.extent - (real)row * cellSize;
+					const ImVec2 a = WorldToCanvas(px, pzTop);
+					const ImVec2 b = WorldToCanvas(px + cellSize, pzTop - cellSize);
+					drawList->AddRectFilled(a, ImVec2(b.x + 0.5f, b.y + 0.5f), m_WorldMap.colours[row * m_WorldMap.resolution + x]);
+				}
+			}
+		}
+
+		if (m_bWorldMapShowChunks)
+		{
+			// Coarse chunks first so finer ones are drawn on top
+			std::sort(chunks.begin(), chunks.end(), [](const terrain::TerrainStreamer::DisplayedChunkInfo& a, const terrain::TerrainStreamer::DisplayedChunkInfo& b)
+			{
+				return a.key.level > b.key.level;
+			});
+			const real dashOffset = (real)glm::mod(g_SecElapsedSinceProgramStart * 12.0f, 1000.0f);
+			for (const terrain::TerrainStreamer::DisplayedChunkInfo& chunk : chunks)
+			{
+				if (chunk.bEmpty)
+				{
+					continue;
+				}
+				const real size = m_Params.ChunkSize((u32)chunk.key.level);
+				const real x0 = (real)chunk.key.index.x * size;
+				const real z0 = (real)chunk.key.index.z * size;
+				const ImVec2 a = WorldToCanvas(x0, z0 + size);
+				const ImVec2 b = WorldToCanvas(x0 + size, z0);
+				if (b.x - a.x < 1.5f)
+				{
+					continue;
+				}
+				const ImU32 colour = levelColours[chunk.key.level % levelColourCount];
+				if (chunk.bPending)
+				{
+					// Being generated: moving dashed outline
+					DrawDashedRect(drawList, a, b, (colour & 0x00FFFFFF) | 0xE0000000, 4.0f, dashOffset);
+				}
+				else
+				{
+					drawList->AddRectFilled(a, b, (colour & 0x00FFFFFF) | 0x28000000);
+					drawList->AddRect(a, b, (colour & 0x00FFFFFF) | 0xC0000000);
+				}
+			}
+		}
+
+		// View distance & camera
+		const ImVec2 cameraCanvasPos = WorldToCanvas(cameraPos.x, cameraPos.z);
+		drawList->AddCircle(cameraCanvasPos, m_Params.viewDistance / (2.0f * viewExtent) * canvasSize, IM_COL32(255, 255, 255, 120), 64);
+		const glm::vec2 forward = glm::length(glm::vec2(camera->forward.x, camera->forward.z)) > 1e-4f ? glm::normalize(glm::vec2(camera->forward.x, camera->forward.z)) : glm::vec2(0.0f, 1.0f);
+		drawList->AddLine(cameraCanvasPos, ImVec2(cameraCanvasPos.x + forward.x * 14.0f, cameraCanvasPos.y - forward.y * 14.0f), IM_COL32(255, 255, 255, 255), 2.0f);
+		drawList->AddCircleFilled(cameraCanvasPos, 4.0f, IM_COL32(255, 255, 255, 255));
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+			drawList->AddCircleFilled(WorldToCanvas(playerPos.x, playerPos.z), 3.5f, IM_COL32(255, 90, 60, 255));
+		}
+
+		drawList->PopClipRect();
+
+		// Hover info, teleporting & zooming
+		if (bHovered && m_Streamer != nullptr)
+		{
+			const ImVec2 mousePos = ImGui::GetIO().MousePos;
+			const real worldX = cameraPos.x + ((mousePos.x - canvasPos.x) / canvasSize - 0.5f) * 2.0f * viewExtent;
+			const real worldZ = cameraPos.z + (0.5f - (mousePos.y - canvasPos.y) / canvasSize) * 2.0f * viewExtent;
+			const terrain::ColumnSample column = m_Streamer->Density()->SampleColumn(worldX, worldZ);
+			ImGui::SetTooltip("(%.0f, %.0f)\nHeight: %.1fm\n%s\nDouble click to teleport", worldX, worldZ, column.height,
+				DescribeLocation(glm::vec3(worldX, 0.0f, worldZ)).c_str());
+
+			if (ImGui::IsMouseDoubleClicked(0))
+			{
+				real height = column.height;
+				if (column.lakeID != 0 && column.lakeT < 1.0f)
+				{
+					height = glm::max(height, column.waterLevel);
+				}
+				camera->position = glm::vec3(worldX, height + 40.0f, worldZ);
+			}
+
+			const real wheel = ImGui::GetIO().MouseWheel;
+			if (wheel != 0.0f)
+			{
+				m_WorldMapZoom = glm::clamp(m_WorldMapZoom * glm::pow(1.25f, wheel), 0.05f, 64.0f);
+			}
+		}
+
+		// Stats
+		if (m_Streamer != nullptr)
+		{
+			terrain::TerrainStreamer::Stats stats = m_Streamer->GetStats();
+
+			u64 vertexCount = 0;
+			u64 triangleCount = 0;
+			for (auto& pair : m_Chunks)
+			{
+				if (pair.second.meshComponent != nullptr)
+				{
+					vertexCount += pair.second.meshComponent->GetVertexBufferData()->UsedVertexCount;
+					triangleCount += pair.second.meshComponent->GetIndexCount() / 3;
+				}
+			}
+
+			ImGui::Text("Chunks: %u (%u with geometry), vertices: %s, triangles: %s", stats.displayedChunkCount, stats.displayedNonEmptyChunkCount,
+				PrettifyLargeNumber(vertexCount, 1).c_str(), PrettifyLargeNumber(triangleCount, 1).c_str());
+
+			const u32 loadingCount = stats.pendingChunkCount + (u32)m_ChunkCommands.size();
+			if (loadingCount > 0)
+			{
+				const real progress = (real)stats.displayedChunkCount / (real)glm::max(stats.displayedChunkCount + stats.pendingChunkCount, 1u);
+				char label[64];
+				snprintf(label, ARRAY_LENGTH(label), "Generating %u, uploading %u", stats.pendingChunkCount, (u32)m_ChunkCommands.size());
+				ImGui::ProgressBar(progress, ImVec2(-1.0f, 0.0f), label);
+			}
+			else
+			{
+				ImGui::Text("All chunks loaded");
+			}
+
+			ImGui::Text("Here: %s", DescribeLocation(cameraPos).c_str());
+			ImGui::Text("Camera: (%.0f, %.0f, %.0f), %.0f m/s", cameraPos.x, cameraPos.y, cameraPos.z, glm::length(stats.velocity));
+		}
+
+		ImGui::End();
+	}
+
+	terrain::BiomeParams TerrainGenerator::ParseBiome(const JSONObject& biomeObj)
+	{
+		terrain::BiomeParams biome = {};
+		biomeObj.TryGetString("name", biome.name);
+		biomeObj.TryGetFloat("frequency", biome.frequency);
+		biomeObj.TryGetFloat("temperature", biome.temperature);
+		biomeObj.TryGetFloat("base height", biome.baseHeight);
+		biomeObj.TryGetFloat("height amplitude", biome.heightAmplitude);
+		biomeObj.TryGetFloat("wavelength", biome.wavelength);
+		biomeObj.TryGetFloat("ridgedness", biome.ridgedness);
+		biomeObj.TryGetFloat("terrace strength", biome.terraceStrength);
+		biomeObj.TryGetFloat("terrace height", biome.terraceHeight);
+		biomeObj.TryGetFloat("overhang amplitude", biome.overhangAmplitude);
+		biomeObj.TryGetFloat("arch strength", biome.archStrength);
+		biomeObj.TryGetFloat("cave strength", biome.caveStrength);
+		biomeObj.TryGetFloat("lake strength", biome.lakeStrength);
+		biomeObj.TryGetVec3("ground colour", biome.groundColour);
+		biomeObj.TryGetFloat("grassiness", biome.grassiness);
+		biomeObj.TryGetVec3("cliff colour", biome.cliffColour);
+		biomeObj.TryGetVec3("peak colour", biome.peakColour);
+		biomeObj.TryGetFloat("peak height", biome.peakHeight);
+		return biome;
+	}
+
+	JSONObject TerrainGenerator::SerializeBiome(const terrain::BiomeParams& biome)
+	{
+		JSONObject biomeObj = {};
+		biomeObj.fields.emplace_back("name", JSONValue(biome.name));
+		biomeObj.fields.emplace_back("frequency", JSONValue(biome.frequency, 2));
+		biomeObj.fields.emplace_back("temperature", JSONValue(biome.temperature, 2));
+		biomeObj.fields.emplace_back("base height", JSONValue(biome.baseHeight, 1));
+		biomeObj.fields.emplace_back("height amplitude", JSONValue(biome.heightAmplitude, 1));
+		biomeObj.fields.emplace_back("wavelength", JSONValue(biome.wavelength, 1));
+		biomeObj.fields.emplace_back("ridgedness", JSONValue(biome.ridgedness, 2));
+		biomeObj.fields.emplace_back("terrace strength", JSONValue(biome.terraceStrength, 2));
+		biomeObj.fields.emplace_back("terrace height", JSONValue(biome.terraceHeight, 1));
+		biomeObj.fields.emplace_back("overhang amplitude", JSONValue(biome.overhangAmplitude, 1));
+		biomeObj.fields.emplace_back("arch strength", JSONValue(biome.archStrength, 2));
+		biomeObj.fields.emplace_back("cave strength", JSONValue(biome.caveStrength, 2));
+		biomeObj.fields.emplace_back("lake strength", JSONValue(biome.lakeStrength, 2));
+		biomeObj.fields.emplace_back("ground colour", JSONValue(biome.groundColour, 2));
+		biomeObj.fields.emplace_back("grassiness", JSONValue(biome.grassiness, 2));
+		biomeObj.fields.emplace_back("cliff colour", JSONValue(biome.cliffColour, 2));
+		biomeObj.fields.emplace_back("peak colour", JSONValue(biome.peakColour, 2));
+		biomeObj.fields.emplace_back("peak height", JSONValue(biome.peakHeight, 1));
+		return biomeObj;
 	}
 
 	void TerrainGenerator::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
@@ -9966,42 +10610,31 @@ namespace flex
 
 			DeserializeRegisteredProperties(chunkGenInfo, collection->childCollection);
 
+			// Scenes from before there was a single seed
+			if (!chunkGenInfo.HasField("seed"))
+			{
+				chunkGenInfo.TryGetInt("manual seed", m_Params.seed);
+			}
+
 			std::vector<JSONObject> biomesArr;
 			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
 			{
-				m_Biomes.reserve(biomesArr.size());
+				std::vector<terrain::BiomeParams> biomes;
+				biomes.reserve(biomesArr.size());
 				for (const JSONObject& biomeObj : biomesArr)
 				{
-					std::vector<NoiseFunction> noiseFunctions;
-
-					std::vector<JSONObject> noiseFunctionsArr;
-					if (biomeObj.TryGetObjectArray("noise functions", noiseFunctionsArr))
+					// Biomes from before volumetric generation (lists of noise functions) aren't compatible
+					if (biomeObj.HasField("noise functions"))
 					{
-						noiseFunctions.reserve(noiseFunctionsArr.size());
-						for (const JSONObject& noiseFunctionObj : noiseFunctionsArr)
-						{
-							noiseFunctions.emplace_back(ParseNoiseFunction(noiseFunctionObj));
-						}
+						continue;
 					}
-					Biome biome;
-					biome.name = biomeObj.GetString("name");
-					biome.noiseFunctions = noiseFunctions;
-					m_Biomes.push_back(biome);
+					biomes.emplace_back(ParseBiome(biomeObj));
 				}
-			}
-			else
-			{
-				m_Biomes.push_back(Biome{ "default", { NoiseFunction::GenerateDefault(NoiseFunction::Type::FBM) } });
-			}
 
-			JSONObject biomeNoiseObj;
-			if (chunkGenInfo.TryGetObject("biome noise", biomeNoiseObj))
-			{
-				m_BiomeNoise = ParseNoiseFunction(biomeNoiseObj);
-			}
-			else
-			{
-				m_BiomeNoise = NoiseFunction::GenerateDefault(NoiseFunction::Type::VORONOI);
+				if (!biomes.empty())
+				{
+					m_Params.biomes = biomes;
+				}
 			}
 		}
 	}
@@ -10015,143 +10648,36 @@ namespace flex
 		SerializeRegisteredProperties(chunkGenInfo, collection->childCollection, bSerializePrefabData);
 
 		std::vector<JSONObject> biomesArr;
-		for (const Biome& biome : m_Biomes)
+		biomesArr.reserve(m_Params.biomes.size());
+		for (const terrain::BiomeParams& biome : m_Params.biomes)
 		{
-			std::vector<JSONObject> noiseFunctionsArr;
-			noiseFunctionsArr.reserve(biome.noiseFunctions.size());
-			for (const NoiseFunction& noiseFunction : biome.noiseFunctions)
-			{
-				noiseFunctionsArr.emplace_back(SerializeNoiseFunction(noiseFunction));
-			}
-
-			JSONObject biomeObj = {};
-			biomeObj.fields.emplace_back("name", JSONValue(biome.name));
-			biomeObj.fields.emplace_back("noise functions", JSONValue(noiseFunctionsArr));
-
-			biomesArr.emplace_back(biomeObj);
+			biomesArr.emplace_back(SerializeBiome(biome));
 		}
 		chunkGenInfo.fields.emplace_back("biomes", JSONValue(biomesArr));
-
-		chunkGenInfo.fields.emplace_back("biome noise", JSONValue(SerializeNoiseFunction(m_BiomeNoise)));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
 	void TerrainGenerator::Regenerate()
 	{
-		TerrainGenConstantData constantData;
-		FillOutConstantData(constantData);
-
-		g_Renderer->RegenerateTerrain(constantData, m_MaxChunkCount);
-
-		m_Meshes.clear();
-		m_ChunksToDestroy.clear();
-		m_ChunksToLoad.clear();
-
-		m_PreviousLoadedChunkRadius = 0.0f;
-
-		DiscoverChunks();
-		GenerateChunks();
+		// Applied on the next update. Existing chunks remain visible until their replacements are ready.
+		m_bParamsDirty = true;
+		m_QueryDensity.reset();
 	}
 
-	void TerrainGenerator::FillInTerrainChunkData(volatile TerrainGenerator::TerrainChunkData& outChunkData)
+	real TerrainGenerator::SampleHeight(const glm::vec2& pos)
 	{
-		outChunkData.chunkSize = m_ChunkSize;
-		outChunkData.maxHeight = m_MaxHeight;
-		outChunkData.roadBlendDist = m_RoadBlendDist;
-		outChunkData.roadBlendThreshold = m_RoadBlendThreshold;
-		outChunkData.vertCountPerChunkAxis = m_NumGridCellsPerChunk;
-		outChunkData.isolateNoiseLayer = m_IsolateNoiseLayer;
-		outChunkData.numPointsPerAxis = m_NumPointsPerAxis;
-
-		outChunkData.randomTables = &m_RandomTables;
-		outChunkData.roadSegments = &m_RoadSegments;
-		outChunkData.biomeNoise = &m_BiomeNoise;
-		outChunkData.biomes = &m_Biomes;
-	}
-
-	real TerrainGenerator::Sample(const volatile TerrainChunkData& chunkData, const glm::vec2& pos)
-	{
-		real sample = SampleTerrain(&chunkData, pos).x;
-		return (sample - 0.5f) * m_MaxHeight + m_Transform.GetWorldPosition().y;
-	}
-
-	real TerrainGenerator::SmoothBlend(real t)
-	{
-		return 6.0f * glm::pow(t, 5.0f) - 15.0f * glm::pow(t, 4.0f) + 10.0f * glm::pow(t, 3.0f);
-	}
-
-	void TerrainGenerator::GenerateGradients()
-	{
-		PROFILE_AUTO("Generate terrain chunk gradient tables");
-
-		const u32 maxNumOctaves = (i32)glm::ceil(glm::log(m_BasePerlinTableWidth)) + 1;
-
-		m_RandomTables.resize(maxNumOctaves);
-
-		std::mt19937 m_RandGenerator;
-		std::uniform_real_distribution<real> m_RandDistribution;
-		m_RandGenerator.seed(m_UseManualSeed ? m_ManualSeed : (u32)Time::CurrentMilliseconds());
-
-		auto dice = std::bind(m_RandDistribution, m_RandGenerator);
-
+		std::shared_ptr<const terrain::TerrainDensity> density = (m_Streamer != nullptr && !m_bParamsDirty) ? m_Streamer->Density() : nullptr;
+		if (density == nullptr)
 		{
-			u32 tableWidth = m_BasePerlinTableWidth;
-			for (u32 octave = 0; octave < maxNumOctaves; ++octave)
+			if (m_QueryDensity == nullptr)
 			{
-				m_RandomTables[octave].resize(tableWidth * tableWidth);
-
-				for (glm::vec2& value : m_RandomTables[octave])
-				{
-					value = glm::normalize(glm::vec2(dice() * 2.0 - 1.0f, dice() * 2.0 - 1.0f));
-				}
-
-				tableWidth /= 2;
+				m_QueryDensity = std::make_shared<const terrain::TerrainDensity>(GetEffectiveParams());
 			}
+			density = m_QueryDensity;
 		}
 
-		if (m_RandomTableTextureID != InvalidTextureID)
-		{
-			g_ResourceManager->RemoveLoadedTexture(m_RandomTableTextureID, true);
-		}
-
-		m_RandomTableTextureLayerCount = (u32)m_RandomTables.size();
-
-		u32 requiredTexMem = 0;
-		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
-		{
-			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
-			if (tableWidth < 1)
-			{
-				break;
-			}
-			requiredTexMem += (u32)m_RandomTables[i].size();
-		}
-
-		std::vector<glm::vec4> textureMem(requiredTexMem);
-		u32 offset = 0;
-		for (u32 i = 0; i < m_RandomTableTextureLayerCount; ++i)
-		{
-			const u32 tableWidth = (u32)glm::sqrt(m_RandomTables[i].size());
-			if (tableWidth < 1)
-			{
-				break;
-			}
-
-			u32 layerSize = (u32)m_RandomTables[i].size();
-			for (u32 j = 0; j < layerSize; ++j)
-			{
-				textureMem[j + offset] = glm::vec4(m_RandomTables[i][j].x * 0.5f + 0.5f, m_RandomTables[i][j].y * 0.5f + 0.5f, 0.0f, 1.0f);
-			}
-			offset += layerSize;
-		}
-
-		// TODO: Upload as two channel texture
-		const u32 baseTableWidth = (u32)glm::sqrt(m_RandomTables[0].size());
-		m_RandomTableTextureID = g_ResourceManager->InitializeTextureArrayFromMemory(textureMem.data(),
-			(u32)(textureMem.size() * sizeof(u32) * 4), TextureFormat::R32G32B32A32_SFLOAT,
-			"Perlin random table", baseTableWidth, baseTableWidth, m_RandomTableTextureLayerCount, 4,
-			g_Renderer->GetSamplerNearestClampToEdge());
+		return density->SampleColumn(pos.x, pos.y).height;
 	}
 
 	void TerrainGenerator::UpdateRoadSegments()
@@ -10176,13 +10702,12 @@ namespace flex
 		glm::vec3 pos = m_Transform.GetWorldPosition();
 		for (const RoadSegment& roadSegment : road->roadSegments)
 		{
-			// TODO:  + 0.5f?
-			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / m_ChunkSize);
-			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / m_ChunkSize);
-			i32 minChunkIndexY = (i32)glm::floor((roadSegment.aabb.minY + pos.y - blendRadiusBoost) / m_ChunkSize);
-			i32 maxChunkIndexY = (i32)glm::ceil((roadSegment.aabb.maxY + pos.y + blendRadiusBoost) / m_ChunkSize);
-			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / m_ChunkSize);
-			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / m_ChunkSize);
+			i32 minChunkIndexX = (i32)glm::floor((roadSegment.aabb.minX + pos.x - blendRadiusBoost) / m_RoadChunkSize);
+			i32 maxChunkIndexX = (i32)glm::ceil((roadSegment.aabb.maxX + pos.x + blendRadiusBoost) / m_RoadChunkSize);
+			i32 minChunkIndexY = (i32)glm::floor((roadSegment.aabb.minY + pos.y - blendRadiusBoost) / m_RoadChunkSize);
+			i32 maxChunkIndexY = (i32)glm::ceil((roadSegment.aabb.maxY + pos.y + blendRadiusBoost) / m_RoadChunkSize);
+			i32 minChunkIndexZ = (i32)glm::floor((roadSegment.aabb.minZ + pos.z - blendRadiusBoost) / m_RoadChunkSize);
+			i32 maxChunkIndexZ = (i32)glm::ceil((roadSegment.aabb.maxZ + pos.z + blendRadiusBoost) / m_RoadChunkSize);
 			for (i32 x = minChunkIndexX; x < maxChunkIndexX; ++x)
 			{
 				for (i32 y = minChunkIndexY; y < maxChunkIndexY; ++y)
@@ -10205,1254 +10730,82 @@ namespace flex
 		}
 	}
 
-	void TerrainGenerator::DiscoverChunks()
+	void TerrainGenerator::DestroyChunkRigidBody(Chunk& chunk)
 	{
-		PROFILE_AUTO("Terrain :: DiscoverChunks");
-
-		const i32 verticalChunkLoadRange = 6;
-
-		glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
-		glm::vec2 center2D(center.x, center.z);
-		const glm::ivec3 centerChunkIdx = (glm::ivec3)(center / m_ChunkSize);
-		const i32 maxChunkIdxDiff = (i32)glm::ceil(m_LoadedChunkRadius / (real)m_ChunkSize);
-		const real radiusSqr = m_LoadedChunkRadius * m_LoadedChunkRadius;
-		const real pRadiusSqr = m_PreviousLoadedChunkRadius * m_PreviousLoadedChunkRadius;
-		for (i32 x = centerChunkIdx.x - maxChunkIdxDiff; x < centerChunkIdx.x + maxChunkIdxDiff; ++x)
+		if (chunk.rigidBody != nullptr)
 		{
-			real xi = (x + 0.5f) * m_ChunkSize;
-			for (i32 z = centerChunkIdx.z - maxChunkIdxDiff; z < centerChunkIdx.z + maxChunkIdxDiff; ++z)
-			{
-				real zi = (z + 0.5f) * m_ChunkSize;
-				glm::vec2 chunkCenter(xi, zi);
-				bool bInRange = glm::distance2(chunkCenter, center2D) < radiusSqr;
-				bool bPrevInRange = glm::distance2(chunkCenter, m_PreviousCenterPoint) < pRadiusSqr;
-
-				if (bInRange && !bPrevInRange)
-				{
-					// Load entire vertical column
-					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
-					{
-						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
-						m_ChunksToLoad.emplace(chunkIndex);
-					}
-				}
-				else if (!bInRange && bPrevInRange)
-				{
-					// Load entire vertical column
-					for (i32 y = centerChunkIdx.y - verticalChunkLoadRange; y < centerChunkIdx.y + verticalChunkLoadRange; ++y)
-					{
-						glm::ivec3 chunkIndex = glm::ivec3(x, y, z);
-						m_ChunksToDestroy.emplace(chunkIndex);
-					}
-				}
-			}
+			chunk.rigidBody->Destroy();
+			delete chunk.rigidBody;
+			chunk.rigidBody = nullptr;
 		}
 
-		m_PreviousCenterPoint = center2D;
-		m_PreviousLoadedChunkRadius = m_LoadedChunkRadius;
+		delete chunk.collisionShape;
+		chunk.collisionShape = nullptr;
+
+		delete chunk.triangleIndexVertexArray;
+		chunk.triangleIndexVertexArray = nullptr;
 	}
 
-	void TerrainGenerator::GenerateChunks()
+	void TerrainGenerator::CreateChunkRigidBody(Chunk& chunk)
 	{
-		if (m_bUseAsyncCompute)
+		if (chunk.rigidBody != nullptr)
 		{
-			if (!m_ChunksToLoad.empty())
-			{
-				PROFILE_AUTO("TerrainGenerator register chunks");
-
-				for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
-				{
-					const glm::ivec3& chunkIndex = *chunkToLoadIter;
-					// This shouldn't happen but it does for some reason
-					if (m_Meshes.find(chunkIndex) != m_Meshes.end())
-					{
-						continue;
-					}
-
-					Chunk* chunk = new Chunk();
-					chunk->meshComponent = nullptr;
-					chunk->linearIndex = (u32)m_Meshes.size(); // ?
-
-					g_Renderer->RegisterTerrainChunk(chunkIndex, chunk->linearIndex);
-					// TODO: Reuse slots
-					m_Meshes.emplace(chunkIndex, chunk);
-				}
-
-				Print("Loaded %d chunks (total: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size());
-				m_ChunksToLoad.clear();
-			}
-
-			// Destroy far away chunks on the main thread
-			{
-				PROFILE_AUTO("TerrainGenerator destroy chunks");
-				while (!m_ChunksToDestroy.empty())
-				{
-					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
-					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
-
-					auto iter = m_Meshes.find(chunkIdx);
-					if (iter != m_Meshes.end())
-					{
-						DestroyChunk(iter->second);
-						m_Meshes.erase(iter);
-					}
-
-					g_Renderer->RemoveTerrainChunk(chunkIdx);
-				}
-			}
-		}
-		else
-		{
-			// Resize work queue if not large enough
-			if ((m_Meshes.size() + m_ChunksToLoad.size()) > terrain_workQueue->Size())
-			{
-				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-				{
-					// TODO: Reuse memory
-					FreeWorkQueueEntry(i);
-				}
-				delete terrain_workQueue;
-
-				u32 newSize = (u32)((m_Meshes.size() + m_ChunksToLoad.size()) * 1.2f);
-				terrain_workQueue = new ThreadSafeArray<TerrainChunkData>(newSize);
-				for (u32 i = 0; i < terrain_workQueue->Size(); ++i)
-				{
-					AllocWorkQueueEntry(i);
-				}
-
-				WRITE_BARRIER;
-			}
-
-			// Destroy far away chunks on the main thread
-			{
-				PROFILE_AUTO("Destroy terrain chunks");
-				ns start = Time::CurrentNanoseconds();
-				i32 iterationCount = 0;
-				while (!m_ChunksToDestroy.empty())
-				{
-					glm::ivec3 chunkIdx = *m_ChunksToDestroy.begin();
-					m_ChunksToDestroy.erase(m_ChunksToDestroy.begin());
-
-					auto iter = m_Meshes.find(chunkIdx);
-					CHECK(iter != m_Meshes.end());
-					DestroyChunk(iter->second);
-					m_Meshes.erase(iter);
-
-					++iterationCount;
-
-					ns now = Time::CurrentNanoseconds();
-					if ((now - start) > m_DeletionBudgetPerFrame)
-					{
-						break;
-					}
-				}
-				if (iterationCount != 0)
-				{
-					Print("Destroyed %d chunks (total: %d)\n", iterationCount, (i32)m_Meshes.size());
-				}
-			}
-
-			PROFILE_BEGIN("generate terrain");
-
-			// Fill out chunk data for threads to discover
-			for (auto chunkToLoadIter = m_ChunksToLoad.begin(); chunkToLoadIter != m_ChunksToLoad.end(); ++chunkToLoadIter)
-			{
-				const glm::ivec3& chunkIndex = *chunkToLoadIter;
-
-				CHECK(m_Meshes.find(chunkIndex) == m_Meshes.end());
-
-				Chunk* chunk = new Chunk();
-				chunk->meshComponent = nullptr;
-				chunk->linearIndex = u32_max; // Temporarily clear linear index, it will be set after chunk creation completes
-				// TODO: Reuse slots
-				m_Meshes.emplace(chunkIndex, chunk);
-
-				volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[terrain_workQueueEntriesCreated];
-				terrainChunkData->chunkIndex.x = chunkIndex.x;
-				terrainChunkData->chunkIndex.y = chunkIndex.y;
-				terrainChunkData->chunkIndex.z = chunkIndex.z;
-
-				WRITE_BARRIER;
-
-				Platform::AtomicIncrement(&terrain_workQueueEntriesCreated);
-			}
-
-			Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
-			Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
-
-			if ((i32)m_Meshes.size() >= terrainShader->maxObjectCount - 1)
-			{
-				terrainShader->maxObjectCount = (u32)(m_Meshes.size() + 1);
-				g_Renderer->SetStaticGeometryBufferDirty(terrainShader->staticVertexBufferIndex);
-			}
-
-			// Wait for all threads to complete
-			// TODO: Call later in frame
-			while (terrain_workQueueEntriesCompleted != terrain_workQueueEntriesCreated)
-			{
-				// TODO: Handle completed entries as they come in rather than waiting for all
-				Platform::YieldProcessor();
-			}
-
-			PROFILE_END("generate terrain");
-
-			if (!m_ChunksToLoad.empty())
-			{
-				// TODO: Spread creation across multiple frames
-
-				static VertexBufferDataCreateInfo vertexBufferCreateInfo = {};
-				vertexBufferCreateInfo.positions_3D.clear();
-				vertexBufferCreateInfo.texCoords_UV.clear();
-				vertexBufferCreateInfo.colours_R32G32B32A32.clear();
-				vertexBufferCreateInfo.normals.clear();
-				vertexBufferCreateInfo.tangents.clear();
-				vertexBufferCreateInfo.normals.clear();
-
-				static std::vector<u32> indices;
-
-				vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
-
-				// TODO: Generate all new vertex buffers first, then do post pass to compute normals
-				i32 workQueueIndex = 0; // Count up to terrain_workQueueEntriesCreated
-				u32 emptyChunkCount = 0;
-				for (const glm::ivec3& chunkIndex : m_ChunksToLoad)
-				{
-					volatile TerrainChunkData* terrainChunkData = &(*terrain_workQueue)[workQueueIndex++];
-
-					const u32 vertexCount = terrainChunkData->vertexCount;
-					// NOTE: TerrainChunkData::indexCount is the total number of indices written
-					// by the generator (already triangleCount * 3), despite its name.
-					const u32 indexCount = terrainChunkData->indexCount;
-
-					if (vertexCount == 0)
-					{
-						++emptyChunkCount;
-						continue;
-					}
-
-					if (terrainChunkData->ranOutOfRoom)
-					{
-						PrintError("Ran out of room! Increase max vertex or index count (%u/%u, %u/%u)\n", vertexCount, m_MaxVertCountPerChunk, indexCount, m_MaxTriCountPerChunk);
-					}
-
-					vertexBufferCreateInfo.positions_3D.resize(vertexCount);
-					vertexBufferCreateInfo.texCoords_UV.resize(vertexCount);
-					vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertexCount);
-					vertexBufferCreateInfo.normals.resize(vertexCount);
-					vertexBufferCreateInfo.tangents.resize(vertexCount);
-					indices.resize(indexCount);
-
-					memcpy((void*)vertexBufferCreateInfo.positions_3D.data(), (void*)terrainChunkData->positions, sizeof(glm::vec3) * vertexCount);
-					memcpy((void*)vertexBufferCreateInfo.texCoords_UV.data(), (void*)terrainChunkData->uvs, sizeof(glm::vec2) * vertexCount);
-					memcpy((void*)vertexBufferCreateInfo.colours_R32G32B32A32.data(), (void*)terrainChunkData->colours, sizeof(glm::vec4) * vertexCount);
-					memcpy((void*)vertexBufferCreateInfo.normals.data(), (void*)terrainChunkData->normals, sizeof(glm::vec3) * vertexCount);
-					memcpy((void*)vertexBufferCreateInfo.tangents.data(), (void*)terrainChunkData->tangents, sizeof(glm::vec3) * vertexCount);
-					memcpy((void*)indices.data(), (void*)terrainChunkData->indices, sizeof(u32) * indexCount);
-
-					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
-					auto roadSegmentIter = terrainChunkData->roadSegments->find(chunkIndex);
-					if (roadSegmentIter != terrainChunkData->roadSegments->end())
-					{
-						overlappingRoadSegments = &roadSegmentIter->second;
-					}
-
-					RenderObjectCreateInfo renderObjectCreateInfo = {};
-					renderObjectCreateInfo.cullFace = CullFace::NONE;
-					i32 submeshIndex;
-					MeshComponent* meshComponent = MeshComponent::LoadFromMemory(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID, &renderObjectCreateInfo, true, &submeshIndex);
-					if (meshComponent != nullptr)
-					{
-						m_Meshes[chunkIndex]->meshComponent = meshComponent;
-						m_Meshes[chunkIndex]->linearIndex = submeshIndex;
-					}
-				}
-
-				Print("Loaded %d chunks (total: %d, empty: %d)\n", (i32)m_ChunksToLoad.size(), (i32)m_Meshes.size(), emptyChunkCount);
-				m_ChunksToLoad.clear();
-			}
-		}
-	}
-
-	void TerrainGenerator::DestroyChunkRigidBody(Chunk* chunk)
-	{
-		if (chunk->rigidBody != nullptr)
-		{
-			chunk->rigidBody->Destroy();
-			delete chunk->rigidBody;
-			chunk->rigidBody = nullptr;
-
-			delete chunk->collisionShape;
-			chunk->collisionShape = nullptr;
-		}
-		delete chunk->triangleIndexVertexArray;
-		chunk->triangleIndexVertexArray = nullptr;
-	}
-
-	void TerrainGenerator::CreateChunkRigidBody(Chunk* chunk)
-	{
-		if (chunk->rigidBody != nullptr)
-		{
-			// Already exists
 			return;
 		}
 
-		MeshComponent* submesh = chunk->meshComponent;
-
-		// Empty chunks (no generated geometry) have no mesh component; nothing to collide with.
+		MeshComponent* submesh = chunk.meshComponent;
 		if (submesh == nullptr || submesh->GetIndexCount() == 0)
 		{
 			return;
 		}
 
-		CHECK_EQ(chunk->collisionShape, nullptr);
+		CHECK_EQ(chunk.collisionShape, nullptr);
 
-		submesh->CreateCollisionMesh(&chunk->triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk->collisionShape);
+		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape);
 
-		// TODO: Don't even create rb?
 		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
-		rigidBody->Initialize(chunk->collisionShape, &m_Transform);
-		chunk->rigidBody = rigidBody;
-		chunk->rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+		rigidBody->Initialize(chunk.collisionShape, &m_Transform);
+		chunk.rigidBody = rigidBody;
+		chunk.rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
 	}
 
-	// NOTE: This function assumes that the caller will remove the chunk from m_Meshes themselves
-	void TerrainGenerator::DestroyChunk(Chunk* chunk)
+	void TerrainGenerator::DestroyChunk(Chunk& chunk)
 	{
-		if (m_Mesh->GetSubmeshCount() != 0 && chunk->linearIndex != u32_max)
-		{
-			m_Mesh->RemoveSubmesh(chunk->linearIndex);
-		}
-
 		DestroyChunkRigidBody(chunk);
 
-		if (chunk->meshComponent != nullptr)
+		auto DestroyMeshComponent = [this](MeshComponent*& meshComponent, i32& submeshIndex)
 		{
-			chunk->meshComponent->Destroy();
-			delete chunk->meshComponent;
-		}
+			if (meshComponent != nullptr)
+			{
+				if (m_Mesh != nullptr && submeshIndex >= 0)
+				{
+					m_Mesh->RemoveSubmesh((u32)submeshIndex);
+				}
+				meshComponent->Destroy();
+				delete meshComponent;
+				meshComponent = nullptr;
+				submeshIndex = -1;
+			}
+		};
 
-		delete chunk;
+		DestroyMeshComponent(chunk.meshComponent, chunk.submeshIndex);
+		DestroyMeshComponent(chunk.waterMeshComponent, chunk.waterSubmeshIndex);
 	}
 
 	void TerrainGenerator::DestroyAllChunks()
 	{
-		for (auto& pair : m_Meshes)
+		for (auto& pair : m_Chunks)
 		{
 			DestroyChunk(pair.second);
 		}
-		m_Meshes.clear();
-	}
+		m_Chunks.clear();
 
-	void TerrainGenerator::AllocWorkQueueEntry(u32 workQueueIndex)
-	{
-		const u32 maxVertCountPerChunk = m_MaxVertCountPerChunk;
-		const u32 triCountPerChunk = m_MaxTriCountPerChunk;
-		const u32 maxIndexCountPerChunk = triCountPerChunk * 3;
-
-		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
-
-		chunkData.maxVertexCount = maxVertCountPerChunk;
-		chunkData.positions = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
-		CHECK_NE(chunkData.positions, nullptr);
-		chunkData.colours = (glm::vec4*)malloc(maxVertCountPerChunk * sizeof(glm::vec4));
-		CHECK_NE(chunkData.colours, nullptr);
-		chunkData.uvs = (glm::vec2*)malloc(maxVertCountPerChunk * sizeof(glm::vec2));
-		CHECK_NE(chunkData.uvs, nullptr);
-		chunkData.normals = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
-		CHECK_NE(chunkData.normals, nullptr);
-		chunkData.tangents = (glm::vec3*)malloc(maxVertCountPerChunk * sizeof(glm::vec3));
-		CHECK_NE(chunkData.tangents, nullptr);
-
-		chunkData.maxIndexCount = maxIndexCountPerChunk;
-		chunkData.indices = (u32*)malloc(maxIndexCountPerChunk * sizeof(u32));
-		CHECK_NE(chunkData.indices, nullptr);
-
-		chunkData.vertexCount = 0;
-		chunkData.indexCount = 0;
-
-		FillInTerrainChunkData(chunkData);
-	}
-
-	void TerrainGenerator::FreeWorkQueueEntry(u32 workQueueIndex)
-	{
-		volatile TerrainChunkData& chunkData = (*terrain_workQueue)[workQueueIndex];
-
-		CHECK_NE(chunkData.positions, nullptr);
-		free((void*)chunkData.positions);
-		chunkData.positions = nullptr;
-
-		CHECK_NE(chunkData.colours, nullptr);
-		free((void*)chunkData.colours);
-		chunkData.colours = nullptr;
-
-		CHECK_NE(chunkData.uvs, nullptr);
-		free((void*)chunkData.uvs);
-		chunkData.uvs = nullptr;
-
-		CHECK_NE(chunkData.normals, nullptr);
-		free((void*)chunkData.normals);
-		chunkData.normals = nullptr;
-
-		CHECK_NE(chunkData.tangents, nullptr);
-		free((void*)chunkData.tangents);
-		chunkData.tangents = nullptr;
-
-		CHECK_NE(chunkData.indices, nullptr);
-		free((void*)chunkData.indices);
-		chunkData.indices = nullptr;
-
-		chunkData.vertexCount = 0;
-		chunkData.indexCount = 0;
-	}
-
-	glm::vec3 SampleTerrainWithRoadBlend(volatile TerrainGenerator::TerrainChunkData* chunkData,
-		std::vector<RoadSegment*>* overlappingRoadSegments,
-		const glm::vec2& sampleCenter, glm::vec4& outColour, bool bCilpPointsInsideRoad)
-	{
-		glm::vec4 terrainInfo = SampleTerrain(chunkData, sampleCenter);
-		real height = terrainInfo.x;
-		real matID = terrainInfo.y;
-
-		glm::vec3 vertPosWS(sampleCenter.x, (height - 0.5f) * chunkData->maxHeight, sampleCenter.y);
-
-		real distToRoad = 99999.0f;
-		glm::vec3 roadTangentAtClosestPoint;
-		glm::vec3 roadCurvePosAtClosestPoint;
-		glm::vec3 closestPointToRoad(VEC3_ZERO);
-		if (overlappingRoadSegments != nullptr)
+		for (auto& pair : m_StagedChunks)
 		{
-			glm::vec3 outClosestPoint(VEC3_ZERO);
-			for (RoadSegment* overlappingRoadSegment : *overlappingRoadSegments)
-			{
-				real d = overlappingRoadSegment->SignedDistanceTo(vertPosWS, outClosestPoint);
-				if (d < distToRoad)
-				{
-					distToRoad = d;
-					closestPointToRoad = outClosestPoint;
-
-					real distAlongCurve = overlappingRoadSegment->curve.FindDistanceAlong(outClosestPoint);
-
-					roadCurvePosAtClosestPoint = overlappingRoadSegment->curve.GetPointOnCurve(distAlongCurve);
-					if (distToRoad - chunkData->roadBlendThreshold < chunkData->roadBlendDist)
-					{
-						glm::vec3 curveForward = glm::normalize(overlappingRoadSegment->curve.GetFirstDerivativeOnCurve(distAlongCurve));
-						roadTangentAtClosestPoint = glm::cross(curveForward, VEC3_UP);
-						if (glm::dot(roadTangentAtClosestPoint, closestPointToRoad - roadCurvePosAtClosestPoint) < 0.0f)
-						{
-							// Negate when point is on left side of road
-							roadTangentAtClosestPoint = -roadTangentAtClosestPoint;
-						}
-					}
-				}
-			}
+			DestroyChunk(pair.second);
 		}
-
-		real vergeLen = chunkData->roadBlendDist * 0.35f;
-
-		// Epsilon value accounts for verts that are _just_ outside of triangle edge
-		// that for some reason aren't picked up by other triangle
-		bool bInsideRoad = distToRoad <= 0.1f;
-
-		outColour = glm::vec4(height, matID, terrainInfo.z, terrainInfo.w);
-
-		// Distance calc must be slightly off, if this checks for 0.0
-		// we get some verts in the road on the edges
-		if (bInsideRoad && bCilpPointsInsideRoad)
-		{
-			// Clip point by setting to NaN
-			vertPosWS.x = vertPosWS.y = vertPosWS.z = (real)nan("");
-		}
-		else
-		{
-			real roadBlendWeight = 1.0f - glm::clamp((distToRoad - chunkData->roadBlendThreshold) / chunkData->roadBlendDist, 0.0f, 1.0f);
-
-			if (roadBlendWeight > 0.0f)
-			{
-				// [0, 1] from inner verge to outer verge and beyond (zero inside road)
-				real distanceAlongVerge = glm::clamp((distToRoad - chunkData->roadBlendThreshold) / vergeLen, 0.0f, 1.0f);
-
-				real lerpToRoadPosAlpha = roadBlendWeight;
-				lerpToRoadPosAlpha *= lerpToRoadPosAlpha; // Square to get nicer falloff
-
-				vertPosWS = vertPosWS + (closestPointToRoad - vertPosWS) * lerpToRoadPosAlpha;
-
-				// Move points near road closer to "verge" position to give road shoulders
-				// and a smoother falloff on hills
-				glm::vec3 projectedPoint = closestPointToRoad + roadTangentAtClosestPoint * (distanceAlongVerge * vergeLen);
-				vertPosWS = Lerp(vertPosWS, projectedPoint, glm::pow(1.0f - distanceAlongVerge, 0.5f));
-			}
-		}
-
-		return vertPosWS;
-	}
-
-	void* TerrainThreadUpdate(void* inData)
-	{
-		TerrainThreadData* threadData = (TerrainThreadData*)inData;
-
-		while (threadData->running)
-		{
-			volatile TerrainGenerator::TerrainChunkData* work = nullptr;
-
-			if (terrain_workQueueEntriesClaimed < terrain_workQueueEntriesCreated)
-			{
-				Platform::EnterCriticalSection(threadData->criticalSection);
-				{
-					if (terrain_workQueueEntriesClaimed < terrain_workQueueEntriesCreated)
-					{
-						work = &(*terrain_workQueue)[terrain_workQueueEntriesClaimed];
-
-						terrain_workQueueEntriesClaimed += 1;
-
-						WRITE_BARRIER;
-
-						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueueEntriesCreated);
-						CHECK_LE(terrain_workQueueEntriesClaimed, terrain_workQueue->Size());
-					}
-
-				}
-				Platform::LeaveCriticalSection(threadData->criticalSection);
-			}
-
-			if (work != nullptr)
-			{
-				glm::ivec3 chunkIndex = glm::ivec3(work->chunkIndex.x, work->chunkIndex.y, work->chunkIndex.z);
-				real chunkSize = work->chunkSize;
-
-				// Outputs
-				volatile glm::vec3* positions = work->positions;
-				volatile glm::vec4* colours = work->colours;
-				volatile glm::vec2* uvs = work->uvs;
-				volatile glm::vec3* normals = work->normals;
-				volatile glm::vec3* tangents = work->tangents;
-				volatile u32* indices = work->indices;
-				volatile u32* outVertexCount = &work->vertexCount;
-				volatile u32* outIndexCount = &work->indexCount;
-
-				switch ((TerrainGenMode)threadData->mode)
-				{
-				case TerrainGenMode::LEGACY:
-				{
-					// Inputs
-					std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare>* roadSegments = work->roadSegments;
-					u32 vertCountPerChunkAxis = work->vertCountPerChunkAxis;
-
-					std::vector<RoadSegment*>* overlappingRoadSegments = nullptr;
-					auto roadSegmentIter = roadSegments->find(chunkIndex);
-					if (roadSegmentIter != roadSegments->end())
-					{
-						overlappingRoadSegments = &roadSegmentIter->second;
-					}
-
-					u32 posIndex = 0;
-					for (u32 z = 0; z < vertCountPerChunkAxis; ++z)
-					{
-						for (u32 x = 0; x < vertCountPerChunkAxis; ++x)
-						{
-							glm::vec2 uv(x / (real)(vertCountPerChunkAxis - 1), z / (real)(vertCountPerChunkAxis - 1));
-
-							glm::vec2 vertPosOS = glm::vec2(uv.x * chunkSize, uv.y * chunkSize);
-							glm::vec2 sampleCenter = vertPosOS + glm::vec2(chunkIndex.x * chunkSize, chunkIndex.y * chunkSize);
-
-							glm::vec4 colour;
-							glm::vec3 vertPosWS = SampleTerrainWithRoadBlend(work, overlappingRoadSegments, sampleCenter, colour, true);
-
-							memcpy((void*)&positions[posIndex], (void*)&vertPosWS, sizeof(glm::vec3));
-							memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
-							memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
-
-							++posIndex;
-						}
-					}
-
-					for (u32 z = 0; z < vertCountPerChunkAxis - 1; ++z)
-					{
-						for (u32 x = 0; x < vertCountPerChunkAxis - 1; ++x)
-						{
-							u32 vertIdx = z * (vertCountPerChunkAxis - 1) + x;
-							u32 i = z * vertCountPerChunkAxis + x;
-							indices[vertIdx * 6 + 0] = i;
-							indices[vertIdx * 6 + 1] = i + 1 + vertCountPerChunkAxis;
-							indices[vertIdx * 6 + 2] = i + 1;
-
-							indices[vertIdx * 6 + 3] = i;
-							indices[vertIdx * 6 + 4] = i + vertCountPerChunkAxis;
-							indices[vertIdx * 6 + 5] = i + 1 + vertCountPerChunkAxis;
-						}
-					}
-
-				} break;
-				case TerrainGenMode::MARCHING_CUBES:
-				{
-					u32 gridCellCountPerAxis = work->vertCountPerChunkAxis;
-					u32 maxVertexCount = work->maxVertexCount;
-					u32 maxIndexCount = work->maxIndexCount;
-					volatile u8* outRanOutOfRoom = &work->ranOutOfRoom;
-
-					TriMeshFace trianglesTemp[10];
-					memset(trianglesTemp, 0, sizeof(trianglesTemp));
-					glm::vec3 verticesTemp[15];
-					memset(verticesTemp, 0, sizeof(verticesTemp));
-
-					u32 posIndex = 0;
-					u32 indexIndex = 0;
-					u8 ranOutOfRoom = 0;
-					real gridCellSize = 1.0f / gridCellCountPerAxis;
-					for (u32 z = 0; z < gridCellCountPerAxis && !ranOutOfRoom; ++z)
-					{
-						for (u32 y = 0; y < gridCellCountPerAxis && !ranOutOfRoom; ++y)
-						{
-							for (u32 x = 0; x < gridCellCountPerAxis; ++x)
-							{
-								glm::vec3 uvw(
-									x / (real)(gridCellCountPerAxis),
-									y / (real)(gridCellCountPerAxis),
-									z / (real)(gridCellCountPerAxis));
-
-								glm::vec3 vertPosOS = uvw * chunkSize;
-								glm::vec3 sampleCenter = vertPosOS + glm::vec3(chunkIndex) * chunkSize;
-
-								real c = gridCellSize * chunkSize;
-								GridCell gridCell;
-								gridCell.pos[0] = sampleCenter;
-								gridCell.pos[1] = sampleCenter + glm::vec3(c, 0.0f, 0.0f);
-								gridCell.pos[2] = sampleCenter + glm::vec3(c, c, 0.0f);
-								gridCell.pos[3] = sampleCenter + glm::vec3(0.0f, c, 0.0f);
-								gridCell.pos[4] = sampleCenter + glm::vec3(0.0f, 0.0f, c);
-								gridCell.pos[5] = sampleCenter + glm::vec3(c, 0.0f, c);
-								gridCell.pos[6] = sampleCenter + glm::vec3(c, c, c);
-								gridCell.pos[7] = sampleCenter + glm::vec3(0.0f, c, c);
-
-								// TODO: Cache results cleverly to avoid duplicate work ("top" and "bottom" cells, swap)
-								gridCell.val[0] = SampleTerrain3D(work, gridCell.pos[0]);
-								gridCell.val[1] = SampleTerrain3D(work, gridCell.pos[1]);
-								gridCell.val[2] = SampleTerrain3D(work, gridCell.pos[2]);
-								gridCell.val[3] = SampleTerrain3D(work, gridCell.pos[3]);
-								gridCell.val[4] = SampleTerrain3D(work, gridCell.pos[4]);
-								gridCell.val[5] = SampleTerrain3D(work, gridCell.pos[5]);
-								gridCell.val[6] = SampleTerrain3D(work, gridCell.pos[6]);
-								gridCell.val[7] = SampleTerrain3D(work, gridCell.pos[7]);
-
-								u8 numVertsGenerated;
-								i32 numTrisGenerated = Polygonize(gridCell, trianglesTemp, numVertsGenerated, verticesTemp);
-								if (numTrisGenerated > 0)
-								{
-									if ((indexIndex + numTrisGenerated * 3 >= maxIndexCount - 3) ||
-										posIndex + numVertsGenerated >= maxVertexCount)
-									{
-										ranOutOfRoom = 1;
-										break;
-									}
-
-									i16 indexOffset = (i16)posIndex;
-									for (i32 triIndex = 0; triIndex < numTrisGenerated; triIndex++)
-									{
-										indices[indexIndex++] = trianglesTemp[triIndex].i[0] + indexOffset;
-										indices[indexIndex++] = trianglesTemp[triIndex].i[2] + indexOffset;
-										indices[indexIndex++] = trianglesTemp[triIndex].i[1] + indexOffset;
-
-										glm::vec3 a = verticesTemp[trianglesTemp[triIndex].i[1]] - verticesTemp[trianglesTemp[triIndex].i[0]];
-										glm::vec3 b = verticesTemp[trianglesTemp[triIndex].i[2]] - verticesTemp[trianglesTemp[triIndex].i[0]];
-										glm::vec3 normal = glm::normalize(glm::cross(b, a));
-										glm::vec3 tangent = glm::normalize(glm::cross(normal, a));
-										memcpy((void*)&normals[posIndex + triIndex * 3 + 0], (void*)&normal, sizeof(glm::vec3));
-										memcpy((void*)&normals[posIndex + triIndex * 3 + 1], (void*)&normal, sizeof(glm::vec3));
-										memcpy((void*)&normals[posIndex + triIndex * 3 + 2], (void*)&normal, sizeof(glm::vec3));
-										memcpy((void*)&tangents[posIndex + triIndex * 3 + 0], (void*)&tangent, sizeof(glm::vec3));
-										memcpy((void*)&tangents[posIndex + triIndex * 3 + 1], (void*)&tangent, sizeof(glm::vec3));
-										memcpy((void*)&tangents[posIndex + triIndex * 3 + 2], (void*)&tangent, sizeof(glm::vec3));
-									}
-									for (u8 vertexIndex = 0; vertexIndex < numVertsGenerated; vertexIndex++)
-									{
-										glm::vec4 colour(1.0f);
-										glm::vec2 uv(0.0f);
-										memcpy((void*)&positions[posIndex], (void*)&verticesTemp[vertexIndex], sizeof(glm::vec3));
-										memcpy((void*)&colours[posIndex], (void*)&colour, sizeof(glm::vec4));
-										memcpy((void*)&uvs[posIndex], (void*)&uv, sizeof(glm::vec2));
-
-										++posIndex;
-									}
-								}
-							}
-						}
-					}
-
-					*outVertexCount = posIndex;
-					*outIndexCount = indexIndex;
-					*outRanOutOfRoom = ranOutOfRoom;
-				} break;
-				}
-				WRITE_BARRIER;
-
-				Platform::AtomicIncrement(&terrain_workQueueEntriesCompleted);
-			}
-			else
-			{
-				Platform::Sleep(2);
-			}
-		}
-
-		return nullptr;
-	}
-
-	// TODO: Create SoA style SampleTerrain which fills out a buffer iteratively, sampling each octave in turn
-
-	real Hash1(/* byvalue */ glm::vec2 p)
-	{
-		p = 50.0f * glm::fract(p * 0.3183099f);
-		return glm::fract(p.x * p.y * (p.x + p.y));
-	}
-
-	real Hash1(real n)
-	{
-		return glm::fract(n * 17.0f * glm::fract(n * 0.3183099f));
-	}
-
-	i32 BiomeIDToindex(const glm::vec2& biomeID, i32 biomeCount)
-	{
-		real result = Hash1(biomeID + glm::vec2(0.12f, 0.258f));
-
-		return (i32)(result * 31.4819f) % biomeCount;
-	}
-
-	glm::vec2 Hash2(real n)
-	{
-		return glm::fract(glm::sin(glm::vec2(n, n + 1.0f)) * glm::vec2(43758.5453123f, 22578.1459123f));
-	}
-
-	glm::vec2 Hash2(/* byvalue */ glm::vec2 p)
-	{
-		const glm::vec2 k = glm::vec2(0.3183099f, 0.3678794f);
-		p = p * k + glm::vec2(k.y, k.x);
-		return glm::fract(16.0f * k * glm::fract(p.x * p.y * (p.x + p.y)));
-	}
-
-	// https://www.reedbeta.com/blog/hash-functions-for-gpu-rendering/
-	u32 HashPCG(u32 n)
-	{
-		u32 state = n * 747796405u + 2891336453u;
-		u32 word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
-		return (word >> 22u) ^ word;
-	}
-
-	// Noise functions
-
-	// Value noise, and its analytical derivatives
-	glm::vec4 noised(const glm::vec3& x)
-	{
-		glm::vec3 p = glm::floor(x);
-		glm::vec3 w = glm::fract(x);
-		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
-		glm::vec3 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
-
-		real n = p.x + 317.0f * p.y + 157.0f * p.z;
-
-		real a = Hash1(n + 0.0f);
-		real b = Hash1(n + 1.0f);
-		real c = Hash1(n + 317.0f);
-		real d = Hash1(n + 318.0f);
-		real e = Hash1(n + 157.0f);
-		real f = Hash1(n + 158.0f);
-		real g = Hash1(n + 474.0f);
-		real h = Hash1(n + 475.0f);
-
-		real k0 = a;
-		real k1 = b - a;
-		real k2 = c - a;
-		real k3 = e - a;
-		real k4 = a - b - c + d;
-		real k5 = a - c - e + g;
-		real k6 = a - b - e + f;
-		real k7 = -a + b + c - d + e - f - g + h;
-
-		return glm::vec4(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z),
-			2.0f * du * glm::vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z,
-				k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x,
-				k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
-	}
-
-	real noise(const glm::vec3& x)
-	{
-		glm::vec3 p = floor(x);
-		glm::vec3 w = glm::fract(x);
-
-		glm::vec3 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
-
-		real n = p.x + 317.0f * p.y + 157.0f * p.z;
-
-		real a = Hash1(n + 0.0f);
-		real b = Hash1(n + 1.0f);
-		real c = Hash1(n + 317.0f);
-		real d = Hash1(n + 318.0f);
-		real e = Hash1(n + 157.0f);
-		real f = Hash1(n + 158.0f);
-		real g = Hash1(n + 474.0f);
-		real h = Hash1(n + 475.0f);
-
-		real k0 = a;
-		real k1 = b - a;
-		real k2 = c - a;
-		real k3 = e - a;
-		real k4 = a - b - c + d;
-		real k5 = a - c - e + g;
-		real k6 = a - b - e + f;
-		real k7 = -a + b + c - d + e - f - g + h;
-
-		return -1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z);
-	}
-
-	glm::vec3 noised(const glm::vec2& x)
-	{
-		glm::vec2 p = floor(x);
-		glm::vec2 w = glm::fract(x);
-		glm::vec2 u = w * w * w * (w * (w * 6.0f - 15.0f) + 10.0f);
-		glm::vec2 du = 30.0f * w * w * (w * (w - 2.0f) + 1.0f);
-
-		real a = Hash1(p + glm::vec2(0, 0));
-		real b = Hash1(p + glm::vec2(1, 0));
-		real c = Hash1(p + glm::vec2(0, 1));
-		real d = Hash1(p + glm::vec2(1, 1));
-
-		real k0 = a;
-		real k1 = b - a;
-		real k2 = c - a;
-		real k4 = a - b - c + d;
-
-		return glm::vec3(-1.0f + 2.0f * (k0 + k1 * u.x + k2 * u.y + k4 * u.x * u.y),
-			2.0f * du * glm::vec2(k1 + k4 * u.y,
-				k2 + k4 * u.x));
-	}
-
-	real noise(const glm::vec2& x)
-	{
-		glm::vec2 p = floor(x);
-		glm::vec2 w = glm::fract(x);
-		glm::vec2 u = w * w * (3.0f - 2.0f * w);
-
-		real a = Hash1(p + glm::vec2(0, 0));
-		real b = Hash1(p + glm::vec2(1, 0));
-		real c = Hash1(p + glm::vec2(0, 1));
-		real d = Hash1(p + glm::vec2(1, 1));
-
-		return -1.0f + 2.0f * (a + (b - a) * u.x + (c - a) * u.y + (a - b - c + d) * u.x * u.y);
-	}
-
-	// FBM
-
-	// Rotation matrices
-	const glm::mat3 m3 = glm::mat3(0.00f, 0.80f, 0.60f, -0.80f, 0.36f, -0.48f, -0.60f, -0.48f, 0.64f);
-	const glm::mat3 m3i = glm::mat3(0.00, -0.80, -0.60, 0.80f, 0.36f, -0.48f, 0.60f, -0.48f, 0.64f);
-	const glm::mat2 m2 = glm::mat2(0.80f, 0.60f, -0.60f, 0.80f);
-	const glm::mat2 m2i = glm::mat2(0.80f, -0.60f, 0.60f, 0.80f);
-
-	real fbm_4(/* byvalue */ glm::vec2 x)
-	{
-		real f = 1.9f;
-		real s = 0.55f;
-		real a = 0.0f;
-		real b = 0.5f;
-		for (u32 i = 0; i < 4; ++i)
-		{
-			real n = noise(x);
-			a += b * n;
-			b *= s;
-			x = f * m2 * x;
-		}
-		return a;
-	}
-
-	real fbm_4(/* byvalue */ glm::vec3 x)
-	{
-		real f = 2.0f;
-		real s = 0.5f;
-		real a = 0.0f;
-		real b = 0.5f;
-		for (i32 i = 0; i < 4; ++i)
-		{
-			real n = noise(x);
-			a += b * n;
-			b *= s;
-			x = f * m3 * x;
-		}
-		return a;
-	}
-
-	glm::vec4 fbmd_7(/* byvalue */ glm::vec3 x)
-	{
-		real f = 1.92f;
-		real s = 0.5f;
-		real a = 0.0f;
-		real b = 0.5f;
-		glm::vec3 d = VEC3_ZERO;
-		glm::mat3 m = MAT3_IDENTITY;
-		for (i32 i = 0; i < 7; ++i)
-		{
-			glm::vec4 n = noised(x);
-			a += b * n.x; // accumulate values
-			d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
-			b *= s;
-			x = f * m3 * x;
-			m = f * m3i * m;
-		}
-		return glm::vec4(a, d);
-	}
-
-	glm::vec4 fbmd_8(/* byvalue */ glm::vec3 x)
-	{
-		real f = 2.0f;
-		real s = 0.65f;
-		real a = 0.0f;
-		real b = 0.5f;
-		glm::vec3 d = VEC3_ZERO;
-		glm::mat3 m = MAT3_IDENTITY;
-		for (i32 i = 0; i < 8; ++i)
-		{
-			glm::vec4 n = noised(x);
-			a += b * n.x; // accumulate values
-			if (i < 4)
-			{
-				d += b * m * glm::vec3(n.y, n.z, n.w); // accumulate derivatives
-			}
-			b *= s;
-			x = f * m3 * x;
-			m = f * m3i * m;
-		}
-		return glm::vec4(a, d);
-	}
-
-	real fbm_9(/* byvalue */ glm::vec2 x, real dampen)
-	{
-		real f = 1.9f;
-		real s = dampen;
-		real a = 0.0f;
-		real b = 0.5f;
-		for (i32 i = 0; i < 9; ++i)
-		{
-			real n = noise(x);
-			a += b * n;
-			b *= s;
-			x = f * m2 * x;
-		}
-		return a;
-	}
-
-	glm::vec3 fbmd_9(/* byvalue */ glm::vec2 x)
-	{
-		real f = 1.9f;
-		real s = 0.55f;
-		real a = 0.0f;
-		real b = 0.5f;
-		glm::vec2 d = VEC2_ZERO;
-		glm::mat2 m = MAT2_IDENTITY;
-		for (i32 i = 0; i < 9; ++i)
-		{
-			glm::vec3 n = noised(x);
-
-			a += b * n.x; // accumulate values
-			d += b * m * glm::vec2(n.y, n.z); // accumulate derivatives
-			b *= s;
-			x = f * m2 * x;
-			m = f * m2i * m;
-		}
-		return glm::vec3(a, d);
-	}
-
-	real SmoothVoronoi(const glm::vec2& pos, real sharpness)
-	{
-		glm::vec2i p = glm::floor(pos);
-		glm::vec2  f = glm::fract(pos);
-
-		real res = 0.0f;
-		for (i32 j = -1; j <= 1; j++)
-		{
-			for (i32 i = -1; i <= 1; i++)
-			{
-				glm::vec2i b = glm::vec2i(i, j);
-				glm::vec2 r = glm::vec2(b) - f + Hash2(p + b);
-				real d = glm::length(r);
-
-				res += glm::exp(-sharpness * d);
-			}
-		}
-		return -1.0f / sharpness * glm::log(res);
-	}
-
-	real Voronoi(const glm::vec2& pos, glm::vec2& outNearestCellID, glm::vec2& outNearestCellRandomPoint)
-	{
-		glm::vec2 posCell = glm::floor(pos);
-		glm::vec2 posCellF = glm::fract(pos);
-
-		// Regular Voronoi: find cell of nearest point
-
-		real sqrDistToClosestEdge = 8.0f;
-		for (i32 j = -1; j <= 1; j++)
-		{
-			for (i32 i = -1; i <= 1; i++)
-			{
-				glm::vec2 cellIndex = glm::vec2(i, j);
-				glm::vec2 cellRandomPoint = Hash2(posCell + cellIndex);
-				glm::vec2 delta = cellIndex + cellRandomPoint - posCellF;
-				real distSq = glm::dot(delta, delta);
-
-				if (distSq < sqrDistToClosestEdge)
-				{
-					sqrDistToClosestEdge = distSq;
-					outNearestCellRandomPoint = cellIndex + cellRandomPoint;
-					outNearestCellID = posCell + cellIndex;
-				}
-			}
-		}
-
-		return sqrDistToClosestEdge;
-	}
-
-	// Returns the shortest distance to the nearest cell neighbor
-	real VoronoiDistance(const glm::vec2& pos, glm::vec2& cell0Coord)
-	{
-		glm::vec2 posCell = glm::floor(pos);
-		glm::vec2 posCellF = glm::fract(pos);
-
-		// Regular Voronoi: find cell of nearest point
-
-		glm::vec2 deltaPosRandomPoint;
-
-		real closestEdge = 8.0f;
-		for (i32 j = -1; j <= 1; j++)
-		{
-			for (i32 i = -1; i <= 1; i++)
-			{
-				glm::vec2 cellCoord = glm::vec2(i, j);
-				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
-				// Vector between pos & this cell's random point
-				glm::vec2 delta = cellCoord + cellRandomPoint - posCellF;
-				real distSq = glm::dot(delta, delta);
-
-				if (distSq < closestEdge)
-				{
-					closestEdge = distSq;
-					deltaPosRandomPoint = delta;
-					cell0Coord = cellCoord;
-				}
-			}
-		}
-
-		// Find distance to second closest cell
-		closestEdge = 8.0f;
-		for (i32 j = -2; j <= 2; j++)
-		{
-			for (i32 i = -2; i <= 2; i++)
-			{
-				glm::vec2 cellCoord = cell0Coord + glm::vec2(i, j);
-				glm::vec2 cellRandomPoint = Hash2(posCell + cellCoord);
-				glm::vec2 neighborDeltaPosRandomPoint = cellCoord + cellRandomPoint - posCellF;
-
-				glm::vec2 diff = neighborDeltaPosRandomPoint - deltaPosRandomPoint;
-				real diffLenSq = glm::dot(diff, diff);
-				if (diffLenSq > 0.00001f)
-				{
-					glm::vec2 halfwayPoint = 0.5f * (deltaPosRandomPoint + neighborDeltaPosRandomPoint);
-					// Project diff vector onto line spanning between cells to get shortest distance to edge
-					real dist = glm::dot(halfwayPoint, diff / diffLenSq);
-					// TODO: use min
-					if (dist < closestEdge)
-					{
-						closestEdge = dist;
-					}
-				}
-			}
-		}
-
-		// Translate into world-space
-		cell0Coord += posCell;
-
-		return closestEdge;
-	}
-
-	real VoronoiColumns(const glm::vec2& pos, real sharpness)
-	{
-		glm::vec2 _x;
-		real dist = VoronoiDistance(pos, _x);
-		return glm::smoothstep(0.0f, 1.0f - glm::clamp(sharpness / 10.0f, 0.0f, 1.0f), dist);
-	}
-
-	// Returns value in range [-1, 1]
-	real SampleNoiseFunction(std::vector<std::vector<glm::vec2>> const* randomTables, const NoiseFunction& noiseFunction, const glm::vec2& pos)
-	{
-		switch (noiseFunction.type)
-		{
-		case NoiseFunction::Type::PERLIN:
-		{
-			real result = 0.0f;
-
-			i32 numOctaves = noiseFunction.numOctaves;
-			real octave = noiseFunction.baseFeatureSize;
-			u32 octaveIdx = numOctaves - 1;
-			i32 isolateOctave = noiseFunction.isolateOctave;
-			real heightScale = noiseFunction.heightScale * 0.005f; // Normalize value so edited values are reasonable
-
-			for (u32 i = 0; i < (u32)numOctaves; ++i)
-			{
-				if (isolateOctave == -1 || i == (u32)isolateOctave)
-				{
-					result += SamplePerlinNoise(*randomTables, pos, octave) * octave * heightScale;
-				}
-				octave = octave / 2.0f;
-				--octaveIdx;
-			}
-
-			result /= (real)numOctaves;
-
-			return glm::clamp(result, -1.0f, 1.0f);
-		} break;
-		case NoiseFunction::Type::FBM:
-		{
-			glm::vec2 p = pos / noiseFunction.wavelength;
-			real n = noise(p); // octave 0 noise
-			real dampen = 0.45f + (n * 0.5f + 0.5f) * 0.2f;
-			real result = fbm_9(p, dampen);
-
-			// Separate high areas from low with a cliff edge
-			result += 0.25f * glm::smoothstep(-0.056f, -0.01f, result);
-			result *= noiseFunction.heightScale;
-			return result;
-		} break;
-		case NoiseFunction::Type::VORONOI:
-		{
-			glm::vec2 p = pos / noiseFunction.wavelength;
-			real result = noiseFunction.heightScale * VoronoiColumns(p, noiseFunction.sharpness);
-			return result;
-		} break;
-		case NoiseFunction::Type::SMOOTH_VORONOI:
-		{
-			glm::vec2 p = pos / noiseFunction.wavelength;
-			real result = noiseFunction.heightScale * SmoothVoronoi(p, noiseFunction.sharpness);
-			return result;
-		} break;
-		}
-
-		return 0.0f;
-	}
-
-	real SampleBiomeTerrain(std::vector<std::vector<glm::vec2>> const* randomTables, const TerrainGenerator::Biome& biome, const glm::vec2& pos)
-	{
-		real result = 0.0f;
-
-		i32 numLayers = (i32)biome.noiseFunctions.size();
-		for (i32 i = 0; i < numLayers; ++i)
-		{
-			//if (chunkData->isolateNoiseLayer == -1 || chunkData->isolateNoiseLayer == i)
-			{
-				result += SampleNoiseFunction(randomTables, biome.noiseFunctions[i], pos);
-			}
-		}
-
-		result /= (real)numLayers;
-
-		return result;
-	}
-
-	// X: height value in [0, 1], Y: mat ID, ZW: unused
-	glm::vec4 SampleTerrain(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec2& pos)
-	{
-		real height = 0.0f;
-
-		i32 biome0Index = 0;
-		glm::vec2 biome0CellCoord;
-
-		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
-		{
-			const glm::vec2 p = pos / chunkData->biomeNoise->wavelength;
-			const i32 biomeCount = (i32)chunkData->biomes->size();
-
-			VoronoiDistance(p, biome0CellCoord);
-			biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
-
-			height = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], pos);
-		}
-
-		// Divide by 2 to transform range from [-1, 1] to [0, 1]
-		height = height * 0.5f + 0.5f;
-
-		CHECK(biome0Index >= 0 && biome0Index < 65536);
-
-		return glm::vec4(height, 0.0f, 0.0f, 0.0f);
-	}
-
-	real SampleTerrain3D(volatile TerrainGenerator::TerrainChunkData const* chunkData, const glm::vec3& pos)
-	{
-		// Sphere:
-		//real density = glm::length(pos) - chunkData->radius;
-
-		if (chunkData->biomeNoise != nullptr && chunkData->biomes != nullptr && !chunkData->biomes->empty())
-		{
-			i32 biome0Index = 0;
-			glm::vec2 biome0CellCoord;
-
-			const glm::vec2 pos2DScaled = glm::vec2(pos.x, pos.z) / chunkData->biomeNoise->wavelength;
-			const i32 biomeCount = (i32)chunkData->biomes->size();
-
-			if (biomeCount > 1)
-			{
-				VoronoiDistance(pos2DScaled, biome0CellCoord);
-				biome0Index = BiomeIDToindex(biome0CellCoord, biomeCount);
-			}
-			else
-			{
-				biome0Index = 0;
-			}
-
-			real terrainHeight = SampleBiomeTerrain(chunkData->randomTables, (*chunkData->biomes)[biome0Index], glm::vec2(pos.x, pos.z));;
-			return pos.y - terrainHeight;
-		}
-
-		return 0.0f;
-	}
-
-	// Returns a value in [-1, 1]
-	real SamplePerlinNoise(const std::vector<std::vector<glm::vec2>>& randomTables, const glm::vec2& pos, real octave)
-	{
-		const glm::vec2 scaledPos = pos / octave;
-		glm::vec2 posi = glm::vec2((real)(i32)scaledPos.x, (real)(i32)scaledPos.y);
-		if (scaledPos.x < 0.0f)
-		{
-			posi.x -= 1;
-		}
-		if (scaledPos.y < 0.0f)
-		{
-			posi.y -= 1.0f;
-		}
-		glm::vec2 posf = scaledPos - posi;
-
-		const u32 tableEntryCount = (u32)randomTables.size();
-		const u32 tableWidth = (u32)std::sqrt(tableEntryCount);
-
-		glm::vec2* data = (glm::vec2*)randomTables.data();
-		glm::vec2 r00 = *(data + ((i32)(posi.y * tableWidth + posi.x) % tableEntryCount));
-		glm::vec2 r10 = *(data + ((i32)(posi.y * tableWidth + posi.x + 1) % tableEntryCount));
-		glm::vec2 r01 = *(data + ((i32)((posi.y + 1) * tableWidth + posi.x) % tableEntryCount));
-		glm::vec2 r11 = *(data + ((i32)((posi.y + 1) * tableWidth + posi.x + 1) % tableEntryCount));
-
-		real posfXMinOne = posf.x - 1.0f;
-		real posfYMinOne = posf.y - 1.0f;
-
-		//real r00p = glm::dot(posf, r00);
-		//real r10p = glm::dot(glm::vec2(posfXMinOne, posf.y), r10);
-		//real r01p = glm::dot(glm::vec2(posf.x, posfYMinOne), r01);
-		//real r11p = glm::dot(glm::vec2(posfXMinOne, posfYMinOne), r11);
-
-		real r00p = posf.x * r00.x + posf.y * r00.y;
-		real r10p = posfXMinOne * r10.x + posf.y * r10.y;
-		real r01p = posf.x * r01.x + posfYMinOne * r01.y;
-		real r11p = posfXMinOne * r11.x + posfYMinOne * r11.y;
-
-		real xBlend = (posf.x);
-		real yBlend = (posf.y);
-		real xval0 = Lerp(r00p, r10p, xBlend);
-		real xval1 = Lerp(r01p, r11p, xBlend);
-		real val = Lerp(xval0, xval1, yBlend);
-
-		return val;
+		m_StagedChunks.clear();
 	}
 
 	// ---
@@ -12798,6 +12151,8 @@ namespace flex
 		m_WheelSlipHisto(RollingAverage<real>(256, SamplingType::CONSTANT))
 	{
 		m_bInteractable = true;
+		// Vehicles can be picked up into the player's inventory & placed again
+		m_bItemizable = true;
 
 		for (i32 i = 0; i < (i32)SoundEffect::_COUNT; ++i)
 		{
@@ -13902,17 +13257,18 @@ namespace flex
 			{
 				real offset = 0.5f;
 
-				TerrainGenerator::TerrainChunkData chunkData = {};
-				terrainGenerator->FillInTerrainChunkData(chunkData);
 				for (u32 i = 0; i < (u32)newPoints.size(); ++i)
 				{
-					newPoints[i].y = terrainGenerator->Sample(chunkData, glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
+					newPoints[i].y = terrainGenerator->SampleHeight(glm::vec2(newPoints[i].x, newPoints[i].z)) + offset;
 				}
 			}
 
 			GenerateSegmentsThroughPoints(newPoints);
 
-			terrainGenerator->UpdateRoadSegments();
+			if (terrainGenerator != nullptr)
+			{
+				terrainGenerator->UpdateRoadSegments();
+			}
 		}
 		else
 		{

@@ -1314,6 +1314,10 @@ namespace flex
 		bool bSetDynamicStates = false;
 		bool bIndexed = false;
 		bool bAllowDynamicBufferShrinking = true;
+		// Allows individual render objects of a shadow casting game object to not cast shadows
+		bool bCastsShadow = true;
+		// World space bounding sphere (xyz: center, w: radius) used to skip drawing into shadow cascades it can't affect (w <= 0: never culled)
+		glm::vec4 shadowCullSphere = glm::vec4(0.0f);
 	};
 
 	struct ShaderInfo

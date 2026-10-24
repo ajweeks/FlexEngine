@@ -95,7 +95,14 @@ namespace flex
 
 	void FirstPersonCamera::FindPlayer()
 	{
-		m_Player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		m_Player = scene->GetPlayer(0);
+		if (m_Player == nullptr && scene->IsInitialized())
+		{
+			// Scenes which don't spawn a player get one at the camera's position when switching to first person
+			m_Player = scene->SpawnPlayer(position, forward);
+			m_Player->UpdateIsPossessed();
+		}
 	}
 
 } // namespace flex

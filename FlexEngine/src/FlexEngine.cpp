@@ -6,6 +6,7 @@
 #include <time.h> // For timed
 
 IGNORE_WARNINGS_PUSH
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 #include <glm/gtx/intersect.hpp>
 
@@ -1017,6 +1018,48 @@ namespace flex
 		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 	}
 
+	void FlexEngine::SpawnVehicleInFrontOfCamera()
+	{
+		const PrefabID vehicleID = g_ResourceManager->GetPrefabID("vehicle");
+		if (!vehicleID.IsValid())
+		{
+			PrintError("Failed to spawn vehicle, prefab not found\n");
+			return;
+		}
+
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		glm::vec3 forward = glm::vec3(camera->forward.x, 0.0f, camera->forward.z);
+		forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : VEC3_FORWARD;
+		glm::vec3 pos = camera->position + forward * 8.0f;
+
+		// Place on the ground (terrain or any other collider)
+		TerrainGenerator* terrain = TerrainGenerator::GetActive();
+		glm::vec3 hitPos, hitNormal;
+		if (terrain != nullptr && terrain->Raycast(pos + glm::vec3(0.0f, 20.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 2000.0f, hitPos, hitNormal))
+		{
+			pos = hitPos + glm::vec3(0.0f, 1.5f, 0.0f);
+		}
+		else
+		{
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+			btVector3 rayStart = ToBtVec3(pos + glm::vec3(0.0f, 20.0f, 0.0f));
+			btVector3 rayEnd = ToBtVec3(pos - glm::vec3(0.0f, 500.0f, 0.0f));
+			btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+			physicsWorld->GetWorld()->rayTest(rayStart, rayEnd, rayCallback);
+			if (rayCallback.hasHit())
+			{
+				pos = ToVec3(rayCallback.m_hitPointWorld) + glm::vec3(0.0f, 1.5f, 0.0f);
+			}
+		}
+
+		const glm::quat rotation = glm::angleAxis(atan2(forward.x, forward.z), VEC3_UP);
+		GameObject* vehicle = GameObject::Deitemize(vehicleID, pos, rotation, GameObjectStack::UserData{});
+		if (vehicle != nullptr)
+		{
+			g_SceneManager->CurrentScene()->AddRootObject(vehicle);
+		}
+	}
+
 	void FlexEngine::DrawImGuiObjects()
 	{
 		PROFILE_AUTO("FlexEngine DrawImGuiObjects");
@@ -1152,6 +1195,18 @@ namespace flex
 
 				BaseScene* scene = g_SceneManager->CurrentScene();
 				Player* player = scene->GetPlayer(0);
+
+				if (ImGui::MenuItem("Spawn vehicle"))
+				{
+					SpawnVehicleInFrontOfCamera();
+				}
+
+				if (player == nullptr && ImGui::MenuItem("Spawn player at camera"))
+				{
+					BaseCamera* camera = g_CameraManager->CurrentCamera();
+					player = scene->SpawnPlayer(camera->position, camera->forward);
+				}
+
 				if (player != nullptr)
 				{
 					if (ImGui::BeginMenu("Player inventory"))
@@ -1337,6 +1392,10 @@ namespace flex
 				{
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
+
+				const bool bHasTerrain = TerrainGenerator::GetActive() != nullptr;
+				ImGui::MenuItem("Terrain map", nullptr, TerrainGenerator::GetShowWorldMapPtr(), bHasTerrain);
+				ImGui::MenuItem("Terrain minimap", nullptr, TerrainGenerator::GetShowMinimapPtr(), bHasTerrain);
 
 				if (ImGui::MenuItem("Help (?)", nullptr, &bShowHelpWindow))
 				{
@@ -1554,6 +1613,8 @@ namespace flex
 		g_Renderer->DrawImGuiWindows();
 
 		g_ResourceManager->DrawImGuiWindows();
+
+		TerrainGenerator::DrawActiveImGuiWindows();
 
 		bool* bShowInputBindingsWindow = GetUIWindowOpen(SID_PAIR("input bindings"));
 		if (*bShowInputBindingsWindow)

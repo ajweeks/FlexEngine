@@ -1,7 +1,6 @@
 #version 450
 
 #include "vk_misc.glsl"
-#include "vk_noises.glsl"
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -17,50 +16,101 @@ layout (binding = 0) uniform UBOConstant
 	float zFar;
 } uboConstant;
 
-layout (location = 0) in vec4 ex_Colour;
+layout (location = 0) in vec4 ex_Colour; // rgb: albedo (sRGB), a: marble vein strength (< 0: water)
 layout (location = 1) in vec3 ex_NormalWS;
 layout (location = 2) in float ex_Depth;
 layout (location = 3) in vec3 ex_PositionWS;
+layout (location = 4) in vec4 ex_Weights; // Procedural texture weights: grass, layered rock, granular, snow
 
 layout (binding = 1) uniform sampler2D albedoSampler;
 layout (binding = 2) uniform sampler2DArrayShadow shadowCascadeSampler;
 
 layout (location = 0) out vec4 fragmentColour;
 
-vec3 pal(float t, vec3 a, vec3 b, vec3 c, vec3 d)
+// Procedural textures are evaluated relative to an origin snapped to a coarse grid near the camera so they keep their
+// precision far from the world origin. Frequencies are powers of two so the integer lattice offset is exact.
+const float NOISE_ORIGIN_GRID = 2048.0;
+
+float HashI(ivec3 c)
 {
-    return a + b * cos(6.28318 * (c * t + d));
+	uvec3 u = uvec3(c);
+	uint h = u.x * 0x8da6b343u ^ u.y * 0xd8163841u ^ u.z * 0xcb1ab31fu;
+	h ^= h >> 16;
+	h *= 0x7feb352du;
+	h ^= h >> 15;
+	h *= 0x846ca68bu;
+	h ^= h >> 16;
+	return float(h) * (1.0 / 4294967295.0);
 }
 
-vec3 palette(float v)
+// Value noise in [-1, 1] with analytic derivatives (yzw)
+vec4 ValueNoiseD(vec3 localScaled, ivec3 latticeOffset)
 {
-	
-	//return pal(v.x, vec3(0.8,0.5,0.4), vec3(0.2,0.4,0.2), vec3(2.0,1.0,1.0), vec3(0.0,0.25,0.25));
-	return pal(v.x, vec3(0.5,0.5,0.5), vec3(0.5,0.5,0.5), vec3(1.0,1.0,1.0), vec3(0.0,0.33,0.67));
+	vec3 p = floor(localScaled);
+	vec3 w = localScaled - p;
+	ivec3 c = ivec3(p) + latticeOffset;
+
+	vec3 u = w * w * w * (w * (w * 6.0 - 15.0) + 10.0);
+	vec3 du = 30.0 * w * w * (w * (w - 2.0) + 1.0);
+
+	float a = HashI(c);
+	float b = HashI(c + ivec3(1, 0, 0));
+	float cc = HashI(c + ivec3(0, 1, 0));
+	float d = HashI(c + ivec3(1, 1, 0));
+	float e = HashI(c + ivec3(0, 0, 1));
+	float f = HashI(c + ivec3(1, 0, 1));
+	float g = HashI(c + ivec3(0, 1, 1));
+	float h = HashI(c + ivec3(1, 1, 1));
+
+	float k0 = a;
+	float k1 = b - a;
+	float k2 = cc - a;
+	float k3 = e - a;
+	float k4 = a - b - cc + d;
+	float k5 = a - cc - e + g;
+	float k6 = a - b - e + f;
+	float k7 = -a + b + cc - d + e - f - g + h;
+
+	return vec4(-1.0 + 2.0 * (k0 + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z),
+		2.0 * du * vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z,
+						k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x,
+						k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
+}
+
+vec3 g_NoiseLocal;
+vec3 g_NoiseOrigin;
+
+// frequency must be a power of two >= 1 / NOISE_ORIGIN_GRID. Derivatives are with respect to world space.
+vec4 Noise(float frequency)
+{
+	vec4 n = ValueNoiseD(g_NoiseLocal * frequency, ivec3(g_NoiseOrigin * frequency));
+	n.yzw *= frequency;
+	return n;
+}
+
+// Same as Noise, with the input offset (to decorrelate layers)
+vec4 NoiseOffset(float frequency, vec3 offset)
+{
+	vec4 n = ValueNoiseD(g_NoiseLocal * frequency + offset, ivec3(g_NoiseOrigin * frequency));
+	n.yzw *= frequency;
+	return n;
 }
 
 void main()
 {
-	// vec3 albedo = texture(albedoSampler, ex_TexCoord).rgb;
-	vec3 albedo = vec3(1.0);
-	float height = ex_Colour.x;
-	// Nudge up to account for float precision
-	float blendWeight = ex_Colour.y;
-	int matID0 = int(ex_Colour.z + 0.5);
-	int matID1 = int(ex_Colour.w + 0.5);
-	vec3 N = normalize(ex_NormalWS);
-	float roughness = 1.0;
-	float metallic = 0.0;
-	float ssao = 0.0;
-
 	mat4 invView = inverse(uboConstant.view);
 	vec3 camPos = vec3(invView[3][0], invView[3][1], invView[3][2]);
 
+	vec3 posWS = ex_PositionWS;
+	vec3 viewVec = posWS - camPos;
+	float dist = length(viewVec);
+	vec3 viewDir = viewVec / max(dist, 0.0001);
+	vec3 V = -viewDir;
+
+	g_NoiseOrigin = floor(camPos / NOISE_ORIGIN_GRID) * NOISE_ORIGIN_GRID;
+	g_NoiseLocal = posWS - g_NoiseOrigin;
+
 	float linDepth = (ex_Depth - uboConstant.zNear) / (uboConstant.zFar - uboConstant.zNear);
-
-	vec3 V = normalize(camPos.xyz - ex_PositionWS);
-
-	float fresnel = pow(1.0 - dot(N, V), 6.0);
 
 	uint cascadeIndex = 0;
 	for (uint i = 0; i < NUM_CASCADES; ++i)
@@ -71,109 +121,120 @@ void main()
 		}
 	}
 
-	int lodLevel = int(cascadeIndex);
+	bool bWater = ex_Colour.a < -0.5;
 
-	float darkening = 1.0;
-
-#if 0
-	if (lodLevel <= 2)
+	vec3 N = normalize(ex_NormalWS);
+	if (!gl_FrontFacing && bWater)
 	{
-		// Rock-face/clif pattern
-		vec3 bump = fbmd_7(ex_PositionWS * vec3(3.0, 0.05, 3.0)).yzw;
-		float bumpInfluence = 0.4 * (1.0-abs(N.y));
-		bumpInfluence *= fbm_4(ex_PositionWS * 0.005) * 0.8 + 0.2;
-		// Blend in bump map where surfaces are not pointing up
-		N = normalize(N + bumpInfluence * bump);
+		N = -N;
+	}
 
-		//float stretchedRock = 1.0-VoronoiColumns((10.0 - ex_PositionWS.x) + ex_PositionWS.xz * 0.9, 0.965, nearestCell, nearestCellPos);
+	// Fade out high frequency detail with distance to avoid aliasing
+	float fineDetail = 1.0 - smoothstep(30.0, 250.0, dist);
+	float midDetail = 1.0 - smoothstep(150.0, 1500.0, dist);
+	float coarseDetail = 1.0 - smoothstep(1500.0, 8000.0, dist);
 
-		// if (height < 0.51)
-		{
-			// Dried cracks pattern
-			bumpInfluence = 1.3 * (1.0 - pow(max(abs(N.y) - 1.0, 0.0), 10.0));
-			bumpInfluence *= clamp((-fbm_4(ex_PositionWS * 0.009)), 0.0, 1.0) * 0.8 + 0.2;
-			vec2 nearestCell, nearestCellPos;
-			float sharpness = 0.965;
-			vec2 _x;
-			float dist = VoronoiDistance(ex_PositionWS.xz * 0.9, nearestCell, nearestCellPos, _x);
+	vec3 albedo;
+	float roughness = 1.0;
+	float specularStrength = 0.0;
 
-			// float maxNormalDist = 0.05;
-			float maxNormalDist = 0.15;
-			if (linDepth < maxNormalDist)
-			{
-				float blendDist = linDepth / maxNormalDist;
-				bumpInfluence *= (1.0 - blendDist*blendDist);
-
-				vec2 dirToEdge = normalize(nearestCellPos);
-				float theta = atan(dirToEdge.y, dirToEdge.x);
-				// float crackWidth = 1.0-(1.0-blendDist)*(1.0-blendDist) + 0.5;
-				// Technically this should take into account FOV, since it's attempting
-				// to match reduction in detail as objects get further from camera.
-				float crackWidth = min(abs(dFdx(ex_TexCoord.x)), abs(dFdx(ex_TexCoord.y))) * 1000.0; // blendDist
-				float crackDepth = 1.0;
-
-				float crackMask = 1.0 - smoothstep(0.0, 1.0 - clamp(crackWidth, 0.96, 1.0), dist);
-				vec3 perterbedN = normalize(mix(vec3(0, 1, 0), -vec3(cos(theta), 0.0, sin(theta)), vec3(clamp(crackMask * crackDepth, 0.0, 1.0))));
-				N = normalize(N + bumpInfluence * perterbedN);
-			}
-			// abs(val) + abs(val + 1) prevents identical hashes along axes (where some value is 0)
-			darkening = 0.8 + 0.3 * (hash1(abs(nearestCell) + abs(nearestCell + 1)) - 0.5);
-		}
+	if (bWater)
+	{
+		albedo = pow(ex_Colour.rgb, vec3(2.2));
+		// Gentle ripples
+		vec4 ripple0 = Noise(0.5);
+		vec4 ripple1 = NoiseOffset(2.0, vec3(17.3, 0.0, 5.1));
+		vec3 rippleGradient = (ripple0.yzw * 0.3 + ripple1.yzw * 0.08) * midDetail;
+		N = normalize(vec3(-rippleGradient.x, 1.0, -rippleGradient.z));
+		roughness = 0.1;
+		specularStrength = 1.0;
 	}
 	else
 	{
-		// TODO: Darken/increase roughness of surface here to account for missing cracks
+		vec3 tint = pow(clamp(ex_Colour.rgb, 0.0, 1.0), vec3(2.2));
+		vec4 weights = max(ex_Weights, vec4(0.0));
+		weights /= max(weights.x + weights.y + weights.z + weights.w, 0.0001);
+
+		vec3 bump = vec3(0.0);
+
+		// Large scale colour variation, shared by all materials
+		vec4 macro = Noise(1.0 / 64.0);
+		vec4 macro2 = NoiseOffset(1.0 / 8.0, vec3(3.7, 1.3, 9.1));
+		float variation = (macro.x * 0.6 + macro2.x * 0.4 * midDetail) * coarseDetail;
+
+		// Grass: clumpy, with drier (straw coloured) & lusher patches. Kept desaturated, since real grass is
+		// much less vivid than it appears.
+		vec3 grass = vec3(0.0);
+		if (weights.x > 0.001)
+		{
+			vec4 clumps = Noise(2.0);
+			vec4 blades = NoiseOffset(16.0, vec3(5.5, 2.1, 7.7));
+			float dry = smoothstep(0.0, 0.8, NoiseOffset(1.0 / 32.0, vec3(1.9, 4.4, 0.6)).x);
+			float lush = smoothstep(0.2, 0.9, NoiseOffset(1.0 / 16.0, vec3(7.1, 0.3, 2.6)).x);
+			grass = tint * mix(vec3(1.0), vec3(1.25, 1.12, 0.78), dry * 0.55);
+			grass = mix(grass, tint * vec3(0.85, 0.95, 0.80), lush * (1.0 - dry) * 0.5);
+			grass *= 0.88 + 0.2 * variation + (0.12 * clumps.x + 0.1 * blades.x * fineDetail) * midDetail;
+			float luminance = dot(grass, vec3(0.2126, 0.7152, 0.0722));
+			grass = mix(grass, vec3(luminance), 0.2);
+			bump += weights.x * (clumps.yzw * 0.008 + blades.yzw * 0.0015 * fineDetail) * midDetail;
+		}
+
+		// Layered rock: strata bands warped by noise, with cracks
+		vec3 rock = vec3(0.0);
+		if (weights.y > 0.001)
+		{
+			vec4 warp = Noise(1.0 / 16.0);
+			float strataCoord = posWS.y * 0.6 + warp.x * 3.0;
+			float strata = sin(strataCoord) * 0.5 + 0.5;
+			float strata2 = sin(strataCoord * 3.7 + 1.3) * 0.5 + 0.5;
+			vec4 grain = NoiseOffset(4.0, vec3(2.2, 8.1, 3.3));
+			vec4 chips = NoiseOffset(1.0, vec3(9.9, 1.1, 4.2));
+			rock = tint * (0.78 + 0.22 * variation + (0.16 * strata + 0.08 * strata2) * midDetail + 0.1 * grain.x * fineDetail);
+			// Strata form subtle ledges in the normal
+			vec3 strataBump = vec3(0.0, cos(strataCoord) * 0.6, 0.0);
+			bump += weights.y * (chips.yzw * 0.06 + grain.yzw * 0.012 * fineDetail + strataBump * 0.08) * midDetail;
+		}
+
+		// Granular (soil, sand, gravel, granite): speckles
+		vec3 granular = vec3(0.0);
+		if (weights.z > 0.001)
+		{
+			vec4 speckleNoise = NoiseOffset(16.0, vec3(4.1, 6.3, 2.9));
+			vec4 pebbles = NoiseOffset(2.0, vec3(8.8, 3.1, 5.6));
+			float speckle = smoothstep(0.55, 0.8, speckleNoise.x) - smoothstep(0.6, 0.85, -speckleNoise.x) * 0.7;
+			granular = tint * (0.85 + 0.2 * variation + (0.14 * pebbles.x) * midDetail + 0.22 * speckle * fineDetail);
+			bump += weights.z * (pebbles.yzw * 0.015 + speckleNoise.yzw * 0.001 * fineDetail) * midDetail;
+		}
+
+		// Snow: bright & soft, with wind ripples
+		vec3 snow = vec3(0.0);
+		if (weights.w > 0.001)
+		{
+			vec4 drift = NoiseOffset(1.0 / 4.0, vec3(6.6, 2.7, 1.8));
+			snow = tint * (0.92 + 0.08 * drift.x * midDetail);
+			bump += weights.w * drift.yzw * 0.08 * midDetail;
+			specularStrength += weights.w * 0.25;
+		}
+
+		albedo = grass * weights.x + rock * weights.y + granular * weights.z + snow * weights.w;
+
+		// Marble veins
+		float vein = clamp(ex_Colour.a, 0.0, 1.0);
+		if (vein > 0.01)
+		{
+			vec4 veinWarp = Noise(1.0 / 4.0);
+			float veinLine = abs(sin(posWS.x * 0.35 + posWS.y * 0.6 + posWS.z * 0.2 + veinWarp.x * 6.0));
+			float veinMask = 1.0 - smoothstep(0.0, 0.12, veinLine);
+			albedo = mix(albedo, albedo * vec3(0.45, 0.47, 0.5), veinMask * vein * midDetail);
+			specularStrength += vein * 0.3;
+		}
+
+		// Remove the component of the bump along the normal & perturb
+		bump -= N * dot(bump, N);
+		N = normalize(N - bump);
 	}
-#endif
 
-	//fragmentColour.xy = abs(dFdx(ex_TexCoord)) * 100.0; fragmentColour.zw = 0.0.xx; return;
-
-	vec3 groundCol;
-
-	float minHeight = 0.0;
-	float maxHeight = 1.0;
-
-	vec3 lowCols[] = {
-		vec3(0.61, 0.19, 0.029), // Orange
-		vec3(0.065, 0.04, 0.02), // Dirt
-		vec3(0.09, 0.03, 0.02), // Red
-		vec3(0.07, 0.08, 0.1), // Blue
-	};
-	vec3 highCols[] = {
-		vec3(0.82, 0.48, 0.20), // Beige
-		vec3(0.045, 0.06, 0.02), // Grass
-		vec3(0.75, 0.76, 0.80), // White
-		vec3(0.08, 0.09, 0.21), // Dark blue
-	};
-
-
-	// Value going from 0 at the start of the blend range, to 0.5 at the edge of a cell
-	// float blendWeight2 = float((uint(ex_Colour.y) & 0xFFFF)) / 65536.0;
-	// float blendWeight0 = clamp(1.0 - blendWeight1 - blendWeight2, 0.0, 1.0);
-
-	// {
-	 	int m0 = matID0 % 4;
-	 	int m1 = matID1 % 4;
-	// 	int m2 = matID2 % 4;
-
-		float alpha = clamp((height - minHeight) / (maxHeight - minHeight), 0.0, 1.0);
-	 	vec3 c0 = mix(lowCols[m0], highCols[m0], alpha);
-	 	vec3 c1 = mix(lowCols[m1], highCols[m1], alpha);
-	// 	vec3 c2 = mix(lowCols[m2], highCols[m2], alpha);
-	// 	groundCol = c0;// * blendWeight0 + c1 * blendWeight1 + c2 * blendWeight2;
-	// 	groundCol = pow(groundCol, vec3(2.2));
-
-	// 	// groundCol = vec3(float(m0) / 4.0, float(matID1) / 4.0, float(matID2) / 4.0);
-	// }
-
-	groundCol = c0;// mix(c0, c1, blendWeight);
-	groundCol = pow(groundCol, vec3(2.2));
-
-	// groundCol = (float(matID2 + 0.5) / 4.0).xxx; fragmentColour.xyz = groundCol; fragmentColour.w = 1.0;
-	// fragmentColour.rgb *= 1.0-(pow(blendWeight1*2.0, 200.0));
-	// return;
-	// groundCol.rg = vec2(blendWeight1, blendWeight2);
-	// groundCol.b = 0.0;
+	vec3 groundCol = albedo;
 
 	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
@@ -182,7 +243,7 @@ void main()
 			continue;
 		}
 
-		float distance = length(uboConstant.pointLights[i].position - ex_PositionWS);
+		float distance = length(uboConstant.pointLights[i].position - posWS);
 
 		if (distance > 125)
 		{
@@ -192,7 +253,7 @@ void main()
 
 		// Pretend point lights have a radius of 1cm to avoid division by 0
 		float attenuation = 1.0 / max((distance * distance), 0.001);
-		vec3 L = normalize(uboConstant.pointLights[i].position - ex_PositionWS);
+		vec3 L = normalize(uboConstant.pointLights[i].position - posWS);
 		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
 
@@ -206,7 +267,7 @@ void main()
 			continue;
 		}
 
-		float distance = length(uboConstant.spotLights[i].position - ex_PositionWS);
+		float distance = length(uboConstant.spotLights[i].position - posWS);
 
 		if (distance > 125)
 		{
@@ -215,10 +276,9 @@ void main()
 		}
 
 		// Pretend point lights have a radius of 1cm to avoid division by 0
-		vec3 pointToLight = normalize(uboConstant.spotLights[i].position - ex_PositionWS);
+		vec3 pointToLight = normalize(uboConstant.spotLights[i].position - posWS);
 		vec3 L = normalize(uboConstant.spotLights[i].direction);
 		float attenuation = 1.0 / max((distance * distance), 0.001);
-		//attenuation *= max(dot(L, pointToLight), 0.0);
 		vec3 radiance = uboConstant.spotLights[i].colour.rgb * attenuation * uboConstant.spotLights[i].brightness;
 		float NoL = max(dot(N, pointToLight), 0.0);
 		float LoPointToLight = max(dot(L, pointToLight), 0.0);
@@ -236,7 +296,8 @@ void main()
 		groundCol += groundCol * radiance * NoL;
 	}
 
-	float light = 0.0;// = dot(N, L) * 0.5 + 0.5;
+	float light = 0.0;
+	vec3 specular = vec3(0.0);
 
 	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
@@ -245,35 +306,49 @@ void main()
 		vec3 radiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness;
 		float NoL = pow(dot(N, L) * 0.5 + 0.5, 4.0); // Wrapped diffuse
 
-		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, ex_PositionWS, N, linDepth, cascadeIndex, shadowCascadeSampler, NoL);
+		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, normalize(ex_NormalWS), linDepth, cascadeIndex, shadowCascadeSampler, max(dot(normalize(ex_NormalWS), L), 0.0));
 		light = (0.75 * dirLightShadowOpacity + 0.25);
 		groundCol *= NoL * radiance;
-	}
 
-	groundCol *= darkening;
+		if (specularStrength > 0.0)
+		{
+			vec3 H = normalize(L + V);
+			float specPower = mix(16.0, 400.0, 1.0 - roughness);
+			specular = radiance * pow(max(dot(N, H), 0.0), specPower) * specularStrength * dirLightShadowOpacity * max(dot(N, L), 0.0);
+		}
+	}
 
 	groundCol *= light;
 	vec3 diffuse = groundCol;
-	vec3 specular = vec3(0);
-	groundCol += (fresnel * 1.1) * groundCol;
+	float fresnel = pow(1.0 - max(dot(N, V), 0.0), 6.0);
+	if (!bWater)
+	{
+		groundCol += (fresnel * 1.1) * groundCol;
+	}
 	groundCol += (2.0 * max(dot(N, vec3(0, 1, 0)), 0.0)) * uboConstant.skyboxData.colourTop.rgb * groundCol;
+	groundCol += specular;
 
 	fragmentColour.w = 1.0;
 	fragmentColour.xyz = groundCol;
-	ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
+	if (!IsDistanceFogEnabled(uboConstant.skyboxData))
+	{
+		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
+	}
 
 	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0)); // Reinhard tone-mapping
 	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
 
-	// Colourize by chunk ID & neighbor chunk ID
-	// fragmentColour.rgb = (palette(matID0 * 0.3 + 0.5) + palette(matID1 * 0.3)) * 0.5;
+	if (bWater)
+	{
+		// Reflect the sky (in the same space the skybox is drawn in)
+		vec3 R = reflect(viewDir, N);
+		R.y = abs(R.y);
+		float waterFresnel = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+		fragmentColour.rgb = mix(fragmentColour.rgb, SkyColour(R, uboConstant.skyboxData) * mix(0.6, 1.0, dirLightShadowOpacity), waterFresnel);
+	}
 
-	// Display chunk borders
-	//fragmentColour.rgb *= 1.0-(pow(blendWeight*2.0, 200.0));
-	// fragmentColour.rgb *= 1.0 - pow(blendWeight, 15.0);
+	ApplyDistanceFog(dist, viewDir, uboConstant.skyboxData, /* inout */ fragmentColour.rgb);
 
-	// fragmentColour.rgb = ex_NormalWS;
-
-    DrawDebugOverlay(albedo, N, roughness, metallic, diffuse, specular, vec2(0),
-     linDepth, dirLightShadowOpacity, cascadeIndex, ssao, /* inout */ fragmentColour);
+	DrawDebugOverlay(albedo, N, roughness, 0.0, diffuse, specular, vec2(0),
+		linDepth, dirLightShadowOpacity, cascadeIndex, 0.0, /* inout */ fragmentColour);
 }

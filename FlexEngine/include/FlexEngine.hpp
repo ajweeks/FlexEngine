@@ -174,6 +174,8 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
+		// Spawns a vehicle (from the vehicle prefab) on the ground in front of the camera
+		void SpawnVehicleInFrontOfCamera();
 
 		void PrintAllConsoleCommands();
 

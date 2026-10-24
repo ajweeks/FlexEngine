@@ -505,10 +505,16 @@ void main()
 	vec3 ambient = (kD * diffuse + specular) * uboConstant.ssaoData.ambientIntensity * ssao * ambientShadow;
 
 	vec3 colour = ambient + Lo;
-    ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
+	if (!IsDistanceFogEnabled(uboConstant.skyboxData))
+	{
+		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
+	}
 
 	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
 	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
+
+	vec3 viewVec = posWS - uboConstant.camPos.xyz;
+	ApplyDistanceFog(length(viewVec), viewVec / max(length(viewVec), 0.0001), uboConstant.skyboxData, /* inout */ colour);
 
 	fragColour = vec4(colour, 1.0);
 

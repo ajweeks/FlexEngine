@@ -12,6 +12,7 @@
 	"shadow cascade base resolution" : 4096,
 	"shadow cascade count" : 4,
 	"shadow cascade split lambda" : 0.812000,
-	"shadow distance" : 150.000000,
-	"shadow normal offset" : 2.313000
+	"shadow distance" : 1000.000000,
+	"shadow normal offset" : 2.313000,
+	"terrain quality" : 1
 }
