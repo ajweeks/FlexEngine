@@ -48,6 +48,14 @@ namespace flex
 				return object;
 			}
 
+			// Gives up ownership of the object without destroying it
+			T release()
+			{
+				T result = object;
+				object = VK_NULL_HANDLE;
+				return result;
+			}
+
 			void operator=(T rhs)
 			{
 				if (rhs != object)

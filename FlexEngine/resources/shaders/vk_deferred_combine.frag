@@ -473,6 +473,8 @@ void main()
 		float NoL = max(dot(N, L), 0.0);
 
 		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, N, linDepth, cascadeIndex, shadowCascadeSampler, NoL);
+		// Shadows of the clouds drifting overhead
+		dirLightShadowOpacity *= CloudShadow(posWS, uboConstant.camPos.xyz, uboConstant.skyboxData);
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo) * dirLightShadowOpacity;
 	}

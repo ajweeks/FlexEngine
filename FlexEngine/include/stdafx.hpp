@@ -181,6 +181,7 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsTypeConversions.hpp"
 #include "Tweakable.hpp"
 #include "Systems/JobSystem.hpp"
+#include "Profiler.hpp"
 
 #ifndef btAssert
 #define btAssert(e) assert(e)
@@ -201,9 +202,10 @@ IGNORE_WARNINGS_POP
 #define PROFILE_END(blockName) plEnd(blockName)
 #define PROFILE_AUTO(blockName) plScope(blockName)
 #else
-#define PROFILE_BEGIN(blockName)
-#define PROFILE_END(blockName)
-#define PROFILE_AUTO(blockName)
+// Lightweight profiler, only active when enabled at runtime (see Profiler.hpp)
+#define PROFILE_BEGIN(blockName) do { if (::flex::Profiler::IsEnabled()) ::flex::Profiler::BeginScope(blockName); } while (0)
+#define PROFILE_END(blockName) do { if (::flex::Profiler::IsEnabled()) ::flex::Profiler::EndScope(); } while (0)
+#define PROFILE_AUTO(blockName) ::flex::Profiler::Scope TOKEN_PASTE(profileScope, __LINE__)(blockName)
 #endif
 
 #if defined(_WINDOWS)

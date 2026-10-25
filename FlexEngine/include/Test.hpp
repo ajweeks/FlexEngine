@@ -2052,7 +2052,6 @@ namespace flex
 
 		UNIT_TEST(InvalidGUID1)
 		{
-			// Only caught in DEBUG
 			GUID a = GUID::FromString("invalid-content-but-right-length");
 			EXPECT(a == InvalidGUID, true);
 		}
@@ -2569,7 +2568,7 @@ namespace flex
 				HelpersRelativeToAbsolutePath0, HelpersRelativeToAbsolutePath1, HelpersRelativeToAbsolutePath2,
 				HelpersRelativeToAbsolutePath3, HelpersRelativeToAbsolutePath4, HelpersRelativeToAbsolutePath5,
 				// GUID tests
-				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID1, InvalidGUID1,
+				GUIDGeneration0, GUIDGeneration1, GUIDGeneration2, GUIDGeneration3, InvalidGUID0, InvalidGUID1,
 				GUIDLessThan0, GUIDNotLessThan0, GUIDLessThan1, GUIDNotLessThan1,
 				// Hash tests
 				HashesDeterministic, HashEmpty, HashCompare0,

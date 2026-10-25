@@ -62,6 +62,10 @@ namespace flex
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods);
 		void ScrollCallback(double xOffset, double yOffset);
 		void KeyCallback(KeyCode keyCode, KeyAction keyAction, i32 mods);
+
+		// Keeps processing input while the window is unfocused (used by automated tests, which inject input into
+		// hidden windows)
+		void SetIgnoreWindowFocus(bool bIgnoreWindowFocus) { m_bIgnoreWindowFocus = bIgnoreWindowFocus; }
 		void CharCallback(u32 character);
 
 		bool DidMouseWrap() const;
@@ -133,6 +137,7 @@ namespace flex
 		static const real MAX_JOYSTICK_ROTATION_SPEED;
 
 		std::map<KeyCode, Key> m_Keys;
+		bool m_bIgnoreWindowFocus = false;
 
 		// Contains one entry for each entry in the Action enum
 		InputBinding m_InputBindings[(i32)Action::_NONE + 1];

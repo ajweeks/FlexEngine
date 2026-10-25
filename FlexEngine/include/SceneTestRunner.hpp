@@ -9,7 +9,7 @@ namespace flex
 	class SceneTestRunner final : public LogSink
 	{
 	public:
-		SceneTestRunner(const std::vector<std::string>& sceneFileNames, u32 framesPerScene);
+		SceneTestRunner(const std::vector<std::string>& sceneFileNames, u32 framesPerScene, bool bCaptureScreenshots, bool bProfile);
 		~SceneTestRunner();
 
 		SceneTestRunner(const SceneTestRunner&&) = delete;
@@ -45,6 +45,11 @@ namespace flex
 			ms loadDuration = 0.0f;
 		};
 
+		// Exercises gameplay & debug features which have broken before (debug windows, physics debug drawing,
+		// spawning the player in terrain), printing errors when they misbehave
+		void BeginSceneChecks();
+		void EndSceneChecks();
+
 		// Subsequent issues will be attributed to this entry
 		void BeginEntry(const std::string& name);
 		void StopRecording();
@@ -54,7 +59,12 @@ namespace flex
 		static SceneTestRunner* s_Instance;
 
 		u32 m_FramesPerScene = 0;
+		bool m_bCaptureScreenshots = false;
+		bool m_bProfile = false;
 		u32 m_FramesRemaining = 0;
+		bool m_bSceneChecksActive = false;
+		bool m_bPrevDrawPhysicsWireframe = false;
+		bool m_bPrevShowTerrainMap = false;
 		ms m_StartupBeginTime = 0.0f;
 		std::vector<std::string> m_Queue;
 		// Only written on the main thread, read without locking by the crash handler

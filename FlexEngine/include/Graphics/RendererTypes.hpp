@@ -191,12 +191,17 @@ namespace flex
 	};
 
 	// 64 bytes
+	// Must match SkyboxData in vk_misc.glsl
 	struct SkyboxData
 	{
 		glm::vec4 top;	// 0
 		glm::vec4 mid;	// 16
 		glm::vec4 btm;	// 32
-		glm::vec4 fog;	// 48
+		glm::vec4 fog;	// 48, w: distance fog distance (<= 1: disabled)
+		glm::vec4 sun;	// 64, xyz: direction towards the sun
+		// 80, x: coverage [0, 1], y: altitude, zw: wind offset. Stored in world space, converted to be relative to
+		// the camera when uploaded (keeps values small enough for shaders' float precision)
+		glm::vec4 clouds;
 	};
 
 	// 64 bytes
@@ -1316,8 +1321,12 @@ namespace flex
 		bool bAllowDynamicBufferShrinking = true;
 		// Allows individual render objects of a shadow casting game object to not cast shadows
 		bool bCastsShadow = true;
-		// World space bounding sphere (xyz: center, w: radius) used to skip drawing into shadow cascades it can't affect (w <= 0: never culled)
-		glm::vec4 shadowCullSphere = glm::vec4(0.0f);
+		// World space bounding sphere (xyz: center, w: radius) of an object which doesn't move, used to skip drawing it
+		// outside of the view & shadow cascades it can't affect (w <= 0: never culled)
+		glm::vec4 cullSphere = glm::vec4(0.0f);
+		// Object space bounding sphere of meshes whose vertices don't change, transformed by the object's transform for
+		// culling when cullSphere isn't set (w <= 0: unknown)
+		glm::vec4 localBoundingSphere = glm::vec4(0.0f);
 	};
 
 	struct ShaderInfo

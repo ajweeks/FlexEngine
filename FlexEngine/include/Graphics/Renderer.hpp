@@ -119,6 +119,9 @@ namespace flex
 
 		virtual DebugRenderer* GetDebugRenderer() = 0;
 
+		// Saves the next presented frame as a PNG (to the screenshots directory when no path is given)
+		void RequestScreenshot(const std::string& absoluteFilePath = "");
+
 		virtual void DrawStringSS(const std::string& str,
 			const glm::vec4& colour,
 			AnchorPoint anchor,
@@ -467,6 +470,11 @@ namespace flex
 			Material::PushConstantBlock* pushConstantOverride = nullptr;
 			// When rendering shadows, used to cull objects outside of the cascade
 			const glm::mat4* shadowCascadeViewProj = nullptr;
+			// When set, objects (with cull spheres) entirely outside of these four planes (xyz: normal, w: distance) aren't drawn
+			const glm::vec4* cullPlanes = nullptr;
+			// Objects are only culled when they're also outside the planes after being moved by this much (shadow casters
+			// affect what's behind them, away from the light)
+			glm::vec3 cullExtrusion = VEC3_ZERO;
 
 			// NOTE: DepthTestFunc only supported in GL, Vulkan requires specification at pipeline creation time
 			DepthTestFunc depthTestFunc = DepthTestFunc::GEQUAL;
@@ -488,6 +496,26 @@ namespace flex
 
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;
+
+		// Distant cascades cover large areas (& so many objects) but change little from frame to frame, so they're
+		// re-rendered less often, keeping the matrices they were rendered with. They're padded so the camera can move a
+		// little before they no longer cover what they need to (at which point they're re-rendered immediately).
+		struct CachedShadowCascade
+		{
+			glm::vec3 center = VEC3_ZERO;
+			real radius = 0.0f;
+			glm::vec3 lightDir = VEC3_ZERO;
+			real shadowDistance = 0.0f;
+			u64 frameRendered = 0;
+			bool bValid = false;
+		};
+		CachedShadowCascade m_CachedShadowCascades[MAX_SHADOW_CASCADE_COUNT];
+		// Whether each cascade must be rendered this frame
+		bool m_bRenderShadowCascade[MAX_SHADOW_CASCADE_COUNT] = {};
+		bool m_bCacheDistantShadowCascades = true;
+		u64 m_ShadowCascadeFrameIndex = 0;
+
+		void InvalidateShadowCascadeCache();
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -538,6 +566,7 @@ namespace flex
 		bool m_bRenderGrid = true;
 
 		bool m_bCaptureScreenshot = false;
+		std::string m_ScreenshotFilePath;
 		bool m_bCaptureReflectionProbes = false;
 
 		bool m_bEnableTAA = false;

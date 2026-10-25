@@ -170,6 +170,9 @@ namespace flex
 		void SetFogDistance(real fogDistance);
 		real GetFogDistance() const;
 
+		// Moves the clouds along with the wind & keeps the sun direction (used by the sky) up to date
+		void UpdateSky();
+
 		void DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
 		// If the object gets deleted this frame *gameObjectRef gets set to nullptr
@@ -200,7 +203,7 @@ namespace flex
 
 		void OnExternalMeshChange(const std::string& meshFilePath);
 
-		// Fills out a sorted list of objects with the given typeID & their distance to the given point
+		// Fills out a list of objects with the given typeID & their distance to the given point, nearest first
 		// Returns true when there are nearby objects
 		template<class T>
 		bool GetObjectsInRadius(const glm::vec3& pos, real radius, StringID typeID, std::vector<Pair<T*, real>>& objects)
@@ -216,9 +219,9 @@ namespace flex
 				}
 			}
 
-			std::sort(objects.begin(), objects.end(), [](const Pair<MineralDeposit*, real>& a, const Pair<MineralDeposit*, real>& b)
+			std::sort(objects.begin(), objects.end(), [](const Pair<T*, real>& a, const Pair<T*, real>& b)
 			{
-				return a.second > b.second;
+				return a.second < b.second;
 			});
 
 			return !objects.empty();
@@ -291,6 +294,13 @@ namespace flex
 		SkyboxData m_SkyboxData;
 		// Passed to shaders in m_SkyboxData.fog.w
 		real m_FogDistance = 0.0f;
+
+		// Cloud layer (drawn by the skybox, casting shadows), passed to shaders in m_SkyboxData.clouds
+		real m_CloudCoverage = 0.0f; // [0, 1], 0: no clouds
+		real m_CloudAltitude = 2400.0f;
+		real m_CloudWindSpeed = 14.0f; // m/s
+		real m_CloudWindAngle = 0.6f; // Radians
+		glm::vec2 m_CloudWindOffset = glm::vec2(0.0f);
 
 		glm::vec3 m_DirLightColours[4];
 

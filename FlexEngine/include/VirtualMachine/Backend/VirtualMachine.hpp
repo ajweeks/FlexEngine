@@ -2,7 +2,7 @@
 
 #include <stack>
 
-#include "Scene/GameObject.hpp" // For Terminal::MAX_OUTPUT_COUNT
+#include "Scene/Objects/Terminal.hpp" // For Terminal::MAX_OUTPUT_COUNT
 #include "Variant.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
 #include "VirtualMachine/Backend/IR.hpp"

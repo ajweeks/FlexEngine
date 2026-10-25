@@ -13,6 +13,8 @@ IGNORE_WARNINGS_PUSH
 #include <sys/types.h> // For kill
 #include <sys/stat.h> // For stat
 #include <sys/time.h> // fortimeofday
+#include <sys/resource.h> // For setpriority
+#include <sys/syscall.h> // For SYS_gettid
 #include <signal.h> // For kill
 #include <unistd.h> // For getcwd, unlink, getpid, sysconf, readlink, chdir
 #include <errno.h> // For errno
@@ -67,7 +69,6 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
-	std::vector<pthread_t> ThreadHandles;
 	std::vector<pthread_mutex_t> mutexes;
 
 	CPUInfo Platform::cpuInfo;
@@ -544,28 +545,10 @@ namespace flex
 		return res;
 	}
 
-	void Platform::JoinThreads()
+	void Platform::SetCurrentThreadBackgroundPriority()
 	{
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			pthread_join(ThreadHandles[i], NULL);
-		}
-		ThreadHandles.clear();
-	}
-
-	void Platform::SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData)
-	{
-		ThreadHandles.resize(threadCount);
-
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			i32 result = pthread_create(&ThreadHandles[i], 0, entryPoint, userData);
-			if (result)
-			{
-				const char* errorStr = result == EAGAIN ? "Insufficient resources" : result == EINVAL ? "Invalid settings" : result == EPERM ? "No permission to set scheduling policy requested" : "unknown";
-				PrintError("Failed to create thread, error: %s\n", errorStr);
-			}
-		}
+		// Threads have their own nice value on Linux
+		setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 5);
 	}
 
 	void Platform::YieldProcessor()

@@ -58,6 +58,8 @@ namespace flex
 		real exposure = 0.0f;
 
 		real FOV = 0.0f;
+		// Added to FOV for gameplay effects (not serialized)
+		real fovOffset = 0.0f;
 		real zNear = 0.0f;
 		real zFar = 0.0f;
 
@@ -77,8 +79,8 @@ namespace flex
 		real rollRestorationSpeed = 0.0f;
 
 		glm::vec3 position;
-		glm::vec3 prevPosition;
-		glm::vec3 velocity;
+		glm::vec3 prevPosition = VEC3_ZERO;
+		glm::vec3 velocity = VEC3_ZERO;
 
 		real yaw;
 		real pitch;

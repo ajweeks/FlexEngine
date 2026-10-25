@@ -12,6 +12,7 @@
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Props.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -111,17 +112,15 @@ namespace flex
 			}
 			else
 			{
-				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
+				m_bLineLimitReached = true;
 			}
 		}
 
 		void VulkanDebugRenderer::drawContactPoint(const btVector3& PointOnB, const btVector3& normalOnB, btScalar distance, int lifeTime, const btVector3& colour)
 		{
-			FLEX_UNUSED(PointOnB);
-			FLEX_UNUSED(normalOnB);
 			FLEX_UNUSED(distance);
 			FLEX_UNUSED(lifeTime);
-			FLEX_UNUSED(colour);
+			drawLine(PointOnB, PointOnB + normalOnB * 0.3f, colour);
 		}
 
 		void VulkanDebugRenderer::DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colour)
@@ -137,7 +136,7 @@ namespace flex
 			}
 			else
 			{
-				PrintWarn("Max number of debug draw lines reached (%d)\n", MAX_NUM_LINE_SEGMENTS);
+				m_bLineLimitReached = true;
 			}
 		}
 
@@ -152,6 +151,13 @@ namespace flex
 		{
 			const u32 lineCount = m_LineSegmentIndex;
 
+			if (m_bLineLimitReached)
+			{
+				// Warn once per frame rather than once per line
+				m_bLineLimitReached = false;
+				PrintWarn("Max number of debug draw lines reached (%u)\n", MAX_NUM_LINE_SEGMENTS);
+			}
+
 			{
 				PROFILE_AUTO("PhysicsDebugRender > Update vertex buffer");
 
@@ -165,16 +171,7 @@ namespace flex
 
 				if (lineCount > 0)
 				{
-					u32 numVerts = lineCount * 2;
-
-					if (m_VertexBufferCreateInfo.positions_3D.capacity() < numVerts)
-					{
-						if (!m_VertexBufferCreateInfo.positions_3D.empty())
-						{
-							// Double in size when growing
-							numVerts = numVerts * 2;
-						}
-					}
+					const u32 numVerts = lineCount * 2;
 
 					m_VertexBufferCreateInfo.positions_3D.resize(numVerts);
 					m_VertexBufferCreateInfo.colours_R32G32B32A32.resize(numVerts);

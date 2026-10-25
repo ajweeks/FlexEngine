@@ -555,12 +555,6 @@ namespace flex
 		volatile T* t = nullptr;
 	};
 
-	struct WaveThreadData
-	{
-		void* criticalSection = nullptr;
-		volatile bool running = true;
-	};
-
 	struct ShaderThreadData
 	{
 		void* criticalSection = nullptr;

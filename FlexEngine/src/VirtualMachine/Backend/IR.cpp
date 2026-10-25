@@ -2,10 +2,11 @@
 
 #include "VirtualMachine/Backend/IR.hpp"
 
+#include "Scene/Objects/Terminal.hpp"
+#include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/VariableContainer.hpp"
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
-#include "StringBuilder.hpp"
 
 namespace flex
 {

@@ -53,12 +53,14 @@ int main(int argc, char *argv[])
 	}
 
 
-	// Usage: Flex --test-scenes [--frames=N] [scene_file_name ...]
+	// Usage: Flex --test-scenes [--frames=N] [--screenshots] [--profile] [scene_file_name ...]
 	// Loads each scene (or only those listed) in a hidden window and exits with the number of
 	// scenes which printed any warnings or errors while loading/simulating
 	bool bTestScenes = argc >= 2 && strcmp(argv[1], "--test-scenes") == 0;
 	std::vector<std::string> sceneTestFileNames;
 	u32 sceneTestFrameCount = 10;
+	bool bSceneTestScreenshots = false;
+	bool bSceneTestProfile = false;
 	if (bTestScenes)
 	{
 		for (i32 i = 2; i < argc; ++i)
@@ -66,6 +68,16 @@ int main(int argc, char *argv[])
 			if (strncmp(argv[i], "--frames=", 9) == 0)
 			{
 				sceneTestFrameCount = (u32)atoi(argv[i] + 9);
+			}
+			else if (strcmp(argv[i], "--screenshots") == 0)
+			{
+				// Saves the last frame of each scene to saved/screenshots/
+				bSceneTestScreenshots = true;
+			}
+			else if (strcmp(argv[i], "--profile") == 0)
+			{
+				// Prints CPU & GPU timings for the second half of each scene's frames
+				bSceneTestProfile = true;
 			}
 			else
 			{
@@ -80,7 +92,7 @@ int main(int argc, char *argv[])
 
 	{
 		// Created before the engine so that warnings during startup are captured too
-		flex::SceneTestRunner* sceneTestRunner = bTestScenes ? new flex::SceneTestRunner(sceneTestFileNames, sceneTestFrameCount) : nullptr;
+		flex::SceneTestRunner* sceneTestRunner = bTestScenes ? new flex::SceneTestRunner(sceneTestFileNames, sceneTestFrameCount, bSceneTestScreenshots, bSceneTestProfile) : nullptr;
 
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
 		engineInstance->SetSceneTestRunner(sceneTestRunner);

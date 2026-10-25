@@ -98,8 +98,8 @@ vec4 NoiseOffset(float frequency, vec3 offset)
 
 void main()
 {
-	mat4 invView = inverse(uboConstant.view);
-	vec3 camPos = vec3(invView[3][0], invView[3][1], invView[3][2]);
+	// The view matrix is a rigid transform, so its inverse translation doesn't need a full matrix inverse
+	vec3 camPos = -(transpose(mat3(uboConstant.view)) * uboConstant.view[3].xyz);
 
 	vec3 posWS = ex_PositionWS;
 	vec3 viewVec = posWS - camPos;
@@ -157,9 +157,13 @@ void main()
 
 		vec3 bump = vec3(0.0);
 
+		// Detail which has faded out entirely isn't evaluated (the results are identical, since it's scaled by zero)
+		bool bMidDetail = midDetail > 0.0;
+		bool bFineDetail = fineDetail > 0.0;
+
 		// Large scale colour variation, shared by all materials
 		vec4 macro = Noise(1.0 / 64.0);
-		vec4 macro2 = NoiseOffset(1.0 / 8.0, vec3(3.7, 1.3, 9.1));
+		vec4 macro2 = bMidDetail ? NoiseOffset(1.0 / 8.0, vec3(3.7, 1.3, 9.1)) : vec4(0.0);
 		float variation = (macro.x * 0.6 + macro2.x * 0.4 * midDetail) * coarseDetail;
 
 		// Grass: clumpy, with drier (straw coloured) & lusher patches. Kept desaturated, since real grass is
@@ -167,8 +171,8 @@ void main()
 		vec3 grass = vec3(0.0);
 		if (weights.x > 0.001)
 		{
-			vec4 clumps = Noise(2.0);
-			vec4 blades = NoiseOffset(16.0, vec3(5.5, 2.1, 7.7));
+			vec4 clumps = bMidDetail ? Noise(2.0) : vec4(0.0);
+			vec4 blades = bFineDetail ? NoiseOffset(16.0, vec3(5.5, 2.1, 7.7)) : vec4(0.0);
 			float dry = smoothstep(0.0, 0.8, NoiseOffset(1.0 / 32.0, vec3(1.9, 4.4, 0.6)).x);
 			float lush = smoothstep(0.2, 0.9, NoiseOffset(1.0 / 16.0, vec3(7.1, 0.3, 2.6)).x);
 			grass = tint * mix(vec3(1.0), vec3(1.25, 1.12, 0.78), dry * 0.55);
@@ -183,12 +187,12 @@ void main()
 		vec3 rock = vec3(0.0);
 		if (weights.y > 0.001)
 		{
-			vec4 warp = Noise(1.0 / 16.0);
+			vec4 warp = bMidDetail ? Noise(1.0 / 16.0) : vec4(0.0);
 			float strataCoord = posWS.y * 0.6 + warp.x * 3.0;
 			float strata = sin(strataCoord) * 0.5 + 0.5;
 			float strata2 = sin(strataCoord * 3.7 + 1.3) * 0.5 + 0.5;
-			vec4 grain = NoiseOffset(4.0, vec3(2.2, 8.1, 3.3));
-			vec4 chips = NoiseOffset(1.0, vec3(9.9, 1.1, 4.2));
+			vec4 grain = bFineDetail ? NoiseOffset(4.0, vec3(2.2, 8.1, 3.3)) : vec4(0.0);
+			vec4 chips = bMidDetail ? NoiseOffset(1.0, vec3(9.9, 1.1, 4.2)) : vec4(0.0);
 			rock = tint * (0.78 + 0.22 * variation + (0.16 * strata + 0.08 * strata2) * midDetail + 0.1 * grain.x * fineDetail);
 			// Strata form subtle ledges in the normal
 			vec3 strataBump = vec3(0.0, cos(strataCoord) * 0.6, 0.0);
@@ -199,8 +203,8 @@ void main()
 		vec3 granular = vec3(0.0);
 		if (weights.z > 0.001)
 		{
-			vec4 speckleNoise = NoiseOffset(16.0, vec3(4.1, 6.3, 2.9));
-			vec4 pebbles = NoiseOffset(2.0, vec3(8.8, 3.1, 5.6));
+			vec4 speckleNoise = bFineDetail ? NoiseOffset(16.0, vec3(4.1, 6.3, 2.9)) : vec4(0.0);
+			vec4 pebbles = bMidDetail ? NoiseOffset(2.0, vec3(8.8, 3.1, 5.6)) : vec4(0.0);
 			float speckle = smoothstep(0.55, 0.8, speckleNoise.x) - smoothstep(0.6, 0.85, -speckleNoise.x) * 0.7;
 			granular = tint * (0.85 + 0.2 * variation + (0.14 * pebbles.x) * midDetail + 0.22 * speckle * fineDetail);
 			bump += weights.z * (pebbles.yzw * 0.015 + speckleNoise.yzw * 0.001 * fineDetail) * midDetail;
@@ -210,7 +214,7 @@ void main()
 		vec3 snow = vec3(0.0);
 		if (weights.w > 0.001)
 		{
-			vec4 drift = NoiseOffset(1.0 / 4.0, vec3(6.6, 2.7, 1.8));
+			vec4 drift = bMidDetail ? NoiseOffset(1.0 / 4.0, vec3(6.6, 2.7, 1.8)) : vec4(0.0);
 			snow = tint * (0.92 + 0.08 * drift.x * midDetail);
 			bump += weights.w * drift.yzw * 0.08 * midDetail;
 			specularStrength += weights.w * 0.25;
@@ -222,10 +226,13 @@ void main()
 		float vein = clamp(ex_Colour.a, 0.0, 1.0);
 		if (vein > 0.01)
 		{
-			vec4 veinWarp = Noise(1.0 / 4.0);
-			float veinLine = abs(sin(posWS.x * 0.35 + posWS.y * 0.6 + posWS.z * 0.2 + veinWarp.x * 6.0));
-			float veinMask = 1.0 - smoothstep(0.0, 0.12, veinLine);
-			albedo = mix(albedo, albedo * vec3(0.45, 0.47, 0.5), veinMask * vein * midDetail);
+			if (bMidDetail)
+			{
+				vec4 veinWarp = Noise(1.0 / 4.0);
+				float veinLine = abs(sin(posWS.x * 0.35 + posWS.y * 0.6 + posWS.z * 0.2 + veinWarp.x * 6.0));
+				float veinMask = 1.0 - smoothstep(0.0, 0.12, veinLine);
+				albedo = mix(albedo, albedo * vec3(0.45, 0.47, 0.5), veinMask * vein * midDetail);
+			}
 			specularStrength += vein * 0.3;
 		}
 

@@ -32,12 +32,11 @@ IGNORE_WARNINGS_POP
 #include "Graphics/VertexAttribute.hpp"
 #include "Graphics/VertexBufferData.hpp"
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
+#include "Graphics/Vulkan/VulkanDebugRenderer.hpp"
 #include "Graphics/Vulkan/VulkanDevice.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
-#include "Graphics/Vulkan/VulkanDebugRenderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Particles.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Platform/Platform.hpp"
@@ -47,6 +46,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/LoadedMesh.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Lights.hpp"
 #include "Scene/SceneManager.hpp"
 #include "StringBuilder.hpp"
 #include "UIMesh.hpp"
@@ -325,6 +325,7 @@ namespace flex
 				{
 					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 				}
+				InvalidateShadowCascadeCache();
 			}
 
 			// NOTE: This is different from the GLRenderer's capture views
@@ -1235,7 +1236,8 @@ namespace flex
 			renderObject->bAllowDynamicBufferShrinking = createInfo->bAllowDynamicBufferShrinking;
 			renderObject->bCastsShadow = createInfo->bCastsShadow;
 			renderObject->bHidden = false;
-			renderObject->shadowCullSphere = createInfo->shadowCullSphere;
+			renderObject->cullSphere = createInfo->cullSphere;
+			renderObject->localBoundingSphere = createInfo->localBoundingSphere;
 			renderObject->topology = TopologyModeToVkPrimitiveTopology(createInfo->topologyMode);
 
 			if (createInfo->indices != nullptr)
@@ -1948,6 +1950,7 @@ namespace flex
 				for (auto iter = m_TimestampQueryNames.begin(); iter != m_TimestampQueryNames.end(); ++iter)
 				{
 					m_TimestampHistograms[i][m_TimestampHistogramIndex] = GetDurationBetweenTimeStamps(iter->first);
+					Profiler::AddSample(("GPU " + iter->first).c_str(), m_TimestampHistograms[i][m_TimestampHistogramIndex]);
 					++i;
 				}
 
@@ -1971,6 +1974,12 @@ namespace flex
 			}
 
 			m_SpriteDynamicUBOSlotCounts.clear();
+
+			UpdateCameraCullPlanes();
+			m_FrameDrawCallCount = 0;
+			m_FrameShadowDrawCallCount = 0;
+			m_FrameTriangleCount = 0;
+			m_FrameShadowTriangleCount = 0;
 
 			DrawCallInfo drawCallInfo = {};
 
@@ -1997,6 +2006,12 @@ namespace flex
 
 			// TODO: Don't build command buffers when m_bRebatchRenderObjects is false (but dynamic UI elements still need to be rebuilt!)
 			FillOutForwardCommandBuffer(drawCallInfo);
+
+			// Reported as counts per frame
+			Profiler::AddSample("# Draw calls", (ms)m_FrameDrawCallCount);
+			Profiler::AddSample("# Shadow draw calls", (ms)m_FrameShadowDrawCallCount);
+			Profiler::AddSample("# Triangles (thousands)", (ms)m_FrameTriangleCount / 1000.0f);
+			Profiler::AddSample("# Shadow triangles (thousands)", (ms)m_FrameShadowTriangleCount / 1000.0f);
 
 
 			if (m_Terrain != nullptr)
@@ -4617,6 +4632,8 @@ namespace flex
 
 		void VulkanRenderer::RecreateShadowFrameBuffers()
 		{
+			InvalidateShadowCascadeCache();
+
 			PROFILE_AUTO("RecreateShadowFrameBuffers");
 
 			VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -4684,6 +4701,7 @@ namespace flex
 				{
 					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 				}
+				InvalidateShadowCascadeCache();
 			}
 			else if ((i32)m_ShadowCascades.size() > m_ShadowCascadeCount)
 			{
@@ -5957,6 +5975,11 @@ namespace flex
 			createInfo.imageExtent = extent;
 			createInfo.imageArrayLayers = 1;
 			createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			if (swapChainSupport.capabilities.supportedUsageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+			{
+				// Allows screenshots
+				createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+			}
 
 			VulkanQueueFamilyIndices indices = m_VulkanDevice->m_QueueFamilyIndices;
 			u32 queueFamilyIndices[] = { (u32)indices.graphicsFamily, (u32)indices.presentFamily };
@@ -7532,7 +7555,101 @@ namespace flex
 			PROFILE_AUTO("PhysicsDebugRender");
 
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-			physicsWorld->debugDrawWorld();
+			m_DebugRenderer->DrawPhysicsWorld(physicsWorld, g_CameraManager->CurrentCamera()->position, m_PhysicsDebuggingSettings.drawRadius);
+		}
+
+		void VulkanRenderer::RecordScreenshotCopy(VkCommandBuffer commandBuffer, u32 swapChainImageIndex)
+		{
+			m_bCaptureScreenshot = false;
+
+			const u32 width = m_SwapChainExtent.width;
+			const u32 height = m_SwapChainExtent.height;
+			const VkDeviceSize size = (VkDeviceSize)width * height * 4;
+			VkImage image = m_SwapChainImages[swapChainImageIndex];
+
+			delete m_ScreenshotStagingBuffer;
+			m_ScreenshotStagingBuffer = new VulkanBuffer(m_VulkanDevice);
+			if (m_ScreenshotStagingBuffer->Create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT | VK_MEMORY_PROPERTY_HOST_CACHED_BIT, "Screenshot staging buffer") != VK_SUCCESS &&
+				m_ScreenshotStagingBuffer->Create(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Screenshot staging buffer") != VK_SUCCESS)
+			{
+				PrintError("Failed to create screenshot staging buffer\n");
+				delete m_ScreenshotStagingBuffer;
+				m_ScreenshotStagingBuffer = nullptr;
+				return;
+			}
+			m_ScreenshotExtent = m_SwapChainExtent;
+
+			// The UI render pass leaves the image ready to present
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = image;
+			barrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
+			barrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+			VkBufferImageCopy region = {};
+			region.imageSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 0, 1 };
+			region.imageExtent = { width, height, 1 };
+			vkCmdCopyImageToBuffer(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, m_ScreenshotStagingBuffer->m_Buffer, 1, &region);
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = 0;
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		}
+
+		void VulkanRenderer::SaveScreenshot()
+		{
+			PROFILE_AUTO("SaveScreenshot");
+
+			const u32 width = m_ScreenshotExtent.width;
+			const u32 height = m_ScreenshotExtent.height;
+			const VkDeviceSize size = (VkDeviceSize)width * height * 4;
+
+			std::vector<u8> pixels(size);
+			if (m_ScreenshotStagingBuffer->Map(size) == VK_SUCCESS)
+			{
+				memcpy(pixels.data(), m_ScreenshotStagingBuffer->m_Mapped, size);
+				m_ScreenshotStagingBuffer->Unmap();
+			}
+			else
+			{
+				PrintError("Failed to map screenshot staging buffer\n");
+				pixels.clear();
+			}
+			delete m_ScreenshotStagingBuffer;
+			m_ScreenshotStagingBuffer = nullptr;
+
+			if (pixels.empty())
+			{
+				return;
+			}
+
+			const bool bBGR = m_SwapChainImageFormat == VK_FORMAT_B8G8R8A8_UNORM || m_SwapChainImageFormat == VK_FORMAT_B8G8R8A8_SRGB;
+			for (u32 i = 0; i < width * height; ++i)
+			{
+				if (bBGR)
+				{
+					std::swap(pixels[i * 4 + 0], pixels[i * 4 + 2]);
+				}
+				pixels[i * 4 + 3] = 255;
+			}
+
+			if (SaveImage(m_ScreenshotFilePath, ImageFormat::PNG, (i32)width, (i32)height, 4, pixels.data()))
+			{
+				Print("Saved screenshot to %s\n", m_ScreenshotFilePath.c_str());
+				AddNotificationMessage("Saved screenshot");
+			}
+			else
+			{
+				PrintError("Failed to save screenshot to %s\n", m_ScreenshotFilePath.c_str());
+			}
 		}
 
 		void VulkanRenderer::CreateStaticVertexBuffers()
@@ -7855,7 +7972,8 @@ namespace flex
 			PROFILE_AUTO("CreateDynamicVertexBuffer");
 
 			vertexBuffer->Create(size,
-				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				// Transfer usage lets resizes copy contents on the GPU (see VulkanBuffer::Resize)
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				DEBUG_name);
 		}
 
@@ -7864,7 +7982,7 @@ namespace flex
 			PROFILE_AUTO("CreateDynamicIndexBuffer");
 
 			indexBuffer->Create(size,
-				VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 				DEBUG_name);
 		}
 
@@ -8436,6 +8554,11 @@ namespace flex
 					m_DescriptorPoolPersistent->GetOrCreateSet(matID) :
 					m_DescriptorPool->GetOrCreateSet(matID);
 
+				// Avoid rebinding state shared by consecutive objects
+				VkPipeline boundPipeline = VK_NULL_HANDLE;
+				VkPipelineLayout pushedConstantsLayout = VK_NULL_HANDLE;
+				const void* pushedConstantsData = nullptr;
+
 				for (RenderID renderID : matBatch.batch.objects)
 				{
 					VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -8444,6 +8567,29 @@ namespace flex
 					if (!renderObject->gameObject->IsVisible() || renderObject->bHidden)
 					{
 						continue;
+					}
+
+					const glm::vec4 cullSphere = drawCallInfo != nullptr ? GetCullSphere(renderObject) : glm::vec4(0.0f);
+					if (drawCallInfo != nullptr && drawCallInfo->cullPlanes != nullptr && cullSphere.w > 0.0f)
+					{
+						const glm::vec3 center(cullSphere);
+						const real radius = cullSphere.w;
+						bool bOutside = false;
+						const glm::vec3 extrudedCenter = center + drawCallInfo->cullExtrusion;
+						for (u32 p = 0; p < 4; ++p)
+						{
+							const glm::vec4& plane = drawCallInfo->cullPlanes[p];
+							if (glm::dot(glm::vec3(plane), center) + plane.w < -radius &&
+								glm::dot(glm::vec3(plane), extrudedCenter) + plane.w < -radius)
+							{
+								bOutside = true;
+								break;
+							}
+						}
+						if (bOutside)
+						{
+							continue;
+						}
 					}
 
 					GraphicsPipeline* pipeline = GetGraphicsPipeline(renderObject->graphicsPipelineID)->pipeline;
@@ -8470,15 +8616,15 @@ namespace flex
 								continue;
 							}
 
-							if (renderObject->shadowCullSphere.w > 0.0f && drawCallInfo->shadowCascadeViewProj != nullptr)
+							if (cullSphere.w > 0.0f && drawCallInfo->shadowCascadeViewProj != nullptr)
 							{
 								// Cascades are orthographic, so the sphere can be tested in clip space (ignoring depth since
 								// casters between the light & the cascade must still be drawn)
 								const glm::mat4& viewProj = *drawCallInfo->shadowCascadeViewProj;
-								const glm::vec4 clipPos = viewProj * glm::vec4(glm::vec3(renderObject->shadowCullSphere), 1.0f);
+								const glm::vec4 clipPos = viewProj * glm::vec4(glm::vec3(cullSphere), 1.0f);
 								const real scaleX = glm::length(glm::vec3(viewProj[0][0], viewProj[1][0], viewProj[2][0]));
 								const real scaleY = glm::length(glm::vec3(viewProj[0][1], viewProj[1][1], viewProj[2][1]));
-								const real radius = renderObject->shadowCullSphere.w;
+								const real radius = cullSphere.w;
 								if (glm::abs(clipPos.x) > 1.0f + radius * scaleX || glm::abs(clipPos.y) > 1.0f + radius * scaleY)
 								{
 									continue;
@@ -8544,7 +8690,13 @@ namespace flex
 						}
 					}
 
-					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+					if (graphicsPipeline != boundPipeline)
+					{
+						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+						boundPipeline = graphicsPipeline;
+						// Push constants may not be compatible between layouts
+						pushedConstantsLayout = VK_NULL_HANDLE;
+					}
 
 					BindDescriptorSet(material, dynamicUBOOffset, commandBuffer, pipelineLayout, descriptorSet);
 
@@ -8562,10 +8714,13 @@ namespace flex
 							material->pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
 						}
 
-						if (pushConstantBlock->data != nullptr)
+						// The camera's matrices (or an override) are the same for every object in the batch, so only push them once
+						if (pushConstantBlock->data != nullptr && (pipelineLayout != pushedConstantsLayout || pushConstantBlock->data != pushedConstantsData))
 						{
 							VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 							vkCmdPushConstants(commandBuffer, pipelineLayout, stages, 0, pushConstantBlock->size, pushConstantBlock->data);
+							pushedConstantsLayout = pipelineLayout;
+							pushedConstantsData = pushConstantBlock->data;
 						}
 					}
 
@@ -8585,7 +8740,54 @@ namespace flex
 					{
 						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->vertexOffset, 0);
 					}
+
+					const u32 triangleCount = (renderObject->bIndexed ? (u32)renderObject->indices->size() : renderObject->vertexBufferData->UsedVertexCount) / 3;
+					if (bRenderingShadows)
+					{
+						++m_FrameShadowDrawCallCount;
+						m_FrameShadowTriangleCount += triangleCount;
+					}
+					else
+					{
+						++m_FrameDrawCallCount;
+						m_FrameTriangleCount += triangleCount;
+					}
 				}
+			}
+		}
+
+		glm::vec4 VulkanRenderer::GetCullSphere(VulkanRenderObject* renderObject) const
+		{
+			if (renderObject->cullSphere.w > 0.0f)
+			{
+				return renderObject->cullSphere;
+			}
+
+			if (renderObject->localBoundingSphere.w > 0.0f)
+			{
+				const glm::mat4& model = renderObject->gameObject->GetTransform()->GetWorldTransform();
+				const glm::vec3 center = glm::vec3(model * glm::vec4(glm::vec3(renderObject->localBoundingSphere), 1.0f));
+				const real scale = glm::max(glm::max(glm::length(glm::vec3(model[0])), glm::length(glm::vec3(model[1]))), glm::length(glm::vec3(model[2])));
+				return glm::vec4(center, renderObject->localBoundingSphere.w * scale);
+			}
+
+			return glm::vec4(0.0f);
+		}
+
+		void VulkanRenderer::UpdateCameraCullPlanes()
+		{
+			// Gribb/Hartmann plane extraction (left, right, bottom, top). These don't depend on the depth convention.
+			const glm::mat4 viewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
+			const glm::vec4 row0(viewProj[0][0], viewProj[1][0], viewProj[2][0], viewProj[3][0]);
+			const glm::vec4 row1(viewProj[0][1], viewProj[1][1], viewProj[2][1], viewProj[3][1]);
+			const glm::vec4 row3(viewProj[0][3], viewProj[1][3], viewProj[2][3], viewProj[3][3]);
+			m_CameraCullPlanes[0] = row3 + row0;
+			m_CameraCullPlanes[1] = row3 - row0;
+			m_CameraCullPlanes[2] = row3 + row1;
+			m_CameraCullPlanes[3] = row3 - row1;
+			for (glm::vec4& plane : m_CameraCullPlanes)
+			{
+				plane /= glm::max(glm::length(glm::vec3(plane)), 1e-6f);
 			}
 		}
 
@@ -8687,6 +8889,7 @@ namespace flex
 				{
 					PROFILE_AUTO("Shadow cascades");
 					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
+					BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Shadows");
 
 					VkClearValue depthStencilClearValue = VkClearValue{ 0.0f, 0 };
 
@@ -8734,8 +8937,18 @@ namespace flex
 					shadowDrawCallInfo.descriptorSetOverride = (u64)(VkDescriptorSet)m_ShadowDescriptorSet;
 					shadowDrawCallInfo.bRenderingShadows = true;
 
+					// Casters can only matter if their shadows can fall within the view
+					shadowDrawCallInfo.cullPlanes = m_CameraCullPlanes;
+					shadowDrawCallInfo.cullExtrusion = -glm::normalize(m_DirectionalLight->data.dir) * GetEffectiveShadowDistance();
+
 					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
 					{
+						if (!m_bRenderShadowCascade[c])
+						{
+							// Still holds what was rendered into it on a previous frame (see CachedShadowCascade)
+							continue;
+						}
+
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, &depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 
 						// TODO: Upload as one draw
@@ -8754,11 +8967,13 @@ namespace flex
 						m_ShadowRenderPass->End();
 					}
 					PROFILE_END("");
+					EndGPUTimeStamp(m_OffScreenCmdBuffer, "Shadows");
 					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Shadow cascades");
 				}
 
 				PROFILE_BEGIN("Deferred render pass");
 				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
+				BeginGPUTimeStamp(m_OffScreenCmdBuffer, "GBuffer");
 
 				//
 				// G-Buffer fill
@@ -8777,15 +8992,18 @@ namespace flex
 				VkRect2D fullScreenScissor = vks::scissor(0u, 0u, m_GBufferColourAttachment0->width, m_GBufferColourAttachment0->height);
 				vkCmdSetScissor(m_OffScreenCmdBuffer, 0, 1, &fullScreenScissor);
 
+				DrawCallInfo gBufferDrawCallInfo = {};
+				gBufferDrawCallInfo.cullPlanes = m_CameraCullPlanes;
 				for (const ShaderBatchPair& shaderBatch : m_DeferredObjectBatches.batches)
 				{
-					DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer);
+					DrawShaderBatch(shaderBatch, m_OffScreenCmdBuffer, &gBufferDrawCallInfo);
 				}
 
 				m_DeferredRenderPass->End();
 
 				m_GBufferDepthAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, m_GraphicsQueue, m_OffScreenCmdBuffer);
 
+				EndGPUTimeStamp(m_OffScreenCmdBuffer, "GBuffer");
 				EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Deferred");
 				PROFILE_END("");
 
@@ -8924,6 +9142,7 @@ namespace flex
 				PROFILE_AUTO("Shade deferred");
 
 				BeginDebugMarkerRegion(commandBuffer, "Shade deferred");
+				BeginGPUTimeStamp(commandBuffer, "Shade deferred");
 
 				VulkanRenderObject* gBufferObject = GetRenderObject(m_GBufferQuadRenderID);
 
@@ -8932,6 +9151,7 @@ namespace flex
 				RenderFullscreenTri(commandBuffer, m_DeferredCombineRenderPass, gBufferObject->materialID,
 					pipeline->layout, pipeline->pipeline, descriptorSet, true);
 
+				EndGPUTimeStamp(commandBuffer, "Shade deferred");
 				EndDebugMarkerRegion(commandBuffer, "End Shade deferred");
 			}
 
@@ -8971,6 +9191,8 @@ namespace flex
 			// Forward pass
 			//
 
+			// Query resets aren't allowed within render passes, so this times the whole pass
+			BeginGPUTimeStamp(commandBuffer, "Forward pass");
 			m_ForwardRenderPass->Begin(commandBuffer, clearValues, (u32)ARRAY_LENGTH(clearValues));
 			{
 				PROFILE_AUTO("Forward render pass");
@@ -8978,9 +9200,11 @@ namespace flex
 				{
 					BeginDebugMarkerRegion(commandBuffer, "Forward");
 
+					DrawCallInfo forwardDrawCallInfo = {};
+					forwardDrawCallInfo.cullPlanes = m_CameraCullPlanes;
 					for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
 					{
-						DrawShaderBatch(shaderBatch, commandBuffer);
+						DrawShaderBatch(shaderBatch, commandBuffer, &forwardDrawCallInfo);
 					}
 
 					EndDebugMarkerRegion(commandBuffer, "End Forward");
@@ -9220,6 +9444,7 @@ namespace flex
 				}
 			}
 			m_ForwardRenderPass->End();
+			EndGPUTimeStamp(commandBuffer, "Forward pass");
 
 			// Only needed on the first frame
 			m_OffscreenFB0ColourAttachment0->layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -9365,6 +9590,12 @@ namespace flex
 			}
 
 			EndGPUTimeStamp(commandBuffer, "Forward");
+
+			if (m_bCaptureScreenshot)
+			{
+				// Swap chain images can only be used between being acquired & presented, so copy it as part of this frame
+				RecordScreenshotCopy(commandBuffer, m_CurrentSwapChainBufferIndex);
+			}
 
 			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
 		}
@@ -9723,6 +9954,12 @@ namespace flex
 			PROFILE_BEGIN("Queue wait idle on present queue");
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 			PROFILE_END("");
+
+			if (m_ScreenshotStagingBuffer != nullptr)
+			{
+				// The frame (including the copy into the staging buffer) has finished
+				SaveScreenshot();
+			}
 
 			if (m_bDiagnosticCheckpointsEnabled)
 			{
@@ -10236,7 +10473,11 @@ namespace flex
 			glm::vec4 camPos = glm::vec4(cam->position, 0.0f);
 			real exposure = cam->exposure;
 			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
-			const SkyboxData& skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
+			// Clouds are positioned relative to the camera so shaders don't need large world space values
+			SkyboxData skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
+			skyboxData.clouds.y -= camPos.y;
+			skyboxData.clouds.z += camPos.x;
+			skyboxData.clouds.w += camPos.z;
 			glm::vec4 time(g_SecElapsedSinceProgramStart, scene->GetTimeOfDay(), 0.0f, 0.0f);
 			glm::vec2i windowSize = g_Window->GetSize();
 			glm::vec4 screenSize(windowSize.x, windowSize.y, 1.0f / windowSize.x, 1.0f / windowSize.y);

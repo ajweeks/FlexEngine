@@ -31,6 +31,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Props.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex

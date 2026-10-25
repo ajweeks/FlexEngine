@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Callbacks/InputCallbacks.hpp"
-#include "Spring.hpp"
 #include "Timer.hpp"
 
 #undef CreateWindow
@@ -265,8 +264,6 @@ namespace flex
 
 		SceneTestRunner* m_SceneTestRunner = nullptr;
 
-		std::vector<Spring<glm::vec3>> m_TestSprings;
-		real m_SpringTimer = 0.0f;
 
 		RollingAverage<real> m_FrameTimes;
 

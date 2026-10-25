@@ -81,7 +81,8 @@ namespace flex
 
 	void BaseCamera::LateUpdate()
 	{
-		velocity = (position - prevPosition) / g_DeltaTime;
+		// Delta time is zero while paused (and on the first frame), which would give an invalid (NaN) velocity
+		velocity = g_DeltaTime > 0.0f ? (position - prevPosition) / g_DeltaTime : VEC3_ZERO;
 
 	}
 
@@ -225,7 +226,7 @@ namespace flex
 		m_View = glm::lookAt(position, position + forward, up);
 
 		real aspectRatio = (real)windowSize.x / (real)windowSize.y;
-		m_Proj = glm::perspective(FOV, aspectRatio, zFar, zNear);
+		m_Proj = glm::perspective(glm::clamp(FOV + fovOffset, glm::radians(5.0f), glm::radians(150.0f)), aspectRatio, zFar, zNear);
 
 		m_ViewProjection = m_Proj * m_View;
 

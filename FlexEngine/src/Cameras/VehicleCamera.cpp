@@ -17,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Vehicle.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
 

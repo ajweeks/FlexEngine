@@ -22,5 +22,8 @@ namespace flex
 		bool bFastWireframe = false;
 		bool bDrawNormals = false;
 		bool bDrawFrames = false;
+
+		// Only objects (& triangles) within this distance of the camera are drawn
+		real drawRadius = 60.0f;
 	};
 } // namespace flex

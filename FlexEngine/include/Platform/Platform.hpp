@@ -125,9 +125,9 @@ namespace flex
 		static u32 AtomicCompareExchange(volatile u32* value, u32 exchange, u32 comparand);
 		static u32 AtomicExchange(volatile u32* value, u32 exchange);
 
-		static void JoinThreads();
-		static void SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData);
 		static void YieldProcessor();
+		// For long running background work (e.g. terrain generation), so it doesn't compete with per-frame work
+		static void SetCurrentThreadBackgroundPriority();
 		static bool SetFlexThreadAffinityMask(void* threadHandle, u64 threadID);
 		static bool SetFlexThreadName(void* threadHandle, const char* threadName);
 

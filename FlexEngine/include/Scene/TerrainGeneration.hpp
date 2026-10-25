@@ -33,7 +33,7 @@ namespace flex
 		static const u32 MAX_BIOME_COUNT = 16;
 
 		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 4;
+		static const u32 GENERATOR_VERSION = 5;
 
 		enum class Material : u8
 		{
@@ -126,8 +126,8 @@ namespace flex
 			real archMaxRadius = 40.0f;
 
 			// Caves: tunnels (which entrances lead to) & occasional large caverns
-			real caveWavelength = 160.0f;
-			real tunnelRadius = 6.0f; // Meters (tunnels are a little flatter than they are wide)
+			real caveWavelength = 300.0f; // Larger = longer, straighter tunnels
+			real tunnelRadius = 12.0f; // Meters (tunnels are a little flatter than they are wide)
 			real caveMaxDepth = 160.0f;
 			real cavernWavelength = 300.0f;
 			real cavernChance = 0.5f; // [0, 1]
@@ -461,6 +461,11 @@ namespace flex
 
 			// Marches along a ray against the density (including edits). Returns true on hit.
 			bool Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const;
+
+			// Density (including edits) at a point (< 0: inside terrain)
+			real SampleDensity(const glm::vec3& pos) const;
+			// Surface attributes (including edits) at a point on the surface
+			SurfaceAttributes SampleSurface(const glm::vec3& pos, const glm::vec3& normal) const;
 
 			// Writes the displayed chunks to the snapshot path (on a background thread)
 			void SaveSnapshot(const glm::vec3& cameraPos);

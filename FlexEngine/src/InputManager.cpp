@@ -57,7 +57,7 @@ namespace flex
 	{
 		PROFILE_AUTO("InputManager Update");
 
-		if (!g_Window->HasFocus())
+		if (!g_Window->HasFocus() && !m_bIgnoreWindowFocus)
 		{
 			ClearAllInputs();
 			return;

@@ -2,6 +2,8 @@
 
 #include "Scene/TerrainGeneration.hpp"
 
+#include "Platform/Platform.hpp"
+
 #include <chrono>
 #include <fstream>
 
@@ -160,6 +162,61 @@ namespace flex
 			const real nx01 = Lerp(n[4], n[5], u);
 			const real nx11 = Lerp(n[6], n[7], u);
 			return Lerp(Lerp(nx00, nx10, v), Lerp(nx01, nx11, v), w);
+		}
+
+		// Gradient noise with analytic derivatives (identical values to GradientNoise3)
+		static real GradientNoise3D(real px, real py, real pz, u32 seed, real& outDx, real& outDy, real& outDz)
+		{
+			const i32 ix = FastFloor(px);
+			const i32 iy = FastFloor(py);
+			const i32 iz = FastFloor(pz);
+			const real x = px - (real)ix;
+			const real y = py - (real)iy;
+			const real z = pz - (real)iz;
+
+			const real* g[8];
+			real n[8];
+			for (i32 c = 0; c < 8; ++c)
+			{
+				const i32 cx = c & 1;
+				const i32 cy = (c >> 1) & 1;
+				const i32 cz = (c >> 2) & 1;
+				g[c] = s_Gradients3D[HashCoords(ix + cx, iy + cy, iz + cz, seed) & 15];
+				n[c] = g[c][0] * (x - (real)cx) + g[c][1] * (y - (real)cy) + g[c][2] * (z - (real)cz);
+			}
+
+			const real u = Quintic(x);
+			const real v = Quintic(y);
+			const real w = Quintic(z);
+			const real du = 30.0f * x * x * (x * (x - 2.0f) + 1.0f);
+			const real dv = 30.0f * y * y * (y * (y - 2.0f) + 1.0f);
+			const real dw = 30.0f * z * z * (z * (z - 2.0f) + 1.0f);
+
+			// Trilinear blend of the corner values (& of their gradients), plus the derivative of the blend weights
+			const real nx00 = Lerp(n[0], n[1], u);
+			const real nx10 = Lerp(n[2], n[3], u);
+			const real nx01 = Lerp(n[4], n[5], u);
+			const real nx11 = Lerp(n[6], n[7], u);
+			const real nxy0 = Lerp(nx00, nx10, v);
+			const real nxy1 = Lerp(nx01, nx11, v);
+
+			real grad[3];
+			for (i32 a = 0; a < 3; ++a)
+			{
+				const real gx00 = Lerp(g[0][a], g[1][a], u);
+				const real gx10 = Lerp(g[2][a], g[3][a], u);
+				const real gx01 = Lerp(g[4][a], g[5][a], u);
+				const real gx11 = Lerp(g[6][a], g[7][a], u);
+				grad[a] = Lerp(Lerp(gx00, gx10, v), Lerp(gx01, gx11, v), w);
+			}
+			grad[0] += du * Lerp(Lerp(n[1] - n[0], n[3] - n[2], v), Lerp(n[5] - n[4], n[7] - n[6], v), w);
+			grad[1] += dv * Lerp(nx10 - nx00, nx11 - nx01, w);
+			grad[2] += dw * (nxy1 - nxy0);
+
+			outDx = grad[0];
+			outDy = grad[1];
+			outDz = grad[2];
+			return Lerp(nxy0, nxy1, w);
 		}
 
 		// Rotations (& doubling of frequency) applied between octaves to hide lattice alignment
@@ -1385,19 +1442,32 @@ namespace flex
 						// just below the surface open up into long trenches)
 						const real topStart = Lerp(m_Params.tunnelRadius * 2.5f, -8.0f, column.caveEntrance);
 						const real top = Smoothstep(topStart, topStart + 12.0f, depth);
-						const real mask = Smoothstep(-0.25f, 0.1f, GradientNoise3(qx * 0.3f, qy * 0.3f, qz * 0.3f, DeriveSeed(m_Seed, SEED_CAVE_MASK)));
+						const real mask = Smoothstep(-0.4f, -0.05f, GradientNoise3(qx * 0.3f, qy * 0.3f, qz * 0.3f, DeriveSeed(m_Seed, SEED_CAVE_MASK)));
 						// Tunnels reach full size quickly (rather than narrowing over long distances, which makes them impassable)
 						const real presence = Smoothstep(0.0f, 0.3f, caveStrength * top * bottom * mask);
 						if (presence > 0.0f)
 						{
-							const real sizeVariation = 0.8f + 0.45f * GradientNoise3(px * 0.016f, py * 0.016f, pz * 0.016f, DeriveSeed(m_Seed, SEED_TUNNEL_SIZE));
-							// Converts noise units to (roughly) meters
-							const real scale = m_Params.caveWavelength * 0.35f;
-							const real radius = m_Params.tunnelRadius * sizeVariation * presence / scale;
-							// Stretch vertically to favour horizontal tunnels
-							const real n0 = GradientNoise3(qx, qy * 1.25f, qz, DeriveSeed(m_Seed, SEED_CAVE_0));
-							const real n1 = GradientNoise3(qx - 13.1f, qy * 1.25f + 47.9f, qz + 23.3f, DeriveSeed(m_Seed, SEED_CAVE_1));
-							const real tube = (std::sqrt(n0 * n0 + n1 * n1) - radius) * scale;
+							// Width varies slowly along tunnels, but never narrows enough to become impassable
+							const real sizeVariation = 0.85f + 0.3f * GradientNoise3(px * 0.006f, py * 0.006f, pz * 0.006f, DeriveSeed(m_Seed, SEED_TUNNEL_SIZE));
+							// Fully closed (rather than a zero width crack) where tunnels fade out
+							const real radius = m_Params.tunnelRadius * sizeVariation * presence - (1.0f - presence) * 3.0f;
+
+							// Tunnels follow the curves where two noise isosurfaces intersect. Stretching the noise vertically
+							// flattens the isosurfaces, so tunnels run mostly horizontally (gentle, walkable slopes).
+							const real verticalStretch = 2.2f;
+							real g0x, g0y, g0z, g1x, g1y, g1z;
+							const real n0 = GradientNoise3D(qx, qy * verticalStretch, qz, DeriveSeed(m_Seed, SEED_CAVE_0), g0x, g0y, g0z);
+							const real n1 = GradientNoise3D(qx - 13.1f, qy * verticalStretch + 47.9f, qz + 23.3f, DeriveSeed(m_Seed, SEED_CAVE_1), g1x, g1y, g1z);
+
+							// Distance (in meters) to each isosurface, estimated by dividing by the gradient length. Vertical
+							// distances are weighted more heavily so tunnels are a little flatter than they are wide. Without this
+							// normalization, tunnel width would vary with the noise gradient (pinching shut in places).
+							const real flatten = 1.35f;
+							const real sy = verticalStretch / flatten;
+							const real minGradient = 0.25f;
+							const real len0 = Max(std::sqrt(g0x * g0x + g0y * g0y * sy * sy + g0z * g0z), minGradient) * inv;
+							const real len1 = Max(std::sqrt(g1x * g1x + g1y * g1y * sy * sy + g1z * g1z), minGradient) * inv;
+							const real tube = Length2(n0 / len0, n1 / len1) - radius;
 							d = SmoothMax(d, -tube, 4.0f);
 						}
 					}
@@ -2981,6 +3051,10 @@ namespace flex
 
 		void TerrainWorkerPool::ThreadMain()
 		{
+			// Streaming happens in the background over many frames, so per-frame work (the main thread & job system)
+			// takes precedence when both need the CPU
+			Platform::SetCurrentThreadBackgroundPriority();
+
 			while (true)
 			{
 				ChunkJob job;
@@ -3829,18 +3903,24 @@ namespace flex
 				return density.Sample(origin + direction * t, editList);
 			};
 
+			// The density is roughly the vertical distance to the surface in meters, so (mostly) vertical rays can take
+			// steps proportional to it (scaled down to account for 3D noise). Horizontal rays can't, since a cliff may be
+			// just ahead while the ground below is far away. Near the surface the minimum step is always used.
 			const real step = glm::max(m_Params.voxelSize * 0.4f, 0.1f);
+			const real distanceStepScale = 0.4f * glm::smoothstep(0.75f, 0.95f, glm::abs(direction.y));
 			real prevT = 0.0f;
-			if (Sample(0.0f) < 0.0f)
+			real value = Sample(0.0f);
+			if (value < 0.0f)
 			{
 				// Starting inside terrain
 				return false;
 			}
 
-			for (real t = step; t <= maxDistance + step * 0.5f; t += step)
+			for (real t = glm::max(step, value * distanceStepScale); prevT < maxDistance; t = prevT + glm::max(step, value * distanceStepScale))
 			{
 				const real tClamped = glm::min(t, maxDistance);
-				if (Sample(tClamped) < 0.0f)
+				value = Sample(tClamped);
+				if (value < 0.0f)
 				{
 					real lo = prevT;
 					real hi = tClamped;
@@ -3871,6 +3951,38 @@ namespace flex
 			}
 
 			return false;
+		}
+
+		real TerrainStreamer::SampleDensity(const glm::vec3& pos) const
+		{
+			if (m_Density == nullptr)
+			{
+				return 1.0f;
+			}
+
+			std::vector<Edit> edits;
+			const real band = m_Density->EditBand();
+			m_Edits.Gather(pos - band, pos + band, edits);
+			EditList editList;
+			editList.edits = edits.data();
+			editList.count = (u32)edits.size();
+			return m_Density->Sample(pos, editList);
+		}
+
+		SurfaceAttributes TerrainStreamer::SampleSurface(const glm::vec3& pos, const glm::vec3& normal) const
+		{
+			if (m_Density == nullptr)
+			{
+				return {};
+			}
+
+			std::vector<Edit> edits;
+			const real band = m_Density->EditBand();
+			m_Edits.Gather(pos - band, pos + band, edits);
+			EditList editList;
+			editList.edits = edits.data();
+			editList.count = (u32)edits.size();
+			return m_Density->ComputeSurface(pos, normal, m_Density->SampleColumn(pos.x, pos.z), editList);
 		}
 
 		void TerrainStreamer::WaitForSnapshotWrite()

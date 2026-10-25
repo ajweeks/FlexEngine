@@ -88,7 +88,9 @@ struct SkyboxData
 	vec4 colourTop;
 	vec4 colourMid;
 	vec4 colourBtm;
-	vec4 colourFog;
+	vec4 colourFog; // w: distance fog distance (<= 1: disabled)
+	vec4 sun; // xyz: direction towards the sun
+	vec4 clouds; // x: coverage [0, 1] (0: none), y: cloud layer altitude relative to the camera, zw: noise offset (camera xz + wind)
 };
 
 // Functions
@@ -301,16 +303,104 @@ void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
 	}
 }
 
-// Matches the gradient drawn by the skybox shader (without its noise)
+// Colour of sunlight, reddening as the sun nears the horizon
+vec3 SunColour(SkyboxData skyboxData)
+{
+	return mix(vec3(1.0, 0.5, 0.25), vec3(1.0, 0.96, 0.88), smoothstep(-0.02, 0.35, skyboxData.sun.y));
+}
+
+// Light scattered around the sun (in the sky's final, display space colour). Haze near the horizon scatters more.
+vec3 SunGlow(vec3 dir, SkyboxData skyboxData)
+{
+	float cosSun = max(dot(dir, skyboxData.sun.xyz), 0.0);
+	float daylight = smoothstep(-0.12, 0.05, skyboxData.sun.y);
+	float horizon = 1.0 - smoothstep(0.0, 0.5, abs(dir.y));
+	float glow = pow(cosSun, 600.0) * 0.6 + pow(cosSun, 24.0) * (0.12 + 0.25 * horizon) + pow(cosSun, 3.0) * 0.06 * horizon;
+	return SunColour(skyboxData) * glow * daylight;
+}
+
+// Matches the sky drawn by the skybox shader (without its noise, sun disk & clouds)
 vec3 SkyColour(vec3 dir, SkyboxData skyboxData)
 {
 	float h = sign(dir.y) * pow(abs(dir.y), 0.3);
 	float w0 = 1.0 - max(h, 0.0);
 	float w1 = max(-h, 0.0);
 	float w2 = h > 0.0 ? 0.0 : 1.0;
-	return clamp(mix(
+	vec3 gradient = mix(
 		mix(skyboxData.colourTop.xyz, skyboxData.colourMid.xyz, w0),
-		mix(skyboxData.colourMid.xyz, skyboxData.colourBtm.xyz, w1), w2), 0.0, 1.0);
+		mix(skyboxData.colourMid.xyz, skyboxData.colourBtm.xyz, w1), w2);
+	return clamp(gradient + SunGlow(dir, skyboxData), 0.0, 1.0);
+}
+
+// Clouds: a layer of procedural noise at a fixed altitude, drifting with the wind. Shared by the skybox (which
+// draws them) & lighting (where they cast shadows), so shadows match the visible clouds.
+
+float CloudHash(vec2 p)
+{
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
+
+float CloudValueNoise(vec2 p)
+{
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+	float a = CloudHash(i);
+	float b = CloudHash(i + vec2(1.0, 0.0));
+	float c = CloudHash(i + vec2(0.0, 1.0));
+	float d = CloudHash(i + vec2(1.0, 1.0));
+	return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+float CloudFbm(vec2 p, int octaves)
+{
+	float sum = 0.0;
+	float amplitude = 0.5;
+	float total = 0.0;
+	const mat2 rotation = mat2(0.8, 0.6, -0.6, 0.8);
+	for (int i = 0; i < octaves; ++i)
+	{
+		sum += amplitude * CloudValueNoise(p);
+		total += amplitude;
+		p = rotation * p * 2.03 + vec2(17.1, 9.3);
+		amplitude *= 0.5;
+	}
+	return sum / total;
+}
+
+// [0, 1] cloud opacity at a point in the cloud layer (noise space: world xz + wind offset)
+float CloudDensity(vec2 p, float coverage, int octaves)
+{
+	vec2 q = p / 2400.0;
+	// Warp the domain so clouds billow rather than looking like plain noise
+	vec2 warp = vec2(CloudValueNoise(q * 0.7 + vec2(3.7, 1.3)), CloudValueNoise(q * 0.7 + vec2(8.2, 5.9))) - 0.5;
+	float n = CloudFbm(q + warp * 0.6, octaves);
+	float threshold = 1.0 - coverage;
+	return smoothstep(threshold - 0.08, threshold + 0.22, n);
+}
+
+// Fraction of sunlight reaching a point through the cloud layer
+float CloudShadow(vec3 posWS, vec3 camPos, SkyboxData skyboxData)
+{
+	float coverage = skyboxData.clouds.x;
+	if (coverage <= 0.0 || skyboxData.sun.y <= 0.02)
+	{
+		return 1.0;
+	}
+
+	float cloudAltitude = skyboxData.clouds.y + camPos.y;
+	if (posWS.y >= cloudAltitude)
+	{
+		return 1.0;
+	}
+
+	// Follow the sun's direction up to the cloud layer
+	float t = (cloudAltitude - posWS.y) / skyboxData.sun.y;
+	vec2 cloudPos = posWS.xz + skyboxData.sun.xz * t + (skyboxData.clouds.zw - camPos.xz);
+	float density = CloudDensity(cloudPos, coverage, 4);
+	return 1.0 - density * 0.75;
 }
 
 // Distance fog, enabled when skyboxData.colourFog.w (the distance at which the scene is fully obscured) is > 1.

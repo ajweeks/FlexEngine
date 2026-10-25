@@ -2,6 +2,7 @@
 
 #include "JSONTypes.hpp"
 #include "Graphics/RendererTypes.hpp"
+#include "Scene/GameObjectTypes.hpp"
 
 namespace flex
 {
@@ -195,7 +196,6 @@ namespace flex
 		bool bEnableRespawning = false;
 	};
 
-	static constexpr StringID ParticleSystemSID = SID("particle system");
 	class ParticleSystem final
 	{
 	public:

@@ -549,6 +549,11 @@ namespace flex
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
+		if (!bDynamic)
+		{
+			// Vertices won't change, so the bounds can be used for culling
+			renderObjectCreateInfo.localBoundingSphere = glm::vec4(newMeshComponent->m_BoundingSphereCenterPoint, newMeshComponent->m_BoundingSphereRadius);
+		}
 
 		if (bCreateRenderObject)
 		{
@@ -629,6 +634,11 @@ namespace flex
 		renderObjectCreateInfo.indices = &newMeshComponent->m_Indices;
 		renderObjectCreateInfo.materialID = materialID;
 		renderObjectCreateInfo.topologyMode = TopologyMode::TRIANGLE_LIST;
+		if (!bDynamic)
+		{
+			// Vertices won't change, so the bounds can be used for culling
+			renderObjectCreateInfo.localBoundingSphere = glm::vec4(newMeshComponent->m_BoundingSphereCenterPoint, newMeshComponent->m_BoundingSphereRadius);
+		}
 
 		if (bCreateRenderObject)
 		{
@@ -1202,6 +1212,12 @@ namespace flex
 
 		CalculateBoundingSphereRadius(vertexBufferDataCreateInfo.positions_3D);
 
+		// Skyboxes are drawn around the camera wherever they are, & grids are editor helpers
+		if (shape == PrefabShape::CUBE || shape == PrefabShape::PLANE || shape == PrefabShape::UV_SPHERE)
+		{
+			renderObjectCreateInfo.localBoundingSphere = glm::vec4(m_BoundingSphereCenterPoint, m_BoundingSphereRadius);
+		}
+
 		m_VertexBufferData.Initialize(vertexBufferDataCreateInfo);
 
 		renderObjectCreateInfo.vertexBufferData = &m_VertexBufferData;
@@ -1614,7 +1630,7 @@ namespace flex
 		createInfo.bIndexed = overrides.bIndexed;
 		createInfo.bAllowDynamicBufferShrinking = overrides.bAllowDynamicBufferShrinking;
 		createInfo.bCastsShadow = overrides.bCastsShadow;
-		createInfo.shadowCullSphere = overrides.shadowCullSphere;
+		createInfo.cullSphere = overrides.cullSphere;
 
 		if (overrides.vertexBufferData != nullptr)
 		{

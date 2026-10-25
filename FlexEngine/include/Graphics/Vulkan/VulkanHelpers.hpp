@@ -547,7 +547,8 @@ namespace flex
 			bool bSetDynamicStates = false;
 			bool bAllowDynamicBufferShrinking = true;
 			bool bCastsShadow = true;
-			glm::vec4 shadowCullSphere = glm::vec4(0.0f);
+			glm::vec4 cullSphere = glm::vec4(0.0f);
+			glm::vec4 localBoundingSphere = glm::vec4(0.0f);
 			bool bHidden = false;
 
 			u32 dynamicUBOOffset = 0;

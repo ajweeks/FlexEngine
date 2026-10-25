@@ -21,16 +21,19 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsManager.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
-#include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Lights.hpp"
+#include "Scene/Objects/Props.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
-#include "Systems/TrackManager.hpp"
 #include "StringBuilder.hpp"
+#include "Systems/TrackManager.hpp"
 #include "Track/BezierCurve3D.hpp"
 
 namespace flex
@@ -203,15 +206,6 @@ namespace flex
 			m_PhysicsWorld->StepSimulation(g_DeltaTime);
 		}
 
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_Z))
-		{
-			AudioManager::PlaySource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
-		}
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_X))
-		{
-			AudioManager::PauseSource(FlexEngine::GetAudioSourceID(FlexEngine::SoundEffect::dud_dud_dud_dud));
-		}
-
 		{
 			PROFILE_AUTO("Update scene objects");
 
@@ -243,6 +237,13 @@ namespace flex
 		if (m_PhysicsWorld)
 		{
 			m_PhysicsWorld->ApplyInterpolatedTransforms();
+		}
+
+		UpdateSky();
+
+		if (m_Player0 != nullptr)
+		{
+			m_Player0->OnRenderPoseUpdated();
 		}
 
 		if (!m_bPauseTimeOfDay)
@@ -435,6 +436,9 @@ namespace flex
 		sceneRootObject.TryGetFloat("fog distance", fogDistance);
 		SetFogDistance(fogDistance);
 
+		sceneRootObject.TryGetFloat("cloud coverage", m_CloudCoverage);
+		sceneRootObject.TryGetFloat("cloud altitude", m_CloudAltitude);
+
 		if (!sceneRootObject.TryGetGUID("player 0 guid", m_PlayerGUIDs[0]))
 		{
 			m_PlayerGUIDs[0] = InvalidGameObjectID;
@@ -600,6 +604,11 @@ namespace flex
 		{
 			ImGui::SetTooltip("Distance at which fog fully obscures the scene (0: depth based fog)");
 		}
+
+		ImGui::SliderFloat("Cloud coverage", &m_CloudCoverage, 0.0f, 1.0f);
+		ImGui::DragFloat("Cloud altitude", &m_CloudAltitude, 10.0f, 100.0f, 20000.0f);
+		ImGui::DragFloat("Cloud wind speed", &m_CloudWindSpeed, 0.1f, 0.0f, 200.0f);
+		ImGui::SliderAngle("Cloud wind direction", &m_CloudWindAngle);
 
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 		ImGui::PushID("main");
@@ -1142,6 +1151,19 @@ namespace flex
 	real BaseScene::GetFogDistance() const
 	{
 		return m_FogDistance;
+	}
+
+	void BaseScene::UpdateSky()
+	{
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		const glm::vec3 sunDir = dirLight != nullptr ? glm::normalize(dirLight->data.dir) : glm::normalize(glm::vec3(0.3f, 0.8f, 0.4f));
+		m_SkyboxData.sun = glm::vec4(sunDir, 0.0f);
+
+		if (!g_EngineInstance->IsSimulationPaused())
+		{
+			m_CloudWindOffset += glm::vec2(std::cos(m_CloudWindAngle), std::sin(m_CloudWindAngle)) * m_CloudWindSpeed * g_DeltaTime * g_EngineInstance->GetSimulationSpeed();
+		}
+		m_SkyboxData.clouds = glm::vec4(glm::clamp(m_CloudCoverage, 0.0f, 1.0f), m_CloudAltitude, m_CloudWindOffset.x, m_CloudWindOffset.y);
 	}
 
 	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
@@ -2164,6 +2186,11 @@ namespace flex
 		{
 			rootSceneObject.fields.emplace_back("fog distance", JSONValue(m_FogDistance, 1));
 		}
+		if (m_CloudCoverage > 0.0f)
+		{
+			rootSceneObject.fields.emplace_back("cloud coverage", JSONValue(m_CloudCoverage, 2));
+			rootSceneObject.fields.emplace_back("cloud altitude", JSONValue(m_CloudAltitude, 1));
+		}
 		if (m_Player0 != nullptr)
 		{
 			rootSceneObject.fields.emplace_back("player 0 guid", JSONValue(m_Player0->ID));
@@ -2766,25 +2793,9 @@ namespace flex
 			return m_Player0;
 		}
 
-		glm::vec3 spawnPos = position;
-		TerrainGenerator* terrain = TerrainGenerator::GetActive();
-		if (terrain != nullptr)
-		{
-			// Drop onto the ground below, or rise out of the ground if underneath it
-			glm::vec3 hitPos, hitNormal;
-			if (terrain->Raycast(position + glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, -1.0f, 0.0f), 5000.0f, hitPos, hitNormal))
-			{
-				spawnPos = hitPos + glm::vec3(0.0f, 2.0f, 0.0f);
-			}
-			else
-			{
-				const real groundHeight = terrain->SampleHeight(glm::vec2(position.x, position.z));
-				spawnPos.y = glm::max(spawnPos.y, groundHeight + 2.0f);
-			}
-		}
-
+		// In terrain scenes the player places themselves on the ground below (or on the surface if this is underground)
 		m_Player0 = new Player(0, m_PlayerGUIDs[0]);
-		m_Player0->GetTransform()->SetWorldPosition(spawnPos);
+		m_Player0->GetTransform()->SetWorldPosition(position);
 		glm::vec2 forward2D(forward.x, forward.z);
 		if (glm::length(forward2D) > 1e-4f)
 		{

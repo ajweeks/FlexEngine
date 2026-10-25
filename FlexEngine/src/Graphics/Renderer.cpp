@@ -34,6 +34,8 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Lights.hpp"
+#include "Scene/Objects/Props.hpp"
 #include "Scene/SceneManager.hpp"
 #include "StringBuilder.hpp"
 #include "UIMesh.hpp"
@@ -73,6 +75,18 @@ namespace flex
 
 	Renderer::~Renderer()
 	{
+	}
+
+	void Renderer::RequestScreenshot(const std::string& absoluteFilePath /* = "" */)
+	{
+		m_bCaptureScreenshot = true;
+		m_ScreenshotFilePath = absoluteFilePath;
+		if (m_ScreenshotFilePath.empty())
+		{
+			const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+			Platform::CreateDirectoryRecursive(directory);
+			m_ScreenshotFilePath = directory + "flex_" + Platform::GetDateString_YMDHMS() + ".png";
+		}
 	}
 
 	void Renderer::Initialize()
@@ -1067,6 +1081,14 @@ namespace flex
 		}
 	}
 
+	void Renderer::InvalidateShadowCascadeCache()
+	{
+		for (CachedShadowCascade& cache : m_CachedShadowCascades)
+		{
+			cache.bValid = false;
+		}
+	}
+
 	void Renderer::UpdateShadowCascades(BaseCamera* cam)
 	{
 		const real zNear = cam->zNear;
@@ -1093,6 +1115,8 @@ namespace flex
 		const glm::vec3 up = glm::abs(glm::dot(lightDir, VEC3_UP)) > 0.99f ? VEC3_FORWARD : VEC3_UP;
 		const glm::mat4 lightRotation = glm::lookAt(VEC3_ZERO, -lightDir, up);
 		const glm::mat4 invLightRotation = glm::inverse(lightRotation);
+
+		++m_ShadowCascadeFrameIndex;
 
 		real lastSplitDist = 0.0f;
 		for (i32 c = 0; c < cascadeCount; ++c)
@@ -1145,6 +1169,36 @@ namespace flex
 				radius = glm::max(radius, distance);
 			}
 			radius = std::ceil(radius * 16.0f) / 16.0f;
+
+			// Distant cascades are only re-rendered every few frames (see CachedShadowCascade)
+			CachedShadowCascade& cache = m_CachedShadowCascades[c];
+			const bool bCacheable = m_bCacheDistantShadowCascades && c >= 2;
+			if (bCacheable && cache.bValid)
+			{
+				const u64 interval = c == 2 ? 2 : 4;
+				const bool bDue = m_ShadowCascadeFrameIndex - cache.frameRendered >= interval;
+				const bool bContained = glm::distance(frustumCenter, cache.center) + radius <= cache.radius;
+				const bool bLightUnchanged = glm::dot(lightDir, cache.lightDir) > 0.99999f && cache.shadowDistance == shadowDistance;
+				if (!bDue && bContained && bLightUnchanged)
+				{
+					m_bRenderShadowCascade[c] = false;
+					m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
+					lastSplitDist = splitDist;
+					continue;
+				}
+			}
+			m_bRenderShadowCascade[c] = true;
+			if (bCacheable)
+			{
+				const glm::vec3 unsnappedCenter = frustumCenter;
+				radius = std::ceil(radius * 1.15f * 16.0f) / 16.0f;
+				cache.center = unsnappedCenter;
+				cache.radius = radius;
+				cache.lightDir = lightDir;
+				cache.shadowDistance = shadowDistance;
+				cache.frameRendered = m_ShadowCascadeFrameIndex;
+				cache.bValid = true;
+			}
 
 			const real texelSize = (2.0f * radius) / (real)m_ShadowMapBaseResolution;
 
@@ -1771,6 +1825,7 @@ namespace flex
 
 	void Renderer::OnPostSceneChange()
 	{
+		InvalidateShadowCascadeCache();
 		m_UIMesh->OnPostSceneChange();
 
 		if (m_DebugRenderer != nullptr)
@@ -2897,6 +2952,7 @@ namespace flex
 		{
 			player->DrawTrackBuildingHUD();
 			player->DrawTerrainToolHUD();
+			player->DrawTraversalHUD();
 		}
 
 		if (previewedFont != InvalidStringID)
@@ -3395,6 +3451,11 @@ namespace flex
 				ImGui::SetTooltip("Detail of streamed terrain (how far away detailed chunks are used)");
 			}
 			ImGui::SliderFloat("Shadow cascade split lambda", &m_ShadowCascadeSplitLambda, 0.0f, 1.0f);
+			ImGui::Checkbox("Cache distant shadow cascades", &m_bCacheDistantShadowCascades);
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Re-render the two most distant cascades every 2nd & 4th frame (or when needed)");
+			}
 			SaveOnRelease();
 			ImGui::SliderFloat("Shadow bias", &m_ShadowBias, 0.0f, 0.25f);
 			SaveOnRelease();
@@ -3483,6 +3544,14 @@ namespace flex
 				ImGui::Checkbox("Wireframe (P)", &physicsDebuggingSettings.bDrawWireframe);
 
 				ImGui::Checkbox("AABB", &physicsDebuggingSettings.bDrawAabb);
+
+				ImGui::Checkbox("Contact points", &physicsDebuggingSettings.bDrawContactPoints);
+
+				ImGui::Checkbox("Constraints", &physicsDebuggingSettings.bDrawConstraints);
+
+				ImGui::PushItemWidth(150.0f);
+				ImGui::SliderFloat("Draw radius", &physicsDebuggingSettings.drawRadius, 5.0f, 1000.0f, "%.0fm", 2.0f);
+				ImGui::PopItemWidth();
 
 				if (physicsDebuggingSettings.bDisableAll)
 				{

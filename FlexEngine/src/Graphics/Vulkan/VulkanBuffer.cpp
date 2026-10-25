@@ -4,6 +4,7 @@
 #include "Graphics/Vulkan/VulkanBuffer.hpp"
 
 #include "Graphics/Vulkan/VulkanDevice.hpp"
+#include "Graphics/Vulkan/VulkanHelpers.hpp"
 #include "Graphics/Vulkan/VulkanInitializers.hpp"
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Time.hpp"
@@ -222,7 +223,43 @@ namespace flex
 			PROFILE_AUTO("VulkanBuffer Resize");
 			const ns start = Time::CurrentNanoseconds();
 			const VkDeviceSize oldSize = m_Size;
-			// Other allocations' data must survive the resize since their owners may not upload it again (e.g. static track meshes)
+
+			// Other allocations' data must survive the resize since their owners may not upload it again (e.g. static
+			// track meshes). Copy on the GPU when possible, since reading back host visible (write combined) memory is
+			// extremely slow (over a second for large terrain buffers).
+			const VkBufferUsageFlags transferFlags = VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			if (m_Buffer != VK_NULL_HANDLE && m_Size > 0 && (m_UsageFlags & transferFlags) == transferFlags)
+			{
+				// Ensure no in-flight frames still reference the old buffer before it's destroyed
+				vkDeviceWaitIdle(m_Device->m_LogicalDevice);
+
+				Unmap();
+				VkBuffer oldBuffer = m_Buffer.release();
+				VkDeviceMemory oldMemory = m_Memory.release();
+
+				VkResult result = Create(newSize, m_UsageFlags, m_MemoryPropertyFlags, m_DEBUG_Name.empty() ? nullptr : m_DEBUG_Name.c_str());
+				if (result == VK_SUCCESS)
+				{
+					VkQueue queue = ((VulkanRenderer*)g_Renderer)->GetGraphicsQueue();
+					VkCommandBuffer commandBuffer = BeginSingleTimeCommands(m_Device);
+					VkBufferCopy region = {};
+					region.size = glm::min(oldSize, m_Size);
+					vkCmdCopyBuffer(commandBuffer, oldBuffer, m_Buffer, 1, &region);
+					EndSingleTimeCommands(m_Device, queue, commandBuffer);
+				}
+
+				vkDestroyBuffer(m_Device->m_LogicalDevice, oldBuffer, nullptr);
+				deviceFreeMemory(m_Device->m_LogicalDevice, oldMemory, nullptr);
+
+				// Allocating & waiting for the GPU take some time for large buffers, but much less than reading them back
+				const ms resizeTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+				if (resizeTime > 100.0f)
+				{
+					PrintWarn("Slow buffer resize: \"%s\" from %.1fMB to %.1fMB took %.1fms\n", m_DEBUG_Name.c_str(), oldSize / (1024.0 * 1024.0), newSize / (1024.0 * 1024.0), resizeTime);
+				}
+				return result;
+			}
+
 			std::vector<u8> contents;
 			const bool bHostVisible = (m_MemoryPropertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0;
 			if (bHostVisible && m_Buffer != VK_NULL_HANDLE && m_Size > 0)

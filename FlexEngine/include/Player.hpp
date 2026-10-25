@@ -11,6 +11,7 @@
 namespace flex
 {
 	class PlayerController;
+	class Traversal;
 
 	enum class InventoryType
 	{
@@ -29,7 +30,6 @@ namespace flex
 
 	// The player is instructed by its player controller how to move by means of its
 	// transform component being updated, and it applies those changes to its rigid body itself
-	static constexpr StringID PlayerSID = SID("player");
 	class Player : public GameObject
 	{
 	public:
@@ -139,7 +139,21 @@ namespace flex
 
 		// Digging & filling terrain with a pickaxe
 		void UpdateTerrainTool();
+		// Keeps the player on top of streamed terrain: places them on the ground when spawning (holding them in place
+		// until collision has loaded below), & moves them back to the surface if they end up inside the terrain
+		void UpdateTerrainSafety();
+		void PlaceOnTerrain(bool bKeepHeight);
 		void DrawTerrainToolHUD() const;
+		void DrawTraversalHUD() const;
+
+		Traversal* GetTraversal() { return m_Traversal; }
+		bool IsGrounded() const { return m_bGrounded; }
+		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded
+		void TeleportOnTerrain(const glm::vec3& pos);
+		// Whether the player is being held in place until terrain collision loads below them
+		bool IsAwaitingTerrainCollision() const { return m_bAwaitingTerrainCollision || m_bTerrainPlacementPending; }
+		// Called once the player's render pose (interpolated between physics steps) has been applied
+		void OnRenderPoseUpdated();
 
 		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
 
@@ -172,6 +186,7 @@ namespace flex
 
 	private:
 		friend class PlayerController;
+		friend class Traversal;
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
 
@@ -229,6 +244,7 @@ namespace flex
 		const real m_TurnToFaceDownTrackInvSpeed = 1.0f / 0.1f;
 
 		PlayerController* m_Controller = nullptr;
+		Traversal* m_Traversal = nullptr;
 		i32 m_Index = 0;
 
 		// TODO: Store IDs rather than raw pointer
@@ -279,6 +295,12 @@ namespace flex
 		i32 m_TerrainFillMaterialIndex = 0;
 		real m_TerrainToolReach = 7.0f;
 		real m_TerrainDigRadius = 2.0f;
+
+		bool m_bTerrainPlacementPending = true;
+		bool m_bAwaitingTerrainCollision = false;
+		glm::vec3 m_TerrainHoldPos = VEC3_ZERO;
+		sec m_AwaitingTerrainCollisionTime = 0.0f;
+		sec m_InsideTerrainTime = 0.0f;
 		GameObject* m_ItemPickingUp = nullptr;
 		const real m_ItemPickingDuration = 0.5f;
 		real m_ItemPickingTimer = -1.0f;

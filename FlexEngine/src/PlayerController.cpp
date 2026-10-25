@@ -32,8 +32,14 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
+#include "Scene/Objects/Industry.hpp"
+#include "Scene/Objects/Props.hpp"
+#include "Scene/Objects/Terminal.hpp"
+#include "Scene/Objects/Vehicle.hpp"
+#include "Scene/Objects/Wires.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
+#include "Traversal.hpp"
 #include "UIMesh.hpp"
 #include "Window/Window.hpp"
 
@@ -419,25 +425,35 @@ namespace flex
 		TrackID pTrackRidingID = m_Player->m_TrackRidingID;
 		bool bWasFacingDownTrack = m_Player->IsFacingDownTrack();
 
-		const btVector3 vel = rb->getLinearVelocity();
+		m_Player->UpdateIsGrounded();
+
+		// Flying, climbing, skiing etc. take over movement entirely
+		if (m_Player->m_TrackRidingID == InvalidTrackID && m_Player->m_Traversal->FixedUpdate())
+		{
+			return;
+		}
+
+		btVector3 vel = rb->getLinearVelocity();
 		btVector3 xzVel(vel.getX(), 0, vel.getZ());
 		real xzVelMagnitude = xzVel.length();
 		if (xzVelMagnitude > m_MaxMoveSpeed)
 		{
-			// Limit maximum velocity
+			// Limit maximum velocity. Bleed off excess speed quickly (rather than instantly) so landing with
+			// momentum (e.g. after flying or swinging) doesn't stop the player dead.
 			if (m_MaxMoveSpeed > 1.0e-5f)
 			{
-				btVector3 xzVelNorm = xzVel.normalized();
-				btVector3 newVel(xzVelNorm.getX() * m_MaxMoveSpeed, vel.getY(), xzVelNorm.getZ() * m_MaxMoveSpeed);
-				rb->setLinearVelocity(newVel);
+				const real excessDeceleration = 30.0f;
+				const real newMagnitude = glm::max(xzVelMagnitude - excessDeceleration * g_FixedDeltaTime, m_MaxMoveSpeed);
+				btVector3 xzVelNorm = xzVel / xzVelMagnitude;
+				vel = btVector3(xzVelNorm.getX() * newMagnitude, vel.getY(), xzVelNorm.getZ() * newMagnitude);
 			}
 			else
 			{
-				rb->setLinearVelocity(btVector3(0, 0, 0));
+				vel = btVector3(0, 0, 0);
 			}
+			rb->setLinearVelocity(vel);
+			xzVel = btVector3(vel.getX(), 0, vel.getZ());
 		}
-
-		m_Player->UpdateIsGrounded();
 
 		if (m_Player->m_bPreviewPlaceItemFromInventory)
 		{
@@ -754,6 +770,13 @@ namespace flex
 			return EventReply::UNCONSUMED;
 		}
 
+		// Without a placeable item selected, the place button jumps/deploys the glider instead (Traversal polls
+		// it directly, since action events aren't sent while modifiers like shift are held)
+		if (action == Action::PLACE_ITEM && !m_Player->m_bPreviewPlaceItemFromInventory && !IsPlaceableItemSelected())
+		{
+			return EventReply::CONSUMED;
+		}
+
 		if (action == Action::PLACE_ITEM && !m_bSpawnWire)
 		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER)
@@ -920,6 +943,19 @@ namespace flex
 		}
 
 		return EventReply::UNCONSUMED;
+	}
+
+	bool PlayerController::IsPlaceableItemSelected() const
+	{
+		const GameObjectStack& gameObjectStack = m_Player->m_QuickAccessInventory[m_Player->m_SelectedQuickAccessItemSlot];
+		if (gameObjectStack.count < 1 || !gameObjectStack.prefabID.IsValid())
+		{
+			return false;
+		}
+
+		// Tools are used rather than placed
+		GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
+		return templateObject != nullptr && templateObject->IsItemizable() && templateObject->GetTypeID() != PickAxeSID;
 	}
 
 	void PlayerController::PreviewPlaceItemFromInventory()

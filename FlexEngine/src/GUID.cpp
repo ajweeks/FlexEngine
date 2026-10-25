@@ -131,7 +131,6 @@ namespace flex
 
 		const char* buffer = str.data();
 
-#if DEBUG
 		for (u32 i = 0; i < 32; ++i)
 		{
 			if (!((buffer[i] >= '0' && buffer[i] <= '9') ||
@@ -140,7 +139,6 @@ namespace flex
 				return InvalidGUID;
 			}
 		}
-#endif
 
 		GUID result = {};
 

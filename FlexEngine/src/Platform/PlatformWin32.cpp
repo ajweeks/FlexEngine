@@ -47,7 +47,6 @@ namespace flex
 
 	CPUInfo Platform::cpuInfo;
 
-	std::vector<HANDLE> ThreadHandles;
 
 	void Platform::Init()
 	{
@@ -452,23 +451,9 @@ namespace flex
 		return InterlockedExchange(value, exchange);
 	}
 
-	void Platform::JoinThreads()
+	void Platform::SetCurrentThreadBackgroundPriority()
 	{
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			WaitForSingleObject(ThreadHandles[i], INFINITE);
-		}
-		ThreadHandles.clear();
-	}
-
-	void Platform::SpawnThreads(u32 threadCount, void* (entryPoint)(void*), void* userData)
-	{
-		ThreadHandles.resize(threadCount);
-
-		for (u32 i = 0; i < (u32)ThreadHandles.size(); ++i)
-		{
-			ThreadHandles[i] = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)entryPoint, userData, 0, 0);
-		}
+		SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_BELOW_NORMAL);
 	}
 
 	bool Platform::SetFlexThreadAffinityMask(void* threadHandle, u64 threadID)

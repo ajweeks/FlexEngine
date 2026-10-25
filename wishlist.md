@@ -3,12 +3,12 @@
 Feature ideas, mostly for exploring the streamed terrain. They're not commitments, just a list to pick from.
 
 ## Traversal (the huge mountains need these)
-- **Grappling hook**: fire a rope at terrain or objects. Reel in, swing, or anchor and climb. Terrain raycasts already exist (`TerrainGenerator::Raycast`), and the rope could reuse the spring/soft-body code.
-- **Paraglider**: deploy in mid-air for slow, steerable descent, with lift from updrafts on sunny slopes and ridge lift on windward faces. It pairs naturally with climbing to massif summits.
-- **Climbing**: hold-to-climb on steep rock, using stamina. Steepness comes from the density gradient.
-- **Wingsuit**: a faster, riskier glide variant.
-- **Ziplines**: player-built cables between two anchor points, which would reuse track/wire placement.
-- **Skiing / sledding** on snow material (surface weights already mark snow).
+Implemented (see `Traversal.hpp`): jumping, a **paraglider** with thermals & ridge lift, a **wingsuit**, a **grappling hook**, stamina based **climbing** and **skiing/sliding** (fastest on snow & sand).
+
+Ideas building on those:
+- **Ziplines**: player-built cables between two anchor points, which would reuse track/wire placement. A grappling hook rope could be fixed in place to make one.
+- **Visible thermals**: dust/leaves or circling birds in rising air (lift is computed in `Traversal::ComputeLift`), so they can be found without the variometer.
+- **Ski tracks & snow spray** particles.
 - **Boats** for lakes and oceans (water surfaces are flat at a known level, so buoyancy is simple).
 - **Vehicle upgrades** for off-road driving: suspension travel, tire grip per material (sand, snow, rock).
 

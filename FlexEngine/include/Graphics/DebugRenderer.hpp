@@ -6,6 +6,8 @@ IGNORE_WARNINGS_POP
 
 #include "Helpers.hpp"
 
+class btDiscreteDynamicsWorld;
+
 namespace flex
 {
 	class DebugRenderer : public btIDebugDraw
@@ -29,6 +31,11 @@ namespace flex
 
 		void UpdateDebugMode();
 		void ClearLines();
+
+		// Draws the world's debug geometry (wireframes, AABBs, contacts, constraints) within radius of center.
+		// Triangle meshes (e.g. terrain) only draw their triangles inside the radius, so huge static meshes don't
+		// flood the line buffer.
+		void DrawPhysicsWorld(btDiscreteDynamicsWorld* world, const glm::vec3& center, real radius);
 
 	protected:
 		virtual void Draw() = 0;
@@ -62,6 +69,7 @@ namespace flex
 		// TODO: Allocate from pool to reduce startup alloc size (currently 57MB!)
 		static const u32 MAX_NUM_LINE_SEGMENTS = 1'048'576;
 		u32 m_LineSegmentIndex = 0;
+		bool m_bLineLimitReached = false;
 		LineSegment m_LineSegments[MAX_NUM_LINE_SEGMENTS];
 
 		i32 m_DebugMode = 0;

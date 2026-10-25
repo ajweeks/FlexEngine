@@ -36,11 +36,15 @@ struct OceanData
 	float fogDensity;
 };
 
+// Must match SkyboxData in vk_misc.glsl (& on the CPU)
 struct SkyboxData
 {
 	vec4 colourTop;
 	vec4 colourMid;
 	vec4 colourBtm;
+	vec4 colourFog;
+	vec4 sun;
+	vec4 clouds;
 };
 
 layout (binding = 0) uniform UBOConstant

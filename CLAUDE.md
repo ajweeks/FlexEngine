@@ -12,6 +12,9 @@ General lessons for working in this repo (not task specifics).
 - ImGui here is an old version: no `ImGuiSliderFlags_*` (use the float `power` argument) and no `ImGuiMouseButton_*` (use integers).
 - `stdafx.hpp` uses CRLF; most other files use LF. Text-mode edits with `sed` `$` anchors silently fail on CRLF files, so verify that edits actually applied.
 - Shaders can be validated with `/mnt/c/VulkanSDK/*/Bin/glslangValidator.exe -V`. Inline the `#include`s first and run it on a copy under `/mnt/c/...`, since the Windows exe can't read WSL paths.
+- Release builds have no shader compiler: they load `FlexEngine/saved/spv/<name>_<stage>.spv`. After editing shaders, run a Debug build once or compile them yourself (glslang, then `spirv-opt -O`). Unoptimized SPIR-V keeps dead texture samples, which trigger validation errors.
+- The user's Windows environment sets `VK_INSTANCE_LAYERS` to the validation layer, so even Release runs are validated (and their CPU timings are inflated about 3x). For perf numbers, run through a `.bat` that clears it.
+- `--test-scenes --profile` prints CPU & GPU timings in any build. `--screenshots` saves each scene's last frame, which is useful for catching broken rendering.
 
 ## Performance investigations
 - Measure before guessing. Add timing or counters (and print them in existing load/stats output) rather than reasoning about which call "must" be slow. Several plausible culprits turned out to be wrong; the real ones were in unrelated shared code.
@@ -21,6 +24,11 @@ General lessons for working in this repo (not task specifics).
   - Per-object work that recreates shared state (descriptor sets).
   - Linear scans over all render objects.
 - Small standalone harnesses (compile a subsystem's .cpp with a tiny shim `stdafx.hpp`) are much faster to iterate with than the full engine. They can check invariants (e.g. crack-free LOD seams, consistent neighbor masks) far more thoroughly.
+
+## Code layout
+- Game object types live in `Scene/Objects/*` (one file per family). New types must be added to the table in `Scene/GameObjectTypes.cpp`, which is the factory, the property collection registration & the serialization flags.
+- Per-frame parallel work uses `JobSystem::Dispatch` + `Wait`. Long running background work (terrain generation) has its own pool at background priority. Don't spawn threads directly.
+- Player movement abilities are in `Traversal` (owned by `Player`). When it controls the player's velocity, `PlayerController` skips walking.
 
 ## Design pitfalls
 - Async/batched systems: watch for livelock. Restarting in-flight work when inputs change can mean nothing ever completes, so prefer finishing a batch and predicting ahead instead.

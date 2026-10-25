@@ -4,6 +4,9 @@
 
 #include <cstring>
 
+// Arguments for PropertyCollection::RegisterProperty describing a member field
+#define FIELD_OFFSET_AND_TYPE(type, field) offsetof(type, field), typeid(decltype(field))
+
 namespace flex
 {
 	// Orders C-string keys by contents rather than address so iteration (and therefore

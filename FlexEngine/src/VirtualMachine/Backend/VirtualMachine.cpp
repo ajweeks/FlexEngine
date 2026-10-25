@@ -3,6 +3,7 @@
 #include "VirtualMachine/Backend/VirtualMachine.hpp"
 
 #include "Helpers.hpp"
+#include "Scene/Objects/Terminal.hpp"
 #include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
 #include "VirtualMachine/Backend/VariableContainer.hpp"

@@ -11,6 +11,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Terminal.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex

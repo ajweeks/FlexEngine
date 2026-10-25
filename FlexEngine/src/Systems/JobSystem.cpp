@@ -82,6 +82,8 @@ namespace flex
 			std::condition_variable wakeCondition;
 			std::mutex wakeMutex;
 			std::atomic<u32> nextQueue{ 0 };
+			// Jobs queued but not yet started, so sleeping workers know when to wake
+			std::atomic<u32> pendingJobCount{ 0 };
 			std::vector<std::thread> threads;
 
 		};
@@ -97,6 +99,7 @@ namespace flex
 				JobQueue& job_queue = s_InternalState.jobQueuePerThread[startingQueue % s_InternalState.numThreads];
 				while (job_queue.pop_front(job))
 				{
+					s_InternalState.pendingJobCount.fetch_sub(1);
 					JobArgs args;
 					args.payload = job.payload;
 					if (job.sharedMemorySize > 0)
@@ -121,6 +124,15 @@ namespace flex
 				}
 				startingQueue++; // go to next queue
 			}
+		}
+
+		static void WakeWorkers()
+		{
+			// Taking the mutex ensures workers aren't between checking for work & going to sleep (which would miss this)
+			{
+				std::lock_guard<std::mutex> lock(s_InternalState.wakeMutex);
+			}
+			s_InternalState.wakeCondition.notify_all();
 		}
 
 		void Initialize(u32 maxThreadCount)
@@ -149,9 +161,12 @@ namespace flex
 					{
 						RunJobs(threadID);
 
-						// Finished with jobs, put to sleep
+						// Finished with jobs, sleep until more are queued
 						std::unique_lock<std::mutex> lock(s_InternalState.wakeMutex);
-						s_InternalState.wakeCondition.wait(lock);
+						s_InternalState.wakeCondition.wait(lock, []
+						{
+							return s_InternalState.pendingJobCount.load() > 0 || !s_InternalState.alive.load();
+						});
 					}
 				});
 
@@ -174,7 +189,7 @@ namespace flex
 		void Destroy()
 		{
 			s_InternalState.alive = false;
-			s_InternalState.wakeCondition.notify_all();
+			WakeWorkers();
 
 			for (std::thread& thread : s_InternalState.threads)
 			{
@@ -196,6 +211,33 @@ namespace flex
 			return s_InternalState.numThreads;
 		}
 
+		void Dispatch(Context& ctx, u32 jobCount, u32 groupSize, const std::function<void(JobArgs)>& task)
+		{
+			if (jobCount == 0 || groupSize == 0)
+			{
+				return;
+			}
+
+			const u32 groupCount = (jobCount + groupSize - 1) / groupSize;
+			ctx.counter.fetch_add(groupCount);
+			s_InternalState.pendingJobCount.fetch_add(groupCount);
+
+			Job job;
+			job.ctx = &ctx;
+			job.task = task;
+			job.sharedMemorySize = 0;
+			job.payload = 0;
+			for (u32 groupID = 0; groupID < groupCount; ++groupID)
+			{
+				job.groupID = groupID;
+				job.groupJobOffset = groupID * groupSize;
+				job.groupJobEnd = std::min(job.groupJobOffset + groupSize, jobCount);
+				s_InternalState.jobQueuePerThread[s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads].push_back(job);
+			}
+
+			WakeWorkers();
+		}
+
 		void Execute(Context& ctx, const std::function<void(JobArgs)>& task, u64 payload)
 		{
 			ctx.counter.fetch_add(1);
@@ -209,8 +251,9 @@ namespace flex
 			job.sharedMemorySize = 0;
 			job.payload = payload;
 
+			s_InternalState.pendingJobCount.fetch_add(1);
 			s_InternalState.jobQueuePerThread[s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads].push_back(job);
-			s_InternalState.wakeCondition.notify_one();
+			WakeWorkers();
 		}
 
 		bool IsBusy(const Context& ctx)
@@ -224,7 +267,7 @@ namespace flex
 			if (IsBusy(ctx))
 			{
 				// Wake any threads that might be sleeping:
-				s_InternalState.wakeCondition.notify_all();
+				WakeWorkers();
 
 				// work() will pick up any jobs that are on stand by and execute them on this thread:
 				RunJobs(s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads);

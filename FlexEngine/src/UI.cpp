@@ -10,10 +10,11 @@
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "ResourceManager.hpp"
-#include "Scene/SceneManager.hpp"
 #include "Scene/BaseScene.hpp"
-#include "Window/Window.hpp"
+#include "Scene/Objects/Industry.hpp"
+#include "Scene/SceneManager.hpp"
 #include "UIMesh.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {

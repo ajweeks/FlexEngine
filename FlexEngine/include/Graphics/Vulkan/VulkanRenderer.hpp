@@ -103,6 +103,8 @@ namespace flex
 
 			virtual DebugRenderer* GetDebugRenderer() override;
 
+			VkQueue GetGraphicsQueue() const { return m_GraphicsQueue; }
+
 			virtual void DrawStringSS(const std::string& str,
 				const glm::vec4& colour,
 				AnchorPoint anchor,
@@ -266,6 +268,12 @@ namespace flex
 			void SaveAndDestroyPipelineCache();
 			std::string GetPipelineCacheFilePath() const;
 			void PhysicsDebugRender();
+			// Screenshots copy the frame's swap chain image into a staging buffer (as part of the frame), then save it
+			// once the frame has finished
+			void RecordScreenshotCopy(VkCommandBuffer commandBuffer, u32 swapChainImageIndex);
+			void SaveScreenshot();
+			VulkanBuffer* m_ScreenshotStagingBuffer = nullptr;
+			VkExtent2D m_ScreenshotExtent = {};
 
 			void CreateUniformBuffers(VulkanMaterial* material);
 			void CreateStaticUniformBuffer(VulkanMaterial* material);
@@ -326,6 +334,15 @@ namespace flex
 			u32 GetShadowDynamicUBOOffset(RenderID renderID) const;
 			bool RenderObjectCastsShadow(VulkanRenderObject* renderObject) const;
 			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
+			// World space bounding sphere to cull an object with (w <= 0: never culled)
+			glm::vec4 GetCullSphere(VulkanRenderObject* renderObject) const;
+			// Side planes of the current camera's frustum, for culling (updated at the start of each frame)
+			void UpdateCameraCullPlanes();
+			glm::vec4 m_CameraCullPlanes[4];
+			u32 m_FrameDrawCallCount = 0;
+			u32 m_FrameShadowDrawCallCount = 0;
+			u64 m_FrameTriangleCount = 0;
+			u64 m_FrameShadowTriangleCount = 0;
 
 			// Expects a render pass to be in flight, renders a fullscreen tri with minimal state setup
 			void RenderFullscreenTri(

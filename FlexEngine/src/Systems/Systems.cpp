@@ -14,6 +14,9 @@ IGNORE_WARNINGS_POP
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Road.hpp"
+#include "Scene/Objects/Terminal.hpp"
+#include "Scene/Objects/Wires.hpp"
 #include "Scene/SceneManager.hpp"
 #include "StringBuilder.hpp"
 

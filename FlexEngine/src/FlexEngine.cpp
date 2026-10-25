@@ -55,6 +55,7 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
 #endif
 
 // TODO: Find out equivalent for nix systems
@@ -335,15 +336,6 @@ namespace flex
 			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0], 0.5f);
 			s_AudioSourceIDs.push_back(AudioManager::SynthesizeMelody(500.0f)); // melody fast
 			AudioManager::SetSourceGain(s_AudioSourceIDs[(i32)SoundEffect::melody_0_fast], 0.5f);
-		}
-
-		i32 springCount = 6;
-		m_TestSprings.reserve(springCount);
-		for (i32 i = 0; i < springCount; ++i)
-		{
-			m_TestSprings.emplace_back(Spring<glm::vec3>());
-			m_TestSprings[i].DR = 0.9f;
-			m_TestSprings[i].UAF = 15.0f;
 		}
 
 		ImGuiIO& io = ImGui::GetIO();
@@ -721,6 +713,8 @@ namespace flex
 		sec frameStartTime = Time::CurrentSeconds();
 		while (m_bRunning)
 		{
+			Profiler::EndFrame();
+
 			if (m_SceneTestRunner != nullptr && !m_SceneTestRunner->Update())
 			{
 				break;
@@ -846,31 +840,6 @@ namespace flex
 
 					currentCamera->LateUpdate();
 
-					Player* player = currentScene->GetPlayer(0);
-					if (player)
-					{
-						Transform* playerTransform = player->GetTransform();
-						glm::vec3 targetPos = playerTransform->GetWorldPosition() + playerTransform->GetForward() * -2.0f;
-						m_SpringTimer += g_DeltaTime;
-						real amplitude = 1.5f;
-						real period = 5.0f;
-						if (m_SpringTimer > period)
-						{
-							m_SpringTimer -= period;
-						}
-						targetPos.y += pow(sin(glm::clamp(m_SpringTimer - period / 2.0f, 0.0f, PI)), 40.0f) * amplitude;
-						glm::vec3 targetVel = ToVec3(player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
-
-						for (Spring<glm::vec3>& spring : m_TestSprings)
-						{
-							spring.SetTargetPos(targetPos);
-							spring.SetTargetVel(targetVel);
-
-							targetPos = spring.pos;
-							targetVel = spring.vel;
-						}
-					}
-
 					AudioManager::Update();
 				}
 				else
@@ -883,16 +852,6 @@ namespace flex
 				}
 
 				currentScene->Render();
-
-#if 0
-				btIDebugDraw* debugDrawer = g_Renderer->GetDebugRenderer();
-				for (i32 i = 0; i < (i32)m_TestSprings.size(); ++i)
-				{
-					m_TestSprings[i].Tick(g_DeltaTime);
-					real t = (real)i / (real)m_TestSprings.size();
-					debugDrawer->drawSphere(ToBtVec3(m_TestSprings[i].pos), (1.0f - t + 0.1f) * 0.5f, btVector3(0.5f - 0.3f * t, 0.8f - 0.4f * t, 0.6f - 0.2f * t));
-				}
-#endif
 
 				g_Window->Update();
 
@@ -1586,23 +1545,6 @@ namespace flex
 				for (System* system : g_Systems)
 				{
 					system->DrawImGui();
-				}
-
-				if (ImGui::TreeNode("Spring"))
-				{
-					real* DR = &m_TestSprings[0].DR;
-					real* UAF = &m_TestSprings[0].UAF;
-
-					ImGui::SliderFloat("DR", DR, 0.0f, 2.0f);
-					ImGui::SliderFloat("UAF", UAF, 0.0f, 20.0f);
-
-					for (Spring<glm::vec3>& spring : m_TestSprings)
-					{
-						spring.DR = *DR;
-						spring.UAF = *UAF;
-					}
-
-					ImGui::TreePop();
 				}
 			}
 			ImGui::End();
@@ -2568,6 +2510,11 @@ namespace flex
 			else if (action == Action::DBG_ENTER_PREV_SCENE)
 			{
 				g_SceneManager->SetPreviousSceneActive();
+				return EventReply::CONSUMED;
+			}
+			else if (action == Action::TAKE_SCREENSHOT)
+			{
+				g_Renderer->RequestScreenshot();
 				return EventReply::CONSUMED;
 			}
 		}

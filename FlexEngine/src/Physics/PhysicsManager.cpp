@@ -8,6 +8,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 IGNORE_WARNINGS_POP
 
+#include "Physics/DynamicsWorld.hpp"
 #include "Physics/PhysicsManager.hpp"
 
 namespace flex
@@ -48,7 +49,7 @@ namespace flex
 	{
 		if (m_bInitialized)
 		{
-			return new btDiscreteDynamicsWorld(m_Dispatcher, m_OverlappingPairCache, m_Solver, m_CollisionConfiguration);
+			return new DynamicsWorld(m_Dispatcher, m_OverlappingPairCache, m_Solver, m_CollisionConfiguration);
 		}
 		return nullptr;
 	}

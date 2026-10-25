@@ -35,6 +35,9 @@ namespace flex
 
 		void UpdateMode();
 
+		// Whether the selected quick access item can be placed in the world (the place button jumps otherwise)
+		bool IsPlaceableItemSelected() const;
+
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bMovingBackwards, real travelSign);
 		void UpdateLook();
