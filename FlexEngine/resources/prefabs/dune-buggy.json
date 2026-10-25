@@ -1,0 +1,193 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "F4E5B7A79CFD46D3A5A8F8F9A13C0703",
+	"root" : 
+	{
+		"id" : "1BE58B416BFD4761A153712ED1FD569E",
+		"name" : "dune buggy",
+		"type" : "vehicle",
+		"mesh" : "car_paint.glb",
+		"materials" : 
+		[
+			"Black glass",
+			"Orange paint",
+			"Brake-light",
+			"Reverse-light"
+		],
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.900,0.300,2.200"
+		},
+		"rigid body" : 
+		{
+			"mass" : 380.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 5,
+			"group" : 1
+		},
+		"vehicle" : 
+		{
+			"tire ids" : 
+			[
+				"F833FD44D8084F5ABD363DA20E442153",
+				"A6FBAD5BECC14072B07185B467EA195C",
+				"602B956B485B425C91256E1DBDAC9699",
+				"650BCCDC44B541E4B85F4CD6EBEA2F31"
+			],
+			"brake light ids" : 
+			[
+				"D6D672686364492D92520843EBEB1F1C",
+				"7731AD8D3A5243EC9C27E55DBD65139B"
+			],
+			"max engine force" : 6500.0,
+			"engine accel" : 22000.0,
+			"suspension stiffness" : 11.0,
+			"suspension damping" : 1.1,
+			"suspension compression" : 1.8,
+			"suspension rest length" : 0.85,
+			"wheel friction" : 70.0,
+			"roll influence" : 0.12,
+			"sound effect sids" : 
+			[
+				18446744073709551615,
+				18446744073709551615
+			]
+		},
+		"children" : 
+		[
+			{
+				"id" : "F833FD44D8084F5ABD363DA20E442153",
+				"name" : "wheel_FL30",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.846, -0.135, 1.534",
+					"rot" : "0.250, -0.000, 0.000"
+				},
+				"mesh" : "car_tire_FL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"id" : "A6FBAD5BECC14072B07185B467EA195C",
+				"name" : "wheel_FR30",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.742, -0.131, 1.537",
+					"rot" : "2.214, -0.000, 0.000"
+				},
+				"mesh" : "car_tire_FR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"id" : "602B956B485B425C91256E1DBDAC9699",
+				"name" : "wheel_RL30",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "-0.720, -0.145, -1.187",
+					"rot" : "0.160, -0.000, 0.000"
+				},
+				"mesh" : "car_tire_RL.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"id" : "650BCCDC44B541E4B85F4CD6EBEA2F31",
+				"name" : "wheel_RR30",
+				"type" : "object",
+				"transform" : 
+				{
+					"pos" : "0.738, -0.151, -1.153",
+					"rot" : "0.905, -0.000, 0.000"
+				},
+				"mesh" : "car_tire_RR.glb",
+				"materials" : 
+				[
+					"black plastic",
+					"pbr chrome"
+				]
+			},
+			{
+				"id" : "3EAC2769A05E4E4A8EC7FAA647865796",
+				"name" : "HeadLight_L-1",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.419, 0.000, 2.584"
+				},
+				"spot light info" : 
+				{
+					"angle" : 0.750,
+					"brightness" : 500.000,
+					"colour" : "0.96,0.97,0.59"
+				}
+			},
+			{
+				"id" : "C80A55715B4D445DBED74C77BFADA52C",
+				"name" : "HeadLight_R-1",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.318, 0.000, 2.584"
+				},
+				"spot light info" : 
+				{
+					"angle" : 0.750,
+					"brightness" : 500.000,
+					"colour" : "0.96,0.97,0.59"
+				}
+			},
+			{
+				"id" : "D6D672686364492D92520843EBEB1F1C",
+				"name" : "TailLight_L-1",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "-0.740, 0.295, -1.958",
+					"rot" : "-2.750, 0.229, 0.094"
+				},
+				"visible" : false,
+				"spot light info" : 
+				{
+					"angle" : 0.245,
+					"brightness" : 80.000,
+					"colour" : "0.91,0.07,0.07",
+					"enabled" : 0
+				}
+			},
+			{
+				"id" : "7731AD8D3A5243EC9C27E55DBD65139B",
+				"name" : "TailLight_R-1",
+				"type" : "spot light",
+				"transform" : 
+				{
+					"pos" : "0.712, 0.343, -1.954",
+					"rot" : "-2.759, -0.289, 0.000"
+				},
+				"visible" : false,
+				"spot light info" : 
+				{
+					"angle" : 0.245,
+					"brightness" : 80.000,
+					"colour" : "0.91,0.07,0.07",
+					"enabled" : 0
+				}
+			}
+		]
+	}
+}

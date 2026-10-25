@@ -45,6 +45,9 @@ struct SkyboxData
 	vec4 colourFog;
 	vec4 sun;
 	vec4 clouds;
+	vec4 moon;
+	vec4 sunColour;
+	vec4 weather;
 };
 
 layout (binding = 0) uniform UBOConstant

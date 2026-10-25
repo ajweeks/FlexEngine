@@ -6,6 +6,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionDispatch/btManifoldResult.h>
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -22,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/VehicleCamera.hpp"
 #include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
+#include "InputManager.hpp"
 #include "Inventory.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -33,6 +35,9 @@ IGNORE_WARNINGS_POP
 #include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/Props.hpp"
 #include "Scene/Objects/Terminal.hpp"
+#include "Scene/Objects/Treasure.hpp"
+#include "Graphics/BitmapFont.hpp"
+#include "Window/Window.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Vehicle.hpp"
 #include "Scene/Objects/Wires.hpp"
@@ -55,8 +60,8 @@ namespace flex
 		FLEX_UNUSED(partId1);
 		FLEX_UNUSED(index1);
 
-		// Surfaces steeper than ~45 degrees are treated as walls
-		const btScalar maxWalkableNormalY = 0.7f;
+		// Surfaces steeper than ~53 degrees are treated as walls
+		const btScalar maxWalkableNormalY = Player::WALKABLE_NORMAL_Y;
 		if (btFabs(cp.m_normalWorldOnB.getY()) < maxWalkableNormalY)
 		{
 			cp.m_combinedFriction = 0.0f;
@@ -102,7 +107,8 @@ namespace flex
 		rigidBody->SetLinearDamping(0.1f);
 		rigidBody->SetFriction(m_MoveFriction);
 
-		btCapsuleShape* collisionShape = new btCapsuleShape(1.0f, 2.0f);
+		// Capsule height excludes the two hemispherical caps
+		btCapsuleShape* collisionShape = new btCapsuleShape(m_Radius, m_Height - m_Radius * 2.0f);
 
 		GameObject* playerMeshObject = new GameObject("Player mesh", BaseObjectSID);
 		Mesh* playerMesh = playerMeshObject->SetMesh(new Mesh(playerMeshObject));
@@ -113,6 +119,8 @@ namespace flex
 		SetCollisionShape(collisionShape);
 		playerMesh->LoadFromFile(MESH_DIRECTORY "capsule.glb", matID);
 		playerMeshObject->GetTransform()->SetLocalRotation(glm::quat(glm::vec3(-PI_DIV_TWO, 0.0f, 0.0f)));
+		// The mesh is a 2m wide, 4m tall capsule (local z is up once rotated)
+		playerMeshObject->GetTransform()->SetLocalScale(glm::vec3(m_Radius, m_Radius, m_Height * 0.25f));
 		AddChild(playerMeshObject);
 
 		m_Controller = new PlayerController();
@@ -120,6 +128,8 @@ namespace flex
 
 		m_Traversal = new Traversal();
 		m_Traversal->Initialize(this);
+
+		m_BuildMode.Initialize(this);
 
 		TextureLoadInfo loadInfo = {};
 		loadInfo.relativeFilePath = TEXTURE_DIRECTORY "cross-hair-01.png";
@@ -139,6 +149,10 @@ namespace flex
 
 		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
 		rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+		// Continuous collision so fast falls don't tunnel through thin terrain (the capsule moves further than its radius
+		// in a step from ~25m/s)
+		rbInternal->setCcdMotionThreshold(m_Radius * 0.5f);
+		rbInternal->setCcdSweptSphereRadius(m_Radius * 0.8f);
 		gContactAddedCallback = PlayerContactAddedCallback;
 
 		// Rotation is set every frame by the controller, so only position needs smoothing between fixed steps
@@ -178,7 +192,33 @@ namespace flex
 		m_Controller->Update();
 		m_Traversal->Update();
 
+		// Build mode (toggled with B) takes over the mouse buttons & scroll wheel
+		if (m_bPossessed && AbleToInteract() && !IsAnyInventoryShowing() && m_TrackRidingID == InvalidTrackID &&
+			!g_EngineInstance->IsSimulationPaused() && g_InputManager->GetKeyPressed(KeyCode::KEY_B))
+		{
+			m_BuildMode.SetActive(!m_BuildMode.IsActive());
+		}
+		if (m_BuildMode.IsActive() && (!AbleToInteract() || m_TrackRidingID != InvalidTrackID))
+		{
+			m_BuildMode.SetActive(false);
+		}
+		m_BuildMode.Update();
+
 		UpdateTerrainTool();
+
+		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+		{
+			TreasureChest::UpdateNearby(terrainGenerator, m_Transform.GetWorldPosition());
+		}
+
+		for (i32 i = (i32)m_Notifications.size() - 1; i >= 0; --i)
+		{
+			m_Notifications[i].timeRemaining -= g_DeltaTime;
+			if (m_Notifications[i].timeRemaining <= 0.0f)
+			{
+				m_Notifications.erase(m_Notifications.begin() + i);
+			}
+		}
 
 		if (m_TrackRidingID != InvalidTrackID)
 		{
@@ -215,9 +255,11 @@ namespace flex
 		{
 			Vehicle* vehicle = (Vehicle*)m_RidingVehicleID.Get();
 
-			const glm::vec3 posOffset = glm::vec3(0.0f, 3.0f, 0.0f);
+			const glm::vec3 posOffset = glm::vec3(0.0f, 1.5f, 0.0f);
 
-			m_Transform.SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset);
+			// Not a teleport for interpolation purposes, the vehicle moves continuously
+			m_RigidBody->SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset, false);
+			m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
 		}
 
 		// Terrain can extend far below the scene's minimum height (UpdateTerrainSafety handles falling out of it)
@@ -401,10 +443,10 @@ namespace flex
 	{
 		glm::vec3 right = m_Transform.GetRight();
 
-		glm::vec3 offset = m_Transform.GetWorldPosition() +
-			GetLookDirection() * 5.0f +
-			m_Transform.GetUp() * -0.75f +
-			((hand == Hand::LEFT) ? -right : right);
+		glm::vec3 offset = GetEyePosition() +
+			GetLookDirection() * 1.6f +
+			m_Transform.GetUp() * -0.35f +
+			((hand == Hand::LEFT) ? -right : right) * 0.45f;
 		return offset;
 	}
 
@@ -416,6 +458,11 @@ namespace flex
 	real Player::GetHeight() const
 	{
 		return m_Height;
+	}
+
+	glm::vec3 Player::GetEyePosition() const
+	{
+		return m_Transform.GetWorldPosition() + VEC3_UP * (m_Height * 0.5f - 0.2f);
 	}
 
 	PlayerController* Player::GetController()
@@ -528,31 +575,55 @@ namespace flex
 
 	void Player::UpdateIsGrounded()
 	{
-		// Reaches a little past the bottom of the capsule so the ground is still found on slopes (where the capsule's
-		// lowest point isn't directly below its center)
-		btVector3 rayStart = ToBtVec3(m_Transform.GetWorldPosition());
-		btVector3 rayEnd = rayStart + btVector3(0, -(m_Height / 2.0f + 0.5f), 0);
+		// Sweeps a sphere a little narrower than the capsule down from its lower hemisphere, so ground is found on
+		// slopes & ledges (where the capsule's lowest point isn't directly above it) & small gaps can be snapped across
+		const real sweepRadius = m_Radius * 0.9f;
+		const glm::vec3 pos = m_Transform.GetWorldPosition();
+		const real bottomSphereOffset = m_Height * 0.5f - m_Radius;
+		const glm::vec3 sweepStart = pos - VEC3_UP * (bottomSphereOffset - 0.2f);
+		const real sweepLength = 0.2f + GROUND_PROBE_DISTANCE;
+		const glm::vec3 sweepEnd = sweepStart - VEC3_UP * sweepLength;
 
-		struct IgnoreSelfRayCallback final : public btDynamicsWorld::ClosestRayResultCallback
+		struct IgnoreSelfConvexCallback final : public btCollisionWorld::ClosestConvexResultCallback
 		{
-			IgnoreSelfRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* self) :
-				ClosestRayResultCallback(from, to),
+			IgnoreSelfConvexCallback(const btVector3& from, const btVector3& to, const btCollisionObject* self) :
+				ClosestConvexResultCallback(from, to),
 				self(self)
 			{
+				m_collisionFilterMask = (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT;
 			}
 
 			virtual bool needsCollision(btBroadphaseProxy* proxy) const override
 			{
-				return proxy->m_clientObject != self && ClosestRayResultCallback::needsCollision(proxy);
+				return proxy->m_clientObject != self && ClosestConvexResultCallback::needsCollision(proxy);
 			}
 
 			const btCollisionObject* self;
 		};
 
-		IgnoreSelfRayCallback rayCallback(rayStart, rayEnd, m_RigidBody->GetRigidBodyInternal());
+		btSphereShape sphere(sweepRadius);
+		const btTransform from(btQuaternion::getIdentity(), ToBtVec3(sweepStart));
+		const btTransform to(btQuaternion::getIdentity(), ToBtVec3(sweepEnd));
+		IgnoreSelfConvexCallback callback(from.getOrigin(), to.getOrigin(), m_RigidBody->GetRigidBodyInternal());
 		btDiscreteDynamicsWorld* physWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
-		physWorld->rayTest(rayStart, rayEnd, rayCallback);
-		m_bGrounded = rayCallback.hasHit();
+		physWorld->convexSweepTest(&sphere, from, to, callback);
+
+		m_bGroundHit = false;
+		m_GroundGap = GROUND_PROBE_DISTANCE;
+		m_GroundNormal = VEC3_UP;
+		if (callback.hasHit())
+		{
+			// Distance between the bottom of the capsule & the ground (negative when slightly penetrating)
+			const real travelled = callback.m_closestHitFraction * sweepLength;
+			m_GroundGap = travelled - 0.2f;
+			m_GroundNormal = ToVec3(callback.m_hitNormalWorld);
+			const real normalLength = glm::length(m_GroundNormal);
+			m_GroundNormal = normalLength > 1e-4f ? m_GroundNormal / normalLength : VEC3_UP;
+			m_bGroundHit = true;
+		}
+
+		// Touching (or very nearly touching) ground which isn't too steep to stand on
+		m_bGrounded = m_bGroundHit && m_GroundGap < 0.12f && m_GroundNormal.y > WALKABLE_NORMAL_Y;
 	}
 
 	void Player::UpdateIsPossessed()
@@ -614,6 +685,13 @@ namespace flex
 
 			m_RidingVehicleID = vehicle->ID;
 
+			// The (invisible) capsule follows the vehicle around, it mustn't push against it
+			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+			rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rbInternal->setGravity(btVector3(0.0f, 0.0f, 0.0f));
+			rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			m_Traversal->Reset();
+
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			VehicleCamera* vehicleCamera = nullptr;
 			// Switch to vehicle cam
@@ -631,6 +709,22 @@ namespace flex
 			ridingVehicle->OnPlayerExit();
 
 			m_RidingVehicleID = InvalidGameObjectID;
+
+			btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+			rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() & ~btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rbInternal->setGravity(g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->getGravity());
+			rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+
+			// Step out beside the vehicle
+			Transform* vehicleTransform = ridingVehicle->GetTransform();
+			const glm::vec3 exitPos = vehicleTransform->GetWorldPosition() - vehicleTransform->GetRight() * 2.5f + VEC3_UP * 1.0f;
+			m_RigidBody->SetWorldPosition(exitPos);
+			m_Transform.SetWorldPosition(exitPos);
+			if (TerrainGenerator::GetActive() != nullptr)
+			{
+				// Make sure that's not inside a hill
+				m_bTerrainPlacementPending = true;
+			}
 
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
 			if (cam->type == CameraType::VEHICLE)
@@ -711,9 +805,9 @@ namespace flex
 
 			Transform* wireTransform = wire->GetTransform();
 
-			glm::vec3 targetPos = m_Transform.GetWorldPosition() +
-				GetLookDirection() * 5.0f +
-				m_Transform.GetUp() * -0.75f;
+			glm::vec3 targetPos = GetEyePosition() +
+				GetLookDirection() * 1.6f +
+				m_Transform.GetUp() * -0.35f;
 
 			wireTransform->SetWorldPosition(targetPos, false);
 
@@ -765,6 +859,53 @@ namespace flex
 		}
 
 		return nullptr;
+	}
+
+	void Player::ShowNotification(const std::string& text)
+	{
+		Print("%s\n", text.c_str());
+		m_Notifications.push_back({ text, 6.0f });
+		if (m_Notifications.size() > 4)
+		{
+			m_Notifications.erase(m_Notifications.begin());
+		}
+	}
+
+	void Player::DrawNotifications() const
+	{
+		if (!m_bPossessed)
+		{
+			return;
+		}
+
+		BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));
+		const real lineHeight = 3.2f * font->GetMetric('W')->height / (real)g_Window->GetSize().y;
+
+		real yOffset = 0.25f;
+		for (const Notification& notification : m_Notifications)
+		{
+			const real alpha = glm::clamp(notification.timeRemaining, 0.0f, 1.0f);
+			g_Renderer->DrawStringSS(notification.text, glm::vec4(1.0f, 0.88f, 0.45f, alpha), AnchorPoint::TOP, glm::vec2(0.0f, -yOffset), 1.5f, 0.7f);
+			yOffset += lineHeight;
+		}
+
+		// Prompt for whatever is in reach
+		GameObject* nearby = m_NearbyInteractableID.Get();
+		if (nearby != nullptr && AbleToInteract() && nearby->IsInteractable())
+		{
+			std::string prompt;
+			switch (nearby->GetTypeID())
+			{
+			case TreasureChestSID: prompt = "[E] Open chest"; break;
+			case VehicleSID: prompt = "[E] Drive"; break;
+			case TerminalSID: prompt = "[E] Use terminal"; break;
+			default: break;
+			}
+			if (!prompt.empty())
+			{
+				g_Renderer->DrawStringSS(prompt, glm::vec4(1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.08f), 1.5f, 0.6f);
+			}
+		}
 	}
 
 	void Player::DrawTraversalHUD() const

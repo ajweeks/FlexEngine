@@ -453,7 +453,9 @@ namespace flex
 				}
 			}
 
-			btCollisionShape* collisionShape = GetCollisionShape();
+			const GameObjectTypeInfo* typeInfo = FindGameObjectType(m_TypeID);
+			const bool bSerializePhysics = typeInfo == nullptr || (typeInfo->flags & GameObjectTypeInfo::NO_SERIALIZED_PHYSICS) == 0;
+			btCollisionShape* collisionShape = bSerializePhysics ? GetCollisionShape() : nullptr;
 			if (collisionShape != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
 				JSONObject colliderObj;
@@ -463,7 +465,7 @@ namespace flex
 				}
 			}
 
-			RigidBody* rigidBody = GetRigidBody();
+			RigidBody* rigidBody = bSerializePhysics ? GetRigidBody() : nullptr;
 			if (rigidBody != nullptr && (!m_SourcePrefabID.IsValid() || bSerializePrefabData))
 			{
 				if (collisionShape == nullptr)

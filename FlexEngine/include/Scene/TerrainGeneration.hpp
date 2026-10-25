@@ -33,7 +33,7 @@ namespace flex
 		static const u32 MAX_BIOME_COUNT = 16;
 
 		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 5;
+		static const u32 GENERATOR_VERSION = 13;
 
 		enum class Material : u8
 		{
@@ -259,6 +259,11 @@ namespace flex
 			real MaxExtentBelow() const { return m_MaxExtentBelow; }
 
 			const WorldParams& Params() const { return m_Params; }
+			u32 Seed() const { return m_Seed; }
+
+			// Height of the topmost surface (including edits) at (x, z) between yMin & yMax, if there is one with open sky
+			// above it (not a cave floor)
+			bool FindTopSurface(real x, real z, real yMin, real yMax, const ColumnSample& column, const EditList& edits, real& outY) const;
 
 			// Climate at a world position [-1: polar, 1: desert]
 			real Temperature(real x, real z) const;
@@ -319,8 +324,12 @@ namespace flex
 			std::vector<glm::vec3> positions;
 			std::vector<glm::vec3> normals;
 			std::vector<glm::vec4> colours;
+			// xyz: grass, layered rock & granular texture weights (snow is the remainder), w: sky visibility [0: deep
+			// underground, 1: open to the sky]
 			std::vector<glm::vec4> weights;
 			std::vector<u32> indices;
+			// Only the first indices are collidable (the terrain & tree trunks, not foliage). ~0u: all of them.
+			u32 collisionIndexCount = ~0u;
 
 			// Flat lake surfaces
 			std::vector<glm::vec3> waterPositions;
@@ -456,6 +465,7 @@ namespace flex
 			void HideAll(std::vector<ChunkCommand>& outCommands);
 
 			void ApplyEdit(const Edit& edit);
+			void ApplyEdits(const Edit* edits, u32 count);
 			void SetEdits(const std::vector<Edit>& edits);
 			const EditStore& Edits() const { return m_Edits; }
 

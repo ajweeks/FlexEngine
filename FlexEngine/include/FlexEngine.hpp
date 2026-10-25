@@ -28,6 +28,9 @@ namespace flex
 
 		// Call before Initialize. The engine will stop once the runner has tested every scene.
 		void SetSceneTestRunner(SceneTestRunner* sceneTestRunner);
+		// Call before Initialize. Starts in the game's main menu rather than the last opened (test) scene.
+		void SetGameMode(bool bGameMode) { m_bGameMode = bGameMode; }
+		void SetRenderImGui(bool bRenderImGui) { m_bRenderImGui = bRenderImGui; }
 
 		i32 ImGuiConsoleInputCallback(ImGuiInputTextCallbackData* data);
 
@@ -191,6 +194,10 @@ namespace flex
 		bool m_bRunning = false;
 
 		bool m_bRenderImGui = true;
+		bool m_bGameMode = false;
+		// Restored to the common settings file while in the game, so the editor opens as it was left
+		std::string m_EditorSceneName;
+		bool m_bEditorRenderImGui = true;
 		// This value should be set to true on input callbacks
 		// to ensure that m_bRenderImGui doesn't change during
 		// a single frame, which would cause an uneven number of

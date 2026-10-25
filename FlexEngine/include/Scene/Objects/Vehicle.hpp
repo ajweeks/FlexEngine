@@ -91,6 +91,7 @@ namespace flex
 		real m_SuspensionStiffness = 20.f;
 		real m_SuspensionDamping = 2.3f;
 		real m_SuspensionCompression = 4.4f;
+		real m_SuspensionRestLength = 0.6f;
 
 		MaterialID m_GlassMatID = InvalidMaterialID;
 		MaterialID m_CarPaintMatID = InvalidMaterialID;

@@ -431,6 +431,7 @@ namespace flex
 
 		// TODO: Serialize player's game object ID
 		sceneRootObject.TryGetBool("spawn player", m_bSpawnPlayer);
+		sceneRootObject.TryGetBool("gameplay", m_bGameplayScene);
 
 		real fogDistance = 0.0f;
 		sceneRootObject.TryGetFloat("fog distance", fogDistance);
@@ -609,6 +610,12 @@ namespace flex
 		ImGui::DragFloat("Cloud altitude", &m_CloudAltitude, 10.0f, 100.0f, 20000.0f);
 		ImGui::DragFloat("Cloud wind speed", &m_CloudWindSpeed, 0.1f, 0.0f, 200.0f);
 		ImGui::SliderAngle("Cloud wind direction", &m_CloudWindAngle);
+		ImGui::SliderFloat("Weather cloudiness", &m_WeatherCloudiness, -1.0f, 1.0f);
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Scales cloud coverage (< 0: changes over time)");
+		}
+		ImGui::SliderFloat("Regional weather variation", &m_WeatherRegionalVariation, 0.0f, 1.0f);
 
 		ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
 		ImGui::PushID("main");
@@ -1153,17 +1160,230 @@ namespace flex
 		return m_FogDistance;
 	}
 
+	namespace
+	{
+		// CPU version of the sky model in vk_misc.glsl (AtmosphereRadiance), used for the sky's gradient colours
+		// (lighting & fog) & the colour of sunlight. Constants must match.
+		namespace atmosphere
+		{
+			const real EARTH_RADIUS = 6360e3f;
+			const real TOP_RADIUS = 6420e3f;
+			const glm::vec3 RAYLEIGH(5.8e-6f, 13.5e-6f, 33.1e-6f);
+			const glm::vec3 OZONE(1.3e-6f, 3.76e-6f, 0.17e-6f);
+			const real MIE = 4e-6f;
+			const real RAYLEIGH_HEIGHT = 8000.0f;
+			const real MIE_HEIGHT = 1200.0f;
+			const real MIE_G = 0.8f;
+			const real MULTIPLE_SCATTERING = 0.15f;
+			const real SUN_INTENSITY = 20.0f;
+			const real MOON_INTENSITY_SCALE = 0.012f;
+			const glm::vec3 WHITE_BALANCE(1.0f, 1.111f, 1.3125f);
+			const real EXPOSURE = 1.5f;
+			const real ALTITUDE = 200.0f;
+			const glm::vec3 NIGHT_GLOW(0.004f, 0.006f, 0.012f);
+
+			glm::vec2 RaySphere(real originRadius, real mu, real sphereRadius)
+			{
+				const real b = originRadius * mu;
+				const real c = (originRadius - sphereRadius) * (originRadius + sphereRadius);
+				const real disc = b * b - c;
+				if (disc < 0.0f)
+				{
+					return glm::vec2(-1.0f);
+				}
+				const real root = std::sqrt(disc);
+				return glm::vec2(-b - root, -b + root);
+			}
+
+			// Optical depths (Rayleigh, Mie) from a point at radius r along dir to the top of the atmosphere
+			glm::vec2 OpticalDepthToTop(real r, real mu, u32 sampleCount)
+			{
+				const real length = RaySphere(r, mu, TOP_RADIUS).y;
+				const real segment = length / (real)sampleCount;
+				glm::vec2 depth(0.0f);
+				for (u32 i = 0; i < sampleCount; ++i)
+				{
+					const real t = segment * ((real)i + 0.5f);
+					// Distance from the planet's center at t along the ray (law of cosines)
+					const real h = std::sqrt(r * r + t * t + 2.0f * r * t * mu) - EARTH_RADIUS;
+					depth.x += std::exp(-h / RAYLEIGH_HEIGHT) * segment;
+					depth.y += std::exp(-h / MIE_HEIGHT) * segment;
+				}
+				return depth;
+			}
+
+			glm::vec3 Transmittance(const glm::vec2& opticalDepth)
+			{
+				const glm::vec3 tau = (RAYLEIGH + OZONE) * opticalDepth.x + glm::vec3(MIE * 1.11f * opticalDepth.y);
+				return glm::exp(-tau);
+			}
+
+			glm::vec3 Radiance(const glm::vec3& dir, const glm::vec3& lightDir, real intensity, u32 sampleCount = 16, u32 lightSampleCount = 6)
+			{
+				const real originRadius = EARTH_RADIUS + ALTITUDE;
+				real tMax = RaySphere(originRadius, dir.y, TOP_RADIUS).y;
+				if (tMax <= 0.0f)
+				{
+					return VEC3_ZERO;
+				}
+				const glm::vec2 ground = RaySphere(originRadius, dir.y, EARTH_RADIUS);
+				if (ground.x > 0.0f)
+				{
+					tMax = ground.x;
+				}
+
+				const real mu = glm::dot(dir, lightDir);
+				const real phaseR = 3.0f / (16.0f * PI) * (1.0f + mu * mu);
+				const real g2 = MIE_G * MIE_G;
+				const real phaseM = 3.0f / (8.0f * PI) * ((1.0f - g2) * (1.0f + mu * mu)) / ((2.0f + g2) * std::pow(1.0f + g2 - 2.0f * MIE_G * mu, 1.5f));
+
+				const real segment = tMax / (real)sampleCount;
+				glm::vec2 opticalDepth(0.0f);
+				glm::vec3 sumR(0.0f);
+				glm::vec3 sumM(0.0f);
+				const glm::vec3 origin(0.0f, originRadius, 0.0f);
+				for (u32 i = 0; i < sampleCount; ++i)
+				{
+					const glm::vec3 p = origin + dir * (segment * ((real)i + 0.5f));
+					const real r = glm::length(p);
+					const real h = r - EARTH_RADIUS;
+					const real densityR = std::exp(-h / RAYLEIGH_HEIGHT) * segment;
+					const real densityM = std::exp(-h / MIE_HEIGHT) * segment;
+					opticalDepth += glm::vec2(densityR, densityM);
+
+					const real lightMu = glm::dot(p, lightDir) / r;
+					if (RaySphere(r, lightMu, EARTH_RADIUS).x > 0.0f)
+					{
+						continue;
+					}
+					const glm::vec3 attenuation = Transmittance(opticalDepth + OpticalDepthToTop(r, lightMu, lightSampleCount));
+					sumR += attenuation * densityR;
+					sumM += attenuation * densityM;
+				}
+
+				return intensity * (sumR * RAYLEIGH * (phaseR + MULTIPLE_SCATTERING) + sumM * MIE * phaseM);
+			}
+
+			glm::vec3 ToDisplay(const glm::vec3& radiance)
+			{
+				return VEC3_ONE - glm::exp(-radiance * WHITE_BALANCE * EXPOSURE);
+			}
+		} // namespace atmosphere
+	} // anonymous namespace
+
+	glm::vec3 BaseScene::GetSunDirection(real timeOfDay)
+	{
+		// The sun crosses the sky from east to west, highest (tilted towards +z) at noon (time of day 0)
+		const real hourAngle = timeOfDay * TWO_PI;
+		const real tilt = glm::radians(25.0f);
+		return glm::normalize(glm::vec3(std::sin(hourAngle), std::cos(hourAngle) * std::cos(tilt), std::cos(hourAngle) * std::sin(tilt)));
+	}
+
+	glm::vec3 BaseScene::GetMoonDirection(real timeOfDay)
+	{
+		// Roughly opposite the sun, rising a little before sunset
+		const real hourAngle = timeOfDay * TWO_PI + PI + 0.3f;
+		const real tilt = glm::radians(15.0f);
+		return glm::normalize(glm::vec3(std::sin(hourAngle), std::cos(hourAngle) * std::cos(tilt), std::cos(hourAngle) * std::sin(tilt)));
+	}
+
 	void BaseScene::UpdateSky()
 	{
-		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
-		const glm::vec3 sunDir = dirLight != nullptr ? glm::normalize(dirLight->data.dir) : glm::normalize(glm::vec3(0.3f, 0.8f, 0.4f));
+		const glm::vec3 sunDir = GetSunDirection(m_TimeOfDay);
+		const glm::vec3 moonDir = GetMoonDirection(m_TimeOfDay);
 		m_SkyboxData.sun = glm::vec4(sunDir, 0.0f);
+
+		// Moonlight & the moon disk fade in once the sun has set
+		const real moonBrightness = 1.0f - glm::smoothstep(-0.12f, 0.02f, sunDir.y) * 0.85f;
+		m_SkyboxData.moon = glm::vec4(moonDir, moonBrightness);
+
+		// Sky gradient colours (used for ambient light & fog) from the same model the skybox draws
+		auto SkyRadiance = [&](const glm::vec3& dir)
+		{
+			glm::vec3 radiance(0.0f);
+			if (sunDir.y > -0.3f)
+			{
+				radiance += atmosphere::Radiance(dir, sunDir, atmosphere::SUN_INTENSITY, 12, 4);
+			}
+			if (moonDir.y > -0.2f)
+			{
+				radiance += atmosphere::Radiance(dir, moonDir, atmosphere::SUN_INTENSITY * atmosphere::MOON_INTENSITY_SCALE * moonBrightness, 8, 3);
+			}
+			return radiance;
+		};
+		const glm::vec3 nightGlow = atmosphere::NIGHT_GLOW * (1.0f - glm::smoothstep(-0.1f, 0.1f, sunDir.y));
+		const glm::vec3 zenith = atmosphere::ToDisplay(SkyRadiance(VEC3_UP)) + nightGlow;
+		glm::vec3 horizon(0.0f);
+		const u32 horizonSampleCount = 4;
+		for (u32 i = 0; i < horizonSampleCount; ++i)
+		{
+			const real azimuth = TWO_PI * ((real)i + 0.5f) / (real)horizonSampleCount;
+			horizon += atmosphere::ToDisplay(SkyRadiance(glm::normalize(glm::vec3(std::cos(azimuth), 0.06f, std::sin(azimuth)))));
+		}
+		horizon = horizon / (real)horizonSampleCount + nightGlow;
+
+		m_SkyboxData.top = glm::vec4(zenith, 1.0f);
+		m_SkyboxData.mid = glm::vec4(horizon, 1.0f);
+		m_SkyboxData.btm = glm::vec4(horizon * 0.55f, 1.0f);
+		const real fogW = m_SkyboxData.fog.w;
+		m_SkyboxData.fog = glm::vec4(horizon, fogW);
+
+		// Sunlight reaching the ground, reddened by the air it passes through
+		glm::vec3 sunTransmittance(0.0f);
+		if (sunDir.y > -0.1f)
+		{
+			sunTransmittance = atmosphere::Transmittance(atmosphere::OpticalDepthToTop(atmosphere::EARTH_RADIUS + atmosphere::ALTITUDE, glm::max(sunDir.y, -0.02f), 16)) * atmosphere::WHITE_BALANCE;
+		}
+		const real maxComponent = glm::max(sunTransmittance.x, glm::max(sunTransmittance.y, sunTransmittance.z));
+		const glm::vec3 sunColour = maxComponent > 1e-6f ? sunTransmittance / maxComponent : glm::vec3(1.0f, 0.4f, 0.1f);
+		m_SkyboxData.sunColour = glm::vec4(sunColour, 1.0f);
+
+		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
+		if (dirLight != nullptr)
+		{
+			if (m_DirLightBaseBrightness < 0.0f)
+			{
+				// The brightness the scene was authored with is that of the midday sun
+				m_DirLightBaseBrightness = dirLight->data.brightness;
+			}
+
+			// The sun lights the scene during the day, the moon at night. They swap while both are too dim to notice.
+			glm::vec3 lightDir;
+			if (sunDir.y > -0.03f)
+			{
+				const real luminance = glm::dot(sunTransmittance, glm::vec3(0.2126f, 0.7152f, 0.0722f));
+				lightDir = sunDir;
+				dirLight->data.colour = sunColour;
+				// (scaled down from the authored brightness, which overexposed the scene with the brighter physically based sky)
+				dirLight->data.brightness = m_DirLightBaseBrightness * 0.85f * glm::smoothstep(-0.03f, 0.06f, sunDir.y) * glm::clamp(std::pow(luminance, 0.6f), 0.0f, 1.0f);
+			}
+			else
+			{
+				lightDir = moonDir;
+				dirLight->data.colour = glm::vec3(0.55f, 0.65f, 1.0f);
+				dirLight->data.brightness = m_DirLightBaseBrightness * 0.045f * glm::smoothstep(0.0f, 0.15f, moonDir.y) * (1.0f - glm::smoothstep(-0.12f, -0.03f, sunDir.y));
+			}
+			dirLight->data.dir = lightDir;
+			// Matches DirectionalLight's convention (its direction is -forward)
+			dirLight->GetTransform()->SetWorldRotation(glm::rotation(-VEC3_FORWARD, lightDir));
+		}
 
 		if (!g_EngineInstance->IsSimulationPaused())
 		{
-			m_CloudWindOffset += glm::vec2(std::cos(m_CloudWindAngle), std::sin(m_CloudWindAngle)) * m_CloudWindSpeed * g_DeltaTime * g_EngineInstance->GetSimulationSpeed();
+			const real dt = g_DeltaTime * g_EngineInstance->GetSimulationSpeed();
+			m_CloudWindOffset += glm::vec2(std::cos(m_CloudWindAngle), std::sin(m_CloudWindAngle)) * m_CloudWindSpeed * dt;
+			m_WeatherTime += dt;
 		}
 		m_SkyboxData.clouds = glm::vec4(glm::clamp(m_CloudCoverage, 0.0f, 1.0f), m_CloudAltitude, m_CloudWindOffset.x, m_CloudWindOffset.y);
+
+		// Weather drifts between clear & overcast over tens of minutes, & varies from region to region
+		real cloudiness = m_WeatherCloudiness;
+		if (cloudiness < 0.0f)
+		{
+			const real t = m_WeatherTime + m_WeatherSeed;
+			cloudiness = 0.45f + 0.35f * std::sin(t / 1100.0f + 1.3f) + 0.2f * std::sin(t / 370.0f + 4.1f) + 0.1f * std::sin(t / 130.0f);
+		}
+		m_SkyboxData.weather = glm::vec4(glm::clamp(cloudiness, 0.0f, 1.0f), m_WeatherRegionalVariation, 0.0f, 0.0f);
 	}
 
 	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
@@ -2033,30 +2253,7 @@ namespace flex
 		if (!NearlyEquals(m_TimeOfDay, time, 1.0e-7f))
 		{
 			m_TimeOfDay = time;
-
-			i32 skyboxIndex0 = (i32)(m_TimeOfDay * ARRAY_LENGTH(m_SkyboxDatas));
-			i32 skyboxIndex1 = (skyboxIndex0 + 1) % ARRAY_LENGTH(m_SkyboxDatas);
-			real alpha = glm::mod(m_TimeOfDay, 1.0f / ARRAY_LENGTH(m_SkyboxDatas)) * (real)ARRAY_LENGTH(m_SkyboxDatas);
-
-			alpha = SmootherStep01(alpha);
-			alpha = SmootherStep01(alpha);
-			alpha = SmootherStep01(alpha);
-			m_SkyboxData.top = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].top, m_SkyboxDatas[skyboxIndex1].top, alpha), VEC4_GAMMA);
-			m_SkyboxData.mid = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].mid, m_SkyboxDatas[skyboxIndex1].mid, alpha), VEC4_GAMMA);
-			m_SkyboxData.btm = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].btm, m_SkyboxDatas[skyboxIndex1].btm, alpha), VEC4_GAMMA);
-			m_SkyboxData.fog = glm::pow(Lerp(m_SkyboxDatas[skyboxIndex0].fog, m_SkyboxDatas[skyboxIndex1].fog, alpha), VEC4_GAMMA);
-			SetFogDistance(m_FogDistance);
-
-			DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
-			if (dirLight != nullptr)
-			{
-				real azimuth = 0.0f;
-				real elevation = m_TimeOfDay * TWO_PI + PI_DIV_TWO;
-				glm::quat rot = glm::rotate(QUAT_IDENTITY, azimuth, VEC3_UP);
-				rot = glm::rotate(rot, elevation, VEC3_RIGHT);
-				dirLight->GetTransform()->SetWorldRotation(rot);
-				dirLight->data.colour = glm::pow(Lerp(m_DirLightColours[skyboxIndex0], m_DirLightColours[skyboxIndex1], alpha), VEC3_GAMMA);
-			}
+			UpdateSky();
 		}
 	}
 
@@ -2182,6 +2379,10 @@ namespace flex
 		rootSceneObject.fields.emplace_back("version", JSONValue(m_SceneFileVersion));
 		rootSceneObject.fields.emplace_back("name", JSONValue(m_Name));
 		rootSceneObject.fields.emplace_back("spawn player", JSONValue(m_bSpawnPlayer));
+		if (m_bGameplayScene)
+		{
+			rootSceneObject.fields.emplace_back("gameplay", JSONValue(m_bGameplayScene));
+		}
 		if (m_FogDistance > 0.0f)
 		{
 			rootSceneObject.fields.emplace_back("fog distance", JSONValue(m_FogDistance, 1));

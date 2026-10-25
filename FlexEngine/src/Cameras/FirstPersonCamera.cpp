@@ -84,7 +84,7 @@ namespace flex
 		//m_Player->GetRigidBody()->GetRigidBodyInternal()->getMotionState()->getWorldTransform(t);
 		//position = ToVec3(t.getOrigin());
 
-		position = playerTransform->GetWorldPosition();
+		position = m_Player->GetEyePosition();
 
 		CalculateYawAndPitchFromForward();
 

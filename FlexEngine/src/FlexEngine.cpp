@@ -45,6 +45,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/SceneManager.hpp"
 #include "SceneTestRunner.hpp"
+#include "Game.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
@@ -503,6 +504,21 @@ namespace flex
 				}
 		}, Variant::Type::STRING, Variant::Type::INT));
 
+		// Usage: player.teleport [x] [z] (onto the ground there, or the nearest dry land)
+		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("player.teleport",
+			[](const Variant& x, const Variant& z)
+		{
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+			if (player == nullptr || terrainGenerator == nullptr)
+			{
+				PrintError("Teleporting needs a player & terrain\n");
+				return;
+			}
+			const terrain::ColumnSample column = terrainGenerator->SampleColumn(x.AsFloat(), z.AsFloat());
+			player->TeleportOnTerrain(glm::vec3(x.AsFloat(), glm::max(column.height, column.waterLevel) + 250.0f, z.AsFloat()));
+		}, Variant::Type::FLOAT, Variant::Type::FLOAT));
+
 		m_ConsoleCommands.emplace_back(FunctionBindings::BindP("open",
 			[](const Variant& windowName)
 		{
@@ -529,6 +545,11 @@ namespace flex
 		if (m_SceneTestRunner != nullptr)
 		{
 			m_SceneTestRunner->OnEngineInitialized();
+		}
+		else if (m_bGameMode)
+		{
+			g_Game = new Game();
+			g_Game->Initialize();
 		}
 
 		sec durationSec = Time::CurrentSeconds() - startTime;
@@ -563,6 +584,11 @@ namespace flex
 		g_InputManager->UnbindMouseButtonCallback(&m_MouseButtonCallback);
 		g_InputManager->UnbindKeyEventCallback(&m_KeyEventCallback);
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
+
+		if (g_Game != nullptr)
+		{
+			g_Game->Destroy();
+		}
 
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
@@ -840,6 +866,11 @@ namespace flex
 
 					currentCamera->LateUpdate();
 
+					if (g_Game != nullptr)
+					{
+						g_Game->LateUpdate();
+					}
+
 					AudioManager::Update();
 				}
 				else
@@ -874,6 +905,11 @@ namespace flex
 				}
 
 				g_UIManager->Update();
+
+				if (g_Game != nullptr)
+				{
+					g_Game->Update();
+				}
 
 				g_Renderer->Update();
 
@@ -2081,6 +2117,12 @@ namespace flex
 			if (JSONParser::ParseFromFile(m_CommonSettingsAbsFilePath, rootObject))
 			{
 				std::string lastOpenedSceneName = rootObject.GetString("last opened scene");
+				if (m_bGameMode)
+				{
+					// The game starts in its own scene, the editor's is kept for next time
+					m_EditorSceneName = lastOpenedSceneName;
+					lastOpenedSceneName = Game::GAMEPLAY_SCENE_NAME;
+				}
 				if (!lastOpenedSceneName.empty())
 				{
 					// Don't print errors if not found, file might have been deleted since last session
@@ -2094,6 +2136,7 @@ namespace flex
 				if (rootObject.TryGetBool("render imgui", bRenderImGui))
 				{
 					m_bRenderImGui = bRenderImGui;
+					m_bEditorRenderImGui = bRenderImGui;
 				}
 
 				real masterGain;
@@ -2149,9 +2192,16 @@ namespace flex
 		JSONObject rootObject = {};
 
 		std::string lastOpenedSceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
+		bool bRenderImGui = m_bRenderImGui;
+		if (g_Game != nullptr && (g_Game->IsPlaying() || g_Game->IsMenuOpen()) && !m_EditorSceneName.empty())
+		{
+			// Playing the game doesn't change what the editor opens
+			lastOpenedSceneName = m_EditorSceneName;
+			bRenderImGui = m_bEditorRenderImGui;
+		}
 		rootObject.fields.emplace_back("last opened scene", JSONValue(lastOpenedSceneName));
 
-		rootObject.fields.emplace_back("render imgui", JSONValue(m_bRenderImGui));
+		rootObject.fields.emplace_back("render imgui", JSONValue(bRenderImGui));
 
 		rootObject.fields.emplace_back("master gain", JSONValue(AudioManager::GetMasterGain()));
 		rootObject.fields.emplace_back("muted", JSONValue(AudioManager::IsMuted()));
@@ -2500,14 +2550,16 @@ namespace flex
 
 	EventReply FlexEngine::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
+		// Gameplay scenes are for playing, not jumping between test scenes
+		const bool bGameplayScene = g_SceneManager->CurrentScene()->IsGameplayScene();
 		if (actionEvent == ActionEvent::ACTION_TRIGGER)
 		{
-			if (action == Action::DBG_ENTER_NEXT_SCENE)
+			if (action == Action::DBG_ENTER_NEXT_SCENE && !bGameplayScene)
 			{
 				g_SceneManager->SetNextSceneActive();
 				return EventReply::CONSUMED;
 			}
-			else if (action == Action::DBG_ENTER_PREV_SCENE)
+			else if (action == Action::DBG_ENTER_PREV_SCENE && !bGameplayScene)
 			{
 				g_SceneManager->SetPreviousSceneActive();
 				return EventReply::CONSUMED;

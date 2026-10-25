@@ -390,6 +390,25 @@ namespace flex
 		};
 		static_assert(ARRAY_LENGTH(s_Materials) == (u32)Material::_COUNT, "s_Materials must match Material enum");
 
+		// Points well below the heightfield are in caves (the heightfield is where the surface would be without caves,
+		// give or take overhangs), which sunlight & the sky don't reach
+		static real SkyVisibility(const glm::vec3& pos, const ColumnSample& column)
+		{
+			const real depth = column.height - pos.y;
+			const real start = column.overhangAmplitude * 0.8f + 6.0f;
+			const real t = glm::clamp((depth - start) / 24.0f, 0.0f, 1.0f);
+			return 1.0f - t * t * (3.0f - 2.0f * t);
+		}
+
+		// Texture weights are normalized so snow can be implied, freeing w for sky visibility
+		static glm::vec4 PackVertexWeights(const glm::vec4& weights, real skyVisibility)
+		{
+			const glm::vec4 clamped = glm::max(weights, glm::vec4(0.0f));
+			const real sum = clamped.x + clamped.y + clamped.z + clamped.w;
+			const glm::vec3 normalized = sum > 1e-5f ? glm::vec3(clamped) / sum : glm::vec3(0.0f, 1.0f, 0.0f);
+			return glm::vec4(normalized, skyVisibility);
+		}
+
 		const char* MaterialName(Material material)
 		{
 			return (u32)material < (u32)Material::_COUNT ? s_Materials[(u32)material].name : "Invalid";
@@ -426,6 +445,9 @@ namespace flex
 			SEED_OCEAN_FLOOR,
 			SEED_TUNNEL_SIZE,
 			SEED_CAVERN,
+			SEED_TREES,
+			SEED_FOREST,
+			SEED_TREASURE,
 			SEED_BIOME_BASE = 1000,
 		};
 
@@ -1794,6 +1816,367 @@ namespace flex
 		// adjacent cells/chunks). Cells touching a face or edge shared with a finer chunk ("transition cells") have
 		// those faces/edges subdivided to match the finer chunk, and are split into tetrahedra fanning out from the
 		// cell center.
+		bool TerrainDensity::FindTopSurface(real x, real z, real yMin, real yMax, const ColumnSample& column, const EditList& edits, real& outY) const
+		{
+			// Coarse steps down from the top, then bisection
+			const real step = m_Params.voxelSize;
+			real prevY = yMax;
+			real prevD = Sample(glm::vec3(x, prevY, z), column, edits);
+			if (prevD < 0.0f)
+			{
+				// Solid at the top of the range, so the surface (if any) is above it
+				return false;
+			}
+			for (real y = yMax - step; y >= yMin - step; y -= step)
+			{
+				const real d = Sample(glm::vec3(x, y, z), column, edits);
+				if (d < 0.0f)
+				{
+					real lo = y;
+					real hi = prevY;
+					for (u32 i = 0; i < 8; ++i)
+					{
+						const real mid = (lo + hi) * 0.5f;
+						if (Sample(glm::vec3(x, mid, z), column, edits) < 0.0f)
+						{
+							lo = mid;
+						}
+						else
+						{
+							hi = mid;
+						}
+					}
+					outY = (lo + hi) * 0.5f;
+					return outY >= yMin && outY < yMax;
+				}
+				prevY = y;
+				prevD = d;
+			}
+			return false;
+		}
+
+		// Trees & cacti, generated with the terrain (so they stream, LOD & collide along with it). Placed on a jittered
+		// grid, each candidate is decided by the biome's climate, a forest density pattern & the ground's slope.
+		class VegetationBuilder
+		{
+		public:
+			VegetationBuilder(const TerrainDensity& density, const EditList& edits, ChunkMeshData& out, i32 level) :
+				m_Density(density),
+				m_Edits(edits),
+				m_Out(out),
+				m_Level(level)
+			{
+			}
+
+			// Appends the plants to the chunk's mesh: trunks (which are collided with) first, then foliage (which isn't)
+			void Finish()
+			{
+				Append(m_Trunks);
+				if (!m_Foliage.indices.empty())
+				{
+					m_Out.collisionIndexCount = (u32)m_Out.indices.size();
+					Append(m_Foliage);
+				}
+			}
+
+			// Adds the plants whose bases lie within the given box
+			void Build(const glm::vec3& boxMin, const glm::vec3& boxMax)
+			{
+				const u32 seed = DeriveSeed(m_Density.Seed(), SEED_TREES);
+				const u32 forestSeed = DeriveSeed(m_Density.Seed(), SEED_FOREST);
+				const i32 minCellX = (i32)glm::floor(boxMin.x / CELL_SIZE);
+				const i32 maxCellX = (i32)glm::floor((boxMax.x - 1e-3f) / CELL_SIZE);
+				const i32 minCellZ = (i32)glm::floor(boxMin.z / CELL_SIZE);
+				const i32 maxCellZ = (i32)glm::floor((boxMax.z - 1e-3f) / CELL_SIZE);
+				for (i32 cz = minCellZ; cz <= maxCellZ; ++cz)
+				{
+					for (i32 cx = minCellX; cx <= maxCellX; ++cx)
+					{
+						const u32 h = HashCoords(cx, cz, seed);
+						// Distant chunks only show the larger plants
+						const real size01 = HashToUnit(HashU32(h + 5));
+						if (m_Level >= 2 && size01 < 0.4f)
+						{
+							continue;
+						}
+
+						const real x = ((real)cx + 0.1f + 0.8f * HashToUnit(HashU32(h + 1))) * CELL_SIZE;
+						const real z = ((real)cz + 0.1f + 0.8f * HashToUnit(HashU32(h + 2))) * CELL_SIZE;
+						if (x < boxMin.x || x >= boxMax.x || z < boxMin.z || z >= boxMax.z)
+						{
+							continue;
+						}
+
+						const ColumnSample column = m_Density.SampleColumn(x, z);
+						const Kind kind = ChooseKind(column, x, z, HashToUnit(h), forestSeed);
+						if (kind == Kind::NONE)
+						{
+							continue;
+						}
+
+						real groundY;
+						if (!m_Density.FindTopSurface(x, z, boxMin.y, boxMax.y, column, m_Edits, groundY))
+						{
+							continue;
+						}
+						const glm::vec3 base(x, groundY, z);
+						if (column.lakeID != 0 && column.lakeT < 1.05f && groundY < column.waterLevel + 0.5f)
+						{
+							continue;
+						}
+						if (groundY > column.peakHeight - 30.0f || SkyVisibility(base, column) < 0.95f)
+						{
+							continue;
+						}
+						// Not on steep slopes
+						const real e = 1.0f;
+						const glm::vec3 gradient(
+							m_Density.Sample(base + glm::vec3(e, 0, 0), column, m_Edits) - m_Density.Sample(base - glm::vec3(e, 0, 0), column, m_Edits),
+							m_Density.Sample(base + glm::vec3(0, e, 0), column, m_Edits) - m_Density.Sample(base - glm::vec3(0, e, 0), column, m_Edits),
+							m_Density.Sample(base + glm::vec3(0, 0, e), column, m_Edits) - m_Density.Sample(base - glm::vec3(0, 0, e), column, m_Edits));
+						const real gradientLength = glm::length(gradient);
+						if (gradientLength < 1e-5f || gradient.y / gradientLength < 0.8f)
+						{
+							continue;
+						}
+
+						AddPlant(kind, base - glm::vec3(0.0f, 0.3f, 0.0f), h, size01);
+					}
+				}
+			}
+
+		private:
+			enum class Kind
+			{
+				NONE,
+				CONIFER,
+				DECIDUOUS,
+				CACTUS,
+			};
+
+			static constexpr real CELL_SIZE = 7.0f;
+
+			Kind ChooseKind(const ColumnSample& column, real x, real z, real chance, u32 forestSeed) const
+			{
+				// Forests grow in patches, with clearings between them
+				const real forestNoise = GradientNoise3(x / 700.0f, 0.0f, z / 700.0f, forestSeed) + 0.4f * GradientNoise3(x / 180.0f, 0.5f, z / 180.0f, forestSeed + 1);
+				const real forest = Smoothstep(-0.25f, 0.45f, forestNoise);
+				const real t = column.temperature;
+				const real grass = column.grassiness;
+
+				if (t > 0.55f && grass < 0.25f)
+				{
+					// Deserts: scattered cacti
+					return chance < 0.05f * (1.0f - grass * 3.0f) ? Kind::CACTUS : Kind::NONE;
+				}
+				if (t < -0.7f)
+				{
+					// Tundra: the odd stunted conifer
+					return chance < 0.03f * grass ? Kind::CONIFER : Kind::NONE;
+				}
+
+				const real density = grass * (0.04f + 0.42f * forest);
+				if (chance >= density)
+				{
+					return Kind::NONE;
+				}
+				// Conifers in the cold & up mountains, broadleaf trees in milder climates, mixed in between
+				const real coniferness = Smoothstep(0.15f, -0.25f, t) + Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
+				return HashToUnit(HashU32((u32)(chance * 16777216.0f) + 77u)) < coniferness ? Kind::CONIFER : Kind::DECIDUOUS;
+			}
+
+			void Append(const ChunkMeshData& part)
+			{
+				const u32 base = (u32)m_Out.positions.size();
+				m_Out.positions.insert(m_Out.positions.end(), part.positions.begin(), part.positions.end());
+				m_Out.normals.insert(m_Out.normals.end(), part.normals.begin(), part.normals.end());
+				m_Out.colours.insert(m_Out.colours.end(), part.colours.begin(), part.colours.end());
+				m_Out.weights.insert(m_Out.weights.end(), part.weights.begin(), part.weights.end());
+				for (u32 index : part.indices)
+				{
+					m_Out.indices.push_back(base + index);
+				}
+			}
+
+			// Flat shaded triangle (one normal per face)
+			void AddTriangle(const glm::vec3& a, const glm::vec3& b, const glm::vec3& c, const glm::vec3& colour, const glm::vec4& weights)
+			{
+				ChunkMeshData& out = *m_Target;
+				glm::vec3 normal = glm::cross(b - a, c - a);
+				const real length = glm::length(normal);
+				if (length < 1e-8f)
+				{
+					return;
+				}
+				normal /= length;
+				const u32 base = (u32)out.positions.size();
+				for (const glm::vec3* p : { &a, &b, &c })
+				{
+					out.positions.push_back(*p);
+					out.normals.push_back(normal);
+					out.colours.push_back(glm::vec4(colour, 0.0f));
+					out.weights.push_back(weights);
+				}
+				out.indices.push_back(base);
+				out.indices.push_back(base + 1);
+				out.indices.push_back(base + 2);
+			}
+
+			// A tapered prism (cone when topRadius is 0) around the vertical axis
+			void AddFrustum(const glm::vec3& base, real height, real bottomRadius, real topRadius, u32 sides, real angleOffset,
+				const glm::vec3& colour, const glm::vec4& weights, bool bCapBottom)
+			{
+				const glm::vec3 top = base + glm::vec3(0.0f, height, 0.0f);
+				for (u32 i = 0; i < sides; ++i)
+				{
+					const real a0 = angleOffset + TWO_PI * (real)i / (real)sides;
+					const real a1 = angleOffset + TWO_PI * (real)(i + 1) / (real)sides;
+					const glm::vec3 d0(std::cos(a0), 0.0f, std::sin(a0));
+					const glm::vec3 d1(std::cos(a1), 0.0f, std::sin(a1));
+					const glm::vec3 b0 = base + d0 * bottomRadius;
+					const glm::vec3 b1 = base + d1 * bottomRadius;
+					if (topRadius > 0.0f)
+					{
+						const glm::vec3 t0 = top + d0 * topRadius;
+						const glm::vec3 t1 = top + d1 * topRadius;
+						AddTriangle(b0, t0, b1, colour, weights);
+						AddTriangle(b1, t0, t1, colour, weights);
+						AddTriangle(top, t1, t0, colour, weights);
+					}
+					else
+					{
+						AddTriangle(b0, top, b1, colour, weights);
+					}
+					if (bCapBottom)
+					{
+						AddTriangle(base, b0, b1, colour, weights);
+					}
+				}
+			}
+
+			// A lumpy, low poly ball of leaves (subdivided octahedron)
+			void AddBlob(const glm::vec3& center, const glm::vec3& radii, u32 hash, const glm::vec3& colour, const glm::vec4& weights)
+			{
+				const glm::vec3 axes[6] = { glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(-1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0), glm::vec3(0, -1, 0) };
+				const u32 faces[8][3] = { { 0, 4, 1 }, { 1, 4, 2 }, { 2, 4, 3 }, { 3, 4, 0 }, { 1, 5, 0 }, { 2, 5, 1 }, { 3, 5, 2 }, { 0, 5, 3 } };
+				auto Point = [&](const glm::vec3& dir)
+				{
+					const glm::vec3 n = glm::normalize(dir);
+					// Deterministic bumps
+					const u32 bump = HashU32(hash + (u32)(i32)(n.x * 97.0f) * 31u + (u32)(i32)(n.y * 89.0f) * 17u + (u32)(i32)(n.z * 83.0f) * 7u);
+					return center + n * radii * (0.85f + 0.3f * HashToUnit(bump));
+				};
+				const bool bSubdivide = m_Level == 0;
+				for (const auto& face : faces)
+				{
+					const glm::vec3 a = axes[face[0]];
+					const glm::vec3 b = axes[face[1]];
+					const glm::vec3 c = axes[face[2]];
+					if (bSubdivide)
+					{
+						const glm::vec3 ab = a + b;
+						const glm::vec3 bc = b + c;
+						const glm::vec3 ca = c + a;
+						AddTriangle(Point(a), Point(ab), Point(ca), colour, weights);
+						AddTriangle(Point(ab), Point(b), Point(bc), colour, weights);
+						AddTriangle(Point(ca), Point(bc), Point(c), colour, weights);
+						AddTriangle(Point(ab), Point(bc), Point(ca), colour, weights);
+					}
+					else
+					{
+						AddTriangle(Point(a), Point(b), Point(c), colour, weights);
+					}
+				}
+			}
+
+			void AddPlant(Kind kind, const glm::vec3& base, u32 hash, real size01)
+			{
+				const real variation = HashToUnit(HashU32(hash + 9)) - 0.5f;
+				const real angle = HashToUnit(HashU32(hash + 11)) * TWO_PI;
+				// Weights: grass (leafy), layered rock, granular; w: sky visibility
+				const glm::vec4 leafWeights(1.0f, 0.0f, 0.0f, 1.0f);
+				const glm::vec4 barkWeights(0.0f, 0.2f, 0.8f, 1.0f);
+				const glm::vec3 bark = glm::vec3(0.33f, 0.24f, 0.16f) * (1.0f + variation * 0.3f);
+				const bool bDetailed = m_Level == 0;
+
+				switch (kind)
+				{
+				case Kind::CONIFER:
+				{
+					const real height = 9.0f + 12.0f * size01;
+					const glm::vec3 needles = glm::vec3(0.11f, 0.2f, 0.11f) * (1.0f + variation * 0.35f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, height * 0.35f, 0.22f + 0.15f * size01, 0.15f, bDetailed ? 6 : 4, angle, bark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const u32 tiers = bDetailed ? 3 : 1;
+					for (u32 i = 0; i < tiers; ++i)
+					{
+						const real t = tiers == 1 ? 0.0f : (real)i / (real)(tiers - 1);
+						const real tierBase = height * (0.18f + 0.3f * t);
+						const real tierHeight = height * (tiers == 1 ? 0.82f : 0.52f - 0.12f * t);
+						const real radius = height * (0.28f - 0.09f * t);
+						AddFrustum(base + glm::vec3(0.0f, tierBase, 0.0f), tierHeight, radius, 0.0f, bDetailed ? 7 : 5, angle + (real)i * 0.4f, needles * (1.0f + 0.08f * (real)i), leafWeights, true);
+					}
+				} break;
+				case Kind::DECIDUOUS:
+				{
+					const real height = 7.0f + 7.0f * size01;
+					const glm::vec3 leaves = glm::vec3(0.2f, 0.32f, 0.11f) * (1.0f + variation * 0.4f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, height * 0.55f, 0.3f + 0.15f * size01, 0.2f, bDetailed ? 6 : 4, angle, bark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const real canopy = height * 0.33f;
+					AddBlob(base + glm::vec3(0.0f, height * 0.68f, 0.0f), glm::vec3(canopy, canopy * 0.8f, canopy), hash, leaves, leafWeights);
+					if (bDetailed)
+					{
+						const glm::vec3 offset(std::cos(angle) * canopy * 0.6f, 0.0f, std::sin(angle) * canopy * 0.6f);
+						AddBlob(base + glm::vec3(0.0f, height * 0.58f, 0.0f) + offset, glm::vec3(canopy * 0.7f), hash + 1, leaves * 1.08f, leafWeights);
+						AddBlob(base + glm::vec3(0.0f, height * 0.62f, 0.0f) - offset, glm::vec3(canopy * 0.65f), hash + 2, leaves * 0.93f, leafWeights);
+					}
+				} break;
+				case Kind::CACTUS:
+				{
+					const real height = 3.0f + 3.5f * size01;
+					const glm::vec3 green = glm::vec3(0.24f, 0.36f, 0.2f) * (1.0f + variation * 0.3f);
+					const glm::vec4 cactusWeights(0.3f, 0.0f, 0.7f, 1.0f);
+					// Prickly: cacti are solid
+					m_Target = &m_Trunks;
+					const u32 sides = bDetailed ? 8 : 5;
+					const real radius = 0.28f + 0.1f * size01;
+					AddFrustum(base, height, radius, radius * 0.8f, sides, angle, green, cactusWeights, false);
+					AddFrustum(base + glm::vec3(0.0f, height, 0.0f), radius * 0.5f, radius * 0.8f, 0.0f, sides, angle, green, cactusWeights, false);
+					if (bDetailed)
+					{
+						// One or two arms: out, then up
+						const u32 armCount = 1 + (HashU32(hash + 13) & 1);
+						for (u32 i = 0; i < armCount; ++i)
+						{
+							const real armAngle = angle + PI * (real)i;
+							const glm::vec3 dir(std::cos(armAngle), 0.0f, std::sin(armAngle));
+							const real armHeight = height * (0.35f + 0.2f * HashToUnit(HashU32(hash + 20 + i)));
+							const real armRadius = radius * 0.65f;
+							const glm::vec3 elbow = base + glm::vec3(0.0f, armHeight, 0.0f) + dir * (radius + 0.45f);
+							// Horizontal part as a short squat frustum around the elbow
+							AddFrustum(elbow - glm::vec3(0.0f, armRadius, 0.0f) - dir * 0.45f, armRadius * 2.0f, armRadius, armRadius, sides, armAngle, green, cactusWeights, true);
+							AddFrustum(elbow, height * 0.35f, armRadius, armRadius * 0.8f, sides, armAngle, green, cactusWeights, false);
+							AddFrustum(elbow + glm::vec3(0.0f, height * 0.35f, 0.0f), armRadius * 0.5f, armRadius * 0.8f, 0.0f, sides, armAngle, green, cactusWeights, false);
+						}
+					}
+				} break;
+				default:
+					break;
+				}
+			}
+
+			const TerrainDensity& m_Density;
+			const EditList& m_Edits;
+			ChunkMeshData& m_Out;
+			ChunkMeshData m_Trunks;
+			ChunkMeshData m_Foliage;
+			ChunkMeshData* m_Target = &m_Trunks;
+			i32 m_Level;
+		};
+
 		class ChunkMesher
 		{
 		public:
@@ -1907,7 +2290,17 @@ namespace flex
 						}
 					}
 				}
+
+				// Plants are only shown up close (they're too small to see from far away)
+				if (!bUniform && m_Key.level <= MAX_VEGETATION_LEVEL)
+				{
+					VegetationBuilder vegetation(m_Density, m_Edits, m_Out, m_Key.level);
+					vegetation.Build(WorldPos(glm::ivec3(0, 0, 0)), WorldPos(glm::ivec3(2 * N, 2 * N, 2 * N)));
+					vegetation.Finish();
+				}
 			}
+
+			static const i32 MAX_VEGETATION_LEVEL = 2;
 
 		private:
 			struct PointSample
@@ -1935,6 +2328,48 @@ namespace flex
 			static inline bool IsEven(const glm::ivec3& a)
 			{
 				return ((a.x | a.y | a.z) & 1) == 0;
+			}
+
+			// The heightfield gives a cheap first guess (points far below it are probably in caves), which is checked by
+			// looking for rock above the point: the heightfield can be well above the real surface (overhangs, carved
+			// lakes, coarse LODs), & points with open air above them are lit no matter how deep they are. Looks up &
+			// away from the surface, so cliff faces (which have rock straight above them) aren't mistaken for caves,
+			// while cave floors (ceiling above) & walls (the opposite wall or ceiling) still are.
+			real ComputeSkyVisibility(const glm::vec3& pos, const glm::vec3& normal, const ColumnSample& column) const
+			{
+				// Coarse chunks' vertices can be far from the real surface (even inside it), & caves can't be seen from
+				// the distances they're shown at anyway
+				if (m_Key.level >= 2)
+				{
+					return 1.0f;
+				}
+				const real estimate = SkyVisibility(pos, column);
+				if (estimate >= 0.999f)
+				{
+					return 1.0f;
+				}
+				// Several rays fanning out above the surface: crevices (where some can escape) are only partly darkened,
+				// enclosed spaces like caves fully
+				const glm::vec3 up = glm::normalize(normal + glm::vec3(0.0f, 1.0f, 0.0f) + glm::vec3(0.0f, 1e-3f, 0.0f));
+				const glm::vec3 side0 = glm::normalize(glm::cross(up, glm::abs(up.x) < 0.9f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 0.0f, 1.0f)));
+				const glm::vec3 side1 = glm::cross(up, side0);
+				const glm::vec3 dirs[5] = { up, glm::normalize(up + side0 * 0.8f), glm::normalize(up - side0 * 0.8f), glm::normalize(up + side1 * 0.8f), glm::normalize(up - side1 * 0.8f) };
+				u32 blockedCount = 0;
+				for (const glm::vec3& dir : dirs)
+				{
+					// Short enough that rays from small hollows in open slopes escape, but cave ceilings & walls block them
+					for (real distance : { 6.0f, 16.0f, 34.0f })
+					{
+						// (sampled with its own column, which can differ a lot from the vertex's on steep terrain)
+						if (m_Density.Sample(pos + normal * m_CellWorldSize + dir * distance, m_Edits) < 0.0f)
+						{
+							++blockedCount;
+							break;
+						}
+					}
+				}
+				const real blocked = (real)blockedCount / 5.0f;
+				return 1.0f - (1.0f - estimate) * blocked * blocked;
 			}
 
 			glm::vec3 WorldPos(const glm::ivec3& a) const
@@ -2140,7 +2575,7 @@ namespace flex
 				m_Out.positions.push_back(pos);
 				m_Out.normals.push_back(normal);
 				m_Out.colours.push_back(surface.colour);
-				m_Out.weights.push_back(surface.weights);
+				m_Out.weights.push_back(PackVertexWeights(surface.weights, ComputeSkyVisibility(pos, normal, blended)));
 				m_VertexMap.Insert(edgeKey, index);
 				return index;
 			}
@@ -2463,6 +2898,7 @@ namespace flex
 			colours.clear();
 			weights.clear();
 			indices.clear();
+			collisionIndexCount = ~0u;
 			waterPositions.clear();
 			waterIndices.clear();
 		}
@@ -2643,6 +3079,7 @@ namespace flex
 			writer.Write((u32)mesh.indices.size());
 			writer.Write(waterVertexCount);
 			writer.Write((u32)mesh.waterIndices.size());
+			writer.Write(mesh.collisionIndexCount);
 
 			// Positions stay full precision so vertices shared with neighboring chunks remain bit-identical
 			writer.Bytes(mesh.positions.data(), vertexCount * sizeof(glm::vec3));
@@ -2674,6 +3111,10 @@ namespace flex
 
 			u32 vertexCount, indexCount, waterVertexCount, waterIndexCount;
 			if (!reader.Read(vertexCount) || !reader.Read(indexCount) || !reader.Read(waterVertexCount) || !reader.Read(waterIndexCount))
+			{
+				return false;
+			}
+			if (!reader.Read(outMesh.collisionIndexCount))
 			{
 				return false;
 			}
@@ -3803,10 +4244,25 @@ namespace flex
 
 		void TerrainStreamer::ApplyEdit(const Edit& edit)
 		{
-			m_Edits.Add(edit);
+			ApplyEdits(&edit, 1);
+		}
 
-			const glm::vec3 editMin = edit.center - glm::vec3(edit.radius);
-			const glm::vec3 editMax = edit.center + glm::vec3(edit.radius);
+		void TerrainStreamer::ApplyEdits(const Edit* edits, u32 count)
+		{
+			if (count == 0)
+			{
+				return;
+			}
+
+			// All the edits' chunks are regenerated together
+			glm::vec3 editMin(1e30f);
+			glm::vec3 editMax(-1e30f);
+			for (u32 i = 0; i < count; ++i)
+			{
+				m_Edits.Add(edits[i]);
+				editMin = glm::min(editMin, edits[i].center - glm::vec3(edits[i].radius));
+				editMax = glm::max(editMax, edits[i].center + glm::vec3(edits[i].radius));
+			}
 			auto Affects = [&](const ChunkKey& key)
 			{
 				glm::vec3 boxMin, boxMax;

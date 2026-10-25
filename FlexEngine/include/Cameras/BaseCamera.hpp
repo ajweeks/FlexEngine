@@ -96,11 +96,12 @@ namespace flex
 
 		CameraType type;
 
-	protected:
 		// Sets right, up, and forward based on yaw and pitch
 		void CalculateAxisVectorsFromPitchAndYaw();
 		void CalculateYawAndPitchFromForward();
 		void RecalculateViewProjection();
+
+	protected:
 
 		void JitterMatrix(glm::mat4& matrix);
 		void ClampPitch();

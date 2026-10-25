@@ -31,3 +31,5 @@ solar panel
 vehicle
 speaker
 pickaxe
+build piece
+treasure chest

@@ -179,14 +179,14 @@ namespace flex
 		return bAnyPropertyChanged;
 	}
 
-	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape)
+	void MeshComponent::CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape, u32 maxIndexCount /* = ~0u */)
 	{
 		*outTriangleIndexVertexArray = new btTriangleIndexVertexArray();
 		btIndexedMesh part = {};
 
 		VertexBufferData* vertexBufferData = GetVertexBufferData();
 		u32* indexBufferData = GetIndexBufferDataPtr();
-		u32 indexCount = GetIndexCount();
+		u32 indexCount = glm::min(GetIndexCount(), maxIndexCount);
 
 		part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
 		part.m_vertexStride = vertexBufferData->VertexStride;

@@ -19,7 +19,7 @@ namespace flex
 	class VertexBufferData;
 	class GameObject;
 
-	static const i32 MAX_POINT_LIGHT_COUNT = 8;
+	static const i32 MAX_POINT_LIGHT_COUNT = 16;
 	static const i32 MAX_SPOT_LIGHT_COUNT = 8;
 	static const i32 MAX_AREA_LIGHT_COUNT = 8;
 	static const i32 MAX_SHADOW_CASCADE_COUNT = 4;
@@ -202,6 +202,9 @@ namespace flex
 		// 80, x: coverage [0, 1], y: altitude, zw: wind offset. Stored in world space, converted to be relative to
 		// the camera when uploaded (keeps values small enough for shaders' float precision)
 		glm::vec4 clouds;
+		glm::vec4 moon; // 96, xyz: direction towards the moon, w: brightness [0, 1]
+		glm::vec4 sunColour; // 112, rgb: colour of sunlight reaching the ground (display space), w: star visibility
+		glm::vec4 weather; // 128, x: cloudiness [0, 1], y: regional variation, zw: weather pattern offset
 	};
 
 	// 64 bytes

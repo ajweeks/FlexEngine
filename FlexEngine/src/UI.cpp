@@ -4,6 +4,7 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
@@ -97,9 +98,32 @@ namespace flex
 
 			Rect rectToDraw = lastCutRect;
 			rectToDraw.Scale(margin);
-			uiMesh->DrawRect(
-				glm::vec2(rectToDraw.minX, rectToDraw.minY),
-				glm::vec2(rectToDraw.maxX, rectToDraw.maxY), rectToDraw.colour, 0.0f);
+			FLEX_UNUSED(uiMesh);
+
+			// Rounded, softly shaded slots (rects are in [-1, 1], +y up)
+			const glm::vec2i windowSize = g_Window->GetSize();
+			const real width = (real)windowSize.x;
+			const real height = (real)windowSize.y;
+			const UIRect pixelRect(
+				(rectToDraw.minX * 0.5f + 0.5f) * width,
+				(0.5f - rectToDraw.maxY * 0.5f) * height,
+				(rectToDraw.maxX - rectToDraw.minX) * 0.5f * width,
+				(rectToDraw.maxY - rectToDraw.minY) * 0.5f * height);
+			const real radius = 10.0f * height / 1080.0f;
+			if (bHighlighted && type == UIContainerType::ITEM)
+			{
+				// Accent outline around the selected slot
+				const real outline = 3.0f * height / 1080.0f;
+				GameUI::DrawRoundedRect(pixelRect.Inset(-outline), UITheme::ACCENT, UITheme::ACCENT_DARK, radius + outline);
+			}
+			glm::vec4 top = rectToDraw.colour;
+			top.r = glm::min(top.r * 1.4f + 0.04f, 1.0f);
+			top.g = glm::min(top.g * 1.4f + 0.04f, 1.0f);
+			top.b = glm::min(top.b * 1.4f + 0.05f, 1.0f);
+			glm::vec4 bottom = rectToDraw.colour;
+			top.a *= 0.88f;
+			bottom.a *= 0.88f;
+			GameUI::DrawRoundedRect(pixelRect, top, bottom, radius);
 		}
 
 		for (UIContainer* child : children)
@@ -785,8 +809,8 @@ namespace flex
 
 	void InventoryUIContainer::OnLayoutChanged()
 	{
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
+		// Slots are linked to inventory stacks by index, which doesn't depend on a player existing yet (the layout is
+		// usually loaded before the player spawns)
 		{
 			if (!children.empty())
 			{
@@ -1088,8 +1112,8 @@ namespace flex
 
 	void QuickAccessItemUIContainer::OnLayoutChanged()
 	{
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
+		// Slots are linked to inventory stacks by index, which doesn't depend on a player existing yet (the layout is
+		// usually loaded before the player spawns)
 		{
 			Print("Quick access children: %u\n", (u32)children.size());
 
@@ -1252,8 +1276,8 @@ namespace flex
 
 	void WearablesItemUIContainer::OnLayoutChanged()
 	{
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
+		// Slots are linked to inventory stacks by index, which doesn't depend on a player existing yet (the layout is
+		// usually loaded before the player spawns)
 		{
 			Print("Wearables inventory children: %u\n", (u32)children.size());
 

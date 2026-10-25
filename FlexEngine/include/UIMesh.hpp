@@ -30,6 +30,10 @@ namespace flex
 			const std::vector<u32>& indices,
 			const glm::vec4& colour,
 			const glm::vec2& uvBlendAmount);
+		// Polygon with a colour per vertex (no texture coordinate based edge blending, fade alpha at the edges instead)
+		void DrawPolygonColoured(const std::vector<glm::vec2>& points,
+			const std::vector<glm::vec4>& colours,
+			const std::vector<u32>& indices);
 
 		void Draw();
 		void EndFrame();
@@ -60,5 +64,7 @@ namespace flex
 		i32 m_LastUsedSubmeshCount = -1;
 
 		GameObject* m_Object = nullptr;
+		// Set while drawing a polygon with per vertex colours
+		const std::vector<glm::vec4>* m_PendingColours = nullptr;
 	};
 } // namespace flex

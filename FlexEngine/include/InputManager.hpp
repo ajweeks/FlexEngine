@@ -67,6 +67,8 @@ namespace flex
 		// hidden windows)
 		void SetIgnoreWindowFocus(bool bIgnoreWindowFocus) { m_bIgnoreWindowFocus = bIgnoreWindowFocus; }
 		void CharCallback(u32 character);
+		// Printable characters typed since the last frame (for in game text fields)
+		const std::string& GetTypedText() const { return m_TypedText; }
 
 		bool DidMouseWrap() const;
 
@@ -154,6 +156,7 @@ namespace flex
 		glm::vec2 m_PrevMousePosition = { 0, 0 };
 		real m_ScrollXOffset = 0;
 		real m_ScrollYOffset = 0;
+		std::string m_TypedText;
 
 		bool m_bMouseWrapped = false;
 		bool m_bInputBindingsDirty = false;

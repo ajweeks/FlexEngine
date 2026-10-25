@@ -189,7 +189,12 @@ namespace flex
 
 		bool DrawImGuiGameObjectIDField(const char* label, GameObjectID& ID, bool bReadOnly = false);
 
+		bool IsGameplayScene() const { return m_bGameplayScene; }
+
 		void SetTimeOfDay(real time);
+		// Directions towards the sun & moon at a time of day
+		static glm::vec3 GetSunDirection(real timeOfDay);
+		static glm::vec3 GetMoonDirection(real timeOfDay);
 		real GetTimeOfDay() const;
 		void SetSecondsPerDay(real secPerDay);
 		real GetSecondsPerDay() const;
@@ -282,6 +287,8 @@ namespace flex
 		bool m_bInitialized = false;
 		bool m_bLoaded = false;
 		bool m_bSpawnPlayer = false;
+		// Scenes played as the game (rather than engine test scenes): can't be saved from the editor
+		bool m_bGameplayScene = false;
 		GameObjectID m_PlayerGUIDs[2];
 
 		ReflectionProbe* m_ReflectionProbe = nullptr;
@@ -301,6 +308,15 @@ namespace flex
 		real m_CloudWindSpeed = 14.0f; // m/s
 		real m_CloudWindAngle = 0.6f; // Radians
 		glm::vec2 m_CloudWindOffset = glm::vec2(0.0f);
+
+		// Weather: how cloudy it is (scaling m_CloudCoverage) changes over time & between regions
+		real m_WeatherTime = 0.0f;
+		real m_WeatherSeed = 0.0f;
+		real m_WeatherCloudiness = -1.0f; // [0, 1], < 0: varies over time
+		real m_WeatherRegionalVariation = 0.6f;
+
+		// Brightness of the midday sun (the directional light's brightness when the scene was loaded)
+		real m_DirLightBaseBrightness = -1.0f;
 
 		glm::vec3 m_DirLightColours[4];
 

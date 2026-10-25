@@ -40,6 +40,8 @@ namespace flex
 	static constexpr StringID VehicleSID = SID("vehicle");
 	static constexpr StringID RoadSID = SID("road");
 	static constexpr StringID PlayerSID = SID("player");
+	static constexpr StringID BuildPieceSID = SID("build piece");
+	static constexpr StringID TreasureChestSID = SID("treasure chest");
 	static constexpr StringID ParticleSystemSID = SID("particle system");
 
 	class GameObject;
@@ -53,6 +55,8 @@ namespace flex
 		{
 			NO_SERIALIZED_MESH = 1 << 0,
 			NO_SERIALIZED_MATERIAL = 1 << 1,
+			// Collider & rigid body are created by the object itself
+			NO_SERIALIZED_PHYSICS = 1 << 2,
 		};
 
 		using ConstructFunc = GameObject* (*)(const std::string& name, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate);

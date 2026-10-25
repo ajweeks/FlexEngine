@@ -151,6 +151,10 @@ namespace flex
 
 	std::string TerrainGenerator::GetSaveFilePathBase() const
 	{
+		if (!m_SaveDirectory.empty())
+		{
+			return m_SaveDirectory + "terrain_" + std::to_string(GetEffectiveParams().seed);
+		}
 		const std::string sceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
 		return RelativePathToAbsolute(SAVED_DIRECTORY "terrain/") + sceneName + "_" + std::to_string(GetEffectiveParams().seed);
 	}
@@ -268,8 +272,9 @@ namespace flex
 				const terrain::WorldParams params = GetEffectiveParams();
 
 				// Edits are stored per world (seed)
-				if (params.seed != m_LoadedEditsSeed && m_bEnableDiskCache)
+				if ((params.seed != m_LoadedEditsSeed || m_bReloadEdits) && m_bEnableDiskCache)
 				{
+					m_bReloadEdits = false;
 					SaveEdits();
 					m_LoadedEditsSeed = params.seed;
 					std::vector<terrain::Edit> edits;
@@ -387,6 +392,7 @@ namespace flex
 			chunk.boundsMax = glm::max(chunk.boundsMax, pos);
 		}
 
+		chunk.collisionIndexCount = mesh.collisionIndexCount;
 		if (!mesh.indices.empty())
 		{
 			chunk.meshComponent = CreateMeshComponent(std::move(mesh.positions), std::move(mesh.normals), std::move(mesh.colours),
@@ -581,14 +587,165 @@ namespace flex
 		return m_Streamer != nullptr && m_Streamer->Raycast(origin, dir, maxDistance, outHitPos, outHitNormal);
 	}
 
-	void TerrainGenerator::Dig(const glm::vec3& center, real radius)
+	void TerrainGenerator::Dig(const glm::vec3& center, real radius, bool bRemoveFragments /* = true */)
 	{
 		terrain::Edit edit = {};
 		edit.center = center;
 		edit.radius = radius;
 		edit.type = terrain::EditType::DIG;
 		edit.material = terrain::Material::SOIL;
-		ApplyEdit(edit);
+
+		std::vector<terrain::Edit> edits = { edit };
+		if (bRemoveFragments && m_Streamer != nullptr)
+		{
+			FindFloatingFragments(center, radius + m_Streamer->Params().voxelSize * 2.0f, edits);
+		}
+
+		if (m_Streamer == nullptr)
+		{
+			return;
+		}
+		m_Streamer->ApplyEdits(edits.data(), (u32)edits.size());
+		MarkEditsDirty();
+	}
+
+	void TerrainGenerator::FindFloatingFragments(const glm::vec3& center, real extent, std::vector<terrain::Edit>& inOutEdits) const
+	{
+		// Samples the density at the grid points chunks are meshed from (level 0, which is what's shown around the
+		// player), & flood fills the solid ones from the edges of the region. Solid points which can't be reached are
+		// cut off from everything around them: small groups are dug away, large ones are left (they're more
+		// noticeable to remove than to leave floating).
+		PROFILE_AUTO("TerrainGenerator FindFloatingFragments");
+
+		const terrain::TerrainDensity& density = *m_Streamer->Density();
+		const real voxel = density.Params().voxelSize;
+		const glm::ivec3 lo = glm::ivec3(glm::floor((center - extent) / voxel));
+		const glm::ivec3 hi = glm::ivec3(glm::ceil((center + extent) / voxel));
+		const glm::ivec3 dims = hi - lo + glm::ivec3(1);
+		const i32 pointCount = dims.x * dims.y * dims.z;
+		if (pointCount <= 0 || pointCount > 32 * 32 * 32)
+		{
+			return;
+		}
+
+		std::vector<terrain::Edit> edits;
+		const glm::vec3 boxMin = glm::vec3(lo) * voxel - density.EditBand();
+		const glm::vec3 boxMax = glm::vec3(hi) * voxel + density.EditBand();
+		m_Streamer->Edits().Gather(boxMin, boxMax, edits);
+		edits.insert(edits.end(), inOutEdits.begin(), inOutEdits.end());
+		terrain::EditList editList;
+		editList.edits = edits.data();
+		editList.count = (u32)edits.size();
+
+		auto Index = [&](i32 x, i32 y, i32 z) { return (z * dims.y + y) * dims.x + x; };
+
+		std::vector<u8> solid(pointCount);
+		for (i32 z = 0; z < dims.z; ++z)
+		{
+			for (i32 x = 0; x < dims.x; ++x)
+			{
+				const real wx = (real)(lo.x + x) * voxel;
+				const real wz = (real)(lo.z + z) * voxel;
+				const terrain::ColumnSample column = density.SampleColumn(wx, wz);
+				for (i32 y = 0; y < dims.y; ++y)
+				{
+					const glm::vec3 pos(wx, (real)(lo.y + y) * voxel, wz);
+					solid[Index(x, y, z)] = density.Sample(pos, column, editList) < 0.0f ? 1 : 0;
+				}
+			}
+		}
+
+		// 0: unvisited, 1: connected to the region's edges, 2: floating
+		std::vector<u8> state(pointCount, 0);
+		std::vector<glm::ivec3> stack;
+		auto Flood = [&](const glm::ivec3& start, u8 value, std::vector<glm::ivec3>* outPoints)
+		{
+			stack.clear();
+			stack.push_back(start);
+			state[Index(start.x, start.y, start.z)] = value;
+			while (!stack.empty())
+			{
+				const glm::ivec3 p = stack.back();
+				stack.pop_back();
+				if (outPoints != nullptr)
+				{
+					outPoints->push_back(p);
+				}
+				// Marching tetrahedra can connect diagonal neighbors, so use all 26 to be safe
+				for (i32 dz = -1; dz <= 1; ++dz)
+				{
+					for (i32 dy = -1; dy <= 1; ++dy)
+					{
+						for (i32 dx = -1; dx <= 1; ++dx)
+						{
+							const glm::ivec3 n = p + glm::ivec3(dx, dy, dz);
+							if (n.x < 0 || n.y < 0 || n.z < 0 || n.x >= dims.x || n.y >= dims.y || n.z >= dims.z)
+							{
+								continue;
+							}
+							const i32 ni = Index(n.x, n.y, n.z);
+							if (solid[ni] != 0 && state[ni] == 0)
+							{
+								state[ni] = value;
+								stack.push_back(n);
+							}
+						}
+					}
+				}
+			}
+		};
+
+		for (i32 z = 0; z < dims.z; ++z)
+		{
+			for (i32 y = 0; y < dims.y; ++y)
+			{
+				for (i32 x = 0; x < dims.x; ++x)
+				{
+					const bool bEdge = x == 0 || y == 0 || z == 0 || x == dims.x - 1 || y == dims.y - 1 || z == dims.z - 1;
+					const i32 i = Index(x, y, z);
+					if (bEdge && solid[i] != 0 && state[i] == 0)
+					{
+						Flood(glm::ivec3(x, y, z), 1, nullptr);
+					}
+				}
+			}
+		}
+
+		const u32 maxFragmentPoints = 24;
+		std::vector<glm::ivec3> fragment;
+		u32 removedCount = 0;
+		for (i32 i = 0; i < pointCount; ++i)
+		{
+			if (solid[i] == 0 || state[i] != 0)
+			{
+				continue;
+			}
+			const i32 x = i % dims.x;
+			const i32 y = (i / dims.x) % dims.y;
+			const i32 z = i / (dims.x * dims.y);
+			fragment.clear();
+			Flood(glm::ivec3(x, y, z), 2, &fragment);
+			if (fragment.size() > maxFragmentPoints)
+			{
+				continue;
+			}
+			for (const glm::ivec3& point : fragment)
+			{
+				terrain::Edit edit = {};
+				edit.center = glm::vec3(lo + point) * voxel;
+				// Just enough to clear this point (barely touching its neighbors)
+				edit.radius = voxel * 0.6f;
+				edit.type = terrain::EditType::DIG;
+				edit.material = terrain::Material::SOIL;
+				inOutEdits.push_back(edit);
+			}
+			++removedCount;
+		}
+
+		if (removedCount > 0)
+		{
+			Print("Removed %u floating terrain fragment%s\n", removedCount, removedCount == 1 ? "" : "s");
+		}
 	}
 
 	void TerrainGenerator::Fill(const glm::vec3& center, real radius, terrain::Material material)
@@ -707,6 +864,11 @@ namespace flex
 		}
 
 		m_Streamer->ApplyEdit(edit);
+		MarkEditsDirty();
+	}
+
+	void TerrainGenerator::MarkEditsDirty()
+	{
 		if (!m_bEditsDirty)
 		{
 			m_bEditsDirty = true;
@@ -724,8 +886,17 @@ namespace flex
 		m_bEditsDirty = false;
 		if (m_bEnableDiskCache)
 		{
-			const std::string sceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
-			const std::string filePath = RelativePathToAbsolute(SAVED_DIRECTORY "terrain/") + sceneName + "_" + std::to_string(m_LoadedEditsSeed) + ".edits";
+			// (the seed the edits were made in, which may differ from the current one while switching)
+			std::string filePath;
+			if (!m_SaveDirectory.empty())
+			{
+				filePath = m_SaveDirectory + "terrain_" + std::to_string(m_LoadedEditsSeed) + ".edits";
+			}
+			else
+			{
+				const std::string sceneName = StripFileType(g_SceneManager->CurrentScene()->GetFileName());
+				filePath = RelativePathToAbsolute(SAVED_DIRECTORY "terrain/") + sceneName + "_" + std::to_string(m_LoadedEditsSeed) + ".edits";
+			}
 			if (!terrain::WriteEdits(filePath, m_LoadedEditsSeed, m_Streamer->Edits().Edits()))
 			{
 				PrintError("Failed to save terrain edits to %s\n", filePath.c_str());
@@ -1271,6 +1442,11 @@ namespace flex
 			g_ResourceManager->RemoveLoadedTexture(m_MinimapTextureID, true);
 			m_MinimapTextureID = InvalidTextureID;
 		}
+		if (bAll && m_LargeMapTextureID != InvalidTextureID)
+		{
+			g_ResourceManager->RemoveLoadedTexture(m_LargeMapTextureID, true);
+			m_LargeMapTextureID = InvalidTextureID;
+		}
 	}
 
 	void TerrainGenerator::UpdateMinimap()
@@ -1776,6 +1952,78 @@ namespace flex
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
+	void TerrainGenerator::SetWorld(i32 seed, const std::string& saveDirectory)
+	{
+		// The previous world's edits are saved to its own directory before switching
+		FlushEdits();
+		m_SaveDirectory = saveDirectory;
+		if (!m_SaveDirectory.empty())
+		{
+			Platform::CreateDirectoryRecursive(m_SaveDirectory);
+		}
+		m_Params.seed = seed;
+		m_bReloadEdits = true;
+		m_LargeMap.bValid = false;
+		m_Minimap.bValid = false;
+		Regenerate();
+	}
+
+	void TerrainGenerator::FlushEdits()
+	{
+		if (m_bEditsDirty)
+		{
+			SaveEdits();
+		}
+	}
+
+	TextureID TerrainGenerator::CreateMapTexture(const WorldMap& map, const char* name)
+	{
+		// Sprite textures are displayed with their first row at the bottom, so flip (rows are stored north first)
+		const u32 resolution = map.resolution;
+		std::vector<u32> pixels(resolution * resolution);
+		for (u32 row = 0; row < resolution; ++row)
+		{
+			memcpy(&pixels[(resolution - 1 - row) * resolution], &map.colours[row * resolution], resolution * sizeof(u32));
+		}
+		return g_Renderer->InitializeTextureFromMemory(pixels.data(), (u32)(pixels.size() * sizeof(u32)), TextureFormat::R8G8B8A8_UNORM,
+			name, resolution, resolution, 4, g_Renderer->GetSamplerLinearClampToEdge(), VK_FILTER_LINEAR);
+	}
+
+	void TerrainGenerator::RequestLargeMap(const glm::vec3& center, real extent, u32 resolution)
+	{
+		if (m_Streamer == nullptr || m_LargeMapFuture.valid())
+		{
+			return;
+		}
+		m_LargeMapFuture = GenerateMap(m_Streamer->Density(), center, extent, resolution);
+	}
+
+	void TerrainGenerator::UpdateLargeMap()
+	{
+		if (m_LargeMapFuture.valid() && m_LargeMapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		{
+			m_LargeMap = m_LargeMapFuture.get();
+			const TextureID textureID = CreateMapTexture(m_LargeMap, "Terrain map");
+			if (m_LargeMapTextureID != InvalidTextureID)
+			{
+				m_RetiredMinimapTextures.emplace_back(m_LargeMapTextureID, 0u);
+			}
+			m_LargeMapTextureID = textureID;
+		}
+	}
+
+	bool TerrainGenerator::GetLargeMap(TextureID& outTextureID, glm::vec3& outCenter, real& outExtent) const
+	{
+		if (m_LargeMapTextureID == InvalidTextureID || !m_LargeMap.bValid)
+		{
+			return false;
+		}
+		outTextureID = m_LargeMapTextureID;
+		outCenter = m_LargeMap.center;
+		outExtent = m_LargeMap.extent;
+		return true;
+	}
+
 	void TerrainGenerator::Regenerate()
 	{
 		// Applied on the next update. Existing chunks remain visible until their replacements are ready.
@@ -1872,14 +2120,15 @@ namespace flex
 		}
 
 		MeshComponent* submesh = chunk.meshComponent;
-		if (submesh == nullptr || submesh->GetIndexCount() == 0)
+		if (submesh == nullptr || submesh->GetIndexCount() == 0 || chunk.collisionIndexCount == 0)
 		{
 			return;
 		}
 
 		CHECK_EQ(chunk.collisionShape, nullptr);
 
-		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape);
+		// Foliage isn't collided with (it's after collisionIndexCount)
+		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape, chunk.collisionIndexCount);
 
 		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);

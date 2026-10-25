@@ -23,46 +23,130 @@ float noise(float s)
 	return fract(546354.846451 * s * s + 4564.4123);
 }
 
-// Returns the clouds' colour (rgb) & opacity (a) in the given view direction
-vec4 SampleClouds(vec3 dir, SkyboxData skyboxData)
+uint StarHash(ivec3 c)
 {
-	float coverage = skyboxData.clouds.x;
-	float relativeAltitude = skyboxData.clouds.y;
-	// Below the layer only clouds above are visible, & vice versa (when flying high)
-	if (coverage <= 0.0 || abs(dir.y) < 0.0005 || relativeAltitude / dir.y <= 0.0)
+	uvec3 u = uvec3(c);
+	uint h = u.x * 0x8da6b343u ^ u.y * 0xd8163841u ^ u.z * 0xcb1ab31fu;
+	h ^= h >> 16;
+	h *= 0x7feb352du;
+	h ^= h >> 15;
+	h *= 0x846ca68bu;
+	h ^= h >> 16;
+	return h;
+}
+
+float HashToUnit(uint h)
+{
+	return float(h & 0xFFFFFFu) / float(0x1000000);
+}
+
+// One layer of stars: space is divided into cells of a 3D grid, each of which may hold one star, projected onto the
+// sphere. Working in 3D avoids the seams & stretching of 2D parameterizations. Brightness follows a steep power law:
+// many faint stars & a few bright ones.
+vec3 StarLayer(vec3 dir, float cellsPerUnit, float density, float pixelAngle, uint seed)
+{
+	vec3 p = dir * cellsPerUnit;
+	ivec3 baseCell = ivec3(floor(p));
+	vec3 result = vec3(0.0);
+	// Stars are points, drawn about a pixel across (wider ones would look like discs)
+	float radius = pixelAngle * 0.9;
+	// Projecting onto the sphere can move a star into a neighboring cell, so check those too
+	for (int z = -1; z <= 1; ++z)
 	{
-		return vec4(0.0);
+		for (int y = -1; y <= 1; ++y)
+		{
+			for (int x = -1; x <= 1; ++x)
+			{
+				ivec3 cell = baseCell + ivec3(x, y, z);
+				uint h = StarHash(cell + ivec3(int(seed), int(seed) * 7, int(seed) * 13));
+				if (HashToUnit(h) > density)
+				{
+					continue;
+				}
+
+				vec3 jitter = vec3(HashToUnit(h * 747796405u + 1u), HashToUnit(h * 2891336453u + 7u), HashToUnit(h * 1181783497u + 3u));
+				vec3 cellPos = (vec3(cell) + jitter) / cellsPerUnit;
+				float cellRadius = length(cellPos);
+				// Only cells the sphere passes through hold stars (each star appears once)
+				if (abs(cellRadius - 1.0) > 0.5 / cellsPerUnit)
+				{
+					continue;
+				}
+				vec3 starPos = cellPos / cellRadius;
+				float angle = acos(clamp(dot(dir, starPos), -1.0, 1.0));
+				if (angle > radius * 4.0)
+				{
+					continue;
+				}
+				float shape = exp(-(angle * angle) / (radius * radius));
+
+				float magnitude = HashToUnit(h * 3266489917u + 11u);
+				float brightness = 0.04 + 1.6 * pow(magnitude, 9.0);
+
+				// Colour from temperature: cool red/orange stars to hot blue ones
+				float temperature = HashToUnit(h * 668265263u + 5u);
+				vec3 colour = temperature < 0.5 ? mix(vec3(1.0, 0.72, 0.5), vec3(1.0, 0.95, 0.9), temperature * 2.0) :
+					mix(vec3(1.0, 0.95, 0.9), vec3(0.7, 0.8, 1.0), (temperature - 0.5) * 2.0);
+
+				// Subtle twinkling
+				float twinkle = 0.85 + 0.15 * sin(uboConstant.time.x * (2.0 + 3.0 * jitter.x) + jitter.y * 40.0);
+				result += colour * brightness * shape * twinkle;
+			}
+		}
+	}
+	return result;
+}
+
+vec3 Stars(vec3 dir, float pixelAngle)
+{
+	// The sky turns about the celestial pole over the day
+	float angle = uboConstant.time.y * 6.2831853;
+	vec3 axis = normalize(vec3(0.0, 0.8, -0.6));
+	float c = cos(angle);
+	float s = sin(angle);
+	vec3 rotated = dir * c + cross(axis, dir) * s + axis * dot(axis, dir) * (1.0 - c);
+
+	vec3 stars = StarLayer(rotated, 60.0, 0.12, pixelAngle, 0u);
+	stars += StarLayer(rotated, 160.0, 0.05, pixelAngle, 17u) * 0.35;
+
+	// The Milky Way: a faint band of light along a great circle
+	vec3 galacticPole = normalize(vec3(0.3, 0.4, 0.86));
+	float band = exp(-pow(dot(rotated, galacticPole) * 5.0, 2.0));
+	float mottling = texture(whiteNoise, rotated.xz * 1.5 + rotated.y).r * 0.5 + 0.5;
+	stars += vec3(0.55, 0.6, 0.75) * band * mottling * 0.025;
+
+	// Starlight passes through more air near the horizon
+	return stars * smoothstep(-0.02, 0.25, dir.y);
+}
+
+vec3 Moon(vec3 dir, SkyboxData skyboxData)
+{
+	vec3 moonDir = skyboxData.moon.xyz;
+	const float moonRadius = 0.014; // Radians (larger than the real moon, so it reads at a glance)
+	float cosAngle = dot(dir, moonDir);
+	if (cosAngle < cos(moonRadius * 1.5))
+	{
+		return vec3(0.0);
 	}
 
-	float t = relativeAltitude / dir.y;
-	vec2 cloudPos = dir.xz * t + skyboxData.clouds.zw;
-	float density = CloudDensity(cloudPos, coverage, 5);
-	if (density <= 0.001)
+	vec3 tangent = normalize(cross(moonDir, abs(moonDir.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0)));
+	vec3 bitangent = cross(moonDir, tangent);
+	vec2 offset = vec2(dot(dir, tangent), dot(dir, bitangent)) / moonRadius;
+	float r2 = dot(offset, offset);
+	float edge = 1.0 - smoothstep(0.92, 1.0, sqrt(r2));
+	if (edge <= 0.0)
 	{
-		return vec4(0.0);
+		return vec3(0.0);
 	}
 
-	// Self shadowing: denser cloud towards the sun blocks more light
-	vec2 sunStep = normalize(skyboxData.sun.xz + vec2(1e-4)) * 350.0;
-	float towardsSun = CloudDensity(cloudPos + sunStep, coverage, 3);
-	float lit = mix(1.0, 0.35, towardsSun * 0.8 + density * 0.2);
-
-	vec3 sunColour = SunColour(skyboxData);
-	float daylight = smoothstep(-0.15, 0.15, skyboxData.sun.y);
-	// Forward scattering brightens cloud edges around the sun (silver lining)
-	float cosSun = max(dot(dir, skyboxData.sun.xyz), 0.0);
-	float silverLining = pow(cosSun, 10.0) * (1.0 - density) * 1.5;
-	vec3 ambient = mix(skyboxData.colourMid.rgb, skyboxData.colourTop.rgb, 0.5);
-	vec3 colour = ambient * 0.7 + sunColour * (lit * 0.75 + silverLining) * daylight;
-	// Viewed from above, sunlit tops are brighter
-	if (relativeAltitude < 0.0)
-	{
-		colour = mix(colour, sunColour * daylight + ambient * 0.3, 0.4);
-	}
-
-	// Fade out towards the horizon, where the layer is very far away (& blends into the haze)
-	float fade = exp(-t / 30000.0) * smoothstep(0.0, 0.06, abs(dir.y));
-	return vec4(clamp(colour, 0.0, 1.0), density * fade);
+	// Lit by the sun from wherever it is, which gives the moon its phases
+	vec3 normal = normalize(tangent * offset.x + bitangent * offset.y - moonDir * sqrt(max(1.0 - r2, 0.0)));
+	float lit = smoothstep(-0.05, 0.15, dot(normal, skyboxData.sun.xyz));
+	// Dark maria
+	float maria = texture(whiteNoise, offset * 0.12 + vec2(0.31, 0.77)).r * 0.6 + texture(whiteNoise, offset * 0.35 + vec2(0.1, 0.4)).r * 0.4;
+	vec3 albedo = vec3(0.92, 0.9, 0.86) * mix(0.62, 1.0, smoothstep(0.35, 0.65, maria));
+	// Faint earthshine on the dark side
+	return albedo * (lit * 0.95 + 0.03) * edge;
 }
 
 void main()
@@ -73,45 +157,45 @@ void main()
 	// Noise to prevent banding
 	float n = noise(abs(ex_TexCoord.x + ex_TexCoord.y));
 
-	vec2 uv = vec2(abs(dir.x), abs(dir.z)) * 2.0;
-	if (dir.y < 0.25 && dir.y > -0.25)
+	// The camera is near the ground (the sky barely changes over the heights players reach)
+	const float altitude = 200.0;
+	vec3 radiance = vec3(0.0);
+	if (skyboxData.sun.y > -0.3)
 	{
-		uv = vec2(abs(dir.x), abs(dir.y)) * 2.0;
+		radiance += AtmosphereRadiance(dir, skyboxData.sun.xyz, ATMOS_SUN_INTENSITY, altitude, 16, 6);
 	}
-	float n_w = texture(whiteNoise, uv).r;
+	// Moonlight is far dimmer, but is scattered the same way
+	if (skyboxData.moon.y > -0.2 && skyboxData.moon.w > 0.0)
+	{
+		radiance += AtmosphereRadiance(dir, skyboxData.moon.xyz, ATMOS_SUN_INTENSITY * 0.012 * skyboxData.moon.w, altitude, 8, 3);
+	}
+	vec3 colour = AtmosphereToDisplay(radiance);
+	// Airglow & scattered starlight keep the night sky from being pure black
+	colour += vec3(0.004, 0.006, 0.012) * (1.0 - smoothstep(-0.1, 0.1, skyboxData.sun.y));
 
-	float h = sign(dir.y) * pow(abs(dir.y), 0.3) + n * 0.03;
+	// Below the horizon, fade towards the ground colour
+	colour = mix(colour, skyboxData.colourBtm.rgb, smoothstep(0.0, -0.08, dir.y));
 
-	float tw = 1.0-max(h, 0.0);
-	float bw = max(-h, 0.0);
-
-	float w0 = tw;
-	float w1 = bw;
-	float w2 = h > 0 ? 0.0 : 1.0;
-
-	vec3 colour = mix(
-		mix(skyboxData.colourTop.xyz, skyboxData.colourMid.xyz, w0),
-		mix(skyboxData.colourMid.xyz, skyboxData.colourBtm.xyz, w1), w2);
-
-	// Sun disk & the light scattered around it
-	colour += SunGlow(dir, skyboxData);
+	// Sun disk, dimmed & reddened by the air in front of it
 	float sunDisk = smoothstep(0.99955, 0.99975, dot(dir, skyboxData.sun.xyz)) * smoothstep(-0.03, 0.0, dir.y);
 	colour = mix(colour, SunColour(skyboxData) * 1.3, sunDisk);
 
-	float timeOfDay = uboConstant.time.y;
-	float nightStart = 0.36;
-	float nightEnd = 0.63;
-	if (timeOfDay > nightStart && timeOfDay < nightEnd)
+	// Stars & moon are only visible once the sky is dark enough
+	float skyLuminance = dot(colour, vec3(0.2126, 0.7152, 0.0722));
+	float darkness = (1.0 - smoothstep(0.015, 0.12, skyLuminance)) * skyboxData.sunColour.w;
+	if (darkness > 0.0)
 	{
-		float nightProgress = (timeOfDay - nightStart) / (nightEnd - nightStart);
-		float nightProgressParabola = 1.0-(nightProgress-0.5)*(nightProgress-0.5)*4.0;
-		nightProgressParabola = pow(nightProgressParabola, 0.25);
-		float starThreshold = mix(-100.0, -12.0, nightProgressParabola);
-		colour += 0.9 * exp(starThreshold * n_w);
+		float pixelAngle = max(length(fwidth(dir)), 1e-4);
+		colour += Stars(dir, pixelAngle) * darkness;
 	}
+	vec3 moon = Moon(dir, skyboxData);
+	float moonVisibility = (1.0 - smoothstep(0.08, 0.5, skyLuminance) * 0.7) * smoothstep(-0.02, 0.02, dir.y);
+	colour = mix(colour, max(colour, moon), clamp(length(moon), 0.0, 1.0) * moonVisibility);
+
+	colour += (n - 0.5) / 255.0;
 
 	// Clouds cover the sun & stars
-	vec4 clouds = SampleClouds(dir, skyboxData);
+	vec4 clouds = CloudLayer(dir, 1e30, skyboxData);
 	colour = mix(colour, clouds.rgb, clouds.a);
 
 	fragmentColour = vec4(clamp(colour, 0.0, 1.0), 1.0);

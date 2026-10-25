@@ -26,6 +26,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/Objects/Lights.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -91,6 +92,15 @@ namespace flex
 			newGameObject->m_SoundEffectSIDs[i] = m_SoundEffectSIDs[i];
 			// m_SoundEffects array will be set in PostInitialize
 		}
+
+		newGameObject->m_MaxEngineForce = m_MaxEngineForce;
+		newGameObject->m_EngineAccel = m_EngineAccel;
+		newGameObject->m_SuspensionStiffness = m_SuspensionStiffness;
+		newGameObject->m_SuspensionDamping = m_SuspensionDamping;
+		newGameObject->m_SuspensionCompression = m_SuspensionCompression;
+		newGameObject->m_SuspensionRestLength = m_SuspensionRestLength;
+		newGameObject->m_WheelFriction = m_WheelFriction;
+		newGameObject->m_RollInfluence = m_RollInfluence;
 
 		return newGameObject;
 	}
@@ -164,7 +174,7 @@ namespace flex
 
 			m_Vehicle->setCoordinateSystem(0, 1, 2);
 
-			btScalar suspensionRestLength(0.6f);
+			btScalar suspensionRestLength(m_SuspensionRestLength);
 			btVector3 wheelDirectionCS0(0, -1, 0);
 			btVector3 wheelAxleCS(-1, 0, 0);
 
@@ -395,7 +405,8 @@ namespace flex
 
 		// TODO: Check in player class? Store min level in scene
 		// Check if fell below the level
-		if (m_Transform.GetWorldPosition().y < -100.0f)
+		// (streamed terrain extends far below this, so only scenes without it reset)
+		if (TerrainGenerator::GetActive() == nullptr && m_Transform.GetWorldPosition().y < -100.0f)
 		{
 			ResetTransform();
 		}
@@ -476,6 +487,16 @@ namespace flex
 		JSONObject vehicleObj;
 		if (parentObject.TryGetObject("vehicle", vehicleObj))
 		{
+			// Handling (optional, so variants like the dune buggy can differ from the defaults)
+			vehicleObj.TryGetFloat("max engine force", m_MaxEngineForce);
+			vehicleObj.TryGetFloat("engine accel", m_EngineAccel);
+			vehicleObj.TryGetFloat("suspension stiffness", m_SuspensionStiffness);
+			vehicleObj.TryGetFloat("suspension damping", m_SuspensionDamping);
+			vehicleObj.TryGetFloat("suspension compression", m_SuspensionCompression);
+			vehicleObj.TryGetFloat("suspension rest length", m_SuspensionRestLength);
+			vehicleObj.TryGetFloat("wheel friction", m_WheelFriction);
+			vehicleObj.TryGetFloat("roll influence", m_RollInfluence);
+
 			// If this object was copied from a prefab, it will already have filled out IDs
 			if (!m_TireIDs[0].IsValid())
 			{
@@ -557,6 +578,15 @@ namespace flex
 
 			vehicleObj.fields.emplace_back("brake light ids", JSONValue(brakeLightIDs));
 		}
+
+		vehicleObj.fields.emplace_back("max engine force", JSONValue(m_MaxEngineForce, 1));
+		vehicleObj.fields.emplace_back("engine accel", JSONValue(m_EngineAccel, 1));
+		vehicleObj.fields.emplace_back("suspension stiffness", JSONValue(m_SuspensionStiffness, 2));
+		vehicleObj.fields.emplace_back("suspension damping", JSONValue(m_SuspensionDamping, 2));
+		vehicleObj.fields.emplace_back("suspension compression", JSONValue(m_SuspensionCompression, 2));
+		vehicleObj.fields.emplace_back("suspension rest length", JSONValue(m_SuspensionRestLength, 2));
+		vehicleObj.fields.emplace_back("wheel friction", JSONValue(m_WheelFriction, 2));
+		vehicleObj.fields.emplace_back("roll influence", JSONValue(m_RollInfluence, 2));
 
 		std::vector<JSONField> soundEffectSIDs;
 		soundEffectSIDs.reserve(m_SoundEffectSIDs.size());

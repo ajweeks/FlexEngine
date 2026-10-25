@@ -373,6 +373,7 @@ namespace flex
 		static GameObject* Deitemize(PrefabID prefabID, const glm::vec3& positionWS, const glm::quat& rotWS, const GameObjectStack::UserData& userData);
 
 		bool IsItemizable() const;
+		bool IsInteractable() const { return m_bInteractable; }
 		bool IsWearable() const;
 
 		i32 GetOutputSignal(i32 slotIdx);

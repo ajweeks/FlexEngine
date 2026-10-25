@@ -152,7 +152,9 @@ void main()
 	else
 	{
 		vec3 tint = pow(clamp(ex_Colour.rgb, 0.0, 1.0), vec3(2.2));
-		vec4 weights = max(ex_Weights, vec4(0.0));
+		// Snow's weight is implied (w holds sky visibility)
+		vec4 weights = vec4(max(ex_Weights.xyz, vec3(0.0)), 0.0);
+		weights.w = max(1.0 - weights.x - weights.y - weights.z, 0.0);
 		weights /= max(weights.x + weights.y + weights.z + weights.w, 0.0001);
 
 		vec3 bump = vec3(0.0);
@@ -241,8 +243,12 @@ void main()
 		N = normalize(N - bump);
 	}
 
-	vec3 groundCol = albedo;
+	// [0: deep in a cave, 1: open to the sky]. Caves only receive light from local sources (torches etc.)
+	float skyVisibility = bWater ? 1.0 : clamp(ex_Weights.w, 0.0, 1.0);
+	float skyLight = skyVisibility * skyVisibility * skyVisibility;
 
+	// Light from local sources, which isn't affected by the sun or sky
+	vec3 localLight = vec3(0.0);
 	for (int i = 0; i < NUM_POINT_LIGHTS; ++i)
 	{
 		if (uboConstant.pointLights[i].enabled == 0)
@@ -264,7 +270,7 @@ void main()
 		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
 
-		groundCol += groundCol * radiance * NoL;
+		localLight += radiance * NoL;
 	}
 
 	for (int i = 0; i < NUM_SPOT_LIGHTS; ++i)
@@ -300,11 +306,11 @@ void main()
 			radiance *= clamp(inCone / blendThreshold, 0.001, 1.0);
 		}
 
-		groundCol += groundCol * radiance * NoL;
+		localLight += radiance * NoL;
 	}
 
-	float light = 0.0;
 	vec3 specular = vec3(0.0);
+	vec3 groundCol = vec3(0.0);
 
 	float dirLightShadowOpacity = 1.0;
 	if (uboConstant.dirLight.enabled != 0)
@@ -314,25 +320,35 @@ void main()
 		float NoL = pow(dot(N, L) * 0.5 + 0.5, 4.0); // Wrapped diffuse
 
 		dirLightShadowOpacity = DoShadowMapping(uboConstant.dirLight, uboConstant.shadowSamplingData, posWS, normalize(ex_NormalWS), linDepth, cascadeIndex, shadowCascadeSampler, max(dot(normalize(ex_NormalWS), L), 0.0));
-		light = (0.75 * dirLightShadowOpacity + 0.25);
-		groundCol *= NoL * radiance;
+		// Shadows of the clouds drifting overhead
+		dirLightShadowOpacity *= CloudShadow(posWS, camPos, uboConstant.skyboxData);
+		// Water scatters light below its surface, so isn't black in shadow
+		float sunlight = bWater ? mix(0.35, 1.0, dirLightShadowOpacity) : dirLightShadowOpacity;
+		groundCol = albedo * NoL * radiance * sunlight * skyVisibility * skyVisibility;
 
 		if (specularStrength > 0.0)
 		{
 			vec3 H = normalize(L + V);
 			float specPower = mix(16.0, 400.0, 1.0 - roughness);
-			specular = radiance * pow(max(dot(N, H), 0.0), specPower) * specularStrength * dirLightShadowOpacity * max(dot(N, L), 0.0);
+			specular = radiance * pow(max(dot(N, H), 0.0), specPower) * specularStrength * dirLightShadowOpacity * skyVisibility * max(dot(N, L), 0.0);
 		}
 	}
 
-	groundCol *= light;
 	vec3 diffuse = groundCol;
 	float fresnel = pow(1.0 - max(dot(N, V), 0.0), 6.0);
 	if (!bWater)
 	{
-		groundCol += (fresnel * 1.1) * groundCol;
+		// Slight sheen at grazing angles
+		groundCol += (fresnel * 0.3) * groundCol;
 	}
-	groundCol += (2.0 * max(dot(N, vec3(0, 1, 0)), 0.0)) * uboConstant.skyboxData.colourTop.rgb * groundCol;
+
+	// Light from the sky (its colours are in display space): bluer from overhead, paler from the horizon.
+	// Occluded in caves.
+	vec3 skyTop = pow(uboConstant.skyboxData.colourTop.rgb, vec3(2.2));
+	vec3 skyHorizon = pow(uboConstant.skyboxData.colourMid.rgb, vec3(2.2));
+	vec3 skyIrradiance = mix(skyHorizon, skyTop, N.y * 0.5 + 0.5) * 0.9;
+	groundCol += albedo * skyIrradiance * skyLight * (0.65 + 0.35 * max(N.y, 0.0));
+	groundCol += albedo * localLight;
 	groundCol += specular;
 
 	fragmentColour.w = 1.0;
@@ -355,7 +371,9 @@ void main()
 	}
 
 	ApplyDistanceFog(dist, viewDir, uboConstant.skyboxData, /* inout */ fragmentColour.rgb);
+	ApplyCloudLayer(posWS, camPos, uboConstant.skyboxData, /* inout */ fragmentColour.rgb);
 
-	DrawDebugOverlay(albedo, N, roughness, 0.0, diffuse, specular, vec2(0),
+	// (sky visibility is shown in place of metalness, which terrain doesn't have)
+	DrawDebugOverlay(albedo, N, roughness, skyVisibility, diffuse, specular, vec2(0),
 		linDepth, dirLightShadowOpacity, cascadeIndex, 0.0, /* inout */ fragmentColour);
 }

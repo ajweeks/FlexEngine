@@ -565,66 +565,7 @@ namespace flex
 				JSONObject inventoryObj;
 				if (JSONParser::Parse(fileContents, inventoryObj))
 				{
-					std::vector<JSONObject> slotLists[3];
-
-					inventoryObj.TryGetObjectArray("slots", slotLists[0]);
-					inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
-					inventoryObj.TryGetObjectArray("wearable slots", slotLists[2]);
-
-					for (i32 slotListIndex = 0; slotListIndex < ARRAY_LENGTH(slotLists); ++slotListIndex)
-					{
-						for (JSONObject& slot : slotLists[slotListIndex])
-						{
-							i32 index = slot.GetInt("index");
-							i32 count = slot.GetInt("count");
-							PrefabID prefabID = slot.GetPrefabID("prefab id");
-							i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
-
-							bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
-							bool bCountValid = count >= 0 && count <= maxStackSize;
-							bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
-
-							if (bIndexValid && bCountValid && bPrefabIDValid)
-							{
-								if (slotListIndex == 0)
-								{
-									m_Inventory[index] = GameObjectStack(prefabID, count);
-								}
-								else if (slotListIndex == 1)
-								{
-									m_QuickAccessInventory[index] = GameObjectStack(prefabID, count);
-								}
-								else if (slotListIndex == 2)
-								{
-									m_WearablesInventory[index] = GameObjectStack(prefabID, count);
-								}
-							}
-							else
-							{
-								if (!bIndexValid)
-								{
-									PrintError("Invalid user inventory index: %i\n", index);
-								}
-								if (!bCountValid)
-								{
-									PrintError("Invalid user inventory count: %i\n", count);
-								}
-								if (!bPrefabIDValid)
-								{
-									std::string prefabIDStr = prefabID.ToString();
-									PrintError("Invalid user inventory prefabID: %s\n", prefabIDStr.c_str());
-								}
-							}
-						}
-					}
-
-					for (const GameObjectStack& stack : m_WearablesInventory)
-					{
-						if (stack.count > 0)
-						{
-							OnWearableEquipped(&stack);
-						}
-					}
+					ParseInventory(inventoryObj);
 				}
 				else
 				{
@@ -637,10 +578,75 @@ namespace flex
 			}
 		}
 		// TODO: Serialize parent & wire reference once ObjectIDs are in
-
 	}
 
-	void Player::SerializeInventoryToFile()
+	void Player::ParseInventory(const JSONObject& inventoryObj)
+	{
+		ResetInventory();
+
+		std::vector<JSONObject> slotLists[3];
+
+		inventoryObj.TryGetObjectArray("slots", slotLists[0]);
+		inventoryObj.TryGetObjectArray("quick access slots", slotLists[1]);
+		inventoryObj.TryGetObjectArray("wearable slots", slotLists[2]);
+
+		for (i32 slotListIndex = 0; slotListIndex < ARRAY_LENGTH(slotLists); ++slotListIndex)
+		{
+			for (JSONObject& slot : slotLists[slotListIndex])
+			{
+				i32 index = slot.GetInt("index");
+				i32 count = slot.GetInt("count");
+				PrefabID prefabID = slot.GetPrefabID("prefab id");
+				i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
+
+				bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
+				bool bCountValid = count >= 0 && count <= maxStackSize;
+				bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
+
+				if (bIndexValid && bCountValid && bPrefabIDValid)
+				{
+					if (slotListIndex == 0)
+					{
+						m_Inventory[index] = GameObjectStack(prefabID, count);
+					}
+					else if (slotListIndex == 1)
+					{
+						m_QuickAccessInventory[index] = GameObjectStack(prefabID, count);
+					}
+					else if (slotListIndex == 2)
+					{
+						m_WearablesInventory[index] = GameObjectStack(prefabID, count);
+					}
+				}
+				else
+				{
+					if (!bIndexValid)
+					{
+						PrintError("Invalid user inventory index: %i\n", index);
+					}
+					if (!bCountValid)
+					{
+						PrintError("Invalid user inventory count: %i\n", count);
+					}
+					if (!bPrefabIDValid)
+					{
+						std::string prefabIDStr = prefabID.ToString();
+						PrintError("Invalid user inventory prefabID: %s\n", prefabIDStr.c_str());
+					}
+				}
+			}
+		}
+
+		for (const GameObjectStack& stack : m_WearablesInventory)
+		{
+			if (stack.count > 0)
+			{
+				OnWearableEquipped(&stack);
+			}
+		}
+	}
+
+	JSONObject Player::SerializeInventoryToJSON()
 	{
 		JSONObject inventoryObj = {};
 
@@ -671,6 +677,26 @@ namespace flex
 		{
 			inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 		}
+
+		return inventoryObj;
+	}
+
+	void Player::ResetInventory()
+	{
+		// Remove anything being worn (e.g. headlamps attached to the player)
+		for (const GameObjectStack& stack : m_WearablesInventory)
+		{
+			if (stack.count > 0)
+			{
+				OnWearableUnequipped(&stack);
+			}
+		}
+		ClearInventory();
+	}
+
+	void Player::SerializeInventoryToFile()
+	{
+		JSONObject inventoryObj = SerializeInventoryToJSON();
 
 		Platform::CreateDirectoryRecursive(RelativePathToAbsolute(SAVE_FILE_DIRECTORY));
 

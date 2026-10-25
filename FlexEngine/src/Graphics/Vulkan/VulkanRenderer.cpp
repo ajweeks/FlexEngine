@@ -4889,8 +4889,10 @@ namespace flex
 			vkCmdBindVertexBuffers(commandBuffer, 0, 1, &fontVertexBuffer->m_Buffer, offsets);
 
 			glm::mat4 transformMat = bScreenSpace ? (glm::scale(MAT4_IDENTITY, scaleVec) * ortho) : camViewProj;
-			for (BitmapFont* font : fonts)
+			const u32 maxFontSlotCount = (u32)glm::max(fontShader->maxObjectCount, 1);
+			for (u32 fontIndex = 0; fontIndex < (u32)fonts.size(); ++fontIndex)
 			{
+				BitmapFont* font = fonts[fontIndex];
 				if (font->bufferSize > 0)
 				{
 					VulkanTexture* fontTex = (VulkanTexture*)font->GetTexture();
@@ -4908,7 +4910,9 @@ namespace flex
 						*descSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&info);
 					}
 
-					u32 dynamicOffsetIndex = 0; // TODO: Remove
+					// Each font's uniforms (e.g. its atlas size) need their own slot, since every font's draw is recorded
+					// before any of them execute
+					const u32 dynamicOffsetIndex = fontIndex % maxFontSlotCount;
 					BindDescriptorSet(fontMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, graphicsPipeline->pipeline->layout, (VkDescriptorSet)font->userData);
 
 					UniformOverrides overrides = {};

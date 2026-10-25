@@ -383,7 +383,11 @@ namespace flex
 		to->position = from->position;
 		to->pitch = from->pitch;
 		to->yaw = from->yaw;
-		to->FOV = from->FOV;
+		// Gameplay cameras keep their own field of view (the player's setting)
+		if (!to->bIsGameplayCam)
+		{
+			to->FOV = from->FOV;
+		}
 	}
 
 	EventReply CameraManager::OnActionEvent(Action action, ActionEvent actionEvent)

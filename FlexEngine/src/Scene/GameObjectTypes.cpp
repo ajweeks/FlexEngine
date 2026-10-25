@@ -3,6 +3,8 @@
 #include "Scene/GameObjectTypes.hpp"
 
 #include "Player.hpp"
+#include "Scene/Objects/Building.hpp"
+#include "Scene/Objects/Treasure.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Objects/Carts.hpp"
 #include "Scene/Objects/GerstnerWave.hpp"
@@ -64,6 +66,8 @@ namespace flex
 			TYPE(Miner, 0),
 			TYPE(Speaker, 0),
 			TYPE(PickAxe, 0),
+			TYPE(BuildPiece, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
+			TYPE(TreasureChest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 		};
 
 #undef TYPE

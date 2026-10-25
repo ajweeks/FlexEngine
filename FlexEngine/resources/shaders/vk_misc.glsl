@@ -4,7 +4,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-#define NUM_POINT_LIGHTS 8
+#define NUM_POINT_LIGHTS 16
 #define NUM_SPOT_LIGHTS 8
 #define NUM_AREA_LIGHTS 8
 
@@ -91,6 +91,9 @@ struct SkyboxData
 	vec4 colourFog; // w: distance fog distance (<= 1: disabled)
 	vec4 sun; // xyz: direction towards the sun
 	vec4 clouds; // x: coverage [0, 1] (0: none), y: cloud layer altitude relative to the camera, zw: noise offset (camera xz + wind)
+	vec4 moon; // xyz: direction towards the moon, w: brightness [0, 1]
+	vec4 sunColour; // rgb: colour of sunlight reaching the ground (display space), w: star visibility [0, 1]
+	vec4 weather; // x: cloudiness of the current weather [0, 1], y: regional variation, zw: weather pattern offset
 };
 
 // Functions
@@ -303,10 +306,10 @@ void ApplyFog(float linearDepth, vec3 colourFog, inout vec3 fragmentColour)
 	}
 }
 
-// Colour of sunlight, reddening as the sun nears the horizon
+// Colour of sunlight, reddening as the sun nears the horizon (from the atmosphere model, computed on the CPU)
 vec3 SunColour(SkyboxData skyboxData)
 {
-	return mix(vec3(1.0, 0.5, 0.25), vec3(1.0, 0.96, 0.88), smoothstep(-0.02, 0.35, skyboxData.sun.y));
+	return skyboxData.sunColour.rgb;
 }
 
 // Light scattered around the sun (in the sky's final, display space colour). Haze near the horizon scatters more.
@@ -319,7 +322,8 @@ vec3 SunGlow(vec3 dir, SkyboxData skyboxData)
 	return SunColour(skyboxData) * glow * daylight;
 }
 
-// Matches the sky drawn by the skybox shader (without its noise, sun disk & clouds)
+// Matches the sky drawn by the skybox shader (without its noise, sun disk & clouds). The gradient colours are sampled
+// from the atmosphere model on the CPU.
 vec3 SkyColour(vec3 dir, SkyboxData skyboxData)
 {
 	float h = sign(dir.y) * pow(abs(dir.y), 0.3);
@@ -332,8 +336,106 @@ vec3 SkyColour(vec3 dir, SkyboxData skyboxData)
 	return clamp(gradient + SunGlow(dir, skyboxData), 0.0, 1.0);
 }
 
+// Physically based sky: single scattering through an atmosphere of air (Rayleigh) & haze (Mie) with exponential
+// density falloff, with a cheap approximation of multiple scattering. Must match BaseScene's CPU version.
+const float ATMOS_EARTH_RADIUS = 6360e3;
+const float ATMOS_TOP_RADIUS = 6420e3;
+const vec3 ATMOS_RAYLEIGH = vec3(5.8e-6, 13.5e-6, 33.1e-6);
+const vec3 ATMOS_OZONE = vec3(1.3e-6, 3.76e-6, 0.17e-6); // Absorption only, follows the air's density
+const float ATMOS_MIE = 4e-6;
+const float ATMOS_RAYLEIGH_HEIGHT = 8000.0;
+const float ATMOS_MIE_HEIGHT = 1200.0;
+const float ATMOS_MIE_G = 0.8;
+const float ATMOS_MULTIPLE_SCATTERING = 0.15;
+const float ATMOS_SUN_INTENSITY = 20.0;
+// Maps radiance to display values (white balanced so the midday sun is white)
+const vec3 ATMOS_WHITE_BALANCE = vec3(1.0, 1.111, 1.3125);
+const float ATMOS_EXPOSURE = 1.5;
+
+// Distances to a sphere (centered at the planet's center) from a point at originRadius from the center, along a
+// direction whose cosine with the local up direction is mu. Formulated to avoid catastrophic cancellation.
+vec2 AtmosRaySphere(float originRadius, float mu, float sphereRadius)
+{
+	float b = originRadius * mu;
+	float c = (originRadius - sphereRadius) * (originRadius + sphereRadius);
+	float disc = b * b - c;
+	if (disc < 0.0)
+	{
+		return vec2(-1.0);
+	}
+	float s = sqrt(disc);
+	return vec2(-b - s, -b + s);
+}
+
+// Radiance scattered towards the viewer (at the given altitude) along dir, lit from lightDir
+vec3 AtmosphereRadiance(vec3 dir, vec3 lightDir, float intensity, float altitude, int sampleCount, int lightSampleCount)
+{
+	float originRadius = ATMOS_EARTH_RADIUS + max(altitude, 1.0);
+	vec2 top = AtmosRaySphere(originRadius, dir.y, ATMOS_TOP_RADIUS);
+	float tMax = top.y;
+	if (tMax <= 0.0)
+	{
+		return vec3(0.0);
+	}
+	vec2 ground = AtmosRaySphere(originRadius, dir.y, ATMOS_EARTH_RADIUS);
+	if (ground.x > 0.0)
+	{
+		tMax = ground.x;
+	}
+
+	float mu = dot(dir, lightDir);
+	float phaseR = 3.0 / (16.0 * PI) * (1.0 + mu * mu);
+	float g2 = ATMOS_MIE_G * ATMOS_MIE_G;
+	float phaseM = 3.0 / (8.0 * PI) * ((1.0 - g2) * (1.0 + mu * mu)) / ((2.0 + g2) * pow(1.0 + g2 - 2.0 * ATMOS_MIE_G * mu, 1.5));
+
+	float segment = tMax / float(sampleCount);
+	float opticalDepthR = 0.0;
+	float opticalDepthM = 0.0;
+	vec3 sumR = vec3(0.0);
+	vec3 sumM = vec3(0.0);
+	vec3 origin = vec3(0.0, originRadius, 0.0);
+	for (int i = 0; i < sampleCount; ++i)
+	{
+		vec3 p = origin + dir * (segment * (float(i) + 0.5));
+		float r = length(p);
+		float h = r - ATMOS_EARTH_RADIUS;
+		float densityR = exp(-h / ATMOS_RAYLEIGH_HEIGHT) * segment;
+		float densityM = exp(-h / ATMOS_MIE_HEIGHT) * segment;
+		opticalDepthR += densityR;
+		opticalDepthM += densityM;
+
+		float lightMu = dot(p, lightDir) / r;
+		vec2 lightGround = AtmosRaySphere(r, lightMu, ATMOS_EARTH_RADIUS);
+		if (lightGround.x > 0.0)
+		{
+			// In the planet's shadow
+			continue;
+		}
+		float lightSegment = AtmosRaySphere(r, lightMu, ATMOS_TOP_RADIUS).y / float(lightSampleCount);
+		float lightDepthR = 0.0;
+		float lightDepthM = 0.0;
+		for (int j = 0; j < lightSampleCount; ++j)
+		{
+			float lh = length(p + lightDir * (lightSegment * (float(j) + 0.5))) - ATMOS_EARTH_RADIUS;
+			lightDepthR += exp(-lh / ATMOS_RAYLEIGH_HEIGHT) * lightSegment;
+			lightDepthM += exp(-lh / ATMOS_MIE_HEIGHT) * lightSegment;
+		}
+		vec3 tau = (ATMOS_RAYLEIGH + ATMOS_OZONE) * (opticalDepthR + lightDepthR) + ATMOS_MIE * 1.11 * (opticalDepthM + lightDepthM);
+		vec3 attenuation = exp(-tau);
+		sumR += attenuation * densityR;
+		sumM += attenuation * densityM;
+	}
+
+	return intensity * (sumR * ATMOS_RAYLEIGH * (phaseR + ATMOS_MULTIPLE_SCATTERING) + sumM * ATMOS_MIE * phaseM);
+}
+
+vec3 AtmosphereToDisplay(vec3 radiance)
+{
+	return 1.0 - exp(-radiance * ATMOS_WHITE_BALANCE * ATMOS_EXPOSURE);
+}
+
 // Clouds: a layer of procedural noise at a fixed altitude, drifting with the wind. Shared by the skybox (which
-// draws them) & lighting (where they cast shadows), so shadows match the visible clouds.
+// draws them), lighting (where they cast shadows) & geometry they're in front of, so they all match.
 
 float CloudHash(vec2 p)
 {
@@ -370,14 +472,29 @@ float CloudFbm(vec2 p, int octaves)
 	return sum / total;
 }
 
-// [0, 1] cloud opacity at a point in the cloud layer (noise space: world xz + wind offset)
-float CloudDensity(vec2 p, float coverage, int octaves)
+// Coverage at a point in the cloud layer: the scene's maximum, scaled by the current weather, which also varies
+// from region to region (so some areas are clear while others are overcast)
+float CloudCoverage(vec2 p, float coverage, SkyboxData skyboxData)
 {
+	vec2 q = (p + skyboxData.weather.zw) / 40000.0;
+	float regional = CloudFbm(q + vec2(41.3, 7.7), 3) * 2.0 - 1.0;
+	float weather = clamp(skyboxData.weather.x + regional * skyboxData.weather.y, 0.0, 1.0);
+	return coverage * weather;
+}
+
+// [0, 1] cloud opacity at a point in the cloud layer (noise space: world xz + wind offset)
+float CloudDensity(vec2 p, float coverage, int octaves, SkyboxData skyboxData)
+{
+	float localCoverage = CloudCoverage(p, coverage, skyboxData);
+	if (localCoverage <= 0.02)
+	{
+		return 0.0;
+	}
 	vec2 q = p / 2400.0;
 	// Warp the domain so clouds billow rather than looking like plain noise
 	vec2 warp = vec2(CloudValueNoise(q * 0.7 + vec2(3.7, 1.3)), CloudValueNoise(q * 0.7 + vec2(8.2, 5.9))) - 0.5;
 	float n = CloudFbm(q + warp * 0.6, octaves);
-	float threshold = 1.0 - coverage;
+	float threshold = 1.0 - localCoverage;
 	return smoothstep(threshold - 0.08, threshold + 0.22, n);
 }
 
@@ -399,8 +516,68 @@ float CloudShadow(vec3 posWS, vec3 camPos, SkyboxData skyboxData)
 	// Follow the sun's direction up to the cloud layer
 	float t = (cloudAltitude - posWS.y) / skyboxData.sun.y;
 	vec2 cloudPos = posWS.xz + skyboxData.sun.xz * t + (skyboxData.clouds.zw - camPos.xz);
-	float density = CloudDensity(cloudPos, coverage, 4);
-	return 1.0 - density * 0.75;
+	float density = CloudDensity(cloudPos, coverage, 4, skyboxData);
+	return 1.0 - density * 0.8;
+}
+
+// Colour (rgb, display space) & opacity (a) of the cloud layer where the view ray along dir crosses it, if that's
+// within maxDistance of the camera
+vec4 CloudLayer(vec3 dir, float maxDistance, SkyboxData skyboxData)
+{
+	float coverage = skyboxData.clouds.x;
+	float relativeAltitude = skyboxData.clouds.y;
+	// Below the layer only clouds above are visible, & vice versa (when flying high)
+	if (coverage <= 0.0 || abs(dir.y) < 0.0005 || relativeAltitude / dir.y <= 0.0)
+	{
+		return vec4(0.0);
+	}
+
+	float t = relativeAltitude / dir.y;
+	if (t > maxDistance)
+	{
+		return vec4(0.0);
+	}
+	vec2 cloudPos = dir.xz * t + skyboxData.clouds.zw;
+	float density = CloudDensity(cloudPos, coverage, 5, skyboxData);
+	if (density <= 0.001)
+	{
+		return vec4(0.0);
+	}
+
+	// Self shadowing: denser cloud towards the sun blocks more light
+	vec2 sunStep = normalize(skyboxData.sun.xz + vec2(1e-4)) * 350.0;
+	float towardsSun = CloudDensity(cloudPos + sunStep, coverage, 3, skyboxData);
+	float lit = mix(1.0, 0.35, towardsSun * 0.8 + density * 0.2);
+
+	vec3 sunColour = SunColour(skyboxData);
+	float daylight = smoothstep(-0.1, 0.1, skyboxData.sun.y);
+	// Forward scattering brightens cloud edges around the sun (silver lining)
+	float cosSun = max(dot(dir, skyboxData.sun.xyz), 0.0);
+	float silverLining = pow(cosSun, 10.0) * (1.0 - density) * 1.5;
+	vec3 ambient = mix(skyboxData.colourMid.rgb, skyboxData.colourTop.rgb, 0.5);
+	vec3 colour = ambient * 0.7 + sunColour * (lit * 0.75 + silverLining) * daylight;
+	// Moonlit at night
+	float moonlight = skyboxData.moon.w * smoothstep(-0.05, 0.15, skyboxData.moon.y) * (1.0 - daylight);
+	colour += vec3(0.05, 0.06, 0.08) * lit * moonlight;
+	// Viewed from above, sunlit tops are brighter
+	if (relativeAltitude < 0.0)
+	{
+		colour = mix(colour, sunColour * daylight + ambient * 0.3, 0.4);
+	}
+
+	// Fade out towards the horizon, where the layer is very far away (& blends into the haze)
+	float fade = exp(-t / 30000.0) * smoothstep(0.0, 0.06, abs(dir.y));
+	return vec4(clamp(colour, 0.0, 1.0), density * fade);
+}
+
+// Clouds in front of geometry (e.g. covering the land below when looking down from a mountain above the clouds, or
+// mountain tops which reach into them). Applied to display space colours, like distance fog.
+void ApplyCloudLayer(vec3 posWS, vec3 camPos, SkyboxData skyboxData, inout vec3 fragmentColour)
+{
+	vec3 viewVec = posWS - camPos;
+	float dist = length(viewVec);
+	vec4 clouds = CloudLayer(viewVec / max(dist, 0.0001), dist, skyboxData);
+	fragmentColour = mix(fragmentColour, clouds.rgb, clouds.a);
 }
 
 // Distance fog, enabled when skyboxData.colourFog.w (the distance at which the scene is fully obscured) is > 1.

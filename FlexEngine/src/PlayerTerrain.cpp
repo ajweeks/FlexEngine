@@ -42,6 +42,7 @@ namespace flex
 		if (terrainGenerator == nullptr ||
 			!m_bPossessed ||
 			!IsWieldingPickAxe() ||
+			m_BuildMode.IsActive() ||
 			IsAnyInventoryShowing() ||
 			m_RidingVehicleID.IsValid() ||
 			m_TrackRidingID != InvalidTrackID ||
@@ -62,9 +63,17 @@ namespace flex
 
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		glm::vec3 hitPos, hitNormal;
-		if (!terrainGenerator->Raycast(camera->position, camera->forward, m_TerrainToolReach, hitPos, hitNormal))
+		// Digging into the same spot again looks through the hole just dug, at its far side (up to a dig radius
+		// further away). Surfaces a little past the reach are still dug into, with the brush held at the reach.
+		const real rayLength = m_TerrainToolReach + m_TerrainDigRadius * 0.9f;
+		if (!terrainGenerator->Raycast(camera->position, camera->forward, rayLength, hitPos, hitNormal))
 		{
 			return;
+		}
+		const real hitDistance = glm::distance(camera->position, hitPos);
+		if (hitDistance > m_TerrainToolReach)
+		{
+			hitPos = camera->position + camera->forward * m_TerrainToolReach;
 		}
 		m_bTerrainToolActive = true;
 
@@ -84,13 +93,16 @@ namespace flex
 			m_TerrainToolCooldown = 0.25f;
 			if (bDig)
 			{
+				// Also removes small scraps of terrain the dig leaves floating
 				terrainGenerator->Dig(hitPos, m_TerrainDigRadius);
 			}
 			else
 			{
-				// Don't bury ourselves
+				// Don't bury ourselves (distance to the capsule's axis)
 				const glm::vec3 playerPos = m_Transform.GetWorldPosition();
-				if (glm::distance(fillCenter, playerPos) > m_TerrainDigRadius + 1.2f)
+				const real axisHalfLength = m_Height * 0.5f - m_Radius;
+				const glm::vec3 closestOnAxis = playerPos + VEC3_UP * glm::clamp(fillCenter.y - playerPos.y, -axisHalfLength, axisHalfLength);
+				if (glm::distance(fillCenter, closestOnAxis) > m_TerrainDigRadius + m_Radius + 0.2f)
 				{
 					terrainGenerator->Fill(fillCenter, m_TerrainDigRadius, terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex]);
 				}

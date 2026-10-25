@@ -23,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Building.hpp"
 #include "Scene/Objects/Lights.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
@@ -325,7 +326,7 @@ namespace flex
 	glm::vec3 Traversal::GetHandPos() const
 	{
 		Transform* transform = m_Player->GetTransform();
-		return transform->GetWorldPosition() + transform->GetRight() * 0.45f + VEC3_UP * 0.6f + GetLookDirection() * 0.5f;
+		return m_Player->GetEyePosition() + transform->GetRight() * 0.25f - VEC3_UP * 0.35f + GetLookDirection() * 0.3f;
 	}
 
 	bool Traversal::HasMomentum() const
@@ -352,6 +353,11 @@ namespace flex
 		}
 
 		m_Mode = mode;
+		if (mode != Mode::CLIMBING)
+		{
+			m_bMantling = false;
+			m_ClimbObjectID = InvalidGameObjectID;
+		}
 
 		// Flying & climbing integrate their own forces
 		SetGravityEnabled(mode != Mode::GLIDING && mode != Mode::WINGSUIT && mode != Mode::CLIMBING);
@@ -495,9 +501,9 @@ namespace flex
 	{
 		m_bJumpHeld = true;
 
-		if (m_Hook.state == HookState::ATTACHED && !m_bGrounded)
+		if (m_Hook.state == HookState::ATTACHED)
 		{
-			// Reels in while held (see UpdateInput)
+			// Reels in while held, lifting the player off the ground (see UpdateInput)
 			return;
 		}
 
@@ -514,9 +520,11 @@ namespace flex
 			m_bJumpQueued = true;
 			break;
 		case Mode::NONE:
-			if (m_bGrounded || m_TimeSinceGrounded < m_Settings.coyoteTime)
+			if (m_bGrounded || m_TimeSinceGrounded < m_Settings.coyoteTime || m_HeightAboveGround < 0.6f)
 			{
+				// Also queued just before landing, & kept for a moment (see FixedUpdate)
 				m_bJumpQueued = true;
+				m_JumpQueuedTime = 0.0f;
 			}
 			else if (m_HeightAboveGround > m_Settings.glideMinHeight)
 			{
@@ -627,13 +635,17 @@ namespace flex
 		const bool bCrouchHeld = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) != 0;
 		const bool bClimbHeld = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0;
 
-		m_Hook.bReelingIn = m_Hook.state == HookState::ATTACHED && m_bJumpHeld && !m_bGrounded;
+		m_Hook.bReelingIn = m_Hook.state == HookState::ATTACHED && m_bJumpHeld;
 		m_Hook.bReelingOut = m_Hook.state == HookState::ATTACHED && bCrouchHeld;
 
 		switch (m_Mode)
 		{
 		case Mode::NONE:
 		{
+			if (TryStartClimbingObject(bClimbHeld))
+			{
+				break;
+			}
 			if (bClimbHeld && !m_bStaminaExhausted && TryStartClimbing())
 			{
 				break;
@@ -642,7 +654,10 @@ namespace flex
 			{
 				if (m_bGrounded)
 				{
-					SetMode(Mode::SKIING);
+					if (m_Settings.bSkiingEnabled)
+					{
+						SetMode(Mode::SKIING);
+					}
 					m_GroundSlipperiness = GetGroundSlipperiness(m_Ground);
 				}
 				else if (m_HeightAboveGround > m_Settings.glideMinHeight * 2.0f)
@@ -672,7 +687,8 @@ namespace flex
 		} break;
 		case Mode::CLIMBING:
 		{
-			if (!bClimbHeld)
+			// Finish climbing onto a ledge even if shift is released, & ladders & ropes don't need it held
+			if (!bClimbHeld && !m_bMantling && !m_ClimbObjectID.IsValid())
 			{
 				SetMode(Mode::NONE);
 			}
@@ -694,7 +710,8 @@ namespace flex
 		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
 		const glm::vec3 heading = GetHeadingXZ();
 		glm::vec3 hitPos, hitNormal;
-		if (!Raycast(pos, pos + heading * m_Settings.climbReach, hitPos, hitNormal) || hitNormal.y > 0.6f)
+		// Walls the player could just walk up aren't climbed
+		if (!Raycast(pos, pos + heading * m_Settings.climbReach, hitPos, hitNormal) || hitNormal.y > Player::WALKABLE_NORMAL_Y)
 		{
 			return false;
 		}
@@ -840,14 +857,29 @@ namespace flex
 			m_TimeSinceGrounded += dt;
 		}
 
+		m_TimeSinceJump += dt;
 		if (m_bJumpQueued)
 		{
-			m_bJumpQueued = false;
 			if ((m_bGrounded || m_TimeSinceGrounded < m_Settings.coyoteTime) && (m_Mode == Mode::NONE || m_Mode == Mode::SKIING))
 			{
-				velocity.y = glm::max(velocity.y, 0.0f) + m_Settings.jumpSpeed;
+				m_bJumpQueued = false;
+				// Jumping off a slope pushes away from it a little, rather than straight up
+				const glm::vec3 groundNormal = m_Player->GetGroundNormal();
+				const glm::vec3 jumpDir = SafeNormalize(VEC3_UP + glm::vec3(groundNormal.x, 0.0f, groundNormal.z) * 0.3f, VEC3_UP);
+				velocity.y = glm::max(velocity.y, 0.0f);
+				velocity += jumpDir * m_Settings.jumpSpeed;
 				m_TimeSinceGrounded = m_Settings.coyoteTime;
+				m_TimeSinceJump = 0.0f;
 				m_bGrounded = false;
+			}
+			else
+			{
+				// Buffered: jump on landing if it's soon enough
+				m_JumpQueuedTime += dt;
+				if (m_JumpQueuedTime > m_Settings.jumpBufferTime || m_Mode != Mode::NONE)
+				{
+					m_bJumpQueued = false;
+				}
 			}
 		}
 
@@ -876,7 +908,8 @@ namespace flex
 		if (m_Hook.state == HookState::ATTACHED)
 		{
 			FixedUpdateHook(velocity);
-			bControlled = bControlled || !m_bGrounded;
+			// Reeling in pulls the player off the ground (walking would cancel it out)
+			bControlled = bControlled || !m_bGrounded || m_Hook.bReelingIn;
 		}
 
 		if (!bControlled && m_Mode == Mode::NONE && !m_bGrounded)
@@ -896,6 +929,16 @@ namespace flex
 			}
 			velocity.x = newHorizontal.x;
 			velocity.z = newHorizontal.z;
+
+			// World gravity (applied by the physics world) is boosted for a quick, punchy arc. Letting go of jump
+			// early cuts the jump short.
+			real gravityScale = m_Settings.fallGravityScale;
+			if (velocity.y > 0.0f)
+			{
+				gravityScale = (m_bJumpHeld && m_TimeSinceJump < 0.6f) ? m_Settings.riseGravityScale : m_Settings.jumpCutGravityScale;
+			}
+			velocity.y += GRAVITY.y * (gravityScale - 1.0f) * dt;
+			velocity.y = glm::max(velocity.y, -m_Settings.maxFallSpeed);
 			bControlled = true;
 		}
 
@@ -960,32 +1003,235 @@ namespace flex
 		velocity += acceleration * dt;
 	}
 
+	bool Traversal::FindLedge(const glm::vec3& wallNormal, glm::vec3& outStandPos) const
+	{
+		// Looks for something to stand on just over the top of the wall: down from above the player's head, a little
+		// way into the wall. Rounded lips are found too (anything walkable within reach).
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real halfHeight = m_Player->GetHeight() * 0.5f;
+		const real radius = m_Player->GetRadius();
+		for (real inset : { radius + 0.35f, radius + 0.8f, radius + 1.3f })
+		{
+			const glm::vec3 top = pos + VEC3_UP * (halfHeight + 1.4f) - wallNormal * inset;
+			glm::vec3 hitPos, hitNormal;
+			// The start must be in open air (the wall may continue upwards)
+			if (Raycast(pos + VEC3_UP * (halfHeight + 1.4f), top, hitPos, hitNormal))
+			{
+				continue;
+			}
+			if (Raycast(top, top - VEC3_UP * (halfHeight * 2.0f + 1.6f), hitPos, hitNormal) && hitNormal.y > 0.5f)
+			{
+				outStandPos = hitPos + VEC3_UP * (halfHeight + 0.1f);
+				// Not a ledge if it's below where the player already is
+				if (outStandPos.y < pos.y - 0.25f)
+				{
+					continue;
+				}
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool Traversal::TryStartClimbingObject(bool bClimbHeld)
+	{
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		BuildPiece* climbable = BuildPiece::FindClimbable(pos, m_Player->GetRadius() + 0.6f);
+		if (climbable == nullptr)
+		{
+			return false;
+		}
+
+		// Walking into it (or holding the climb key) grabs on
+		const glm::vec3 toClimbable = climbable->ClosestPointOnClimbAxis(pos) - pos;
+		const glm::vec3 toClimbableXZ = SafeNormalize(glm::vec3(toClimbable.x, 0.0f, toClimbable.z), GetHeadingXZ());
+		const glm::vec3 moveDir = GetHeadingXZ() * GetMoveForward() + glm::cross(GetHeadingXZ(), VEC3_UP) * GetMoveRight();
+		const bool bWalkingInto = glm::dot(moveDir, toClimbableXZ) > 0.5f;
+		// Ladders can only be climbed from the front
+		const glm::vec3 facing = climbable->GetClimbFacing();
+		if (glm::length(facing) > 0.5f && glm::dot(-toClimbableXZ, facing) < 0.0f)
+		{
+			return false;
+		}
+		// Approaching the top of a ladder from above, walking onto it would grab on immediately, so only climb down
+		// when looking down
+		const bool bAboveTop = pos.y - m_Player->GetHeight() * 0.5f > climbable->GetClimbTop().y - 0.5f;
+		if (bAboveTop && GetLookDirection().y > -0.5f)
+		{
+			return false;
+		}
+		if (!bWalkingInto && !bClimbHeld)
+		{
+			return false;
+		}
+
+		if (m_Hook.state != HookState::NONE)
+		{
+			ReleaseHook();
+		}
+		SetMode(Mode::CLIMBING);
+		m_ClimbObjectID = climbable->ID;
+		return true;
+	}
+
+	bool Traversal::FixedUpdateClimbObject(glm::vec3& velocity)
+	{
+		BuildPiece* climbable = (BuildPiece*)m_ClimbObjectID.Get();
+		if (climbable == nullptr)
+		{
+			SetMode(Mode::NONE);
+			return false;
+		}
+
+		const sec dt = g_FixedDeltaTime;
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real halfHeight = m_Player->GetHeight() * 0.5f;
+		const real forward = GetMoveForward();
+		const bool bRope = climbable->GetPieceType() == BuildPieceType::ROPE;
+
+		const glm::vec3 axisPoint = climbable->ClosestPointOnClimbAxis(pos);
+		glm::vec3 facing = climbable->GetClimbFacing();
+		if (glm::length(facing) < 0.5f)
+		{
+			// Ropes are held from whichever side the player is on
+			facing = SafeNormalize(glm::vec3(pos.x - axisPoint.x, 0.0f, pos.z - axisPoint.z), -GetHeadingXZ());
+		}
+		m_WallNormal = facing;
+
+		if (m_bLeapQueued)
+		{
+			// Jump off backwards
+			m_bLeapQueued = false;
+			SetMode(Mode::NONE);
+			velocity = facing * 4.5f + VEC3_UP * 4.0f;
+			return true;
+		}
+
+		const glm::vec3 top = climbable->GetClimbTop();
+		const glm::vec3 bottom = climbable->GetClimbBottom();
+		const real feetY = pos.y - halfHeight;
+
+		// Climbed off the top: step onto whatever the ladder leads to
+		if (forward > 0.0f && feetY > top.y - 0.6f)
+		{
+			glm::vec3 standPos;
+			if (FindLedge(facing, standPos))
+			{
+				m_ClimbObjectID = InvalidGameObjectID;
+				m_bMantling = true;
+				m_MantleTime = 0.0f;
+				m_MantleTarget = standPos;
+				velocity = VEC3_UP * 3.0f;
+				return true;
+			}
+			if (bRope)
+			{
+				// Nothing to climb onto, hang at the top
+				velocity = VEC3_ZERO;
+				return true;
+			}
+		}
+
+		// Reached the ground while climbing down
+		if (forward < 0.0f && (m_Player->IsGrounded() || feetY < bottom.y - 0.3f))
+		{
+			SetMode(Mode::NONE);
+			return false;
+		}
+		// Slid off the bottom of a rope
+		if (pos.y + halfHeight < bottom.y)
+		{
+			SetMode(Mode::NONE);
+			return false;
+		}
+
+		const real climbSpeed = bRope ? m_Settings.climbSpeed * 1.1f : m_Settings.climbSpeed * 1.6f;
+		const glm::vec3 holdPos = axisPoint + facing * (m_Player->GetRadius() + 0.15f);
+		velocity = glm::vec3((holdPos.x - pos.x) * 12.0f, forward * climbSpeed, (holdPos.z - pos.z) * 12.0f);
+		if (forward > 0.0f && pos.y > top.y + halfHeight * 0.2f)
+		{
+			velocity.y = 0.0f;
+		}
+
+		if (bRope)
+		{
+			// Ropes are harder work than ladders
+			m_Stamina -= (glm::abs(forward) > 0.1f ? m_Settings.climbMoveStaminaDrain : m_Settings.climbStaminaDrain) * 0.5f * dt;
+			if (m_Stamina <= 0.0f)
+			{
+				m_Stamina = 0.0f;
+				m_bStaminaExhausted = true;
+				SetMode(Mode::NONE);
+				return false;
+			}
+		}
+		return true;
+	}
+
 	bool Traversal::FixedUpdateClimb(glm::vec3& velocity)
 	{
+		if (m_ClimbObjectID.IsValid() && !m_bMantling)
+		{
+			return FixedUpdateClimbObject(velocity);
+		}
+
 		const sec dt = g_FixedDeltaTime;
 		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
 		const real forward = GetMoveForward();
 		const real sideways = GetMoveRight();
 
-		glm::vec3 hitPos, hitNormal;
-		const bool bHit = Raycast(pos, pos - m_WallNormal * (m_Settings.climbReach + 0.6f), hitPos, hitNormal);
-		if (!bHit)
+		if (m_bMantling)
 		{
-			SetMode(Mode::NONE);
-			if (forward > 0.0f)
+			// Up first (so the body clears the lip), then over onto the ledge
+			m_MantleTime += dt;
+			const glm::vec3 toTarget = m_MantleTarget - pos;
+			const real horizontalDist = glm::length(glm::vec2(toTarget.x, toTarget.z));
+			if (horizontalDist < 0.2f || m_MantleTime > 1.5f)
 			{
-				// Reached the top of the wall: pull up over the edge
-				velocity = VEC3_UP * 6.5f - m_WallNormal * 3.5f;
+				m_bMantling = false;
+				SetMode(Mode::NONE);
+				velocity = glm::vec3(toTarget.x, 0.0f, toTarget.z) * 2.0f;
 				return true;
 			}
-			return false;
+			const glm::vec3 horizontal = SafeNormalize(glm::vec3(toTarget.x, 0.0f, toTarget.z), -m_WallNormal);
+			if (toTarget.y > 0.05f)
+			{
+				velocity = VEC3_UP * glm::clamp(toTarget.y * 10.0f, 2.0f, 6.0f) + horizontal * 0.8f;
+			}
+			else
+			{
+				velocity = horizontal * glm::clamp(horizontalDist * 8.0f, 2.0f, 5.0f) + VEC3_UP * glm::max(toTarget.y * 8.0f, 0.0f);
+			}
+			return true;
 		}
 
-		if (hitNormal.y > 0.75f)
+		glm::vec3 hitPos, hitNormal;
+		const real reach = m_Settings.climbReach + 0.4f;
+		const bool bHit = Raycast(pos, pos - m_WallNormal * reach, hitPos, hitNormal);
+		// Rounded lips & the tops of walls: pushing up/forward climbs over onto whatever's there
+		const bool bNearTop = !bHit || hitNormal.y > 0.55f;
+		if (bNearTop)
 		{
-			// Flat enough to walk on
-			SetMode(Mode::NONE);
-			return false;
+			glm::vec3 standPos;
+			if (forward > 0.0f && FindLedge(bHit ? SafeNormalize(m_WallNormal + hitNormal, m_WallNormal) : m_WallNormal, standPos))
+			{
+				m_bMantling = true;
+				m_MantleTime = 0.0f;
+				m_MantleTarget = standPos;
+				velocity = VEC3_UP * 3.0f;
+				return true;
+			}
+			if (!bHit || hitNormal.y > 0.8f)
+			{
+				SetMode(Mode::NONE);
+				if (!bHit && forward > 0.0f)
+				{
+					// Nothing found to stand on, hop up & over anyway
+					velocity = VEC3_UP * 5.0f - m_WallNormal * 2.5f;
+					return true;
+				}
+				return false;
+			}
 		}
 
 		m_WallNormal = SafeNormalize(m_WallNormal + (hitNormal - m_WallNormal) * 0.5f, hitNormal);
@@ -1002,7 +1248,7 @@ namespace flex
 
 		// Stay just off the wall
 		const real wallDistance = glm::dot(pos - hitPos, m_WallNormal);
-		const real targetDistance = 1.1f;
+		const real targetDistance = m_Player->GetRadius() + 0.1f;
 		desired -= m_WallNormal * (wallDistance - targetDistance) * 8.0f;
 
 		m_Stamina -= (m_Settings.climbStaminaDrain + (bMoving ? m_Settings.climbMoveStaminaDrain : 0.0f)) * dt;
@@ -1013,7 +1259,7 @@ namespace flex
 			if (m_Stamina > m_Settings.climbLeapStamina * 0.5f)
 			{
 				m_Stamina -= m_Settings.climbLeapStamina;
-				desired = wallUp * 8.0f + wallRight * sideways * 3.0f + m_WallNormal * 0.5f;
+				desired = wallUp * 7.0f + wallRight * sideways * 3.0f + m_WallNormal * 0.5f;
 			}
 		}
 

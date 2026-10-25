@@ -32,6 +32,26 @@
 			"soften" : 0.04
 		},
 		{
+			"name" : "ui",
+			"file path" : "bahnschrift.ttf",
+			"size" : 34,
+			"screen space" : true,
+			"threshold" : 0.50,
+			"shadow opacity" : 0.35,
+			"shadow offset" : "0.01, -0.01",
+			"soften" : 0.04
+		},
+		{
+			"name" : "ui-heading",
+			"file path" : "bahnschrift.ttf",
+			"size" : 72,
+			"screen space" : true,
+			"threshold" : 0.50,
+			"shadow opacity" : 0.45,
+			"shadow offset" : "0.01, -0.01",
+			"soften" : 0.03
+		},
+		{
 			"name" : "editor-02-ws",
 			"file path" : "SourceCodePro-regular.ttf",
 			"size" : 48,

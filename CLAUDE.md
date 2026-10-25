@@ -15,10 +15,13 @@ General lessons for working in this repo (not task specifics).
 - Release builds have no shader compiler: they load `FlexEngine/saved/spv/<name>_<stage>.spv`. After editing shaders, run a Debug build once or compile them yourself (glslang, then `spirv-opt -O`). Unoptimized SPIR-V keeps dead texture samples, which trigger validation errors.
 - The user's Windows environment sets `VK_INSTANCE_LAYERS` to the validation layer, so even Release runs are validated (and their CPU timings are inflated about 3x). For perf numbers, run through a `.bat` that clears it.
 - `--test-scenes --profile` prints CPU & GPU timings in any build. `--screenshots` saves each scene's last frame, which is useful for catching broken rendering.
+- Without arguments Flex starts in the game (main menu, `scene_world.json`); `--editor` opens the last test scene instead. `FLEX_GAME_TOUR=1` drives every game screen and saves `saved/screenshots/tour_*.png` (pass env vars to Flex.exe from WSL with `WSLENV`). `FLEX_DEBUG_OVERLAY=<n>` sets the debug overlay (terrain shows sky visibility as "metallic", 4). `FLEX_TEST_FIRST_PERSON`, `FLEX_TEST_SHOW_INVENTORY` & `FLEX_TRAVERSAL_DEBUG` help with scene tests.
+- Console builds wait in `system("pause")` after shutdown (except in game mode). Redirect stdin from `/dev/null` when running them from scripts, or a run can look like it hangs on exit.
 
 ## Performance investigations
 - Measure before guessing. Add timing or counters (and print them in existing load/stats output) rather than reasoning about which call "must" be slow. Several plausible culprits turned out to be wrong; the real ones were in unrelated shared code.
 - Compare against a baseline. When a metric looks bad, run the same scenario on the previous version (e.g. `git show :path` into a scratch dir) before changing things.
+- Uniforms written per draw must use separate dynamic UBO slots: every draw is recorded before any execute, so reusing one slot means all draws see the last values (this garbled text whenever two fonts were on screen).
 - Renderer hot spots seen so far:
   - Undersized GPU buffers that grow repeatedly. Reading back host-visible (write-combined) memory is very slow.
   - Per-object work that recreates shared state (descriptor sets).
@@ -26,7 +29,9 @@ General lessons for working in this repo (not task specifics).
 - Small standalone harnesses (compile a subsystem's .cpp with a tiny shim `stdafx.hpp`) are much faster to iterate with than the full engine. They can check invariants (e.g. crack-free LOD seams, consistent neighbor masks) far more thoroughly.
 
 ## Code layout
-- Game object types live in `Scene/Objects/*` (one file per family). New types must be added to the table in `Scene/GameObjectTypes.cpp`, which is the factory, the property collection registration & the serialization flags.
+- Game object types live in `Scene/Objects/*` (one file per family). New types must be added to the table in `Scene/GameObjectTypes.cpp`, which is the factory, the property collection registration & the serialization flags, and their names to `config/game_object_types.txt` (CRLF), or they serialize without a type.
+- New source files need the projects regenerated: `scripts/genie --file=genie.lua ninja` & `scripts/genie.exe --file=genie.lua vs2026` (run from `scripts/`).
+- `Game` (`src/Game.cpp`) owns the menus, worlds (`saved/worlds/<name>/`, each with its own terrain edits) & settings; `GameUI` is the immediate mode UI toolkit it draws with.
 - Per-frame parallel work uses `JobSystem::Dispatch` + `Wait`. Long running background work (terrain generation) has its own pool at background priority. Don't spawn threads directly.
 - Player movement abilities are in `Traversal` (owned by `Player`). When it controls the player's velocity, `PlayerController` skips walking.
 

@@ -7,6 +7,7 @@
 #include "Track/BezierCurve3D.hpp"
 #include "Track/BezierCurveList.hpp"
 #include "Systems/TrackManager.hpp" // For TrackPointRef
+#include "Scene/Objects/Building.hpp" // For BuildMode
 
 namespace flex
 {
@@ -57,6 +58,12 @@ namespace flex
 
 		i32 GetIndex() const;
 		real GetHeight() const;
+		real GetRadius() const { return m_Radius; }
+		// Where the first person camera sits (a little below the top of the capsule)
+		glm::vec3 GetEyePosition() const;
+
+		// Contacts with surfaces flatter than this (normal y) can be walked on, steeper ones are walls
+		static constexpr real WALKABLE_NORMAL_Y = 0.6f;
 		PlayerController* GetController();
 
 		real GetDistAlongTrack() const;
@@ -102,6 +109,11 @@ namespace flex
 		void ClearInventory();
 		void ParseInventoryFile();
 		void SerializeInventoryToFile();
+		// Replaces the inventory's contents
+		void ParseInventory(const JSONObject& inventoryObj);
+		JSONObject SerializeInventoryToJSON();
+		// Empties every inventory (unequipping anything worn)
+		void ResetInventory();
 
 		void SetInteractingWithTerminal(Terminal* terminal);
 		void SetRidingVehicle(Vehicle* vehicle);
@@ -116,6 +128,7 @@ namespace flex
 
 		bool IsAnyInventoryShowing() const;
 		bool IsInventoryShowing() const;
+		void SetInventoryShowing(bool bShowing) { m_bInventoryShowing = bShowing; }
 		bool IsMinerInventoryShowing() const;
 
 		i32 GetSelectedQuickAccessItemSlot() const { return m_SelectedQuickAccessItemSlot; }
@@ -147,7 +160,15 @@ namespace flex
 		void DrawTraversalHUD() const;
 
 		Traversal* GetTraversal() { return m_Traversal; }
+		BuildMode& GetBuildMode() { return m_BuildMode; }
+		bool IsBuilding() const { return m_BuildMode.IsActive(); }
+		void DrawBuildModeHUD() const { m_BuildMode.DrawHUD(); }
+		// Briefly shows a message in the middle of the screen
+		void ShowNotification(const std::string& text);
+		// Notifications & prompts for nearby things that can be interacted with
+		void DrawNotifications() const;
 		bool IsGrounded() const { return m_bGrounded; }
+		const glm::vec3& GetGroundNormal() const { return m_GroundNormal; }
 		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded
 		void TeleportOnTerrain(const glm::vec3& pos);
 		// Whether the player is being held in place until terrain collision loads below them
@@ -245,12 +266,21 @@ namespace flex
 
 		PlayerController* m_Controller = nullptr;
 		Traversal* m_Traversal = nullptr;
+		BuildMode m_BuildMode;
+
+		struct Notification
+		{
+			std::string text;
+			sec timeRemaining;
+		};
+		std::vector<Notification> m_Notifications;
 		i32 m_Index = 0;
 
 		// TODO: Store IDs rather than raw pointer
 
 		real m_MoveFriction = 12.0f;
-		real m_Height = 4.0f;
+		real m_Height = 2.0f; // Total capsule height (meters)
+		real m_Radius = 0.4f;
 
 		real m_Pitch = 0.0f;
 		// Yaw of the view relative to the body while riding a track
@@ -259,6 +289,11 @@ namespace flex
 		TrackBuildingContext m_TrackBuildingContext;
 
 		bool m_bGrounded = false;
+		// Result of the last ground probe (which reaches GROUND_PROBE_DISTANCE below the capsule)
+		bool m_bGroundHit = false;
+		real m_GroundGap = 0.0f;
+		glm::vec3 m_GroundNormal = VEC3_UP;
+		static constexpr real GROUND_PROBE_DISTANCE = 0.7f;
 		bool m_bPossessed = false;
 
 		TrackID m_TrackRidingID = InvalidTrackID;
@@ -293,8 +328,8 @@ namespace flex
 		bool m_bTerrainToolActive = false; // Whether the player is pointing a pickaxe at terrain within reach
 		sec m_TerrainToolCooldown = 0.0f;
 		i32 m_TerrainFillMaterialIndex = 0;
-		real m_TerrainToolReach = 7.0f;
-		real m_TerrainDigRadius = 2.0f;
+		real m_TerrainToolReach = 8.0f;
+		real m_TerrainDigRadius = 1.6f;
 
 		bool m_bTerrainPlacementPending = true;
 		bool m_bAwaitingTerrainCollision = false;

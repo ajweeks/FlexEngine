@@ -45,7 +45,8 @@ namespace flex
 		// Returns true if any property changed
 		bool DrawImGui(i32 slotIndex, bool bDrawingEditorObjects);
 
-		void CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape);
+		// Only the first maxIndexCount indices are included
+		void CreateCollisionMesh(btTriangleIndexVertexArray** outTriangleIndexVertexArray, btBvhTriangleMeshShape** outbvhTriangleMeshShape, u32 maxIndexCount = ~0u);
 
 		/*
 		* Call before loading to force certain attributes to be filled/ignored based on shader

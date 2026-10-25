@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "Orange paint",
+		"shader" : "pbr",
+		"const albedo" : "0.950,0.330,0.040",
+		"const metallic" : 0.600000,
+		"const roughness" : 0.550000
+	}
+}

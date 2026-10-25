@@ -48,12 +48,13 @@ namespace flex
 				GRAPPLE,
 				CLIMB,
 				SKI,
+				DIG,
 				DONE
 			};
 
 			static const char* StepName(Step step)
 			{
-				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "done" };
+				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "dig", "done" };
 				return names[(u32)step];
 			}
 
@@ -108,15 +109,16 @@ namespace flex
 						m_Max = pos.y;
 						Press(KeyCode::KEY_SPACE);
 					}
-					else if (m_Frame == 2)
+					else if (m_StepTime > 0.4f && m_StepTime - g_DeltaTime <= 0.4f)
 					{
+						// Held for a full height jump (tapping gives a short hop)
 						Release(KeyCode::KEY_SPACE);
 					}
 					m_Max = glm::max(m_Max, pos.y);
 					if (m_StepTime > 1.2f)
 					{
 						Print("Traversal test: jump height %.2fm\n", m_Max - m_StartPos.y);
-						if (m_Max - m_StartPos.y < 1.0f)
+						if (m_Max - m_StartPos.y < 0.9f)
 						{
 							Fail("jumping didn't leave the ground");
 						}
@@ -386,37 +388,71 @@ namespace flex
 				} break;
 				case Step::CLIMB:
 				{
+					// A tall pillar of rock with a rounded top (built from terrain edits, so there's always one), climbed
+					// from the bottom & mantled onto at the top
 					if (m_Frame == 0)
 					{
-						glm::vec3 wallPos, wallNormal;
-						if (!FindWall(terrainGenerator, pos, wallPos, wallNormal))
+						const glm::vec3 heading = glm::normalize(glm::vec3(player->GetLookDirection().x, 0.0f, player->GetLookDirection().z) + glm::vec3(1e-4f, 0.0f, 0.0f));
+						glm::vec3 groundPos;
+						if (!terrainGenerator->FindStandingPoint(pos + heading * 10.0f, true, groundPos))
 						{
-							Print("Traversal test: no steep wall nearby, skipping climbing\n");
+							Fail("couldn't find somewhere to build a pillar to climb");
 							NextStep(Step::SKI);
 							break;
 						}
-						Teleport(player, wallPos + wallNormal * 1.3f);
-						Look(player, -glm::normalize(glm::vec3(wallNormal.x, 0.0f, wallNormal.z)), 0.0f);
-						m_StartPos = wallPos + wallNormal * 1.3f;
-						Press(KeyCode::KEY_LEFT_SHIFT);
+						const real pillarRadius = 3.5f;
+						for (i32 i = 0; i < 5; ++i)
+						{
+							terrainGenerator->Fill(groundPos + VEC3_UP * ((real)i * 4.0f - 2.0f), pillarRadius, terrain::Material::GRANITE);
+						}
+						m_TargetDir = heading;
+						// Standing on the ground beside it (which may be higher or lower than at the pillar)
+						glm::vec3 standPos = groundPos - heading * (pillarRadius + 0.7f);
+						glm::vec3 besidePos;
+						if (terrainGenerator->FindStandingPoint(standPos + VEC3_UP * 30.0f, true, besidePos) && glm::distance(glm::vec2(besidePos.x, besidePos.z), glm::vec2(standPos.x, standPos.z)) < 1.0f)
+						{
+							standPos.y = besidePos.y;
+						}
+						m_StartPos = standPos + VEC3_UP * (player->GetHeight() * 0.5f + 0.3f);
+						m_Max = groundPos.y + 4.0f * 4.0f; // Top of the pillar (roughly)
+						Teleport(player, m_StartPos);
+						Look(player, heading, 0.0f);
 					}
-					else if (m_Frame == 3)
+					else if (m_SubStep == 0 && m_StepTime > 1.5f && !terrainGenerator->IsApplyingEdits())
+					{
+						// Edits have been applied (& collision updated) by now
+						Teleport(player, m_StartPos);
+						Look(player, m_TargetDir, 0.0f);
+						m_SubStep = 1;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 1 && m_StepTime > m_SubStepTime + 0.3f && !player->IsAwaitingTerrainCollision())
+					{
+						Press(KeyCode::KEY_LEFT_SHIFT);
+						m_SubStep = 2;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 2 && m_StepTime > m_SubStepTime + 0.15f)
 					{
 						if (traversal->GetMode() != Traversal::Mode::CLIMBING)
 						{
-							Fail("didn't grab onto a steep wall");
+							Fail("didn't grab onto the pillar");
 						}
 						Press(KeyCode::KEY_W);
+						m_SubStep = 3;
 					}
-					else if (m_StepTime > 2.5f)
+					else if (m_SubStep == 3 && (m_StepTime > 14.0f || (player->IsGrounded() && pos.y > m_StartPos.y + 5.0f)))
 					{
 						Release(KeyCode::KEY_W);
 						Release(KeyCode::KEY_LEFT_SHIFT);
-						Print("Traversal test: climbed %.1fm in 2.5s (stamina left: %.0f%%)\n", pos.y - m_StartPos.y, traversal->GetStamina() * 100.0f);
-						if (pos.y - m_StartPos.y < 2.0f)
+						const real feetY = pos.y - player->GetHeight() * 0.5f;
+						Print("Traversal test: climbed %.1fm up a pillar (stamina left: %.0f%%), %s\n", pos.y - m_StartPos.y, traversal->GetStamina() * 100.0f,
+							feetY > m_Max - 1.0f && player->IsGrounded() ? "standing on top" : "not on top");
+						if (feetY < m_Max - 1.0f)
 						{
-							Fail("climbing didn't move the player up the wall");
+							Fail("didn't climb up & over the top of the pillar");
 						}
+						m_SubStep = 0;
 						NextStep(Step::SKI);
 					}
 				} break;
@@ -444,12 +480,71 @@ namespace flex
 					}
 					else if (m_StepTime > 2.0f)
 					{
-						Print("Traversal test: skiing at %.1fm/s\n", glm::length(velocity));
-						if (traversal->GetMode() != Traversal::Mode::SKIING)
+						// Skiing is currently disabled, so ctrl on the ground should do nothing
+						Print("Traversal test: holding ctrl on the ground moved at %.1fm/s\n", glm::length(velocity));
+						if (traversal->GetMode() == Traversal::Mode::SKIING)
 						{
-							Fail("holding ctrl on the ground didn't start skiing");
+							Fail("skiing started although it's disabled");
 						}
 						Release(KeyCode::KEY_LEFT_CONTROL);
+						NextStep(Step::DIG);
+					}
+				} break;
+				case Step::DIG:
+				{
+					if (m_Frame == 0)
+					{
+						// Dig into the ground ahead from a fixed viewpoint three times: each dig should find terrain at the
+						// back of the previous hole (rather than looking straight through it)
+						const glm::vec3 eye = player->GetEyePosition();
+						const glm::vec3 heading = glm::normalize(glm::vec3(player->GetLookDirection().x, 0.0f, player->GetLookDirection().z) + glm::vec3(1e-4f, 0.0f, 0.0f));
+						const glm::vec3 dir = glm::normalize(heading - VEC3_UP * 0.6f);
+						u32 digCount = 0;
+						for (u32 i = 0; i < 3; ++i)
+						{
+							glm::vec3 hitPos, hitNormal;
+							// Same reach & clamping as the pickaxe (see Player::UpdateTerrainTool)
+							const real reach = 8.0f;
+							const real radius = 1.6f;
+							if (terrainGenerator->Raycast(eye, dir, reach + radius * 0.9f, hitPos, hitNormal))
+							{
+								if (glm::distance(eye, hitPos) > reach)
+								{
+									hitPos = eye + dir * reach;
+								}
+								terrainGenerator->Dig(hitPos, radius);
+								++digCount;
+							}
+						}
+						Print("Traversal test: dug the same spot %u/3 times\n", digCount);
+						if (digCount < 3)
+						{
+							Fail("repeated digging didn't keep finding terrain");
+						}
+
+						// A small blob of terrain floating in the air beside a dig should be removed by it
+						glm::vec3 groundPos;
+						if (terrainGenerator->FindStandingPoint(pos + heading * 20.0f, true, groundPos))
+						{
+							// Centered on a point of the grid the terrain is meshed from (2m), so it's a single solid point
+							m_StartPos = glm::round((groundPos + VEC3_UP * 6.0f) / 2.0f) * 2.0f;
+							terrainGenerator->Fill(m_StartPos, 1.1f, terrain::Material::SOIL);
+							if (terrainGenerator->SampleDensity(m_StartPos) >= 0.0f)
+							{
+								Fail("filling didn't create terrain");
+							}
+							// Close enough that the blob is well inside the region checked for fragments
+							terrainGenerator->Dig(m_StartPos - VEC3_UP * 3.0f, 1.6f);
+							const bool bRemoved = terrainGenerator->SampleDensity(m_StartPos) > 0.0f;
+							Print("Traversal test: floating fragment %s\n", bRemoved ? "removed" : "left behind");
+							if (!bRemoved)
+							{
+								Fail("digging didn't remove a nearby floating fragment");
+							}
+						}
+					}
+					if (m_StepTime > 1.0f)
+					{
 						NextStep(Step::DONE);
 					}
 				} break;
@@ -622,6 +717,7 @@ namespace flex
 			Step m_Step = Step::WAIT_FOR_GROUND;
 			bool m_bStepChanged = false;
 			u32 m_SubStep = 0;
+			sec m_SubStepTime = 0.0f; // Step time when the current sub step began
 			sec m_StepTime = 0.0f;
 			u32 m_Frame = 0;
 			real m_Max = 0.0f;
@@ -689,6 +785,29 @@ namespace flex
 			{
 				s_TraversalTest->Update();
 			}
+			if (getenv("FLEX_TEST_SHOW_INVENTORY") != nullptr)
+			{
+				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (player != nullptr)
+				{
+					player->SetInventoryShowing(true);
+					static bool bFilled = false;
+					if (!bFilled && getenv("FLEX_TEST_FILL_INVENTORY") != nullptr)
+					{
+						// Copy the quick access items into the main inventory so its icons can be checked too
+						bFilled = true;
+						for (u32 i = 0; i < Player::QUICK_ACCESS_ITEM_COUNT; ++i)
+						{
+							InventoryType inventoryType;
+							GameObjectStack* stack = player->GetGameObjectStackFromInventory(Player::GetGameObjectStackIDForQuickAccessInventory(i), inventoryType);
+							if (stack != nullptr && stack->count > 0)
+							{
+								player->AddToInventory(stack->prefabID, stack->count, stack->userData, InventoryType::PLAYER_INVENTORY);
+							}
+						}
+					}
+				}
+			}
 			if (m_bProfile && m_FramesRemaining == m_FramesPerScene / 2)
 			{
 				// Skip the first half, while things load
@@ -755,9 +874,18 @@ namespace flex
 			}
 
 			// Profile what the player sees
-			if (m_bProfile)
+			if (const char* overlay = getenv("FLEX_DEBUG_OVERLAY"))
+			{
+				g_Renderer->SetDebugOverlayID(atoi(overlay));
+			}
+			if (m_bProfile || getenv("FLEX_TEST_FIRST_PERSON") != nullptr)
 			{
 				g_CameraManager->SetCameraByName("first-person", false);
+				if (const char* cameraName = getenv("FLEX_TEST_CAMERA"))
+				{
+					g_CameraManager->SetCameraByName(cameraName, false);
+				}
+				g_InputManager->SetIgnoreWindowFocus(true);
 			}
 
 			// The traversal abilities need terrain streamed in around the player, which takes a while

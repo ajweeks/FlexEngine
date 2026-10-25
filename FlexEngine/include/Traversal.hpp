@@ -72,6 +72,9 @@ namespace flex
 		real GetRopeLength() const { return m_Hook.ropeLength; }
 		glm::vec3 GetHookPos() const { return m_Hook.pos; }
 		real GetStamina() const { return m_Stamina; }
+		// Seconds since the player last jumped off the ground (ground snapping is suspended right after a jump)
+		sec GetTimeSinceJump() const { return m_TimeSinceJump; }
+		bool IsMantling() const { return m_bMantling; }
 
 	private:
 		enum class HookState
@@ -94,13 +97,19 @@ namespace flex
 
 		struct Settings
 		{
-			real jumpSpeed = 7.5f;
-			real coyoteTime = 0.15f;
+			// Jumps use stronger gravity than the rest of the world so they're short & snappy rather than floaty
+			real jumpSpeed = 7.8f;
+			real coyoteTime = 0.12f;
+			real jumpBufferTime = 0.12f; // Jump presses this long before landing still jump
+			real riseGravityScale = 2.4f; // While rising with jump held
+			real jumpCutGravityScale = 4.0f; // While rising after releasing jump (short hops)
+			real fallGravityScale = 2.8f;
+			real maxFallSpeed = 55.0f;
 
 			real glideSpeed = 12.0f;
 			real glideSpeedBoost = 5.0f; // Added/removed with forward/back input
 			real glideSinkRate = 2.0f;
-			real glideMinHeight = 3.0f; // Above the ground, to deploy
+			real glideMinHeight = 2.5f; // Above the ground, to deploy
 
 			real wingsuitLift = 0.035f;
 			real wingsuitDrag = 0.0018f;
@@ -112,13 +121,14 @@ namespace flex
 			real reelSpeed = 16.0f;
 			real swingControl = 7.0f; // Acceleration from move input while hanging
 
-			real climbSpeed = 3.0f;
-			real climbReach = 1.9f; // From the player's center to the wall
-			real climbStaminaDrain = 0.07f; // Per second while hanging
-			real climbMoveStaminaDrain = 0.12f; // Extra per second while moving
-			real climbLeapStamina = 0.2f;
+			real climbSpeed = 2.6f;
+			real climbReach = 1.0f; // From the player's center to the wall
+			real climbStaminaDrain = 0.03f; // Per second while hanging
+			real climbMoveStaminaDrain = 0.05f; // Extra per second while moving
+			real climbLeapStamina = 0.15f;
 			real staminaRegen = 0.35f; // Per second while grounded
 
+			bool bSkiingEnabled = false;
 			real skiMaxSpeed = 48.0f;
 			real skiTurnRate = 2.2f; // Radians per second
 			real skiPush = 4.0f;
@@ -154,11 +164,16 @@ namespace flex
 		void FireHook();
 		void ReleaseHook();
 		bool TryStartClimbing();
+		// Grabs onto a nearby ladder or rope
+		bool TryStartClimbingObject(bool bClimbHeld);
+		bool FixedUpdateClimbObject(glm::vec3& velocity);
 
 		void FixedUpdateHook(glm::vec3& velocity);
 		void FixedUpdateGlide(glm::vec3& velocity);
 		void FixedUpdateWingsuit(glm::vec3& velocity);
 		bool FixedUpdateClimb(glm::vec3& velocity);
+		// Finds a point to stand on over the top of the wall being climbed
+		bool FindLedge(const glm::vec3& wallNormal, glm::vec3& outStandPos) const;
 		void FixedUpdateSki(glm::vec3& velocity);
 
 		// Raycasts against physics colliders (ignoring the player) & the terrain's density
@@ -183,10 +198,18 @@ namespace flex
 		bool m_bGrounded = false;
 		bool m_bJumpHeld = false;
 		bool m_bJumpQueued = false;
+		sec m_JumpQueuedTime = 0.0f;
+		sec m_TimeSinceJump = 100.0f;
 
 		// Climbing
 		glm::vec3 m_WallNormal = VEC3_FORWARD;
 		bool m_bLeapQueued = false;
+		// Ladder or rope being climbed (invalid when climbing terrain)
+		GameObjectID m_ClimbObjectID;
+		// Pulling up over the top of a wall onto m_MantleTarget (the player's center once standing)
+		bool m_bMantling = false;
+		glm::vec3 m_MantleTarget = VEC3_ZERO;
+		sec m_MantleTime = 0.0f;
 
 		// Cached surroundings (updated each frame rather than each physics step)
 		GroundInfo m_Ground;

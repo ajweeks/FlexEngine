@@ -33,7 +33,8 @@ namespace flex
 
 		// Marches along the ray against the terrain (including edits). Returns true on hit.
 		bool Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const;
-		void Dig(const glm::vec3& center, real radius);
+		// Removes small fragments left floating by the dig (unless bRemoveFragments is false)
+		void Dig(const glm::vec3& center, real radius, bool bRemoveFragments = true);
 		void Fill(const glm::vec3& center, real radius, terrain::Material material);
 		// Number of edit jobs in flight (edits are applied a few frames after being made)
 		bool IsApplyingEdits() const;
@@ -53,6 +54,22 @@ namespace flex
 		bool IsCollisionLoadedBelow(const glm::vec3& pos) const;
 
 		i32 GetSeed() const { return m_Params.seed; }
+
+		// Switches to another world: its seed, & where its edits & cached chunks are saved (empty: the default, per
+		// scene & seed)
+		void SetWorld(i32 seed, const std::string& saveDirectory);
+		// Writes any unsaved edits to disk now
+		void FlushEdits();
+		// Whether the chunks around the camera have all been generated since the last regeneration
+		bool IsLoadComplete() const { return m_bLoadComplete && !m_bParamsDirty; }
+
+		// A map of a large area (for the in game map screen), generated in the background. UpdateLargeMap must be
+		// called every frame while it's in use (even while the game is paused).
+		void RequestLargeMap(const glm::vec3& center, real extent, u32 resolution);
+		void UpdateLargeMap();
+		// Returns false until a map has been generated
+		bool GetLargeMap(TextureID& outTextureID, glm::vec3& outCenter, real& outExtent) const;
+		bool IsGeneratingLargeMap() const { return m_LargeMapFuture.valid(); }
 
 		// The terrain generator in the current scene (if any)
 		static TerrainGenerator* GetActive() { return s_Active; }
@@ -80,6 +97,7 @@ namespace flex
 			btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
 			RigidBody* rigidBody = nullptr;
 			btCollisionShape* collisionShape = nullptr;
+			u32 collisionIndexCount = ~0u;
 		};
 
 		void UpdateRoadSegments();
@@ -96,6 +114,10 @@ namespace flex
 		void UpdateRigidBodies();
 		void UpdateEditorBrush();
 		void ApplyEdit(const terrain::Edit& edit);
+		void MarkEditsDirty();
+		// Appends dig edits removing small pieces of terrain near center which aren't connected to anything (after
+		// applying inOutEdits)
+		void FindFloatingFragments(const glm::vec3& center, real extent, std::vector<terrain::Edit>& inOutEdits) const;
 		void SaveEdits();
 		std::string GetSaveFilePathBase() const;
 		void UpdateSceneFog();
@@ -181,6 +203,14 @@ namespace flex
 		std::future<WorldMap> m_WorldMapFuture;
 		real m_WorldMapZoom = 1.0f;
 		bool m_bWorldMapShowChunks = true;
+
+		TextureID CreateMapTexture(const WorldMap& map, const char* name);
+
+		WorldMap m_LargeMap;
+		std::future<WorldMap> m_LargeMapFuture;
+		TextureID m_LargeMapTextureID = InvalidTextureID;
+		std::string m_SaveDirectory;
+		bool m_bReloadEdits = false;
 
 		WorldMap m_Minimap;
 		std::future<WorldMap> m_MinimapFuture;

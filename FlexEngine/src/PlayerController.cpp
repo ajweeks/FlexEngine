@@ -35,6 +35,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/Props.hpp"
 #include "Scene/Objects/Terminal.hpp"
+#include "Scene/Objects/Treasure.hpp"
 #include "Scene/Objects/Vehicle.hpp"
 #include "Scene/Objects/Wires.hpp"
 #include "Scene/SceneManager.hpp"
@@ -56,6 +57,8 @@ namespace flex
 		m_ConfigFile("Player config", PLAYER_CONFIG_LOCATION, CURRENT_CONFIG_FILE_VERSION)
 	{
 		m_ConfigFile.RegisterProperty("max move speed", &m_MaxMoveSpeed)
+			.SetRange(0.001f, 100.0f);
+		m_ConfigFile.RegisterProperty("sprint speed", &m_SprintSpeed)
 			.SetRange(0.001f, 100.0f);
 		m_ConfigFile.RegisterProperty("move acceleration", &m_MoveAcceleration)
 			.SetRange(0.1f, 500.0f);
@@ -124,7 +127,8 @@ namespace flex
 		if (m_Player->m_bPossessed)
 		{
 			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_SELECTED_ITEM_FORWARD);
-			if (!ImGui::GetIO().WantCaptureMouse)
+			// The scroll wheel picks build pieces while building
+			if (!ImGui::GetIO().WantCaptureMouse && !m_Player->IsBuilding())
 			{
 				if (cycleItemAxis > 0.0f)
 				{
@@ -195,7 +199,7 @@ namespace flex
 			if (m_Player->AbleToInteract())
 			{
 				// TODO: Move to All.variables
-				const real maxDistSqr = 9.0f * 9.0f;
+				const real maxDistSqr = 4.5f * 4.5f;
 				const glm::vec3 posWS = m_Player->m_Transform.GetWorldPosition();
 				GameObjectID excludeGameObjectID = m_Player->ID;
 				g_SceneManager->CurrentScene()->GetNearbyInteractableObjects(nearbyInteractables,
@@ -206,6 +210,10 @@ namespace flex
 					nearestInteractable = nearbyInteractables.front().first;
 					nearestInteractable->SetNearbyInteractable(m_Player->ID);
 					m_Player->SetNearbyInteractable(nearestInteractable->ID);
+				}
+				else
+				{
+					m_Player->SetNearbyInteractable(InvalidGameObjectID);
 				}
 			}
 
@@ -430,20 +438,24 @@ namespace flex
 		// Flying, climbing, skiing etc. take over movement entirely
 		if (m_Player->m_TrackRidingID == InvalidTrackID && m_Player->m_Traversal->FixedUpdate())
 		{
+			m_bWasGrounded = false;
 			return;
 		}
+
+		const bool bSprinting = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0;
+		const real maxMoveSpeed = bSprinting ? m_SprintSpeed : m_MaxMoveSpeed;
 
 		btVector3 vel = rb->getLinearVelocity();
 		btVector3 xzVel(vel.getX(), 0, vel.getZ());
 		real xzVelMagnitude = xzVel.length();
-		if (xzVelMagnitude > m_MaxMoveSpeed)
+		if (xzVelMagnitude > maxMoveSpeed)
 		{
 			// Limit maximum velocity. Bleed off excess speed quickly (rather than instantly) so landing with
 			// momentum (e.g. after flying or swinging) doesn't stop the player dead.
-			if (m_MaxMoveSpeed > 1.0e-5f)
+			if (maxMoveSpeed > 1.0e-5f)
 			{
 				const real excessDeceleration = 30.0f;
-				const real newMagnitude = glm::max(xzVelMagnitude - excessDeceleration * g_FixedDeltaTime, m_MaxMoveSpeed);
+				const real newMagnitude = glm::max(xzVelMagnitude - excessDeceleration * g_FixedDeltaTime, maxMoveSpeed);
 				btVector3 xzVelNorm = xzVel / xzVelMagnitude;
 				vel = btVector3(xzVelNorm.getX() * newMagnitude, vel.getY(), xzVelNorm.getZ() * newMagnitude);
 			}
@@ -496,37 +508,79 @@ namespace flex
 				m_Player->m_pDTrackMovement = m_Player->m_DistAlongTrack - pDist;
 				pCurveDir = newCurveDir;
 			}
-			else
+			else if (!m_Player->m_RidingVehicleID.IsValid())
 			{
-				if (m_Player->AbleToInteract() &&
-					!m_Player->IsAnyInventoryShowing())
+				glm::vec3 moveDir = VEC3_ZERO;
+				if (m_Player->AbleToInteract() && !m_Player->IsAnyInventoryShowing())
 				{
-					glm::vec3 moveDir = playerTransform->GetRight() * moveLR + playerTransform->GetForward() * moveFB;
+					moveDir = playerTransform->GetRight() * moveLR + playerTransform->GetForward() * moveFB;
 					moveDir.y = 0.0f;
 					const real moveDirLen = glm::length(moveDir);
 					if (moveDirLen > 1.0f)
 					{
 						moveDir /= moveDirLen;
 					}
+				}
+				bMoving = glm::length(moveDir) > 0.01f;
 
-					bMoving = moveDirLen > 0.01f;
-					if (bMoving)
+				const bool bGrounded = m_Player->m_bGrounded;
+				const glm::vec3 groundNormal = m_Player->m_GroundNormal;
+				glm::vec3 velocity = ToVec3(rb->getLinearVelocity());
+
+				// Walk along the ground's surface (rather than horizontally into/off it) so slopes don't launch the
+				// player into the air or slow them down
+				const glm::vec3 currentVel = bGrounded ? velocity - groundNormal * glm::dot(velocity, groundNormal) : glm::vec3(velocity.x, 0.0f, velocity.z);
+				glm::vec3 targetVel = moveDir * maxMoveSpeed;
+				if (bGrounded && bMoving)
+				{
+					const glm::vec3 alongGround = targetVel - groundNormal * glm::dot(targetVel, groundNormal);
+					const real alongLength = glm::length(alongGround);
+					targetVel = alongLength > 1e-4f ? alongGround * (maxMoveSpeed * glm::length(moveDir) / alongLength) : targetVel;
+				}
+
+				if (bGrounded || bMoving)
+				{
+					// Speeding up is gradual, while slowing down/changing direction uses the (faster) deceleration rate
+					const real rate = glm::length(targetVel) > glm::length(currentVel) ? m_MoveAcceleration : m_MoveDeceleration;
+					const glm::vec3 diff = targetVel - currentVel;
+					const real diffLen = glm::length(diff);
+					const real maxDelta = rate * (bGrounded ? 1.0f : 0.15f) * g_FixedDeltaTime;
+					glm::vec3 newVel = (diffLen > maxDelta) ? (currentVel + diff * (maxDelta / diffLen)) : targetVel;
+					if (!bGrounded)
 					{
-						// Drive horizontal velocity towards the target directly. Speeding up is gradual, while
-						// slowing down/changing direction uses the (faster) deceleration rate
-						const glm::vec3 currentVel = ToVec3(xzVel);
-						const glm::vec3 targetVel = moveDir * m_MaxMoveSpeed;
-						const real rate = glm::length(targetVel) > glm::length(currentVel) ? m_MoveAcceleration : m_MoveDeceleration;
-						const glm::vec3 diff = targetVel - currentVel;
-						const real diffLen = glm::length(diff);
-						const real maxDelta = rate * g_FixedDeltaTime;
-						const glm::vec3 newVel = (diffLen > maxDelta) ? (currentVel + diff * (maxDelta / diffLen)) : targetVel;
-						rb->setLinearVelocity(btVector3(newVel.x, rb->getLinearVelocity().getY(), newVel.z));
-						rb->activate();
+						newVel.y = velocity.y;
 					}
+					velocity = newVel;
+				}
+
+				// Stick to the ground while walking over bumps & crests rather than bouncing off them. Skipped just
+				// after jumping, & when the ground below is a drop rather than a step.
+				Traversal* traversal = m_Player->m_Traversal;
+				const bool bJustJumped = traversal != nullptr && traversal->GetTimeSinceJump() < 0.25f;
+				if (m_bWasGrounded && !bJustJumped && m_Player->m_bGroundHit && groundNormal.y > Player::WALKABLE_NORMAL_Y &&
+					m_Player->m_GroundGap > 0.02f && m_Player->m_GroundGap < m_GroundSnapDistance)
+				{
+					btTransform transform = rb->getWorldTransform();
+					transform.setOrigin(transform.getOrigin() - btVector3(0.0f, m_Player->m_GroundGap - 0.01f, 0.0f));
+					rb->setWorldTransform(transform);
+					velocity -= groundNormal * glm::max(glm::dot(velocity, groundNormal), 0.0f);
+					m_Player->m_bGrounded = true;
+				}
+				else if (bGrounded && !bJustJumped)
+				{
+					// Don't skip off the ground
+					velocity -= groundNormal * glm::max(glm::dot(velocity, groundNormal), 0.0f);
+				}
+
+				rb->setLinearVelocity(ToBtVec3(velocity));
+				if (bMoving)
+				{
+					rb->activate();
 				}
 			}
 		}
+
+		m_bWasGrounded = m_Player->m_bGrounded;
 
 		// Friction would fight the velocity set above, so it only applies when there's no move input (to stop quickly)
 		rb->setFriction(bMoving ? 0.0f : m_Player->m_MoveFriction);
@@ -878,6 +932,12 @@ namespace flex
 			}
 		}
 
+		if (action == Action::PICKUP_ITEM && m_Player->IsBuilding())
+		{
+			// The left mouse button places pieces while building
+			return EventReply::CONSUMED;
+		}
+
 		if (action == Action::PICKUP_ITEM)
 		{
 			if (actionEvent == ActionEvent::ACTION_TRIGGER &&
@@ -1213,6 +1273,14 @@ namespace flex
 					m_bAttemptInteractRightHand = false;
 					bInteracted = true;
 				}
+			} break;
+			case TreasureChestSID:
+			{
+				TreasureChest* chest = (TreasureChest*)nearbyInteractable;
+				chest->Open(m_Player);
+				m_bAttemptInteractLeftHand = false;
+				m_bAttemptInteractRightHand = false;
+				bInteracted = true;
 			} break;
 			case VehicleSID:
 			{

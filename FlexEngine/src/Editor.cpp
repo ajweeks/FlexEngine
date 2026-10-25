@@ -209,7 +209,8 @@ namespace flex
 			g_SceneManager->OpenNewSceneWindow();
 		}
 
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_M))
+		// (M opens the map in gameplay scenes)
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_M) && !g_SceneManager->CurrentScene()->IsGameplayScene())
 		{
 			AudioManager::ToggleMuted();
 		}
@@ -1324,7 +1325,16 @@ namespace flex
 
 		if (bControlDown && action == KeyAction::KEY_PRESS && keyCode == KeyCode::KEY_S)
 		{
-			g_SceneManager->CurrentScene()->SerializeToFile(true);
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			if (scene->IsGameplayScene())
+			{
+				// Worlds are saved separately (automatically), the scene itself is only a template
+				Print("Saving is disabled in gameplay scenes, worlds save automatically\n");
+			}
+			else
+			{
+				scene->SerializeToFile(true);
+			}
 			return EventReply::CONSUMED;
 		}
 

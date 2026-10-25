@@ -57,6 +57,8 @@ namespace flex
 	{
 		PROFILE_AUTO("InputManager Update");
 
+		m_TypedText.clear();
+
 		if (!g_Window->HasFocus() && !m_bIgnoreWindowFocus)
 		{
 			ClearAllInputs();
@@ -1002,6 +1004,10 @@ namespace flex
 		if (character > 0 && character < 0x10000)
 		{
 			io.AddInputCharacter((ImWchar)character);
+		}
+		if (character >= 32 && character < 127)
+		{
+			m_TypedText += (char)character;
 		}
 	}
 

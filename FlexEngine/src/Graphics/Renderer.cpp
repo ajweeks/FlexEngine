@@ -2396,7 +2396,7 @@ namespace flex
 		// Font SS
 		m_Shaders[shaderID]->renderPassType = RenderPassType::UI;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
-		m_Shaders[shaderID]->maxObjectCount = 4;
+		m_Shaders[shaderID]->maxObjectCount = 16; // One per font (each needs its own uniforms)
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV |
@@ -2415,7 +2415,7 @@ namespace flex
 		// Font WS
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 1024 * 1024; // TODO: FIXME:
-		m_Shaders[shaderID]->maxObjectCount = 4;
+		m_Shaders[shaderID]->maxObjectCount = 16; // One per font (each needs its own uniforms)
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::UV |
@@ -2567,8 +2567,9 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
 		m_Shaders[shaderID]->bDepthWriteEnable = true;
 		m_Shaders[shaderID]->maxObjectCount = 8192; // Grows on demand
-		// Streamed terrain chunks are sub-allocated from the dynamic buffer, which grows as needed
-		m_Shaders[shaderID]->dynamicVertexBufferSize = 160 * 1024 * 1024;
+		// Streamed terrain chunks (& the plants generated with them) are sub-allocated from the dynamic buffer, which
+		// grows as needed. Growing stalls for a while, so it starts out large enough for a typical view.
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 320 * 1024 * 1024;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
@@ -2953,6 +2954,8 @@ namespace flex
 			player->DrawTrackBuildingHUD();
 			player->DrawTerrainToolHUD();
 			player->DrawTraversalHUD();
+			player->DrawBuildModeHUD();
+			player->DrawNotifications();
 		}
 
 		if (previewedFont != InvalidStringID)

@@ -481,8 +481,9 @@ void main()
 
 	vec3 F = FresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
 
-	vec3 skyColour = mix(uboConstant.skyboxData.colourTop.rgb, uboConstant.skyboxData.colourMid.rgb, 1.0-max(dot(N, vec3(0,1,0)), 0.0));
-	skyColour = mix(skyColour, uboConstant.skyboxData.colourBtm.rgb, -min(dot(N, vec3(0,-1,0)), 0.0));
+	// The sky's colours are in display space
+	vec3 skyColour = mix(pow(uboConstant.skyboxData.colourTop.rgb, vec3(2.2)), pow(uboConstant.skyboxData.colourMid.rgb, vec3(2.2)), 1.0-max(dot(N, vec3(0,1,0)), 0.0));
+	skyColour = mix(skyColour, pow(uboConstant.skyboxData.colourBtm.rgb, vec3(2.2)), -min(dot(N, vec3(0,-1,0)), 0.0));
 
 	// Diffse ambient term (IBL)
 	vec3 kS = F;
@@ -504,7 +505,11 @@ void main()
 	// Ambient light is occluded by nearby geometry (SSAO) and partially by the sun's shadow
 	// (the brightest part of the sky is typically in the sun's direction)
 	float ambientShadow = mix(1.0, dirLightShadowOpacity, uboConstant.ssaoData.ambientShadowAmount);
-	vec3 ambient = (kD * diffuse + specular) * uboConstant.ssaoData.ambientIntensity * ssao * ambientShadow;
+	// The irradiance & reflection maps are captured once, so scale them by how bright the sky is now (relative to
+	// a clear day) so objects darken at night
+	float skyLuminance = dot(pow(uboConstant.skyboxData.colourTop.rgb, vec3(2.2)), vec3(0.2126, 0.7152, 0.0722));
+	float skyBrightness = clamp(skyLuminance / 0.22, 0.03, 1.2);
+	vec3 ambient = (kD * diffuse + specular) * uboConstant.ssaoData.ambientIntensity * ssao * ambientShadow * skyBrightness;
 
 	vec3 colour = ambient + Lo;
 	if (!IsDistanceFogEnabled(uboConstant.skyboxData))
@@ -517,6 +522,7 @@ void main()
 
 	vec3 viewVec = posWS - uboConstant.camPos.xyz;
 	ApplyDistanceFog(length(viewVec), viewVec / max(length(viewVec), 0.0001), uboConstant.skyboxData, /* inout */ colour);
+	ApplyCloudLayer(posWS, uboConstant.camPos.xyz, uboConstant.skyboxData, /* inout */ colour);
 
 	fragColour = vec4(colour, 1.0);
 

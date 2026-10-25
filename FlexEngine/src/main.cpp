@@ -89,13 +89,24 @@ int main(int argc, char *argv[])
 	}
 
 	i32 result = 0;
+	bool bGameMode = false;
 
 	{
 		// Created before the engine so that warnings during startup are captured too
 		flex::SceneTestRunner* sceneTestRunner = bTestScenes ? new flex::SceneTestRunner(sceneTestFileNames, sceneTestFrameCount, bSceneTestScreenshots, bSceneTestProfile) : nullptr;
 
+		// The game's main menu is shown on startup, unless testing or "--editor" is passed (which opens the last
+		// opened test scene)
+		bool bEditor = false;
+		for (i32 i = 1; i < argc; ++i)
+		{
+			bEditor = bEditor || strcmp(argv[i], "--editor") == 0;
+		}
+
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();
 		engineInstance->SetSceneTestRunner(sceneTestRunner);
+		bGameMode = !bTestScenes && !bRunUnitTests && !bEditor;
+		engineInstance->SetGameMode(bGameMode);
 		engineInstance->Initialize();
 		engineInstance->UpdateAndRender();
 		delete engineInstance;
@@ -109,7 +120,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (g_bShowConsole && !flex::g_bHeadless)
+	// Keeps the console open to read the output (but quitting the game shouldn't leave a console waiting)
+	if (g_bShowConsole && !flex::g_bHeadless && !bGameMode)
 	{
 		i32 pauseResult = system("pause");
 		FLEX_UNUSED(pauseResult);

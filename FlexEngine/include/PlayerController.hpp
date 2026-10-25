@@ -35,6 +35,8 @@ namespace flex
 
 		void UpdateMode();
 
+		void SetMouseSensitivity(real sensitivity, bool bInvert) { m_MouseRotateHSpeed = sensitivity; m_MouseRotateVSpeed = sensitivity; m_bInvertMouseV = bInvert; }
+
 		// Whether the selected quick access item can be placed in the world (the place button jumps otherwise)
 		bool IsPlaceableItemSelected() const;
 
@@ -61,10 +63,14 @@ namespace flex
 
 		static const i32 CURRENT_CONFIG_FILE_VERSION = 1;
 
-		real m_MaxMoveSpeed = 26.0f;
+		real m_MaxMoveSpeed = 7.0f;
+		real m_SprintSpeed = 12.0f;
 		// Rates (m/s^2) at which horizontal velocity approaches the target while move input is held
-		real m_MoveAcceleration = 165.0f;
-		real m_MoveDeceleration = 260.0f;
+		real m_MoveAcceleration = 60.0f;
+		real m_MoveDeceleration = 90.0f;
+		// Gaps below the player smaller than this are snapped across while walking (stepping down slopes & bumps)
+		real m_GroundSnapDistance = 0.55f;
+		bool m_bWasGrounded = false;
 		// Scales vertical look input when tilting the overhead camera
 		real m_CameraElevationSensitivity = 2.0f;
 		real m_RotateHSpeedFirstPerson = 3.0f;

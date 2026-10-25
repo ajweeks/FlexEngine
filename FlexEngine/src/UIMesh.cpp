@@ -241,11 +241,17 @@ namespace flex
 		drawData->indexBuffer = indices;
 		drawData->vertexBufferCreateInfo.positions_2D = points;
 		drawData->vertexBufferCreateInfo.texCoords_UV = texCoords;
-		drawData->vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
-
-		for (u32 i = 0; i < vertCount; ++i)
+		if (m_PendingColours != nullptr)
 		{
-			drawData->vertexBufferCreateInfo.colours_R32G32B32A32[i] = colour;
+			drawData->vertexBufferCreateInfo.colours_R32G32B32A32 = *m_PendingColours;
+		}
+		else
+		{
+			drawData->vertexBufferCreateInfo.colours_R32G32B32A32.resize(vertCount);
+			for (u32 i = 0; i < vertCount; ++i)
+			{
+				drawData->vertexBufferCreateInfo.colours_R32G32B32A32[i] = colour;
+			}
 		}
 
 		if (bCreateNewDrawData)
@@ -277,6 +283,18 @@ namespace flex
 			mesh->GetSubMesh(submeshIndex)->UpdateDynamicVertexData(drawData->vertexBufferCreateInfo, indices);
 			m_DrawData[submeshIndex]->uvBlendAmount = uvBlendAmount;
 		}
+	}
+
+	void UIMesh::DrawPolygonColoured(const std::vector<glm::vec2>& points,
+		const std::vector<glm::vec4>& colours,
+		const std::vector<u32>& indices)
+	{
+		CHECK_EQ(points.size(), colours.size());
+		// Centered texture coordinates are never blended
+		const std::vector<glm::vec2> texCoords(points.size(), glm::vec2(0.5f));
+		m_PendingColours = &colours;
+		DrawPolygon(points, texCoords, indices, VEC4_ONE, glm::vec2(1.0f));
+		m_PendingColours = nullptr;
 	}
 
 	void UIMesh::Draw()
